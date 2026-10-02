@@ -58,8 +58,9 @@ export async function POST(request: Request) {
   if (requested !== null && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(requested)) {
     return NextResponse.json({ error: "bad_slug" }, { status: 400 });
   }
-  // **`?brand=1` dresses the shop** in the canonical demo's brand and a logo,
-  // for the one capture of the settings profile row and nothing else
+  // **`?brand=1` dresses the shop** in the brand fixture — the canonical
+  // demo's cover and badges plus a colour, a display face and a logo — for the
+  // settings profile capture and the storefront brand spec
   // (`createDemoShop`'s `brand`). A flag, never a URL: the caller picks
   // whether, not what.
   const brand = params.get("brand") === "1";

@@ -44,7 +44,6 @@ export function SubSurfaceRipple({
       role="status"
       aria-live="polite"
     >
-      <div className="sub-surface-ripple-ring" />
       <div className="sub-surface-ripple-message">
         <svg
           className="w-12 h-12 text-primary"

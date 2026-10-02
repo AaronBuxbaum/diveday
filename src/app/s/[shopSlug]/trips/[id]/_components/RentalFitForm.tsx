@@ -646,9 +646,7 @@ function BcdIcon({ active, label }: { active: boolean; label: string }) {
   return (
     <svg
       aria-hidden="true"
-      className={`w-9 h-9 transition-all ${
-        active ? "text-success drop-shadow-[0_0_8px_rgba(21,128,61,0.4)]" : "text-muted opacity-30"
-      }`}
+      className={`w-9 h-9 transition-all ${active ? "text-success" : "text-muted opacity-30"}`}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -671,9 +669,7 @@ function FinIcon({ active, label }: { active: boolean; label: string }) {
   return (
     <svg
       aria-hidden="true"
-      className={`w-9 h-9 transition-all ${
-        active ? "text-success drop-shadow-[0_0_8px_rgba(21,128,61,0.4)]" : "text-muted opacity-30"
-      }`}
+      className={`w-9 h-9 transition-all ${active ? "text-success" : "text-muted opacity-30"}`}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

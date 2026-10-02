@@ -368,14 +368,16 @@ export const test = base.extend<
   privateShopSlug: [null, { option: true }],
 
   /**
-   * Dress the minted shop in a **logo, a cover photo and badges**, for a
-   * visual capture and nothing else.
+   * Dress the minted shop in a **logo, a cover photo, badges, a brand colour
+   * and a display face**, for a visual capture or the storefront brand spec.
    *
    * A minted shop is blank shop-wide config, and the canonical demo has a
-   * cover photo and badges but no logo, so no fixture showed the settings
-   * profile row with a stored logo to take back off. Uploading one through the
-   * form cannot work here: the fleet configures no media storage. Set it with
-   * `test.use({ privateShopBrand: true })` on the describe that captures.
+   * cover photo and badges but no logo and no colour of its own (it wears
+   * Logbook's, ADR 20261001-logbook), so no other fixture shows the settings
+   * profile row with a stored logo to take back off, or a storefront in a
+   * shop's own colour. Uploading through the form cannot work here: the fleet
+   * configures no media storage. Set it with
+   * `test.use({ privateShopBrand: true })` on the describe that needs it.
    */
   privateShopBrand: [false, { option: true }],
 

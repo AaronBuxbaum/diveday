@@ -236,7 +236,7 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
               {/* The builder's notes beside the screen (the 2026-09-24 voice
                   decision, docs/design/brand.md): each names one thing on the
                   mockup and gives its reason or its limit. The fifth note is
-                  Harbor's storefront and the embeds, and the one place on this
+                  the shop's own storefront and the embeds, and the one place on this
                   page the built-to-order website is offered (H-64) — beside
                   the shipped claim it extends, not in the reference index,
                   which promises only the demo. */}

@@ -282,17 +282,15 @@ export async function seedIfEmpty(db: DbExecutor): Promise<void> {
 }
 
 /**
- * **Blue Mantis wears its own brand** (Harbor, ADR 20260901-diveday-reimagined):
- * the demo is where a shop leaving FareHarbor first sees a storefront that is
- * not DiveDay-coloured, so the demo shop has a colour, a face, a cover photo
- * and a badge wall. Mantis green, chosen because it is not the product's teal
- * and dark enough for white text as typed (so the demo's Settings carry no
- * darkening hint); the photo is one of the bundled Molasses Reef frames the
- * site catalog already ships.
+ * **Blue Mantis's storefront: a cover photo and a badge wall, in Logbook's own
+ * colour and face.** It set no brand colour and no display face (ADR
+ * 20261001-logbook, decision 8): the demo is what every diver-facing capture
+ * photographs, and a demo in its own green and Bricolage showed the retheme
+ * nowhere. The per-shop brand is still a shop feature; the minted fixture
+ * below is where it is exercised. The photo is one of the bundled Molasses
+ * Reef frames the site catalog already ships.
  */
 const DEMO_SHOP_BRAND: Partial<typeof shops.$inferInsert> = {
-  brandColor: "#158462",
-  brandDisplayFont: "bricolage_grotesque",
   brandHeroImageUrl: `/dive-sites/${encodeURIComponent("Elkhorn coral 8 Molasses Reef 20080309.jpg")}`,
   // i18n-exempt: a shop writes its own alt text, like its tagline.
   brandHeroImageAlt: "Elkhorn coral on Molasses Reef, sunlight from above",
@@ -301,8 +299,16 @@ const DEMO_SHOP_BRAND: Partial<typeof shops.$inferInsert> = {
 };
 
 /**
- * **The brand a minted shop wears when a visual capture asks for one**: Blue
- * Mantis's own, and a logo, which Blue Mantis has none of. The settings
+ * The colour a branded minted shop wears: mantis green, chosen because it is
+ * not the product's teal and dark enough for white text as typed. Exported for
+ * `e2e/storefront-brand.spec.ts`, which proves the storefront wears it.
+ */
+export const MINTED_DEMO_BRAND_COLOR = "#158462";
+
+/**
+ * **The brand a minted shop wears when a visual capture or a brand spec asks
+ * for one**: Blue Mantis's cover photo and badges, plus the colour, display
+ * face and logo Blue Mantis itself does not carry. The settings
  * profile row takes a stored logo and cover photo back off, and
  * `settings-profile` is the only capture that shows it with both on file. The
  * canonical demo cannot be that fixture: a logo on it would sit in the header
@@ -314,6 +320,8 @@ const DEMO_SHOP_BRAND: Partial<typeof shops.$inferInsert> = {
  */
 const MINTED_DEMO_BRAND: Partial<typeof shops.$inferInsert> = {
   ...DEMO_SHOP_BRAND,
+  brandColor: MINTED_DEMO_BRAND_COLOR,
+  brandDisplayFont: "bricolage_grotesque",
   logoUrl: `/dive-sites/${encodeURIComponent("French Angelfish Molasses Reef 20080309.jpg")}`,
 };
 
@@ -683,7 +691,8 @@ export async function createDemoShop(
   db: DbExecutor,
   /**
    * `brand` dresses the shop in `MINTED_DEMO_BRAND` (a logo, a cover photo,
-   * badges), for the one capture of the profile row that needs them on file.
+   * badges, a colour and a display face), for the profile row's capture and
+   * the storefront brand spec.
    * Left off, a minted shop is blank shop-wide config, as every behavioural
    * spec expects.
    */

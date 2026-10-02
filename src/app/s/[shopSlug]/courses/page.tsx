@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { AgencyTabs } from "@/components/AgencyTabs";
-import { CourseWavePlaceholder } from "@/components/CourseWavePlaceholder";
 import { EmptyState } from "@/components/EmptyState";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StoredPhoto } from "@/components/StoredPhoto";
@@ -187,7 +186,10 @@ export default async function PublicCoursesPage({
                           sizes="64px"
                         />
                       ) : (
-                        <CourseWavePlaceholder className="size-16 shrink-0 rounded-inset" />
+                        <div
+                          aria-hidden="true"
+                          className="size-16 shrink-0 rounded-inset bg-surface-sunken"
+                        />
                       )}
                       <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
                         <div className="min-w-0">

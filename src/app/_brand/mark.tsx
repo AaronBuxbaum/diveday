@@ -1,4 +1,4 @@
-import { MARK_CORAL, MARK_FOAM, MARK_GRADIENT } from "./colors";
+import { MARK_CORAL, MARK_FOAM, MARK_GROUND } from "./colors";
 
 /**
  * **The bubble-trail mark, at any size, for the bitmaps a browser asks for.**
@@ -32,7 +32,7 @@ export function BubbleMark({ size, maskable = false }: { size: number; maskable?
         height: "100%",
         display: "flex",
         position: "relative",
-        background: MARK_GRADIENT,
+        background: MARK_GROUND,
         // A maskable icon must bleed to the edge — the launcher supplies the
         // corner. A favicon keeps the rounded square it has always had, scaled.
         borderRadius: maskable ? 0 : unit * 7,

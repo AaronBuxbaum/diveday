@@ -8,8 +8,8 @@ import { utcToWallTime } from "./zoned";
  *
  * The system sheet draws six: the green turtle (the all-clear), the
  * parrotfish (the reef trip), the sea fan (courses), the brain coral (the dive
- * site), the bubble trail (the mark) and the swell (the divider and the band —
- * `Swell.tsx`, since it is a line rather than a tile). Four of them stand for
+ * site), the bubble trail (the mark) and the swell (the divider and the band,
+ * deleted with the Logbook retheme). Four of them stand for
  * a departure on the home spine and the week board — the parrotfish for a
  * reef, the sea fan for a course session (taught, whatever the site), the
  * bubble trail for open water or a site nobody has named yet — plus a

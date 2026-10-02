@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { CourseWavePlaceholder } from "@/components/CourseWavePlaceholder";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { buttonClass, tapTargetLineClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -22,10 +21,10 @@ import type { DiverTranslator } from "@/i18n/messages";
  * yet on the board is a real day-zero shape, and the shelf is the only thing on
  * that page with something to sell.
  *
- * A card with no `courses.heroImageUrl` gets `CourseWavePlaceholder` rather
- * than a grey box or somebody else's stock reef — one drawn swell in the
- * primary tint, never the accent, which decision 11's budget has already spent
- * on the review stars.
+ * A card with no `courses.heroImageUrl` keeps the photo's place as a plain
+ * sunken tile rather than somebody else's stock reef, so the three cards stay
+ * one height. Nothing is drawn on it (ADR 20261001-logbook: no ornament); the
+ * card's heading names the course.
  */
 export function CoursesShelf({
   courses,
@@ -99,7 +98,7 @@ export function CoursesShelf({
                   sizes="(min-width: 1024px) 22rem, (min-width: 640px) 50vw, 100vw"
                 />
               ) : (
-                <CourseWavePlaceholder className="h-32 w-full" />
+                <div aria-hidden="true" className="h-32 w-full bg-surface-sunken" />
               )}
               {/* A card's inset, `SectionCard`'s `p-4 sm:p-5`: at `p-4` alone
                   the title started 4px left of the cards beside it at 1280. */}

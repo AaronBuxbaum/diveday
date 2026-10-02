@@ -14,8 +14,8 @@
  * `src/components/Logo.tsx` is the live SVG that reads the tokens properly.
  */
 
-/** The mark's ground: `--primary` into `--primary-hover`, light mode. */
-export const MARK_GRADIENT = "linear-gradient(135deg, #0b6e8a, #08566c)";
+/** The mark's ground: flat `--primary`, light mode — Logbook draws no gradients. */
+export const MARK_GROUND = "#0b6e8a";
 
 /** The bubbles rising off it — foam, and the one coral highlight. */
 export const MARK_FOAM = "#eafcff";
