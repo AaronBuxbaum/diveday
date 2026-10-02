@@ -27,9 +27,8 @@
 // A check keyed on the purpose union alone would have caught `handoff` and missed `shelf`
 // and `gift`: it would have re-created the same omission one table over, which is the
 // exact failure being guarded. The table also covers `waiver_records`, three
-// `account_tokens` purposes, `shop_contact_email_confirmation_tokens`,
-// `person_shelf_tokens`, two unsubscribe tables and two stateless signed shapes, so no
-// single list is the whole surface.
+// `account_tokens` purposes, `shop_contact_email_confirmation_tokens`, two unsubscribe
+// tables and two stateless signed shapes, so no single list is the whole surface.
 //
 // The lists are read out of *source text*, not imported. `CAPABILITY_QUERY_PARAMS` is
 // module-local — a guard that imports the module sees only `CAPABILITY_ROUTE_PREFIXES` —

@@ -273,8 +273,6 @@ const ERASURE_KEEPS: Record<string, string> = {
     "that one seat arrived from another seat's recap link — two booking ids and a timestamp, and nothing else. Both bookings carry their own erasure, so the diver either side of the link is erased where they are stored",
   trip_sightings:
     "what a crew tapped at a site: a species slug from DiveDay’s own catalogue, a count, and the site’s name as it stood. Its two person columns are the crew member who tapped and the one who undid it, pointers joined at read the way `trip_desk_events` is",
-  person_shelf_tokens:
-    "nothing mints, reads or verifies a shelf token since the diver's shelf was cut; the table holds hashed tokens alone and goes at the next schema drop",
   trip_desk_events:
     "`subject_person_id` is a pointer by design and the name is joined at read, which resolves to the anonymized one after this runs",
   trip_help_requests:
@@ -307,7 +305,6 @@ const ERASURE_KEEPS: Record<string, string> = {
   shop_promo_codes: "a discount the shop published, its window and its ceiling",
   trip_last_minute_promos:
     "that a shop offered a deal on a departure and to how many people. The addresses it reached are on the recipient rows, which the erasure redacts",
-  display_tokens: "a lobby screen's own capability and label, issued by a staff member",
   waiver_materiality_decisions:
     "an owner's ruling on whether a template change was material — a decision about the shop’s text, not about any signer",
 
@@ -379,14 +376,11 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   shop_backup_destinations: "where the shop sends its own backups, and the sealed key to get there",
   shop_backup_deliveries:
     "whether one of those bundles arrived; a period key, a byte count and a status",
-  shop_print_runs:
-    "when the shop last printed each of its own sheets — a sheet name, the boat a boat card is for, and a timestamp. The paper pass records under the empty subject key precisely so which diver it printed for is not kept",
   boats: "the shop’s vessels",
   courses: "the shop’s course catalogue, copied from a template and then its own",
   waiver_templates:
     "the text a shop asks people to sign, versioned. The *signatures* are `waiver_records`, which the erasure strips and re-seals",
   trip_lenses: "the shop’s own word for a kind of day",
-  season_events: "the shop’s own year — a mini-season, a derby, a nesting window",
   trip_series:
     "the cadence a repeating departure is generated from. Its instances are ordinary `trips` rows",
   trip_series_skips:

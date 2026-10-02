@@ -21,7 +21,6 @@ import {
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
-  bookingGifts,
   bookingPayments,
   bookingReferrals,
   bookings,
@@ -35,7 +34,6 @@ import {
   crewAssignmentRequests,
   crewAvailabilityBlocks,
   dayCloseouts,
-  displayTokens,
   divePackageEntitlements,
   diveSiteCreatures,
   diveSiteMoments,
@@ -67,7 +65,6 @@ import {
   people,
   personCourtesyEmailUnsubscribeTokens,
   personRoles,
-  personShelfTokens,
   preDepartureCheckEvents,
   priorGearAssignments,
   priorVisits,
@@ -1179,10 +1176,6 @@ export async function resetDemoSchedule(
   // against them are schedule-scoped operational history.
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
   await db.delete(tripStageEvents).where(eq(tripStageEvents.shopId, shopId));
-  // Lobby-display links (issue #1426): nothing seeds one, so a reset clears
-  // them outright and every spec starts with no screens — which is also what
-  // lets the visual captures mint exactly one and photograph exactly one.
-  await db.delete(displayTokens).where(eq(displayTokens.shopId, shopId));
   await db.delete(heldSends).where(eq(heldSends.shopId, shopId));
   await db.delete(formDrafts).where(eq(formDrafts.shopId, shopId));
   // Neither of these is seeded — both are written only by what a visitor does
@@ -1228,15 +1221,8 @@ export async function resetDemoSchedule(
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
   // Readiness/confirm capabilities reference bookings, so they must go before them.
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
-  // Shelf links reference `people`, and the purge below takes every diver, so
-  // they go shop-wide rather than by id: a reset restores the fixture's
-  // schedule, and a credential minted at a diver who is about to be re-seeded
-  // is part of that schedule, not part of the shop's configuration.
-  await db.delete(personShelfTokens).where(eq(personShelfTokens.shopId, shopId));
-  // The gift and the buddy referral both reference bookings, so both go before
-  // them (ADR 20260908-one-hand, decision 6, lever W). `booking_referrals`
-  // names two bookings and neither is deleted first, so it goes here too.
-  await db.delete(bookingGifts).where(eq(bookingGifts.shopId, shopId));
+  // The buddy referral references bookings (ADR 20260908-one-hand, decision 6,
+  // lever W) — two of them, and neither is deleted first — so it goes before them.
   await db.delete(bookingReferrals).where(eq(bookingReferrals.shopId, shopId));
   // Tips reference bookings, so they must go before them — same FK this
   // cascade's sibling (deleteDemoShopCascade) already fixed (Codex finding:

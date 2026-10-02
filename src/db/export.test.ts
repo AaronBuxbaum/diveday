@@ -190,10 +190,6 @@ const FOLDED_TABLES = [
  * its export fate fails the coverage test below.
  */
 const EXCLUDED_TABLES = [
-  // Seasons and events were cut from the product (ADR 20261001-logbook):
-  // nothing writes this table any more, and it is dropped in the schema pass
-  // that follows the cut.
-  "season_events",
   // Historical assignments are source evidence attached to the gear-history
   // import, not a live reservation or booking record. They remain in the
   // shop database and are intentionally not part of the current full-shop
@@ -227,13 +223,6 @@ const EXCLUDED_TABLES = [
   // exactly the reason notification_delivery_attempts is.
   "waiver_deliveries",
   "notification_send_queue", // operational retry state, not shop records
-  // When each printed sheet was last printed. Not a shop record at all, and
-  // nothing writes it since the window sticker, dock sign, boat card and
-  // briefing cards were cut; the table waits for its schema drop.
-  "shop_print_runs",
-  // A seat one person bought for another. Nothing writes it since gifting a
-  // dive was cut; the table waits for its schema drop.
-  "booking_gifts",
   // Per-device Web Push credentials (ADR 20260804-manifest-web-push). Excluded
   // for two independent reasons: they are meaningless in another system — an
   // endpoint is issued by a browser vendor to one installed app on one device,
@@ -277,10 +266,8 @@ const EXCLUDED_TABLES = [
   "auth_provider_accounts",
   "auth_verifications",
   "calendar_feeds", // bearer credentials for a staff calendar subscription, never exported
-  "display_tokens", // bearer credentials for a lobby screen's departures board, never exported
   "last_minute_list_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "person_courtesy_email_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
-  "person_shelf_tokens", // bearer credentials over a diver's own file, never exported — same reasoning as booking_capabilities
   "shop_contact_email_confirmation_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   // The shop's own Meta access token (sealed) plus the provider linkage around
   // it. Never exported, for both reasons already on this list: it is a live
@@ -352,24 +339,6 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // can address mail into this shop's inbox, and a restored shop is minted a
     // fresh one by the database rather than carrying the old one in a CSV.
     "inbound_email_token",
-    // Nothing writes or reads these two since the regional directory and the
-    // public year card were cut; both columns go with the schema drop.
-    "region_slug",
-    // Settings cut by ADR 20261001-logbook. Nothing reads or writes these any
-    // more, and the schema pass that follows the cut drops them.
-    "conservation_commitments",
-    "send_window_start_hour",
-    "send_window_end_hour",
-    "fly_safe_hours_single",
-    "fly_safe_hours_repetitive",
-    "tide_window_public",
-    "welcome_note",
-    "dock_call_note",
-    "sign_off_note",
-    "show_year_on_diveday",
-    // The switch for the public boat line, which was cut with the page it
-    // published. Nothing reads or writes it; the column waits for its drop.
-    "public_boat_line",
   ], // DiveDay-side config, not shop records
   boats: ["shop_id"],
   trip_lenses: ["shop_id"],
@@ -434,15 +403,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "stripe_promotion_code_id",
   ],
   trip_last_minute_promo_recipients: ["shop_id"],
-  booking_arrival_events: [
-    "shop_id",
-    // Which counter tablet an arrival was tapped on (N-24). `display_tokens` is
-    // never exported — it holds bearer credentials at rest — so this id would
-    // resolve to nothing inside the bundle. What the column is *for* survives
-    // the export anyway: a self check-in's `recorded_by_person_id` is the
-    // diver's own, and a desk check-in's is the staffer who served them.
-    "display_token_id",
-  ],
+  booking_arrival_events: ["shop_id"],
   roll_call_events: ["shop_id"],
   roll_call_crew_events: ["shop_id"],
   // The member row's surrogate id says nothing beyond (pair_id, booking_id),
