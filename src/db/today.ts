@@ -1860,10 +1860,10 @@ export async function getTodayWork(
         // bookkeeping, so the sentence carries only what a staffer cannot see
         // without it: the file outlived the record.
         detail: failedPhotoDeletionDetailText(t),
-        // Settings' "Data & integrations" group — the retry button for a stuck
+        // Settings' "Data" group — the retry button for a stuck
         // deletion lives there now, at the group anchor this href lands on.
         actionLabel: openDataSettingsActionText(t),
-        href: `/shop/${shopSlug}/settings#data-integrations`,
+        href: `/shop/${shopSlug}/settings#data`,
         dueAt: null,
       });
     }

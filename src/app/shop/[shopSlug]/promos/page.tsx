@@ -593,6 +593,19 @@ export default async function PromosPage({
         total={t("promos.tripDeals.pagination.total", { count: dealPage.total })}
         words={staffPagerWords(t)}
       />
+
+      {/* Prepaid packages are the third price this tab holds (ADR
+          20261001-logbook): set up once, so a door rather than a list. */}
+      <GroupLabel as="h2" id="dive-packages" className="mt-10">
+        {t("settings.main.divePackages.heading")}
+      </GroupLabel>
+      <p className="mt-1 text-sm text-muted">{t("settings.main.divePackages.description")}</p>
+      <Link
+        href={`/shop/${shopSlug}/promos/packages`}
+        className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}
+      >
+        {t("promos.packages.open")}
+      </Link>
     </main>
   );
 }

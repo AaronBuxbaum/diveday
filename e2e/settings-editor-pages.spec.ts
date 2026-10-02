@@ -40,7 +40,6 @@ test("the hub's four editors are doors, and each opens its own page", async ({
     ["Boats", "boats"],
     ["Kinds of day", "kinds-of-day"],
     ["Seasons and events", "seasons"],
-    ["Dive packages", "dive-packages"],
   ] as const) {
     await expect(main.getByRole("link", { name, exact: true })).toHaveAttribute(
       "href",
@@ -90,7 +89,7 @@ test("a package is added on its own page, and the save lands back on it", async 
 }) => {
   test.setTimeout(60_000);
   const SHOP = privateShop.slug;
-  await page.goto(`/shop/${SHOP}/settings/dive-packages`);
+  await page.goto(`/shop/${SHOP}/promos/packages`);
   await expect(page.getByRole("heading", { level: 1, name: "Dive packages" })).toBeVisible();
 
   await page.getByLabel("What you call it").fill("Ten-dive card");

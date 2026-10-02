@@ -14,7 +14,7 @@ import { SettingsRow } from "./_components/SettingsRows";
  *
  * **It is a row, not a card.** This was a full bordered `SectionCard` — a
  * heading, a two-sentence caption, the URL, and a "Show the code" disclosure
- * inside it — standing between the "Data & integrations" group label and the
+ * inside it — standing between its group label and the
  * ten plain rows that are its siblings. One object in a list of eleven wearing
  * its own border is the inconsistency the group heading exists to prevent, and
  * the card's inner disclosure made it a disclosure inside a disclosure. It is

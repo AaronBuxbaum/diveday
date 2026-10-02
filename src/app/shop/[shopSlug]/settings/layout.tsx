@@ -10,7 +10,6 @@ import {
   canManageMessagingSettings,
   canManageStaffAccounts,
   canManageWaiverTemplates,
-  canViewShopReports,
 } from "@/lib/authz";
 import { requireShopSurface } from "@/lib/session";
 import { SettingsRail } from "./_components/SettingsRail";
@@ -85,7 +84,6 @@ async function SettingsRailPanel({ params }: { params: Promise<{ shopSlug: strin
   if (canPayments) gates.add("payments");
   if (canManageStaffAccounts(roles)) gates.add("team");
   if (canManageWaiverTemplates(roles)) gates.add("waivers");
-  if (canViewShopReports(roles)) gates.add("promos");
   if (canManageMessagingSettings(roles)) gates.add("messaging");
   if (canImportShopData(roles)) gates.add("import");
   if (canExportShopData(roles)) gates.add("export");

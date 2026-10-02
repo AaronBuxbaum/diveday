@@ -122,7 +122,7 @@ export async function recordProcessorErasureObligations(
 
 /**
  * This shop's still-owed obligations, oldest first — the panel in Settings'
- * "Data & integrations" group.
+ * "Data" group.
  * Shop-scoped in the query, never filtered in the caller: an obligation names a
  * record in one shop's Stripe account and has no business being readable from
  * another's.

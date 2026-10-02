@@ -2468,6 +2468,21 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("link")
           .first()
           .waitFor();
+        // The current chip sits past a phone's edge until `FilterChipsScroller`
+        // hydrates and scrolls the row to it; a capture taken before that drew
+        // the row at its start, so wait until the chip lies whole inside its row.
+        const chip = page.locator('[aria-current="true"]', { hasText: "After dark" });
+        await expect
+          .poll(() =>
+            chip.evaluate((element) => {
+              const row = element.parentElement?.closest("div");
+              if (!row) return false;
+              const a = element.getBoundingClientRect();
+              const b = row.getBoundingClientRect();
+              return a.left >= b.left && a.right <= b.right;
+            }),
+          )
+          .toBe(true);
         await capture(page, "schedule-lens", scheme);
       });
 
@@ -6404,7 +6419,7 @@ for (const scheme of ["light", "dark"] as const) {
        * turns itself on.
        */
       test(`the dive-packages page renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings/dive-packages");
+        await page.goto("/shop/blue-mantis/promos/packages");
         await page.getByRole("heading", { level: 1, name: "Dive packages" }).waitFor();
         await page.getByRole("button", { name: "Add package" }).waitFor();
         await capture(page, "settings-dive-packages", scheme);
@@ -6603,7 +6618,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * Settings' "Data & integrations" group when the shop owes work it has
+       * Settings' "Data" group when the shop owes work it has
        * not finished: photos removed from the app but still in storage, and an
        * erased diver's records still sitting at Stripe. Danger-toned, and the
        * only place either obligation is ever stated — an unfinished erasure is

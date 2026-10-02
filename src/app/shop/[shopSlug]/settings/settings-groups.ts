@@ -1,7 +1,9 @@
 import type { StaffMessageKey } from "@/i18n/staff-messages";
 
 /**
- * The settings hub's one list of groups, in render order. Both of the hub's
+ * The settings hub's one list of groups, in render order: the ten of ADR
+ * 20261001-logbook, each named for what a shop is setting up rather than for
+ * where the row happened to be built. Both of the hub's
  * `SettingsPage.tsx` renders its sections from this one list. It remains a
  * registry rather than three local constants so a new section cannot drift
  * from the hub's section order or its test coverage.
@@ -15,9 +17,16 @@ import type { StaffMessageKey } from "@/i18n/staff-messages";
  * 20260827-clearwater-surface-language, decision 6).
  */
 export const SETTINGS_GROUPS = [
-  { id: "your-shop", labelKey: "settings.main.groups.yourShop" },
+  { id: "shop", labelKey: "settings.main.groups.shop" },
+  { id: "team", labelKey: "settings.main.groups.team" },
+  { id: "boats-sites", labelKey: "settings.main.groups.boatsSites" },
+  { id: "bookings-waivers", labelKey: "settings.main.groups.bookingsWaivers" },
+  { id: "rental-gear", labelKey: "settings.main.groups.rentals" },
   { id: "money", labelKey: "settings.main.groups.money" },
-  { id: "data-integrations", labelKey: "settings.main.groups.dataIntegrations" },
+  { id: "messages", labelKey: "settings.main.groups.messages" },
+  { id: "website", labelKey: "settings.main.groups.website" },
+  { id: "data", labelKey: "settings.main.groups.data" },
+  { id: "account", labelKey: "settings.main.groups.account" },
 ] as const satisfies readonly { id: string; labelKey: StaffMessageKey }[];
 
 export type SettingsGroupId = (typeof SETTINGS_GROUPS)[number]["id"];
@@ -36,7 +45,8 @@ export type SettingsGroupSpec = (typeof SETTINGS_GROUPS)[number];
  * every line; "Seasons and events" alone held six of them inside one `⌄`. The
  * hub is a directory, and a directory row states an answer and opens the form
  * that changes it (ADR 20260827-clearwater-surface-language, decision 6). Those
- * four are `route` rows below and `SettingsDoorRow`s on the hub; their actions
+ * are `route` rows below and `SettingsDoorRow`s on the hub (dive packages has
+ * since moved under Money's Discounts tab); their actions
  * redirect to their own page with a plain `?notice=`.
  *
  * It lives here rather than in `SettingsPage.tsx` because the rail below needs
@@ -103,7 +113,6 @@ export type SettingsRailGate =
   | "payments"
   | "team"
   | "waivers"
-  | "promos"
   | "messaging"
   | "import"
   | "export"
@@ -138,8 +147,8 @@ export type SettingsRailRow = {
  *
  * Two rules hold it to the hub. It covers every `SECTION_IDS` entry, so no
  * section of the pane is unreachable from the rail; and it covers every door
- * the hub renders, including the three that leave the `/settings` namespace
- * (dive sites, waivers, promo codes). Both are pinned in
+ * the hub renders, including the two that leave the `/settings` namespace
+ * (dive sites, waivers). Both are pinned in
  * `_components/SettingsRail.test.tsx` against the hub's own render, so a row
  * added to one and missed on the other fails rather than quietly falling off
  * the map.
@@ -149,192 +158,135 @@ export type SettingsRailRow = {
  * with the page would light the wrong row.
  */
 export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
-  // Your shop — the doors first, exactly as the hub lists them, then its
-  // editable rows.
-  {
-    id: "team",
-    labelKey: "settings.main.team.heading",
-    group: "your-shop",
-    target: { kind: "route", path: "/settings/team" },
-    gate: "team",
-  },
-  {
-    id: "diveSites",
-    labelKey: "settings.main.diveSites.heading",
-    group: "your-shop",
-    target: { kind: "route", path: "/dive-sites" },
-  },
-  {
-    id: "waivers",
-    labelKey: "settings.main.waivers.heading",
-    group: "your-shop",
-    target: { kind: "route", path: "/waivers" },
-    gate: "waivers",
-  },
-  {
-    id: "safetyChecklist",
-    labelKey: "settings.main.safetyChecklist.heading",
-    group: "your-shop",
-    target: { kind: "route", path: "/settings/safety-checklist" },
-  },
-  {
-    id: "security",
-    labelKey: "settings.main.security.heading",
-    group: "your-shop",
-    target: { kind: "route", path: "/settings/security" },
-  },
   {
     id: "timezone",
     labelKey: "settings.main.timezone.heading",
-    group: "your-shop",
+    group: "shop",
     target: { kind: "section", id: "timezone" },
   },
   {
     id: "season",
     labelKey: "settings.main.season.heading",
-    group: "your-shop",
+    group: "shop",
     target: { kind: "section", id: "season" },
-  },
-  {
-    id: "contact",
-    labelKey: "settings.main.contact.heading",
-    group: "your-shop",
-    target: { kind: "section", id: "contact" },
-  },
-  {
-    id: "profile",
-    labelKey: "settings.main.profile.heading",
-    group: "your-shop",
-    target: { kind: "section", id: "profile" },
-  },
-  {
-    id: "hospitality",
-    labelKey: "settings.main.hospitality.heading",
-    group: "your-shop",
-    target: { kind: "section", id: "hospitality" },
-  },
-  {
-    id: "address",
-    labelKey: "settings.main.address.heading",
-    group: "your-shop",
-    target: { kind: "section", id: "address" },
-  },
-  {
-    id: "reviewLink",
-    labelKey: "settings.main.reviewLink.heading",
-    group: "your-shop",
-    target: { kind: "section", id: "reviewLink" },
-  },
-  {
-    id: "searchListing",
-    labelKey: "settings.main.searchListing.heading",
-    group: "your-shop",
-    target: { kind: "section", id: "searchListing" },
-  },
-  {
-    id: "tideWindow",
-    labelKey: "settings.main.tideWindow.heading",
-    group: "your-shop",
-    target: { kind: "section", id: "tideWindow" },
-  },
-  {
-    id: "conservation",
-    labelKey: "settings.main.conservation.heading",
-    group: "your-shop",
-    target: { kind: "section", id: "conservation" },
-  },
-  {
-    id: "packing",
-    labelKey: "settings.main.packing.heading",
-    group: "your-shop",
-    target: { kind: "section", id: "packing" },
-  },
-  {
-    id: "dockCall",
-    labelKey: "settings.main.dockCall.heading",
-    group: "your-shop",
-    target: { kind: "section", id: "dockCall" },
-  },
-  {
-    id: "sendWindow",
-    labelKey: "settings.main.sendWindow.heading",
-    group: "your-shop",
-    target: { kind: "section", id: "sendWindow" },
-  },
-  {
-    id: "flySafe",
-    labelKey: "settings.main.flySafe.heading",
-    group: "your-shop",
-    target: { kind: "section", id: "flySafe" },
   },
   {
     id: "units",
     labelKey: "settings.main.units.heading",
-    group: "your-shop",
+    group: "shop",
     target: { kind: "section", id: "units" },
   },
   {
-    id: "divingOptions",
-    labelKey: "boats.divingOptionsHeading",
-    group: "your-shop",
-    target: { kind: "section", id: "divingOptions" },
+    id: "contact",
+    labelKey: "settings.main.contact.heading",
+    group: "shop",
+    target: { kind: "section", id: "contact" },
   },
   {
-    id: "emergency",
-    labelKey: "settings.main.emergency.heading",
-    group: "your-shop",
-    target: { kind: "section", id: "emergency" },
+    id: "address",
+    labelKey: "settings.main.address.heading",
+    group: "shop",
+    target: { kind: "section", id: "address" },
+  },
+  {
+    id: "print",
+    labelKey: "print.settings.title",
+    group: "shop",
+    target: { kind: "route", path: "/settings/print" },
+  },
+  {
+    id: "team",
+    labelKey: "settings.main.team.heading",
+    group: "team",
+    target: { kind: "route", path: "/settings/team" },
+    gate: "team",
   },
   {
     id: "boats",
     labelKey: "boats.heading",
-    group: "your-shop",
+    group: "boats-sites",
     target: { kind: "route", path: "/settings/boats" },
     gate: "boats",
   },
-  // No gate: a shore-diving shop with no hull still names its kinds of day
-  // (ADR 20260904-reef-all-the-way-down, decision 2).
+  {
+    id: "diveSites",
+    labelKey: "settings.main.diveSites.heading",
+    group: "boats-sites",
+    target: { kind: "route", path: "/dive-sites" },
+  },
+  {
+    id: "divingOptions",
+    labelKey: "boats.divingOptionsHeading",
+    group: "boats-sites",
+    target: { kind: "section", id: "divingOptions" },
+  },
+  {
+    id: "safetyChecklist",
+    labelKey: "settings.main.safetyChecklist.heading",
+    group: "boats-sites",
+    target: { kind: "route", path: "/settings/safety-checklist" },
+  },
+  {
+    id: "emergency",
+    labelKey: "settings.main.emergency.heading",
+    group: "boats-sites",
+    target: { kind: "section", id: "emergency" },
+  },
+  {
+    id: "dockCall",
+    labelKey: "settings.main.dockCall.heading",
+    group: "boats-sites",
+    target: { kind: "section", id: "dockCall" },
+  },
+  {
+    id: "tideWindow",
+    labelKey: "settings.main.tideWindow.heading",
+    group: "boats-sites",
+    target: { kind: "section", id: "tideWindow" },
+  },
   {
     id: "lenses",
     labelKey: "lenses.heading",
-    group: "your-shop",
+    group: "boats-sites",
     target: { kind: "route", path: "/settings/kinds-of-day" },
   },
-  // The shop's own year (issue #1485). Beside the words above it, and ungated
-  // for the same reason: a shore-diving shop still has a mini-season.
   {
     id: "seasonEvents",
     labelKey: "seasonEvents.heading",
-    group: "your-shop",
+    group: "boats-sites",
     target: { kind: "route", path: "/settings/seasons" },
   },
-  // Money.
   {
-    id: "promos",
-    labelKey: "settings.main.promos.heading",
-    group: "money",
-    target: { kind: "route", path: "/promos" },
-    gate: "promos",
+    id: "waivers",
+    labelKey: "settings.main.waivers.heading",
+    group: "bookings-waivers",
+    target: { kind: "route", path: "/waivers" },
+    gate: "waivers",
+  },
+  {
+    id: "packing",
+    labelKey: "settings.main.packing.heading",
+    group: "bookings-waivers",
+    target: { kind: "section", id: "packing" },
+  },
+  {
+    id: "flySafe",
+    labelKey: "settings.main.flySafe.heading",
+    group: "bookings-waivers",
+    target: { kind: "section", id: "flySafe" },
   },
   {
     id: "rentals",
     labelKey: "settings.main.rentals.heading",
-    group: "money",
+    group: "rental-gear",
     target: { kind: "section", id: "rentals" },
     gate: "payments",
   },
   {
     id: "rentalPricing",
     labelKey: "settings.main.rentalPricing.heading",
-    group: "money",
+    group: "rental-gear",
     target: { kind: "section", id: "rentalPricing" },
-    gate: "payments",
-  },
-  {
-    id: "divePackages",
-    labelKey: "settings.main.divePackages.heading",
-    group: "money",
-    target: { kind: "route", path: "/settings/dive-packages" },
     gate: "payments",
   },
   {
@@ -359,78 +311,113 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     gate: "payments",
     badgeSource: "payments",
   },
-  // Data & integrations — all doors.
   {
-    id: "embed",
-    labelKey: "settings.main.embed.heading",
-    group: "data-integrations",
-    target: { kind: "route", path: "/settings/embed" },
+    id: "sendWindow",
+    labelKey: "settings.main.sendWindow.heading",
+    group: "messages",
+    target: { kind: "section", id: "sendWindow" },
   },
   {
-    id: "calendar",
-    labelKey: "settings.main.calendar.heading",
-    group: "data-integrations",
-    target: { kind: "route", path: "/settings/calendar" },
-  },
-  {
-    id: "display",
-    labelKey: "settings.main.display.heading",
-    group: "data-integrations",
-    target: { kind: "route", path: "/settings/display" },
-  },
-  {
-    id: "print",
-    labelKey: "print.settings.title",
-    group: "data-integrations",
-    target: { kind: "route", path: "/settings/print" },
-  },
-  {
-    id: "integrations",
-    labelKey: "settings.main.integrations.heading",
-    group: "data-integrations",
-    target: { kind: "route", path: "/settings/integrations" },
+    id: "reviewLink",
+    labelKey: "settings.main.reviewLink.heading",
+    group: "messages",
+    target: { kind: "section", id: "reviewLink" },
   },
   {
     id: "whatsapp",
     labelKey: "settings.main.whatsapp.heading",
-    group: "data-integrations",
+    group: "messages",
     target: { kind: "route", path: "/settings/whatsapp" },
     gate: "messaging",
   },
   {
+    id: "profile",
+    labelKey: "settings.main.profile.heading",
+    group: "website",
+    target: { kind: "section", id: "profile" },
+  },
+  {
+    id: "searchListing",
+    labelKey: "settings.main.searchListing.heading",
+    group: "website",
+    target: { kind: "section", id: "searchListing" },
+  },
+  {
+    id: "hospitality",
+    labelKey: "settings.main.hospitality.heading",
+    group: "website",
+    target: { kind: "section", id: "hospitality" },
+  },
+  {
+    id: "conservation",
+    labelKey: "settings.main.conservation.heading",
+    group: "website",
+    target: { kind: "section", id: "conservation" },
+  },
+  {
+    id: "embed",
+    labelKey: "settings.main.embed.heading",
+    group: "website",
+    target: { kind: "route", path: "/settings/embed" },
+  },
+  {
+    id: "display",
+    labelKey: "settings.main.display.heading",
+    group: "website",
+    target: { kind: "route", path: "/settings/display" },
+  },
+  {
+    id: "integrations",
+    labelKey: "settings.main.integrations.heading",
+    group: "data",
+    target: { kind: "route", path: "/settings/integrations" },
+  },
+  {
     id: "backup",
     labelKey: "settings.main.backup.heading",
-    group: "data-integrations",
+    group: "data",
     target: { kind: "route", path: "/settings/export#backups" },
     gate: "export",
   },
   {
     id: "dataImport",
     labelKey: "settings.import.title",
-    group: "data-integrations",
+    group: "data",
     target: { kind: "route", path: "/settings/import" },
     gate: "import",
   },
   {
     id: "gearImport",
     labelKey: "gear.import.title",
-    group: "data-integrations",
+    group: "data",
     target: { kind: "route", path: "/settings/gear-import" },
     gate: "import",
   },
   {
     id: "diveSiteImport",
     labelKey: "diveSites.import.title",
-    group: "data-integrations",
+    group: "data",
     target: { kind: "route", path: "/settings/dive-site-import" },
     gate: "import",
   },
   {
     id: "dataExport",
     labelKey: "settings.export.title",
-    group: "data-integrations",
+    group: "data",
     target: { kind: "route", path: "/settings/export" },
     gate: "export",
+  },
+  {
+    id: "security",
+    labelKey: "settings.main.security.heading",
+    group: "account",
+    target: { kind: "route", path: "/settings/security" },
+  },
+  {
+    id: "calendar",
+    labelKey: "settings.main.calendar.heading",
+    group: "account",
+    target: { kind: "route", path: "/settings/calendar" },
   },
 ];
 

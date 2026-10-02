@@ -123,7 +123,7 @@ function stuckDeletionWhere(staleBefore: Date) {
   );
 }
 
-/** Attempts an owner needs to see and can retry — the panel in Settings' "Data & integrations" group. */
+/** Attempts an owner needs to see and can retry — the panel in Settings' "Data" group. */
 export async function listPendingMediaDeletions(
   db: AppDb,
   shopId: string,

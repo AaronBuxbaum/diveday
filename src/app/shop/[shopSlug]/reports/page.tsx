@@ -82,7 +82,7 @@ function earlierMonth(left: MonthRef, right: MonthRef): MonthRef {
  * never finished, erasures still owed at the processor — which made a third of
  * "how did the month go" into a to-do list about something else entirely. Each
  * moved to the surface that owns its object: payments to the Orders index,
- * both deletion queues to Settings' "Data & integrations" group. Nothing on
+ * both deletion queues to Settings' "Data" group. Nothing on
  * this page is actionable now except the month you are looking at and the
  * revenue figure's jump into Orders.
  *

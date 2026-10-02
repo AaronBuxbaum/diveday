@@ -27,7 +27,7 @@ const SHOP = DEMO_SHOP_SLUG;
 test.describe("as owner", () => {
   signedInAs("owner");
 
-  test("the sub-nav reaches each group, and Settings opens Team and Promo codes", async ({
+  test("the sub-nav reaches each group, Settings opens Team, and Discounts opens packages", async ({
     page,
   }) => {
     await page.goto(`/shop/${SHOP}/settings`);
@@ -36,8 +36,8 @@ test.describe("as owner", () => {
     // headings remain the stable anchors for deep links and the cards expose
     // the actual doors.
     await expect(page.locator("h2#money")).toBeVisible();
-    await page.goto(`/shop/${SHOP}/settings#data-integrations`);
-    await expect(page.locator("h2#data-integrations")).toBeVisible();
+    await page.goto(`/shop/${SHOP}/settings#data`);
+    await expect(page.locator("h2#data")).toBeVisible();
 
     // Team: the row an owner opening Settings to add a colleague looks for.
     // The heading is the link now — a door row carries no separate CTA label.
@@ -46,14 +46,17 @@ test.describe("as owner", () => {
     await expect(page).toHaveURL(`/shop/${SHOP}/settings/team`);
     await expect(page.getByRole("heading", { level: 1, name: "Team" })).toBeVisible();
 
-    // Promo codes: in Money, where the shop's other money is. These cards are
-    // the doors on the surface that owns them, and since the nav of nouns left
-    // they are the *only* standing doors — the shop's own name opens Settings,
-    // and the search finds the rest (ADR 20260919-one-idea, slice 23b).
-    await page.goto(`/shop/${SHOP}/settings`);
-    await page.getByRole("main").getByRole("link", { name: "Promo codes", exact: true }).click();
+    // Discounts is Money's tab now, so Settings carries no door to it; dive
+    // packages are tucked under it, and their way back is the eyebrow
+    // (ADR 20261001-logbook).
+    await expect(page.getByRole("main").locator(`a[href="/shop/${SHOP}/promos"]`)).toHaveCount(0);
+    await page.goto(`/shop/${SHOP}/promos`);
+    await page.getByRole("link", { name: "Edit packages" }).click();
+    await expect(page).toHaveURL(`/shop/${SHOP}/promos/packages`);
+    await expect(page.getByRole("heading", { level: 1, name: "Dive packages" })).toBeVisible();
+    // The positive half of the absence above: the same href, found where it lives.
+    await page.getByRole("main").locator(`a[href="/shop/${SHOP}/promos"]`).first().click();
     await expect(page).toHaveURL(`/shop/${SHOP}/promos`);
-    await expect(page.getByRole("heading", { level: 1, name: "Money" })).toBeVisible();
   });
 
   test("a settings sub-page keeps the map beside it, and its own way back", async ({ page }) => {
@@ -81,7 +84,9 @@ test.describe("as owner", () => {
     // link, and this assertion is about the page's own eyebrow.
     await page.getByRole("main").getByRole("link", { name: "Settings", exact: true }).click();
     await expect(page).toHaveURL(`/shop/${SHOP}/settings`);
-    await expect(page.getByRole("heading", { level: 1, name: "Shop settings" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Settings", exact: true }),
+    ).toBeVisible();
   });
 
   test("the rail is a desktop column and the phone keeps its list", async ({ page }) => {
@@ -90,7 +95,9 @@ test.describe("as owner", () => {
     // was deleted.
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/shop/${SHOP}/settings`);
-    await expect(page.getByRole("heading", { level: 1, name: "Shop settings" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Settings", exact: true }),
+    ).toBeVisible();
     await expect(page.getByRole("navigation", { name: "Settings sections" })).toBeHidden();
     // The grouped list is still the whole surface, doors and all.
     await expect(

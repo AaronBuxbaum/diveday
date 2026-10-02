@@ -1,7 +1,6 @@
 {
   "main": {
     "eyebrow": "Ajustes",
-    "title": "Ajustes del centro",
     "notice": {
       "packingSaved": "Lista de equipo guardada para todas las salidas.",
       "packingInvalid": "Añade entre uno y doce artículos a la lista.",
@@ -400,9 +399,16 @@
       "emailCta": "Escribir a {email}"
     },
     "groups": {
-      "yourShop": "Tu centro",
+      "shop": "Centro",
+      "team": "Equipo",
+      "boatsSites": "Embarcaciones y sitios",
+      "bookingsWaivers": "Reservas y exenciones",
+      "rentals": "Alquiler",
       "money": "Dinero",
-      "dataIntegrations": "Datos e integraciones"
+      "messages": "Mensajes",
+      "website": "Sitio web",
+      "data": "Datos",
+      "account": "Cuenta"
     },
     "rail": {
       "ariaLabel": "Secciones de configuración"
@@ -427,9 +433,6 @@
     },
     "security": {
       "heading": "Seguridad de la cuenta"
-    },
-    "promos": {
-      "heading": "Códigos promocionales"
     },
     "dataJobs": {
       "mediaKind": {

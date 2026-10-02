@@ -77,7 +77,7 @@ stay in `AGENTS.md`.
 - **The back-office queues** are **not on Reports** — each sits with the object it is about and
   renders *nothing* when empty: stuck payment operations on the Orders index behind
   `canPersonManagePaymentSettings`; stuck media deletions and owed processor erasures lead Settings'
-  "Data & integrations" group in `settings/SettingsPage.tsx`. `/shop/[shopSlug]/reports` is the
+  "Data" group in `settings/SettingsPage.tsx`. `/shop/[shopSlug]/reports` is the
   shop's own reading of itself and nothing else: the month by default, the year at `?range=year`,
   one segmented control between them, and **no money at all on the year** (ADR 20260908-one-hand,
   decision 6, lever T). The year prints as a 3:2 card at `reports/card`, and with the shop's yes

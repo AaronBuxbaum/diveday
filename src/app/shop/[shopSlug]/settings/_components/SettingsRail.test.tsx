@@ -94,6 +94,14 @@ describe("the map covers the whole hub", () => {
     for (const row of SETTINGS_RAIL_ROWS) expect(groups.has(row.group)).toBe(true);
   });
 
+  it("never names a group what a section already answers to", () => {
+    // A group's heading and a section's row are both `id`s on the one page, so
+    // a shared name is a duplicate id: axe refuses it, and `#rentals` would
+    // land on whichever came first. The Rentals group once was exactly that.
+    const fragments = new Set<string>(SECTION_IDS.map((id) => settingsSectionFragment(id)));
+    for (const group of SETTINGS_GROUPS) expect(fragments.has(group.id), group.id).toBe(false);
+  });
+
   it("keeps every fragment that other surfaces already link to", () => {
     // The pane scrolls; the ids do not move. These six are the anchors the
     // rest of the app spells out in `/settings#…` links, and a rename here
@@ -261,7 +269,7 @@ describe("the rail as it renders", () => {
   });
 
   it("draws every group, each under its own label", () => {
-    // The whole reason the rail exists: Money and Data & integrations are not
+    // The whole reason the rail exists: the groups below the first are not
     // a second page. A regression that dropped them would still look right on
     // the hub, where the pane repeats the map below the fold.
     renderRail();
@@ -295,12 +303,12 @@ describe("the rail as it renders", () => {
     pathname = `${BASE}/settings/team`;
     renderRail();
     const nav = screen.getByRole("navigation", { name: "Settings sections" });
-    // "team" is a Your shop row; the other two groups stay quiet.
-    expect(nav.querySelector("#settings-rail-your-shop")?.className).toContain("text-primary");
-    expect(nav.querySelector("#settings-rail-money")?.className).not.toContain("text-primary");
-    expect(nav.querySelector("#settings-rail-data-integrations")?.className).not.toContain(
-      "text-primary",
-    );
+    // "team" is the Team group's row; every other group stays quiet.
+    for (const group of SETTINGS_GROUPS) {
+      const className = nav.querySelector(`#settings-rail-${group.id}`)?.className;
+      if (group.id === "team") expect(className).toContain("text-primary");
+      else expect(className, group.id).not.toContain("text-primary");
+    }
   });
 
   it("renders no badge at all when nothing is wrong", () => {
@@ -536,7 +544,6 @@ describe("what the rail hides", () => {
   const gated: Record<string, SettingsRailGate> = {
     team: "team",
     waivers: "waivers",
-    promos: "promos",
     whatsapp: "messaging",
     dataImport: "import",
     gearImport: "import",
@@ -693,7 +700,6 @@ describe("the captions the copy-restraint filter deleted", () => {
     "waivers",
     "safetyChecklist",
     "security",
-    "promos",
     "embed",
     "calendar",
     "integrations",

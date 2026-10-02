@@ -471,7 +471,7 @@ export async function saveFlySafeHoursAction(formData: FormData) {
  */
 export async function createDivePackageAction(formData: FormData) {
   const session = await requireStaffSession();
-  const page = shopPath(session.user.shopSlug, "settings", "dive-packages");
+  const page = shopPath(session.user.shopSlug, "promos", "packages");
   await settingsBlock(session);
   await paymentSettingsBlock(session);
   const db = await getDb();
@@ -507,7 +507,7 @@ export async function createDivePackageAction(formData: FormData) {
  */
 export async function deleteDivePackageAction(formData: FormData) {
   const session = await requireStaffSession();
-  const page = shopPath(session.user.shopSlug, "settings", "dive-packages");
+  const page = shopPath(session.user.shopSlug, "promos", "packages");
   await settingsBlock(session);
   await paymentSettingsBlock(session);
   // `uuidParam`, like `deleteBoatAction` two hundred lines down: a malformed id
@@ -1080,7 +1080,7 @@ export async function suggestAddressAction(query: string): Promise<AddressLookup
 }
 
 /* -------------------------------------------------------------------------- *
- * Data-compliance queues (the "Data & integrations" group)
+ * Data-compliance queues (the "Data" group)
  *
  * Two jobs the shop still owes on data it promised to remove: a stored file a
  * provider delete never got rid of (CR-012) and an erasure that didn't land at

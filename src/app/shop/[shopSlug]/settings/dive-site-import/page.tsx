@@ -42,7 +42,7 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
  * shop's whole library and three comments around it described a shop exporting
  * and re-importing, while nothing could read one back.
  *
- * In Settings' "Data & integrations" group beside the contacts and gear
+ * In Settings' "Data" group beside the contacts and gear
  * importers, gated owner/manager like every other bulk-write door there. No
  * template to download, unlike its two neighbours: those read a competitor's
  * file and a template is how a shop knows what to put in it, while the only

@@ -322,7 +322,18 @@ export { SECTION_IDS, SETTINGS_GROUPS };
 
 type SettingsGroupSpec = (typeof SETTINGS_GROUPS)[number];
 
-const [YOUR_SHOP_GROUP, MONEY_GROUP, DATA_GROUP] = SETTINGS_GROUPS;
+const [
+  SHOP_GROUP,
+  TEAM_GROUP,
+  BOATS_SITES_GROUP,
+  BOOKINGS_GROUP,
+  RENTALS_GROUP,
+  MONEY_GROUP,
+  MESSAGES_GROUP,
+  WEBSITE_GROUP,
+  DATA_GROUP,
+  ACCOUNT_GROUP,
+] = SETTINGS_GROUPS;
 
 /**
  * Staff words for the beats of the dock day these fields produce. The
@@ -542,13 +553,12 @@ export default async function SettingsPage({
   // keeps a manager from being shown a button they would be bounced from
   // (ADR 20260724-role-gated-surfaces-hide-not-explain).
   const canErase = await canPersonErasePersonalData(db, session.user.shopId, session.user.personId);
-  // The same two gates the nav registry hangs Team and Promo codes off
+  // The same gates the nav registry hangs Team and the waiver template off
   // (src/lib/staff-destinations.ts), so a divemaster who has neither is never
   // shown a door that would bounce them (ADR
   // 20260724-role-gated-surfaces-hide-not-explain). Both pages re-check.
   const canManageTeam = canManageStaffAccounts(session.user.roles);
   const canManageWaivers = canManageWaiverTemplates(session.user.roles);
-  const canManagePromos = canViewShopReports(session.user.roles);
   // Trial timing is owner-grade information the same way the monthly report
   // is — the daily crew has no reason to see it, and a demo shop isn't a
   // trial at all (ADR 20260720-trial-shops-are-not-demo).
@@ -718,7 +728,7 @@ export default async function SettingsPage({
   return (
     <main className={settingsPaneClass()}>
       <FlashParams params={["notice", "saved"]} />
-      <ShopPageHeader eyebrow={t("settings.main.eyebrow")} title={t("settings.main.title")} />
+      <ShopPageHeader title={t("shared.shopSections.settings")} />
 
       {banner && !activeSection ? (
         <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner>
@@ -728,43 +738,8 @@ export default async function SettingsPage({
           `space-y-10` here, and no `mt-*` on any group or card
           (docs/design/forms-and-controls.md). */}
       <div className="space-y-10">
-        <SettingsGroup group={YOUR_SHOP_GROUP} label={t(YOUR_SHOP_GROUP.labelKey)}>
+        <SettingsGroup group={SHOP_GROUP} label={t(SHOP_GROUP.labelKey)}>
           <InsetGroup>
-            {/* Who works here comes first: an owner opening Settings to add a
-              colleague used to find no door to Team anywhere on this page — only
-              the nav's "Set up" menu and ⌘K knew it existed. */}
-            {canManageTeam ? (
-              <SettingsDoorRow
-                href={`/shop/${shopSlug}/settings/team`}
-                heading={t("settings.main.team.heading")}
-              />
-            ) : null}
-
-            {/* The two reference libraries the daily surfaces consume — the
-              board's add panel reads the dive-site list, and every waiver a
-              diver signs renders the template. Both left the header nav with
-              the cut to five tabs; an owner's path to them is this page (and
-              the palette), so each gets a door beside the other configure-once
-              work. */}
-            <SettingsDoorRow
-              href={`/shop/${shopSlug}/dive-sites`}
-              heading={t("settings.main.diveSites.heading")}
-            />
-            {canManageWaivers ? (
-              <SettingsDoorRow
-                href={`/shop/${shopSlug}/waivers`}
-                heading={t("settings.main.waivers.heading")}
-              />
-            ) : null}
-            <SettingsDoorRow
-              href={`/shop/${shopSlug}/settings/safety-checklist`}
-              heading={t("settings.main.safetyChecklist.heading")}
-            />
-            <SettingsDoorRow
-              href={`/shop/${shopSlug}/settings/security`}
-              heading={t("settings.main.security.heading")}
-            />
-
             {/* First editable row, because it is the setting every other date
               and time on every surface is read through — the board's day
               headers, "sailing today", a departure's 08:30. Sign-up asked once
@@ -882,6 +857,116 @@ export default async function SettingsPage({
               </FieldGrid>
             </SettingsRow>
 
+            {/* One row for the three units a shop reads its own numbers in.
+              Depth stays stored in metres and water temperature in Celsius
+              whatever these say (H-08); currency is the one that reinterprets
+              rather than converts, which is what its own marker explains. The
+              three are genuinely independent — a Caribbean operator serving
+              American divers publishes feet and Celsius — so they are three
+              fields, not one. */}
+            <SettingsRow
+              heading={t("settings.main.units.heading")}
+              value={unitsValue}
+              sectionId="units"
+              activeSection={activeSection}
+              // The setup checklist's currency-and-depth step links to
+              // `settings#units`, and for as long as this row carried neither
+              // of these that link did **nothing**: the page loaded at the top
+              // with the row still shut, leaving a brand-new shop to hunt for
+              // the one setting it had just been sent to answer. The row is a
+              // `<details>`, so a fragment only reveals it when the target is
+              // *inside* it (`anchorId`) or `AutoOpenDetails` opens it on a
+              // client navigation (`openOnHash`) — which is why the three rows
+              // that already had deep links have both.
+            >
+              <SectionNotice banner={banner} section="units" active={activeSection} />
+              {/* What Stripe reports for the connected account is advisory, so a
+              disagreement is surfaced rather than silently resolved either way
+              (ADR 20260731-shop-currency). Stripe refuses a session in a currency
+              the account can't settle, so this is the difference between a
+              warning here and a failed checkout later. */}
+              {currencyMismatch ? (
+                <div className="mt-4">
+                  <ShopNotice tone="warning" role="status">
+                    {t("settings.main.units.currencyMismatch", {
+                      shopCurrency: currencyMismatch.shopCurrency.toUpperCase(),
+                      accountCurrency: currencyMismatch.accountCurrency.toUpperCase(),
+                    })}
+                  </ShopNotice>
+                </div>
+              ) : null}
+              <FieldGrid as="form" action={saveUnitsAction} columns={2} className="mt-4">
+                {/* The explanations render as plain helper text, not InfoHint
+                  buttons — inside an open disclosure the reader has already
+                  asked for detail, and three ⓘ controls hiding three facts
+                  fail remove-until-it-breaks. */}
+                <Field label={t("settings.main.units.depthLabel")}>
+                  <select name="depthUnit" defaultValue={shop.depthUnit} className={controlClass}>
+                    <option value="meters">{t("settings.main.units.meters")}</option>
+                    <option value="feet">{t("settings.main.units.feet")}</option>
+                  </select>
+                </Field>
+                <Field label={t("settings.main.units.temperatureLabel")}>
+                  <select
+                    name="temperatureUnit"
+                    defaultValue={shop.temperatureUnit}
+                    className={controlClass}
+                  >
+                    <option value="celsius">{t("settings.main.units.celsius")}</option>
+                    <option value="fahrenheit">{t("settings.main.units.fahrenheit")}</option>
+                  </select>
+                </Field>
+                {/* Owner/manager only (H-14): this decides what a diver's card is
+                charged in. Hiding it is convenience — `saveUnitsAction` re-checks
+                the gate against live roles for any submission that carries the
+                field anyway. */}
+                {canPayments ? (
+                  <Field label={t("settings.main.units.currencyLabel")}>
+                    <select
+                      name="currency"
+                      defaultValue={toShopCurrency(shop.currency)}
+                      className={controlClass}
+                    >
+                      {currencyOptions(locale).map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                ) : null}
+                {/* **What changing it will do**, and only once there is
+                    something for it to do it to. `price_cents` counts the
+                    *current* currency's minor unit and nothing converts on a
+                    switch, so a shop that priced a $95 trip and moves to pesos
+                    is left with a ninety-five peso trip (ADR
+                    20260731-shop-currency). Before any money exists the change
+                    is free, and saying this to a shop on its first afternoon
+                    would be noise (issue #712). Informs, never refuses: the
+                    shop that genuinely set the wrong currency needs that select
+                    to work.
+
+                    Outside the `<Field>`, not inside it: `Field`'s contract is
+                    a single control, and a second child makes it fall back to
+                    wrapping everything in the `<label>` — which folded this
+                    sentence into the select's accessible *name* and broke every
+                    `getByLabel("Charge and display in")` in the suite. */}
+                {canPayments && hasPricedRecords ? (
+                  <p className="text-sm text-warning-strong sm:col-span-2">
+                    {t("settings.main.units.currencyRepricingWarning")}
+                  </p>
+                ) : null}
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.units.submitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.units.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
+
             <SettingsRow
               heading={t("settings.main.contact.heading")}
               value={contactValue}
@@ -938,236 +1023,6 @@ export default async function SettingsPage({
               ) : null}
             </SettingsRow>
 
-            <SettingsRow
-              heading={t("settings.main.profile.heading")}
-              value={profileValue}
-              description={t("settings.main.profile.description")}
-              sectionId="profile"
-              activeSection={activeSection}
-            >
-              <SectionNotice banner={banner} section="profile" active={activeSection} />
-              <FieldGrid as="form" action={saveProfileAction} columns={1} className="mt-4">
-                <Field label={t("settings.main.profile.tagline")}>
-                  <input
-                    name="tagline"
-                    type="text"
-                    maxLength={120}
-                    defaultValue={shop.tagline ?? ""}
-                    placeholder={t("settings.main.profile.taglinePlaceholder")}
-                    className={controlClass}
-                  />
-                </Field>
-                <Field label={t("settings.main.profile.descriptionLabel")}>
-                  <textarea
-                    name="description"
-                    rows={3}
-                    maxLength={1000}
-                    defaultValue={shop.description ?? ""}
-                    placeholder={t("settings.main.profile.descriptionPlaceholder")}
-                    className={textareaClassFor(3)}
-                  />
-                </Field>
-                {/* `htmlFor` the picker: wrapped in the caption's label, with a
-                    logo on file "Logo" labelled the remove box before it, and
-                    a click on the caption ticked it (K-13 review). */}
-                <Field
-                  label={t("settings.main.profile.logo")}
-                  hint={t("settings.main.profile.logoHint")}
-                  htmlFor="settings-logo-file"
-                >
-                  {/* The stored logo is taken back off the way every stored
-                      photo is (K-247 follow-up), in the square it is drawn as
-                      on the storefront. */}
-                  {shop.logoUrl ? (
-                    <div className="mb-3">
-                      <RemovablePhoto
-                        url={shop.logoUrl}
-                        name="removeLogo"
-                        label={t("settings.main.profile.removeLogo")}
-                        shape="logo"
-                      />
-                    </div>
-                  ) : null}
-                  <ImageFileInput id="settings-logo-file" name="logoFile" copy={imageInputCopy} />
-                </Field>
-                <FieldGrid columns={2}>
-                  <Field
-                    label={t("settings.main.profile.brandColor")}
-                    hint={
-                      brandTheme?.adjusted
-                        ? t("settings.main.profile.brandColorDarkened", {
-                            hex: brandTheme.primary,
-                          })
-                        : brandNightTheme?.adjusted
-                          ? t("settings.main.profile.brandColorLightenedAtNight", {
-                              hex: brandNightTheme.primary,
-                            })
-                          : t("settings.main.profile.brandColorHint")
-                    }
-                  >
-                    <BrandColorField
-                      initial={shop.brandColor}
-                      pickerLabel={t("settings.main.profile.brandColorPicker")}
-                      placeholder={DIVEDAY_BRAND_COLOR}
-                    />
-                  </Field>
-                  <Field label={t("settings.main.profile.displayFont")}>
-                    <select
-                      name="brandDisplayFont"
-                      defaultValue={shop.brandDisplayFont ?? ""}
-                      className={controlClass}
-                    >
-                      <option value="">{t("settings.main.profile.displayFontDefault")}</option>
-                      {BRAND_DISPLAY_FONT_CODES.map((code) => (
-                        <option key={code} value={code}>
-                          {BRAND_DISPLAY_FONTS[code].family}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                </FieldGrid>
-                <BrandPreview
-                  shopName={shop.name}
-                  brandColor={shop.brandColor}
-                  brandDisplayFont={shop.brandDisplayFont}
-                  label={t("settings.main.profile.brandPreview")}
-                  nightLabel={t("settings.main.profile.brandPreviewNight")}
-                />
-                <Field
-                  label={t("settings.main.profile.heroPhoto")}
-                  hint={t("settings.main.profile.heroHint")}
-                  htmlFor="settings-cover-photo-file"
-                >
-                  {/* One cell of the gallery grid, as the course hero is: a
-                      full-width field holding one photo draws it at a
-                      gallery cell's size (RemovablePhoto's grid doc). */}
-                  {shop.brandHeroImageUrl ? (
-                    <div className={`mb-3 ${removablePhotoGridClass}`}>
-                      <RemovablePhoto
-                        url={shop.brandHeroImageUrl}
-                        name="removeHero"
-                        label={t("settings.main.profile.removeHero")}
-                      />
-                    </div>
-                  ) : null}
-                  <ImageFileInput
-                    id="settings-cover-photo-file"
-                    name="brandHeroFile"
-                    copy={imageInputCopy}
-                  />
-                </Field>
-                <FieldGrid columns={2}>
-                  <Field label={t("settings.main.profile.heroAlt")}>
-                    <input
-                      name="brandHeroImageAlt"
-                      type="text"
-                      required={Boolean(shop.brandHeroImageUrl)}
-                      maxLength={200}
-                      defaultValue={shop.brandHeroImageAlt ?? ""}
-                      className={controlClass}
-                    />
-                  </Field>
-                  <Field label={t("settings.main.profile.establishedYear")}>
-                    <input
-                      name="establishedYear"
-                      type="number"
-                      inputMode="numeric"
-                      min={1900}
-                      max={2100}
-                      defaultValue={shop.establishedYear ?? ""}
-                      className={controlClass}
-                    />
-                  </Field>
-                </FieldGrid>
-                {/* A group of choices, so a legend over them: as a `Field` the
-                    caption's label wrapped every badge and named the first
-                    (K-13 review). */}
-                <ChoiceFieldset
-                  legend={t("settings.main.profile.badges")}
-                  hint={t("settings.main.profile.badgesHint")}
-                  bodyClassName="grid grid-cols-1 gap-2.5 sm:grid-cols-2"
-                >
-                  {BRAND_BADGE_CODES.map((code) => (
-                    <ChoiceRow
-                      key={code}
-                      name="badge"
-                      type="checkbox"
-                      value={code}
-                      defaultChecked={shop.brandBadges.includes(code)}
-                      className="text-sm"
-                    >
-                      {t(`settings.main.profile.badgeLabels.${code}`)}
-                    </ChoiceRow>
-                  ))}
-                </ChoiceFieldset>
-                <FieldActions>
-                  <SubmitButton
-                    pendingLabel={t("settings.main.profile.submitting")}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {t("settings.main.profile.submit")}
-                  </SubmitButton>
-                </FieldActions>
-              </FieldGrid>
-            </SettingsRow>
-
-            {/* **The shop's own three sentences** (issue #1212). Free text,
-              rendered verbatim on the thread, the arrival card and the recap —
-              which is why the one line here names the consequence a shop
-              cannot see from this page: what they type is what a diver reads,
-              in the language they typed it (ADR
-              20260813-dive-site-briefings-are-the-shops-own-words). */}
-            <SettingsRow
-              heading={t("settings.main.hospitality.heading")}
-              value={
-                hospitalityWritten > 0
-                  ? t("settings.main.hospitality.value", { count: hospitalityWritten })
-                  : notSet
-              }
-              description={t("settings.main.hospitality.hint")}
-              sectionId="hospitality"
-              activeSection={activeSection}
-            >
-              <SectionNotice banner={banner} section="hospitality" active={activeSection} />
-              <FieldGrid as="form" action={saveHospitalityAction} columns={1} className="mt-4">
-                <Field label={t("settings.main.hospitality.welcomeLabel")}>
-                  <textarea
-                    name="welcomeNote"
-                    rows={2}
-                    maxLength={280}
-                    defaultValue={shop.welcomeNote ?? ""}
-                    className={textareaClassFor(2)}
-                  />
-                </Field>
-                <Field label={t("settings.main.hospitality.dockCallLabel")}>
-                  <textarea
-                    name="dockCallNote"
-                    rows={2}
-                    maxLength={280}
-                    defaultValue={shop.dockCallNote ?? ""}
-                    className={textareaClassFor(2)}
-                  />
-                </Field>
-                <Field label={t("settings.main.hospitality.signOffLabel")}>
-                  <textarea
-                    name="signOffNote"
-                    rows={2}
-                    maxLength={280}
-                    defaultValue={shop.signOffNote ?? ""}
-                    className={textareaClassFor(2)}
-                  />
-                </Field>
-                <FieldActions>
-                  <SubmitButton
-                    pendingLabel={t("settings.main.hospitality.saving")}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {t("settings.main.hospitality.save")}
-                  </SubmitButton>
-                </FieldActions>
-              </FieldGrid>
-            </SettingsRow>
-
             {/* One search box, no Save: picking a place *is* the save (ADR
               20260811-address-is-one-search-box). The five free-text boxes that
               used to sit under the lookup are gone — they were the source of
@@ -1210,182 +1065,222 @@ export default async function SettingsPage({
               />
             </SettingsRow>
 
-            {/* One of the few rows another surface links straight to: the Reviews
-              page's empty state names this box, so it opens itself on the
-              `#review-link` fragment rather than dropping a shop at a closed
-              row. */}
+            {/* The shop's own paper (ADR 20260908-one-hand, decision 6, lever
+                X). */}
+            <SettingsDoorRow
+              href={`/shop/${shopSlug}/settings/print`}
+              heading={t("print.settings.title")}
+            />
+          </InsetGroup>
+        </SettingsGroup>
+
+        {canManageTeam ? (
+          <SettingsGroup group={TEAM_GROUP} label={t(TEAM_GROUP.labelKey)}>
+            <InsetGroup>
+              {/* An owner opening Settings to add a colleague used to find no
+                door to Team anywhere on this page — only the nav's "Set up"
+                menu and ⌘K knew it existed. */}
+              {canManageTeam ? (
+                <SettingsDoorRow
+                  href={`/shop/${shopSlug}/settings/team`}
+                  heading={t("settings.main.team.heading")}
+                />
+              ) : null}
+            </InsetGroup>
+          </SettingsGroup>
+        ) : null}
+
+        <SettingsGroup group={BOATS_SITES_GROUP} label={t(BOATS_SITES_GROUP.labelKey)}>
+          <InsetGroup>
+            {/* A shore-and-pool shop has no hulls to name, so the row is gone
+                rather than empty — an empty control for a thing you do not own
+                is a question you have to answer twice. Existing boat rows are
+                left alone: turning the option back on brings the fleet back
+                exactly as it was. */}
+            {shop.hasBoatDiving ? (
+              <SettingsDoorRow
+                href={`/shop/${shopSlug}/settings/boats`}
+                heading={t("boats.heading")}
+              />
+            ) : null}
+
+            {/* A reference library the daily surfaces consume — the board's add
+              panel reads the dive-site list. It left the header nav with the
+              cut to five tabs; an owner's path to it is this page (and the
+              palette). */}
+            <SettingsDoorRow
+              href={`/shop/${shopSlug}/dive-sites`}
+              heading={t("settings.main.diveSites.heading")}
+            />
+
             <SettingsRow
-              heading={t("settings.main.reviewLink.heading")}
-              value={reviewLinkValue}
-              description={t("settings.main.reviewLink.description")}
-              detail={t("settings.main.reviewLink.detail")}
-              sectionId="reviewLink"
+              heading={t("boats.divingOptionsHeading")}
+              value={divingOptionsValue}
+              sectionId="divingOptions"
               activeSection={activeSection}
             >
-              <SectionNotice banner={banner} section="reviewLink" active={activeSection} />
-              <FieldGrid as="form" action={saveReviewUrlAction} columns={1} className="mt-4">
+              <SectionNotice banner={banner} section="divingOptions" active={activeSection} />
+              <FieldGrid as="form" action={saveDivingOptionsAction} columns={1} className="mt-4">
+                {/* Boat first, and on by default: it is what the product assumed
+                    before this row existed, and what `trips.dive_mode` still
+                    defaults to. Turning it off is what hides the Boats row
+                    below and takes the hull out of the Requests planner.
+
+                    Each box sits on its name's line, not between the name and
+                    the sentence under it, which `items-center` did (K-13). */}
+                <ChoiceRow
+                  name="hasBoatDiving"
+                  type="checkbox"
+                  defaultChecked={shop.hasBoatDiving}
+                  className="text-sm"
+                >
+                  <span className="block font-medium">{t("boats.boatDivingLabel")}</span>
+                  <span className="block text-xs text-muted">
+                    {t("boats.boatDivingDescription")}
+                  </span>
+                </ChoiceRow>
+                <ChoiceRow
+                  name="hasShoreDiving"
+                  type="checkbox"
+                  defaultChecked={shop.hasShoreDiving}
+                  className="mt-2 text-sm"
+                >
+                  <span className="block font-medium">{t("boats.shoreDivingLabel")}</span>
+                  <span className="block text-xs text-muted">
+                    {t("boats.shoreDivingDescription")}
+                  </span>
+                </ChoiceRow>
+                <ChoiceRow
+                  name="hasPoolDiving"
+                  type="checkbox"
+                  defaultChecked={shop.hasPoolDiving}
+                  className="mt-2 text-sm"
+                >
+                  <span className="block font-medium">{t("boats.poolDivingLabel")}</span>
+                  <span className="block text-xs text-muted">
+                    {t("boats.poolDivingDescription")}
+                  </span>
+                </ChoiceRow>
+                {/* Asked of every shop, unlike the "divers per departure" it
+                    replaced: a hull's seat count is a fact about the boat, and
+                    this is a statement about who is in the water — which a
+                    beach, a pool and a boat all need an answer to. */}
                 <Field
-                  label={t("settings.main.reviewLink.label")}
-                  hint={t("settings.main.reviewLink.hint")}
+                  label={t("boats.diversPerDivemasterLabel")}
+                  hint={t("boats.diversPerDivemasterHint")}
+                  className="mt-2"
                 >
                   <input
-                    name="reviewUrl"
-                    type="url"
-                    maxLength={500}
-                    defaultValue={shop.reviewUrl ?? ""}
-                    placeholder="https://g.page/r/your-shop/review"
+                    name="diversPerDivemaster"
+                    type="number"
+                    inputMode="numeric"
+                    min={MIN_DIVERS_PER_DIVEMASTER}
+                    max={MAX_DIVERS_PER_DIVEMASTER}
+                    defaultValue={shop.diversPerDivemaster}
                     className={controlClass}
                   />
                 </Field>
                 <FieldActions>
                   <SubmitButton
-                    pendingLabel={t("settings.main.reviewLink.submitting")}
+                    pendingLabel={t("boats.divingOptionsSubmitting")}
                     className={buttonClass({ variant: "secondary" })}
                   >
-                    {t("settings.main.reviewLink.submit")}
+                    {t("boats.divingOptionsSubmit")}
                   </SubmitButton>
                 </FieldActions>
               </FieldGrid>
             </SettingsRow>
 
-            {/* Beside the review link, because both rows are about the shop's
-              public face rather than its operations. A shop is listed by
-              default and the box says so; unticking it drops the shop out of
-              sitemap.xml *and* makes its public pages emit robots: noindex
-              (ADR 20260813-search-listing-is-a-choice). */}
-            <SettingsRow
-              heading={t("settings.main.searchListing.heading")}
-              value={
-                shop.searchListingOptOutAt
-                  ? t("settings.main.searchListing.valueHidden")
-                  : t("settings.main.searchListing.valueListed")
-              }
-              detail={t("settings.main.searchListing.detail")}
-              sectionId="searchListing"
-              activeSection={activeSection}
-            >
-              <SectionNotice banner={banner} section="searchListing" active={activeSection} />
-              <FieldGrid as="form" action={saveSearchListingAction} columns={1} className="mt-4">
-                <ChoiceRow
-                  name="searchListed"
-                  type="checkbox"
-                  defaultChecked={!shop.searchListingOptOutAt}
-                  className="text-sm"
-                >
-                  {t("settings.main.searchListing.label")}
-                </ChoiceRow>
-                <FieldActions>
-                  <SubmitButton
-                    pendingLabel={t("settings.main.searchListing.submitting")}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {t("settings.main.searchListing.submit")}
-                  </SubmitButton>
-                </FieldActions>
-              </FieldGrid>
-            </SettingsRow>
+            <SettingsDoorRow
+              href={`/shop/${shopSlug}/settings/safety-checklist`}
+              heading={t("settings.main.safetyChecklist.heading")}
+            />
 
-            {/* The third row about the shop's public face: whether the tide
-                window a stationed site carries reaches divers. Off by default
-                (ADR 20260907-noaa-tide-predictions). */}
+            {/* **Not gated on boat diving.** A shore operation's crew needs a chamber number exactly as much as a
+                boat's does. Its own row rather than a line inside another
+                because it is the one thing on this page a crew reads when
+                something has gone wrong (issue #688). */}
             <SettingsRow
-              heading={t("settings.main.tideWindow.heading")}
-              value={
-                shop.tideWindowPublic
-                  ? t("settings.main.tideWindow.valueOn")
-                  : t("settings.main.tideWindow.valueOff")
-              }
-              detail={t("settings.main.tideWindow.detail")}
-              sectionId="tideWindow"
+              heading={t("settings.main.emergency.heading")}
+              value={emergencyValue}
+              // The row's description, where every row's first body line sits:
+              // as a `<p>` inside the `mt-4` form it sat 16px lower (K-437).
+              description={t("settings.main.emergency.intro")}
+              sectionId="emergency"
               activeSection={activeSection}
             >
-              <SectionNotice banner={banner} section="tideWindow" active={activeSection} />
-              <FieldGrid as="form" action={saveTideWindowAction} columns={1} className="mt-4">
-                <ChoiceRow
-                  name="tideWindowPublic"
-                  type="checkbox"
-                  defaultChecked={shop.tideWindowPublic}
-                  className="text-sm"
-                >
-                  {t("settings.main.tideWindow.label")}
-                </ChoiceRow>
-                <FieldActions>
-                  <SubmitButton
-                    pendingLabel={t("settings.main.tideWindow.submitting")}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {t("settings.main.tideWindow.submit")}
-                  </SubmitButton>
-                </FieldActions>
-              </FieldGrid>
-            </SettingsRow>
-
-            <SettingsRow
-              heading={t("settings.main.conservation.heading")}
-              value={conservationValue}
-              detail={t("settings.main.conservation.detail")}
-              sectionId="conservation"
-              activeSection={activeSection}
-            >
-              <SectionNotice banner={banner} section="conservation" active={activeSection} />
-              <FieldGrid
-                as="form"
-                action={saveConservationCommitmentsAction}
-                columns={1}
-                className="mt-4"
-              >
-                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                  {CONSERVATION_COMMITMENT_CODES.map((code) => (
-                    <ChoiceRow
-                      key={code}
-                      name="commitment"
-                      type="checkbox"
-                      value={code}
-                      defaultChecked={shop.conservationCommitments.includes(code)}
-                      className="text-sm"
-                    >
-                      {t(`settings.main.conservation.commitments.${code}`)}
-                    </ChoiceRow>
+              <SectionNotice banner={banner} section="emergency" active={activeSection} />
+              <form action={saveEmergencyReferenceAction} className="mt-4 flex flex-col gap-4">
+                <FieldGrid columns={2}>
+                  {EMERGENCY_LINE_SLOTS.map((slot, index) => (
+                    <Fragment key={slot}>
+                      {/* The examples are the first line's description, which
+                          wraps: as every label box's placeholder they were cut
+                          mid-word in a half-width box (K-583). */}
+                      <Field
+                        label={t("settings.main.emergency.lineLabel", { n: index + 1 })}
+                        description={
+                          index === 0 ? t("settings.main.emergency.lineExamples") : undefined
+                        }
+                      >
+                        <input
+                          name={`emergencyLabel-${index}`}
+                          type="text"
+                          maxLength={80}
+                          defaultValue={shop.emergencyReference.lines[index]?.label ?? ""}
+                          className={controlClass}
+                        />
+                      </Field>
+                      <Field label={t("settings.main.emergency.phoneLabel", { n: index + 1 })}>
+                        <input
+                          name={`emergencyPhone-${index}`}
+                          type="tel"
+                          maxLength={40}
+                          defaultValue={shop.emergencyReference.lines[index]?.phone ?? ""}
+                          className={controlClass}
+                        />
+                      </Field>
+                    </Fragment>
                   ))}
-                </div>
-                <FieldActions>
-                  <SubmitButton
-                    pendingLabel={t("settings.main.conservation.submitting")}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {t("settings.main.conservation.submit")}
-                  </SubmitButton>
-                </FieldActions>
-              </FieldGrid>
-            </SettingsRow>
-
-            <SettingsRow
-              heading={t("settings.main.packing.heading")}
-              value={packingValue}
-              description={t("settings.main.packing.description")}
-              sectionId="packing"
-              activeSection={activeSection}
-            >
-              <SectionNotice banner={banner} section="packing" active={activeSection} />
-              <FieldGrid as="form" action={savePackingAction} columns={1} className="mt-4">
-                <Field label={t("settings.main.packing.label")}>
+                  <Field label={t("settings.main.emergency.vesselLabel")}>
+                    <input
+                      name="emergencyVessel"
+                      type="text"
+                      maxLength={120}
+                      defaultValue={shop.emergencyReference.vessel}
+                      className={controlClass}
+                    />
+                  </Field>
+                  <Field label={t("settings.main.emergency.shoreContactLabel")}>
+                    <input
+                      name="emergencyShoreContact"
+                      type="text"
+                      maxLength={160}
+                      defaultValue={shop.emergencyReference.shoreContact}
+                      className={controlClass}
+                    />
+                  </Field>
+                </FieldGrid>
+                <Field label={t("settings.main.emergency.planLabel")}>
                   <textarea
-                    name="packingList"
-                    rows={6}
-                    maxLength={1212}
-                    defaultValue={shop.packingList.join("\n")}
-                    className={textareaClassFor(6)}
+                    name="emergencyPlan"
+                    rows={4}
+                    maxLength={2000}
+                    defaultValue={shop.emergencyReference.plan}
+                    className={textareaClassFor(4)}
                   />
                 </Field>
+                {/* The hub's one Save: `md` in `FieldActions`. It was `sm` in
+                    a bare div, 44px beside every other row's 48px (K-308). */}
                 <FieldActions>
                   <SubmitButton
-                    pendingLabel={t("settings.main.packing.submitting")}
+                    pendingLabel={t("settings.main.emergency.saving")}
                     className={buttonClass({ variant: "secondary" })}
                   >
-                    {t("settings.main.packing.submit")}
+                    {t("settings.main.emergency.submit")}
                   </SubmitButton>
                 </FieldActions>
-              </FieldGrid>
+              </form>
             </SettingsRow>
 
             <SettingsRow
@@ -1500,56 +1395,107 @@ export default async function SettingsPage({
               ) : null}
             </SettingsRow>
 
-            {/* One row for the three units a shop reads its own numbers in.
-              Depth stays stored in metres and water temperature in Celsius
-              whatever these say (H-08); currency is the one that reinterprets
-              rather than converts, which is what its own marker explains. The
-              three are genuinely independent — a Caribbean operator serving
-              American divers publishes feet and Celsius — so they are three
-              fields, not one. */}
-            {/* **When the shop's own messages may reach a diver.** Beside the
-              dock-day rhythm because both are about the shape of a shop's day,
-              and directly after it because a shop reading "we brief at 7:15"
-              is already thinking in its own clock. */}
+            {/* Whether the tide window a stationed site carries reaches
+                divers. Off by default
+                (ADR 20260907-noaa-tide-predictions). */}
             <SettingsRow
-              heading={t("settings.main.sendWindow.heading")}
-              value={sendWindowValue}
-              description={t("settings.main.sendWindow.description")}
-              sectionId="sendWindow"
+              heading={t("settings.main.tideWindow.heading")}
+              value={
+                shop.tideWindowPublic
+                  ? t("settings.main.tideWindow.valueOn")
+                  : t("settings.main.tideWindow.valueOff")
+              }
+              detail={t("settings.main.tideWindow.detail")}
+              sectionId="tideWindow"
               activeSection={activeSection}
             >
-              <SectionNotice banner={banner} section="sendWindow" active={activeSection} />
-              <FieldGrid as="form" action={saveSendWindowAction} columns={2} className="mt-4">
-                <Field label={t("settings.main.sendWindow.startLabel")}>
-                  <input
-                    name="sendWindowStartHour"
-                    type="number"
-                    inputMode="numeric"
-                    required
-                    min={0}
-                    max={23}
-                    defaultValue={shop.sendWindowStartHour}
-                    className={`${controlClass} tabular-nums`}
-                  />
-                </Field>
-                <Field label={t("settings.main.sendWindow.endLabel")}>
-                  <input
-                    name="sendWindowEndHour"
-                    type="number"
-                    inputMode="numeric"
-                    required
-                    min={1}
-                    max={24}
-                    defaultValue={shop.sendWindowEndHour}
-                    className={`${controlClass} tabular-nums`}
+              <SectionNotice banner={banner} section="tideWindow" active={activeSection} />
+              <FieldGrid as="form" action={saveTideWindowAction} columns={1} className="mt-4">
+                <ChoiceRow
+                  name="tideWindowPublic"
+                  type="checkbox"
+                  defaultChecked={shop.tideWindowPublic}
+                  className="text-sm"
+                >
+                  {t("settings.main.tideWindow.label")}
+                </ChoiceRow>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.tideWindow.submitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.tideWindow.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
+
+            {/* **Kinds of day** — ADR 20260904-reef-all-the-way-down, decision 2
+              (issue #1162). The shop's own words for its departures, which a
+              diver then filters the public schedule by. Unconditional: a
+              shore-diving shop with no hull still names its kinds of day, so
+              this row carries no `hasBoatDiving` gate. */}
+            <SettingsDoorRow
+              href={`/shop/${shopSlug}/settings/kinds-of-day`}
+              heading={t("lenses.heading")}
+            />
+
+            {/* **The reef's calendar** (issue #1485). The shop types
+              mini-season, its two days and what it wants divers to know, and
+              the storefront shows exactly that while the week is on. Ungated
+              like kinds of day — a shore-diving shop still has a mini-season. */}
+            <SettingsDoorRow
+              href={`/shop/${shopSlug}/settings/seasons`}
+              heading={t("seasonEvents.heading")}
+            />
+          </InsetGroup>
+        </SettingsGroup>
+
+        <SettingsGroup group={BOOKINGS_GROUP} label={t(BOOKINGS_GROUP.labelKey)}>
+          <InsetGroup>
+            {canManageWaivers ? (
+              <SettingsDoorRow
+                href={`/shop/${shopSlug}/waivers`}
+                heading={t("settings.main.waivers.heading")}
+              />
+            ) : null}
+
+            {/* The counter's own door (issue #1236): a QR a shop prints and
+                puts on the desk, so a walk-in who has booked nothing can put
+                themselves on file before they reach the front of the queue.
+                A row of this group rather than a bordered card standing above
+                it — there is nothing here to configure, so it is the one row
+                that states an address instead of changing one. */}
+            <CounterQrCard
+              url={`${publicAppUrl() ?? ""}${publicShopRegisterPath(shopSlug)}`}
+              title={t("settings.main.counterQr.heading")}
+              description={t("settings.main.counterQr.description")}
+            />
+
+            <SettingsRow
+              heading={t("settings.main.packing.heading")}
+              value={packingValue}
+              description={t("settings.main.packing.description")}
+              sectionId="packing"
+              activeSection={activeSection}
+            >
+              <SectionNotice banner={banner} section="packing" active={activeSection} />
+              <FieldGrid as="form" action={savePackingAction} columns={1} className="mt-4">
+                <Field label={t("settings.main.packing.label")}>
+                  <textarea
+                    name="packingList"
+                    rows={6}
+                    maxLength={1212}
+                    defaultValue={shop.packingList.join("\n")}
+                    className={textareaClassFor(6)}
                   />
                 </Field>
                 <FieldActions>
                   <SubmitButton
-                    pendingLabel={t("settings.main.sendWindow.submitting")}
+                    pendingLabel={t("settings.main.packing.submitting")}
                     className={buttonClass({ variant: "secondary" })}
                   >
-                    {t("settings.main.sendWindow.submit")}
+                    {t("settings.main.packing.submit")}
                   </SubmitButton>
                 </FieldActions>
               </FieldGrid>
@@ -1602,460 +1548,108 @@ export default async function SettingsPage({
                 </FieldActions>
               </FieldGrid>
             </SettingsRow>
-
-            <SettingsRow
-              heading={t("settings.main.units.heading")}
-              value={unitsValue}
-              sectionId="units"
-              activeSection={activeSection}
-              // The setup checklist's currency-and-depth step links to
-              // `settings#units`, and for as long as this row carried neither
-              // of these that link did **nothing**: the page loaded at the top
-              // with the row still shut, leaving a brand-new shop to hunt for
-              // the one setting it had just been sent to answer. The row is a
-              // `<details>`, so a fragment only reveals it when the target is
-              // *inside* it (`anchorId`) or `AutoOpenDetails` opens it on a
-              // client navigation (`openOnHash`) — which is why the three rows
-              // that already had deep links have both.
-            >
-              <SectionNotice banner={banner} section="units" active={activeSection} />
-              {/* What Stripe reports for the connected account is advisory, so a
-              disagreement is surfaced rather than silently resolved either way
-              (ADR 20260731-shop-currency). Stripe refuses a session in a currency
-              the account can't settle, so this is the difference between a
-              warning here and a failed checkout later. */}
-              {currencyMismatch ? (
-                <div className="mt-4">
-                  <ShopNotice tone="warning" role="status">
-                    {t("settings.main.units.currencyMismatch", {
-                      shopCurrency: currencyMismatch.shopCurrency.toUpperCase(),
-                      accountCurrency: currencyMismatch.accountCurrency.toUpperCase(),
-                    })}
-                  </ShopNotice>
-                </div>
-              ) : null}
-              <FieldGrid as="form" action={saveUnitsAction} columns={2} className="mt-4">
-                {/* The explanations render as plain helper text, not InfoHint
-                  buttons — inside an open disclosure the reader has already
-                  asked for detail, and three ⓘ controls hiding three facts
-                  fail remove-until-it-breaks. */}
-                <Field label={t("settings.main.units.depthLabel")}>
-                  <select name="depthUnit" defaultValue={shop.depthUnit} className={controlClass}>
-                    <option value="meters">{t("settings.main.units.meters")}</option>
-                    <option value="feet">{t("settings.main.units.feet")}</option>
-                  </select>
-                </Field>
-                <Field label={t("settings.main.units.temperatureLabel")}>
-                  <select
-                    name="temperatureUnit"
-                    defaultValue={shop.temperatureUnit}
-                    className={controlClass}
-                  >
-                    <option value="celsius">{t("settings.main.units.celsius")}</option>
-                    <option value="fahrenheit">{t("settings.main.units.fahrenheit")}</option>
-                  </select>
-                </Field>
-                {/* Owner/manager only (H-14): this decides what a diver's card is
-                charged in. Hiding it is convenience — `saveUnitsAction` re-checks
-                the gate against live roles for any submission that carries the
-                field anyway. */}
-                {canPayments ? (
-                  <Field label={t("settings.main.units.currencyLabel")}>
-                    <select
-                      name="currency"
-                      defaultValue={toShopCurrency(shop.currency)}
-                      className={controlClass}
-                    >
-                      {currencyOptions(locale).map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </Field>
-                ) : null}
-                {/* **What changing it will do**, and only once there is
-                    something for it to do it to. `price_cents` counts the
-                    *current* currency's minor unit and nothing converts on a
-                    switch, so a shop that priced a $95 trip and moves to pesos
-                    is left with a ninety-five peso trip (ADR
-                    20260731-shop-currency). Before any money exists the change
-                    is free, and saying this to a shop on its first afternoon
-                    would be noise (issue #712). Informs, never refuses: the
-                    shop that genuinely set the wrong currency needs that select
-                    to work.
-
-                    Outside the `<Field>`, not inside it: `Field`'s contract is
-                    a single control, and a second child makes it fall back to
-                    wrapping everything in the `<label>` — which folded this
-                    sentence into the select's accessible *name* and broke every
-                    `getByLabel("Charge and display in")` in the suite. */}
-                {canPayments && hasPricedRecords ? (
-                  <p className="text-sm text-warning-strong sm:col-span-2">
-                    {t("settings.main.units.currencyRepricingWarning")}
-                  </p>
-                ) : null}
-                <FieldActions>
-                  <SubmitButton
-                    pendingLabel={t("settings.main.units.submitting")}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {t("settings.main.units.submit")}
-                  </SubmitButton>
-                </FieldActions>
-              </FieldGrid>
-            </SettingsRow>
-
-            <SettingsRow
-              heading={t("boats.divingOptionsHeading")}
-              value={divingOptionsValue}
-              sectionId="divingOptions"
-              activeSection={activeSection}
-            >
-              <SectionNotice banner={banner} section="divingOptions" active={activeSection} />
-              <FieldGrid as="form" action={saveDivingOptionsAction} columns={1} className="mt-4">
-                {/* Boat first, and on by default: it is what the product assumed
-                    before this row existed, and what `trips.dive_mode` still
-                    defaults to. Turning it off is what hides the Boats row
-                    below and takes the hull out of the Requests planner.
-
-                    Each box sits on its name's line, not between the name and
-                    the sentence under it, which `items-center` did (K-13). */}
-                <ChoiceRow
-                  name="hasBoatDiving"
-                  type="checkbox"
-                  defaultChecked={shop.hasBoatDiving}
-                  className="text-sm"
-                >
-                  <span className="block font-medium">{t("boats.boatDivingLabel")}</span>
-                  <span className="block text-xs text-muted">
-                    {t("boats.boatDivingDescription")}
-                  </span>
-                </ChoiceRow>
-                <ChoiceRow
-                  name="hasShoreDiving"
-                  type="checkbox"
-                  defaultChecked={shop.hasShoreDiving}
-                  className="mt-2 text-sm"
-                >
-                  <span className="block font-medium">{t("boats.shoreDivingLabel")}</span>
-                  <span className="block text-xs text-muted">
-                    {t("boats.shoreDivingDescription")}
-                  </span>
-                </ChoiceRow>
-                <ChoiceRow
-                  name="hasPoolDiving"
-                  type="checkbox"
-                  defaultChecked={shop.hasPoolDiving}
-                  className="mt-2 text-sm"
-                >
-                  <span className="block font-medium">{t("boats.poolDivingLabel")}</span>
-                  <span className="block text-xs text-muted">
-                    {t("boats.poolDivingDescription")}
-                  </span>
-                </ChoiceRow>
-                {/* Asked of every shop, unlike the "divers per departure" it
-                    replaced: a hull's seat count is a fact about the boat, and
-                    this is a statement about who is in the water — which a
-                    beach, a pool and a boat all need an answer to. */}
-                <Field
-                  label={t("boats.diversPerDivemasterLabel")}
-                  hint={t("boats.diversPerDivemasterHint")}
-                  className="mt-2"
-                >
-                  <input
-                    name="diversPerDivemaster"
-                    type="number"
-                    inputMode="numeric"
-                    min={MIN_DIVERS_PER_DIVEMASTER}
-                    max={MAX_DIVERS_PER_DIVEMASTER}
-                    defaultValue={shop.diversPerDivemaster}
-                    className={controlClass}
-                  />
-                </Field>
-                <FieldActions>
-                  <SubmitButton
-                    pendingLabel={t("boats.divingOptionsSubmitting")}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {t("boats.divingOptionsSubmit")}
-                  </SubmitButton>
-                </FieldActions>
-              </FieldGrid>
-            </SettingsRow>
-
-            {/* A shore-and-pool shop has no hulls to name, so the row is gone
-                rather than empty — an empty control for a thing you do not own
-                is a question you have to answer twice. Existing boat rows are
-                left alone: turning the option back on brings the fleet back
-                exactly as it was. */}
-            {/* **Above the fleet, and not gated on boat diving.** A shore
-                operation's crew needs a chamber number exactly as much as a
-                boat's does. Its own row rather than a line inside another
-                because it is the one thing on this page a crew reads when
-                something has gone wrong (issue #688). */}
-            <SettingsRow
-              heading={t("settings.main.emergency.heading")}
-              value={emergencyValue}
-              // The row's description, where every row's first body line sits:
-              // as a `<p>` inside the `mt-4` form it sat 16px lower (K-437).
-              description={t("settings.main.emergency.intro")}
-              sectionId="emergency"
-              activeSection={activeSection}
-            >
-              <SectionNotice banner={banner} section="emergency" active={activeSection} />
-              <form action={saveEmergencyReferenceAction} className="mt-4 flex flex-col gap-4">
-                <FieldGrid columns={2}>
-                  {EMERGENCY_LINE_SLOTS.map((slot, index) => (
-                    <Fragment key={slot}>
-                      {/* The examples are the first line's description, which
-                          wraps: as every label box's placeholder they were cut
-                          mid-word in a half-width box (K-583). */}
-                      <Field
-                        label={t("settings.main.emergency.lineLabel", { n: index + 1 })}
-                        description={
-                          index === 0 ? t("settings.main.emergency.lineExamples") : undefined
-                        }
-                      >
-                        <input
-                          name={`emergencyLabel-${index}`}
-                          type="text"
-                          maxLength={80}
-                          defaultValue={shop.emergencyReference.lines[index]?.label ?? ""}
-                          className={controlClass}
-                        />
-                      </Field>
-                      <Field label={t("settings.main.emergency.phoneLabel", { n: index + 1 })}>
-                        <input
-                          name={`emergencyPhone-${index}`}
-                          type="tel"
-                          maxLength={40}
-                          defaultValue={shop.emergencyReference.lines[index]?.phone ?? ""}
-                          className={controlClass}
-                        />
-                      </Field>
-                    </Fragment>
-                  ))}
-                  <Field label={t("settings.main.emergency.vesselLabel")}>
-                    <input
-                      name="emergencyVessel"
-                      type="text"
-                      maxLength={120}
-                      defaultValue={shop.emergencyReference.vessel}
-                      className={controlClass}
-                    />
-                  </Field>
-                  <Field label={t("settings.main.emergency.shoreContactLabel")}>
-                    <input
-                      name="emergencyShoreContact"
-                      type="text"
-                      maxLength={160}
-                      defaultValue={shop.emergencyReference.shoreContact}
-                      className={controlClass}
-                    />
-                  </Field>
-                </FieldGrid>
-                <Field label={t("settings.main.emergency.planLabel")}>
-                  <textarea
-                    name="emergencyPlan"
-                    rows={4}
-                    maxLength={2000}
-                    defaultValue={shop.emergencyReference.plan}
-                    className={textareaClassFor(4)}
-                  />
-                </Field>
-                {/* The hub's one Save: `md` in `FieldActions`. It was `sm` in
-                    a bare div, 44px beside every other row's 48px (K-308). */}
-                <FieldActions>
-                  <SubmitButton
-                    pendingLabel={t("settings.main.emergency.saving")}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {t("settings.main.emergency.submit")}
-                  </SubmitButton>
-                </FieldActions>
-              </form>
-            </SettingsRow>
-            {shop.hasBoatDiving ? (
-              <SettingsDoorRow
-                href={`/shop/${shopSlug}/settings/boats`}
-                heading={t("boats.heading")}
-              />
-            ) : null}
-            {/* **Kinds of day** — ADR 20260904-reef-all-the-way-down, decision 2
-              (issue #1162). The shop's own words for its departures, which a
-              diver then filters the public schedule by. Unconditional: a
-              shore-diving shop with no hull still names its kinds of day, so
-              this row carries no `hasBoatDiving` gate. */}
-            <SettingsDoorRow
-              href={`/shop/${shopSlug}/settings/kinds-of-day`}
-              heading={t("lenses.heading")}
-            />
-            {/* **The reef's calendar** (issue #1485). Beside the words above it,
-              because a season is written the same way and often names one: the
-              shop types mini-season, its two days and what it wants divers to
-              know, and the storefront shows exactly that while the week is on.
-              Ungated like the row above — a shore-diving shop still has a
-              mini-season. */}
-            <SettingsDoorRow
-              href={`/shop/${shopSlug}/settings/seasons`}
-              heading={t("seasonEvents.heading")}
-            />
           </InsetGroup>
         </SettingsGroup>
 
-        <SettingsGroup group={MONEY_GROUP} label={t(MONEY_GROUP.labelKey)}>
-          <InsetGroup>
-            {/* First row in "Money" — what DiveDay itself costs, before what the
-              shop charges divers. Soft expiry by product decision: a trial past
-              its window keeps working exactly as before, so this is purely
-              informational, never a lockout. */}
-            {canViewTrialStatus ? (
+        {canPayments ? (
+          <SettingsGroup group={RENTALS_GROUP} label={t(RENTALS_GROUP.labelKey)}>
+            <InsetGroup>
+              {/* Currency is not here. It lives in the "Units" row with depth
+              and water temperature — a shop looking for "what do we measure
+              things in" should find all three answers in one place, and this
+              group keeps what a shop *charges* and gets paid through. */}
               <SettingsRow
-                heading={t("settings.main.trial.heading")}
-                value={
-                  trialExpired
-                    ? t("settings.main.trial.expiredValue", { endDate: trialEndLabel })
-                    : t("settings.main.trial.value", { count: trialDaysLeft })
-                }
-                description={
-                  trialExpired
-                    ? t("settings.main.trial.expiredDescription", { endDate: trialEndLabel })
-                    : t("settings.main.trial.activeDescription", {
-                        count: trialDaysLeft,
-                        endDate: trialEndLabel,
-                      })
-                }
+                heading={t("settings.main.rentals.heading")}
+                value={rentalsValue}
+                detail={t("settings.main.rentals.detail")}
+                sectionId="rentals"
+                activeSection={activeSection}
               >
-                <p className="mt-3 text-sm text-muted">{t("settings.main.trial.upgradeBody")}</p>
-                <div className="mt-4">
-                  <a
-                    href={`mailto:${ONBOARDING_EMAIL}`}
-                    className={buttonClass({ variant: "secondary" })}
+                <SectionNotice banner={banner} section="rentals" active={activeSection} />
+                <form action={saveRentalItemsAction} className="mt-4">
+                  <fieldset>
+                    <legend className="sr-only">{t("settings.main.rentals.legend")}</legend>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      {SHOP_CATALOG_ITEMS.map((item) => (
+                        <ChoicePill
+                          key={item.kind}
+                          type="checkbox"
+                          name={item.name}
+                          defaultChecked={offeredKinds.has(item.kind)}
+                        >
+                          {catalogItemLabel(t, item.kind)}
+                        </ChoicePill>
+                      ))}
+                    </div>
+                  </fieldset>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.rentals.submitting")}
+                    className={buttonClass({ variant: "secondary", className: "mt-3" })}
                   >
-                    {t("settings.main.trial.emailCta", { email: ONBOARDING_EMAIL })}
-                  </a>
-                </div>
+                    {t("settings.main.rentals.submit")}
+                  </SubmitButton>
+                </form>
               </SettingsRow>
-            ) : null}
 
-            {/* Orders is not here, and that is the rule this page is held to
-              rather than a preference: a row here means `place: "shop"`, and
-              Orders is `season` (`settings-doors.test.ts`). It is money a
-              shop reads, reached from the season and from the search — one
-              destination, one place to find it. Promo codes go the other way:
-              they are configured rarely, they are `shop`, and this row is
-              the door that makes that true. */}
-            {canManagePromos ? (
-              <SettingsDoorRow
-                href={`/shop/${shopSlug}/promos`}
-                heading={t("settings.main.promos.heading")}
-              />
-            ) : null}
-
-            {canPayments ? (
-              <>
-                {/* Currency is not here. It lives in the "Units" row with depth
-                and water temperature — a shop looking for "what do we measure
-                things in" should find all three answers in one place, and this
-                group keeps what a shop *charges* and gets paid through. */}
-                <SettingsRow
-                  heading={t("settings.main.rentals.heading")}
-                  value={rentalsValue}
-                  detail={t("settings.main.rentals.detail")}
-                  sectionId="rentals"
-                  activeSection={activeSection}
-                >
-                  <SectionNotice banner={banner} section="rentals" active={activeSection} />
-                  <form action={saveRentalItemsAction} className="mt-4">
-                    <fieldset>
-                      <legend className="sr-only">{t("settings.main.rentals.legend")}</legend>
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                        {SHOP_CATALOG_ITEMS.map((item) => (
-                          <ChoicePill
-                            key={item.kind}
-                            type="checkbox"
-                            name={item.name}
-                            defaultChecked={offeredKinds.has(item.kind)}
-                          >
-                            {catalogItemLabel(t, item.kind)}
-                          </ChoicePill>
-                        ))}
-                      </div>
-                    </fieldset>
-                    <SubmitButton
-                      pendingLabel={t("settings.main.rentals.submitting")}
-                      className={buttonClass({ variant: "secondary", className: "mt-3" })}
-                    >
-                      {t("settings.main.rentals.submit")}
-                    </SubmitButton>
-                  </form>
-                </SettingsRow>
-
-                <SettingsRow
-                  heading={t("settings.main.rentalPricing.heading")}
-                  value={rentalPricingValue}
-                  description={t("settings.main.rentalPricing.description")}
-                  detail={t("settings.main.rentalPricing.detail")}
-                  sectionId="rentalPricing"
-                  activeSection={activeSection}
-                >
-                  <SectionNotice banner={banner} section="rentalPricing" active={activeSection} />
-                  <form action={saveRentalPricingAction} className="mt-4">
-                    <FieldGrid columns={2}>
+              <SettingsRow
+                heading={t("settings.main.rentalPricing.heading")}
+                value={rentalPricingValue}
+                description={t("settings.main.rentalPricing.description")}
+                detail={t("settings.main.rentalPricing.detail")}
+                sectionId="rentalPricing"
+                activeSection={activeSection}
+              >
+                <SectionNotice banner={banner} section="rentalPricing" active={activeSection} />
+                <form action={saveRentalPricingAction} className="mt-4">
+                  <FieldGrid columns={2}>
+                    <PriceField
+                      name="setPrice"
+                      label={t("settings.main.rentalPricing.fullSetLabel")}
+                      hint={t("settings.main.rentalPricing.fullSetHint")}
+                      cents={shop.rentalPricing.setCents}
+                      currency={shopCurrency}
+                      locale={locale}
+                      copy={forgivingCopy(t)}
+                    />
+                    {RENTABLE_ITEMS.filter((item) => offeredKinds.has(item.kind)).map((item) => (
                       <PriceField
-                        name="setPrice"
-                        label={t("settings.main.rentalPricing.fullSetLabel")}
-                        hint={t("settings.main.rentalPricing.fullSetHint")}
-                        cents={shop.rentalPricing.setCents}
+                        key={item.kind}
+                        name={`price_${item.name}`}
+                        label={rentableItemLabel(t, item.kind)}
+                        cents={shop.rentalPricing.perItemCents[item.kind] ?? null}
                         currency={shopCurrency}
                         locale={locale}
                         copy={forgivingCopy(t)}
                       />
-                      {RENTABLE_ITEMS.filter((item) => offeredKinds.has(item.kind)).map((item) => (
-                        <PriceField
-                          key={item.kind}
-                          name={`price_${item.name}`}
-                          label={rentableItemLabel(t, item.kind)}
-                          cents={shop.rentalPricing.perItemCents[item.kind] ?? null}
-                          currency={shopCurrency}
-                          locale={locale}
-                          copy={forgivingCopy(t)}
-                        />
-                      ))}
-                      {offeredKinds.has("nitrox") ? (
-                        <PriceField
-                          name="nitroxPrice"
-                          label={t("settings.main.rentalPricing.nitroxLabel")}
-                          hint={t("settings.main.rentalPricing.nitroxHint")}
-                          cents={shop.rentalPricing.nitroxCents}
-                          currency={shopCurrency}
-                          locale={locale}
-                          copy={forgivingCopy(t)}
-                        />
-                      ) : null}
-                    </FieldGrid>
-                    <SubmitButton
-                      pendingLabel={t("settings.main.rentalPricing.submitting")}
-                      className={buttonClass({ variant: "secondary", className: "mt-4" })}
-                    >
-                      {t("settings.main.rentalPricing.submit")}
-                    </SubmitButton>
-                  </form>
-                </SettingsRow>
+                    ))}
+                    {offeredKinds.has("nitrox") ? (
+                      <PriceField
+                        name="nitroxPrice"
+                        label={t("settings.main.rentalPricing.nitroxLabel")}
+                        hint={t("settings.main.rentalPricing.nitroxHint")}
+                        cents={shop.rentalPricing.nitroxCents}
+                        currency={shopCurrency}
+                        locale={locale}
+                        copy={forgivingCopy(t)}
+                      />
+                    ) : null}
+                  </FieldGrid>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.rentalPricing.submitting")}
+                    className={buttonClass({ variant: "secondary", className: "mt-4" })}
+                  >
+                    {t("settings.main.rentalPricing.submit")}
+                  </SubmitButton>
+                </form>
+              </SettingsRow>
+            </InsetGroup>
+          </SettingsGroup>
+        ) : null}
 
-                {/* **The shop's prepaid packages.** Beside the rental prices
-                    because both are the shop's own price list, and behind the
-                    same payment gate as everything else in this group. Opt-in
-                    by presence: a shop that has never defined one sees an empty
-                    list and an add form, and nothing anywhere else in the app
-                    changes until the first one exists (ADR
-                    20260822-a-package-is-entitlements-not-money). */}
-                <SettingsDoorRow
-                  href={`/shop/${shopSlug}/settings/dive-packages`}
-                  heading={t("settings.main.divePackages.heading")}
-                />
-
+        <SettingsGroup group={MONEY_GROUP} label={t(MONEY_GROUP.labelKey)}>
+          <InsetGroup>
+            {canPayments ? (
+              <>
                 <SettingsRow
                   heading={t("settings.main.tax.heading")}
                   value={taxValue}
@@ -2250,6 +1844,420 @@ export default async function SettingsPage({
           )}
         </SettingsGroup>
 
+        <SettingsGroup group={MESSAGES_GROUP} label={t(MESSAGES_GROUP.labelKey)}>
+          <InsetGroup>
+            {/* **When the shop's own messages may reach a diver.** */}
+            <SettingsRow
+              heading={t("settings.main.sendWindow.heading")}
+              value={sendWindowValue}
+              description={t("settings.main.sendWindow.description")}
+              sectionId="sendWindow"
+              activeSection={activeSection}
+            >
+              <SectionNotice banner={banner} section="sendWindow" active={activeSection} />
+              <FieldGrid as="form" action={saveSendWindowAction} columns={2} className="mt-4">
+                <Field label={t("settings.main.sendWindow.startLabel")}>
+                  <input
+                    name="sendWindowStartHour"
+                    type="number"
+                    inputMode="numeric"
+                    required
+                    min={0}
+                    max={23}
+                    defaultValue={shop.sendWindowStartHour}
+                    className={`${controlClass} tabular-nums`}
+                  />
+                </Field>
+                <Field label={t("settings.main.sendWindow.endLabel")}>
+                  <input
+                    name="sendWindowEndHour"
+                    type="number"
+                    inputMode="numeric"
+                    required
+                    min={1}
+                    max={24}
+                    defaultValue={shop.sendWindowEndHour}
+                    className={`${controlClass} tabular-nums`}
+                  />
+                </Field>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.sendWindow.submitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.sendWindow.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
+
+            {/* One of the few rows another surface links straight to: the Reviews
+              page's empty state names this box, so it opens itself on the
+              `#review-link` fragment rather than dropping a shop at a closed
+              row. */}
+            <SettingsRow
+              heading={t("settings.main.reviewLink.heading")}
+              value={reviewLinkValue}
+              description={t("settings.main.reviewLink.description")}
+              detail={t("settings.main.reviewLink.detail")}
+              sectionId="reviewLink"
+              activeSection={activeSection}
+            >
+              <SectionNotice banner={banner} section="reviewLink" active={activeSection} />
+              <FieldGrid as="form" action={saveReviewUrlAction} columns={1} className="mt-4">
+                <Field
+                  label={t("settings.main.reviewLink.label")}
+                  hint={t("settings.main.reviewLink.hint")}
+                >
+                  <input
+                    name="reviewUrl"
+                    type="url"
+                    maxLength={500}
+                    defaultValue={shop.reviewUrl ?? ""}
+                    placeholder="https://g.page/r/your-shop/review"
+                    className={controlClass}
+                  />
+                </Field>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.reviewLink.submitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.reviewLink.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
+
+            {/* Owner/manager only, like the payment rows: the credential it
+              stores can send messages as the business. */}
+            {canManageMessaging ? (
+              <SettingsDoorRow
+                href={`/shop/${shopSlug}/settings/whatsapp`}
+                heading={t("settings.main.whatsapp.heading")}
+              />
+            ) : null}
+          </InsetGroup>
+        </SettingsGroup>
+
+        <SettingsGroup group={WEBSITE_GROUP} label={t(WEBSITE_GROUP.labelKey)}>
+          <InsetGroup>
+            <SettingsRow
+              heading={t("settings.main.profile.heading")}
+              value={profileValue}
+              description={t("settings.main.profile.description")}
+              sectionId="profile"
+              activeSection={activeSection}
+            >
+              <SectionNotice banner={banner} section="profile" active={activeSection} />
+              <FieldGrid as="form" action={saveProfileAction} columns={1} className="mt-4">
+                <Field label={t("settings.main.profile.tagline")}>
+                  <input
+                    name="tagline"
+                    type="text"
+                    maxLength={120}
+                    defaultValue={shop.tagline ?? ""}
+                    placeholder={t("settings.main.profile.taglinePlaceholder")}
+                    className={controlClass}
+                  />
+                </Field>
+                <Field label={t("settings.main.profile.descriptionLabel")}>
+                  <textarea
+                    name="description"
+                    rows={3}
+                    maxLength={1000}
+                    defaultValue={shop.description ?? ""}
+                    placeholder={t("settings.main.profile.descriptionPlaceholder")}
+                    className={textareaClassFor(3)}
+                  />
+                </Field>
+                {/* `htmlFor` the picker: wrapped in the caption's label, with a
+                    logo on file "Logo" labelled the remove box before it, and
+                    a click on the caption ticked it (K-13 review). */}
+                <Field
+                  label={t("settings.main.profile.logo")}
+                  hint={t("settings.main.profile.logoHint")}
+                  htmlFor="settings-logo-file"
+                >
+                  {/* The stored logo is taken back off the way every stored
+                      photo is (K-247 follow-up), in the square it is drawn as
+                      on the storefront. */}
+                  {shop.logoUrl ? (
+                    <div className="mb-3">
+                      <RemovablePhoto
+                        url={shop.logoUrl}
+                        name="removeLogo"
+                        label={t("settings.main.profile.removeLogo")}
+                        shape="logo"
+                      />
+                    </div>
+                  ) : null}
+                  <ImageFileInput id="settings-logo-file" name="logoFile" copy={imageInputCopy} />
+                </Field>
+                <FieldGrid columns={2}>
+                  <Field
+                    label={t("settings.main.profile.brandColor")}
+                    hint={
+                      brandTheme?.adjusted
+                        ? t("settings.main.profile.brandColorDarkened", {
+                            hex: brandTheme.primary,
+                          })
+                        : brandNightTheme?.adjusted
+                          ? t("settings.main.profile.brandColorLightenedAtNight", {
+                              hex: brandNightTheme.primary,
+                            })
+                          : t("settings.main.profile.brandColorHint")
+                    }
+                  >
+                    <BrandColorField
+                      initial={shop.brandColor}
+                      pickerLabel={t("settings.main.profile.brandColorPicker")}
+                      placeholder={DIVEDAY_BRAND_COLOR}
+                    />
+                  </Field>
+                  <Field label={t("settings.main.profile.displayFont")}>
+                    <select
+                      name="brandDisplayFont"
+                      defaultValue={shop.brandDisplayFont ?? ""}
+                      className={controlClass}
+                    >
+                      <option value="">{t("settings.main.profile.displayFontDefault")}</option>
+                      {BRAND_DISPLAY_FONT_CODES.map((code) => (
+                        <option key={code} value={code}>
+                          {BRAND_DISPLAY_FONTS[code].family}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                </FieldGrid>
+                <BrandPreview
+                  shopName={shop.name}
+                  brandColor={shop.brandColor}
+                  brandDisplayFont={shop.brandDisplayFont}
+                  label={t("settings.main.profile.brandPreview")}
+                  nightLabel={t("settings.main.profile.brandPreviewNight")}
+                />
+                <Field
+                  label={t("settings.main.profile.heroPhoto")}
+                  hint={t("settings.main.profile.heroHint")}
+                  htmlFor="settings-cover-photo-file"
+                >
+                  {/* One cell of the gallery grid, as the course hero is: a
+                      full-width field holding one photo draws it at a
+                      gallery cell's size (RemovablePhoto's grid doc). */}
+                  {shop.brandHeroImageUrl ? (
+                    <div className={`mb-3 ${removablePhotoGridClass}`}>
+                      <RemovablePhoto
+                        url={shop.brandHeroImageUrl}
+                        name="removeHero"
+                        label={t("settings.main.profile.removeHero")}
+                      />
+                    </div>
+                  ) : null}
+                  <ImageFileInput
+                    id="settings-cover-photo-file"
+                    name="brandHeroFile"
+                    copy={imageInputCopy}
+                  />
+                </Field>
+                <FieldGrid columns={2}>
+                  <Field label={t("settings.main.profile.heroAlt")}>
+                    <input
+                      name="brandHeroImageAlt"
+                      type="text"
+                      required={Boolean(shop.brandHeroImageUrl)}
+                      maxLength={200}
+                      defaultValue={shop.brandHeroImageAlt ?? ""}
+                      className={controlClass}
+                    />
+                  </Field>
+                  <Field label={t("settings.main.profile.establishedYear")}>
+                    <input
+                      name="establishedYear"
+                      type="number"
+                      inputMode="numeric"
+                      min={1900}
+                      max={2100}
+                      defaultValue={shop.establishedYear ?? ""}
+                      className={controlClass}
+                    />
+                  </Field>
+                </FieldGrid>
+                {/* A group of choices, so a legend over them: as a `Field` the
+                    caption's label wrapped every badge and named the first
+                    (K-13 review). */}
+                <ChoiceFieldset
+                  legend={t("settings.main.profile.badges")}
+                  hint={t("settings.main.profile.badgesHint")}
+                  bodyClassName="grid grid-cols-1 gap-2.5 sm:grid-cols-2"
+                >
+                  {BRAND_BADGE_CODES.map((code) => (
+                    <ChoiceRow
+                      key={code}
+                      name="badge"
+                      type="checkbox"
+                      value={code}
+                      defaultChecked={shop.brandBadges.includes(code)}
+                      className="text-sm"
+                    >
+                      {t(`settings.main.profile.badgeLabels.${code}`)}
+                    </ChoiceRow>
+                  ))}
+                </ChoiceFieldset>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.profile.submitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.profile.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
+
+            {/* A shop is listed by default and the box says so; unticking it drops the shop out of
+              sitemap.xml *and* makes its public pages emit robots: noindex
+              (ADR 20260813-search-listing-is-a-choice). */}
+            <SettingsRow
+              heading={t("settings.main.searchListing.heading")}
+              value={
+                shop.searchListingOptOutAt
+                  ? t("settings.main.searchListing.valueHidden")
+                  : t("settings.main.searchListing.valueListed")
+              }
+              detail={t("settings.main.searchListing.detail")}
+              sectionId="searchListing"
+              activeSection={activeSection}
+            >
+              <SectionNotice banner={banner} section="searchListing" active={activeSection} />
+              <FieldGrid as="form" action={saveSearchListingAction} columns={1} className="mt-4">
+                <ChoiceRow
+                  name="searchListed"
+                  type="checkbox"
+                  defaultChecked={!shop.searchListingOptOutAt}
+                  className="text-sm"
+                >
+                  {t("settings.main.searchListing.label")}
+                </ChoiceRow>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.searchListing.submitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.searchListing.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
+
+            {/* **The shop's own three sentences** (issue #1212). Free text,
+              rendered verbatim on the thread, the arrival card and the recap —
+              which is why the one line here names the consequence a shop
+              cannot see from this page: what they type is what a diver reads,
+              in the language they typed it (ADR
+              20260813-dive-site-briefings-are-the-shops-own-words). */}
+            <SettingsRow
+              heading={t("settings.main.hospitality.heading")}
+              value={
+                hospitalityWritten > 0
+                  ? t("settings.main.hospitality.value", { count: hospitalityWritten })
+                  : notSet
+              }
+              description={t("settings.main.hospitality.hint")}
+              sectionId="hospitality"
+              activeSection={activeSection}
+            >
+              <SectionNotice banner={banner} section="hospitality" active={activeSection} />
+              <FieldGrid as="form" action={saveHospitalityAction} columns={1} className="mt-4">
+                <Field label={t("settings.main.hospitality.welcomeLabel")}>
+                  <textarea
+                    name="welcomeNote"
+                    rows={2}
+                    maxLength={280}
+                    defaultValue={shop.welcomeNote ?? ""}
+                    className={textareaClassFor(2)}
+                  />
+                </Field>
+                <Field label={t("settings.main.hospitality.dockCallLabel")}>
+                  <textarea
+                    name="dockCallNote"
+                    rows={2}
+                    maxLength={280}
+                    defaultValue={shop.dockCallNote ?? ""}
+                    className={textareaClassFor(2)}
+                  />
+                </Field>
+                <Field label={t("settings.main.hospitality.signOffLabel")}>
+                  <textarea
+                    name="signOffNote"
+                    rows={2}
+                    maxLength={280}
+                    defaultValue={shop.signOffNote ?? ""}
+                    className={textareaClassFor(2)}
+                  />
+                </Field>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.hospitality.saving")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.hospitality.save")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
+
+            <SettingsRow
+              heading={t("settings.main.conservation.heading")}
+              value={conservationValue}
+              detail={t("settings.main.conservation.detail")}
+              sectionId="conservation"
+              activeSection={activeSection}
+            >
+              <SectionNotice banner={banner} section="conservation" active={activeSection} />
+              <FieldGrid
+                as="form"
+                action={saveConservationCommitmentsAction}
+                columns={1}
+                className="mt-4"
+              >
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                  {CONSERVATION_COMMITMENT_CODES.map((code) => (
+                    <ChoiceRow
+                      key={code}
+                      name="commitment"
+                      type="checkbox"
+                      value={code}
+                      defaultChecked={shop.conservationCommitments.includes(code)}
+                      className="text-sm"
+                    >
+                      {t(`settings.main.conservation.commitments.${code}`)}
+                    </ChoiceRow>
+                  ))}
+                </div>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.conservation.submitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.conservation.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
+
+            <SettingsDoorRow
+              href={`/shop/${shopSlug}/settings/embed`}
+              heading={t("settings.main.embed.heading")}
+            />
+
+            <SettingsDoorRow
+              href={`/shop/${shopSlug}/settings/display`}
+              heading={t("settings.main.display.heading")}
+            />
+          </InsetGroup>
+        </SettingsGroup>
+
         <SettingsGroup group={DATA_GROUP} label={t(DATA_GROUP.labelKey)}>
           {/*
           Data this shop said it would delete and hasn't finished deleting —
@@ -2408,50 +2416,12 @@ export default async function SettingsPage({
           ) : null}
 
           <InsetGroup>
-            {/* The counter's own door (issue #1236): a QR a shop prints and
-                puts on the desk, so a walk-in who has booked nothing can put
-                themselves on file before they reach the front of the queue.
-                A row of this group rather than a bordered card standing above
-                it — there is nothing here to configure, so it is the one row
-                that states an address instead of changing one. */}
-            <CounterQrCard
-              url={`${publicAppUrl() ?? ""}${publicShopRegisterPath(shopSlug)}`}
-              title={t("settings.main.counterQr.heading")}
-              description={t("settings.main.counterQr.description")}
-            />
-            <SettingsDoorRow
-              href={`/shop/${shopSlug}/settings/embed`}
-              heading={t("settings.main.embed.heading")}
-            />
-            <SettingsDoorRow
-              href={`/shop/${shopSlug}/settings/calendar`}
-              heading={t("settings.main.calendar.heading")}
-            />
-            <SettingsDoorRow
-              href={`/shop/${shopSlug}/settings/display`}
-              heading={t("settings.main.display.heading")}
-            />
-            {/* The shop's own paper (ADR 20260908-one-hand, decision 6, lever
-                X). Beside Display for the reason it reads that way: both panes
-                are "what this shop looks like somewhere that is not this
-                screen". */}
-            <SettingsDoorRow
-              href={`/shop/${shopSlug}/settings/print`}
-              heading={t("print.settings.title")}
-            />
             <SettingsDoorRow
               href={`/shop/${shopSlug}/settings/integrations`}
               heading={t("settings.main.integrations.heading")}
             />
-            {/* Owner/manager only, like the payment rows above: the credential it
-              stores can send messages as the business. */}
-            {canManageMessaging ? (
-              <SettingsDoorRow
-                href={`/shop/${shopSlug}/settings/whatsapp`}
-                heading={t("settings.main.whatsapp.heading")}
-              />
-            ) : null}
-            {/* Owner/manager only, like the export row below it feeds: the
+
+            {/* Owner/manager only, like the export row it feeds: the
               destination it configures receives the whole shop every week.
 
               Two rows, one surface. Backups and the download are the same
@@ -2466,29 +2436,80 @@ export default async function SettingsPage({
                 heading={t("settings.main.backup.heading")}
               />
             ) : null}
+
             {canImport ? (
               <SettingsDoorRow
                 href={`/shop/${shopSlug}/settings/import`}
                 heading={t("settings.import.title")}
               />
             ) : null}
+
             {canImport ? (
               <SettingsDoorRow
                 href={`/shop/${shopSlug}/settings/gear-import`}
                 heading={t("gear.import.title")}
               />
             ) : null}
+
             {canImport ? (
               <SettingsDoorRow
                 href={`/shop/${shopSlug}/settings/dive-site-import`}
                 heading={t("diveSites.import.title")}
               />
             ) : null}
+
             {canExport ? (
               <SettingsDoorRow
                 href={`/shop/${shopSlug}/settings/export`}
                 heading={t("settings.export.title")}
               />
+            ) : null}
+          </InsetGroup>
+        </SettingsGroup>
+
+        <SettingsGroup group={ACCOUNT_GROUP} label={t(ACCOUNT_GROUP.labelKey)}>
+          <InsetGroup>
+            <SettingsDoorRow
+              href={`/shop/${shopSlug}/settings/security`}
+              heading={t("settings.main.security.heading")}
+            />
+
+            <SettingsDoorRow
+              href={`/shop/${shopSlug}/settings/calendar`}
+              heading={t("settings.main.calendar.heading")}
+            />
+
+            {/* What DiveDay itself costs, owner-grade like the rest of the
+              account. Soft expiry by product decision: a trial past
+              its window keeps working exactly as before, so this is purely
+              informational, never a lockout. */}
+            {canViewTrialStatus ? (
+              <SettingsRow
+                heading={t("settings.main.trial.heading")}
+                value={
+                  trialExpired
+                    ? t("settings.main.trial.expiredValue", { endDate: trialEndLabel })
+                    : t("settings.main.trial.value", { count: trialDaysLeft })
+                }
+                description={
+                  trialExpired
+                    ? t("settings.main.trial.expiredDescription", { endDate: trialEndLabel })
+                    : t("settings.main.trial.activeDescription", {
+                        count: trialDaysLeft,
+                        endDate: trialEndLabel,
+                      })
+                }
+              >
+                <p className="mt-3 text-sm text-muted">{t("settings.main.trial.upgradeBody")}</p>
+                <div className="mt-4">
+                  <a
+                    href={`mailto:${ONBOARDING_EMAIL}`}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.trial.emailCta", { email: ONBOARDING_EMAIL })}
+                  </a>
+                </div>
+              </SettingsRow>
             ) : null}
           </InsetGroup>
         </SettingsGroup>

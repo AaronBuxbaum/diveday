@@ -50,7 +50,7 @@ export function seasonEventNoticeMessages(t: StaffTranslator): NoticeMessages {
   };
 }
 
-/** `/settings/dive-packages` — `createDivePackageAction`, `deleteDivePackageAction`. */
+/** `/promos/packages` — `createDivePackageAction`, `deleteDivePackageAction`. */
 export function divePackageNoticeMessages(t: StaffTranslator): NoticeMessages {
   return {
     "package-saved": { tone: "success", text: t("settings.main.notice.packageSaved") },
