@@ -210,25 +210,24 @@ export type TripConditionsHoldEmailInput = {
  * satori `ImageResponse` can (see `src/lib/og-rasterizer.ts` and
  * `scripts/check-tokens.mjs`'s exemption list).
  */
-const BRAND_PRIMARY_COLOR = "#008080";
-const BRAND_PAGE_COLOR = "#FAF9F6";
-const BRAND_INK_COLOR = "#0C2A35";
+const BRAND_PRIMARY_COLOR = "#0b6e8a";
+const BRAND_PAGE_COLOR = "#f4f6f4";
+const BRAND_INK_COLOR = "#16232c";
 const BRAND_CONTAINER_COLOR = "#FFFFFF";
-const BRAND_BORDER_COLOR = "#E5E7EB";
+const BRAND_BORDER_COLOR = "#dde2df";
 
 /**
- * The dark half of the same palette, from `docs/design/brand.md`'s core
- * identity table: open ocean as the page, deep-sea ink's dark value as the
- * reading colour, lagoon's dark value as the action colour, and the app's own
- * dark `--surface` for a lifted panel.
+ * The dark half of the same palette: the Logbook dark theme's `--background`
+ * as the page, `--foreground` as the reading colour, `--primary` as the action
+ * colour, and `--surface` for a lifted panel (ADR 20261001-logbook).
  */
-const DARK_PAGE_COLOR = "#071720";
-const DARK_INK_COLOR = "#e9f3f4";
-const DARK_PRIMARY_COLOR = "#22d3ee";
-const DARK_PANEL_COLOR = "#0d222d";
-const DARK_BORDER_COLOR = "#1e3a47";
+const DARK_PAGE_COLOR = "#0f171c";
+const DARK_INK_COLOR = "#e4ebef";
+const DARK_PRIMARY_COLOR = "#4fbcd8";
+const DARK_PANEL_COLOR = "#162129";
+const DARK_BORDER_COLOR = "#25333c";
 
-const EMAIL_HEAD_STYLE = `<style>:root{color-scheme:light dark;}a{color:${BRAND_PRIMARY_COLOR};}.dd-btn{background-color:${BRAND_PRIMARY_COLOR}!important;color:#ffffff!important;}@media (prefers-color-scheme:dark){.dd-page{background-color:${DARK_PAGE_COLOR}!important;color:${DARK_INK_COLOR}!important;}.dd-card{background-color:${DARK_PANEL_COLOR}!important;border-color:${DARK_BORDER_COLOR}!important;color:${DARK_INK_COLOR}!important;}.dd-shop{color:${DARK_PRIMARY_COLOR}!important;}.dd-panel{background-color:${DARK_PANEL_COLOR}!important;border-left-color:${DARK_PRIMARY_COLOR}!important;}.dd-btn{background-color:${DARK_PRIMARY_COLOR}!important;color:#071720!important;}a{color:${DARK_PRIMARY_COLOR}!important;}}</style>`;
+const EMAIL_HEAD_STYLE = `<style>:root{color-scheme:light dark;}a{color:${BRAND_PRIMARY_COLOR};}.dd-btn{background-color:${BRAND_PRIMARY_COLOR}!important;color:#ffffff!important;}@media (prefers-color-scheme:dark){.dd-page{background-color:${DARK_PAGE_COLOR}!important;color:${DARK_INK_COLOR}!important;}.dd-card{background-color:${DARK_PANEL_COLOR}!important;border-color:${DARK_BORDER_COLOR}!important;color:${DARK_INK_COLOR}!important;}.dd-shop{color:${DARK_PRIMARY_COLOR}!important;}.dd-panel{background-color:${DARK_PANEL_COLOR}!important;border-left-color:${DARK_PRIMARY_COLOR}!important;}.dd-btn{background-color:${DARK_PRIMARY_COLOR}!important;color:#0f171c!important;}a{color:${DARK_PRIMARY_COLOR}!important;}}</style>`;
 
 /**
  * Bulletproof email call-to-action button, table-wrapped to render consistently
@@ -257,9 +256,9 @@ export function emailButton(url: string, label: string): string {
  */
 const EMAIL_MARK_HTML =
   '<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin-right: 10px;"><tr>' +
-  '<td width="10" height="24" valign="bottom" style="width: 10px;"><div style="width: 10px; height: 10px; border-radius: 50%; background-color: #008080; font-size: 1px; line-height: 1px;">&nbsp;</div></td>' +
+  '<td width="10" height="24" valign="bottom" style="width: 10px;"><div style="width: 10px; height: 10px; border-radius: 50%; background-color: #0b6e8a; font-size: 1px; line-height: 1px;">&nbsp;</div></td>' +
   '<td width="3" style="width: 3px; font-size: 1px; line-height: 1px;">&nbsp;</td>' +
-  '<td width="7" height="24" valign="middle" style="width: 7px;"><div style="width: 7px; height: 7px; border-radius: 50%; background-color: #008080; opacity: 0.75; font-size: 1px; line-height: 1px;">&nbsp;</div></td>' +
+  '<td width="7" height="24" valign="middle" style="width: 7px;"><div style="width: 7px; height: 7px; border-radius: 50%; background-color: #0b6e8a; opacity: 0.75; font-size: 1px; line-height: 1px;">&nbsp;</div></td>' +
   '<td width="3" style="width: 3px; font-size: 1px; line-height: 1px;">&nbsp;</td>' +
   '<td width="4" height="24" valign="top" style="width: 4px;"><div style="width: 4px; height: 4px; border-radius: 50%; background-color: #ff6b6b; font-size: 1px; line-height: 1px;">&nbsp;</div></td>' +
   "</tr></table>";

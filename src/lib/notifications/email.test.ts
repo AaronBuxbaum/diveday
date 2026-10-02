@@ -810,10 +810,10 @@ describe("wrapEmailHtml", () => {
   it("flips page, ink, and action colours in dark mode", () => {
     const html = wrapEmailHtml("<p>Body</p>", { shopName: "Blue Mantis", locale: "en-US" });
     const dark = html.slice(html.indexOf("@media (prefers-color-scheme:dark)"));
-    // docs/design/brand.md: open ocean, deep-sea ink's dark value, dark lagoon.
-    expect(dark).toContain("#071720");
-    expect(dark).toContain("#e9f3f4");
-    expect(dark).toContain("#22d3ee");
+    // The Logbook dark theme: ground, ink, and teal (ADR 20261001-logbook).
+    expect(dark).toContain("#0f171c");
+    expect(dark).toContain("#e4ebef");
+    expect(dark).toContain("#4fbcd8");
   });
 
   // Inline declarations outrank any stylesheet rule that is not `!important`,
@@ -835,10 +835,10 @@ describe("wrapEmailHtml", () => {
   it("keeps the light values inline, so a client that strips the stylesheet still reads", () => {
     const html = wrapEmailHtml("<p>Body</p>", { shopName: "Blue Mantis", locale: "en-US" });
     const body = html.slice(html.indexOf("<body"));
-    // docs/design/brand.md: sunlit sand, deep-sea ink, lagoon
-    expect(body).toContain("background-color: #FAF9F6");
-    expect(body).toContain("color: #0C2A35");
-    expect(body).toContain("#008080");
+    // The Logbook light theme: ground, ink, teal
+    expect(body).toContain("background-color: #f4f6f4");
+    expect(body).toContain("color: #16232c");
+    expect(body).toContain("#0b6e8a");
   });
 
   // Issue #770: an inline <svg> mark is stripped outright by Outlook's Word
@@ -851,7 +851,7 @@ describe("wrapEmailHtml", () => {
     const html = wrapEmailHtml("<p>Body</p>", { shopName: "Blue Mantis", locale: "en-US" });
     expect(html).not.toContain("<svg");
     expect(html).not.toContain("<img");
-    expect(html).toContain("background-color: #008080");
+    expect(html).toContain("background-color: #0b6e8a");
     expect(html).toContain("background-color: #ff6b6b");
     expect(html).toContain("border-radius: 50%");
   });

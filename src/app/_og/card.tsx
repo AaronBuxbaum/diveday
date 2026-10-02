@@ -3,7 +3,7 @@ import { LOGO_MARK_CIRCLES, LOGO_MARK_VIEWBOX } from "@/components/Logo";
 // i18n-exempt-file: link-preview card chrome rendered for crawlers with no
 // visitor locale context, the same carve-out every card takes.
 /**
- * The chrome every DiveDay link-preview card wears: the deep-ocean gradient,
+ * The chrome every DiveDay link-preview card wears: the flat Logbook ground,
  * the wordmark, and the tagline footer.
  *
  * There are four cards (`src/app/link-card/route.tsx`, the shop schedule, one
@@ -21,26 +21,25 @@ import { LOGO_MARK_CIRCLES, LOGO_MARK_VIEWBOX } from "@/components/Logo";
  * a bitmap with no stylesheet, so CSS custom properties cannot reach here. It
  * is the same exemption Next's metadata filenames carry — this path is named
  * explicitly in `scripts/check-tokens.mjs` for exactly that reason. The values
- * restate the deep-ocean dark palette from `globals.css`; dark works on every
+ * restate the Logbook dark palette from `globals.css` (ADR 20261001-logbook);
+ * dark works on every
  * chat client's light and dark chrome, which is why the card commits to it.
  */
 export const OG_COLORS = {
-  /** `--surface` in the deep-ocean dark theme — the card's ground. */
-  base: "#071720",
-  /** The gradient's far corner, a shade off the ground. */
-  baseFar: "#0d222d",
+  /** `--surface` in the Logbook dark theme — the card's ground, flat. */
+  base: "#162129",
   /** `--foreground`: the headline and the wordmark. */
-  ink: "#e9f3f4",
+  ink: "#e4ebef",
   /** `--muted`: the secondary lines (shop name, dive sites, date). */
-  muted: "#9fc0c7",
+  muted: "#97a7b1",
   /** `--primary`: the two lower bubbles and the footer line. */
-  primary: "#22d3ee",
-  /** `--accent`: the rationed coral — the top bubble and the full stop. */
-  accent: "#ff8a7e",
+  primary: "#4fbcd8",
+  /** `--accent`: the rationed marine amber — the top bubble and the full stop. */
+  accent: "#f0a24a",
 } as const;
 
 /**
- * The deep-ocean ground every card sits on. Each card keeps its own `size`
+ * The flat ground every card sits on. Each card keeps its own `size`
  * export — that is Next's metadata contract with the route, not chrome.
  */
 export const CARD_STYLE = {
@@ -51,7 +50,6 @@ export const CARD_STYLE = {
   justifyContent: "space-between",
   padding: 72,
   backgroundColor: OG_COLORS.base,
-  backgroundImage: `linear-gradient(160deg, ${OG_COLORS.base} 55%, ${OG_COLORS.baseFar} 100%)`,
   color: OG_COLORS.ink,
   fontSize: 32,
 };
