@@ -105,9 +105,8 @@ export type TextareaRows = keyof typeof textareaMinHeight;
  * Every textarea picked a fixed `rows` for a typical value, so a longer one
  * scrolled inside its box and its next line showed as a sliver on the bottom
  * border: the course FAQ answer (1,200 characters in three rows) with a
- * fourth line's ink 2px above the border at 390, the seasons notes (280
- * characters in two) with a third line's ascenders on it (the pixel probe,
- * course-edit-save-bar and settings-seasons). `field-sizing: content` grows
+ * fourth line's ink 2px above the border at 390 (the pixel probe,
+ * course-edit-save-bar). `field-sizing: content` grows
  * the box with its text; the minimum keeps the rows it had, so an empty box
  * reads as the size of answer it asks for.
  *
@@ -589,8 +588,8 @@ export function Field({
   // A no-break space before it, so the marker is part of the caption's last
   // word. After an ordinary space it was a word of its own, and "diving *"
   // counted as two words on a last line: `text-pretty` repairs a last line of
-  // one word and left the fly-safe caption's "diving *" alone under 280px of
-  // text (the pixel probe, settings-fly-safe, K-586).
+  // one word and left a caption's "diving *" alone under 280px of text (the
+  // pixel probe, K-586).
   const requiredMarker = isRequired ? (
     <span aria-hidden="true" className="text-danger">
       {"\u00A0"}*
@@ -704,9 +703,8 @@ export function Field({
       className={`row-span-2 grid min-w-0 grid-rows-subgrid gap-y-1 text-sm font-medium ${className}`}
     >
       {/* `text-pretty` on every branch's caption row: a caption that wraps
-          keeps company on its last line. The fly-safe label left "diving *"
-          alone there, 49px of a 329px column (the pixel probe,
-          settings-fly-safe). */}
+          keeps company on its last line. A label once left "diving *" alone
+          there, 49px of a 329px column (the pixel probe). */}
       <span className="self-end text-pretty">
         <label htmlFor={controlId}>{captionContent}</label>
         {requiredMarker}

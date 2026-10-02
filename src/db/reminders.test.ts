@@ -44,15 +44,6 @@ async function reminderContext() {
     .select()
     .from(people)
     .where(eq(people.email, "reminders-pat@example.com"));
-  // **This shop sends around the clock**, so the cases below are about the
-  // cadence buckets and nothing else. A reminder is also held outside the
-  // shop's own civil hours (`src/lib/send-window.ts`, issue #697), which has
-  // its own cases at the bottom of this file; mixing the two would test the
-  // bucket arithmetic and the clock at the same time and prove neither.
-  await db
-    .update(shops)
-    .set({ sendWindowStartHour: 0, sendWindowEndHour: 24 })
-    .where(eq(shops.id, shop.id));
   // 100h out lands in the 7-day bucket (T-168h .. T-24h).
   const inWeekBucket = new Date(reef.startsAt.getTime() - 100 * 60 * 60 * 1000);
   return { db, shop, reef, bookingId, personId: person.id, inWeekBucket };
@@ -270,8 +261,9 @@ describe("sendDueReminders", () => {
     });
     await db.update(shops).set({ contactPhone: "+13055551234" }).where(eq(shops.id, shop.id));
     const email = fakeEmail();
-    // 10h out lands in the 24-hour bucket, so the reminder is the full brief.
-    const dayNow = new Date(reef.startsAt.getTime() - 10 * 60 * 60 * 1000);
+    // 6h out lands in the 24-hour bucket, inside the send window, so the
+    // reminder is the full brief.
+    const dayNow = new Date(reef.startsAt.getTime() - 6 * 60 * 60 * 1000);
     expect(dayNow.getTime()).toBeGreaterThan(inWeekBucket.getTime());
 
     await sendDueReminders(db, {
@@ -308,7 +300,7 @@ describe("sendDueReminders", () => {
     const email = fakeEmail();
 
     await sendDueReminders(db, {
-      now: new Date(reef.startsAt.getTime() - 10 * 60 * 60 * 1000),
+      now: new Date(reef.startsAt.getTime() - 6 * 60 * 60 * 1000),
       emailProvider: email.provider,
       smsProvider: fakeSms().provider,
       appOrigin: null,
@@ -429,14 +421,7 @@ describe("sendDueReminders locale (docs ADR 20260731-per-person-notification-loc
  * close the bucket.
  */
 describe("reminders against the shop's civil hours", () => {
-  async function quietHoursContext() {
-    const ctx = await reminderContext();
-    await ctx.db
-      .update(shops)
-      .set({ sendWindowStartHour: 8, sendWindowEndHour: 20 })
-      .where(eq(shops.id, ctx.shop.id));
-    return ctx;
-  }
+  const quietHoursContext = reminderContext;
 
   /** The same instant in the run-up, moved to a given shop-local hour. */
   function atLocalHour(reference: Date, hour: number) {

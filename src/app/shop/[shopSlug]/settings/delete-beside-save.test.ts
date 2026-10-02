@@ -8,17 +8,13 @@ import { describe, expect, it } from "vitest";
  * measures it.
  *
  * **A row's Delete sits in its edit form, beside Save** (pixel-craft class
- * 12). Each season and each boat drew Delete in a form of its own after the
- * edit form, because `InlineConfirm` submits the form it sits in and forms
- * cannot nest: on seasons that put Delete on a line under Save and cost 56px
- * per season. `InlineConfirm`'s `formAction` lets the confirm post to the
- * delete from inside the edit form. Kinds of day's rows are pinned beside
- * their own page, in `kinds-of-day/page.control-rows.test.ts`.
+ * 12). Each boat drew Delete in a form of its own after the edit form,
+ * because `InlineConfirm` submits the form it sits in and forms cannot nest,
+ * which put Delete on a line under Save. `InlineConfirm`'s `formAction` lets
+ * the confirm post to the delete from inside the edit form. Trip tags' rows
+ * are pinned beside their own page, in `trip-tags/page.control-rows.test.ts`.
  */
-const PAGES = [
-  { page: "seasons", update: "updateSeasonEventAction", remove: "deleteSeasonEventAction" },
-  { page: "boats", update: "updateBoatAction", remove: "deleteBoatAction" },
-] as const;
+const PAGES = [{ page: "boats", update: "updateBoatAction", remove: "deleteBoatAction" }] as const;
 
 describe.each(PAGES)("the $page rows", ({ page, update, remove }) => {
   const source = readFileSync(join(import.meta.dirname, page, "page.tsx"), "utf8");

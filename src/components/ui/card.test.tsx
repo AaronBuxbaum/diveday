@@ -598,17 +598,17 @@ describe("naming the region", () => {
 
   it("preserves aria-label when passed explicitly", () => {
     const { container: kebabContainer } = render(
-      <SectionCard aria-label="Conservation commitments">body</SectionCard>,
+      <SectionCard aria-label="Emergency reference">body</SectionCard>,
     );
     expect(kebabContainer.querySelector("section")?.getAttribute("aria-label")).toBe(
-      "Conservation commitments",
+      "Emergency reference",
     );
 
     const { container: camelContainer } = render(
-      <SectionCard ariaLabel="Conservation commitments">body</SectionCard>,
+      <SectionCard ariaLabel="Emergency reference">body</SectionCard>,
     );
     expect(camelContainer.querySelector("section")?.getAttribute("aria-label")).toBe(
-      "Conservation commitments",
+      "Emergency reference",
     );
   });
 });

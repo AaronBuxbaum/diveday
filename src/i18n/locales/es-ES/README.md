@@ -143,8 +143,8 @@ arrival the turn sits on is the whole point of naming it.
 | the tide window | la ventana de marea |
 | NOAA tide station | estación de mareas NOAA |
 
-The strings these govern are `tide.window` in `staff/shared.json` and `trip.tideWindow` in
-`diver.json`; both carry every row above in one ICU `select`.
+The string these govern is `tide.window` in `staff/shared.json`; it carries every row above in
+one ICU `select`.
 
 ## A place you dive is **un sitio de buceo**
 

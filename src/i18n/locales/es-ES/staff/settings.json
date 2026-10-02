@@ -12,7 +12,6 @@
       "taxInvalid": "No se pudo guardar la configuración de impuestos.",
       "passThroughSaved": "Cuota repercutida guardada.",
       "passThroughInvalid": "Introduce el nombre y un importe positivo, o deja ambos vacíos para desactivarla.",
-      "conservationSaved": "Compromisos de conservación guardados.",
       "rentalsSaved": "Catálogo de alquiler guardado.",
       "rentalPricesSaved": "Precios de alquiler guardados.",
       "rentalPricesInvalid": "Introduce cada precio como una cantidad en dólares (o deja el campo vacío), entre $0 y $100.000.",
@@ -28,9 +27,6 @@
       "reviewUrlInvalid": "Introduce un enlace https:// completo, o vacía el campo para dejar de pedir reseñas.",
       "searchListingOn": "Tus páginas públicas aparecen en los buscadores.",
       "searchListingOff": "Tus páginas públicas están ocultas para los buscadores. Lo que ya esté indexado puede tardar unas semanas en desaparecer.",
-      "tideWindowOn": "Los buceadores ya ven la ventana de marea en las páginas de salida.",
-      "tideWindowOff": "La ventana de marea ya no aparece en las páginas de salida de los buceadores.",
-      "conservationInvalid": "Revisa la selección de compromisos de conservación.",
       "connected": "Cuenta de Stripe conectada.",
       "connectFailed": "La conexión con Stripe no se completó. Inténtalo de nuevo.",
       "notConfigured": "Los pagos en línea aún no están activos en esta instalación de DiveDay.",
@@ -42,10 +38,6 @@
       "seasonInvalid": "Elige un día que ese mes tenga.",
       "timezoneInvalid": "No reconocemos esa zona horaria: elige una de la lista.",
       "emergencySaved": "Referencia de emergencia guardada.",
-      "sendWindowSaved": "Horario de mensajes guardado.",
-      "sendWindowInvalid": "Eso no se guardó. La primera hora tiene que ir antes que la última, en formato de 24 horas.",
-      "flySafeSaved": "Espera antes de volar guardada.",
-      "flySafeInvalid": "Eso no se guardó. Horas enteras, como mínimo las 12 y 18 de DAN, como máximo 72, y la espera tras dos inmersiones no puede ser menor que la de una.",
       "packageSaved": "Paquete añadido.",
       "packageDeleted": "Paquete eliminado.",
       "packageInvalid": "Eso no se guardó. Revisa el número de inmersiones, el precio y cuánto tiempo se puede usar."
@@ -154,20 +146,6 @@
       "brandPreview": "Cómo se ve",
       "brandPreviewNight": "De noche"
     },
-    "hospitality": {
-      "heading": "Tus propias palabras",
-      "value": "{count, plural, one {# escrita} other {# escritas}}",
-      "hint": "Los buceadores leen esto en el idioma en que lo escribas.",
-      "welcomeLabel": "Lo que lee quien bucea contigo por primera vez",
-      "dockCallLabel": "Qué esperar en el muelle",
-      "signOffLabel": "Cómo despides un día terminado",
-      "save": "Guardar tus palabras",
-      "saving": "Guardando…",
-      "notice": {
-        "saved": "Guardado.",
-        "tooLong": "Mantén cada una por debajo de 280 caracteres."
-      }
-    },
     "address": {
       "heading": "Dirección del centro",
       "detail": "Se muestra a los buceadores y a los buscadores.",
@@ -201,32 +179,6 @@
       "detail": "Estar visible también pone tu centro en la página de DiveDay para tu localidad. Si desmarcas esto, lo que ya esté indexado puede tardar unas semanas en desaparecer, y una página que alguien haya enlazado sigue siendo accesible por ese enlace.",
       "label": "Mostrar mis páginas públicas en los buscadores",
       "submit": "Guardar",
-      "submitting": "Guardando…"
-    },
-    "tideWindow": {
-      "heading": "Ventana de marea",
-      "valueOn": "Visible para buceadores",
-      "valueOff": "Solo personal",
-      "detail": "Los sitios con estación de mareas NOAA llevan una línea en las páginas del personal: la estoa más cercana y hacia dónde se mueve el agua cuando llega el barco. Marca esto y los buceadores leen la misma línea en la página de la salida.",
-      "label": "Mostrar la ventana de marea en las páginas públicas de salida",
-      "submit": "Guardar",
-      "submitting": "Guardando…"
-    },
-    "conservation": {
-      "heading": "Compromisos de conservación",
-      "detail": "Selecciona los compromisos que practica tu operación. Se publican como una declaración de tu centro, nunca como una verificación de DiveDay.",
-      "value": "{count, plural, one {# compromiso} other {# compromisos}}",
-      "commitments": {
-        "green_fins_member": "Miembro de Green Fins",
-        "padi_aware_partner": "Socio de PADI AWARE",
-        "mooring_buoys_only": "Solo boyas de amarre",
-        "no_touch_policy": "Política de no tocar el arrecife",
-        "no_gloves_policy": "Política de no usar guantes",
-        "reef_cleanup_dives": "Inmersiones de limpieza de arrecifes",
-        "lionfish_containment": "Control de pez león",
-        "coral_nursery_support": "Apoyo a viveros de coral"
-      },
-      "submit": "Guardar compromisos de conservación",
       "submitting": "Guardando…"
     },
     "packing": {
@@ -268,24 +220,6 @@
       "atDeparture": "A la hora",
       "siteOverrides": "{count, plural, one {# sitio de buceo tiene su propio tiempo en el agua, así que este ritmo no describe una inmersión allí:} other {# sitios de buceo tienen su propio tiempo en el agua, así que este ritmo no describe una inmersión en ninguno de ellos:}}",
       "siteOverride": "{name} · {count} min"
-    },
-    "sendWindow": {
-      "heading": "Cuándo escribimos a los buceadores",
-      "value": "{start} – {end}",
-      "description": "Los recordatorios y los resúmenes esperan a estas horas en tu zona horaria. Una cancelación sale siempre al momento.",
-      "startLabel": "No antes de (0–23)",
-      "endLabel": "No después de (1–24)",
-      "submit": "Guardar horario",
-      "submitting": "Guardando…"
-    },
-    "flySafe": {
-      "heading": "Espera antes de volar",
-      "value": "{single} h · {repetitive} h",
-      "description": "Cuánto se le pide esperar a un buceador después del buceo del día antes de volar. Su resumen dice la hora, que la espera la fijas tú y que sigue las recomendaciones de DAN.",
-      "singleLabel": "Tras una sola inmersión",
-      "repetitiveLabel": "Tras inmersiones repetitivas o más de un día de buceo",
-      "submit": "Guardar horas de espera",
-      "submitting": "Guardando…"
     },
     "units": {
       "heading": "Unidades",

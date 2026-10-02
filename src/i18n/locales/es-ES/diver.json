@@ -77,19 +77,6 @@
     "unavailableHeading": "Esta tableta no está configurada",
     "unavailableBody": "Crea uno nuevo en Configuración, en Pantalla del lobby."
   },
-  "conservation": {
-    "shopClaimsDisclaimer": "Declarado por el centro, no verificado por DiveDay.",
-    "commitments": {
-      "green_fins_member": "Miembro de Green Fins",
-      "padi_aware_partner": "Socio de PADI AWARE",
-      "mooring_buoys_only": "Solo boyas de amarre",
-      "no_touch_policy": "Política de no tocar el arrecife",
-      "no_gloves_policy": "Política de no usar guantes",
-      "reef_cleanup_dives": "Inmersiones de limpieza de arrecifes",
-      "lionfish_containment": "Control de pez león",
-      "coral_nursery_support": "Apoyo a viveros de coral"
-    }
-  },
   "common": {
     "backToSchedule": "Volver al calendario",
     "needHelpContact": "¿Necesitas ayuda? <link>Contacta con {shop}</link>.",
@@ -140,8 +127,6 @@
     "footerLine": "{shop}",
     "spokenLanguages": "Hablamos {languages}",
     "languageFallback": "DiveDay todavía no está en {requested}. Esta página está en {shown}, el idioma en el que trabaja {shop}.",
-    "conservationCommitmentsHeading": "Compromisos de conservación declarados por el centro",
-    "conservationCommitmentsDisclaimer": "Estas son declaraciones del centro; DiveDay no las verifica ni las respalda.",
     "credit": "Reservas con DiveDay"
   },
   "regions": {
@@ -173,7 +158,6 @@
     "offSeason": {
       "heading": "No hay salidas durante un tiempo",
       "back": "Volvemos al agua el {date}.",
-      "nextSeason": "{name} comienza el {date}.",
       "requestHeading": "Pídenos un día"
     },
     "filters": {
@@ -206,7 +190,7 @@
       "eyebrowFiltered": "Próxima salida con plazas en esta vista"
     },
     "lenses": {
-      "railLabel": "Tipos de día",
+      "railLabel": "Etiquetas de salida",
       "all": "Todas las salidas"
     },
     "shopfront": {
@@ -216,11 +200,6 @@
     "moreWaysHeading": "Otras formas de ayudarte",
     "boatsHeading": "Las embarcaciones",
     "boatSeats": "{count, plural, one {# buceador} other {# buceadores}}"
-  },
-  "season": {
-    "eyebrow": "En temporada",
-    "through": "Hasta el {date}",
-    "lensLink": "Ver salidas de {lens}"
   },
   "trip": {
     "courseSession": "Sesión de curso",
@@ -340,7 +319,6 @@
     "forecastUpdateUnavailable": "Hora de actualización no disponible.",
     "forecastCrewCall": "Las condiciones se confirman en el muelle.",
     "forecastCreditPrefix": "Previsión de",
-    "tideWindow": "{turn, select, next {Próxima} other {Última}} {kind, select, high {pleamar} other {bajamar}} a las {time}; el barco llega al sitio {phase, select, slack {en el cambio de marea} flood {con marea entrante} other {con marea saliente}}{fit, select, met {, cuando mejor se bucea} missed {. Se bucea mejor {preference, select, slack {en la estoa} flood {con marea entrante} other {con marea saliente}}} other {}}.",
     "timeline": {
       "arrive": "Llegada y registro",
       "gearSetup": "Monta tu equipo",
@@ -413,8 +391,7 @@
       "crew": "Tripulación"
     },
     "pitchDoor": "El resto del briefing",
-    "pitchDoorSpecies": "{count, plural, one {# especie} other {# especies}}",
-    "tideStation": "Marea en {station}"
+    "pitchDoorSpecies": "{count, plural, one {# especie} other {# especies}}"
   },
   "factSource": {
     "forecast": "Pronóstico",

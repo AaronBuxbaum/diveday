@@ -103,7 +103,7 @@ describe("the map covers the whole hub", () => {
   });
 
   it("keeps every fragment that other surfaces already link to", () => {
-    // The pane scrolls; the ids do not move. These six are the anchors the
+    // The pane scrolls; the ids do not move. These five are the anchors the
     // rest of the app spells out in `/settings#…` links, and a rename here
     // would be a dead deep link nothing else would notice.
     expect(settingsSectionFragment("contact")).toBe("contact");
@@ -111,7 +111,6 @@ describe("the map covers the whole hub", () => {
     expect(settingsSectionFragment("units")).toBe("units");
     expect(settingsSectionFragment("reviewLink")).toBe("review-link");
     expect(settingsSectionFragment("searchListing")).toBe("search-listing");
-    expect(settingsSectionFragment("conservation")).toBe("conservation");
   });
 });
 
@@ -339,8 +338,8 @@ describe("the rail as it renders", () => {
    * sticks at its scroller's padding edge, and the rail's scroller carried
    * `py-6`: a label stuck 24px under the box's top, and the rows scrolled past
    * it kept showing in that strip — once the rail opened on its current row,
-   * a 10px sliver of "Trip packing checklist" stood above "YOUR SHOP" on Kinds
-   * of day and Seasons. The inset belongs to what the box scrolls, not to the
+   * a 10px sliver of "Trip packing checklist" stood above "YOUR SHOP" on Trip
+   * tags. The inset belongs to what the box scrolls, not to the
    * box.
    */
   it("keeps its inset inside what it scrolls, so a stuck label sits on the box's top edge", () => {
@@ -358,7 +357,7 @@ describe("the rail as it renders", () => {
  * box of its own, and the settings layout keeps it across a click inside the
  * rail, but every other way in (a direct link, ⌘K's "Go to", the hub's own
  * rows) landed with the box at its top: 19 grey rows and no selected one on
- * Kinds of day, Seasons, Print and WhatsApp, whose rows sit 140–750px below
+ * Trip tags, Print and WhatsApp, whose rows sit 140–750px below
  * the box's fold. The rail brings its own box to the row, and never the page:
  * `scrollIntoView` would scroll the window as well.
  */
@@ -462,7 +461,7 @@ describe("the rail keeps the current row in view", () => {
    * **It lands a whole row under the stuck label, never half of one** (K-221).
    * Centring the row put the box's scroll wherever the arithmetic fell, and
    * the label stuck at the box's top cut the row that happened to be passing
-   * under it: on Kinds of day and Seasons the bottom half of "Trip packing
+   * under it: on Trip tags the bottom half of "Trip packing
    * checklist" showed under "YOUR SHOP", a state only a hand could have left
    * the rail in. The rail finishes the move on a row's edge: the first row
    * the label would cut starts where a row starts under its label at rest.

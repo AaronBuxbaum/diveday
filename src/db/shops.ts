@@ -2,16 +2,13 @@ import { and, asc, eq, exists, gt, isNull, or, sql } from "drizzle-orm";
 import { cache } from "react";
 import type { BrandBadgeCode, BrandDisplayFontCode } from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
-import type { ConservationCommitmentCode } from "@/lib/conservation-commitments";
 import type { DepthUnit } from "@/lib/depth-units";
 import type { DockDayRhythm } from "@/lib/diver-planning";
 import type { EmergencyReference } from "@/lib/emergency-reference";
-import type { FlySafeHours } from "@/lib/fly-safe";
 import type { ShopCurrency } from "@/lib/money";
 import { regionSlugFromLocality } from "@/lib/region";
 import type { RentalPricing } from "@/lib/rentals";
 import type { SeasonStart } from "@/lib/season";
-import type { SendWindow } from "@/lib/send-window";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { type AppDb, getDb } from "./client";
 import { courses, divePackages, orders, shops, trips } from "./schema";
@@ -201,20 +198,6 @@ export async function setShopPassThroughFee(
   return shop ?? null;
 }
 
-/** Stores the shop's own conservation claims without presenting them as verified. */
-export async function setShopConservationCommitments(
-  db: AppDb,
-  shopId: string,
-  conservationCommitments: ConservationCommitmentCode[],
-) {
-  const [shop] = await db
-    .update(shops)
-    .set({ conservationCommitments })
-    .where(eq(shops.id, shopId))
-    .returning();
-  return shop ?? null;
-}
-
 /**
  * Sets the shop's whole dock-day rhythm — the arrival call and the five minute
  * amounts the rest of the day is laid out from (src/lib/diver-planning.ts).
@@ -355,35 +338,6 @@ export async function markShopUnitsConfirmed(db: AppDb, shopId: string, now = no
 
 export async function setShopDockDayRhythm(db: AppDb, shopId: string, rhythm: DockDayRhythm) {
   const [shop] = await db.update(shops).set(rhythm).where(eq(shops.id, shopId)).returning();
-  return shop ?? null;
-}
-
-/**
- * The hours during which the shop's automated messages may reach a diver —
- * shop-local, and the only thing standing between a Fiji shop and a 3 AM text
- * (`src/lib/send-window.ts`, issue #697).
- */
-export async function setShopSendWindow(db: AppDb, shopId: string, window: SendWindow) {
-  const [shop] = await db
-    .update(shops)
-    .set({ sendWindowStartHour: window.startHour, sendWindowEndHour: window.endHour })
-    .where(eq(shops.id, shopId))
-    .returning();
-  return shop ?? null;
-}
-
-/**
- * How long after the last dive this shop tells a diver they may fly
- * (`src/lib/fly-safe.ts`, issue #1425). The pair is validated by
- * `parseFlySafeHours` before it reaches here and by the table's own CHECK
- * after, so a caller that skips the parser is refused rather than stored.
- */
-export async function setShopFlySafeHours(db: AppDb, shopId: string, hours: FlySafeHours) {
-  const [shop] = await db
-    .update(shops)
-    .set({ flySafeHoursSingle: hours.single, flySafeHoursRepetitive: hours.repetitive })
-    .where(eq(shops.id, shopId))
-    .returning();
   return shop ?? null;
 }
 
@@ -635,46 +589,6 @@ export async function setShopProfile(
         : {}),
       ...(profile.brandBadges !== undefined ? { brandBadges: profile.brandBadges } : {}),
     })
-    .where(eq(shops.id, shopId))
-    .returning();
-  return shop ?? null;
-}
-
-/**
- * **The shop's own three sentences** (issue #1212) — the welcome a first-timer
- * reads, what to expect at the dock, and how a finished day is signed off.
- *
- * All three are written together because they are one act at one form, and a
- * blank one is stored as NULL so "unset" has exactly one shape: every reader
- * asks `note ? …` and nothing has to decide whether a run of spaces counts.
- */
-export async function setShopHospitalityNotes(
-  db: AppDb,
-  shopId: string,
-  notes: { welcomeNote: string; dockCallNote: string; signOffNote: string },
-) {
-  const clean = (value: string) => value.trim() || null;
-  const [shop] = await db
-    .update(shops)
-    .set({
-      welcomeNote: clean(notes.welcomeNote),
-      dockCallNote: clean(notes.dockCallNote),
-      signOffNote: clean(notes.signOffNote),
-    })
-    .where(eq(shops.id, shopId))
-    .returning();
-  return shop ?? null;
-}
-
-/**
- * Whether a site's tide window reaches the diver's public departure page
- * (ADR 20260907-noaa-tide-predictions). Off by default; staff surfaces read
- * the window regardless of this.
- */
-export async function setShopTideWindowPublic(db: AppDb, shopId: string, on: boolean) {
-  const [shop] = await db
-    .update(shops)
-    .set({ tideWindowPublic: on })
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;

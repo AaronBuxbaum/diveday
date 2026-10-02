@@ -23,28 +23,29 @@ import { lensNoticeMessages } from "../sub-page-notices";
 export const instant = true;
 
 /** Static metadata resolves before locale negotiation, so it stays English. */
-export const metadata: Metadata = { title: "Kinds of day — DiveDay" };
+export const metadata: Metadata = { title: "Trip tags — DiveDay" };
 
 /**
- * **Kinds of day** — ADR 20260904-reef-all-the-way-down, decision 2 (issue
- * #1162). The shop's own words for its departures, which a diver then filters
- * the public schedule by.
+ * **Trip tags** — ADR 20260904-reef-all-the-way-down, decision 2 (issue
+ * #1162), cut down to a plain list by ADR 20261001-logbook. The shop's own
+ * tags for its departures, which a diver then filters the public schedule by:
+ * add one, rename one, delete one.
  *
  * On its own page rather than inside a hub row, for the reason `boats` is: a
  * list with a rename form and a delete confirm on every line is a page, and a
  * disclosure that opens onto one is a page wearing a row. Unconditional — a
- * shore-diving shop with no hull still names its kinds of day — so this route
+ * shore-diving shop with no hull still tags its departures — so this route
  * carries no `hasBoatDiving` gate.
  *
  * **Every row here that holds a text box is an `md` row.** A list row would
  * take `sm`, but a box's type is 16px and `sm`'s is 14px, so a rename box
  * beside `sm` Save and Delete read as two sizes on all six rows of
- * `settings-kinds-of-day` (the pixel probe's `mismatched-controls` cluster,
+ * `settings-trip-tags` (the pixel probe's `mismatched-controls` cluster,
  * 2026-09-25). The buttons take `md` and the boxes stand at its 48px, and the
  * delete confirm of a word that carries departures passes `size="md"` so the
  * Cancel `InlineConfirm` draws beside its confirm is `md` too.
  */
-export default async function KindsOfDaySettingsPage({
+export default async function TripTagsSettingsPage({
   params,
   searchParams,
 }: {

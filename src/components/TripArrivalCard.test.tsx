@@ -11,7 +11,6 @@ const shop = {
   timezone: "America/New_York",
   contactPhone: null,
   contactEmail: null,
-  dockCallNote: null,
   address: {
     street: "100 Ocean Drive",
     locality: "Key Largo",
@@ -62,19 +61,8 @@ describe("arrivalCardFacts", () => {
     });
   });
 
-  /**
-   * **The shop's standing sentence, and only where the departure wrote none**
-   * (issue #1212). Two answers to one question is the defect, so the
-   * departure's own words always win.
-   */
-  it("falls back to the shop's standing dock-call sentence, and never over the trip's own", () => {
-    const withStanding = { ...shop, dockCallNote: "  Come to the blue gate, we’ll wave.  " };
-    expect(arrivalCardFacts(withStanding, trip)).toMatchObject({
-      firstInteraction: "Ask the dock host",
-    });
-    expect(
-      arrivalCardFacts(withStanding, { ...trip, arrivalFirstInteraction: null }),
-    ).toMatchObject({ firstInteraction: "Come to the blue gate, we’ll wave." });
+  it("states the departure's own first interaction, and nothing when it wrote none", () => {
+    expect(arrivalCardFacts(shop, trip)).toMatchObject({ firstInteraction: "Ask the dock host" });
     expect(
       arrivalCardFacts(shop, { ...trip, arrivalFirstInteraction: null }).firstInteraction,
     ).toBeNull();

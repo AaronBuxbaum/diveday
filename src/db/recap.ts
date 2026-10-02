@@ -7,7 +7,7 @@ import type { CertificationLevel } from "@/lib/certification-levels";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
 import { compareDiveRecord, type DiveRecordComparison } from "@/lib/dive-record";
-import { type FlySafeResult, flySafeFrom } from "@/lib/fly-safe";
+import { DEFAULT_FLY_SAFE_HOURS, type FlySafeResult, flySafeFrom } from "@/lib/fly-safe";
 import { type ShopCurrency, toShopCurrency } from "@/lib/money";
 import {
   type Notification,
@@ -126,12 +126,6 @@ export type RecapPageData = {
      */
     brandColor: string | null;
     brandDisplayFont: BrandDisplayFontCode | null;
-    /**
-     * How this shop signs off a finished day, in its own words (issue #1212).
-     * Read only where the crew wrote nothing of their own for this diver — a
-     * standing sentence must never talk over one somebody wrote today.
-     */
-    signOffNote: string | null;
   };
   /**
    * **The course this departure taught, and what the shop recorded for it**
@@ -407,9 +401,6 @@ export async function getRecapPageData(
       temperatureUnit: shops.temperatureUnit,
       brandColor: shops.brandColor,
       brandDisplayFont: shops.brandDisplayFont,
-      signOffNote: shops.signOffNote,
-      flySafeHoursSingle: shops.flySafeHoursSingle,
-      flySafeHoursRepetitive: shops.flySafeHoursRepetitive,
       courseNextStep: bookings.courseNextStep,
       courseNextStepByPersonId: bookings.courseNextStepByPersonId,
     })
@@ -608,7 +599,7 @@ export async function getRecapPageData(
     endsAt: trip.endsAt,
     divedRecently: divedRecentlyIds.has(row.personId),
     now: nowDate(),
-    hours: { single: row.flySafeHoursSingle, repetitive: row.flySafeHoursRepetitive },
+    hours: DEFAULT_FLY_SAFE_HOURS,
   });
 
   const tripLocalDay = calendarDateInTimezone(trip.startsAt, row.timezone);
@@ -651,7 +642,6 @@ export async function getRecapPageData(
       temperatureUnit: row.temperatureUnit,
       brandColor: row.brandColor,
       brandDisplayFont: row.brandDisplayFont,
-      signOffNote: row.signOffNote,
     },
     course: trip.course
       ? {
@@ -1307,10 +1297,7 @@ async function sendRecaps(
             endsAt: first.trip.endsAt,
             divedRecently: divedRecentlyIds.has(r.booking.personId),
             now,
-            hours: {
-              single: first.shop.flySafeHoursSingle,
-              repetitive: first.shop.flySafeHoursRepetitive,
-            },
+            hours: DEFAULT_FLY_SAFE_HOURS,
           }),
         );
       }
@@ -1344,12 +1331,7 @@ async function sendRecaps(
     // (issue #697). Held rather than dropped, and safely so: a recap is due
     // from `endsAt + 4h` onwards with no upper bound, so the condition simply
     // stays true until this hourly pass next runs inside the shop's own hours.
-    if (
-      !maySendNow("trip_recap", now, shop.timezone, {
-        startHour: shop.sendWindowStartHour,
-        endHour: shop.sendWindowEndHour,
-      })
-    ) {
+    if (!maySendNow("trip_recap", now, shop.timezone)) {
       summary.held += 1;
       continue;
     }

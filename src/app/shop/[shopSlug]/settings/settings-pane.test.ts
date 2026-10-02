@@ -46,7 +46,7 @@ describe("the settings pane", () => {
       "safety-checklist/loading.tsx",
       "team/page.tsx",
       "embed/page.tsx",
-      "kinds-of-day/loading.tsx",
+      "trip-tags/loading.tsx",
     ]) {
       expect(files).toContain(file);
     }

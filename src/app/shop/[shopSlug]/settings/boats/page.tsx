@@ -235,8 +235,7 @@ export default async function BoatsSettingsPage({
               no values to read a box by, and its placeholders were its only
               labels: the 128px capacity box read "Capacity (se" and the
               description lost twenty characters of its own at 390 (K-145).
-              Captions, as the seasons form beside it has them; a row above
-              keeps its placeholders because its values say what each box
+              Captions; a row above keeps its placeholders because its values say what each box
               holds. */}
           <AddPanel title={t("boats.createTitle")}>
             <FieldGrid as="form" columns={2} action={createBoatAction}>

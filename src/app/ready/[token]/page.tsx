@@ -1536,7 +1536,6 @@ export default async function DiverReadinessPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = diverTranslator(locale);
   const firstName = detail.person.fullName.split(" ")[0] || t("ready.namelessFallback");
-  const welcomeNote = data.firstVisit ? shop.welcomeNote?.trim() || null : null;
   // Every date, time, and relative phrase on this page formats for `locale` —
   // the *negotiated* one. These four used to pass `shop.defaultLocale`
   // straight into the formatter, so a diver reading Spanish prose got the
@@ -2274,19 +2273,6 @@ export default async function DiverReadinessPage({
             title={t("booking.confirmedHeading", { name: firstName })}
           />
         ) : null}
-        {/* **The shop's own welcome** (issue #1212), to somebody who has not
-            dived with them before — a welcome read on every thread stops being
-            a welcome. Rendered exactly as typed and uncaptioned, the way a
-            dive-site briefing renders: never through ICU, never with a label
-            over it explaining that the shop wrote it.
-
-            It greets at the top of the thread now rather than closing it. It
-            used to be the one thing worth keeping in a trailing "Your dive
-            shop" card whose address, phone, email and map link all restated
-            "Where to go" further up the page; that card is gone, and a
-            greeting arriving after the cancel button was never where a welcome
-            belonged. */}
-        {welcomeNote ? <p className="mt-8 text-base">{welcomeNote}</p> : null}
         {spine.setupItem ? (
           // Nothing on this booking is the diver's until the shop finishes its
           // own configuration, so there is no spine and no figure — one
@@ -2348,7 +2334,6 @@ export default async function DiverReadinessPage({
                 timezone: fullShop.timezone,
                 contactPhone: fullShop.contactPhone,
                 contactEmail: fullShop.contactEmail,
-                dockCallNote: fullShop.dockCallNote,
                 address: {
                   street: fullShop.addressStreet,
                   locality: fullShop.addressLocality,

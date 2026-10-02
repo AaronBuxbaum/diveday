@@ -31,14 +31,13 @@ describe("the hero renders only what the shop authored", () => {
         name="Blue Mantis Divers"
         tagline={null}
         aggregate={NO_REVIEWS}
-        commitments={[]}
         locale="en-US"
         t={t}
       />,
     );
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Blue Mantis Divers");
-    // No tagline line, no rating line, no conservation line — and above all no
+    // No tagline line, no rating line — and above all no
     // DiveDay sentence standing in for any of them.
     expect(screen.queryAllByRole("paragraph")).toHaveLength(0);
     expect(screen.queryByText(/reviews/i)).not.toBeInTheDocument();
@@ -50,7 +49,6 @@ describe("the hero renders only what the shop authored", () => {
         name="Blue Mantis Divers"
         tagline="Small-boat reef and wreck diving out of Key Largo."
         aggregate={NO_REVIEWS}
-        commitments={[]}
         locale="en-US"
         t={t}
       />,
@@ -64,7 +62,6 @@ describe("the hero renders only what the shop authored", () => {
         name="Blue Mantis Divers"
         tagline={null}
         aggregate={NO_REVIEWS}
-        commitments={[]}
         locale="en-US"
         t={t}
       />,
@@ -80,7 +77,6 @@ describe("the hero renders only what the shop authored", () => {
         name="Blue Mantis Divers"
         tagline={null}
         aggregate={{ count: 83, average: 4.3, suppressedCount: 0 }}
-        commitments={[]}
         locale="en-US"
         t={t}
       />,
@@ -97,7 +93,6 @@ describe("the hero renders only what the shop authored", () => {
         name="Blue Mantis Divers"
         tagline={null}
         aggregate={{ count: 83, average: 4.3, suppressedCount: 0 }}
-        commitments={[]}
         locale="en-US"
         t={t}
       />,
@@ -115,7 +110,6 @@ describe("the hero renders only what the shop authored", () => {
         name="Blue Mantis Divers"
         tagline={null}
         aggregate={{ count: 83, average: 4.3, suppressedCount: 0 }}
-        commitments={[]}
         locale="es-ES"
         t={es}
       />,
@@ -132,7 +126,6 @@ describe("the accent is the stars, and it is data ink", () => {
         name="Blue Mantis Divers"
         tagline={null}
         aggregate={{ count: 83, average: 4.3, suppressedCount: 0 }}
-        commitments={[]}
         locale="en-US"
         t={t}
       />,
@@ -149,7 +142,6 @@ describe("the accent is the stars, and it is data ink", () => {
         name="Blue Mantis Divers"
         tagline="Small-boat reef and wreck diving out of Key Largo."
         aggregate={NO_REVIEWS}
-        commitments={["green_fins_member"]}
         locale="en-US"
         t={t}
       />,
@@ -157,56 +149,6 @@ describe("the accent is the stars, and it is data ink", () => {
 
     expect(container.querySelector(".text-accent")).toBeNull();
     expect(container.querySelector(".bg-accent")).toBeNull();
-  });
-});
-
-describe("the conservation line", () => {
-  it("joins every commitment the shop chose, behind one drawn glyph", () => {
-    render(
-      <ShopfrontHero
-        name="Blue Mantis Divers"
-        tagline={null}
-        aggregate={NO_REVIEWS}
-        commitments={["green_fins_member", "no_touch_policy", "coral_nursery_support"]}
-        locale="en-US"
-        t={t}
-      />,
-    );
-
-    expect(visibleText(screen.getByRole("paragraph"))).toBe(
-      "Green Fins member · No-touch reef policy · Coral nursery support " +
-        "Stated by the shop, not verified by DiveDay.",
-    );
-  });
-
-  it("keeps the claims guard — it is never deleted and never softened", () => {
-    render(
-      <ShopfrontHero
-        name="Blue Mantis Divers"
-        tagline={null}
-        aggregate={NO_REVIEWS}
-        commitments={["green_fins_member"]}
-        locale="en-US"
-        t={t}
-      />,
-    );
-
-    expect(screen.getByText("Stated by the shop, not verified by DiveDay.")).toBeInTheDocument();
-  });
-
-  it("renders nothing at all when the shop has ticked nothing", () => {
-    render(
-      <ShopfrontHero
-        name="Blue Mantis Divers"
-        tagline={null}
-        aggregate={NO_REVIEWS}
-        commitments={[]}
-        locale="en-US"
-        t={t}
-      />,
-    );
-
-    expect(screen.queryByText(/Stated by the shop/)).not.toBeInTheDocument();
   });
 });
 
@@ -221,7 +163,6 @@ describe("the shop's face", () => {
         name="Blue Mantis Divers"
         tagline={null}
         aggregate={{ average: 4.3, count: 83, suppressedCount: 0 }}
-        commitments={[]}
         locale="en-US"
         t={t}
       />,
@@ -238,7 +179,6 @@ describe("the shop's face", () => {
         name="Blue Mantis Divers"
         tagline="Two tanks before lunch."
         aggregate={null}
-        commitments={[]}
         heroImage={{ url: "/dive-sites/reef.jpg", alt: "Elkhorn coral" }}
         badges={["padi_5_star"]}
         establishedYear={1998}
@@ -264,7 +204,6 @@ describe("the masthead is the shop's photograph or its name", () => {
         name="Blue Mantis Divers"
         tagline={null}
         aggregate={NO_REVIEWS}
-        commitments={[]}
         heroImage={{ url: "/dive-sites/reef.jpg", alt: "Elkhorn coral" }}
         locale="en-US"
         t={t}
@@ -280,7 +219,6 @@ describe("the masthead is the shop's photograph or its name", () => {
         name="Blue Mantis Divers"
         tagline={null}
         aggregate={NO_REVIEWS}
-        commitments={[]}
         locale="en-US"
         t={t}
       />,

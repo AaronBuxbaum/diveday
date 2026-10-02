@@ -1,28 +1,26 @@
 import { expect, test } from "./fixtures";
-import { openSettingsRow, openTripAbout } from "./helpers";
+import { openTripAbout } from "./helpers";
 
 /**
  * **The tide window** (ADR 20260907-noaa-tide-predictions): a site that names
  * a NOAA station carries one line — the nearest slack and which way the water
  * is moving when the boat arrives — on the staff site briefing and the
- * departure page, and on the diver's page only once the shop switches it on.
+ * departure page. Divers never read it: the public tide window was cut (ADR
+ * 20261001-logbook).
  *
  * The fleet has no route to NOAA (`DIVEDAY_DISABLE_EXTERNAL_HTTP`), so the
  * seam serves a deterministic fixture table; the assertions match the shape
  * of the sentence rather than a phase, since which phase the fixture lands on
  * is the arithmetic's business, not this spec's.
  *
- * **Each test takes a shop of its own** (`privateShop`): the second one writes
- * a shop-wide setting, which `/api/test/reset` never restores, and the first
- * edits a seeded site's station — schedule-scoped, but a minted shop carries
- * the same seeded Molasses Reef and keeps both tests on one fixture.
+ * **The test takes a shop of its own** (`privateShop`): it edits a seeded
+ * site's station, and a minted shop carries the same seeded Molasses Reef.
  */
 
 /** `\s` before the meridiem: a formatted time keeps "7:05 AM" whole with
  *  U+00A0, and `getByText` matches a regex against the raw text. */
 const TURN = /(Next|Last) (high|low) water at \d{1,2}:\d{2}\s[AP]M/;
 const STAFF_LINE = new RegExp(`${TURN.source}; this departure reaches the site`);
-const DIVER_LINE = new RegExp(`${TURN.source}; the boat reaches the site`);
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
 /** Whose water the turn came from (issue #1732); the fleet's fixture station. */
 const STATION = "Tide at Carysfort Reef, FL";
@@ -70,34 +68,5 @@ test.describe("the tide window", () => {
     await page.getByText("Dive site saved.").waitFor();
     await expect(page.getByText(STAFF_LINE)).toHaveCount(0);
     await expect(page.getByText(STATION)).toHaveCount(0);
-  });
-
-  test("divers read the line only once the shop switches it on", async ({ page, privateShop }) => {
-    test.setTimeout(60_000);
-    // Off by default: the public departure page says nothing about the tide.
-    await page.goto(`/s/${privateShop.slug}`);
-    await page.getByRole("link", { name: REEF_TRIP }).first().click();
-    await page.getByRole("heading", { name: "The day" }).waitFor();
-    const tripUrl = page.url();
-    await expect(page.getByText(DIVER_LINE)).toHaveCount(0);
-
-    await page.goto(`/shop/${privateShop.slug}/settings`);
-    // Settings rows are disclosures; the checkbox is inside a closed one.
-    await openSettingsRow(page, "Tide window");
-    const toggle = page.getByLabel("Show the tide window on public departure pages");
-    await toggle.check();
-    await page
-      .locator("form")
-      .filter({ has: toggle })
-      .getByRole("button", { name: "Save" })
-      .click();
-    await expect(
-      page.getByText("Divers now see the tide window on departure pages."),
-    ).toBeVisible();
-
-    await page.goto(tripUrl);
-    await page.getByRole("heading", { name: "The day" }).waitFor();
-    await expect(page.getByText(DIVER_LINE).first()).toBeVisible();
-    await expect(page.getByText(STATION).first()).toBeVisible();
   });
 });

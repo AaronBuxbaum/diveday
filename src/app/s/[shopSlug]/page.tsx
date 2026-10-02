@@ -20,7 +20,6 @@ import { type AppDb, getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { tripRequirementSummaries } from "@/db/readiness";
 import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
-import { listSeasonEvents } from "@/db/season-events";
 import { shopBySlugCached } from "@/db/shops";
 import { listTripLenses } from "@/db/trip-lenses";
 import { liveShopStage } from "@/db/trip-stages";
@@ -40,9 +39,7 @@ import { timeZoneLabel } from "@/i18n/timezone-labels";
 import { courseDepthFormat } from "@/i18n/unit-labels";
 import { parseBrandBadges } from "@/lib/brand";
 import { addMonths, type MonthRef, monthKey, monthLabel, parseMonthKey } from "@/lib/calendar";
-import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { parseConservationCommitments } from "@/lib/conservation-commitments";
 import { courseTotalCents, resolveCourseContentDepths, resolveImageAlt } from "@/lib/courses";
 import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import {
@@ -74,7 +71,6 @@ import {
   popCursor,
   pushCursor,
 } from "@/lib/schedule-pagination";
-import { liveSeasonEvents } from "@/lib/season-events";
 import { cardClearsDeparture, chooseShelfGreeting } from "@/lib/shelf-greeting";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
 import { absoluteUrl, scheduleJsonLd } from "@/lib/structured-data";
@@ -89,7 +85,6 @@ import { LiveBoatPanel } from "./_components/LiveBoatPanel";
 import { NextBoatCard } from "./_components/NextBoatCard";
 import { OffSeasonPanel } from "./_components/OffSeasonPanel";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
-import { SeasonBand } from "./_components/SeasonBand";
 import { ShopfrontHero } from "./_components/ShopfrontHero";
 import {
   WEEK_LEDGER_FOLLOWER_CLASS,
@@ -272,7 +267,7 @@ export default async function SchedulePage({
   const listMonthBounds = explicitMonth ? monthBoundsUtc(explicitMonth) : null;
 
   /**
-   * **The shop's own words for its kinds of day** — ADR
+   * **The shop's trip tags** — ADR
    * 20260904-reef-all-the-way-down, decision 2 (issue #1162).
    *
    * Read before the batch below rather than inside it, because the list query
@@ -287,25 +282,6 @@ export default async function SchedulePage({
    */
   const lenses = isEmbed ? [] : await listTripLenses(db, shop.id);
   const activeLens = resolveLens(lens, lenses);
-
-  /**
-   * **The reef's calendar** (issue #1485) — the weeks the shop plans its year
-   * around, in the shop's own words, while one of them is live.
-   *
-   * Read beside the vocabulary above and for the same reason: both are the
-   * shop's own writing about its schedule, and both stand down inside the
-   * frame, where a band would spend a third of a 900px widget on something the
-   * host page did not ask for.
-   *
-   * "Live" is asked on the shop's own calendar day, never the server's: a Key
-   * Largo mini-season closes at midnight in Key Largo (`src/lib/season-events.ts`).
-   */
-  const today = calendarDateInTimezone(now, tz);
-  // The whole calendar, not only the live half: the off-season card below
-  // needs the *upcoming* windows, which is the one honest date a shop with an
-  // empty board still has on file (`src/lib/off-season.ts`).
-  const seasonRows = isEmbed ? [] : await listSeasonEvents(db, shop.id);
-  const liveSeasons = liveSeasonEvents(seasonRows, today);
 
   // The view a diver has built — month, embed mode, the lens, and every list
   // filter — must survive every link that re-renders this page. A pager or
@@ -343,32 +319,6 @@ export default async function SchedulePage({
     const query = params.toString();
     return `${publicSchedulePath(shopSlug)}${query ? `?${query}` : ""}`;
   };
-
-  /**
-   * The live seasons as words. The name, the sentence and the days are the
-   * shop's; "Through …" and the link's label are DiveDay's frame.
-   *
-   * The end date is a `CalendarDate` with no instant in it, so
-   * `formatCalendarDate` reads it through UTC rather than converting a moment —
-   * "Oct 31" is October 31st wherever it is read.
-   *
-   * The link is offered only when the season names a word the rail still
-   * carries: `listSeasonEvents` narrows its join to live lenses, so a season
-   * pointing at a deleted word renders its own sentence and no link, rather
-   * than a chip that lands on the unfiltered board.
-   */
-  const seasonEntries = liveSeasons.map((event) => ({
-    id: event.id,
-    name: event.name,
-    note: event.note,
-    through: t("season.through", { date: formatCalendarDate(event.endsOn, locale) }),
-    lens: event.lens
-      ? {
-          href: lensHref(event.lens.slug),
-          label: t("season.lensLink", { lens: event.lens.name }),
-        }
-      : null,
-  }));
 
   // The published-review *list* still streams in separately (below, via
   // <ScheduleReviewsSection>) — it is the slower, independent read the shell
@@ -477,8 +427,8 @@ export default async function SchedulePage({
    * Nothing public on the board for the next thirty days is a state the
    * storefront is now designed for rather than an empty list under "No trips
    * on the books yet" — see `src/lib/off-season.ts` for why the answer is
-   * derived from a departure the shop scheduled or a season it wrote, and
-   * never from a fourth column somebody has to remember to update.
+   * derived from a departure the shop scheduled, and never from a column
+   * somebody has to remember to update.
    *
    * Never inside the frame. `?embed=1` is a window onto the next few
    * departures on somebody else's website; a card about the shop's year, and
@@ -486,25 +436,17 @@ export default async function SchedulePage({
    * the widget already keeps its own terminal state below.
    */
   const quiet = isEmbed
-    ? { quiet: false, opensAt: null, nextSeason: null }
-    : offSeason({ now, firstDeparture: range.first, today, seasons: seasonRows });
+    ? { quiet: false, opensAt: null }
+    : offSeason({ now, firstDeparture: range.first });
   /**
    * The one sentence the card is allowed, already zoned and already worded.
    *
-   * A departure outranks a written season and only one ever renders — see
-   * `offSeason`. `formatShortDate` for the departure (a real instant, read in
-   * the shop's own zone, the same words the week rows below use) and
-   * `formatCalendarDate` for the season, whose two dates have no instant in
-   * them at all.
+   * `formatShortDate` for the departure (a real instant, read in the shop's
+   * own zone, the same words the week rows below use).
    */
   const quietLine = quiet.opensAt
     ? t("schedule.offSeason.back", { date: formatShortDate(quiet.opensAt, locale, tz) })
-    : quiet.nextSeason
-      ? t("schedule.offSeason.nextSeason", {
-          name: quiet.nextSeason.name,
-          date: formatCalendarDate(quiet.nextSeason.startsOn, locale),
-        })
-      : null;
+    : null;
   // Where each departure on this page actually goes. One read for the page,
   // not one per card — and read off the *dives* rather than `trips.dive_site_id`
   // (dive one's site, copied onto the trip row), so a two-site day names both
@@ -623,13 +565,9 @@ export default async function SchedulePage({
    * inferred from the rendered children, because a grid wrapper around four
    * conditionals still draws its own top margin when every one of them is
    * false — an empty 24px band above the schedule on the commonest shop of
-   * all, the one with no live boat and no season written down.
+   * all, the one with no live boat.
    */
-  const identityPanels =
-    (quiet.quiet ? 1 : 0) +
-    (liveStage ? 1 : 0) +
-    (nextBoat ? 1 : 0) +
-    (seasonEntries.length > 0 ? 1 : 0);
+  const identityPanels = (quiet.quiet ? 1 : 0) + (liveStage ? 1 : 0) + (nextBoat ? 1 : 0);
 
   // The month rail: one row of "where am I / step a month" instead of the
   // full month grid this page used to open with. The grid duplicated every
@@ -907,7 +845,6 @@ export default async function SchedulePage({
               tagline={shop.tagline}
               description={shop.description}
               aggregate={reviewAggregate}
-              commitments={parseConservationCommitments(shop.conservationCommitments)}
               heroImage={
                 shop.brandHeroImageUrl
                   ? { url: shop.brandHeroImageUrl, alt: shop.brandHeroImageAlt ?? "" }
@@ -922,14 +859,13 @@ export default async function SchedulePage({
                 held `max-w-md` of its own, so on a 1152px page they stacked
                 down the left third and left the other two-thirds empty — three
                 boxes reading as three unrelated things with nothing beside
-                them. They are one band: the same four facts, laid out as a row
+                them. They are one band: the same three facts, laid out as a row
                 at `md` and up and as the old stack on a phone. `grid-flow-col`
                 with `auto-cols-fr` rather than a fixed `grid-cols-3`, because
                 how many of them render is a fact about the shop's day — no
-                live boat, no season — and the row has to read at one, two,
-                three or four. Order is the reading order it has always been:
-                the quiet, the boat that is out, the next one with space, the
-                season. */}
+                live boat — and the row has to read at one, two or three. Order
+                is the reading order it has always been: the quiet, the boat
+                that is out, the next one with space. */}
             {identityPanels > 0 ? (
               <div className="mt-6 grid gap-4 md:auto-cols-fr md:grid-flow-col">
                 {/* **The quiet, before the boat** (N-45). A shop with nothing on
@@ -988,11 +924,6 @@ export default async function SchedulePage({
                     t={t}
                   />
                 ) : null}
-                {/* **The reef's calendar** (issue #1485). After the next boat,
-                    because the page's one primary is still the bookable object —
-                    but above the schedule, because a week that changes what the
-                    diving is like changes which day somebody picks out of it. */}
-                <SeasonBand eyebrow={t("season.eyebrow")} entries={seasonEntries} />
               </div>
             ) : null}
           </div>
@@ -1086,7 +1017,7 @@ export default async function SchedulePage({
           ) : null}
 
           {/* **The lens rail** — ADR 20260904-reef-all-the-way-down, decision 2
-              (issue #1162): the shop's own words for its kinds of day, as a row
+              (issue #1162): the shop's trip tags, as a row
               of views onto the list below.
 
               **Above the filter form, never between it and the list.** Seven

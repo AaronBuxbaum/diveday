@@ -310,10 +310,10 @@ test("the day's facts render once, inside the one record a diver keeps", async (
  * still hours from sailing at the frozen clock and nobody has logged a dive,
  * so a cold recap carries no line at all. Once the crew logs both tanks with
  * their times out, the after-state names the instant in the shop's zone, the
- * shop's repetitive hours, and who set them. The exact string is pinned
+ * repetitive hours, and who asks for them. The exact string is pinned
  * because every word of it is a claim about a diver's body: the weekday and
  * time come from the seeded departure plus the route's fixed dive shape, and
- * the 24 is the shop default. The shop asks, and it asks for a minimum — DAN's
+ * the 24 is DiveDay's fixed repetitive rule. The shop asks, and it asks for a minimum — DAN's
  * preflight surface interval is a consensus floor that lowers DCS risk without
  * removing it, so "fly-safe" promised more than the sentence behind it can
  * support and an unhedged time promised the rest. "With us" is the other

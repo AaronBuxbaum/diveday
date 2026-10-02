@@ -147,7 +147,6 @@ import { seedPromos } from "./seed-promos";
 import { seedRecentRecaps } from "./seed-recent-recaps";
 import { seedRegionNeighbours } from "./seed-region-neighbours";
 import { seedRentalFit } from "./seed-rental-fit";
-import { seedSeasonEvents } from "./seed-season-events";
 import { seedSelfDeclaredJoiners } from "./seed-self-declared";
 import { seedSightings } from "./seed-sightings";
 import { seedSupportNeeds } from "./seed-support-needs";
@@ -883,7 +882,7 @@ export async function seedDemoSchedule(
   const { siteByName, benwood, french } = await seedDiveSites(db, shopId);
   // Which NOAA station the two Key Largo sites read their tide from; the
   // public toggle rides the history flag (ADR 20260907-noaa-tide-predictions).
-  await seedTides(db, shopId, opts.history !== false);
+  await seedTides(db, shopId);
   const { tripRows, captainId, divemasterId } = await seedTrips(db, shopId, {
     boatByName,
     instructor,
@@ -916,14 +915,10 @@ export async function seedDemoSchedule(
     waiverTemplate,
   });
 
-  // The shop's own words for its kinds of day, and which departure wears which
+  // The shop's trip tags, and which departure wears which
   // (ADR 20260904-reef-all-the-way-down, decision 2). After `seedMoreTrips`,
   // because it hangs the words on those departures by title.
   await seedLenses(db, shopId);
-
-  // The shop's own year (issue #1485). After the words above, because a season
-  // may name one — a mini-season fills the board with easygoing reef days.
-  await seedSeasonEvents(db, shopId);
 
   await seedPromos(db, shopId, promoRedemptionBooking);
 

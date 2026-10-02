@@ -59,8 +59,7 @@ export function LiveBoatPanel({
             // One quiet door, at link weight. A panel about a boat that is
             // already out is not a place for a button competing with the
             // page's one primary, which is the seat on the next departure.
-            // Drawn as the season band's link beside it is, on a line its
-            // words' height, so its 44px target adds nothing under the card.
+            // Drawn as a quiet link, on a line its words' height, so its 44px target adds nothing under the card.
             // 16px under the meta line, because the target reaches 12px above
             // the words and its ring 17: after 8px the ring crossed the meta
             // line's x-height.

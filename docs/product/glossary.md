@@ -975,8 +975,7 @@ new domain concept, define it here in the same PR.
   site may say when it **dives best** (`any` / `slack` / `flood` / `ebb`) and the sentence says
   whether this departure meets it. The time named is the tide table's turn, not a current
   measurement — real slack on a reef lags it by a site-specific amount, which is the crew's to know.
-  Staff read it wherever a site has a station; divers read it only once the shop switches
-  `tide_window_public` on. Informs; never a gate.
+  Staff read it wherever a site has a station; divers never do. Informs; never a gate.
 - **Station echo** — NOAA's own name for the station a site points at, shown under the id on the
   dive-site editor. `isTideStationId` is `/^\d{7}$/` and can be no stricter — a subordinate
   station's id looks exactly like a harmonic one's and every seven-digit id answers — so a station
@@ -2057,8 +2056,8 @@ new domain concept, define it here in the same PR.
   (`src/lib/fly-safe.ts`, issue #1425). **Never a clearance, and since #1433 the copy does not
   read as one**: whether a diver may fly is between them, their profile and their physician, and a
   shop knows one interval — so the sentence asks them to wait at least until this instant rather
-  than telling them they may go, and attributes both the number and the practice. The shop's own hours (`shops.fly_safe_hours_single` and
-  `_repetitive`, defaults 18 and 24, floored at DAN's published minimums of 12 and 18) counted from
+  than telling them they may go, and attributes both the number and the practice. DiveDay's fixed hours
+  (`DEFAULT_FLY_SAFE_HOURS`: 18 single, 24 repetitive, above DAN's published minimums of 12 and 18) counted from
   the **last recorded exit**, or from the **buffered return** — the scheduled return plus the
   one-hour departure buffer — once the boat is home by that buffer. The gate and the anchor are the
   same instant on purpose: a boat that came in late must not read an hour early in a sentence that
@@ -2072,7 +2071,7 @@ new domain concept, define it here in the same PR.
   a live booking on a live departure the shop still says ran, not a dive log row: crews do not
   reliably log, and requiring a row would have let today's boat speak from its plan while
   yesterday's fell silent. The longer wait is the one that costs nothing if wrong, and reaching
-  repetitive can never shorten one, because a shop's `repetitive` may not be set below its `single`.
+  repetitive can never shorten one, because the fixed `repetitive` is longer than the fixed `single`.
   A record that is short of its plan, or missing its last exit, anchors on the return, never on an
   earlier dive. Rendered on the thread's after-state and in the recap email, in the shop's zone. The
   sentence states its reason on the two routes a diver cannot check for themselves — the earlier
@@ -2207,22 +2206,12 @@ new domain concept, define it here in the same PR.
 
 ## What a shop says about itself
 
-- **Conservation commitment** — one of a fixed set of codes a shop ticks to state its own practice
-  (Green Fins member, PADI AWARE partner, mooring buoys only, no-touch policy, no-gloves policy,
-  reef cleanup dives, lionfish containment, coral nursery support). DiveDay **cannot verify these
-  and does not**: they are shop claims, displayed as such, and no operational rule reads them — a
-  no-gloves commitment gates nothing at the rail (ADR
-  [20260826-shop-stated-conservation](../architecture/decisions/20260826-shop-stated-conservation.md)).
-  The vocabulary is `src/lib/conservation-commitments.ts` and there is exactly one of it; the
-  words for each code are DiveDay's, in every language, like the marine-life catalog and unlike a
-  site briefing.
 - **Conservation note** — a shop's own prose about its conservation practice at one dive site.
   The shop's words, in the shop's language, alongside the rest of the briefing — not a code and
   not a claim DiveDay renders on the shop's behalf.
 - **Lens** — the shop's own word for a kind of day ("Easygoing reef", "After dark", "First time
-  back in a while"), written once in `trip_lenses` and hung on a departure by `trips.lens_id`. It
-  is **shop prose**, like a site briefing and unlike the conservation codes or the marine-life
-  catalog: DiveDay never translates it, and the whole value is that the schedule sounds like the
+  back in a while"), called a **trip tag** on every screen (Settings → Trip tags), written once in `trip_lenses` and hung on a departure by `trips.lens_id`. It
+  is **shop prose**, like a site briefing and unlike the marine-life catalog: DiveDay never translates it, and the whole value is that the schedule sounds like the
   shop rather than like every other shop. Shop prose is a decision rather than a default: the owner
   chose it on 2026-09-10 (issue #1392) over the fixed DiveDay taxonomy issue #1162's triage
   recommended, and the untranslated rail is the accepted cost. A diver filters the public schedule
@@ -2238,22 +2227,6 @@ new domain concept, define it here in the same PR.
   nothing at all (ADR
   [20260904-reef-all-the-way-down](../architecture/decisions/20260904-reef-all-the-way-down.md),
   decision 2).
-- **Season event** — a week the shop plans its year around, written in the shop's own words:
-  lobster mini-season, a goliath grouper aggregation, turtle nesting, the lionfish derby it runs
-  every August. A `season_events` row is a name, an optional sentence, an inclusive calendar-date
-  range, and optionally one **lens** — the kind of day the week fills the board with. Like a site
-  briefing and unlike the conservation codes, the words are **the shop's** and DiveDay writes only
-  the frame around them; there is deliberately no catalog of seasons to pick from, because the
-  dates move by state rule and by species and the sentence that makes a visitor care is the one
-  the shop would say across the counter.
-  **The dates have no instant in them.** "The last Wednesday and Thursday of July" is two days on a
-  wall calendar, inclusive at both ends; whether the window is *live* is the only question with a
-  zone in it, and it is asked once, at the edge, against today's date in the shop's own timezone
-  (`src/lib/season-events.ts`). While it is live the storefront carries a band above the schedule;
-  a month before it opens the shop's own work queue carries one row about it, and then goes quiet
-  once the shop is standing in the week. It **informs and never gates** — nothing in
-  `src/lib/trip-admission.ts` or `src/lib/readiness.ts` reads one, and a season puts no departure
-  on the board by itself.
 - **Crew public name** — the string a consenting staff member shows divers on the departures they
   crew (`people.crew_public_name`). Theirs to type, not derived: `full_name` is one free-text box
   a shop fills in, so taking its first whitespace token assumes the given name was typed first and

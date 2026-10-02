@@ -26,6 +26,9 @@ export type SendableKind = Notification["kind"];
  * **The shop's civil hours, never the diver's.** A diver's own zone is unknown,
  * guessing it from a phone prefix is unreliable, and someone who booked a dive
  * in Fiji expects Fiji's clock.
+ *
+ * **One fixed window for every shop.** It was a per-shop setting; the setting
+ * was cut (ADR 20261001-logbook), and `DEFAULT_SEND_WINDOW` is now the rule.
  */
 export type SendWindow = {
   /** First hour a message may go out, shop-local, 0–23. Inclusive. */
@@ -35,10 +38,8 @@ export type SendWindow = {
 };
 
 /**
- * 08:00–20:00 shop time. A dawn-boat operation legitimately wants an earlier
- * floor than a resort, which is why this is a shop setting rather than a
- * constant — but a default has to be defensible unattended, and this one is the
- * range no diver in any market would call unreasonable.
+ * 08:00–20:00 shop time — the range no diver in any market would call
+ * unreasonable, and the one window every shop's automated messages keep.
  */
 export const DEFAULT_SEND_WINDOW: SendWindow = { startHour: 8, endHour: 20 };
 
@@ -62,22 +63,8 @@ export const QUIET_HOURS_EXEMPT_KINDS: ReadonlySet<SendableKind> = new Set<Senda
   "trip_minimum_not_met",
 ]);
 
-/** A window a shop could not have meant — falls back rather than muting a shop. */
-function usable(window: SendWindow): SendWindow {
-  const { startHour, endHour } = window;
-  const sane =
-    Number.isInteger(startHour) &&
-    Number.isInteger(endHour) &&
-    startHour >= 0 &&
-    startHour < 24 &&
-    endHour > 0 &&
-    endHour <= 24 &&
-    startHour < endHour;
-  return sane ? window : DEFAULT_SEND_WINDOW;
-}
-
 /**
- * Whether `now` falls inside the shop's window, in the shop's own wall-clock
+ * Whether `now` falls inside the send window, in the shop's own wall-clock
  * time.
  *
  * Read through `utcToWallTime` rather than an offset arithmetic shortcut,
@@ -86,8 +73,8 @@ function usable(window: SendWindow): SendWindow {
  * window computed from a fixed offset drifts by an hour twice a year — in the
  * direction that puts the first send of the day before the floor.
  */
-export function isWithinSendWindow(now: Date, timeZone: string, window: SendWindow): boolean {
-  const { startHour, endHour } = usable(window);
+export function isWithinSendWindow(now: Date, timeZone: string): boolean {
+  const { startHour, endHour } = DEFAULT_SEND_WINDOW;
   const { hour } = utcToWallTime(now, timeZone);
   return hour >= startHour && hour < endHour;
 }
@@ -108,33 +95,6 @@ export function isWithinSendWindow(now: Date, timeZone: string, window: SendWind
  * Both need the caller's cron to run **hourly**; a once-a-day UTC batch cannot
  * serve more than one longitude, whatever this predicate says.
  */
-export function maySendNow(
-  kind: SendableKind,
-  now: Date,
-  timeZone: string,
-  window: SendWindow,
-): boolean {
-  return QUIET_HOURS_EXEMPT_KINDS.has(kind) || isWithinSendWindow(now, timeZone, window);
-}
-
-/**
- * A submitted send window, or null when it is not one — the same shape the
- * settings form's `min`/`max` carry, checked again here because a `min` on an
- * input is help rather than a rule.
- *
- * Refused rather than clamped: a shop that typed 22 and got 20 has been quietly
- * overruled about its own divers' evenings, and nothing on screen would say so.
- */
-export function parseSendWindow(input: {
-  startHour: FormDataEntryValue | null;
-  endHour: FormDataEntryValue | null;
-}): SendWindow | null {
-  const startHour = Number(input.startHour);
-  const endHour = Number(input.endHour);
-  const window = { startHour, endHour };
-  // `usable` already encodes every bound, so this cannot drift from what the
-  // predicate itself will accept at send time.
-  return Number.isFinite(startHour) && Number.isFinite(endHour) && usable(window) === window
-    ? window
-    : null;
+export function maySendNow(kind: SendableKind, now: Date, timeZone: string): boolean {
+  return QUIET_HOURS_EXEMPT_KINDS.has(kind) || isWithinSendWindow(now, timeZone);
 }

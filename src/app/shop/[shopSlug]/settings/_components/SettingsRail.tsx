@@ -90,8 +90,8 @@ export function SettingsRail({
 
   // The rail scrolls in a box of its own, and the layout keeps that box across
   // a click inside the rail. Every other way in (a direct link, ⌘K's "Go to",
-  // the hub's own rows) landed with it at the top: on Kinds of day, Seasons,
-  // Print or WhatsApp that is 19 grey rows and no selected one, the row itself
+  // the hub's own rows) landed with it at the top: on Trip tags, Print or
+  // WhatsApp that is 19 grey rows and no selected one, the row itself
   // 140–750px below the box's fold. So whenever the current row changes, the
   // box comes to it — when it is out of sight, and only then.
   useEffect(() => {

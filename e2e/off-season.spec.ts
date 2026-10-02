@@ -11,11 +11,6 @@ import { expect, test } from "./fixtures";
  * Mutating the shared fixture is safe: each Playwright worker owns its own
  * database and `/api/test/reset` restores the schedule before every test
  * (e2e/servers.ts), which is also why nothing here puts the board back.
- *
- * The demo shop's own calendar is seeded with "Lobster mini-season" eighteen
- * days out (`src/db/seed-season-events.ts`), which is what the first test reads
- * back: with no departure to name, the card falls through to the soonest week
- * the shop actually wrote down.
  */
 
 test("an empty board says when the shop is next doing something, and opens the composer", async ({
@@ -30,9 +25,9 @@ test("an empty board says when the shop is next doing something, and opens the c
   await expect(
     page.getByRole("heading", { name: "Nothing on the water for a while" }),
   ).toBeVisible();
-  // The shop's own words for its own week, in DiveDay's frame — the fallback
-  // when nothing is scheduled at all.
-  await expect(page.getByText(/Lobster mini-season opens /)).toBeVisible();
+  // Nothing scheduled at all, so there is no date to name: the card is its
+  // heading and nothing invented under it.
+  await expect(page.getByText(/We’re back out /)).toHaveCount(0);
 
   // The sentence this state exists to remove. It read as a shop that had
   // stopped, on the page that decides whether a stranger books anywhere.
@@ -71,10 +66,8 @@ test("a departure beyond the quiet window is named as the day the shop is back",
   await expect(
     page.getByRole("heading", { name: "Nothing on the water for a while" }),
   ).toBeVisible();
-  // A departure the shop scheduled outranks a week it merely wrote about, so
-  // the mini-season line stands down and the date is the departure's own.
+  // The date is the departure's own.
   await expect(page.getByText(/We’re back out /)).toBeVisible();
-  await expect(page.getByText(/Lobster mini-season opens /)).toHaveCount(0);
 
   // The board is not hidden — that departure is still bookable, and its row is
   // still there under the schedule heading.

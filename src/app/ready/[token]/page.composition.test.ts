@@ -67,23 +67,6 @@ describe("the thread page's order", () => {
     expect(countOf("googleMapEmbedUrl")).toBe(0);
     expect(countOf("showMap")).toBe(1);
   });
-
-  /**
-   * **The shop's welcome is said once, and it greets** (issue #1212).
-   *
-   * It used to ride the trailing shop card, which put a first-timer's welcome
-   * *after* the button that releases their seat. It opens the thread now, near
-   * the booked moment, and it is rendered exactly once — a second copy would
-   * be the same sentence twice on one thread.
-   */
-  it("says the shop's welcome once, above the status", () => {
-    expect(countOf("{welcomeNote ?")).toBe(1);
-    expect(countOf("welcomeNote}</p>")).toBe(1);
-    expect(positionOf("{welcomeNote ?")).toBeLessThan(positionOf("<ThreadStatus"));
-    // Only to somebody who has not dived with this shop before: a welcome read
-    // on every thread stops being a welcome.
-    expect(SOURCE).toContain("const welcomeNote = data.firstVisit ?");
-  });
 });
 
 /**

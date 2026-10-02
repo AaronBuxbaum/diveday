@@ -25,11 +25,9 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * Two shapes, because the card has two and they say different things:
  *
  * - no `?opensInDays=` — every upcoming departure is deleted and the shop has
- *   nothing scheduled at all. The card then names the soonest **season** the
- *   shop has written, if it has written one.
+ *   nothing scheduled at all. The card then names no date.
  * - `?opensInDays=45` — the same clear-out, then one ordinary departure that
- *   far out. The card names **that date**, because a departure the shop
- *   scheduled outranks a week it merely wrote about (`src/lib/off-season.ts`).
+ *   far out. The card names **that date** (`src/lib/off-season.ts`).
  *
  * The delete is the product's own soft delete (`trips.deleted_at`, ADR
  * 20260820-every-delete-is-soft) — every read this exercises filters through

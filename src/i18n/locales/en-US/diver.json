@@ -77,19 +77,6 @@
     "unavailableHeading": "This tablet isn’t set up",
     "unavailableBody": "Make a new one in Settings, under Lobby display."
   },
-  "conservation": {
-    "shopClaimsDisclaimer": "Stated by the shop, not verified by DiveDay.",
-    "commitments": {
-      "green_fins_member": "Green Fins member",
-      "padi_aware_partner": "PADI AWARE partner",
-      "mooring_buoys_only": "Mooring buoys only",
-      "no_touch_policy": "No-touch reef policy",
-      "no_gloves_policy": "No-gloves policy",
-      "reef_cleanup_dives": "Reef cleanup dives",
-      "lionfish_containment": "Lionfish containment",
-      "coral_nursery_support": "Coral nursery support"
-    }
-  },
   "common": {
     "backToSchedule": "Back to the schedule",
     "needHelpContact": "Need help? <link>Contact {shop}</link>.",
@@ -140,8 +127,6 @@
     "footerLine": "{shop}",
     "spokenLanguages": "We speak {languages}",
     "languageFallback": "DiveDay isn’t in {requested} yet. This page is in {shown}, the language {shop} works in.",
-    "conservationCommitmentsHeading": "Shop-stated conservation commitments",
-    "conservationCommitmentsDisclaimer": "These are the shop’s claims; DiveDay does not verify or endorse them.",
     "credit": "Bookings by DiveDay"
   },
   "regions": {
@@ -173,7 +158,6 @@
     "offSeason": {
       "heading": "Nothing on the water for a while",
       "back": "We’re back out {date}.",
-      "nextSeason": "{name} opens {date}.",
       "requestHeading": "Ask us for a day"
     },
     "filters": {
@@ -206,7 +190,7 @@
       "eyebrowFiltered": "Next boat with space in this view"
     },
     "lenses": {
-      "railLabel": "Kinds of day",
+      "railLabel": "Trip tags",
       "all": "Every departure"
     },
     "shopfront": {
@@ -216,11 +200,6 @@
     "moreWaysHeading": "Other ways we can help",
     "boatsHeading": "The boats",
     "boatSeats": "{count, plural, one {# diver} other {# divers}}"
-  },
-  "season": {
-    "eyebrow": "In season",
-    "through": "Through {date}",
-    "lensLink": "See {lens} departures"
   },
   "trip": {
     "courseSession": "Course session",
@@ -340,7 +319,6 @@
     "forecastUpdateUnavailable": "Update time unavailable.",
     "forecastCrewCall": "The crew confirms conditions and makes the final call at the dock.",
     "forecastCreditPrefix": "Forecast by",
-    "tideWindow": "{turn, select, next {Next} other {Last}} {kind, select, high {high} other {low}} water at {time}; the boat reaches the site {phase, select, slack {at the turn of the tide} flood {on the flood} other {on the ebb}}{fit, select, met {, when it dives best} missed {. It dives best {preference, select, slack {at slack water} flood {on the flood} other {on the ebb}}} other {}}.",
     "timeline": {
       "arrive": "Arrive and check in",
       "gearSetup": "Set up your gear",
@@ -413,8 +391,7 @@
       "crew": "Crew"
     },
     "pitchDoor": "The rest of the briefing",
-    "pitchDoorSpecies": "{count, plural, one {# species} other {# species}}",
-    "tideStation": "Tide at {station}"
+    "pitchDoorSpecies": "{count, plural, one {# species} other {# species}}"
   },
   "factSource": {
     "forecast": "Forecast",

@@ -2399,10 +2399,6 @@ for (const scheme of ["light", "dark"] as const) {
        * row three sections down. A diff on this one is a diff on the shape of
        * an empty page, which is exactly the thing a passing e2e assertion
        * cannot see.
-       *
-       * The line under the heading is the demo shop's own "Lobster mini-season"
-       * eighteen days out — the fallback for a shop with nothing scheduled at
-       * all (`src/db/seed-season-events.ts`).
        */
       test(`the off-season storefront renders true to the design (${scheme})`, async ({
         page,
@@ -6199,27 +6195,10 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * The shop's own year, open (issue #1485) — the reef's calendar, where a
-       * shop writes mini-season and the sentence a diver reads on the
-       * storefront while it is running.
-       *
-       * Its own page rather than a hub row since three season forms and an add
-       * form turned out to be a page wearing a disclosure. The seeded calendar
-       * carries a window that is live, so the "Running now" badge — the one
-       * badge on the page, and the whole reason a shop can find the week that
-       * is on its storefront at a glance — is in frame rather than theoretical.
-       */
-      test(`the seasons page renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings/seasons");
-        await page.getByRole("heading", { level: 1, name: "Seasons and events" }).waitFor();
-        await page.getByRole("button", { name: "Add" }).last().waitFor();
-        await capture(page, "settings-seasons", scheme);
-      });
-
-      /**
        * The shop's fleet — a name, a capacity and a line of description per
        * hull, with the delete confirm that names how many departures one has
-       * carried. Off the hub for the same reason the seasons page is.
+       * carried. Its own page rather than a hub row: a list plus an add form
+       * stopped fitting inside a disclosure.
        */
       test(`the boats page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/boats");
@@ -6231,14 +6210,13 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * The shop's own words for its kinds of day (ADR
-       * 20260904-reef-all-the-way-down, decision 2) — the list a diver then
-       * filters the public schedule by.
+       * The shop's trip tags (ADR 20260904-reef-all-the-way-down, decision 2)
+       * — the list a diver then filters the public schedule by.
        */
-      test(`the kinds-of-day page renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings/kinds-of-day");
-        await page.getByRole("heading", { level: 1, name: "Kinds of day" }).waitFor();
-        await capture(page, "settings-kinds-of-day", scheme);
+      test(`the trip-tags page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/trip-tags");
+        await page.getByRole("heading", { level: 1, name: "Trip tags" }).waitFor();
+        await capture(page, "settings-trip-tags", scheme);
       });
 
       /**
@@ -6260,27 +6238,9 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * Earliest flight, open (issue #1425) — two whole-hour boxes whose
-       * floors are DAN's minimums. Its own capture for the reason the row
-       * above has one: closed everywhere else, and the form is the only place
-       * a shop sets the number the recap then credits to it. The card read
-       * "Fly-safe hours" until issue #1433 took "safe" out of the diver's
-       * sentence as a verdict the wait does not earn; the baseline key stays
-       * `settings-fly-safe` so the reworded card diffs against the old one
-       * rather than arriving as an unreviewable new capture.
-       */
-      test(`the earliest-flight card renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "Earliest flight" }).waitFor();
-        await openSettingsRow(page, "Earliest flight");
-        await page.getByLabel("After repetitive dives or more than one day of diving").waitFor();
-        await capture(page, "settings-fly-safe", scheme);
-      });
-
-      /**
        * The emergency reference, open — the five number slots, the vessel and
        * shore-contact boxes, and the free-text plan (issue #688). Its own
-       * capture for the same reason as the two rows above: it is closed in
+       * capture for the same reason as the dock-day row above: it is closed in
        * `settings-payments`, so the only form in the app whose output a crew
        * reads offshore is otherwise never looked at.
        *
@@ -6300,20 +6260,6 @@ for (const scheme of ["light", "dark"] as const) {
         await openSettingsRow(page, "Emergency reference");
         await page.getByRole("button", { name: "Save emergency reference" }).waitFor();
         await capture(page, "settings-emergency", scheme);
-      });
-
-      /**
-       * When the shop's automated messages may reach a diver. Its own capture
-       * for the same reason as the two rows above — closed in
-       * `settings-payments` — and because it is the only screen standing
-       * between a shop in Fiji and a 3 AM text (issue #697).
-       */
-      test(`the message-hours card renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "When we message divers" }).waitFor();
-        await openSettingsRow(page, "When we message divers");
-        await page.getByRole("button", { name: "Save message hours" }).waitFor();
-        await capture(page, "settings-send-window", scheme);
       });
 
       /**
@@ -8299,35 +8245,6 @@ for (const scheme of ["light", "dark"] as const) {
       // The row's own words, not a timing guess.
       await page.getByText(/guessed from your timezone/).waitFor();
       await capture(page, "today-units-unconfirmed", scheme);
-    });
-
-    /**
-     * **The shop's own three sentences** (issue #1212).
-     *
-     * Filled through the shop's own form, in its own shop, because this writes
-     * shop-wide settings (ADR 20260815-per-test-private-shops) — the same
-     * reason the emergency capture below takes one.
-     */
-    test(`the shop's own words render true to the design (${scheme})`, async ({
-      page,
-      privateShop,
-    }) => {
-      await page.goto(`/shop/${privateShop.slug}/settings`);
-      await openSettingsRow(page, "Your own words");
-      await page
-        .getByLabel("What a first-timer reads before diving with you")
-        .fill("First time with us? Come find whoever is holding the clipboard — that’s us.");
-      await page
-        .getByLabel("What to expect at the dock")
-        .fill("Park by the blue gate. We’ll wave you down from the second slip.");
-      await page
-        .getByLabel("How you sign off a finished day")
-        .fill("Thanks for diving with us. The kettle's always on.");
-      await page.getByRole("button", { name: "Save your words" }).click();
-      // The row comes back open with its saved notice — the destination's own
-      // render, not a timing guess.
-      await page.getByText("Saved.").first().waitFor();
-      await capture(page, "settings-hospitality", scheme);
     });
 
     /**

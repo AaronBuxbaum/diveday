@@ -30,7 +30,6 @@ const EXPECTED_FILES = [
   "shop.csv",
   "boats.csv",
   "trip_lenses.csv",
-  "season_events.csv",
   "contacts.csv",
   "people.csv",
   "certifications.csv",
@@ -107,7 +106,6 @@ const EXPORTED_TABLES = [
   "shops",
   "boats",
   "trip_lenses",
-  "season_events",
   "people",
   "certifications",
   "specialty_certifications",
@@ -193,6 +191,10 @@ const FOLDED_TABLES = [
  * its export fate fails the coverage test below.
  */
 const EXCLUDED_TABLES = [
+  // Seasons and events were cut from the product (ADR 20261001-logbook):
+  // nothing writes this table any more, and it is dropped in the schema pass
+  // that follows the cut.
+  "season_events",
   // Historical assignments are source evidence attached to the gear-history
   // import, not a live reservation or booking record. They remain in the
   // shop database and are intentionally not part of the current full-shop
@@ -354,13 +356,20 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // bundle hold a region that disagrees with the address printed beside it --
     // the one way those two can drift -- and re-deriving costs a function call.
     "region_slug",
+    // Settings cut by ADR 20261001-logbook. Nothing reads or writes these any
+    // more, and the schema pass that follows the cut drops them.
+    "conservation_commitments",
+    "send_window_start_hour",
+    "send_window_end_hour",
+    "fly_safe_hours_single",
+    "fly_safe_hours_repetitive",
+    "tide_window_public",
+    "welcome_note",
+    "dock_call_note",
+    "sign_off_note",
   ], // DiveDay-side config, not shop records
   boats: ["shop_id"],
   trip_lenses: ["shop_id"],
-  // The shop's own year (issue #1485). `created_at` is when somebody typed the
-  // season into Settings, which says nothing about the season; the two date
-  // columns are the fact, and they are both exported.
-  season_events: ["shop_id", "created_at"],
   dive_packages: ["shop_id"],
   dive_package_entitlements: ["shop_id"],
   staff_shifts: ["shop_id"],
