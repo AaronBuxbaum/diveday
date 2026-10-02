@@ -94,6 +94,14 @@ describe("the map covers the whole hub", () => {
     for (const row of SETTINGS_RAIL_ROWS) expect(groups.has(row.group)).toBe(true);
   });
 
+  it("never names a group what a section already answers to", () => {
+    // A group's heading and a section's row are both `id`s on the one page, so
+    // a shared name is a duplicate id: axe refuses it, and `#rentals` would
+    // land on whichever came first. The Rentals group once was exactly that.
+    const fragments = new Set<string>(SECTION_IDS.map((id) => settingsSectionFragment(id)));
+    for (const group of SETTINGS_GROUPS) expect(fragments.has(group.id), group.id).toBe(false);
+  });
+
   it("keeps every fragment that other surfaces already link to", () => {
     // The pane scrolls; the ids do not move. These six are the anchors the
     // rest of the app spells out in `/settings#…` links, and a rename here

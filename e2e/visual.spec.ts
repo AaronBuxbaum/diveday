@@ -2468,6 +2468,14 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("link")
           .first()
           .waitFor();
+        // The current chip sits past a phone's edge until `FilterChipsScroller`
+        // hydrates and scrolls the row to it; a capture taken before that drew
+        // the row at its start, so wait for the chip the page brings on screen.
+        await expect(
+          page.locator('[aria-current="true"]', { hasText: "After dark" }),
+        ).toBeInViewport({
+          ratio: 1,
+        });
         await capture(page, "schedule-lens", scheme);
       });
 
