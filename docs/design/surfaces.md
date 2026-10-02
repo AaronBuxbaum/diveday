@@ -295,6 +295,8 @@ the instrument line's figures roll as a check-in lands, the sinking row's neighb
 
 ### The public schedule — `/s/[shopSlug]`
 
+**Cut 2026-10-02** ([ADR 20261001-logbook](../architecture/decisions/20261001-logbook.md), decision 7): the boat that is out left the identity band with follow-the-boat, and the "Yours" group and "Your card clears this" lines left with the diver's shelf. The entries below that describe them are history.
+
 **Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): Harbor's face on the headings and the shop's colour on the one filled control, over the picked direction's rows: the boat that is out, the next boat with space and Book, the week, the courses — as groups (A), as the page with one floating capsule that books the next boat (B), or with two tiles for spots and the boat that is out (C). Pending H-87, one call: A · Inset, B · Glass or C · Figures. Superseded 2026-09-19.
 
 **Decided 2026-09-19 (H-88)** ([ADR 20260919-one-idea](../architecture/decisions/20260919-one-idea.md), [canvas](canvases/20260919-one-idea/README.md)). Three whole products were drawn: Harbor's face and the shop's colour over the idea's own front page — the next boats led by their time under the noon sky and the week as seven days (I), the boat you are about to book with its empty seats visible (II), where we go on the shop's chart (III). **The pick: Tide** — the shop's name and the day over its own sky, the next boats led by their time, the week as seven days with seats left.
@@ -440,29 +442,6 @@ one line beside Add to calendar, *Add to Wallet*, on every state after booking; 
   arrival/change reading and the party hand-off; the same spine grammar the staff home speaks makes
   the product one product.
 
-### The shelf — `/shelf/[token]`
-
-**Built 2026-09-10** (slice 20t of [ADR 20260908-one-hand](../architecture/decisions/20260908-one-hand.md)).
-The first bearer surface anchored to a **person** rather than to a booking, so it outlives every
-seat: `person_shelf_tokens`, stored and revocable, and erasure closes it.
-
-- **One idea:** what this shop already holds for me, and the next reason to come back.
-- **The question it arrives with:** "when am I next out, and what do you have for me?" — answered by
-  the seat the diver holds, the same boat next time, and the crew's own "next time" from the day
-  just dived, in that order, before the file.
-- **Controls that dissolved:** none — this surface is new. What it deliberately never grows: a
-  medical answer, another diver's anything, a price. The reader (`src/db/shelf.ts`) cannot return
-  any of the three, and its test walks the whole object rather than the fields somebody remembered.
-- **Remove first:** the file's rows, before the reasons to come back. A shelf with nothing on it is
-  still worth opening for the next departure; a shelf with nothing ahead of it is a filing cabinet.
-- **Composition:** the thread's shell and measure, in the shop's brand — a diver who reached this
-  from their thread should not feel they left the shop. Two quiet lines close it: what is never here,
-  and "Forget this phone", which clears the storefront's greeting cookie and nothing else.
-- **What it leaves elsewhere:** the storefront reads that cookie and greets the diver by first name
-  with which visit the next one is, puts a "Yours" group above the week, and says why a departure
-  demanding a card is open to them instead of the warn pill. Without the cookie the storefront is
-  unchanged.
-
 ### The waiver — `/waivers/[token]`
 
 **Built 2026-08-29** — same ADR and canvas. Legal surface: wording and presentation floor are
@@ -562,7 +541,7 @@ primary-weight control lives on the page (`_lib/record-primaries.test.ts`).
 **Amended 2026-09-17, the file is one door grammar.** The 8b build shipped two: "legacy" groups
 (certification records, waiver, gear and sizes, diver notes, conversation) hid their summary above
 `sm` and rendered open as `InsetGroup` cards under a second, uppercase copy of their own label,
-while the newer groups (shelf, dive support) stayed doors at every width. Down one page they
+while the newer groups (dive support) stayed doors at every width. Down one page they
 interleaved — an open bordered card, a closed row, another open card — and the phone, which had
 only ever had the doors, was the cleaner page. Every group is now a door at every width, its row
 label is its `<h2>` and its fragment target, and its summary is its one **useful** fact rather than

@@ -574,6 +574,7 @@ records it; the owner's calls are H-71 (i)–(o). **Shipped 2026-09-10** on the 
 round 4 (all seven at once) as one stack of seven pull requests, merged bottom first the same day —
 20n #1626, 20o #1627, 20p #1629, 20t #1630, 20s #1631, 20r #1633, 20q #1634 — each built on the
 recommendation recorded beside its call. What each landed in is the canvas README's slice table.
+**Cut 2026-10-02** under [ADR 20261001-logbook](../../architecture/decisions/20261001-logbook.md), decision 7: U (follow the boat, its storefront panel and its Settings switch), W's gift (the counted buddy seat stays), Z (the diver's shelf), and X's dock sign, window sticker, boat card and site briefing cards with Settings › Print. The paper pass and the trip print packet stay.
 
 - **20n** — U, follow the boat: the pass's "Share with whoever is waiting for you", a public route
   per boat per day carrying the trip's line with the crew's stage word and its time only, the

@@ -189,12 +189,6 @@ describe("the trip page's order", () => {
     const FRAME = "mx-auto w-full max-w-xl flex-1 px-4 py-8 sm:px-6 sm:py-10";
     const LOADING = readFileSync(join(__dirname, "loading.tsx"), "utf8");
     const HEADER = readFileSync(join(__dirname, "_components", "TripHeader.tsx"), "utf8");
-    const BOATS = readFileSync(
-      join(__dirname, "..", "..", "boats", "[tripId]", "page.tsx"),
-      "utf8",
-    );
-    // The same frame the boat page draws, for the same `max-w-xl` measure.
-    expect(BOATS).toContain(`<main className="${FRAME}">`);
     // Both of this page's non-embed columns — the departure and the cancelled
     // landing — and its loading skeleton.
     expect(SOURCE.split(`: "${FRAME}"`).length - 1).toBe(2);

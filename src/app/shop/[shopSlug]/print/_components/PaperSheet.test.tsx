@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { DIVEDAY_BRAND_COLOR, deriveBrandTheme } from "@/lib/brand";
 import { PAPER_PASS_PAPER, PRINT_SHEET_BOX_MM } from "@/lib/print-sheets";
 import { PaperSheet, SheetMark } from "./PaperSheet";
 
@@ -11,7 +12,9 @@ import { PaperSheet, SheetMark } from "./PaperSheet";
 
 afterEach(cleanup);
 
-const TONE = { band: "#0b5f73", bandInk: "#ffffff" };
+// The pass page's own derivation, so the test carries no colour of its own.
+const THEME = deriveBrandTheme(DIVEDAY_BRAND_COLOR);
+const TONE = { band: THEME.primary, bandInk: THEME.primaryForeground };
 
 function renderSheet() {
   return render(

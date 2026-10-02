@@ -1048,43 +1048,16 @@ new domain concept, define it here in the same PR.
   raises it and the schedule board badges the departure — **for crew as well as divers**. It comes
   in six distinct kinds, which are deliberately never worded or ranked alike — see **unaccounted
   for** below.
-  Two rules travel with it onto paper, and the **boat card** below carries both in as many words:
-  **the app is the record and the card is the fallback**, so nothing printed is ever a second,
+  Two rules travel with it onto paper: **the app is the record and paper is the fallback**, so
+  nothing printed is ever a second,
   quieter register; and **the roll is called by name**, every diver and every crew member, by two
   people — a head count is the practice that leaves people behind, which is why no DiveDay surface
   asks for one. The number printed beside each name is a line number and never an identity; see
   **roll-call order**.
 - **Roll-call order** — the order the manifest lists divers in: **oldest seat first, then the diver's name, then the booking id** (`getTripRoster`, `src/db/trips-roster.ts`). The screen, the departure log and the saved dock copy all read that one query, so the three can never disagree about who sits where in the list. The **number beside each name is a line number, not the diver's number**: it is that row's position in today's list, so it shifts when a seat is cancelled, when a released seat is resold to somebody else, and when a name is corrected inside a group of seats sold in the same instant. It exists so a person can keep their place down a wet list, and for nothing else — **the roll is still called by name** (see **Manifest**), and no note, message, export or radio call ever refers to a diver as a number. A shop wanting a number a diver keeps for the day (a tank station, a group) does not have one: that is a stored fact about a person on a departure, not a position in a list. The order is stable against a re-read and against a fresh seed of the same data; it is not stable against the roster's own contents changing (issue #1720, and #1759 for the stronger promise).
-- **Print register** — the pane in Settings that lists the shop's own printable sheets in the
-  groups of where the paper goes: at the dock and the door, on the boat, for a diver, on the wall
-  (ADR 20260908-one-hand, decision 6, lever X). Every row names the sheet, the paper it prints on,
-  one sentence, and the day it was last printed; its door is a form rather than a link, because
-  opening a sheet is what records that day. A sheet reads what its page reads at the moment it is
-  drawn — nothing on paper is stored copy.
-- **Print run** — one row of `shop_print_runs`: the day a shop last printed one sheet (and, for the
-  boat card, one hull). One row per sheet per subject, replaced in place rather than appended, and
-  the whole of what the register keeps. The paper pass records the day and never the diver.
 - **Hull** — the *drawn* boat, above a departure's roster: an outline from transom to bow with one rounded seat per place the vessel has, the wheelhouse and the helm (`src/lib/hull.ts` for the geometry, `src/components/boat/Hull.tsx` for the element; ADR 20260919-one-idea, decision I · Tide). It is the count made spatial — how full, how many cannot board, how much room is left — and it adds no fact: every seat it draws is a row in words beneath it, and taking the picture away leaves the page saying everything it said. It informs and gates nothing, exactly like the sky: no capacity, readiness, admission or manifest rule reads a coordinate from it. **A seat is never numbered and never assigned**, and the absent numeral is not what makes that true — what does is that nothing stores a position and nothing reads one (see **Roll-call order**); seats fill in booking order, so the layout is deliberately unstable, and a released seat resold moves everyone after it. The hull is drawn only for a departure that has a boat *and* is sailing: a shore dive has no vessel to draw, and a **blow-out** leaves every booking active, so a cancelled trip would otherwise draw a full, happy boat over words saying the day is off. **It prints**, which it did not until the paper had a treatment of its own: the print palette flattens `--success` and `--warning` onto one near-black, so *aboard* and *ashore* — the only two answers a head count has — came off a printer identical, and the picture stood down rather than lie. `@media print` now re-cuts all eight by fill, stroke weight, dash and an inner mark, and gives the shop's colour back to the page's ink; hue carries nothing, because hue is the channel a mono laser does not keep (ADR 20260919-one-idea §3b.4). The rows still carry the same facts in words beside it, and on paper the hull's own sentence prints beneath it — a letterless hull is a grid of unlabelled boxes otherwise, on the one artifact used when the app is not there to explain it. **The wheelhouse holds two**, so a departure with more guides than that draws a boat with people missing from it; the sentence says how many, because a picture of a whole boat that omits a soul is the one thing a manifest may not be. **A guide carries a roll-call state, as a diver does** (§3b.6): five of the six words are a diver's own, because the derivation under both is one function, and the three a guide cannot wear — *open*, *booked*, *blocked* — are readiness, which gates boarding against a booking a crew member does not hold. The sixth is *rostered*, and it exists so that a surface with no head count in it does not paint every guide as a question: the departure page has no roll call, and an alarm is earned by a recorded fact rather than by the absence of one.
 - **Seat state** — the eight things a place on a **hull** can be wearing, derived once in `seatReadingFor`: **open** (nobody has taken it), **booked** (held, nothing recorded, nothing stopping them boarding), **blocked** (held, and readiness says they cannot board), **awaiting** (nobody has said anything about this person at this head count — at the dock, nobody has read their readiness; after a dive, nobody has counted them back, and readiness is not the question there at all), and **aboard**, **ashore**, **ashoreImplied** and **missing**, the ones a human *recorded* at a roll call (see **Roll-call**). A recorded fact outranks readiness, because a body on the boat is a fact and readiness is a decision — but the reading keeps what readiness said either way, so "aboard, and nobody ever cleared them" is a sentence the picture can still be asked for. A **stated** ashore and one **carried forward** from the dock's silence are separate states and separately drawn, because an alarm is earned by a recorded fact and never by the absence of one. The seats a hull draws are the ones **seat held** counts, so the boat and the sentence beside it can never count different sets.
 - **Hull colour** — `boats.hull_color`, a `#rrggbb` a shop picks once per boat in Settings, so a crew recognises the vessel before reading its name and two morning departures become two objects rather than two rows with different text. Null until a shop picks one, and **null is not a gap to fill with a random colour** — an unpainted hull is drawn in the page's own ink, which is a perfectly good boat. It informs nothing: no capacity, readiness, admission or manifest rule reads it. It leaves with the shop in `boats.csv`.
-- **Boat card** — the laminated A5 card taped to a console: two faces of one lamination, a day side
-  and a night side, one per hull. It exists for the minute the app is not there, so it carries the
-  roll by name, what to do if someone is missing, the shop's own emergency numbers and vessel, the
-  shop's emergency action plan, and ruled blanks for the oxygen and first aid kits. **It wears the
-  boat's colours, never the shop's** — the same ban that keeps a storefront palette off a manifest —
-  and the night side is read under a red torch, so its ink is off-white rather than any hue. Nothing
-  about a diver is on it: no name, no count of who is aboard, and no medical fact of any kind. The
-  card cannot paginate, and says on its own fold line that the app is the record.
-- **Dock sign** — the A3 sheet at the slip: the shop's name and meeting point, its boats with their
-  capacity and the shop's own sentence for each, the counter's number, the shop's dock call, and two
-  codes. **No names, ever** — who is on a boat is the manifest's business, and a manifest is not a
-  public document.
-- **Window sticker** — the 100 mm square for the door and the boat's console: one sentence and the
-  storefront's code. No name on it either.
-- **Site briefing card** — the A5 card on the crew's clipboard, one per dive site: the site editor's
-  own briefing and the field guide the shop picked, so the words a diver hears on the boat are the
-  words on the storefront. The briefing is the shop's; the species names are DiveDay's, in the
-  reader's language.
 - **Arrival code** — the QR on a diver's downloaded arrival card: an `arrival`-purpose booking
   capability, minted fresh each download, hashed at rest, and dying with the booking it names. It
   authorizes **one thing** — being recognised at the counter tablet, the same thing saying a surname
@@ -1206,9 +1179,6 @@ new domain concept, define it here in the same PR.
   text throughout, including the phone lines: an international dive line is not a `tel:`-shaped
   string until the shop writes it, and nothing on this card links, dials, escalates, or opens an
   incident. It is a laminated card retyped, priced at zero words of DiveDay's own.
-  The **boat card** below is the same card, printed: it reads these values and prints a ruled blank
-  wherever the shop has recorded nothing, because the rule that forbids a plausible wrong number on
-  the screen forbids it on the console too.
 - **Roll-call event** — an append-only record that a staff member marked one booking boarded,
   not boarded, or cleared, including the time and who recorded it. It carries **no free text**: the
   note field was removed in 2026-08, which also means a roll call records *that* a diver did not
@@ -2150,16 +2120,6 @@ new domain concept, define it here in the same PR.
   below, and unlike the board it writes (N-24). **Only the check-in link expires** — 180 days
   (`CHECK_IN_LINK_TTL_DAYS`), renewed from the same settings page; a board link is non-expiring like
   a calendar feed, because a screen on a wall going dark is noticed by nobody (issue #1609).
-- **Follow link** — the public page for one departure's day (`/s/<shopSlug>/boats/<tripId>`), which
-  a diver hands to whoever is waiting for them on the dock. Deliberately **not** a bearer credential
-  and deliberately not revocable: the trip id is in the URL unhashed because the page holds no
-  secret — the stage word a crew member tapped, the time they tapped it, and the departure's own
-  line of times. Never a name, never a count of people, never a position. Two divers on the same
-  boat share one page. A shop publishes it, its storefront's live line and its Follow door together
-  through one switch, `shops.public_boat_line`, which is **off** until the shop turns it on and
-  takes all three with it when it goes back off; a private charter, a cancelled departure and a day
-  that has closed are each a 404 rather than an empty state (ADR
-  [20260908-one-hand](../architecture/decisions/20260908-one-hand.md), decision 6, lever U).
 - **Self check-in** — a diver typing their own last name on a counter tablet behind a check-in
   display link, and reading "You're set" or "See the desk". What it records is an **arrival**,
   never a boarding: the tablet writes the same `booking_arrival_events` row the desk does, stamped
