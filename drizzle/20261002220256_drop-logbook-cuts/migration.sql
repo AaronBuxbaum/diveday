@@ -7,6 +7,9 @@
 -- and a row still carrying either would fail the cast back into the new type
 -- and stop the build. Nothing has written either since the cut; the DELETEs
 -- make the rebuild certain rather than leaving it to the state of the database.
+-- Each compares as text: on a fresh database every migration runs in one
+-- transaction, and Postgres refuses a literal coerced to an enum value added
+-- by `ALTER TYPE ... ADD VALUE` earlier in that same transaction.
 --
 -- diveday:allow-destructive drop-table season_events: cut by ADR 20261001-logbook decision 7; its reader and writer are already deleted, pre-pilot, no users (H-49)
 -- diveday:allow-destructive drop-table display_tokens: cut by ADR 20261001-logbook decision 7; its reader and writer are already deleted, pre-pilot, no users (H-49)
@@ -37,9 +40,9 @@
 -- diveday:allow-destructive alter-column-type notification_deliveries.kind: covers both steps; enum to text cannot lose a value, and the cast back lands every row on the value it had once the gift_pass rows are deleted above
 -- diveday:allow-destructive alter-column-type notification_delivery_attempts.kind: covers both steps; enum to text cannot lose a value, and the cast back lands every row on the value it had once the gift_pass rows are deleted above
 
-DELETE FROM "notification_delivery_attempts" WHERE "kind" = 'gift_pass';--> statement-breakpoint
-DELETE FROM "notification_deliveries" WHERE "kind" = 'gift_pass';--> statement-breakpoint
-DELETE FROM "booking_capabilities" WHERE "purpose" = 'arrival';--> statement-breakpoint
+DELETE FROM "notification_delivery_attempts" WHERE "kind"::text = 'gift_pass';--> statement-breakpoint
+DELETE FROM "notification_deliveries" WHERE "kind"::text = 'gift_pass';--> statement-breakpoint
+DELETE FROM "booking_capabilities" WHERE "purpose"::text = 'arrival';--> statement-breakpoint
 ALTER TABLE "booking_arrival_events" DROP CONSTRAINT "booking_arrival_events_display_token_id_display_tokens_id_fkey";--> statement-breakpoint
 DROP TABLE "booking_gifts";--> statement-breakpoint
 DROP TABLE "display_tokens";--> statement-breakpoint
