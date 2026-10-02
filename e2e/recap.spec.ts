@@ -448,9 +448,7 @@ test("a private pulse reaches the shop, appears nowhere public, and can be taken
     try {
       const captain = makeActivitySafe(await captainContext.newPage());
       await captain.goto("/shop/blue-mantis/reviews");
-      await expect(
-        captain.getByRole("heading", { level: 1, name: "What divers said" }),
-      ).toBeVisible();
+      await expect(captain.getByRole("heading", { level: 1, name: "Inbox" })).toBeVisible();
       await expect(captain.getByRole("heading", { name: "Asked us to fix" })).toHaveCount(0);
       await expect(captain.getByText(NOTE)).toHaveCount(0);
     } finally {

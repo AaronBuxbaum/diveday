@@ -1,5 +1,4 @@
 {
-  "title": "Cómo va tu mes",
   "soFar": "hasta ahora",
   "chooseMonth": "Elegir mes",
   "previousMonth": "Mes anterior",
@@ -52,7 +51,6 @@
   },
   "partnerArrivals": "{count, plural, one {# plaza llegó} other {# plazas llegaron}} desde un enlace de socio",
   "year": {
-    "title": "Cómo va tu año",
     "rangeLabel": "Elegir un periodo",
     "thisMonth": "Este mes",
     "thisYear": "Este año",

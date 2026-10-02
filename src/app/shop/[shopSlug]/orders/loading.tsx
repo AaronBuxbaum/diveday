@@ -1,5 +1,6 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
+import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 
 /**
  * Body-shaped skeleton for the Orders day ledger (design principle 1; the
@@ -16,7 +17,8 @@ export default function OrdersIndexLoading() {
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton description={false} actions />
+        <ShopPageHeaderSkeleton eyebrow={false} titleWidth="w-32" description={false} actions />
+        <StaffSectionTabsSkeleton section="money" />
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <div className="h-11 w-full rounded-lg bg-surface-sunken sm:w-80" />

@@ -1,6 +1,7 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { SEGMENT_CORNER, SEGMENT_RAISED, segmentedTrackClass } from "@/components/ui/segmented";
+import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 import { CREW_COLUMN, METER_COLUMN } from "./_components/DepartureLedger";
 import { figureCellClass } from "./_components/MonthFigures";
 
@@ -26,7 +27,8 @@ export default function ReportsLoading() {
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton description={false} />
+        <ShopPageHeaderSkeleton eyebrow={false} titleWidth="w-32" description={false} />
+        <StaffSectionTabsSkeleton section="money" />
         {/* `ReportRangeTabs`: the segmented track itself, one 44px option
             deep, its current option raised as the page draws it. */}
         <div className={`${segmentedTrackClass} mb-6 w-48`}>

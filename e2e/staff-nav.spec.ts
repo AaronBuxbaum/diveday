@@ -246,11 +246,33 @@ test.describe("owner", () => {
     await expect(page).toHaveURL(/\/settings\/calendar$/);
   });
 
-  test("the demoted doors on owning surfaces still hold", async ({ page }) => {
-    // The monthly report keeps its door on the Orders header — the same
-    // money, summed.
-    await page.goto("/shop/blue-mantis/orders");
-    await expect(page.getByRole("link", { name: "Monthly report" })).toBeVisible();
+  test("Inbox and Money are one place each, its parts as tabs under the title", async ({
+    page,
+  }) => {
+    // ADR 20261001-logbook: every page in the section wears the section's
+    // name, and the tab says which part of it you are on.
+    for (const [suffix, title, tab, tabs] of [
+      ["/inbox", "Inbox", "Messages", ["Messages", "Date requests", "Reviews"]],
+      ["/requests", "Inbox", "Date requests", ["Messages", "Date requests", "Reviews"]],
+      ["/orders", "Money", "Orders", ["Orders", "Discounts", "Reports"]],
+      ["/reports", "Money", "Reports", ["Orders", "Discounts", "Reports"]],
+    ] as const) {
+      await page.goto(`/shop/blue-mantis${suffix}`);
+      await expect(page.getByRole("heading", { level: 1, name: title }), suffix).toBeVisible();
+      const strip = page.getByRole("main").getByRole("navigation", { name: title });
+      await expect(strip.getByRole("link"), suffix).toHaveText([...tabs]);
+      await expect(strip.getByRole("link", { name: tab }), suffix).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
+    }
+    // A tab is a page: Discounts opens the codes.
+    await page
+      .getByRole("main")
+      .getByRole("navigation", { name: "Money" })
+      .getByRole("link", { name: "Discounts" })
+      .click();
+    await expect(page).toHaveURL(/\/promos$/);
   });
 });
 
@@ -272,13 +294,13 @@ test.describe("captain", () => {
     await page.locator("header").getByRole("button", { name: "Search" }).click();
     // Named one by one rather than left to a list's length, so a gate is
     // asserted rather than implied.
-    for (const gated of ["Waivers", "Reports", "Team", "Promo codes", "Settings"]) {
+    for (const gated of ["Waivers", "Reports", "Team", "Discounts", "Settings"]) {
       await page.getByRole("combobox").fill(gated);
       await expect(page.getByRole("option", { name: gated, exact: true })).toHaveCount(0);
     }
-    // Requests and the Inbox are open to every staff role (issues #1505,
-    // #1518, #1679, H-14 amendments).
-    for (const open of ["Requests", "Inbox"]) {
+    // Date requests and the inbox's messages are open to every staff role
+    // (issues #1505, #1518, #1679, H-14 amendments).
+    for (const open of ["Date requests", "Messages"]) {
       await page.getByRole("combobox").fill(open);
       await expect(page.getByRole("option", { name: open, exact: true }).first()).toBeVisible();
     }

@@ -39,8 +39,8 @@ import {
   promoLedgerGroup,
 } from "@/lib/promo-codes";
 import { requireShopSurface } from "@/lib/session";
-import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import {
   PromoCodeLedger,
   type PromoCodeRow,
@@ -353,9 +353,15 @@ export default async function PromosPage({
         ]}
       />
       <ShopPageHeader
-        eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.promoCodes)}
-        title={t("promos.title")}
+        title={t("shared.shopSections.money")}
         description={t("promos.description")}
+      />
+      <StaffSectionTabs
+        shopSlug={shopSlug}
+        section="money"
+        current="promoCodes"
+        roles={session.user.roles}
+        t={t}
       />
 
       {notice === "deleted" && undoCode && undoDiscountPercent && undoScope ? (

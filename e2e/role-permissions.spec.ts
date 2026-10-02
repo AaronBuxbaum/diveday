@@ -197,9 +197,7 @@ test.describe("H-14 role permissions", () => {
       // The worklist's own heading, not a bounce to Today with a notice on it
       // — which is what every refusal in the test above looks like.
       await expect(page).toHaveURL(`/shop/${SHOP}/inbox`);
-      await expect(
-        page.getByRole("heading", { level: 1, name: "What divers wrote" }),
-      ).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "Inbox" })).toBeVisible();
 
       // Through the row to the record, the way a captain would reach it. The
       // composer's presence is the whole assertion: nothing is typed and
@@ -228,7 +226,7 @@ test.describe("H-14 role permissions", () => {
       await page.goto(`/shop/${SHOP}/requests`);
       // The page's own heading, not a bounce to Today carrying a notice.
       await expect(page).toHaveURL(new RegExp(`/shop/${SHOP}/requests`));
-      await expect(page.getByRole("heading", { level: 1, name: "Requested dates" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "Inbox" })).toBeVisible();
       // That it is also a place a captain can *get to* rather than only type
       // is a nav question, and it is asserted where the nav is: the More
       // menu's captain list in `staff-nav.spec.ts`, and the registry three

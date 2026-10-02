@@ -92,6 +92,6 @@ test.describe("staff", () => {
     await expect(dialog.getByRole("option", { name: "Español" })).toHaveCount(0);
     await dialog.getByRole("option", { name: "English" }).click();
 
-    await expect(page.getByRole("heading", { level: 1, name: "What divers said" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Inbox" })).toBeVisible();
   });
 });

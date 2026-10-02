@@ -583,9 +583,9 @@ test.describe("automated accessibility scans of the static staff routes", () => 
     await scanStaticRoutes(page, [
       { path: "/shop/blue-mantis/orders", heading: "Orders" },
       { path: "/shop/blue-mantis/orders/new", heading: "New order" },
-      { path: "/shop/blue-mantis/promos", heading: "Discounts a diver can type" },
-      { path: "/shop/blue-mantis/reviews", heading: "What divers said" },
-      { path: "/shop/blue-mantis/reports", heading: "How’s your month" },
+      { path: "/shop/blue-mantis/promos", heading: "Money" },
+      { path: "/shop/blue-mantis/reviews", heading: "Inbox" },
+      { path: "/shop/blue-mantis/reports", heading: "Money" },
       { path: "/shop/blue-mantis/staffing", heading: "Schedule" },
       { path: "/shop/blue-mantis/courses", heading: "Courses" },
       { path: "/shop/blue-mantis/waivers", heading: "The release" },
@@ -643,7 +643,7 @@ test.describe("automated accessibility scans of the static staff routes", () => 
       // so an empty shop would scan the empty state instead, which is a
       // different page and not the one worth guarding.
       { path: "/shop/blue-mantis/gear", heading: "Gear" },
-      { path: "/shop/blue-mantis/requests", heading: "Requested dates" },
+      { path: "/shop/blue-mantis/requests", heading: "Inbox" },
       { path: "/shop/blue-mantis/divers/new", heading: "Add a diver" },
       { path: "/shop/blue-mantis/settings/security", heading: "Account security" },
       { path: "/shop/blue-mantis/settings/integrations", heading: "Shop integrations" },
