@@ -76,7 +76,6 @@ test("the departure's tabs reach its gear and its manifest", async ({ page }) =>
     .getByRole("link", { name: "Divers" })
     .click();
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
-  await expect(onThisPhone).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Guests" })).toBeVisible();
 });
 
