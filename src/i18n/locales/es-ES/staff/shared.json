@@ -218,6 +218,7 @@
     }
   },
   "shopNav": {
+    "boatMode": "Modo barco",
     "language": "Idioma",
     "signOut": "Cerrar sesión",
     "signOutConfirm": "¿Cerrar sesión? Confirmar",

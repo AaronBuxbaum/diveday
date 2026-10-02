@@ -550,8 +550,11 @@ body {
  * action colour, in Atkinson Hyperlegible. Every pair clears AA by a wide
  * margin: ink 15.0 on the surface, muted 8.3, yellow 11.2, ink on yellow 12.6.
  * It is the single high-contrast surface: there is no ambient-light switch
- * and no separate glare skin.
+ * and no separate glare skin. Anyone can put a whole device in it from the
+ * identity menu, which sets the class on `<html>` (`src/lib/boat-mode.ts`);
+ * `:root.boat-mode` outranks the dark scheme's `:root` block.
  */
+:root.boat-mode,
 .boat-mode {
   color-scheme: dark;
   --background: #0a141c;
@@ -1015,6 +1018,7 @@ textarea {
   }
 
   :root,
+  :root.boat-mode,
   .boat-mode {
     color-scheme: light;
     --background: #ffffff;
