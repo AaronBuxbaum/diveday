@@ -635,7 +635,7 @@ export function openOrdersActionText(t: StaffTranslator): string {
 }
 
 /**
- * A stuck photo-deletion's action label — Settings' "Data & integrations"
+ * A stuck photo-deletion's action label — Settings' "Data"
  * group, where the retry button for it now lives.
  */
 export function openDataSettingsActionText(t: StaffTranslator): string {

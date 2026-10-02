@@ -1432,7 +1432,7 @@ describe("role lens raw material", () => {
       expect(row?.dueAt).toBeNull();
       // The retry button for a stuck deletion lives in Settings' "Data &
       // integrations" group now, so the row lands on that group's anchor.
-      expect(row?.href).toBe(`/shop/${shop.slug}/settings#data-integrations`);
+      expect(row?.href).toBe(`/shop/${shop.slug}/settings#data`);
     });
 
     it("mirrors money owed for a cancelled departure, once it has sat for a day", async () => {

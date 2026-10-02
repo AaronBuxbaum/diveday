@@ -42,7 +42,7 @@ import {
  * 740px of viewport beside the bar, so it has always been a *scrolling* map
  * and no legible row height changes that. What it was missing is the part
  * that makes a long map usable: a reader landed on "Your shop" and had no
- * signal that Money and Data & integrations existed at all below the fold.
+ * signal that the groups below the first existed at all below the fold.
  * Each group label is sticky inside the rail's own scroll area now, so the
  * group you are reading is named at the top of the column and the next one
  * announces itself as it arrives, and the group holding the current row wears

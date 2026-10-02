@@ -14,11 +14,10 @@ import { MAX_PACKAGE_DIVE_COUNT } from "@/lib/dive-packages";
 import { formatMoneyScanned } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam } from "@/lib/staff-notices";
-import { settingsPaneClass } from "../_components/settings-pane";
-import { createDivePackageAction, deleteDivePackageAction } from "../actions";
-import { divePackageNoticeMessages } from "../sub-page-notices";
+import { createDivePackageAction, deleteDivePackageAction } from "../../settings/actions";
+import { divePackageNoticeMessages } from "../../settings/sub-page-notices";
 
-// See the sibling settings sub-pages (ADR 20260804-instant-navigation).
+// See the settings sub-pages (ADR 20260804-instant-navigation).
 export const instant = true;
 
 /** Static metadata resolves before locale negotiation, so it stays English. */
@@ -34,8 +33,10 @@ export const metadata: Metadata = { title: "Dive packages — DiveDay" };
  * list and the add form, and nothing anywhere else in the app changes until the
  * first package exists.
  *
- * Behind the same payment gate the Money group's rows are, re-checked here
- * rather than inherited — every destination re-checks its own permission
+ * Tucked under Money's Discounts tab (ADR 20261001-logbook): a package is a
+ * price a diver pays up front, beside the codes and deals that lower one. Its
+ * way back is its eyebrow. Behind the same payment gate as Discounts,
+ * re-checked here rather than inherited — every destination re-checks its own permission
  * server-side, which is what keeps hiding a row a convenience.
  */
 export default async function DivePackagesSettingsPage({
@@ -49,11 +50,10 @@ export default async function DivePackagesSettingsPage({
   const { notice } = await searchParams;
   const { db, session, shop } = await requireShopSurface(shopSlug, {
     allow: canPersonManagePaymentSettings,
-    // Back to the hub rather than Today, and with the hub's own payment-gate
-    // code: `not-authorized` is the sentence that names payment settings, and
-    // Today's map does not carry it — a refusal that lands somewhere with no
-    // words for it is indistinguishable from a dead link.
-    refusal: { notice: "not-authorized", landing: ["settings"] },
+    // The same refusal Discounts gives: a reader who cannot open the price
+    // list is told so on Today, rather than bounced to a page that refuses
+    // them for the same reason.
+    refusal: { notice: "promos-not-authorized" },
   });
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
@@ -61,11 +61,11 @@ export default async function DivePackagesSettingsPage({
   const banner = noticeFromParam(notice, divePackageNoticeMessages(t));
 
   return (
-    <main className={settingsPaneClass()}>
+    <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow={t("settings.main.eyebrow")}
-        eyebrowHref={`/shop/${shopSlug}/settings`}
+        eyebrow={t("shared.shopNavLinks.promoCodes")}
+        eyebrowHref={`/shop/${shopSlug}/promos`}
         title={t("settings.main.divePackages.heading")}
         description={t("settings.main.divePackages.description")}
       />

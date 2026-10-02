@@ -10,7 +10,7 @@ import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 /**
  * Moved from the gear register (`src/app/shop/[shopSlug]/gear/actions.ts`) to
- * Settings' "Data & integrations" group, beside the sibling contacts CSV
+ * Settings' "Data" group, beside the sibling contacts CSV
  * importer this mirrors. That move is also a permission tightening: the
  * register never gated this bulk write, and the sibling importer's own action
  * re-checks the same live, database-backed permission rather than trusting

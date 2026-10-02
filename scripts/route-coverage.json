@@ -466,6 +466,11 @@
     "visual": ["window-sticker"],
     "exempt": "One sentence and the storefront's code, with no control on it. The register's door that opens it is the same form the dock sign's row is driven through in shop-on-paper.spec.ts, and the print capture is the artifact this route exists to produce."
   },
+  "/shop/[shopSlug]/promos/packages": {
+    "e2e": ["settings-editor-pages.spec.ts", "settings-findability.spec.ts"],
+    "visual": ["settings-dive-packages"],
+    "a11y": []
+  },
   "/shop/[shopSlug]/promos": {
     "e2e": ["promo-codes.spec.ts", "settings-findability.spec.ts"],
     "visual": ["staff-promos"],
@@ -565,11 +570,6 @@
   "/shop/[shopSlug]/settings/boats": {
     "e2e": ["settings-editor-pages.spec.ts"],
     "visual": ["settings-boats"],
-    "a11y": []
-  },
-  "/shop/[shopSlug]/settings/dive-packages": {
-    "e2e": ["settings-editor-pages.spec.ts"],
-    "visual": ["settings-dive-packages"],
     "a11y": []
   },
   "/shop/[shopSlug]/settings/kinds-of-day": {

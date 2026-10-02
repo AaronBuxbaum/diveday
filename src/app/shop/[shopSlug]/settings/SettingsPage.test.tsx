@@ -115,17 +115,15 @@ describe("settings findability", () => {
     );
   });
 
-  it("gives an owner a door to Team and to Promo codes, and only one door each", async () => {
-    // Both surfaces existed only in the nav registry and ⌘K: an owner who
-    // opened Settings to add a colleague or a discount code found no card.
-    // They are now *only* here — the header dropped both rows, because one
-    // destination behind two menus is the duplicate control principle 8 rules
-    // out (src/lib/staff-destinations.ts).
+  it("gives an owner a door to Team, and none to the Money section's pages", async () => {
+    // Team existed only in the nav registry and ⌘K: an owner who opened
+    // Settings to add a colleague found no card. Discounts went the other way
+    // once Money gave it a tab (ADR 20261001-logbook): one destination behind
+    // two menus is the duplicate control principle 8 rules out
+    // (src/lib/staff-destinations.ts).
     const hrefs = hrefsIn(await renderSettings("owner"));
     expect(hrefs).toContain(`/shop/${SHOP_SLUG}/settings/team`);
-    expect(hrefs).toContain(`/shop/${SHOP_SLUG}/promos`);
-    // The trade the other way: Orders is money a shop reads every day, so it
-    // keeps its header row and this page carries no second door to it.
+    expect(hrefs).not.toContain(`/shop/${SHOP_SLUG}/promos`);
     expect(hrefs).not.toContain(`/shop/${SHOP_SLUG}/orders`);
   });
 
@@ -168,7 +166,7 @@ describe("deep links into settings", () => {
     );
     const anchored = openable;
     // A link may also point at a whole *group* — a plain `<h2 id>` outside any
-    // disclosure, so it needs nothing to reveal it. `#data-integrations` is
+    // disclosure, so it needs nothing to reveal it. `#data` is
     // one, and reading it as a broken row link would be this test crying wolf.
     const groups = new Set<string>(SETTINGS_GROUPS.map((group) => group.id));
 
@@ -585,13 +583,15 @@ describe("the diving options a shop runs", () => {
     expect(names).toContain("hasBoatDiving");
   });
 
-  it("keeps the four editors that outgrew a row as doors, not forms", async () => {
+  it("keeps the editors that outgrew a row as doors, not forms", async () => {
     // A row states an answer and opens the form that changes it (ADR
-    // 20260827-clearwater-surface-language, decision 6). These four opened onto
+    // 20260827-clearwater-surface-language, decision 6). These opened onto
     // lists of forms, so they are pages; the hub renders no control of theirs.
+    // Dive packages is a door on Money's Discounts tab now, not here.
     const element = await renderSettings("owner");
     const hrefs = hrefsIn(element);
-    for (const segment of ["boats", "kinds-of-day", "seasons", "dive-packages"]) {
+    expect(hrefs).not.toContain(`/shop/${SHOP_SLUG}/promos/packages`);
+    for (const segment of ["boats", "kinds-of-day", "seasons"]) {
       expect(hrefs).toContain(`/shop/${SHOP_SLUG}/settings/${segment}`);
     }
     const names = inputNamesIn(element);

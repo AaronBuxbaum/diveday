@@ -19,16 +19,11 @@ import { STAFF_DESTINATIONS } from "@/lib/staff-destinations";
  *
  * The rule runs **both ways**: a destination with a section of its own in the
  * nav does not also get a door here, or Settings grows back into a second nav.
- * Promo codes is the one door still standing on that side, until the Money
- * section gives it a tab of its own (ADR 20261001-logbook, build order).
  */
 const SETTINGS_PAGE = path.join(import.meta.dirname, "SettingsPage.tsx");
 
 /** `/shop/${shopSlug}/promos` and `/shop/${shopSlug}/settings/team` alike. */
 const DOOR_HREF = /shopSlug\}(\/[a-z-]+(?:\/[a-z-]+)?)`/g;
-
-/** Doors standing until their own section's page carries them. */
-const TRANSITIONAL_DOORS = new Set(["promoCodes"]);
 
 describe("Settings is the door to everything in its section", () => {
   it("has a row for each `settings` destination, and for no other", async () => {
@@ -37,7 +32,7 @@ describe("Settings is the door to everything in its section", () => {
 
     for (const destination of STAFF_DESTINATIONS) {
       // Settings is the page, not a row on itself.
-      if (destination.id === "settings" || TRANSITIONAL_DOORS.has(destination.id)) continue;
+      if (destination.id === "settings") continue;
       expect(doors.has(destination.suffix), `${destination.id} (${destination.suffix})`).toBe(
         destination.section === "settings",
       );
@@ -56,10 +51,9 @@ describe("Settings is the door to everything in its section", () => {
     // with no row in `STAFF_DESTINATIONS` — is a destination declared outside
     // the one file a destination may be declared in.
     const shopSuffixes = new Set(
-      STAFF_DESTINATIONS.filter(
-        (destination) =>
-          destination.section === "settings" || TRANSITIONAL_DOORS.has(destination.id),
-      ).map((destination) => destination.suffix),
+      STAFF_DESTINATIONS.filter((destination) => destination.section === "settings").map(
+        (destination) => destination.suffix,
+      ),
     );
     const strays = [...doors].filter(
       (door) => !door.startsWith("/settings/") && !shopSuffixes.has(door),

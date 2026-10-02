@@ -1,7 +1,6 @@
 {
   "main": {
     "eyebrow": "Settings",
-    "title": "Shop settings",
     "notice": {
       "packingSaved": "Packing checklist saved for every trip.",
       "packingInvalid": "Add between one and twelve packing items.",
@@ -400,9 +399,16 @@
       "emailCta": "Email {email}"
     },
     "groups": {
-      "yourShop": "Your shop",
+      "shop": "Shop",
+      "team": "Team",
+      "boatsSites": "Boats & sites",
+      "bookingsWaivers": "Bookings & waivers",
+      "rentals": "Rentals",
       "money": "Money",
-      "dataIntegrations": "Data & integrations"
+      "messages": "Messages",
+      "website": "Website",
+      "data": "Data",
+      "account": "Account"
     },
     "rail": {
       "ariaLabel": "Settings sections"
@@ -427,9 +433,6 @@
     },
     "security": {
       "heading": "Account security"
-    },
-    "promos": {
-      "heading": "Promo codes"
     },
     "dataJobs": {
       "mediaKind": {

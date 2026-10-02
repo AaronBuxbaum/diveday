@@ -80,6 +80,9 @@
   "retrying": "Intentando de nuevo…",
   "delete": "Eliminar",
   "deleting": "Eliminando…",
+  "packages": {
+    "open": "Editar paquetes"
+  },
   "tripDeals": {
     "heading": "Ofertas por salida",
     "description": "Descuentos de una sola salida enviados desde la página de una salida.",

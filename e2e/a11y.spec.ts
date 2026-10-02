@@ -600,7 +600,7 @@ test.describe("automated accessibility scans of the static staff routes", () => 
     // 6 scans at ~3.5s each.
     test.setTimeout(85_000);
     await scanStaticRoutes(page, [
-      { path: "/shop/blue-mantis/settings", heading: "Shop settings" },
+      { path: "/shop/blue-mantis/settings", heading: "Settings" },
       { path: "/shop/blue-mantis/settings/team", heading: "Team" },
       { path: "/shop/blue-mantis/settings/import", heading: "Import contacts" },
       // One page, both halves: the download manifest and — since ADR

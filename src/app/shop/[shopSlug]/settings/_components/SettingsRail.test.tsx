@@ -261,7 +261,7 @@ describe("the rail as it renders", () => {
   });
 
   it("draws every group, each under its own label", () => {
-    // The whole reason the rail exists: Money and Data & integrations are not
+    // The whole reason the rail exists: the groups below the first are not
     // a second page. A regression that dropped them would still look right on
     // the hub, where the pane repeats the map below the fold.
     renderRail();
@@ -295,12 +295,12 @@ describe("the rail as it renders", () => {
     pathname = `${BASE}/settings/team`;
     renderRail();
     const nav = screen.getByRole("navigation", { name: "Settings sections" });
-    // "team" is a Your shop row; the other two groups stay quiet.
-    expect(nav.querySelector("#settings-rail-your-shop")?.className).toContain("text-primary");
-    expect(nav.querySelector("#settings-rail-money")?.className).not.toContain("text-primary");
-    expect(nav.querySelector("#settings-rail-data-integrations")?.className).not.toContain(
-      "text-primary",
-    );
+    // "team" is the Team group's row; every other group stays quiet.
+    for (const group of SETTINGS_GROUPS) {
+      const className = nav.querySelector(`#settings-rail-${group.id}`)?.className;
+      if (group.id === "team") expect(className).toContain("text-primary");
+      else expect(className, group.id).not.toContain("text-primary");
+    }
   });
 
   it("renders no badge at all when nothing is wrong", () => {
@@ -536,7 +536,6 @@ describe("what the rail hides", () => {
   const gated: Record<string, SettingsRailGate> = {
     team: "team",
     waivers: "waivers",
-    promos: "promos",
     whatsapp: "messaging",
     dataImport: "import",
     gearImport: "import",
@@ -693,7 +692,6 @@ describe("the captions the copy-restraint filter deleted", () => {
     "waivers",
     "safetyChecklist",
     "security",
-    "promos",
     "embed",
     "calendar",
     "integrations",

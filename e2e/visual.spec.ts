@@ -6404,7 +6404,7 @@ for (const scheme of ["light", "dark"] as const) {
        * turns itself on.
        */
       test(`the dive-packages page renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings/dive-packages");
+        await page.goto("/shop/blue-mantis/promos/packages");
         await page.getByRole("heading", { level: 1, name: "Dive packages" }).waitFor();
         await page.getByRole("button", { name: "Add package" }).waitFor();
         await capture(page, "settings-dive-packages", scheme);
@@ -6603,7 +6603,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * Settings' "Data & integrations" group when the shop owes work it has
+       * Settings' "Data" group when the shop owes work it has
        * not finished: photos removed from the app but still in storage, and an
        * erased diver's records still sitting at Stripe. Danger-toned, and the
        * only place either obligation is ever stated — an unfinished erasure is

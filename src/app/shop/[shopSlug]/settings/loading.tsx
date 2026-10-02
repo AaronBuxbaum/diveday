@@ -12,7 +12,7 @@ export default function SettingsLoading() {
     // into Settings jump sideways when the real page landed.
     <main className={settingsPaneClass()}>
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-48" description={false} />
+        <ShopPageHeaderSkeleton eyebrow={false} titleWidth="w-32" description={false} />
         {/* Three labelled groups, each a row list wearing the card shell — the
             shape and the `space-y-10` both come from where the page takes
             them, so the skeleton cannot drift into a layout jump. */}
