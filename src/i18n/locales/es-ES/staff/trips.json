@@ -4,6 +4,21 @@
     "manifest": "Manifiesto",
     "prep": "Preparación"
   },
+  "tabs": {
+    "label": "Salida",
+    "divers": "Buceadores",
+    "checkin": "Registro",
+    "boat": "Barco",
+    "gear": "Equipo",
+    "details": "Detalles"
+  },
+  "phases": {
+    "label": "Etapa",
+    "prep": "Preparación",
+    "checkin": "Registro",
+    "aboard": "A bordo",
+    "back": "De vuelta"
+  },
   "about": {
     "heading": "Sobre esta salida",
     "add": "Añadir",
@@ -120,7 +135,8 @@
     "overRatio": "Ratio de alumnos excedida",
     "overIntroRatio": "Ratio de bautismo excedida",
     "prepGaps": "{count, plural, one {A # buceador le faltan tallas de alquiler} other {A # buceadores les faltan tallas de alquiler}}",
-    "awaitingPayment": "{count, plural, one {# pedido pendiente de pago} other {# pedidos pendientes de pago}}"
+    "awaitingPayment": "{count, plural, one {# pedido pendiente de pago} other {# pedidos pendientes de pago}}",
+    "noRequirements": "Define los requisitos para que alguien pueda embarcar"
   },
   "detail": {
     "viewBookingPage": "Ver página de reserva",

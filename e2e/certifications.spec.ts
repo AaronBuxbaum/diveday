@@ -9,6 +9,7 @@ import {
   openDiverFileGroup,
   openThreadStep,
   openTripAbout,
+  openTripTab,
   rosterRow,
   signInAsOwner,
   signOut,
@@ -142,7 +143,8 @@ test("an instructor certifies a diver from the course roster, and they can book 
   await page.getByLabel("Assign crew").selectOption({ label: "Marcus Webb" });
   await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
 
-  await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
+  // Crew is on Details; the roster the diver joins is the Divers tab.
+  await openTripTab(page, "Trip");
 
   const diverName = `Cert Test Diver ${e2eNow().getTime()}`;
   const diverEmail = `cert-test-${e2eNow().getTime()}@example.com`;
@@ -202,7 +204,8 @@ test("an instructor writes a student's next step on the course session's own ros
 }) => {
   const trip = await findTripOnBoard(page, "blue-mantis", /Advanced Open Water Diver/);
   await trip.click();
-  await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
+  // Crew is on Details; the roster the diver joins is the Divers tab.
+  await openTripTab(page, "Trip");
 
   // The disclosure is per student; the first one on this session's roster is
   // the one this walks.
@@ -227,7 +230,8 @@ test("a fun dive's roster offers no certification and no next step", async ({ pa
   const trip = await findTripOnBoard(page, "blue-mantis", /Two-Tank Reef/);
   const title = ((await trip.textContent()) ?? "").trim();
   await trip.click();
-  await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
+  // Crew is on Details; the roster the diver joins is the Divers tab.
+  await openTripTab(page, "Trip");
   // The departure's own masthead is what says the page has rendered.
   await page.getByRole("heading", { level: 1, name: title }).waitFor();
   await expect(page.getByText("Next step", { exact: true })).toHaveCount(0);

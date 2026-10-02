@@ -78,7 +78,7 @@ import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
  * ## Headings: what size, and where one goes
  *
  * `title` renders the staff type scale (`text-2xl` — Reef's section rung,
- * drawn 26/600 on the system sheet and set in Geist at the ramp's nearest
+ * drawn 26/600 on the system sheet and set in Plex at the ramp's nearest
  * step — or `text-base` for a card
  * inside a group that already owns the `h2`). The **marketing pages keep their
  * own scale at the call site** and pass no `title` — their headings sit under a

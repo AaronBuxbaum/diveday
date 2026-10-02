@@ -30,8 +30,6 @@ vi.mock("@/app/shop/[shopSlug]/actions", () => ({
   setLeftoverDecisionAction: vi.fn(),
 }));
 
-import { SITE_MARK_SIZES } from "@/components/illustration/SiteMark";
-import { tapTargetOverhangClass } from "@/components/ui/button";
 import type { FirstBooking } from "@/db/first-booking";
 import type { DayTakings as DayTakingsReading } from "@/lib/closeout";
 import { assembleEveningClose, type CloseoutDeparture } from "@/lib/closeout";
@@ -179,11 +177,10 @@ function renderSpine({
  * title on every queue row that hung off it.
  */
 describe("a station owns its departure's facts", () => {
-  it("renders the departure's title exactly once, and no row repeats it", () => {
+  it("names each row's boat itself, now that the rows are one list under the departures", () => {
     renderSpine({
       actions: [
         action({ id: "r1", subject: "Priya Sharma", departure: boat("t1") }),
-        action({ id: "r2", subject: "Grace Mensah", departure: boat("t1") }),
         action({
           id: "r3",
           subject: "Two-Tank Reef",
@@ -194,16 +191,19 @@ describe("a station owns its departure's facts", () => {
         }),
       ],
     });
-    // Once, in the station header — never again beneath it, not even by the
-    // row that is *about* the departure, which leads with its detail instead.
-    // Counted in the page's words, not by element: the header sets the
-    // title's last word in a span of its own, beside its chevron.
-    expect(document.body.textContent?.split("Two-Tank Reef")).toHaveLength(2);
-    expect(screen.getByRole("link", { name: /Two-Tank Reef/ })).toHaveAttribute(
+    // The card links the departure once; each row says its boat by the label
+    // the reader composed, so a row lifted out of the card still names it.
+    expect(screen.getByRole("link", { name: /^Two-Tank Reef$/ })).toHaveAttribute(
       "href",
       "/shop/blue-mantis/trips/t1",
     );
-    expect(screen.getByText("3 divers still need rental sizes.")).toBeInTheDocument();
+    const needsYou = screen.getByText("Needs you").closest("div") as HTMLElement;
+    // Both rows say their boat on a quiet line under their words.
+    const labels = within(needsYou).getAllByText("Two-Tank Reef · 7:00 AM");
+    expect(labels).toHaveLength(2);
+    for (const label of labels) expect(label).toHaveClass("text-muted");
+    expect(within(needsYou).getByText("3 divers still need rental sizes.")).toBeInTheDocument();
+    expect(within(needsYou).getByText("Priya Sharma")).toBeInTheDocument();
   });
 
   /**
@@ -247,11 +247,17 @@ describe("a station owns its departure's facts", () => {
     ).toBeInTheDocument();
   });
 
-  it("leads the head count as a figure with the open spots beneath it", () => {
-    renderSpine();
-    expect(screen.getByText("10")).toBeInTheDocument();
-    expect(screen.getByText("of 12")).toBeInTheDocument();
+  it("says how many of the booked divers are ready, and the open spots beside it", () => {
+    renderSpine({ departures: [departure({ blocked: 2 })] });
+    expect(screen.getByText("8 of 10 ready")).toBeInTheDocument();
+    expect(screen.getByText("2 blocked")).toBeInTheDocument();
     expect(screen.getByText("2 spots open")).toBeInTheDocument();
+  });
+
+  it("says nothing about blocked divers on a boat whose divers are all ready", () => {
+    renderSpine();
+    expect(screen.getByText("10 of 10 ready")).toBeInTheDocument();
+    expect(screen.queryByText(/blocked/)).toBeNull();
   });
 
   it("says Full rather than nought spots open on a boat with no seats left", () => {
@@ -260,42 +266,26 @@ describe("a station owns its departure's facts", () => {
     expect(screen.queryByText(/spots? open/)).toBeNull();
   });
 
-  it("draws the head count as a dial whose water is the shallows, standing at booked-of-capacity", () => {
-    const { container } = renderSpine();
-    // Reef's one decorative fill token, and never a state: the figure over
-    // the water and the words beside it carry the fact (ADR
-    // 20260901-diveday-reimagined, decision 1 — "water fills that carry no
-    // fact").
-    const water = container.querySelector("[data-station-water]");
-    expect(water).not.toBeNull();
-    expect(water?.className).toContain("bg-shallows");
-    expect(water?.getAttribute("aria-hidden")).toBe("true");
-    expect((water as HTMLElement).style.transform).toBe("scaleY(0.83)");
-    expect(container.querySelector(".bg-muted.opacity-30")).toBeNull();
+  it("draws readiness as one bar the boat's capacity wide: ready, then blocked, then open", () => {
+    const { container } = renderSpine({ departures: [departure({ blocked: 3 })] });
+    const bar = container.querySelector("[data-readiness-bar]");
+    expect(bar?.getAttribute("aria-hidden")).toBe("true");
+    const [ready, blocked] = [...(bar?.children ?? [])] as HTMLElement[];
+    // 7 ready and 3 blocked of 12 seats; the rest of the bar is the open seats.
+    expect(ready?.className).toContain("bg-success");
+    expect(ready?.style.width).toBe(`${(7 / 12) * 100}%`);
+    expect(blocked?.className).toContain("bg-danger");
+    expect(blocked?.style.width).toBe("25%");
   });
 
-  it("gives the next boat's site mark the surface's one coral detail, and the rest none", () => {
-    const { container } = renderSpine({
-      departures: [
-        departure({ tripId: "sailed", title: "Dawn Patrol", startsAt: hoursFromNow(-3) }),
-        departure({ tripId: "next", title: "Two-Tank Reef", startsAt: hoursFromNow(2) }),
-        departure({ tripId: "later", title: "Wreck Trip", startsAt: hoursFromNow(6) }),
-      ],
-    });
-    // A boat that left more than the hour's buffer ago is not "next"; the
-    // one after it is, and only it wears the warm detail.
-    const marks = [...container.querySelectorAll("[data-site-mark]")];
-    expect(marks).toHaveLength(3);
-    const coral = marks.map((mark) => mark.querySelectorAll('[fill="var(--accent)"]').length);
-    expect(coral).toEqual([0, 1, 0]);
-  });
-
-  it("swaps the site mark's wash and ink for a boat that leaves after dark", () => {
-    // 23:30 UTC is 7:30 PM in Key Largo — the fiction's night dive.
-    const { container } = renderSpine({
-      departures: [departure({ startsAt: new Date("2026-08-27T23:30:00Z") })],
-    });
-    expect(container.querySelector("[data-site-mark]")?.className).toContain("bg-primary-hover");
+  it("wears the departure's stage as a pill, and none when the reader has no phase", () => {
+    renderSpine({ departures: [departure({ phase: "checkin" })] });
+    expect(screen.getByText("Check-in")).toBeInTheDocument();
+    cleanup();
+    renderSpine({ departures: [departure({ phase: null })] });
+    for (const word of ["Prep", "Check-in", "Aboard", "Back"]) {
+      expect(screen.queryByText(word)).toBeNull();
+    }
   });
 
   it("badges the reader's own boat without moving it up the clock", () => {
@@ -339,26 +329,6 @@ describe("the station is a panel (16a)", () => {
     expect(container.querySelector('[class*="grid-cols-[112px_112px_1fr]"]')).toBeNull();
   });
 
-  it("puts the site tile inside the panel, leading the header", () => {
-    const { container } = renderSpine();
-    const station = container.querySelector("ol > li");
-    const mark = station?.querySelector("[data-site-mark]");
-    expect(mark).not.toBeNull();
-    // Leading: the first element child of the header row is the tile.
-    expect(mark?.parentElement?.firstElementChild).toBe(mark);
-  });
-
-  it("keeps the capacity inside the dial and the open count beside it", () => {
-    const { container } = renderSpine();
-    const water = container.querySelector("[data-station-water]");
-    const dial = water?.parentElement;
-    if (!dial) throw new Error("no dial rendered");
-    expect(within(dial as HTMLElement).getByText("10")).toBeInTheDocument();
-    expect(within(dial as HTMLElement).getByText("of 12")).toBeInTheDocument();
-    expect(within(dial as HTMLElement).queryByText("2 spots open")).toBeNull();
-    expect(screen.getByText("2 spots open")).toBeInTheDocument();
-  });
-
   it("offers the departure log on a live station as a quiet link, never a button", () => {
     renderSpine({
       departures: [departure({ tripId: "t1" })],
@@ -369,58 +339,6 @@ describe("the station is a panel (16a)", () => {
     // `buttonClass()` always emits the control rung; the door is a text link.
     expect(door.className).not.toContain("rounded-lg");
     expect(door.className).toContain("text-primary");
-  });
-
-  /**
-   * **The dial's words centre on the dial** (pixel-craft class 1, K-186). The
-   * column beside the 76px dial is centred on it, and the log door's 44px
-   * target stacked in that column as 44px of box under a 20px line: "3 spots
-   * open / Generate log" sat 4.5px high, 8px clear of the dial's top and 17px
-   * of its bottom. The door stands in a box its own line tall, so the column
-   * measures its words, and the target reaches past the line into the room
-   * below it rather than taking room in the column.
-   */
-  it("stands the log door in a box one line tall, so its target takes no room in the dial's column", () => {
-    renderSpine({ departures: [departure({ tripId: "t1" })], evening: evening([]) });
-    const door = screen.getByRole("link", { name: "Generate log" });
-    const line = door.parentElement;
-    const column = screen.getByText("2 spots open").parentElement;
-    expect(line?.parentElement).toBe(column);
-    // text-sm's line box is 20px: `h-5`.
-    expect(line).toHaveClass("h-5");
-    // The target is still 44px, standing from the top of the line.
-    expect(door).toHaveClass("min-h-11", "items-start");
-    expect(line).toHaveClass("items-start");
-    // The eyebrow back-link's shape, reaching the other way: one decision in
-    // button.ts, not a second hand-spelled copy of it.
-    expect(door).toHaveClass(...tapTargetOverhangClass.down.target.split(" "));
-    expect(line).toHaveClass(...tapTargetOverhangClass.down.line.split(" "));
-  });
-
-  /**
-   * **On a phone the dial's words start on the title's column** (pixel-craft
-   * class 3, K-318). Below `sm` the dial wraps to its own line under the site
-   * tile, and its words started at 76 + 16 from the card's edge while the
-   * time, title and meta beside the tile start at 84 + 20: 11px apart. The
-   * dial now stands in a box the tile's width, centred, at the tile's gap.
-   */
-  it("starts the dial's words on the title's column below sm", () => {
-    const { container } = renderSpine();
-    const px = (classes: string | undefined, pattern: RegExp) => {
-      const match = classes?.match(pattern);
-      if (!match?.[1]) throw new Error(`no ${pattern} in "${classes}"`);
-      return Number(match[1]);
-    };
-    const tileWidth = px(SITE_MARK_SIZES.md.tile, /(?:^|\s)w-\[(\d+)px\](?:\s|$)/);
-    const header = container.querySelector("[data-site-mark]")?.parentElement;
-    const dial = container.querySelector("[data-station-water]")?.parentElement;
-    const box = dial?.parentElement;
-    const row = box?.parentElement;
-    expect(px(box?.className, /(?:^|\s)max-sm:w-(\d+)(?:\s|$)/) * 4).toBe(tileWidth);
-    expect(box).toHaveClass("justify-center");
-    expect(px(row?.className, /(?:^|\s)gap-(\d+)(?:\s|$)/)).toBe(
-      px(header?.className, /(?:^|\s)gap-x-(\d+)(?:\s|$)/),
-    );
   });
 
   /**
@@ -458,17 +376,6 @@ describe("the station is a panel (16a)", () => {
     const station = container.querySelector("ol > li");
     expect(station?.className).toContain("rounded-panel");
     expect(container.querySelector('[class*="grid-cols-[112px_112px_1fr]"]')).toBeNull();
-  });
-
-  it("leaves a station's last row to the panel's own edge", () => {
-    // A closing rule 20px above the panel's border was two parallel lines with
-    // nothing between them (pixel-craft class 6).
-    renderSpine({
-      actions: [action({ id: "r1", subject: "Priya Sharma", departure: boat("t1") })],
-    });
-    const row = screen.getByText("Priya Sharma").closest("li");
-    expect(row).toHaveClass("border-t");
-    expect(row).not.toHaveClass("last:border-b");
   });
 
   it("says a row as one line: the person, then the sentence", () => {
@@ -573,10 +480,10 @@ describe("a station's safety notes", () => {
 
 /** A `TodayAction` with no `tripId` belongs to nobody's boat. */
 describe("the desk group", () => {
-  it("files a row with no departure under 'At the desk'", () => {
+  it("ranks a row with no departure in the same Needs you list as the boats' rows", () => {
     renderSpine({
       actions: [
-        action({ id: "on-boat", subject: "Priya Sharma", departure: boat("t1") }),
+        action({ id: "on-boat", kind: "waiver", subject: "Priya Sharma", departure: boat("t1") }),
         action({
           id: "chore",
           kind: "reviews_pending",
@@ -585,17 +492,17 @@ describe("the desk group", () => {
         }),
       ],
     });
-    const desk = screen.getByText("At the desk").closest("div");
-    expect(desk).not.toBeNull();
-    expect(
-      within(desk as HTMLElement).getByText("One review is waiting on you."),
-    ).toBeInTheDocument();
-    expect(within(desk as HTMLElement).queryByText("Priya Sharma")).toBeNull();
+    const needsYou = screen.getByText("Needs you").closest("div") as HTMLElement;
+    const rows = within(needsYou).getAllByRole("listitem");
+    // Warning before quiet, wherever each row is filed.
+    expect(rows[0]).toHaveTextContent("Priya Sharma");
+    expect(rows[1]).toHaveTextContent("One review is waiting on you.");
+    expect(screen.queryByText("At the desk")).toBeNull();
   });
 
-  it("renders no desk group at all when nothing is bound to the desk", () => {
-    renderSpine({ actions: [action({ id: "on-boat", departure: boat("t1") })] });
-    expect(screen.queryByText("At the desk")).toBeNull();
+  it("renders no Needs you list on a day nothing needs anyone", () => {
+    renderSpine();
+    expect(screen.queryByText("Needs you")).toBeNull();
   });
 
   it("carries the quiet payments row, pointing at settings, when the shop is asked to connect", () => {
@@ -1044,17 +951,11 @@ describe("roll-call rows (DOM-H3)", () => {
 
     expect(screen.getByText("Roll call").className).toContain("text-danger");
     // Never an in-place control: closing a head count happens on the manifest,
-    // one tap away, not from a button on the spine. The door appears twice —
-    // once as the row, once lifted into the "First thing" panel above it —
-    // and both point at the same checkpoint.
-    const doors = screen.getAllByRole("link", { name: "Open roll call" });
-    expect(doors).toHaveLength(2);
-    for (const door of doors) {
-      expect(door).toHaveAttribute(
-        "href",
-        "/shop/blue-mantis/trips/t1/manifest?checkpoint=after_dive_2",
-      );
-    }
+    // one tap away, not from a button on the spine.
+    expect(screen.getByRole("link", { name: "Open roll call" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/t1/manifest?checkpoint=after_dive_2",
+    );
     expect(container.querySelector("form")).toBeNull();
   });
 
@@ -1680,7 +1581,9 @@ describe("the row glyph", () => {
         action({ id: "quiet", kind: "dive_prep", departure: boat("t1") }),
       ],
     });
-    const rows = [...container.querySelectorAll("ol li ul li")];
+    const rows = [...container.querySelectorAll("ol ~ * li, ul > li")].filter((row) =>
+      row.querySelector("span > svg"),
+    );
     expect(rows).toHaveLength(3);
     const inks = rows.map((row) => row.querySelector("span > svg")?.getAttribute("class") ?? "");
     expect(inks[0]).toContain("text-danger");
@@ -1688,86 +1591,6 @@ describe("the row glyph", () => {
     expect(inks[2]).toContain("text-muted");
     // From the shipped status family: a drawing is never a status glyph.
     for (const row of rows) expect(row.querySelector("[data-site-mark]")).toBeNull();
-  });
-});
-
-/**
- * The one obvious next action (H-62), lifted above the spine as the board's
- * "First thing" panel: the next boat's first danger-toned door, once.
- */
-describe("the first thing", () => {
-  it("lifts the next boat's first blocking door into one panel with its fix as the primary", () => {
-    renderSpine({
-      actions: [
-        action({
-          id: "medical",
-          kind: "medical_review",
-          subject: "Grace Mensah",
-          detail: "Medical answers need a look before she boards.",
-          actionLabel: "Verify it",
-          href: "/shop/blue-mantis/divers/p1",
-          departure: boat("t1"),
-        }),
-        action({ id: "waiver", kind: "waiver", departure: boat("t1") }),
-      ],
-    });
-    const panel = screen.getByRole("region", { name: /^First thing · / });
-    expect(within(panel).getByText("Grace Mensah")).toBeInTheDocument();
-    expect(
-      within(panel).getByText("Medical answers need a look before she boards."),
-    ).toBeInTheDocument();
-    expect(within(panel).getByRole("link", { name: "Verify it" })).toHaveAttribute(
-      "href",
-      "/shop/blue-mantis/divers/p1",
-    );
-    // The row beneath still stands: the panel repeats it, it does not move it.
-    expect(screen.getAllByRole("link", { name: "Verify it" })).toHaveLength(2);
-  });
-
-  it("renders nothing when the next boat's loudest row is only a warning, or performs its fix inline", () => {
-    renderSpine({
-      actions: [action({ id: "waiver", kind: "waiver", departure: boat("t1") })],
-    });
-    expect(screen.queryByText(/^First thing/)).toBeNull();
-    cleanup();
-    // A danger row that sends its own waiver keeps its control on the row.
-    renderSpine({
-      actions: [
-        action({
-          id: "medical",
-          kind: "medical_review",
-          departure: boat("t1"),
-          waiver: { bookingIds: ["b1"] },
-        }),
-      ],
-    });
-    expect(screen.queryByText(/^First thing/)).toBeNull();
-  });
-
-  it("reads the next boat, not the first on the page", () => {
-    renderSpine({
-      departures: [
-        departure({ tripId: "sailed", title: "Dawn Patrol", startsAt: hoursFromNow(-3) }),
-        departure({ tripId: "t1", startsAt: hoursFromNow(2) }),
-      ],
-      actions: [
-        action({
-          id: "gone",
-          kind: "medical_review",
-          subject: "Left behind",
-          departure: boat("sailed", "Dawn Patrol"),
-        }),
-        action({
-          id: "next",
-          kind: "identity",
-          subject: "Nadia Petrov",
-          departure: boat("t1"),
-        }),
-      ],
-    });
-    const panel = screen.getByRole("region", { name: /^First thing/ });
-    expect(within(panel).getByText("Nadia Petrov")).toBeInTheDocument();
-    expect(within(panel).queryByText("Left behind")).toBeNull();
   });
 });
 

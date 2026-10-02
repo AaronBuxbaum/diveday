@@ -157,7 +157,7 @@ describe("StaffingWeek", () => {
     // And the act, named for the departure it belongs to, pointing at that
     // trip's crew section rather than at a nav tab.
     for (const link of screen.getAllByRole("link", { name: "Assign crew to Spiegel Grove" })) {
-      expect(link).toHaveAttribute("href", "/shop/blue-mantis/trips/trip-gap#crew");
+      expect(link).toHaveAttribute("href", "/shop/blue-mantis/trips/trip-gap?view=details#crew");
     }
     // Thursday, in the shop's zone — not the 5:00 PM the host would read.
     expect(screen.getAllByText("1:00 PM").length).toBeGreaterThan(0);
@@ -220,7 +220,7 @@ describe("StaffingWeek", () => {
     const doors = screen.getAllByRole("link", { name: /Dawn Two-Tank/ });
     expect(doors.length).toBeGreaterThan(0);
     for (const door of doors) {
-      expect(door).toHaveAttribute("href", "/shop/blue-mantis/trips/trip-7#crew");
+      expect(door).toHaveAttribute("href", "/shop/blue-mantis/trips/trip-7?view=details#crew");
     }
   });
 
@@ -477,7 +477,7 @@ describe("StaffingWeek standing crew clash", () => {
     const { list } = branches(container);
 
     const link = within(list).getByText("Also on Spiegel Grove: cannot be on both").closest("a");
-    expect(link).toHaveAttribute("href", "/shop/blue-mantis/trips/trip-drift#crew");
+    expect(link).toHaveAttribute("href", "/shop/blue-mantis/trips/trip-drift?view=details#crew");
     expect(within(list).queryByRole("alert")).toBeNull();
     expect(within(list).queryByRole("status")).toBeNull();
   });
@@ -616,7 +616,7 @@ describe("StaffingWeek geometry", () => {
       shift: canManage
         ? grid.querySelector("summary")
         : within(grid).getByText("6:30 AM – 12:00 PM").closest("span.flex-col")?.parentElement,
-      crew: grid.querySelector('a[href="/shop/blue-mantis/trips/trip-drift#crew"]'),
+      crew: grid.querySelector('a[href="/shop/blue-mantis/trips/trip-drift?view=details#crew"]'),
       away: within(grid).getByText("Away").parentElement,
       gap: within(grid).getByText("Nobody in the water").parentElement,
     };

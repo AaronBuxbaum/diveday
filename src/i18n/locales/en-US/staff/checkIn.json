@@ -130,5 +130,9 @@
     "addPersonAriaLabel": "Add {name} to this boat",
     "handEntryDescription": "Email is optional, and the crew can collect it later. A name is enough to get them on the boat now."
   },
-  "blockerReasonsWithFirst": "{reason} {count, plural, one {And # more reason.} other {And # more reasons.}}"
+  "blockerReasonsWithFirst": "{reason} {count, plural, one {And # more reason.} other {And # more reasons.}}",
+  "notOnCounter": {
+    "text": "That departure isn’t on the counter right now.",
+    "open": "Open the departure"
+  }
 }

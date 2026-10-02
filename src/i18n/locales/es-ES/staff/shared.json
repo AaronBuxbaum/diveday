@@ -12,7 +12,7 @@
   "imageInput": {
     "tooMany": "{count, plural, one {Elige hasta # foto por vez.} other {Elige hasta # fotos por vez.}}",
     "wrongTypeSuffix": ": usa una foto JPG, PNG, WebP o HEIC.",
-    "tooBigSuffix": ": supera los {maxMb}\u00a0MB, prueba con una foto más pequeña.",
+    "tooBigSuffix": ": supera los {maxMb} MB, prueba con una foto más pequeña.",
     "choose": "Elige una foto",
     "chooseAnother": "Elige otra foto"
   },
@@ -229,10 +229,10 @@
     "checkIn": "Registro",
     "walkIn": "Walk-in",
     "divers": "Buceadores",
-    "board": "Tablero",
+    "board": "Agenda",
     "addBooking": "Añadir una reserva",
     "tookACall": "Llamada recibida",
-    "staffing": "Personal",
+    "staffing": "Turnos de la tripulación",
     "diveSites": "Sitios de buceo",
     "gear": "Equipo",
     "courses": "Cursos",
@@ -247,11 +247,17 @@
     "team": "Equipo",
     "calendarFeed": "Suscripción al calendario"
   },
-  "shopPlaceNav": {
-    "navAriaLabel": "Cuándo",
+  "shopSections": {
+    "navAriaLabel": "Principal",
     "today": "Hoy",
-    "week": "Semana",
-    "season": "Temporada"
+    "schedule": "Agenda",
+    "divers": "Buceadores",
+    "inbox": "Mensajes",
+    "money": "Dinero",
+    "courses": "Cursos",
+    "gear": "Equipo",
+    "settings": "Ajustes",
+    "more": "Más"
   },
   "subSurfaceRipple": {
     "iconTitle": "Icono de pase de lista completo",
@@ -547,9 +553,5 @@
   "formDraft": {
     "pickedUp": "Retomado del mostrador, {time}.",
     "startOver": "Empezar de nuevo"
-  },
-  "diverSheet": {
-    "close": "Cerrar",
-    "openRecord": "Abrir la ficha completa"
   }
 }

@@ -1115,8 +1115,8 @@ Dropdown panels are one column, one item per row, `whitespace-nowrap`. A multi-c
 short labels onto two lines and strands the odd item of an odd-length group in a column of its own,
 which reads as a layout bug rather than a menu. The "More" menu in `ShopNavLinks.tsx` that taught
 this left with the nav of nouns (ADR 20260919-one-idea, slice 23b). The two menus in the staff
-chrome now are `ShopPlaceMenu` in `src/components/ShopPlaceNav.tsx` (the three places, folded
-behind one button below `lg`, read from `src/lib/staff-destinations.ts`) and
-`src/components/ShopIdentityMenu.tsx` (settings, language and sign-out). Both are one column. Both
-keep a row on one line with a panel minimum width (`min-w-40`, `min-w-44`) rather than
+chrome now are the phone tab bar's More menu in `src/components/ShopSectionNav.tsx` (the sections
+the four tabs leave out, read from `src/lib/staff-destinations.ts`) and
+`src/components/ShopIdentityMenu.tsx` (calendar feed, language and sign-out). Both are one column.
+Both keep a row on one line with a panel minimum width (`min-w-48`, `min-w-44`) rather than
 `whitespace-nowrap` on the row, which holds only while every label fits that width.

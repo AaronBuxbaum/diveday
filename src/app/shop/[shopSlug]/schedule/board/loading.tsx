@@ -1,8 +1,8 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
+import { ScheduleViewsSkeleton } from "../_components/ScheduleViews";
 import {
   WEEK_DAY_GRID_CLASS,
   WEEK_EMPTY_DAY_CLASS,
-  WEEK_MARK_CLASS,
   WEEK_ROW_BOX_CLASS,
 } from "./_components/week-geometry";
 
@@ -33,7 +33,8 @@ export default function ScheduleBoardLoading() {
         {/* Two rows of doors on a phone: "View public page", "Add a
             departure" and "Add a booking" wrap to two at 390px for anyone
             who can configure the board. */}
-        <ShopPageHeaderSkeleton titleWidth="w-48" description={false} actions={2} />
+        <ShopPageHeaderSkeleton eyebrow={false} titleWidth="w-48" description={false} actions={2} />
+        <ScheduleViewsSkeleton />
         <div className="mt-4">
           {/* `WeekPager`: two 48px steps (`icon`) and the range, at every
               width. */}
@@ -77,9 +78,6 @@ export default function ScheduleBoardLoading() {
                     Array.from({ length: departures }, (_, departure) => (
                       // biome-ignore lint/suspicious/noArrayIndexKey: a skeleton row's only identity is its place in the day
                       <div key={departure} className={WEEK_ROW_BOX_CLASS}>
-                        <div
-                          className={`${WEEK_MARK_CLASS} h-7.5 w-11 rounded-lg bg-surface-sunken`}
-                        />
                         <div className="min-w-0 flex-1">
                           {/* The first line: the time in its slot, the seat
                               bar, and the meta inline from `md`. */}

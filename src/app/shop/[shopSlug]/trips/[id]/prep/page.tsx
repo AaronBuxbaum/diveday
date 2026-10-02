@@ -4,14 +4,21 @@ import { notFound } from "next/navigation";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { buttonClass } from "@/components/ui/button";
+import { latestTripStage } from "@/db/trip-stages";
 import { getTripPrep } from "@/db/trips-prep";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { nowDate } from "@/lib/clock";
 import { isPrepGrouping, type PrepGrouping } from "@/lib/dive-prep";
+import { PREP_SECTION_ID, scopedId } from "@/lib/element-id";
 import { requireShopSurface } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
+import { tripPhaseOf } from "@/lib/trip-phase";
 import { uuidParam } from "@/lib/uuid";
 import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
+import { TripTabs } from "../_components/TripTabs";
+import { tripTabsCopy } from "../_components/trip-tabs-copy";
 import { PrepBody } from "./_components/PrepBody";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -78,16 +85,28 @@ export default async function TripPrepPage({
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const prep = await getTripPrep(db, shop, tripId);
+  const [prep, stageReading] = await Promise.all([
+    getTripPrep(db, shop, tripId),
+    latestTripStage(db, shop.id, tripId),
+  ]);
   if (!prep) notFound();
   const { trip } = prep;
+  const now = nowDate();
+  const phase = tripPhaseOf({
+    startsAt: trip.startsAt,
+    endsAt: trip.endsAt,
+    now,
+    timeZone: shop.timezone,
+    stage: stageReading,
+    cancelled: trip.status === "cancelled",
+  });
 
   return (
     <>
       <FlashParams params={["notice"]} />
       <TripPageHeader
-        boardHref={shopPath(shopSlug, "trips", tripId)}
-        backLabel={t("trips.surfaces.trip")}
+        boardHref={shopPath(shopSlug, "schedule", "board")}
+        backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
         trip={trip}
         locale={locale}
         timeZone={shop.timezone}
@@ -95,34 +114,45 @@ export default async function TripPrepPage({
           <TripCapacityBadge trip={trip} cancelledLabel={t("trips.detail.cancelledBadge")} t={t} />
         }
       />
-      <PrepBody
-        prep={prep}
-        t={t}
-        locale={locale}
+      <TripTabs
         shopSlug={shopSlug}
         tripId={tripId}
-        rentalItems={shop.rentalItems}
-        notice={notice}
-        grouping={grouping}
-        cancelled={trip.status === "cancelled"}
-        groupPath={shopPath(shopSlug, "trips", tripId, "prep")}
-        emptyState={
-          // The whole page's content region, so this one wears an h2 — and the
-          // packing list can only become real once someone is on the boat,
-          // which happens on the departure page.
-          <EmptyState
-            title={t("tripPrep.emptyHeading")}
-            body={t("tripPrep.noDivers")}
-            action={
-              <Link href={shopPath(shopSlug, "trips", tripId)} className={buttonClass()}>
-                {t("tripPrep.emptyAction")}
-              </Link>
-            }
-          />
-        }
-        idPrefix={idPrefix}
-        className="space-y-10"
+        current="gear"
+        phase={phase}
+        copy={tripTabsCopy(t)}
       />
+      {/* The anchor every "fix the packing list" link lands on, prefixed like
+          every other id here when the paper day composes this page per departure. */}
+      <div id={scopedId(idPrefix, PREP_SECTION_ID)} className="mt-10 scroll-mt-6">
+        <PrepBody
+          prep={prep}
+          t={t}
+          locale={locale}
+          shopSlug={shopSlug}
+          tripId={tripId}
+          rentalItems={shop.rentalItems}
+          notice={notice}
+          grouping={grouping}
+          cancelled={trip.status === "cancelled"}
+          groupPath={shopPath(shopSlug, "trips", tripId, "prep")}
+          emptyState={
+            // The whole page's content region, so this one wears an h2 — and the
+            // packing list can only become real once someone is on the boat,
+            // which happens on the departure page.
+            <EmptyState
+              title={t("tripPrep.emptyHeading")}
+              body={t("tripPrep.noDivers")}
+              action={
+                <Link href={shopPath(shopSlug, "trips", tripId)} className={buttonClass()}>
+                  {t("tripPrep.emptyAction")}
+                </Link>
+              }
+            />
+          }
+          idPrefix={idPrefix}
+          className="space-y-10"
+        />
+      </div>
     </>
   );
 }

@@ -492,10 +492,14 @@ async function assertNoSidewaysScroll(page: import("@playwright/test").Page, tri
   await page.setViewportSize({ width: 390, height: 900 });
   for (const suffix of ["", "/manifest", "/prep"]) {
     await page.goto(`${tripPath}${suffix}`);
-    // The segmented track itself, not the first `nav` on the page — that one
-    // is the shop header's, which is hidden at this width. Waiting for the
+    // The departure's own tabs, on every one of its pages. Waiting for the
     // thing under test is what makes this deterministic rather than timed.
-    await page.locator('nav[class*="rounded-inset"]').first().waitFor();
+    const tabs = page.locator("nav[data-trip-tabs] ul");
+    await tabs.waitFor();
+    expect(
+      await tabs.evaluate((list) => list.scrollWidth - list.clientWidth),
+      `${suffix || "/overview"} tabs`,
+    ).toBeLessThanOrEqual(0);
     expect(await overflowingControls(page), `${suffix || "/overview"}`).toEqual([]);
   }
 }

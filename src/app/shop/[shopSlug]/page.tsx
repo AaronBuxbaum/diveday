@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { Suspense } from "react";
-import { DiverSheetSection } from "@/app/shop/[shopSlug]/_components/DiverSheetSection";
 import { DayHeader } from "@/app/shop/[shopSlug]/_components/day/DayHeader";
 import {
   DaySpine,
@@ -51,11 +50,9 @@ import { daySpineSummaryText } from "@/i18n/today-labels";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { assembleEveningClose, dayTakings } from "@/lib/closeout";
-import { dayStripGeometry, dayStripTicks, dayStripWindow } from "@/lib/day-strip";
 import { FORM_DRAFT_RESUME_SUFFIX } from "@/lib/form-drafts";
 import {
   formatDateTimeTz,
-  formatHourShort,
   formatMonthDay,
   formatShortDate,
   formatTime,
@@ -69,7 +66,6 @@ import { recapAutoSendAt } from "@/lib/recap-schedule";
 import { summarizeMonth } from "@/lib/reporting";
 import { seasonStartInstant } from "@/lib/season";
 import { requireStaffSession } from "@/lib/session";
-import { skyReadingFor } from "@/lib/sky-scheme";
 import {
   type NoticeCodeOf,
   type NoticeTone,
@@ -88,8 +84,7 @@ import {
   type TodayAction,
 } from "@/lib/today";
 import { hasSailed } from "@/lib/trips";
-import { uuidParam } from "@/lib/uuid";
-import { dayHourBoundaries, shopDayBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { shopDayBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import {
   deleteCrewRecapPhotoAction,
   deleteRecapPhotoAction,
@@ -218,8 +213,6 @@ export default async function ShopPage({
     noted?: string;
     decision?: string;
     decisionState?: string;
-    /** A diver the search found — laid over the day as a sheet (slice 23e). */
-    diver?: string;
   }>;
 }) {
   // The session and the two route-param promises don't depend on one
@@ -227,7 +220,7 @@ export default async function ShopPage({
   const [
     session,
     { shopSlug },
-    { created, series, reset, email, notice, closed, noted, decision, decisionState, diver },
+    { created, series, reset, email, notice, closed, noted, decision, decisionState },
   ] = await Promise.all([requireStaffSession(), params, searchParams]);
   const seriesCount = series ? Number.parseInt(series, 10) : 0;
 
@@ -261,7 +254,6 @@ export default async function ShopPage({
           noted={noted}
           decision={decision}
           decisionState={decisionState}
-          diver={diver}
         />
       </Suspense>
     </main>
@@ -308,7 +300,6 @@ async function TodayBody({
   noted,
   decision,
   decisionState,
-  diver,
 }: {
   session: Awaited<ReturnType<typeof requireStaffSession>>;
   shopSlug: string;
@@ -324,8 +315,6 @@ async function TodayBody({
   /** A leftover just decided, and which way — the Undo toast's whole input. */
   decision?: string;
   decisionState?: string;
-  /** The diver the search found. Narrowed here, so junk names no sheet. */
-  diver?: string;
 }) {
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
@@ -351,9 +340,6 @@ async function TodayBody({
   // the helper cannot run inside this boundary.
   if (shop.slug !== shopSlug) notFound();
   const t = staffTranslator(locale);
-  // An unparseable id names no diver, and a `uuid` comparison against junk
-  // raises in Postgres — so it is narrowed here rather than in the reader.
-  const diverSheetId = uuidParam(diver ?? "") ?? undefined;
   // `Object.hasOwn`, not `AUTH_NOTICES[notice]`: `notice` is an attacker-supplied
   // query param, and a bare lookup resolves `?notice=constructor` off the
   // prototype (src/lib/staff-notices.ts).
@@ -622,23 +608,6 @@ async function TodayBody({
           ? formatTime(nextStation.startsAt, locale, shop.timezone)
           : null,
       });
-  // **The day's own sky and picture** (ADR 20260919-one-idea, decision I ·
-  // Tide, slice 23a). The scheme comes from the sun over this shop where it has
-  // coordinates and from its own clock where it does not, and neither reading
-  // gates anything: the sky says what hour it is and no rule consults it.
-  const sky = skyReadingFor({
-    at: now,
-    timeZone: shop.timezone,
-    latitude: shop.latitude,
-    longitude: shop.longitude,
-  });
-  // Every departure on the board today, sailed or not. `work.departures` is
-  // scoped to the operational window, which begins at `now` — so at noon it
-  // holds the afternoon and the morning's two boats have left it, and a strip
-  // drawn from it would show an empty morning to a shop that ran one. The
-  // close-out's list is the day's own, whole, from midnight — which is what
-  // `dayBounds` above brackets.
-  //
   // **What today made** — the evening's one money reading (issue #1930; ADR
   // 20260919-one-idea, decision I · Tide: "money is what the day made"). It
   // renders above the closing block and inside nothing; `DayTakings.tsx`
@@ -669,68 +638,6 @@ async function TodayBody({
           ),
         )
       : null;
-  const stripMarks = dayDepartures.map((departure) => departure.startsAt);
-  // Not midnight to midnight: a whole calendar day spends half its width on
-  // night, which flattens the arc to a wire and crowds every boat into the
-  // same third. The window is the day's own content, clamped inside it.
-  const stripWindow = dayStripWindow({
-    dayFrom: dayBounds.from,
-    dayTo: dayBounds.to,
-    now,
-    sunriseAt: sky.sunriseAt,
-    sunsetAt: sky.sunsetAt,
-    marks: stripMarks,
-  });
-  // Four ticks, however wide the window turned out. More than four and the
-  // labels touch at 390. The top of an hour is a wall-clock fact and
-  // `day-strip` reads no zone, so the boundaries are resolved here — by
-  // `dayHourBoundaries`, which knows that a day is not always 24 hours long.
-  const stripTicks = dayStripTicks({
-    ...stripWindow,
-    hours: dayHourBoundaries(dayBounds, shop.timezone),
-    count: 4,
-  });
-  const stripGeometry = dayStripGeometry({
-    from: stripWindow.from,
-    to: stripWindow.to,
-    now,
-    // **One day, so one entry.** The home's window is the shop's own calendar
-    // day by construction (`shopDayBounds`), which is exactly the case the
-    // single pair used to assume — so the list has one element here and the
-    // picture is the one it has always drawn (issue #1904).
-    daylight: [{ sunriseAt: sky.sunriseAt, sunsetAt: sky.sunsetAt }],
-    daylightProgress: sky.daylightProgress,
-    marks: dayDepartures.map((departure) => ({
-      id: departure.tripId,
-      at: departure.startsAt,
-    })),
-    ticks: stripTicks,
-  });
-  const markLabels = Object.fromEntries(
-    dayDepartures.map((departure) => [
-      departure.tripId,
-      formatTime(departure.startsAt, locale, shop.timezone),
-    ]),
-  );
-  // The hour alone under a tick — "6 AM", never "6:00 AM". Four full times side
-  // by side touch at 390, and the minute on a tick is a digit nobody reads.
-  const tickLabels = stripTicks.map((at) =>
-    formatHourShort(utcToWallTime(at, shop.timezone).hour, locale),
-  );
-  // Sunrise and sunset, or the one line that tells a shop how to get them.
-  // Nothing at all while the setup ledger is still on screen: a shop that has
-  // not had a first booking is not the reader to send to the address form.
-  const almanacLine = showFirstRunChecklist
-    ? null
-    : sky.sunriseAt && sky.sunsetAt
-      ? t("shopHome.day.sunriseAndSunset", {
-          sunrise: formatTime(sky.sunriseAt, locale, shop.timezone),
-          sunset: formatTime(sky.sunsetAt, locale, shop.timezone),
-        })
-      : sky.basis === "clock"
-        ? t("shopHome.day.noPlace")
-        : null;
-
   // The whole page is empty at once, and collapses to a heading, one sentence
   // and the one act available — never a spine of empty groups. Every clause of
   // that rule lives with the spine (`spineIsQuiet`), first-run included: the
@@ -837,12 +744,6 @@ async function TodayBody({
   return (
     <>
       <DayHeader
-        // **The home is the day** (ADR 20260919-one-idea, decision I · Tide,
-        // slice 23a). The eyebrow and the greeting are both gone: Tide's floor
-        // deletes them, and what stands where they were is the day itself —
-        // the sky at the shop's own hour, the date as the page's one name, and
-        // every departure on the hour it leaves.
-        scheme={sky.scheme}
         weekday={formatWeekday(now, locale, shop.timezone)}
         date={formatMonthDay(
           utcToWallTime(now, shop.timezone).month,
@@ -859,24 +760,6 @@ async function TodayBody({
             : quietDay
               ? t("shopHome.spine.quietSentence")
               : (daySummaryText ?? "")
-        }
-        almanac={almanacLine}
-        // Nothing to draw on a day with no boats and no sun: an empty arc over
-        // an empty horizon is a picture of nothing, and the band still says the
-        // date.
-        strip={
-          stripGeometry.sunArcs.length > 0 || stripGeometry.marks.length > 0
-            ? {
-                geometry: stripGeometry,
-                label:
-                  stripGeometry.marks.length > 0
-                    ? t("shopHome.day.stripLabel")
-                    : t("shopHome.day.stripLabelNoBoats"),
-                markLabels,
-                tickLabels,
-                nowLabel: formatTime(now, locale, shop.timezone),
-              }
-            : null
         }
         // **The paper day** (N-54). One document holding every departure of
         // today — manifest, emergency card, waiver state, packing list — so a
@@ -903,74 +786,76 @@ async function TodayBody({
               // The band's own chip, as the trip masthead draws it: a 44px
               // target on the control rung. It was typed out by hand as a
               // 32px pill in a heavier weight (K-152).
-              className={buttonClass({ variant: "sky", size: "sm", className: "print:hidden" })}
+              className={buttonClass({
+                variant: "secondary",
+                size: "sm",
+                className: "print:hidden",
+              })}
             >
               {t("shared.printPacket.dayDoor")}
             </Link>
           ) : null
         }
       >
-        <>
-          {/* The day's own line is in the sky above this, so the only sentence
+        {/* The day's own line is in the sky above this, so the only sentence
               left here is first-run's, which carries the address a diver would
               use and the count of what is left to do — neither of which the
               band says (issue #711). */}
-          {showFirstRunChecklist ? (
-            <p className="max-w-2xl text-lg text-muted">
-              {t.rich("shopHome.firstRun.pageIntro", {
-                address: (chunks) => <address className="inline not-italic">{chunks}</address>,
-                url: publicScheduleUrl,
-              })}
-            </p>
-          ) : null}
-          {/* A day with no boats answers its follow-up question right here. */}
-          {!quietDay && spine.stations.length === 0 && nextDeparture ? (
-            <p className="mt-1 max-w-2xl text-muted">
-              {t.rich("shopHome.nextDeparture", {
-                link: (chunks) => (
-                  <Link
-                    href={`/shop/${shopSlug}/trips/${nextDeparture.tripId}`}
-                    className="font-medium text-primary hover:underline"
-                  >
-                    {chunks}
-                  </Link>
-                ),
-                title: nextDeparture.title,
-                date: formatShortDate(nextDeparture.startsAt, locale, shop.timezone),
-                time: formatTime(nextDeparture.startsAt, locale, shop.timezone),
-              })}
-            </p>
-          ) : null}
-          {/* Nothing on the books at all (and past first-run, whose ledger
+        {showFirstRunChecklist ? (
+          <p className="max-w-2xl text-lg text-muted">
+            {t.rich("shopHome.firstRun.pageIntro", {
+              address: (chunks) => <address className="inline not-italic">{chunks}</address>,
+              url: publicScheduleUrl,
+            })}
+          </p>
+        ) : null}
+        {/* A day with no boats answers its follow-up question right here. */}
+        {!quietDay && spine.stations.length === 0 && nextDeparture ? (
+          <p className="mt-1 max-w-2xl text-muted">
+            {t.rich("shopHome.nextDeparture", {
+              link: (chunks) => (
+                <Link
+                  href={`/shop/${shopSlug}/trips/${nextDeparture.tripId}`}
+                  className="font-medium text-primary hover:underline"
+                >
+                  {chunks}
+                </Link>
+              ),
+              title: nextDeparture.title,
+              date: formatShortDate(nextDeparture.startsAt, locale, shop.timezone),
+              time: formatTime(nextDeparture.startsAt, locale, shop.timezone),
+            })}
+          </p>
+        ) : null}
+        {/* Nothing on the books at all (and past first-run, whose ledger
                 owns "schedule your first trip"): one teaching sentence and the
                 door, not a boxed section. */}
-          {!quietDay && spine.stations.length === 0 && !nextDeparture && !showFirstRunChecklist ? (
-            <p className="mt-1 max-w-2xl text-muted">
-              {t("shopHome.noDeparturesEmpty")}{" "}
-              <Link
-                href={`/shop/${shopSlug}/schedule/board?add=1`}
-                className="font-medium text-primary hover:underline"
-              >
-                {t("shopHome.scheduleTrip")}
-              </Link>
-            </p>
-          ) : null}
-          {/* **Live-only, and it should say so.** This board is read straight
+        {!quietDay && spine.stations.length === 0 && !nextDeparture && !showFirstRunChecklist ? (
+          <p className="mt-1 max-w-2xl text-muted">
+            {t("shopHome.noDeparturesEmpty")}{" "}
+            <Link
+              href={`/shop/${shopSlug}/schedule/board?add=1`}
+              className="font-medium text-primary hover:underline"
+            >
+              {t("shopHome.scheduleTrip")}
+            </Link>
+          </p>
+        ) : null}
+        {/* **Live-only, and it should say so.** This board is read straight
                 from the server every render — the boat has an encrypted device
                 copy, this does not — so a dropped signal means the counts, the
                 crew line and the blocked names are whatever they were when the
                 signal went (issue #819). */}
-          <ConnectivityStatus
-            offlineLabel={t("shopHome.offlineLabel")}
-            onlyWhenOffline
-            className="mt-2"
-            copy={{
-              online: t("shared.connectivity.online"),
-              onlineTitle: t("shared.connectivity.onlineTitle"),
-              offlineTitle: t("shared.connectivity.offlineTitle"),
-            }}
-          />
-        </>
+        <ConnectivityStatus
+          offlineLabel={t("shopHome.offlineLabel")}
+          onlyWhenOffline
+          className="mt-2"
+          copy={{
+            online: t("shared.connectivity.online"),
+            onlineTitle: t("shared.connectivity.onlineTitle"),
+            offlineTitle: t("shared.connectivity.offlineTitle"),
+          }}
+        />
       </DayHeader>
 
       {created && firstBookableMoment ? (
@@ -1230,22 +1115,6 @@ async function TodayBody({
           }
         />
       )}
-      {/* **The search's one answer that has no hour.** Last in the tree and
-          first on the screen: it portals to the body, so where it sits here
-          decides only what it can reach — this body's own shop row and
-          locale, already resolved, rather than a second pair of reads.
-
-          **Its own boundary, and `null` for a fallback.** Without one, the
-          sheet's three reads join the day's and the whole spine sits behind
-          `TodaySkeleton` while they run — so opening a diver would blank the
-          day that this slice exists to keep on screen. A sheet has no skeleton
-          worth drawing either: it rises over a day that is already painted,
-          which is what it looks like from the palette anyway. */}
-      {diverSheetId ? (
-        <Suspense fallback={null}>
-          <DiverSheetSection shop={shop} personId={diverSheetId} locale={locale} />
-        </Suspense>
-      ) : null}
     </>
   );
 }

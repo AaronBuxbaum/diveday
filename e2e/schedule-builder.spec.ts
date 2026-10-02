@@ -46,7 +46,7 @@ test.describe("schedule builder", () => {
   }) => {
     const title = "Wreck Trip — Spiegel Grove";
     await page.goto(BOARD);
-    await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+    await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
 
     const row = rowActions(page, title).first();
     await expect(row).toBeVisible();
@@ -99,7 +99,7 @@ test.describe("schedule builder", () => {
    */
   test("says who is already out at the hours a departure would move to", async ({ page }) => {
     await page.goto(BOARD);
-    await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+    await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
 
     const rows = page.getByRole("button", { name: /^Move, copy, or remove / });
     const titles = await rows.evaluateAll((nodes) =>
@@ -161,7 +161,7 @@ test.describe("schedule builder", () => {
     const copyDay = daysFromNow(4);
 
     await page.goto(BOARD);
-    await expect(page.getByRole("heading", { name: "Board", level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Schedule", level: 1 })).toBeVisible();
 
     // Add — the whole departure, from the board. The control is a link in the
     // page header's action cluster (?add=1), not a button of its own band.
@@ -254,7 +254,7 @@ test.describe("schedule builder", () => {
 
   test("opening and cancelling the add/move panels manages keyboard focus", async ({ page }) => {
     await page.goto(BOARD);
-    await expect(page.getByRole("heading", { name: "Board", level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Schedule", level: 1 })).toBeVisible();
 
     // Opening the top "Add a departure" panel (the header's ?add=1 link)
     // moves focus straight into its first field, rather than leaving a
@@ -413,7 +413,7 @@ test.describe("schedule builder", () => {
     // at every width now and its day headers pin too, so there is no width at
     // which this question has no answer.
     for (const [surface, url, ready, widths] of [
-      ["the schedule board", BOARD, "Board", [390, 768, 1280]],
+      ["the schedule board", BOARD, "Schedule", [390, 768, 1280]],
       // The shopfront's h1 is the shop's own name now, not the word
       // "Schedule" over a DiveDay-branded bar (slice 7a's hero).
       ["the public schedule", `/s/${SHOP}`, "Blue Mantis Divers", [390, 768, 1280]],
@@ -517,7 +517,7 @@ test.describe("schedule builder", () => {
    */
   test("the board is the week at every width, with nothing underneath it", async ({ page }) => {
     await page.goto(BOARD);
-    await expect(page.getByRole("heading", { name: "Board", level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Schedule", level: 1 })).toBeVisible();
 
     // Raw CSS locators, not `getByRole`: the fixture patches the role queries
     // to visible-only matches, which would make "is it hidden" unanswerable.
@@ -568,7 +568,7 @@ test.describe("schedule builder", () => {
     await expect(week.getByRole("link", { name: title, exact: true })).toBeVisible();
 
     await week.getByRole("link", { name: new RegExp(`^Set a price for ${title},`) }).click();
-    await expect(page).toHaveURL(/\/trips\/[0-9a-f-]+#details$/);
+    await expect(page).toHaveURL(/\/trips\/[0-9a-f-]+\?view=details#details$/);
     await openTripAbout(page);
     await page.getByText("Edit details", { exact: true }).click();
     await page.getByLabel(/Price per diver/).fill("110");
@@ -689,7 +689,7 @@ test.describe("schedule builder, as the daily crew", () => {
     // Trip definition is owner/manager/instructor work (H-14); the crew runs the
     // day from each trip's own page.
     await page.goto(BOARD);
-    await expect(page.getByRole("heading", { name: "Board", level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Schedule", level: 1 })).toBeVisible();
     await expect(page.getByRole("link", { name: "Add a departure", exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /Add a departure/ })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /^Move, copy, or remove / })).toHaveCount(0);

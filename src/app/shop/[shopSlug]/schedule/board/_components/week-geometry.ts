@@ -22,16 +22,10 @@ export const WEEK_DAY_GRID_CLASS =
   "grid grid-cols-[4.5rem_minmax(0,1fr)] items-start gap-x-3 py-2 sm:gap-x-5";
 
 /**
- * A departure's box on a day: the site mark, then its lines, 8px in from the
- * row's fill on every side.
+ * A departure's box on a day: its lines, 8px in from the row's fill on every
+ * side.
  */
 export const WEEK_ROW_BOX_CLASS = "flex items-start gap-2.5 rounded-lg px-2 py-2 sm:gap-3";
-
-/**
- * **A departure's site mark, centred on its row's 32px first line.** The
- * `sm` tile is 30px, so 1px down the row puts its centre on the line's 16.
- */
-export const WEEK_MARK_CLASS = "mt-px shrink-0";
 
 /**
  * **An empty day's "No boats": the same 32px first line, 8px down**, where

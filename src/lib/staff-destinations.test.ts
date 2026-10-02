@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   currentStaffDestination,
-  currentStaffPlace,
+  currentStaffSection,
   isLiveManifestPath,
   isStaffDestinationPage,
   STAFF_DESTINATION_LABEL_KEYS,
@@ -11,10 +11,11 @@ import {
   STAFF_DESTINATIONS,
   type StaffDestinationGates,
   type StaffDestinationId,
-  staffBarPlaces,
+  type StaffNavOffers,
   staffDestination,
   staffDestinationHref,
   staffDestinationSuffix,
+  staffNavSections,
   staffPaletteDestinations,
   staffShopRoot,
   visibleStaffDestinations,
@@ -32,6 +33,8 @@ const crew: StaffDestinationGates = {
   team: false,
   settings: false,
 };
+const everything: StaffNavOffers = { courses: true, gear: true };
+const nothing: StaffNavOffers = { courses: false, gear: false };
 
 describe("the staff destination registry", () => {
   it("gives every destination a unique id and a unique URL", () => {
@@ -56,21 +59,26 @@ describe("the staff destination registry", () => {
   });
 
   it("keeps every destination reachable through the search", () => {
-    // The bar wears three times and never a list of destinations, so the
-    // search is what everything else is reached by — and it is a control in
-    // the bar at every width, not a keyboard shortcut (slice 23b; ADR
-    // 20260813-more-is-the-shops-other-door on why that distinction matters).
-    // A destination the search does not offer is a page with no door.
+    // The search is the shortcut to every destination, the nav's sections
+    // the visible map of them.
     for (const destination of STAFF_DESTINATIONS) {
       expect(destination.inPalette, `${destination.id} has no door`).toBe(true);
     }
   });
 
-  it("gives every destination a time it happens at", () => {
-    // `navGroup` allowed `null` — "real, but the header has no room". A place
-    // is not a slot, so there is nothing to be left out of.
+  it("files every destination under a section of the nav", () => {
+    const sections = [
+      "today",
+      "schedule",
+      "divers",
+      "inbox",
+      "money",
+      "courses",
+      "gear",
+      "settings",
+    ];
     for (const destination of STAFF_DESTINATIONS) {
-      expect(["day", "week", "season", "shop"], destination.id).toContain(destination.place);
+      expect(sections, destination.id).toContain(destination.section);
     }
   });
 
@@ -170,19 +178,17 @@ describe("permission gating", () => {
     // of contact details for people who have not booked — stopped
     // distinguishing it the day the inbox began showing a stranger's address
     // and message to every live staff role.
-    expect(gated).toEqual(["waivers", "reports", "team", "promoCodes", "settings"]);
+    expect(gated).toEqual(["reports", "promoCodes", "waivers", "team", "settings"]);
 
     const visible = visibleStaffDestinations(crew).map((destination) => destination.id);
-    // The two consumers the registry has left: the bar's three times, and the
-    // search. It used to be three — the header strip, the dock and the More
-    // surfaces all derived their own rows, and this test walked all of them.
+    // The two consumers: the nav's sections and the search.
     const palette = staffPaletteDestinations(crew).map((destination) => destination.id);
-    const bar = staffBarPlaces(crew).map((entry) => entry.destination.id);
+    const nav = staffNavSections(crew, everything).map((entry) => entry.destination.id);
 
     for (const id of gated) {
       expect(visible).not.toContain(id);
       expect(palette).not.toContain(id);
-      expect(bar).not.toContain(id);
+      expect(nav).not.toContain(id);
     }
   });
 
@@ -204,56 +210,68 @@ describe("permission gating", () => {
     expect(ids).not.toContain("team");
   });
 
-  it("never renders an empty bar: the barest crew role still gets a Today and a Week", () => {
-    // Season is `reports`, which is gated, so a captain's bar is two pills —
-    // the honest picture rather than a pill that refuses. Today and the board
-    // are ungated and always there.
-    expect(staffBarPlaces(crew).map((entry) => entry.place)).toEqual(["day", "week"]);
-    expect(staffBarPlaces(owner).map((entry) => entry.place)).toEqual(["day", "week", "season"]);
+  it("shows the crew every section it can open, and no Settings row", () => {
+    // Money opens Orders, which is ungated; Settings' only door for the crew
+    // is their own calendar feed, and a row called Settings opening that
+    // would be a lie, so the row goes and the feed stays in the search.
+    expect(staffNavSections(crew, everything).map((entry) => entry.section)).toEqual([
+      "today",
+      "schedule",
+      "divers",
+      "inbox",
+      "money",
+      "courses",
+      "gear",
+    ]);
   });
 });
 
 describe("what each consumer derives", () => {
-  it("wears three times, and each one points at a real destination", () => {
-    // Today, Week and Season — what the desk bar is drawn with on
-    // `Tide.dc.html`. Not a smaller nav of nouns: the pages behind them may be
-    // rebuilt (the board becomes the week in 23f) without the bar changing.
-    expect(staffBarPlaces(owner).map((entry) => entry.destination.id)).toEqual([
-      "today",
-      "board",
-      "reports",
+  it("shows the sections in order, each opening its lead destination", () => {
+    expect(
+      staffNavSections(owner, everything).map((entry) => [entry.section, entry.destination.id]),
+    ).toEqual([
+      ["today", "today"],
+      ["schedule", "board"],
+      ["divers", "divers"],
+      ["inbox", "inbox"],
+      ["money", "orders"],
+      ["courses", "courses"],
+      ["gear", "gear"],
+      ["settings", "settings"],
     ]);
-    // And each is the destination whose own place it is, so a pill can never
-    // point at a page filed under a different time.
-    for (const { place, destination } of staffBarPlaces(owner)) {
-      expect(destination.place, destination.id).toBe(place);
+    // And each row's destination is filed under the section it names.
+    for (const { section, destination } of staffNavSections(owner, everything)) {
+      expect(destination.section, destination.id).toBe(section);
     }
   });
 
-  it("files every destination under the time it happens at", () => {
-    const byPlace = (place: string) =>
+  it("leaves Courses and Gear out for a shop that teaches nothing and keeps no fleet", () => {
+    const sections = staffNavSections(owner, nothing).map((entry) => entry.section);
+    expect(sections).not.toContain("courses");
+    expect(sections).not.toContain("gear");
+    // Both stay in the search, so a shop can start.
+    const palette = staffPaletteDestinations(owner).map((d) => d.id);
+    expect(palette).toContain("courses");
+    expect(palette).toContain("gear");
+  });
+
+  it("files every destination under the section it lights", () => {
+    const bySection = (section: string) =>
       visibleStaffDestinations(owner)
-        .filter((destination) => destination.place === place)
+        .filter((destination) => destination.section === section)
         .map((destination) => destination.id);
-    // What is happening now, what is coming, what the days added up to, and
-    // the one with no hour at all.
-    expect(byPlace("day")).toEqual([
-      "today",
-      "checkIn",
-      "divers",
-      "addBooking",
-      "walkIn",
-      "tookACall",
-      "gear",
-      "inbox",
-    ]);
-    expect(byPlace("week")).toEqual(["board", "staffing", "courses", "requests"]);
-    expect(byPlace("season")).toEqual(["reviews", "orders", "reports"]);
-    expect(byPlace("shop")).toEqual([
+    expect(bySection("today")).toEqual(["today", "checkIn", "walkIn"]);
+    expect(bySection("schedule")).toEqual(["board", "addBooking", "staffing"]);
+    expect(bySection("divers")).toEqual(["divers"]);
+    expect(bySection("inbox")).toEqual(["inbox", "requests", "tookACall", "reviews"]);
+    expect(bySection("money")).toEqual(["orders", "reports", "promoCodes"]);
+    expect(bySection("courses")).toEqual(["courses"]);
+    expect(bySection("gear")).toEqual(["gear"]);
+    expect(bySection("settings")).toEqual([
       "diveSites",
       "waivers",
       "team",
-      "promoCodes",
       "calendarFeed",
       "settings",
     ]);
@@ -291,22 +309,12 @@ describe("what each consumer derives", () => {
     expect(visibleStaffDestinations(crew).map((d) => d.id)).toContain("requests");
   });
 
-  it("keeps the acts on the day they happen on rather than nowhere", () => {
-    // Seating a diver, the walk-in counter and the desk phone used to carry
-    // `navGroup: null` — "an act, not a place a menu should list". They are
-    // still acts; they just happen on the day, and saying so costs the bar
-    // nothing because the bar lists no destinations at all.
-    for (const id of ["addBooking", "walkIn", "tookACall"] as const) {
-      expect(staffDestination(id).place, id).toBe("day");
-    }
-  });
-
   it("puts Settings last in the whole registry, so no consumer can list it mid-menu", () => {
     expect(STAFF_DESTINATIONS.at(-1)?.id).toBe("settings");
     expect(staffPaletteDestinations(owner).at(-1)?.id).toBe("settings");
   });
 
-  it("has no Close-out destination at all, and files Orders under the season", () => {
+  it("has no Close-out destination at all, and files Orders under Money", () => {
     // The evening is a state the shop home settles into, not a place to go
     // (H-62). An entry pointing at the bare home would be a second row landing
     // on Today's own URL — the duplicate control principle 8 forbids — so the
@@ -316,7 +324,7 @@ describe("what each consumer derives", () => {
       false,
     );
     const orders = STAFF_DESTINATIONS.find((destination) => destination.id === "orders");
-    expect(orders?.place).toBe("season");
+    expect(orders?.section).toBe("money");
     expect(orders?.inPalette).toBe(true);
   });
 
@@ -335,7 +343,7 @@ describe("what each consumer derives", () => {
     const addBooking = STAFF_DESTINATIONS.find((d) => d.id === "addBooking");
     if (!addBooking) throw new Error("registry lost the add-booking door");
     expect(addBooking.suffix).toBe("/bookings/new");
-    expect(addBooking.place).toBe("day");
+    expect(addBooking.section).toBe("schedule");
     expect(addBooking.inPalette).toBe(true);
     expect(addBooking.gate).toBeUndefined();
     expect(staffDestinationHref(staffShopRoot("blue-mantis"), addBooking)).toBe(
@@ -345,10 +353,10 @@ describe("what each consumer derives", () => {
     expect(staffPaletteDestinations(crew).map((d) => d.id)).toContain("addBooking");
   });
 
-  it("keeps a trip's detail page lit on the week the board is", () => {
+  it("keeps a trip's detail page lit on Schedule, where the board is", () => {
     const board = STAFF_DESTINATIONS.find((destination) => destination.id === "board");
     expect(board?.suffix).toBe("/schedule/board");
-    // `/trips` only: Staffing is its own `week` destination, and a page with a
+    // `/trips` only: Staffing is its own destination, and a page with a
     // destination of its own lights that, never a borrowed claim.
     expect(board?.alsoMatch).toEqual(["/trips"]);
   });
@@ -386,17 +394,16 @@ describe("what each consumer derives", () => {
 });
 
 /**
- * Every nav consumer — header tabs, phone dock, the More menu and the dock's
- * More sheet — answers "which row reads as current?" through this one
- * function, so at most one thing anywhere lights up, and it is the most
- * specific claim on the page being looked at.
+ * Both forms of the nav answer "which row reads as current?" through this one
+ * function, so at most one section lights, from the most specific claim on the
+ * page being looked at.
  */
-describe("currentStaffDestination and the time it lights", () => {
+describe("currentStaffDestination and the section it lights", () => {
   const root = staffShopRoot("blue-mantis");
   const current = (pathname: string, gates: StaffDestinationGates = owner) =>
     currentStaffDestination(pathname, root, gates)?.id ?? null;
-  const place = (pathname: string, gates: StaffDestinationGates = owner) =>
-    currentStaffPlace(pathname, root, gates);
+  const section = (pathname: string, gates: StaffDestinationGates = owner) =>
+    currentStaffSection(pathname, root, gates);
 
   it("lights Today only at the shop root", () => {
     expect(current(root)).toBe("today");
@@ -420,23 +427,16 @@ describe("currentStaffDestination and the time it lights", () => {
     expect(current(`${root}/settings/export`)).toBe("settings");
   });
 
-  it("lets the walk-in counter claim its own path, because the answer is the day either way", () => {
-    // This used to be guarded: `navGroup: null` entries were skipped so the
-    // counter's more specific path could not steal the Check-in *tab's* light,
-    // back when those were two rows in a bar. Nothing is skipped now, so the
-    // counter wins the claim — and Check-in and the counter are the same
-    // place, so the bar lights Today for both. The guard protected a question
-    // the bar no longer asks.
+  it("lets the walk-in counter claim its own path, because the section is Today either way", () => {
     expect(current(`${root}/check-in/walk-in`)).toBe("walkIn");
-    expect(place(`${root}/check-in/walk-in`)).toBe("day");
-    expect(place(`${root}/check-in`)).toBe("day");
+    expect(section(`${root}/check-in/walk-in`)).toBe("today");
+    expect(section(`${root}/check-in`)).toBe("today");
   });
 
   it("lights a borrowed claim for a page with no destination of its own", () => {
-    // Trip details are the board's detail views (`alsoMatch`), and the board
-    // is the week.
+    // Trip details are the board's detail views (`alsoMatch`).
     expect(current(`${root}/trips/42`)).toBe("board");
-    expect(place(`${root}/trips/42`)).toBe("week");
+    expect(section(`${root}/trips/42`)).toBe("schedule");
   });
 
   it("never lights a destination the viewer cannot see", () => {
@@ -449,31 +449,27 @@ describe("currentStaffDestination and the time it lights", () => {
 
   it("answers null off the registry's map", () => {
     expect(current(`${root}/nowhere`)).toBeNull();
-    expect(place(`${root}/nowhere`)).toBeNull();
+    expect(section(`${root}/nowhere`)).toBeNull();
   });
 
-  it("lights none of the bar's three for a page that lives behind the shop's name", () => {
-    // The site library, the waiver template and Settings are `shop` — no
-    // hour, and no pill. That is the design rather than a gap: each is
-    // reached from the shop's own name at the other end of the bar, and by
-    // search. `settings-doors.test.ts` holds the other half of that claim —
-    // that Settings really does carry a door to every one of them.
-    for (const suffix of ["/dive-sites", "/waivers", "/settings"]) {
-      expect(place(`${root}${suffix}`), suffix).toBe("shop");
+  it("lights Settings for what a shop sets up, and Money for what it earns", () => {
+    for (const suffix of ["/dive-sites", "/waivers", "/settings", "/settings/team"]) {
+      expect(section(`${root}${suffix}`), suffix).toBe("settings");
+    }
+    for (const suffix of ["/orders", "/reports", "/promos"]) {
+      expect(section(`${root}${suffix}`), suffix).toBe("money");
     }
   });
 
-  it("lights Today for the gear register, which is a morning rather than a setting", () => {
-    // The register was `shop` until #1937, on a mapping of the retired
-    // `navGroup: "daily"` that inverted the row's own reason for being in
-    // that group. Handing a wetsuit over and chasing it back is the day's
-    // work, and Settings never had a door to the fleet — so the bar said
-    // "behind the shop's name" about a page that was not there.
-    expect(place(`${root}/gear`)).toBe("day");
-    // The unit page too, which is where a staffer actually pulls one for
-    // service: `destinationClaim` matches on the path prefix, and a reading
-    // that lit the index and went dark one tap in would be worse than either.
-    expect(place(`${root}/gear/some-unit-id`)).toBe("day");
+  it("lights Inbox for everything a diver says to the shop", () => {
+    for (const suffix of ["/inbox", "/requests", "/calls", "/reviews"]) {
+      expect(section(`${root}${suffix}`), suffix).toBe("inbox");
+    }
+  });
+
+  it("lights Gear for the register and every unit in it", () => {
+    expect(section(`${root}/gear`)).toBe("gear");
+    expect(section(`${root}/gear/some-unit-id`)).toBe("gear");
   });
 });
 
@@ -492,9 +488,7 @@ describe("the calendar subscription survives the settings gate", () => {
 
   it("keeps its door in the search for that role", () => {
     expect(staffPaletteDestinations(crew).map((d) => d.id)).toContain("calendarFeed");
-    // Filed behind the shop's name with the rest of the configuration, which
-    // is where a personal feed of your own shifts belongs.
-    expect(staffDestination("calendarFeed").place).toBe("shop");
+    expect(staffDestination("calendarFeed").section).toBe("settings");
   });
 
   it("hides settings and everything filed beneath it from the daily crew", () => {
@@ -512,9 +506,9 @@ describe("one destination by id", () => {
 });
 
 /**
- * **A place a reader is *in* versus a page a link *opens*.** The bar needs
+ * **A section a reader is *in* versus a page a link *opens*.** The nav needs
  * both answers and they are not the same question — `currentStaffDestination`
- * resolves a subtree, so most staff URLs light a time whose link goes
+ * resolves a subtree, so many staff URLs light a section whose link goes
  * somewhere else (#1938).
  */
 describe("whether a destination's own link opens the page being read", () => {
@@ -527,7 +521,7 @@ describe("whether a destination's own link opens the page being read", () => {
   };
 
   it("says yes on the destination's own href, for a root and a suffix alike", () => {
-    // Today is the shop root, whose claim is exact; Week is a suffix below it.
+    // Today is the shop root, whose claim is exact; the board is a suffix below it.
     expect(isStaffDestinationPage(root, root, staffDestination("today"))).toBe(true);
     expect(isStaffDestinationPage(`${root}/schedule/board`, root, staffDestination("board"))).toBe(
       true,
@@ -536,17 +530,17 @@ describe("whether a destination's own link opens the page being read", () => {
 
   it("says no on a page the destination claims but does not open", () => {
     // The pair that decides the whole design. A departure *resolves* to the
-    // board — `alsoMatch: ["/trips"]` — so the week is the right time to
+    // board — `alsoMatch: ["/trips"]` — so Schedule is the right section to
     // light, and the board's link still opens somewhere else entirely.
     const departure = `${root}/trips/7f3a`;
     expect(currentStaffDestination(departure, root, owner)?.id).toBe("board");
     expect(isStaffDestinationPage(departure, root, staffDestination("board"))).toBe(false);
 
-    // And the flat version of the same shape: the diver list lights Today,
-    // whose link is the shop root.
-    const divers = `${root}/divers`;
-    expect(currentStaffPlace(divers, root, owner)).toBe("day");
-    expect(isStaffDestinationPage(divers, root, staffDestination("today"))).toBe(false);
+    // And the flat version of the same shape: the requests page lights Inbox,
+    // whose link is the inbox.
+    const requests = `${root}/requests`;
+    expect(currentStaffSection(requests, root, owner)).toBe("inbox");
+    expect(isStaffDestinationPage(requests, root, staffDestination("inbox"))).toBe(false);
   });
 
   it("says no one path segment past the destination's own", () => {

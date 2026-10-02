@@ -129,7 +129,7 @@ export type StaffingWeekLinks = {
 export type GapWords = Record<StaffGapCode, string>;
 
 function tripHref(shopSlug: string, tripId: string) {
-  return `/shop/${shopSlug}/trips/${tripId}#crew`;
+  return `/shop/${shopSlug}/trips/${tripId}?view=details#crew`;
 }
 
 /**

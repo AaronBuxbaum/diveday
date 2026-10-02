@@ -1058,7 +1058,7 @@ describe("FormStatus", () => {
 });
 
 describe("StickyFormActions", () => {
-  it("rides the bottom edge, which nothing stands on any more", () => {
+  it("rides the top of the phone tab bar, and the bottom edge where there is none", () => {
     const { container } = render(
       <StickyFormActions>
         <button type="submit">Save</button>
@@ -1066,9 +1066,9 @@ describe("StickyFormActions", () => {
     );
 
     expect(container.firstElementChild).toHaveClass("sticky");
-    // It sat at `--dock-clearance` while the staff shell had a phone dock
-    // under it (ADR 20260919-one-idea, slice 23b retired both).
-    expect(container.firstElementChild).toHaveClass("bottom-0");
+    // `--tabbar-h` is the staff tab bar's height below `lg` and 0 everywhere
+    // else (ADR 20261001-logbook).
+    expect(container.firstElementChild).toHaveClass("bottom-(--tabbar-h)");
   });
 
   /**
@@ -1116,9 +1116,10 @@ describe("StickyFormActions", () => {
     expect(rule, "html:has([data-sticky-actions]) { … }").not.toBeNull();
     // The bar's measured height, and until it is measured (the server's
     // paint, a browser with no ResizeObserver) its one-row height: the md
-    // button (3rem), the bar's py-3 (1.5rem) and its hairline.
+    // button (3rem), the bar's py-3 (1.5rem) and its hairline — above the
+    // tab bar it stands on.
     expect(rule?.[1]).toMatch(
-      /scroll-padding-bottom:\s*var\(--sticky-actions-h,\s*calc\(3rem \+ 1\.5rem \+ 1px\)\)/,
+      /scroll-padding-bottom:\s*calc\(var\(--sticky-actions-h,\s*calc\(3rem \+ 1\.5rem \+ 1px\)\)\s*\+\s*var\(--tabbar-h\)\)/,
     );
   });
 

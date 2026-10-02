@@ -48,7 +48,7 @@ export const segmentedGridTrackClass = `grid ${TRACK_WELL}`;
  * **The corner of anything laid on the track: the track's corner less the
  * track's inset.** A segment sits one border and one padding step inside the
  * track, 1px + 4px, so a curve concentric with the track's 12px corner is
- * 12 − 5 = 7px — spelled from the same tokens the track is, so the two cannot
+ * 8 − 5 = 3px — spelled from the same tokens the track is, so the two cannot
  * drift apart without `segmented.test.ts` saying so.
  *
  * It was `rounded-lg`, the 12px control rung, on every segment and on

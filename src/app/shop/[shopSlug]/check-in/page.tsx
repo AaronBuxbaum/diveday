@@ -38,8 +38,15 @@ import { formatDayParts, formatTime, formatWeekdayTime } from "@/lib/format";
 import { type NoShowClaim, noShowClaim, noShowGate } from "@/lib/no-show";
 import { requireStaffSession } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { type NoticeCodeOf, noticeForForm, noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import {
+  type NoticeCodeOf,
+  noticeForForm,
+  noticeFromParam,
+  noticeRole,
+  shopPath,
+} from "@/lib/staff-notices";
 import { hasSailed } from "@/lib/trips";
+import { uuidParam } from "@/lib/uuid";
 import { CounterInstrument } from "./_components/CounterInstrument";
 import { CounterQueue } from "./_components/CounterQueue";
 import type { CounterIdentityCopy } from "./_components/CounterQueueRow";
@@ -377,6 +384,12 @@ export default async function CheckInPage({
   // page keys off this one distinction.
   const focus = query ? null : selectFocusedDeparture(departures, trip, now);
   const focusedTripId = focus?.tripId ?? null;
+  // **A departure's Check-in tab asked for one boat.** When that boat is not
+  // in the counter's window (next week's, or one that sailed hours ago), the
+  // counter falls back to today's next boat, and it says so rather than
+  // letting a staffer work the wrong queue in silence.
+  const requestedTripMissing =
+    !query && trip !== undefined && uuidParam(trip) !== null && focusedTripId !== trip;
   // **Suppress the banner only for a row that is actually on screen**, which is
   // not the same question as "is this booking in the queue". A search renders
   // every departure; focus mode renders exactly one, and the refused booking
@@ -606,6 +619,15 @@ export default async function CheckInPage({
         // nowhere at all (issue 1574).
         <ShopNotice tone={copy.tone} role={noticeRole(copy.tone)} className="mb-6">
           {noticeContent}
+        </ShopNotice>
+      ) : null}
+
+      {requestedTripMissing && trip ? (
+        <ShopNotice tone="neutral" className="mb-6">
+          {t("checkIn.notOnCounter.text")}{" "}
+          <Link href={shopPath(shopSlug, "trips", trip)} className="font-medium underline">
+            {t("checkIn.notOnCounter.open")}
+          </Link>
         </ShopNotice>
       ) : null}
 

@@ -40,10 +40,9 @@ test("staff sign-in lands on the shop dashboard and sign-out locks it again", {
   await expect(page).toHaveURL(/\/shop/);
   await expect(page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
   // Today leads with the boats that sail today, not a generic trip list: the
-  // summary sentence counts them, and the first station carries the head count
-  // as a figure rather than as another line of small muted text.
+  // summary sentence counts them, and each departure says how many are ready.
   await expect(page.getByText(/boats? today\./)).toBeVisible();
-  await expect(page.getByText(/^of \d+$/).first()).toBeVisible();
+  await expect(page.getByText(/^\d+ of \d+ ready$/).first()).toBeVisible();
 
   await signOut(page);
   await page.goto("/shop");

@@ -357,7 +357,7 @@ export function storefrontAddress(shopSlug: string, origin: string | null): stri
  * copy of, so a palette that moved without these moving fails rather than
  * printing a card in a colour the app no longer uses.
  */
-export const BOAT_CARD_DAY = { band: "#075985", bandInk: "#ffffff" } as const;
+export const BOAT_CARD_DAY = { band: "#ffd23f", bandInk: "#1a1500" } as const;
 export const BOAT_CARD_NIGHT = { band: "#000a0f", bandInk: "#f4fbfc", night: true } as const;
 
 /**

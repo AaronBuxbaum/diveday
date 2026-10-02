@@ -99,6 +99,7 @@ import {
   type TodayAction,
   urgencyFor,
 } from "@/lib/today";
+import { type TripPhase, tripPhaseOf } from "@/lib/trip-phase";
 import { liveStageOf, type TripStageReading } from "@/lib/trip-stages";
 import { hasReturned, hasSailed } from "@/lib/trips";
 import { welcomeCueFor } from "@/lib/welcome-cue";
@@ -282,6 +283,13 @@ export type DepartureSummary = {
    * anything, which is most departures and renders nothing.
    */
   stage: TripStageReading | null;
+  /**
+   * Where the departure is in its own day — Prep, Check-in, Aboard, Back
+   * (`tripPhaseOf`, ADR 20261001-logbook). Read from the crew's raw tap, never
+   * `stage` above: that one stops speaking two hours past the return, which is
+   * exactly when a late boat must not turn Back.
+   */
+  phase: TripPhase | null;
   /**
    * **What the divers aboard came for, as counts** (D12/#1172 with D23/#1183,
    * issue #1386). Empty on a departure nobody answered on — which renders
@@ -1449,7 +1457,7 @@ export async function getTodayWork(
         aboutDeparture: true,
         detail: missingFitDetailText(t, withoutFit),
         actionLabel: openPrepListActionText(t),
-        href: `${tripHref}#${PREP_SECTION_ID}`,
+        href: `${tripHref}/prep#${PREP_SECTION_ID}`,
         dueAt: trip.startsAt,
       });
     }
@@ -1466,7 +1474,7 @@ export async function getTodayWork(
         aboutDeparture: true,
         detail: ungatedNitroxDetailText(t, ungatedCount),
         actionLabel: openPrepListActionText(t),
-        href: `${tripHref}#${PREP_SECTION_ID}`,
+        href: `${tripHref}/prep#${PREP_SECTION_ID}`,
         dueAt: trip.startsAt,
       });
     }
@@ -1547,7 +1555,7 @@ export async function getTodayWork(
         actionLabel: openCrewActionText(t),
         // The trip's crew editor, not the bare Overview it used to land on
         // (Lens 17 task 139) — the fix for either gap lives right there.
-        href: `${tripHref}#crew`,
+        href: `${tripHref}?view=details#crew`,
         dueAt: trip.startsAt,
       });
     }
@@ -1595,7 +1603,7 @@ export async function getTodayWork(
             ? uncrewedCourseDetailText(t, ratioGap.divers)
             : uncrewedDepartureDetailText(t, ratioGap.divers),
           actionLabel: openCrewActionText(t),
-          href: `${tripHref}#crew`,
+          href: `${tripHref}?view=details#crew`,
           dueAt: trip.startsAt,
         });
       } else {
@@ -1614,7 +1622,7 @@ export async function getTodayWork(
             diversPerDivemaster,
           ),
           actionLabel: openCrewActionText(t),
-          href: `${tripHref}#crew`,
+          href: `${tripHref}?view=details#crew`,
           dueAt: trip.startsAt,
         });
       }
@@ -2253,6 +2261,14 @@ export async function getTodayWork(
       // manifest is the exception and reads the raw ledger — that strip is the
       // crew's own control, and it shows them their last answer.
       stage: liveStageOf(stagesByTrip.get(trip.id) ?? null, trip.endsAt, now),
+      phase: tripPhaseOf({
+        startsAt: trip.startsAt,
+        endsAt: trip.endsAt,
+        now,
+        timeZone,
+        stage: stagesByTrip.get(trip.id) ?? null,
+        cancelled: false,
+      }),
       // Absent from the map means nobody aboard answered, and an empty tally is
       // what makes the station render no line at all.
       intents: diveIntents.get(trip.id) ?? [],

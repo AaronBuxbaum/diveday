@@ -518,12 +518,9 @@ describe("person-first diver records", () => {
     });
 
     /**
-     * The live case, which the removed one above does not cover and which one
-     * surface now rests its whole tenant story on: the diver sheet laid over a
-     * shop's day (ADR 20260919-one-idea, slice 23e) renders exactly when this
-     * returns a row, and its `shopId` is the session's. So "another shop's id
-     * with this shop's person" is the one call that decides whether a copied
-     * `?diver=` reads somebody else's roster.
+     * The live case, which the removed one above does not cover: "another
+     * shop's id with this shop's person" must never read somebody else's
+     * roster.
      */
     it("does not open another shop's live diver", async () => {
       const { db, shop } = ctx;

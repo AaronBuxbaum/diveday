@@ -194,7 +194,7 @@ export function ShopPageHeader({
    * and the course's title on the diver-facing pages (Harbor, ADR
    * 20260901-diveday-reimagined, decision 2: "the display face labels headings
    * only"). The staff surfaces that share this header never pass it; with no
-   * `BrandStyle` above, the utility resolves to Geist anyway.
+   * `BrandStyle` above, the utility resolves to Plex anyway.
    */
   titleFace?: "app" | "brand";
 }) {

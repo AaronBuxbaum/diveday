@@ -9,11 +9,8 @@ afterEach(cleanup);
 
 const SRC = join(import.meta.dirname, "..", "..");
 
-/** The two bottom sheets: a person from the manifest, a diver over the day. */
-const SHEETS = [
-  "app/shop/[shopSlug]/trips/[id]/manifest/_components/PersonSheet.tsx",
-  "components/DiverSheet.tsx",
-];
+/** The bottom sheets: a person from the manifest. */
+const SHEETS = ["app/shop/[shopSlug]/trips/[id]/manifest/_components/PersonSheet.tsx"];
 
 /**
  * **One sheet, one shell** (pixel-craft classes 6 and 12). The manifest's
@@ -27,7 +24,7 @@ describe("SHEET_PANEL_CLASS", () => {
     expect(SHEET_PANEL_CLASS).not.toMatch(/rounded-[a-z-]*\[/);
   });
 
-  it("is the one shell both sheets wear", () => {
+  it("is the one shell every sheet wears", () => {
     for (const file of SHEETS) {
       const source = readFileSync(join(SRC, file), "utf8");
       expect(source, file).toContain("SHEET_PANEL_CLASS");

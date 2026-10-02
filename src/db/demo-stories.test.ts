@@ -23,7 +23,7 @@ describe("demoStoryPath", () => {
     const path = await demoStoryPath(db, shop.id, shop.slug, "returning-diver");
     // On the departure, where the list reads — not `/prep`, which survives for
     // the paper day and which no staffer navigates to (slice 23c).
-    expect(path).toMatch(new RegExp(`^/shop/${shop.slug}/trips/[0-9a-f-]+#packing-list$`));
+    expect(path).toMatch(new RegExp(`^/shop/${shop.slug}/trips/[0-9a-f-]+/prep#packing-list$`));
 
     // The departure it picked really does have divers aboard — an empty prep
     // list shows the shop knowing nothing about nobody, which is not the story.

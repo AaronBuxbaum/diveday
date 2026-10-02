@@ -23,7 +23,7 @@ test("the first-booking story opens the shop's own public page, with no sign-in"
   // so its absence is not what makes this the customer's view. The staff nav is:
   // none of the tabs a signed-in shop works from are on this page.
   await expect(page).toHaveURL(/\/s\/[^/]+$/);
-  await expect(page.getByRole("link", { name: "Board", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Inbox", exact: true })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Check-in", exact: true })).toHaveCount(0);
 });
 
@@ -36,10 +36,9 @@ test("the returning-diver story opens a prep list the shop already knows things 
   ).toBeVisible();
   await page.getByRole("button", { name: "Open this story" }).click();
 
-  // The packing list reads on the departure itself now — `/prep` survives only
-  // so the paper day can compose it (ADR 20260919-one-idea, slice 23c), so the
-  // story lands on the boat with the list under the anchor.
-  await expect(page).toHaveURL(/\/shop\/[^/]+\/trips\/[^/]+#packing-list$/);
+  // The packing list is the departure's Gear tab (ADR 20261001-logbook), so
+  // the story lands there with the list under the anchor.
+  await expect(page).toHaveURL(/\/shop\/[^/]+\/trips\/[^/]+\/prep#packing-list$/);
   // Signed in as somebody who preps boats, on a real staff surface.
   await expect(page.getByText("Demo shop")).toBeVisible();
 });

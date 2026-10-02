@@ -12,7 +12,7 @@ import { useMenuDismissal } from "@/components/useMenuDismissal";
 import { motionMs } from "@/lib/motion";
 
 export type ShopIdentityMenuCopy = {
-  settings: string;
+  calendar: string;
   language: string;
   signOut: string;
   signOutConfirm: string;
@@ -36,20 +36,11 @@ export type ShopIdentityMenuCopy = {
  * render as their own languages' names rather than as words in whichever
  * language is currently wrong for them.
  *
- * **Settings is back, and it is the reason this menu is the shop's name.**
- * It lived here once, between leaving the tab strip and the "More" groups
- * arriving, and left because it is a *place* and places lived in the nav — a
- * second door here would have been the duplicate control principle 8 forbids
- * (ADR 20260813-more-is-the-shops-other-door). There is no nav now, and no
- * other door, so the objection is void and the ADR is explicit: "Only Settings
- * has no hour and lives behind the shop's name" (ADR 20260919-one-idea,
- * decision I · Tide, slice 23b).
- *
- * It sits above the rule, apart from what follows it, because the two halves
- * of this menu are about different things: Settings is the *shop*, and the
- * language and the way out are this *reader*. It is absent rather than
- * disabled for a role that may not open it, like every other gated place
- * (ADR 20260724-role-gated-surfaces-hide-not-explain).
+ * **Settings left again, for the nav** (ADR 20261001-logbook): it has its own
+ * row at the sidebar's foot, and a second door here would be the duplicate
+ * control principle 8 forbids. What leads the menu now is the one shop page
+ * that belongs to the reader — their own calendar subscription — above the
+ * rule, apart from the language and the way out.
  *
  * The sign-out itself keeps its two-tap `InlineConfirm` (task 81): an undo
  * banner is not safe here, because its grace window would keep the session
@@ -65,7 +56,7 @@ export function shopInitials(name: string): string {
 export function ShopIdentityMenu({
   shopName,
   logoUrl,
-  settingsHref,
+  calendarHref,
   signOutAction,
   locale,
   languages,
@@ -74,8 +65,8 @@ export function ShopIdentityMenu({
 }: {
   shopName: string;
   logoUrl?: string;
-  /** Where Settings lives, or absent for a reader who may not open it. */
-  settingsHref?: string;
+  /** This reader's own calendar subscription, the one shop page that is theirs. */
+  calendarHref?: string;
   signOutAction: () => Promise<void>;
   /** The language this render was written in — the one marked as in force. */
   locale: string;
@@ -167,17 +158,17 @@ export function ShopIdentityMenu({
       </button>
       {mounted ? (
         // The shared menu panel and its rows (`ui/menu.ts`): a `p-1` panel
-        // whose rows nest in its corner, and one tick gutter that Settings,
+        // whose rows nest in its corner, and one tick gutter that the calendar row,
         // the LANGUAGE label, the language names and Sign out all start
         // their words on. The rows are not `buttonClass`, whose `rounded-lg`
         // would beat the nested corner in the stylesheet.
         <div
           className={`absolute top-full left-0 z-10 mt-2 min-w-44 ${MENU_PANEL} ${closing ? "animate-scale-out" : "animate-scale-in"}`}
         >
-          {settingsHref ? (
+          {calendarHref ? (
             <div className="border-b border-border pb-1">
-              <Link href={settingsHref} onClick={close} className={menuRowClass("quiet")}>
-                {copy.settings}
+              <Link href={calendarHref} onClick={close} className={menuRowClass("quiet")}>
+                {copy.calendar}
               </Link>
             </div>
           ) : null}

@@ -91,7 +91,7 @@ export function UndoToast({
   // inset, so the word ends 16px inside the toast as the message starts 16px
   // inside it. Both sides at `px-4` put Undo 7px further in (pixel-craft K-102).
   return (
-    <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 print:hidden">
+    <div className="fixed inset-x-0 bottom-[calc(1rem+var(--tabbar-h))] z-50 flex justify-center px-4 print:hidden">
       <div
         role="status"
         onMouseEnter={pause}

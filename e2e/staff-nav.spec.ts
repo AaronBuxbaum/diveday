@@ -1,20 +1,15 @@
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
-import { STAFF_DAY_HEADING } from "./helpers";
 import { ONBOARD_FORM_PATH } from "./servers";
 
 /**
- * **The bar is three times** — ADR 20260919-one-idea, decision I · Tide, slice
- * 23b: "A date, a search and the shop's name in the bar — no tabs, no More, no
- * dock."
+ * **The nav is the shop's sections, by name, always on screen** — ADR
+ * 20261001-logbook, decision 1.
  *
- * What this spec used to cover was a nav of *nouns*: five primary tabs, a
- * "More" menu from `lg` up and a bottom sheet rising from a phone dock's sixth
- * slot, three consumers deriving twenty-one destinations from one registry
- * (ADR 20260813-more-is-the-shops-other-door). What it covers now is Today,
- * Week and Season, and the two things that have to stay true without the nav:
- * **everything else is reachable through the search**, and **a gated place is
- * absent rather than shown and refused** (ADR
- * 20260724-role-gated-surfaces-hide-not-explain).
+ * A labelled sidebar from `lg` up and a bottom tab bar below it: Today,
+ * Schedule, Divers, Inbox, Money, Courses and Gear when the shop uses them,
+ * and Settings at the foot. The search is a shortcut to the same places, never
+ * the only door, and **a gated section is absent rather than shown and
+ * refused** (ADR 20260724-role-gated-surfaces-hide-not-explain).
  */
 
 test.describe("owner", () => {
@@ -44,52 +39,48 @@ test.describe("owner", () => {
    */
   const BOARD_SCROLL_PX = 157;
 
-  test("the bar wears three times, and the one you are on is lit", async ({ page }) => {
+  test("the sidebar names every section, and the one you are on is lit", async ({ page }) => {
     await page.goto("/shop/blue-mantis");
 
-    const bar = page.locator("header").getByRole("navigation", { name: "When" });
-    await expect(bar.getByRole("link")).toHaveText([/Today/, "Week", "Season"]);
-    // The nouns are gone from the bar — all twenty-one of them. Divers and
-    // Check-in are the two that were tabs longest, so they are the ones worth
-    // naming rather than trusting the list above.
-    for (const noun of ["Divers", "Check-in", "Board", "Orders", "More"]) {
-      await expect(bar.getByRole("link", { name: noun, exact: true })).toHaveCount(0);
-    }
+    const nav = page.getByRole("navigation", { name: "Main", exact: true });
+    await expect(nav.getByRole("link")).toHaveText([
+      /^Today/,
+      "Schedule",
+      "Divers",
+      "Inbox",
+      "Money",
+      "Courses",
+      "Gear",
+      "Settings",
+    ]);
+    // **Not `exact`, because Today's badge is part of its name**: the blocked
+    // count rides the row, so the accessible name is "Today 20 divers blocked".
+    await expect(nav.getByRole("link", { name: /^Today/ })).toHaveAttribute("aria-current", "page");
 
-    // **Not `exact`, because Today's badge is part of its name.** The blocked
-    // count rides the pill, so the accessible name is "Today 20 divers
-    // blocked" — an exact match on "Today" finds nothing. A substring match is
-    // unambiguous in a bar of three, where the other two are Week and Season.
-    await expect(bar.getByRole("link", { name: "Today" })).toHaveAttribute("aria-current", "page");
-
-    // A time is a link to a page, and the page behind it may be rebuilt
-    // without this bar changing: Week is the board today and becomes the week
-    // in 23f.
-    await bar.getByRole("link", { name: "Week" }).click();
-    await expect(page).toHaveURL(/\/schedule\/board$/);
-    await expect(bar.getByRole("link", { name: "Week" })).toHaveAttribute("aria-current", "page");
-    await expect(bar.getByRole("link", { name: "Today" })).not.toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    const divers = nav.getByRole("link", { name: "Divers", exact: true });
+    await divers.click();
+    await expect(page).toHaveURL(/\/divers$/);
+    await expect(divers).toHaveAttribute("aria-current", "page");
+    await expect(nav.getByRole("link", { name: /^Today/ })).not.toHaveAttribute("aria-current");
   });
 
-  test("a departure lights the week it sails in, because the board claims it", async ({ page }) => {
+  test("a departure lights Schedule, because the board claims it", async ({ page }) => {
     await page.goto("/shop/blue-mantis/schedule/board");
-    const bar = page.locator("header").getByRole("navigation", { name: "When" });
-    await page
-      .getByRole("main")
-      .getByRole("link")
-      .filter({ hasText: /Reef|Wreck|Night/ })
-      .first()
-      .click();
+    const nav = page.getByRole("navigation", { name: "Main", exact: true });
+    const door = page.locator("[data-week-board] a[data-departure-door]").first();
+    const title = (await door.getAttribute("aria-label")) ?? "";
+    await door.click();
     await expect(page).toHaveURL(/\/trips\//);
-    // **Lit, and `"true"` rather than `"page"`** — the distinction #1938 is
-    // about, on the surface that makes it. The board *claims* `/trips` (its
-    // `alsoMatch`), so the week is the honest answer to "which time am I in";
-    // it does not *open* this URL, so a screen reader may not be told this
-    // link is the page being read.
-    await expect(bar.getByRole("link", { name: "Week" })).toHaveAttribute("aria-current", "true");
+    // The address moves before the page commits; under load the nav can still
+    // be reading the board when the URL already names the trip.
+    await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+    // **Lit, and `"true"` rather than `"page"`** (#1938): the board claims
+    // `/trips`, so Schedule is the honest answer to "where am I", but its link
+    // does not open this URL.
+    await expect(nav.getByRole("link", { name: "Schedule" })).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
   });
 
   /**
@@ -116,11 +107,7 @@ test.describe("owner", () => {
    */
   test("a departure opened from a scrolled board starts at its own top", async ({ page }) => {
     await page.goto("/shop/blue-mantis/schedule/board");
-    const departure = page
-      .getByRole("main")
-      .getByRole("link")
-      .filter({ hasText: /Reef|Wreck|Night/ })
-      .first();
+    const departure = page.locator("[data-week-board] a[data-departure-door]").first();
     await expect(departure).toBeVisible();
 
     // **Open the departure once and come back, the way a staffer does.**
@@ -144,9 +131,8 @@ test.describe("owner", () => {
     await expect(page).toHaveURL(/\/trips\//);
     await expect(page.locator("#roster")).toBeVisible();
     await page
-      .locator("header")
-      .getByRole("navigation", { name: "When" })
-      .getByRole("link", { name: "Week" })
+      .getByRole("navigation", { name: "Main", exact: true })
+      .getByRole("link", { name: "Schedule" })
       .click();
     await expect(page).toHaveURL(/\/schedule\/board$/);
     await expect(departure).toBeVisible();
@@ -201,8 +187,10 @@ test.describe("owner", () => {
     // masthead readable.
     const clearance = await page.evaluate(() => {
       const bar = document.querySelector("[data-chrome-bar]")?.getBoundingClientRect();
-      const back = [...document.querySelectorAll("a")]
-        .find((anchor) => /board/i.test(anchor.textContent ?? ""))
+      // The masthead's way back up, named for the section it returns to.
+      // Read inside `main`: the sidebar carries a "Schedule" link too.
+      const back = [...document.querySelectorAll("main a")]
+        .find((anchor) => /^schedule$/i.test(anchor.textContent?.trim() ?? ""))
         ?.getBoundingClientRect();
       return bar && back ? Math.round(back.top - bar.bottom) : null;
     });
@@ -210,68 +198,26 @@ test.describe("owner", () => {
     expect(clearance ?? -1).toBeGreaterThanOrEqual(0);
   });
 
-  test("a page with no hour lights nothing, because it lives behind the shop's name", async ({
-    page,
-  }) => {
-    // Settings, the site library and the waiver template are `shop` — the one
-    // place with no time in it. A bar of three times has no pill for them, and
-    // that is the design rather than a gap: each has its own door on Settings,
-    // which `settings-doors.test.ts` holds.
-    for (const suffix of ["/settings", "/dive-sites", "/waivers"]) {
+  test("a page under a section lights that section", async ({ page }) => {
+    const nav = page.getByRole("navigation", { name: "Main", exact: true });
+    for (const [suffix, section] of [
+      ["/dive-sites", "Settings"],
+      ["/settings/team", "Settings"],
+      ["/requests", "Inbox"],
+      ["/reviews", "Inbox"],
+      ["/reports", "Money"],
+    ] as const) {
       await page.goto(`/shop/blue-mantis${suffix}`);
-      const bar = page.locator("header").getByRole("navigation", { name: "When" });
-      await expect(bar.getByRole("link")).toHaveCount(3);
-      // Any `aria-current`, not only `page`: since #1938 a lit place that is
-      // not its own page says `"true"`, and a bar that lit one here would
-      // still satisfy a `[aria-current='page']` count of zero.
-      await expect(bar.locator("[aria-current]")).toHaveCount(0);
+      await expect(nav.getByRole("link", { name: section }), suffix).toHaveAttribute(
+        "aria-current",
+        "true",
+      );
+      await expect(nav.locator("[aria-current]"), suffix).toHaveCount(1);
     }
   });
 
-  test("the gear register lights Today, because chasing a wetsuit is the day's work", async ({
-    page,
-  }) => {
-    // It read as a place with no hour until #1937 — mapped there from the
-    // retired `navGroup: "daily"` by slice 23b, which inverted the row's own
-    // reason for being in that group. In the bar that was a page claiming to
-    // live behind the shop's name while Settings had no door to it.
-    await page.goto("/shop/blue-mantis/gear");
-    const bar = page.locator("header").getByRole("navigation", { name: "When" });
-    // `"true"`: the register is the day's work, and Today's link is the shop
-    // root rather than this page (#1938).
-    await expect(bar.getByRole("link", { name: "Today" })).toHaveAttribute("aria-current", "true");
-
-    // And one tap in, on the unit a staffer actually pulls for service — a
-    // pill that lit the index and went dark on the page the work happens on
-    // would be worse than either reading.
-    // A unit by its href shape, not "the first link in main": the register
-    // leads with its kind filters, which are `?kind=` readings of this page.
-    await page.locator('main a[href*="/gear/"]').first().click();
-    await expect(page).toHaveURL(/\/gear\/[0-9a-f-]+/i);
-    await expect(bar.getByRole("link", { name: "Today" })).toHaveAttribute("aria-current", "true");
-  });
-
-  test("Settings is behind the shop's own name, which is the only door it has", async ({
-    page,
-  }) => {
-    // "Only Settings has no hour and lives behind the shop's name" (ADR
-    // 20260919-one-idea, decision I · Tide). It lived here once and left when
-    // the nav's More groups arrived, because a second door would have been a
-    // duplicate control — there is no nav now, and no second door.
+  test("the search is a shortcut to the same places", async ({ page }) => {
     await page.goto("/shop/blue-mantis");
-    await expect(page.locator("header").getByRole("link", { name: "Settings" })).toHaveCount(0);
-    await page.locator("header [data-identity-menu]").click();
-    await page.locator("header").getByRole("link", { name: "Settings" }).click();
-    await expect(page).toHaveURL(/\/settings$/);
-  });
-
-  test("everything that is not one of the three is reached through the search", async ({
-    page,
-  }) => {
-    await page.goto("/shop/blue-mantis");
-    // The search is a control in the bar, not a keyboard shortcut — ADR
-    // 20260813-more-is-the-shops-other-door retired an earlier bar for making
-    // fourteen destinations ⌘K-only, and that finding outlived the bar.
     await page.locator("header").getByRole("button", { name: "Search" }).click();
     await page.getByRole("combobox").fill("Orders");
     await page
@@ -281,66 +227,23 @@ test.describe("owner", () => {
     await expect(page).toHaveURL(/\/orders$/);
   });
 
-  /**
-   * **The one thing the search finds that has no hour** — ADR
-   * 20260919-one-idea, decision I · Tide, slice 23e: "a diver with no booking
-   * has no hour; the search finds them, and their record opens as a sheet over
-   * the day."
-   *
-   * Every other destination the search offers is a place, and taking the
-   * staffer to it is the answer. A person is not: the question is usually one
-   * glance, and paying for it with the day they were reading — the boats, the
-   * blockers, the hour they were standing in — is the trade this slice refuses.
-   */
-  test("a diver the search finds is laid over the day, not opened instead of it", async ({
-    page,
-  }) => {
+  test("a diver the search finds opens their record", async ({ page }) => {
     await page.goto("/shop/blue-mantis");
     await page.locator("header").getByRole("button", { name: "Search" }).click();
     await page.getByRole("combobox").fill("Priya");
     // `exact`, because a person's name is also the text of every seat they
-    // hold: a loose match took whichever row the ranking happened to put up,
-    // which was a booking on a departure. The diver row is the one whose whole
-    // accessible name is the person.
+    // hold; the diver row is the one whose whole accessible name is the person.
     await page.getByRole("option", { name: "Priya Sharma", exact: true }).first().click();
-
-    // Still the day, with the diver over it — the URL says so, and so does the
-    // fact that the day's own heading is still on the page behind the sheet.
-    await expect(page).toHaveURL(/\/shop\/blue-mantis\?diver=[0-9a-f-]+$/);
-    const sheet = page.getByRole("dialog");
-    await expect(sheet.getByRole("heading", { name: "Priya Sharma" })).toBeVisible();
-
-    // **It is a reading, and its one door is the record.** Every act on a
-    // diver redirects with a `?notice=`, which would tear the sheet off the
-    // screen — so the sheet offers none and points at the page that does.
-    await expect(sheet.getByRole("link", { name: /Open the full record/ })).toBeVisible();
-
-    // Closing puts the staffer back on the day they never left, and takes the
-    // param with it so a refresh does not reopen what they just closed.
-    await page.keyboard.press("Escape");
-    await expect(sheet).toHaveCount(0);
-    await expect(page).toHaveURL(/\/shop\/blue-mantis$/);
+    await expect(page).toHaveURL(/\/shop\/blue-mantis\/divers\/[0-9a-f-]+$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Priya Sharma" })).toBeVisible();
   });
 
-  /**
-   * **A `?diver=` is not a key to anything.** It is the one param on this page
-   * that names a person, so the two ways of writing one by hand both have to
-   * end in a day with nobody over it: an id that is not a uuid, which is
-   * narrowed before it reaches a query, and a well-formed one that names
-   * nobody *of this shop* — the same answer `getDiverProfile` gives for
-   * another tenant's diver, which is what makes a copied URL worth nothing
-   * (`src/db/divers.test.ts`, "does not open another shop's live diver").
-   *
-   * The day rendering is half the assertion: a 404 or a 500 here would be a
-   * different bug wearing the same green.
-   */
-  test("a diver id that names nobody leaves the day with nobody over it", async ({ page }) => {
-    for (const id of ["not-a-uuid", "6f1c9a2e-0b3d-4f5a-8c7e-1d2a3b4c5d6e"]) {
-      const response = await page.goto(`/shop/blue-mantis?diver=${id}`);
-      expect(response?.status()).toBe(200);
-      await expect(page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
-      await expect(page.getByRole("dialog")).toHaveCount(0);
-    }
+  test("the shop's name holds the reader's own things, not a second Settings", async ({ page }) => {
+    await page.goto("/shop/blue-mantis");
+    await page.locator("header [data-identity-menu]").click();
+    await expect(page.locator("header").getByRole("link", { name: "Settings" })).toHaveCount(0);
+    await page.locator("header").getByRole("link", { name: "Calendar subscription" }).click();
+    await expect(page).toHaveURL(/\/settings\/calendar$/);
   });
 
   test("the demoted doors on owning surfaces still hold", async ({ page }) => {
@@ -354,14 +257,14 @@ test.describe("owner", () => {
 test.describe("captain", () => {
   signedInAs("captain");
 
-  test("a gated time is absent from the bar, not shown and refused", async ({ page }) => {
+  test("a section the role cannot open is absent, not shown and refused", async ({ page }) => {
     await page.goto("/shop/blue-mantis");
-
-    const bar = page.locator("header").getByRole("navigation", { name: "When" });
-    // Season is Reports, which is gated. A captain's bar is two pills — the
-    // honest picture, rather than a third that refuses when tapped.
-    await expect(bar.getByRole("link")).toHaveText([/Today/, "Week"]);
-    await expect(bar.getByRole("link", { name: "Season" })).toHaveCount(0);
+    const nav = page.getByRole("navigation", { name: "Main", exact: true });
+    // Settings is gated, and its one door a captain may open is their own
+    // calendar feed, which is in the shop's menu. Money stays: Orders is open
+    // to every staff role.
+    await expect(nav.getByRole("link", { name: "Settings" })).toHaveCount(0);
+    await expect(nav.getByRole("link", { name: "Money" })).toBeVisible();
   });
 
   test("the search offers a captain only what their role can open", async ({ page }) => {
@@ -373,12 +276,8 @@ test.describe("captain", () => {
       await page.getByRole("combobox").fill(gated);
       await expect(page.getByRole("option", { name: gated, exact: true })).toHaveCount(0);
     }
-    // **Requests and the Inbox are not on that list, and the pairing is the
-    // point.** Both gates were deleted rather than relaxed (issues #1505/#1518
-    // on 2026-09-10 and #1679 on 2026-09-16, H-14 amendments): the inbox shows
-    // this same captain a stranger's address and message and lets them answer
-    // as the shop, so "these carry contact details for people who have not
-    // booked" had stopped telling the two surfaces apart.
+    // Requests and the Inbox are open to every staff role (issues #1505,
+    // #1518, #1679, H-14 amendments).
     for (const open of ["Requests", "Inbox"]) {
       await page.getByRole("combobox").fill(open);
       await expect(page.getByRole("option", { name: open, exact: true }).first()).toBeVisible();
@@ -390,63 +289,44 @@ test.describe("the phone", () => {
   signedInAsOwner();
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test("has no dock — a name, a date and a search, which is what the artboard draws", async ({
+  test("carries four sections and More in a tab bar at the foot", async ({ page }) => {
+    await page.goto("/shop/blue-mantis");
+    const tabs = page.getByRole("navigation", { name: "Main", exact: true });
+    await expect(tabs.getByRole("link")).toHaveText([/^Today/, "Schedule", "Divers", "Inbox"]);
+    await expect(tabs.getByRole("button", { name: "More" })).toBeVisible();
+
+    // Fixed to the foot of the screen.
+    const box = await tabs.boundingBox();
+    if (!box) throw new Error("the tab bar has no box");
+    expect(Math.round(box.y + box.height)).toBeGreaterThanOrEqual(844 - 1);
+
+    await tabs.getByRole("link", { name: "Schedule" }).click();
+    await expect(page).toHaveURL(/\/schedule\/board$/);
+    await expect(tabs.getByRole("link", { name: "Schedule" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
+  test("keeps the rest one tap behind More, and lights More when you are there", async ({
     page,
   }) => {
     await page.goto("/shop/blue-mantis");
-
-    // The dock was a fixed bottom tab bar whose sixth slot raised a sheet.
-    // Nothing stands at the bottom edge now.
-    await expect(page.locator("[data-dock-more]")).toHaveCount(0);
-    // And the three times do not *stand* here: at 390px they are folded, so
-    // nothing wearing them is on screen until the date is tapped.
-    await expect(
-      page.getByRole("navigation", { name: "When" }).filter({ visible: true }),
-    ).toHaveCount(0);
-
-    // What a thumb has instead — `Tide.dc.html`'s pocket, left to right.
-    await expect(page.locator("header [data-identity-menu]")).toBeVisible();
-    await expect(page.locator("header [data-place-menu]")).toBeVisible();
-    await expect(page.locator("header").getByRole("button", { name: "Search" })).toBeVisible();
-  });
-
-  test("folds the three times into the date, and they are the same three", async ({ page }) => {
-    await page.goto("/shop/blue-mantis");
-
-    await page.locator("header [data-place-menu]").click();
-    const when = page.getByRole("navigation", { name: "When" });
-    await expect(when.getByRole("link")).toHaveText([/^Today/, "Week", "Season"]);
-    // The same one is lit as on the desk bar: the day, because that is where
-    // this page sits.
-    await expect(when.getByRole("link", { name: /^Today/ })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-
-    await when.getByRole("link", { name: "Week" }).click();
-    await expect(page).toHaveURL(/\/schedule\/board$/);
-
-    // And the fold knows where the reader went: reopened on the board, Week
-    // is lit and Today is not.
-    await page.locator("header [data-place-menu]").click();
-    await expect(when.getByRole("link", { name: "Week" })).toHaveAttribute("aria-current", "page");
-    await expect(when.getByRole("link", { name: /^Today/ })).not.toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-  });
-
-  test("reaches everything that is not a time through the search", async ({ page }) => {
-    await page.goto("/shop/blue-mantis");
-
-    const search = page.locator("header").getByRole("button", { name: "Search" });
-    await search.click();
-    await page.getByRole("combobox").fill("Divers");
-    await page
-      .getByRole("option", { name: /Divers/ })
-      .first()
-      .click();
-    await expect(page).toHaveURL(/\/divers$/);
+    const tabs = page.getByRole("navigation", { name: "Main", exact: true });
+    await tabs.getByRole("button", { name: "More" }).click();
+    await expect(tabs.getByRole("link")).toHaveText([
+      /^Today/,
+      "Schedule",
+      "Divers",
+      "Inbox",
+      "Money",
+      "Courses",
+      "Gear",
+      "Settings",
+    ]);
+    await tabs.getByRole("link", { name: "Money" }).click();
+    await expect(page).toHaveURL(/\/orders$/);
+    await expect(tabs.getByRole("button", { name: "More" })).toHaveClass(/text-primary/);
   });
 });
 
@@ -524,14 +404,12 @@ test.describe("a long shop name on a phone", () => {
     // the name genuinely runs out of room it truncates, and the flex row never
     // wraps the search buttons under it.
     const trigger = page.locator("header [data-identity-menu]");
-    const date = page.locator("header [data-place-menu]");
     const search = page.locator("header").getByRole("button", { name: "Search" });
-    const [triggerBox, dateBox, searchBox] = await Promise.all([
+    const [triggerBox, searchBox] = await Promise.all([
       trigger.boundingBox(),
-      date.boundingBox(),
       search.boundingBox(),
     ]);
-    if (!triggerBox || !dateBox || !searchBox) throw new Error("header controls have no box");
+    if (!triggerBox || !searchBox) throw new Error("header controls have no box");
 
     // And nothing is being held back: whatever the name does not get, the row
     // has already spent. This is the clamp's actual signature — a truncated
@@ -540,8 +418,12 @@ test.describe("a long shop name on a phone", () => {
     // from the identity control rather than from the name, because the caret
     // that opens it is part of the control and not idle space; what is left
     // between the two is the row's own two gaps (8px each) and nothing else.
-    const idle = dateBox.x - (triggerBox.x + triggerBox.width);
-    expect(idle).toBeLessThan(24);
+    // Only asked of a name that did not fit: one that renders whole leaves the
+    // row's spare width where it belongs, beside it.
+    if (width.wants > width.shown) {
+      const idle = searchBox.x - (triggerBox.x + triggerBox.width);
+      expect(idle).toBeLessThan(24);
+    }
     expect(Math.abs(triggerBox.y - searchBox.y)).toBeLessThan(triggerBox.height);
     expect(triggerBox.x + triggerBox.width).toBeLessThanOrEqual(searchBox.x);
     // And nothing spilled sideways off the phone.

@@ -214,9 +214,9 @@ test("a shop with a departure today is not treated as a shop with no departures"
   // and the derived currency has never been confirmed. The row picks the
   // question up rather than letting it vanish — which is why this asserts real
   // work rather than "Nothing is waiting on you", the empty state it used to
-  // reach here. It hangs off no boat, so it files under the desk group, in the
+  // reach here. It hangs off no boat, and it ranks in the one "Needs you" list, in the
   // open (ADR 20260827-clearwater-surface-language, decision 4).
-  await expect(page.getByText("At the desk")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Needs you" })).toBeVisible();
   await expect(page.getByText(/guessed from your timezone/)).toBeVisible();
   await expect(page.getByRole("link", { name: /Open units/ })).toBeVisible();
 });

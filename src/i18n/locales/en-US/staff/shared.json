@@ -12,7 +12,7 @@
   "imageInput": {
     "tooMany": "{count, plural, one {Choose up to # photo at a time.} other {Choose up to # photos at a time.}}",
     "wrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
-    "tooBigSuffix": ": that’s over {maxMb}\u00a0MB, so try a smaller photo.",
+    "tooBigSuffix": ": that’s over {maxMb} MB, so try a smaller photo.",
     "choose": "Choose a photo",
     "chooseAnother": "Choose a different photo"
   },
@@ -229,10 +229,10 @@
     "checkIn": "Check-in",
     "walkIn": "Walk-in",
     "divers": "Divers",
-    "board": "Board",
+    "board": "Schedule",
     "addBooking": "Add a booking",
     "tookACall": "Took a call",
-    "staffing": "Staffing",
+    "staffing": "Crew schedule",
     "diveSites": "Dive sites",
     "gear": "Gear",
     "courses": "Courses",
@@ -247,11 +247,17 @@
     "team": "Team",
     "calendarFeed": "Calendar subscription"
   },
-  "shopPlaceNav": {
-    "navAriaLabel": "When",
+  "shopSections": {
+    "navAriaLabel": "Main",
     "today": "Today",
-    "week": "Week",
-    "season": "Season"
+    "schedule": "Schedule",
+    "divers": "Divers",
+    "inbox": "Inbox",
+    "money": "Money",
+    "courses": "Courses",
+    "gear": "Gear",
+    "settings": "Settings",
+    "more": "More"
   },
   "subSurfaceRipple": {
     "iconTitle": "Roll call complete icon",
@@ -547,9 +553,5 @@
   "formDraft": {
     "pickedUp": "Picked up from the desk, {time}.",
     "startOver": "Start over"
-  },
-  "diverSheet": {
-    "close": "Close",
-    "openRecord": "Open the full record"
   }
 }

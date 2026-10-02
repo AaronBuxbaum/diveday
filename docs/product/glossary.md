@@ -605,6 +605,10 @@ new domain concept, define it here in the same PR.
   is Schedule's job, not a triage list's. Defined once in `src/lib/operational-window.ts`; each
   surface derives its bounds from there rather than declaring its own. Reports is deliberately
   outside this model — a calendar month is genuinely its job.
+- **Needs you** — the one list of jobs on Today (ADR 20261001-logbook, decision 4): every row from
+  Today's work queue, at a boat or at the desk, ranked together by tone and then by when it is due,
+  each naming its own boat on a quiet line. It sits under the day's departures, which carry no rows
+  of their own. A status list, not a page: an empty one is not drawn.
 - **Not ready** — the **by-departure view** of Today's work queue (`?view=departures`), not a page
   of its own: the same blocked divers the urgency view ranks chronologically, grouped instead under
   the boat each one holds up, with a per-departure batch waiver send. It had its own route until
@@ -1373,6 +1377,7 @@ new domain concept, define it here in the same PR.
   points (Today's departure card, the command palette's "Boarding" jump) open the manifest on that
   checkpoint. Crew, emergency contacts, after-dive roll call, print, and the offline snapshot are all
   on the same page.
+- **Trip phase** — which kind of work a departure is in, for staff only: Prep, Check-in, Aboard or Back, drawn as the stepper above the departure's five tabs (ADR [20261001-logbook](../architecture/decisions/20261001-logbook.md), decision 3; `src/lib/trip-phase.ts`). Not a **trip stage**: a stage is a word the crew said and DiveDay publishes, so it is never inferred; a phase is orientation on the crew's own screen, so it falls back to the clock when nobody has tapped. The crew's tap still wins: any stage but `home` reads Aboard until the return day ends, and `home` reads Back. It reads the raw tap rather than `liveStageOf`, because a late boat is exactly when the stepper must not say Back. A cancelled departure has no phase.
 - **Trip stage** — where a departure is, in the crew's own word: one of five (`boarding`,
   `underway`, `surface`, `heading_in`, `home`) tapped on the **manifest** and then repeated, with
   the time it was tapped, everywhere DiveDay draws that boat — the shop home's station chip, the

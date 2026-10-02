@@ -57,16 +57,17 @@ const FACT_SEPARATOR = "\u00a0·";
  * Sky to both edges, exactly as `DayHeader` does it and for the same reason:
  * the trip shell is `mx-auto max-w-5xl`, so a band stopping at its content box
  * would be a panel of sky with the page's ground either side of it.
- * `mx-[calc(50%-50vw)] w-screen` walks it back out to the viewport from inside
- * that centred column, which is safe because `body { overflow-x: clip }`
- * contains the scrollbar without opening a horizontal scroll container.
+ * The calc margin and width walk it back out from inside that centred column
+ * to the edges of the content area: the viewport less `--shell-start`, the
+ * sidebar's width from `lg` up, so the band meets the sidebar instead of
+ * running 112px past the right edge.
  * `-mt-8 sm:-mt-10` eats the shell's own top padding, because a sky with a
  * margin above it is a picture of sky. No margin below: the page's
  * `space-y-10` spaces the masthead from what follows it (K-262), and the
  * skeleton stands on the same stack.
  */
 const BAND_CLASS =
-  "mx-[calc(50%-50vw)] -mt-8 w-screen pt-5 pb-5 print:mx-0 print:w-full sm:-mt-10 sm:pt-7";
+  "mx-[calc(50%-50vw+var(--shell-start)/2)] -mt-8 w-[calc(100vw-var(--shell-start))] pt-5 pb-5 print:mx-0 print:w-full sm:-mt-10 sm:pt-7";
 
 /** The page's column again, inside the full-bleed band. */
 const BAND_COLUMN_CLASS = "mx-auto w-full max-w-5xl px-4 sm:px-6";

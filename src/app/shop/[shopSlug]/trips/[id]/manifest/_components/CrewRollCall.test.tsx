@@ -110,7 +110,7 @@ describe("a departure with no crew", () => {
     const fix = within(panel).getByRole("link", { name: t("manifest.addCrewToTrip") });
     expect(fix).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/trips/00000000-0000-4000-8000-0000000000ff#crew",
+      "/shop/blue-mantis/trips/00000000-0000-4000-8000-0000000000ff?view=details#crew",
     );
     expect(screen.queryByRole("list")).toBeNull();
   });

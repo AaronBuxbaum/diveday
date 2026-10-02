@@ -36,12 +36,10 @@ export async function demoStoryPath(
 
   if (story === "returning-diver") {
     // The prep list is only a story when somebody is on the boat — an empty
-    // one shows the shop knowing nothing about nobody. On the departure
-    // rather than `/prep`: the packing list reads there now (ADR
-    // 20260919-one-idea, slice 23c) and a demo that opens a route no staffer
-    // navigates to is a demo of something else.
+    // one shows the shop knowing nothing about nobody. The list is the
+    // departure's Gear tab (ADR 20261001-logbook).
     const crewed = upcoming.find((trip) => trip.booked > 0) ?? upcoming[0];
-    return crewed ? `${home}/trips/${crewed.id}#${PREP_SECTION_ID}` : home;
+    return crewed ? `${home}/trips/${crewed.id}/prep#${PREP_SECTION_ID}` : home;
   }
 
   // The weather day opens on the confirm page with the departure **still

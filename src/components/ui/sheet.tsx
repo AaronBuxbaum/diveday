@@ -3,8 +3,7 @@ import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 
 /**
  * **A bottom sheet's panel**: the box a sheet rises in from the foot of the
- * screen, over a scrim — the manifest's person sheet (`PersonSheet`) and the
- * day's diver sheet (`DiverSheet`).
+ * screen, over a scrim — the manifest's person sheet (`PersonSheet`).
  *
  * The two were hand copies of one shell, and both rounded their top corners at
  * an arbitrary 22px against the 20px `rounded-panel` of every card they lie

@@ -42,14 +42,14 @@ and [principles.md](principles.md). This guide translates those rules into ident
 ### Bubble-trail mark
 
 The current mark is three ascending bubbles. It suggests a calm, controlled ascent: one large
-bubble, one smaller bubble, and one small coral bubble. The mark is implemented as
+bubble, one smaller bubble, and one small amber bubble. The mark is implemented as
 `LogoMark` in `src/components/Logo.tsx`.
 
 Use the mark as a simple, recognizable signal:
 
 - Keep the bubbles ascending from lower-left to upper-right.
-- Keep the smallest/top bubble coral.
-- Let the other bubbles inherit the surrounding color where possible; on a dark or solid lagoon
+- Keep the smallest/top bubble amber.
+- Let the other bubbles inherit the surrounding color where possible; on a dark or solid sea teal
   background they may be white or a very light ink.
 - Preserve the mark's proportions. Do not stretch it, rotate it, add a drop shadow, or redraw it
   as a generic scuba icon.
@@ -77,18 +77,17 @@ when no logo is uploaded — leads the masthead beside the shop's name. A shop r
 DiveDay and should see its own identity leading the workspace rather than a permanent vendor mark.
 
 There is currently no separate production-ready wordmark asset in `public/`. For a vendor proof,
-use the mark with the word `DiveDay` set in Geist Semibold, or request a vector lockup derived from
+use the mark with the word `DiveDay` set in Plex Sans Semibold, or request a vector lockup derived from
 the implementation. Do not send a screenshot of the website as the artwork.
 
 ## Color system
 
-> **Direction change, 2026-09-01 (H-64, ADR 20260901-diveday-reimagined).** The staff app moves to
-> Reef's warmer palette — sand `#fbf7ef`, shell `#fffdf8`, tideline `#f3ecdd`, rope `#e6dcc8`, the
-> lagoon opened to a deep `#0a4d61` and a decorative shallows `#7fd0d6`, washes for coral and each
-> signal — landed with slice 13a; the values below are the tree. Diver-facing
-> surfaces wear the **shop's** brand (Harbor), with these tokens as the default for a shop that has
-> set none.
-
+> **Direction change, 2026-10-01 (H-91, ADR 20261001-logbook).** The staff app and the default
+> storefront move to **Logbook**: paper with a faint sea-green cast, slate ink, one sea-teal action
+> colour and a rare marine-amber accent, with a designed deep-slate dark scheme. The roll call wears
+> **Boat mode** (Night Dive): navy and marine safety yellow in both schemes. Diver-facing surfaces
+> still wear the **shop's** brand colour, with these tokens as the default for a shop that has set
+> none. The values below are the tree.
 
 The product's source of truth is the semantic token set in `src/app/globals.css`, governed by
 [ADR-0004](../architecture/decisions/0004-design-tokens.md). The table below makes the current
@@ -99,32 +98,32 @@ embroidery, and vendor conversations.
 
 | Color | Light value | Dark value | Role | Merch guidance |
 | --- | --- | --- | --- | --- |
-| Sand | `#FBF7EF` | — | Light background; warm, open, tactile (Reef, 13a). | Best garment or paper ground for a light application. |
-| Open ocean | — | `#071720` | Dark background; deep, quiet, dependable. | Best dark garment, hat, tote, or sticker ground. |
-| Deep-sea ink | `#0C2A35` | `#E9F3F4` | Primary reading color: grounded dark ink in light mode, soft light ink in dark mode. | Use the contrasting value for the wordmark and longer copy. |
-| Lagoon | `#0E7490` | `#22D3EE` | Action color and primary brand signal. | Main imprint color on sand or ocean; use the darker light-mode value on light goods. |
-| Lagoon hover/depth | `#0A4D61` | `#67E8F9` | Darker or brighter lagoon variant for contrast and depth. | Use sparingly for a two-tone mark or secondary imprint. |
-| Coral | `#FF6F61` | `#FF8A7E` | Rare warm accent; the smallest bubble and earned moments of joy. Its wash (`#FFEEE9` by day, `#3F1D19` at night) is the bed an earned moment sits on; its deep (`#A83A2C` / `#FFB3AA`) is ink on that wash. |
-| Shallows | `#7FD0D6` | `#1F6F78` | Decorative water behind a count that is already spelled out. Never a status. | One small accent only: bubble, stitch, dot, or detail. Never make the whole item coral by default. |
+| Paper | `#F4F6F4` | — | Light background; the page a logbook is written on. | Best garment or paper ground for a light application. |
+| Deep slate | — | `#0F171C` | Dark background; quiet and dependable. | Best dark garment, hat, tote, or sticker ground. |
+| Slate ink | `#16232C` | `#E4EBEF` | Primary reading colour. | Use the contrasting value for the wordmark and longer copy. |
+| Sea teal | `#0B6E8A` | `#4FBCD8` | Action colour and primary brand signal. | Main imprint colour on paper or slate. |
+| Sea teal, deep | `#08566C` | `#7FD0E4` | Hover and depth. | Use sparingly for a two-tone mark. |
+| Marine amber | `#D97A1E` | `#F0A24A` | Rare warm accent; the smallest bubble. Its wash (`#FBEFE0` / `#33240F`) is the bed it sits on; its deep (`#8A4A0C` / `#F6C27F`) is ink on that wash. Never a status. | One small accent only. |
+| Safety yellow (Boat mode) | `#FFD23F` on navy `#0A141C` | same | The roll call's one action colour, in both schemes. | Not a merch colour. |
 
 ### Supporting colors
 
 | Token family | Current purpose | Brand use |
 | --- | --- | --- |
-| Shell `#FFFDF8` / tideline `#F3ECDD` | Quiet hierarchy between panels, pages, and recessed areas; a resting panel sits on the warm bed `0 2px 10px rgba(88, 66, 30, 0.06)` at a 28px radius. | Optional background neutrals for paper, packaging, and layout; do not turn them into extra brand colors. |
-| Rope `#E6DCC8` / rope-strong `#8A8065` | Structure and control affordances. | Use for physical rules or labels only when needed; the brand is not a framed-box system. |
-| Success / warning / danger | Operational feedback. Each has a drawn wash in both schemes — by day `#E6F0E8` / `#F8EEE2` / `#F8E8E6`, at night `#0F3324` / `#3A2A0E` / `#3D1717` (the lagoon's are `#E6F3F5` / `#0B3540`) — a hue, never a mix, so a warning stays amber on a dark shell (ADR 20260901-diveday-reimagined, 13j). | Keep these out of general merch and promotional art. They signal state, not identity. |
+| Surface `#FFFFFF` / sunken `#EAEDEA` (dark `#162129` / `#0B1216`) | Groups and wells; a resting panel is set off by a hairline and a 12px corner, not a lift. | Optional neutrals for paper and packaging. |
+| Border `#DDE2DF` / border-strong `#78838A` | Hairlines between rows; form control edges (≥3:1). | Physical rules only when needed. |
+| Success / warning / danger | Operational feedback, each with a drawn wash in both schemes (by day `#E2F2E8` / `#FBEFDC` / `#FBE6E7`, at night `#123022` / `#33280F` / `#3A191C`). | Keep out of merch and promotional art. They signal state, not identity. |
 
 Color rules:
 
-- The primary pairing is **lagoon + sand** or **lagoon + open ocean**.
-- In the product itself, coral's every sanctioned appearance is one table — **the coral budget**,
+- The primary pairing is **sea teal + paper** or **sea teal + deep slate**.
+- In the product itself, amber's every sanctioned appearance is one table — **the amber budget**,
   [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
   decision 11: earned, transient moments only, at most one per surface — plus, since Reef
   (2026-09-01), the drawn hand's single warm detail beside it — and a new one takes a table row in
   the same change. Brand and collateral work follows the same instinct at its own
-  scale; the budget is the register to check before putting coral anywhere a shop will see daily.
-- Coral is a punctuation mark, not a field color. It should usually occupy less than 10% of a
+  scale; the budget is the register to check before putting amber anywhere a shop will see daily.
+- Amber is a punctuation mark, not a field color. It should usually occupy less than 10% of a
   composition.
 - Never use safety colors as decoration or rely on color alone to communicate a status.
 - For product UI, use semantic token names rather than raw values or palette-scale classes. For
@@ -134,7 +133,7 @@ Color rules:
   garment or material.
 - **Outbound email carries both columns literally.** A message cannot reach the tokens, so
   `wrapEmailHtml` (`src/lib/notifications/email.ts`) writes the light values inline and the dark ones
-  — open ocean, deep-sea ink's dark value, dark lagoon — in the single `@media
+  — deep slate, slate ink's dark value, dark sea teal — in the single `@media
   (prefers-color-scheme: dark)` block in its `<head>`. Both halves move together: the document
   declares `color-scheme: light dark`, which is a promise that it renders correctly in both and stops
   Apple Mail and Outlook inverting it themselves, so a colour added to an email in light only lands
@@ -142,10 +141,10 @@ Color rules:
 
 ## Typography
 
-> **Settled 2026-09-01 (H-64):** Geist stays the only face on DiveDay's own surfaces. A display
-> serif was drawn for Reef and declined because it moves the brand voice too far; Reef's display
-> moments are Geist at weight and size. A shop's storefront may carry the shop's own display face for
-> headings only — never for a fact.
+> **Settled 2026-10-01 (H-91, ADR 20261001-logbook):** IBM Plex Sans is the face on DiveDay's own
+> surfaces, with IBM Plex Mono for fixed-width utility. Boat mode (the roll call) sets Atkinson
+> Hyperlegible, a face drawn for legibility. A shop's storefront may carry the shop's own display
+> face for headings only, never for a fact.
 
 > **Settled 2026-09-10 (#1367):** the apostrophe is `’` (U+2019) everywhere a person reads it — every
 > message bundle, every locale, every route's `metadata` literals. The straight `'` survives only
@@ -167,17 +166,17 @@ The current product type system is:
 
 | Use | Typeface | Weight / treatment |
 | --- | --- | --- |
-| Headings, labels, body copy, wordmark | **Geist Sans** | Regular for reading; Medium/Semibold for hierarchy. Keep tracking restrained. |
-| Data, timestamps, credentials, technical utility | **Geist Mono** | Use only where fixed-width reading helps. It is not a display face. |
-| Fallback | `system-ui`, sans-serif | Only when Geist is unavailable; do not substitute a script, condensed, retro, or novelty face. |
+| Headings, labels, body copy, wordmark | **IBM Plex Sans** | Regular for reading; Medium/Semibold for hierarchy; tabular figures for times and counts. |
+| Data, timestamps, credentials, technical utility | **IBM Plex Mono** | Only where fixed-width reading helps. Not a display face. |
+| Boat mode (roll call, manifest) | **Atkinson Hyperlegible** | Regular and Bold at large sizes. |
+| Fallback | `system-ui`, sans-serif | Only when Plex is unavailable. |
 
-Typography should feel modern, open, and quietly capable:
+Typography should feel calm, plain and capable:
 
 - Prefer short lines, generous leading, and clear hierarchy over oversized display type.
 - Use weight and spacing to organize information; do not use all caps as the default voice.
-- For merch, use Geist Semibold for `DiveDay` and Geist Regular or Medium for a short supporting
-  line. Keep the mark and wordmark legible at the actual decoration size.
-- Do not use Geist Mono for a slogan, and do not mix in a second “dive” font to make merch feel
+- For merch, use Plex Sans Semibold for `DiveDay` and Regular or Medium for a short supporting line.
+- Do not use Plex Mono for a slogan, and do not mix in a second "dive" font to make merch feel
   more nautical.
 
 ## Visual language and concepts
@@ -205,7 +204,7 @@ Good recurring concepts:
 
 - ascending bubbles and buoyancy;
 - gentle arcs, routes, and return paths;
-- coral as a small living detail, not a loud pattern;
+- amber as a small living detail, not a loud pattern;
 - dock-to-boat preparation: a clipboard made calm, a head count made clear;
 - daylight, open water, and honest visibility;
 - rounded forms, soft corners, and enough negative space to breathe.
@@ -428,20 +427,20 @@ combinations:
 
 | Item | Ground | Artwork | Suggested copy |
 | --- | --- | --- | --- |
-| Primary dark shirt or hoodie | Open ocean | Lagoon mark/wordmark, white or light-ink wordmark, one coral bubble | `DiveDay` on front; optional back line: “A calmer way to run a dive day” |
-| Light shirt or tote | Sunlit sand | Deep-sea ink wordmark, lagoon mark, one coral bubble | `DiveDay` or `DiveDay · from booking to head count` |
-| Cap or small sticker | Lagoon | Light-ink bubbles with one coral bubble | Mark alone or `DiveDay` beside it |
-| Small paper insert or thank-you card | Sand or white | Deep-sea ink body, lagoon heading, coral detail | One warm sentence and one useful next step |
+| Primary dark shirt or hoodie | Deep slate | Sea teal mark/wordmark, white or light-ink wordmark, one amber bubble | `DiveDay` on front; optional back line: “A calmer way to run a dive day” |
+| Light shirt or tote | Paper | Slate ink wordmark, sea teal mark, one amber bubble | `DiveDay` or `DiveDay · from booking to head count` |
+| Cap or small sticker | Sea teal | Light-ink bubbles with one amber bubble | Mark alone or `DiveDay` beside it |
+| Small paper insert or thank-you card | Paper or white | Slate ink body, sea teal heading, amber detail | One warm sentence and one useful next step |
 
 Production defaults:
 
 - Prefer one- to three-color decoration. A clean two-color mark will usually outlast a complex
   print.
-- Use embroidery only when the vendor can preserve the three bubbles and the coral detail at the
+- Use embroidery only when the vendor can preserve the three bubbles and the amber detail at the
   finished size; otherwise use a screen print, transfer, or woven patch with a proof.
 - Avoid gradients, bevels, outlines added by the vendor, distressed effects, faux stitching, and
   extra nautical symbols.
-- Do not make coral the main garment color unless a specific campaign has approved it. Coral is
+- Do not make amber the main garment color unless a specific campaign has approved it. Amber is
   strongest as a small surprise.
 - Request a physical or on-material proof. Check the smallest bubble, the wordmark at arm's length,
   contrast in daylight, and whether the colors still feel calm rather than neon.
@@ -454,10 +453,10 @@ Production defaults:
 
 - [ ] Name is `DiveDay` and is spelled correctly.
 - [ ] Bubble trail ascends lower-left to upper-right.
-- [ ] Smallest/top bubble is coral.
+- [ ] Smallest/top bubble is amber.
 - [ ] Mark is not stretched, rotated, shadowed, or crowded.
-- [ ] Artwork uses lagoon, sand/ocean, ink, and a restrained coral accent.
-- [ ] Wordmark is Geist-like and readable at the finished size.
+- [ ] Artwork uses sea teal, paper/slate, ink, and a restrained amber accent.
+- [ ] Wordmark is Plex-like and readable at the finished size.
 - [ ] Contrast works on the actual garment or material in daylight.
 - [ ] No feedback colors, fake claims, agency logos, or unexplained symbols were added.
 - [ ] A product owner has approved the final proof before purchase.

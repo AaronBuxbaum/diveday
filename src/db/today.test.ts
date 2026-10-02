@@ -39,6 +39,7 @@ import { getStaffingView } from "./staffing";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTodayWork } from "./today";
 import { sendLastMinuteDealBlast } from "./trip-promos";
+import { recordTripStage } from "./trip-stages";
 import {
   createTrip,
   getTripRoster,
@@ -179,6 +180,33 @@ describe("today's work queue (in-memory PGlite)", () => {
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     expect(work.departures[0]?.boarded).toBe(1);
+  });
+
+  /**
+   * **The stage pill reads the crew's tap before the clock** (ADR
+   * 20261001-logbook, decision 4): a boat the crew says is boarding is Aboard
+   * on Today even before its scheduled hour, and the clock speaks otherwise.
+   */
+  it("gives each departure its phase, the crew's tap first", async () => {
+    const { db, shop } = ctx;
+    const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const departure = before.departures[0];
+    if (!departure) throw new Error("demo departure missing");
+    expect(departure.phase).not.toBeNull();
+
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("demo staff missing");
+    const recorded = await recordTripStage(db, {
+      shopId: shop.id,
+      tripId: departure.tripId,
+      stage: "boarding",
+      recordedByPersonId: staff.person.id,
+      recordedAt: nowDate(),
+    });
+    expect(recorded.ok).toBe(true);
+
+    const after = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    expect(after.departures.find((row) => row.tripId === departure.tripId)?.phase).toBe("aboard");
   });
 
   /**
@@ -521,7 +549,7 @@ describe("today's work queue (in-memory PGlite)", () => {
     // The packing list reads on the departure now (ADR 20260919-one-idea,
     // slice 23c), so the day's row lands on its section rather than on a
     // route no staffer navigates to.
-    expect(prepAction?.href).toBe(`/shop/${shop.slug}/trips/${reef.id}#packing-list`);
+    expect(prepAction?.href).toBe(`/shop/${shop.slug}/trips/${reef.id}/prep#packing-list`);
 
     const rents = {
       rentsBcd: true,

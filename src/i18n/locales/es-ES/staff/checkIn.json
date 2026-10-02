@@ -130,5 +130,9 @@
     "addPersonAriaLabel": "Añadir a {name} a este barco",
     "handEntryDescription": "El correo es opcional y la tripulación puede recogerlo más tarde. Con el nombre basta para subirlo al barco ahora."
   },
-  "blockerReasonsWithFirst": "{reason} {count, plural, one {Y # motivo más.} other {Y # motivos más.}}"
+  "blockerReasonsWithFirst": "{reason} {count, plural, one {Y # motivo más.} other {Y # motivos más.}}",
+  "notOnCounter": {
+    "text": "Esa salida no está en el mostrador ahora mismo.",
+    "open": "Abrir la salida"
+  }
 }

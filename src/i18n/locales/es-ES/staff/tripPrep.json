@@ -56,6 +56,5 @@
   "supportHeading": "Apoyo en la inmersión",
   "supportToArrange": "{count, plural, one {# buceador de apoyo por organizar} other {# buceadores de apoyo por organizar}}",
   "supportOnTheManifest": "Toda persona que entre al agua va en la lista de embarque, la organice quien la organice.",
-  "cancelledNothingToPack": "La salida está cancelada. No hay nada que preparar.",
-  "readFailed": "El registro de equipo no respondió, así que la lista de preparación no está aquí. Todo lo demás en esta página está al día."
+  "cancelledNothingToPack": "La salida está cancelada. No hay nada que preparar."
 }

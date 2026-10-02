@@ -1,6 +1,10 @@
 {
-  "boardEyebrow": "Calendario",
-  "boardTitle": "Tablero",
+  "boardTitle": "Agenda",
+  "views": {
+    "label": "Vistas de la agenda",
+    "week": "Semana",
+    "crew": "Tripulación"
+  },
   "viewPublicPage": "Ver la página pública",
   "scheduleTrip": "Programar una salida",
   "notices": {

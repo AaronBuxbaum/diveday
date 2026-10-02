@@ -130,12 +130,10 @@ describe("a drawn mark inside a Badge", () => {
 
   it("centres itself", () => {
     const offenders: string[] = [];
-    let marks = 0;
     for (const file of files(SRC_DIR)) {
       const text = readFileSync(file, "utf8");
       for (const badge of text.matchAll(/<Badge\b[^>]*?>([\s\S]*?)<\/Badge>/g)) {
         for (const mark of (badge[1] ?? "").matchAll(MARK_TAG)) {
-          marks++;
           if (/\bself-center\b/.test(mark[0])) continue;
           const at = (badge.index ?? 0) + badge[0].indexOf(mark[0]);
           const line = text.slice(0, at).split("\n").length;
@@ -143,9 +141,12 @@ describe("a drawn mark inside a Badge", () => {
         }
       }
     }
-    // The sweep sees the one mark a caller passes today, so it cannot pass by
-    // matching nothing.
-    expect(marks).toBeGreaterThan(0);
+    // No caller passes a mark today (the Logbook Today dropped the stage
+    // chip's boat, ADR 20261001-logbook), so the sweep proves it can see one
+    // on a sample instead of passing by matching nothing.
+    const sample = '<Badge tone="primary"><SiteMark mark="reef" />Aboard</Badge>';
+    const inner = /<Badge\b[^>]*?>([\s\S]*?)<\/Badge>/.exec(sample)?.[1] ?? "";
+    expect([...inner.matchAll(MARK_TAG)]).toHaveLength(1);
     expect(offenders).toEqual([]);
   });
 });

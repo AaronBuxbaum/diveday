@@ -327,7 +327,7 @@ test.describe("staff", () => {
     // 20260806-one-trip-create-form) — the panel opens with the course
     // preselected and the title placeholder already shaped for it.
     await expect(page).toHaveURL(/\/shop\/blue-mantis\/schedule\/board\?course=[0-9a-f-]{36}$/);
-    await expect(page.getByRole("heading", { level: 1, name: "Board" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Schedule" })).toBeVisible();
     // By name, not label: every board row carries an aria-label naming the
     // departure ("Copy Open Water Diver — …"), and a substring label match
     // sweeps those up alongside the panel's own select.
@@ -662,7 +662,7 @@ test.describe("staff", () => {
   }) => {
     test.setTimeout(30_000);
     await page.goto("/shop/blue-mantis/courses/open-water-diver/edit");
-    const rail = page.getByRole("navigation", { name: "Sections" });
+    const rail = page.getByRole("navigation", { name: "Sections", exact: true });
     await expect(rail.getByRole("link", { name: "Day by day" })).toBeVisible();
 
     // A clean form says nothing at all — the note is a consequence, not a label.
@@ -1079,15 +1079,13 @@ test.describe("the course editor over a wander through the app", () => {
     // **Four routes, and four is the point** — React's Activity holds three, so
     // a three-hop walk never reaches the eviction this test exists to cover.
     //
-    // It used to walk four nav tabs. The bar is three times now and everything
-    // else is reached through the search (ADR 20260919-one-idea, slice 23b),
-    // so the walk goes the way a staffer's would: two of the bar's own times,
-    // then two places the search finds. Today's accessible name carries its
-    // blocked-diver badge, which is why it is matched by prefix.
+    // The walk goes the way a staffer's would: two of the sidebar's sections,
+    // then two places the search finds (ADR 20261001-logbook). Today's
+    // accessible name carries its blocked-diver badge, which is why it is
+    // matched by prefix.
     const goByBar = async (name: RegExp) => {
       await page
-        .locator("header")
-        .getByRole("navigation", { name: "When" })
+        .getByRole("navigation", { name: "Main", exact: true })
         .getByRole("link", { name })
         .click();
     };
@@ -1103,7 +1101,7 @@ test.describe("the course editor over a wander through the app", () => {
       await page.waitForURL((candidate) => !candidate.pathname.endsWith("/edit"));
       await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
     };
-    await goByBar(/^Week$/);
+    await goByBar(/^Schedule$/);
     await settle();
     await goByBar(/^Today/);
     await settle();
@@ -1113,9 +1111,6 @@ test.describe("the course editor over a wander through the app", () => {
     await settle();
 
     // Back the way a person would come back: through the search, not history.
-    // The More menu that used to hold Courses left with the nav of nouns (ADR
-    // 20260919-one-idea, slice 23b), and the search is the door now — which is
-    // still "the way a person would come back", just a different door.
     await page.locator("header").getByRole("button", { name: "Search" }).click();
     await page.getByRole("combobox").fill("Courses");
     await page

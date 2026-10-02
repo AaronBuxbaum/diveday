@@ -12,7 +12,7 @@ afterEach(() => {
 });
 
 const COPY = {
-  settings: "Settings",
+  calendar: "Calendar subscription",
   language: "Language",
   signOut: "Sign out",
   signOutConfirm: "Sign out now?",
@@ -71,17 +71,15 @@ describe("ShopIdentityMenu", () => {
   });
 
   /**
-   * **Settings is the reason this menu is the shop's name** (ADR
-   * 20260919-one-idea, slice 23b). It is the one place with no hour in it, so
-   * the bar's three times have no pill for it and this is its door. It lived
-   * here once and left when the nav's "More" groups arrived — a second door
-   * would have been a duplicate control — and there is no nav now.
+   * **The reader's own calendar feed leads this menu** (ADR 20261001-logbook).
+   * Settings has its own row in the nav now, so a second door here would be a
+   * duplicate control; what stays is about this reader, not the shop.
    */
-  it("opens on Settings for a reader who may see it", async () => {
+  it("opens on the reader's calendar subscription", async () => {
     render(
       <ShopIdentityMenu
         shopName="Blue Mantis Divers"
-        settingsHref="/shop/blue-mantis/settings"
+        calendarHref="/shop/blue-mantis/settings/calendar"
         signOutAction={vi.fn()}
         locale="en-US"
         languages={[{ locale: "en-US", label: "English (US)" }]}
@@ -91,16 +89,13 @@ describe("ShopIdentityMenu", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: /Blue Mantis Divers/ }));
-    expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Calendar subscription" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/settings",
+      "/shop/blue-mantis/settings/calendar",
     );
   });
 
-  it("is absent, not disabled, for a reader who may not open it", async () => {
-    // The same rule every gated place follows (ADR
-    // 20260724-role-gated-surfaces-hide-not-explain): a captain is not shown a
-    // row that refuses them.
+  it("leaves the reader's own half of the menu when no link leads it", async () => {
     render(
       <ShopIdentityMenu
         shopName="Blue Mantis Divers"
@@ -113,7 +108,7 @@ describe("ShopIdentityMenu", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: /Blue Mantis Divers/ }));
-    expect(screen.queryByRole("link", { name: "Settings" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Calendar subscription" })).toBeNull();
     // …and the reader's own half of the menu is still there.
     expect(screen.getByText("Language")).toBeInTheDocument();
   });
@@ -141,7 +136,7 @@ describe("ShopIdentityMenu — the open panel", () => {
     render(
       <ShopIdentityMenu
         shopName="Blue Mantis Divers"
-        settingsHref="/shop/blue-mantis/settings"
+        calendarHref="/shop/blue-mantis/settings/calendar"
         signOutAction={vi.fn()}
         locale="en-US"
         languages={LANGUAGES}
@@ -160,7 +155,7 @@ describe("ShopIdentityMenu — the open panel", () => {
   it("puts Settings, the LANGUAGE label, both languages and Sign out on the tick gutter and no other inset", async () => {
     await openMenu();
     const starts = [
-      screen.getByRole("link", { name: "Settings" }),
+      screen.getByRole("link", { name: "Calendar subscription" }),
       screen.getByText("Language"),
       screen.getByRole("button", { name: "English (US)" }),
       screen.getByRole("button", { name: "Español" }),
@@ -193,7 +188,7 @@ describe("ShopIdentityMenu — the open panel", () => {
     for (const token of MENU_PANEL.split(" ")) expect(panel).toHaveClass(token);
     expect(panel).not.toHaveClass("p-2");
     const rows = [
-      screen.getByRole("link", { name: "Settings" }),
+      screen.getByRole("link", { name: "Calendar subscription" }),
       screen.getByRole("button", { name: "English (US)" }),
       screen.getByRole("button", { name: "Español" }),
       screen.getByRole("button", { name: "Sign out" }),

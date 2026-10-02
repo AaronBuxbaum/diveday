@@ -215,7 +215,7 @@ describe("the conservation line", () => {
  * labels the name and nothing that carries a fact.
  */
 describe("the shop's face", () => {
-  it("dresses the name in the display face and leaves the rating in Geist", () => {
+  it("dresses the name in the display face and leaves the rating in Plex", () => {
     const { container } = render(
       <ShopfrontHero
         name="Blue Mantis Divers"

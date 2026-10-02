@@ -56,7 +56,6 @@
       "other": "Other"
     }
   },
-  "eyebrow": "Operations",
   "notice": {
     "awayDeleted": "Removed.",
     "awaySaved": "Saved. The shop can see those days on the week.",
@@ -83,7 +82,6 @@
     "crewConsentSaved": "Saved. Divers will see your first name on the departures you crew.",
     "crewConsentWithdrawn": "Saved. Your name comes off the departures you crew."
   },
-  "title": "Staffing",
   "week": {
     "approve": "Approve",
     "ariaLabel": "Who’s working",

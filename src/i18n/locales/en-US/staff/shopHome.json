@@ -40,7 +40,7 @@
       "owner": {
         "title": "You’re steering the whole shop",
         "desc": "Today is your work queue: bookings, blockers, and today’s departures in one place.",
-        "tryThis": "Open Board to see this week’s departures."
+        "tryThis": "Open Schedule to see this week’s departures."
       },
       "manager": {
         "title": "Keeping the shop running day to day",
@@ -117,7 +117,6 @@
     "summaryNext": "{count, plural, =0 {Nothing needs you before the {time} leaves the dock.} one {# thing needs you before the {time} leaves the dock.} other {# things need you before the {time} leaves the dock.}}",
     "summaryAfter": "{count, plural, =0 {Nothing is waiting on you.} one {# thing still needs you.} other {# things still need you.}}",
     "quietSentence": "No boats today, and nothing is waiting on you.",
-    "deskLabel": "At the desk",
     "deskPaymentsKind": "Setup",
     "deskPaymentsRow": "Payments aren’t connected, so divers can book and pay at the counter.",
     "deskPaymentsAction": "Open payment settings",
@@ -128,9 +127,7 @@
     "jobs": "{count, plural, one {# job} other {# jobs}}",
     "spotsOpen": "{count, plural, one {# spot open} other {# spots open}}",
     "full": "Full",
-    "ofCapacity": "of {capacity}",
     "until": "until {time}",
-    "stationClear": "Nothing left before {time}.",
     "crewing": "You’re crewing",
     "aboardNamed": "{name} is aboard with {reason}",
     "aboardCount": "{count, plural, one {# diver is aboard with {reason}} other {# divers are aboard with {reason}}}",
@@ -182,14 +179,11 @@
     "firstBookingPaymentDue": "payment due",
     "firstBookingWaiverSigned": "waiver signed",
     "firstBookingWaiverNeeded": "waiver needed",
-    "firstThing": "First thing · {kind}"
+    "readyCount": "{ready} of {booked} ready",
+    "blockedCount": "{count} blocked",
+    "departuresLabel": "Departures",
+    "needsYouLabel": "Needs you"
   },
   "quietAddDeparture": "Add a departure",
-  "quietNextDepartureLabel": "Next departure",
-  "day": {
-    "stripLabel": "The day at a glance: the sun’s arc, the tide, and every departure on the hour it leaves.",
-    "stripLabelNoBoats": "The day at a glance: the sun’s arc over the shop.",
-    "sunriseAndSunset": "Sunrise {sunrise} · sunset {sunset}",
-    "noPlace": "Add the shop’s address in Settings and this reads the real sunrise."
-  }
+  "quietNextDepartureLabel": "Next departure"
 }

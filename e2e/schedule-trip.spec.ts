@@ -167,6 +167,10 @@ test("a multi-day departure is one trip with a meeting day per day", async ({ pa
   await expect(page.getByLabel("Days")).toHaveValue("3");
   await page.getByLabel("Days").fill("2");
   await page.getByRole("button", { name: "Save changes" }).click();
+  // The save's own notice is the wait: reading the field back passes on its
+  // first poll whether or not the write landed, and the `goto` below then
+  // cancels the action in flight.
+  await expect(page.getByRole("status")).toContainText("Changes saved");
   await expect(page.getByLabel("Days")).toHaveValue("2");
 
   // **And the diver is told.** The public page receives the same departure

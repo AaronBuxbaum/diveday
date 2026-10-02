@@ -73,7 +73,7 @@ test.describe("a standing crew clash", () => {
     // The move that manufactures the clash: 06:30 slides to 09:00, straight on
     // top of the drift, and `moveTrip` never looks at the crew.
     await page.goto(BOARD);
-    await page.getByRole("heading", { name: "Board", level: 1 }).waitFor();
+    await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
     await chooseRowAction(page, "Move", twoTank);
     await page.getByLabel("New date").fill(day);
     await page.getByLabel("New departure time").fill("09:00");
@@ -101,7 +101,7 @@ test.describe("a standing crew clash", () => {
     // Monday (`resolveWeekStart`), so this is the week the clash falls in
     // whatever weekday the frozen clock lands on.
     await page.goto(`/shop/${SHOP}/staffing?week=${weekStartOf(day)}`);
-    await page.getByRole("heading", { name: "Staffing", level: 1 }).waitFor();
+    await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
     // Both chips say it, each naming the other boat: a manager fixes this from
     // whichever one they opened. `.first()` because the week renders as a grid
     // above `lg` and as a day list below it, and one of the two is hidden.

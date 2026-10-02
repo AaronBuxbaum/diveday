@@ -36,6 +36,7 @@ import { noticeFromParam, noticeRole, shopPath } from "@/lib/staff-notices";
 import { staffWeek } from "@/lib/staffing-week";
 import { resolveWeekStart, shiftWeek, WEEK_PARAM, weekStartOf } from "@/lib/week-board";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { ScheduleViews } from "../schedule/_components/ScheduleViews";
 import {
   type CredentialRow,
   type RenewalState,
@@ -64,7 +65,7 @@ import {
 // 20260804-instant-navigation.
 export const instant = true;
 
-export const metadata: Metadata = { title: "Staffing — DiveDay" };
+export const metadata: Metadata = { title: "Crew schedule — DiveDay" };
 
 /**
  * A notice query param maps to a message key, never to a sentence — the words
@@ -367,7 +368,19 @@ export default async function StaffingPage({
           one-shot chrome, including the retired `from`/`to` an old bookmark
           may still carry. */}
       <FlashParams params={["from", "to", "notice"]} />
-      <ShopPageHeader eyebrow={t("staffing.eyebrow")} title={t("staffing.title")} />
+      {/* The Crew view of Schedule (ADR 20261001-logbook): the section's name,
+          then the two views, carrying the week across. */}
+      <ShopPageHeader title={t("schedule.boardTitle")} />
+      <ScheduleViews
+        shopSlug={shopSlug}
+        current="crew"
+        week={weekStart}
+        copy={{
+          label: t("schedule.views.label"),
+          week: t("schedule.views.week"),
+          crew: t("schedule.views.crew"),
+        }}
+      />
 
       {pageNotice ? (
         <div className="mb-6">

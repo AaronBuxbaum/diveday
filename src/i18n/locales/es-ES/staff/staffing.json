@@ -56,7 +56,6 @@
       "other": "Otra"
     }
   },
-  "eyebrow": "Operaciones",
   "notice": {
     "awayDeleted": "Quitado.",
     "awaySaved": "Guardado. El centro verá esos días en la semana.",
@@ -83,7 +82,6 @@
     "crewConsentSaved": "Guardado. Los buceadores verán tu nombre en las salidas que tripules.",
     "crewConsentWithdrawn": "Guardado. Tu nombre desaparece de las salidas que tripules."
   },
-  "title": "Personal",
   "week": {
     "approve": "Aprobar",
     "ariaLabel": "Quién trabaja",

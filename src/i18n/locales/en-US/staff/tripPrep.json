@@ -56,6 +56,5 @@
   "supportHeading": "Dive support",
   "supportToArrange": "{count, plural, one {# support diver to arrange} other {# support divers to arrange}}",
   "supportOnTheManifest": "Anyone in the water goes on the manifest, whoever arranged them.",
-  "cancelledNothingToPack": "The departure is cancelled. Nothing to pack.",
-  "readFailed": "The gear register didn’t answer just now, so the packing list isn’t here. Everything else on this page is current."
+  "cancelledNothingToPack": "The departure is cancelled. Nothing to pack."
 }
