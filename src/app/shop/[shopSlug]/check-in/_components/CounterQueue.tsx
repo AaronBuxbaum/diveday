@@ -1,6 +1,5 @@
 import { SettledRows } from "@/components/SettledRows";
 import { LedgerGroup } from "@/components/ui/ledger";
-import { RollingFigure } from "@/components/ui/RollingFigure";
 import type { CheckInQueueRow as QueueRow } from "@/db/check-in";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { CalendarDate } from "@/lib/calendar-date";
@@ -241,15 +240,9 @@ export function CounterQueue({
           // The boat's fact, once, beside the count it belongs to.
           meta={boardedMeta}
           label={
-            // The count rolls on increment, and only its digits do — the words
-            // around it are the same statement (ADR
-            // 20260907-nothing-from-nowhere, decision 3). It replaces a
-            // keyed remount playing `fade-in` over the whole label, which
-            // faded the words too and so said "this line is new" rather than
-            // "this number changed". Reduced motion swaps, as it did.
-            <RollingFigure className="tabular-nums">
+            <span className="tabular-nums">
               {t("checkIn.settledGroup", { count: settled.length })}
-            </RollingFigure>
+            </span>
           }
         >
           {/* **No group opacity** (K-324). The rows recede by their own ink —

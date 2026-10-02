@@ -130,12 +130,6 @@
       "feet": "{value} ft",
       "celsius": "{value}°C",
       "fahrenheit": "{value}°F"
-    },
-    "contrast": {
-      "modeLabel": "Screen contrast",
-      "labelAuto": "Auto",
-      "labelStandard": "Standard",
-      "labelFull": "High"
     }
   },
   "shopChrome": {
@@ -321,26 +315,6 @@
     "diveNumber": "Dive {number}",
     "siteToBeConfirmed": "Site to be confirmed",
     "sitesToBeConfirmed": "{count, plural, one {One dive · site to be confirmed} other {# dives · sites to be confirmed}}",
-    "sky": {
-      "nightLine": "Sunset {sunset}, dark by {dusk}. {moon}, {percent}% lit.",
-      "nightLineNoDusk": "Sunset {sunset}. {moon}, {percent}% lit.",
-      "dayLine": "Sunrise {sunrise}, sunset {sunset}.",
-      "moonrise": "Moon up at {moonrise}.",
-      "nightLineNoMoon": "Sunset {sunset}, dark by {dusk}.",
-      "nightLineNoDuskNoMoon": "Sunset {sunset}.",
-      "noMoon": "No moon during the dive.",
-      "moonset": "Moon sets at {moonset}.",
-      "moon": {
-        "new": "New moon",
-        "waxingCrescent": "Waxing crescent",
-        "firstQuarter": "First quarter",
-        "waxingGibbous": "Waxing gibbous",
-        "full": "Full moon",
-        "waningGibbous": "Waning gibbous",
-        "lastQuarter": "Last quarter",
-        "waningCrescent": "Waning crescent"
-      }
-    },
     "seen": {
       "heading": "Seen here this month",
       "line": "{species} on {seen} of {dives, plural, one {# logged dive} other {# logged dives}} here this month",

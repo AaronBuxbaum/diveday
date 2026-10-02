@@ -10,7 +10,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { AmbientContrastControl, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
 import { HapticsToggle } from "@/components/HapticsToggle";
@@ -32,7 +31,6 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { textareaClassFor } from "@/components/ui/form";
 import { StatusMark, type StatusMarkVariant } from "@/components/ui/StatusMark";
 import { FIGURE_CLASS, SECTION_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
-import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
 import { matchLocale } from "@/i18n/negotiate";
 import {
@@ -1423,7 +1421,6 @@ export function OfflineManifestView() {
   return (
     <main className="boat-mode mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6">
       <PullToRefresh onRefresh={reconcile}>
-        <AmbientGlareDetector />
         <OfflineShellVersionBanner copy={shellVersionCopy} />
         {discardNotice}
         <SkipLink href="#offline-roll-call" label={t("shared.offlineManifest.single.skipLink")} />
@@ -2726,9 +2723,11 @@ export function OfflineManifestView() {
         {/* Per-device controls are secondary to roll call. Keep them in the
           same disclosure on the offline surface as the live manifest's
           "On this phone" group, rather than mixing one toggle into the
-          checkpoint selector and leaving the others at the page foot. */}
+          checkpoint selector. The haptics toggle renders nothing on a phone
+          with no vibration motor, and then the group has nothing in it, so
+          it hides rather than opening onto an empty box. */}
         <section
-          className="mt-8 border-t border-border pt-5 print:hidden"
+          className="mt-8 border-t border-border pt-5 print:hidden has-[[data-phone-prefs]:empty]:hidden"
           aria-labelledby="offline-phone-heading"
         >
           <details id="offline-phone-settings" className="group/offline-phone">
@@ -2741,25 +2740,12 @@ export function OfflineManifestView() {
                 {t("manifest.onThisPhone")}
               </h2>
             </summary>
-            <div className="grid gap-3 pt-4 sm:grid-cols-2">
-              <WaterLockerToggle
-                copy={{ disableToggleLabel: t("shared.waterLocker.disableToggleLabel") }}
-                className="h-full w-full justify-start"
-              />
+            <div data-phone-prefs className="grid gap-3 pt-4 sm:grid-cols-2">
               {/* Renders nothing on a phone with no vibration motor — which is
                 every iPhone (src/components/haptics.ts). */}
               <HapticsToggle
                 copy={{ label: t("shared.haptics.toggleLabel") }}
                 className="h-full w-full justify-start"
-              />
-              <AmbientContrastControl
-                className="h-full w-full rounded-inset border border-border bg-surface-sunken p-3"
-                copy={{
-                  modeLabel: t("shared.boatMode.modeLabel"),
-                  labelAuto: t("shared.boatMode.labelAuto"),
-                  labelStandard: t("shared.boatMode.labelLand"),
-                  labelFull: t("shared.boatMode.labelBoat"),
-                }}
               />
             </div>
           </details>
@@ -2795,17 +2781,6 @@ export function OfflineManifestView() {
          * reconciliation (reconcile(), above) remains the only thing that ever
          * changes `syncStatus`.
          */}
-        <WaterLocker
-          copy={{
-            rainAlt: t("shared.waterLocker.rainAlt"),
-            heading: t("shared.waterLocker.heading"),
-            body: t("shared.waterLocker.body"),
-            holdLine1: t("shared.waterLocker.holdLine1"),
-            holdLine2: t("shared.waterLocker.holdLine2"),
-            unlockingProgress: t.raw("shared.waterLocker.unlockingProgress"),
-            holdToUnlock: t("shared.waterLocker.holdToUnlock"),
-          }}
-        />
         <MilestoneHaptics total={totalDivers} boarded={boarded} />
         {/*
          * Gated on `allBoarded` (the true boarded count), not `rollCallComplete`

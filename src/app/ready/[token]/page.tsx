@@ -73,7 +73,6 @@ import { getShopById, getShopBySlug } from "@/db/shops";
 import { listTripChangeEvents } from "@/db/trip-change-events";
 import { latestTripStage } from "@/db/trip-stages";
 import { getTripWithBooked, listTripDives, tripPublicCrew } from "@/db/trips";
-import { diverContrastCopy } from "@/i18n/contrast-copy";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { DIVER_DIVE_INTENT_KEYS, DIVER_RE_ENTRY_KEYS } from "@/i18n/dive-intent-labels";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
@@ -2194,7 +2193,6 @@ export default async function DiverReadinessPage({
       <ThreadShell
         shopName={detail.shop.name}
         title={detail.trip.title}
-        contrastCopy={diverContrastCopy(t)}
         meta={
           <>
             <p className="mt-1 text-base text-muted">

@@ -390,9 +390,8 @@ export type SeatReadiness = "ready" | "blocked" | "unread";
  * moment of derivation, and the roll-call row that still carries it in words
  * is not what gets photographed. The hull is.
  *
- * Named for the shape `skyReadingFor` already uses in this codebase: a reading
- * is what a thing says when you look at it, with everything that went into it
- * still attached.
+ * Named a reading because a reading is what a thing says when you look at it,
+ * with everything that went into it still attached.
  */
 export type SeatReading = {
   /** What the picture paints. */

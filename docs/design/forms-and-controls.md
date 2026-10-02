@@ -703,9 +703,8 @@ import { buttonClass } from "@/components/ui/button";
 Variants: `primary`, `secondary`, `outline` (`secondary` with the `--border-strong` edge that holds
 3:1 against the page's ground, for the public pages; staff keep the hairline), `ghost`, `danger`,
 `danger-ghost` (the danger hue without the box, for a destructive row in a quiet menu),
-`danger-solid`, `link` (reads as inline text but still claims a full target), `sky` (a translucent
-chip for a control standing on a `SkyBand`), and `bare` (shape and target only, for a control whose
-fill is the state of its row). Sizes: `md` (the
+`danger-solid`, `link` (reads as inline text but still claims a full target), and `bare` (shape and
+target only, for a control whose fill is the state of its row). Sizes: `md` (the
 default, 48px with a 16px label), `sm` (44px with a 14px label), `boat` (56px with a 16px
 semibold label), `icon` (a 48px square), `icon-sm` (a 44px square, for a glyph in a row of `sm`
 controls), and `mark` (a 56px circle, for the roll call). The corner is the control rung,

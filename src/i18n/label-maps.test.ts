@@ -23,7 +23,6 @@ import {
   type ReadinessBlockerParams,
 } from "@/lib/readiness";
 import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
-import { MOON_PHASES, type NightSky } from "@/lib/sky";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { ROLL_CALL_GAP_KINDS, type TodaySeason } from "@/lib/today";
 import { buddyAlertText } from "./buddy-labels";
@@ -84,7 +83,6 @@ import { CHECKLIST_DETAIL_KEYS } from "./readiness-summary-labels";
 import { reminderActionText } from "./reminder-labels";
 import { rentalItemLabel } from "./rental-labels";
 import { DEFAULT_DIVER_LOCALE, DIVER_LOCALES, type DiverLocale } from "./settings";
-import { nightSkyLine } from "./sky-labels";
 import { staffTranslator } from "./staff-messages";
 import { STAFF_ROLE_LABEL_KEYS, staffRoleLabel } from "./staff-role-labels";
 import { THREAD_STEP_STATE_KEYS, THREAD_STEP_TITLE_KEYS } from "./thread-labels";
@@ -361,16 +359,6 @@ const BLOCKER_PARAMS: Partial<Record<ReadinessBlockerCode, ReadinessBlockerParam
 
 /** Every fact a next-dive reason sentence can name, so one object covers all five. */
 const NEXT_DIVE_FACTS = { site: "Blue Hole", course: "Advanced Open Water", lens: "drift" };
-
-/** A sky with a moon up and setting inside the window, so the phase is named. */
-const MOONLIT_SKY: Omit<NightSky, "phase"> = {
-  sunsetAt: new Date("2026-06-01T23:42:00Z"),
-  civilDuskAt: new Date("2026-06-02T00:09:00Z"),
-  illuminatedPercent: 62,
-  moonOverDive: "sets",
-  moonriseAt: null,
-  moonsetAt: new Date("2026-06-02T03:15:00Z"),
-};
 
 const CASES: readonly LabelMapCase[] = [
   {
@@ -688,17 +676,6 @@ const CASES: readonly LabelMapCase[] = [
     // register and the shop catalog both index this one map.
     rows: codeRows(RENTAL_ITEM_KINDS, (locale, kind) =>
       rentalItemLabel(staffTranslator(locale), kind),
-    ),
-  },
-  {
-    module: "sky-labels.ts",
-    map: "MOON_PHASE_KEYS",
-    rows: codeRows(MOON_PHASES, (locale, phase) =>
-      nightSkyLine(
-        diverTranslator(locale),
-        { ...MOONLIT_SKY, phase },
-        { sunset: "7:42 PM", dusk: "8:09 PM", moonset: "11:15 PM" },
-      ),
     ),
   },
   {

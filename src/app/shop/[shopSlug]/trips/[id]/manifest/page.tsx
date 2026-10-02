@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AmbientContrastControl, AmbientGlareDetector } from "@/components/AmbientGlareDetector";
 import { EmergencyReferenceCard } from "@/components/EmergencyReferenceCard";
 import { HapticsToggle } from "@/components/HapticsToggle";
 import { MilestoneHaptics } from "@/components/MilestoneHaptics";
@@ -13,7 +12,6 @@ import { PushOptIn, type PushOptInCopy } from "@/components/PushOptIn";
 import { SkipLink } from "@/components/SkipLink";
 import { SubSurfaceRipple } from "@/components/SubSurfaceRipple";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
-import { WaterLocker, WaterLockerToggle } from "@/components/WaterLocker";
 import { listTripBuddyTeams } from "@/db/buddy-pairs";
 import { listDeskEventsSince } from "@/db/desk-events";
 import { diveIntentTallyForTrip } from "@/db/dive-intent";
@@ -675,7 +673,6 @@ export default async function TripManifestPage({
 
   return (
     <div className="boat-mode">
-      <AmbientGlareDetector />
       <SkipLink
         href={scopedHash(idPrefix, "roll-call-list")}
         label={t("manifest.skipToRollCall")}
@@ -1152,28 +1149,14 @@ export default async function TripManifestPage({
               />
             </div>
 
-            {/* These are all *this device* preferences, not checkpoint
-              destinations. They share one responsive grid so their labels and
-              touch targets stay together on a phone and align at desk width. */}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <WaterLockerToggle
-                copy={{ disableToggleLabel: t("shared.waterLocker.disableToggleLabel") }}
-                className="h-full w-full justify-start"
-              />
-              {/* Renders nothing on a phone with no vibration motor — which is
-                every iPhone (src/components/haptics.ts). */}
+            {/* A *this device* preference, not a checkpoint destination. It
+              renders nothing on a phone with no vibration motor — which is
+              every iPhone (src/components/haptics.ts) — and the empty guard
+              keeps that from leaving a blank cell behind. */}
+            <div className="grid gap-3 empty:hidden sm:grid-cols-2">
               <HapticsToggle
                 copy={{ label: t("shared.haptics.toggleLabel") }}
                 className="h-full w-full justify-start"
-              />
-              <AmbientContrastControl
-                className="h-full w-full rounded-inset border border-border bg-surface-sunken p-3"
-                copy={{
-                  modeLabel: t("shared.boatMode.modeLabel"),
-                  labelAuto: t("shared.boatMode.labelAuto"),
-                  labelStandard: t("shared.boatMode.labelLand"),
-                  labelFull: t("shared.boatMode.labelBoat"),
-                }}
               />
             </div>
           </div>
@@ -1193,17 +1176,6 @@ export default async function TripManifestPage({
         />
       </ManifestMoreMenu>
 
-      <WaterLocker
-        copy={{
-          rainAlt: t("shared.waterLocker.rainAlt"),
-          heading: t("shared.waterLocker.heading"),
-          body: t("shared.waterLocker.body"),
-          holdLine1: t("shared.waterLocker.holdLine1"),
-          holdLine2: t("shared.waterLocker.holdLine2"),
-          unlockingProgress: t.raw("shared.waterLocker.unlockingProgress"),
-          holdToUnlock: t("shared.waterLocker.holdToUnlock"),
-        }}
-      />
       {/* Keyed by trip id + checkpoint: each holds a `prevPct`/`isInitial`
           (MilestoneHaptics) or `prevComplete` (SubSurfaceRipple) ref that
           assumes a monotonic same-trip-same-checkpoint lifecycle. Rendered

@@ -760,8 +760,6 @@ export default async function TripDetailPage({
             nextOpensOnRule={pitchOpensOnDoor(diveBriefings, publicCrew)}
             sightings={seenBySite}
             shop={shop}
-            startsAt={trip.startsAt}
-            endsAt={trip.endsAt}
             locale={locale}
             profile={{
               rhythm: shop,

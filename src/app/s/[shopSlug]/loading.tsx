@@ -37,10 +37,9 @@ import {
  * 20260804-instant-navigation), so it cannot know whether this shop has a
  * cover photograph, lenses, or a month either side. It draws the demo shop,
  * which has all three. A shop with no photograph, the shape of every shop
- * until it uploads one, loads a band about 436px shorter at 1280 than this
- * skeleton draws (`storefront-sky`: 517px, a 140px sky, and that minted shop
- * has no rating line or badge chips either), so its week rises when it lands;
- * the old text skeleton drew that band about 157px too short. A shop with no
+ * until it uploads one, loads a band far shorter than this skeleton draws (a
+ * bare name, often with no rating line or badge chips either), so its week
+ * rises when it lands. A shop with no
  * lenses loads no pill row, and one with no month either side no month row:
  * 60px each, both drawn here for every shop.
  */

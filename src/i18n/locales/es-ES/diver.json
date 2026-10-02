@@ -130,12 +130,6 @@
       "feet": "{value} ft",
       "celsius": "{value} °C",
       "fahrenheit": "{value} °F"
-    },
-    "contrast": {
-      "modeLabel": "Contraste de la pantalla",
-      "labelAuto": "Automático",
-      "labelStandard": "Estándar",
-      "labelFull": "Alto"
     }
   },
   "shopChrome": {
@@ -321,26 +315,6 @@
     "diveNumber": "Inmersión {number}",
     "siteToBeConfirmed": "Sitio por confirmar",
     "sitesToBeConfirmed": "{count, plural, one {Una inmersión · sitio por confirmar} other {# inmersiones · sitios por confirmar}}",
-    "sky": {
-      "nightLine": "Puesta de sol a las {sunset}, oscuridad total a las {dusk}. {moon}, con un {percent} % de luz.",
-      "nightLineNoDusk": "Puesta de sol a las {sunset}. {moon}, con un {percent} % de luz.",
-      "dayLine": "Amanecer a las {sunrise}, puesta de sol a las {sunset}.",
-      "moonrise": "La luna sale a las {moonrise}.",
-      "nightLineNoMoon": "Puesta de sol a las {sunset}, oscuridad total a las {dusk}.",
-      "nightLineNoDuskNoMoon": "Puesta de sol a las {sunset}.",
-      "noMoon": "Sin luna durante la inmersión.",
-      "moonset": "La luna se pone a las {moonset}.",
-      "moon": {
-        "new": "Luna nueva",
-        "waxingCrescent": "Luna creciente",
-        "firstQuarter": "Cuarto creciente",
-        "waxingGibbous": "Luna gibosa creciente",
-        "full": "Luna llena",
-        "waningGibbous": "Luna gibosa menguante",
-        "lastQuarter": "Cuarto menguante",
-        "waningCrescent": "Luna menguante"
-      }
-    },
     "seen": {
       "heading": "Visto aquí este mes",
       "line": "{species} en {seen} de {dives, plural, one {# inmersión registrada} other {# inmersiones registradas}} aquí este mes",

@@ -1683,19 +1683,6 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     expect(within(grid).getByText("Blocked when saved")).toBeInTheDocument();
   });
 
-  it("ports the WaterLocker disable toggle onto the offline surface", async () => {
-    searchParams = new URLSearchParams({ trip: "trip-1" });
-    vi.mocked(loadOfflineManifest).mockResolvedValue(richEnvelope("trip-1"));
-    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
-
-    render(<OfflineManifestView />);
-    await screen.findByRole("heading", { name: "Two-Tank Reef" });
-
-    expect(
-      await screen.findByRole("switch", { name: "Disable spray guard on this device" }),
-    ).toBeInTheDocument();
-  });
-
   it("keeps all device controls in the collapsed On this phone group", async () => {
     searchParams = new URLSearchParams({ trip: "trip-1" });
     vi.mocked(loadOfflineManifest).mockResolvedValue(richEnvelope("trip-1"));
@@ -1708,19 +1695,6 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
     const disclosure = heading.closest("details");
     expect(disclosure).not.toBeNull();
     expect((disclosure as HTMLDetailsElement).open).toBe(false);
-
-    const deviceGroup = within(disclosure as HTMLElement);
-    expect(
-      await deviceGroup.findByRole("switch", { name: "Disable spray guard on this device" }),
-    ).toBeInTheDocument();
-    expect(deviceGroup.getByText("Boat mode", { selector: "legend" })).toBeInTheDocument();
-
-    const checkpointNav = screen.getByRole("navigation", { name: "Roll-call checkpoint" });
-    expect(
-      within(checkpointNav).queryByRole("checkbox", {
-        name: "Disable spray guard on this device",
-      }),
-    ).not.toBeInTheDocument();
   });
 });
 

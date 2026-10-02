@@ -110,7 +110,7 @@ describe("the eyebrow's line box", () => {
    * `<p>` can take the line.
    * Introducing the wrapper put those on the nested link, where grid placement
    * does nothing and `print:hidden` leaves a 16px band of nothing on paper
-   * (`sourcery-ai` on #1943). Colour is the exception, and already has `onSky`.
+   * (`sourcery-ai` on #1943).
    */
   it("gives the caller's layout classes to the wrapper, which is what the parent lays out", () => {
     render(

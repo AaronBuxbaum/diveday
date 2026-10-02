@@ -6,7 +6,6 @@ import {
   formatDateTimeTz,
   formatDateWithYear,
   formatDayParts,
-  formatHourShort,
   formatMonthDay,
   formatOrdinal,
   formatRelativeDay,
@@ -131,12 +130,11 @@ describe("a date or a time is one unit on the line", () => {
     );
   });
 
-  it("binds a weekday's time, an hour's day period and a month's day the same way", () => {
-    // The recap's fly-safe line, a tick on the day strip, the season start.
+  it("binds a weekday's time and a month's day the same way", () => {
+    // The recap's fly-safe line and the season start.
     // Each still carried Intl's breakable space after the rule said none did.
     expect(formatWeekdayTime(departs, "en-US", zone)).toBe(`Tuesday${NB}7:05${NB}AM`);
     expect(formatWeekdayTime(departs, "es-ES", zone)).toBe("martes, 7:05");
-    expect(formatHourShort(6, "en-US")).toBe(`6${NB}AM`);
     expect(formatMonthDay(7, 21, "en-US")).toBe(`July${NB}21`);
   });
 
@@ -410,23 +408,5 @@ describe("formatOrdinal", () => {
   it("formats Spanish ordinals correctly", () => {
     expect(formatOrdinal(1, "es-ES")).toBe("1.º");
     expect(formatOrdinal(4, "es-ES")).toBe("4.º");
-  });
-});
-
-describe("formatHourShort", () => {
-  /**
-   * The hour under a tick on the day strip. `formatHourOfDay` prints "6:00 AM",
-   * and four of those side by side touch at 390 — the minute on a tick is a
-   * digit nobody reads.
-   */
-  it("says the hour and no minute", () => {
-    expect(formatHourShort(6, "en-US")).toBe("6\u00A0AM");
-    expect(formatHourShort(12, "en-US")).toBe("12\u00A0PM");
-    expect(formatHourShort(18, "en-US")).toBe("6\u00A0PM");
-    expect(formatHourShort(0, "en-US")).toBe("12\u00A0AM");
-  });
-
-  it("follows the reader's locale to a 24-hour clock", () => {
-    expect(formatHourShort(18, "es-ES")).toMatch(/^18/);
   });
 });

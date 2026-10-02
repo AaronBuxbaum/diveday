@@ -33,7 +33,6 @@ import {
   saveWaiverDraft,
   staleWaiverRecordForToken,
 } from "@/db/waivers";
-import { diverContrastCopy } from "@/i18n/contrast-copy";
 import { fill, pluralForm } from "@/i18n/fill";
 import { diverGuardianRelationshipOptions } from "@/i18n/guardian-labels";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
@@ -987,7 +986,6 @@ export default async function WaiverPage({
     <ThreadShell
       shopName={shopName}
       title={t("waiver.beforeDockTitle")}
-      contrastCopy={diverContrastCopy(t)}
       meta={
         <>
           <p className="mt-2 text-base text-muted">{t("waiver.beforeDockDescription")}</p>

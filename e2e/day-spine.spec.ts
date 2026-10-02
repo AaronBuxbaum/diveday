@@ -46,7 +46,6 @@ test("the day is named, said once, and followed by its departures and what needs
 
   await expect(page.getByRole("heading", { level: 1, name: STAFF_DAY_HEADING })).toBeVisible();
   await expect(page.getByText(/^(Mon|Tues|Wednes|Thurs|Fri|Satur|Sun)day$/)).toBeVisible();
-  await expect(page.locator(".sky")).toHaveCount(0);
   await expect(page.getByRole("img", { name: /The day at a glance/ })).toHaveCount(0);
 
   // The day in one line, said once.

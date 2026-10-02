@@ -137,7 +137,7 @@ const SECONDARY_FACE =
  * wash.** The gear return's "Service concern" is `ghost` until it is opened
  * and `secondary` once it is, and it moved its label 1px and grew its box 2px
  * as the note opened; the team card's Disable (`danger-ghost`) and Enable
- * (`secondary`) are one control either side of a submit. `link`, `sky` and
+ * (`secondary`) are one control either side of a submit. `link` and
  * `bare` swap with nothing bordered and are left as they are. A flush quiet
  * button takes the pixel back from its padding (`FLUSH_HOVER_FILL`), so its
  * label still sits on the column it is flushed to.
@@ -205,22 +205,6 @@ const variants = {
     "border border-transparent bg-danger text-primary-foreground not-disabled:not-has-[input:disabled]:hover:bg-danger/90",
   /** Reads as inline text, but still claims a full touch target. */
   link: "text-primary not-disabled:not-has-[input:disabled]:hover:underline",
-  /**
-   * **A control standing on the sky** — a `SkyBand`'s own chip.
-   *
-   * The band's ink does not follow the reader's colour scheme, because a sky is
-   * dark in both (`--sky-ink` is white at every stop). A control that keeps its
-   * own hue there goes illegible: the trip masthead's "Add diver" shipped in
-   * `link`'s accent and measured **1.76:1** against `--sky-day` in the captured
-   * pixels — under the 3:1 a graphical object owes, let alone the 4.5:1 of the
-   * word it is. A translucent white chip is the answer the day header's print
-   * door already found; this is that decision named once instead of twice.
-   *
-   * White at 18% over every gradient stop keeps the chip itself a visible
-   * object, and the label on it is the band's own ink, so it can never drift
-   * from the sentence beside it.
-   */
-  sky: "bg-white/18 text-(--sky-ink) backdrop-blur-sm not-disabled:not-has-[input:disabled]:hover:bg-white/28",
   /**
    * Shape and touch target only — no colour of its own.
    *
@@ -541,7 +525,7 @@ const HOVER_FILL: ReadonlySet<ButtonVariant> = new Set(["ghost", "danger-ghost"]
  * no label for `flush` to line up: the type refuses `flush` on them, and at
  * runtime it changes nothing.
  */
-type PaintedAtRest = "primary" | "secondary" | "outline" | "danger" | "danger-solid" | "sky";
+type PaintedAtRest = "primary" | "secondary" | "outline" | "danger" | "danger-solid";
 
 /**
  * The horizontal padding a button renders with. A size that carries none — the

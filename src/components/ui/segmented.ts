@@ -11,14 +11,6 @@
  * embed page's look all take it. **A `rounded-inset` segmented track or its
  * segment is never spelled at a call site**; if one looks wrong, fix it here.
  *
- * **One segmented group is a capsule and does not take this recipe:** the
- * glare picker in `AmbientGlareDetector.tsx`, a `rounded-full` track holding
- * `rounded-full` segments. Its corners nest without a derivation, because a
- * capsule inside a capsule is concentric at any inset. It keeps its own
- * selected ink (`text-foreground`) and has no hover fill (#1975), and
- * `segmented.test.ts`'s scan cannot see it, by design: the scan looks for
- * the `rounded-inset` track.
- *
  * What stays with the caller is what differs between them: the target size
  * (`SegmentedControl`'s 44px and boat 56px, the party picker's square 44px
  * numerals), the width behaviour (`fill`, `w-fit`, wrapping), and what focus
