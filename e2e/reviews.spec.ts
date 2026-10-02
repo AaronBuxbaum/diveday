@@ -312,9 +312,7 @@ test("a weekend's held reviews can be cleared in one pass, not one button at a t
   // from two different pages. Document-relative, so a scroll before the
   // measurement cannot skew it either. The waits above are the deterministic
   // gate (`pnpm check:e2e-hygiene` refuses the timing guess).
-  const titleEl = await page
-    .getByRole("heading", { level: 1, name: "What divers said" })
-    .elementHandle();
+  const titleEl = await page.getByRole("heading", { level: 1, name: "Inbox" }).elementHandle();
   const outcomeEl = await outcome.elementHandle();
   // A known review row, not "the first `<li>` on the page" — the staff nav is
   // a list too, and its items sit above everything here.
@@ -375,7 +373,7 @@ test.describe("as owner, the worklist leads", () => {
    */
   test("says how the shop is rated exactly once", async ({ page }) => {
     await page.goto("/shop/blue-mantis/reviews");
-    await page.getByRole("heading", { level: 1, name: "What divers said" }).waitFor();
+    await page.getByRole("heading", { level: 1, name: "Inbox" }).waitFor();
     await expect(page.getByText(/average across \d+ published review/)).toHaveCount(1);
     // The tiles, and the region that grouped them, are gone.
     await expect(page.getByRole("region", { name: "Rating overview" })).toHaveCount(0);

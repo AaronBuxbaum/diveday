@@ -28,8 +28,8 @@ describe("the promos skeleton", () => {
     // No card and no field grid: the fields wait behind the disclosure.
     expect(pulse.querySelector(".rounded-panel")).toBeNull();
     expect(pulse.querySelector(".grid")).toBeNull();
-    // One md button's 48px, straight after the header.
-    const door = pulse.querySelector(":scope > .mb-8")?.nextElementSibling;
+    // One md button's 48px, straight after the header and Money's tabs.
+    const door = pulse.querySelector(":scope > .mb-8")?.nextElementSibling?.nextElementSibling;
     expect(door).toHaveClass("mt-8", "h-12");
   });
 
@@ -49,8 +49,7 @@ describe("the promos skeleton", () => {
   });
 
   /**
-   * The loaded header wraps: "Discounts a / diver can type" is two lines at
-   * 390, and the description ("A code works across your whole schedule,
+   * The loaded header is "Money", one line at every width, and the description ("A code works across your whole schedule,
    * unlike the one-trip deal you send from / a departure.") is two at 390 and
    * at 1280. One bar of each dropped the page 68px at 390 and 24px at 1280.
    */
@@ -60,7 +59,7 @@ describe("the promos skeleton", () => {
       [...(header?.querySelectorAll(`.${height}`) ?? [])].map((bar) =>
         bar.classList.contains("sm:hidden") ? "phone" : "both",
       );
-    expect(bars("h-11")).toEqual(["both", "phone"]);
+    expect(bars("h-11")).toEqual(["both"]);
     expect(bars("h-6")).toEqual(["both", "both"]);
   });
 

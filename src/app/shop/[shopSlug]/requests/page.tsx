@@ -11,8 +11,8 @@ import { formatCalendarDate } from "@/lib/calendar-date";
 import { addDepartureHref, groupDateRequests } from "@/lib/date-requests";
 import { adviseRequests, departureShapeFor } from "@/lib/request-advisor";
 import { requireShopSurface } from "@/lib/session";
-import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { RequestDayGroup, requestAdviceLines } from "./_components/RequestDayGroup";
 import { RequestLedgerRow } from "./_components/RequestLedgerRow";
 import { RequestReferenceRow } from "./_components/RequestReferenceRow";
@@ -80,7 +80,7 @@ export default async function RequestsPage({
   // them answer as the shop, and has since 2026-09-10. The gate was deleted
   // rather than relaxed, the way the inbox's was, so there is nothing left here
   // to drift out of step with it.
-  const { db, shop } = await requireShopSurface(shopSlug);
+  const { session, db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const timezone = shop.timezone;
   const t = staffTranslator(locale);
@@ -114,9 +114,15 @@ export default async function RequestsPage({
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
-        eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.requests)}
-        title={t("requests.title")}
+        title={t("shared.shopSections.inbox")}
         description={t("requests.description")}
+      />
+      <StaffSectionTabs
+        shopSlug={shopSlug}
+        section="inbox"
+        current="requests"
+        roles={session.user.roles}
+        t={t}
       />
 
       {logged ? (

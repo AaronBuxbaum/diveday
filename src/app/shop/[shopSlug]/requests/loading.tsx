@@ -1,5 +1,6 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
+import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 
 /**
  * Body-shaped skeleton for Requests (design principle 1): a day's group label
@@ -34,10 +35,12 @@ export default function RequestsLoading() {
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton
-          titleWidth="w-72 max-w-full"
+          eyebrow={false}
+          titleWidth="w-32"
           description
           descriptionWidth="w-64 max-w-full"
         />
+        <StaffSectionTabsSkeleton section="inbox" />
         <div className="space-y-10">
           {[2, 1].map((rows) => (
             <div key={rows}>

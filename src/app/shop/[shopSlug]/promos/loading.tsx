@@ -1,5 +1,6 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
+import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 
 /**
  * Body-shaped skeleton for Promos (design principle 1) — the discount-code
@@ -28,11 +29,13 @@ export default function PromosLoading() {
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton
-          titleLines={{ base: 2, sm: 1 }}
+          eyebrow={false}
+          titleWidth="w-32"
           description
           descriptionWidth="w-80 max-w-full"
           descriptionLines={2}
         />
+        <StaffSectionTabsSkeleton section="money" />
         <div className="mt-8 h-12 w-36 rounded-lg bg-surface-sunken" />
         <div className="mt-10 space-y-8">
           {[0, 1].map((shelf) => (

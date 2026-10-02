@@ -17,7 +17,7 @@ test.describe("owner", () => {
   }) => {
     await page.goto("/shop/blue-mantis/reports");
 
-    await expect(page.getByRole("heading", { level: 1, name: "How’s your month" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Money" })).toBeVisible();
 
     // The five headline figures the buyer asks about — unboxed since slice 9f
     // of ADR 20260827-the-shops-shelves, which is why these are exact matches:

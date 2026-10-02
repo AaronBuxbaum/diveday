@@ -44,9 +44,9 @@ import {
 } from "@/lib/reporting";
 import { requireShopSurface } from "@/lib/session";
 import { summarizeShopYear } from "@/lib/shop-year";
-import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { shopPath } from "@/lib/staff-notices";
 import { shopMonthBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { DepartureLedger, type DepartureRow } from "./_components/DepartureLedger";
 import { type MonthFigure, MonthFigures } from "./_components/MonthFigures";
 import { ReportRangeTabs } from "./_components/ReportRangeTabs";
@@ -113,7 +113,7 @@ export default async function ReportsPage({
   // 20260724-role-gated-surfaces-hide-not-explain); this landing is for
   // everyone who arrived by bookmark, deep link, or a role that changed under
   // them.
-  const { db, shop } = await requireShopSurface(shopSlug, {
+  const { session, db, shop } = await requireShopSurface(shopSlug, {
     allow: canPersonViewShopReports,
     refusal: { notice: "reports-not-authorized" },
   });
@@ -141,8 +141,7 @@ export default async function ReportsPage({
     return (
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
         <ShopPageHeader
-          eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.reports)}
-          title={t("reports.year.title")}
+          title={t("shared.shopSections.money")}
           description={
             year.sinceMonth
               ? t("reports.year.rangeSince", {
@@ -162,6 +161,13 @@ export default async function ReportsPage({
               </a>
             ) : undefined
           }
+        />
+        <StaffSectionTabs
+          shopSlug={shopSlug}
+          section="money"
+          current="reports"
+          roles={session.user.roles}
+          t={t}
         />
         <ReportRangeTabs shopSlug={shopSlug} range="year" t={t} className="mb-8" />
         <YearReport
@@ -518,9 +524,13 @@ export default async function ReportsPage({
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <ShopPageHeader
-        eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.reports)}
-        title={t("reports.title")}
+      <ShopPageHeader title={t("shared.shopSections.money")} />
+      <StaffSectionTabs
+        shopSlug={shopSlug}
+        section="money"
+        current="reports"
+        roles={session.user.roles}
+        t={t}
       />
 
       <ReportRangeTabs shopSlug={shopSlug} range="month" t={t} className="mb-6" />

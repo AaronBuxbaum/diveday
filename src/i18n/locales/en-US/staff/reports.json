@@ -1,5 +1,4 @@
 {
-  "title": "How’s your month",
   "soFar": "so far",
   "chooseMonth": "Choose month",
   "previousMonth": "Previous month",
@@ -52,7 +51,6 @@
   },
   "partnerArrivals": "{count, plural, one {# seat} other {# seats}} arrived on a partner link",
   "year": {
-    "title": "How’s your year",
     "rangeLabel": "Choose a range",
     "thisMonth": "This month",
     "thisYear": "This year",

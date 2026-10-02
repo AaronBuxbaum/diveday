@@ -467,19 +467,17 @@ to *look for* anything. Content leads; chrome defers. Concretely:
   the first. When tempted to add a control or a card, first ask whether layout could make it
   unnecessary.
 - **A page confirms you arrived, in the word you tapped.** The first thing anybody looks for on
-  arrival is that they got where they meant to go — so a staff surface's eyebrow is its
-  *destination's* name, read from `STAFF_DESTINATION_LABEL_KEYS` in
-  `src/lib/staff-destinations.ts` so it is literally the string the nav tab, the More menu, the
-  phone dock and ⌘K all render. Never a second copy of that word in the page's own bundle, and
-  never the nav *group* it belongs to: `/reports` said `OWNER` above "How's your month", so
-  neither line said "Reports".
-  The `<h1>` keeps its voice. "How's your month" and "What divers said" are better writing than
-  the tab labels and they stay; the eyebrow is what lets a page say both things at once, at no
-  cost in height. Where a headline is genuinely a *state* rather than a name — Close-out's "A few
-  things are still open", Today's greeting — the eyebrow is the only stable name the page has, so
-  it is not optional there. And where the headline is a stable name of its own, it goes in
-  `STAFF_DESTINATION_TITLE_KEYS` so ⌘K finds the page by it: a staffer who thinks of Reports as
-  "how's my month" and types that used to get nothing back (issue #824).
+  arrival is that they got where they meant to go. Since the Logbook restart (ADR
+  20261001-logbook) the sidebar names the section, so a page's `<h1>` is that section's name, and
+  where a section has parts — Schedule's Week and Crew, Inbox's Messages, Date requests and
+  Reviews, Money's Orders, Discounts and Reports — they are tabs under the title, each a page of
+  its own carrying `aria-current`. Inbox's and Money's tabs come from `STAFF_SECTION_TABS` in
+  `src/lib/staff-destinations.ts` and read `STAFF_DESTINATION_LABEL_KEYS`, so a tab is literally
+  the string ⌘K renders. Never a second copy of that word in the page's own bundle. Where a page
+  still names itself something other than its nav word ("Counter check-in"), or where every page
+  in a section wears the section's name, the name goes in `STAFF_DESTINATION_TITLE_KEYS` so ⌘K
+  finds the page by what it says on screen: a staffer who typed the headline used to get nothing
+  back (issue #824).
 - **A surface below depth 1 names its parent and links to it.** Through the page's eyebrow where it
   has one — `ShopPageHeader`'s `eyebrowHref`, or `EyebrowBackLink` for a header that is not that
   component — and through an explicit "← Parent" link only where the page has no eyebrow to spend

@@ -46,7 +46,7 @@ test.describe("demo billing history", () => {
     await expect(page.getByRole("button", { name: "Refund" })).toHaveCount(0);
 
     await page.goto("/shop/blue-mantis/orders");
-    await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
+    await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
     await ledgerRows(page).first().getByRole("link").first().click();
     await page.waitForURL(/\/orders\/[0-9a-f-]{36}/);
     const orderRefund = page.getByRole("button", { name: /Refund|Void|Refresh/ }).first();
@@ -61,7 +61,7 @@ test.describe("demo billing history", () => {
     // the only exit, and the date the index showed disappeared on the way in —
     // on the one screen a refund argument turns on.
     await page.goto("/shop/blue-mantis/orders");
-    await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
+    await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
     // The date is the *group's* now, not the row's, which is the whole point of
     // the ledger — so this is where it has to be read from. Today's group wears
     // it after a "Today · " prefix; every other day is the bare date.
@@ -92,7 +92,7 @@ test.describe("demo billing history", () => {
     page,
   }) => {
     await page.goto("/shop/blue-mantis/orders");
-    await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
+    await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
 
     const rows = ledgerRows(page);
     await expect(rows.first()).toBeVisible();
@@ -136,7 +136,7 @@ test.describe("demo billing history", () => {
     tag: READ_ONLY,
   }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/orders");
-    await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
+    await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
     // Apply-on-change means the select is the submit, so nothing may be
     // selected until the handler is live — the toolbar says when it is.
     await page.locator('#orders-search[data-hydrated="true"]').waitFor();
@@ -169,7 +169,7 @@ test.describe("demo billing history", () => {
    */
   test("no row repeats its day group's date", { tag: READ_ONLY }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/orders");
-    await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
+    await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
     await expect(ledgerRows(page).first()).toBeVisible();
 
     const heading = ((await dayHeadings(page).first().textContent()) ?? "").trim();
@@ -188,7 +188,7 @@ test.describe("demo billing history", () => {
 
   test("an exceptional status wears the row's one pill", { tag: READ_ONLY }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/orders?status=open&range=all");
-    await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
+    await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
 
     const row = ledgerRows(page)
       // The ledger reads the canonical status word, not the order *detail*
@@ -236,7 +236,7 @@ test.describe("demo billing history", () => {
   /** A filter has to survive paging, or page 2 quietly shows the unfiltered set. */
   test("paging keeps the active filter", { tag: READ_ONLY }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/orders?status=paid");
-    await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
+    await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
     const pager = page.getByRole("navigation", { name: "Pages" });
     // Not "skip if there's nothing to page": the seeded demo carries a
     // trailing quarter of invoices and the paid slice is far past one page
@@ -274,7 +274,7 @@ test.describe("no connected payment account", () => {
     tag: READ_ONLY,
   }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/orders");
-    await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
+    await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
 
     await expect(page.getByRole("link", { name: "New order" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Connect payments" }).first()).toHaveAttribute(
@@ -289,7 +289,7 @@ test.describe("no connected payment account", () => {
     // Hiding the link is a courtesy; the page itself is the gate. A bookmark,
     // a deep link, or a shop that disconnected mid-session still gets here.
     await page.goto("/shop/blue-mantis/orders/new");
-    await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
+    await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
     // Not a URL assertion: FlashParams strips `?notice=payment-not-connected`
     // on mount, so the rendered banner is what proves the code was handled —
     // an unhandled code renders nothing and fails here.

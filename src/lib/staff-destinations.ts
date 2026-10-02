@@ -162,9 +162,10 @@ export type StaffDestinationTitles = Partial<Record<StaffDestinationId, string>>
  * beside `shared.shopNavLinks.reviews` "Reviews", two strings one edit apart
  * from disagreeing. Those duplicates are gone; this is the join.
  *
- * The `<h1>` is deliberately not in here. "How's your month" is the product's
- * voice and better writing than "Reports" (docs/design/brand.md); the eyebrow
- * is what confirms you arrived where you meant to, and a page gets to say both.
+ * The `<h1>` is deliberately not in here. In a tabbed section (Inbox, Money)
+ * every page's `<h1>` is the section's name and this word is its tab (ADR
+ * 20261001-logbook); elsewhere a page may still name itself in the product's
+ * voice (`STAFF_DESTINATION_TITLE_KEYS`).
  */
 export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessageKey> = {
   today: "shared.shopNavLinks.today",
@@ -202,12 +203,11 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
  */
 export const STAFF_DESTINATION_TITLE_KEYS: Partial<Record<StaffDestinationId, StaffMessageKey>> = {
   checkIn: "checkIn.title",
-  reports: "reports.title",
-  reviews: "reviews.title",
-  requests: "requests.title",
-  inbox: "inbox.title",
+  // A tabbed section's pages wear the section's name (`STAFF_SECTION_TABS`):
+  // its lead tab answers to it, so typing "Money" still finds Orders.
+  inbox: "shared.shopSections.inbox",
+  orders: "shared.shopSections.money",
   diveSites: "diveSites.list.title",
-  promoCodes: "promos.title",
 };
 
 export type StaffDestination = {
@@ -291,6 +291,38 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // their own paths by being the longer match.
   { id: "settings", suffix: "/settings", section: "settings", inPalette: true, gate: "settings" },
 ];
+
+/**
+ * **The tabs a section shows under its title** — ADR 20261001-logbook, the one
+ * page shape: a title, then optional tabs. Inbox and Money are each one place
+ * whose pages were separate rooms with their own headlines; now every page in
+ * the section wears the section's name as its `<h1>` and these tabs say which
+ * part of it you are on.
+ *
+ * Schedule's Week and Crew views are the same shape, kept with the board
+ * because both read the week on screen.
+ */
+export const STAFF_SECTION_TABS = {
+  inbox: ["inbox", "requests", "reviews"],
+  money: ["orders", "promoCodes", "reports"],
+} as const satisfies Partial<Record<StaffSection, readonly StaffDestinationId[]>>;
+
+export type TabbedStaffSection = keyof typeof STAFF_SECTION_TABS;
+
+/**
+ * The tabs this viewer sees for a section, in order. A tab gated away is
+ * absent like any other destination (ADR
+ * 20260724-role-gated-surfaces-hide-not-explain); fewer than two left is no
+ * tab strip at all, which the renderer decides.
+ */
+export function staffSectionTabs(
+  section: TabbedStaffSection,
+  gates: StaffDestinationGates,
+): readonly StaffDestination[] {
+  return STAFF_SECTION_TABS[section]
+    .map((id) => staffDestination(id))
+    .filter((destination) => passesGate(destination, gates));
+}
 
 /** The `/shop/<shopSlug>` prefix every destination hangs off. */
 export function staffShopRoot(shopSlug: string): string {

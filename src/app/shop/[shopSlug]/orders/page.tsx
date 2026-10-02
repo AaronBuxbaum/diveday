@@ -36,6 +36,7 @@ import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { isManagedStorageUrl } from "@/lib/storage/blob-host";
 import { uuidParam } from "@/lib/uuid";
 import { wallTimeToUtc } from "@/lib/zoned";
+import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
 import { OrdersToolbar } from "./_components/OrdersToolbar";
 
@@ -474,21 +475,9 @@ export default async function OrdersIndexPage({
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow={t("orders.index.eyebrow")}
-        title={t("orders.index.title")}
+        title={t("shared.shopSections.money")}
         actions={
           <>
-            {/* The monthly report is this page's money, summed — its door
-                lives here now that Reports left the header nav (it keeps its
-                palette row and gate). */}
-            {canReconcilePayments ? (
-              <Link
-                href={`/shop/${shopSlug}/reports`}
-                className={buttonClass({ variant: "secondary" })}
-              >
-                {t("orders.index.monthlyReport")}
-              </Link>
-            ) : null}
             {/* While the unfiltered list is empty, the empty state below holds
                 this same door — two identical primaries for one action is
                 triage work the layout should do (principle 8), so the header
@@ -504,6 +493,13 @@ export default async function OrdersIndexPage({
             )}
           </>
         }
+      />
+      <StaffSectionTabs
+        shopSlug={shopSlug}
+        section="money"
+        current="orders"
+        roles={session.user.roles}
+        t={t}
       />
 
       {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}

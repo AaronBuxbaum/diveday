@@ -53,9 +53,7 @@ test.describe("as owner", () => {
     await page.goto(`/shop/${SHOP}/settings`);
     await page.getByRole("main").getByRole("link", { name: "Promo codes", exact: true }).click();
     await expect(page).toHaveURL(`/shop/${SHOP}/promos`);
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Discounts a diver can type" }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Money" })).toBeVisible();
   });
 
   test("a settings sub-page keeps the map beside it, and its own way back", async ({ page }) => {

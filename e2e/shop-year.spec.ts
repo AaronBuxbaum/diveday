@@ -30,13 +30,13 @@ test.describe("the year on Reports", () => {
 
   test("an owner reads the year beside the month", { tag: READ_ONLY }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/reports");
-    await expect(page.getByRole("heading", { level: 1, name: "How’s your month" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Money" })).toBeVisible();
 
     await page.getByRole("link", { name: "This year" }).click();
     // The destination's own render first, then the URL: a client navigation
     // resolves the two in that order, and waiting on the URL alone times out
     // on a loaded box while the page it names is already on its way.
-    await expect(page.getByRole("heading", { level: 1, name: "How’s your year" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Money" })).toBeVisible();
     await expect(page).toHaveURL(/reports\?range=year/);
     // The sentence the year says, then the four figures under the strip.
     await expect(page.getByText(/\d+ divers?, \d+ boats? out, \d+ sites?\./)).toBeVisible();
@@ -56,7 +56,7 @@ test.describe("the year on Reports", () => {
   test("the month page is one tap back", { tag: READ_ONLY }, async ({ page }) => {
     await page.goto("/shop/blue-mantis/reports?range=year");
     await page.getByRole("link", { name: "This month" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "How’s your month" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Money" })).toBeVisible();
     await expect(page.getByRole("region", { name: "This month’s numbers" })).toBeVisible();
   });
 

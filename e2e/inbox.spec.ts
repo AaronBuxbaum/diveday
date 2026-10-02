@@ -31,7 +31,7 @@ test("a staffer reads the inbox, opens the record, and answers the diver", async
   test.setTimeout(45_000);
 
   await page.goto("/shop/blue-mantis/inbox");
-  await expect(page.getByRole("heading", { level: 1, name: "What divers wrote" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Inbox" })).toBeVisible();
 
   // The worklist shape: unanswered first, under a group carrying the count.
   await expect(page.getByRole("heading", { name: /Waiting on you/ })).toBeVisible();

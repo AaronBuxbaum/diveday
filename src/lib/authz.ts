@@ -5,6 +5,8 @@
  * — the proxy is never the only layer (ADR-0006).
  */
 
+import type { StaffDestinationGates } from "./staff-destinations";
+
 export const ALL_ROLES = [
   "owner",
   "manager",
@@ -322,4 +324,18 @@ export function canOverrideGearRequest(roles: readonly Role[] | undefined): bool
     (role) =>
       role === "owner" || role === "manager" || role === "instructor" || role === "divemaster",
   );
+}
+
+/**
+ * Which destination gates these roles pass — the one reading the nav, the
+ * palette and a section's tabs share, so a tab never offers a page the nav
+ * would hide.
+ */
+export function staffDestinationGates(roles: readonly Role[] | undefined): StaffDestinationGates {
+  return {
+    waivers: canManageWaiverTemplates(roles),
+    reports: canViewShopReports(roles),
+    team: canManageStaffAccounts(roles),
+    settings: canManageShopSettings(roles),
+  };
 }

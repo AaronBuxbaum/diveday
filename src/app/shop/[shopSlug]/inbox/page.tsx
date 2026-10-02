@@ -8,8 +8,8 @@ import { pagedInboxMessages } from "@/db/inbound-messages";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { requireShopSurface } from "@/lib/session";
-import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
+import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { InboxRow } from "./_components/InboxRow";
 import { deleteInboxMessageAction } from "./actions";
 
@@ -67,7 +67,7 @@ export default async function InboxPage({
   // request and sends a disabled, deleted or fully demoted staffer to
   // `/sign-in?session=ended`, and the tenant assert follows it — so a stale
   // 30-day token buys nobody the shop's messages.
-  const { db, shop } = await requireShopSurface(shopSlug);
+  const { session, db, shop } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
 
@@ -84,7 +84,14 @@ export default async function InboxPage({
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <ShopPageHeader eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.inbox)} title={t("inbox.title")} />
+      <ShopPageHeader title={t("shared.shopSections.inbox")} />
+      <StaffSectionTabs
+        shopSlug={shopSlug}
+        section="inbox"
+        current="inbox"
+        roles={session.user.roles}
+        t={t}
+      />
 
       {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
 

@@ -97,7 +97,7 @@ test("the command palette also finds dive sites, courses, and every gated nav de
     ["Courses", /\/courses$/],
     ["Reviews", /\/reviews$/],
     ["Reports", /\/reports$/],
-    ["Promo codes", /\/promos$/],
+    ["Discounts", /\/promos$/],
     // Both used to exist in only one of the palette/nav pair; they come from
     // the shared destination registry now, so each is reachable from both.
     ["Orders", /\/orders$/],
@@ -121,11 +121,12 @@ test("the command palette also finds dive sites, courses, and every gated nav de
 /**
  * **Type what the page calls itself, not what the tab calls it.**
  *
- * The "Go to" rows are built from the nav's vocabulary and eight staff pages
- * are written in the product's, so a staffer who thinks of Reports as "How's
- * your month" and typed that got nothing back — the page was reachable only by
- * a word they never read on it (issue #824). The row still *says* the nav
- * label: two names on one row is a list you have to read twice.
+ * The "Go to" rows are built from the nav's vocabulary, and a page that wears
+ * another name is reachable by that name too — a staffer who typed what they
+ * read on the page used to get nothing back (issue #824). The row still *says*
+ * the nav label: two names on one row is a list you have to read twice. Inbox
+ * and Money are the case now (ADR 20261001-logbook): every page in them wears
+ * the section's name, and the name finds the section's lead tab.
  */
 test("the command palette finds a page by the headline it wears", {
   tag: READ_ONLY,
@@ -135,18 +136,15 @@ test("the command palette finds a page by the headline it wears", {
   const box = page.getByRole("combobox", { name: /Search divers/ });
 
   for (const [headline, label, urlPattern] of [
-    ["How’s your month", "Reports", /\/reports$/],
-    ["What divers said", "Reviews", /\/reviews$/],
-    ["Discounts a diver can type", "Promo codes", /\/promos$/],
+    ["Counter check-in", "Check-in", /\/check-in$/],
+    ["Money", "Orders", /\/orders$/],
+    ["Inbox", "Messages", /\/inbox$/],
   ] as const) {
     await box.fill(headline);
     const option = page.getByRole("option", { name: label, exact: true });
     await expect(option).toBeVisible();
     await option.click();
     await expect(page).toHaveURL(urlPattern);
-    // And the page confirms it, in the word that was typed *and* the one that
-    // was clicked: the eyebrow is the nav label, the h1 is the headline.
-    await expect(page.getByText(label, { exact: true }).first()).toBeVisible();
     await expect(page.getByRole("heading", { level: 1, name: headline })).toBeVisible();
     await page.keyboard.press("ControlOrMeta+k");
   }

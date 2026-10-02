@@ -1,5 +1,6 @@
 import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
+import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 
 /**
  * Body-shaped skeleton for the inbox (design principle 1): a group label, then
@@ -33,7 +34,8 @@ export default function InboxLoading() {
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-72 max-w-full" description={false} />
+        <ShopPageHeaderSkeleton eyebrow={false} titleWidth="w-32" description={false} />
+        <StaffSectionTabsSkeleton section="inbox" />
         <div className="space-y-10">
           {[3, 2].map((rows) => (
             <div key={rows}>

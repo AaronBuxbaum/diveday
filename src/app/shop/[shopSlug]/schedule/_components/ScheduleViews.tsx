@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { SectionTabs, SectionTabsSkeleton } from "@/components/SectionTabs";
 
 /**
  * **Schedule is one place with two views** — ADR 20261001-logbook: the week of
@@ -33,40 +33,19 @@ export function ScheduleViews({
   copy: ScheduleViewsCopy;
 }) {
   return (
-    <nav aria-label={copy.label} data-schedule-views className="mb-6 print:hidden">
-      <ul className="flex gap-1 border-b border-border">
-        {SCHEDULE_VIEWS.map((view) => {
-          const active = view === current;
-          return (
-            <li key={view}>
-              <Link
-                href={scheduleViewHref(shopSlug, view, week)}
-                aria-current={active ? "page" : undefined}
-                className={`-mb-px inline-flex min-h-11 items-center border-b-2 px-3 text-sm font-medium ${
-                  active
-                    ? "border-primary text-foreground"
-                    : "border-transparent text-muted hover:text-foreground"
-                }`}
-              >
-                {copy[view]}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
+    <SectionTabs
+      label={copy.label}
+      current={current}
+      tabs={SCHEDULE_VIEWS.map((view) => ({
+        id: view,
+        href: scheduleViewHref(shopSlug, view, week),
+        label: copy[view],
+      }))}
+    />
   );
 }
 
-/** The two views as both views' `loading.tsx` draws them: 44px tabs on the rule. */
+/** The two views as both views' `loading.tsx` draws them. */
 export function ScheduleViewsSkeleton() {
-  return (
-    <div className="mb-6 flex gap-1 border-b border-border">
-      {SCHEDULE_VIEWS.map((view) => (
-        <div key={view} className="flex min-h-11 items-center px-3">
-          <div className="h-4 w-12 rounded bg-surface-sunken" />
-        </div>
-      ))}
-    </div>
-  );
+  return <SectionTabsSkeleton count={SCHEDULE_VIEWS.length} />;
 }

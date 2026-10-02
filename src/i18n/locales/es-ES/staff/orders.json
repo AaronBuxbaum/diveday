@@ -97,10 +97,7 @@
     }
   },
   "index": {
-    "eyebrow": "Recepción",
-    "title": "Pedidos",
     "newOrder": "Nuevo pedido",
-    "monthlyReport": "Informe mensual",
     "notice": {
       "paymentNotConnected": "Los pagos aún no están conectados, así que no hay ninguna cuenta desde la que facturar. Conecta una para empezar a cobrar a los buceadores.",
       "notAuthorized": "Enviar una factura está limitado a propietarios y gerentes. Pide a uno de ellos que le facture a este buceador."

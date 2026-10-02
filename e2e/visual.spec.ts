@@ -6470,7 +6470,7 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the orders list renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/orders");
-        await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
         // A row of the day ledger itself, not just the heading — the ledger
         // streams in and a capture taken on the header alone banks an empty
         // page. (The table became day groups with slice 6f, ADR
@@ -6546,7 +6546,7 @@ for (const scheme of ["light", "dark"] as const) {
         const ledgerRow = page.locator('ul[aria-labelledby^="orders-day-"] > li');
         await ledgerRow.filter({ visible: true }).first().waitFor();
         await ledgerRow.locator('a[href*="/orders/"]').filter({ visible: true }).first().click();
-        // Not "Orders": the index this just navigated from wears that word as
+        // Not "Money": the index this just navigated from wears that word as
         // its own `<h1>`, already on screen, so waiting on it resolves
         // instantly against the *old* page instead of the new one — capture()
         // then fires while orders/[id] is still behind its own loading.tsx
@@ -6831,7 +6831,7 @@ for (const scheme of ["light", "dark"] as const) {
       // table).
       test(`owner reports render true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/reports");
-        await page.getByRole("heading", { level: 1, name: "How’s your month" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
         await capture(page, "reports", scheme);
       });
 
@@ -6875,7 +6875,7 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the shop's year renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/reports?range=year");
-        await page.getByRole("heading", { level: 1, name: "How’s your year" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
         await page.getByRole("region", { name: "The year’s numbers" }).waitFor();
         await capture(page, "reports-year", scheme);
       });
@@ -6963,7 +6963,7 @@ for (const scheme of ["light", "dark"] as const) {
         page,
       }) => {
         await page.goto("/shop/blue-mantis/reviews");
-        await page.getByRole("heading", { level: 1, name: "What divers said" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Inbox" }).waitFor();
         await page.getByRole("region", { name: /^Waiting on you/ }).waitFor();
         await page.getByRole("region", { name: /^Published/ }).waitFor();
         await capture(page, "staff-reviews", scheme);
@@ -6987,7 +6987,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await request.post("/api/test/seed-recap-pulse");
         await page.goto("/shop/blue-mantis/reviews");
-        await page.getByRole("heading", { level: 1, name: "What divers said" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Inbox" }).waitFor();
         await page.getByRole("heading", { name: "Asked us to fix" }).waitFor();
         await page.getByRole("region", { name: /^Published/ }).waitFor();
         await capture(page, "staff-reviews-pulse", scheme);
@@ -7016,7 +7016,7 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await request.post("/api/test/seed-trouble-states");
         await page.goto("/shop/blue-mantis/reviews");
-        await page.getByRole("heading", { level: 1, name: "What divers said" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Inbox" }).waitFor();
         await page.getByText(/DiveDay has stopped publishing it/).waitFor();
         await capture(page, "staff-reviews-rating-withheld", scheme);
       });
@@ -7031,7 +7031,7 @@ for (const scheme of ["light", "dark"] as const) {
       // it, so a capture taken before one lands photographs a half-built list.
       test(`the date requests list renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/requests");
-        await page.getByRole("heading", { level: 1, name: "Requested dates" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Inbox" }).waitFor();
         await page.getByRole("link", { name: "Add a departure" }).first().waitFor();
         await capture(page, "staff-date-requests", scheme);
       });
@@ -7046,7 +7046,7 @@ for (const scheme of ["light", "dark"] as const) {
       // alone can photograph a half-built list.
       test(`the shop inbox renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/inbox");
-        await page.getByRole("heading", { level: 1, name: "What divers wrote" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Inbox" }).waitFor();
         await page.getByRole("heading", { name: "Answered" }).waitFor();
         await capture(page, "staff-inbox", scheme);
       });
@@ -7078,7 +7078,7 @@ for (const scheme of ["light", "dark"] as const) {
       // behind it the composer is a "New code" door rather than a standing card.
       test(`the discount codes page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/promos");
-        await page.getByRole("heading", { level: 1, name: "Discounts a diver can type" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
         // The shelves are what changed; wait for one rather than for the
         // header, which paints with the static shell.
         await page.getByRole("heading", { level: 2, name: "Live" }).waitFor();

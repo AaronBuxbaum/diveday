@@ -80,7 +80,7 @@ test("a diver asks for a date from the schedule page and staff read it grouped b
 
   await signInAsOwner(page);
   await page.goto("/shop/blue-mantis/requests");
-  await expect(page.getByRole("heading", { name: "Requested dates" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Inbox" })).toBeVisible();
 
   // Both date groups carry both requests, while each row retains the
   // preferred/alternate detail that explains why it is present. Scoped by each

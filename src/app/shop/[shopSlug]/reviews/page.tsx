@@ -27,9 +27,9 @@ import { formatShortDate } from "@/lib/format";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { ratingIsWithheld, reviewsToRepublishForRating } from "@/lib/reviews";
 import { requireShopSurface } from "@/lib/session";
-import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import {
   type BulkPublishCopy,
   PublishAllButton,
@@ -254,8 +254,7 @@ export default async function ReviewsPage({
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
-        eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.reviews)}
-        title={t("reviews.title")}
+        title={t("shared.shopSections.inbox")}
         meta={<ReviewsAggregateLine aggregate={aggregate} month={monthAggregate} t={t} />}
         actions={
           <Link
@@ -267,6 +266,13 @@ export default async function ReviewsPage({
             {t("reviews.viewPublicPage")}
           </Link>
         }
+      />
+      <StaffSectionTabs
+        shopSlug={shopSlug}
+        section="inbox"
+        current="reviews"
+        roles={session.user.roles}
+        t={t}
       />
 
       {/* The one thing on this page that is neither a row nor a count: the

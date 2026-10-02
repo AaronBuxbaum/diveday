@@ -1,5 +1,6 @@
 import { ShopPageHeaderSkeleton, SkeletonLineBars } from "@/components/ShopPageHeader";
 import { LedgerRow } from "@/components/ui/ledger";
+import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
 
 /**
  * Body-shaped skeleton for Reviews (design principle 1): the aggregate line
@@ -44,12 +45,15 @@ export default function ReviewsLoading() {
         {/* The aggregate line wraps to two lines at 390px, one at 1280; the
             "View public page" door stacks under it on a phone (K-86). */}
         <ShopPageHeaderSkeleton
+          eyebrow={false}
+          titleWidth="w-32"
           description={false}
           meta={
             <SkeletonLineBars lines={{ base: 2, sm: 1 }} height="h-5" width="w-72 max-w-full" />
           }
           actions
         />
+        <StaffSectionTabsSkeleton section="inbox" />
         <div className="space-y-10">
           <div>
             <div className="h-4 w-40 rounded bg-surface-sunken" />

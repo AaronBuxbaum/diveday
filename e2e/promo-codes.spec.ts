@@ -69,7 +69,7 @@ test.describe("as owner", () => {
     page,
   }) => {
     await page.goto("/shop/blue-mantis/promos");
-    await expect(page.getByRole("heading", { name: "Discounts a diver can type" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Money" })).toBeVisible();
 
     const standing = page.locator("li").filter({ hasText: "REEF10" }).filter({ visible: true });
     await expect(standing.getByText("10% off")).toBeVisible();

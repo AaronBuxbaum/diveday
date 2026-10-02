@@ -20,13 +20,7 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
-import {
-  canManageShopSettings,
-  canManageStaffAccounts,
-  canManageWaiverTemplates,
-  canViewShopReports,
-  isStaff,
-} from "@/lib/authz";
+import { isStaff, staffDestinationGates } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
@@ -188,12 +182,7 @@ const loadShopChrome = cache(async (shopSlug: string) => {
       : [0, undefined, false, 0];
 
   const navGates = session?.user
-    ? {
-        waivers: canManageWaiverTemplates(session.user.roles),
-        reports: canViewShopReports(session.user.roles),
-        team: canManageStaffAccounts(session.user.roles),
-        settings: canManageShopSettings(session.user.roles),
-      }
+    ? staffDestinationGates(session.user.roles)
     : { waivers: false, reports: false, team: false, settings: false };
 
   return {

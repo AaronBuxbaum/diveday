@@ -80,9 +80,7 @@ test.describe("staff", () => {
     // about this person on this device rather than about the dive day.
     await page.locator("[data-identity-menu]").click();
     await page.getByRole("button", { name: "Español" }).click();
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Lo que dicen los buceadores" }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Mensajes" })).toBeVisible();
 
     // Door two: the command palette, which is where a staffer who is already
     // typing looks for anything at all. Offered only in the languages *not* in
@@ -92,6 +90,6 @@ test.describe("staff", () => {
     await expect(dialog.getByRole("option", { name: "Español" })).toHaveCount(0);
     await dialog.getByRole("option", { name: "English" }).click();
 
-    await expect(page.getByRole("heading", { level: 1, name: "What divers said" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Inbox" })).toBeVisible();
   });
 });
