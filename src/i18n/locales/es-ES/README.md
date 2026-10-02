@@ -355,29 +355,6 @@ specific than the English.
 `src/db/marine-life-catalog.test.ts` fails if a species loses its Spanish, gains copy for a slug the
 catalog dropped, or ends up with a description identical to the English one.
 
-## The diver's shelf is **el casillero**
-
-Settled 2026-09-10 with the shelf itself (slice 20t of ADR 20260908-one-hand). The English "shelf"
-is the diver's own page at one shop — their next departure, their days in the water, and what the
-shop holds for them.
-
-**Not *estante*,** which is a plank of wood and says nothing about whose things are on it. **Not
-*ficha*,** which this file already gives to a *person's record* on the staff side: one word for two
-surfaces, one of them staff-facing and one of them a link on a diver's phone, is the exact collision
-the *centro* and *sitio de buceo* sections exist to prevent. **El casillero** is the locker a diver
-is handed at a dive centre — concrete, warm, unmistakably theirs, and read the same way across Latin
-America and the Caribbean.
-
-| English | Spanish |
-| --- | --- |
-| your shelf | tu casillero |
-| the shelf link | el enlace de tu casillero |
-| send the link (staff) | enviar el enlace |
-| forget this phone | olvidar este teléfono |
-
-The noun is **masculine**: `el`/`un`/`este`, and anything reaching back to it agrees (`abierto`,
-`enviado`, `guardado`).
-
 ## A seat the diver gave up is **cancelada**; only the shop **libera** one
 
 Settled 2026-09-11 (dive-domain-expert review of the counter's no-show door). English already keeps

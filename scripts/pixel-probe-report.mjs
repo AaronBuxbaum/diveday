@@ -56,7 +56,7 @@ export const FAMILIES = [
     key: "token",
     title: "Token pages and offline",
     match: (route) =>
-      /^\/(ready|waivers|recap|verify|reset-password|invite|claim|gift|shelf|board|check-in|confirm-contact|unsubscribe|offline-manifest)(\/|$)/.test(
+      /^\/(ready|waivers|recap|verify|reset-password|invite|claim|board|check-in|confirm-contact|unsubscribe|offline-manifest)(\/|$)/.test(
         route,
       ),
   },

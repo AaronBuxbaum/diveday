@@ -519,8 +519,7 @@ describe("POST /api/webhooks/stripe — event dispatch", () => {
     });
 
     // The recorder runs before the status dispatch, so a failure there must
-    // never swallow the settlement it precedes — the same treatment
-    // `sendGiftPassesForCheckout` gets.
+    // never swallow the settlement it precedes.
     it("still settles the checkout when recording the Customer throws", async () => {
       vi.mocked(recordCheckoutStripeCustomer).mockRejectedValue(new Error("stripe customer write"));
       const response = await post({

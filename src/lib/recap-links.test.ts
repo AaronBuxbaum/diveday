@@ -25,7 +25,7 @@ describe("recap tokens", () => {
 
   /**
    * **A signature that is not base64url is refused, never thrown at** (security
-   * review of the gift slice, finding 3 — the same shape lives here).
+   * review, finding 3).
    * `timingSafeEqual` compares *bytes* and throws on unequal lengths, so a
    * 43-*character* signature carrying a multibyte character used to reach it
    * and raise `RangeError`, which on a bearer page is a 500 where "this link

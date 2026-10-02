@@ -66,7 +66,7 @@ describe("StageStrip", () => {
     // The path walk in `illustration.test.ts` covers the import; this covers
     // the tokens and the animation class, which no import would show.
     const source = readFileSync(path.join(__dirname, "StageStrip.tsx"), "utf8");
-    expect(source).not.toMatch(/SiteMark|Swell|BoatDrift/);
+    expect(source).not.toMatch(/SiteMark|Swell/);
     expect(source).not.toMatch(/accent/);
     expect(source).not.toMatch(/animate-|boat-leaves|settle-in|rise-in/);
   });

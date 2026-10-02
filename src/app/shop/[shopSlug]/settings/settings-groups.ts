@@ -181,12 +181,6 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     target: { kind: "section", id: "address" },
   },
   {
-    id: "print",
-    labelKey: "print.settings.title",
-    group: "shop",
-    target: { kind: "route", path: "/settings/print" },
-  },
-  {
     id: "team",
     labelKey: "settings.main.team.heading",
     group: "team",

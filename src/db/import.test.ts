@@ -241,10 +241,9 @@ describe("commitContactImport", () => {
     const { db, shop } = await seededShopContext();
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     // A staffer's note filed under "wetsuit size" in the prior system, 45
-    // characters. Stored whole, it failed `safeParse` on all three writers of
-    // `rental_fit_profiles` — the staff fit editor, the `/ready` gear form and
-    // the diver's own shelf — so every visible box read right and the save
-    // died. `boot_size` is the quietest of the four: no form has a box of its
+    // characters. Stored whole, it failed `safeParse` on both writers of
+    // `rental_fit_profiles` — the staff fit editor and the `/ready` gear form —
+    // so every visible box read right and the save died. `boot_size` is the quietest of the four: no form has a box of its
     // own for it.
     const wetsuitCell = "Medium Large, long torso, prefers 5mm not 3mm";
     const bootCell = "Wide, 9.5 US in a 10 EU boot, sock liner too";

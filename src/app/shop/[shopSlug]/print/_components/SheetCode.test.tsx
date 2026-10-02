@@ -88,12 +88,8 @@ describe("a code on a sheet", () => {
 /**
  * **Four modules clear on every side that faces words.** The quiet zone
  * overhangs the code's box, so the words beside it keep at least that much
- * room or the white is painted over them: the window sticker's `gap-5` was
- * 4.3mm at the 13px print root, the dock sign's `mt-3` under each code 2.6mm.
- * A module is the code's printed width over its module count, and the count
- * falls with the payload: the coarsest code any absolute URL makes is a
- * version 2, 25 modules, which is what a storefront link on a short slug
- * prints. A booking id is always a version 3.
+ * room or the white is painted over them. A module is the code's printed width
+ * over its module count, and a booking id is always a version 3.
  */
 describe("the paper each call site keeps clear of its code", () => {
   const PRINT = join(import.meta.dirname, "..");
@@ -112,36 +108,6 @@ describe("the paper each call site keeps clear of its code", () => {
     const actual = await vi.importActual<{ default: typeof import("qrcode") }>("qrcode");
     return actual.default.create(value).modules.size;
   }
-
-  it("takes a URL code's floor from the coarsest version a URL can be", async () => {
-    // The shortest absolute URL of the storefront's shape.
-    expect(await modules("https://a.b/s/c")).toBe(25);
-    expect(await modules("0b6f1f3e-5a51-4a0e-9d7e-2f0c7b7f4a11")).toBe(29);
-  });
-
-  it("keeps the window sticker's sentence four modules above its code", async () => {
-    const page = source("window-sticker/page.tsx");
-    const gap = page.match(/className="flex flex-col items-center (gap-[^\s"]+) text-center"/)?.[1];
-    const width = page.match(/<SheetCode[\s\S]*?size=\{(\d+)\}/)?.[1];
-    expect(gap && width).toBeTruthy();
-    expect(mm(gap ?? "")).toBeGreaterThanOrEqual(
-      (4 * Number(width)) / (await modules("https://a.b/s/c")),
-    );
-  });
-
-  it("keeps each dock-sign caption four modules below its code", async () => {
-    const page = source("dock-sign/page.tsx");
-    const sites = [
-      ...page.matchAll(
-        /<SheetCode[\s\S]*?size=\{(\d+)\}[^>]*?\/>(?:\s*\{\/\*[\s\S]*?\*\/\})?\s*<p className="[^"]*\b(mt-[^\s"]+)/g,
-      ),
-    ];
-    expect(sites).toHaveLength(2);
-    const floor = await modules("https://a.b/s/c");
-    for (const [, width, margin] of sites) {
-      expect(mm(margin ?? "")).toBeGreaterThanOrEqual((4 * Number(width)) / floor);
-    }
-  });
 
   it("keeps the pass's words four modules beside its code", async () => {
     const page = source("pass/[bookingId]/page.tsx");

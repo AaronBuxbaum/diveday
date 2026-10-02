@@ -274,7 +274,7 @@ const ERASURE_KEEPS: Record<string, string> = {
   trip_sightings:
     "what a crew tapped at a site: a species slug from DiveDay’s own catalogue, a count, and the site’s name as it stood. Its two person columns are the crew member who tapped and the one who undid it, pointers joined at read the way `trip_desk_events` is",
   person_shelf_tokens:
-    "revoked rather than rewritten, and through `revokeShelfTokens` (./person-shelf-tokens) rather than here, so the static sweep above cannot see the write — `WRITTEN_VIA_HELPER` below is where that indirection is declared",
+    "nothing mints, reads or verifies a shelf token since the diver's shelf was cut; the table holds hashed tokens alone and goes at the next schema drop",
   trip_desk_events:
     "`subject_person_id` is a pointer by design and the name is joined at read, which resolves to the anonymized one after this runs",
   trip_help_requests:
@@ -418,8 +418,6 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
 const WRITTEN_VIA_HELPER: Record<string, string> = {
   media_deletion_attempts:
     "`queueMediaDeletion` (./media-deletions) — every blob the erasure retires goes through the existing durable ledger rather than a second mechanism invented here (ADR 20260723-media-validation-and-deletion)",
-  person_shelf_tokens:
-    '`revokeShelfTokens` (./person-shelf-tokens) — the shelf link is closed the way every other holder of it is closed, by the module that mints and verifies it, so one definition of "revoked" serves the erasure and the diver’s own "Forget this phone"',
   processor_erasure_obligations:
     "`recordProcessorErasureObligations` (./processor-erasure) — what Stripe still holds, written inside the transaction so a crash a millisecond later cannot lose it (ADR 20260803-processor-erasure-obligations)",
 };

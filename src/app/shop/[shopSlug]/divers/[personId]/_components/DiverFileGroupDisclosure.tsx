@@ -7,7 +7,7 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
  * **One door per file group, at every width.**
  *
  * Every group in the diver's file — certification records, waiver, gear and
- * sizes, shelf, notes, dive support, conversation, activity — is a row that
+ * sizes, notes, dive support, conversation, activity — is a row that
  * states its one useful fact and opens on request. There is no second mode.
  *
  * It had one until this sweep: "legacy" groups hid their summary above `sm`

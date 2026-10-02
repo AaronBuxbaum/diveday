@@ -275,13 +275,11 @@ describe("diver copy has a provider above it", () => {
     expect(withCopy.sort()).toEqual([
       "claim/[token]/error.tsx",
       "confirm-contact/[token]/error.tsx",
-      "gift/[token]/error.tsx",
       "invite/[token]/error.tsx",
       "ready/[token]/error.tsx",
       "recap/[token]/error.tsx",
       "reset-password/[token]/error.tsx",
       "s/[shopSlug]/error.tsx",
-      "shelf/[token]/error.tsx",
       "unsubscribe/[token]/error.tsx",
       "verify/[token]/error.tsx",
       "waivers/[token]/error.tsx",

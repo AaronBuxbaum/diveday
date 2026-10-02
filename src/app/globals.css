@@ -818,26 +818,24 @@ textarea {
 /*
  * **The shop on paper** — ADR 20260908-one-hand, decision 6, lever X.
  *
- * The five sheets under `/shop/<slug>/print/**` are the one family of pages in
- * the app whose *output* is paper rather than a screen, and they are the one
- * place the rules below are deliberately inverted:
+ * The paper pass under `/shop/<slug>/print/pass/**` is the one page in the
+ * app whose *output* is a sheet of the shop's own paper rather than a screen,
+ * and it is the one place the rules below are deliberately inverted:
  *
  * 1. **They print in colour, on purpose.** The `@media print` block repaints
  *    the whole app black-on-white and strips every fill, which is right for a
- *    manifest a shop prints on a mono laser and wrong for the sign at the slip:
+ *    manifest a shop prints on a mono laser and wrong for a diver's pass:
  *    the whole point of these sheets is that they carry the shop's own colour
  *    and face. So each sheet restores its own ground and band under print, at
  *    class specificity, and asks the UA for the ink with `print-color-adjust`.
  * 2. **The band's colour is set inline by the sheet, never read from
  *    `--primary`.** Print redefines that token, so a band drawn from it would
- *    print grey; the sheet resolves the shop's derived brand (or the boat's own
- *    action colour) at render and hands it down as `--sheet-band`.
+ *    print grey; the sheet resolves the shop's derived brand at render and
+ *    hands it down as `--sheet-band`.
  * 3. **A sheet is a box in millimetres**, sized to its paper less the `@page`
  *    margin the route declares - a floor rather than a ceiling, and never a
- *    clip. A shop's own briefing is prose of whatever length the shop wrote,
- *    and a card that silently cut it off would be read on a boat as the whole
- *    briefing. So a sheet that outgrows its paper takes a second page, and no
- *    sheet ever loses a word.
+ *    clip. A sheet that outgrows its paper takes a second page, and no sheet
+ *    ever loses a word.
  *
  * On screen the sheet sits in a frame that scrolls sideways rather than
  * squashing the layout - this is a document, and a document that reflows to a
@@ -868,14 +866,6 @@ textarea {
   -webkit-print-color-adjust: exact;
 }
 
-/* The night side of the boat card: the ground a red torch reads against. */
-.paper-sheet-night {
-  --sheet-ground: #000a0f;
-  --sheet-ink: #f4fbfc;
-  --sheet-muted: #b9cdd4;
-  --sheet-rule: #1c3a47;
-}
-
 .paper-sheet + .paper-sheet {
   margin-top: 1.5rem;
 }
@@ -887,22 +877,6 @@ textarea {
   padding: 0.75rem 1.25rem;
   background: var(--sheet-band);
   color: var(--sheet-band-ink);
-}
-
-/*
- * The one sheet that may not paginate. The boat card is two faces of one
- * lamination, so a face that grew would be laminated across two cards; content
- * that overruns is cut at the card's own edge, where the fold line makes the
- * cut visible. Its caller bounds the one unbounded thing it prints, the shop's
- * emergency plan (`boatCardPlan`).
- */
-.paper-sheet-fit {
-  overflow: hidden;
-}
-
-/* The night side's band is its own ground, so it needs the rule to show. */
-.paper-sheet-night .paper-sheet-band {
-  border-bottom: 1px solid var(--sheet-rule);
 }
 
 .paper-sheet-mark {
@@ -922,21 +896,6 @@ textarea {
   padding: 1.25rem;
 }
 
-/*
- * A sign rather than a document (`PaperSheet`'s `layout="poster"`): the dock
- * sign and the window sticker hold a few fixed things and none of the shop's
- * prose, so their content is centred on the paper instead of running from the
- * band and leaving the rest of the sheet blank. The body already fills the
- * sheet's height, so this is the only place the centring can live: a child's
- * `h-full` has no definite height to resolve against in a sheet whose height
- * is a floor.
- */
-.paper-sheet-body-poster {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
 .paper-sheet-muted {
   color: var(--sheet-muted);
 }
@@ -952,19 +911,6 @@ textarea {
   font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 0.5rem;
   letter-spacing: 0.02em;
-}
-
-/* A ruled blank a skipper fills in by hand - never an invented number. It
-   runs to its column's edge and lies on its label's baseline. An 8ch inline
-   block was 13mm of rule ending wherever its label ended, three blanks at
-   three x positions; a one-line block reached the edge but dropped its rule
-   to the foot of the line, 3.4px under the words. Inline-level and as wide as
-   its definition, it is both: an empty inline block's bottom edge is the
-   line's baseline (`PaperSheet.test.tsx`, `e2e/shop-on-paper.spec.ts`). */
-.paper-sheet-blank {
-  display: inline-block;
-  width: 100%;
-  border-bottom: 1px solid var(--sheet-rule);
 }
 
 @page {
@@ -1421,7 +1367,7 @@ textarea {
 
   /*
    * **The sheets keep their ink.** Everything above repaints the app for a
-   * shop's mono laser; a dock sign in the shop's colour is the one document
+   * shop's mono laser; a pass in the shop's colour is the one document
    * that is *for* the colour, so each sheet restores its own ground and band at
    * class specificity - which beats the `*` rule above without another
    * `!important` arms race - and the frame around it stops being a frame.
@@ -1446,7 +1392,7 @@ textarea {
     padding: 0;
   }
 
-  /* One sheet, one page - the boat card's two sides, every briefing card. */
+  /* One sheet, one page. */
   .paper-sheet + .paper-sheet {
     margin-top: 0;
     break-before: page;

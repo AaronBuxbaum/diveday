@@ -67,17 +67,16 @@ import { seatHeld } from "./trips-queries";
  * predicate. The filter is here because every public reader of a departure
  * carries it and therefore 404s a deleted one anyway (`getTripWithBooked`
  * below, which the page, the `.ics` route and the arrival card all read
- * through, and `publicBoatLine`), so refusing a removed departure at the edge
+ * through), so refusing a removed departure at the edge
  * matches the page rather than overruling it — and `scripts/check-live-trips.mjs`
  * exists to stop a reader of this table quietly meaning "tombstones too".
  *
  * Status and `isPrivate` are deliberately *not* here. Each is a reason a page
  * declines to render a departure that is still on the board, and the page
- * answers several of them at 200 on purpose: a cancelled departure gets its
- * own soft landing, and a shop with the boat line switched off renders
- * `notFound()` rather than confirm the departure exists. The edge refusing
- * either would be stricter than the page, which is the one failure this whole
- * mechanism must not have.
+ * answers them at 200 on purpose: a cancelled departure gets its own soft
+ * landing, and a private one is still served to whoever holds its link. The
+ * edge refusing either would be stricter than the page, which is the one
+ * failure this whole mechanism must not have.
  */
 export async function tripExistsForShop(
   db: AppDb,

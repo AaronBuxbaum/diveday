@@ -11,8 +11,8 @@
     "a11y": ["a11y.spec.ts"]
   },
   "/claim/[token]": {
-    "e2e": ["a11y.spec.ts", "gift.spec.ts", "seat-claim.spec.ts"],
-    "visual": ["seat-claim", "gift-claim"],
+    "e2e": ["a11y.spec.ts", "seat-claim.spec.ts"],
+    "visual": ["seat-claim"],
     "a11y": ["a11y.spec.ts"]
   },
   "/confirm-contact/[token]": {
@@ -23,10 +23,6 @@
     "e2e": ["account-lifecycle.spec.ts"],
     "visual": ["forgot-password"],
     "a11y": ["a11y.spec.ts"]
-  },
-  "/gift/[token]": {
-    "e2e": ["gift.spec.ts"],
-    "visual": ["gift-giver-page"]
   },
   "/invite/[token]": {
     "e2e": ["staff-invite.spec.ts"],
@@ -142,7 +138,6 @@
       "schedule-lenses.spec.ts",
       "schedule-trip.spec.ts",
       "seo.spec.ts",
-      "shelf.spec.ts",
       "storefront-brand.spec.ts",
       "tenant-isolation.spec.ts",
       "trip-admission.spec.ts",
@@ -153,14 +148,8 @@
       "schedule-above-level",
       "schedule-embed",
       "schedule-lens",
-      "schedule-off-season",
-      "shopfront-known-diver"
+      "schedule-off-season"
     ],
-    "a11y": ["a11y.spec.ts"]
-  },
-  "/s/[shopSlug]/boats/[tripId]": {
-    "e2e": ["follow-the-boat.spec.ts", "a11y.spec.ts"],
-    "visual": ["follow-the-boat"],
     "a11y": ["a11y.spec.ts"]
   },
   "/s/[shopSlug]/courses": {
@@ -235,11 +224,6 @@
   "/s/[shopSlug]/trips/[id]/embed": {
     "e2e": ["returning-diver.spec.ts", "schedule-embed.spec.ts"],
     "visual": ["booking-confirmed-embed"]
-  },
-  "/shelf/[token]": {
-    "e2e": ["a11y.spec.ts", "shelf.spec.ts"],
-    "visual": ["diver-shelf"],
-    "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]": {
     "e2e": [
@@ -351,7 +335,6 @@
       "add-diver.spec.ts",
       "certifications.spec.ts",
       "divers.spec.ts",
-      "shelf.spec.ts",
       "gear-fit-and-age.spec.ts",
       "import.spec.ts",
       "inbox.spec.ts",
@@ -363,7 +346,6 @@
       "diver-medical-clearance-form",
       "diver-medical-not-cleared",
       "diver-profile",
-      "diver-record-shelf",
       "diver-profile-deleted",
       "diver-profile-imported",
       "diver-profile-not-certified",
@@ -410,27 +392,9 @@
     "visual": ["day-packet"],
     "a11y": ["a11y.spec.ts"]
   },
-  "/shop/[shopSlug]/print/boat-card/[boatId]": {
-    "e2e": ["shop-on-paper.spec.ts"],
-    "visual": ["boat-card"]
-  },
-  "/shop/[shopSlug]/print/dock-sign": {
-    "e2e": ["shop-on-paper.spec.ts"],
-    "visual": ["dock-sign"]
-  },
   "/shop/[shopSlug]/print/pass/[bookingId]": {
     "e2e": ["shop-on-paper.spec.ts"],
     "visual": ["paper-pass"]
-  },
-  "/shop/[shopSlug]/print/site-briefings": {
-    "e2e": [],
-    "visual": ["site-briefing-cards"],
-    "exempt": "One sheet per site of the site editor's own words, with no control on it. The register's door that opens it is the same form the dock sign's row is driven through in shop-on-paper.spec.ts, and the print capture is the artifact this route exists to produce."
-  },
-  "/shop/[shopSlug]/print/window-sticker": {
-    "e2e": [],
-    "visual": ["window-sticker"],
-    "exempt": "One sentence and the storefront's code, with no control on it. The register's door that opens it is the same form the dock sign's row is driven through in shop-on-paper.spec.ts, and the print capture is the artifact this route exists to produce."
   },
   "/shop/[shopSlug]/promos/packages": {
     "e2e": ["settings-editor-pages.spec.ts", "settings-findability.spec.ts"],
@@ -579,10 +543,6 @@
     "e2e": ["manifest.spec.ts"],
     "visual": ["settings-safety-checklist"],
     "a11y": ["a11y.spec.ts"]
-  },
-  "/shop/[shopSlug]/settings/print": {
-    "e2e": ["shop-on-paper.spec.ts"],
-    "visual": ["settings-print"]
   },
   "/shop/[shopSlug]/settings/security": {
     "e2e": ["security-settings.spec.ts"],

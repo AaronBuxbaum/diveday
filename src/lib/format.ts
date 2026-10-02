@@ -172,11 +172,7 @@ export function formatWeekdayTime(date: Date, locale = "en-US", timeZone: string
 /**
  * "Saturday" — the weekday alone, in the shop's zone.
  *
- * For a sentence whose subject is the *day of the week* rather than a date:
- * the shelf's "Same boat, next Saturday", where the point is that this
- * departure repeats on the day the diver already knows. A date beside it would
- * answer a question the reader is not asking, and the row links to the
- * departure, which states its own.
+ * For a sentence whose subject is the *day of the week* rather than a date.
  */
 export function formatWeekday(date: Date, locale = "en-US", timeZone: string): string {
   return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
@@ -289,10 +285,9 @@ export function formatTimeRangeTz(
  * not be standing in it.
  *
  * The public schedule leaves its times bare on purpose: local time is the
- * honest default for somebody in the shop's own town. The follow-the-boat page
- * is the case that argues the other way — it is a link a diver pastes into a
- * group chat, and whoever opens it may be three zones away, deciding when to
- * leave for the dock.
+ * honest default for somebody in the shop's own town. A message a diver
+ * forwards is the case that argues the other way — whoever opens it may be
+ * three zones away, deciding when to leave for the dock.
  */
 export function formatTimeTz(date: Date, locale = "en-US", timeZone: string): string {
   return keepUnitsWhole(

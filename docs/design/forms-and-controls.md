@@ -666,8 +666,7 @@ them cut it away. The pixel probe's first pass counted 1,700 clipped rings.
   negative top margin collapses through a parent with no top border or padding, so that parent is
   `flow-root`. Not for underline tabs: the product page's chapter strip padded its tabs that way and
   floated the active underline 4px above the bar's rule (K-400), so its tabs take the ring inset and
-  sit on the rule. Room too where the row's padding was the defect: the diver record's shelf rows
-  had `px-1` in an `InsetGroup` and now take its `px-5 py-4 sm:px-6`.
+  sit on the rule.
 - **Never switch the outline off** on an `a`, `button`, `input`, `select`, `textarea` or
   `summary`. In `@layer base` the global rule loses to `outline-none`, so it now does what it
   says and leaves a keyboard user nothing. The two exceptions show focus on another box:

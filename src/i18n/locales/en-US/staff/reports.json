@@ -86,6 +86,5 @@
     "entriesRest": "{count, plural, one {# more day} other {# more days}}",
     "empty": "No departures have sailed this year yet."
   },
-  "giftSeats": "{given, plural, one {# seat} other {# seats}} given as gifts · {claimed} claimed",
   "buddySeats": "{count, plural, one {# seat} other {# seats}} arrived on a buddy’s link"
 }

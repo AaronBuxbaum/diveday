@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { BrandStyle } from "@/components/BrandStyle";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { ImageFileInput } from "@/components/ImageFileInput";
@@ -241,14 +240,6 @@ export type AfterStateProps = {
   /** The pick's booking page carrying this diver's own handoff, or null. */
   nextDiveHref?: string | null;
   /**
-   * The way to this diver's shelf, already built by whichever page is rendering
-   * (`src/components/ShelfDoor.tsx`). Null on a page that has no shelf to offer
-   * — this component decides nothing about which door it is, because the thread
-   * and the recap are allowed different ones and the reason is a security one
-   * (`src/app/actions/shelf-door.ts`).
-   */
-  shelfDoor?: ReactNode;
-  /**
    * **The buddy seat** (ADR 20260908-one-hand, decision 6, lever W): this
    * diver's own link to the shop, carrying a non-secret referral id, for them
    * to hand to a friend.
@@ -344,7 +335,6 @@ export function AfterState({
   nextDive,
   nextDiveWorded,
   nextDiveHref = null,
-  shelfDoor = null,
   buddyLinkUrl = null,
   actions,
   siteMark,
@@ -785,18 +775,12 @@ export function AfterState({
             {nextDeparture.title} · {nextDeparture.when}
           </p>
         ) : null}
-        {/* The same flush link button as the shelf door beside it: one
-            drawing for the footer's two ways onward, each a target, with the
-            footer's own gap between their words. */}
         <Link
           href={publicSchedulePath(shop.slug)}
           className={buttonClass({ variant: "link", flush: true })}
         >
           {t("recap.seeWhatsNext")}
         </Link>
-        {/* ——— The way to this diver's own shelf, beside the way back to the
-            board: the two things a finished day leaves a diver wanting. */}
-        {shelfDoor}
       </footer>
     </main>
   );

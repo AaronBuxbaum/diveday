@@ -24,7 +24,6 @@ import { isUuid } from "@/lib/uuid";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
-import { giftGiversByBooking } from "./gifts";
 import {
   departureRollCallForBooking,
   listAfterDiveRollCallByTrip,
@@ -109,20 +108,6 @@ export type CheckInQueueRow = {
    */
   missingEmergencyContact: boolean;
   /**
-   * **An unclaimed gift on the day** (ADR 20260908-one-hand, decision 6,
-   * lever W): who gave this seat, when the person it was given to has not
-   * claimed it yet.
-   *
-   * The counter is where that matters, because the diver may well be standing
-   * there without ever having opened the link — the row is the shop's cue to
-   * seat the giver's friend by name rather than hunt for a booking under an
-   * address nobody has. Null for every ordinary seat, and null the moment the
-   * gift is claimed: after that it is simply that diver's booking.
-   *
-   * Batched over the whole queue, never one query per row.
-   */
-  giftGiverName: string | null;
-  /**
    * This seat is the diver's **first** with the shop, counting DiveDay's own
    * bookings *and* the visits a migration carried across
    * (ADR 20260725-import-prior-visits) — the merged-history semantics
@@ -175,7 +160,6 @@ export async function listCheckInQueue(
       startsAt: trips.startsAt,
       endsAt: trips.endsAt,
       bookingStatus: bookings.status,
-      claimedAt: bookings.claimedAt,
       emergencyContactName: people.emergencyContactName,
       emergencyContactPhone: people.emergencyContactPhone,
     })
@@ -207,17 +191,9 @@ export async function listCheckInQueue(
   // instead of it — the badge needs the dock and the gate needs both.
   const afterDiveByTrip = await listAfterDiveRollCallByTrip(db, shopId, tripIds);
   const history = await queueVisitHistory(db, shopId, rows, arrivals.to);
-  // Only the seats that are still unclaimed: a claimed gift is that diver's
-  // own booking and the counter has nothing extra to do with it.
-  const giftGivers = await giftGiversByBooking(
-    db,
-    shopId,
-    rows.filter((row) => row.claimedAt === null).map((row) => row.bookingId),
-  );
 
-  return rows.map(({ emergencyContactName, emergencyContactPhone, claimedAt, ...row }) => ({
+  return rows.map(({ emergencyContactName, emergencyContactPhone, ...row }) => ({
     ...row,
-    giftGiverName: claimedAt === null ? (giftGivers.get(row.bookingId) ?? null) : null,
     bookingStatus: row.bookingStatus as "booked" | "checked_in" | "no_show",
     boarded: boardedBookingIds.has(row.bookingId),
     onTheWater: boardedBookingIds.has(row.bookingId)

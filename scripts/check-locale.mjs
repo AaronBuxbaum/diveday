@@ -178,10 +178,6 @@ export const DELIBERATELY_IDENTICAL = new Map([
   // form to give it: a brand, an acronym, a place, a unit, or a word Spanish
   // diving uses unchanged. Held both ways like every entry above — the day
   // somebody translates one of these, the declaration fails.
-  ["staff/print.json settings.dockSign.paper", "ISO paper size"],
-  ["staff/print.json settings.paperPass.paper", "ISO paper size"],
-  ["staff/print.json settings.siteBriefing.paper", "ISO paper size"],
-  ["staff/print.json settings.yearPoster.paper", "ISO paper size"],
   [
     "diver.json marketing.guides.fareharbor.website.rows.row2.theirs",
     "a competitor's own product name",
@@ -190,7 +186,6 @@ export const DELIBERATELY_IDENTICAL = new Map([
     "diver.json marketing.guides.fareharbor.website.rows.row5.theirs",
     "a competitor's own product name",
   ],
-  ["staff/print.json settings.windowSticker.paper", "a width in millimetres"],
   ["staff/divers.json shared.agencies.bsac", "agency acronym"],
   ["staff/divers.json shared.agencies.cmas", "agency acronym"],
   ["staff/divers.json shared.agencies.gue", "agency acronym"],
@@ -262,7 +257,6 @@ export const DELIBERATELY_IDENTICAL = new Map([
     "industry rung, not translated in Spanish diving",
   ],
   ["staff/trips.json crew.roleDivemaster", "industry rung, not translated in Spanish diving"],
-  ["diver.json shelf.sizeBcd", "kit acronym, used as-is in Spanish"],
   ["staff/gear.json itemKinds.dpv", "kit acronym, used as-is in Spanish"],
   ["diver.json booking.money.eLearning", "loanword Spanish diving uses"],
   ["staff/reviews.json pulseCategoryBriefing", "loanword Spanish diving uses"],

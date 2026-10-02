@@ -24,9 +24,7 @@
   "row": {
     "arrived": "Checked in",
     "firstVisit": "First visit",
-    "missingEmergencyContact": "No emergency contact",
-    "giftUnclaimed": "A gift from {giver}, not claimed yet",
-    "giftDoor": "Seat the giver’s friend by name"
+    "missingEmergencyContact": "No emergency contact"
   },
   "noShow": {
     "door": "Not here?",

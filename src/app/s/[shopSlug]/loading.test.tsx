@@ -71,7 +71,6 @@ describe("the shopfront's loading week", () => {
             site: null,
             requirements: [],
             aboveLevel: null,
-            clears: null,
             capacityText: "3 spots left",
             capacityTone: "quiet",
             price: "$95",

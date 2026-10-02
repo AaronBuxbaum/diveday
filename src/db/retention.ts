@@ -346,8 +346,8 @@ export async function pruneExpiredRecords(
   // (security review of the gift slice, finding 5). The one arm here that
   // redacts instead of deleting: the giver is a third party with no `people`
   // row, and once the boat is back and the money has settled nobody needs their
-  // name — but the row still explains the seat on the till and in an export, so
-  // the identity goes and the gift stays.
+  // name. Nothing writes the table since gifting a dive was cut; the arm stays
+  // until the table is dropped.
   //
   // "Not yet redacted" is read off the sentinel the erasure path writes, whose
   // address ends in the reserved `@invalid` TLD (RFC 2606) and so can never

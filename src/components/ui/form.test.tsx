@@ -1683,8 +1683,8 @@ describe("source sweeps", () => {
    * a group caption drawn by hand, and the ones found sat 8px or 12px above
    * their choices where a field caption sits 4px: the rental "What to plan"
    * and nitrox groups (`mt-2`, and a pill written `mt-2` under its legend),
-   * the staff rental toggles, the ready page's re-entry answers, the booking
-   * form's gift choice and a departure's required specialties (`mt-3`), each
+   * the staff rental toggles, the ready page's re-entry answers and a
+   * departure's required specialties (`mt-3`), each
    * touched by the batch that moved its boxes (K-72 review). The rule's own
    * wording is that the rest follow as they are touched: the three below have
    * not been, and a file leaves this list the day it is. A bordered

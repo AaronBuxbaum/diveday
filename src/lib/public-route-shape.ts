@@ -37,7 +37,7 @@
  * segments this module judges by *shape* are the two the pages themselves
  * already judge by shape before they query — a dive-site slug through
  * `parseDiveSiteSlug` (`sites/[siteSlug]/page.tsx`) and a trip id through
- * `uuidParam` (`trips/[id]/page.tsx`, `boats/[tripId]/page.tsx`) — plus the
+ * `uuidParam` (`trips/[id]/page.tsx`) — plus the
  * embed catalogue, whose widget names are a closed list in this repository
  * rather than a row. A shop slug and a course slug are *not* pattern-checked
  * here even though both are minted from a known charset: the page does not
@@ -175,7 +175,7 @@ function shopNamespaceShape(segments: string[]): PublicRouteShape | null {
       const siteSlug = parseDiveSiteSlug(second);
       return siteSlug ? { kind: "site", shopSlug, siteSlug } : { kind: "malformed", shopSlug };
     }
-    if (first === "trips" || first === "boats") return tripShape(shopSlug, second);
+    if (first === "trips") return tripShape(shopSlug, second);
     // The proxy answers an unknown widget before it ever asks for a shape
     // (`isUnknownEmbedWidgetRoute`), because that refusal needs no shop. Said
     // again here so this function stays true on its own terms rather than by

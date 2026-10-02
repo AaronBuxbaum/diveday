@@ -40,8 +40,8 @@
  *   the flag is *reported* rather than applied, and who may see past it is
  *   settled one layer up (see "The one predicate the edge applies" below);
  * - a departure is looked up without status and without `isPrivate`, because a
- *   cancelled one gets its own soft landing at 200 and a shop with the boat
- *   line switched off answers `notFound()` on purpose — but *with* `liveTrip()`,
+ *   cancelled one gets its own soft landing at 200 and a private one is
+ *   still served to whoever holds its link — but *with* `liveTrip()`,
  *   because every public reader of a departure carries it and 404s a removed
  *   one anyway, so the filter matches the page rather than overruling it
  *   (`tripExistsForShop` states the whole of that reasoning);

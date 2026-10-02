@@ -20,7 +20,7 @@ import { fileURLToPath } from "node:url";
  * unchanged one: both are the same bytes. The only way a schema could is for
  * every form to carry an `original-<field>` hidden input and compare, which is
  * a second copy of every stored value on the wire, on surfaces where the URL is
- * the capability (`/ready/[token]`, `/shelf/[token]`) and the extra field is one
+ * the capability (`/ready/[token]`) and the extra field is one
  * more thing a hand-crafted post can lie about. That is more machinery than all
  * three incidents cost put together.
  *

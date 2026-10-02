@@ -16,7 +16,6 @@ import { getDiverProfile } from "@/db/divers";
 import { canPersonExportShopData } from "@/db/export";
 import { personThread } from "@/db/inbound-messages";
 import { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
-import { shelfTokenStanding } from "@/db/person-shelf-tokens";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { getSupportNeeds } from "@/db/support-needs";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
@@ -43,7 +42,6 @@ import { NoticeBanner } from "./_components/NoticeBanner";
 import { RemoveDiver } from "./_components/RemoveDiver";
 import { RestoreDiver } from "./_components/RestoreDiver";
 import { resolveDiverNotice } from "./_components/record-notices";
-import { ShelfGroup } from "./_components/ShelfGroup";
 import { SupportNeedsPanel } from "./_components/SupportNeedsPanel";
 import { WaiverGroup } from "./_components/WaiverGroup";
 import { canRaiseInvoiceFor } from "./_lib/invoice-door";
@@ -167,7 +165,6 @@ export default async function DiverDetailPage({
     activityPage,
     supportNeeds,
     thread,
-    shelfStanding,
   ] = await Promise.all([
     canPersonDeleteDiver(db, shop.id, session.user.personId),
     canPersonMergeDiver(db, shop.id, session.user.personId),
@@ -204,9 +201,6 @@ export default async function DiverDetailPage({
     // What this diver wrote and what the shop wrote back, interleaved by time.
     // Shop-scoped from the session like every read here.
     personThread(db, shop.id, personId),
-    // How the diver's own shelf link is doing (slice 20t): opens, when, and how
-    // many phones hold one. Shop-scoped from the session like every read here.
-    shelfTokenStanding(db, { shopId: shop.id, personId, now }),
   ]);
   // `orders/new` refuses outright without a payable account, so the story's
   // foot simply omits "New invoice" rather than offering a link that bounces.
@@ -347,7 +341,7 @@ export default async function DiverDetailPage({
           record's sections, and they stack on this wrapper's `space-y-10`
           (forms-and-controls.md, "Section rhythm"). Each used to hang its own
           margin — the story and certifications `mt-10`, five others `mt-8`,
-          the shelf none — and the pixel probe measured the stack at
+          one none — and the pixel probe measured the stack at
           32/40/32/32/0/32/32/32px. A section that renders nothing (a diver
           who never wrote, an empty activity log) takes no space in it. */}
       <div className="mt-10 space-y-10">
@@ -425,18 +419,6 @@ export default async function DiverDetailPage({
           locale={locale}
           t={t}
           status={noticeForForm(diverNotice, "fit")}
-        />
-        {/* After the gear it shares its sizes with, and before the notes staff
-            write for the crew: the shelf is the diver's own view of everything
-            above it (slice 20t). */}
-        <ShelfGroup
-          shopSlug={shopSlug}
-          personId={personId}
-          standing={shelfStanding}
-          locale={locale}
-          timezone={shop.timezone}
-          t={t}
-          status={noticeForForm(diverNotice, "shelf")}
         />
         <DiverNotesSection
           notes={notes}

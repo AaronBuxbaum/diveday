@@ -817,10 +817,9 @@ export type SimilarDiver = {
    * — and that is the fact the counter's identity question turns on. The full
    * argument sits on the `no_show` clause in `peopleWhoDivedBefore`.
    *
-   * What still differs between the four readers is the *trip-status* leg: the
-   * recap's dive-day count (`getRecapPageData`, src/db/recap.ts) and the diver
-   * shelf (src/db/shelf.ts) take a plain non-`scheduled` departure as
-   * disqualifying, with no escape for a crew-logged dive. That gap is
+   * What still differs between the three readers is the *trip-status* leg: the
+   * recap's dive-day count (`getRecapPageData`, src/db/recap.ts) takes a plain
+   * non-`scheduled` departure as disqualifying, with no escape for a crew-logged dive. That gap is
    * affordable in this direction only. This prompt asks *who is standing at
    * the counter*, and it asks a staffer who can see them, so naming a day they
    * do not recognise costs a shake of the head while withholding one costs the

@@ -5,7 +5,6 @@ import path from "node:path";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { BoatStageLine } from "./BoatStageLine";
-import { FollowShareRow } from "./FollowShareRow";
 
 afterEach(cleanup);
 
@@ -22,29 +21,14 @@ describe("BoatStageLine", () => {
   });
 
   /**
-   * **One row, drawn once** (K-155). The boat's line and the share row under
-   * it are the same anatomy — the boat mark on the sunken ground beside a
-   * line and its detail — and were two hand copies of one class string that
-   * differed in one word: this one's `items-start` hung its mark 20px above
-   * the card's centre at 390, where the share row's is centred.
+   * **The mark centred on the words** (K-155): an `items-start` hung it 20px
+   * above the card's centre at 390.
    */
-  it("draws the same row as the share row beneath it, the mark centred on the words", () => {
+  it("centres the mark on the words", () => {
     const { container } = render(
-      <>
-        <BoatStageLine sentence="Out on Molasses Reef." said="The crew said so at 7:04 AM." />
-        <FollowShareRow
-          url="https://example.test/s/blue-mantis/boats/mantis-ii"
-          text="Mantis II's day"
-          heading="Share with whoever is waiting for you"
-          detail="A link to where the boat is, no names on it."
-          action="Share"
-          copied="Link copied"
-          copyFailed="Could not copy"
-        />
-      </>,
+      <BoatStageLine sentence="Out on Molasses Reef." said="The crew said so at 7:04 AM." />,
     );
-    const [stage, share] = Array.from(container.children);
-    expect(stage.className).toBe(share.className);
+    const [stage] = Array.from(container.children);
     expect(stage).toHaveClass("items-center");
     expect(stage).not.toHaveClass("items-start");
   });

@@ -206,7 +206,6 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       // website group below inventories the whole catalogue, and one thing is
       // never listed twice (docs/product/marketing.md). Not resequenced.
       "marketing.capabilities.booking.item3",
-      "marketing.capabilities.booking.item4",
       "marketing.capabilities.booking.item5",
       "marketing.capabilities.booking.item6",
       "marketing.capabilities.booking.item7",
