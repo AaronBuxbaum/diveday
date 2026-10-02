@@ -581,7 +581,7 @@ test.describe("automated accessibility scans of the static staff routes", () => 
     // recap tip section.
     await request.post("/api/test/seed-stripe-account");
     await scanStaticRoutes(page, [
-      { path: "/shop/blue-mantis/orders", heading: "Orders" },
+      { path: "/shop/blue-mantis/orders", heading: "Money" },
       { path: "/shop/blue-mantis/orders/new", heading: "New order" },
       { path: "/shop/blue-mantis/promos", heading: "Money" },
       { path: "/shop/blue-mantis/reviews", heading: "Inbox" },

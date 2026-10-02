@@ -6470,7 +6470,7 @@ for (const scheme of ["light", "dark"] as const) {
        */
       test(`the orders list renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/orders");
-        await page.getByRole("heading", { level: 1, name: "Orders" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
         // A row of the day ledger itself, not just the heading — the ledger
         // streams in and a capture taken on the header alone banks an empty
         // page. (The table became day groups with slice 6f, ADR
@@ -6546,7 +6546,7 @@ for (const scheme of ["light", "dark"] as const) {
         const ledgerRow = page.locator('ul[aria-labelledby^="orders-day-"] > li');
         await ledgerRow.filter({ visible: true }).first().waitFor();
         await ledgerRow.locator('a[href*="/orders/"]').filter({ visible: true }).first().click();
-        // Not "Orders": the index this just navigated from wears that word as
+        // Not "Money": the index this just navigated from wears that word as
         // its own `<h1>`, already on screen, so waiting on it resolves
         // instantly against the *old* page instead of the new one — capture()
         // then fires while orders/[id] is still behind its own loading.tsx
