@@ -47,17 +47,6 @@ export function publicAvailabilityPath(shopSlug: string): string {
 }
 
 /**
- * The shop's year as one 3:2 image (ADR 20260908-one-hand, decision 6, lever
- * T). It exists **only while the shop says yes**: with
- * `shops.show_year_on_diveday` off the route 404s, which is what lets
- * DiveDay's homepage embed it for the shops that turned it on and nobody
- * else's. Divers, boats out and sites — never money, never a diver's name.
- */
-export function publicShopYearCardPath(shopSlug: string): string {
-  return `${PUBLIC_SHOP_PREFIX}/${shopSlug}/year-card`;
-}
-
-/**
  * **The giver's own page for a gift seat** (ADR 20260908-one-hand, decision 6,
  * lever W). Outside `/s/<shopSlug>` like every other bearer page, because the
  * URL is the capability rather than the shop: the token names the booking, and

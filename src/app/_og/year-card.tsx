@@ -11,14 +11,9 @@ import {
  * lever T) — the pass's shape at card size, in the shop's colour, with the
  * year's sentence, three facts and the strip of days.
  *
- * Two routes draw it and it is the same pixels in both: the staff act on the
- * year page ("Print the card"), and the public route DiveDay's homepage band
- * embeds for a shop that turned the switch on. That is the whole reason it is
- * a shared element rather than a copy in each — the homepage's claim is that
- * the card it shows is the card the shop has.
+ * Drawn by the staff act on the year page ("Print the card").
  *
- * **Divers, boats and sites only.** No money, on the card or on the band, and
- * never a diver's name: the card leaves the shop, so the figures it carries are
+ * **Divers, boats and sites only.** No money, and never a diver's name: the card leaves the shop, so the figures it carries are
  * the ones a shop hands a landlord, not the ones it hands an accountant. The
  * words arrive already translated — satori rasterizes to a bitmap and cannot
  * reach a message bundle.

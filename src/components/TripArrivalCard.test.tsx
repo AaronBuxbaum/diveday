@@ -209,12 +209,11 @@ describe("the ruled rows", () => {
         trip={trip}
         locale="en-US"
         sites={["Molasses Reef"]}
-        stopCodeAction={async () => {}}
       />,
     );
     const ruled = [...container.querySelectorAll(".border-t")];
 
-    expect(ruled).toHaveLength(3);
+    expect(ruled).toHaveLength(2);
     for (const row of ruled) {
       const gap = row.parentElement?.className.match(/(?:^|\s)gap-(\d+(?:\.\d+)?)(?:\s|$)/)?.[1];
       expect(gap).toBeDefined();
@@ -237,46 +236,5 @@ describe("the ruled rows", () => {
     expect(phone).toHaveClass("min-h-11");
     // (44 − 20) / 2 above and below, handed back by the links' own row.
     expect(phone.parentElement).toHaveClass("-my-3");
-  });
-});
-
-/**
- * **The way out of a lost printout** — `stopArrivalCodesFromReady`, issue #1729.
- *
- * The page never shows the code, so the control has to say what it is about on
- * its own, and it may not appear where there is nothing to stop: a diver who
- * never saved the card would be reading a sentence about a credential they do
- * not hold. Whether they hold one is `hasLiveArrivalCapability`'s answer and
- * arrives here as the presence of the action.
- */
-describe("stopping the code on a saved card", () => {
-  const stop = async () => {};
-
-  it("offers it behind a confirmation that names the consequence", async () => {
-    const { default: userEvent } = await import("@testing-library/user-event");
-    render(<TripArrivalCard shop={shop} trip={trip} locale="en-US" stopCodeAction={stop} />);
-
-    // Unarmed, nothing about the printout is claimed yet.
-    expect(screen.queryByText(/It will not scan at the counter/)).not.toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: "Stop the code on a saved card" }));
-
-    // The consequence is read at the moment of commitment, and it says the
-    // *scan* stops — never that the diver's printout was deleted, which would
-    // be false about the world.
-    expect(
-      screen.getByText(
-        "Stop the code on any card you saved or printed? It will not scan at the counter; save the card again for a new one.",
-      ),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Yes, stop the code" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Never mind" })).toBeInTheDocument();
-  });
-
-  it("renders no control at all where there is no code to stop", () => {
-    render(<TripArrivalCard shop={shop} trip={trip} locale="en-US" />);
-    expect(
-      screen.queryByRole("button", { name: "Stop the code on a saved card" }),
-    ).not.toBeInTheDocument();
   });
 });

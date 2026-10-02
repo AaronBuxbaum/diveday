@@ -551,7 +551,7 @@ eighty-one page routes on it across fifteen boards that each name their deletion
 levers, L–S. The ADR's decision 5 records it; the owner's calls are H-71 (a) and (e)–(h).
 
 - **20h** — L, the trip's own line: drawn once and shown on the staff trip page, the diver's trip
-  page and thread, the lobby board and the reminder email; moves on the crew's stage taps, says
+  page and thread, and the reminder email; moves on the crew's stage taps, says
   "as of" when stale. Waits on 20g's F and H-71 h.
 - **20i** — M, the pass: booking confirmed becomes a pass in the shop's colour with the site's
   photo, the boat, the slip, the time, what to bring and a code carrying the booking id only; the
@@ -562,7 +562,7 @@ levers, L–S. The ADR's decision 5 records it; the owner's calls are H-71 (a) a
   figures from the entries. Waits on H-71 g.
 - **20k** — N, the postcard: the recap printed from the crew's log, front and back, the review as
   one line, "next time" with a reason; the recap email carries the front. Waits on 20h.
-- **20l** — P the six room drawings in the empty states and on the lobby board; R the shop's card as
+- **20l** — P the six room drawings in the empty states; R the shop's card as
   the settings index's pane with the live brand preview; S first light on a new shop's first Today;
   Q's two new answers (a unit, a day's line) in the palette.
 - **20m** — the surface sweep: each round-3 board's "Deleted here" list applied to its family of

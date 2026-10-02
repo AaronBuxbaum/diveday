@@ -645,8 +645,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
 
   // The diver who wants the seat Odile is about to give up. A signed-out
   // context, because the wait list is a diver-facing form and a staff session
-  // on the same page is the manage view (`e2e/departures-board.spec.ts` opens
-  // its lobby screen the same way).
+  // on the same page is the manage view.
   const visitorContext = await page.context().browser()?.newContext();
   if (!visitorContext) throw new Error("no browser to open a signed-out context with");
   try {

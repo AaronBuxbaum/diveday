@@ -164,49 +164,6 @@ typed consent is a sufficient assurance level is still H-03 — this shipped the
 the frame around them, not a minor-specific release. ADR
 [20260907-guardian-co-signature](../architecture/decisions/20260907-guardian-co-signature.md).
 
-## The regional pages (delivered 2026-09-07)
-
-N-49 from the 2026-09-07 improvement-ideas sheet (issue #1436). `/dive` and `/dive/[region]` are
-the one place DiveDay lists shops beside each other: a town, and the shops that dive out of it, for
-the diver who knows *where* they will be and not yet *who* with. One row per shop, carrying only
-what the shop authored and its storefront already shows a stranger — no search box, no map, no
-sort, because a town has a handful of shops and a list of them needs no instrument. Departures stay
-on the storefront one tap away: the owner settled that on 2026-09-10 (issue #1511) against #1436's
-original spec, because "next out" on every row would fan an unbounded town out to three reads a
-shop on a page crawlers hit. Written up in
-[design/surfaces.md](../design/surfaces.md#the-regional-pages--dive-and-diveregion).
-
-## Self check-in at the counter (delivered 2026-09-09)
-
-N-24 from the improvement-ideas decision sheet. A shop mints a second kind of **display link** at
-Settings → Lobby display — the choice of what a link opens is now explicit and has no default — and
-stands a tablet on the counter: `/check-in/[token]` asks for a last name, or takes the booking
-reference an arrival card's QR carries, and answers "You're set, {name}" with the departure and the
-meeting point, or "See the desk". **What it records is an arrival, never a boarding.** The writer
-(`checkInAtKiosk`, `src/db/check-in.ts`) re-reads live readiness, projects `bookings.status`, and
-appends the same `booking_arrival_events` row the desk does — stamped with `display_token_id` and
-recorded as the diver's own act — while touching nothing `roll_call_events` or the manifest reads;
-boarding stays a roll-call act the crew performs at the rail. Every refusal is one sentence: a miss,
-an ambiguous surname, a sailed departure and an unmet blocker are indistinguishable from the glass,
-so the tablet cannot be walked to enumerate a roster. Surnames match exactly and whole-word, never
-as a substring and never on an email; lookups are rate-limited per link. `display_tokens` grew a
-`purpose`, matched inside `verifyDisplayToken`'s predicate, so a board link handed to whoever mounts
-a TV can never open the one surface that writes.
-
-## The departures board (delivered 2026-09-07)
-
-N-23 from the improvement-ideas decision sheet (owner decision 2026-09-07, issue #1426). A shop mints
-a **display link** at Settings → Lobby display and opens it on a TV in the lobby or a tablet on the
-dock: `/board/[token]` shows today's boats in clock order — time, title, site and boat, the crew's
-stage word, "n of capacity aboard", the meeting point and the automated outlook — in display type,
-following the device's light or dark scheme at the manifest's `boat-mode` contrast, and re-reads the
-day every minute with no session. The reader (`src/db/departures-board.ts`) is the day spine's own
-readers in a lobby's shape and its row type is closed by test: no diver is ever named, no readiness,
-no phone, no money; the one switch on a link (`show_names`) adds the crew line. The token is hashed
-at rest (`src/lib/bearer-tokens.ts`), non-expiring like the calendar feed, revoked from the same
-settings page, redacted from telemetry (`CAPABILITY_ROUTE_PREFIXES`) and disallowed to crawlers. A
-private charter keeps its row under "Private charter", never its name.
-
 ## The tide window (delivered 2026-09-07)
 
 N-01 of the improvement-ideas sheet, owner decision 2026-09-07. A dive site names a NOAA CO-OPS

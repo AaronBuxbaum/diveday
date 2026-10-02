@@ -18,12 +18,6 @@
 export type CounterSeat = {
   bookingStatus: string;
   readiness: { status: string };
-  /**
-   * The arrival was typed at the lobby tablet rather than seen by a staffer
-   * (N-24). Optional so every caller that predates the kiosk keeps its
-   * meaning: absent is "a person tapped this", which is what it always was.
-   */
-  selfReported?: boolean;
 };
 
 /**
@@ -93,15 +87,6 @@ export function counterIsDone(seat: CounterSeat): boolean {
  * "Everybody checked in" alone is not the condition. A boat with every diver
  * through the counter and one of them blocked still has work on it, and the
  * accent is this app's signal to stop chasing.
- *
- * **Nor is "everybody typed their name into the tablet".** Since N-24 a seat
- * can settle without any staffer having laid eyes on the diver, and proxy
- * check-in is the ordinary use of a self-serve kiosk rather than an abuse of
- * one — one half of a couple parks the car while the other types both
- * surnames. "Everybody is here" is a claim only a human can make, so a single
- * self-reported arrival holds the accent back and the queue stays a list of
- * work. The seat still counts as `here`; what it does not do is end the
- * chasing (`dive-domain-expert` review, 2026-09-09).
  */
 export function counterIsClear(seats: readonly CounterSeat[]): boolean {
   // **A released seat is not somebody still to chase.** Marking a no-show is a
@@ -110,12 +95,7 @@ export function counterIsClear(seats: readonly CounterSeat[]): boolean {
   // accent back until the row ages out of the window would be the app arguing
   // with the person who just told it (issue #1209).
   const present = seats.filter((seat) => !isNoShowAtCounter(seat));
-  return present.length > 0 && present.every(isSettledAtCounter) && !present.some(isSelfReported);
-}
-
-/** This seat's arrival is hearsay: typed at the tablet, unseen by a staffer. */
-export function isSelfReported(seat: CounterSeat): boolean {
-  return seat.selfReported === true && seat.bookingStatus === "checked_in";
+  return present.length > 0 && present.every(isSettledAtCounter);
 }
 
 /**

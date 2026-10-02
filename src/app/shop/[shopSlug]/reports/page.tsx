@@ -170,13 +170,7 @@ export default async function ReportsPage({
           t={t}
         />
         <ReportRangeTabs shopSlug={shopSlug} range="year" t={t} className="mb-8" />
-        <YearReport
-          year={year}
-          locale={locale}
-          shopSlug={shopSlug}
-          t={t}
-          showsOnDiveday={shop.showYearOnDiveday}
-        />
+        <YearReport year={year} locale={locale} shopSlug={shopSlug} t={t} />
       </main>
     );
   }

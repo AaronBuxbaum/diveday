@@ -1969,11 +1969,6 @@ export default async function SettingsPage({
               href={`/shop/${shopSlug}/settings/embed`}
               heading={t("settings.main.embed.heading")}
             />
-
-            <SettingsDoorRow
-              href={`/shop/${shopSlug}/settings/display`}
-              heading={t("settings.main.display.heading")}
-            />
           </InsetGroup>
         </SettingsGroup>
 

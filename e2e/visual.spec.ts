@@ -63,11 +63,10 @@ import { E2E_FROZEN_CLOCK, ONBOARD_FORM_PATH } from "./servers";
  * once, at a US-Letter width (or a wider sheet's own), via `capturePrint()`.
  *
  * `captureStickyFoot()` adds 4 more (one surface × light/dark × both widths),
- * `TABLET_SURFACES` adds 16 — eight surfaces a shop runs on a tablet get a
- * third, portrait width, at one screenshot per scheme rather than two — and
- * `TV_SURFACES` adds 2 for the one board a lobby screen shows. That brings the
- * run to 1,038 screenshots: the extra widths are a 2% addition, not the 50% a
- * third viewport applied to every surface would have cost.
+ * and `TABLET_SURFACES` adds 12 — six surfaces a shop runs on a tablet get a
+ * third, portrait width, at one screenshot per scheme rather than two. The
+ * extra width is a small addition, not the 50% a third viewport applied to
+ * every surface would have cost.
  *
  * Three of the 254 are the same surface twice, in a second language: see
  * {@link SPANISH}. A Spanish sibling takes the standard pair and keys its own
@@ -184,7 +183,7 @@ const PHONE_VIEWPORT = VIEWPORTS[0];
 const TABLET_VIEWPORT = { width: 820, height: 1180 } as const;
 
 /**
- * The capture names that get `TABLET_VIEWPORT` as a third width — **eight, not
+ * The capture names that get `TABLET_VIEWPORT` as a third width — **six, not
  * every surface in this file.**
  *
  * A third width applied everywhere is another 506 screenshots and the baseline
@@ -215,23 +214,7 @@ const TABLET_SURFACES: ReadonlySet<string> = new Set([
   "prep",
   "departure-log",
   "departure-log-every-checkpoint",
-  // The dock tablet is one of the two devices the departures board is for
-  // (issue #1426); the other is the TV below.
-  "departures-board",
-  // A counter tablet is what the self check-in kiosk *is* (N-24), so its
-  // tablet width is the width it ships at rather than a third variant.
-  "self-check-in",
 ]);
-
-/**
- * **A TV on the lobby wall** — the other device the departures board is built
- * for (issue #1426, N-23), and the one width nothing else in this file has any
- * reason to photograph. 1920×1080 is what a lobby screen actually is; the
- * 1280 "desktop" is a laptop. Same shape as `TABLET_SURFACES`: a bounded set
- * checked against the captures that exist, never a global width.
- */
-const TV_VIEWPORT = { width: 1920, height: 1080 } as const;
-const TV_SURFACES: ReadonlySet<string> = new Set(["departures-board"]);
 
 /**
  * A name in `TABLET_SURFACES` that no `capture()` call uses photographs
@@ -240,10 +223,10 @@ const TV_SURFACES: ReadonlySet<string> = new Set(["departures-board"]);
  * this file back is the cheapest thing that can tell a typo from a decision.
  * Once per worker process, against a file already on the page cache.
  */
-for (const name of [...TABLET_SURFACES, ...TV_SURFACES]) {
+for (const name of TABLET_SURFACES) {
   if (!readFileSync("e2e/visual.spec.ts", "utf8").includes(`capture(page, "${name}"`)) {
     throw new Error(
-      `TABLET_SURFACES/TV_SURFACES names "${name}", which no capture() call uses — it would ` +
+      `TABLET_SURFACES names "${name}", which no capture() call uses — it would ` +
         "silently photograph nothing. Fix the name or drop it from the set.",
     );
   }
@@ -1533,11 +1516,7 @@ async function capture(
   // rather than inheriting a third width: those sets are about the *device* a
   // surface runs on, and a second language has nothing new to say at 820px
   // that it does not say louder at 390.
-  const viewports = [
-    ...VIEWPORTS,
-    ...(TABLET_SURFACES.has(baseline) ? [TABLET_VIEWPORT] : []),
-    ...(TV_SURFACES.has(baseline) ? [TV_VIEWPORT] : []),
-  ];
+  const viewports = [...VIEWPORTS, ...(TABLET_SURFACES.has(baseline) ? [TABLET_VIEWPORT] : [])];
   // Light only: geometry does not change with the scheme, and checking one
   // scheme is the owner's standing rule for anything that is not colour work.
   // The import happens here, inside the flag, so an unset flag loads nothing.
@@ -2176,79 +2155,6 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("button", { name: "Send it to the shop" }).waitFor();
         await page.mouse.move(0, 0);
         await capture(page, "shopfront-register", scheme);
-      });
-
-      /**
-       * **The departures board** (issue #1426, N-23): a lobby TV's read of the
-       * day behind a display link and no session. Minted through the test
-       * seed route because the token is hashed at rest and shown once; with
-       * names on, so the crew line — the one thing the switch adds — is in the
-       * picture. Phone, laptop, the dock tablet and the TV wall
-       * (`TV_SURFACES`).
-       */
-      test(`the departures board renders true to the design (${scheme})`, async ({
-        page,
-        request,
-      }) => {
-        const seeded = await request.post("/api/test/seed-display-token", {
-          data: { label: "Lobby TV", showNames: true },
-        });
-        expect(seeded.ok()).toBe(true);
-        const { path } = (await seeded.json()) as { path: string };
-        await page.goto(path);
-        await page.getByRole("heading", { level: 1, name: "Blue Mantis Divers" }).waitFor();
-        await page.getByText("Two-Tank Reef — Molasses & French").waitFor();
-        await capture(page, "departures-board", scheme);
-      });
-
-      /**
-       * **Self check-in at the counter** (N-24): the other thing a display link
-       * can open, and the one surface in DiveDay a stranger operates unaided.
-       * Minted through the test seed route, like the board above — the token is
-       * hashed at rest and shown once.
-       *
-       * **The idle prompt, and deliberately not the answer card.** The answer
-       * names a diver and stands in a lobby, so it wipes itself after twelve
-       * seconds (`CLEAR_AFTER_MS`) — which is shorter than a multi-viewport
-       * `capture()` takes, and a baseline that sometimes photographs a blank
-       * panel is worse than no baseline at all. What the card says is pinned by
-       * `e2e/self-check-in.spec.ts`, which reads it in one pass and is done.
-       */
-      test(`the counter kiosk renders true to the design (${scheme})`, async ({
-        page,
-        request,
-      }) => {
-        const seeded = await request.post("/api/test/seed-display-token", {
-          data: { label: "Counter tablet", purpose: "check_in" },
-        });
-        expect(seeded.ok()).toBe(true);
-        const { path } = (await seeded.json()) as { path: string };
-        await page.goto(path);
-        await page.getByRole("heading", { level: 1, name: "Blue Mantis Divers" }).waitFor();
-        await page.getByLabel("Last name").waitFor();
-        await page.mouse.move(0, 0);
-        await capture(page, "self-check-in", scheme);
-      });
-
-      /**
-       * **The regional pages** (issue #1436, N-49), the two anonymous surfaces
-       * a diver meets before a shop's own storefront. The demo shop is a demo
-       * and is excluded from both, so what is in the picture is the pair of
-       * real Key Largo neighbours `seedRegionNeighbours` seeds — a populated
-       * state on purpose, since an empty ledger would photograph the empty
-       * state rather than the page.
-       */
-      test(`the regional index renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/dive");
-        await page.getByRole("heading", { level: 1, name: "Dive shops by town" }).waitFor();
-        await capture(page, "regions-index", scheme);
-      });
-
-      test(`one town's dive shops render true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/dive/key-largo");
-        // The town's own <h1>, which the index never renders.
-        await page.getByRole("heading", { level: 1, name: "Dive shops in Key Largo" }).waitFor();
-        await capture(page, "region-shops", scheme);
       });
 
       test(`the landing page renders true to the design (${scheme})`, async ({ page }) => {
@@ -3176,43 +3082,6 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **Stopping the code on a card that is already on paper** — issue #1729.
-       *
-       * The one control on this thread whose subject is never on screen: the
-       * arrival code rides a QR inside the saved file, and the page shows only
-       * the card that file was made from. So what a baseline can catch here is
-       * the *armed* state — whether a consequence sentence long enough to be
-       * honest still reads at phone width, and whether a destructive confirm
-       * sitting inside a card of facts reads as a decision rather than as one
-       * more fact.
-       *
-       * Its own capture rather than a row added to `readiness` above, and the
-       * download below is why: the control is offered only where a card has
-       * actually been saved, so folding it into the calm thread would mean
-       * every night-before baseline pretending a diver had downloaded one. The
-       * calm capture correctly has no control at all.
-       */
-      test(`the thread offers a way out of a lost arrival card (${scheme})`, async ({ page }) => {
-        test.setTimeout(FLOW_TIMEOUT_MS);
-        await bookAVisualRegressionSeat(page, scheme);
-        const thread = new URL(page.url()).pathname;
-        // Fetched rather than clicked: the link carries `download`, and a real
-        // click hands the file to the browser instead of the route. The GET is
-        // what mints the `arrival` capability, which is the state being
-        // photographed.
-        const cardHref = await page
-          .getByRole("link", { name: "Save arrival card" })
-          .getAttribute("href");
-        if (!cardHref) throw new Error("the arrival card offers no download");
-        expect((await page.request.get(cardHref)).status()).toBe(200);
-        await page.goto(thread);
-        await threadStatus(page).waitFor();
-        await page.getByRole("button", { name: "Stop the code on a saved card" }).click();
-        await expect(page.getByRole("button", { name: "Yes, stop the code" })).toBeVisible();
-        await capture(page, "thread-arrival-code", scheme);
-      });
-
-      /**
        * **The thread's Day-of step, answered "Getting comfortable again"** (D12
        * and D18).
        *
@@ -3389,19 +3258,6 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/s/blue-mantis");
         await page.getByRole("region", { name: "Yours" }).waitFor();
         await capture(page, "shopfront-known-diver", scheme);
-      });
-
-      /**
-       * **A demo story's door** (issue #1215, delight report D55) — one stable
-       * link per story, the thing somebody pastes into an email to a shop
-       * owner. The weather day because it is the one with the most to prove:
-       * three lines and one button, and the only claim on the page is a
-       * description of what the visitor is about to see.
-       */
-      test(`a demo story door renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/demo/weather-day");
-        await page.getByRole("heading", { level: 1, name: "A day the weather takes" }).waitFor();
-        await capture(page, "demo-story-door", scheme);
       });
 
       /**
@@ -6592,39 +6448,6 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-calendar", scheme);
       });
 
-      // Lobby display (issue #1426) with both kinds of screen listed — minted
-      // through the seed route rather than the form, so the shown-once link
-      // block is *not* in the picture: it carries a token that differs on every
-      // run. Both kinds, because the rows are not the same shape: only the
-      // check-in link expires, so only it prints an expiry line and carries a
-      // Renew beside its Revoke (issue #1609). The date is stable because the
-      // e2e harness freezes the clock (src/lib/clock.ts) — which is also why
-      // the kiosk link asks for a `createdAtOffsetSeconds`. The panel lists
-      // newest first and breaks a tie on `id`, a fresh uuid every run, so two
-      // links minted in the same frozen second rendered in a random order and
-      // reported this capture as changed on pull requests that touched nothing
-      // near it. The offset stays inside the frozen minute, so every stamp in
-      // the picture reads the same and only the order is settled: the kiosk row
-      // is the newer of the two, and sits on top.
-      test(`the lobby display settings render true to the design (${scheme})`, async ({
-        page,
-        request,
-      }) => {
-        const seeded = await request.post("/api/test/seed-display-token", {
-          data: { label: "Lobby TV" },
-        });
-        expect(seeded.ok()).toBe(true);
-        const kiosk = await request.post("/api/test/seed-display-token", {
-          data: { label: "Counter tablet", purpose: "check_in", createdAtOffsetSeconds: 30 },
-        });
-        expect(kiosk.ok()).toBe(true);
-        await page.goto("/shop/blue-mantis/settings/display");
-        await page.getByRole("button", { name: "Create link" }).waitFor();
-        await page.getByText("Lobby TV").waitFor();
-        await page.getByRole("button", { name: "Renew Counter tablet" }).waitFor();
-        await capture(page, "settings-display", scheme);
-      });
-
       // The courses catalog as one ledger (slice 9g of ADR
       // 20260827-the-shops-shelves): agency as the group heading that replaced
       // the tab strip, the list in progression order rather than alphabetical,
@@ -8466,55 +8289,6 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByRole("checkbox", { name: "Remove current logo" }).waitFor();
       await page.getByRole("checkbox", { name: "Remove the cover photo" }).waitFor();
       await capture(page, "settings-profile", scheme);
-    });
-  });
-}
-
-/**
- * **The proof band on DiveDay's own homepage** (ADR 20260908-one-hand,
- * decision 6, lever T): a real shop's year card, the one sentence a number on
- * the card can prove, and the line that says why it is there.
- *
- * **A real shop, seeded for this**, not the `privateShop` mint: the band and the
- * public card both refuse an `isDemo` tenant, because a demo's shop, boat and
- * site names are typed by whichever visitor minted it (security review, finding
- * 1) — so a demo cannot reach this band at all. `/api/test/seed-year-band-shop`
- * mints the real one (`src/db/seed-year-band.ts`): fixed name, fixed
- * departures, out of search, dropped here and again by every `/api/test/reset`.
- *
- * Fixed rather than random because the shop's *name* is half of what this
- * photographs — on the card, in the claim beside it, and in the storefront door
- * — so a random identity would report as changed on the very next pull request.
- */
-for (const scheme of ["light", "dark"] as const) {
-  test.describe(`${scheme} mode — a shop's year on DiveDay's homepage`, () => {
-    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
-
-    test(`the homepage carries a real shop's year card (${scheme})`, async ({ page, request }) => {
-      // The seed and the card render come out of this test's own budget.
-      test.setTimeout(FLOW_TIMEOUT_MS);
-      const seeded = await request.post("/api/test/seed-year-band-shop");
-      expect(seeded.ok()).toBe(true);
-
-      await page.goto("/");
-      await page.getByText("Shown here because the shop turned it on.").waitFor();
-      // The card is an image route, so the band is not finished until its bytes
-      // have arrived — a capture fired on the sentence alone photographs an
-      // empty frame where the year is.
-      await page
-        .locator('img[alt*="year card"]')
-        .first()
-        .evaluate((node: HTMLImageElement) =>
-          node.complete
-            ? undefined
-            : new Promise<void>((done) => {
-                node.addEventListener("load", () => done());
-              }),
-        );
-      await capture(page, "landing-year-band", scheme);
-      // Dropped here rather than left for the next test's reset, so the
-      // cascade is charged to the test that asked for the shop.
-      await request.delete("/api/test/seed-year-band-shop");
     });
   });
 }

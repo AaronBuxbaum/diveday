@@ -2796,8 +2796,8 @@ describe("findSimilarDivers last dive day", () => {
   });
 
   /**
-   * A tokenless `arrived` row — a staffer's own tap rather than the lobby
-   * tablet's — written here rather than through `checkInBooking`, whose door is
+   * A staffer's own `arrived` row, written here rather than through
+   * `checkInBooking`, whose door is
    * readiness-gated. What this file owns is whether the *counter* spends the
    * standing verdict at all.
    */

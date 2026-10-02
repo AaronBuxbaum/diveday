@@ -135,6 +135,7 @@ import { seedGear } from "./seed-gear";
 import { seedHistory } from "./seed-history";
 import { seedInbox } from "./seed-inbox";
 import { seedLenses } from "./seed-lenses";
+import { seedListedShops } from "./seed-listed-shops";
 import { seedMedicalReview } from "./seed-medical-review";
 import { seedMinimumSeats } from "./seed-minimum-seats";
 import { seedMoreTrips } from "./seed-more-trips";
@@ -145,7 +146,6 @@ import { seedPartnerReferrals } from "./seed-partner-referrals";
 import { seedPreDepartureChecklist } from "./seed-pre-departure-checklist";
 import { seedPromos } from "./seed-promos";
 import { seedRecentRecaps } from "./seed-recent-recaps";
-import { seedRegionNeighbours } from "./seed-region-neighbours";
 import { seedRentalFit } from "./seed-rental-fit";
 import { seedSelfDeclaredJoiners } from "./seed-self-declared";
 import { seedSightings } from "./seed-sightings";
@@ -391,9 +391,6 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       addressRegion: "FL",
       addressPostalCode: "33037",
       addressCountry: "US",
-      // What `setShopAddress` would derive from the locality above; seeded
-      // inserts bypass that writer, so they say it themselves (issue #1436).
-      regionSlug: "key-largo",
       latitude: 25.0865,
       longitude: -80.4473,
       // Rents the core kit plus both add-ons and fills nitrox, and prices them:
@@ -532,10 +529,9 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
   // (ADR 20260824-pre-departure-safety-check) — seeded once here, never
   // re-seeded by a reset, which is why it is not inside seedDemoSchedule.
   await seedPreDepartureChecklist(db, shop.id);
-  // Two listed neighbours in the same town, so `/dive/key-largo` has shops
-  // to show beside a demo it cannot list (issue #1436). Stable half: real
+  // Two listed shops beside a demo no listing may show. Stable half: real
   // rows a reset never touches.
-  await seedRegionNeighbours(db);
+  await seedListedShops(db);
 }
 
 /**
@@ -637,7 +633,6 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, brand = false
           addressRegion: "FL",
           addressPostalCode: "33037",
           addressCountry: "US",
-          regionSlug: "key-largo",
           latitude: 25.0865,
           longitude: -80.4473,
           rentalItems: [

@@ -25,7 +25,6 @@ function row(name: string, overrides: Partial<CheckInQueueRow> = {}): CheckInQue
   return {
     bookingId: `booking-${name}`,
     personId: `person-${name}`,
-    selfReported: false,
     personName: name,
     email: null,
     dateOfBirth: null,

@@ -147,12 +147,8 @@ export const DEFAULT_DEMO_TTL_MS = 7 * DAY_MS;
  * there in the same change.
  *
  * Never call this on the canonical blue-mantis demo, or on any shop somebody
- * uses. There are two callers and each addresses one shop it minted itself: the
- * reaper below, which only ever passes a minted demo (`isDemo`, non-canonical
- * slug), and `dropYearBandShop` (src/db/seed-year-band.ts), which passes the
- * homepage band's e2e fixture — a shop that is not a demo, precisely because
- * the band refuses demos, and is therefore addressed by one reserved slug that
- * nothing else creates, from routes that exist only under `DIVEDAY_E2E`.
+ * uses. Its caller is the reaper below, which only ever passes a minted demo
+ * (`isDemo`, non-canonical slug).
  */
 export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Promise<void> {
   const shopTrips = await db.select({ id: trips.id }).from(trips).where(eq(trips.shopId, shopId));

@@ -114,14 +114,6 @@ describe("redactCapabilityUrl", () => {
     expect(redactCapabilityUrl("/unsubscribe/abc123.def456")).toBe("/unsubscribe/[token]");
   });
 
-  it("redacts a self check-in kiosk link", () => {
-    expect(redactCapabilityUrl("/check-in/abc123.def456")).toBe("/check-in/[token]");
-  });
-
-  it("redacts a departures-board display link", () => {
-    expect(redactCapabilityUrl("/board/abc123.def456")).toBe("/board/[token]");
-  });
-
   it("redacts even with query string and hash", () => {
     expect(redactCapabilityUrl("/ready/abc123.def456?photo=error#section")).toBe("/ready/[token]");
   });

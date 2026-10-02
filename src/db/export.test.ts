@@ -351,10 +351,8 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // can address mail into this shop's inbox, and a restored shop is minted a
     // fresh one by the database rather than carrying the old one in a CSV.
     "inbound_email_token",
-    // Derived from `address_locality`, which *is* exported, by
-    // `regionSlugFromLocality` (issue #1436). Carrying it would let a restored
-    // bundle hold a region that disagrees with the address printed beside it --
-    // the one way those two can drift -- and re-deriving costs a function call.
+    // Nothing writes or reads these two since the regional directory and the
+    // public year card were cut; both columns go with the schema drop.
     "region_slug",
     // Settings cut by ADR 20261001-logbook. Nothing reads or writes these any
     // more, and the schema pass that follows the cut drops them.
@@ -367,6 +365,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     "welcome_note",
     "dock_call_note",
     "sign_off_note",
+    "show_year_on_diveday",
   ], // DiveDay-side config, not shop records
   boats: ["shop_id"],
   trip_lenses: ["shop_id"],

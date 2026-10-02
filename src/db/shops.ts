@@ -1,4 +1,4 @@
-import { and, asc, eq, exists, gt, isNull, or, sql } from "drizzle-orm";
+import { and, eq, exists, gt, isNull, or, sql } from "drizzle-orm";
 import { cache } from "react";
 import type { BrandBadgeCode, BrandDisplayFontCode } from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
@@ -6,7 +6,6 @@ import type { DepthUnit } from "@/lib/depth-units";
 import type { DockDayRhythm } from "@/lib/diver-planning";
 import type { EmergencyReference } from "@/lib/emergency-reference";
 import type { ShopCurrency } from "@/lib/money";
-import { regionSlugFromLocality } from "@/lib/region";
 import type { RentalPricing } from "@/lib/rentals";
 import type { SeasonStart } from "@/lib/season";
 import type { TemperatureUnit } from "@/lib/temperature-units";
@@ -113,10 +112,9 @@ export async function listShopsForSitemap(db: AppDb): Promise<{ slug: string; na
 
 /**
  * **What "a listed shop" means, in one place** — the three conditions above,
- * as a `where` fragment. The sitemap, `llms.txt` and the regional pages
- * (`src/db/regions.ts`, issue #1436) all read through it, so a shop that
- * said no to search is absent from every public list DiveDay publishes on
- * its behalf, and a fourth reader cannot quietly widen the scope.
+ * as a `where` fragment. The sitemap and `llms.txt` both read through it,
+ * so a shop that said no to search is absent from every public list DiveDay
+ * publishes on its behalf, and a third reader cannot quietly widen the scope.
  */
 export function listedShopScope(db: AppDb) {
   return and(
@@ -484,9 +482,6 @@ export async function setShopAddress(
       addressCountry: clean(address.addressCountry),
       latitude: address.latitude ?? null,
       longitude: address.longitude ?? null,
-      // Derived, never typed: the regional page a shop appears on follows
-      // its locality wherever the address goes (issue #1436).
-      regionSlug: regionSlugFromLocality(clean(address.addressLocality)),
     })
     .where(eq(shops.id, shopId))
     .returning();
@@ -606,59 +601,4 @@ export async function setShopPublicBoatLine(db: AppDb, shopId: string, on: boole
     .where(eq(shops.id, shopId))
     .returning();
   return shop ?? null;
-}
-
-/**
- * **The shop's yes** for its year on DiveDay's own pages (ADR
- * 20260908-one-hand, decision 6, lever T; the owner's call is H-71 (k)). Off
- * by default; the switch is one row on Settings' Lobby display page, and
- * turning it off takes the homepage band and the public card down on the next
- * render.
- */
-export async function setShopYearOnDiveday(db: AppDb, shopId: string, show: boolean) {
-  const [shop] = await db
-    .update(shops)
-    .set({ showYearOnDiveday: show })
-    .where(eq(shops.id, shopId))
-    .returning();
-  return shop ?? null;
-}
-
-/**
- * The shops whose year DiveDay's homepage may draw: a real shop that said yes.
- *
- * **Two conditions, and the second is not a tidiness rule.** "Try the live
- * demo" mints a throwaway `isDemo` tenant per visitor and signs that visitor in
- * as its owner, so a demo shop's boat names, site names and shop name are
- * *attacker-supplied text* — and this band prints them on dive.day's own
- * homepage, under a sentence vouching for them. An earlier draft of this query
- * only **ordered** by `is_demo`, which meant a visitor who minted a demo, typed
- * whatever they liked into a boat and turned the switch on could put it there
- * whenever no real shop had said yes (security review, finding 1). It is a
- * `where` now. `/s/<slug>/year-card` carries the same exclusion, because the
- * card is a dive.day URL whether or not the homepage links it.
- *
- * The switch is still the gate for every real shop: nothing else may add or
- * remove one from a band whose entire claim is "shown here because the shop
- * turned it on". Ordered by slug so the homepage shows the same shop on every
- * render rather than whichever row Postgres handed back; bounded, and the
- * caller takes the first with a year worth drawing.
- */
-export async function listShopsShowingYearOnDiveday(db: AppDb, limit = 3) {
-  return db
-    .select({
-      id: shops.id,
-      slug: shops.slug,
-      name: shops.name,
-      timezone: shops.timezone,
-      defaultLocale: shops.defaultLocale,
-      brandColor: shops.brandColor,
-      brandDisplayFont: shops.brandDisplayFont,
-      brandHeroImageUrl: shops.brandHeroImageUrl,
-      brandHeroImageAlt: shops.brandHeroImageAlt,
-    })
-    .from(shops)
-    .where(and(eq(shops.showYearOnDiveday, true), eq(shops.isDemo, false)))
-    .orderBy(asc(shops.slug))
-    .limit(limit);
 }

@@ -24,9 +24,8 @@ new domain concept, define it here in the same PR.
 - **Arrival card** — the place-to-go projection for one departure: meeting label and address,
   optional shop-authored landmark guidance, a map hand-off, public support contacts, and the
   departure time. The panel on the public trip page is public and non-sensitive. The **download**
-  is not: it is the booked diver's own card, released only against their `/ready` capability, and
-  it carries an **arrival code**. It still contains no waiver, readiness or medical state, and no
-  booking id.
+  is not: it is the booked diver's own card, released only against their `/ready` capability. It
+  contains no waiver, readiness or medical state, no credential, and no booking id.
 - **Change ledger** — the chronological, diver-visible record of material meeting-point and
   conditions changes. Each event stores before/after public-safe snapshots, a broad source
   (`shop` or `crew`), and a timestamp; it never names a staffer or carries private operational
@@ -670,10 +669,7 @@ new domain concept, define it here in the same PR.
   views.
 - **Check-in** — a recorded arrival state for a booked diver. It confirms the live readiness
   result and changes the booking to `checked_in`; it is not boarding, which remains a separate
-  departure-time manifest decision. **Two doors write it**: a staffer's tap at the counter, which
-  is a sighting, and a diver's own tap at a **self check-in** tablet, which is a claim. The two are
-  told apart by `booking_arrival_events.display_token_id` and wear different words wherever a
-  person reads them. Readiness is confirmed **wherever the tap is applied**, which
+  departure-time manifest decision. A staffer's tap at the counter writes it. Readiness is confirmed **wherever the tap is applied**, which
   since the counter went offline-capable is at the desk for a live tap and at reconciliation —
   minutes or hours later, against readiness as it stands *then* — for a queued one.
 - **Arrival event** — one append-only row in `booking_arrival_events` recording a single tap at the
@@ -685,10 +681,6 @@ new domain concept, define it here in the same PR.
   checkpoint, and its writers cannot reach `roll_call_events`: an arrival is never promoted to
   aboard by the queue
   ([ADR 20260907-the-counter-survives-offline](../architecture/decisions/20260907-the-counter-survives-offline.md)).
-  Two doors write these rows. A staffer at the desk is the usual one. The other is
-  **self check-in**: `display_token_id` names the counter tablet it was tapped on, and
-  `recorded_by_person_id` is the diver themselves — which is what lets a shop reading its own trail
-  tell "Dana checked Priya in" from "Priya checked herself in", on a shop where staff dive too.
 - **No-show** — one staffer's recorded statement that a booked diver did not come. The status is
   `bookings.status = "no_show"`, written only by `markBookingNoShow` (`src/db/no-show.ts`), behind
   the counter's "Not here?" disclosure and its confirm tap. **It is not the three things it is most easily mistaken
@@ -1084,13 +1076,6 @@ new domain concept, define it here in the same PR.
   own briefing and the field guide the shop picked, so the words a diver hears on the boat are the
   words on the storefront. The briefing is the shop's; the species names are DiveDay's, in the
   reader's language.
-- **Arrival code** — the QR on a diver's downloaded arrival card: an `arrival`-purpose booking
-  capability, minted fresh each download, hashed at rest, and dying with the booking it names. It
-  authorizes **one thing** — being recognised at the counter tablet, the same thing saying a surname
-  there already buys — and nothing on `/ready`: not the waiver, not the medical answers, not
-  payment. Deliberately **not** the paper pass's booking id: that id is safe on paper because only a
-  staff session resolves it, and an id printed on a diver-facing surface can never be revoked. A
-  forwarded card is therefore worth what the manifest already shows a staffer.
 - **Paper pass** — the A6 pass printed at the counter for a diver without a phone: the departure,
   the hull, the meeting point, the shop's dock call, what to bring, and a code carrying **the
   booking's id and nothing else**. A booking id is not a capability — the counter resolves it inside
@@ -1380,7 +1365,7 @@ new domain concept, define it here in the same PR.
 - **Trip stage** — where a departure is, in the crew's own word: one of five (`boarding`,
   `underway`, `surface`, `heading_in`, `home`) tapped on the **manifest** and then repeated, with
   the time it was tapped, everywhere DiveDay draws that boat — the shop home's station chip, the
-  storefront's live line, the **follow link**, the **departures board**, and a diver's own link (ADR
+  storefront's live line, the **follow link**, and a diver's own link (ADR
   [20260904-reef-all-the-way-down](../architecture/decisions/20260904-reef-all-the-way-down.md),
   decision 2; `src/lib/trip-stages.ts`). **Never inferred and never a position.** A clock implies no
   stage: a departure nobody tapped has none, renders nothing, and never renders "Unknown"; and
@@ -2141,15 +2126,6 @@ new domain concept, define it here in the same PR.
   since revoked, never satisfies it. Being signed in is not being stepped up; **and step-up is
   only demanded of an account that has enabled two-factor**, so it is a control a staff member
   opts into rather than a floor under every account.
-- **Display link** — a revocable bearer URL (`display_tokens`) a shop opens on a screen of its own,
-  with no sign-in on that screen. Hashed at rest, revoked from Settings → Lobby display. A link says
-  which of two surfaces it opens, and the two never cross: a **board** link (`/board/[token]`) is
-  the **departures board** — today's boats, the crew's stage word, an "n of capacity" count, the
-  meeting point and the outlook, never a diver's name; its one switch, *show names*, adds the crew
-  line (issue #1426). A **check-in** link (`/check-in/[token]`) is the **self check-in kiosk**
-  below, and unlike the board it writes (N-24). **Only the check-in link expires** — 180 days
-  (`CHECK_IN_LINK_TTL_DAYS`), renewed from the same settings page; a board link is non-expiring like
-  a calendar feed, because a screen on a wall going dark is noticed by nobody (issue #1609).
 - **Follow link** — the public page for one departure's day (`/s/<shopSlug>/boats/<tripId>`), which
   a diver hands to whoever is waiting for them on the dock. Deliberately **not** a bearer credential
   and deliberately not revocable: the trip id is in the URL unhashed because the page holds no
@@ -2160,36 +2136,6 @@ new domain concept, define it here in the same PR.
   takes all three with it when it goes back off; a private charter, a cancelled departure and a day
   that has closed are each a 404 rather than an empty state (ADR
   [20260908-one-hand](../architecture/decisions/20260908-one-hand.md), decision 6, lever U).
-- **Self check-in** — a diver typing their own last name on a counter tablet behind a check-in
-  display link, and reading "You're set" or "See the desk". What it records is an **arrival**,
-  never a boarding: the tablet writes the same `booking_arrival_events` row the desk does, stamped
-  with the tablet it was tapped on (`display_token_id`) and recorded as the diver's own act.
-  Boarding stays a roll-call act a crew member performs at the rail with the diver in front of
-  them. Readiness is re-read at the tap, so a diver with an unsigned waiver is turned toward the
-  desk while there is still somebody to talk to (N-24).
-  It **does** move `bookings.status`, which the counter's "here" count and the roll-call screen's
-  arrival pill both read — so those surfaces distinguish it: a kiosk arrival reads *"Says they're
-  here"*, and one alone holds back the counter's stop-chasing accent, because "everybody is here"
-  is a claim only a human can make. Proxy check-in is the ordinary use of a self-serve kiosk, not
-  an abuse of one. The tablet answers only for a departure within the next six hours (or half an
-  hour past its start) — never one that has sailed and returned, and never tomorrow's — and never
-  for a diver with stated support needs or a minor, who meet a person, which is the whole point of
-  stating either. A diver's own two departures inside that window resolve to the nearer one; two
-  different people sharing a surname still go to the desk. Both apellidos of a two-apellido name
-  work, and so does a tussenvoegsel: the lookup matches any word of the stored name but the given
-  ones, whole and exactly, because a prompt reading "Apellido" that accepted only the maternal one
-  refused every Hispanic diver (issue #1610).
-  Every refusal is one identical sentence *and* one length: the lookup path and the blocked-diver
-  path do different amounts of work, so response time used to tell them apart, and every answer is
-  now held to a floor (`KIOSK_RESPONSE_FLOOR_MS`, issue #1608). The floor hides the difference only
-  while the slow path stays under it.
-  **A second tap is answered warmly, and that is an accepted disclosure.** A diver already arrived
-  reads *"Already checked in, Diego."* rather than the generic "See the desk", so a link holder can
-  learn that somebody by that surname has turned up today. It stands because the alternative
-  discloses more, not less: typing a name that has *not* arrived answers "You're set" and records
-  an arrival, so presence is readable from the success path either way, and folding the second tap
-  into the refusal would only send a diver who is already through into a queue for nothing (issue
-  #1611).
 - **Recovery code** — one of ten single-use strings issued at two-factor enrolment, shown once and
   stored only as a salted HMAC under the deployment's own sealing key. It is a second factor, not
   a password reset: presenting one satisfies the same check a TOTP code does.

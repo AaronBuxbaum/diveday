@@ -351,26 +351,6 @@ drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion
   a decided diver already is; the arrival card follows the hero and the change ledger follows the
   conditions reading so practical wayfinding never competes with the pitch.
 
-### The regional pages — `/dive` and `/dive/[region]`
-
-**Built 2026-09-07** — N-49 (issue #1436), the one place DiveDay lists shops beside each other: a
-town, and the shops that dive out of it.
-
-- **One idea:** a diver who knows *where* they will be, and not yet *who* with, gets a way in.
-- **The question it arrives with:** "who runs boats out of Key Largo?" — answered by the town's own
-  page, one row per shop, each row the shop's own name and its own line about itself.
-- **Controls that dissolved:** every filter anyone would reach for. There is no search box, no map,
-  no sort: a town has a handful of shops and a list of them needs no instrument.
-- **Remove first:** anything DiveDay would be saying *about* a shop. A row carries only what the
-  shop authored and its storefront already shows a stranger, so a shop that has written no tagline
-  gets a shorter row rather than a generated one. Departures stay on the storefront one tap away —
-  putting "next out" on every row would fan an unbounded town out to three reads a shop on a page
-  crawlers hit. That is decided, not deferred: the owner settled it on 2026-09-10 (issue #1511)
-  against #1436's original spec, which asked for departures. The town page is a list of shops.
-- **Composition:** the marketing chrome with its trial pitch suppressed (a diver looking for a boat
-  is not that audience), the page's name, one line saying these shops book through DiveDay, then
-  the hairline ledger the diver-facing catalog already uses.
-
 ### The product page — `/product`
 
 **Reviewed 2026-08-31** — conversion surface, governed by
@@ -578,44 +558,6 @@ standing on every row of a safety-critical group, is `danger-ghost`; and "Can't 
 sizes?" — a heading, a two-line caption, an input and a button under the gear facts on every diver
 who rents anything — is one link-weight door, its caption deleted (it described what the flag does
 to the packing list, which is the mechanism, not the outcome).
-
-### The departures board — `/board/[token]`
-
-**Built 2026-09-07** — N-23 (owner decision 2026-09-07, issue #1426), the shop's day on a screen
-nobody touches: a TV in the lobby, a tablet on the dock, behind a display link minted at
-Settings → Lobby display.
-
-- **One idea:** the boat you are looking for, from across a room — when it leaves, where it is,
-  how full.
-- **The question it arrives with:** "is my boat still boarding, and where do I go?" — answered by
-  the time, the crew's own stage word and the meeting line on the same row, at 24px or larger.
-- **Controls that dissolved:** all of them. No nav, no session, no tap; the page re-reads itself
-  every minute and the only act (revoke) lives on the settings page that made the link.
-- **Remove first:** anyone's name. The row is a count ("3 of 12 aboard"), a private charter is
-  "Private charter", and the crew line exists only on a link minted with names on.
-- **Composition:** the shop's name and the date, then one row per departure in clock order —
-  time · title, site, meeting point, outlook · stage word and count — on the manifest's
-  `boat-mode` ground so it follows the device's light or dark; the footer says when it last read.
-
-### Self check-in at the counter — `/check-in/[token]`
-
-**Built 2026-09-09** — N-24, the other thing a display link can open: a tablet on the counter that
-a diver operates unaided, behind the same credential and the same revocation door as the board.
-
-- **One idea:** type your last name, learn whether you are set — and if you are not, learn it
-  standing in front of somebody who can fix it.
-- **The question it arrives with:** "am I checked in, and where do I go?" — answered in one
-  submission, because a lookup step would mean a screen listing who was found.
-- **Controls that dissolved:** all but one box and one button. No nav, no session, no account, no
-  second step; the answer clears itself after twelve seconds so the next diver walks up to a blank
-  prompt.
-- **Remove first:** every reason. A miss, an ambiguous surname and a diver readiness will not clear
-  are one identical sentence — the screen is operated by whoever walks up to it, so an answer that
-  varied with *why* would answer questions about a stranger's booking to anyone willing to type.
-- **What it must never do:** board anybody. It records an arrival; boarding stays a roll-call act
-  the crew performs at the rail.
-- **Composition:** the shop's name and today's date, the prompt, one box, one button — then one
-  card, in success or caution tone, at 24-32px so it reads at arm's length across a counter.
 
 ### The doors — `/sign-in`, `/onboard`, and the token family
 

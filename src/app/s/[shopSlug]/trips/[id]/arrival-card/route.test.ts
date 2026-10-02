@@ -1,13 +1,10 @@
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
-import QRCode from "qrcode";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-capabilities";
+import { issueBookingCapability } from "@/db/booking-capabilities";
 import { cancelBooking } from "@/db/bookings";
-import type { AppDb } from "@/db/client";
 import { bookingCapabilities } from "@/db/schema";
 import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
-import { arrivalCardExpiryFor, capabilityExpiryFor } from "@/lib/booking-capabilities";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { seededShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
@@ -67,104 +64,49 @@ function card(shopSlug: string, tripId: string, token?: string) {
   );
 }
 
-/** Every live `arrival` capability this booking holds. */
-async function arrivalRows(db: AppDb, bookingId: string) {
-  return db
-    .select({ id: bookingCapabilities.id, expiresAt: bookingCapabilities.expiresAt })
-    .from(bookingCapabilities)
-    .where(
-      and(eq(bookingCapabilities.bookingId, bookingId), eq(bookingCapabilities.purpose, "arrival")),
-    );
-}
-
 describe("GET /s/[shopSlug]/trips/[id]/arrival-card", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, retryAfterMs: 0 });
   });
 
-  it("returns the diver's own card as an attachment, with the code drawn into it", async () => {
+  it("returns the diver's own card as an attachment", async () => {
     const { shop, trip, token } = await bookedDiver();
 
     const response = await card(shop.slug, trip.id, token);
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Disposition")).toMatch(/attachment/);
-    // `private, no-store` is the half of the design that keeps a bearer
-    // credential out of a shared cache; it predates the code and must survive it.
+    // `private, no-store`: the request carried a bearer credential, so its
+    // answer stays out of every shared cache.
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
-    const body = await response.text();
-    // Unescaped on purpose: escaping our own base64 would break the image.
-    expect(body).toContain('<img src="data:image/png;base64,');
-    expect(body).toContain("Your arrival code");
   });
 
   /**
-   * **The security property of this ticket, pinned.**
-   *
-   * The card is a file a diver saves, prints and can forward. What travels on
-   * that paper must buy recognition at the counter and nothing else — not the
-   * readiness surface (medical, waiver, payment) that the `?booking=` token in
-   * the URL opens. So the code is a *different* credential on a *different*
-   * purpose, and this is the test that says so.
+   * The card is a file a diver saves, prints and can forward, so nothing on it
+   * may buy anything: not the readiness token that authorized the download
+   * (their medical, waiver and payment surface), and not the booking's id.
    */
-  it("draws an arrival credential, never the readiness token that authorized the download", async () => {
-    const { db, shop, trip, bookingId, token } = await bookedDiver();
-    const drawn = vi.spyOn(QRCode, "toDataURL");
-
-    await card(shop.slug, trip.id, token);
-
-    expect(drawn).toHaveBeenCalledTimes(1);
-    const payload = drawn.mock.calls[0]?.[0] as string;
-    expect(payload).not.toBe(token);
-
-    await expect(
-      verifyBookingCapability(db, { token: payload, purpose: "arrival" }),
-    ).resolves.toMatchObject({ bookingId });
-    await expect(
-      verifyBookingCapability(db, { token: payload, purpose: "readiness" }),
-    ).resolves.toBeNull();
-  });
-
-  /**
-   * **A printed credential must not outlive the morning it is for.**
-   *
-   * The card left with the trip-anchored default — trip end plus thirty days —
-   * so a seat booked a season out printed a code that scanned for the season
-   * and a month after it (`security-reviewer`, issue #1600). The only door that
-   * accepts it is the kiosk, which looks a few hours either side of a
-   * departure, so the credential is cut to that and nothing wider.
-   */
-  it("mints a code bounded to the departure, not to the trip-anchored default", async () => {
-    const { db, shop, trip, bookingId, token } = await bookedDiver();
-
-    await card(shop.slug, trip.id, token);
-
-    const [row] = await arrivalRows(db, bookingId);
-    expect(row?.expiresAt).toEqual(arrivalCardExpiryFor(trip.startsAt));
-    expect(row?.expiresAt.getTime()).toBeLessThan(
-      capabilityExpiryFor(trip.endsAt, new Date()).getTime(),
-    );
-  });
-
-  it("never prints the booking's database id on the card", async () => {
+  it("carries no credential and no database id", async () => {
     const { shop, trip, bookingId, token } = await bookedDiver();
 
     const body = await (await card(shop.slug, trip.id, token)).text();
 
+    expect(body).not.toContain(token);
+    expect(body).not.toContain(encodeURIComponent(token));
     expect(body).not.toContain(bookingId);
+    expect(body).not.toContain("<img");
   });
 
-  it("refuses a request with no booking token, and mints nothing", async () => {
-    const { db, shop, trip, bookingId } = await bookedDiver();
+  it("refuses a request with no booking token", async () => {
+    const { shop, trip } = await bookedDiver();
 
     const response = await card(shop.slug, trip.id);
 
     expect(response.status).toBe(404);
-    await expect(arrivalRows(db, bookingId)).resolves.toHaveLength(0);
   });
 
-  it("refuses a revoked token, and mints nothing", async () => {
+  it("refuses a revoked token", async () => {
     const { db, shop, trip, bookingId, token } = await bookedDiver();
     await db
       .update(bookingCapabilities)
@@ -174,7 +116,6 @@ describe("GET /s/[shopSlug]/trips/[id]/arrival-card", () => {
     const response = await card(shop.slug, trip.id, token);
 
     expect(response.status).toBe(404);
-    await expect(arrivalRows(db, bookingId)).resolves.toHaveLength(0);
   });
 
   it("refuses a token replayed under another shop's slug", async () => {
@@ -186,22 +127,13 @@ describe("GET /s/[shopSlug]/trips/[id]/arrival-card", () => {
     expect(response.status).toBe(404);
   });
 
-  /**
-   * **A readiness link is not a budget.** Anyone holding one — they are
-   * re-tapped all week and forwarded in inboxes — could loop this GET, and
-   * every pass rasterizes a code and writes a capability row that
-   * `src/lib/retention.ts` never prunes; past
-   * `MAX_LIVE_CAPABILITIES_PER_PURPOSE` the loop starts revoking the card the
-   * diver already printed for tomorrow morning.
-   */
-  it("refuses a throttled caller with the same 404, and mints nothing", async () => {
-    const { db, shop, trip, bookingId, token } = await bookedDiver();
+  it("refuses a throttled caller with the same 404", async () => {
+    const { shop, trip, token } = await bookedDiver();
     vi.mocked(checkRateLimit).mockResolvedValue({ allowed: false, retryAfterMs: 60_000 });
 
     const response = await card(shop.slug, trip.id, token);
 
     expect(response.status).toBe(404);
-    await expect(arrivalRows(db, bookingId)).resolves.toHaveLength(0);
   });
 
   it("spends the shared capability budget before the token is verified", async () => {
@@ -234,13 +166,12 @@ describe("GET /s/[shopSlug]/trips/[id]/arrival-card", () => {
     expect(body).not.toContain("http://localhost");
   });
 
-  it("refuses a cancelled booking, and mints nothing", async () => {
+  it("refuses a cancelled booking", async () => {
     const { db, shop, trip, bookingId, token } = await bookedDiver();
     await cancelBooking(db, shop.id, bookingId);
 
     const response = await card(shop.slug, trip.id, token);
 
     expect(response.status).toBe(404);
-    await expect(arrivalRows(db, bookingId)).resolves.toHaveLength(0);
   });
 });

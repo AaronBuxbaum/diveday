@@ -27,7 +27,7 @@ import { MIN_MAIN_TEXT, SKELETON_SELECTOR } from "./screenshot-guards.mjs";
  *   out. Narrow the widths with --width <px>.
  * - --tablet swaps in the portrait tablet the spec's TABLET_SURFACES use
  *   (820x1180): the counter, the manifest, the schedule board, the prep list,
- *   the departure log, the departures board and the self check-in kiosk. The
+ *   and the departure log. The
  *   two staying in step is why the default pair is
  *   documented as matched — a design review of those surfaces should be
  *   looking at the width CI checks them at.

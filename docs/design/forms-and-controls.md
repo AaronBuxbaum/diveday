@@ -770,8 +770,7 @@ by its edge, not its label, so the type refuses `flush` on them.
 Mid-row, among other words, a quiet button keeps its padding: that is what keeps its hover fill
 off its neighbours. Where it starts a line, its padding was part of the space to the next control,
 so the row's gap takes it back — 12px more beside a padded neighbour (the staff credentials' review
-and Remove, `gap-2` to `gap-5`), 24px more between two flush ones (the display links' Renew and
-Revoke) — or the fill ends where the next box begins. A component that draws the button for many
+and Remove, `gap-2` to `gap-5`), 24px more between two flush ones — or the fill ends where the next box begins. A component that draws the button for many
 callers takes `flush` as a prop (`Copyable`), because only the caller knows where it sits. The
 button test refuses the hand cancels `flush` replaced, in a `buttonClass` call and on a row that
 wraps a quiet button.
