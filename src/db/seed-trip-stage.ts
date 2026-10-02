@@ -9,7 +9,7 @@ import { liveTrip } from "./trips-live";
  * twenty minutes after the lines came off, or this instant if she has not been
  * out that long.
  *
- * The clamp is the whole point. `liveShopStage` refuses a reading stamped after
+ * The clamp is the whole point. `liveStageOf` refuses a reading stamped after
  * the moment it is read — a word from the future is not a word anyone has said
  * — so an unclamped `startsAt + 20m` on a boat that left ten minutes ago seeds a
  * row that no surface will ever render, and the demo's chip and every diver's

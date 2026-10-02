@@ -45,7 +45,7 @@
  * erasure half is answered by the live join to `people` rather than by a
  * window: a redacted staffer's name leaves every reading without a row moving.
  * Growth is a handful of rows per departure, and every reader takes only the
- * newest one (`latestTripStage`, `latestTripStagesByTrip`, `liveShopStage`), so
+ * newest one (`latestTripStage`, `latestTripStagesByTrip`), so
  * the trail is dead weight operationally — which is the whole of the argument
  * for a window. Against it is `gear_service_events`' argument on a table with
  * more rows: the trail may become evidentiary, "when did the crew say this boat

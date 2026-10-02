@@ -1,7 +1,7 @@
-import { and, asc, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
-import { liveStageOf, type TripStage, type TripStageReading } from "@/lib/trip-stages";
+import { type TripStage, type TripStageReading } from "@/lib/trip-stages";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { diveSites, people, tripDives, tripStageEvents, trips } from "./schema";
@@ -163,103 +163,4 @@ export async function latestTripStagesByTrip(
     });
   }
   return newest;
-}
-
-/**
- * Deliberately **without** `recordedByName`. This is the one reader an
- * anonymous visitor's page calls, and the crew member who tapped the word is
- * not theirs to read — omitting it here makes printing it a compile error
- * rather than a thing review has to keep catching.
- */
-export type LiveShopStage = Omit<TripStageReading, "recordedByName"> & {
-  tripId: string;
-  tripTitle: string;
-  boatName: string | null;
-  endsAt: Date | null;
-};
-
-/**
- * **The one departure the shop's own website may say is out.**
- *
- * Narrowed at the query rather than at the surface, because this is the only
- * place in the app where an operational fact reaches an anonymous visitor: a
- * private charter is never named, a cancelled or deleted departure is never
- * named, and `home` is never published (`stageIsPublishable`). What is left is
- * a boat that a crew said is out, on a day the shop is open to the public.
- */
-export async function liveShopStage(
-  db: DbExecutor,
-  shopId: string,
-  now: Date,
-  windowStart: Date,
-): Promise<LiveShopStage | null> {
-  const rows = await db
-    .select({
-      ...READING_COLUMNS,
-      tripTitle: trips.title,
-      endsAt: trips.endsAt,
-    })
-    .from(tripStageEvents)
-    // Every lookup here is shop-scoped in its own right, not merely by way of
-    // the event row. The departure title and the site name this resolves are
-    // printed to an anonymous visitor on the storefront, and
-    // `tripDiveSiteSummaries` beside it already joins this way. Relying on
-    // `validateDiveSites` two modules away is the shape that put another
-    // shop's vessel name on the board once already (`trips.boat_id`,
-    // src/db/trips-create.ts) — so the departure and the crew name get the
-    // same predicate rather than an argument about which writer could ever
-    // mis-tenant `trip_id` or `recorded_by_person_id`.
-    .innerJoin(trips, and(eq(tripStageEvents.tripId, trips.id), eq(trips.shopId, shopId)))
-    .leftJoin(
-      diveSites,
-      and(eq(tripStageEvents.diveSiteId, diveSites.id), eq(diveSites.shopId, shopId)),
-    )
-    .leftJoin(
-      people,
-      and(eq(tripStageEvents.recordedByPersonId, people.id), eq(people.shopId, shopId)),
-    )
-    .where(
-      and(
-        eq(tripStageEvents.shopId, shopId),
-        liveTrip(),
-        eq(trips.status, "scheduled"),
-        eq(trips.isPrivate, false),
-        gte(tripStageEvents.recordedAt, windowStart),
-        // Inclusive: a tap recorded in the same instant as this read is not in
-        // the future, and on a frozen clock (the e2e fleet, the seeded demo)
-        // every tap shares that instant exactly.
-        lte(tripStageEvents.recordedAt, now),
-      ),
-    )
-    .orderBy(desc(tripStageEvents.recordedAt), desc(tripStageEvents.seq));
-
-  const seen = new Set<string>();
-  for (const row of rows) {
-    if (seen.has(row.tripId)) continue;
-    seen.add(row.tripId);
-    const reading = liveStageOf(
-      {
-        stage: row.stage,
-        siteName: row.siteName ?? null,
-        recordedAt: row.recordedAt,
-        recordedByName: row.recordedByName,
-      },
-      row.endsAt,
-      now,
-    );
-    if (!reading || reading.stage === "home") continue;
-    return {
-      // Named one by one rather than spread: a spread would carry
-      // `recordedByName` back out to the storefront the day someone widens
-      // `TripStageReading`.
-      stage: reading.stage,
-      siteName: reading.siteName,
-      recordedAt: reading.recordedAt,
-      tripId: row.tripId,
-      tripTitle: row.tripTitle,
-      boatName: null,
-      endsAt: row.endsAt,
-    };
-  }
-  return null;
 }
