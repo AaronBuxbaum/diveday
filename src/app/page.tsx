@@ -335,7 +335,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
           <MarketingHeroMotion>
             <div className="mx-auto w-full max-w-sm lg:max-w-md">
               <CaptainPhoneFrame label={t("marketing.home.phoneFrameLabel")} locale={locale} />
-              <div className="relative z-10 mx-auto -mt-5 w-[88%] rounded-inset border border-border bg-surface px-4 py-3 shadow-lg">
+              <div className="relative z-10 mx-auto -mt-5 w-[88%] rounded-inset border border-border bg-surface px-4 py-3">
                 <p className={groupLabelClass("primary")}>{t("marketing.home.dockEyebrow")}</p>
                 <p className="mt-1 text-sm font-medium">{t("marketing.home.dockDetail")}</p>
               </div>

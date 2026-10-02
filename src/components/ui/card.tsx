@@ -17,19 +17,15 @@ import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
  * A card, a stat tile and a table shell are the same object, so they read as
  * one.
  *
- * ## On the warm bed
+ * ## On the bed
  *
- * **A resting panel sits on the bed** (ADR 20260901-diveday-reimagined,
- * decision 1, slice 13a): Reef's 28px `--radius-panel` and the one soft warm
- * shadow `--shadow-bed`, `0 2px 10px rgba(88, 66, 30, 0.06)`. This is the one
- * deliberate reversal of Clearwater's "elevation is earned" (ADR
- * 20260827-clearwater-surface-language, decision 1), and it reverses it for
- * the panel alone: menus, sheets, dialogs and toasts keep their own
- * `shadow-lg`/`shadow-2xl` lift because they float, and the header tiles,
- * logos and markers that #1228 flattened stay flat because they are not
- * panels. There is still no `elevated` prop and no `shadow-sm` anywhere near a
- * panel — the bed is a token, so it moves with the palette and never with a
- * call site.
+ * **A resting panel is set off by its hairline, not a lift** (ADR
+ * 20261001-logbook, decision 5): a 12px `--radius-panel` and the token
+ * `--shadow-bed`, which Logbook sets to draw nothing. The token survives so the
+ * panel's elevation stays one value that moves with the palette and never with
+ * a call site; menus, sheets, dialogs and toasts keep their own
+ * `shadow-lg`/`shadow-2xl` lift because they float. There is still no
+ * `elevated` prop and no `shadow-sm` anywhere near a panel.
  *
  * The rule reaches the panels this component does not own, too: `card.test.tsx`
  * fails the build on any class string in `src/` that still wears the retired

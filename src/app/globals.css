@@ -103,8 +103,12 @@
   --radius: 0.5rem;
   --radius-inset: 0.5rem;
   --radius-panel: 0.75rem;
-  /* A resting panel is set off by its hairline, not a lift. */
-  --shadow-bed: 0 1px 2px rgba(22, 35, 44, 0.05);
+  /* A resting panel is set off by its hairline, not a lift: the token stays so
+     every `shadow-bed` call site is still valid, and draws nothing. Not the
+     keyword `none` — Tailwind joins this into a comma list with the ring
+     shadows, where `none` would void the whole declaration (and a ring with
+     it); a zero-offset transparent shadow is Tailwind's own "nothing". */
+  --shadow-bed: 0 0 #0000;
 
   /*
    * Tell the browser which way our palette runs, so native form parts (date
@@ -157,7 +161,6 @@
     --success-tint: #123022;
     --warning-tint: #33280f;
     --danger-tint: #3a191c;
-    --shadow-bed: 0 1px 2px rgba(0, 0, 0, 0.45);
   }
 }
 
@@ -2265,84 +2268,26 @@ details[open]::details-content {
   }
 }
 
-/* Waiver Signature Coral Bubbles */
-@keyframes coral-bubble-rise {
+/*
+ * The roll call's all-aboard confirmation: one flat panel, a hairline and the
+ * panel's 12px corner, shown and then gone (ADR 20261001-logbook — no lift and
+ * no ornament; the expanding ring that used to sit behind it went). Opacity is
+ * the only thing that moves. Under reduced motion the fade is dropped outright
+ * rather than shortened: the global kill-switch cuts it to 0.01ms with
+ * `forwards`, which lands on the last keyframe, opacity 0, so a reader who
+ * asked for less motion saw no confirmation at all.
+ */
+@keyframes sub-surface-message-fade {
   0% {
-    transform: translateY(100%) scale(0.5);
     opacity: 0;
   }
   15% {
-    opacity: 0.6;
-  }
-  90% {
-    opacity: 0.4;
-  }
-  100% {
-    transform: translateY(-150px) scale(1.1);
-    opacity: 0;
-  }
-}
-
-.bubble-container {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 0;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.coral-bubble {
-  position: absolute;
-  bottom: 0;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 30% 30%,
-    color-mix(in srgb, var(--surface) 60%, transparent) 0%,
-    color-mix(in srgb, var(--accent) 30%, transparent) 70%,
-    color-mix(in srgb, var(--accent) 60%, transparent) 100%
-  );
-  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
-  opacity: 0;
-}
-
-.animate-bubble {
-  animation-name: coral-bubble-rise;
-  animation-timing-function: ease-in-out;
-  animation-iteration-count: infinite;
-}
-
-/* Clean-slate close-out: a restrained signal that the board is clear and ready. */
-@keyframes sub-surface-ripple {
-  0% {
-    transform: scale(0.35);
-    opacity: 0.45;
-  }
-  70% {
-    opacity: 0.18;
-  }
-  100% {
-    transform: scale(2.7);
-    opacity: 0;
-  }
-}
-
-@keyframes sub-surface-message-fade {
-  0% {
-    transform: translateY(4px) scale(0.96);
-    opacity: 0;
-  }
-  20% {
-    transform: translateY(0) scale(1);
     opacity: 1;
   }
-  76% {
-    transform: scale(1);
+  80% {
     opacity: 1;
   }
   100% {
-    transform: translateY(-2px) scale(0.98);
     opacity: 0;
   }
 }
@@ -2360,21 +2305,6 @@ details[open]::details-content {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background-color: color-mix(in srgb, var(--background) 18%, transparent);
-}
-
-.sub-surface-ripple-ring {
-  position: absolute;
-  width: 180px;
-  height: 180px;
-  border-radius: 50%;
-  border: 2px solid color-mix(in srgb, var(--primary) 70%, transparent);
-  opacity: 0;
-  pointer-events: none;
-}
-
-.sub-surface-ripple-ring:nth-child(1) {
-  animation: sub-surface-ripple 1.4s var(--ease-out-soft) forwards;
 }
 
 .sub-surface-ripple-message {
@@ -2383,11 +2313,17 @@ details[open]::details-content {
   align-items: center;
   gap: 0.75rem;
   background: var(--surface);
-  border: 1px solid color-mix(in srgb, var(--primary) 40%, var(--border));
-  box-shadow: 0 8px 20px color-mix(in srgb, var(--foreground) 10%, transparent);
+  border: 1px solid var(--primary);
   padding: 1rem 1.5rem;
-  border-radius: 1rem;
+  border-radius: var(--radius-panel);
   animation: sub-surface-message-fade 1.4s var(--ease-out-soft) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sub-surface-ripple-message {
+    /* biome-ignore lint/complexity/noImportantStyles: must beat the kill-switch's duration override, which would leave the panel at its final opacity 0 */
+    animation-name: none !important;
+  }
 }
 
 /*

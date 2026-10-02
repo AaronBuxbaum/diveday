@@ -50,9 +50,9 @@ export function ShopfrontHero({
   t,
 }: {
   name: string;
-  /** The shop's cover photograph (Harbor); the name and tagline sit on it. */
+  /** The shop's cover photograph; the name and tagline sit on it. */
   heroImage?: { url: string; alt: string } | null;
-  /** The badge wall, in the shop's order (Harbor). */
+  /** The badge wall, in the shop's order. */
   badges?: readonly BrandBadgeCode[];
   establishedYear?: number | null;
   /** `shops.tagline` — the shop's own line, or nothing at all. */
@@ -76,20 +76,23 @@ export function ShopfrontHero({
           20260901-diveday-reimagined, decision 2); every fact beneath stays in
           Plex and ink, so the face can never label a rating, a count or a claim. */}
       {heroImage ? (
-        <div className="relative mb-6 overflow-hidden rounded-panel border border-border bg-surface-sunken shadow-bed">
+        <div className="mb-6 overflow-hidden rounded-panel border border-border bg-surface-sunken shadow-bed">
           <StoredPhoto
             src={heroImage.url}
             alt={heroImage.alt}
-            // Taller on a phone: at 390px a 16:7 frame is 170px, and the
-            // two-line title plus tagline in the scrim below it is more than
-            // that, so the name was cropped at the top of the picture.
-            className="aspect-[4/3] w-full sm:aspect-[16/7]"
+            // 16:9 on a phone, so the picture still reads as a picture above
+            // the band; 16:7 from `sm` up.
+            className="aspect-video w-full sm:aspect-[16/7]"
             sizes="(min-width: 1152px) 1152px, 100vw"
             priority
           />
-          {/* Paper on a scrim of ink, whatever the photograph: legibility does
-              not depend on the shop choosing a dark picture. */}
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-device-frame/85 via-device-frame/45 to-transparent px-5 pt-16 pb-5 text-device-frame-foreground sm:px-8 sm:pb-7">
+          {/* Paper on a flat band of solid ink under the photograph, whatever
+              the picture: legibility does not depend on the shop choosing a
+              dark one. Opaque and below the photo rather than a fade over it
+              (ADR 20261001-logbook: no gradients), so the name reads at the
+              ink's own contrast and a two-line name on a phone does not bury
+              the picture it sat on. */}
+          <div className="bg-device-frame px-5 py-4 text-device-frame-foreground sm:px-8 sm:py-5">
             <h1 className={`font-brand-display ${PAGE_TITLE_CLASS} text-balance sm:text-5xl`}>
               {name}
             </h1>

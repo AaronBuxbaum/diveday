@@ -12,10 +12,11 @@ import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
  * rationing rule; a surface picks the shape its moment is, and never redraws
  * either at the call site:
  *
- * - {@link EarnedMoment} — the whole-page moment on a diver's token page. A
- *   heading, a body, and rising coral bubbles.
+ * - {@link EarnedMoment} — the whole-page moment on a diver's token page: a
+ *   flat tinted panel with a heading and a body, and nothing drawn on it
+ *   (ADR 20261001-logbook — the rising bubbles were ornament, and went).
  * - {@link EarnedMomentLine} — one line inside a working staff surface, where
- *   a coral panel with bubbles in the middle of a queue would be far too much.
+ *   a heading-sized panel in the middle of a queue would be far too much.
  *
  * The compact shape is not new; three surfaces had already built it by hand,
  * each correctly citing principle 3 and each arriving at a different object:
@@ -126,7 +127,7 @@ export function EarnedMoment({
     // `INSET` is a SectionCard rung (`sectionCardClass`), so the moment's text
     // starts on the same x as the cards stacked under it.
     <section
-      className={`relative overflow-hidden rise-in rounded-panel border border-accent/40 bg-accent/10 ${INSET[inset]} ${className}`.trim()}
+      className={`rise-in rounded-panel border border-accent/40 bg-accent/10 ${INSET[inset]} ${className}`.trim()}
     >
       {/* The 4px between eyebrow and heading belongs to the eyebrow: on the
           heading it pushed a lone title 2px below the panel's centre. */}
@@ -135,69 +136,6 @@ export function EarnedMoment({
         {title}
       </Heading>
       {children ? <div className="mt-3 text-muted">{children}</div> : null}
-      {/* Waiver Signature Coral Bubbles */}
-      <div className="bubble-container" aria-hidden="true">
-        <span
-          className="coral-bubble animate-bubble"
-          style={{
-            left: "10%",
-            width: "12px",
-            height: "12px",
-            animationDelay: "0s",
-            animationDuration: "3s",
-          }}
-        />
-        <span
-          className="coral-bubble animate-bubble"
-          style={{
-            left: "25%",
-            width: "8px",
-            height: "8px",
-            animationDelay: "0.5s",
-            animationDuration: "2.5s",
-          }}
-        />
-        <span
-          className="coral-bubble animate-bubble"
-          style={{
-            left: "45%",
-            width: "16px",
-            height: "16px",
-            animationDelay: "1.2s",
-            animationDuration: "3.5s",
-          }}
-        />
-        <span
-          className="coral-bubble animate-bubble"
-          style={{
-            left: "60%",
-            width: "10px",
-            height: "10px",
-            animationDelay: "0.2s",
-            animationDuration: "2.8s",
-          }}
-        />
-        <span
-          className="coral-bubble animate-bubble"
-          style={{
-            left: "75%",
-            width: "14px",
-            height: "14px",
-            animationDelay: "1.8s",
-            animationDuration: "3.2s",
-          }}
-        />
-        <span
-          className="coral-bubble animate-bubble"
-          style={{
-            left: "90%",
-            width: "7px",
-            height: "7px",
-            animationDelay: "0.8s",
-            animationDuration: "2.2s",
-          }}
-        />
-      </div>
     </section>
   );
 }

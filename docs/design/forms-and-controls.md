@@ -14,18 +14,16 @@ cards sat at two elevations on one page.
 
 One spelling now, and it is the one `ShopStat` and the `<Table>` shell already shared —
 `rounded-panel border border-border bg-surface shadow-bed` — so **a card, a stat tile and a table
-shell read as the same object**. `rounded-panel` is the panel rung, 20px (the ladder is under
+shell read as the same object**. `rounded-panel` is the panel rung, 12px (the ladder is under
 [The rungs, as they ship](#the-rungs-as-they-ship)).
 
-**A resting panel sits on the bed.** `shadow-bed` is the one soft shadow a panel wears: a token
-(`--shadow-bed`, two neutral layers, redrawn for the night palette), so it moves with the palette
-and never with a call site. Clearwater took every panel's shadow away on 2026-08-28 (ADR
-20260827-clearwater-surface-language, decision 1: **elevation is earned**), and Reef put this one
-back for the panel alone (ADR 20260901-diveday-reimagined, 13a). Everything else still follows
-Clearwater: a menu, a sheet, a dialog and a toast carry `shadow-lg`/`shadow-2xl` because they float
-above the page, and `card.test.tsx` fails the build on any `rounded-panel` class string that also
-carries `shadow-sm`. Round 2's surface (ADR 20260918-nothing-to-explain, slice 22b) says "no bed".
-The code has kept it, and whether it should stay is #1965.
+**A resting panel is set off by its hairline, not a lift** (ADR 20261001-logbook, decision 5).
+`shadow-bed` survives as a token (`--shadow-bed`), so every panel's elevation is still one value that
+moves with the palette and never with a call site, and Logbook sets it to draw nothing (a
+zero-offset transparent shadow rather than the keyword `none`, which would void the ring shadows
+Tailwind joins it with). The primary button carries no shadow either. A menu, a sheet, a dialog and a
+toast still carry `shadow-lg`/`shadow-2xl` because they float above the page, and `card.test.tsx`
+fails the build on any `rounded-panel` class string that also carries `shadow-sm`.
 
 ```tsx
 import { SectionCard } from "@/components/ui/card";

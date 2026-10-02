@@ -87,19 +87,11 @@ describe("MarketingMockup", () => {
     expect(screen.getByRole("img", { name: label })).toBeInTheDocument();
   });
 
-  it("draws a page's screenshot as a panel: the panel corner, one hairline and its lift", () => {
+  it("draws a page's screenshot as a panel: the panel corner and one hairline, no lift", () => {
     render(<MarketingMockup label="A screen">{null}</MarketingMockup>);
     const panel = screen.getByRole("img", { name: "A screen" });
-    expect(panel).toHaveClass(
-      "rounded-panel",
-      "border",
-      "border-border",
-      "shadow-xl",
-      "shadow-foreground/5",
-    );
-    // The lift every page's screenshot has worn is the frame's own now, so no
-    // second shadow sits beside it for stylesheet order to settle.
-    expect(panel).not.toHaveClass("shadow-bed");
+    expect(panel).toHaveClass("rounded-panel", "border", "border-border");
+    expect(tokens(panel.className).filter((token) => /^shadow(-|$)/.test(token))).toEqual([]);
   });
 
   /**
@@ -107,10 +99,11 @@ describe("MarketingMockup", () => {
    * on one element resolve by the order Tailwind emits them, not by which one
    * a caller meant: the phone's `rounded-[1.9rem]` lost to `rounded-panel`
    * that way (K-295), and every page's `shadow-xl` silently beat the mockup's
-   * own `shadow-bed`. So each frame names exactly one corner and one shadow,
-   * and no caller passes either (or a border) through `className`.
+   * own `shadow-bed`. So each frame names exactly one corner and, under
+   * Logbook, no shadow at all (ADR 20261001-logbook, decision 5); no caller
+   * passes a corner, a border or a shadow through `className`.
    */
-  it("gives each frame exactly one corner and one shadow", () => {
+  it("gives each frame exactly one corner and no shadow", () => {
     for (const frame of ["panel", "screen"] as const) {
       render(
         <MarketingMockup label={`A ${frame}`} frame={frame}>
@@ -123,9 +116,9 @@ describe("MarketingMockup", () => {
         frame,
       ).toHaveLength(1);
       expect(
-        classes.filter((token) => /^shadow(-(xs|sm|md|lg|xl|2xl|bed|none))?$/.test(token)),
+        classes.filter((token) => /^shadow(-|$)/.test(token)),
         frame,
-      ).toHaveLength(1);
+      ).toHaveLength(0);
     }
   });
 

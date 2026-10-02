@@ -12,8 +12,7 @@ import { describe, expect, it } from "vitest";
  * Two walks over `src/app` *and* `src/components` — the offline manifest, the
  * boat's own surface, lives in the second and was outside the first version of
  * this net. The first walk catches every importer of anything under
- * `components/illustration/` (the site mark, the swell) plus the course
- * placeholder, which draws a swell of its own; the rule is on the *category*,
+ * `components/illustration/` (the site mark and its kin); the rule is on the *category*,
  * so a seventh drawing added tomorrow is covered the day it is written. The
  * second catches the coral token itself — any `*-accent` utility or
  * `var(--accent` — on a file whose path names a safety or payment surface.
@@ -23,7 +22,7 @@ import { describe, expect, it } from "vitest";
 const SRC = path.resolve(__dirname, "../..");
 const ROOTS = ["app", "components"].map((dir) => path.join(SRC, dir));
 const SAFETY_SURFACE = /manifest|roll-call|rollcall|cert|waiver|order|payment|checkout|refund/i;
-const DRAWING_IMPORT = /components\/illustration\/|\bCourseWavePlaceholder\b/;
+const DRAWING_IMPORT = /components\/illustration\//;
 const CORAL_TOKEN =
   /(?<![\w-])(?:bg|text|border|fill|stroke|from|via|to|ring|outline|decoration|shadow)-accent(?:-[a-z]+)?(?![\w-])|var\(--accent/;
 

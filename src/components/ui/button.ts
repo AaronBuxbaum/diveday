@@ -161,7 +161,7 @@ const SECONDARY_FACE =
  */
 const variants = {
   primary:
-    "border border-transparent bg-primary text-primary-foreground shadow-sm not-disabled:not-has-[input:disabled]:hover:bg-primary-hover",
+    "border border-transparent bg-primary text-primary-foreground not-disabled:not-has-[input:disabled]:hover:bg-primary-hover",
   /**
    * The demoted-but-real action: a bordered surface box whose label is **body
    * text**, not link blue.
