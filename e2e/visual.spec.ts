@@ -2470,12 +2470,19 @@ for (const scheme of ["light", "dark"] as const) {
           .waitFor();
         // The current chip sits past a phone's edge until `FilterChipsScroller`
         // hydrates and scrolls the row to it; a capture taken before that drew
-        // the row at its start, so wait for the chip the page brings on screen.
-        await expect(
-          page.locator('[aria-current="true"]', { hasText: "After dark" }),
-        ).toBeInViewport({
-          ratio: 1,
-        });
+        // the row at its start, so wait until the chip lies whole inside its row.
+        const chip = page.locator('[aria-current="true"]', { hasText: "After dark" });
+        await expect
+          .poll(() =>
+            chip.evaluate((element) => {
+              const row = element.parentElement?.closest("div");
+              if (!row) return false;
+              const a = element.getBoundingClientRect();
+              const b = row.getBoundingClientRect();
+              return a.left >= b.left && a.right <= b.right;
+            }),
+          )
+          .toBe(true);
         await capture(page, "schedule-lens", scheme);
       });
 
