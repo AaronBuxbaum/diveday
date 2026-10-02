@@ -17,26 +17,7 @@ import type { DiveBriefing } from "./types";
 
 afterEach(cleanup);
 
-/** Key Largo, the demo shop's own coordinates, in its own zone. */
-const SHOP = {
-  slug: "blue-mantis",
-  timezone: "America/New_York",
-  latitude: 25.0865,
-  longitude: -80.4473,
-};
-/** A shop that never finished its address, so the sky line has nothing to stand on. */
-const NO_ADDRESS = {
-  slug: "blue-mantis",
-  timezone: "America/New_York",
-  latitude: null,
-  longitude: null,
-};
-/** 9:00 AM to 12:30 PM Eastern: the two-tank reef trip, home well before dark. */
-const MORNING = new Date("2026-01-02T14:00:00Z");
-const MIDDAY = new Date("2026-01-02T17:30:00Z");
-/** 4:30 PM to 8:00 PM Eastern, over a 5:44 PM sunset: the night charter. */
-const AFTER_DARK = new Date("2026-01-02T21:30:00Z");
-const HOME_IN_THE_DARK = new Date("2026-01-03T01:00:00Z");
+const SHOP = { slug: "blue-mantis", timezone: "America/New_York" };
 
 function briefing(overrides: Partial<DiveBriefing> = {}): DiveBriefing {
   return {
@@ -64,8 +45,6 @@ describe("TripDayPlan", () => {
           } as unknown as DiveBriefing),
         ]}
         shop={SHOP}
-        startsAt={MORNING}
-        endsAt={MIDDAY}
         locale={DEFAULT_DIVER_LOCALE}
       />,
     );
@@ -78,12 +57,6 @@ describe("TripDayPlan", () => {
     // Time-neutral: a dive plan's clock belongs to the day itself, on the
     // thread. A schedule beside a Book button reads as a promise the crew has
     // not made.
-    //
-    // Scoped to the run of dives, which is what that rule is about. The sky
-    // line above it has always named a clock — sunset, on a night charter —
-    // and since slice 20r it names sunrise and sunset on a daylight one. Those
-    // are facts about the sky over the day, not a schedule the crew is
-    // promising to keep.
     const dives = screen.getByRole("list");
     expect(within(dives).queryByText(/\d{1,2}:\d{2}/)).not.toBeInTheDocument();
   });
@@ -109,8 +82,6 @@ describe("TripDayPlan", () => {
           } as unknown as Partial<DiveBriefing>),
         ]}
         shop={SHOP}
-        startsAt={MORNING}
-        endsAt={MIDDAY}
         locale={DEFAULT_DIVER_LOCALE}
       />,
     );
@@ -127,93 +98,9 @@ describe("TripDayPlan", () => {
     expect(within(dives).getByText("Wreck penetration").closest("li")).not.toContainElement(door);
   });
 
-  it("says when the light arrives and when it goes, on a daylight departure", () => {
-    // The other half of the night charter's line, and the half that speaks for
-    // nearly every departure on every board: a 9:00 AM two-tank in January
-    // meets in the dark, and the same trip in June does not.
-    render(
-      <TripDayPlan
-        briefings={[briefing()]}
-        shop={SHOP}
-        startsAt={MORNING}
-        endsAt={MIDDAY}
-        locale={DEFAULT_DIVER_LOCALE}
-      />,
-    );
-    expect(screen.getByText(/Sunrise 7:07 AM, sunset 5:44 PM\./)).toBeInTheDocument();
-    // And no moon on a day trip: the moon is what a night diver plans a torch
-    // around, and on a morning boat it is noise.
-    expect(screen.queryByText(/moon/i)).not.toBeInTheDocument();
-  });
-
-  it("renders nothing when the departure has no dive plan and no sky to speak of", () => {
+  it("says nothing on a departure with no dives planned", () => {
     const { container } = render(
-      <TripDayPlan
-        briefings={[]}
-        shop={NO_ADDRESS}
-        startsAt={MORNING}
-        endsAt={MIDDAY}
-        locale={DEFAULT_DIVER_LOCALE}
-      />,
-    );
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  it("keeps the day's light on a departure whose sites are not picked yet", () => {
-    // The daylight twin of the night charter's case below: sunrise and sunset
-    // are facts about the departure, not about the sites nobody has chosen.
-    render(
-      <TripDayPlan
-        briefings={[]}
-        shop={SHOP}
-        startsAt={MORNING}
-        endsAt={MIDDAY}
-        locale={DEFAULT_DIVER_LOCALE}
-      />,
-    );
-    expect(screen.getByText(/Sunrise 7:07 AM/)).toBeInTheDocument();
-  });
-
-  it("says when the light goes and what moon there is, on a night departure", () => {
-    // It casts off in daylight and is still out at sunset, which is what makes
-    // it a night dive — the shape of every real night charter.
-    render(
-      <TripDayPlan
-        briefings={[briefing()]}
-        shop={SHOP}
-        startsAt={AFTER_DARK}
-        endsAt={HOME_IN_THE_DARK}
-        locale={DEFAULT_DIVER_LOCALE}
-      />,
-    );
-    expect(screen.getByText(/Sunset 5:44 PM, dark by 6:09 PM/)).toBeInTheDocument();
-    expect(screen.getByText(/Full moon, 100% lit/)).toBeInTheDocument();
-  });
-
-  it("keeps the sky line on a departure whose sites are not picked yet", () => {
-    // The one beat that would otherwise be a heading over nothing: sunset is a
-    // fact about the departure, not about the sites nobody has chosen.
-    render(
-      <TripDayPlan
-        briefings={[]}
-        shop={SHOP}
-        startsAt={AFTER_DARK}
-        endsAt={HOME_IN_THE_DARK}
-        locale={DEFAULT_DIVER_LOCALE}
-      />,
-    );
-    expect(screen.getByText(/Sunset 5:44 PM/)).toBeInTheDocument();
-  });
-
-  it("says nothing about the sky when the shop has set no address", () => {
-    const { container } = render(
-      <TripDayPlan
-        briefings={[]}
-        shop={NO_ADDRESS}
-        startsAt={AFTER_DARK}
-        endsAt={HOME_IN_THE_DARK}
-        locale={DEFAULT_DIVER_LOCALE}
-      />,
+      <TripDayPlan briefings={[]} shop={SHOP} locale={DEFAULT_DIVER_LOCALE} />,
     );
     expect(container).toBeEmptyDOMElement();
   });
@@ -257,8 +144,6 @@ describe("TripDayPlan's profile", () => {
       <TripDayPlan
         briefings={[briefing(), wall]}
         shop={SHOP}
-        startsAt={MORNING}
-        endsAt={MIDDAY}
         locale={DEFAULT_DIVER_LOCALE}
         profile={profile}
       />,
@@ -266,9 +151,7 @@ describe("TripDayPlan's profile", () => {
     expect(screen.getAllByText("Usually 45 minutes in the water")).toHaveLength(2);
     expect(screen.getByText("Usually 60 minutes on the surface")).toBeInTheDocument();
     // Durations, not a clock: the day's hours belong to the booked diver's own
-    // thread, and a schedule beside a Book button reads as a promise. Scoped to
-    // the run of dives for the reason the beat's own test above is — the sky
-    // line names a clock and always has.
+    // thread, and a schedule beside a Book button reads as a promise.
     expect(within(screen.getByRole("list")).queryByText(/\d{1,2}:\d{2}/)).not.toBeInTheDocument();
   });
 
@@ -287,8 +170,6 @@ describe("TripDayPlan's profile", () => {
       <TripDayPlan
         briefings={[briefing(), wall]}
         shop={SHOP}
-        startsAt={MORNING}
-        endsAt={MIDDAY}
         locale={DEFAULT_DIVER_LOCALE}
         profile={profile}
         nextOpensOnRule
@@ -308,8 +189,6 @@ describe("TripDayPlan's profile", () => {
       <TripDayPlan
         briefings={[briefing(), secondDive]}
         shop={SHOP}
-        startsAt={MORNING}
-        endsAt={MIDDAY}
         locale={DEFAULT_DIVER_LOCALE}
         profile={profile}
         nextOpensOnRule
@@ -326,8 +205,6 @@ describe("TripDayPlan's profile", () => {
       <TripDayPlan
         briefings={[briefing(), secondDive]}
         shop={SHOP}
-        startsAt={MORNING}
-        endsAt={MIDDAY}
         locale={DEFAULT_DIVER_LOCALE}
         profile={profile}
       />,
@@ -340,8 +217,6 @@ describe("TripDayPlan's profile", () => {
       <TripDayPlan
         briefings={[briefing()]}
         shop={SHOP}
-        startsAt={MORNING}
-        endsAt={MIDDAY}
         locale={DEFAULT_DIVER_LOCALE}
         profile={profile}
       />,
@@ -355,8 +230,6 @@ describe("TripDayPlan's profile", () => {
       <TripDayPlan
         briefings={[briefing(), wall]}
         shop={SHOP}
-        startsAt={MORNING}
-        endsAt={MIDDAY}
         locale={DEFAULT_DIVER_LOCALE}
         profile={profile}
       />,
@@ -380,8 +253,6 @@ describe("TripDayPlan's profile", () => {
       <TripDayPlan
         briefings={[briefing(), wall]}
         shop={SHOP}
-        startsAt={MORNING}
-        endsAt={MIDDAY}
         locale={DEFAULT_DIVER_LOCALE}
         profile={profile}
       />,
@@ -403,8 +274,6 @@ describe("TripDayPlan's profile", () => {
       <TripDayPlan
         briefings={[shallow]}
         shop={SHOP}
-        startsAt={MORNING}
-        endsAt={MIDDAY}
         locale={DEFAULT_DIVER_LOCALE}
         profile={profile}
       />,
@@ -425,8 +294,6 @@ describe("TripDayPlan's profile", () => {
       <TripDayPlan
         briefings={[briefing()]}
         shop={SHOP}
-        startsAt={MORNING}
-        endsAt={MIDDAY}
         locale={DEFAULT_DIVER_LOCALE}
         profile={profile}
       />,

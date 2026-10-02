@@ -28,8 +28,7 @@ export const STATED_LEVEL_STORAGE_KEY = "diveday.diver-level";
 /**
  * Same-tab notification, because `storage` only fires in *other* tabs. Two
  * controls on one page have to hear each other, so a reader who answers the
- * picker sees the offer appear below without a reload — the pattern
- * `WaterLocker` already uses.
+ * picker sees the offer appear below without a reload.
  */
 export const STATED_LEVEL_CHANGE_EVENT = "diveday:stated-diver-level-change";
 

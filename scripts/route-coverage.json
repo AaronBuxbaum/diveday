@@ -69,8 +69,7 @@
       "offline-manifest-list",
       "offline-manifest-list-needs-refresh",
       "offline-manifest-removed-other-shop",
-      "offline-manifest-roll-call",
-      "offline-manifest-roll-call-high-contrast"
+      "offline-manifest-roll-call"
     ],
     "a11y": ["a11y.spec.ts"]
   },
@@ -134,7 +133,6 @@
       "stranded-diver-card",
       "thread-anything-changed",
       "thread-arrival-code",
-      "thread-high-contrast",
       "thread-prep-current-step"
     ],
     "a11y": ["a11y.spec.ts"]
@@ -261,7 +259,6 @@
       "day-profile-ceiling",
       "shop-not-found",
       "site-briefing",
-      "site-briefing-night-sky",
       "site-briefing-requirements"
     ],
     "a11y": ["a11y.spec.ts"]
@@ -746,8 +743,7 @@
       "manifest-not-here",
       "manifest-person-panel",
       "manifest-plan-change",
-      "manifest-seen",
-      "manifest-seen-boat-mode"
+      "manifest-seen"
     ],
     "a11y": ["a11y.spec.ts"]
   },

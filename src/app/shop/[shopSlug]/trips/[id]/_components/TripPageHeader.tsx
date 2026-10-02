@@ -51,7 +51,7 @@ const TRIP_META_TYPE = "text-[13px] sm:text-[15px]";
 /**
  * The header a departure's sub-pages wear — `/manifest`, `/prep`, `/guests`
  * and the printed packet. The departure itself wears `VoyageHeader`, its hour
- * over its own sky.
+ * as its name.
  *
  * Each is one reading of one departure, so the identity of the departure — its
  * name, how full it is, when it sails — renders here once and identically
@@ -226,21 +226,12 @@ export function TripAddDiverLink({
   label,
   compactLabel = label,
   ariaLabel,
-  onSky = false,
 }: {
   href: string;
   label: string;
   compactLabel?: string;
   /** Distinguishes the masthead jump from the inline add form for assistive tech. */
   ariaLabel?: string;
-  /**
-   * `VoyageHeader` stands this door on a `SkyBand`, where `link`'s accent
-   * measured 1.76:1 against `--sky-day` — see the `sky` variant. On the sky it
-   * becomes the band's own chip; everywhere else it stays a link, because a
-   * chip on the page's ground would be the second primary this component's
-   * note above exists to prevent.
-   */
-  onSky?: boolean;
 }) {
   return (
     <a
@@ -250,11 +241,7 @@ export function TripAddDiverLink({
       // class string and had drifted to `font-semibold` and a `sm:`
       // re-statement of its own radius. The glyph and the width-forked label
       // are the children.
-      className={
-        onSky
-          ? buttonClass({ variant: "sky", size: "sm", className: "gap-1.5" })
-          : buttonClass({ variant: "link", className: "gap-1.5" })
-      }
+      className={buttonClass({ variant: "link", className: "gap-1.5" })}
     >
       <DiveDayIcon name="addBooking" className="size-4" />
       <span className="sm:hidden">{compactLabel}</span>

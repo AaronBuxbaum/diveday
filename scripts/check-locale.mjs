@@ -190,7 +190,6 @@ export const DELIBERATELY_IDENTICAL = new Map([
     "diver.json marketing.guides.fareharbor.website.rows.row5.theirs",
     "a competitor's own product name",
   ],
-  ["staff/shared.json waterLocker.holdLine2", "a duration in seconds"],
   ["staff/print.json settings.windowSticker.paper", "a width in millimetres"],
   ["staff/divers.json shared.agencies.bsac", "agency acronym"],
   ["staff/divers.json shared.agencies.cmas", "agency acronym"],

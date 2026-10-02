@@ -17,8 +17,8 @@ import { motionMs } from "@/lib/motion";
  * or card ancestor with its own `backdrop-blur`/`transform` would otherwise
  * become the containing block for `position: fixed`, clipping the backdrop to
  * that ancestor's box instead of the viewport). Reuses the entrance/exit
- * timing and focus-trap primitives already used by `CommandPalette` and
- * `WaterLocker` rather than inventing a third.
+ * timing and focus-trap primitives already used by `CommandPalette` rather
+ * than inventing a second.
  */
 export function Modal({
   open,

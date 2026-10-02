@@ -2,14 +2,10 @@
 
 import { type FormEvent, type ReactNode, useEffect, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
-import { RollingFigure } from "@/components/ui/RollingFigure";
-import { fill } from "@/i18n/fill";
 import { heldSendSecondsLeft } from "@/lib/held-sends";
 
 export type SendHoldCopy = {
-  /** "Sending in {seconds} s." */
-  sendingIn: string;
-  /** "Sending…" — the moment the hold drains and the mail is leaving. */
+  /** "Sending…" — said for the whole hold, beside Undo. */
   sendingNow: string;
   undo: string;
 };
@@ -23,18 +19,18 @@ export type SendHoldCopy = {
  */
 export type HeldTicket = { id: string; runAt: number; holdMs: number };
 
-/** The countdown's own beat. */
+/** How often the hold's own clock advances. */
 const TICK_MS = 250;
 
 /**
  * A send you can take back (ADR 20260906-before-you-ask, decision 2).
  *
  * Wraps the form a send is submitted from. The tap does not send: it asks the
- * server to **hold** the send for eight seconds, then this control counts the
- * hold down in the row where the button stood — "Sending in 5 s." with Undo
- * exactly where Send was, so the thumb that pressed it can press it again —
- * and asks the server to **release** it at zero. Undo deletes the held row;
- * nothing was sent and the form is back as it was. The hold lives on the
+ * server to **hold** the send for eight seconds, shows a plain "Sending…" with
+ * Undo in the row where the button stood, so the thumb that pressed it can
+ * press it again, and asks the server to **release** it when the hold has run.
+ * No countdown, ring or animation: the line is a standard undo affordance.
+ * Undo deletes the held row; nothing was sent and the form is back as it was. The hold lives on the
  * server, so a closed tab does not stop the mail: the hourly sweep sends it.
  *
  * `hold` receives the form's own `FormData`, submitter included, so the four
@@ -60,7 +56,7 @@ export function SendHold<Outcome>({
   ) => Promise<{ status: "pending" | "gone" } | { status: "done"; outcome: Outcome }>;
   onOutcome: (outcome: Outcome) => void;
   copy: SendHoldCopy;
-  /** The one clause a send keeps ("the old link stops working"), shown beside the countdown. */
+  /** The one clause a send keeps ("the old link stops working"), shown beside "Sending…". */
   note?: string;
   className?: string;
   children: ReactNode;
@@ -69,8 +65,8 @@ export function SendHold<Outcome>({
   const [releasing, setReleasing] = useState(false);
   // How much of the hold has run, counted in ticks of the interval below —
   // never read off a clock. `Date.now()` is pinned in the e2e fleet (and may
-  // be skewed anywhere), while timers keep running; a countdown that read the
-  // clock sat at eight seconds forever there.
+  // be skewed anywhere), while timers keep running; a hold that read the
+  // clock never released there.
   const [elapsedMs, setElapsedMs] = useState(0);
   const busy = useRef(false);
 
@@ -81,7 +77,6 @@ export function SendHold<Outcome>({
   }, [ticket]);
 
   const seconds = ticket ? heldSendSecondsLeft(ticket.holdMs, elapsedMs) : 0;
-  const holdSeconds = ticket ? Math.max(1, ticket.holdMs / 1000) : 1;
 
   // Release at zero. The server decides whether the hold has drained; a
   // `pending` answer is a skewed clock, and the next tick asks again.
@@ -129,18 +124,8 @@ export function SendHold<Outcome>({
         aria-live="polite"
         className={`flex flex-wrap items-center gap-3 ${className ?? ""}`.trim()}
       >
-        <HoldRing fraction={releasing ? 1 : Math.min(1, 1 - seconds / holdSeconds)} />
         <span className="text-sm">
-          {/* The seconds roll down as the hold drains, on the same clock the
-              ring beside them is drawn from — one change, one answer (ADR
-              20260907-nothing-from-nowhere, decision 3). The word "Sending
-              now" is a different sentence, so it swaps. The leaving digit is
-              `aria-hidden`, so this live region still announces one value. */}
-          {releasing ? (
-            copy.sendingNow
-          ) : (
-            <RollingFigure>{fill(copy.sendingIn, { seconds })}</RollingFigure>
-          )}
+          {copy.sendingNow}
           {note ? <span className="text-muted"> {note}</span> : null}
         </span>
         <button
@@ -159,33 +144,5 @@ export function SendHold<Outcome>({
     <form onSubmit={onSubmit} className={className}>
       {children}
     </form>
-  );
-}
-
-/** The ring that drains: a stroke whose gap grows as the hold runs out. */
-function HoldRing({ fraction }: { fraction: number }) {
-  const circumference = 2 * Math.PI * 8;
-  return (
-    <svg
-      aria-hidden="true"
-      width="20"
-      height="20"
-      viewBox="0 0 20 20"
-      fill="none"
-      className="shrink-0 -rotate-90 text-primary"
-    >
-      <circle cx="10" cy="10" r="8" className="stroke-border" strokeWidth="2" />
-      <circle
-        cx="10"
-        cy="10"
-        r="8"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeDasharray={circumference}
-        strokeDashoffset={circumference * fraction}
-        className="transition-[stroke-dashoffset] duration-(--motion-base) ease-out-soft motion-reduce:transition-none"
-      />
-    </svg>
   );
 }

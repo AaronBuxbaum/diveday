@@ -264,9 +264,9 @@ export function WaiverSendControl({
   wrapperClassName?: string;
   copy: WaiverSendCopy;
 }) {
-  // The tap holds the send for eight seconds and this control's row counts it
-  // down with Undo where the button was (ADR 20260906-before-you-ask, decision
-  // 2); the outcome lands here once the hold drains, in the same shape the
+  // The tap holds the send for eight seconds and this control's row says
+  // "Sending…" with Undo where the button was (ADR 20260906-before-you-ask,
+  // decision 2); the outcome lands here once the hold drains, in the same shape the
   // notice below has always rendered.
   const [state, setState] = useState<WaiverSendState>(IDLE_WAIVER_SEND_STATE);
   // **The tap answered "there is nothing to send", so the button goes.**

@@ -475,12 +475,6 @@ const CUT_RINGS: readonly (readonly [file: string, anchor: string, needs: readon
   ["components/ui/rail.ts", "min-h-11 items-center rounded-lg px-3 py-2", []],
   ["components/ui/rail.ts", "RAIL_ROW_BOX} text-sm", ["focus-visible:focus-ring-inset"]],
   ["components/JumpNav.tsx", "focus-visible:focus-ring-inset", []],
-  // The contrast switch's pills scroll sideways in a 4px track.
-  [
-    "components/AmbientGlareDetector.tsx",
-    "rounded-full px-3 text-sm font-semibold",
-    ["has-[:focus-visible]:focus-ring-inset"],
-  ],
 ];
 
 describe("no ring the probe measured cut is cut any more", () => {
@@ -490,22 +484,5 @@ describe("no ring the probe measured cut is cut any more", () => {
       classStringsWith(source, anchor, needs),
       `a class string with "${anchor}" carrying ${needs.join(", ") || "it"}`,
     ).not.toHaveLength(0);
-  });
-});
-
-/**
- * **On the sky, the ring is the sky's ink.** `--focus-ring` is `--primary`,
- * measured against the app's light surfaces, and a `SkyBand` is none of
- * them: lagoon on the day sky measured 1.78–1.89:1 and 1.28:1 at the band's
- * foot, under the 3:1 a focus indicator owes (pixel probe, state atlas, the
- * BOARD back link on `trip-repeating-panel`). Every focusable on a band —
- * `VoyageHeader`, `DayHeader`, `ShopfrontHero` — stands on the sky itself, so
- * the band retokens the ring once for all of them.
- */
-describe("the ring on a SkyBand", () => {
-  it("is the band's own ink", () => {
-    const sky = unlayeredRules(CSS).find((rule) => rule.prelude === ".sky");
-    expect(sky, "a .sky rule").toBeDefined();
-    expect(declarations(sky?.body ?? "")["--focus-ring"]).toBe("var(--sky-ink)");
   });
 });

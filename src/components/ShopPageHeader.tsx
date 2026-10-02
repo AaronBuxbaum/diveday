@@ -82,7 +82,6 @@ export function EyebrowBackLink({
   href,
   children,
   className = "",
-  onSky = false,
 }: {
   href: string;
   children: ReactNode;
@@ -93,28 +92,15 @@ export function EyebrowBackLink({
    * pages hide it in print with `print:hidden` (the last two so their
    * print-only `<p>` can take the line). On the link those do nothing and the
    * wrapper auto-places, which is a 16px band of nothing on paper and a
-   * back-link in the wrong grid cell on screen. Colour is the exception and
-   * already has a prop, for the reason below.
+   * back-link in the wrong grid cell on screen.
    */
   className?: string;
-  /**
-   * This eyebrow is standing on a `SkyBand`, so it wears the band's ink rather
-   * than lagoon. `text-primary` on `--sky-day` measures **1.76:1** in the
-   * captured pixels — the trip masthead shipped it that way and the way back
-   * was effectively invisible. It is a prop rather than a `className`
-   * override because two `text-*` utilities resolve by stylesheet order, not
-   * by the order they are written, so an override here silently does nothing
-   * (the same trap `buttonClass`'s `flush` exists for).
-   */
-  onSky?: boolean;
 }) {
   return (
     <span className={`${EYEBROW_TAP_WRAPPER} ${className}`.trim()}>
       <Link
         href={href}
-        className={`${EYEBROW_TAP_TARGET} ${EYEBROW_SHAPE} ${
-          onSky ? "text-(--sky-ink)" : "text-primary"
-        } hover:underline`.trim()}
+        className={`${EYEBROW_TAP_TARGET} ${EYEBROW_SHAPE} text-primary hover:underline`}
       >
         {/* **One row, the words' own line box, centred inside** (K-395). The
             link stands its content on its bottom edge, and as two items of the

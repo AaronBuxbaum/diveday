@@ -164,9 +164,7 @@ const VIEWPORTS = [
  * default for a marketing page, a booking page and a diver's `/ready`. It is
  * the wrong device for the surfaces a dive shop works from: `/check-in` calls
  * itself "Counter mode", and a counter device is an iPad on a stand; the
- * manifest is read at the rail, often through a dry case, which is the whole
- * reason `glare-mode` exists in `globals.css` with its >=16px text and >=44px
- * targets.
+ * manifest is read at the rail, often through a dry case.
  *
  * 768-1024px is also where Tailwind's `sm:`/`md:` breakpoints change a
  * layout's *shape* — where a two-column `FieldGrid` stands in columns while
@@ -199,8 +197,7 @@ const TABLET_VIEWPORT = { width: 820, height: 1180 } as const;
  *
  * - `check-in` — "Counter mode" by its own heading. The front desk is a
  *   tablet on a stand and nothing else.
- * - `manifest` — worked at the rail in a dry case; `glare-mode`'s whole
- *   premise is this device in this light.
+ * - `manifest` — worked at the rail in a dry case.
  * - `schedule-builder` — a dense two-column board a shop keeps open on
  *   whatever is on the desk.
  * - `prep` — the same, the day before.
@@ -641,7 +638,6 @@ const FLOW_TIMEOUT_MS = SURFACE_TIMEOUT_MS + FLOW_ALLOWANCE_MS;
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
 
 /** The demo's night charter: 7:30 PM to 11:00 PM, in the water after dark. */
-const NIGHT_TRIP = "Night Dive — City of Washington";
 
 /**
  * A departure far enough out that D18's re-entry offers are still worth making.
@@ -1753,11 +1749,6 @@ function publicReefCard(page: Page) {
   return page.locator("li").filter({ hasText: REEF_TRIP });
 }
 
-/** The same card, for the night charter. */
-function publicNightCard(page: Page) {
-  return page.locator("li").filter({ hasText: NIGHT_TRIP });
-}
-
 /** Open the seeded reef charter's staff record, the way staff reach it. */
 async function openReefTrip(page: Page) {
   await page.goto("/shop/blue-mantis/schedule/board");
@@ -2653,32 +2644,6 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **The one departure whose sky is an operational fact** (issue #1467).
-       *
-       * `site-briefing` above photographs the reef morning, where there is
-       * nothing to say about the light and the line is correctly absent. The
-       * night charter casts off at 7:30 PM, half an hour before a July sunset,
-       * and dives both tanks in the dark — so it is the only departure on the
-       * demo board that renders sunset, civil dusk and the moon, and without
-       * this capture that line has no baseline anywhere.
-       *
-       * The clock is frozen (`E2E_FROZEN_CLOCK`) and the shop's coordinates are
-       * seeded, so both times and the phase are fixed: a diff here is a change
-       * in the arithmetic or the copy, never the calendar moving.
-       */
-      test(`the night charter names the light and the moon (${scheme})`, async ({ page }) => {
-        await page.goto("/s/blue-mantis");
-        await publicNightCard(page).getByRole("link", { name: NIGHT_TRIP }).click();
-        await page.getByRole("heading", { name: "The day" }).waitFor();
-        // The line this capture exists for. Waiting on it means the shot can
-        // never be of a page that quietly decided the departure sails in
-        // daylight.
-        await page.getByText(/^Sunset /).waitFor();
-        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
-        await capture(page, "site-briefing-night-sky", scheme);
-      });
-
-      /**
        * **The same departure with the pitch's door open** (ADR
        * 20260904-reef-all-the-way-down, decision 1).
        *
@@ -3298,49 +3263,6 @@ for (const scheme of ["light", "dark"] as const) {
         const dayOf = await openThreadStep(page, "dayof");
         await expect(dayOf.getByText("Anything that would help?")).toBeVisible();
         await capture(page, "readiness-easing-back", scheme);
-      });
-
-      /**
-       * **The same thread with the contrast turned up** (issue #1214, delight
-       * report D54).
-       *
-       * `.glare-mode` is the app's whole answer to a phone in direct sun — an
-       * AAA palette, a 16px floor on type, a 44px floor on every target, all
-       * declared on `documentElement` — and until this it was mounted only on
-       * the crew's offline manifest, so nothing on the diver's side had ever
-       * rendered it and nothing at all had photographed it on this page.
-       *
-       * Captured in both schemes deliberately, even though the mode resolves to
-       * the same light AAA palette in each: that *is* the behaviour, it is what
-       * a diver who keeps their phone in dark mode will actually see, and a
-       * baseline is the only thing that would notice if a future palette edit
-       * quietly broke the dark path into it.
-       *
-       * The chosen mode is the boundary this feature must not cross, so the
-       * assertions below are part of the capture rather than a separate test:
-       * every fact the standard page carries is still on the page after the
-       * switch. Turning the contrast up may not take anything away.
-       */
-      test(`the thread in high contrast renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
-        test.setTimeout(FLOW_TIMEOUT_MS);
-        await bookAVisualRegressionSeat(page, scheme);
-        await page.goto(new URL(page.url()).pathname);
-        await threadStatus(page).waitFor();
-
-        const contrast = page.getByRole("group", { name: "Screen contrast" });
-        // The radios are `sr-only` and the label is the target — which is the
-        // point of the control, so tap it the way a wet thumb does.
-        await contrast.getByText("High", { exact: true }).click();
-        await expect(page.locator("html")).toHaveClass(/glare-mode/);
-
-        // Nothing hidden: the status line, the way to the shop, and the door
-        // out are all still there at maximum contrast.
-        await expect(threadStatus(page)).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Where to go" })).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Pack with confidence" })).toBeVisible();
-        await capture(page, "thread-high-contrast", scheme);
       });
 
       /**
@@ -7285,47 +7207,6 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **The same group with the contrast turned up.**
-       *
-       * These are 56px targets a crew taps with one wet hand on a moving deck,
-       * and boat mode is the state they are actually tapped in. A chip row that
-       * reads at desk contrast and disappears in glare is a regression nothing
-       * else here would catch — the thread's own high-contrast capture proves
-       * the same thing for the diver's side (issue #1214).
-       */
-      test(`the Seen group in boat mode renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
-        test.setTimeout(FLOW_TIMEOUT_MS);
-        await openSailedTrip(page);
-        await openTripTab(page, "Manifest");
-        await offlineCopySaved(page);
-        await page
-          .getByRole("link", { name: "After dive 1" })
-          .evaluate((link: HTMLElement) => link.click());
-        await page.waitForURL(/checkpoint=after_dive_1/);
-        // Every per-device preference rests behind "On this phone" (ADR
-        // 20260827-the-departure-is-two-working-surfaces, decision 2).
-        await openOnThisPhone(page);
-        // The option's own label, which is what a thumb lands on. Not the bare
-        // text — the fieldset's legend reads "Boat mode" too, so that resolves
-        // to two nodes — and not the radio, which is `sr-only` and therefore
-        // never actionable. The thread's high-contrast capture clicks the same
-        // control the same way; only the collision with the legend is new.
-        const boatMode = page.getByRole("group", { name: "Boat mode" });
-        await boatMode.locator("label").filter({ hasText: "Boat mode" }).click();
-        const seen = page.getByRole("region", { name: "Seen" });
-        const chip = seen.getByRole("button", { name: "Southern stingray", exact: true });
-        await chip.evaluate((button) => button.scrollIntoView({ block: "center" }));
-        await chip.click();
-        await expect(
-          seen.getByRole("listitem").filter({ hasText: "Southern stingray" }),
-        ).toContainText("1");
-        await page.mouse.move(0, 0);
-        await capture(page, "manifest-seen-boat-mode", scheme);
-      });
-
-      /**
       /**
        * **What one diver arranged, on the surface a crew reads it from.**
        *
@@ -7997,38 +7878,6 @@ for (const scheme of ["light", "dark"] as const) {
         });
 
         /**
-         * **The same roll call in Boat mode**, the way it is read at the rail
-         * in sun. Glare mode floors every `text-xs` at 16px, so the stat
-         * tiles' "Embarcados" / "Buceadores" / "Pendientes" are wider than any
-         * inset a phone tile can give them: they measured fine in the capture
-         * above and spilled past the 8px gap into the next tile here (K-473
-         * review). The probe sweeps this at 360 as well. Switched by the
-         * control's own change event, which is what the Boat mode button
-         * sends, so the capture does not depend on a light sensor.
-         */
-        test(`the offline roll call in Boat mode reads in Spanish (${scheme})`, async ({
-          page,
-        }) => {
-          test.setTimeout(FLOW_TIMEOUT_MS);
-          await openReefTrip(page);
-          await page.goto(`${new URL(page.url()).pathname}/manifest`);
-          await settleOfflineShellWorker(page);
-          await openOnThisPhone(page);
-          await page.getByRole("link", { name: "Abrir pase de lista sin conexión" }).click();
-          await page.waitForURL(/offline-manifest/);
-          await expect(page.getByRole("heading", { name: "Priya Sharma" })).toBeVisible();
-          await page.evaluate(() =>
-            window.dispatchEvent(
-              new CustomEvent("diveday:contrast-mode-change", { detail: { mode: "full" } }),
-            ),
-          );
-          await expect(page.locator("html")).toHaveClass(/glare-mode/);
-          await capture(page, "offline-manifest-roll-call-high-contrast", scheme, {
-            locale: SPANISH,
-          });
-        });
-
-        /**
          * **The manifest's checkpoint track**, whose tabs carry a checkpoint
          * name and a state word in a row that has to stay one line: "Punto de
          * control activo" against "Active checkpoint", and "No embarcado"
@@ -8421,49 +8270,6 @@ test.describe("print", () => {
  * blue-mantis would hand a blank emergency card to whichever spec ran next in
  * this worker (ADR 20260815-per-test-private-shops).
  */
-for (const scheme of ["light", "dark"] as const) {
-  /**
-   * **The storefront is the day** — ADR 20260919-one-idea, decision I · Tide,
-   * slice 23d. The band at the top of a shop's public page is one frame with
-   * two fillings, and `blue-mantis` can only ever photograph one of them: it
-   * has a cover photograph, by design, because it is the demo a shop leaving
-   * FareHarbor sees. A minted shop has none — which is the ordinary shape for a
-   * shop that has just signed up — so its storefront is where the sky renders.
-   *
-   * **The zone does not pick the hour on this surface**, and the capture is what
-   * showed it. A minted shop carries the canonical demo's *address* — Key Largo,
-   * a real street, so the address path is exercised end to end — while
-   * `privateShopTimezone` moves only its clock. `skyReadingFor` prefers the
-   * almanac wherever a shop has coordinates, so the sky here is the sun over
-   * Florida at the fleet's frozen instant, and the Maldives zone shows up in the
-   * *date line* rather than in the gradient. That is the right precedence (a
-   * whole timezone is far too coarse to derive a sunrise from) and it means this
-   * capture is the day sky; a dusk or night storefront needs a shop whose
-   * coordinates say so, which is a fixture that does not exist yet.
-   */
-  test.describe(`${scheme} mode — the storefront over its own sky`, () => {
-    test.use({
-      colorScheme: scheme,
-      viewport: { width: 1280, height: 800 },
-      privateShopSlug: "harbour-lantern-divers",
-      privateShopTimezone: "Indian/Maldives",
-    });
-
-    test(`a shop with no cover photo wears the hour (${scheme})`, async ({ page, privateShop }) => {
-      await page.goto(`/s/${privateShop.slug}`);
-      // The band having *chosen* an hour, not merely rendered: `data-scheme` is
-      // server-rendered from the shop's own coordinates or clock, so its
-      // presence is the page having resolved this shop's sky rather than the
-      // shell's. Waiting on the attribute rather than on a timeout.
-      const sky = page.locator(".sky").first();
-      await expect(sky).toHaveAttribute("data-scheme", /^(dawn|day|dusk|night)$/);
-      // The shop's name is inside the band, and no photograph replaced it.
-      await expect(sky.getByRole("heading", { level: 1 })).toBeVisible();
-      await capture(page, "storefront-sky", scheme);
-    });
-  });
-}
-
 for (const scheme of ["light", "dark"] as const) {
   test.describe(`${scheme} mode — the unanswered emergency reference`, () => {
     // **A pinned identity, or this capture is noise.** The minted shop's name

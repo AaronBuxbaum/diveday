@@ -184,7 +184,7 @@ describe("the crew rows on paper", () => {
 /**
  * **The mark keeps room for its focus ring on the last row.** The roll-call
  * card is `overflow-hidden`. While glare's 44px floor shrank the name button
- * to 52px (#1981; a floor now, `glare-mode.test.ts`), the mark column set the
+ * to 52px (#1981), the mark column set the
  * row's height, and the last row's mark ended on the card's bottom edge: its
  * 5px ring lost its bottom (pixel probe, `manifest-seen-boat-mode`). Pinned as
  * structure, because jsdom has no layout; the probe measures the ring.

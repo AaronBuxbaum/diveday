@@ -366,7 +366,8 @@ ADR, a test pins the rule, the canvas README's slice table moves, and the visual
 - **16a** — the station on the shop home is a `SectionCard` with the site tile leading, one line
   per row, the log door a quiet link, the dial at 76px. **Started 2026-09-04.**
 - **16b** — the water band follows the shop's clock (four washes) and the one fact of scale renders
-  on the day it is true, with a season-start setting (#1371, #1373). **Shipped 2026-09-05.**
+  on the day it is true, with a season-start setting (#1371, #1373). **Shipped 2026-09-05.** The
+  band and its washes were removed by ADR 20261001-logbook; the fact of scale stays.
 - **16c** — the boat says where it is: `trip_stage_events`, the manifest's stage strip, the home's
   chip, the storefront's live panel, the thread's line; the boat drawing (#1372, #1374, D20).
   **Shipped 2026-09-05** — `#1374`'s "next with space" half stays open for 16f.
@@ -432,7 +433,8 @@ spring half, 18c's roster half and 18f wait on it.
   trees. **Shipped 2026-09-07.** A figure whose *sentence* changed swaps rather than rolls, which
   the boards did not draw: rolling digits inside a line that rewrote itself claims a continuity
   that is not there. The station chip, the palette count and the gear price are the same one-line
-  wiring and go with the surfaces that own them.
+  wiring and go with the surfaces that own them. **Removed by ADR 20261001-logbook**: every count
+  is a plain tabular number, and the held send says "Sending…" with Undo.
 - **18c** — a row closes its own gap: `SettledRows` on the counter's working queue and its settled
   group, with Undo running the same path reversed. **Shipped 2026-09-07.** Rows are tracked by DOM
   identity rather than by a key attribute, so a list opts in by wrapping and nothing labels its
@@ -659,7 +661,8 @@ then the day's own domain and components (23i), then the home, the departure and
   departures and now into pure geometry — plus `dayStripWindow`, which frames the part of the day
   worth drawing rather than midnight to midnight, and `dayStripTicks`, which picks one even clock
   stride across it. `SkyBand` and `DayStrip` render them. Both are prose-free and neither informs a
-  rule.
+  rule. **Removed by ADR 20261001-logbook**, with the sky and moon lines on the diver's trip page
+  and in the night-before email.
 - **23a** — the picked idea's home: `/shop/[shopSlug]` becomes the day (I), the stack (II) or the
   chart (III), on round 2's surface; the Today spine's actions become the idea's own things — hours,
   seats or tracks. **The top of it shipped 2026-09-19**: the greeting and the eyebrow are deleted
@@ -671,9 +674,12 @@ then the day's own domain and components (23i), then the home, the departure and
   registry of places with two consumers; ⌘K stays as the search.
 - **23c** — the departure: the hour page with the strip (I), the hull with its seats (II), the voyage
   on the chart (III); the four trip tabs one page; the roll call's one tap untouched beneath. Deck's
-  hull needs `boats.hull_color` (the **schema-change** skill).
+  hull needs `boats.hull_color` (the **schema-change** skill). The sky and the strip were removed
+  by ADR 20261001-logbook; the hour stays the page's name.
 - **23d** — the storefront's front page on the idea, in Harbor's face and the shop's colour: the day
-  and the week (I), the boat you are about to book (II), where we go (III).
+  and the week (I), the boat you are about to book (II), where we go (III). A shop with no cover
+  photograph shows its name on the page's surface; the sky that filled the band was removed by ADR
+  20261001-logbook.
 - **23e** — the diver, the counter and the walk-in reached through the idea: search and a sheet over
   the home; the person's record unchanged inside it.
 - **23f** — the week, the requests and the season on the idea: the Board becomes the week; a request
@@ -681,7 +687,9 @@ then the day's own domain and components (23i), then the home, the departure and
 - **23g** — the rest, one family per session: courses, gear, money, reviews, staffing, and Settings
   behind the shop's name. Chart's coastline is its own ADR here.
 - **23h** — night and glare on the idea: by the hour (I) or by the device (II, III); glare as the
-  crew's word in the roll call's bar; the black-on-white twin held by a test.
+  crew's word in the roll call's bar; the black-on-white twin held by a test. **Dropped by ADR
+  20261001-logbook**: glare mode and the water lock are gone; Boat mode and the `prefers-contrast:
+  more` boost are the high-contrast surface.
 
 ## Concept-model simplification (proposed — each row needs an owner decision)
 
