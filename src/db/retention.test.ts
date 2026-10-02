@@ -9,19 +9,15 @@ import * as schema from "./schema";
 import {
   accountTokens,
   activityEvents,
-  bookingGifts,
   bookingPaymentEvents,
-  bookings,
   notificationDeliveries,
   notificationDeliveryAttempts,
-  people,
-  personShelfTokens,
   stripeWebhookEvents,
   tripDeskEvents,
   tripReadMarks,
   userAccounts,
 } from "./schema";
-import { getTripRoster, upcomingTripsWithCounts, updateTrip } from "./trips";
+import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const NOW = new Date("2026-08-03T00:00:00.000Z");
@@ -232,53 +228,6 @@ describe("pruneExpiredRecords", () => {
     ]);
   });
 
-  /**
-   * The one arm measured from the **later** of two deaths, because a shelf link
-   * can die twice: it runs out, or the shop revokes it (erasure does). Either
-   * column alone gets one of the three rows below wrong.
-   */
-  it("prunes a shelf link only once both its deaths are long past", async () => {
-    const { db, shop } = await retentionContext();
-    const window = RETENTION_DAYS.person_shelf_tokens;
-    const [diver] = await db
-      .insert(people)
-      .values({ shopId: shop.id, fullName: "Shelf Retention Diver" })
-      .returning({ id: people.id });
-    if (!diver) throw new Error("diver fixture insert failed");
-    const row = (tokenHash: string, expiresAt: Date, revokedAt?: Date) => ({
-      shopId: shop.id,
-      personId: diver.id,
-      tokenHash,
-      expiresAt,
-      revokedAt,
-    });
-    await db.insert(personShelfTokens).values([
-      // Ran out long ago and was never revoked: the ordinary end of a link.
-      row("shelf-long-dead", daysAgo(window + 1)),
-      // Ran out, but not long enough ago — its counters are still the shop's
-      // answer to "how many phones held this".
-      row("shelf-recently-dead", daysAgo(window - 1)),
-      // **Revoked today, but minted with a year to run.** Measuring from
-      // `expires_at` alone would keep it a year past the revocation; measuring
-      // from `revoked_at` alone would prune the row above, whose column is
-      // null. The later of the two is the only clock that gets both right.
-      row("shelf-revoked-today", daysAgo(window + 400), NOW),
-      // Live: unrevoked and unexpired, however old the row is.
-      row("shelf-still-live", new Date(NOW.getTime() + 60 * 60 * 1000)),
-    ]);
-
-    const summary = await pruneExpiredRecords(db, { now: NOW });
-    expect(outcomeFor(summary, "person_shelf_tokens").deleted).toBe(1);
-    const remaining = await db
-      .select({ tokenHash: personShelfTokens.tokenHash })
-      .from(personShelfTokens);
-    expect(remaining.map((entry) => entry.tokenHash).sort()).toEqual([
-      "shelf-recently-dead",
-      "shelf-revoked-today",
-      "shelf-still-live",
-    ]);
-  });
-
   it("leaves a freshly written money trail entirely alone", async () => {
     const { db, shop, entry } = await retentionContext();
     await setBookingPayment(db, {
@@ -292,85 +241,6 @@ describe("pruneExpiredRecords", () => {
     const summary = await pruneExpiredRecords(db, { now: NOW });
     expect(outcomeFor(summary, "booking_payment_events").deleted).toBe(0);
     expect(await db.select().from(bookingPaymentEvents)).toHaveLength(1);
-  });
-
-  /**
-   * **The giver is retired, the gift is not** (security review of the gift
-   * slice, finding 5). A giver has no `people` row and never signed up for
-   * anything, so their name and address age out on their own window — while
-   * the row stays, because it is what explains the seat and its money on the
-   * till and in an export.
-   */
-  it("redacts a gift's giver ninety days after the boat came home, and keeps the row", async () => {
-    const { db, shop } = await retentionContext();
-    const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
-    const old = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
-    if (!old) throw new Error("demo reef trip missing");
-    // Nothing writes `booking_gifts` since gifting a dive was cut, so the
-    // fixture inserts the row; the arm stays until the table is dropped.
-    const [ben] = await db
-      .insert(people)
-      .values({ shopId: shop.id, fullName: "Ben Carter" })
-      .returning({ id: people.id });
-    if (!ben) throw new Error("fixture insert failed");
-    const [seat] = await db
-      .insert(bookings)
-      .values({ shopId: shop.id, tripId: old.id, personId: ben.id })
-      .returning({ id: bookings.id });
-    if (!seat) throw new Error("fixture insert failed");
-    const gift = { bookingId: seat.id };
-    await db.insert(bookingGifts).values({
-      shopId: shop.id,
-      bookingId: seat.id,
-      giverName: "Hannah Liu",
-      giverEmail: "hannah.liu@example.com",
-      receiverName: "Ben Carter",
-      message: "From Hannah, for your birthday",
-    });
-
-    // Inside the window: the departure came home yesterday.
-    await updateTrip(db, shop.id, old.id, {
-      title: old.title,
-      startsAt: daysAgo(2),
-      endsAt: daysAgo(1),
-      capacity: old.capacity,
-      plannedDives: old.plannedDives,
-    });
-    await pruneExpiredRecords(db, { now: NOW });
-    const [fresh] = await db
-      .select()
-      .from(bookingGifts)
-      .where(eq(bookingGifts.bookingId, gift.bookingId));
-    expect(fresh?.giverName).toBe("Hannah Liu");
-
-    // Past it.
-    const past = RETENTION_DAYS.booking_gifts + 1;
-    await updateTrip(db, shop.id, old.id, {
-      title: old.title,
-      startsAt: daysAgo(past + 1),
-      endsAt: daysAgo(past),
-      capacity: old.capacity,
-      plannedDives: old.plannedDives,
-    });
-    const summary = await pruneExpiredRecords(db, { now: NOW });
-    expect(outcomeFor(summary, "booking_gifts").deleted).toBe(1);
-
-    const [retired] = await db
-      .select()
-      .from(bookingGifts)
-      .where(eq(bookingGifts.bookingId, gift.bookingId));
-    // The row survives; the identity does not, and the receiver's name — the
-    // giver's own words about somebody who *is* a diver here — is left to the
-    // erasure path that owns it.
-    expect(retired).toBeTruthy();
-    expect(retired?.giverName).not.toBe("Hannah Liu");
-    expect(retired?.giverEmail).toMatch(/@invalid$/);
-    expect(retired?.message).toBeNull();
-
-    // Idempotent: a second pass finds nothing, rather than re-counting a row
-    // it has already retired.
-    const again = await pruneExpiredRecords(db, { now: NOW });
-    expect(outcomeFor(again, "booking_gifts").deleted).toBe(0);
   });
 
   it("is idempotent: a second pass with nothing eligible deletes nothing", async () => {
@@ -536,7 +406,6 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "trip_change_events",
   "executed_dives",
   "trip_sightings",
-  "season_events",
   "trip_assignments",
   "trip_help_requests",
   "trip_waitlist_entries",
@@ -580,10 +449,10 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "shop_promo_redemptions",
   // Credentials that live and die with the thing they open: revoked, spent, or
   // deleted with their parent. The token tables that are *not* here
-  // (`account_tokens`, `person_shelf_tokens`,
-  // `shop_contact_email_confirmation_tokens`, `integration_oauth_states`) are
-  // the ones whose already-dead rows are kept on purpose for an incident
-  // review — which is what a window is for, and why they have one.
+  // (`account_tokens`, `shop_contact_email_confirmation_tokens`,
+  // `integration_oauth_states`) are the ones whose already-dead rows are kept
+  // on purpose for an incident review — which is what a window is for, and why
+  // they have one.
   "user_accounts",
   "account_sessions",
   "account_security",
@@ -592,14 +461,10 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "auth_verifications",
   "booking_capabilities",
   "calendar_feeds",
-  "display_tokens",
   "last_minute_list_unsubscribe_tokens",
   "person_courtesy_email_unsubscribe_tokens",
   // Current state about DiveDay's own machinery: one row per object, replaced
   // in place rather than appended, so there is no history here to age out.
-  // `shop_print_runs`' docblock makes the point in the other direction — a
-  // print register that answered "when did we last print this" from a trail
-  // would be a table wanting a window.
   "notification_rate_limit_state",
   "integration_sync_records",
   "shop_integrations",
@@ -607,7 +472,6 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "shop_whatsapp_accounts",
   "shop_backup_destinations",
   "shop_backup_deliveries",
-  "shop_print_runs",
   // Queues that empty themselves. Both are argued in src/lib/retention.ts or
   // in their own docblock: a finished send clears its payload and every
   // handle, and a held send is deleted by whichever claimant reaches it first.

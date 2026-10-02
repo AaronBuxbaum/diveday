@@ -95,11 +95,6 @@ export const shops = pgTable(
     passThroughFee: jsonb("pass_through_fee")
       .$type<{ name: string; amountCents: number } | null>()
       .default(null),
-    /** Coded commitments the shop chooses to display on its public schedule; these are shop claims. */
-    conservationCommitments: jsonb("conservation_commitments")
-      .$type<string[]>()
-      .notNull()
-      .default([]),
     /** Which medical questionnaire the shop's waivers use; RSTC is the default. */
     jurisdiction: medicalJurisdiction("jurisdiction").notNull().default("rstc"),
     /**
@@ -287,29 +282,6 @@ export const shops = pgTable(
     bottomTimeMinutes: integer("bottom_time_minutes").notNull().default(45),
     surfaceIntervalMinutes: integer("surface_interval_minutes").notNull().default(60),
     /**
-     * The hours, shop-local, during which automated messages may reach a diver
-     * — see `src/lib/send-window.ts`. `end` is exclusive, so 20 means "up to
-     * 19:59". A fixed 14:00 UTC reminder batch reached Singapore at 22:00,
-     * Sydney at midnight and Fiji at 03:00 (issue #697), and a recap four hours
-     * after a night dive lands at 3 AM in every zone on earth.
-     *
-     * Defaults chosen to be defensible unattended, not to be right for every
-     * shop; a dawn-boat operation lowers the floor.
-     */
-    sendWindowStartHour: integer("send_window_start_hour").notNull().default(8),
-    sendWindowEndHour: integer("send_window_end_hour").notNull().default(20),
-    /**
-     * How long after the day's last dive a diver reads they may fly, in whole
-     * hours — one figure for a single dive, one for a day of two or more
-     * (`src/lib/fly-safe.ts`, issue #1425). The sentence on the recap credits
-     * the figure to the shop and the practice to DAN, so the CHECK below
-     * floors each at DAN's published minimum (12 and 18): a shop may ask for
-     * more, never less, or even that weaker claim is false. Informs, never
-     * gates.
-     */
-    flySafeHoursSingle: integer("fly_safe_hours_single").notNull().default(18),
-    flySafeHoursRepetitive: integer("fly_safe_hours_repetitive").notNull().default(24),
-    /**
      * Where the shop's season starts — the denominator behind the home's one
      * fact of scale (ADR 20260904-reef-all-the-way-down, decision 2, Budget
      * rule 3). "Your 400th diver of the season" is a claim about a count from
@@ -348,41 +320,6 @@ export const shops = pgTable(
      * it and they come back.
      */
     searchListingOptOutAt: timestamp("search_listing_opt_out_at", { withTimezone: true }),
-    /**
-     * Whether the tide window a site carries reaches the diver's public
-     * departure page. Off by default: the sentence names a clock time beside
-     * a Book button, and whether that is a promise the shop wants to publish
-     * is the shop's call. Staff surfaces read it regardless (ADR
-     * 20260907-noaa-tide-predictions).
-     */
-    tideWindowPublic: boolean("tide_window_public").notNull().default(false),
-    /**
-     * Whether this shop's boats say where they are in their day to somebody
-     * who is not a diver on board — the storefront's live line, the follow
-     * link a diver shares, the dock sign (ADR 20260908-one-hand, decision 6,
-     * lever U).
-     *
-     * Off by default, and the default is the point: what leaves the shop is a
-     * stage word a crew member tapped and the time they tapped it. Never a
-     * name, never a count of people, never a position. A shop that has not
-     * said yes publishes none of it, and every public reader treats the switch
-     * as a `notFound()` rather than as an empty state.
-     *
-     * A boolean rather than a timestamp, unlike `search_listing_opt_out_at`
-     * beside it: that column answers "when did this shop opt out of something
-     * it had by default?", and this one has no default to opt out of.
-     */
-    publicBoatLine: boolean("public_boat_line").notNull().default(false),
-    /**
-     * The shop's locality as a path segment — `key-largo` for a shop whose
-     * `address_locality` says "Key Largo" — written by `setShopAddress` from
-     * `regionSlugFromLocality` (src/lib/region.ts) every time the address
-     * saves, and never typed by anyone. `/dive/<region>` lists every listed
-     * shop that shares one (issue #1436). Null when the shop has no locality
-     * on file, which keeps it off every regional page rather than on a page
-     * called "null".
-     */
-    regionSlug: text("region_slug"),
     tagline: text("tagline"),
     description: text("description"),
     logoUrl: text("logo_url"),
@@ -405,45 +342,13 @@ export const shops = pgTable(
      * The badge wall: coded affiliations the shop chooses to show, in the
      * order it chose them — `BRAND_BADGE_CODES` in `src/lib/brand.ts`. Codes,
      * never words or logos: a code arrives in every language, and DiveDay
-     * draws a text badge rather than a mark it has no right to show. The same
-     * shape as `conservation_commitments`, and like it these are shop claims.
+     * draws a text badge rather than a mark it has no right to show. Like every
+     * badge, these are shop claims.
      */
     brandBadges: jsonb("brand_badges").$type<string[]>().notNull().default([]),
-    /**
-     * The shop's own three sentences (issue #1212): what a first-timer reads
-     * before diving with them, what to expect at the dock, and how a finished
-     * day is signed off.
-     *
-     * **Monolingual by design**, and the same trade ADR
-     * 20260813-dive-site-briefings-are-the-shops-own-words made: these are the
-     * shop's words, rendered verbatim and uncaptioned wherever they appear, so
-     * they arrive in the language they were typed rather than the reader's.
-     * Never through ICU — a swallowed error would take the paragraph with it
-     * (ADR 20260814-course-depth-markers).
-     *
-     * Blank normalises to NULL in the writer, so "unset" has exactly one
-     * shape, and each is bounded at 280 characters by
-     * `shops_hospitality_notes_bounded`.
-     */
-    welcomeNote: text("welcome_note"),
-    dockCallNote: text("dock_call_note"),
-    signOffNote: text("sign_off_note"),
     latitude: doublePrecision("latitude"),
     longitude: doublePrecision("longitude"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    /**
-     * **The shop's yes** for its year card on DiveDay's own pages (ADR
-     * 20260908-one-hand, decision 6, lever T; the owner's call is H-71 (k)).
-     *
-     * Off by default and never inferred: DiveDay's homepage carries a real
-     * shop's card only while this is true, and the public card route
-     * (`/s/<slug>/year-card`) 404s for every shop that has not turned it on.
-     * What leaves the shop is what the card draws — divers, boats out, sites,
-     * the busiest day, the strip of days — and never money and never a diver's
-     * name. Turning it off takes the band down on the next render; nothing is
-     * cached elsewhere.
-     */
-    showYearOnDiveday: boolean("show_year_on_diveday").notNull().default(false),
   },
   (table) => [
     uniqueIndex("shops_inbound_email_token_unique").on(table.inboundEmailToken),
@@ -461,32 +366,12 @@ export const shops = pgTable(
         and not (${table.seasonStartMonth} = 2 and ${table.seasonStartDay} > 28)
         and not (${table.seasonStartMonth} in (4, 6, 9, 11) and ${table.seasonStartDay} > 30)`,
     ),
-    // The same bounds `parseFlySafeHours` accepts (`src/lib/fly-safe.ts`):
-    // DAN's floors, a three-day ceiling, and a repetitive wait no shorter than
-    // the single one.
-    check(
-      "shops_fly_safe_hours_in_range",
-      sql`${table.flySafeHoursSingle} >= 12 and ${table.flySafeHoursSingle} <= 72
-        and ${table.flySafeHoursRepetitive} >= 18 and ${table.flySafeHoursRepetitive} <= 72
-        and ${table.flySafeHoursRepetitive} >= ${table.flySafeHoursSingle}`,
-    ),
     // A year a shop could plausibly have opened in. Bounded at both ends like
     // every other numeric setting, so no caller can persist a figure the
     // storefront would print as nonsense.
-    // `/dive/<region>` reads listed shops by this one column (issue #1436).
-    index("shops_region_slug_idx").on(table.regionSlug),
     check(
       "shops_established_year_plausible",
       sql`${table.establishedYear} IS NULL OR (${table.establishedYear} >= 1900 AND ${table.establishedYear} <= 2100)`,
-    ),
-    // Three sentences, not three paragraphs: each of the shop's own words is
-    // read in passing — on a thread, on an arrival card, at the foot of a
-    // recap — and the bound is what keeps it that.
-    check(
-      "shops_hospitality_notes_bounded",
-      sql`(${table.welcomeNote} is null or length(${table.welcomeNote}) <= 280)
-        and (${table.dockCallNote} is null or length(${table.dockCallNote}) <= 280)
-        and (${table.signOffNote} is null or length(${table.signOffNote}) <= 280)`,
     ),
     // `#rrggbb`, lowercase, or nothing — the one shape `src/lib/brand.ts` parses.
     check(
@@ -1993,67 +1878,6 @@ export const tripLenses = pgTable(
     uniqueIndex("trip_lenses_shop_slug_key")
       .on(table.shopId, table.slug)
       .where(sql`${table.deletedAt} is null`),
-  ],
-);
-
-/**
- * **The reef's calendar** — the weeks a shop plans its year around, in the
- * shop's own words (issue #1485).
- *
- * Lobster mini-season, a goliath grouper aggregation, turtle nesting, the
- * lionfish derby the shop runs every August. A Florida shop's summer is
- * organised by these and none of them is DiveDay's to name: the dates move by
- * state rule and by species, and the sentence that makes a visitor care is the
- * one the shop would say across the counter. So the words are the shop's,
- * exactly like a dive site's fit tone (ADR
- * 20260813-dive-site-briefings-are-the-shops-own-words) or a lens, and
- * `src/i18n` supplies only the frame the storefront draws around them. There is
- * deliberately no seeded catalog to pick from.
- *
- * **Calendar dates, not instants.** "The last Wednesday and Thursday of July"
- * is two days on a wall calendar, inclusive at both ends; there is no clock in
- * it, and a timestamp would slide the window under a reader in another zone.
- * Whether it is live is the only question with a zone in it, and it is asked at
- * the edge — today's date in `shops.timezone` (`src/lib/season-events.ts`).
- *
- * The optional `lens_id` is the shop's own word for the kind of day this season
- * fills the board with, so the storefront band can hand a visitor the narrowed
- * schedule rather than leaving them to find it. Null is the ordinary case.
- */
-export const seasonEvents = pgTable(
-  "season_events",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    name: text("name").notNull(),
-    /** The shop's own sentence about the week. Null renders the name alone. */
-    note: text("note"),
-    startsOn: date("starts_on", { mode: "string" }).notNull(),
-    /** Inclusive: a one-day derby is `starts_on = ends_on`. */
-    endsOn: date("ends_on", { mode: "string" }).notNull(),
-    /**
-     * `set null` rather than a cascade: deleting the word must not delete the
-     * season, which is a fact about the shop's year and not about its
-     * vocabulary.
-     */
-    lensId: uuid("lens_id").references(() => tripLenses.id, { onDelete: "set null" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    /**
-     * Deleting a season stamps this and leaves the row (ADR
-     * 20260820-every-delete-is-soft). The word on screen is still "Delete".
-     */
-    deletedAt: timestamp("deleted_at", { withTimezone: true }),
-  },
-  (table) => [
-    // Every reader asks the same question — this shop's live seasons in date
-    // order — whether it is the storefront band, the month-out reminder or the
-    // Settings inset.
-    index("season_events_shop_range_idx")
-      .on(table.shopId, table.startsOn, table.endsOn)
-      .where(sql`${table.deletedAt} is null`),
-    check("season_events_ends_on_or_after", sql`${table.endsOn} >= ${table.startsOn}`),
   ],
 );
 
@@ -4058,11 +3882,6 @@ export const notificationKind = pgEnum("notification_kind", [
   // (src/lib/minimum-seats.ts). Tracked per booking like every other trip
   // message, so a shop can see who was told.
   "trip_minimum_not_met",
-  // The pass for a seat one person bought for another, carrying the claim link
-  // the giver forwards (ADR 20260908-one-hand, decision 6, lever W). The one
-  // per-booking message addressed to somebody other than the diver, and
-  // tracked like the rest so a shop can see that the gift went out.
-  "gift_pass",
 ]);
 
 export const notificationDeliveryStatus = pgEnum("notification_delivery_status", [
@@ -6417,11 +6236,6 @@ export const bookingCapabilityPurpose = pgEnum("booking_capability_purpose", [
   // 3): ten minutes, minted by the diver's own thread and consumed by the
   // booking it leads to. The one purpose whose expiry is not the trip's.
   "handoff",
-  // The QR on the arrival card the diver downloads, prints and can forward.
-  // It authorizes nothing but being recognised at the counter tablet — the
-  // same thing typing a surname there already buys — so a card left on a
-  // hotel desk leaks no more than the diver's name on the manifest.
-  "arrival",
 ]);
 
 /**
@@ -6527,94 +6341,6 @@ export const calendarFeeds = pgTable(
     uniqueIndex("calendar_feeds_live_person_scope_idx")
       .on(table.personId, table.scope)
       .where(sql`${table.revokedAt} IS NULL`),
-  ],
-);
-
-/**
- * A long-lived, revocable bearer credential over the shop's **departures board**
- * — the lobby TV / dock tablet at `/board/[token]` (issue #1426, N-23). Same
- * discipline as `calendar_feeds`: only the hash is stored and the raw token
- * exists solely in the response that minted it. A **board** link has no expiry,
- * because a screen on a wall that went dark after 60 days would be noticed by
- * nobody until a diver asked why the board is blank; revocation is the
- * mitigation there. A **check-in** link does expire — see `expires_at`.
- *
- * What the board shows is decided at the reader (`src/db/departures-board.ts`),
- * never by a column here: a boat's title, time, site, stage word, meeting point
- * and an "n of capacity" count. `show_names` is the one knob — off, nobody is
- * named at all; on, the **crew** line appears. Diver names never reach a
- * lobby screen at any setting.
- *
- * Revoking *is* the delete: a revoked link has nothing left a shop could ask
- * to remove, so `revoked_at` is the row's soft-delete stamp and the settings
- * page lists only rows where it is null. Nothing hard-deletes a row except the
- * demo cascade.
- */
-/**
- * **What a display link opens** — the one thing that separates a screen the
- * lobby *reads* from a tablet a diver *taps* (N-23, N-24).
- *
- * `board` is the departures board at `/board/[token]`: read-only, and its
- * reader decides by type that no diver is ever named on it. `check_in` is the
- * self check-in kiosk at `/check-in/[token]`, which **writes** — it records an
- * arrival against a real booking.
- *
- * They share this table, its hashing and its one revocation path deliberately;
- * what they must never share is a token. A board link is handed to whoever
- * mounts a TV, and if it also opened a surface that can move a booking's status
- * then mounting a TV would be granting a write. `verifyDisplayToken` therefore
- * takes the purpose it expects and refuses a token minted for the other one,
- * with the same single refusal it gives an unknown token.
- *
- * `board` is the default because every row that existed before this column did
- * was a board link.
- */
-export const displayTokenPurpose = pgEnum("display_token_purpose", ["board", "check_in"]);
-
-export const displayTokens = pgTable(
-  "display_tokens",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    tokenHash: text("token_hash").notNull().unique(),
-    /** "Lobby TV", "Dock B tablet" — the shop's own word for which screen this is. */
-    label: text("label").notNull(),
-    purpose: displayTokenPurpose("purpose").notNull().default("board"),
-    showNames: boolean("show_names").notNull().default(false),
-    createdByPersonId: uuid("created_by_person_id")
-      .notNull()
-      .references(() => people.id),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    /**
-     * Stamped when the board renders, coarsely, so the settings page can tell
-     * a screen that is actually showing from a link nobody ever opened.
-     */
-    lastShownAt: timestamp("last_shown_at", { withTimezone: true }),
-    /**
-     * **When this link stops verifying** (issue #1609, security review). The
-     * `check_in` case is the one that expires, because it is the one that
-     * **writes**: its URL lives on a tablet on a counter, and a credential that
-     * records arrivals against real bookings should not outlive the tablet by
-     * years. The lifetime is `CHECK_IN_LINK_TTL_DAYS`, derived in the writer
-     * from `purpose`, and a manager renews it from Settings.
-     *
-     * Null means never **for a board link only**. A `check_in` row with no
-     * expiry — every one minted before this column existed — is not an
-     * unbounded kiosk credential: `verifyDisplayToken` reads the purpose
-     * alongside the expiry and refuses it (security review, 2026-09-12), so the
-     * column being nullable never widens what the counter's URL can do.
-     *
-     * An expired row is not a revoked row: it stays in the settings list, so
-     * the manager whose kiosk stopped working can see why and renew it.
-     */
-    expiresAt: timestamp("expires_at", { withTimezone: true }),
-    revokedAt: timestamp("revoked_at", { withTimezone: true }),
-  },
-  (table) => [
-    index("display_tokens_token_hash_idx").on(table.tokenHash),
-    index("display_tokens_shop_live_idx").on(table.shopId, table.revokedAt),
   ],
 );
 
@@ -8385,28 +8111,11 @@ export const bookingArrivalEvents = pgTable(
       .notNull()
       .references(() => bookings.id, { onDelete: "cascade" }),
     /**
-     * Who said so. A staffer at the desk on every path but one: a diver who
-     * checked *themselves* in at a lobby tablet is recorded as their own
-     * recorder, which is the honest reading of the column and is why it stays
-     * `not null`. `displayTokenId` beside it is what tells the two apart.
+     * Who said so: the staffer at the desk.
      */
     recordedByPersonId: uuid("recorded_by_person_id")
       .notNull()
       .references(() => people.id),
-    /**
-     * The kiosk this arrival was tapped on, or null for a staffer's own tap
-     * (N-24). It is the whole difference between "Dana checked Priya in" and
-     * "Priya checked herself in on the lobby tablet", and a shop reading its
-     * own trail after the fact needs to be able to tell those apart — which
-     * `recorded_by_person_id` alone cannot, since staff dive too.
-     *
-     * Deliberately **not** a new `source` value: `source` is shared with
-     * `roll_call_events`, and widening that enum would make `kiosk` a
-     * representable origin for a *boarding*. Arrival is the desk's question and
-     * boarding is the rail's, and nothing a diver taps in a lobby may ever
-     * reach the second one (ADR 20260907-the-counter-survives-offline).
-     */
-    displayTokenId: uuid("display_token_id").references(() => displayTokens.id),
     status: arrivalStatus("status").notNull(),
     /** Same offline contract as `rollCallEvents.source` — rides the same queue. */
     source: rollCallSource("source").notNull().default("live"),
@@ -9265,67 +8974,6 @@ export const pushSubscriptions = pgTable(
   ],
 );
 
-/**
- * **A diver's standing door onto their own file at one shop** — the shelf
- * (`/shelf/[token]`).
- *
- * Every other diver-facing bearer surface is anchored to a *booking*: the
- * thread, the waiver, the claim and the recap each name one seat on one boat,
- * and each dies with it. This is the first anchored to the **person**, because
- * what it answers — when am I next out, what does this shop already hold for
- * me, what did I see last time — is not a fact about a departure and outlives
- * every one of them.
- *
- * **Stored rather than signed**, which is the difference from
- * `src/lib/recap-links.ts`. A signed token is unrevocable by construction, and
- * this one has to be revocable for two separate reasons: erasure
- * (`anonymizeDiver`, H-02) must leave nothing that still opens a person's file,
- * and a diver who loses a phone has to be able to ask the shop to kill the link
- * that was on it. Only the digest is kept (`src/lib/bearer-tokens.ts`), so a
- * reader of a dump comes away with nothing replayable.
- *
- * **One row per link handed out**, never superseded, which is what lets the
- * diver record answer "how many phones hold this": a row that has been opened
- * is a device carrying the cookie, and a row that never was is a link that
- * never landed. `opens` and `last_opened_at` are the two facts shown beside it.
- *
- * No `deleted_at`: nobody points at a credential and asks for it gone, they
- * revoke it — the same call `booking_capabilities` and `calendar_feeds` make
- * (`.claude/rules/db.md`, "machinery nobody pointed at").
- */
-export const personShelfTokens = pgTable(
-  "person_shelf_tokens",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    personId: uuid("person_id")
-      .notNull()
-      .references(() => people.id),
-    /** SHA-256 of the bearer token. Unique: the verify path is a digest lookup. */
-    tokenHash: text("token_hash").notNull().unique(),
-    issuedAt: timestamp("issued_at", { withTimezone: true }).notNull().defaultNow(),
-    /**
-     * Bounded, never unlimited. A year is longer than a dive season and shorter
-     * than a phone's life, so a link nobody uses stops working rather than
-     * standing open forever; the shop mints another in one tap from the record.
-     */
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    /** When this link was last opened, and how often — the record's two facts. */
-    lastOpenedAt: timestamp("last_opened_at", { withTimezone: true }),
-    opens: integer("opens").notNull().default(0),
-    revokedAt: timestamp("revoked_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [
-    // The verify path: hash the bearer token, find the row.
-    index("person_shelf_tokens_token_hash_idx").on(table.tokenHash),
-    // The record's count, and the revocation sweep erasure runs.
-    index("person_shelf_tokens_shop_person_idx").on(table.shopId, table.personId, table.revokedAt),
-  ],
-);
-
 export type Shop = typeof shops.$inferSelect;
 export type Person = typeof people.$inferSelect;
 export type Trip = typeof trips.$inferSelect;
@@ -9389,63 +9037,6 @@ export type GearServiceEvent = typeof gearServiceEvents.$inferSelect;
 export type GearServiceKindValue = (typeof gearServiceKind.enumValues)[number];
 export type GearReservation = typeof gearReservations.$inferSelect;
 export type PriorGearAssignment = typeof priorGearAssignments.$inferSelect;
-
-export type PersonShelfToken = typeof personShelfTokens.$inferSelect;
-
-/**
- * Which sheet a print run was for — `src/lib/print-sheets.ts`'s codes, in the
- * register's own order (ADR 20260908-one-hand, decision 6, lever X).
- */
-export const printSheet = pgEnum("print_sheet", [
-  "dock_sign",
-  "window_sticker",
-  "boat_card",
-  "site_briefing",
-  "paper_pass",
-]);
-
-/**
- * **When each sheet was last printed.**
- *
- * The whole persistence surface of the shop's paper. Every sheet reads what its
- * page reads at the moment it is drawn, so the one fact a template cannot
- * recover for itself is how old the copy taped to the console is — and that is
- * the fact a shop is actually asking Settings for ("printed Aug 12"), so it is
- * the only one stored.
- *
- * **One row per sheet per subject, replaced in place, rather than a log.** A
- * print register that answered "when did we last print this" by scanning an
- * append-only trail would be a table wanting a retention window (H-02) for a
- * question a single row answers. `subject_key` is the boat's id for the boat
- * card and the empty string for everything else — empty rather than null,
- * because Postgres treats nulls as distinct in a unique index and a nullable
- * column here would quietly allow a second row per sheet.
- *
- * The paper pass records under the empty key too: a pass prints from a diver's
- * booking, and which diver that was is not a fact this register exists to keep.
- *
- * No `deleted_at`: nothing points at a row here and asks for it gone (the
- * machinery exception in `.claude/rules/db.md`).
- */
-export const shopPrintRuns = pgTable(
-  "shop_print_runs",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    sheet: printSheet("sheet").notNull(),
-    /** The boat for a boat card; the empty string for a sheet with no subject. */
-    subjectKey: text("subject_key").notNull().default(""),
-    printedAt: timestamp("printed_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [
-    uniqueIndex("shop_print_runs_sheet_unique").on(table.shopId, table.sheet, table.subjectKey),
-  ],
-);
-
-export type ShopPrintRun = typeof shopPrintRuns.$inferSelect;
-export type PrintSheetValue = (typeof printSheet.enumValues)[number];
 
 /**
  * **What a crew actually saw at a site, tallied** — the living reef.
@@ -9525,61 +9116,6 @@ export const tripSightings = pgTable(
 export type TripSighting = typeof tripSightings.$inferSelect;
 
 /**
- * **A seat one person bought for another** (ADR 20260908-one-hand, decision 6,
- * lever W; the owner's call (l): yes to the gift, gift cards stay parked).
- *
- * A gift is a **booking**, not stored value. The row over there is the seat —
- * it takes capacity, it carries readiness, it refunds on a blow-out — and this
- * row is the small amount of extra fact a gift adds to it: who bought it, the
- * line they wrote, and the name they typed for the person they bought it for.
- * Nothing here holds a balance, and there is nothing to reconcile when the
- * departure is over.
- *
- * **`claimed_at` is deliberately not a column here.** `bookings.claimed_at` is
- * already that fact, written inside the claim transaction (`src/db/seat-claims.ts`)
- * for a party seat and for a gift alike; a second copy on this row would be one
- * more thing that can disagree with the seat it is about.
- *
- * **`receiver_name` is the giver's own words, and it is what the giver's page
- * renders.** The booking's `people` row starts as a placeholder carrying the
- * same name and then becomes the claimant's real record the moment they claim —
- * so a giver's page reading through the booking would start showing the diver's
- * own chosen name, their own spelling, and (through the same join) whatever
- * else that record grows. The giver reads back what the giver typed.
- *
- * **The giver is a third party's personal data on a diver's seat**, held for
- * the same reason a guardian's is on a minor's release, so the erasure of the
- * diver who dives takes it too (`src/db/anonymize.ts`).
- */
-export const bookingGifts = pgTable(
-  "booking_gifts",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    /** One gift per seat: a booking is bought once, by one person. */
-    bookingId: uuid("booking_id")
-      .notNull()
-      .unique()
-      .references(() => bookings.id),
-    giverName: text("giver_name").notNull(),
-    /** Where the receipt and the claim link go — the giver forwards the pass. */
-    giverEmail: text("giver_email").notNull(),
-    /** The name the giver typed for whoever is diving. Never read back off the booking. */
-    receiverName: text("receiver_name").notNull(),
-    /** The one line the giver wrote. It goes on the pass and nowhere else. */
-    message: text("message"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [
-    // The till's read: every gift on this page of orders, and the day's
-    // unclaimed ones at the counter.
-    index("booking_gifts_shop_idx").on(table.shopId),
-  ],
-);
-
-/**
  * **Which diver's link brought this seat** (ADR 20260908-one-hand, decision 6,
  * lever W: the buddy seat).
  *
@@ -9624,5 +9160,4 @@ export const bookingReferrals = pgTable(
   ],
 );
 
-export type BookingGift = typeof bookingGifts.$inferSelect;
 export type BookingReferral = typeof bookingReferrals.$inferSelect;

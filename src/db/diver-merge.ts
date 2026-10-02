@@ -162,7 +162,6 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "crew_assignment_requests.decided_by_person_id": "who answered the ask",
   "crew_availability_blocks.created_by_person_id": "who blocked the days",
   "day_closeouts.actor_person_id": "who closed the day",
-  "display_tokens.created_by_person_id": "who made the lobby screen's link",
   "dive_packages.created_by_person_id": "who wrote the package",
   "dive_sites.planning_note_by_person_id": "who wrote down what the site was like",
   "executed_dives.deleted_by_person_id": "who deleted the logged dive",
@@ -235,9 +234,6 @@ export const PERSON_TABLES_DELIBERATELY_UNMOVED: Readonly<Record<string, string>
   // 3), gone within a day. Written by someone at the desk, never about a
   // diver, so it belongs to whoever typed it and moves with nobody.
   form_drafts: "a staffer's own half-typed form, gone in a day",
-  // Nothing reads a shelf token since the diver's shelf was cut; the table goes
-  // at the next schema drop.
-  person_shelf_tokens: "nothing reads a shelf token any more",
 };
 
 function quotedTable(tableName: string) {

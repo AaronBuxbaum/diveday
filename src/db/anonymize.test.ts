@@ -14,7 +14,6 @@ import {
   authVerifications,
   bookingCheckoutBookings,
   bookingCheckouts,
-  bookingGifts,
   bookingPaymentEvents,
   bookingPayments,
   bookings,
@@ -46,7 +45,6 @@ import {
   waiverTemplates,
 } from "./schema";
 import { upsertShopStripeAccount } from "./stripe-accounts";
-import { upcomingTripsWithCounts } from "./trips";
 
 /**
  * A managed storage origin, the shape `isManagedStorageUrl` accepts. A blob URL
@@ -484,74 +482,6 @@ describe("anonymizeDiver — a provider login (issue #1594)", () => {
         .where(eq(authProviderAccounts.userAccountId, account.id)),
     ).toEqual([]);
     expect(await db.select().from(authVerifications)).toEqual([]);
-  });
-});
-
-/**
- * **The giver of a gift is a third party with no record of their own**
- * (security review of the gift slice, finding 5).
- *
- * `booking_gifts` names them by address and by nothing else — no `people` row,
- * no id joining them to anything — so the only handle an erasure has on "gifts
- * this person bought" is the address they are being erased from. Without this
- * sweep, erasing a diver left their name and email standing on every seat they
- * had ever bought somebody else. Nothing writes the table since gifting a
- * dive was cut, so the fixture inserts the row directly; the redaction stays
- * until the table is dropped.
- */
-describe("anonymizeDiver — the gifts this person bought", () => {
-  it("erases the giver on a seat they paid for, not only the seats they dive", async () => {
-    const { db, shop, owner } = await erasureFixtures();
-    const [trip] = await upcomingTripsWithCounts(db, shop.id);
-    if (!trip) throw new Error("no demo trip");
-
-    // Hannah is a diver here *and* bought Ben a seat. Erasing her has to reach
-    // both: her own record, and her name on somebody else's booking.
-    const [hannah] = await db
-      .insert(people)
-      .values({ shopId: shop.id, fullName: "Hannah Liu", email: "Hannah.Liu@example.com" })
-      .returning();
-    if (!hannah) throw new Error("fixture insert failed");
-    await db.insert(personRoles).values({ personId: hannah.id, role: "diver" });
-
-    const [ben] = await db
-      .insert(people)
-      .values({ shopId: shop.id, fullName: "Ben Carter" })
-      .returning({ id: people.id });
-    if (!ben) throw new Error("fixture insert failed");
-    const [seat] = await db
-      .insert(bookings)
-      .values({ shopId: shop.id, tripId: trip.id, personId: ben.id })
-      .returning({ id: bookings.id });
-    if (!seat) throw new Error("fixture insert failed");
-    await db.insert(bookingGifts).values({
-      shopId: shop.id,
-      bookingId: seat.id,
-      giverName: "Hannah Liu",
-      // Cased differently from the row on file: the match is case-folded,
-      // because an address is one address however it was typed.
-      giverEmail: "hannah.liu@example.com",
-      receiverName: "Ben Carter",
-      message: "From Hannah, for your birthday",
-    });
-
-    const erased = await anonymizeDiver(db, {
-      shopId: shop.id,
-      personId: hannah.id,
-      actorPersonId: owner.id,
-    });
-    expect(erased.ok).toBe(true);
-
-    const [row] = await db.select().from(bookingGifts).where(eq(bookingGifts.bookingId, seat.id));
-    // The row survives — it is what explains the seat and its money — and the
-    // identity does not.
-    expect(row).toBeTruthy();
-    expect(row?.giverName).not.toBe("Hannah Liu");
-    expect(row?.giverEmail).toMatch(/@invalid$/);
-    expect(row?.message).toBeNull();
-    // Ben is not Hannah: erasing her says nothing about the diver whose seat
-    // it is, and his own erasure is his own.
-    expect(row?.receiverName).toBe("Ben Carter");
   });
 });
 

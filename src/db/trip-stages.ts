@@ -1,7 +1,7 @@
-import { and, asc, desc, eq, inArray, } from "drizzle-orm";
+import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
-import { type TripStage, type TripStageReading } from "@/lib/trip-stages";
+import type { TripStage, TripStageReading } from "@/lib/trip-stages";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { diveSites, people, tripDives, tripStageEvents, trips } from "./schema";

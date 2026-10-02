@@ -98,9 +98,6 @@ const TOLD_THE_DATE_KINDS: readonly DeliveryKind[] = [
   "booking_confirmation",
   "trip_reminder_7d",
   "trip_reminder_24h",
-  // Nothing sends a gift pass since gifting a dive was cut; the enum value
-  // stays until the schema drops it, and a pass already sent named the date.
-  "gift_pass",
 ];
 
 /**

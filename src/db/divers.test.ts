@@ -2815,7 +2815,6 @@ describe("findSimilarDivers last dive day", () => {
       bookingId,
       recordedByPersonId: staffer.id,
       status: "arrived",
-      displayTokenId: null,
       occurredAt: new Date(nowMs() - 25 * HOUR_MS),
     });
   }
