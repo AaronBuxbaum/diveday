@@ -30,6 +30,7 @@ import { ActivitySection } from "./_components/ActivitySection";
 import { BookActivity } from "./_components/BookActivity";
 import { CertificationsGroup } from "./_components/CertificationsGroup";
 import { ConversationSection } from "./_components/ConversationSection";
+import { DiverDetailsGroup } from "./_components/DiverDetailsGroup";
 import { DiverHeader } from "./_components/DiverHeader";
 import { DiverNotesSection } from "./_components/DiverNotesSection";
 import { DiverStatusLedger } from "./_components/DiverStatusLedger";
@@ -276,10 +277,7 @@ export default async function DiverDetailPage({
       <DiverHeader
         diver={diver}
         shopSlug={shopSlug}
-        personId={personId}
         t={t}
-        locale={locale}
-        country={shop.addressCountry}
         visits={visits}
         status={cleared ? undefined : detailsStatus}
         moment={
@@ -307,12 +305,6 @@ export default async function DiverDetailPage({
             />
           )
         }
-        // Only ever set by the roster's "Add a diver" form, which lands here
-        // with a name and little else. `FlashParams` strips it from the URL
-        // straight away, so a reload or a shared link is the ordinary
-        // collapsed page. Keep the editor open for a refused save so the
-        // staffer can correct the fields in place.
-        editOpen={edit === "1" || detailsStatus?.tone === "danger"}
       />
       {removed ? (
         <RestoreDiver
@@ -389,6 +381,21 @@ export default async function DiverDetailPage({
           removed={removed}
           t={t}
           status={noticeForForm(diverNotice, "reply")}
+        />
+        <DiverDetailsGroup
+          diver={diver}
+          shopSlug={shopSlug}
+          personId={personId}
+          t={t}
+          locale={locale}
+          country={shop.addressCountry}
+          status={detailsStatus}
+          // \`edit=1\` is only ever set by the roster's "Add a diver" form, which
+          // lands here with a name and little else. \`FlashParams\` strips it
+          // from the URL straight away, so a reload or a shared link is the
+          // ordinary collapsed page. A refused save keeps the group open so the
+          // staffer can correct the fields in place.
+          open={edit === "1" || detailsStatus?.tone === "danger"}
         />
         <CertificationsGroup
           diver={diver}

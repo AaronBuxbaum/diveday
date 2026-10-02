@@ -169,15 +169,17 @@ describe("the diver record's skeleton", () => {
     const { container } = render(<DiverProfileLoading />);
     expect(container.querySelectorAll(".rounded-panel")).toHaveLength(0);
     const doors = container.querySelectorAll(".border-y");
-    expect(doors).toHaveLength(7);
+    expect(doors).toHaveLength(8);
     for (const skeleton of doors) expect(box(skeleton, door)).toEqual(box(loaded, door));
   });
 
-  it("draws the acts at the md buttons' 48px", () => {
+  // One act: Book a departure. Contact details is a file door, not a button
+  // beside it (ADR 20261001-logbook, decision 2).
+  it("draws the one act at the md button's 48px", () => {
     expect(buttonClass().split(" ")).toContain("min-h-12");
     const { container } = render(<DiverProfileLoading />);
     const acts = container.querySelectorAll(".rounded-lg");
-    expect(acts).toHaveLength(2);
+    expect(acts).toHaveLength(1);
     for (const act of acts) expect(act).toHaveClass("h-12");
   });
 

@@ -3,6 +3,7 @@ import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /** The file's groups that every record renders a door for (`page.tsx`). */
 const FILE_DOORS = [
+  "details",
   "certifications",
   "waiver",
   "gear",
@@ -33,7 +34,8 @@ const FILE_DOORS = [
  * dropped about 28px when the record arrived.
  *
  * - The meta: the contact links' 44px line (`buttonClass` `sm`).
- * - The acts: Book a departure and Edit details, `md` buttons, 48px.
+ * - The act: Book a departure, an `md` button, 48px. Contact details is the
+ *   first file door below, not a second button.
  * - The story: `BookingStoryRow`s on the ledger's box, their 12px inset
  *   round a date beside a two-line title from `sm` (44px), and the three
  *   lines stacked below it (66px).
@@ -55,7 +57,6 @@ export default function DiverProfileLoading() {
         />
         <div className="mt-1 flex flex-wrap gap-2">
           <div className="h-12 w-44 rounded-lg bg-surface-sunken" />
-          <div className="h-12 w-32 rounded-lg bg-surface-sunken" />
         </div>
         <div className="mt-10 space-y-10">
           <div>

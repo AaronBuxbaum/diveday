@@ -396,7 +396,7 @@ test.describe("minimum age (H-08, fail open)", () => {
     // for this diver.
     await signInAs(page, DEV_STAFF_LOGINS.owner);
     await goToDiver(page, diverName);
-    await page.getByText("Edit details").click();
+    await page.getByText("Contact details", { exact: true }).click();
     await page.getByLabel("Date of birth").fill(daysFromNow(-365 * 8));
     await page.getByRole("button", { name: "Save details" }).click();
     await expect(page.getByRole("status")).toContainText("Diver details updated");

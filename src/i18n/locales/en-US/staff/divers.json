@@ -78,7 +78,6 @@
     "cardKindSpecialty": "Specialty"
   },
   "page": {
-    "eyebrow": "Front desk",
     "title": "Divers",
     "matchingCount": "{count} matching",
     "noticeDuplicate": "A diver with that email is already in this shop.",
@@ -149,7 +148,6 @@
     "noContactDetails": "No contact details yet",
     "diveInsurancePrefix": "Dive insurance: ",
     "diveInsuranceOnFile": "DAN insurance on file",
-    "editDetails": "Edit details",
     "fullNameLabel": "Full name",
     "emailLabel": "Email",
     "phoneLabel": "Phone",
@@ -461,5 +459,10 @@
     "noEmail": "No email address on file.",
     "failed": "That did not send. Try again.",
     "unavailable": "This record cannot hold a shelf link."
+  },
+  "details": {
+    "label": "Contact details",
+    "summaryEmergency": "Emergency contact: {name}",
+    "summaryNoEmergency": "No emergency contact"
   }
 }

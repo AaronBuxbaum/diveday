@@ -32,11 +32,9 @@ function diver(): DiverProfile {
 }
 
 function renderHeader({
-  editOpen = false,
   status,
   book = <span>Book a departure</span>,
 }: {
-  editOpen?: boolean;
   status?: HeaderStatus;
   book?: ComponentProps<typeof DiverHeader>["book"];
 } = {}) {
@@ -44,13 +42,9 @@ function renderHeader({
     <DiverHeader
       diver={diver()}
       shopSlug="blue-mantis"
-      personId="person-1"
       t={t}
-      locale="en-US"
-      country="US"
       visits={0}
       book={book}
-      editOpen={editOpen}
       status={status}
     />,
   );
@@ -73,50 +67,14 @@ describe("the diver's phone number", () => {
   });
 });
 
-describe("DiverHeader edit disclosure", () => {
-  it("keeps the summary in the action row while its full-width form is open", () => {
-    const { container } = renderHeader({ editOpen: true });
-    const details = container.querySelector("details");
-    const summary = container.querySelector<HTMLElement>("#edit-details");
-
-    expect(details).not.toBeNull();
-    expect(details).toHaveAttribute("open");
-    expect(summary?.tagName).toBe("SUMMARY");
-    expect(details).toHaveClass("group", "open:contents");
-    expect(details).not.toHaveClass("open:w-full");
-    expect(summary).toHaveClass("inline-flex", "min-h-11", "items-center");
-    expect(details?.querySelector("form")).toHaveClass("w-full");
-    expect(details?.parentElement).toHaveClass("flex", "flex-wrap");
-
-    summary?.focus();
-    expect(document.activeElement).toBe(summary);
-  });
-
-  /**
-   * **The open card reaches the column's right edge** (pixel-craft class 3).
-   * With the disclosure `contents`, the box Chrome wraps its body in,
-   * `::details-content`, is what joins the flex row, and it shrink-wrapped
-   * the form: the card stopped at its longest hint, 167px short of the edge
-   * every other card and rule on the record reaches at 1280. The body's box
-   * takes the whole line, so the form's `w-full` is the row's width.
-   */
-  it("gives the open form the action row's whole width", () => {
-    const { container } = renderHeader({ editOpen: true });
-    const details = container.querySelector("details");
-    expect(details).toHaveClass("open:contents", "open:details-content:basis-full");
-    expect(details?.querySelector("form")).toHaveClass("w-full");
-  });
-
-  /**
-   * **The masthead's action row is one size, `md`.** "Book a departure"
-   * arrives in the `book` slot at the default size and "Edit details" was
-   * `sm`: a 48px, 16px primary beside a 44px, 14px secondary, top-aligned, so
-   * the pair ended 4px apart on every diver record (the pixel probe's
-   * `mismatched-controls` cluster, 72 flags on twelve captures, 2026-09-25).
-   * Rendered with the real `BookActivity`, because the drift was two
-   * components choosing their sizes apart.
-   */
-  it("draws Edit details at the size of the Book a departure beside it", () => {
+/**
+ * **One act in the masthead** (ADR 20261001-logbook, decision 2). Edit details
+ * sat beside Book a departure as a second dropdown; it is the record's first
+ * file group now (`DiverDetailsGroup`), so the header's only disclosure is
+ * Book's own picker.
+ */
+describe("DiverHeader actions", () => {
+  it("carries Book a departure and nothing beside it", () => {
     const book = (
       <BookActivity
         diver={diver()}
@@ -130,11 +88,14 @@ describe("DiverHeader edit disclosure", () => {
     );
     const { container } = renderHeader({ book });
     const summaries = [...container.querySelectorAll<HTMLElement>("summary")];
-    expect(summaries.map((summary) => summary.id)).toEqual(["book-departure", "edit-details"]);
-    for (const summary of summaries) {
-      expect(summary, summary.id).toHaveClass("min-h-12", "text-base");
-      expect(summary, summary.id).not.toHaveClass("text-sm");
-    }
+    expect(summaries.map((summary) => summary.id)).toEqual(["book-departure"]);
+    expect(container.querySelector("#edit-details")).toBeNull();
+  });
+
+  it("shows a saved-details confirmation under the masthead", () => {
+    const status: HeaderStatus = { form: "details", tone: "success", text: "Details saved." };
+    const { getByText } = renderHeader({ status });
+    expect(getByText("Details saved.")).toBeInTheDocument();
   });
 
   it("stands the departure picker level with the button it sits beside", () => {
@@ -154,18 +115,5 @@ describe("DiverHeader edit disclosure", () => {
     expect(picker).toHaveClass("min-h-12");
     expect(picker).not.toHaveClass("min-h-11");
     expect(submit).toHaveClass("min-h-12", "text-base");
-  });
-
-  it("honors an initially open editor and keeps a danger notice with it", () => {
-    const status: HeaderStatus = {
-      form: "details",
-      tone: "danger",
-      text: "Could not save the diver details.",
-    };
-    const { container, getByRole } = renderHeader({ editOpen: true, status });
-    const details = container.querySelector("details");
-
-    expect(details).toHaveAttribute("open");
-    expect(getByRole("alert")).toHaveTextContent(status.text);
   });
 });
