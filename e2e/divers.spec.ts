@@ -203,7 +203,7 @@ test("staff record and correct a diver's emergency contact from the roster and t
   // `updateDiver`/`saveBookingEmergencyContact` sharing the same columns —
   // one write path regardless of who fills it in.
   await card.getByRole("link", { name: diverName }).click();
-  await page.getByText("Edit details").click();
+  await page.getByText("Contact details", { exact: true }).click();
   await expect(page.getByLabel("Emergency contact name")).toHaveValue("Robin Diver");
   await expect(page.getByLabel("Emergency contact phone")).toHaveValue("+1 305 555 0166");
 
@@ -578,7 +578,7 @@ test("a section's outcome renders inside that section, not in a banner at the to
 
   // A refusal lands on the box it is about, not beside the button and not at
   // the top: this email belongs to another active diver in the demo shop.
-  await page.getByText("Edit details").click();
+  await page.getByText("Contact details", { exact: true }).click();
   const detailsForm = page
     .locator("form")
     .filter({ has: page.getByRole("button", { name: "Save details" }) });

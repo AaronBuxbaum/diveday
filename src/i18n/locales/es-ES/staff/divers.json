@@ -78,7 +78,6 @@
     "cardKindSpecialty": "Especialidad"
   },
   "page": {
-    "eyebrow": "Recepción",
     "title": "Buceadores",
     "matchingCount": "{count, plural, one {# coincidencia} other {# coincidencias}}",
     "noticeDuplicate": "Ya hay un buceador con ese correo en este centro.",
@@ -149,7 +148,6 @@
     "noContactDetails": "Aún sin datos de contacto",
     "diveInsurancePrefix": "Seguro de buceo: ",
     "diveInsuranceOnFile": "Seguro DAN archivado",
-    "editDetails": "Editar datos",
     "fullNameLabel": "Nombre completo",
     "emailLabel": "Correo electrónico",
     "phoneLabel": "Teléfono",
@@ -461,5 +459,10 @@
     "noEmail": "No hay correo archivado.",
     "failed": "No se envió. Inténtalo otra vez.",
     "unavailable": "Esta ficha no puede tener un casillero."
+  },
+  "details": {
+    "label": "Datos de contacto",
+    "summaryEmergency": "Contacto de emergencia: {name}",
+    "summaryNoEmergency": "Sin contacto de emergencia"
   }
 }

@@ -28,7 +28,7 @@ export default function DiversLoading() {
     // roster slide sideways when the real page landed.
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-56" description={false} />
+        <ShopPageHeaderSkeleton titleWidth="w-56" description={false} eyebrow={false} />
         <div className="mt-8 flex gap-2 max-sm:overflow-hidden sm:flex-wrap">
           {[0, 1, 2, 3].map((i) => (
             <div key={i} className="h-11 w-28 shrink-0 rounded-full bg-surface-sunken" />

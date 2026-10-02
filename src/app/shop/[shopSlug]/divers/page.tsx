@@ -250,7 +250,7 @@ export default async function DiversPage({
           and a person id left sitting in the address bar after the toast has
           been read is nobody's business and nothing's input. */}
       <FlashParams params={["notice", "deleted"]} />
-      <ShopPageHeader eyebrow={t("divers.page.eyebrow")} title={t("divers.page.title")} />
+      <ShopPageHeader title={t("divers.page.title")} />
 
       {undoRemoval ? (
         <UndoToast
