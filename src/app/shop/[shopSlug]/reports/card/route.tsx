@@ -17,8 +17,7 @@ import { shopYearCard, summarizeShopYear } from "@/lib/shop-year";
  * Staff-only, behind the same gate the year page itself is behind: the card
  * carries no money and no diver's name, but who may read a shop's year is
  * still the owner's and the manager's question, and a card is a URL that gets
- * pasted. The **public** twin is `/s/<slug>/year-card`, which exists only while
- * the shop has turned the switch on.
+ * pasted.
  *
  * A shop with no departures this year has no card: the page hides the act, and
  * a hand-typed URL gets a 404 rather than an image of four zeroes.

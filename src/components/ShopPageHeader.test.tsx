@@ -205,8 +205,7 @@ describe("the skeleton's description bar", () => {
  * The skeleton could draw one title line and one description line, and a
  * width cannot stand in for text that wraps. WhatsApp's description is three
  * lines at 390px and two at 1280, so its card landed 48px and 24px below where
- * the skeleton put it (K-97); `/dive` and `/dive/[region]` wrap title and
- * description the same way on a phone (K-292). A line count, or one count
+ * the skeleton put it (K-97). A line count, or one count
  * below `sm` and one from it, draws each line's box — the line's own height,
  * stacked with no gap, as a paragraph's line boxes are — and hides the ones a
  * width does not have.

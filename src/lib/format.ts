@@ -507,8 +507,8 @@ export function formatCalendarDateRange(
  *
  * Trip titles are free text a shop types, and they are "X — Y" throughout. A
  * balanced heading (`text-balance`) breaks at whichever space evens its lines,
- * and the space before the dash is often it: the departures board and the
- * thread's pages opened line two with "— Benwood & Elbow". Binding the space
+ * and the space before the dash is often it: the thread's pages opened line
+ * two with "— Benwood & Elbow". Binding the space
  * before the dash leaves the one after it free, so a line may end on the dash
  * and never begin with it. For a title rendered as a balanced heading; a title
  * in running text needs nothing.

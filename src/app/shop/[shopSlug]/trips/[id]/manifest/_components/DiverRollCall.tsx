@@ -770,21 +770,9 @@ export function DiverRollCall({
                       `mt-3` stood on the note form's, 24px where the panel's
                       blocks sit 12 apart (pixel-craft class 4). */}
                     <ul className="mt-3 flex flex-wrap gap-2 empty:hidden">
-                      {/* **A sighting and a claim wear different words.**
-                        A staffer's tap means the desk has seen this person;
-                        a lobby-tablet tap means somebody typed a surname,
-                        quite possibly on their behalf, which is the ordinary
-                        way a self-serve kiosk gets used. Flattening the two
-                        into one badge is how a crew member at the rail stops
-                        looking for a diver who never arrived (N-24,
-                        `dive-domain-expert` review). */}
                       {diver.checkedIn ? (
                         <li>
-                          <Badge tone="neutral">
-                            {diver.checkedInSelfReported
-                              ? t("manifest.selfCheckedInPill")
-                              : t("manifest.checkedInPill")}
-                          </Badge>
+                          <Badge tone="neutral">{t("manifest.checkedInPill")}</Badge>
                         </li>
                       ) : null}
                       {/* The age, and — when something louder took the row's
@@ -883,11 +871,7 @@ export function DiverRollCall({
                       </Badge>
                     )}
                     {diver.checkedIn ? (
-                      <Badge tone="neutral">
-                        {diver.checkedInSelfReported
-                          ? t("manifest.selfCheckedInPill")
-                          : t("manifest.checkedInPill")}
-                      </Badge>
+                      <Badge tone="neutral">{t("manifest.checkedInPill")}</Badge>
                     ) : null}
                     {diver.hotelPickupLocation ? (
                       <Badge tone="neutral">

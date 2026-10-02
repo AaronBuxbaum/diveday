@@ -33,8 +33,6 @@
 type ActivityParamShapes = {
   /** A diver arrived and a staffer recorded it. */
   counter_check_in: { diver: string };
-  /** A diver recorded their own arrival on the lobby tablet. */
-  kiosk_check_in: { diver: string };
   /** A staffer took an arrival back. */
   counter_check_in_undone: { diver: string };
   /** A staff-only note was written, on a seat or on a diver's record. */
@@ -59,8 +57,7 @@ type ActivityParamShapes = {
    * the roster's version is somebody reading a list. A shop asking months later
    * how a stranger's dives ended up under this name is asking exactly that, so
    * the two doors do not share one sentence (`dive-domain-expert` review of
-   * issue #1696) — the same distinction `counter_check_in` and
-   * `kiosk_check_in` already draw.
+   * issue #1696).
    */
   identity_confirmed_at_counter: { actor: string; diver: string };
   /** A seat was taken off a departure. */
@@ -184,7 +181,6 @@ export type ActivityEntry = {
 /** Every code, for the guard tests that hold the union and the bundles together. */
 export const ACTIVITY_CODES = [
   "counter_check_in",
-  "kiosk_check_in",
   "counter_check_in_undone",
   "note_added",
   "note_deleted",

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { GroupLabel, LedgerRow } from "@/components/ui/ledger";
 import { ProgressBar } from "@/components/ui/ProgressBar";
@@ -17,9 +16,8 @@ import { YearStrip } from "./YearStrip";
  * closed out — above the month page, which keeps its own shape and its own
  * money and is reached by the same segmented control that reached this.
  *
- * **No money here, on any of it.** Two of the three things this data draws
- * leave the shop (the printed card, and the homepage band for a shop that said
- * yes), so the figure a shop would least like a stranger to read is absent from
+ * **No money here, on any of it.** The printed card this data draws leaves
+ * the shop, so the figure a shop would least like a stranger to read is absent from
  * the read itself rather than filtered out at the last surface — see
  * `getShopYear` in `src/db/reporting.ts`.
  *
@@ -37,14 +35,11 @@ export function YearReport({
   locale,
   shopSlug,
   t,
-  showsOnDiveday,
 }: {
   year: ShopYearSummary;
   locale: string;
   shopSlug: string;
   t: StaffTranslator;
-  /** Whether this shop's year is on DiveDay's pages — the one line about the switch. */
-  showsOnDiveday: boolean;
 }) {
   if (!year.hasActivity) {
     return <EmptyState title={t("reports.year.empty")} className="mt-8" />;
@@ -222,23 +217,6 @@ export function YearReport({
             ) : null}
           </section>
         ) : null}
-
-        {/* Where the card goes when it leaves the shop, and the one door that
-          changes it. A quiet line rather than a section, on the tax line's
-          pattern: it is a state and a door, not a heading's worth of page.
-          The door is kept whole (`whitespace-nowrap`), so on a phone the
-          line breaks at the dot before it rather than leaving one of its
-          words on a line of its own (K-574). */}
-        <p className="text-end text-sm text-muted">
-          {showsOnDiveday ? t("reports.year.shareOn") : t("reports.year.shareOff")}
-          {" · "}
-          <Link
-            href={shopPath(shopSlug, "settings", "display")}
-            className="font-medium whitespace-nowrap text-primary hover:underline"
-          >
-            {t("reports.year.shareDoor")}
-          </Link>
-        </p>
       </div>
     </>
   );

@@ -174,15 +174,6 @@ const routes: SeedRoute[] = [
     expectPastTheGuard: expectInvalidBody,
   },
   {
-    slug: "seed-arrival-code",
-    // A shop slug and an email, refused first — and it must be, because past
-    // that it mints a working arrival code for a diver's seat, and a scan of
-    // one *writes an arrival on a manifest*. A route answering on a
-    // misconfigured deployment would let anyone put a diver on a boat they
-    // never came to (issue #1725).
-    expectPastTheGuard: expectInvalidBody,
-  },
-  {
     slug: "seed-shelf-token",
     // A shop slug and an email, refused first — and it must be, because past
     // that it mints a year-long credential over a diver's whole file at that
@@ -197,17 +188,6 @@ const routes: SeedRoute[] = [
     // emergency contact. A route answering on a misconfigured deployment would
     // be rewriting the number a coastguard calls.
     expectPastTheGuard: expectInvalidBody,
-  },
-  {
-    slug: "seed-display-token",
-    // No body is a valid ask (the defaults are the fixture), so reaching the
-    // database is what proves the guard let it through. Past that it mints a
-    // working, non-expiring link over a shop's whole day for a lobby screen —
-    // a route answering on a misconfigured deployment would be handing out a
-    // real shop's board to anyone.
-    expectPastTheGuard: async () => {
-      expect(getDb).toHaveBeenCalled();
-    },
   },
   {
     slug: "seed-off-season",
@@ -300,31 +280,6 @@ const routes: SeedRoute[] = [
     // Past the guard with no `?slug=` at all: refused on its shape, before any
     // tenant is looked up.
     expectPastTheGuard: expectInvalidBody,
-  },
-  {
-    slug: "seed-year-band-shop",
-    method: "DELETE",
-    // The `DELETE` the directory-level registration used to vouch for without
-    // exercising (`security-reviewer`, 2026-09-13, issue #1791). It opens a
-    // transaction immediately past the guard and drops the seeded shop that
-    // stands under DiveDay's own homepage hero, so reaching the database is
-    // both the signal and the reason this row has to exist.
-    swallowThrow: true,
-    expectPastTheGuard: async () => {
-      expect(getDb).toHaveBeenCalled();
-    },
-  },
-  {
-    slug: "seed-year-band-shop",
-    swallowThrow: true,
-    // No body, so reaching the database is what proves the guard let it
-    // through. This one writes a shop with `show_year_on_diveday` on, which is
-    // the row DiveDay's homepage band reads (ADR 20260908-one-hand, decision 6,
-    // lever T): a route that answered on a misconfigured deployment would put a
-    // shop nobody owns under the hero of dive.day.
-    expectPastTheGuard: async () => {
-      expect(getDb).toHaveBeenCalled();
-    },
   },
 ];
 

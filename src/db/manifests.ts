@@ -24,7 +24,6 @@ import {
 import { offlineEventOutOfBounds } from "@/lib/offline-events";
 import { medicalWaiverMark } from "@/lib/waivers";
 import { welcomeCueFor } from "@/lib/welcome-cue";
-import { listSelfReportedArrivalBookingIdsForTrip } from "./arrival-provenance";
 import { loadActiveStaffRoles } from "./authz";
 import { listTripBuddyTeams } from "./buddy-pairs";
 import type { AppDb, DbExecutor } from "./client";
@@ -766,7 +765,6 @@ export async function getTripManifests(
     standingClashes,
     supportByPerson,
     welcomeInputs,
-    selfReportedBookingIds,
     ...rollCalls
   ] = await Promise.all([
     getShopById(db, shopId),
@@ -789,11 +787,6 @@ export async function getTripManifests(
     // so the offline serializer and every other consumer of a manifest see the
     // same derived cue.
     welcomeCueInputsByBooking(db, shopId, tripId),
-    // Which of the roster's arrivals were typed at the lobby tablet rather
-    // than seen by a staffer (N-24). Read here so the offline serializer and
-    // every other consumer of a manifest carry the same distinction the
-    // on-screen pill draws.
-    listSelfReportedArrivalBookingIdsForTrip(db, shopId, tripId),
     ...checkpoints.map((checkpoint) => listLatestRollCallByBooking(db, shopId, tripId, checkpoint)),
   ]);
   if (!shop) return null;
@@ -915,7 +908,6 @@ export async function getTripManifests(
       hotelPickupLocation: booking.hotelPickupLocation,
       pickupTime: booking.pickupTime,
       checkedIn: booking.status === "checked_in",
-      checkedInSelfReported: selfReportedBookingIds.has(booking.id),
       // The other half of the same column, and the one the roster read could
       // not say before there was a writer for it (#1209): this seat was
       // released at the desk. The row stays — `getTripRoster` keeps every

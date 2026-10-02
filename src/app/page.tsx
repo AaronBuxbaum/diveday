@@ -6,7 +6,6 @@ import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { HomeBodySkeleton } from "@/app/_components/HomeBodySkeleton";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { ScreenDoor } from "@/app/_components/ScreenDoor";
-import { ShopYearBand } from "@/app/_components/ShopYearBand";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingHeroMotion, MarketingReveal } from "@/components/MarketingReveal";
 import { ImportPreviewFallback } from "@/components/MarketingScreenFallbacks";
@@ -131,25 +130,7 @@ export default function Home() {
 
 async function LocalizedHomeBody() {
   const locale = await requestLocale();
-  // **The proof band is a slot, not a section of the cached body.** `HomeBody`
-  // is `"use cache"` at `cacheLife("max")` — it is the same words for every
-  // visitor forever — and the band reads the database for whichever shop
-  // turned the switch on, which is neither. A compositional slot passes
-  // *through* a cached component without joining its cache entry (Next's
-  // `use-cache` docs, "Interleaving"), so the band streams behind its own
-  // boundary while the page around it stays static.
-  return (
-    <HomeBody
-      locale={locale}
-      proofBand={
-        // Keyed: a slot crossing a `"use cache"` boundary arrives on the other
-        // side as an element in a list, and React asks for an identity for it.
-        <Suspense key="proof-band" fallback={null}>
-          <ShopYearBand locale={locale} />
-        </Suspense>
-      }
-    />
-  );
+  return <HomeBody locale={locale} />;
 }
 
 /**
@@ -198,20 +179,7 @@ function SectionMarker({ children, as: Tag = "p" }: { children: ReactNode; as?: 
  * at the first of them; the old mid-page door and the two extra banded closes
  * merged into the single closing band (docs/product/marketing.md).
  */
-async function HomeBody({
-  locale,
-  proofBand,
-}: {
-  locale: DiverLocale;
-  /**
-   * A real shop's year card, or nothing (ADR 20260908-one-hand, decision 6,
-   * lever T). A slot rather than a section: it is per-request and this body is
-   * cached forever, and a slot passes through a cached component without
-   * joining its entry. Never read or introspected here — passed straight into
-   * the tree, which is what keeps that true.
-   */
-  proofBand: ReactNode;
-}) {
+async function HomeBody({ locale }: { locale: DiverLocale }) {
   "use cache";
   cacheLife("max");
   const t = diverTranslator(locale);
@@ -375,8 +343,6 @@ async function HomeBody({
           </MarketingHeroMotion>
         </div>
       </section>
-
-      {proofBand}
 
       {/* The four screens, in the order the day runs them: alternating rows,
           each a marker, a title, the builder's notes and one door beside a

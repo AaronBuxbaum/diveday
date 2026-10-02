@@ -1,7 +1,6 @@
 {
   "line": {
     "counter_check_in": "{diver} checked in at the counter",
-    "kiosk_check_in": "{diver} checked in at the counter tablet",
     "counter_check_in_undone": "{diver}’s counter check-in was undone",
     "note_added": "{actor} added a private note about {diver}",
     "note_deleted": "{actor} deleted a private note about {diver}",

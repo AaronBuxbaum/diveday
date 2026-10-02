@@ -9,7 +9,7 @@ import { expect, READ_ONLY, test } from "./fixtures";
  *
  * `READ_ONLY` holds for the whole file — every test navigates and reads. The
  * seeded blue-mantis library carries Molasses Reef with prose and a field
- * guide, and the two Key Largo neighbours (`seedRegionNeighbours`) are the
+ * guide, and the two listed shops beside it (`seedListedShops`) are the
  * only *listed* shops in the fixture, so the sitemap assertions have a real
  * shop to find and the demo to not find.
  */

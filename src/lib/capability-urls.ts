@@ -59,12 +59,6 @@ export const CAPABILITY_ROUTE_PREFIXES = [
   // `expires_at` or a `revoked_at`, so an exposed token works forever, which
   // is a longer life than anything else here.
   "unsubscribe",
-  // The departures board's display link (issue #1426, N-23): `/board/[token]`
-  // is a lobby TV's credential over the shop's whole day — non-expiring like
-  // the calendar feed, revocable from `shop/[shopSlug]/settings/display`. A
-  // TV's browser is exactly the kind of client that would report a page URL
-  // to telemetry forever.
-  "board",
   // The diver's shelf (slice 20t): `/shelf/[token]` is a year-long, revocable
   // credential over one person's whole file at one shop — their card, where
   // their release stands, their sizes. Longer-lived than every booking token
@@ -79,12 +73,6 @@ export const CAPABILITY_ROUTE_PREFIXES = [
   // departure, which is the narrowest payload here, and the giver is exactly
   // the kind of reader who opens it from a phone and leaves the tab.
   "gift",
-  // The self check-in kiosk's display link (N-24): `/check-in/[token]` is a
-  // counter tablet's credential, non-expiring like the board's and revoked from
-  // the same settings row — but unlike the board it **writes**, recording an
-  // arrival against a real booking. A tablet's browser is exactly the kind of
-  // client that would report a page URL to telemetry forever.
-  "check-in",
 ] as const;
 
 /**

@@ -69,11 +69,6 @@ vi.mock("@/db/public-route-existence", () => ({
   publicRouteLookup: async (_db: unknown, shape: PublicRouteQuery) => {
     existence.asked.push(shape);
     if (existence.throws) throw existence.throwsWith ?? new Error("database unavailable");
-    // A town names no shop, so the real module never resolves one and answers
-    // `shopExists: false` whatever it finds — the refusal is DiveDay's own
-    // (issue #1734).
-    if (shape.kind === "region")
-      return { exists: existence.answer, shopExists: false, hidden: false };
     const shopExists = existence.liveShops
       ? existence.liveShops.has(shape.shopSlug)
       : existence.answer;
@@ -513,80 +508,37 @@ describe("the public namespace's edge refusal", () => {
   });
 
   /**
-   * The three dynamic routes outside `/s/**` (issue #1734). They answered 200
+   * The dynamic route outside `/s/**` (issue #1734). It answered 200
    * with a not-found page for six weeks after this refusal shipped, because a
    * pathname `publicRouteShape` has no opinion about is passed through
    * untouched — silence by construction, which is why
    * `src/app/edge-refusal-coverage.test.ts` now reads the route tree.
    */
-  it("refuses an unregistered incumbent and an unknown story without opening a database", async () => {
-    // `MIGRATION_GUIDE_SLUGS` and `DEMO_STORY_IDS` are closed lists this
-    // repository holds, so the pure half settles both. `asked` staying empty is
-    // the assertion: a crawler probing these must not be able to make a cold
-    // instance open a connection it has no question for.
+  it("refuses an unregistered incumbent without opening a database", async () => {
+    // `MIGRATION_GUIDE_SLUGS` is a closed list this repository holds, so the
+    // pure half settles it. `asked` staying empty is the assertion: a crawler
+    // probing these must not be able to make a cold instance open a connection
+    // it has no question for.
     existence.answer = true;
-    for (const path of ["/switching/checkfront", "/demo/not-a-story"]) {
-      const res = await run(request(path));
-      expect(rewriteTarget(res), path).toBe("/_not-found");
-      // No shop over these — they are DiveDay's own pages, so the refusal is
-      // DiveDay's own and issue #765's frame does not apply.
-      expect(res.headers.get(`x-middleware-request-${REFUSED_SHOP_SLUG_HEADER}`), path).toBe("");
-      expect(res.headers.get("Cache-Control"), path).toBe("no-store");
-    }
+    const res = await run(request("/switching/checkfront"));
+    expect(rewriteTarget(res)).toBe("/_not-found");
+    // No shop over it — the guides are DiveDay's own pages, so the refusal is
+    // DiveDay's own and issue #765's frame does not apply.
+    expect(res.headers.get(`x-middleware-request-${REFUSED_SHOP_SLUG_HEADER}`)).toBe("");
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(existence.asked).toEqual([]);
   });
 
-  it("leaves a registered guide, a real story and the spreadsheet page alone", async () => {
+  it("leaves a registered guide and the spreadsheet page alone", async () => {
     // The direction that costs an outage rather than crawl budget. The
     // spreadsheet guide is the sharp one: a live page whose slug is
     // deliberately not an incumbent, so a `[competitor]`-shaped judgement of
     // its path would 404 it.
     existence.answer = false;
-    for (const path of [
-      "/switching/eve",
-      "/switching/spreadsheet",
-      "/switching",
-      "/demo/weather-day",
-    ]) {
+    for (const path of ["/switching/eve", "/switching/spreadsheet", "/switching"]) {
       expect(rewriteTarget(await run(request(path))), path).toBeNull();
     }
     expect(existence.asked).toEqual([]);
-  });
-
-  it("asks the database about a town, and refuses the one nobody dives out of", async () => {
-    // There is no closed list of towns — `isRegionSlug` is a pattern, and the
-    // set is a projection of `shops.region_slug` — so `/dive/not-a-town` is the
-    // one of the three that has to be a read. This is the assertion a
-    // shape-only fix fails.
-    existence.answer = false;
-    const res = await run(request("/dive/not-a-town"));
-    expect(rewriteTarget(res)).toBe("/_not-found");
-    expect(existence.asked).toEqual([{ kind: "region", regionSlug: "not-a-town" }]);
-    expect(res.headers.get(`x-middleware-request-${REFUSED_SHOP_SLUG_HEADER}`)).toBe("");
-
-    existence.asked = [];
-    existence.answer = true;
-    expect(rewriteTarget(await run(request("/dive/key-largo")))).toBeNull();
-    expect(existence.asked).toEqual([{ kind: "region", regionSlug: "key-largo" }]);
-  });
-
-  it("refuses a town segment no locality could have produced, with no read at all", async () => {
-    // The free half: `dive/[region]/page.tsx` shape-tests before it queries, so
-    // the edge may apply the same test a layer earlier.
-    existence.answer = true;
-    for (const segment of ["Key%20Largo", "key_largo", "-key-largo"]) {
-      expect(rewriteTarget(await run(request(`/dive/${segment}`))), segment).toBe("/_not-found");
-    }
-    expect(existence.asked).toEqual([]);
-  });
-
-  it("serves a town when the read fails, exactly as it serves a shop", async () => {
-    // The fail-open policy reaches the new shape too: a database outage must
-    // not take `/dive/key-largo` off the internet to fix a soft 404.
-    existence.throws = true;
-    await logged(async () => {
-      expect(rewriteTarget(await run(request("/dive/key-largo")))).toBeNull();
-    });
   });
 
   it("names the shop when the shop is alive and only the thing under it is gone", async () => {

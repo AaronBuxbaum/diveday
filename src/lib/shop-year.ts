@@ -12,8 +12,8 @@ import { type CalendarDate, calendarDateWeekday, shiftCalendarDate } from "./cal
  * is never called the quietest). The reading itself is
  * `getShopYear` in `src/db/reporting.ts`; the words are the surface's.
  *
- * **Money is not in this file.** The year page, the card and the homepage band
- * all render from `ShopYear`, and two of the three leave the shop, so the
+ * **Money is not in this file.** The year page and the card both render from
+ * `ShopYear`, and the card leaves the shop, so the
  * figure a shop would least like a stranger to read is not carried here at
  * all rather than carried and hidden downstream. The month page keeps its
  * money and is untouched.

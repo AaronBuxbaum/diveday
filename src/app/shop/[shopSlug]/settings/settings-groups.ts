@@ -361,12 +361,6 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     target: { kind: "route", path: "/settings/embed" },
   },
   {
-    id: "display",
-    labelKey: "settings.main.display.heading",
-    group: "website",
-    target: { kind: "route", path: "/settings/display" },
-  },
-  {
     id: "integrations",
     labelKey: "settings.main.integrations.heading",
     group: "data",

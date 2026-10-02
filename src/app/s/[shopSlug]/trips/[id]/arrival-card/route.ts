@@ -1,12 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
-import QRCode from "qrcode";
-import { issueBookingCapability, verifyBookingCapability } from "@/db/booking-capabilities";
+import { verifyBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
-import { arrivalCardExpiryFor } from "@/lib/booking-capabilities";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { publicTripPath } from "@/lib/public-routes";
@@ -36,64 +34,15 @@ function field(label: string, value: string | null | undefined): string {
 }
 
 /**
- * **The code the counter recognises, drawn at 512 device pixels.**
- *
- * `SheetCode.tsx`'s number and its reasoning verbatim: about 400 dpi at the
- * size a card prints, past what a phone camera needs and past what a laser
- * blurs. Encoded on the server into the document because this file is saved
- * and opened offline — a code that arrived one paint later would be a white
- * square on a no-signal morning, which is the whole occasion for the card.
- */
-const CODE_PIXELS = 512;
-
-/** How wide the code is drawn in the saved page. Print size, not payload size. */
-const CODE_DRAWN_PX = 180;
-
-/**
- * The section the code sits in. The caller skips it entirely when no
- * capability was minted: a card that cannot carry its code is still the card —
- * the address, the landmark and the phone number are what a diver opens it
- * for — so a refused mint degrades to the rest of the page, never to a 404.
- */
-function arrivalCode(dataUrl: string, heading: string, body: string, alt: string): string {
-  return (
-    '<section><p class="label">' +
-    escapeHtml(heading) +
-    // Not escaped, deliberately: this is our own base64 `data:` URL, and
-    // escaping its `+` and `/` would break the image. Nothing diver-supplied
-    // reaches it — `QRCode.toDataURL` is the only writer.
-    '</p><p><img src="' +
-    dataUrl +
-    '" alt="' +
-    escapeHtml(alt) +
-    '" width="' +
-    String(CODE_DRAWN_PX) +
-    '" height="' +
-    String(CODE_DRAWN_PX) +
-    '"></p><p>' +
-    escapeHtml(body) +
-    "</p></section>"
-  );
-}
-
-/**
  * A deliberately boring HTML download: it is a saved post-booking place card,
  * authorized by the Ready capability and never a copy of the private Ready page.
  *
- * **It carries a bearer credential, so what that credential buys is the whole
- * design** (issue #1600). The QR holds an `arrival`-purpose booking capability
- * — not the readiness token in the URL that authorized this download. The card
- * is a file: the diver saves it, prints it, and can forward it. A readiness
- * token on that paper would be their medical, waiver and payment surface
- * travelling in a hotel lobby; an arrival token buys exactly what saying a
- * surname at the counter already buys, so a card left on a seat leaks nothing
- * the manifest does not already show a staffer.
- *
- * The raw `bookings.id` the paper pass carries is deliberately *not* reused
- * here. That id is safe on the pass because only a staff session resolves it,
- * inside its own shop; this page is reached by a diver's own bearer token, and
- * a database id printed on a diver-facing surface is an identifier we can
- * never revoke.
+ * **It carries no credential.** The card is a file: the diver saves it, prints
+ * it, and can forward it, so the readiness token in the URL that authorized
+ * this download never appears in it — that token is their medical, waiver and
+ * payment surface, and paper left in a hotel lobby cannot be revoked. Nor does
+ * the raw `bookings.id`: a database id printed on a diver-facing surface is an
+ * identifier we can never take back.
  */
 export async function GET(
   request: NextRequest,
@@ -104,16 +53,10 @@ export async function GET(
   const bookingToken = request.nextUrl.searchParams.get("booking")?.trim();
   if (!bookingToken) return new NextResponse("Not found", { status: 404 });
 
-  // Before the hash comparison, like every other capability door: this one
-  // both verifies a bearer token and writes a row, so an unthrottled version
-  // would let one caller walk tokens and grow the table at the same time. The
-  // caller who already holds a readiness link is the one that matters here —
-  // those links are re-tapped all week and forwarded in inboxes — because a
-  // loop over this GET rasterizes a code and inserts a capability row per
-  // request, `src/lib/retention.ts` prunes none of them, and past
-  // `MAX_LIVE_CAPABILITIES_PER_PURPOSE` it starts revoking the card the diver
-  // printed for tomorrow morning. Refused as the same 404 as every other
-  // refusal, so a throttle can answer no question the token could not.
+  // Before the hash comparison, like every other capability door: an
+  // unthrottled version would let one caller walk tokens. Refused as the same
+  // 404 as every other refusal, so a throttle can answer no question the token
+  // could not.
   if (
     !(
       await checkRateLimit(
@@ -146,23 +89,6 @@ export async function GET(
   const trip = await getTripWithBooked(db, shop.id, id);
   if (trip?.status !== "scheduled") return new NextResponse("Not found", { status: 404 });
 
-  // Minted per download rather than reused: tokens are stored only as hashes,
-  // so an existing row's plaintext can never be re-derived. The pile stays
-  // bounded by `MAX_LIVE_CAPABILITIES_PER_PURPOSE` retiring the oldest, and
-  // cancelling the booking revokes every purpose including this one.
-  //
-  // The expiry is stated rather than defaulted, because this credential leaves
-  // on paper: the trip-anchored default is trip end + 30 days, so a seat booked
-  // a season out printed a card that scanned for the season plus a month
-  // (`security-reviewer`, issue #1600). `arrivalCardExpiryFor` bounds it to the
-  // departure the card is for — see it for why that number is the kiosk's.
-  const issued = await issueBookingCapability(db, {
-    shopId: shop.id,
-    bookingId: capability.bookingId,
-    purpose: "arrival",
-    expiresAt: arrivalCardExpiryFor(trip.startsAt),
-  });
-
   const locale = await requestLocale(shop.defaultLocale);
   const t = diverTranslator(locale);
   const address: ShopAddressParts = {
@@ -187,14 +113,6 @@ export async function GET(
   const tripUrl = new URL(publicTripPath(shopSlug, id), publicAppUrl() ?? request.url).toString();
   const support = [shop.contactPhone, shop.contactEmail].filter(Boolean).join(" · ");
   const filename = `${shopSlug.replace(/[^a-z0-9_-]/gi, "-")}-arrival-card.html`;
-  const codeSection = issued
-    ? arrivalCode(
-        await QRCode.toDataURL(issued.token, { margin: 1, width: CODE_PIXELS }),
-        t("trip.arrivalCodeHeading"),
-        t("trip.arrivalCodeBody"),
-        t("trip.arrivalCodeAlt"),
-      )
-    : "";
   const html = [
     "<!doctype html>",
     '<html lang="',
@@ -223,7 +141,6 @@ export async function GET(
     field(t("trip.arrivalTransit"), trip.arrivalTransitNote),
     field(t("trip.arrivalFirstInteraction"), trip.arrivalFirstInteraction),
     field(t("trip.arrivalSupport"), support),
-    codeSection,
     '<p><a href="',
     escapeHtml(tripUrl),
     '">',

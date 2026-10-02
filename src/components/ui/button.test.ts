@@ -733,7 +733,7 @@ describe("buttonClass", () => {
     });
 
     it("hands no font size to buttonClass: the type, and the line it sets, are the size's", () => {
-      // The self check-in kiosk passed `text-[1.25rem]` over `boat`'s
+      // A counter surface once passed `text-[1.25rem]` over `boat`'s
       // `text-base`. The arbitrary size won the font, and `text-base`'s
       // unitless 1.5 line-height scaled with it: 14 + 30 + 14 made a 58px
       // `boat` where every other one is 56 (K-339). A label size a surface

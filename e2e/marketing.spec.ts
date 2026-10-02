@@ -991,7 +991,7 @@ test("migration guides walk a shop from an incumbent export into the importer", 
 });
 
 /**
- * **The three public dynamic routes outside `/s/**` answer a real 404** (issue
+ * **The public dynamic route outside `/s/**` answers a real 404** (issue
  * #1734, ADR 20260912-the-public-namespace-refuses-at-the-edge).
  *
  * A status assertion rather than a heading assertion, and that is the whole
@@ -1000,44 +1000,33 @@ test("migration guides walk a shop from an incumbent export into the importer", 
  * life of the soft 404 — the shell streamed at 200, the page's `notFound()`
  * landed in the body far too late to change a status line, and a crawler kept
  * the URL as a page worth re-fetching. `/s/**` was fixed and asserted in
- * `e2e/seo.spec.ts`; these three were left, went on answering 200 for six more
+ * `e2e/seo.spec.ts`; the guides were left, went on answering 200 for six more
  * weeks, and nothing anywhere went red. This is the assertion that can tell,
  * and it is a copy of that one's shape.
  *
- * **Twice each.** `/switching/[competitor]` and `/demo/[story]` prerender only
- * their registered slugs, so an unregistered one used to answer 200 on the
- * first, cold hit and 404 only once that path had resolved — a single probe
- * could have called the bug fixed while it was not. The edge decides before any
- * of that, so both hits must agree now.
+ * **Twice.** `/switching/[competitor]` prerenders only its registered slugs, so
+ * an unregistered one used to answer 200 on the first, cold hit and 404 only
+ * once that path had resolved — a single probe could have called the bug fixed
+ * while it was not. The edge decides before any of that, so both hits must
+ * agree now.
  *
  * **The 200s are not decoration.** A guard that only proves unknown URLs are
  * refused is satisfied by refusing everything, which is the far worse bug: a
- * town that has shops, a guide that is written, a story that opens. The
- * spreadsheet guide is the sharpest of them — a shipped page whose slug is
+ * guide that is written. The spreadsheet guide is the sharpest of them — a shipped page whose slug is
  * deliberately not in `MIGRATION_GUIDE_SLUGS`, because a spreadsheet is not an
  * incumbent, so a `[competitor]`-shaped judgement of its path would 404 it.
  */
-test("an unknown town, incumbent or story answers 404, not 200 with the not-found page", async ({
-  page,
-}) => {
+test("an unknown incumbent answers 404, not 200 with the not-found page", async ({ page }) => {
   for (const path of [
-    // The issue's own probe, and the one a shape-only fix would have missed:
-    // `not-a-town` is a slug this app could have minted, so only the shops
-    // listed in it can answer for it.
-    "/dive/not-a-town",
-    // A town segment no locality could have produced — refused on shape,
-    // before any query, exactly as `dive/[region]/page.tsx` refuses it.
-    "/dive/Not_A_Town",
     // An incumbent with no guide. `checkfront` appears once in
     // `src/lib/migration-guides.ts`, inside a Rezdy source URL, and names no
     // guide.
     "/switching/checkfront",
-    "/demo/not-a-story",
   ]) {
     const cold = await page.request.get(path);
     expect(cold.status(), `${path} (cold hit)`).toBe(404);
     // A negative answer must never be pinned to a URL that later becomes real:
-    // a town gains its first listed shop, and a guide gets written.
+    // a guide gets written.
     expect(cold.headers()["cache-control"], path).toContain("no-store");
     // The same path again, resolved. Not a retry — both hits must answer 404,
     // and it is the *cold* one that used to be a 200.
@@ -1046,13 +1035,7 @@ test("an unknown town, incumbent or story answers 404, not 200 with the not-foun
     expect(warm.headers()["cache-control"], path).toContain("no-store");
   }
 
-  for (const path of [
-    // Seeded by `seedRegionNeighbours` — two listed shops in Key Largo.
-    "/dive/key-largo",
-    "/switching/eve",
-    "/switching/spreadsheet",
-    "/demo/weather-day",
-  ]) {
+  for (const path of ["/switching/eve", "/switching/spreadsheet"]) {
     expect((await page.request.get(path)).status(), path).toBe(200);
   }
 });

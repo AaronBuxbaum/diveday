@@ -5,42 +5,39 @@ import { at, DEMO_SHOP_TIMEZONE } from "./seed-clock";
 import { createTrip } from "./trips";
 
 /**
- * **Two more shops on Key Largo's regional page** (issue #1436, N-49).
+ * **Two listed shops beside the demo.**
  *
- * `/dive/key-largo` lists every *listed* shop in the town — not a demo, not
- * opted out of search, with something scheduled — and the canonical demo is
- * a demo, so on its own the fixture would photograph an empty region. These
- * two are the neighbours: real (`isDemo: false`) rows with a Key Largo
- * address, one dive site each, and a handful of public departures inside the
- * next two weeks, so the page and its visual baseline show two operators
- * side by side and the sitemap has a shop to list.
+ * The canonical demo is a demo, and a demo stays out of the sitemap, the
+ * agent feeds and every other listing a search engine reads. These two are
+ * real (`isDemo: false`) rows with one dive site each and a handful of public
+ * departures inside the next two weeks, so the sitemap and a listed shop's
+ * own dive-site page have a shop to show.
  *
  * They are deliberately thin: no staff, no logins, no bookings, no history.
  * Nothing signs into them, nothing resets them (`/api/test/reset` restores
  * the demo's schedule and purges minted demos, and touches neither), and
  * nothing about them is personal. A test that needs a *shop* uses
- * `privateShop`; these exist so a *page about a place* has a place to show.
+ * `privateShop`; these exist so a *listed* shop exists at all.
  *
  * Not a seed scenario the demo shop owns — `seedDemoSchedule` seeds one
  * shop's board and re-runs on reset; this runs once, beside the shop's own
  * stable half, in `seedDemo`.
  */
-export const REGION_NEIGHBOUR_SLUGS = ["reef-line-divers", "keys-current-charters"] as const;
+const LISTED_SHOP_SLUGS = ["reef-line-divers", "keys-current-charters"] as const;
 
-export async function seedRegionNeighbours(db: DbExecutor): Promise<void> {
+export async function seedListedShops(db: DbExecutor): Promise<void> {
   const address = {
     addressLocality: "Key Largo",
     addressRegion: "FL",
     addressPostalCode: "33037",
     addressCountry: "US",
-    regionSlug: "key-largo",
   };
   const [reefLine, keysCurrent] = await db
     .insert(shops)
     .values([
       {
         name: "Reef Line Divers",
-        slug: REGION_NEIGHBOUR_SLUGS[0],
+        slug: LISTED_SHOP_SLUGS[0],
         // i18n-exempt: a shop types its own tagline.
         tagline: "Two tanks on the outer reef, every morning.",
         timezone: DEMO_SHOP_TIMEZONE,
@@ -53,7 +50,7 @@ export async function seedRegionNeighbours(db: DbExecutor): Promise<void> {
       },
       {
         name: "Keys Current Charters",
-        slug: REGION_NEIGHBOUR_SLUGS[1],
+        slug: LISTED_SHOP_SLUGS[1],
         // i18n-exempt: a shop types its own tagline.
         tagline: "Wrecks and drift dives, small groups.",
         timezone: DEMO_SHOP_TIMEZONE,
@@ -66,7 +63,7 @@ export async function seedRegionNeighbours(db: DbExecutor): Promise<void> {
       },
     ])
     .returning({ id: shops.id });
-  if (!reefLine || !keysCurrent) throw new Error("seedRegionNeighbours: shops did not insert");
+  if (!reefLine || !keysCurrent) throw new Error("seedListedShops: shops did not insert");
 
   const [frenchReef, spiegelGrove] = await db
     .insert(diveSites)
@@ -90,7 +87,7 @@ export async function seedRegionNeighbours(db: DbExecutor): Promise<void> {
       },
     ])
     .returning({ id: diveSites.id });
-  if (!frenchReef || !spiegelGrove) throw new Error("seedRegionNeighbours: sites did not insert");
+  if (!frenchReef || !spiegelGrove) throw new Error("seedListedShops: sites did not insert");
 
   const hours = (n: number) => n * 60 * 60 * 1000;
   const departures = [
@@ -166,7 +163,7 @@ export async function seedRegionNeighbours(db: DbExecutor): Promise<void> {
       ...departure,
       endsAt: new Date(departure.startsAt.getTime() + hours(4)),
     });
-    if (!trip) throw new Error(`seedRegionNeighbours: ${departure.title} did not insert`);
+    if (!trip) throw new Error(`seedListedShops: ${departure.title} did not insert`);
     if (departure.shopId === keysCurrent.id) {
       await upsertTripRequirements(db, {
         shopId: keysCurrent.id,

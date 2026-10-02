@@ -13,7 +13,7 @@ import { LLMS_TXT_PATH } from "./public-routes";
  *
  * The tokened surfaces (`/waivers/*`, `/ready/*`, `/recap/*`,
  * `/offline-manifest`, `/verify/*`, `/reset-password/*`, `/invite/*`,
- * `/calendar/*`, `/unsubscribe/*`, `/board/*`, `/check-in/*`) already carry per-page
+ * `/calendar/*`, `/unsubscribe/*`) already carry per-page
  * `robots: noindex`
  * (or, for the `/calendar/*` feed route, an `X-Robots-Tag: noindex` response
  * header); disallowing their prefixes here keeps crawlers from fetching
@@ -36,8 +36,6 @@ export const ROBOTS_DISALLOW = [
   "/invite/",
   "/calendar/",
   "/unsubscribe/",
-  "/board/",
-  "/check-in/",
 ] as const;
 
 /** The policy as data, for anything that wants to reason about it rather than serve it. */

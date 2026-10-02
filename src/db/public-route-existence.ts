@@ -5,24 +5,10 @@
  *
  * `src/lib/public-route-shape.ts` reads the pathname and says which question
  * to ask; this file asks it, from `src/proxy.ts`, before any static shell has
- * gone out. One indexed read for a shop-only route, a malformed segment or a
- * town, two for a route that names a course, a dive site or a departure inside
- * a shop. A closed-list miss (`absent`) never arrives here at all — it is not
- * in `PublicRouteQuery`, so nothing can hand it to a database.
- *
- * ## A town is the one shape with no shop over it
- *
- * `/dive/<town>` names no shop, so there is no frame to resolve (issue #765 is
- * about a diver on a dead storefront link) and no shop read to make: one
- * bounded probe answers the whole question. It costs a real read on an
- * anonymous, crawler-visible route that had none before, and the invariant is
- * what makes it unavoidable — there is no closed list of towns, only a
- * projection of `shops.region_slug`, so `/dive/not-a-town` passes every pattern
- * check there is and a shape-only refusal would have left the issue's own probe
- * answering 200 with every new unit test green (issue #1734). The probe is
- * `regionIsListed`, which carries `listedShopScope` and nothing else — the same
- * scope `listRegionShops` reads through, so the day a shop ticks Search listing
- * the edge and the page change their minds together.
+ * gone out. One indexed read for a shop-only route or a malformed segment, two
+ * for a route that names a course, a dive site or a departure inside a shop. A
+ * closed-list miss (`absent`) never arrives here at all — it is not in
+ * `PublicRouteQuery`, so nothing can hand it to a database.
  *
  * ## Two answers, one shop read
  *
@@ -124,7 +110,6 @@ import type { PublicRouteQuery } from "@/lib/public-route-shape";
 import type { AppDb } from "./client";
 import { getCourseBySlug } from "./courses";
 import { getDiveSiteBySlug } from "./dive-sites";
-import { regionIsListed } from "./regions";
 import { shopIdBySlug } from "./shops";
 import { tripExistsForShop } from "./trips-record";
 
@@ -150,10 +135,6 @@ export async function publicRouteLookup(
   db: AppDb,
   shape: PublicRouteQuery,
 ): Promise<PublicRouteLookup> {
-  // The one shape with no shop over it, so the one that skips the shop read:
-  // `/dive/<town>` is DiveDay's own page and its refusal is DiveDay's own.
-  if (shape.kind === "region")
-    return { exists: await regionIsListed(db, shape.regionSlug), shopExists: false, hidden: false };
   const shopId = await shopIdBySlug(db, shape.shopSlug);
   if (!shopId) return NOTHING;
   switch (shape.kind) {

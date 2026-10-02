@@ -462,12 +462,6 @@ const CUT_RINGS: readonly (readonly [file: string, anchor: string, needs: readon
     "group flex gap-4 px-2",
     ["focus-visible:focus-ring-inset"],
   ],
-  ["app/dive/page.tsx", "group flex items-baseline", ["focus-visible:focus-ring-inset"]],
-  [
-    "app/dive/[region]/page.tsx",
-    "group flex items-center gap-4 px-2",
-    ["focus-visible:focus-ring-inset"],
-  ],
   // The page rail's one row: the editor's section rail and the settings map
   // both draw it (EditorRail.test.tsx, SettingsRail.test.tsx). Its box is
   // `RAIL_ROW_BOX`, which the settings rail's skeleton wears too (K-345), and

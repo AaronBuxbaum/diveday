@@ -81,7 +81,7 @@ describe("reading the three lists out of source text", () => {
     expect(parseArrayMembers(urls, "CAPABILITY_ROUTE_PREFIXES")).toContain("shelf");
     // Module-local, never exported — the reason the lists are read as text.
     expect(parseArrayMembers(urls, "CAPABILITY_QUERY_PARAMS")).toContain("handoff");
-    expect(parseUnionMembers(capabilities, "CapabilityPurpose")).toContain("arrival");
+    expect(parseUnionMembers(capabilities, "CapabilityPurpose")).toContain("handoff");
   });
 });
 

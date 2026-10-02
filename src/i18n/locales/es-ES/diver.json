@@ -42,41 +42,6 @@
       "text": "El día de {boat}, con {shop}"
     }
   },
-  "board": {
-    "empty": "Hoy no hay salidas.",
-    "aboard": "{boarded} de {booked, plural, one {# buceador} other {# buceadores}} a bordo",
-    "meetAt": "Punto de encuentro: {place}",
-    "privateCharter": "Salida privada",
-    "crew": "Tripulación: {names}",
-    "stage": {
-      "boarding": "Embarcando",
-      "underway": "En {site}",
-      "underwayNoSite": "En el agua",
-      "surface": "En superficie",
-      "headingIn": "De regreso",
-      "home": "De vuelta en el muelle"
-    },
-    "updated": "Actualizado a las {time}",
-    "unavailableHeading": "Este enlace de pantalla no está disponible",
-    "unavailableBody": "Crea uno nuevo en Configuración, en Pantalla del lobby.",
-    "seats": "{booked} de {capacity, plural, one {# plaza reservada} other {# plazas reservadas}}",
-    "hold": "En espera por condiciones",
-    "returned": "{boarded, plural, one {salió # buceador} other {salieron # buceadores}}"
-  },
-  "kiosk": {
-    "title": "Registro de llegada",
-    "prompt": "Apellido, o escanea tu código",
-    "submit": "Registrar llegada",
-    "submitting": "Verificando…",
-    "ready": "Todo listo, {name}.",
-    "readyAgain": "Ya estás registrado, {name}.",
-    "departure": "{title} · {time}",
-    "meetAt": "Punto de encuentro: {place}",
-    "deskHeading": "Pasa por el mostrador",
-    "deskBody": "Alguien del mostrador se encarga desde aquí.",
-    "unavailableHeading": "Esta tableta no está configurada",
-    "unavailableBody": "Crea uno nuevo en Configuración, en Pantalla del lobby."
-  },
   "conservation": {
     "shopClaimsDisclaimer": "Declarado por el centro, no verificado por DiveDay.",
     "commitments": {
@@ -149,19 +114,6 @@
     "conservationCommitmentsHeading": "Compromisos de conservación declarados por el centro",
     "conservationCommitmentsDisclaimer": "Estas son declaraciones del centro; DiveDay no las verifica ni las respalda.",
     "credit": "Reservas con DiveDay"
-  },
-  "regions": {
-    "index": {
-      "title": "Centros de buceo por localidad",
-      "description": "Centros que publican su calendario y aceptan reservas con DiveDay, agrupados por la localidad desde la que bucean.",
-      "shopCount": "{count, plural, one {# centro} other {# centros}}",
-      "emptyTitle": "Todavía no hay localidades",
-      "emptyBody": "Un centro aparece aquí en cuanto programa una salida."
-    },
-    "region": {
-      "title": "Centros de buceo en {name}",
-      "description": "Cada centro de esta lista publica su propio calendario y acepta reservas con DiveDay."
-    }
   },
   "schedule": {
     "eyebrow": "Salidas",
@@ -255,13 +207,6 @@
     "arrivalImageAlt": "Referencia de llegada en {place}",
     "openArrivalMap": "Abrir en mapas",
     "saveArrivalCard": "Guardar tarjeta de llegada",
-    "arrivalCodeHeading": "Tu código de llegada",
-    "arrivalCodeBody": "Acércalo al escáner del mostrador y el personal te encontrará.",
-    "arrivalCodeAlt": "Código de llegada de tu reserva",
-    "arrivalCodeStop": "Anular el código de una tarjeta guardada",
-    "arrivalCodeStopConfirm": "¿Anular el código de cualquier tarjeta que hayas guardado o impreso? Ya no funcionará en el escáner del mostrador; vuelve a guardar la tarjeta para obtener uno nuevo.",
-    "arrivalCodeStopConfirmButton": "Sí, anular el código",
-    "arrivalCodeStopping": "Anulando…",
     "openPublicTrip": "Abrir la página pública de la salida",
     "arrivalShopDefault": "Punto de encuentro del centro",
     "changeLedgerHeading": "Qué ha cambiado",
@@ -987,7 +932,6 @@
     "saveNote": "Guardar nota",
     "noteSaved": "Guardado. La tripulación lo verá.",
     "noteUnavailable": "No se ha guardado. Inténtalo otra vez o díselo a la tripulación ese día.",
-    "arrivalCodeStopped": "Tu código anterior ya no funciona. Vuelve a guardar la tarjeta para obtener uno nuevo.",
     "hotelPickupHeaderLine": "Recogida a las {time} en {location}",
     "hotelPickupLocationNotSet": "tu hotel",
     "hotelPickupLabel": "¿Quieres recogida por la mañana?",
@@ -2602,22 +2546,6 @@
         "desc": "Lo que ven tus clientes: reservar un viaje, firmar la exención, pedir equipo de alquiler.",
         "tryThis": "Elige un viaje en el horario y reserva una plaza."
       }
-    },
-    "stories": {
-      "eyebrow": "Demo en vivo",
-      "enter": "Abrir esta historia",
-      "firstBooking": {
-        "title": "Una primera reserva",
-        "desc": "El calendario público del centro y el formulario que rellena quien nunca ha buceado con ellos."
-      },
-      "returningDiver": {
-        "title": "Alguien que ya ha venido",
-        "desc": "La lista de preparación de mañana, con las tallas que recepción ya tenía archivadas."
-      },
-      "weatherDay": {
-        "title": "Un día que se lleva el tiempo",
-        "desc": "Cancela una salida y mira cómo se entera cada buceador reservado, con otro sitio al que ir."
-      }
     }
   },
   "marketing": {
@@ -3962,14 +3890,6 @@
       "daysAtSea": "Días en el mar",
       "mostDived": "El más buceado · {times, number}",
       "divers": "Buceadores"
-    },
-    "band": {
-      "eyebrow": "El año de un centro real",
-      "claim": "{shop} ha hecho {boats, plural, one {# salida} other {# salidas}} en DiveDay este año.",
-      "source": "Su tarjeta, dibujada por su registro. Cada número es un día que su equipo cerró.",
-      "note": "Se muestra aquí porque el centro lo activó.",
-      "door": "Ver su escaparate",
-      "alt": "Tarjeta del año de {shop}: {divers, plural, one {# buceador} other {# buceadores}}, {boats, plural, one {# salida} other {# salidas}}, {sites, plural, one {# sitio} other {# sitios}}."
     }
   },
   "shelf": {
