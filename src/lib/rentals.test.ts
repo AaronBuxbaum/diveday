@@ -494,14 +494,11 @@ describe("offeredRentalFitFields / NOTHING_RENTED", () => {
 
 describe("RENTAL_FIT_TEXT_LIMITS", () => {
   it("is the one cap both writers of rental_fit_profiles read", () => {
-    // THREE schemas must read these, not two: the staff fit editor
-    // (`src/app/shop/[shopSlug]/divers/[personId]/actions.ts`), the diver's
-    // gear form (`src/app/ready/[token]/actions.ts`), and the diver's own shelf
-    // (`src/app/shelf/[token]/actions.ts`). Each posts back whatever staff
-    // stored, so a tighter cap on any of them fails `safeParse` on a form where
-    // every visible box is right — `?error=fit` on the first two, `?error=sizes`
-    // on the shelf. The shelf was missed on the first pass and found by a domain
-    // review; that is what this count is here to stop happening again.
+    // Both schemas must read these: the staff fit editor
+    // (`src/app/shop/[shopSlug]/divers/[personId]/actions.ts`) and the diver's
+    // gear form (`src/app/ready/[token]/actions.ts`). Each posts back whatever
+    // staff stored, so a tighter cap on either fails `safeParse` on a form
+    // where every visible box is right (`?error=fit`).
     //
     // That was live when this was written: `finSize` was 20 on the diver side
     // against 40 staff-side, and `weightPreference` 80 against 120, so a

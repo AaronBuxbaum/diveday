@@ -37,7 +37,7 @@ function recapSecret(): string {
 
 /**
  * **A base64url signature, held to its charset before it is compared**
- * (security review of the gift slice, finding 3).
+ * (security review, finding 3).
  *
  * `timingSafeEqual` compares *bytes* and throws `RangeError` on buffers of
  * unequal length, while the guard beside it counted *characters* — so a

@@ -1425,8 +1425,7 @@ function freeText(value: string | null): string | null {
  *
  * Every writer of `rental_fit_profiles` caps a size at
  * `RENTAL_FIT_TEXT_LIMITS.size`, and each of them re-posts whatever is stored:
- * the staff fit editor, the diver's gear form on `/ready`, and the diver's own
- * shelf. A longer value in the column therefore fails `safeParse` on every one
+ * the staff fit editor and the diver's gear form on `/ready`. A longer value in the column therefore fails `safeParse` on every one
  * of them, on a form where every visible box reads right — issue #1062's bug
  * reached from the one door that had no cap at all (issue #1754). A prior
  * system's "wetsuit size" cell is exactly where this arrives: `Medium Large,

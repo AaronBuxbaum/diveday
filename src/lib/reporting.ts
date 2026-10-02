@@ -77,17 +77,6 @@ export type MonthlyReportInput = {
    */
   partnerReferredSeats: number;
   /**
-   * **Seats given as gifts this month, and how many have been claimed** (ADR
-   * 20260908-one-hand, decision 6, lever W).
-   *
-   * Two numbers rather than one because the pair is the whole story: a shop
-   * reading "6 given, 6 claimed" knows the lever is working, and one reading
-   * "6 given, 2 claimed" has four people to chase before Saturday. Counted on
-   * the same basis as `seatsBooked` — active seats on this month's live
-   * departures — so the figures are slices of a number already on the page.
-   */
-  giftSeats: { given: number; claimed: number };
-  /**
    * Seats that arrived on a **diver's** own link this month — the buddy seat.
    * Deliberately its own number rather than folded into
    * `partnerReferredSeats`: a hotel is a business the shop has a relationship
@@ -132,8 +121,6 @@ export type MonthlyReport = {
   waiverCompletion: number | null;
   /** Seats that arrived on a partner link this month; zero for most shops. A count, never the slugs — see the input type. */
   partnerReferredSeats: number;
-  /** Seats given as gifts this month, and how many of them have been claimed. */
-  giftSeats: { given: number; claimed: number };
   /** Seats that arrived on a diver's own buddy link this month. */
   buddyReferredSeats: number;
 };
@@ -169,7 +156,6 @@ export function summarizeMonth(input: MonthlyReportInput): MonthlyReport {
     waiverOutstanding: Math.max(0, seatsBooked - waiverComplete),
     waiverCompletion: seatsBooked > 0 ? waiverComplete / seatsBooked : null,
     partnerReferredSeats: input.partnerReferredSeats,
-    giftSeats: input.giftSeats,
     buddyReferredSeats: input.buddyReferredSeats,
   };
 }

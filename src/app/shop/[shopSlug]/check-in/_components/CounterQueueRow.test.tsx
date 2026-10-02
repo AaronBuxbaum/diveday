@@ -41,7 +41,6 @@ function row(overrides: Partial<CheckInQueueRow> = {}): CheckInQueueRow {
     personName: "Nadia Petrov",
     email: "nadia@example.com",
     dateOfBirth: null,
-    giftGiverName: null,
     tripId: "trip-1",
     tripTitle: "Two-Tank Reef — Molasses & French",
     startsAt: new Date("2026-08-27T11:00:00.000Z"),
@@ -598,7 +597,7 @@ describe("the row's box", () => {
   it("keeps the settled row's undo a whole gap clear of its pass", () => {
     renderRow({ bookingStatus: "checked_in" });
     const undo = screen.getByRole("button", { name: "Undo check-in for Nadia Petrov" });
-    const pass = screen.getByRole("button", { name: "Print a pass" });
+    const pass = screen.getByRole("link", { name: "Print a pass" });
     expect(undo.compareDocumentPosition(pass) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
     const form = undo.parentElement;
@@ -618,7 +617,7 @@ describe("the row's box", () => {
    */
   it("ends the settled row's pass on the column's edge", () => {
     renderRow({ bookingStatus: "checked_in" });
-    const pass = screen.getByRole("button", { name: "Print a pass" });
+    const pass = screen.getByRole("link", { name: "Print a pass" });
     expect(pass.className).toBe(buttonClass({ variant: "link", size: "sm", flush: true }));
   });
 });

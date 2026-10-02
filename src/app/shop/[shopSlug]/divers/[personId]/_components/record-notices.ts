@@ -489,13 +489,6 @@ const NOTICE_KEYS: DiverNoticeMap = {
   // Emitted by half a dozen actions, so it has no single home of its own; each
   // one stamps a `?form=` and this default is only reached without one.
   invalid: { form: "page", tone: "danger", key: "divers.notices.invalid" },
-  // The shelf link's four outcomes (slice 20t). Each says the one thing a
-  // staffer standing at a counter can act on: it went, there is nowhere to send
-  // it, it did not go, or this record cannot hold one.
-  "shelf-sent": { form: "shelf", tone: "success", key: "divers.shelf.sent" },
-  "shelf-no-email": { form: "shelf", tone: "danger", key: "divers.shelf.noEmail" },
-  "shelf-failed": { form: "shelf", tone: "danger", key: "divers.shelf.failed" },
-  "shelf-unavailable": { form: "shelf", tone: "danger", key: "divers.shelf.unavailable" },
 };
 
 /**
@@ -510,7 +503,6 @@ const DIVER_FORMS = new Set([
   "cards",
   "waiver",
   "fit",
-  "shelf",
   "support",
   "story",
   "book",

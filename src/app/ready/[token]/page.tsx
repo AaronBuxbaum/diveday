@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { openShelfFromThreadAction } from "@/app/actions/shelf-door";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
 import { BoatStageLine } from "@/app/ready/[token]/_components/BoatStageLine";
 import { ChangedFacts, type FitRecall } from "@/app/ready/[token]/_components/ChangedFacts";
@@ -29,7 +28,6 @@ import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { FlashParams } from "@/components/FlashParams";
 import { PartyClaimPanel } from "@/components/PartyClaimPanel";
 import { RememberBooker } from "@/components/RememberBooker";
-import { ShelfDoor } from "@/components/ShelfDoor";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { TripArrivalCard } from "@/components/TripArrivalCard";
@@ -1672,20 +1670,7 @@ export default async function DiverReadinessPage({
         timeZone={detail.shop.timezone}
         namespaces={["recap", "common", "booking", "reviews", "trip"]}
       >
-        <AfterState
-          {...after}
-          // **The thread's door opens the shelf.** This capability is stored
-          // and revocable and is already the one link the product will mint a
-          // handoff from, so a person-scoped token minted here is a lateral
-          // move rather than an escalation — unlike the recap's, which sends
-          // (`src/app/actions/shelf-door.ts`).
-          shelfDoor={
-            <ShelfDoor
-              action={openShelfFromThreadAction.bind(null, token)}
-              label={t("shelf.doorOpen")}
-            />
-          }
-        />
+        <AfterState {...after} />
       </DiverIntlProvider>
     );
   }

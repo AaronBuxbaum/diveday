@@ -51,16 +51,8 @@ const WAY_UP_MARKERS = ["eyebrowHref", "EyebrowBackLink", "TripPageHeader"];
 const WAY_UP_EXEMPT: Record<string, string> = {
   "schedule/board":
     "A first-class destination wearing two URL segments: `/schedule` has no page, so the board is a depth-1 surface and its eyebrow is its own name, per principle 10's first bullet.",
-  "print/boat-card/[boatId]":
-    "A printed sheet, not a screen. `SheetDocument` carries the way back to the print register as its own `print:hidden` link, because paper has no eyebrow.",
-  "print/dock-sign":
-    "A printed sheet, not a screen. `SheetDocument` carries the way back to the print register as its own `print:hidden` link, because paper has no eyebrow.",
   "print/pass/[bookingId]":
-    "A printed sheet, not a screen. `SheetDocument` carries the way back to the print register as its own `print:hidden` link, because paper has no eyebrow.",
-  "print/site-briefings":
-    "A printed sheet, not a screen. `SheetDocument` carries the way back to the print register as its own `print:hidden` link, because paper has no eyebrow.",
-  "print/window-sticker":
-    "A printed sheet, not a screen. `SheetDocument` carries the way back to the print register as its own `print:hidden` link, because paper has no eyebrow.",
+    "A printed sheet, not a screen. `SheetDocument` carries the way back to the counter as its own `print:hidden` link, because paper has no eyebrow.",
 };
 
 type StaffRoute = {

@@ -11,31 +11,23 @@ import QRCode from "qrcode";
  * `AutoPrint`, and a code that arrived one paint later would be a white square
  * on the sign at the slip.
  *
- * Rendered at 512 device pixels whatever its printed size, which is about
- * 300 dpi across the dock sign's 32mm symbol and its quiet zone — past what a
- * phone camera needs and past what a laser blurs.
+ * Rendered at 512 device pixels whatever its printed size — past what a phone
+ * camera needs and past what a laser blurs.
  *
  * **The quiet zone is the code's own, and it overhangs the code's box.** The
  * QR spec owes a scanner four modules of white on every side, so the image
- * carries them (`margin: 4`) rather than trusting whatever is around it — at
- * the dock sign's left edge the body's padding is 4.3mm, short of the 5.1mm
- * four modules of a 32mm version-2 code need, and the rest was the printer's
- * margin. But a quiet zone inside the
- * box stands the ink that far inside the text column the box sits in: with one
- * module the pixel probe measured the pass's code 3px right of its title and
- * the dock sign's 2px and 4px right of their captions. So the caller names the
- * *symbol's* size in millimetres, and the box is drawn at that size with the
- * quiet zone outdented on every side: the ink sits on the column, and the
- * white travels with it. The module count comes from the encoder, so the
- * outdent is exact for whatever version the payload makes.
+ * carries them (`margin: 4`) rather than trusting whatever is around it. But a
+ * quiet zone inside the box stands the ink that far inside the text column the
+ * box sits in. So the caller names the *symbol's* size in millimetres, and the
+ * box is drawn at that size with the quiet zone outdented on every side: the
+ * ink sits on the column, and the white travels with it. The module count
+ * comes from the encoder, so the outdent is exact for whatever version the
+ * payload makes.
  *
  * The words beside a code keep four modules clear of its box, or the quiet
- * zone is painted over them, sized for the coarsest code its payload can make:
- * a booking id is always a version 3 (29 modules), so 3.3mm around the pass's
- * 24mm code; a storefront link on a short slug is a version 2 (25 modules), so
- * 5.1mm around the dock sign's 32mm codes and 5.4mm around the sticker's 34mm
- * one. `SheetCode.test.tsx` checks all three, and reads the rendered PNG for
- * its white edge.
+ * zone is painted over them: a booking id is always a version 3 (29 modules),
+ * so 3.3mm around the pass's 24mm code. `SheetCode.test.tsx` checks it, and
+ * reads the rendered PNG for its white edge.
  */
 const CODE_PIXELS = 512;
 
@@ -55,9 +47,8 @@ export async function SheetCode({
   className = "",
 }: {
   /**
-   * What the code carries. Every caller passes a value it can defend: the two
-   * on the dock sign are public URLs, and the pass's is the booking's id and
-   * nothing else (`passCodePayload`).
+   * What the code carries. Every caller passes a value it can defend: the
+   * pass's is the booking's id and nothing else (`passCodePayload`).
    */
   value: string;
   /** What this code opens, for a reader who cannot photograph it. */

@@ -407,7 +407,7 @@ function classStringsWith(source: string, anchor: string, needs: readonly string
  * (ProductChapterNav.test.tsx), the command palette's field
  * (CommandPalette.test.tsx), `RowLink` (table.test.tsx), the tip picker
  * (TipAmountPicker.test.tsx), the roll-call mark (DiverRollCall.test.tsx,
- * CrewRollCall.test.tsx), the diver record's shelf rows (ShelfGroup.test.tsx),
+ * CrewRollCall.test.tsx),
  * "Remove address" (AddressSearch.test.tsx) and the roster seat's foot row
  * (RosterSection.test.tsx).
  */

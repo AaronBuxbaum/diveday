@@ -3,7 +3,6 @@ import { eq, getTableName } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { RETENTION_DAYS, UNBOUNDED_BY_DECISION } from "@/lib/retention";
 import { seededShopContext } from "@/test/db";
-import { createGiftBooking } from "./bookings";
 import { setBookingPayment } from "./payments";
 import { pruneExpiredRecords } from "./retention";
 import * as schema from "./schema";
@@ -12,6 +11,7 @@ import {
   activityEvents,
   bookingGifts,
   bookingPaymentEvents,
+  bookings,
   notificationDeliveries,
   notificationDeliveryAttempts,
   people,
@@ -306,17 +306,27 @@ describe("pruneExpiredRecords", () => {
     const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
     const old = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
     if (!old) throw new Error("demo reef trip missing");
-    const gift = await createGiftBooking(
-      db,
-      { actor: "public", shopId: shop.id, tripId: old.id, fullName: "Ben Carter" },
-      {
-        giverName: "Hannah Liu",
-        giverEmail: "hannah.liu@example.com",
-        receiverName: "Ben Carter",
-        message: "From Hannah, for your birthday",
-      },
-    );
-    if (!gift.ok) throw new Error(`gift booking failed: ${gift.reason}`);
+    // Nothing writes `booking_gifts` since gifting a dive was cut, so the
+    // fixture inserts the row; the arm stays until the table is dropped.
+    const [ben] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Ben Carter" })
+      .returning({ id: people.id });
+    if (!ben) throw new Error("fixture insert failed");
+    const [seat] = await db
+      .insert(bookings)
+      .values({ shopId: shop.id, tripId: old.id, personId: ben.id })
+      .returning({ id: bookings.id });
+    if (!seat) throw new Error("fixture insert failed");
+    const gift = { bookingId: seat.id };
+    await db.insert(bookingGifts).values({
+      shopId: shop.id,
+      bookingId: seat.id,
+      giverName: "Hannah Liu",
+      giverEmail: "hannah.liu@example.com",
+      receiverName: "Ben Carter",
+      message: "From Hannah, for your birthday",
+    });
 
     // Inside the window: the departure came home yesterday.
     await updateTrip(db, shop.id, old.id, {

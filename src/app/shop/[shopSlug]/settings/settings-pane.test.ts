@@ -40,8 +40,6 @@ describe("the settings pane", () => {
     for (const file of [
       "SettingsPage.tsx",
       "loading.tsx",
-      "print/page.tsx",
-      "print/loading.tsx",
       "safety-checklist/page.tsx",
       "safety-checklist/loading.tsx",
       "team/page.tsx",

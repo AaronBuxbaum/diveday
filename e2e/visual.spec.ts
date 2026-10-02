@@ -54,10 +54,9 @@ import { E2E_FROZEN_CLOCK, ONBOARD_FORM_PATH } from "./servers";
  * "correct the prose" instruction above ended up chasing a number that was
  * never right.
  *
- * Ten more come from the `print` block at the bottom: the manifest, prep,
- * trip-packet, day-packet, departure-log, dock-sign, window-sticker,
- * boat-card, site-briefing-cards and paper-pass pages as they render for the
- * printer. Print
+ * Six more come from the `print` block at the bottom: the manifest, prep,
+ * trip-packet, day-packet, departure-log and paper-pass pages as they render
+ * for the printer. Print
  * is its own concern, not a light/dark one — the `@media print` token override
  * collapses both schemes to one black-and-white palette — so each is captured
  * once, at a US-Letter width (or a wider sheet's own), via `capturePrint()`.
@@ -3447,48 +3446,6 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **The diver's shelf** (slice 20t of ADR 20260908-one-hand) — the
-       * standing door onto a diver's own file at one shop, in the shop's face.
-       *
-       * Three things this is the only picture of: the top rows that are the
-       * reason to come back, the file as one card of rows with the sizes
-       * editable inside it, and the two quiet lines at the foot — what is never
-       * here, and how to take the greeting off a phone. Captured at both
-       * viewports like everything else, because it is written phone-first and
-       * the rail of past days is the piece that changes shape between them.
-       *
-       * Reached through `/api/test/seed-shelf-token`, which mints the same
-       * `person_shelf_tokens` row the thread's door writes; walking the thread
-       * would mean a departure that has come home.
-       */
-      test(`the diver's shelf renders true to the design (${scheme})`, async ({
-        page,
-        request,
-      }) => {
-        test.setTimeout(FLOW_TIMEOUT_MS);
-        await bookAVisualRegressionSeat(page, scheme);
-        const seeded = await request.post("/api/test/seed-shelf-token", {
-          data: { shopSlug: "blue-mantis", email: `visual-regression-${scheme}@example.com` },
-        });
-        expect(seeded.ok()).toBe(true);
-        const { href } = (await seeded.json()) as { href: string };
-        await page.goto(href);
-        await page.getByRole("heading", { name: "Your shelf" }).waitFor();
-        await capture(page, "diver-shelf", scheme);
-
-        /**
-         * **The storefront a returning diver opens**, which is the same page
-         * every visitor gets with one group above the week: the greeting, the
-         * seat they hold, and the way back to the shelf. Opening the shelf
-         * above set the cookie this reads; without it the storefront's own
-         * baseline elsewhere in this file is the picture.
-         */
-        await page.goto("/s/blue-mantis");
-        await page.getByRole("region", { name: "Yours" }).waitFor();
-        await capture(page, "shopfront-known-diver", scheme);
-      });
-
-      /**
        * **A demo story's door** (issue #1215, delight report D55) — one stable
        * link per story, the thing somebody pastes into an email to a shop
        * owner. The weather day because it is the one with the most to prove:
@@ -5147,52 +5104,6 @@ for (const scheme of ["light", "dark"] as const) {
         // record.
         await page.getByRole("region", { name: "The story" }).waitFor();
         await capture(page, "diver-profile", scheme);
-      });
-
-      /**
-       * **The shelf, as one row of the diver's file** (slice 20t) — open, so
-       * the two facts a staffer uses and the one act are on screen.
-       *
-       * A link is minted and opened first, because the row's whole job is to
-       * say how the diver's link is doing and the interesting state is the one
-       * with a number in it. The `?opened=` walk is the shipped path: the
-       * shelf's own client effect counts the open, so this photographs what a
-       * shop actually sees rather than a hand-written row.
-       */
-      test(`the diver record's shelf row renders true to the design (${scheme})`, async ({
-        page,
-        request,
-      }) => {
-        test.setTimeout(FLOW_TIMEOUT_MS);
-        await openDiverProfile(page, "Priya", "Priya Sharma");
-        const seeded = await request.post("/api/test/seed-shelf-token", {
-          data: { shopSlug: "blue-mantis", email: "priya.sharma@example.com" },
-        });
-        expect(seeded.ok()).toBe(true);
-        const { href } = (await seeded.json()) as { href: string };
-        // **Wait for the open to be *counted*, not merely for the shelf to
-        // paint.** `RememberShelf` fires a server action from a client effect,
-        // so the diver record -- server-rendered, once, on the way back -- shows
-        // whichever side of that race this landed on. Both sides also read as
-        // "open" ("Sent, not opened" against "1 open"), so the assertion below
-        // could not tell them apart and the baseline drifted between the two
-        // between pull requests. The action posts to the shelf's own URL.
-        const counted = page.waitForResponse(
-          (response) =>
-            response.request().method() === "POST" && response.url().includes("/shelf/"),
-        );
-        await page.goto(href);
-        await page.getByRole("heading", { name: "Your shelf" }).waitFor();
-        await counted;
-        await openDiverProfile(page, "Priya", "Priya Sharma");
-        const shelf = page.getByRole("region", { name: "Shelf" });
-        // A count, not the word: the state this capture exists for is the one
-        // with a number in it.
-        await expect(shelf.getByText(/^\d+ opens?$/)).toBeVisible();
-        await shelf.getByText("Shelf", { exact: true }).click();
-        await expect(shelf.getByRole("button", { name: "Send the link" })).toBeVisible();
-        await page.mouse.move(0, 0);
-        await capture(page, "diver-record-shelf", scheme);
       });
 
       /**
@@ -8336,60 +8247,11 @@ test.describe("print", () => {
     await capturePrint(page, "departure-log");
   });
 
-  /**
-   * **The shop's own paper** (ADR 20260908-one-hand, decision 6, lever X).
-   *
-   * Five sheets that exist only to come out of a printer, so the print
-   * rendering *is* the artifact: a fixed box in millimetres, a band in the
-   * shop's colour, and a fold line carrying the day it was printed. They are
-   * the one family of pages that keeps its ink under `@media print`, which is
-   * exactly the kind of rule no assertion can look at.
-   *
-   * Reached by URL rather than through the register's doors on purpose. A door
-   * is a form that records a print run, and `shop_print_runs` survives the
-   * schedule reset (RESET_KEEPS), so clicking one here would date a row for
-   * whichever spec ran next in this worker. A `GET` of a sheet writes nothing.
-   */
-  test("the dock sign prints A3 in the shop's colour", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/print/dock-sign");
-    await page.getByRole("heading", { level: 1, name: "Our boats leave from here." }).waitFor();
-    await capturePrint(page, "dock-sign");
-  });
-
-  test("the window sticker prints 100mm square", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/print/window-sticker");
-    await page.getByText("Book a seat with your phone").first().waitFor();
-    await capturePrint(page, "window-sticker");
-  });
-
-  // Two pages, one document: the day side on white and the night side on the
-  // ground a red torch reads. The boat id comes off the register's own door,
-  // which is a hidden input rather than a link, so reading it is a page load
-  // and not a submit.
-  test("the boat card prints both its sides in boat colours", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/settings/print");
-    const boatId = await page
-      .locator('form:has(input[value="boat_card"]) input[name="subjectId"]')
-      .first()
-      .inputValue();
-    await page.goto(`/shop/blue-mantis/print/boat-card/${boatId}`);
-    await page.getByRole("heading", { name: "Before the boat moves" }).first().waitFor();
-    // The seeded shop has filled its emergency reference in, so this is where
-    // the card's two read-from-settings halves are proven: the vessel a rescue
-    // coordinator asks for, and the shop's own plan in the shop's own words.
-    // `shop-on-paper.spec.ts` asserts the other side of the same rule — a
-    // minted shop that has recorded none of it gets ruled blanks and no plan.
-    await expect(page.getByText("Mantis II - VHF 16, MMSI 338055501").first()).toBeVisible();
-    await page.getByRole("heading", { name: "If something goes wrong" }).first().waitFor();
-    await capturePrint(page, "boat-card");
-  });
-
-  test("the site briefing cards print one per site", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/print/site-briefings");
-    await page.getByRole("heading", { name: "The briefing" }).first().waitFor();
-    await capturePrint(page, "site-briefing-cards");
-  });
-
+  // **The shop's own paper** (ADR 20260908-one-hand, decision 6, lever X). The
+  // pass exists only to come out of a printer, so the print rendering *is* the
+  // artifact: a fixed box in millimetres, a band in the shop's colour, and a
+  // fold line carrying the day it was printed.
+  //
   // **The pinned booking, not the counter's first row.** The pass renders a QR
   // of `passCodePayload` — the booking's id and nothing else — and
   // `bookings.id` is `defaultRandom()`, so a capture that reads whichever id
@@ -8807,90 +8669,6 @@ for (const scheme of ["light", "dark"] as const) {
       // Dropped here rather than left for the next test's reset, so the
       // cascade is charged to the test that asked for the shop.
       await request.delete("/api/test/seed-year-band-shop");
-    });
-  });
-}
-
-/**
- * **The Print register** (ADR 20260908-one-hand, decision 6, lever X) — the
- * pane in Settings that lists the shop's paper in the groups of where it goes:
- * at the dock and the door, on the boat, for a diver, on the wall.
- *
- * Read-only here. Every row reads "Never printed" on the seeded shop, and the
- * doors are deliberately not clicked — see the print block above for why.
- */
-for (const scheme of ["light", "dark"] as const) {
-  test.describe(`${scheme} mode — the print register`, () => {
-    signedInAsOwner();
-    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
-
-    test(`the print register lists the shop's sheets (${scheme})`, async ({ page }) => {
-      await page.goto("/shop/blue-mantis/settings/print");
-      await page.getByRole("heading", { level: 1, name: "Print" }).waitFor();
-      await capture(page, "settings-print", scheme);
-    });
-  });
-}
-
-/**
- * **Give a dive** (ADR 20260908-one-hand, decision 6, lever W; owner's call
- * (l)) — the three surfaces the lever adds, on their own describe so a failure
- * costs one capture rather than re-premising a shard.
- *
- * The form's gift state is a click on the public trip page; the claim and the
- * giver's page both need a real gift seat, minted through
- * `/api/test/seed-gift` for the reason the trouble states are seeded that way:
- * a demo shop where a third of every boat is somebody's birthday present is a
- * worse demo, and the branch worth photographing is the rare one.
- */
-for (const scheme of ["light", "dark"] as const) {
-  test.describe(`${scheme} mode — give a dive`, () => {
-    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
-
-    test(`the booking form's gift state renders true to the design (${scheme})`, async ({
-      page,
-      request,
-    }) => {
-      const seeded = await request.post("/api/test/seed-gift");
-      expect(seeded.ok(), await seeded.text()).toBe(true);
-      const { tripId } = (await seeded.json()) as { tripId: string };
-      await page.goto(`/s/blue-mantis/trips/${tripId}`);
-      await page.getByRole("radio", { name: "Someone else, as a gift" }).check();
-      // The three gift questions replacing the party's five is the whole
-      // subject of the frame; waiting on the last of them is what proves the
-      // swap fired rather than photographing the ordinary form twice.
-      await page.getByLabel("Your email", { exact: true }).waitFor();
-      await page.mouse.move(0, 0);
-      await capture(page, "booking-gift-form", scheme);
-    });
-
-    test(`the gift's claim page renders true to the design (${scheme})`, async ({
-      page,
-      request,
-    }) => {
-      const seeded = await request.post("/api/test/seed-gift");
-      expect(seeded.ok(), await seeded.text()).toBe(true);
-      const { claimPath } = (await seeded.json()) as { claimPath: string };
-      await page.goto(claimPath);
-      await page.getByText("From Hannah, for your birthday").waitFor();
-      await page.getByRole("button", { name: "Claim this seat" }).waitFor();
-      await capture(page, "gift-claim", scheme);
-    });
-
-    test(`the giver's own page renders true to the design (${scheme})`, async ({
-      page,
-      request,
-    }) => {
-      const seeded = await request.post("/api/test/seed-gift");
-      expect(seeded.ok(), await seeded.text()).toBe(true);
-      const { giftPath } = (await seeded.json()) as { giftPath: string };
-      await page.goto(giftPath);
-      await page.getByRole("heading", { name: "Ben Carter’s seat" }).waitFor();
-      // The four rows are the frame, and the page mints nothing — no token
-      // renders here at all, which is what keeps this baseline stable run to
-      // run as well as keeping the page read-only.
-      await page.getByText("Not aboard yet").waitFor();
-      await capture(page, "gift-giver-page", scheme);
     });
   });
 }

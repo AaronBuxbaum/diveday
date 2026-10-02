@@ -6,10 +6,8 @@ import { buttonClass } from "@/components/ui/button";
 
 /**
  * A constant rather than `useId`: React 19 mints ids containing `«»`, which
- * `document.getElementById` accepts and a CSS selector does not — and this
- * element is how `e2e/gift.spec.ts` reads the referral link now that the page
- * no longer prints it. One buddy section renders per page, so there is nothing
- * to collide with.
+ * `document.getElementById` accepts and a CSS selector does not. One buddy
+ * section renders per page, so there is nothing to collide with.
  */
 const BUDDY_LINK_ID = "buddy-link";
 

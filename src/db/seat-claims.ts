@@ -18,7 +18,6 @@ import { recordTripActivity } from "./operations";
 import { findOrCreatePerson } from "./people";
 import { storedPhone } from "./person-phone";
 import {
-  bookingGifts,
   bookings,
   certifications,
   courses,
@@ -65,17 +64,6 @@ export type ClaimPageData = {
   endsAt: Date;
   /** The name the organizer typed for this seat — the seat being claimed, never a sibling's. */
   seatName: string;
-  /**
-   * **Set when this seat was bought as a gift** (ADR 20260908-one-hand,
-   * decision 6, lever W): who gave it, and the one line they wrote. The claim
-   * page reads them to render the pass the receiver is about to take over —
-   * "From Hannah, for your birthday" — and reads nothing else off the giver.
-   *
-   * Null for a party seat, which is the other and older way a claim link
-   * exists. The two share this page and every rule on it; only the sentence
-   * above the form differs.
-   */
-  gift: { giverName: string; message: string | null } | null;
 };
 
 export async function getClaimPageData(
@@ -86,18 +74,15 @@ export async function getClaimPageData(
   const capability = await verifyBookingCapability(db, { token, purpose: "claim", now });
   if (!capability) return null;
   const [row] = await db
-    .select({ booking: bookings, trip: trips, shop: shops, person: people, gift: bookingGifts })
+    .select({ booking: bookings, trip: trips, shop: shops, person: people })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .innerJoin(shops, eq(shops.id, bookings.shopId))
     .innerJoin(people, eq(people.id, bookings.personId))
-    // A gift seat has no party lead, so the gift row is what makes it
-    // claimable — see `claimableNow`.
-    .leftJoin(bookingGifts, eq(bookingGifts.bookingId, bookings.id))
     .where(and(eq(bookings.id, capability.bookingId), eq(bookings.shopId, capability.shopId)))
     .limit(1);
   if (!row) return null;
-  if (!claimableNow(row.booking, row.trip, now, Boolean(row.gift))) return null;
+  if (!claimableNow(row.booking, row.trip, now)) return null;
   return {
     shopId: row.shop.id,
     shopName: row.shop.name,
@@ -111,7 +96,6 @@ export async function getClaimPageData(
     startsAt: row.trip.startsAt,
     endsAt: row.trip.endsAt,
     seatName: row.person.fullName,
-    gift: row.gift ? { giverName: row.gift.giverName, message: row.gift.message } : null,
   };
 }
 
@@ -199,16 +183,9 @@ export async function getClaimPageState(
 /**
  * The one claimability rule, shared by the page read and the claim write so
  * they can never drift: the seat is a live booking somebody else is holding
- * for a diver (`status = 'booked'`, not yet claimed) on a scheduled trip that
+ * for a diver (`status = 'booked'`, not yet claimed, linked to its organizer's
+ * lead booking — ADR 20260804-seat-claim-links) on a scheduled trip that
  * hasn't departed.
- *
- * **Two ways a seat is somebody else's to hand over**, and the caller supplies
- * which: a party member's, linked to its organizer's lead booking (ADR
- * 20260804-seat-claim-links), or a **gift**, which has no party at all and is
- * marked by its `booking_gifts` row (ADR 20260908-one-hand, decision 6,
- * lever W). Everything downstream of this line is identical for both — the
- * claimant's own name, contact, waiver and admission gate — because a gift is
- * a booking and a claim is a claim.
  *
  * Deliberately *not* checked: `conditions_hold`
  * — a hold pauses new seat sales while existing bookings remain valid
@@ -219,11 +196,10 @@ function claimableNow(
   booking: typeof bookings.$inferSelect,
   trip: typeof trips.$inferSelect,
   now: Date,
-  isGift: boolean,
 ): boolean {
   return (
     booking.status === "booked" &&
-    (booking.partyLeadBookingId !== null || isGift) &&
+    booking.partyLeadBookingId !== null &&
     booking.claimedAt === null &&
     trip.status === "scheduled" &&
     trip.startsAt > now
@@ -302,15 +278,7 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
     .from(trips)
     .where(and(eq(trips.id, booking.tripId), eq(trips.shopId, capability.shopId), liveTrip()))
     .limit(1);
-  // Read under the same lock as everything else the decision is made of: a
-  // gift seat is claimable *because* this row exists, so a read outside the
-  // lock would be a second source for the one question.
-  const [gift] = await tx
-    .select({ id: bookingGifts.id })
-    .from(bookingGifts)
-    .where(and(eq(bookingGifts.bookingId, booking.id), eq(bookingGifts.shopId, capability.shopId)))
-    .limit(1);
-  if (!trip || !claimableNow(booking, trip, now, Boolean(gift))) {
+  if (!trip || !claimableNow(booking, trip, now)) {
     return { ok: false, reason: "invalid" };
   }
 
@@ -594,10 +562,7 @@ export async function issuePartySeatClaims(
     .orderBy(asc(bookings.createdAt), asc(people.fullName), asc(bookings.id));
   const seats: PartySeatClaim[] = [];
   for (const row of rows) {
-    // `false`: this query is scoped to one organizer's party by
-    // `party_lead_booking_id`, so every row here is claimable as a party seat
-    // or not at all — a gift has no party and is never in this set.
-    const claimable = claimableNow(row.booking, row.trip, now, false);
+    const claimable = claimableNow(row.booking, row.trip, now);
     seats.push({
       bookingId: row.booking.id,
       seatName: row.person.fullName,

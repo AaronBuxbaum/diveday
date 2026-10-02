@@ -1064,13 +1064,6 @@ export default async function SettingsPage({
                 }}
               />
             </SettingsRow>
-
-            {/* The shop's own paper (ADR 20260908-one-hand, decision 6, lever
-                X). */}
-            <SettingsDoorRow
-              href={`/shop/${shopSlug}/settings/print`}
-              heading={t("print.settings.title")}
-            />
           </InsetGroup>
         </SettingsGroup>
 

@@ -5,7 +5,7 @@ import { SETTINGS_GROUPS, SETTINGS_RAIL_ROWS } from "../settings-groups";
 import { SettingsRail } from "./SettingsRail";
 import { SettingsRailSkeleton } from "./SettingsRailSkeleton";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/shop/blue-mantis/settings/print" }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/shop/blue-mantis/settings/team" }));
 
 afterEach(cleanup);
 

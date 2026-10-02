@@ -33,8 +33,8 @@ type SeedRoute = {
    * The route directory, which is also the URL segment **and** the module this
    * row exercises — resolved by `handlerFor` below rather than named a second
    * time. A row used to carry its own `handler:`, and nothing tied the two
-   * together: `slug: "seed-gift", handler: seedRecapPulse.POST` would have gone
-   * green while `seed-gift` was never called, and `check:e2e-fixtures` reads
+   * together: `slug: "seed-arrival-code", handler: seedRecapPulse.POST` would have gone
+   * green while `seed-arrival-code` was never called, and `check:e2e-fixtures` reads
    * the slug, so the guard would have agreed (`security-reviewer`, 2026-09-13).
    */
   slug: string;
@@ -183,14 +183,6 @@ const routes: SeedRoute[] = [
     expectPastTheGuard: expectInvalidBody,
   },
   {
-    slug: "seed-shelf-token",
-    // A shop slug and an email, refused first — and it must be, because past
-    // that it mints a year-long credential over a diver's whole file at that
-    // shop. A route answering on a misconfigured deployment would be handing
-    // out the door to a real diver's certifications, waiver and sizes.
-    expectPastTheGuard: expectInvalidBody,
-  },
-  {
     slug: "seed-returning-diver",
     // It takes a shop slug and an email, so the body is what it refuses first —
     // and it must, because past that it writes a diver's sizes and their
@@ -266,17 +258,6 @@ const routes: SeedRoute[] = [
     // inside the confirmation email and is hashed at rest, so a route that
     // answered would hand anyone the address-confirmation for any shop.
     expectPastTheGuard: expectInvalidBody,
-  },
-  {
-    slug: "seed-gift",
-    // Database first, then the body — so reaching the database is what proves
-    // the guard let it through. Past that it books a real seat through
-    // `createGiftBooking` and mints a claim capability for it, so a route that
-    // answered on a misconfigured deployment would be selling a real shop's
-    // seats and handing out the links to sit in them.
-    expectPastTheGuard: async () => {
-      expect(getDb).toHaveBeenCalled();
-    },
   },
   {
     slug: "seed-recap-pulse",

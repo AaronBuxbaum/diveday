@@ -152,12 +152,6 @@ export default async function TripDetailPage({
     embed?: string;
     /** A diver's own handoff (ADR 20260906-before-you-ask, decision 3). */
     handoff?: string | string[];
-    /**
-     * Open the booking form on the gift rather than on "Me" (ADR
-     * 20260908-one-hand, decision 6, lever W). The giver's page sends someone
-     * here after a blow-out, to give the same seat on the next departure.
-     */
-    gift?: string | string[];
   }>;
 }) {
   await connection();
@@ -173,7 +167,6 @@ export default async function TripDetailPage({
     pay,
     embed,
     handoff: handoffParam,
-    gift: giftParam,
   } = await searchParams;
   // One string or nothing: a repeated `?handoff=` arrives as an array, and an
   // array must read as no handoff rather than reach the hasher.
@@ -910,9 +903,6 @@ export default async function TripDetailPage({
               terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
               knownDiver={knownDiverPanel}
               offerHandoff={offerHandoff.bind(null, tripRef)}
-              // Exactly `1`, and a repeated parameter reads as absent — the same
-              // single-value rule every other query flag on this page follows.
-              giftDefault={giftParam === "1"}
             />
           )}
           {/* The last line on the page: how to reach a human. Renders nothing at

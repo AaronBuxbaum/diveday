@@ -299,9 +299,9 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * has no `people` row, is not a diver of this shop, and never agreed to
    * anything, so the only thing holding their identity is that they once
    * bought somebody a seat. Once the boat is home and the season's refund and
-   * chargeback windows have run, nobody needs to know who paid — but the
-   * *row* still has work to do, because it is what explains the seat and its
-   * money on the till and in an export. So the giver goes and the gift stays.
+   * chargeback windows have run, nobody needs to know who paid. Nothing writes
+   * the table since gifting a dive was cut; this window stays until the table
+   * is dropped, so a row already there still ages out.
    *
    * 90 rather than 400: unlike the delivery trails, this is not evidence of
    * something DiveDay did, and the shorter window is the one a person who

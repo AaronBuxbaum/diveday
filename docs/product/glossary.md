@@ -1642,22 +1642,21 @@ new domain concept, define it here in the same PR.
   one**: a cancelled booking, a no-show, an imported visit standing `did_not_happen`, and a
   cancelled departure are all excluded, the last of those because a blow-out leaves its bookings
   active by design and the count read them as days until a review caught it (2026-08-28). **A
-  `no_show` has no escape in any of the four readers** (issue #1558, settled the other way by a
+  `no_show` has no escape in any of the three readers** (issue #1558, settled the other way by a
   `dive-domain-expert` review on 2026-09-11). The fly-safe reader and the counter's name-match
   prompt used to let a standing desk sighting outrank it, to keep a close-of-day sweep from erasing
   the 06:40 tap. No sweep exists and none is coming: `markBookingNoShow` (`src/db/no-show.ts`) is
   the only writer of that status, it is one staffer's deliberate tap on one seat, and check-in
   refuses anything but a `booked` seat — so the sighting is always the older statement, and the
   escape only ever let 06:40 beat 07:15. **One exclusion still has an escape, and only two of the
-  four readers carry it.** A cancelled departure the crew logged dives on is a dive day to the
+  three readers carry it.** A cancelled departure the crew logged dives on is a dive day to the
   fly-safe reader (`peopleWhoDivedBefore`, `src/db/executed-dives.ts`) and to the counter's
-  name-match prompt (`SimilarDiver.lastDiveDayAt`, `src/db/divers.ts`) — and to neither the recap's
-  own count (`getRecapPageData`, `src/db/recap.ts`) nor the diver shelf (`src/db/shelf.ts`), which
-  still read a plain non-`scheduled` departure as disqualifying. The gap is deliberate: the two that
-  widened answer a staffer who can see the person and can shake their head, while this count tells
-  the diver "your 3rd dive day" with nobody there to correct it and feeds `visitMilestone`'s exact
-  equality, where a day that moves skips a stamp permanently rather than blurring it. Putting all
-  four behind one predicate is issue #1694.
+  name-match prompt (`SimilarDiver.lastDiveDayAt`, `src/db/divers.ts`) — but not to the recap's own
+  count (`getRecapPageData`, `src/db/recap.ts`), which still reads a plain non-`scheduled` departure
+  as disqualifying. The gap is deliberate: the two that widened answer a staffer who can see the
+  person and can shake their head, while this count tells the diver "your 3rd dive day" with nobody
+  there to correct it and feeds `visitMilestone`'s exact equality, where a day that moves skips a
+  stamp permanently rather than blurring it. Putting all three behind one predicate is issue #1694.
 - **Milestone stamp** — the drawn double-ring roundel beside the dive record, on the dive days
   `src/lib/visit-milestones.ts` names and no others: the 1st, 10th, 25th, 50th and 100th. Exact
   equality, not "at least", so a miscounted day does not blur a milestone — it skips it permanently.

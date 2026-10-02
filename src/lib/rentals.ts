@@ -320,10 +320,9 @@ export type SizedRentalKind = (typeof SIZED_RENTAL_KINDS)[number];
  * How long a rental-fit text field may be, for **every** writer of
  * `rental_fit_profiles`.
  *
- * There are three, and a domain review found the third after the first two were
- * fixed: the staff fit editor, the diver's gear form on `/ready/[token]`, and
- * the diver's own shelf (`src/app/shelf/[token]/actions.ts`). `confirmRentalFitSize`
- * is a fourth door onto one column.
+ * There are two — the staff fit editor and the diver's gear form on
+ * `/ready/[token]` — and `confirmRentalFitSize` is a third door onto one
+ * column.
  *
  * Written down once because they cannot hold different limits. The
  * staff fit editor is free text — a neoprene-sock fleet records "ML, rock boot

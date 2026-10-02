@@ -178,7 +178,6 @@ const EXPORTED_TABLES = [
 const FOLDED_TABLES = [
   "person_roles", // people.csv / trip_assignments.csv `roles`
   "booking_payments", // bookings.csv payment_* columns
-  "booking_gifts", // bookings.csv gift_* columns — a gift is a fact about the seat
   "booking_referrals", // bookings.csv `referred_by_booking_id`
 ];
 
@@ -226,11 +225,13 @@ const EXCLUDED_TABLES = [
   // exactly the reason notification_delivery_attempts is.
   "waiver_deliveries",
   "notification_send_queue", // operational retry state, not shop records
-  // When each printed sheet was last printed (ADR 20260908-one-hand, decision
-  // 6, lever X). Not a shop record at all: every sheet reads what its page
-  // reads, and the only thing stored is how old the copy on the console is.
-  // There is nothing here another system could act on.
+  // When each printed sheet was last printed. Not a shop record at all, and
+  // nothing writes it since the window sticker, dock sign, boat card and
+  // briefing cards were cut; the table waits for its schema drop.
   "shop_print_runs",
+  // A seat one person bought for another. Nothing writes it since gifting a
+  // dive was cut; the table waits for its schema drop.
+  "booking_gifts",
   // Per-device Web Push credentials (ADR 20260804-manifest-web-push). Excluded
   // for two independent reasons: they are meaningless in another system — an
   // endpoint is issued by a browser vendor to one installed app on one device,

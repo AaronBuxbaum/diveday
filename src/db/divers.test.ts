@@ -2644,8 +2644,8 @@ describe("findSimilarDivers name similarity and exact matching", () => {
  * fly-safe reader cannot disagree about what a dive day is.
  *
  * That rule includes both of the fly-safe reader's escapes, which is what makes
- * this the widest of the four readers of "did this person dive" — the recap's
- * count and the diver's shelf are narrower on purpose, and
+ * this the widest of the three readers of "did this person dive" — the recap's
+ * count is narrower on purpose, and
  * `SimilarDiver.lastDiveDayAt` argues why (issue #1694). The two cases below
  * are the escapes; without them the counter goes quiet on exactly the days a
  * shop's own records disagree with the status column.

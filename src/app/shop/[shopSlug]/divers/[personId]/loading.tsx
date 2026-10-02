@@ -7,7 +7,6 @@ const FILE_DOORS = [
   "certifications",
   "waiver",
   "gear",
-  "shelf",
   "notes",
   "support",
   "activity",
