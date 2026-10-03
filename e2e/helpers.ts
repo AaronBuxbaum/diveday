@@ -311,7 +311,10 @@ export async function openTripTab(page: Page, tab: "Trip" | "Manifest" | "Prep")
  * departure does. English, like every other locator in this suite.
  */
 export function rosterRow(page: Page, diverName: string): Locator {
-  return page.getByRole("region", { name: "Guests" }).locator("li").filter({ hasText: diverName });
+  return page
+    .getByRole("region", { name: "Divers", exact: true })
+    .locator("li")
+    .filter({ hasText: diverName });
 }
 
 const TRIP_ROOT_URL = /\/trips\/[^/?#]+(?:[?#]|$)/;
@@ -660,7 +663,9 @@ export async function openCounterFor(page: Page, shopSlug: string, diverName: st
     .getByRole("link", { name: new RegExp(`check-in for ${escapeRegExp(diverName)}$`) })
     .first()
     .click();
-  await page.waitForURL(new RegExp(`/shop/${shopSlug}/trips/[0-9a-f-]{36}/check-in(\\?.*)?$`));
+  await page.waitForURL(
+    new RegExp(`/shop/${shopSlug}/trips/[0-9a-f-]{36}/check-in(\\?[^#]*)?(#.*)?$`),
+  );
   const tripId = new URL(page.url()).pathname.match(/\/trips\/([0-9a-f-]{36})\//)?.[1];
   if (!tripId) throw new Error(`no trip id in ${page.url()} after opening ${diverName}'s counter`);
   return tripId;

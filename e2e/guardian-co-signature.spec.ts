@@ -1,6 +1,7 @@
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
+  counterPath,
   daysFromNow,
   openDiverFileGroup,
   openPaperWaiverForm,
@@ -156,11 +157,9 @@ test("a namesake parent can co-sign on paper, on the staffer's own attestation",
   };
   if (!blockedMinor) throw new Error("seed-trouble-states found no seat for the demo's minor");
 
-  // By departure rather than by search: the counter re-renders its whole list
-  // when a search lands, which rebuilds the row and closes the form on it
-  // (`check-in.spec.ts` says so at length). Naming the trip puts her row on
-  // screen in one render and keeps it there.
-  await page.goto(`/shop/${SHOP}/check-in?trip=${blockedMinor.tripId}`);
+  // Straight to her departure's Check-in tab, which puts her row on screen in
+  // one render and keeps it there.
+  await page.goto(counterPath(SHOP, blockedMinor.tripId));
   const row = page.locator("article").filter({ hasText: "Lena Fischer" }).filter({ visible: true });
   await expect(row.getByText("Blocked")).toBeVisible();
 

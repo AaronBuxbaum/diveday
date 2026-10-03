@@ -697,5 +697,9 @@
     "e2e": ["check-in.spec.ts", "trip-admission.spec.ts"],
     "visual": ["check-in-walk-in", "check-in-walk-in-notice", "check-in-walk-in-diver"],
     "a11y": ["a11y.spec.ts"]
+  },
+  "/shop/[shopSlug]/print/counter-card": {
+    "e2e": ["counter-card.spec.ts"],
+    "visual": ["paper-counter-card"]
   }
 }

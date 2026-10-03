@@ -105,6 +105,33 @@ export type CheckInQueueRow = {
 };
 
 /**
+ * Whether any departure has someone to check in right now — the arrivals
+ * window `listCheckInQueue` reads, with no query. Today shows its arrival
+ * lookup on this, not on its own spine, so the search is there the evening
+ * before a dawn boat and the afternoon after the last one sailed.
+ */
+export async function hasArrivals(db: AppDb, shopId: string, now: Date = nowDate()) {
+  const arrivals = arrivalsWindow(now);
+  const [row] = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        eq(trips.shopId, shopId),
+        liveTrip(),
+        eq(trips.status, "scheduled"),
+        inArray(bookings.status, ["booked", "checked_in", "no_show"]),
+        gte(trips.startsAt, arrivals.from),
+        lte(trips.startsAt, arrivals.to),
+      ),
+    )
+    .limit(1);
+  return row !== undefined;
+}
+
+/**
  * The counter queue is intentionally a bounded, day-of read: the arrivals lens
  * on the shared operational horizon (`src/lib/operational-window.ts`), never a
  * freestanding window of its own. A scanner that types a booking id into the

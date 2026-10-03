@@ -79,7 +79,7 @@ import { ONBOARDING_EMAIL, SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { publicShopRegisterPath } from "@/lib/public-routes";
 import { RENTABLE_ITEMS, SHOP_CATALOG_ITEMS, toRentableKinds } from "@/lib/rentals";
 import { requireShopSurface } from "@/lib/session";
-import { noticeFromParam, noticeRole } from "@/lib/staff-notices";
+import { noticeFromParam, noticeRole, shopPath } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import {
   type CuratedTimeZone,
@@ -1371,6 +1371,8 @@ export default async function SettingsPage({
               url={`${publicAppUrl() ?? ""}${publicShopRegisterPath(shopSlug)}`}
               title={t("settings.main.counterQr.heading")}
               description={t("settings.main.counterQr.description")}
+              printHref={shopPath(shopSlug, "print", "counter-card")}
+              printLabel={t("print.sheet.door")}
             />
 
             <SettingsRow

@@ -23,6 +23,7 @@ import type { FormNotice } from "@/lib/staff-notices";
 import { primaryBlocker } from "@/lib/today";
 import { counterBlockerDisclosure } from "../blocker-disclosure";
 import { CheckInActionForm } from "../CheckInActionForm";
+import { counterRowId } from "../focus";
 import { RowActionForm } from "../RowActionForm";
 import { NoShowSalvage, type NoShowSalvageCopy, NoShowScript } from "./NoShowScript";
 
@@ -308,7 +309,7 @@ export function CounterQueueRow({
          deactivated — and the Undo beside it is the whole reason the row stays
          on this page instead of vanishing: the diver who walks in as the lines
          come off needs somewhere for a staffer to walk it back. */
-      <LedgerRow as="article" size="lg" pad="lg" closed={closed}>
+      <LedgerRow as="article" id={counterRowId(row.bookingId)} size="lg" pad="lg" closed={closed}>
         <div className={RELEASED_LINE_CLASS}>
           <div className="min-w-0">
             <DiverIdentity
@@ -353,6 +354,7 @@ export function CounterQueueRow({
          beside that tap is the mis-tap this row spent a slice removing. */
       <LedgerRow
         as="article"
+        id={counterRowId(row.bookingId)}
         size="lg"
         // The undo is the row's whole box and pads itself, rule to rule.
         pad="none"
@@ -408,6 +410,7 @@ export function CounterQueueRow({
     return (
       <LedgerRow
         as="article"
+        id={counterRowId(row.bookingId)}
         size="lg"
         // The tap is the row's whole box and pads itself, rule to rule.
         pad="none"
@@ -616,7 +619,7 @@ export function CounterQueueRow({
     </RowActionForm>
   ) : null;
   return (
-    <LedgerRow as="article" size="lg" pad="lg" closed={closed}>
+    <LedgerRow as="article" id={counterRowId(row.bookingId)} size="lg" pad="lg" closed={closed}>
       <div className={STATE_LINE_CLASS}>
         <div className={STATE_LINE_IDENTITY_CLASS}>
           <DiverIdentity

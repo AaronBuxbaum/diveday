@@ -14,3 +14,8 @@ import { shopPath } from "@/lib/staff-notices";
 export function counterQueuePath(shopSlug: string, tripId: string): string {
   return shopPath(shopSlug, "trips", tripId, "check-in");
 }
+
+/** A counter row's anchor, which Today's arrival lookup links straight to. */
+export function counterRowId(bookingId: string): string {
+  return `booking-${bookingId}`;
+}

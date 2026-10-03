@@ -5,7 +5,6 @@ import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice } from "@/components/ShopPageHeader";
-import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import { FIGURE_HERO_CLASS } from "@/components/ui/typography";
 import type {
@@ -450,20 +449,6 @@ export default async function TripCheckInPage({
         timeZone={shop.timezone}
         badge={
           <TripCapacityBadge trip={trip} cancelledLabel={t("trips.detail.cancelledBadge")} t={t} />
-        }
-        // **The counter on paper** (Aaron, 2026-10-03): the departure's packet —
-        // its manifest carries every diver's waiver and readiness state — so a
-        // dead tablet at the desk costs a printer rather than the queue. A
-        // real link, like Today's day packet, so no popup blocker can refuse it.
-        actions={
-          <Link
-            href={shopPath(shopSlug, "trips", tripId, "print")}
-            target="_blank"
-            rel="noreferrer"
-            className={buttonClass({ variant: "secondary", size: "sm" })}
-          >
-            {t("trips.about.printPacket")}
-          </Link>
         }
         // **Say it before the tap, not after.** The counter is live-only —
         // the boat has an encrypted device copy and this does not — so a

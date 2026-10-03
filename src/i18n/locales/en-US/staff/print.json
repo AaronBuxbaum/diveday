@@ -8,6 +8,10 @@
       "show": "Show this at the counter, or say your name.",
       "code": "The code is your booking and nothing else.",
       "beAtDock": "Be at the dock by {time}"
+    },
+    "counterCard": {
+      "heading": "New here? Scan this.",
+      "body": "Register from your phone while you wait: your name, certification and sizes."
     }
   },
   "counter": {

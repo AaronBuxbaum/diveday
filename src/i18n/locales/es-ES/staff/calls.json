@@ -9,7 +9,7 @@
   "departureUnchosen": "Elige una salida",
   "departureFull": "{title} · {date} · {time} · llena",
   "noDepartures": "No hay ninguna salida llena, así que no hay lista de espera a la que apuntarse.",
-  "interestLabel": "Por qué preguntó",
+  "interestLabel": "Sobre qué preguntó",
   "interestPlaceholder": "Dos tanques en el arrecife en marzo",
   "preferredDateLabel": "Día que quiere",
   "diversLabel": "Cuántos buceadores",
@@ -22,7 +22,7 @@
     "reply": "Toma un correo o un teléfono, o nadie podrá devolverle la llamada.",
     "email": "Una entrada en lista de espera necesita un correo: por ahí se ofrece una plaza que se libera.",
     "departure": "Elige la salida por la que preguntó.",
-    "interest": "Di por qué preguntó.",
+    "interest": "Di sobre qué preguntó.",
     "logged": "Llamada anotada."
   }
 }

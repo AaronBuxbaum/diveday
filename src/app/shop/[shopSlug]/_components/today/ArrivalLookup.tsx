@@ -4,8 +4,9 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { CheckInQueueRow } from "@/db/check-in";
 import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { formatTime } from "@/lib/format";
+import { formatWeekdayTime } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
+import { counterRowId } from "../../trips/[id]/check-in/focus";
 import { ArrivalSearch } from "./ArrivalSearch";
 
 /**
@@ -56,7 +57,7 @@ export function ArrivalLookup({
               {rows.map((row) => (
                 <LedgerRow
                   key={row.bookingId}
-                  href={shopPath(shopSlug, "trips", row.tripId, "check-in")}
+                  href={`${shopPath(shopSlug, "trips", row.tripId, "check-in")}#${counterRowId(row.bookingId)}`}
                   linkLabel={t("shopHome.arrivals.open", {
                     name: row.personName,
                     trip: row.tripTitle,
@@ -76,7 +77,7 @@ export function ArrivalLookup({
                   <div className="min-w-0">
                     <p className={`${SECTION_TITLE_CLASS} break-words`}>{row.personName}</p>
                     <p className="text-sm text-muted tabular-nums">
-                      {formatTime(row.startsAt, locale, timeZone)} · {row.tripTitle}
+                      {formatWeekdayTime(row.startsAt, locale, timeZone)} · {row.tripTitle}
                     </p>
                   </div>
                 </LedgerRow>

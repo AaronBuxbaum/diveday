@@ -35,7 +35,6 @@ const OTHER_SHOP_DIVER = "Priya Sharma";
 const STAFF_PATHS = [
   "",
   "/divers",
-  "/check-in",
   "/waivers",
   "/orders",
   "/schedule/board",
@@ -107,7 +106,6 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
   await expect(page.getByRole("link", { name: OTHER_SHOP_NAME }).first()).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Main", exact: true })).toHaveCount(0);
   await expect(page.getByRole("link", { name: "Not ready" })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Check-in" })).toHaveCount(0);
 
   // A real Blue Mantis trip id, read off that same public page — the strongest
   // form of the check, since a trip-scoped staff route is handed a genuinely
@@ -126,7 +124,8 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
     ...STAFF_PATHS,
     `/trips/${tripId}`,
     `/trips/${tripId}/manifest`,
-    `/trips/${tripId}/guests`,
+    `/trips/${tripId}/check-in`,
+    `/trips/${tripId}/check-in/walk-in`,
   ]) {
     const path = `/shop/blue-mantis${suffix}`;
     await page.goto(path);
@@ -206,13 +205,13 @@ test("a mistyped id in a staff path segment is a 404, never a 500", async ({ pag
     "/shop/blue-mantis/orders/nope",
     "/shop/blue-mantis/trips/nope",
     "/shop/blue-mantis/trips/nope/manifest",
-    "/shop/blue-mantis/trips/nope/guests",
+    "/shop/blue-mantis/trips/nope/check-in",
     "/shop/blue-mantis/trips/nope/prep",
     "/shop/blue-mantis/trips/nope/log",
     "/shop/blue-mantis/divers/nope",
     "/shop/blue-mantis/dive-sites/nope",
     "/shop/blue-mantis/bookings/new/nope",
-    "/shop/blue-mantis/check-in/walk-in/nope",
+    "/shop/blue-mantis/trips/nope/check-in/walk-in",
     "/shop/blue-mantis/schedule/blowout/nope",
   ]) {
     const response = await page.goto(path);

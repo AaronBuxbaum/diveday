@@ -26,7 +26,7 @@ import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { inHorizonReadiness } from "@/db/blockers";
-import { listCheckInQueue } from "@/db/check-in";
+import { hasArrivals, listCheckInQueue } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { getDayCloseout, listHeadCountCloses, shopHasSailedBefore } from "@/db/closeout";
 import { listDiveSites } from "@/db/dive-sites";
@@ -427,9 +427,10 @@ async function TodayBody({
   );
   const { actions, withheldCount, nextDeparture, crewedTripIds, crewedSessions } = work;
   const spine = assembleDaySpine(work, tomorrowWork);
-  const arrivalRows = arrivalQuery
-    ? await listCheckInQueue(db, shop.id, { query: arrivalQuery, now })
-    : [];
+  const [arrivalRows, counterOpen] = await Promise.all([
+    arrivalQuery ? listCheckInQueue(db, shop.id, { query: arrivalQuery, now }) : [],
+    arrivalQuery ? true : hasArrivals(db, shop.id, now),
+  ]);
   // **The day's closing state** (H-62; ADR 20260827-clearwater-surface-language,
   // decision 4). `/close-out` is a 308 to this page now, and its reader came
   // here with it — unchanged, including the trail it appends to.
@@ -995,9 +996,9 @@ async function TodayBody({
         : null}
 
       {/* The desk's first question when a diver walks up — which boat? —
-          over every departure the counter is open for. Only on a day with a
-          boat, or while a lookup is open. */}
-      {arrivalQuery || spine.stations.length > 0 ? (
+          over every departure the counter is open for. Only while some boat
+          has someone to check in, or while a lookup is open. */}
+      {counterOpen ? (
         <ArrivalLookup
           query={arrivalQuery}
           rows={arrivalRows}

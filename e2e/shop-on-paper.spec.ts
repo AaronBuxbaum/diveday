@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures";
+import { openCounterFor } from "./helpers";
 
 /**
  * Every test here mints a shop of its own and signs in live, and that setup
@@ -22,7 +23,8 @@ test.describe("the shop on paper", () => {
     page,
     privateShop,
   }) => {
-    await page.goto(`/shop/${privateShop.slug}/check-in`);
+    // A boat inside the counter's window, found the way the desk finds one.
+    await openCounterFor(page, privateShop.slug, "Diego Alvarez");
 
     // Check one diver in, so the settled group has a row with a pass door.
     const checkIn = page.getByRole("button", { name: /^Check in / }).first();

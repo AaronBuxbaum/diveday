@@ -119,7 +119,7 @@ test.describe("staff", () => {
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, title);
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
-    // The roster lives on the Guests tab now.
+    // The roster lives on the trip page.
     await expect(page.getByText("Nora Quinn").first()).toBeVisible();
     await expect(page.getByText("Sam Quinn").first()).toBeVisible();
     // Removing a booking confirms first — it can fire an automatic refund that

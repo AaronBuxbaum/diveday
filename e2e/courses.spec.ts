@@ -1107,7 +1107,7 @@ test.describe("the course editor over a wander through the app", () => {
     await settle();
     await goBySearch("Divers");
     await settle();
-    await goBySearch("Check-in");
+    await goBySearch("Crew schedule");
     await settle();
 
     // Back the way a person would come back: through the search, not history.

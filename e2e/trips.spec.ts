@@ -303,7 +303,7 @@ test.describe("trip print packet", () => {
     await expect(popup.getByRole("heading", { name: "Manifest", exact: true })).toHaveCount(1);
     await expect(popup.getByRole("heading", { name: "Prep", exact: true })).toHaveCount(1);
     await expect(popup.getByRole("heading", { name: "Overview", exact: true })).toHaveCount(0);
-    await expect(popup.getByRole("heading", { name: "Guests", exact: true })).toHaveCount(0);
+    await expect(popup.getByRole("heading", { name: "Divers", exact: true })).toHaveCount(0);
 
     // **And the roster's names reach the paper.** A roll-call person is the
     // one button the packet prints on purpose (`data-print-content`): its

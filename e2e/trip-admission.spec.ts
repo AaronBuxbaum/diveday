@@ -163,7 +163,7 @@ test.describe("as owner", () => {
     ).toBeEnabled();
   });
 
-  test("the Guests tab names the level the charter wants and the level the diver holds", async ({
+  test("the Divers tab names the level the charter wants and the level the diver holds", async ({
     page,
   }) => {
     const tripId = await seededTripId(page, "blue-mantis", ADVANCED_CHARTER);
@@ -247,9 +247,9 @@ test.describe("as owner", () => {
   test("the counter collapses the same refusal to one blunt line and carries no gate detail", async ({
     page,
   }) => {
-    // The walk-in picker only offers today's and tomorrow's boats, so the
-    // counter's own case needs a same-day departure — the shape
-    // check-in.spec.ts's full-boat refusal already uses.
+    // A same-day departure, so the counter's own case is a boat inside its
+    // arrivals window — the shape check-in.spec.ts's full-boat refusal
+    // already uses.
     test.setTimeout(30_000);
     const title = `Counter Gate ${e2eNow().getTime()}`;
     await createTrip(page, {
@@ -270,7 +270,7 @@ test.describe("as owner", () => {
     await page.getByRole("button", { name: "Save requirements" }).click();
     await expect(page.getByRole("status")).toContainText("Trip readiness requirements updated.");
 
-    await page.goto(`/shop/blue-mantis/check-in/walk-in/${tripId}?diverq=Diego+Alvarez`);
+    await page.goto(`/shop/blue-mantis/trips/${tripId}/check-in/walk-in?diverq=Diego+Alvarez`);
     await page.getByRole("button", { name: "Add Diego Alvarez to this boat" }).click();
 
     // The counter names the gate now, on the form that produced the refusal,
@@ -279,7 +279,7 @@ test.describe("as owner", () => {
     // the moment they had least time to go there. The structured detail rides a
     // signed `?gate=` bound to the departure in this route's own path, so the
     // banner can say which card is missing and what the diver holds.
-    await expect(page).toHaveURL(new RegExp(`/check-in/walk-in/${tripId}\\?`));
+    await expect(page).toHaveURL(new RegExp(`/trips/${tripId}/check-in/walk-in\\?`));
     await expect(
       page.getByText(/Advanced Open Water|certifications on file|certifications don’t reach/),
     ).toBeVisible();

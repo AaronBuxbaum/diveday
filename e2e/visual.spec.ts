@@ -7816,6 +7816,15 @@ test.describe("print", () => {
     await page.getByText("Show this at the counter, or say your name.").waitFor();
     await capturePrint(page, "paper-pass");
   });
+
+  // **The counter card on paper** — the sign a shop stands on its desk. Its
+  // code is the shop's public register address, the same on every seed, so
+  // the capture is deterministic without a pinned id.
+  test("the counter card prints A6 with the register code", async ({ page }) => {
+    await page.goto("/shop/blue-mantis/print/counter-card");
+    await page.getByRole("heading", { name: "New here? Scan this." }).waitFor();
+    await capturePrint(page, "paper-counter-card");
+  });
 });
 
 /**

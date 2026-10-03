@@ -595,8 +595,11 @@ export function LedgerRow({
   closed = true,
   stacked = false,
   as: Tag = "li",
+  id,
   className = "",
 }: {
+  /** An anchor a link elsewhere can land on (a counter row from Today's lookup). */
+  id?: string;
   /** An 18px drawn glyph. Omitted for plain rows. */
   leading?: ReactNode;
   /** The row's kind, in the row's own type. */
@@ -643,6 +646,7 @@ export function LedgerRow({
 } & LedgerRowDoor) {
   return (
     <Tag
+      id={id}
       className={`relative flex items-center gap-3 ${
         closed ? ledgerRowBoxClass : ledgerRowOpenBoxClass
       } ${ROW_PAD[pad]} ${

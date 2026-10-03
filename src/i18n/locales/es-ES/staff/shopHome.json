@@ -188,7 +188,7 @@
   "quietNextDepartureLabel": "Próxima salida",
   "arrivals": {
     "label": "Buscar a un buceador que llega",
-    "placeholder": "Nombre, correo o ID de reserva",
+    "placeholder": "Nombre, teléfono, correo o ID de reserva",
     "none": "Nadie de los que llegan coincide con “{query}”.",
     "resultsFor": "Buceadores que llegan y coinciden con “{query}”",
     "open": "Abrir el registro de {trip} para {name}"

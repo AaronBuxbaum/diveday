@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { SelectedTripCard } from "@/components/seat-diver/SelectedTripCard";
@@ -8,10 +8,13 @@ import { getTripWithBooked } from "@/db/trips";
 import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
+import { arrivalsWindow } from "@/lib/operational-window";
 import { requireShopSurface } from "@/lib/session";
 import { noticeFromParam, noticeRole, shopPath } from "@/lib/staff-notices";
 import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
+import { hasSailed } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { SeatDiverPanel } from "../../../../_components/SeatDiverPanel";
 
@@ -101,6 +104,18 @@ export default async function WalkInDiverPage({
 
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (trip?.status !== "scheduled") notFound();
+  const counter = shopPath(shopSlug, "trips", trip.id, "check-in");
+  // The door is drawn only while the counter is open for this boat and it has
+  // not sailed; a typed URL outside that lands on the tab, which says why.
+  const now = nowDate();
+  const arrivals = arrivalsWindow(now);
+  if (
+    trip.startsAt < arrivals.from ||
+    trip.startsAt > arrivals.to ||
+    hasSailed(trip.startsAt, now)
+  ) {
+    redirect(counter);
+  }
   const query = diverq?.trim() ?? "";
   const candidates = await listBookableDivers(db, shop.id, trip.id, { query });
   const banner = noticeFromParam(notice, NOTICE_KEYS);
@@ -108,7 +123,6 @@ export default async function WalkInDiverPage({
     notice === "walkin-trip-prerequisite"
       ? verifyTripAdmissionGate(gate, { kind: "trip", id: tripId })
       : null;
-  const counter = shopPath(shopSlug, "trips", trip.id, "check-in");
 
   return (
     <div className="max-w-2xl">
