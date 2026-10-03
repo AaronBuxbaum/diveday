@@ -214,8 +214,9 @@ describe("the trip page's order", () => {
    * one `space-y-10` now, and none carries a margin of its own.
    */
   it("stacks every section from the day's run to the contact line 40px apart", () => {
-    const opening =
-      '<div className="mt-10 space-y-10 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10 lg:space-y-0">';
+    // From `lg` the stack is `contents` of the page's two-column grid, so its
+    // sections are that grid's left-column cells.
+    const opening = '<div className="mt-10 space-y-10 lg:contents lg:space-y-0">';
     const stack = positionOf(opening);
     expect(stack).toBeGreaterThan(-1);
     // The stack opens directly on the day's run, and holds everything to the

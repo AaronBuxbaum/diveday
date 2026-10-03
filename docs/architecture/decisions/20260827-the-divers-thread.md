@@ -182,5 +182,5 @@ lose. The step grammar lives inside one sheet instead.
 and on every other thread page, but on the trip page at 1280 it put the booking form about 1,500px
 down, the last thing a diver reached. From `lg` the trip page widens to `max-w-5xl`: the reading
 runs down a left column in decision 2's order and the form, with the contact line, stands in a
-22rem right column level with the day. The source order is unchanged, so a phone and a screen
+25rem right column level with the title; the left column keeps the 528px it always had. The source order is unchanged, so a phone and a screen
 reader still meet the form last. Requested in the "marketing and untouched pages" review.
