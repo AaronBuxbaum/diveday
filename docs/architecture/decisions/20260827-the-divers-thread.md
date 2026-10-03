@@ -82,9 +82,9 @@ at `?booked=1` — all-set settles into a plain success-ink line, because "paper
 waiver page's completed state (decision 6) and one moment does not fire twice; the receipt, the
 emails line and the per-row "Done" states collapse
 into their steps. Party seats, self-cancel and the shop card keep their places at the foot.
-Recency, the note, hotel pickup and the support-needs question
-(ADR 20260827-support-needs-are-a-record-about-the-dive) fold into Day-of details; support needs
-stays optional and never gates the step's settling.
+Recency, the note and hotel pickup fold into Day-of details. *(Amended 2026-10-03: a
+support-needs question also folded in here; it was removed at the owner's request during the Divers
+page cleanup, and ADR 20260827-support-needs-are-a-record-about-the-dive is deprecated.)*
 
 ### 4. After the dive, the same link (the after-state)
 
@@ -177,3 +177,10 @@ lose. The step grammar lives inside one sheet instead.
   net every slice must keep green.
 - `surfaces.md` gains entries for the trip page (public), the thread, and the waiver; the recap's
   entry is the thread's after-state paragraph.
+
+**Amended 2026-10-03: the trip page widens on a desktop.** Decision 1's measure holds on a phone
+and on every other thread page, but on the trip page at 1280 it put the booking form about 1,500px
+down, the last thing a diver reached. From `lg` the trip page widens to `max-w-5xl`: the reading
+runs down a left column in decision 2's order and the form, with the contact line, stands in a
+25rem right column level with the title; the left column keeps the 528px it always had. The source order is unchanged, so a phone and a screen
+reader still meet the form last. Requested in the "marketing and untouched pages" review.

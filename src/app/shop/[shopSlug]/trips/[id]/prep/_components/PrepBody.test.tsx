@@ -11,7 +11,6 @@ import {
   type PrepGrouping,
   type RentalFit,
 } from "@/lib/dive-prep";
-import type { SupportNeeds } from "@/lib/support-needs";
 import { rendersFlush } from "@/test/button-flush";
 import { PrepBody } from "./PrepBody";
 
@@ -195,20 +194,6 @@ function fit(overrides: Partial<RentalFit> = {}): RentalFit {
   };
 }
 
-const LIFT_AND_BOARDING: SupportNeeds = {
-  supportDiversNeeded: null,
-  supportDiversProvidedBy: null,
-  needsBoardingAssistance: true,
-  needsWaterLift: true,
-  briefingInSign: false,
-  briefingInWriting: false,
-  briefingAloud: false,
-  briefingBySignals: false,
-  equipmentAdaptation: null,
-  divesWithName: null,
-  statedAt: STATED,
-};
-
 function diver(n: number, fullName: string, rest: Partial<PrepDiver> = {}): PrepDiver {
   return {
     bookingId: `b${n}`,
@@ -224,8 +209,7 @@ function diver(n: number, fullName: string, rest: Partial<PrepDiver> = {}): Prep
 
 /**
  * **A departure that opens every panel the list has**: a nitrox blocker, a
- * partial fit, a never-asked diver, a hands-on fit, a support arrangement, a
- * hotel pickup, a shared rental line, a diver dry for five years and an
+ * partial fit, a never-asked diver, a hands-on fit, a hotel pickup, a shared rental line, a diver dry for five years and an
  * assigned unit. The geometry below is about how each of those is drawn, so
  * each one has to be on the page.
  */
@@ -257,7 +241,7 @@ function everyPanelPrep(): TripPrep {
         fit: fit({ rentsBcd: true, bcdSize: "L", rentsWeights: true }),
       }),
       diver(4, "Theo Lindqvist"),
-      diver(5, "Nadia Petrov", { wantsNitrox: true, supportNeeds: LIFT_AND_BOARDING }),
+      diver(5, "Nadia Petrov", { wantsNitrox: true }),
     ],
     plannedDives: 2,
     divingCrew: ["Keiko Tanaka"],
@@ -352,8 +336,8 @@ describe("the packing list's geometry", () => {
     const { container } = renderPrep(everyPanelPrep(), { notice: "gear-assigned" });
     const stack = container.firstElementChild;
     expect(stack).toHaveClass(STACK);
-    // Tanks, nitrox, sizes, staff fit, support, pickups, kit, banner, assignments.
-    expect(stack?.children.length).toBe(9);
+    // Tanks, nitrox, sizes, staff fit, pickups, kit, banner, assignments.
+    expect(stack?.children.length).toBe(8);
     for (const section of stack?.children ?? []) {
       expect(tokens(section).filter((token) => /^mt-/.test(token))).toEqual([]);
     }
@@ -363,12 +347,8 @@ describe("the packing list's geometry", () => {
     const { container } = renderPrep(everyPanelPrep());
     const lead = byText(container, t("tripPrep.missingSizesNobodyAskedLead"));
     const neverAsked = within(lead.nextElementSibling as HTMLElement).getAllByRole("link");
-    const support = diverLinks(container).filter((link) =>
-      link.getAttribute("href")?.endsWith("#support"),
-    );
     expect(neverAsked.map((link) => link.textContent)).toEqual(["Theo Lindqvist", "Nadia Petrov"]);
-    expect(support.map((link) => link.textContent)).toEqual(["Nadia Petrov"]);
-    for (const link of [...neverAsked, ...support]) {
+    for (const link of neverAsked) {
       // The 44px floor, and the (44 − 20) / 2 handed back above and below, so
       // the 20px line the name sits on does not grow to 44.
       expect(tokens(link)).toEqual(expect.arrayContaining(["inline-flex", "min-h-11", "-my-3"]));
@@ -394,13 +374,10 @@ describe("the packing list's geometry", () => {
     const neverAsked = within(
       byText(byItem, t("tripPrep.missingSizesNobodyAskedLead")).nextElementSibling as HTMLElement,
     ).getAllByRole("link");
-    const support = diverLinks(byItem).filter((link) =>
-      link.getAttribute("href")?.endsWith("#support"),
-    );
     const byDiver = renderPrep(everyPanelPrep(), { grouping: "diver" }).container;
     const carmen = diverLinks(byDiver).filter((link) => link.textContent === "Carmen Ruiz");
     expect(carmen).toHaveLength(2);
-    for (const link of [...neverAsked, ...support, ...carmen]) {
+    for (const link of [...neverAsked, ...carmen]) {
       // A 44px floor with a fixed give-back is right only for a name on one
       // line: wrapped, the box outgrows the floor, the margin still hands back
       // the same, and the second line hangs over the dive-recency note under
@@ -498,8 +475,8 @@ describe("the packing list's geometry", () => {
   it("titles every section at the one size a card's own title has (K-151)", () => {
     const { container } = renderPrep(everyPanelPrep(), { notice: "gear-assigned" });
     const headings = container.querySelectorAll("h2");
-    // Tanks, nitrox, sizes, staff fit, support, pickups, kit, assignments.
-    expect(headings).toHaveLength(8);
+    // Tanks, nitrox, sizes, staff fit, pickups, kit, assignments.
+    expect(headings).toHaveLength(7);
     for (const heading of headings) {
       expect(tokens(heading), heading.textContent ?? "").toEqual(
         expect.arrayContaining(LEAD_TITLE_CLASS.split(" ")),
@@ -614,14 +591,6 @@ describe("the packing list's geometry", () => {
       const between = [...cell.childNodes].filter((node) => node.nodeType === Node.TEXT_NODE);
       expect(between.map((node) => node.textContent)).toEqual([" "]);
     }
-  });
-
-  it("sets a diver's support facts apart from each other, so a wrapped fact reads as one (K-366)", () => {
-    const { container } = renderPrep(everyPanelPrep());
-    const link = diverLinks(container).find((a) => a.getAttribute("href")?.endsWith("#support"));
-    const facts = link?.parentElement?.querySelector("ul");
-    expect(facts?.children.length).toBeGreaterThan(1);
-    expect(tokens(facts)).toContain("gap-1");
   });
 
   it("floors the by-item table at a width a 768px tablet holds without scrolling (K-506)", () => {

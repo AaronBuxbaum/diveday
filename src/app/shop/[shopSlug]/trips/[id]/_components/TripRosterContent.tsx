@@ -397,6 +397,7 @@ export function TripRosterContent({
                 requirement={dealRequirement}
                 course={courseTarget}
                 openSeats={spotsRemaining({ capacity: trip.capacity, booked: trip.booked })}
+                hasWaitlist={waitlist.length > 0}
                 cancelled={cancelled}
                 promos={lastMinute.promos}
                 promoRecipients={lastMinute.promoRecipients}

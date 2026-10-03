@@ -22,21 +22,6 @@ export async function seedRentalFit(
         boot: string | null;
         fin: string | null;
         weights?: string;
-        /**
-         * **This diver is in a drysuit** (issue 1414). Its own size, on the
-         * drysuit grid rather than the wetsuit's, and it turns `rents_wetsuit`
-         * off with it: a diver who takes the shop's drysuit does not also take
-         * its wetsuit, and a shop holds no wetsuit size for a piece it is not
-         * handing them.
-         *
-         * The seed carried none until issue #1727, so the two rows a crew
-         * reads about a drysuit diver on the morning of a departure had never
-         * been rendered by a test or photographed: the sized drysuit piece with
-         * no boots line beside it, and the weights line that deliberately shows
-         * no number because a stated weighting is a wetsuit answer and a
-         * drysuit needs two to four kilos more (`src/lib/dive-prep.ts`).
-         */
-        drysuit?: string;
         ownsRegulator?: boolean;
         /**
          * This diver brings the whole kit. Every `rents_*` column goes false,
@@ -54,14 +39,7 @@ export async function seedRentalFit(
     ]
   > = [
     [0, { bcd: "S", wetsuit: "S", boot: "6", fin: "S", weights: "6 kg" }],
-    // **The drysuit diver** (issues 1414 and #1727). Tom Okafor: on today's reef
-    // departure, so the prep list's drysuit and weight-check rows are on the
-    // captured page; fully recorded otherwise, so his row says one thing and
-    // not two; and named by no other seed or spec that reads his sizes, so this
-    // moves the baselines it is about and no others. His stated weighting stays
-    // on the record and is suppressed on the packing line, which is the whole
-    // behaviour worth looking at.
-    [1, { bcd: "L", wetsuit: null, boot: "11", fin: "L", weights: "8 kg", drysuit: "ML" }],
+    [1, { bcd: "L", wetsuit: "L", boot: "11", fin: "L", weights: "8 kg" }],
     // A diver with their own reg — the prep list has to leave it off.
     [3, { bcd: "L", wetsuit: "M", boot: "10", fin: "M", ownsRegulator: true }],
     [4, { bcd: "S", wetsuit: "S", boot: "7", fin: "S", weights: "5 kg" }],
@@ -120,13 +98,11 @@ export async function seedRentalFit(
         personId: person.id,
         rentsBcd: !fit.ownsEverything,
         rentsRegulator: !fit.ownsRegulator && !fit.ownsEverything,
-        rentsWetsuit: !fit.ownsEverything && !fit.drysuit,
+        rentsWetsuit: !fit.ownsEverything,
         rentsMaskFins: !fit.ownsEverything,
         rentsWeights: !fit.ownsEverything,
-        rentsDrysuit: Boolean(fit.drysuit),
         bcdSize: fit.bcd,
         wetsuitSize: fit.wetsuit,
-        drysuitSize: fit.drysuit ?? null,
         bootSize: fit.boot,
         finSize: fit.fin,
         weightPreference: fit.weights ?? null,

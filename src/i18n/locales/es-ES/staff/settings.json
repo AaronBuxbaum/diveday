@@ -314,7 +314,7 @@
       "description": "Imprímela y ponla en el mostrador. Quien llegue sin reserva la escanea, indica su nombre, certificación y tallas, y se le envía la exención, todo antes de llegar al frente de la cola."
     },
     "integrations": {
-      "heading": "Shopify, QuickBooks, Xero y Zapier"
+      "heading": "Integraciones del centro"
     },
     "trial": {
       "heading": "Tu prueba",
@@ -577,7 +577,13 @@
     "unassigned": "Sin tripulación registrada"
   },
   "import": {
-    "title": "Importar contactos",
+    "title": "Importar",
+    "tabs": {
+      "label": "Qué importar",
+      "divers": "Buceadores",
+      "gear": "Historial del equipo",
+      "diveSites": "Sitios de buceo"
+    },
     "comingFrom": "¿Vienes de <eve>EVE</eve>, <diveshop360>DiveShop360</diveshop360>, o de <spreadsheet>una hoja de cálculo</spreadsheet>? Consulta la guía correspondiente y vuelve aquí para importar.",
     "notice": {
       "notAuthorized": "La importación escribe datos personales y médicos de los buceadores, así que está limitada a propietarios y gerentes."
@@ -959,6 +965,6 @@
     "code": "Código de inserción",
     "partnerLinkField": "Enlace de referido",
     "showRequired": "Elige la salida de esta tarjeta.",
-    "fromFareharbor": "¿Vienes de FareHarbor? <link>Cada una de sus inserciones tiene aquí su equivalente</link>."
+    "fromFareharbor": "¿Te cambias desde FareHarbor? <link>Mira qué inserción sustituye a cada uno de sus widgets</link>."
   }
 }

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoices";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
@@ -14,7 +13,6 @@ import { motionMs } from "@/lib/motion";
 
 export type ShopIdentityMenuCopy = {
   boatMode: string;
-  calendar: string;
   language: string;
   signOut: string;
   signOutConfirm: string;
@@ -40,9 +38,9 @@ export type ShopIdentityMenuCopy = {
  *
  * **Settings left again, for the nav** (ADR 20261001-logbook): it has its own
  * row at the sidebar's foot, and a second door here would be the duplicate
- * control principle 8 forbids. What leads the menu now is the one shop page
- * that belongs to the reader — their own calendar subscription — above the
- * rule, apart from the language and the way out.
+ * control principle 8 forbids. The reader's calendar subscription left for the
+ * same reason (Aaron, 2026-10-03): it is a row in Settings' Account group and
+ * in ⌘K, so the menu opens on the language.
  *
  * The sign-out itself keeps its two-tap `InlineConfirm` (task 81): an undo
  * banner is not safe here, because its grace window would keep the session
@@ -58,7 +56,6 @@ export function shopInitials(name: string): string {
 export function ShopIdentityMenu({
   shopName,
   logoUrl,
-  calendarHref,
   signOutAction,
   locale,
   languages,
@@ -67,8 +64,6 @@ export function ShopIdentityMenu({
 }: {
   shopName: string;
   logoUrl?: string;
-  /** This reader's own calendar subscription, the one shop page that is theirs. */
-  calendarHref?: string;
   signOutAction: () => Promise<void>;
   /** The language this render was written in — the one marked as in force. */
   locale: string;
@@ -160,21 +155,14 @@ export function ShopIdentityMenu({
       </button>
       {mounted ? (
         // The shared menu panel and its rows (`ui/menu.ts`): a `p-1` panel
-        // whose rows nest in its corner, and one tick gutter that the calendar row,
+        // whose rows nest in its corner, and one tick gutter that
         // the LANGUAGE label, the language names and Sign out all start
         // their words on. The rows are not `buttonClass`, whose `rounded-lg`
         // would beat the nested corner in the stylesheet.
         <div
           className={`absolute top-full left-0 z-10 mt-2 min-w-44 ${MENU_PANEL} ${closing ? "animate-scale-out" : "animate-scale-in"}`}
         >
-          {calendarHref ? (
-            <div className="border-b border-border pb-1">
-              <Link href={calendarHref} onClick={close} className={menuRowClass("quiet")}>
-                {copy.calendar}
-              </Link>
-            </div>
-          ) : null}
-          <div className="pt-1">
+          <div>
             <GroupLabel className={MENU_TICK_GUTTER}>{copy.language}</GroupLabel>
             <div className="mt-1">
               <LanguageChoices

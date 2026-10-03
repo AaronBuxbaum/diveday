@@ -9,6 +9,15 @@
       "1920": 1102
     }
   },
+  "src/app/s/[shopSlug]/_components/ShopfrontHero.tsx :: (min-width: 1152px) 760px, (min-width: 1024px) 62vw, 100vw": {
+    "measured": "2026-10-03, /s/blue-mantis",
+    "rendered": {
+      "390": 356,
+      "768": 718,
+      "1280": 758,
+      "1920": 758
+    }
+  },
   "src/app/s/[shopSlug]/_components/CoursesShelf.tsx :: (min-width: 1024px) 22rem, (min-width: 640px) 50vw, 100vw": {
     "measured": "2026-09-04, /s/blue-mantis",
     "rendered": {

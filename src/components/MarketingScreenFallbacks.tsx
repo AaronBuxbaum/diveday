@@ -51,6 +51,10 @@ const MOCK_PRIMARY_BUTTON =
  * where `justify-between` spreads them: the landing hero's phone holds the
  * pair with 9px to spare, and a 12px floor broke it onto two lines.
  */
+/** The mocks' secondary button, the primary's twin in the bordered material. */
+const MOCK_SECONDARY_BUTTON =
+  "inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-surface text-xs font-semibold text-foreground";
+
 function AppBar({ label, inset = MOCK_INSET_X }: { label: string; inset?: string }) {
   return (
     <div
@@ -73,44 +77,66 @@ function AppBar({ label, inset = MOCK_INSET_X }: { label: string; inset?: string
  * "Tanks analyzed & loaded" needed at 390, and a row that had fitted wrapped
  * to start its second line with "&" (K-578 review).
  */
-function ChecklistRow({ label, status, tone }: { label: string; status: string; tone: string }) {
+function ChecklistRow({
+  label,
+  status,
+  tone,
+  mark = true,
+}: {
+  label: string;
+  status: string;
+  tone: string;
+  /** The done-check, only on a step that is done. */
+  mark?: boolean;
+}) {
   return (
     <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-surface px-4 py-2.5">
       <span className="min-w-0 text-sm font-semibold text-pretty">{label}</span>
       <span
         className={`inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium ${tone}`}
       >
-        <DiveDayIcon name="check" className="size-3" strokeWidth={2.2} /> {status}
+        {mark ? <DiveDayIcon name="check" className="size-3" strokeWidth={2.2} /> : null} {status}
       </span>
     </div>
   );
 }
 
+/**
+ * **The captain's saved copy, drawn small** — `OfflineManifestView`, the roll
+ * call a phone keeps once the boat is out of signal. It wears Boat mode
+ * (`.boat-mode`), as the real page does, and carries what that page carries:
+ * the "Saved" time in the corner, three counts (Divers, Boarded, Awaiting),
+ * the checkpoint's heading, and a row per diver with its "when saved" word
+ * and the two verbs. The home and product notes quote these words, so a
+ * change to the real page is a change here and to those notes.
+ */
 export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
   return (
-    <div className="bg-background">
-      <AppBar label={t("fallback.offlineCopy")} inset={PHONE_INSET_X} />
+    <div className="boat-mode bg-background text-foreground">
+      <AppBar label={t("fallback.savedAt")} inset={PHONE_INSET_X} />
       <div className={`space-y-4 ${PHONE_BODY}`}>
         <div>
-          <p className={groupLabelClass("primary")}>{t("fallback.boatManifest")}</p>
+          <p className={groupLabelClass("primary")}>{t("fallback.offlineManifest")}</p>
           <h3 className={`mt-1 ${SECTION_TITLE_CLASS}`}>{t("fallback.tripName")}</h3>
           <p className="text-xs text-muted">{t("fallback.tripTime")}</p>
         </div>
-        <div className="grid grid-cols-3 gap-2 text-center">
+        <div className="grid grid-cols-3 gap-2">
           {[
             [t("fallback.diversLabel"), "9"],
-            [t("fallback.readyLabel"), "7"],
             [t("fallback.boardedLabel"), "4"],
+            [t("fallback.awaitingLabel"), "5"],
           ].map(([label, value]) => (
             <div key={label} className="rounded-lg border border-border bg-surface p-2">
-              <p className="text-[10px] font-medium text-muted uppercase">{label}</p>
+              <p className="text-[11px] font-semibold text-muted hyphens-auto wrap-break-word">
+                {label}
+              </p>
               <p className={`mt-0.5 ${FIGURE_INLINE_CLASS}`}>{value}</p>
             </div>
           ))}
         </div>
         <div>
-          <h3 className="text-sm font-semibold">{t("fallback.rollCall")}</h3>
+          <h3 className="text-sm font-semibold">{t("fallback.rollCallHeading")}</h3>
           <div className="mt-2 space-y-2">
             {/* i18n-exempt: sample diver names used only in marketing mockups */}
             {["Priya Sharma", "Tom Okafor"].map((name) => (
@@ -118,13 +144,24 @@ export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
                 key={name}
                 className="marketing-roll-call-row rounded-lg border border-border bg-surface p-3"
               >
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-semibold">{name}</p>
-                    <p className="text-xs text-success">{t("fallback.readyToBoard")}</p>
-                  </div>
-                  <button type="button" disabled className={MOCK_PRIMARY_BUTTON}>
+                <p className="text-sm font-semibold">{name}</p>
+                <p className="mt-0.5 text-xs text-success">{t("fallback.readyWhenSaved")}</p>
+                {/* The primary takes the room the secondary leaves: "Mark not
+                    boarded" on one line, even in /about's 290px phone. */}
+                <div className="mt-2 grid grid-cols-[1fr_auto] gap-1.5">
+                  <button
+                    type="button"
+                    disabled
+                    className={`${MOCK_PRIMARY_BUTTON} whitespace-nowrap`}
+                  >
                     {t("fallback.markBoarded")}
+                  </button>
+                  <button
+                    type="button"
+                    disabled
+                    className={`${MOCK_SECONDARY_BUTTON} whitespace-nowrap px-2`}
+                  >
+                    {t("fallback.markNotBoarded")}
                   </button>
                 </div>
               </div>
@@ -136,26 +173,77 @@ export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
   );
 }
 
+/**
+ * **Today, drawn small** — the shop home's two halves (ADR 20261001-logbook,
+ * decision 4): one departure card as `DayStation` draws it (the time, its
+ * stage pill, the readiness bar and the words under it), then two rows of the
+ * "Needs you" list, each naming one diver, the one thing missing and its boat.
+ * The waiver row carries its own button, as the real row does. The homepage's
+ * door under this screen opens Today in the demo, so this is what it lands on.
+ */
 export function FrontDeskReadinessFallback({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
   const rows = [
-    { name: "Priya Sharma", status: t("fallback.waiverNeedsAttention"), tone: "text-danger" },
-    { name: "Lena Fischer", status: t("fallback.readyToBoard"), tone: "text-success" },
-    { name: "Diego Alvarez", status: t("fallback.certificationPending"), tone: "text-warning" },
+    {
+      kind: t("fallback.kindWaiver"),
+      // i18n-exempt: sample diver name used only in marketing mockups
+      name: "Priya Sharma",
+      detail: t("fallback.waiverNotSent"),
+      action: t("fallback.sendWaiver"),
+    },
+    {
+      kind: t("fallback.kindCertifications"),
+      // i18n-exempt: sample diver name used only in marketing mockups
+      name: "Diego Alvarez",
+      detail: t("fallback.certPending"),
+      action: null,
+    },
   ];
   return (
     <div className="bg-background">
-      <AppBar label={t("fallback.tripDetail")} />
+      <AppBar label={t("fallback.today")} />
       <div className={MOCK_BODY}>
-        <p className={groupLabelClass("primary")}>{t("fallback.readiness")}</p>
-        <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.answerBeforeDock")}</h3>
-        <p className="mt-1 text-sm text-muted">{t("fallback.noDiverClears")}</p>
-        <div className="mt-4 divide-y divide-border rounded-inset border border-border bg-surface">
-          {/* i18n-exempt: sample diver names used only in marketing mockups */}
-          {rows.map(({ name, status, tone }) => (
-            <div key={name} className="flex items-center justify-between gap-3 px-4 py-3">
-              <p className="text-sm font-semibold">{name}</p>
-              <p className={`text-xs font-medium ${tone}`}>{status}</p>
+        <div className="rounded-inset border border-border bg-surface p-4">
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className={FIGURE_INLINE_CLASS}>{t("fallback.todayStart")}</span>
+            <span className="text-xs text-muted">{t("fallback.todayUntil")}</span>
+            <span className="rounded-full bg-warning-tint px-2 py-0.5 text-xs font-medium text-warning-strong">
+              {t("fallback.phaseCheckin")}
+            </span>
+          </p>
+          <h3 className="mt-1 text-sm font-semibold">{t("fallback.tripName")}</h3>
+          {/* i18n-exempt: sample site, boat and crew used only in marketing mockups */}
+          <p className="text-xs text-muted">French Reef · Mantis II · Keiko Tanaka</p>
+          <div
+            aria-hidden="true"
+            className="mt-3 flex h-2 overflow-hidden rounded-full bg-surface-sunken"
+          >
+            <span className="bg-success" style={{ width: "58%" }} />
+            <span className="bg-danger" style={{ width: "17%" }} />
+          </div>
+          <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs tabular-nums">
+            <span>{t("fallback.readyCount")}</span>
+            <span className="font-medium text-danger">{t("fallback.blockedCount")}</span>
+            <span className="text-muted">{t("fallback.spotsOpen")}</span>
+          </p>
+        </div>
+        <p className={`mt-5 ${groupLabelClass()}`}>{t("fallback.needsYou")}</p>
+        <div className="mt-2 divide-y divide-border border-y border-border">
+          {rows.map((row) => (
+            <div key={row.name} className="flex items-center gap-3 py-2.5">
+              <DiveDayIcon name="warning" className="size-4 shrink-0 text-warning" />
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-warning-strong">{row.kind}</p>
+                <p className="text-sm">
+                  <span className="font-semibold">{row.name}</span> · {row.detail}
+                </p>
+                <p className="text-xs text-muted">{t("fallback.tripLine")}</p>
+              </div>
+              {row.action ? (
+                <button type="button" disabled className={`shrink-0 px-3 ${MOCK_SECONDARY_BUTTON}`}>
+                  {row.action}
+                </button>
+              ) : null}
             </div>
           ))}
         </div>
@@ -472,107 +560,99 @@ export function RecapPageFallback({ locale }: { locale: DiverLocale }) {
   );
 }
 
+/**
+ * **The diver's trip page the night before** (`/ready/[token]`), drawn small:
+ * the dock call line, then the checklist in the page's own three words (Done,
+ * Your turn, With the shop). The forecast is not here because the page does
+ * not carry it; it arrives in the night-before email.
+ */
 export function NightBeforeBriefFallback({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
+  const done = "text-success-strong bg-success-tint";
+  const yourTurn = "text-primary bg-primary-tint";
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.nightBefore.label")} />
       <div className={MOCK_BODY}>
-        <p className={groupLabelClass("primary")}>{t("fallback.nightBefore.eyebrow")}</p>
-        <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.nightBefore.title")}</h3>
+        <h3 className={SUB_TITLE_CLASS}>{t("fallback.tripName")}</h3>
         <p className="mt-1 text-sm text-muted">{t("fallback.nightBefore.time")}</p>
-
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-          {[
-            [t("fallback.recap.water"), "27°C"],
-            [t("fallback.recap.visibility"), "24 m"],
-            [t("fallback.nightBefore.weatherLabel"), t("fallback.nightBefore.weatherValue")],
-          ].map(([label, value]) => (
-            <div key={label} className="rounded-lg border border-border bg-surface p-2">
-              <p className="text-[10px] font-medium text-muted uppercase">{label}</p>
-              <p className="mt-0.5 text-sm font-semibold tabular-nums">{value}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-6">
-          <h4 className="text-sm font-semibold">{t("fallback.nightBefore.checklist")}</h4>
-          <div className="mt-2 space-y-2">
-            {[
-              [
-                t("fallback.nightBefore.waiver"),
-                t("fallback.recap.completed"),
-                "text-success-strong bg-success-tint",
-              ],
-              [
-                t("fallback.nightBefore.cert"),
-                t("fallback.recap.completed"),
-                "text-success-strong bg-success-tint",
-              ],
-              [
-                t("fallback.nightBefore.payment"),
-                t("fallback.recap.completed"),
-                "text-success-strong bg-success-tint",
-              ],
-            ].map(([label, status, tone]) => (
-              <ChecklistRow key={label} label={label} status={status} tone={tone} />
-            ))}
-          </div>
+        <p className="mt-4 rounded-inset bg-surface-sunken p-3 text-sm">
+          {t("fallback.nightBefore.dockLine")}
+        </p>
+        <div className="mt-4 space-y-2">
+          <ChecklistRow
+            label={t("fallback.nightBefore.waiver")}
+            status={t("fallback.nightBefore.done")}
+            tone={done}
+          />
+          <ChecklistRow
+            label={t("fallback.nightBefore.cert")}
+            status={t("fallback.nightBefore.done")}
+            tone={done}
+          />
+          <ChecklistRow
+            label={t("fallback.nightBefore.gear")}
+            status={t("fallback.nightBefore.yourTurn")}
+            tone={yourTurn}
+            mark={false}
+          />
         </div>
       </div>
     </div>
   );
 }
 
+/**
+ * **A departure's Gear tab** (`trips/[id]/prep`), drawn small: tanks split
+ * into air and nitrox, the divers whose sizes are still missing (named, so the
+ * desk can ask), and the rental kit to pull. Its section headings are the
+ * tab's own (`tripPrep.json`).
+ */
 export function ShopPrepListFallback({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
   return (
     <div className="bg-background">
       <AppBar label={t("fallback.shopPrep.label")} />
-      <div className={MOCK_BODY}>
-        <p className={groupLabelClass("primary")}>{t("fallback.shopPrep.eyebrow")}</p>
-        <h3 className={`mt-1 ${SUB_TITLE_CLASS}`}>{t("fallback.shopPrep.title")}</h3>
-        <p className="mt-1 text-sm text-muted">{t("fallback.shopPrep.time")}</p>
-
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center">
-          {[
-            [t("fallback.shopPrep.diversLabel"), "12"],
-            [t("fallback.shopPrep.rentalsLabel"), "5"],
-            [t("fallback.shopPrep.tanksLabel"), "24"],
-          ].map(([label, value]) => (
-            <div key={label} className="rounded-lg border border-border bg-surface p-2">
-              <p className="text-[10px] font-medium text-muted uppercase">{label}</p>
-              <p className="mt-0.5 text-sm font-semibold tabular-nums">{value}</p>
-            </div>
-          ))}
+      <div className={`space-y-5 ${MOCK_BODY}`}>
+        <div>
+          <h3 className={SUB_TITLE_CLASS}>{t("fallback.tripName")}</h3>
+          <p className="mt-1 text-sm text-muted">{t("fallback.shopPrep.time")}</p>
         </div>
-
-        <div className="mt-6">
-          <h4 className="text-sm font-semibold">{t("fallback.shopPrep.checklistHeading")}</h4>
-          <div className="mt-2 space-y-2">
+        <div>
+          <h4 className="text-sm font-semibold">{t("fallback.shopPrep.tanksHeading")}</h4>
+          <div className="mt-2 grid grid-cols-3 gap-2">
             {[
-              [
-                t("fallback.shopPrep.gearStaged"),
-                t("fallback.recap.completed"),
-                "text-success-strong bg-success-tint",
-              ],
-              [
-                t("fallback.shopPrep.tanksReady"),
-                t("fallback.recap.completed"),
-                "text-success-strong bg-success-tint",
-              ],
-              [
-                t("fallback.shopPrep.crewAssigned"),
-                t("fallback.recap.completed"),
-                "text-success-strong bg-success-tint",
-              ],
-              [
-                t("fallback.shopPrep.manifestReady"),
-                t("fallback.recap.completed"),
-                "text-success-strong bg-success-tint",
-              ],
-            ].map(([label, status, tone]) => (
-              <ChecklistRow key={label} label={label} status={status} tone={tone} />
+              [t("fallback.shopPrep.air"), "18"],
+              [t("fallback.shopPrep.nitrox"), "6"],
+              [t("fallback.shopPrep.total"), "24"],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-lg border border-border bg-surface p-2">
+                <p className="text-xs font-medium text-muted">{label}</p>
+                <p className="mt-0.5 text-sm font-semibold tabular-nums">{value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div>
+          <h4 className="text-sm font-semibold">{t("fallback.shopPrep.missingSizesHeading")}</h4>
+          <p className="mt-1 text-sm">
+            {/* i18n-exempt: sample diver name used only in marketing mockups */}
+            <span className="font-semibold">Diego Alvarez</span>{" "}
+            <span className="text-muted">{t("fallback.shopPrep.missingRow")}</span>
+          </p>
+        </div>
+        <div>
+          <h4 className="text-sm font-semibold">{t("fallback.shopPrep.rentalKitHeading")}</h4>
+          <div className="mt-2 divide-y divide-border rounded-inset border border-border bg-surface text-sm">
+            {[
+              [t("fallback.shopPrep.kitBcd"), "2"],
+              [t("fallback.shopPrep.kitWetsuit"), "1"],
+              [t("fallback.shopPrep.kitRegulator"), "3"],
+            ].map(([item, qty]) => (
+              <div key={item} className="flex items-center justify-between gap-3 px-3 py-2">
+                <span>{item}</span>
+                <span className="font-semibold tabular-nums">×{qty}</span>
+              </div>
             ))}
           </div>
         </div>

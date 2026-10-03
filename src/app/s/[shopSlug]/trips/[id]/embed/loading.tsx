@@ -24,7 +24,7 @@ export default function EmbeddedTripLoading() {
     <>
       <EmbedChromeCollapse />
       <main className="w-full flex-1 px-3 py-4">
-        <div className="animate-pulse">
+        <div className="animate-pulse lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:grid-rows-[auto_repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10">
           {/* No wrapper: `TripHeader` returns its header bare (K-170). */}
           <ShopPageHeaderSkeleton
             brand={{ base: 2, sm: 1 }}
@@ -42,7 +42,7 @@ export default function EmbeddedTripLoading() {
           />
           {/* The page's one stack of sections, 40px apart (K-162), as the page
               skeleton stands them. */}
-          <div className="mt-10 space-y-10">
+          <div className="mt-10 space-y-10 lg:contents lg:space-y-0">
             {/* "The day" — the run of dives, one row each. */}
             <div className="h-28 rounded bg-surface-sunken" />
             {/* The pitch: the fact chip, three tiles each over its name, the
@@ -65,7 +65,12 @@ export default function EmbeddedTripLoading() {
             {/* The alternates. */}
             <div className="h-26 rounded bg-surface-sunken" />
             {/* The booking card, last, from the same place `SectionCard` takes it. */}
-            <div className={sectionCardClass({ padding: "none", className: "h-96" })} />
+            <div
+              className={sectionCardClass({
+                padding: "none",
+                className: "h-96 lg:col-start-2 lg:row-span-6 lg:row-start-1",
+              })}
+            />
           </div>
         </div>
       </main>

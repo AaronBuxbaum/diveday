@@ -579,17 +579,7 @@ describe("the good-news moments", () => {
         action({ id: "later", kind: "waiver", departure: boat("t9") }),
       ],
     });
-    expect(screen.getByText("Today’s boats are all clear 🤙")).toBeInTheDocument();
-  });
-
-  it("keeps the 🤙 — the product's one word-mark gesture, inside the sentence", () => {
-    renderSpine({
-      actions: [
-        action({ id: "quiet", kind: "dive_prep", departure: boat("t1") }),
-        action({ id: "later", kind: "waiver", departure: boat("t9") }),
-      ],
-    });
-    expect(screen.getByRole("status").textContent).toContain("🤙");
+    expect(screen.getByText("Today’s boats are all clear")).toBeInTheDocument();
   });
 
   it("stays quiet while a station still carries a blocking row", () => {
@@ -599,7 +589,7 @@ describe("the good-news moments", () => {
         action({ id: "later", kind: "dive_prep", departure: boat("t9") }),
       ],
     });
-    expect(screen.queryByText("Today’s boats are all clear 🤙")).toBeNull();
+    expect(screen.queryByText("Today’s boats are all clear")).toBeNull();
   });
 
   it("stays quiet while the desk still carries one", () => {
@@ -610,12 +600,12 @@ describe("the good-news moments", () => {
         action({ id: "later", kind: "waiver", departure: boat("t9") }),
       ],
     });
-    expect(screen.queryByText("Today’s boats are all clear 🤙")).toBeNull();
+    expect(screen.queryByText("Today’s boats are all clear")).toBeNull();
   });
 
-  it("never doubles up with the whole-week 🤙 state", () => {
+  it("never doubles up with the whole-week empty state", () => {
     renderSpine({ actions: [] });
-    expect(screen.queryByText("Today’s boats are all clear 🤙")).toBeNull();
+    expect(screen.queryByText("Today’s boats are all clear")).toBeNull();
     expect(screen.getByText("Nothing is waiting on you")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "View the schedule" })).toHaveAttribute(
       "href",
@@ -626,7 +616,7 @@ describe("the good-news moments", () => {
   it("renders neither once there is real work anywhere", () => {
     renderSpine({ actions: [action({ id: "blocked", departure: boat("t1") })] });
     expect(screen.queryByText("Nothing is waiting on you")).toBeNull();
-    expect(screen.queryByText("Today’s boats are all clear 🤙")).toBeNull();
+    expect(screen.queryByText("Today’s boats are all clear")).toBeNull();
   });
 
   it("puts the earned line above the first station, where the summary sentence ends", () => {
@@ -730,7 +720,7 @@ describe("the first booking ever", () => {
       ],
     });
     expect(screen.getByText("Your first booking")).toBeInTheDocument();
-    expect(screen.queryByText("Today’s boats are all clear 🤙")).toBeNull();
+    expect(screen.queryByText("Today’s boats are all clear")).toBeNull();
   });
 
   it("yields to the evening: a boat that came home is the later moment", () => {

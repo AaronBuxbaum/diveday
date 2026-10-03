@@ -524,10 +524,12 @@ test.describe("staff", () => {
     await page.goto("/shop/blue-mantis/gear");
     await expect(page.getByRole("heading", { name: "Import gear history" })).toHaveCount(0);
 
-    await page.goto("/shop/blue-mantis/settings/gear-import");
+    await page.goto("/shop/blue-mantis/settings/import?what=gear");
     await expect(
-      page.getByRole("heading", { level: 1, name: "Import gear history" }),
-    ).toBeVisible();
+      page
+        .getByRole("navigation", { name: "What to import" })
+        .getByRole("link", { name: "Gear history" }),
+    ).toHaveAttribute("aria-current", "page");
     await expect(page.getByRole("link", { name: "Download gear CSV template" })).toBeVisible();
   });
 });

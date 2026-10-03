@@ -13,7 +13,7 @@ import { ledgerRowBoxClass } from "@/components/ui/ledger";
  */
 export default function StaffCoursesLoading() {
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton eyebrow={false} titleWidth="w-48" description={false} actions />
         <div className="mt-8 space-y-8">

@@ -56,6 +56,7 @@
     "filterAriaLabel": "Filtrar por tipo",
     "filterAll": "Todo ({count})",
     "filterKind": "{label} ({count})",
+    "sizeOnly": "Talla {size}",
     "outWith": "Con {name} · vuelve el {dueOn}",
     "overdueWith": "Con {name} · debía volver el {dueOn}",
     "reservedFor": "Reservado para {name} · desde el {from}",
@@ -139,7 +140,6 @@
     "nothingToHandOver": "Ese conjunto ya está fuera."
   },
   "import": {
-    "title": "Importar historial del equipo",
     "help": "Una fila por unidad o evento. Las unidades coinciden primero por etiqueta y luego por número de serie; las reimportaciones se deduplican.",
     "downloadTemplate": "Descargar plantilla CSV del equipo",
     "submit": "Importar historial",

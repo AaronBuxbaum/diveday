@@ -38,7 +38,6 @@ import {
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
-  diveSupportNeeds,
   executedDives,
   formDrafts,
   gearItems,
@@ -146,7 +145,6 @@ import { seedRecentRecaps } from "./seed-recent-recaps";
 import { seedRentalFit } from "./seed-rental-fit";
 import { seedSelfDeclaredJoiners } from "./seed-self-declared";
 import { seedSightings } from "./seed-sightings";
-import { seedSupportNeeds } from "./seed-support-needs";
 import { seedTides } from "./seed-tides";
 import { seedTripLegs } from "./seed-trip-legs";
 import { seedTripStage } from "./seed-trip-stage";
@@ -178,7 +176,6 @@ import { seedWaiverVersions } from "./seed-waiver-versions";
  * | `./seed-nitrox.ts` | EANx cards and the per-dive gas the wreck charter gates on |
  * | `./seed-rental-fit.ts` | divers' saved sizes, so the gear locker has something to pull |
  * | `./seed-gear.ts` | the rental fleet on the wall — tagged units, service clocks, a few reserved for the wreck trip |
- * | `./seed-support-needs.ts` | one diver who arranged an accessible dive, and one asked who needs nothing |
  * | `./seed-course-inquiries.ts` | course leads off the public pages, in all three `person_id` states |
  * | `./seed-front-desk.ts` | the desk's own day: walk-ins, wait lists, inquiries, tips |
  * | `./seed-history.ts` | the trailing quarter that gives owner reporting something to report |
@@ -398,7 +395,7 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       addressCountry: "US",
       latitude: 25.0865,
       longitude: -80.4473,
-      // Rents the core kit plus both add-ons and fills nitrox, and prices them:
+      // Rents the core kit plus the GoPro and fills nitrox, and prices them:
       // a full set is cheaper than the pieces, each piece has its own price, and
       // nitrox is a per-dive surcharge. Divers see these when they set their
       // rental fit. Most real shops leave nitrox unticked (default off) — the
@@ -411,11 +408,8 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
         "weights",
         "dive_computer",
         "gopro",
-        // **The one add-on the demo offers, and the one that carries a size**
-        // (issue 1414). A shop with a drysuit renter on its fit book has to say
-        // it rents drysuits, or both fit forms read that fit as "not rented"
-        // and the next save clears it (`divers/[personId]/actions.ts`).
-        "drysuit",
+        // No drysuit on the demo's list (Aaron, 2026-10-03): it is an add-on a
+        // shop ticks for itself, and new shops start without it too.
         "nitrox",
       ],
       rentalPricing: {
@@ -428,7 +422,6 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
           weights: 500,
           dive_computer: 1000,
           gopro: 2000,
-          drysuit: 3500,
         },
         nitroxCents: 1200,
       },
@@ -648,7 +641,6 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, brand = false
             "weights",
             "dive_computer",
             "gopro",
-            "drysuit",
             "nitrox",
           ],
           rentalPricing: {
@@ -661,7 +653,6 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, brand = false
               weights: 500,
               dive_computer: 1000,
               gopro: 2000,
-              drysuit: 3500,
             },
             nitroxCents: 1200,
           },
@@ -925,9 +916,6 @@ export async function seedDemoSchedule(
 
   await seedNitrox(db, shopId, customers, wreck, bookingRows, instructor.id);
   await seedRentalFit(db, shopId, customers);
-  // Beside the fit book, and read by the same two surfaces: what a diver said
-  // their dive needs set up (ADR 20260827-support-needs-are-a-record-about-the-dive).
-  await seedSupportNeeds(db, shopId, customers);
   // The rental fleet on the wall, after the bookings so a few units can be
   // reserved against the upcoming wreck trip (ADR 20260815-minimal-gear-register).
   await seedGear(db, shopId, {
@@ -1199,10 +1187,6 @@ export async function resetDemoSchedule(
   await db.delete(closeoutLeftoverDecisions).where(eq(closeoutLeftoverDecisions.shopId, shopId));
   await db.delete(dayCloseouts).where(eq(dayCloseouts.shopId, shopId));
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
-  // Beside the rental fit it sits beside in the schema, and cleared for the
-  // same reason: it is keyed on a person, and the people purge below would
-  // FK-violate on it otherwise.
-  await db.delete(diveSupportNeeds).where(eq(diveSupportNeeds.shopId, shopId));
   // The gear register, children first: reservations reference gear_items and
   // bookings, service events reference gear_items and people (their recording
   // staffer) — so all three clear before bookings and the people purge below.

@@ -51,8 +51,38 @@ import {
  * the ramp.
  */
 
-/** How far down the viewport the "current section" reading line sits. */
+/**
+ * How far down the viewport the "current section" reading line sits, at the
+ * least. A section a rail click just scrolled to lands lower than this — under
+ * the bar's `scroll-padding-top` plus its own `scroll-mt-24`, about 152px —
+ * so the line moves down to wherever the section's own landing is
+ * (`landingLine`), or the row you clicked lit the one above it (Aaron,
+ * 2026-10-03: "Review link" selected "Online payments").
+ */
 const READING_LINE_PX = 120;
+
+/** A pixel or two of rounding between where a section lands and where it is read. */
+const LANDING_SLACK_PX = 8;
+
+/** Where a fragment jump puts `anchor`'s top edge: the scrollport's inset plus its own margin. */
+function landingLine(anchor: HTMLElement): number {
+  const px = (value: string) => Number.parseFloat(value) || 0;
+  const inset = px(getComputedStyle(document.documentElement).scrollPaddingTop);
+  return Math.max(
+    READING_LINE_PX,
+    inset + px(getComputedStyle(anchor).scrollMarginTop) + LANDING_SLACK_PX,
+  );
+}
+
+/**
+ * True when the page cannot scroll any further down. A section near the foot
+ * of the pane never reaches the reading line at all, so there the fragment
+ * the reader just followed decides, as long as its section is in view.
+ */
+function atPageFoot(): boolean {
+  const root = document.documentElement;
+  return window.scrollY > 0 && window.innerHeight + window.scrollY >= root.scrollHeight - 2;
+}
 
 export type SettingsRailGroupView = {
   id: string;
@@ -309,8 +339,13 @@ function useSectionScrollSpy(groups: readonly SettingsRailGroupView[]): string |
         const anchor = document.getElementById(section.fragment);
         if (!anchor) continue;
         first ??= section.id;
-        if (anchor.getBoundingClientRect().top <= READING_LINE_PX) current = section.id;
+        if (anchor.getBoundingClientRect().top <= landingLine(anchor)) current = section.id;
         else break;
+      }
+      const followed = sections.find((section) => `#${section.fragment}` === window.location.hash);
+      if (followed && atPageFoot()) {
+        const rect = document.getElementById(followed.fragment)?.getBoundingClientRect();
+        if (rect && rect.top >= 0 && rect.top < window.innerHeight) current = followed.id;
       }
       // The first section counts as current before the page has scrolled past
       // it, so the map is never blank at the top of the pane.
@@ -323,11 +358,18 @@ function useSectionScrollSpy(groups: readonly SettingsRailGroupView[]): string |
     window.addEventListener("scroll", schedule, { passive: true });
     window.addEventListener("resize", schedule);
     window.addEventListener("hashchange", schedule);
+    // A rail click opens the row it lands on (`AutoOpenDetails`) after the
+    // jump, which pushes every section below it down without scrolling: read
+    // again whenever the page changes height, or the row under it, which stood
+    // within the line while everything was shut, keeps the light.
+    const resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(schedule);
+    resize?.observe(document.body);
     return () => {
       if (frame) window.cancelAnimationFrame(frame);
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
       window.removeEventListener("hashchange", schedule);
+      resize?.disconnect();
     };
   }, [key]);
 

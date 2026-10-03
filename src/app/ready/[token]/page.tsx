@@ -132,7 +132,6 @@ import {
   saveNoteFromReady,
   saveReEntryAskFromReady,
   saveSpecialtyFromReady,
-  saveSupportNeedsFromReady,
   saveTanksFromReady,
   saveWelcomeConsentFromReady,
   signWaiverFromReady,
@@ -146,38 +145,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-/**
- * One tick-box in the support-needs question, worded on its right: a
- * `ChoiceRow`, whose box sits on the first line of a label that wraps and
- * whose row is never under 44px (these were 20px targets).
- *
- * `value="on"` is explicit rather than relied on: the action's schema reads an
- * unticked box as an absent key, which is how HTML posts one, and a diver
- * unticking something genuinely retracts it.
- */
-function CheckboxRow({
-  name,
-  label,
-  defaultChecked,
-}: {
-  name: string;
-  label: string;
-  defaultChecked: boolean;
-}) {
-  return (
-    <ChoiceRow
-      type="checkbox"
-      name={name}
-      value="on"
-      defaultChecked={defaultChecked}
-      className="text-base"
-    >
-      {label}
-    </ChoiceRow>
-  );
-}
-
-/** One radio in the support-divers question, worded on its right. */
+/** One radio, worded on its right. */
 function RadioRow({
   name,
   value,
@@ -734,11 +702,6 @@ const READY_NOTICES: Record<
   "error-dive-intent": { tone: "danger", key: "ready.intentUnavailable" },
   "saved-re-entry-ask": { tone: "success", key: "ready.reEntrySaved" },
   "error-re-entry-ask": { tone: "danger", key: "ready.reEntryUnavailable" },
-  "saved-support": { tone: "success", key: "ready.supportSaved" },
-  "error-support": { tone: "danger", key: "ready.supportUnavailable" },
-  // The count is refused on its own field (see `saveSupportNeedsFromReady`);
-  // the banner stays quiet so the page does not shout about one number.
-  "error-support-count": { tone: "neutral", key: "ready.supportDiversCountHint" },
   "saved-help": { tone: "success", key: "ready.helpRequestSent" },
   "error-help": { tone: "danger", key: "ready.helpRequestUnavailable" },
   "error-help-handled": { tone: "neutral", key: "ready.helpRequestHandled" },
@@ -950,28 +913,25 @@ function ExpiredLink({
  * **Day-of details** — the last step of the thread's spine, and the one that
  * absorbed four separate rows.
  *
- * Before this it was four: "When did you last dive?", the diver's own note to
- * the crew, the hotel-pickup question and the support-needs record, each a row
- * of its own on a checklist, three of them permanently marked "Optional"
- * because most divers have nothing to say to them. Three rows that could never
- * settle are three reasons the figure over the list could never fill, which is
- * the defect ADR 20260827-the-divers-thread, decision 3 set out to end.
+ * Before this it was separate rows: "When did you last dive?", the diver's own
+ * note to the crew and the hotel-pickup question, each a row of its own on a
+ * checklist, the optional ones permanently marked "Optional" because most
+ * divers have nothing to say to them. Rows that could never settle are reasons
+ * the figure over the list could never fill, which is the defect ADR
+ * 20260827-the-divers-thread, decision 3 set out to end.
  *
  * So the step **counts, and settles on the recency question** — the one thing
- * genuinely asked of everybody. The other three ride inside it, save on their
- * own actions exactly as before, and gate nothing: answering none of them
- * still finishes the step, and answering one cannot blank another.
+ * genuinely asked of everybody. The others ride inside it, save on their own
+ * actions exactly as before, and gate nothing: answering none of them still
+ * finishes the step, and answering one cannot blank another.
  */
 function DayOfDetails({
   token,
   data,
-  error,
   t,
 }: {
   token: string;
   data: ReadyPageData;
-  /** The `?error=` code, for the one field that refuses on itself. */
-  error?: string;
   t: DiverTranslator;
 }) {
   const saveButton = buttonClass({ variant: "secondary", size: "sm" });
@@ -1229,137 +1189,6 @@ function DayOfDetails({
           </form>
         </div>
       ) : null}
-      {/* **What this dive needs set up for you** — the accessible-dive record
-          (ADR 20260827-support-needs-are-a-record-about-the-dive). Asked here
-          and nowhere else: `/ready` is after the sale and is the diver's own
-          page, where the public booking form is a disclosure to a stranger
-          before a purchase, on a page the shop's competitors can also load.
-
-          Every question is about the *dive* — how many hands in the water,
-          getting aboard, how the briefing reaches you — and none is about the
-          diver. There is no condition to declare and nothing here is medical.
-          Nothing it records gates anything, this step included. */}
-      <div className="pt-5">
-        <h3 className="text-base font-semibold">{t("ready.supportLabel")}</h3>
-        <form
-          action={saveSupportNeedsFromReady.bind(null, token)}
-          className="mt-3 flex flex-col gap-4"
-        >
-          {/* **How many, and who brings them.** Two questions, because the
-              shop's action is opposite in each: "please arrange them" is two
-              more crew to roster, "they're coming with me" is two more seats to
-              book and a buddy team to build. One number could not say which,
-              and the crew was reading the same sentence for both. */}
-          <fieldset className="flex flex-col gap-2">
-            <legend className="text-sm font-semibold">{t("ready.supportDiversLabel")}</legend>
-            <RadioRow
-              name="supportDiversProvidedBy"
-              value=""
-              label={t("ready.supportDiversNone")}
-              defaultChecked={!data.supportNeeds?.supportDiversProvidedBy}
-            />
-            <RadioRow
-              name="supportDiversProvidedBy"
-              value="shop"
-              label={t("ready.supportDiversFromShop")}
-              defaultChecked={data.supportNeeds?.supportDiversProvidedBy === "shop"}
-            />
-            <RadioRow
-              name="supportDiversProvidedBy"
-              value="diver"
-              label={t("ready.supportDiversOwn")}
-              defaultChecked={data.supportNeeds?.supportDiversProvidedBy === "diver"}
-            />
-            {/* Seats, not crew. Somebody in the water who is on no manifest is
-                a person the coastguard's copy does not know about. */}
-            <p className="text-sm text-muted">{t("ready.supportDiversSeatNote")}</p>
-          </fieldset>
-          <Field
-            label={t("ready.supportDiversCountLabel")}
-            htmlFor="support-divers"
-            // The ceiling is a typo guard, not a limit, and it has to say so: a
-            // browser's own validation bubble arrives in the wrong language and
-            // reads as a refusal on the one form that must never feel like one.
-            hint={t("ready.supportDiversCountHint")}
-            error={error === "support-count" ? t("ready.supportDiversCountHint") : undefined}
-          >
-            <input
-              id="support-divers"
-              name="supportDiversNeeded"
-              type="number"
-              inputMode="numeric"
-              min={0}
-              max={4}
-              defaultValue={data.supportNeeds?.supportDiversNeeded ?? ""}
-              className={`${controlClass} max-w-24`}
-            />
-          </Field>
-          <fieldset className="flex flex-col gap-2">
-            <legend className="text-sm font-semibold">{t("ready.supportBoardingLegend")}</legend>
-            <CheckboxRow
-              name="needsBoardingAssistance"
-              label={t("ready.supportBoardingAssistance")}
-              defaultChecked={data.supportNeeds?.needsBoardingAssistance ?? false}
-            />
-            <CheckboxRow
-              name="needsWaterLift"
-              label={t("ready.supportWaterLift")}
-              defaultChecked={data.supportNeeds?.needsWaterLift ?? false}
-            />
-          </fieldset>
-          <fieldset className="flex flex-col gap-2">
-            <legend className="text-sm font-semibold">{t("ready.supportBriefingLegend")}</legend>
-            <CheckboxRow
-              name="briefingInSign"
-              label={t("ready.supportBriefingSign")}
-              defaultChecked={data.supportNeeds?.briefingInSign ?? false}
-            />
-            <CheckboxRow
-              name="briefingInWriting"
-              label={t("ready.supportBriefingWriting")}
-              defaultChecked={data.supportNeeds?.briefingInWriting ?? false}
-            />
-            {/* A briefing is delivered off a map or a slate, so the options
-                above are all *visual* — which is the wrong set for a blind or
-                low-vision diver, and "in writing" is exactly the wrong answer
-                for one. */}
-            <CheckboxRow
-              name="briefingAloud"
-              label={t("ready.supportBriefingAloud")}
-              defaultChecked={data.supportNeeds?.briefingAloud ?? false}
-            />
-            <CheckboxRow
-              name="briefingBySignals"
-              label={t("ready.supportBriefingSignals")}
-              defaultChecked={data.supportNeeds?.briefingBySignals ?? false}
-            />
-          </fieldset>
-          <Field label={t("ready.supportEquipmentLabel")} htmlFor="support-equipment">
-            <textarea
-              id="support-equipment"
-              name="equipmentAdaptation"
-              rows={2}
-              maxLength={300}
-              defaultValue={data.supportNeeds?.equipmentAdaptation ?? ""}
-              className={textareaClassFor(2)}
-            />
-          </Field>
-          <Field label={t("ready.supportDivesWithLabel")} htmlFor="support-dives-with">
-            <input
-              id="support-dives-with"
-              name="divesWithName"
-              maxLength={120}
-              defaultValue={data.supportNeeds?.divesWithName ?? ""}
-              className={controlClass}
-            />
-          </Field>
-          <div>
-            <SubmitButton pendingLabel={t("common.saving")} className={saveButton}>
-              {t("ready.saveSupport")}
-            </SubmitButton>
-          </div>
-        </form>
-      </div>
     </div>
   );
 }
@@ -1842,8 +1671,8 @@ export default async function DiverReadinessPage({
   /**
    * **The spine** (ADR 20260827-the-divers-thread, decision 3). Every step it
    * emits is finishable, so the figure over it can always fill — which is the
-   * whole reason the optional questions (the note, hotel pickup, support
-   * needs) live *inside* Day-of details rather than beside it as rows of their
+   * whole reason the optional questions (the note, hotel pickup) live
+   * *inside* Day-of details rather than beside it as rows of their
    * own that moved no number when answered.
    */
   /**
@@ -2107,7 +1936,7 @@ export default async function DiverReadinessPage({
           />
         );
       case "dayof":
-        return <DayOfDetails token={token} data={data} error={error} t={t} />;
+        return <DayOfDetails token={token} data={data} t={t} />;
     }
   };
 

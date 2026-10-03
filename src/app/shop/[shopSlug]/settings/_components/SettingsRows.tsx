@@ -204,7 +204,12 @@ export function SettingsRow({
   );
   if (fragment) {
     return (
-      <AutoOpenDetails openOnHash={fragment} open={open} className="group scroll-mt-24">
+      <AutoOpenDetails
+        openOnHash={fragment}
+        open={open}
+        onToggle={onToggle}
+        className="group scroll-mt-24"
+      >
         {body}
       </AutoOpenDetails>
     );

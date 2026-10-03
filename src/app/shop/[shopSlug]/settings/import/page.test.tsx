@@ -23,7 +23,7 @@ const authModule = (await import("@/lib/auth")) as unknown as {
   auth: ReturnType<typeof vi.fn<() => Promise<DiveDaySession | null>>>;
 };
 const auth = authModule.auth;
-const ImportContactsPage = (await import("./page")).default;
+const ImportPage = (await import("./page")).default;
 
 type HostProps = { className?: unknown; children?: ReactNode };
 
@@ -41,7 +41,7 @@ function listItems(node: unknown, found: ReactElement<HostProps>[] = []) {
   return found;
 }
 
-async function renderImport() {
+async function renderImport(what?: string) {
   const db: AppDb = await seededTestDb();
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error("demo shop missing");
@@ -57,7 +57,10 @@ async function renderImport() {
       roles: ["owner", "manager"],
     },
   });
-  return ImportContactsPage({ params: Promise.resolve({ shopSlug: "blue-mantis" }) });
+  return ImportPage({
+    params: Promise.resolve({ shopSlug: "blue-mantis" }),
+    searchParams: Promise.resolve({ what }),
+  });
 }
 
 describe("what comes across, and what stays behind", () => {
@@ -88,5 +91,55 @@ describe("what comes across, and what stays behind", () => {
       const staysBehind = IMPORT_HONESTY_TABLE[index]?.scope === "stays-behind";
       expect(cells, `row ${index}`).toHaveLength(staysBehind ? 3 : 2);
     }
+  });
+});
+
+/** Every element in the tree whose type is `component`, in render order. */
+function elementsOf(node: unknown, component: unknown, found: ReactElement[] = []) {
+  if (node === null || typeof node !== "object") return found;
+  if (Array.isArray(node)) {
+    for (const child of node) elementsOf(child, component, found);
+    return found;
+  }
+  if (isValidElement<HostProps>(node)) {
+    if (node.type === component) found.push(node);
+    elementsOf(node.props.children, component, found);
+  }
+  return found;
+}
+
+/**
+ * **One Import page, a tab per kind of file** (Aaron, 2026-10-03). Divers,
+ * gear history and dive sites were three Settings pages; `?what=` now picks
+ * the tab, and anything it does not name is the Divers tab.
+ */
+describe("the import tabs", () => {
+  it("opens on Divers, with the gear and dive-site tabs beside it", async () => {
+    const { SectionTabs } = await import("@/components/SectionTabs");
+    const tree = await renderImport();
+    const [tabs] = elementsOf(tree, SectionTabs) as ReactElement<{
+      current: string;
+      tabs: { id: string; href: string }[];
+    }>[];
+    expect(tabs?.props.current).toBe("divers");
+    expect(tabs?.props.tabs.map((tab) => tab.href)).toEqual([
+      "/shop/blue-mantis/settings/import",
+      "/shop/blue-mantis/settings/import?what=gear",
+      "/shop/blue-mantis/settings/import?what=dive-sites",
+    ]);
+  });
+
+  it("draws only the panel its tab names", async () => {
+    const { GearImportPanel } = await import("./GearImportPanel");
+    const { DiveSiteImportPanel } = await import("./DiveSiteImportPanel");
+    const gear = await renderImport("gear");
+    expect(elementsOf(gear, GearImportPanel)).toHaveLength(1);
+    expect(elementsOf(gear, DiveSiteImportPanel)).toHaveLength(0);
+    expect(listItems(gear).some((item) => String(item.props.className).includes("10rem"))).toBe(
+      false,
+    );
+    const sites = await renderImport("dive-sites");
+    expect(elementsOf(sites, DiveSiteImportPanel)).toHaveLength(1);
+    expect(elementsOf(await renderImport("nonsense"), GearImportPanel)).toHaveLength(0);
   });
 });

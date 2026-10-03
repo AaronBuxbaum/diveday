@@ -836,7 +836,7 @@ export async function openTripActivity(page: Page): Promise<void> {
  * Open one file group on a diver's record (`/shop/<slug>/divers/<personId>`).
  *
  * Every group there — Certification records, Waiver, Gear and sizes, Diver
- * notes, Conversation, Dive support, Activity — is a closed `<details>` door at
+ * notes, Conversation, Activity — is a closed `<details>` door at
  * every width, and opens itself only for open work (a `?notice=` aimed at it,
  * an unanswered message, a held medical review, a standing can't-fill flag,
  * existing notes). A spec that reaches for a control inside one therefore opens

@@ -275,7 +275,6 @@
     "saveSiteBriefing": "Save dive site"
   },
   "import": {
-    "title": "Import dive sites",
     "description": "Read a dive_sites.csv from your DiveDay export back into this shop’s library.",
     "help": "This reads DiveDay’s own export rather than another system’s file, so it expects the columns the bundle wrote and refuses one it does not recognise. Sites match by id first, then by name: importing into the shop the bundle came from rewrites the sites it names, and importing into a new one creates them. A site that was deleted when the bundle was made comes back deleted.",
     "notRestored": "Two things do not come back. The field guide’s species travel in dive_site_creatures.csv and are left exactly as they are. And a tide-station acknowledgement lands only on a site this shop already holds that station for; anywhere else the distance prompt asks again, which is what it is for.",

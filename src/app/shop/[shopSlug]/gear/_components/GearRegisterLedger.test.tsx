@@ -124,6 +124,21 @@ describe("the three groups", () => {
     expect(screen.getByRole("heading", { level: 2 }).textContent).toBe("On the wall — 1");
   });
 
+  it("names a size that stands without a brand, and leaves it bare beside one", () => {
+    const base = unit("Boots #1").item;
+    renderLedger({
+      onWall: wall([
+        unit("Boots #1", { item: { ...base, kind: "boots", size: "7" } }),
+        unit("BCD #1", {
+          item: { ...base, id: "unit-BCD", size: "XS", brandModel: "Cressi Start" },
+        }),
+      ]),
+    });
+    // A bare "7" on a row of boots read as a count or a tag.
+    expect(screen.getByText("Size 7")).toBeInTheDocument();
+    expect(screen.getByText("Cressi Start · XS")).toBeInTheDocument();
+  });
+
   it("never restates the group's own word on its rows", () => {
     renderLedger({
       out: [unit("BCD-02", { reservation: reservation() })],

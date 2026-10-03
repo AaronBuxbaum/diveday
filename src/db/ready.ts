@@ -9,7 +9,6 @@ import { publicAppUrl } from "@/lib/notifications";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { type ReEntryAsk, reEntryWindowOpen } from "@/lib/re-entry";
 import type { RentalPricing } from "@/lib/rentals";
-import type { SupportNeeds } from "@/lib/support-needs";
 import { hasSailed } from "@/lib/trips";
 import { shopWaiverStatus } from "@/lib/waivers";
 import { offerableWelcomeCue, type WelcomeCue } from "@/lib/welcome-cue";
@@ -28,7 +27,6 @@ import {
 } from "./rental-fit";
 import { bookings, certifications, people, shops } from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
-import { getSupportNeeds } from "./support-needs";
 import { getTripWithBooked } from "./trips";
 import { getCurrentWaiverTemplate, listSignedWaiversByPerson } from "./waivers";
 import { welcomeCueInputsByBooking } from "./welcome-cues";
@@ -156,13 +154,6 @@ export type ReadyPageData = {
   nitroxCardOnFile: boolean;
   /** Projected: staff-only fit columns never reach the diver's browser. */
   rentalFit: DiverRentalFit | null;
-  /**
-   * What this diver's dive needs set up, if they have said (ADR
-   * 20260827-support-needs-are-a-record-about-the-dive). Null means nobody has
-   * asked yet, which is the ordinary state and reads as an optional row rather
-   * than an outstanding one.
-   */
-  supportNeeds: SupportNeeds | null;
   /** The one active, non-medical day-of request this booking has made. */
   helpRequest: HelpRequest | null;
   /** True when the shop can actually take a card for this trip right now. */
@@ -280,7 +271,6 @@ export async function getReadyPageData(
 
   const [
     rentalFit,
-    supportNeeds,
     helpRequest,
     payment,
     stripeAccount,
@@ -290,7 +280,6 @@ export async function getReadyPageData(
     fitConfirmation,
   ] = await Promise.all([
     getRentalFit(db, row.shopId, row.personId),
-    getSupportNeeds(db, row.shopId, row.personId),
     getHelpRequestForBooking(db, row.shopId, bookingId, now),
     getBookingPayment(db, row.shopId, bookingId),
     getShopStripeAccount(db, row.shopId),
@@ -374,7 +363,6 @@ export async function getReadyPageData(
     nitroxCardVerified: nitroxVerified.has(row.personId),
     nitroxCardOnFile: nitroxOnFile.has(row.personId),
     rentalFit: toDiverRentalFit(rentalFit),
-    supportNeeds,
     helpRequest,
     hotelPickupLocation: row.hotelPickupLocation,
     pickupTime: row.pickupTime,

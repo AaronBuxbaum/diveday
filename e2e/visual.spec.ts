@@ -5522,23 +5522,10 @@ for (const scheme of ["light", "dark"] as const) {
       // Blue Mantis fills nitrox, so the Tanks tile grid is at its full
       // Total/Air/Nitrox width; the collapsed single-tile layout for a shop that
       // doesn't is its own test below.
-      //
-      // **And one diver is in a drysuit** (issues 1414 and #1727), which is the
-      // state this page had never been photographed in: the seed carried no
-      // drysuit renter at all, so the sized drysuit piece and the weights line
-      // that deliberately carries no number — a stated weighting is a wetsuit
-      // answer, and a drysuit needs two to four kilos more — were unit-tested
-      // and unseen. Both are waited on rather than assumed, because a capture
-      // on the right route in the wrong state is the blind spot this file's own
-      // "A capture only covers the state it captures" note is about.
       test(`a trip's prep list renders true to the design (${scheme})`, async ({ page }) => {
         await openReefTrip(page);
         await openTripTab(page, "Prep");
         await page.getByRole("heading", { name: "Tanks" }).waitFor();
-        // `exact`, because the weights line's own cell reads "Drysuit: weight
-        // check in the water" and a substring match would find two.
-        await expect(page.getByRole("cell", { name: "Drysuit", exact: true })).toBeVisible();
-        await expect(page.getByText("Drysuit: weight check in the water")).toBeVisible();
         await capture(page, "prep", scheme);
       });
 
@@ -5554,9 +5541,6 @@ for (const scheme of ["light", "dark"] as const) {
         // The by-item grouping has no Diver column, so this cannot resolve
         // against the view that was on screen a moment ago.
         await page.getByRole("columnheader", { name: "Diver" }).waitFor();
-        // The drysuit diver's whole row, which is where the two states read as
-        // one fit rather than as two rack lines (issue #1727).
-        await expect(page.getByText("Drysuit: weight check in the water")).toBeVisible();
         await capture(page, "prep-by-diver", scheme);
       });
 
@@ -6184,20 +6168,19 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-import", scheme);
       });
 
-      // The gear-history CSV importer, moved here from the gear register
-      // (previously untested visually since it never had a route of its own).
-      test(`the gear-history import page renders true to the design (${scheme})`, async ({
+      // Import's "Gear history" tab: the gear CSV importer.
+      test(`the gear-history import tab renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/settings/gear-import");
+        await page.goto("/shop/blue-mantis/settings/import?what=gear");
         await page.getByRole("link", { name: "Download gear CSV template" }).waitFor();
         await capture(page, "settings-gear-import", scheme);
       });
 
       // The other half of `dive_sites.csv`: the bundle carried the shop's whole
       // library for a year while nothing could read one back (issue #1771).
-      test(`the dive-site import page renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings/dive-site-import");
+      test(`the dive-site import tab renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/import?what=dive-sites");
         await page.getByRole("button", { name: "Import dive sites" }).waitFor();
         await capture(page, "settings-dive-site-import", scheme);
       });
@@ -6862,43 +6845,6 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(seen.getByRole("listitem")).toHaveCount(2);
         await page.mouse.move(0, 0);
         await capture(page, "manifest-seen", scheme);
-      });
-
-      /**
-      /**
-       * **What one diver arranged, on the surface a crew reads it from.**
-       *
-       * The accessible-dive support-needs record (ADR
-       * 20260827-support-needs-are-a-record-about-the-dive). The `prep` capture
-       * above carries its panel; this is the manifest half, and it needs a
-       * baseline of its own because the marker is inside the person panel —
-       * `manifest` photographs the roster at rest and proves nothing about what
-       * the tap reveals, and `manifest-person-panel` opens whichever row is
-       * first rather than the one with a record on it.
-       *
-       * The tone is what this baseline is actually for. It has to sit in the
-       * same muted voice as the rental fit and the pickup beside it: a fact to
-       * plan around, never a warning. A diver who arranged a lift is a diver
-       * this shop is ready for, and a surface that renders that as an alert is
-       * telling the crew the opposite of what the record exists to say.
-       *
-       * Diego Alvarez by name, because he is the seeded diver who arranged
-       * something (`src/db/seed-support-needs.ts`) and his position on the
-       * roster is not this test's to depend on.
-       */
-      test(`a diver's dive-support record renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
-        await openReefTrip(page);
-        await openTripTab(page, "Manifest");
-        await offlineCopySaved(page);
-        const row = page.locator("#roll-call-list > ul > li").filter({ hasText: "Diego Alvarez" });
-        await openManifestPerson(row);
-        await expect(page.getByRole("dialog").getByText("Dive support")).toBeVisible();
-        // The click leaves the pointer on the summary, which would bank a
-        // hover-underlined name into the baseline.
-        await page.mouse.move(0, 0);
-        await capture(page, "manifest-dive-support", scheme);
       });
 
       /**

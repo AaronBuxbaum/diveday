@@ -32,7 +32,10 @@ describe("DiverFileGroupDisclosure", () => {
     expect(details).toHaveAttribute("open");
     const summary = details.querySelector("summary");
     expect(summary).toHaveTextContent(/diver notes\s*1 note/i);
-    expect(summary).toHaveClass("border-y", "group-open/diver-file:border-b-0");
+    // The rule belongs to the group, not the summary: open or shut, each
+    // group draws the one line under itself and the file reads as one list.
+    expect(details.closest("section")).toHaveClass("border-b", "first:border-t");
+    expect(summary).not.toHaveClass("border-y");
   });
 
   /**
@@ -49,23 +52,23 @@ describe("DiverFileGroupDisclosure", () => {
         <DiverFileGroupDisclosure id="gear" label="Gear and sizes" summary="Gear details" stacked>
           <p>Gear rows</p>
         </DiverFileGroupDisclosure>
-        <DiverFileGroupDisclosure id="support" label="Dive support" summary="None stated" open>
-          <p>Support facts</p>
+        <DiverFileGroupDisclosure id="waiver" label="Waiver" summary="Not signed" open>
+          <p>Waiver actions</p>
         </DiverFileGroupDisclosure>
       </>,
     );
 
-    for (const id of ["notes", "gear", "support"]) {
+    for (const id of ["notes", "gear", "waiver"]) {
       const details = screen.getByTestId(`diver-file-group-${id}`);
       const summary = details.querySelector("summary");
-      expect(summary).toHaveClass("border-y", "group-open/diver-file:border-b-0");
+      expect(details.closest("section")).toHaveClass("border-b", "first:border-t");
       expect(summary).not.toHaveClass("sm:hidden");
       expect(details.querySelector(`#${id}-content`)).not.toHaveClass("sm:!block");
     }
 
     expect(screen.getByTestId("diver-file-group-notes")).not.toHaveAttribute("open");
     expect(screen.getByTestId("diver-file-group-gear")).not.toHaveAttribute("open");
-    expect(screen.getByTestId("diver-file-group-support")).toHaveAttribute("open");
+    expect(screen.getByTestId("diver-file-group-waiver")).toHaveAttribute("open");
   });
 
   it("gives the summary a touch floor and one content region", () => {
@@ -82,7 +85,7 @@ describe("DiverFileGroupDisclosure", () => {
     const details = screen.getByTestId("diver-file-group-certifications");
     const summary = details.querySelector("summary");
     expect(summary).toHaveTextContent(/certification records\s*padi open water/i);
-    expect(summary).toHaveClass("min-h-11");
+    expect(summary).toHaveClass("min-h-13");
     expect(summary).not.toHaveClass("max-sm:flex-wrap");
     expect(screen.getByText("PADI Open Water")).toHaveClass("shrink-0");
     expect(summary).toHaveAttribute("aria-controls", "certifications-content");
@@ -111,7 +114,7 @@ describe("DiverFileGroupDisclosure", () => {
 
   /**
    * The row's own label is the group's heading, and it carries the fragment the
-   * `?notice=` redirects and the prep panel's `#support` link land on. A second
+   * `?notice=` redirects and the status ledger's fixes land on. A second
    * uppercase copy of it inside the body was what made the desktop record read
    * as two headings per group.
    */
@@ -126,6 +129,26 @@ describe("DiverFileGroupDisclosure", () => {
     expect(heading).toHaveAttribute("id", "waiver");
     expect(heading.closest("summary")).not.toBeNull();
     expect(screen.getByRole("region", { name: "Waiver" })).toBeInTheDocument();
+  });
+
+  /**
+   * A group with nothing behind its fact is a row, not a door: a caret that
+   * opens onto the summary again promises something the row cannot keep.
+   */
+  it("draws a plain row, no caret and no disclosure, when there is nothing to open", () => {
+    render(
+      <DiverFileGroupDisclosure id="waiver" label="Waiver" summary="Signed · Good until Jul 21" />,
+    );
+
+    const group = screen.getByTestId("diver-file-group-waiver");
+    expect(group.querySelector("details")).toBeNull();
+    expect(group.querySelector("summary")).toBeNull();
+    expect(screen.getByRole("heading", { level: 2, name: "Waiver" })).toHaveAttribute(
+      "id",
+      "waiver",
+    );
+    expect(group).toHaveTextContent(/waiver\s*signed · good until jul 21/i);
+    expect(group).toHaveClass("border-b", "first:border-t");
   });
 
   it("puts a long phone summary on its own wrapped line", () => {
@@ -144,11 +167,7 @@ describe("DiverFileGroupDisclosure", () => {
     const label = summary?.querySelector("h2");
     const value = summary?.querySelector("span.text-sm");
 
-    expect(summary).toHaveClass(
-      "max-sm:flex-wrap",
-      "max-sm:py-2",
-      "group-open/diver-file:border-b-0",
-    );
+    expect(summary).toHaveClass("max-sm:flex-wrap", "max-sm:py-2");
     expect(label).toHaveClass("min-w-0", "flex-1");
     expect(value).toHaveClass(
       "min-w-0",

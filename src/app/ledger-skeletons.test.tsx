@@ -157,16 +157,27 @@ describe("the diver record's skeleton", () => {
       <DiverFileGroupDisclosure id="notes" label="Diver notes" summary="1 note">
         <p>Note body</p>
       </DiverFileGroupDisclosure>,
-    ).container.querySelector("summary");
-    const door = /^(?:border-y|border-border|p[ytb]-\d)/;
-    expect(box(loaded, door)).toEqual(["border-border", "border-y", "py-3"]);
+    ).container;
+    // The rule is the group's (one list, shared hairlines); the height is the
+    // summary's. The skeleton's door carries both on one element.
+    const rule = /^(?:border-[bty]|border-border|first:border-t|-mx-2|px-2)$/;
+    const height = /^(?:min-h-\d+|p[ytb]-\d)$/;
+    const loadedDoor = [
+      ...box(loaded.querySelector("section"), rule),
+      ...box(loaded.querySelector("summary"), height),
+    ].sort();
+    expect(loadedDoor).toEqual(
+      ["-mx-2", "border-b", "border-border", "first:border-t", "min-h-13", "px-2", "py-3"].sort(),
+    );
     cleanup();
 
     const { container } = render(<DiverProfileLoading />);
     expect(container.querySelectorAll(".rounded-panel")).toHaveLength(0);
-    const doors = container.querySelectorAll(".border-y");
-    expect(doors).toHaveLength(7);
-    for (const skeleton of doors) expect(box(skeleton, door)).toEqual(box(loaded, door));
+    const doors = container.querySelectorAll(".border-b");
+    expect(doors).toHaveLength(6);
+    for (const skeleton of doors) {
+      expect([...box(skeleton, rule), ...box(skeleton, height)].sort()).toEqual(loadedDoor);
+    }
   });
 
   // One act: Book a departure. Contact details is a file door, not a button

@@ -361,7 +361,6 @@
       "emergencyContact": "Emergency contact",
       "notOnFile": "Not on file",
       "rentalFit": "Rental fit",
-      "diveSupport": "Dive support",
       "nitroxRequestedSuffix": "· Nitrox requested",
       "saving": "Saving…",
       "boardedDone": "Boarded",
@@ -491,21 +490,6 @@
     "oneToFiveYears": "one to five years ago",
     "overFiveYears": "over five years ago",
     "never": "never"
-  },
-  "supportNeeds": {
-    "label": "Dive support",
-    "supportDiversFromShop": "{count, plural, one {# support diver in the water, arranged by the shop} other {# support divers in the water, arranged by the shop}}",
-    "supportDiversOwn": "{count, plural, one {# support diver in the water, brought by the diver} other {# support divers in the water, brought by the diver}}",
-    "boardingAssistance": "Help getting aboard",
-    "waterLift": "Lift in and out of the water",
-    "briefingSign": "Briefing in sign language",
-    "briefingWritten": "Briefing in writing",
-    "briefingAloud": "Briefing described aloud",
-    "briefingSignals": "Agreed signals",
-    "equipment": "Equipment: {note}",
-    "divesWith": "Dives with {name}",
-    "divesWithOnDeparture": "Dives with {name}, on this departure",
-    "divesWithNotOnDeparture": "Dives with {name}, not booked on this departure"
   },
   "welcomeCue": {
     "firstTrip": "first time with us",

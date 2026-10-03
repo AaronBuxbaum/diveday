@@ -558,12 +558,12 @@ describe("what the rail hides", () => {
     waivers: "waivers",
     whatsapp: "messaging",
     dataImport: "import",
-    gearImport: "import",
     backup: "export",
     dataExport: "export",
     boats: "boats",
     stripe: "payments",
     tax: "payments",
+    trial: "trial",
   };
 
   it("drops every gated destination for a reader who holds nothing", () => {

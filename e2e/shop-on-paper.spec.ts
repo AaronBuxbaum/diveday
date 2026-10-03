@@ -25,6 +25,10 @@ test.describe("the shop on paper", () => {
   }) => {
     // A boat inside the counter's window, found the way the desk finds one.
     await openCounterFor(page, privateShop.slug, "Diego Alvarez");
+    // The counter's own hydration signal: a tap that lands before the row's
+    // handler is attached is lost, and on a loaded CI shard that left the
+    // settled group never appearing.
+    await expect(page.locator("[data-check-in-queue]")).toHaveAttribute("data-hydrated", "true");
 
     // Check one diver in, so the settled group has a row with a pass door.
     const checkIn = page.getByRole("button", { name: /^Check in / }).first();

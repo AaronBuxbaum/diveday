@@ -19,13 +19,12 @@ describe("activity lines", () => {
     const t = staffTranslator(locale);
 
     for (const code of ACTIVITY_CODES) {
-      // `self` and `reason` are each read by one sentence — the support-needs
-      // pair and the refused no-show undo — and passing them everywhere costs
-      // nothing: an ICU select over a parameter a message does not mention is
-      // unused.
+      // `reason` is read by one sentence — the refused no-show undo — and
+      // passing it everywhere costs nothing: an ICU select over a parameter a
+      // message does not mention is unused.
       const line = activityLine(t, {
         code,
-        params: { ...NAMES, self: "no", reason: "trip_full" },
+        params: { ...NAMES, reason: "trip_full" },
       });
       expect(line.trim(), code).not.toBe("");
       // A missing key renders as the key itself, which is the failure this
@@ -34,22 +33,6 @@ describe("activity lines", () => {
       // And no placeholder survives unfilled.
       expect(line, code).not.toMatch(/\{[a-z]/i);
     }
-  });
-
-  it("says which side of the support-needs line the diver was on", () => {
-    const t = staffTranslator("en-US");
-    const staff = activityLine(t, {
-      code: "support_needs_updated",
-      params: { ...NAMES, self: "no" },
-    });
-    const own = activityLine(t, {
-      code: "support_needs_updated",
-      params: { ...NAMES, self: "yes" },
-    });
-
-    expect(staff).toContain(NAMES.actor);
-    expect(own).not.toContain(NAMES.actor);
-    expect(own).toContain("their dives");
   });
 
   /**

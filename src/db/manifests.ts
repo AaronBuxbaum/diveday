@@ -42,7 +42,6 @@ import {
   trips,
 } from "./schema";
 import { getShopById } from "./shops";
-import { supportNeedsByTripPerson } from "./support-needs";
 import { getTripRoster, getTripWithBooked } from "./trips";
 import { crewClashes } from "./trips-crew";
 import { liveTrip } from "./trips-live";
@@ -763,7 +762,6 @@ export async function getTripManifests(
     crewRollCalls,
     buddyTeams,
     standingClashes,
-    supportByPerson,
     welcomeInputs,
     ...rollCalls
   ] = await Promise.all([
@@ -781,7 +779,6 @@ export async function getTripManifests(
     // nothing for a departure that has come home, which is the rule the week
     // grid already keeps.
     crewClashes(db, shopId, tripId),
-    supportNeedsByTripPerson(db, shopId, tripId),
     // The two facts behind the welcome word (issue #1182): who consented, and
     // when this shop last had them on a boat. Read here rather than in the page
     // so the offline serializer and every other consumer of a manifest see the
@@ -904,7 +901,6 @@ export async function getTripManifests(
         tripEndsAt: trip.endsAt,
       }),
       depthAdvisory: depthByBooking.get(booking.id),
-      supportNeeds: supportByPerson.get(person.id) ?? null,
       hotelPickupLocation: booking.hotelPickupLocation,
       pickupTime: booking.pickupTime,
       checkedIn: booking.status === "checked_in",

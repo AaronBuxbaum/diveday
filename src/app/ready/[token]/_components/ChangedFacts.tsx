@@ -26,10 +26,9 @@ import { SIZED_RENTAL_KINDS, sizeForRentalItem } from "@/lib/rentals";
  * them; the tanks door writes `bookings.wants_nitrox` and nothing else; the
  * contact door writes a name and a phone and never blanks either.
  *
- * **What is deliberately not here**: the crew note, the support-needs record
- * and the hotel pickup stay inside Day-of details. Support needs are a record
- * about a person's dive (#1179's privacy call), and a confirm-at-a-glance panel
- * is the wrong place to restate one.
+ * **What is deliberately not here**: the crew note and the hotel pickup stay
+ * inside Day-of details. The note is the diver's own words (#1179's privacy
+ * call), and a confirm-at-a-glance panel is the wrong place to restate it.
  *
  * No drawing, no coral, no motion. Sizes and an emergency contact are
  * safety-adjacent, and Budget rule 8 stands.

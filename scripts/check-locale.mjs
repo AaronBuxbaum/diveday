@@ -302,6 +302,7 @@ export const DELIBERATELY_IDENTICAL = new Map([
     "the gas, and the word Spanish diving uses for it",
   ],
   ["diver.json ready.tanksNitrox", "the gas, and the word Spanish diving uses for it"],
+  ["diver.json fallback.shopPrep.nitrox", "the gas, and the word Spanish diving uses for it"],
   ["diver.json rental.nitroxLegend", "the gas, and the word Spanish diving uses for it"],
   [
     "diver.json switching.spreadsheet.columns.nitrox.column",
@@ -342,7 +343,6 @@ export const DELIBERATELY_IDENTICAL = new Map([
     "the mail reply prefix, used unchanged in Spanish",
   ],
   ["diver.json demo.roles.instructor.title", "the same word in Spanish"],
-  ["diver.json ready.supportDiversNone", "the same word in Spanish"],
   ["diver.json trip.crewRole.instructor", "the same word in Spanish"],
   ["diver.json waiver.answerNo", "the same word in Spanish"],
   ["staff/diveSites.json form.route.zoomLabel", "the same word in Spanish"],
@@ -350,6 +350,7 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["staff/settings.json team.roleLabels.instructor", "the same word in Spanish"],
   ["staff/settings.json team.rolesLegend", "the same word in Spanish"],
   ["staff/tripPrep.json total", "the same word in Spanish"],
+  ["diver.json fallback.shopPrep.total", "the same word in Spanish"],
   [
     "staff/incidentExport.json executedDiveSurfaceIntervalValue",
     "the unit abbreviation, unchanged in Spanish",

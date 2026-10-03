@@ -16,34 +16,38 @@ import { sectionCardClass } from "@/components/ui/card";
  * **last**. It held the old order
  * — card, then a flat band — until 2026-08-28, and a skeleton that promises a
  * form where the pitch lands is a layout jump wearing a placeholder's clothes.
- * `max-w-xl` with the page: the thread's one measure (decision 1).
+ * `max-w-xl` with the page, the thread's one measure (decision 1), and two
+ * columns from `lg` as the page has.
  */
 export default function TripDetailLoading() {
   return (
-    <main className="mx-auto w-full max-w-xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <div className="animate-pulse">
+    <main className="mx-auto w-full max-w-xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:max-w-5xl">
+      <div className="animate-pulse lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:grid-rows-[auto_repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10">
         {/* No bar for a back link: the page dropped its standalone "← All
             trips" when the header's eyebrow became the way back, and the bar
             that outlived it put every line below 16px low (pixel-craft class
             11, K-264). */}
-        <ShopPageHeaderSkeleton
-          titleWidth="w-72 max-w-full"
-          description={false}
-          meta={
-            <>
-              <div className="h-7 w-56 max-w-full rounded bg-surface-sunken" />
-              <div className="mt-4 h-9 w-36 rounded bg-surface-sunken" />
-            </>
-          }
-        />
-        {/* The hero's Add-to-calendar / Share row, `TripActions`: 16px under
+        {/* The hero, one cell of the grid as the page sets it. */}
+        <div>
+          <ShopPageHeaderSkeleton
+            titleWidth="w-72 max-w-full"
+            description={false}
+            meta={
+              <>
+                <div className="h-7 w-56 max-w-full rounded bg-surface-sunken" />
+                <div className="mt-4 h-9 w-36 rounded bg-surface-sunken" />
+              </>
+            }
+          />
+          {/* The hero's Add-to-calendar / Share row, `TripActions`: 16px under
             the header and a 44px target tall, on every page but the embed. */}
-        <div className="mt-4 flex h-11 items-center">
-          <div className="h-5 w-64 max-w-full rounded bg-surface-sunken" />
+          <div className="mt-4 flex h-11 items-center">
+            <div className="h-5 w-64 max-w-full rounded bg-surface-sunken" />
+          </div>
         </div>
         {/* The page's one stack of sections, 40px apart (pixel-craft class 4,
             K-162), on the same `mt-10 space-y-10` the page stands them on. */}
-        <div className="mt-10 space-y-10">
+        <div className="mt-10 space-y-10 lg:contents lg:space-y-0">
           {/* "The day" — the run of dives, one row each. */}
           <div className="h-28 rounded bg-surface-sunken" />
           {/* The pitch, in its three parts — the fact chip, the three tiles,
@@ -66,8 +70,13 @@ export default function TripDetailLoading() {
           <div className="h-26 rounded bg-surface-sunken" />
           {/* The booking card's shell, from the same place `SectionCard` takes
               it — the one raised card the page streams in, and the last thing
-              on it. */}
-          <div className={sectionCardClass({ padding: "none", className: "h-96" })} />
+              on it; from `lg` the right-hand column, as the page sets it. */}
+          <div
+            className={sectionCardClass({
+              padding: "none",
+              className: "h-96 lg:col-start-2 lg:row-span-6 lg:row-start-1",
+            })}
+          />
         </div>
       </div>
     </main>

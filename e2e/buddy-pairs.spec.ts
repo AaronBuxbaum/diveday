@@ -33,10 +33,9 @@ test("staff build a buddy team, roll call raises the split, and boarding the res
   const teamPanel = page.locator("section", {
     has: page.getByRole("heading", { name: "Buddy teams" }),
   });
-  // Scoped to the **membership** chips, not to any text in the row. A team row
-  // also carries the "dives with" constraints its divers stated (issue #1068),
-  // so a bare `li hasText` matched Diego's team when asked for Omar's — the
-  // same over-loose shape this spec's own note below warns about.
+  // Scoped to the **membership** chips, not to any text in the row: a bare
+  // `li hasText` is the over-loose shape this spec's own note below warns
+  // about.
   const teamRow = (name: string) =>
     teamPanel
       .locator("li")

@@ -1,5 +1,6 @@
 "use client";
 
+import { unstable_rethrow } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { applicationServerKey, pushSupport } from "@/lib/web-push-key";
@@ -117,7 +118,10 @@ export function PushOptIn({
         return;
       }
       setSubscribed(true);
-    } catch {
+    } catch (error) {
+      // An expired session ends the action in a redirect to sign-in; let it
+      // navigate rather than painting "couldn't turn on" over it.
+      unstable_rethrow(error);
       setProblem("error");
     } finally {
       setBusy(false);
@@ -136,7 +140,8 @@ export function PushOptIn({
         if (!hasOtherTrips) await subscription.unsubscribe();
       }
       setSubscribed(false);
-    } catch {
+    } catch (error) {
+      unstable_rethrow(error);
       setProblem("error");
     } finally {
       setBusy(false);

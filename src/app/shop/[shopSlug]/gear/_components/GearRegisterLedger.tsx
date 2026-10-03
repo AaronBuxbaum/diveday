@@ -251,7 +251,13 @@ function GearUnitRow({
   // Brand and size, the two things a hand reaching for a unit checks. The
   // serial lives on the unit's own record — it identifies a unit to an
   // insurer, never to a staffer at the rack.
-  const descriptor = [item.brandModel, item.size].filter(Boolean).join(" · ");
+  // A size on its own names itself: a bare "7" on a row of boots read as a
+  // count or a tag, not a size.
+  const descriptor = item.brandModel
+    ? [item.brandModel, item.size].filter(Boolean).join(" · ")
+    : item.size
+      ? t("gear.fleet.sizeOnly", { size: item.size })
+      : "";
   const where = reservation
     ? whereFact({ reservation, group, t, locale, timeZone, todayLocal })
     : null;

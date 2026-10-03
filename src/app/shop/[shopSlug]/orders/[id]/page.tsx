@@ -542,7 +542,9 @@ export default async function OrderDetailPage({
               : t("orders.detail.notice.fallback")
             : undefined}
         </FormStatus>
-        {demo && (order.order.status === "open" || order.order.status === "paid") ? (
+        {/* Only beside a disabled button it explains: a paid order this
+            person cannot refund shows no button, so it gets no reason either. */}
+        {demo && (order.order.status === "open" || canOfferRefund) ? (
           <p className="mt-2 text-xs text-muted">{demoActionHint}</p>
         ) : null}
       </SectionCard>

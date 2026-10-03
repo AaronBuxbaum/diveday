@@ -31,6 +31,7 @@ import {
 import { nextHeadersStub } from "@/test/next-headers";
 import { demoteOwnerToManager } from "@/test/staff-session";
 import { BrandColorField } from "./_components/BrandColorField";
+import { CounterQrCard } from "./CounterQrCard";
 import { SETTINGS_RAIL_ROWS, type SectionId, settingsSectionFragment } from "./settings-groups";
 
 // Same mocking shape as ./embed/page.test.tsx: the page is invoked directly,
@@ -769,6 +770,27 @@ async function readdirDeep(dir: string): Promise<string[]> {
 }
 
 /**
+ * The section ids the pane renders, in order. `CounterQrCard` is a client row
+ * whose `SettingsRow` sits inside it, out of this tree's reach, so the card
+ * itself stands for its section.
+ */
+function renderedSectionIds(node: unknown, found: string[] = []): string[] {
+  if (node === null || typeof node !== "object") return found;
+  if (Array.isArray(node)) {
+    for (const child of node) renderedSectionIds(child, found);
+    return found;
+  }
+  if ("type" in node && "props" in node) {
+    const element = node as ReactElement<{ sectionId?: string; children?: unknown }>;
+    if (element.type === settingsRowsModule.SettingsRow && element.props.sectionId)
+      found.push(element.props.sectionId);
+    if (element.type === CounterQrCard) found.push("counterCard");
+    renderedSectionIds(element.props?.children, found);
+  }
+  return found;
+}
+
+/**
  * **The pane half of the rail-and-pane split** (ADR
  * 20260827-clearwater-surface-language, decision 6). The rail is only honest
  * if it is drawn from the same list the pane renders, so these read the hub's
@@ -778,11 +800,12 @@ async function readdirDeep(dir: string): Promise<string[]> {
  */
 describe("the rail and the pane say the same thing", () => {
   it("renders every section the rail points at, in the rail's order", async () => {
-    const rows = findElements<{ sectionId?: string }>(
-      await renderSettings("owner"),
-      settingsRowsModule.SettingsRow,
+    // A shop past its demo, so the trial row renders too.
+    const rendered = renderedSectionIds(
+      await renderSettings("owner", async (db, session) => {
+        await db.update(shops).set({ isDemo: false }).where(eq(shops.id, session.user.shopId));
+      }),
     );
-    const rendered = rows.flatMap((row) => (row.props.sectionId ? [row.props.sectionId] : []));
     const mapped = SETTINGS_RAIL_ROWS.flatMap((row) =>
       row.target.kind === "section" ? [row.target.id] : [],
     );
@@ -793,6 +816,23 @@ describe("the rail and the pane say the same thing", () => {
     expect(new Set(rendered)).toEqual(new Set(mapped.filter((id) => rendered.includes(id))));
     // The seeded shop runs boats and takes payments, so it renders the lot.
     expect(rendered).toEqual(mapped);
+  });
+
+  /**
+   * **Nothing on the pane is missing from the map** (Aaron, 2026-10-03: the
+   * rail and the list disagreed). The counter card and the trial row were
+   * rows with no section id, so the test above never saw them and the rail
+   * never named them.
+   */
+  it("gives every row the pane renders a section the rail names", async () => {
+    const rows = findElements<{ sectionId?: string; heading: string }>(
+      await renderSettings("owner", async (db, session) => {
+        await db.update(shops).set({ isDemo: false }).where(eq(shops.id, session.user.shopId));
+      }),
+      settingsRowsModule.SettingsRow,
+    );
+    for (const row of rows) expect(row.props.sectionId, row.props.heading).toBeDefined();
+    expect(rows.length).toBeGreaterThan(5);
   });
 
   it("names every door the hub renders", async () => {

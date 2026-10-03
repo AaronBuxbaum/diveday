@@ -796,7 +796,10 @@ test("a paper release is recorded from the diver's own record, not just from a d
   // person-wide: the row's state word flips, and every send route retires
   // because there is nothing left for it to do.
   await expect(page.getByText("Not signed")).toHaveCount(0);
-  await expect(page.locator("#waiver-content").getByText(/Good until/)).toBeVisible();
+  // Nothing left to send or record: the group is a plain row now.
+  await expect(page.getByRole("region", { name: "Waiver", exact: true })).toContainText(
+    /Signed · Good until/,
+  );
   await expect(page.getByText("Mark signed on paper")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Email waiver" })).toHaveCount(0);
 
@@ -1148,7 +1151,7 @@ test("a physician's clearance ends a medical hold, and the roster leads to it", 
   // is the standing itself: held becomes signed.
   await expect(page.getByRole("status")).toContainText("Nothing is waiting on Morgan Vale");
   const waiverGroup = page.getByRole("region", { name: "Waiver" });
-  await expect(waiverGroup.getByText("Signed", { exact: true })).toBeVisible();
+  await expect(waiverGroup).toContainText(/Signed · Good until/);
   await expect(waiverGroup.getByText("Medical review", { exact: true })).toHaveCount(0);
 
   // And the block is gone where it actually mattered — on the boat's roster.

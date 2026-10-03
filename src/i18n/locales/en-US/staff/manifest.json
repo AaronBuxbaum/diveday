@@ -118,8 +118,6 @@
   "buddyTeamLabel": "Team {number, number, ::00}",
   "buddyCancelledName": "{name} (seat cancelled)",
   "buddyCrewName": "{name} (crew)",
-  "buddyDivesWith": "Dives with {name}",
-  "buddyDivesWithNotBooked": "Dives with {name} — not booked",
   "buddyRecordedBy": "Recorded by {name}",
   "buddyDissolve": "Dissolve team",
   "buddyRemoveMember": "Remove {name}",
@@ -183,7 +181,6 @@
   "rollCallRecordedShort": "{label} · {time} · {name}",
   "markBackAboard": "Mark back aboard",
   "crewMarkBackAboard": "Mark back aboard",
-  "supportNeedsLabel": "Dive support",
   "emergency": {
     "heading": "In an emergency",
     "empty": "No emergency numbers recorded for this shop.",

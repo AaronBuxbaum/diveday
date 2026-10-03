@@ -46,6 +46,26 @@ describe("NoticeBanner", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it("only asks for an invoice from a reader who can raise one", () => {
+    expect(
+      resolveDiverNotice({
+        notice: "booked",
+        personId: PERSON,
+        locale: "en-US",
+        canRaiseInvoice: true,
+      })?.text,
+    ).toBe("Booked. Review it below, then create and send the invoice.");
+    // No order rights, or no Stripe: the story has no "New invoice" link to point at.
+    expect(
+      resolveDiverNotice({
+        notice: "booked",
+        personId: PERSON,
+        locale: "en-US",
+        canRaiseInvoice: false,
+      })?.text,
+    ).toBe("Booked.");
+  });
+
   it("renders a known notice", () => {
     renderBanner("booked");
     expect(screen.getByRole("status")).toBeInTheDocument();

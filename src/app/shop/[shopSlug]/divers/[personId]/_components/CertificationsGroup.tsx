@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { CertificationCardRow } from "@/components/person/rows";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
@@ -578,7 +577,9 @@ export function CertificationsGroup({
               as="form"
               action={addCardAction.bind(null, shopSlug, personId)}
               columns={2}
-              className={sectionCardClass({ className: "mt-3 gap-y-3" })}
+              // Flat, not a card: it already sits inside the group's own panel,
+              // and a bordered card in a bordered card read as a second page.
+              className="mt-4 gap-y-3"
             >
               <Field label={t("divers.certifications.agency")}>
                 <select name="agency" className={controlClass}>
