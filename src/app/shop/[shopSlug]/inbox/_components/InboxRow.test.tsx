@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -42,6 +43,7 @@ function renderRow(
         timezone="America/Cancun"
         t={t}
         deleteAction={vi.fn()}
+        doneAction={vi.fn()}
       />
     </ul>,
   );
@@ -49,11 +51,11 @@ function renderRow(
 }
 
 describe("a message on file", () => {
-  it("opens the diver's record at the conversation", () => {
+  it("opens the diver's record on this very message", () => {
     renderRow();
     expect(screen.getByRole("link", { name: "Open the record for Priya Sharma" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/divers/af000000-1111-4222-8333-444444444444#conversation",
+      `/shop/blue-mantis/divers/af000000-1111-4222-8333-444444444444#message-${MESSAGE.id}`,
     );
   });
 
@@ -76,16 +78,22 @@ describe("a message from a stranger", () => {
     expect(screen.getByText(/marta\.keller@example\.net/)).toBeInTheDocument();
   });
 
-  it("offers a Delete, because nothing else on any surface can finish this row", () => {
-    // Issue #1506: no record means no door and no composer, so without this
-    // the row could only be read — and it went on counting against Today's
-    // unanswered messages for as long as it sat there.
+  it("offers a Delete behind its ⋯, since a stranger's message has no record to live on", async () => {
+    // Issue #1506: no record means no door and no composer, so a stranger's
+    // message could only be read, and nothing else on any surface clears it.
     const container = renderRow({ personId: null, fromAddress: "marta.keller@example.net" }, null);
-    expect(
-      screen.getByRole("button", { name: "Delete the message from marta.keller@example.net" }),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Delete/ })).toBeNull();
+    await userEvent.click(
+      screen.getByRole("button", { name: "More for the message from Unknown sender" }),
+    );
+    const remove = screen.getByRole("button", {
+      name: "Delete the message from marta.keller@example.net",
+    });
     // The id the action deletes rides in the form, not in the URL.
-    expect(container.querySelector('input[name="messageId"]')).toHaveValue(MESSAGE.id);
+    expect(remove.closest("form")?.querySelector('input[name="messageId"]')).toHaveValue(
+      MESSAGE.id,
+    );
+    expect(container.querySelector("[data-row-menu]")).toContainElement(remove);
   });
 });
 
@@ -98,54 +106,61 @@ function slotOf(container: HTMLElement, node: Element): Element {
 }
 
 /**
- * **One column of dates, door or not** (pixel-craft class 3, K-459). A
- * stranger's row carried its Delete beside its date, and a door's chevron is
- * 5.7px of ink, so the stranger's date ended 50px left of every other date in
- * the column (903–1035 against 853–984 at 1280). And the 44px button set the
- * height of the kind's line on a phone, so that row's first line sat 12px
- * lower than its neighbours' (K-465). The trailing slot holds the date alone
- * on every row, the door's slot follows it whether or not there is a door, and
- * Delete is a line of the row's body.
+ * **One column of dates, door or not** (pixel-craft class 3, K-459). Every row
+ * ends on the same date, ⋯ and door's slot, whatever the row offers, so the
+ * dates down the column end on one edge and no row's first line sits lower
+ * than its neighbours' (K-465).
  */
-describe("where the row sets its date and its Delete", () => {
+describe("where the row sets its date and its acts", () => {
   const RECEIVED = formatDateTimeTz(MESSAGE.receivedAt, "en-US", "America/Cancun");
   // By exact text: the formatted date keeps its no-break spaces, which
   // `getByText`'s normalizer would collapse on the node's side only.
   const received = () =>
     screen.getByText((_, node) => node?.children.length === 0 && node.textContent === RECEIVED);
 
-  it("holds only the date in a door row's trailing slot, with the door's glyph after it", () => {
+  it("holds the date and the ⋯ in a door row's trailing slot, with the door's glyph after it", () => {
     const container = renderRow();
     const trailing = slotOf(container, received());
-    expect(trailing.textContent).toBe(RECEIVED);
+    expect(trailing).toContainElement(
+      screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
+    );
     const glyph = trailing.nextElementSibling;
     expect(glyph?.querySelector("svg")).not.toBeNull();
     expect(glyph).not.toHaveClass("invisible");
   });
 
-  it("holds only the date in a stranger's trailing slot, and keeps the door's slot after it", () => {
+  it("holds the same in a stranger's trailing slot, and keeps the door's slot after it", () => {
     const container = renderRow({ personId: null, fromAddress: "marta.keller@example.net" }, null);
     const trailing = slotOf(container, received());
-    expect(trailing.textContent).toBe(RECEIVED);
-    expect(trailing.querySelector("form, button")).toBeNull();
+    expect(trailing).toContainElement(
+      screen.getByRole("button", { name: "More for the message from Unknown sender" }),
+    );
     // The door's glyph, unseen: the date ends where a door row's date ends.
     const glyph = trailing.nextElementSibling;
     expect(glyph?.querySelector("svg")).not.toBeNull();
     expect(glyph).toHaveClass("invisible");
     expect(screen.queryByRole("link")).toBeNull();
   });
+});
 
-  it("sets a stranger's Delete in the row's body, after the address it names", () => {
-    const container = renderRow({ personId: null, fromAddress: "marta.keller@example.net" }, null);
-    const remove = screen.getByRole("button", {
-      name: "Delete the message from marta.keller@example.net",
-    });
-    const address = screen.getByText("marta.keller@example.net");
-    expect(slotOf(container, remove)).toBe(slotOf(container, screen.getByText("Unknown sender")));
-    expect(address.compareDocumentPosition(remove) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    // Its own line, at the body's end edge.
-    const line = remove.closest("form")?.parentElement;
-    expect(line).toHaveClass("flex", "justify-end");
+describe("marking a message done", () => {
+  it("offers Mark done on a waiting message, posting done=true", async () => {
+    renderRow();
+    await userEvent.click(
+      screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
+    );
+    const done = screen.getByRole("button", { name: "Mark done" });
+    expect(done.closest("form")?.querySelector('input[name="done"]')).toHaveValue("true");
+  });
+
+  it("offers the way back on a done message, posting done=false", async () => {
+    renderRow({ answeredAt: new Date("2026-07-21T15:00:00.000Z") });
+    await userEvent.click(
+      screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
+    );
+    const back = screen.getByRole("button", { name: "Move back to waiting" });
+    expect(back.closest("form")?.querySelector('input[name="done"]')).toHaveValue("false");
+    expect(screen.queryByRole("button", { name: "Mark done" })).toBeNull();
   });
 });
 
@@ -225,8 +240,11 @@ describe("a stranger's message, which has no record to be read on", () => {
 });
 
 describe("what a row with a record behind it does not offer", () => {
-  it("has no Delete: it has a door and a composer, and the way to finish it is to answer it", () => {
+  it("has no Delete: what a diver wrote belongs to their conversation", async () => {
     renderRow();
+    await userEvent.click(
+      screen.getByRole("button", { name: "More for the message from Priya Sharma" }),
+    );
     expect(screen.queryByRole("button", { name: /^Delete/ })).toBeNull();
   });
 });

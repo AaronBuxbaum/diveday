@@ -72,8 +72,9 @@ const ADDRESS_TARGET =
  *   lead, and the only question is whether the shop puts a boat on that day.
  *
  * The name is the door when this lead is linked to a diver on file
- * (`personId`, resolved at capture time by exact email match and never
- * back-filled — `src/db/course-inquiries.ts`). Most requests are strangers, so
+ * (`personId`: an exact email match, made at capture time and again on every
+ * read, so a diver added after they asked still gets their door —
+ * `withRosterLinks` in `src/db/course-inquiries.ts`). Most requests are strangers, so
  * most rows have no door at all: a stretched row link over a list where one row
  * in four is tappable is a promise the surface cannot keep, and the row's own
  * acts — mailing them, seating them — have to stay reachable either way.

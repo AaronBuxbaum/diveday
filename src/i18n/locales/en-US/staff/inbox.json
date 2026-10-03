@@ -3,7 +3,7 @@
   "emptyDetail": "Replies to the emails and WhatsApp messages you send land here.",
   "group": {
     "waiting": "Waiting on you · {count}",
-    "answered": "Answered"
+    "answered": "Done"
   },
   "channel": {
     "email": "Email",
@@ -23,6 +23,14 @@
     "actionFor": "Delete the message from {address}",
     "confirm": "Delete this message?",
     "pending": "Deleting…"
+  },
+  "done": {
+    "action": "Mark done",
+    "reopen": "Move back to waiting",
+    "pending": "Saving…"
+  },
+  "menu": {
+    "label": "More for the message from {name}"
   },
   "pagination": {
     "total": "{count, plural, one {# message} other {# messages}}"
