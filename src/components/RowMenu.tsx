@@ -17,13 +17,10 @@ import { useMenuDismissal } from "@/components/useMenuDismissal";
  *   panel over the rows below — it never pushes the row taller or reflows
  *   what sits beside it;
  * - a second tap on the "⋯" closes it, as does Escape (focus goes back to the
- *   "⋯") or a tap anywhere else (`useMenuDismissal`);
- * - the button stays lit while its list is open, so the reader can see which
- *   row the list belongs to.
+ *   "⋯") or a tap anywhere else (`useMenuDismissal`).
  *
  * The Reviews "⋯" used to be a `<details>` whose list opened *inside* the row:
- * the row grew, the review text and Publish slid down, the "⋯" lost its fill
- * the moment it opened, and a second `<details>` nested in it for Hide
+ * the row grew, the review text and Publish slid down, and a second `<details>` nested in it for Hide
  * stretched the row again. That is the bug this replaces.
  *
  * The panel's content is the caller's — rows built with `menuRowClass(…,
@@ -74,7 +71,7 @@ export function RowMenu({
     <div
       ref={rootRef}
       data-row-menu-open={open ? "" : undefined}
-      className={`relative ${open ? "z-30" : ""}`.trim()}
+      className={`relative ${open ? "z-20" : ""}`.trim()}
     >
       <button
         ref={triggerRef}
@@ -83,11 +80,7 @@ export function RowMenu({
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
         onClick={() => (open ? close() : setOpen(true))}
-        className={buttonClass({
-          variant: "ghost",
-          size: "icon-sm",
-          className: "aria-expanded:bg-surface-sunken",
-        })}
+        className={buttonClass({ variant: "ghost", size: "icon-sm" })}
       >
         <DiveDayIcon name="more" className="size-4" />
       </button>
@@ -96,7 +89,7 @@ export function RowMenu({
           ref={panelRef}
           id={panelId}
           data-row-menu=""
-          className={`absolute end-0 top-full z-30 mt-1 max-w-[calc(100vw-2rem)] animate-scale-in ${MENU_PANEL} ${panelClassName}`}
+          className={`absolute end-0 top-full z-20 mt-1 max-w-[calc(100vw-2rem)] animate-scale-in ${MENU_PANEL} ${panelClassName}`}
         >
           {typeof children === "function" ? children(close) : children}
         </div>
