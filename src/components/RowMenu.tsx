@@ -1,7 +1,15 @@
 // i18n-exempt-file: every visible label arrives as an already-translated prop.
 "use client";
 
-import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { MENU_PANEL } from "@/components/ui/menu";
@@ -16,6 +24,8 @@ import { useMenuDismissal } from "@/components/useMenuDismissal";
  * - the list opens directly under its button, end-aligned, as a floating
  *   panel over the rows below — it never pushes the row taller or reflows
  *   what sits beside it;
+ * - when the list would run under the foot of the screen (or the phone tab
+ *   bar), it opens upward from the "⋯" instead;
  * - a second tap on the "⋯" closes it, as does Escape (focus goes back to the
  *   "⋯") or a tap anywhere else (`useMenuDismissal`).
  *
@@ -53,6 +63,24 @@ export function RowMenu({
   }, []);
   useMenuDismissal({ open, close, inside: [rootRef], returnFocus: triggerRef });
   const panelRef = useRef<HTMLDivElement>(null);
+  const [upward, setUpward] = useState(false);
+
+  // Measured before paint, so a list near the foot never flashes downward
+  // first. The tab bar is fixed over the foot below `lg` (`--tabbar-h`), and a
+  // list that opened under it would hide its last act — Delete, on the Inbox.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the panel's content can change its height
+  useLayoutEffect(() => {
+    const panel = panelRef.current;
+    if (!open || !panel) {
+      setUpward(false);
+      return;
+    }
+    const trigger = triggerRef.current?.getBoundingClientRect();
+    const height = panel.getBoundingClientRect().height;
+    if (!trigger || height === 0) return;
+    const floor = window.innerHeight - tabBarHeight(panel);
+    setUpward(trigger.bottom + height + 8 > floor && trigger.top - height - 8 >= 0);
+  }, [open, children]);
 
   // The first act takes focus as the list opens, so a keyboard reader lands in
   // the list they opened, and Escape hands it back to the "⋯".
@@ -89,11 +117,22 @@ export function RowMenu({
           ref={panelRef}
           id={panelId}
           data-row-menu=""
-          className={`absolute end-0 top-full z-20 mt-1 max-w-[calc(100vw-2rem)] animate-scale-in ${MENU_PANEL} ${panelClassName}`}
+          className={`absolute end-0 z-20 ${upward ? "bottom-full mb-1" : "top-full mt-1"} max-w-[calc(100vw-2rem)] animate-scale-in ${MENU_PANEL} ${panelClassName}`}
         >
           {typeof children === "function" ? children(close) : children}
         </div>
       ) : null}
     </div>
   );
+}
+
+/** The phone tab bar's height in px, read off `--tabbar-h` (`0px` from `lg` up). */
+function tabBarHeight(element: HTMLElement): number {
+  const raw = getComputedStyle(element).getPropertyValue("--tabbar-h").trim();
+  const value = Number.parseFloat(raw);
+  if (!Number.isFinite(value)) return 0;
+  if (raw.endsWith("rem")) {
+    return value * Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+  }
+  return value;
 }
