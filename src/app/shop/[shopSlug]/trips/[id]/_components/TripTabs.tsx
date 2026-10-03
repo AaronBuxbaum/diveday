@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SECTION_TAB_LIST_CLASS, sectionTabClass } from "@/components/SectionTabs";
 import { TRIP_PHASES, type TripPhase } from "@/lib/trip-phase";
 
 /**
@@ -91,22 +92,19 @@ export function TripTabs({
         </ol>
       )}
       {/* **Never a sideways drag** (`e2e/trips.spec.ts`): the five fit a 390px
-          phone in Spanish, the longer locale, by spreading across the row with
-          tighter padding below `sm` rather than by scrolling. */}
-      <nav aria-label={copy.tabsLabel} data-trip-tabs>
-        <ul className="flex justify-between border-b border-border sm:justify-start sm:gap-1">
+          phone in Spanish, the longer locale, by splitting the row with
+          tighter padding below `sm` rather than by scrolling. Every tab is the
+          same width — the section tabs' grid. */}
+      <nav aria-label={copy.tabsLabel} data-trip-tabs className="border-b border-border">
+        <ul className={SECTION_TAB_LIST_CLASS}>
           {TRIP_TABS.map((tab) => {
             const active = tab === current;
             return (
-              <li key={tab}>
+              <li key={tab} className="flex">
                 <Link
                   href={tripTabHref(shopSlug, tripId, tab)}
                   aria-current={active ? "page" : undefined}
-                  className={`-mb-px inline-flex min-h-11 items-center border-b-2 px-2 text-sm font-medium sm:px-3 ${
-                    active
-                      ? "border-primary text-foreground"
-                      : "border-transparent text-muted hover:text-foreground"
-                  }`}
+                  className={`grow ${sectionTabClass(active)}`}
                 >
                   {copy.tabs[tab]}
                 </Link>

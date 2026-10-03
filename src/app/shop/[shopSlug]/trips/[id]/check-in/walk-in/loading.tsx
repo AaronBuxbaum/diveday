@@ -6,7 +6,7 @@ export default function WalkInDiverLoading() {
   return (
     <div className="max-w-2xl">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-56" description descriptionWidth="w-80 max-w-full" />
+        <ShopPageHeaderSkeleton titleWidth="w-56" description={false} />
         <div className={sectionCardClass({ padding: "lg", className: "mt-8" })}>
           {["name", "email", "phone", "trip"].map((slot) => (
             <div key={slot} className="mt-4 first:mt-0">

@@ -2,7 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { SegmentedControl } from "./SegmentedControl";
-import { SEGMENT_CORNER, segmentedTrackClass } from "./segmented";
+import { SEGMENT_CORNER, segmentedGridTrackClass } from "./segmented";
 
 afterEach(cleanup);
 
@@ -178,7 +178,7 @@ describe("SegmentedControl", () => {
     for (const size of ["md", "boat"] as const) {
       render(<SegmentedControl ariaLabel="Trip" items={items} currentKey="guests" size={size} />);
       const nav = screen.getByRole("navigation", { name: "Trip" });
-      for (const token of segmentedTrackClass.split(" ")) expect(nav, size).toHaveClass(token);
+      for (const token of segmentedGridTrackClass.split(" ")) expect(nav, size).toHaveClass(token);
       const parts = [
         nav.querySelector('span[aria-hidden="true"]'),
         screen.getByText("Guests"),
@@ -242,12 +242,25 @@ describe("a track too narrow for one line", () => {
     return screen.getByRole("navigation", { name: "Days" });
   }
 
-  it("keeps one flex line while the options fit", () => {
+  /**
+   * **One line is equal widths** (Aaron, 2026-10-03): Money's range tabs sized
+   * each option to its label, so the targets jumped from tab to tab. `1fr`
+   * columns in a content-width track all take the widest option's width.
+   */
+  it("keeps one line of equal columns while the options fit", () => {
     const nav = renderInRoom(800);
     expect(nav.style.display).toBe("");
     expect(nav.style.gridTemplateColumns).toBe("");
-    expect(nav).toHaveClass("flex", "flex-wrap");
-    expect(nav).not.toHaveClass("grid");
+    expect(nav).toHaveClass("grid", "grid-flow-col", "auto-cols-fr", "w-fit");
+    expect(nav).not.toHaveClass("flex");
+  });
+
+  it("wraps when every option at the widest one's width would not fit", () => {
+    // Five 100px options need 500px on one line; 450px is not enough even
+    // though no single option is wider than its share.
+    const nav = renderInRoom(450);
+    expect(nav).not.toHaveClass("grid-flow-col");
+    expect(nav.style.gridTemplateColumns).toBe("repeat(4, minmax(0, 1fr))".replace("4", "3"));
   });
 
   it("lays wrapped options on columns every line shares, balanced across the lines", () => {

@@ -136,7 +136,8 @@ export default async function DiveSitesPage({
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice"]} />
       <ShopPageHeader
-        eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.diveSites)}
+        eyebrow={t("settings.main.eyebrow")}
+        eyebrowHref={shopPath(shopSlug, "settings")}
         title={t("diveSites.list.title")}
         // An empty library gets no header action: the empty card below is
         // already the whole page, and it carries both doors. Two identical

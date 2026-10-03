@@ -40,7 +40,6 @@ import {
   type MonthComparison,
   monthHasActivity,
   summarizeMonth,
-  tripFillRate,
 } from "@/lib/reporting";
 import { requireShopSurface } from "@/lib/session";
 import { summarizeShopYear } from "@/lib/shop-year";
@@ -497,22 +496,21 @@ export default async function ReportsPage({
     href: `/shop/${shopSlug}/trips/${trip.tripId}`,
     title: trip.title,
     date: formatShortDate(trip.startsAt, locale, tz),
-    seats: {
-      fact: t("reports.row.seats", { booked: trip.activeBookings, capacity: trip.capacity }),
-      ratio: tripFillRate(trip),
-    },
+    seats: t("reports.row.seats", { booked: trip.activeBookings, capacity: trip.capacity }),
     crew: t("reports.row.crew", { count: crewCounts.get(trip.tripId) ?? 0 }),
     // A departure nobody booked has no waivers to collect, so it says nothing
-    // about them rather than reporting an em dash against a bar of zero.
+    // about them. Otherwise the row says the one thing a staffer acts on: how
+    // many are still out, or that none are.
     waivers:
       trip.activeBookings > 0
-        ? {
-            fact: t("reports.row.waivers", {
-              complete: trip.waiverComplete,
-              total: trip.activeBookings,
-            }),
-            ratio: trip.waiverComplete / trip.activeBookings,
-          }
+        ? trip.waiverComplete >= trip.activeBookings
+          ? { fact: t("reports.row.waiversAllIn"), outstanding: false }
+          : {
+              fact: t("reports.row.waiversToCollect", {
+                count: trip.activeBookings - trip.waiverComplete,
+              }),
+              outstanding: true,
+            }
         : null,
   }));
 

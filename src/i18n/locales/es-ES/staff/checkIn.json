@@ -103,7 +103,6 @@
   },
   "walkIn": {
     "title": "Walk-in",
-    "description": "No hace falta correo en el mostrador.",
     "tripLabel": "Barco",
     "addToBoat": "Añadir al barco",
     "addPersonAriaLabel": "Añadir a {name} a este barco"

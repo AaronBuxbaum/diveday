@@ -1,6 +1,5 @@
 {
   "title": "Shop integrations",
-  "description": "Connect the systems that should share your shop’s catalog, money records, or automation events.",
   "notice": {
     "connected": "Integration connected.",
     "saved": "Integration settings saved.",

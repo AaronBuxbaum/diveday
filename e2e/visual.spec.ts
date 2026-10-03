@@ -1509,6 +1509,14 @@ async function capture(
       timeout: 15_000,
     },
   );
+  // Settings' rail moves to the current row from an effect, after the page has
+  // painted, so a capture could catch it at its top or on the row depending on
+  // the run (`settings-embed`). The rail marks itself once it has moved.
+  await page.waitForFunction(
+    () => !document.querySelector("[data-settings-rail-scroller]:not([data-rail-settled])"),
+    undefined,
+    { timeout: 15_000 },
+  );
   // The standard pair, plus the portrait tablet for the five staff surfaces a
   // shop runs on one. Widest last is deliberate: the base viewport is restored
   // below either way, but a capture that fails mid-loop leaves the page at a
@@ -4079,6 +4087,15 @@ for (const scheme of ["light", "dark"] as const) {
           .filter({ hasText: "Odile Marchand" })
           .filter({ visible: true });
         const sailedDoor = sailedRow.locator("details").filter({ hasText: "Did not dive?" });
+        // Hydrated before the tap, not after: this frame opens the door
+        // straight off a page load, and a summary tapped while the page is
+        // still the server's markup did not stay open on CI or locally. The
+        // first frame reached its door through the release form, which only
+        // answers once the page is live.
+        await expect(page.locator("[data-check-in-queue]")).toHaveAttribute(
+          "data-hydrated",
+          "true",
+        );
         await sailedDoor.locator("> summary").click();
         await disclosureSettled(sailedDoor);
         await capture(page, "check-in-no-show-sailed", scheme);

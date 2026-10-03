@@ -34,12 +34,7 @@ export default function RequestsLoading() {
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton
-          eyebrow={false}
-          titleWidth="w-32"
-          description
-          descriptionWidth="w-64 max-w-full"
-        />
+        <ShopPageHeaderSkeleton eyebrow={false} titleWidth="w-32" description={false} />
         <StaffSectionTabsSkeleton section="inbox" />
         <div className="space-y-10">
           {[2, 1].map((rows) => (

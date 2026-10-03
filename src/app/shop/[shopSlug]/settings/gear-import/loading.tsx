@@ -7,7 +7,7 @@ export default function Loading() {
   return (
     <main className={settingsPaneClass()}>
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton description descriptionWidth="w-full max-w-xl" />
+        <ShopPageHeaderSkeleton description={false} />
         <div className={sectionCardClass({ padding: "lg", className: "mt-8" })}>
           <div className="h-5 w-44 rounded bg-surface-sunken" />
           <div className="mt-4 h-9 w-56 rounded-lg bg-surface-sunken" />

@@ -7,7 +7,6 @@ import {
   SEGMENT_RAISED,
   segmentClass,
   segmentedGridTrackClass,
-  segmentedTrackClass,
 } from "@/components/ui/segmented";
 
 /**
@@ -71,7 +70,7 @@ import {
  *   x 627 on the first line and 616 on the second, labels centred at different
  *   x. So once the options measure wider than the track's room, the track lays
  *   them on equal columns — as many as its widest option allows, balanced so
- *   five make 3 + 2 rather than 4 + 1 — and goes back to one flex line when
+ *   five make 3 + 2 rather than 4 + 1 — and goes back to one line of equal columns when
  *   there is room again. Measured, not guessed from the item count: a boat-size
  *   checkpoint row in Spanish fits fewer columns than four short times do.
  * - **A caller may supply a shorter word for below `sm`** (`shortLabel`), for a
@@ -139,10 +138,12 @@ export type SegmentedControlSize = keyof typeof sizes;
 /**
  * The columns a track needs, or `null` while its options fit on one line.
  *
- * Reads two widths off the track: laid on one unwrapped line at its content's
- * width (every option at its own width, `flex: none`), and at the room its
- * container gives it. Both are set as inline styles and put back before this
- * returns, inside the same layout pass, so nothing is painted in between.
+ * **One line means equal widths**, so the question is whether every option at
+ * the widest option's width fits: `count × widest`, plus the gaps, padding and
+ * border. Reads the widest option laid at its own width (`flex: none`) and the
+ * room its container gives the track. Both are set as inline styles and put
+ * back before this returns, inside the same layout pass, so nothing is painted
+ * in between.
  */
 function columnsFor(nav: HTMLElement, count: number): number | null {
   const options = [...nav.querySelectorAll<HTMLElement>("[data-key]")];
@@ -153,25 +154,25 @@ function columnsFor(nav: HTMLElement, count: number): number | null {
   nav.style.maxWidth = "none";
   nav.style.width = "max-content";
   for (const option of options) option.style.flex = "none";
-  const oneLine = nav.getBoundingClientRect().width;
   const widest = Math.max(...options.map((option) => option.getBoundingClientRect().width));
   nav.style.width = "100%";
   const room = nav.getBoundingClientRect().width;
   for (const option of options) option.style.flex = "";
   if (style === null) nav.removeAttribute("style");
   else nav.setAttribute("style", style);
+  const track = getComputedStyle(nav);
+  const px = (value: string) => Number.parseFloat(value) || 0;
+  const frame =
+    px(track.paddingLeft) +
+    px(track.paddingRight) +
+    px(track.borderLeftWidth) +
+    px(track.borderRightWidth);
+  const gap = px(track.columnGap);
+  const oneLine = options.length * widest + (options.length - 1) * gap + frame;
   // Half a pixel of slack: widths arrive in fractions, and a track that fits
   // exactly must not flip to a grid on a rounding error.
   if (oneLine <= room + 0.5) return null;
-  const track = getComputedStyle(nav);
-  const px = (value: string) => Number.parseFloat(value) || 0;
-  const inner =
-    room -
-    px(track.paddingLeft) -
-    px(track.paddingRight) -
-    px(track.borderLeftWidth) -
-    px(track.borderRightWidth);
-  const gap = px(track.columnGap);
+  const inner = room - frame;
   // As many columns as the widest option allows, never fewer than one...
   const fit = Math.max(1, Math.min(count, Math.floor((inner + gap) / (widest + gap))));
   // ...then balanced over the lines that takes: five in room for four are
@@ -195,7 +196,7 @@ export function SegmentedControl({
   /** The current item's key, or null when no option is current (nothing is marked). */
   currentKey: string | null;
   size?: SegmentedControlSize;
-  /** Equal-width options spanning the container, vs. a content-width track. */
+  /** Options spanning the container, vs. a track as wide as its options need. Equal widths either way. */
   fill?: boolean;
   /**
    * Keep the current choice a clickable link instead of an inert span — for
@@ -336,20 +337,23 @@ export function SegmentedControl({
     placePill.current(false);
   }, [columns]);
 
-  // Block-level `flex` in both shapes, never `inline-flex`: an inline-level
+  // Block-level `grid` in both shapes, never `inline-grid`: an inline-level
   // box opts out of margin collapsing, so a track with `mt-*` below a header
   // with `mb-*` would stack the two margins instead of taking the larger —
   // +28px of phantom space the old hand-rolled navs (all block-level) never
-  // had. Content width comes from `w-fit`, not from being inline. A grid
-  // spans its room, like the wrapped row it replaces. Its `display` is a class
-  // swapped for the track's `flex` (`segmentedGridTrackClass`), never added
-  // beside it — two utilities for one property are settled by stylesheet
-  // order, not intent — and never an inline style, which outranks
-  // `print:hidden` and printed the track. Only the column count is inline.
+  // had. Content width comes from `w-fit`, not from being inline. A wrapped
+  // grid spans its room. The `display` is a class, never an inline style,
+  // which outranks `print:hidden` and printed the track; only the column
+  // count is inline.
+  //
+  // **Every option is the same width** (Aaron, 2026-10-03: a tab one label
+  // longer than its neighbours made the row's targets jump). One line is a
+  // grid of `1fr` columns: in a `w-fit` track that sizes every column to the
+  // widest option, and in a `fill` track it splits the room evenly.
   const track = `relative ${
     columns !== null
       ? segmentedGridTrackClass
-      : `${segmentedTrackClass} ${fill ? "flex-wrap" : "w-fit max-w-full flex-wrap"}`
+      : `${segmentedGridTrackClass} grid-flow-col auto-cols-fr${fill ? "" : " w-fit max-w-full"}`
   } print:hidden ${className}`
     .replace(/\s+/g, " ")
     .trim();
@@ -374,16 +378,12 @@ export function SegmentedControl({
       />
       {items.map((item) => {
         const active = item.key === currentKey;
-        // `grow` on the content-width variant too: it does nothing while the
-        // row fits (a `w-fit` track is exactly its content), and before the
-        // track has measured itself onto a grid (the server's render) it keeps
-        // a wrapped line from sitting ragged. On the grid it means nothing.
-        const cls = `relative inline-flex ${
-          fill ? "flex-1" : "grow"
-        } pressable items-center justify-center whitespace-nowrap ${sizes[size]} ${segmentClass({
-          selected: active,
-          raised: !pillReady,
-        })}`;
+        const cls = `relative inline-flex pressable items-center justify-center whitespace-nowrap ${sizes[size]} ${segmentClass(
+          {
+            selected: active,
+            raised: !pillReady,
+          },
+        )}`;
         // `hidden` is `display: none`, so exactly one form is in the
         // accessibility tree at any width and the accessible name is whichever
         // one a reader can see. An item with no `shortLabel` renders its label

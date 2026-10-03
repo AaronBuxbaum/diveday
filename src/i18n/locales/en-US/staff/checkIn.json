@@ -103,7 +103,6 @@
   },
   "walkIn": {
     "title": "Walk-in",
-    "description": "No email required at the counter.",
     "tripLabel": "Boat",
     "addToBoat": "Add to boat",
     "addPersonAriaLabel": "Add {name} to this boat"

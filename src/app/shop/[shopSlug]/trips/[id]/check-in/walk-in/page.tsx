@@ -131,7 +131,6 @@ export default async function WalkInDiverPage({
         eyebrow={t("trips.tabs.checkin")}
         eyebrowHref={counter}
         title={t("checkIn.walkIn.title")}
-        description={t("checkIn.walkIn.description")}
       />
       {banner ? (
         <ShopNotice tone={banner.tone} role={noticeRole(banner.tone)} className="mt-6">

@@ -1,5 +1,4 @@
 {
-  "eyebrow": "La pared",
   "title": "Equipo",
   "itemKinds": {
     "mask": "Máscara",
@@ -93,7 +92,6 @@
   "addUnit": {
     "door": "Agregar equipo",
     "title": "Agregar una unidad",
-    "description": "Una fila por cada cosa física en la pared, etiquetada como la dirías en voz alta.",
     "submit": "Agregar al registro",
     "pending": "Agregando…"
   },
@@ -142,7 +140,6 @@
   },
   "import": {
     "title": "Importar historial del equipo",
-    "description": "Trae tu flota y sus registros de mantenimiento desde otro sistema.",
     "help": "Una fila por unidad o evento. Las unidades coinciden primero por etiqueta y luego por número de serie; las reimportaciones se deduplican.",
     "downloadTemplate": "Descargar plantilla CSV del equipo",
     "submit": "Importar historial",
@@ -155,7 +152,6 @@
       "badge": "Eliminada",
       "restore": "Restaurar unidad"
     },
-    "backToRegister": "Registro de equipo",
     "where": {
       "title": "Dónde está",
       "inShop": "En el centro, sin reservas.",
