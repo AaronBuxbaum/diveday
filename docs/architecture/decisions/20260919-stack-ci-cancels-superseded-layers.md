@@ -1,6 +1,6 @@
 # 20260919-stack-ci-cancels-superseded-layers — A layer that stops being the top has its CI cancelled
 
-- **Status:** Accepted
+- **Status:** Superseded by [20261003-every-stack-layer-runs-ci](20261003-every-stack-layer-runs-ci.md) (the skip and the cancel are removed; the fork-point visual key stays)
 - **Date:** 2026-09-19
 - **Supersedes:** [20260827-stack-ci-skips-the-middle-layers](20260827-stack-ci-skips-the-middle-layers.md)
 - **Amends:** [20260821-stacked-pull-requests](20260821-stacked-pull-requests.md), [20260729-reg-suit-visual-regression](20260729-reg-suit-visual-regression.md)

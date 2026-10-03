@@ -44,7 +44,8 @@
   "row": {
     "seats": "{booked} of {capacity, plural, one {# seat} other {# seats}}",
     "crew": "{count, plural, one {# crew} other {# crew}}",
-    "waivers": "{complete} of {total, plural, one {# waiver} other {# waivers}}"
+    "waiversAllIn": "All waivers in",
+    "waiversToCollect": "{count, plural, one {# waiver} other {# waivers}} to collect"
   },
   "pagination": {
     "total": "{count, plural, one {# trip} other {# trips}}"

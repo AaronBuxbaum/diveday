@@ -1,39 +1,34 @@
 import type { ReactNode } from "react";
 import { GroupLabel, LedgerRow } from "@/components/ui/ledger";
-import { ProgressBar } from "@/components/ui/ProgressBar";
 
 /**
  * **The month's departures as a ledger** — ADR 20260827-the-shops-shelves,
  * decision 3, in the open-ledger grammar of ADR
  * 20260827-clearwater-surface-language (decision 2).
  *
- * What this replaced was a five-column `<Table>` whose headers were the only
- * thing naming what each cell held, which is why the phone had to fold "Seats"
- * back into the trip cell and hide two columns outright. A ledger row carries
- * its own nouns, so nothing has to be hidden and nothing has to be said twice:
- * the title and its date are the door, and the three facts behind it — seats,
- * crew, waivers — are worded fragments, tabular, each with its meter beside it.
+ * Each row is the door to its trip and says three things in words: how full
+ * the boat was, how many crew went, and whether any waivers are still out.
+ * There are no meters. The seats and waivers bars that stood here drew the
+ * same numbers the words already said, and the waiver bar coloured the part
+ * that was *missing*, which read as backwards (Aaron, 2026-10-03). A ledger
+ * row carries its own nouns, so the phone keeps all three facts.
  *
- * **The ink is on the gap, not the achievement** (issue 775, kept verbatim
- * through the recomposition). The seats meter is quiet at every ratio: a
- * half-full boat on a month being reviewed is a fact, not a task, and toning
- * one would put amber on most rows of a working shop's report. The waiver
- * meter's *remainder* is what carries the tone — the fill stays quiet at every
- * ratio — so at 0% the whole bar is the warning, at 100% there is nothing left
- * to warn about, and every value between shades itself with no threshold to
- * argue about. `DepartureLedger.test.tsx` pins that the fill never takes it.
+ * **The ink is on the gap, not the achievement** (issue 775). Seats are quiet
+ * at every count: a half-full boat on a month being reviewed is a fact, not a
+ * task. Waivers say "all in" quietly, and only the count still to collect
+ * takes the warning tone, in words, so colour never carries it alone.
  *
- * The meters are decorative and say so: every number they draw is already in
- * the words beside them, which is also what lets the phone keep all three
- * facts instead of hiding two.
+ * From `lg` the title takes the row's left and the facts stand in three fixed
+ * columns on its right, so each fact lines up down the month and reads as a
+ * column. Below `lg` they wrap under the title.
  */
 
-/** A share of a whole, already worded — "9 of 12 seats". */
-export type DepartureShare = {
-  /** The fact, in words. Never a bare numeral: no column header names it. */
+/** A departure's waivers: none outstanding, or how many still to collect. */
+export type DepartureWaivers = {
+  /** "All waivers in" or "2 waivers to collect", already worded. */
   fact: string;
-  /** 0–1, or null when there is nothing to measure (a departure with no seats). */
-  ratio: number | null;
+  /** True when at least one booked diver has not signed. */
+  outstanding: boolean;
 };
 
 export type DepartureRow = {
@@ -43,77 +38,23 @@ export type DepartureRow = {
   title: string;
   /** Already formatted in the shop's zone and the reader's locale. */
   date: string;
-  seats: DepartureShare;
+  /** "9 of 12 seats". */
+  seats: string;
   /** "3 crew" — never a cost; DiveDay does not know wages (issue #700). */
   crew: string;
   /** Null for a departure nobody booked: no waivers to collect, so nothing to say. */
-  waivers: DepartureShare | null;
+  waivers: DepartureWaivers | null;
 };
 
 /**
- * One share: the words, then a 5px meter. `attention` puts the tone on the
- * remainder by colouring the *track* the fill has not covered — the fill is
- * `bg-muted` at every ratio, in both modes.
- *
- * The meter is the half that goes on a phone, and the words are the half that
- * stays. Three facts and three bars on one 390px row wrap five lines deep; the
- * bars are the scannable rendering of numbers already written beside them, so
- * dropping them there costs the reader nothing and dropping the words would
- * cost them the fact. It is the opposite of the old table's answer, which hid
- * two whole columns and had to fold "70% of what?" back into the trip cell.
- *
- * **From `lg` the words start the column and the bar ends it** (K-285), so
- * every row's bar stands at one x: after the words, the bar's start was the
- * words' length, and the seats bars wandered 18px down a month (x 236, 245,
- * 254…). The words are set whole (K-286): a column that could not hold
- * "10 of 10 waivers" beside its bar wrapped the fact and stood that row 85px
- * against the others' 65. See `METER_COLUMN` for the width.
+ * The facts' columns from `lg`, each sized for its longest real fact set
+ * whole. Spanish is the longest of each: "10 de 12 plazas" (~100px),
+ * "3 tripulantes" (~87px with two digits) and "12 exenciones por recoger"
+ * (~170px). Exported for the Reports skeleton, whose blocks stand in them.
  */
-function ShareMeter({
-  share,
-  remainder = "quiet",
-  className = "",
-}: {
-  share: DepartureShare;
-  remainder?: "quiet" | "attention";
-  className?: string;
-}) {
-  const attention = remainder === "attention" && share.ratio !== null && share.ratio < 1;
-  return (
-    <span
-      className={`flex min-w-0 max-w-full items-center gap-2 text-sm whitespace-nowrap tabular-nums lg:justify-between ${
-        attention ? "font-medium text-warning-strong" : "text-muted"
-      } ${className}`.trim()}
-    >
-      {share.fact}
-      {share.ratio === null ? null : (
-        <ProgressBar
-          aria-hidden="true"
-          className="hidden h-[5px] w-24 shrink-0 lg:block"
-          trackClassName={attention ? "bg-warning" : "bg-surface-sunken"}
-          segments={[{ key: "share", fraction: share.ratio, className: "bg-muted" }]}
-        />
-      )}
-    </span>
-  );
-}
-
-/**
- * **A meter's column, from `lg`: the longest real fact, the gap and the bar.**
- * "5 of 5 waivers" measures 89px at 1280, so "10 of 10 waivers" is about 107.
- * The longest is Spanish, "10 de 10 exenciones", about 133px; with the 8px
- * gap and the 96px bar that is 237px, past `w-56` and 3px inside `w-60`, too
- * close to call, so `w-64`. One class for both meters and the empty slot that
- * holds the waivers column open, so the columns line up down every row.
- * Exported for the Reports skeleton, whose bars stand in these columns.
- */
-export const METER_COLUMN = "lg:w-64";
-
-/**
- * The crew count's column, set whole: "3 tripulantes" is about 78px and two
- * digits of it 87, so `w-20` wrapped it or ran it into the gap.
- */
+export const SEATS_COLUMN = "lg:w-32";
 export const CREW_COLUMN = "lg:w-24";
+export const WAIVERS_COLUMN = "lg:w-48";
 
 export function DepartureLedger({
   label,
@@ -146,25 +87,31 @@ export function DepartureLedger({
       <ul className="mt-2">
         {rows.map((row) => (
           <LedgerRow key={row.tripId} href={row.href} linkLabel={row.title}>
-            <div className="min-w-0">
-              <p className="min-w-0 text-base font-medium break-words">
+            <div className="flex min-w-0 flex-col gap-2 sm:gap-1 lg:flex-row lg:items-baseline lg:gap-6">
+              <p className="min-w-0 text-base font-medium break-words lg:flex-1">
                 {row.title}
                 <span className="font-normal text-muted tabular-nums">
                   {" · "}
                   {row.date}
                 </span>
               </p>
-              <div className="mt-2 flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 text-sm sm:mt-1 lg:flex-nowrap">
-                <ShareMeter share={row.seats} className={METER_COLUMN} />
-                <span
-                  className={`shrink-0 whitespace-nowrap text-muted tabular-nums ${CREW_COLUMN}`}
-                >
-                  {row.crew}
-                </span>
+              <div className="flex min-w-0 flex-wrap items-baseline gap-x-4 gap-y-1 text-sm whitespace-nowrap text-muted tabular-nums lg:flex-nowrap lg:gap-x-6">
+                <span className={`shrink-0 ${SEATS_COLUMN}`}>{row.seats}</span>
+                <span className={`shrink-0 ${CREW_COLUMN}`}>{row.crew}</span>
                 {row.waivers ? (
-                  <ShareMeter share={row.waivers} remainder="attention" className={METER_COLUMN} />
+                  <span
+                    className={`shrink-0 ${WAIVERS_COLUMN} ${
+                      row.waivers.outstanding ? "font-medium text-warning-strong" : ""
+                    }`.trim()}
+                  >
+                    {row.waivers.fact}
+                  </span>
                 ) : (
-                  <span aria-hidden="true" className={`hidden shrink-0 lg:block ${METER_COLUMN}`} />
+                  // Holds the column open from `lg` so the rows still line up.
+                  <span
+                    aria-hidden="true"
+                    className={`hidden shrink-0 lg:block ${WAIVERS_COLUMN}`}
+                  />
                 )}
               </div>
             </div>
