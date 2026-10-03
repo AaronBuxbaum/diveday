@@ -53,7 +53,9 @@ describe("the illustration hand stays off the safety and payment surfaces", () =
 
   it("is drawn somewhere, so the walk is proving something", () => {
     const importers = files.filter((file) => DRAWING_IMPORT.test(readFileSync(file, "utf8")));
-    expect(importers.length).toBeGreaterThan(2);
+    // The diver's /ready page still draws it (the after-state mark and the
+    // boat row); Today's all-clear turtle left on 2026-10-03.
+    expect(importers.length).toBeGreaterThan(1);
   });
 
   it("is imported by no manifest, roll call, cert, waiver, order or payment file", () => {
