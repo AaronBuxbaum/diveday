@@ -295,6 +295,8 @@ the instrument line's figures roll as a check-in lands, the sinking row's neighb
 
 ### The public schedule — `/s/[shopSlug]`
 
+**Widened 2026-10-03.** From `lg` up the next boat with space (and any other band panel) stands in a 20rem column beside the photograph, as ADR 20260827-clearwater-surface-language decision 8 drew it. Stacked, the photograph, its name band and the card filled the first screen at 1280×900 and the schedule started 1,220px down; now it starts on the first screen. A shop with no panel keeps the full-width photograph, and a phone keeps the stack.
+
 **Cut 2026-10-02** ([ADR 20261001-logbook](../architecture/decisions/20261001-logbook.md), decision 7): the boat that is out left the identity band with follow-the-boat, and the "Yours" group and "Your card clears this" lines left with the diver's shelf. The entries below that describe them are history.
 
 **Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): Harbor's face on the headings and the shop's colour on the one filled control, over the picked direction's rows: the boat that is out, the next boat with space and Book, the week, the courses — as groups (A), as the page with one floating capsule that books the next boat (B), or with two tiles for spots and the boat that is out (C). Pending H-87, one call: A · Inset, B · Glass or C · Figures. Superseded 2026-09-19.
@@ -325,6 +327,8 @@ routes took the display-scale h1 only.
   because a diver is choosing a shop before they are choosing a time slot.
 
 ### The public trip page — `/s/[shopSlug]/trips/[id]`
+
+**Two columns from `lg`, 2026-10-03.** At 1280 the page was a 576px column and the booking form stood about 1,500px down. From `lg` the column widens to `max-w-5xl`: the reading (the day, the pitch, the conditions line, the other boats and the requirement) runs down the left, and the form with the contact line under it takes a 25rem column on the right, level with the title, so the whole form is on the first screen at 1280×900. The left column keeps the 528px it always had, so nothing in it changes width. The source order, a phone and a screen reader still meet the form last (ADR 20260827-the-divers-thread, decision 2). The cancelled landing keeps `max-w-xl`.
 
 **Tidied 2026-09-17** (the "as rendered" sweep, slice F1). "What the crew logged, and when. It says what was seen, not what you will see." closed every "Seen here this month" block, so a two-tank day printed it twice, twelve lines apart. It is the **day's** sentence now — once, under the plan, whenever any site in the day has a month to show. And the embed's booking confirmation stopped offering three link-blue lines at one weight: the readiness page is the button, the way back into the widget is quiet text (and the readiness door demotes to `secondary` when there is a balance to pay, which is then the section's one primary).
 
@@ -374,10 +378,17 @@ drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion
 
 **Annotated, 2026-09-24** (H-89, [brand.md](brand.md) "The two registers of the public pages"):
 each chapter is now the screen with the builder's notes under it, a numbered `MarginNotes` list
-of things visible in the mockup (the readiness list's three states, the roll call's “Offline copy ·
-up to date” line and its count, the recap's dive-log entry), each note giving a reason or a limit
+of things visible in the mockup (Today's readiness bar and its Needs you rows, the saved roll
+call's “Saved” time and its counts, the recap's dive-log entry), each note giving a reason or a limit
 and none an evaluation. The descriptive paragraphs the notes replaced are gone, not moved; the
 existing four demo doors stay, one per chapter, and the index and the honest-no are unchanged.
+
+**Redrawn, 2026-10-03**, after the Logbook redesign (ADR 20261001-logbook) changed the screens the
+mockups mirror: the readiness card became Today (a departure card, then two Needs you rows), the
+roll call became the saved offline copy in Boat mode (Divers, Boarded, Awaiting, and “Mark boarded”
+beside “Mark not boarded”), the prep list became the trip's Gear tab, and the night-before brief
+became the diver's trip page (the dock call line, then Done and Your turn). The notes were re-read
+against each redraw.
 
 ### The pricing page — `/pricing`
 
@@ -603,7 +614,7 @@ drawn on that canvas's `TryItWithYourBoats.dc.html`.
 - **One idea:** the page is the product's own screens, in the order a day runs them, with notes
   from the person who built them; the copy is the note, not a description of the screen.
 - **The question it arrives with:** "what does it actually look like when the day is running?"
-  — answered by the diver's booking page, the desk's readiness list, the captain's roll call and
+  — answered by the diver's booking page, Today at the desk, the captain's roll call and
   the diver's recap, each with three or four notes naming one visible thing and its reason or
   limit.
 - **What it never does:** evaluate. No note says a screen is fast, calm or simple; a note says

@@ -62,7 +62,9 @@ for (const dir of skillDirs) {
     problems.push(`AGENTS.md: skill "${dir}" exists but is never mentioned`);
 }
 for (const name of indexed) {
-  if (!skillDirs.includes(name))
+  // A skill vendored under `.agents/skills/` is linked in, and a symlink is
+  // not a directory entry: it exists when its SKILL.md resolves.
+  if (!skillDirs.includes(name) && !existsSync(path.join(ROOT, ".claude/skills", name, "SKILL.md")))
     problems.push(
       `.claude/skills/README.md: index lists "${name}" but .claude/skills/${name}/ does not exist`,
     );

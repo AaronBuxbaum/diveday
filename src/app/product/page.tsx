@@ -47,7 +47,7 @@ export const instant = true;
 export const metadata: Metadata = {
   title: "Product — the day, screen by screen | DiveDay",
   description:
-    "Five screens from a dive shop’s day with a note on each: the schedule, the readiness list, the prep list and the brief, the manifest that works with no signal, and the recap.",
+    "Five screens from a dive shop’s day with a note on each: the schedule, Today, the gear list and the brief, the manifest that works with no signal, and the recap.",
   alternates: { canonical: "/product" },
   openGraph: {
     ...sharedLinkCard,

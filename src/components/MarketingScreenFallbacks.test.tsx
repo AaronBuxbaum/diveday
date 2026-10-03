@@ -92,17 +92,31 @@ describe("the mock family's inset", () => {
 /**
  * "Mark boarded" and "Download" were 44px and the recap's "Leave my review"
  * 40px, off the button ladder, with the class string otherwise identical
- * (K-516). One drawn primary button, at the `sm` rung's 44px.
+ * (K-516). One drawn primary button, at the `sm` rung's 44px, and its bordered
+ * twin ("Mark not boarded", "Send waiver") on the same rung.
  */
 describe("the mocks' primary button", () => {
-  it("is one 44px button in every mock that draws one", () => {
-    const buttons = EVERY_MOCK.flatMap(([, Mock]) => {
+  const everyButton = () =>
+    EVERY_MOCK.flatMap(([, Mock]) => {
       const { container, unmount } = render(<Mock locale="en-US" />);
       const found = Array.from(container.querySelectorAll("button"));
       const classes = found.map((button) => button.className);
       unmount();
       return classes;
     });
+
+  it("draws every button on the 44px rung", () => {
+    for (const className of everyButton()) {
+      const tokens = className.split(/\s+/);
+      expect(tokens).toEqual(expect.arrayContaining(["min-h-11", "rounded-lg", "text-xs"]));
+      expect(tokens).not.toContain("min-h-10");
+    }
+  });
+
+  it("is one 44px button in every mock that draws one", () => {
+    const buttons = everyButton().filter((className) =>
+      className.split(/\s+/).includes("bg-primary"),
+    );
     expect(buttons.length).toBeGreaterThanOrEqual(4);
     for (const className of buttons) {
       const tokens = className.split(/\s+/);
@@ -134,7 +148,7 @@ describe("the mocks' primary button", () => {
  */
 describe("the mocks' checklist rows", () => {
   it.each([
-    ["ShopPrepListFallback", ShopPrepListFallback, "Crew assigned (Mateo & Sarah)"],
+    ["NightBeforeBriefFallback", NightBeforeBriefFallback, "Gear and setup"],
     ["NightBeforeBriefFallback", NightBeforeBriefFallback, "Waiver"],
   ] as const)("%s wraps a long label cleanly beside its badge", (_name, Mock, text) => {
     render(<Mock locale="en-US" />);
@@ -147,46 +161,67 @@ describe("the mocks' checklist rows", () => {
 });
 
 describe("MarketingScreenFallbacks", () => {
-  describe("ShopPrepListFallback", () => {
-    it("renders in English with crew staging checklist", () => {
-      render(<ShopPrepListFallback locale="en-US" />);
-      expect(screen.getByText("Trip prep")).toBeInTheDocument();
-      expect(screen.getByText("Two-Tank Morning Reef")).toBeInTheDocument();
-      expect(screen.getByText("Staging checklist")).toBeInTheDocument();
-      expect(screen.getByText("Rental gear staged")).toBeInTheDocument();
+  // Each mock mirrors one real screen element for element, and the notes beside
+  // it quote that screen's words (docs/design/brand.md, "The builder's note").
+  // These pin the words the notes quote.
+  describe("FrontDeskReadinessFallback, Today drawn small", () => {
+    it("draws a departure's readiness and two Needs you rows", () => {
+      render(<FrontDeskReadinessFallback locale="en-US" />);
+      expect(screen.getByText("7 of 9 ready")).toBeInTheDocument();
+      expect(screen.getByText("2 blocked")).toBeInTheDocument();
+      expect(screen.getByText("Needs you")).toBeInTheDocument();
+      expect(screen.getByText("Send waiver")).toBeInTheDocument();
+      // There is no button that clears everyone (the home note says so).
+      expect(screen.getAllByRole("button")).toHaveLength(1);
     });
 
-    it("renders in Spanish with crew staging checklist", () => {
-      render(<ShopPrepListFallback locale="es-ES" />);
-      expect(screen.getByText("Preparación de salida")).toBeInTheDocument();
-      expect(screen.getByText("Arrecife dos botellas matinal")).toBeInTheDocument();
-      expect(screen.getByText("Lista de preparación")).toBeInTheDocument();
-      expect(screen.getByText("Equipos de alquiler preparados")).toBeInTheDocument();
+    it("renders in Spanish", () => {
+      render(<FrontDeskReadinessFallback locale="es-ES" />);
+      expect(screen.getByText("Pendiente")).toBeInTheDocument();
+      expect(screen.getByText("Enviar exención")).toBeInTheDocument();
     });
   });
 
-  describe("NightBeforeBriefFallback", () => {
-    it("renders in English with checklist and weather details", () => {
-      render(<NightBeforeBriefFallback locale="en-US" />);
+  describe("CaptainRollCallFallback, the saved copy", () => {
+    it("wears Boat mode and carries the saved copy's counts and verbs", () => {
+      const { container } = render(<CaptainRollCallFallback locale="en-US" />);
+      expect(container.firstElementChild).toHaveClass("boat-mode");
+      expect(screen.getByText("Saved 6:52 AM")).toBeInTheDocument();
+      expect(screen.getByText("Awaiting")).toBeInTheDocument();
+      expect(screen.getAllByText("Ready when saved")).toHaveLength(2);
+      expect(screen.getAllByText("Mark boarded")).toHaveLength(2);
+      expect(screen.getAllByText("Mark not boarded")).toHaveLength(2);
+    });
+  });
 
-      // Check title and details
-      expect(screen.getByText("Ready brief")).toBeInTheDocument();
-      expect(screen.getByText("Two-Tank Reef")).toBeInTheDocument();
-      expect(screen.getByText("Your pre-trip checklist")).toBeInTheDocument();
-
-      // Check status elements
-      expect(screen.getByText("Waiver")).toBeInTheDocument();
-      expect(screen.getAllByText("Completed")).toHaveLength(3);
+  describe("ShopPrepListFallback, the Gear tab", () => {
+    it("renders in English with the tab's own sections", () => {
+      render(<ShopPrepListFallback locale="en-US" />);
+      expect(screen.getByText("Tanks")).toBeInTheDocument();
+      expect(screen.getByText("Sizes still missing")).toBeInTheDocument();
+      expect(screen.getByText("Rental kit")).toBeInTheDocument();
     });
 
-    it("renders in Spanish with checklist and weather details", () => {
-      render(<NightBeforeBriefFallback locale="es-ES" />);
+    it("renders in Spanish", () => {
+      render(<ShopPrepListFallback locale="es-ES" />);
+      expect(screen.getByText("Faltan tallas")).toBeInTheDocument();
+      expect(screen.getByText("Equipo de alquiler")).toBeInTheDocument();
+    });
+  });
 
-      // Check title and details in Spanish
-      expect(screen.getByText("Resumen de preparación")).toBeInTheDocument();
-      expect(screen.getByText("Tu lista de control previa al viaje")).toBeInTheDocument();
+  describe("NightBeforeBriefFallback, the diver's trip page", () => {
+    it("renders the dock time and the checklist's own words", () => {
+      render(<NightBeforeBriefFallback locale="en-US" />);
+      expect(screen.getByText(/Aim to be at the dock by/)).toBeInTheDocument();
+      expect(screen.getAllByText("Done")).toHaveLength(2);
+      expect(screen.getByText("Your turn")).toBeInTheDocument();
+    });
+
+    it("renders in Spanish", () => {
+      render(<NightBeforeBriefFallback locale="es-ES" />);
       expect(screen.getByText("Exención")).toBeInTheDocument();
-      expect(screen.getAllByText("Completada")).toHaveLength(3);
+      expect(screen.getAllByText("Hecho")).toHaveLength(2);
+      expect(screen.getByText("Te toca")).toBeInTheDocument();
     });
   });
 

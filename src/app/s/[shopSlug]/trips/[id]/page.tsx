@@ -591,274 +591,304 @@ export default async function TripDetailPage({
         className={
           isEmbed
             ? "w-full flex-1 px-3 py-4"
-            : "mx-auto w-full max-w-xl flex-1 px-4 py-8 sm:px-6 sm:py-10"
+            : "mx-auto w-full max-w-xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:max-w-5xl"
         }
       >
         {structuredData ? <JsonLd data={structuredData} /> : null}
         <FlashParams params={["error", "pay"]} />
         {staffPreviewBar}
-        {/* No standalone "← All trips" link: the header's own eyebrow is the
-            way up outside the frame (2026-08-28 diver-views review, finding
-            8 — see TripHeader). */}
-        <TripHeader
-          shop={shop}
-          trip={trip}
-          meetingDays={meetingDays}
-          locale={locale}
-          embed={isEmbed}
-          showMeetingPoint={false}
-        />
-        {/* The hero's two conveniences, inside the hero rather than as a row of
-            buttons under it. */}
-        {isEmbed ? null : <TripActions calendarUrl={publicTripCalendarPath(shopSlug, tripId)} />}
-        {/* The one warning panel this page ever wears — the same radius,
-            border and tone as the conditions-changed panel below, on purpose.
-            Two amber boxes with different radii and border weights read as two
-            different systems warning about one weather call. Each is a card in
-            a tone on its neighbour's inset. A hold replaces the booking form
-            with plain type, so this banner never stands beside the form's
-            card: the box beside it is the minimum-seats note directly under
-            it, 16px in, so it takes the default tone panel (`TONE_PANEL_CLASS`),
-            level with that note on a phone. */}
-        {trip.conditionsHold ? (
-          <div role="status" className={`mt-5 ${TONE_PANEL_CLASS} border-warning/40 bg-warning/10`}>
-            <h2 className="font-semibold">{t("trip.conditionsHoldHeading")}</h2>
-            <p className="mt-1 text-sm text-muted">{t("trip.conditionsHoldBody")}</p>
-          </div>
-        ) : null}
-        {/* The promise, stated before anyone pays: what this departure needs to
-            run, and the exact moment the answer arrives. It is what makes the
-            automatic cancellation fair rather than abrupt — a diver who books
-            a boat that needs four people knows that, and knows when they'll
-            hear (ADR 20260813-minimum-head-count-departures). Dropped once the
-            count is met, because then there is nothing conditional left to
-            say, and on a departure that already sailed or was cancelled. */}
-        {minimumSeats.kind === "short" || minimumSeats.kind === "due" ? (
-          // Sunken fill, no border: a stated fact about the departure, not a
-          // warning — it wears the same quiet material as the supporting
-          // reading, one step below the amber conditions banner above.
-          <p className="mt-5 rounded-inset bg-surface-sunken p-4 text-sm text-muted">
-            {t("trip.minimumSeatsNotice", {
-              minimum: minimumSeats.minimum,
-              deadline: formatDateTimeTz(minimumSeats.decidesAt, locale, shop.timezone),
-            })}
-          </p>
-        ) : null}
-        {/* Full keeps the same sticky CTA rather than hiding it — a diver who
-            scrolls to a full boat still has one obvious next step (the wait
-            list), not a dead-ended thumb (task 12). Both destinations share
-            the `#book` anchor: `BookSpotSection` and `TripFullSection`'s
-            wait-list form each carry it. */}
-        {!confirmed && !inPast && !trip.conditionsHold ? (
-          // **A bar at the foot, not a pill over the page** (pixel-craft class
-          // 9, K-139). A 70×48 pill fixed 16px off the corner of a phone
-          // screen sat on the page's own controls at rest — the depth
-          // picker's caret, a sighting's "logged dives", a dive's "water" —
-          // with no room reserved for it. The bar spans the screen in the
-          // chrome's materials (the page ground behind a blur, one hairline,
-          // no shadow), and `data-foot-bar` is what `globals.css` ends the
-          // document that much lower by, so the page's last line and the
-          // shop's footer scroll clear of it.
-          <div
-            data-foot-bar=""
-            className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:hidden print:hidden"
-          >
-            <a href="#book" className={buttonClass({ className: "w-full" })}>
-              {/* The verb, and nothing else. It carried the seat count too
-                  ("Book · 3 left"), which is the very fact the card it scrolls
-                  to states in its own corner — a floating pill repeating the
-                  number it is taking you to read (ADR 20260827-the-divers-thread,
-                  decision 2). */}
-              {full ? t("booking.waitlistHeading") : t("booking.bookVerb")}
-            </a>
-          </div>
-        ) : null}
-
-        {/* **One rhythm below the hero** (pixel-craft class 4, K-162;
-            forms-and-controls.md's section rhythm): every section from the
-            day's run to the shop's contact line stands 40px from the next, on
-            this `space-y-10`, and none carries a margin of its own. Each used
-            to spell its own — `mt-6`, `mt-8`, `mt-10` — and the page's
-            sections stood 24, 32 and 40px apart. */}
-        <div className="mt-10 space-y-10">
-          {/* **The pitch, then the ask.** Everything that answers "is this my
-              day?" runs above the form, and nothing runs below it but the fine
-              print it owns and the shop's own contact line. It read the other way
-              round until 2026-08-28 — the form sat directly under the hero and
-              roughly a thousand pixels of forecast, packing and briefings
-              followed it — which put the page's one act in the middle of its own
-              scroll (ADR 20260827-the-divers-thread, decision 2). Packing left
-              for the thread entirely: what to bring is preparation, and
-              preparation is for a diver who has a seat. */}
-          {/* The shape of the day as well as its sites: how long each dive runs,
-              how long the boat sits between two of them, and — once a reader
-              names a card — which of the day's sites go deeper than that card
-              covers. Facts the shop already publishes (issue #1479); the beat
-              stays time-neutral, since durations promise no clock. */}
-          {/* Its run closes itself, except over a pitch that opens on its
-              door's own rule (pixel-craft class 6). */}
-          <TripDayPlan
-            briefings={diveBriefings}
-            nextOpensOnRule={pitchOpensOnDoor(diveBriefings, publicCrew)}
-            sightings={seenBySite}
-            shop={shop}
-            locale={locale}
-            profile={{
-              rhythm: shop,
-              depthUnit: shop.depthUnit,
-              diveMode: trip.diveMode,
-              dayCount: meetingDays.length,
-            }}
-          />
-          {/* **The bound** (ADR 20260904-reef-all-the-way-down, decision 1). The
-              route, the rest of the field guide, the moments strip, the shop's
-              site prose and the crew used to run down the page as five more
-              beats — 5,782px at 390 before a diver was offered a seat. They are
-              all still here, in this order, behind `TripPitch`'s one door. A
-              feature that wants to sell harder opens that door; it does not add
-              a section, and `page.composition.test.ts` is what says so. */}
-          {/* The pitch and the conditions line, one block of the stack. Under
-              the pitch's door the line sits flush, so its rule is the door's
-              close rather than a second rule a gap below it; with no door the
-              two stand a section apart. An empty block takes no room: its
-              margins collapse through it. */}
-          <div className={pitchHasDoor(diveBriefings, publicCrew) ? undefined : "space-y-10"}>
-            <TripPitch
-              briefings={diveBriefings}
-              crew={publicCrew}
-              locale={locale}
-              embed={isEmbed}
-            />
-            <ConditionsLine
+        {/* **Two columns from `lg` up.** At 1280 the column was 528px wide in a
+            1280 window and the form stood about 1,500px down, the last thing
+            a diver reached. From `lg` the form and the contact line take a
+            25rem right-hand column level with the title, and the hero and the
+            reading run down the left at the 528px they always had, so nothing
+            in them (the pitch's tiles, their `sizes`) changes width. The
+            section stack below joins this grid as `contents`; its last row
+            is `1fr`, so a form taller than the reading stretches that row
+            rather than the gaps between sections. A phone keeps the one
+            column and the form terminal, as the source order does (ADR
+            20260827-the-divers-thread, decision 2 and its 2026-10-03
+            amendment). */}
+        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_25rem] lg:grid-rows-[auto_repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10">
+          <div>
+            {/* No standalone "← All trips" link: the header's own eyebrow is the
+                way up outside the frame (2026-08-28 diver-views review, finding
+                8 — see TripHeader). */}
+            <TripHeader
               shop={shop}
               trip={trip}
-              crewPrediction={crewPrediction}
-              automatedForecast={automatedForecast}
-              crewLanguages={crewLanguagesLine}
+              meetingDays={meetingDays}
               locale={locale}
+              embed={isEmbed}
+              showMeetingPoint={false}
             />
-          </div>
-          <TripChangeLedger
-            events={changeEvents}
-            locale={locale}
-            timeZone={shop.timezone}
-            revealArrivalDetails={false}
-          />
-          {confirmed &&
-          conditionsChangedSinceBooking(
-            trip.conditionsUpdatedAt,
-            confirmed.booking.conditionsBriefedAt,
-          ) ? (
-            // Only a booked diver sees this, and a booking renders the booked
-            // moment on the `lg` rung below, so this panel is its `lg` twin.
-            <section
-              className={`${TONE_PANEL_LG_CLASS} border-warning/40 bg-warning/10`}
-              role="status"
-            >
-              <h2 className="font-semibold">{t("trip.conditionsChangedHeading")}</h2>
-              <p className="mt-1 text-sm text-muted">{t("trip.conditionsChangedBody")}</p>
-            </section>
-          ) : null}
-          {/* Who this trip is for: one line, hairline-topped, no box. It was a
-              sunken bordered panel *inside* the raised booking card — a box
-              inside a box, and the first thing a diver met when they reached the
-              form. It still says only what the *trip* demands, never anything
-              about the reader, which is what makes it safe on an anonymous page
-              (DOM-M6), and it still says nothing at all on a course session,
-              whose own page states its admission rule. */}
-          {/* The other boats close their own list, and the requirement note
-              under them sits 16px below that closing rule rather than drawing a
-              second one; alone, it opens on a rule of its own (pixel-craft
-              class 6, K-16). The two are one block of the stack, so that 16px
-              is the block's own and the block stands a section from the next.
-              An empty block takes no room: its margins collapse through it. */}
-          <div>
-            <TripAlternatives alternatives={worthALookRows} locale={locale} />
-            {requirementNote ? (
-              // The ledger's room, so its words start where the alternatives'
-              // do, and its rule is as long as theirs.
-              <p
-                className={`${worthALookRows.length > 0 ? "mt-4" : "border-t border-border pt-4"} text-sm text-muted ${ledgerRowRoomClass}`}
+            {/* The hero's two conveniences, inside the hero rather than as a row of
+                buttons under it. */}
+            {isEmbed ? null : (
+              <TripActions calendarUrl={publicTripCalendarPath(shopSlug, tripId)} />
+            )}
+            {/* The one warning panel this page ever wears — the same radius,
+                border and tone as the conditions-changed panel below, on purpose.
+                Two amber boxes with different radii and border weights read as two
+                different systems warning about one weather call. Each is a card in
+                a tone on its neighbour's inset. A hold replaces the booking form
+                with plain type, so this banner never stands beside the form's
+                card: the box beside it is the minimum-seats note directly under
+                it, 16px in, so it takes the default tone panel (`TONE_PANEL_CLASS`),
+                level with that note on a phone. */}
+            {trip.conditionsHold ? (
+              <div
+                role="status"
+                className={`mt-5 ${TONE_PANEL_CLASS} border-warning/40 bg-warning/10`}
               >
-                {t("trip.requirementNote", { list: requirementNote })}
+                <h2 className="font-semibold">{t("trip.conditionsHoldHeading")}</h2>
+                <p className="mt-1 text-sm text-muted">{t("trip.conditionsHoldBody")}</p>
+              </div>
+            ) : null}
+            {/* The promise, stated before anyone pays: what this departure needs to
+                run, and the exact moment the answer arrives. It is what makes the
+                automatic cancellation fair rather than abrupt — a diver who books
+                a boat that needs four people knows that, and knows when they'll
+                hear (ADR 20260813-minimum-head-count-departures). Dropped once the
+                count is met, because then there is nothing conditional left to
+                say, and on a departure that already sailed or was cancelled. */}
+            {minimumSeats.kind === "short" || minimumSeats.kind === "due" ? (
+              // Sunken fill, no border: a stated fact about the departure, not a
+              // warning — it wears the same quiet material as the supporting
+              // reading, one step below the amber conditions banner above.
+              <p className="mt-5 rounded-inset bg-surface-sunken p-4 text-sm text-muted">
+                {t("trip.minimumSeatsNotice", {
+                  minimum: minimumSeats.minimum,
+                  deadline: formatDateTimeTz(minimumSeats.decidesAt, locale, shop.timezone),
+                })}
               </p>
             ) : null}
+            {/* Full keeps the same sticky CTA rather than hiding it — a diver who
+                scrolls to a full boat still has one obvious next step (the wait
+                list), not a dead-ended thumb (task 12). Both destinations share
+                the `#book` anchor: `BookSpotSection` and `TripFullSection`'s
+                wait-list form each carry it. */}
+            {!confirmed && !inPast && !trip.conditionsHold ? (
+              // **A bar at the foot, not a pill over the page** (pixel-craft class
+              // 9, K-139). A 70×48 pill fixed 16px off the corner of a phone
+              // screen sat on the page's own controls at rest — the depth
+              // picker's caret, a sighting's "logged dives", a dive's "water" —
+              // with no room reserved for it. The bar spans the screen in the
+              // chrome's materials (the page ground behind a blur, one hairline,
+              // no shadow), and `data-foot-bar` is what `globals.css` ends the
+              // document that much lower by, so the page's last line and the
+              // shop's footer scroll clear of it.
+              <div
+                data-foot-bar=""
+                className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 py-3 backdrop-blur sm:hidden print:hidden"
+              >
+                <a href="#book" className={buttonClass({ className: "w-full" })}>
+                  {/* The verb, and nothing else. It carried the seat count too
+                      ("Book · 3 left"), which is the very fact the card it scrolls
+                      to states in its own corner — a floating pill repeating the
+                      number it is taking you to read (ADR 20260827-the-divers-thread,
+                      decision 2). */}
+                  {full ? t("booking.waitlistHeading") : t("booking.bookVerb")}
+                </a>
+              </div>
+            ) : null}
           </div>
-
-          {/* The form, terminal — or whichever state stands in its place. */}
-          {confirmed ? (
-            <EmbedBookedNotice
+          {/* **One rhythm below the hero** (pixel-craft class 4, K-162;
+              forms-and-controls.md's section rhythm): every section from the
+              day's run to the shop's contact line stands 40px from the next, on
+              this `space-y-10`, and none carries a margin of its own. Each used
+              to spell its own — `mt-6`, `mt-8`, `mt-10` — and the page's
+              sections stood 24, 32 and 40px apart. */}
+          <div className="mt-10 space-y-10 lg:contents lg:space-y-0">
+            {/* **The pitch, then the ask.** Everything that answers "is this my
+                day?" runs above the form, and nothing runs below it but the fine
+                print it owns and the shop's own contact line. It read the other way
+                round until 2026-08-28 — the form sat directly under the hero and
+                roughly a thousand pixels of forecast, packing and briefings
+                followed it — which put the page's one act in the middle of its own
+                scroll (ADR 20260827-the-divers-thread, decision 2). Packing left
+                for the thread entirely: what to bring is preparation, and
+                preparation is for a diver who has a seat. */}
+            {/* The shape of the day as well as its sites: how long each dive runs,
+                how long the boat sits between two of them, and — once a reader
+                names a card — which of the day's sites go deeper than that card
+                covers. Facts the shop already publishes (issue #1479); the beat
+                stays time-neutral, since durations promise no clock. */}
+            {/* Its run closes itself, except over a pitch that opens on its
+                door's own rule (pixel-craft class 6). */}
+            <TripDayPlan
+              briefings={diveBriefings}
+              nextOpensOnRule={pitchOpensOnDoor(diveBriefings, publicCrew)}
+              sightings={seenBySite}
               shop={shop}
-              shopSlug={shopSlug}
               locale={locale}
-              trip={trip}
-              confirmed={confirmed}
-              readinessLink={readinessLink}
-              emailsOnTheWay={emailsOnTheWay}
-              payCancelled={pay === "cancelled"}
-              paymentUrl={
-                pay === "due"
-                  ? ((await getLatestCheckoutForBooking(db, shop.id, confirmed.booking.id))
-                      ?.checkoutUrl ?? null)
-                  : null
-              }
+              profile={{
+                rhythm: shop,
+                depthUnit: shop.depthUnit,
+                diveMode: trip.diveMode,
+                dayCount: meetingDays.length,
+              }}
             />
-          ) : waitlistConfirmation ? (
-            <WaitlistConfirmation
-              firstName={waitlistConfirmation.person.fullName.split(" ")[0]}
-              shopSlug={shopSlug}
-              embed={isEmbed}
-            />
-          ) : inPast ? (
-            <TripSailedNotice shopSlug={shopSlug} embed={isEmbed} />
-          ) : trip.conditionsHold ? (
-            <ConditionsHoldSection />
-          ) : full ? (
-            <TripFullSection
-              shopSlug={shopSlug}
-              trip={trip}
-              tripRef={tripRef}
-              remaining={remaining}
-              errorMessage={errorMessage}
-              contactEmail={shop.contactEmail}
-              contactPhone={shop.contactPhone}
-              alternatives={alternatives}
-              terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
-            />
-          ) : (
-            <BookSpotSection
-              trip={trip}
-              tripRef={tripRef}
-              remaining={remaining}
-              errorMessage={errorMessage}
-              payAtBooking={payAtBooking}
-              perDiverPriceCents={perDiverPriceCents}
-              currency={shopCurrency}
+            {/* **The bound** (ADR 20260904-reef-all-the-way-down, decision 1). The
+                route, the rest of the field guide, the moments strip, the shop's
+                site prose and the crew used to run down the page as five more
+                beats — 5,782px at 390 before a diver was offered a seat. They are
+                all still here, in this order, behind `TripPitch`'s one door. A
+                feature that wants to sell harder opens that door; it does not add
+                a section, and `page.composition.test.ts` is what says so. */}
+            {/* The pitch and the conditions line, one block of the stack. Under
+                the pitch's door the line sits flush, so its rule is the door's
+                close rather than a second rule a gap below it; with no door the
+                two stand a section apart. An empty block takes no room: its
+                margins collapse through it. */}
+            <div className={pitchHasDoor(diveBriefings, publicCrew) ? undefined : "space-y-10"}>
+              <TripPitch
+                briefings={diveBriefings}
+                crew={publicCrew}
+                locale={locale}
+                embed={isEmbed}
+              />
+              <ConditionsLine
+                shop={shop}
+                trip={trip}
+                crewPrediction={crewPrediction}
+                automatedForecast={automatedForecast}
+                crewLanguages={crewLanguagesLine}
+                locale={locale}
+              />
+            </div>
+            <TripChangeLedger
+              events={changeEvents}
               locale={locale}
               timeZone={shop.timezone}
-              contactEmail={shop.contactEmail}
-              contactPhone={shop.contactPhone}
-              rentalItems={shop.rentalItems}
-              rentalPricing={shop.rentalPricing}
-              passThroughFee={passThroughFee}
-              taxEnabled={shop.taxEnabled}
-              courseFeeCents={courseFeeCents}
-              eLearningFeeCents={eLearningFeeCents}
-              depositCents={depositCents}
-              balanceDueAt={trip.startsAt}
-              terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
-              knownDiver={knownDiverPanel}
-              offerHandoff={offerHandoff.bind(null, tripRef)}
+              revealArrivalDetails={false}
             />
-          )}
-          {/* The last line on the page: how to reach a human. Renders nothing at
-              all when the shop has published neither a phone nor an address. */}
-          {shop.contactPhone || shop.contactEmail ? (
-            <p className="flex flex-wrap items-baseline gap-x-2 text-sm text-muted">
-              {t("trip.questionsContact")}
-              <ShopContactLinks phone={shop.contactPhone} email={shop.contactEmail} />
-            </p>
-          ) : null}
+            {confirmed &&
+            conditionsChangedSinceBooking(
+              trip.conditionsUpdatedAt,
+              confirmed.booking.conditionsBriefedAt,
+            ) ? (
+              // Only a booked diver sees this, and a booking renders the booked
+              // moment on the `lg` rung below, so this panel is its `lg` twin.
+              <section
+                className={`${TONE_PANEL_LG_CLASS} border-warning/40 bg-warning/10`}
+                role="status"
+              >
+                <h2 className="font-semibold">{t("trip.conditionsChangedHeading")}</h2>
+                <p className="mt-1 text-sm text-muted">{t("trip.conditionsChangedBody")}</p>
+              </section>
+            ) : null}
+            {/* Who this trip is for: one line, hairline-topped, no box. It was a
+                sunken bordered panel *inside* the raised booking card — a box
+                inside a box, and the first thing a diver met when they reached the
+                form. It still says only what the *trip* demands, never anything
+                about the reader, which is what makes it safe on an anonymous page
+                (DOM-M6), and it still says nothing at all on a course session,
+                whose own page states its admission rule. */}
+            {/* The other boats close their own list, and the requirement note
+                under them sits 16px below that closing rule rather than drawing a
+                second one; alone, it opens on a rule of its own (pixel-craft
+                class 6, K-16). The note heads the form's column (below), so the
+                16px is the boats' own `mb-4` in place of the section gap. An
+                empty block takes no room: its margins collapse through it. */}
+            <div
+              className={requirementNote && worthALookRows.length > 0 ? "mb-4 lg:mb-0" : undefined}
+            >
+              <TripAlternatives alternatives={worthALookRows} locale={locale} />
+            </div>
+
+            {/* The form, terminal — or whichever state stands in its place —
+                and the contact line under it: the right-hand column from `lg`. */}
+            <div className="space-y-10 lg:col-start-2 lg:row-span-6 lg:row-start-1">
+              {/* Who this trip is for, the form's own preface. On a phone it
+                  sits 16px under the other boats' closing rule (their block's
+                  `mb-4` above), or opens on its own rule alone; from `lg` it
+                  heads the right-hand column, so a diver reads it before the
+                  form there too rather than a screen below it. */}
+              {requirementNote ? (
+                // The ledger's room, so its words start where the alternatives'
+                // do, and its rule is as long as theirs.
+                <p
+                  className={`${worthALookRows.length > 0 ? "" : "border-t border-border pt-4 lg:border-t-0 lg:pt-0"} text-sm text-muted ${ledgerRowRoomClass}`}
+                >
+                  {t("trip.requirementNote", { list: requirementNote })}
+                </p>
+              ) : null}
+              {confirmed ? (
+                <EmbedBookedNotice
+                  shop={shop}
+                  shopSlug={shopSlug}
+                  locale={locale}
+                  trip={trip}
+                  confirmed={confirmed}
+                  readinessLink={readinessLink}
+                  emailsOnTheWay={emailsOnTheWay}
+                  payCancelled={pay === "cancelled"}
+                  paymentUrl={
+                    pay === "due"
+                      ? ((await getLatestCheckoutForBooking(db, shop.id, confirmed.booking.id))
+                          ?.checkoutUrl ?? null)
+                      : null
+                  }
+                />
+              ) : waitlistConfirmation ? (
+                <WaitlistConfirmation
+                  firstName={waitlistConfirmation.person.fullName.split(" ")[0]}
+                  shopSlug={shopSlug}
+                  embed={isEmbed}
+                />
+              ) : inPast ? (
+                <TripSailedNotice shopSlug={shopSlug} embed={isEmbed} />
+              ) : trip.conditionsHold ? (
+                <ConditionsHoldSection />
+              ) : full ? (
+                <TripFullSection
+                  shopSlug={shopSlug}
+                  trip={trip}
+                  tripRef={tripRef}
+                  remaining={remaining}
+                  errorMessage={errorMessage}
+                  contactEmail={shop.contactEmail}
+                  contactPhone={shop.contactPhone}
+                  alternatives={alternatives}
+                  terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
+                />
+              ) : (
+                <BookSpotSection
+                  trip={trip}
+                  tripRef={tripRef}
+                  remaining={remaining}
+                  errorMessage={errorMessage}
+                  payAtBooking={payAtBooking}
+                  perDiverPriceCents={perDiverPriceCents}
+                  currency={shopCurrency}
+                  locale={locale}
+                  timeZone={shop.timezone}
+                  contactEmail={shop.contactEmail}
+                  contactPhone={shop.contactPhone}
+                  rentalItems={shop.rentalItems}
+                  rentalPricing={shop.rentalPricing}
+                  passThroughFee={passThroughFee}
+                  taxEnabled={shop.taxEnabled}
+                  courseFeeCents={courseFeeCents}
+                  eLearningFeeCents={eLearningFeeCents}
+                  depositCents={depositCents}
+                  balanceDueAt={trip.startsAt}
+                  terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
+                  knownDiver={knownDiverPanel}
+                  offerHandoff={offerHandoff.bind(null, tripRef)}
+                />
+              )}
+              {/* The last line on the page: how to reach a human. Renders nothing at
+                  all when the shop has published neither a phone nor an address. */}
+              {shop.contactPhone || shop.contactEmail ? (
+                <p className="flex flex-wrap items-baseline gap-x-2 text-sm text-muted">
+                  {t("trip.questionsContact")}
+                  <ShopContactLinks phone={shop.contactPhone} email={shop.contactEmail} />
+                </p>
+              ) : null}
+            </div>
+          </div>
         </div>
       </main>
     </DiverIntlProvider>

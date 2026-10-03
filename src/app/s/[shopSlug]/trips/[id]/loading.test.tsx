@@ -16,14 +16,15 @@ afterEach(cleanup);
 describe("the public trip's loading skeleton", () => {
   it("opens on the header, with no bar for a back link the page no longer has", () => {
     const { container } = render(<TripDetailLoading />);
-    const pulse = container.querySelector(".animate-pulse");
+    // The hero is the grid's first cell (two columns from `lg`), and opens on
     // `ShopPageHeaderSkeleton`'s own wrapper, with the eyebrow bar inside it.
-    expect(pulse?.firstElementChild).toHaveClass("mb-8");
+    const hero = container.querySelector(".animate-pulse")?.firstElementChild;
+    expect(hero?.firstElementChild).toHaveClass("mb-8");
   });
 
   it("stands the hero's actions row, 44px, under the header", () => {
     const { container } = render(<TripDetailLoading />);
-    const actions = container.querySelector(".animate-pulse")?.children[1];
+    const actions = container.querySelector(".animate-pulse")?.firstElementChild?.children[1];
     expect(actions).toHaveClass("mt-4", "h-11");
   });
 });

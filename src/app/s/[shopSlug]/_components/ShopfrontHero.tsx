@@ -46,10 +46,16 @@ export function ShopfrontHero({
   heroImage = null,
   badges = [],
   establishedYear = null,
+  beside = false,
   locale,
   t,
 }: {
   name: string;
+  /**
+   * The next-boat card shares the row from `lg` up, so the photograph is the
+   * narrower column there and asks for a smaller file.
+   */
+  beside?: boolean;
   /** The shop's cover photograph; the name and tagline sit on it. */
   heroImage?: { url: string; alt: string } | null;
   /** The badge wall, in the shop's order. */
@@ -81,9 +87,15 @@ export function ShopfrontHero({
             src={heroImage.url}
             alt={heroImage.alt}
             // 16:9 on a phone, so the picture still reads as a picture above
-            // the band; 16:7 from `sm` up.
-            className="aspect-video w-full sm:aspect-[16/7]"
-            sizes="(min-width: 1152px) 1152px, 100vw"
+            // the band; 16:7 from `sm` up, and 2:1 from `lg` when it shares
+            // the row with the next boat and a narrower column would make
+            // 16:7 a letterbox.
+            className={`aspect-video w-full sm:aspect-[16/7] ${beside ? "lg:aspect-[2/1]" : ""}`}
+            sizes={
+              beside
+                ? "(min-width: 1152px) 760px, (min-width: 1024px) 62vw, 100vw"
+                : "(min-width: 1152px) 1152px, 100vw"
+            }
             priority
           />
           {/* Paper on a flat band of solid ink under the photograph, whatever
