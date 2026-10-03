@@ -788,25 +788,32 @@ export default async function TripDetailPage({
             {/* The other boats close their own list, and the requirement note
                 under them sits 16px below that closing rule rather than drawing a
                 second one; alone, it opens on a rule of its own (pixel-craft
-                class 6, K-16). The two are one block of the stack, so that 16px
-                is the block's own and the block stands a section from the next.
-                An empty block takes no room: its margins collapse through it. */}
-            <div>
+                class 6, K-16). The note heads the form's column (below), so the
+                16px is the boats' own `mb-4` in place of the section gap. An
+                empty block takes no room: its margins collapse through it. */}
+            <div
+              className={requirementNote && worthALookRows.length > 0 ? "mb-4 lg:mb-0" : undefined}
+            >
               <TripAlternatives alternatives={worthALookRows} locale={locale} />
-              {requirementNote ? (
-                // The ledger's room, so its words start where the alternatives'
-                // do, and its rule is as long as theirs.
-                <p
-                  className={`${worthALookRows.length > 0 ? "mt-4" : "border-t border-border pt-4"} text-sm text-muted ${ledgerRowRoomClass}`}
-                >
-                  {t("trip.requirementNote", { list: requirementNote })}
-                </p>
-              ) : null}
             </div>
 
             {/* The form, terminal — or whichever state stands in its place —
                 and the contact line under it: the right-hand column from `lg`. */}
             <div className="space-y-10 lg:col-start-2 lg:row-span-6 lg:row-start-1">
+              {/* Who this trip is for, the form's own preface. On a phone it
+                  sits 16px under the other boats' closing rule (their block's
+                  `mb-4` above), or opens on its own rule alone; from `lg` it
+                  heads the right-hand column, so a diver reads it before the
+                  form there too rather than a screen below it. */}
+              {requirementNote ? (
+                // The ledger's room, so its words start where the alternatives'
+                // do, and its rule is as long as theirs.
+                <p
+                  className={`${worthALookRows.length > 0 ? "" : "border-t border-border pt-4 lg:border-t-0 lg:pt-0"} text-sm text-muted ${ledgerRowRoomClass}`}
+                >
+                  {t("trip.requirementNote", { list: requirementNote })}
+                </p>
+              ) : null}
               {confirmed ? (
                 <EmbedBookedNotice
                   shop={shop}

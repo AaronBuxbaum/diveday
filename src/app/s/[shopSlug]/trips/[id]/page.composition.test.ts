@@ -73,8 +73,18 @@ describe("the trip page's rules", () => {
     expect(positionOf("<TripAlternatives")).toBeLessThan(positionOf("{requirementNote ? ("));
     // Alone, the note stands a section from the block above on the page's
     // stack (K-162) and opens on its own rule; under the boats it sits 16px
-    // below their closing rule, inside the one block the two make.
-    expect(SOURCE).toMatch(/worthALookRows\.length > 0 \? "mt-4" : "border-t border-border pt-4"/);
+    // below their closing rule, the boats' block taking 16px in place of the
+    // section gap. It heads the form's column, so from `lg` it is still read
+    // before the form rather than a screen below it.
+    expect(SOURCE).toMatch(
+      /requirementNote && worthALookRows\.length > 0 \? "mb-4 lg:mb-0" : undefined/,
+    );
+    expect(SOURCE).toMatch(
+      /worthALookRows\.length > 0 \? "" : "border-t border-border pt-4 lg:border-t-0 lg:pt-0"/,
+    );
+    const formColumn = positionOf("lg:col-start-2 lg:row-span-6 lg:row-start-1");
+    expect(formColumn).toBeGreaterThan(-1);
+    expect(formColumn).toBeLessThan(positionOf("{requirementNote ? ("));
   });
 });
 
