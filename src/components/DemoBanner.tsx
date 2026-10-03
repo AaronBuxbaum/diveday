@@ -1,15 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 import { useState, useTransition } from "react";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 
-/** One role card's full content, resolved server-side (icon/name are data, the rest is translated copy). */
+/** One role card's full content, resolved server-side (name is data, the rest is translated copy). */
 interface DemoRoleInfo {
   id: "owner" | "instructor" | "divemaster" | "captain" | "diver";
-  icon: string;
   name: string;
   title: string;
   desc: string;
@@ -83,6 +83,11 @@ export function DemoBanner({
       try {
         await switchRole(roleId, shopSlug);
       } catch (err) {
+        // The action ends every path — success included — in `redirect()`,
+        // whose sentinel reaches this catch on the client too. Without the
+        // rethrow a switch that worked still painted "didn't go through" under
+        // the new role's page.
+        unstable_rethrow(err);
         console.error("Failed to switch demo role:", err);
         // The panel has already closed by now — say so in the banner itself,
         // not only in a console nobody on a demo is watching.
@@ -119,9 +124,7 @@ export function DemoBanner({
             </Badge>
             <p className="text-sm text-foreground">
               {copy.viewingAs}{" "}
-              <span className="font-semibold text-primary">
-                {activeInfo?.icon} {activeInfo?.title}
-              </span>
+              <span className="font-semibold text-primary">{activeInfo?.title}</span>
               {/* One unit: the name wraps whole, never leaving "Reyes)" alone on a
                   line, so the space before it sits outside the unbreakable span. */}
               {currentName && currentRole !== "diver" ? (
@@ -205,7 +208,7 @@ export function DemoBanner({
                     <div>
                       <div className="flex items-center justify-between gap-1.5">
                         <span className="text-sm font-semibold tracking-tight text-foreground">
-                          {role.icon} {role.title}
+                          {role.title}
                         </span>
                         {isActive ? (
                           <span className="rounded-full bg-primary-tint px-2 py-0.5 text-[10px] font-semibold text-primary">

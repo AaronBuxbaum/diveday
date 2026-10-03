@@ -474,6 +474,7 @@ async function TripGuestsBody({
                 requirement={dealRequirement}
                 course={courseTarget}
                 openSeats={spotsRemaining({ capacity: trip.capacity, booked: trip.booked })}
+                hasWaitlist={waitlist.length > 0}
                 cancelled={cancelled}
                 promos={lastMinutePromos}
                 promoRecipients={lastMinutePromoRecipients}

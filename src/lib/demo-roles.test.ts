@@ -12,8 +12,7 @@ describe("the demo roster", () => {
     expect(Object.keys(DEMO_ROLE_KEYS).sort()).toEqual([...DEMO_ROLE_IDS].sort());
   });
 
-  it("gives every role a distinct icon and sample person", () => {
-    expect(new Set(DEMO_ROLE_META.map((role) => role.icon)).size).toBe(DEMO_ROLE_META.length);
+  it("gives every role a distinct sample person", () => {
     expect(new Set(DEMO_ROLE_META.map((role) => role.name)).size).toBe(DEMO_ROLE_META.length);
   });
 

@@ -10,13 +10,13 @@ export const DEMO_ROLE_IDS = ["owner", "instructor", "divemaster", "captain", "d
 
 export type DemoRoleId = (typeof DEMO_ROLE_IDS)[number];
 
-/** Data (icon/sample name), not copy — the words come from the `demo` message namespace. */
-export const DEMO_ROLE_META: { id: DemoRoleId; icon: string; name: string }[] = [
-  { id: "owner", icon: "👑", name: "Dana Reyes" }, // i18n-exempt: sample person name
-  { id: "instructor", icon: "🎓", name: "Marcus Webb" }, // i18n-exempt: sample person name
-  { id: "divemaster", icon: "🤿", name: "Keiko Tanaka" }, // i18n-exempt: sample person name
-  { id: "captain", icon: "⚓", name: "Sal Moretti" }, // i18n-exempt: sample person name
-  { id: "diver", icon: "🐬", name: "Public Guest" }, // i18n-exempt: seed placeholder, not rendered as copy
+/** Data (sample name), not copy — the words come from the `demo` message namespace. */
+export const DEMO_ROLE_META: { id: DemoRoleId; name: string }[] = [
+  { id: "owner", name: "Dana Reyes" }, // i18n-exempt: sample person name
+  { id: "instructor", name: "Marcus Webb" }, // i18n-exempt: sample person name
+  { id: "divemaster", name: "Keiko Tanaka" }, // i18n-exempt: sample person name
+  { id: "captain", name: "Sal Moretti" }, // i18n-exempt: sample person name
+  { id: "diver", name: "Public Guest" }, // i18n-exempt: seed placeholder, not rendered as copy
 ];
 
 export const DEMO_ROLE_KEYS: Record<

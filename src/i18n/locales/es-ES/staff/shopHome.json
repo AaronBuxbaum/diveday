@@ -1,7 +1,7 @@
 {
   "createdNotice": {
-    "single": "“{title}” ya está en el calendario. 🤙",
-    "series": "“{title}” ya está en el calendario con {count, plural, one {# salida programada} other {# salidas programadas}}. 🤙"
+    "single": "“{title}” ya está en el calendario.",
+    "series": "“{title}” ya está en el calendario con {count, plural, one {# salida programada} other {# salidas programadas}}."
   },
   "firstBookable": {
     "heading": "“{title}” ya está en el calendario y tu centro ya acepta reservas.",
@@ -134,7 +134,7 @@
     "aboardReasonMedical": "hay una respuesta médica que un médico tiene que autorizar; nadie a bordo puede darla por buena.",
     "aboardReasonCertification": "falta una certificación que esta inmersión pide y que no hemos visto.",
     "aboardReasonUnknown": "no hay nada en la ficha que lo autorice.",
-    "aboardReasonPayment": "queda un pago pendiente. Está en la lista de abajo.",
+    "aboardReasonPayment": "queda un pago pendiente.",
     "crewRollCallOpen": "Todos los buceadores están a bordo y falta pasar lista a la tripulación.",
     "allHome": "Todos los barcos están en puerto: salieron {divers, plural, one {# buceador} other {# buceadores}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}.",
     "firstBoatHome": "Tu primer barco está en puerto: salieron {divers, plural, one {# buceador} other {# buceadores}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}.",

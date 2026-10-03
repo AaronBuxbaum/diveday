@@ -6,7 +6,6 @@ import {
 } from "@/app/shop/[shopSlug]/trips/[id]/_components/WaitlistInvite";
 import { EarnedMomentLine } from "@/components/EarnedMoment";
 import { EmptyState } from "@/components/EmptyState";
-import { SiteMark } from "@/components/illustration/SiteMark";
 import { SubmitButton } from "@/components/SubmitButton";
 import { sendHoldCopy } from "@/components/send-hold-copy";
 import { buttonClass } from "@/components/ui/button";
@@ -689,15 +688,7 @@ export function DaySpine({
           })}
         </EarnedMomentLine>
       ) : boatsClearLine ? (
-        // The morning's all-clear carries the green turtle — the one drawing
-        // an earned moment on a staff surface may hold (ADR
-        // 20260901-diveday-reimagined, decision 1: "one earned moment on a
-        // staff surface, once a day"). Drawn in the line, without its own coral
-        // detail: the panel it sits in is the surface's coral.
-        <EarnedMomentLine className="flex items-center gap-3">
-          <SiteMark mark="turtle" size="sm" ground="surface" coral={false} />
-          <span>{t("today.todayQueue.boatsClear")}</span>
-        </EarnedMomentLine>
+        <EarnedMomentLine>{t("today.todayQueue.boatsClear")}</EarnedMomentLine>
       ) : null}
 
       {/* **One fact of scale, on the day it is true** (ADR

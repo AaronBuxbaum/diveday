@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { ChromeBar } from "./chrome/ChromeBar";
 import { DemoBanner } from "./DemoBanner";
@@ -23,7 +23,6 @@ const COPY = {
 const ROLES = [
   {
     id: "owner" as const,
-    icon: "🏝️",
     name: "Dana Reyes",
     title: "Propietaria",
     desc: "",
@@ -80,5 +79,62 @@ describe("DemoBanner", () => {
     const barRow = bar.querySelector("header")?.firstElementChild ?? null;
     expect(maxWidthOf(barRow)).toBeDefined();
     expect(maxWidthOf(bannerRow)).toBe(maxWidthOf(barRow));
+  });
+
+  describe("switching role", () => {
+    const TWO_ROLES = [
+      ...ROLES,
+      {
+        ...ROLES[0],
+        id: "captain" as const,
+        title: "Capitán",
+        switchAriaLabel: "Switch to captain",
+      },
+    ];
+
+    function renderSwitcher(switchRole: () => Promise<void>) {
+      render(
+        <DemoBanner
+          currentRole="owner"
+          currentName="Dana Reyes"
+          shopSlug="demo"
+          roles={TWO_ROLES}
+          copy={{ ...COPY, switchFailed: "That role switch didn’t go through." }}
+          switchRole={switchRole}
+        />,
+      );
+      fireEvent.click(screen.getByRole("button", { name: /Cambiar rol/ }));
+      fireEvent.click(screen.getByRole("button", { name: "Switch to captain" }));
+    }
+
+    it("says nothing went wrong when the action ends, as every switch does, in a redirect", async () => {
+      // The reported bug: every switch worked and still printed the failure,
+      // because the redirect's sentinel reached the client's catch.
+      const redirectSentinel = Object.assign(new Error("NEXT_REDIRECT"), {
+        digest: "NEXT_REDIRECT;replace;/shop/demo;307;",
+      });
+      const switchRole = async () => {
+        throw redirectSentinel;
+      };
+      renderSwitcher(switchRole);
+      await waitFor(() => expect(screen.queryByText(/Capitán/)).toBeNull());
+      expect(screen.queryByRole("alert")).toBeNull();
+    });
+
+    it("says the switch failed when the request itself fails", async () => {
+      const switchRole = async () => {
+        throw new TypeError("Failed to fetch");
+      };
+      const consoleError = console.error;
+      console.error = () => {};
+      try {
+        renderSwitcher(switchRole);
+        expect(await screen.findByRole("alert")).toHaveTextContent(
+          "That role switch didn’t go through.",
+        );
+      } finally {
+        console.error = consoleError;
+      }
+    });
   });
 });
