@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { ChromeBar } from "@/components/chrome/ChromeBar";
+import { ChromeTitleSlot } from "@/components/chrome/ChromeTitleSlot";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { ShopIdentityMenu } from "@/components/ShopIdentityMenu";
 import { gearStatusLabels } from "@/i18n/gear-labels";
@@ -196,28 +197,8 @@ export function ShopNav({
                 nowhere else, which is what keeps the fold to the staff shell:
                 `PublicShopChrome` composes the same `ChromeBar` and renders no
                 slot, so `FoldedPageTitle`'s portal has no target on the
-                storefront and no-ops.
-
-                Empty in the markup — the page fills it after mount — and
-                `aria-hidden`, because it is a second copy of a heading the page
-                already renders and the bar's accessible name stays the shop's.
-                `max-w-0` at rest so the label costs the row nothing wherever
-                the fold does not run — no scroll-driven animations, `lg` and
-                up, or a reduced-motion reader — and the fold gives it the width
-                the shop's name lets go of.
-
-                The shop name's own line box, `leading-6`: 24px, the name's
-                16px at the body's 1.5. The row centres both boxes on the mark,
-                and where a box's top lands decides the pixel row its baseline
-                snaps to — the name's starts on a half pixel. The title's own
-                box, 17px under `leading-none` and 25.5px inherited, started on
-                a whole one, and its cap sat 1px above the mark's centre and
-                the name it replaces (K-502). */}
-            <span
-              data-chrome-title-slot
-              aria-hidden
-              className="max-w-0 min-w-0 truncate text-[17px] leading-6 font-semibold tracking-tight opacity-0"
-            />
+                storefront and no-ops. */}
+            <ChromeTitleSlot />
           </div>
         }
         trailing={

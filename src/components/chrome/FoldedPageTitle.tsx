@@ -45,11 +45,17 @@ export function FoldedPageTitle({ title }: { title: string }) {
   // the effect never ran again, and the bar silently lost its folding title for
   // the life of that page view. Not a paint later than it should be — never.
   //
+  // **Present is not enough: the slot has to have hydrated.** Text portalled
+  // into the server's markup before React has claimed it is a node hydration
+  // did not expect, and the shell is thrown away and client rendered (issue
+  // #2036). `ChromeTitleSlot` marks itself ready from its own effect, so the
+  // lookup asks for that mark and the observer watches for the attribute too.
+  //
   // Found as a one-in-six flake in `e2e/staff-nav.spec.ts`, where the slot
   // stayed empty for the whole of the assertion's budget rather than filling
   // late, which is what said it was an ordering rather than a slow hydration.
   useEffect(() => {
-    const find = () => document.querySelector("[data-chrome-title-slot]");
+    const find = () => document.querySelector("[data-chrome-title-slot][data-chrome-title-ready]");
     const onMount = find();
     if (onMount) {
       setSlot(onMount);
@@ -63,7 +69,12 @@ export function FoldedPageTitle({ title }: { title: string }) {
       observer.disconnect();
       setSlot(late);
     });
-    observer.observe(document.body, { childList: true, subtree: true });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-chrome-title-ready"],
+    });
     return () => observer.disconnect();
   }, []);
 

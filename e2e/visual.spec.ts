@@ -4122,12 +4122,17 @@ for (const scheme of ["light", "dark"] as const) {
           .filter({ hasText: "Odile Marchand" })
           .filter({ visible: true });
         const sailedDoor = sailedRow.locator("details").filter({ hasText: "Did not dive?" });
-        await sailedDoor.locator("> summary").click();
-        await disclosureSettled(sailedDoor);
+        // Hydrated before the tap, not after: this frame opens the door
+        // straight off a page load, and a summary tapped while the page is
+        // still the server's markup did not stay open on CI or locally. The
+        // first frame reached its door through the release form, which only
+        // answers once the page is live.
         await expect(page.getByLabel("Scan or search diver")).toHaveAttribute(
           "data-hydrated",
           "true",
         );
+        await sailedDoor.locator("> summary").click();
+        await disclosureSettled(sailedDoor);
         await capture(page, "check-in-no-show-sailed", scheme);
       });
 

@@ -11,10 +11,11 @@ import { FoldedPageTitle } from "./FoldedPageTitle";
  * does not fold.
  */
 
-const withSlot = () => {
+const withSlot = ({ hydrated = true } = {}) => {
   const slot = document.createElement("span");
   slot.setAttribute("data-chrome-title-slot", "");
   slot.setAttribute("aria-hidden", "true");
+  if (hydrated) slot.setAttribute("data-chrome-title-ready", "");
   document.body.append(slot);
   return slot;
 };
@@ -57,6 +58,22 @@ describe("FoldedPageTitle", () => {
     expect(document.body.textContent).toBe("");
 
     const slot = withSlot();
+    await waitFor(() => expect(slot.textContent).toBe("Check-in"));
+  });
+
+  /**
+   * **A slot still in the server's markup is not yet a target** (issue #2036).
+   * Text portalled into it before React has hydrated it is a node hydration
+   * did not expect: "Hydration failed", and the whole staff shell is thrown
+   * away and client rendered, closing whatever a staffer had just opened.
+   */
+  it("waits for the slot to hydrate before filling it", async () => {
+    const slot = withSlot({ hydrated: false });
+    render(<FoldedPageTitle title="Check-in" />);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(slot.textContent).toBe("");
+
+    slot.setAttribute("data-chrome-title-ready", "");
     await waitFor(() => expect(slot.textContent).toBe("Check-in"));
   });
 
