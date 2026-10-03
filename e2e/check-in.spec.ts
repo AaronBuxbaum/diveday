@@ -1,9 +1,12 @@
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
+  counterPath,
   createTrip,
   daysFromNow,
   e2eNow,
   HELD_SEND_TIMEOUT_MS,
+  openCounterFor,
+  openIfClosed,
   openPaperWaiverForm,
   openTripFromBoard,
   publicTripUrl,
@@ -14,18 +17,25 @@ test.describe.configure({ timeout: 45_000 });
 
 signedInAsOwner();
 
-test("counter check-in searches by diver, confirms live readiness, and keeps blocked rows out of the line", async ({
+/**
+ * The counter's own URL, allowing the `#booking-<id>` an arrival-lookup match
+ * lands on — the hash scrolls to that diver's row and changes nothing else.
+ */
+function onCounter(path: string): RegExp {
+  return new RegExp(`${path}(#booking-[0-9a-f-]+)?$`);
+}
+
+/** A seeded boat still ahead of the frozen clock and inside the counter's window. */
+const OPEN_BOAT = "Two-Tank Reef — Molasses & French";
+
+test("counter check-in finds a diver's boat, confirms live readiness, and keeps blocked rows out of the line", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/check-in");
-  await expect(page.getByRole("heading", { name: "Counter check-in" })).toBeVisible();
+  // Today's arrival lookup finds the boat; its match opens that departure's
+  // Check-in tab, the counter for that one boat.
+  const tripId = await openCounterFor(page, "blue-mantis", "Priya Sharma");
+  await expect(page).toHaveURL(onCounter(counterPath("blue-mantis", tripId)));
   await expect(page.getByRole("region", { name: "Check-in queue" })).toBeVisible();
-
-  const search = page.getByRole("searchbox", { name: "Scan or search diver" });
-  await expect(search).toHaveAttribute("data-hydrated", "true");
-  await search.fill("Priya Sharma");
-  await search.press("Enter");
-  await expect(page).toHaveURL(/\/check-in\?q=Priya\+Sharma/);
 
   const card = page
     .locator("article")
@@ -48,14 +58,9 @@ test("counter check-in searches by diver, confirms live readiness, and keeps blo
   await expect(card.getByText(/Why: \d+ reasons?/)).toHaveCount(0);
   await expect(card.getByRole("button", { name: "Check in Priya Sharma" })).toHaveCount(0);
 
-  await search.fill("not-a-real-diver");
-  await search.press("Enter");
-  await expect(page.getByRole("heading", { name: "No one matches that scan" })).toBeVisible();
-  // A search that found nobody has one honest way on: drop the search. The
-  // counter used to say "no one matches that scan" and stop there — including
-  // when nothing had been typed at all (docs/design/principles.md #4).
-  await page.getByRole("link", { name: "Show everyone arriving" }).click();
-  await expect(page).toHaveURL("/shop/blue-mantis/check-in");
+  // A lookup that finds nobody says so, naming what was typed.
+  await page.goto("/shop/blue-mantis?q=not-a-real-diver");
+  await expect(page.getByText("Nobody arriving matches “not-a-real-diver”.")).toBeVisible();
 });
 
 /**
@@ -69,11 +74,7 @@ test("counter check-in searches by diver, confirms live readiness, and keeps blo
  * worst reason (it isn't — the waiver is).
  */
 test("a diver blocked five ways names the worst reason and counts the rest", async ({ page }) => {
-  await page.goto("/shop/blue-mantis/check-in");
-  const search = page.getByRole("searchbox", { name: "Scan or search diver" });
-  await expect(search).toHaveAttribute("data-hydrated", "true");
-  await search.fill("Ferreira");
-  await search.press("Enter");
+  await openCounterFor(page, "blue-mantis", "Tomás Ferreira");
 
   const card = page.locator("article").filter({ hasText: "Ferreira" }).filter({ visible: true });
   await expect(card).toHaveCount(1);
@@ -93,20 +94,14 @@ test("a diver blocked five ways names the worst reason and counts the rest", asy
  * The row now **sinks** on the tap: it leaves the working queue for its
  * departure's collapsed settled group (ADR 20260827-clearwater-surface-language,
  * decision 9). Every assertion below is on the final DOM — the settled group's
- * own count text and the undo control inside it — and never on the 150ms
+ * own heading and the undo control inside it — and never on the 150ms
  * fade-out that carries the row there. An e2e that waited on motion is exactly
  * what `pnpm check:e2e-hygiene` refuses.
  */
 test("a ready diver checks in with one tap, sinks into the settled group, and a re-tap undoes it", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/check-in");
-  const search = page.getByRole("searchbox", { name: "Scan or search diver" });
-  await expect(search).toHaveAttribute("data-hydrated", "true");
-  // Searched, so the row this taps is the same diver on every run whichever
-  // boat the instrument happens to be focused on.
-  await search.fill("Diego Alvarez");
-  await search.press("Enter");
+  await openCounterFor(page, "blue-mantis", "Diego Alvarez");
 
   const row = page
     .locator("article")
@@ -116,24 +111,19 @@ test("a ready diver checks in with one tap, sinks into the settled group, and a 
 
   // The settled group IS the confirmation — no success banner restates it from
   // the top of the page (design principle 9), and no sentence teaching the
-  // re-tap either: the control's accessible name already says "Undo".
-  const settled = page.locator("details").filter({ hasText: "Checked in — 1" });
-  await expect(settled.getByRole("heading", { name: "Checked in — 1" })).toBeVisible({
-    timeout: 15_000,
-  });
+  // re-tap either: the control's accessible name already says "Undo". Other
+  // divers on the same boat may already be in it, so the count is not pinned.
+  const settledHeading = page.getByRole("heading", { name: /^Checked in — \d+$/ });
+  await expect(settledHeading).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole("button", { name: "Check in Diego Alvarez" })).toHaveCount(0);
 
-  // **Under a search the receipts arrive open**, so there is no summary to tap
-  // first. A search is a lookup rather than the instrument, and the row a
-  // staffer typed a name to reach is very often the settled one they are about
-  // to correct — folding it away put the correction one more tap behind exactly
-  // the gesture this surface is built around.
-  await expect(settled).toHaveJSProperty("open", true);
+  // A boat still ahead keeps its receipts folded; open them to reach the row.
+  await openIfClosed(page.locator("details").filter({ has: settledHeading }));
   // **The row itself says nothing about its state, and that is the point.**
-  // The group header two lines above it already says "Checked in — 1"; the
-  // drawn mark and its two words on every row under it were that statement
-  // repeated per receipt (principle 9). What still names the act is the tap's
-  // accessible name, which is also what a screen reader reads.
+  // The group header above it already says "Checked in — n"; the drawn mark
+  // and its two words on every row under it were that statement repeated per
+  // receipt (principle 9). What still names the act is the tap's accessible
+  // name, which is also what a screen reader reads.
   const undo = page.getByRole("button", { name: "Undo check-in for Diego Alvarez" });
   await expect(undo).toBeVisible();
   await expect(undo).toContainText("Diego Alvarez");
@@ -154,45 +144,42 @@ test("a ready diver checks in with one tap, sinks into the settled group, and a 
  * than inherited — `TABLET_SURFACES` in `visual.spec.ts` governs the captures,
  * not this spec.
  *
- * What it pins is the instrument itself: one departure in focus with the count
- * leading, the day's other boats one 44px tap away, queue rows at the counter's
- * 56px floor, and — on a boat that has already sailed — the settled receipts
- * open with the earned line above them.
+ * What it pins is the instrument itself: one departure with the count
+ * leading, queue rows at the counter's 56px floor, the walk-in door at the
+ * foot, and — on a boat that has already sailed — the settled receipts open.
  */
 test("the counter reads as an instrument at the tablet on the desk", async ({ page }) => {
   await page.setViewportSize({ width: 820, height: 1180 });
-  await page.goto("/shop/blue-mantis/check-in");
+  const sailedId = await seededTripId(page, "blue-mantis", "Dawn Two-Tank — Molasses Reef");
+  const openId = await seededTripId(page, "blue-mantis", OPEN_BOAT);
+
+  await page.goto(counterPath("blue-mantis", openId));
+  await expect(page.getByRole("heading", { name: OPEN_BOAT, level: 1 })).toBeVisible();
   const queue = page.getByRole("region", { name: "Check-in queue" });
   await expect(queue).toBeVisible();
 
   // The count leads, before any list.
   await expect(page.getByText(/^\d+ of \d+ here$/)).toBeVisible();
 
-  // Every standalone control clears the app-wide 44px floor; a queue row
-  // clears the counter's own 56px one.
-  const chips = page.getByRole("navigation", { name: "Choose a departure" });
-  const chipLinks = chips.getByRole("link");
-  // Zero chips would pass every assertion in the loop below and prove nothing
-  // about the tap target — the vacuous pass `empty-all` exists for.
-  await expect(chipLinks).not.toHaveCount(0);
-  for (const chip of await chipLinks.all()) {
-    expect((await chip.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
-  }
+  // A queue row clears the counter's own 56px floor.
   const firstTap = queue.getByRole("button", { name: /^(Check in|Undo check-in for) / }).first();
-  if ((await firstTap.count()) > 0) {
-    expect((await firstTap.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(56);
-  }
+  await expect(firstTap).toBeVisible();
+  expect((await firstTap.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(56);
 
-  // The walk-in door stands at the foot of the queue, not behind a failed
-  // search.
+  // The walk-in door stands at the foot of the queue.
   await expect(queue.getByRole("link", { name: "Add a walk-in" })).toBeVisible();
 
-  // A boat that has already sailed says so beside its hours, and its receipts
+  // A boat that has already sailed is read rather than worked: its receipts
   // are the point, so the settled group arrives open.
-  await chipLinks.filter({ hasText: "Dawn Two-Tank — Molasses Reef" }).click();
-  await expect(page).toHaveURL(/\/check-in\?trip=[0-9a-f-]{36}$/);
-  await expect(page.getByText("Departed")).toBeVisible();
-  await expect(page.getByRole("heading", { name: /^Checked in — \d+$/ })).toBeVisible();
+  await page.goto(counterPath("blue-mantis", sailedId));
+  const settledHeading = page.getByRole("heading", { name: /^Checked in — \d+$/ });
+  await expect(settledHeading).toBeVisible();
+  await expect(page.locator("details").filter({ has: settledHeading })).toHaveJSProperty(
+    "open",
+    true,
+  );
+  // Nobody can be seated on a boat that has left, so its door is not drawn.
+  await expect(page.getByRole("link", { name: "Add a walk-in" })).toHaveCount(0);
 
   // **And it is not all-clear, because three of the eight aboard are blocked.**
   // Every diver on this boat is `checked_in`, which used to be the whole
@@ -212,29 +199,17 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
 });
 
 test("a counter walk-in books straight onto a boat with no email required", async ({ page }) => {
-  await page.goto("/shop/blue-mantis/check-in");
-  const queueSearch = page.getByRole("searchbox", { name: "Scan or search diver" });
-  await queueSearch.fill("Zzyzx No Such Diver");
-  await queueSearch.press("Enter");
-  await expect(page.getByRole("heading", { name: "No one matches that scan" })).toBeVisible();
-  await page.getByRole("link", { name: "Add “Zzyzx No Such Diver” as a walk-in" }).click();
+  const tripId = await seededTripId(page, "blue-mantis", OPEN_BOAT);
+  const counter = counterPath("blue-mantis", tripId);
+  await page.goto(counter);
+  await page.getByRole("link", { name: "Add a walk-in" }).click();
   await expect(page.getByRole("heading", { name: "Walk-in", level: 1 })).toBeVisible();
-
-  const tripSection = page.locator("section").filter({ hasText: "Which boat?" });
-  const firstTrip = tripSection.locator("ul li a").filter({ visible: true }).first();
-  await expect(firstTrip).toBeVisible();
-  const tripText = await firstTrip.innerText();
-  // The picker binds its separators with a no-break space (K-246), so the
-  // dot is not always flanked by plain spaces.
-  const tripTitle = tripText.split(/\s·\s/)[0];
-  if (!tripTitle) throw new Error("could not read a trip title from the walk-in picker");
-  await firstTrip.click();
-  // The departure is a path segment, not a `?tripId=` — which is what lets a
+  // The boat is the departure's own, in the path — which is what lets a
   // refusal land back on this same form with the boat still chosen and name
   // the gate it hit.
-  await expect(page).toHaveURL(/\/check-in\/walk-in\/[0-9a-f-]{36}(\?.*)?$/);
+  await expect(page).toHaveURL(`${counter}/walk-in`);
   // The chosen boat is echoed back so the crew can confirm before adding anyone.
-  await expect(page.getByText(tripTitle, { exact: false }).first()).toBeVisible();
+  await expect(page.getByText(OPEN_BOAT, { exact: false }).first()).toBeVisible();
 
   // A search for someone who isn't on file falls through to adding a diver.
   const walkInSearch = page.getByRole("searchbox", { name: "Search by name, email, or phone" });
@@ -251,18 +226,13 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   // No email was collected, so no waiver could be mailed — and the notice says
   // so rather than implying one is on its way. This is the *ordinary* counter
   // outcome, not an edge case: the diver is seated and the link is still owed.
-  // The bare queue URL, asserted rather than a `?notice=` this page erases:
+  // The bare counter URL, asserted rather than a `?notice=` this page erases:
   // `toHaveURL` retries, so this waits for `FlashParams` to strip the code and
   // proves it actually did — a looser pattern would pass either way.
-  await expect(page).toHaveURL("/shop/blue-mantis/check-in");
+  await expect(page).toHaveURL(counter);
   await expect(
     page.getByText("Added to this boat’s list, but their waiver wasn’t emailed."),
   ).toBeVisible();
-  // Searched, because the queue now shows one departure at a time and the boat
-  // the picker offered first is not necessarily the one in focus.
-  const settledSearch = page.getByRole("searchbox", { name: "Scan or search diver" });
-  await settledSearch.fill("Walk-in Test Diver");
-  await settledSearch.press("Enter");
   await expect(
     page.locator("article").filter({ hasText: "Walk-in Test Diver" }).filter({ visible: true }),
   ).toHaveCount(1);
@@ -286,8 +256,9 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
 test("a walk-in seated off the name prompt is confirmed and checked in without leaving the queue", async ({
   page,
 }) => {
-  const tripId = await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French");
-  await page.goto(`/shop/blue-mantis/check-in/walk-in/${tripId}`);
+  const tripId = await seededTripId(page, "blue-mantis", OPEN_BOAT);
+  const counter = counterPath("blue-mantis", tripId);
+  await page.goto(`${counter}/walk-in`);
   await page.getByRole("link", { name: "Add diver" }).click();
   await page.waitForURL(/\/divers\/new\?/);
 
@@ -306,17 +277,10 @@ test("a walk-in seated off the name prompt is confirmed and checked in without l
   await expect(
     page.getByText("the seat is held until you confirm it’s the same person", { exact: false }),
   ).toBeVisible();
-
-  const search = page.getByRole("searchbox", { name: "Scan or search diver" });
-  await expect(search).toHaveAttribute("data-hydrated", "true");
-  await search.fill("Zoe Bennett");
-  await search.press("Enter");
-  // Act on the search render, never on the focused-departure one: the same row
-  // is on screen in both, and touching it mid-navigation loses the client state
-  // the confirm keeps (see the paper-waiver spec below for the incident).
-  await expect(
-    page.getByRole("heading", { name: /Search results for .Zoe Bennett./ }),
-  ).toBeVisible();
+  // Back on this boat's counter, with the notice's code already stripped — so
+  // the render the row is acted on below is the settled one, not one a
+  // navigation is about to replace (and with it the confirm's client state).
+  await expect(page).toHaveURL(counter);
 
   const card = page.locator("article").filter({ hasText: "Zoe Bennett" }).filter({ visible: true });
   await expect(card.getByText("Blocked")).toBeVisible();
@@ -331,31 +295,33 @@ test("a walk-in seated off the name prompt is confirmed and checked in without l
   await expect(card.getByText("Is the person at the counter Zoe Bennett?")).toBeVisible();
   await card.getByRole("button", { name: "Yes, this is them" }).click();
 
-  // It lands in place — the search that found her is still in the box and still
-  // in the URL — and the row it landed on now offers the boarding the flag was
-  // refusing.
+  // It lands in place — still this boat's counter — and the row it landed on
+  // now offers the boarding the flag was refusing.
   await expect(card.getByRole("button", { name: "Check in Zoe Bennett" })).toBeVisible();
-  await expect(page).toHaveURL(/\/check-in\?q=Zoe\+Bennett/);
+  await expect(page).toHaveURL(counter);
   await expect(card.getByRole("button", { name: /^Confirm this is / })).toHaveCount(0);
 
   // And `checkInBooking` re-reads readiness for itself, so this tap is the
   // proof the flag is gone from the row rather than only from the render.
   await card.getByRole("button", { name: "Check in Zoe Bennett" }).click();
+  await expect(page.getByRole("button", { name: "Check in Zoe Bennett" })).toHaveCount(0);
+  // A boat still ahead keeps its receipts folded; open them to reach her row.
+  const settledHeading = page.getByRole("heading", { name: /^Checked in — \d+$/ });
+  await openIfClosed(page.locator("details").filter({ has: settledHeading }));
   await expect(page.getByRole("button", { name: "Undo check-in for Zoe Bennett" })).toBeVisible();
 });
 
-test("the walk-in picker explains an invalid submission before a boat is chosen", async ({
-  page,
-}) => {
-  await page.goto("/shop/blue-mantis/check-in/walk-in?notice=walkin-invalid");
-  await expect(page.getByRole("alert").filter({ hasText: "Choose a boat" })).toContainText(
-    "Choose a boat and enter a name before adding a walk-in.",
+test("the walk-in form explains an invalid submission", async ({ page }) => {
+  const tripId = await seededTripId(page, "blue-mantis", OPEN_BOAT);
+  await page.goto(`${counterPath("blue-mantis", tripId)}/walk-in?notice=walkin-invalid`);
+  await expect(page.getByRole("alert").filter({ hasText: "Enter a name" })).toContainText(
+    "Enter a name before adding a walk-in.",
   );
 });
 
 test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ page }) => {
-  // A same-day, one-seat trip so it's both offered by the walk-in picker
-  // (today's/tomorrow's departures) and trivially fillable in one step.
+  // A same-day, one-seat trip so it's inside the counter's arrivals window
+  // and trivially fillable in one step.
   const title = `Walk-in Full Trip ${e2eNow().getTime()}`;
   await createTrip(page, {
     title,
@@ -382,11 +348,7 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
 
   // The boat is now full — a counter walk-in onto it is refused, not silently
   // dropped, and points the crew at the wait list instead.
-  // The old `?tripId=` shape still lands on the diver step rather than losing
-  // the choice — the departure moved into the path when the counter learned to
-  // say *why* a diver bounced.
-  await page.goto(`/shop/blue-mantis/check-in/walk-in?tripId=${tripId}`);
-  await page.waitForURL(`/shop/blue-mantis/check-in/walk-in/${tripId}`);
+  await page.goto(`${counterPath("blue-mantis", tripId)}/walk-in`);
   await page.getByRole("link", { name: "Add diver" }).click();
   await page.waitForURL(/\/divers\/new\?/);
   await page.getByLabel("Full name").fill("Turned Away Tara");
@@ -395,51 +357,34 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   // A refusal lands back on the walk-in form with the boat still chosen — the
   // staffer's next move is another diver or another boat, not a trip page.
   await expect(page).toHaveURL(
-    new RegExp(`/shop/blue-mantis/check-in/walk-in/${tripId}\\?notice=walkin-full$`),
+    new RegExp(`/shop/blue-mantis/trips/${tripId}/check-in/walk-in\\?notice=walkin-full$`),
   );
   // Regression: this refusal rendered with no role at all, so screen readers
   // heard nothing. Danger notices announce as alerts (noticeRole); filtered
   // because Next's route announcer is also role="alert".
   await expect(page.getByRole("alert").filter({ hasText: "That boat is full" })).toBeVisible();
   await expect(
-    page.getByText("That boat is full. Try the wait list from its trip page instead."),
+    page.getByText("That boat is full. Try the wait list on the Divers tab instead."),
   ).toBeVisible();
 });
 
 /**
  * The counter's paper-waiver escape hatch. A diver standing at the desk with a
  * signed release in hand used to leave the staffer no way forward from here —
- * the only "mark signed on paper" control lived on the trip's Guests tab, so
+ * the only "mark signed on paper" control lived on the trip's roster, so
  * clearing the blocker meant leaving the queue and hunting for the departure.
  */
 test("the counter records a paper waiver and the diver becomes checkable in place", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/check-in");
-  const search = page.getByRole("searchbox", { name: "Scan or search diver" });
-  await expect(search).toHaveAttribute("data-hydrated", "true");
-  await search.fill("Priya Sharma");
-  await search.press("Enter");
+  const tripId = await openCounterFor(page, "blue-mantis", "Priya Sharma");
+  const counter = counterPath("blue-mantis", tripId);
 
   const card = page
     .locator("article")
     .filter({ hasText: "Priya Sharma" })
     .filter({ visible: true });
   await expect(card.getByText("Blocked")).toBeVisible();
-  // **Wait for the counter to actually be in search mode before touching a row
-  // on it**, which is the one assertion that distinguishes the two: Priya's row
-  // is on screen in *either* mode, because her boat is also the one the
-  // instrument focuses. Open the paper-waiver form while the search navigation
-  // is still in flight and the queue re-renders under it in the other mode —
-  // rows move from the focused `CounterQueue` into the per-departure list — so
-  // React rebuilds the row and `PaperWaiverControl`'s open state, which is
-  // client state on a component that was just unmounted, goes with it. That is
-  // the queue doing its job (a search replaces the list), not a defect: the
-  // only thing that switches the mode is the staffer typing in this very box,
-  // and nobody fills a form on a row with the same hand. The spec has to say
-  // which render it is acting on. See `searchIsShowing` below.
-  const searchIsShowing = page.getByRole("heading", { name: /Search results for .Priya Sharma./ });
-  await expect(searchIsShowing).toBeVisible();
 
   await openPaperWaiverForm(card);
   // The medical attestation is the control, not a buried confirm. The
@@ -461,33 +406,30 @@ test("the counter records a paper waiver and the diver becomes checkable in plac
   ).toBeVisible();
 
   // **Neither outcome navigates.** The refusal used to, landing on the bare
-  // queue — so the search had to be retyped, the row was rebuilt, and the form
-  // the staffer had filled in closed behind a "Mark signed on paper" button
-  // with everything they typed gone (the step that timed out on CI). Now the
-  // form is still open, still on this row, and the search is still in the box:
-  // the staffer's next act is the single box the refusal named.
-  await expect(page).toHaveURL(/\/check-in\?q=Priya\+Sharma/);
+  // queue — so the row was rebuilt, and the form the staffer had filled in
+  // closed behind a "Mark signed on paper" button with everything they typed
+  // gone (the step that timed out on CI). Now the form is still open, still on
+  // this row: the staffer's next act is the single box the refusal named.
+  await expect(page).toHaveURL(onCounter(counter));
   await card
     .getByLabel("I have this diver’s signed release on file", { exact: false })
     .filter({ visible: true })
     .check();
   await card.getByRole("button", { name: "Record paper signature" }).click();
 
-  // Success lands **in place** too: no banner, no navigation, and — the point
-  // of it — the search that found her is still in the box and still in the URL,
-  // so the next act is one tap rather than typing her name a second time. Same
-  // immutable record a self-service signature produces, so the blocker is
-  // genuinely gone rather than merely hidden.
+  // Success lands **in place** too: no banner, no navigation, so the next act
+  // is one tap on the same row. Same immutable record a self-service signature
+  // produces, so the blocker is genuinely gone rather than merely hidden.
   await expect(card.getByRole("button", { name: "Check in Priya Sharma" })).toBeVisible();
-  await expect(page).toHaveURL(/\/check-in\?q=Priya\+Sharma/);
+  await expect(page).toHaveURL(onCounter(counter));
   await expect(page.getByText("Paper waiver recorded")).toHaveCount(0);
 });
 
 /**
- * **The counter faces a queue.** `/shop/[shopSlug]/check-in` calls itself
- * Counter mode — the screen on the front desk that divers line up at — and it
- * printed every diver's personal email under their name. On the seeded shop
- * that is 26 addresses on a screen angled at a lobby, so whoever is second in
+ * **The counter faces a queue.** A departure's Check-in tab is the counter —
+ * the screen on the front desk that divers line up at — and it
+ * printed every diver's personal email under their name: a boat's worth of
+ * addresses on a screen angled at a lobby, so whoever is second in
  * the queue can read the address of whoever is first (issue #716).
  *
  * The email is a *disambiguator*: it earns its place only where two visible
@@ -497,32 +439,26 @@ test("the counter records a paper waiver and the diver becomes checkable in plac
 test("the counter shows a diver's email only when another diver shares their name", async ({
   page,
 }) => {
-  await page.goto("/shop/blue-mantis/check-in");
+  await openCounterFor(page, "blue-mantis", "Priya Sharma");
   await expect(page.getByRole("region", { name: "Check-in queue" })).toBeVisible();
 
   // No two seeded divers share a name, so the whole queue renders without a
-  // single address. Asserted on the queue region rather than the page: the
-  // search box's own placeholder still names email, which is a staffer typing.
+  // single address. Asserted on the queue region rather than the page.
   const queue = page.getByRole("region", { name: "Check-in queue" });
   await expect(queue.getByText(/@example\.com/)).toHaveCount(0);
 
-  // Searching by email still finds the diver — that path is a staffer typing,
-  // never a display, and it must not have been narrowed with the display.
-  const search = page.getByRole("searchbox", { name: "Scan or search diver" });
-  await expect(search).toHaveAttribute("data-hydrated", "true");
-  await search.fill("priya.sharma@example.com");
-  await search.press("Enter");
-  await expect(
-    page.locator("article").filter({ hasText: "Priya Sharma" }).filter({ visible: true }),
-  ).toHaveCount(1);
+  // Looking up by email still finds the diver's boat — that path is a staffer
+  // typing on Today, never a display, and it must not have been narrowed with
+  // the display.
+  await page.goto(`/shop/blue-mantis?q=${encodeURIComponent("priya.sharma@example.com")}`);
+  await expect(page.getByRole("link", { name: /check-in for Priya Sharma$/ })).toHaveCount(1);
 });
 
 /**
  * **A dropped signal must not take the queue with it.**
  *
  * Offline, one tap on "Check in" used to be replaced by the whole segment's
- * error boundary: the 26-diver queue, the four departure groups, the scroll
- * position and anything typed into the scan field, all gone — in front of a
+ * error boundary: the queue and the scroll position, all gone — in front of a
  * diver standing at the desk (issue #819). DiveDay's headline capability is
  * that the head count works with no signal, and it does, on the *boat*; the
  * counter is one nav tab away and a marina's wifi is exactly as bad at the desk.
@@ -535,23 +471,14 @@ test("a dropped signal at the counter fails on the row, not on the page", async 
   page,
   context,
 }) => {
-  await page.goto("/shop/blue-mantis/check-in");
+  // A diver who is *checkable*, so the row this taps exists — and waited for
+  // by the counter's own render, never a timer: going offline mid-navigation
+  // leaves no rows to tap at all.
+  await openCounterFor(page, "blue-mantis", "Lena Fischer");
   const queue = page.getByRole("region", { name: "Check-in queue" });
   await expect(queue).toBeVisible();
-
-  // What the staffer typed, which the boundary used to discard along with
-  // everything else.
-  const search = page.getByRole("searchbox", { name: "Scan or search diver" });
-  await expect(search).toHaveAttribute("data-hydrated", "true");
-  // A name that is still *checkable* once the filter lands, so the row this
-  // taps exists — and waited for by the filtered queue's own render, never a
-  // timer: typing here navigates, and going offline mid-navigation leaves no
-  // rows to tap at all. That race made this test fail about one run in three
-  // before it was pinned this way.
-  await search.fill("Lena");
   const row = queue.getByRole("button", { name: "Check in Lena Fischer" });
   await expect(row).toBeVisible();
-  await expect(queue.getByRole("button", { name: /^Check in / })).toHaveCount(1);
 
   await context.setOffline(true);
   await row.click();
@@ -560,10 +487,9 @@ test("a dropped signal at the counter fails on the row, not on the page", async 
   // not happen, which the client cannot know.
   await expect(page.getByRole("alert").filter({ hasText: "That didn’t send" })).toBeVisible();
 
-  // And the page is still the page: the queue, the row, and what was typed.
+  // And the page is still the page: the queue and the row.
   await expect(queue).toBeVisible();
   await expect(row).toBeVisible();
-  await expect(search).toHaveValue("Lena");
   await expect(page.getByText("This screen ran into a problem")).toHaveCount(0);
 
   // The connection is stated before the next tap, not only after it.
@@ -630,8 +556,8 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
     capacity: 1,
   });
   const tripId = await seededTripId(page, "blue-mantis", title);
-  const counter = `/shop/blue-mantis/check-in?trip=${tripId}`;
-  const walkIn = `/shop/blue-mantis/check-in/walk-in/${tripId}`;
+  const counter = counterPath("blue-mantis", tripId);
+  const walkIn = `${counter}/walk-in`;
 
   // Odile Marchand is seeded carded and deliberately booked on nothing
   // (`src/db/seed-cert-gates.ts`), so she clears this trip's Open Water
@@ -731,7 +657,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   // The door goes to the shipped control rather than growing a second sender
   // beside it.
   await released.getByRole("link", { name: "Open the wait list" }).click();
-  await page.waitForURL(new RegExp(`/shop/blue-mantis/trips/${tripId}/guests$`));
+  await page.waitForURL(new RegExp(`/shop/blue-mantis/trips/${tripId}#waitlist$`));
   await expect(page.getByRole("heading", { name: /Waiting for a seat/ })).toBeVisible();
 
   await page.getByRole("button", { name: "Email Nora an invite" }).click();
@@ -799,19 +725,19 @@ test("a phone number read off a diver's record finds their seat at the counter",
   ).trim();
   expect(printed).toMatch(/\s/);
 
-  await page.goto("/shop/blue-mantis/check-in");
-  const search = page.getByRole("searchbox", { name: "Scan or search diver" });
+  // Typed into Today's arrival lookup, exactly as the desk finds a boat.
+  await page.goto("/shop/blue-mantis");
+  const search = page.getByRole("searchbox", { name: "Find an arriving diver" });
   await expect(search).toHaveAttribute("data-hydrated", "true");
   await search.fill(printed);
   await search.press("Enter");
 
-  // In the queue, on the departure she holds a seat on…
+  // Matched to the departure she holds a seat on — the match is a row on that
+  // boat's counter, which is where its link goes.
+  const match = page.getByRole("link", { name: /check-in for Priya Sharma$/ }).first();
+  await expect(match).toBeVisible();
+  await match.click();
+  await page.waitForURL(/\/trips\/[0-9a-f-]{36}\/check-in(#.*)?$/);
   const queue = page.getByRole("region", { name: "Check-in queue" });
   await expect(queue.getByText("Priya Sharma").first()).toBeVisible();
-  // …and not offered a seat she already has. "Known divers" is the people in
-  // the shop record who are *not* booked on today's departures, and a diver
-  // found there beside a seat button is the same failure wearing the other
-  // face: the search matched the person and missed their booking.
-  const known = page.getByRole("region", { name: "Known divers" });
-  await expect(known.getByText("Priya Sharma")).toHaveCount(0);
 });

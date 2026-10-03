@@ -49,7 +49,7 @@ const TRIP_META_GAP = "mt-1.5 sm:mt-2.5";
 const TRIP_META_TYPE = "text-[13px] sm:text-[15px]";
 
 /**
- * The header a departure's sub-pages wear — `/manifest`, `/prep`, `/guests`
+ * The header a departure's sub-pages wear — `/check-in`, `/manifest`, `/prep`
  * and the printed packet. The departure itself wears `VoyageHeader`, its hour
  * as its name.
  *

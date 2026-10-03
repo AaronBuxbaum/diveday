@@ -408,7 +408,7 @@ export async function listDepartureRollCallByTrip(
  * evening said "0 out, 0 back" about a one-diver boat carrying a missing diver:
  * the desk's `no_show` stood, no dock result contradicted it, and the after-dive
  * `not_boarded` the day was raising a top-severity row about was invisible to
- * the count. And the counter's own door (src/app/shop/[shopSlug]/check-in) drew
+ * the count. And the counter's own door (src/app/shop/[shopSlug]/trips/[id]/check-in) drew
  * "Did not dive?" over exactly those divers, because it fed `noShowGate` the
  * departure-boarded set — the writer refused the tap, so no seat was ever lost,
  * but the app spent two taps inviting the desk to write off the person the crew

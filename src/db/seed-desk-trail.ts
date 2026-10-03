@@ -5,8 +5,8 @@ import { activityEvents, type bookings, internalNotes, people, type trips } from
 import { at } from "./seed-clock";
 
 /**
- * The desk's own paper trail on a departure — the Guests tab's two halves
- * (`/shop/[shopSlug]/trips/[id]/guests`): the private notes staff keep against
+ * The desk's own paper trail on a departure — the Divers tab's two halves
+ * (`/shop/[shopSlug]/trips/[id]`): the private notes staff keep against
  * a diver's seat, and the append-only account of what has been done to the trip.
  *
  * Both tables were empty in every seeded shop, because both are written only by

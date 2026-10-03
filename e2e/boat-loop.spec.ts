@@ -76,7 +76,7 @@ test("the departure's tabs reach its gear and its manifest", async ({ page }) =>
     .getByRole("link", { name: "Divers" })
     .click();
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
-  await expect(page.getByRole("region", { name: "Guests" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Divers", exact: true })).toBeVisible();
 });
 
 test("staff can view or copy a trip's public booking page from its overview", async ({

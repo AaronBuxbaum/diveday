@@ -6,6 +6,7 @@ import { expect, signedInAsOwner, test } from "./fixtures";
 import {
   acceptAgeAttestation,
   choosePartySize,
+  counterPath,
   createTrip,
   daysFromNow,
   e2eNow,
@@ -14,6 +15,7 @@ import {
   openTripMore,
   openTripTab,
   STAFF_DAY_HEADING,
+  seededTripId,
   signOut,
   threadStatus,
   waiverLinkFromResult,
@@ -249,8 +251,16 @@ test.describe("automated accessibility scans of the static staff routes", () => 
   test("the front-desk and scheduling surfaces have no automated a11y violations", async ({
     page,
   }) => {
-    // 8 scans at ~3.5s each, plus the sign-in state and first cold render.
-    test.setTimeout(105_000);
+    // 8 scans at ~3.5s each, plus the sign-in state, first cold render and
+    // one board crawl for the counter's departure.
+    test.setTimeout(120_000);
+    // The counter is a departure's own Check-in tab, so it needs a seeded boat
+    // still inside the arrivals window; its <h1> is the trip's title.
+    const counterBoat = "Two-Tank Reef — Molasses & French";
+    const counter = counterPath(
+      "blue-mantis",
+      await seededTripId(page, "blue-mantis", counterBoat),
+    );
     await scanStaticRoutes(page, [
       // Today, which is now one composition rather than two views of one
       // (ADR 20260827-clearwater-surface-language, decision 4) — so the second
@@ -258,12 +268,8 @@ test.describe("automated accessibility scans of the static staff routes", () => 
       // gone with the body. `/blockers` still redirects here, and
       // `day-spine.spec.ts` holds it to a single hop.
       { path: "/shop/blue-mantis", heading: STAFF_DAY_HEADING },
-      { path: "/shop/blue-mantis/check-in", heading: "Counter check-in" },
-      { path: "/shop/blue-mantis/check-in/walk-in", heading: "Walk-in" },
-      // The desk phone's door (N-22), on the branch that renders its extra
-      // block: the two inactive branches are `disabled` fieldsets that stay in
-      // the DOM, so this scan sees the whole form either way.
-      { path: "/shop/blue-mantis/calls?outcome=date-request", heading: "Took a call" },
+      { path: counter, heading: counterBoat },
+      { path: `${counter}/walk-in`, heading: "Walk-in" },
       { path: "/shop/blue-mantis/schedule/board", heading: "Schedule" },
       // Creating a trip is the board's own add panel now (ADR
       // 20260806-one-trip-create-form), and `?add=full` is the deep end of it
@@ -427,7 +433,7 @@ test.describe("automated accessibility scans of the staff detail surfaces", () =
   });
 
   test("the global add-a-booking door has no automated a11y violations", async ({ page }) => {
-    // 4 scans at ~3.5s each, plus a board crawl and a server-action round trip.
+    // 5 scans at ~3.5s each, plus a board crawl and a server-action round trip.
     test.setTimeout(110_000);
     // Step one: which departure. A registry destination
     // (src/lib/staff-destinations.ts, `addBooking`) with a palette row, and
@@ -467,6 +473,17 @@ test.describe("automated accessibility scans of the staff detail surfaces", () =
     await candidate.click();
     const refusal = page.getByRole("alert");
     await expect(refusal).toBeVisible();
+    await expectNoA11yViolations(page);
+
+    // The desk phone's answer (N-22) at the foot of the same page, opened by
+    // its `#call` hash, on the branch that renders its extra block: the
+    // inactive branch is a `disabled` fieldset that stays in the DOM, so this
+    // scan sees the whole form either way.
+    await page.goto("/shop/blue-mantis/bookings/new?outcome=date-request#call", {
+      waitUntil: "domcontentloaded",
+    });
+    const call = page.locator("details#call");
+    await expect(call.getByLabel("What they asked about")).toBeVisible();
     await expectNoA11yViolations(page);
   });
 
@@ -1051,19 +1068,26 @@ test.describe("automated accessibility scans for an unsupported-language visitor
  * one. If a page grows one, exempt it by name with a sentence — never by
  * widening the rule.
  */
-const TAP_TARGET_PAGES = [
-  "/shop/blue-mantis/gear",
-  "/shop/blue-mantis/orders",
-  "/shop/blue-mantis/check-in",
+const TAP_TARGET_PAGES: readonly { name: string; path: (page: Page) => Promise<string> }[] = [
+  { name: "/shop/blue-mantis/gear", path: async () => "/shop/blue-mantis/gear" },
+  { name: "/shop/blue-mantis/orders", path: async () => "/shop/blue-mantis/orders" },
+  {
+    name: "a departure's Check-in tab",
+    path: async (page) =>
+      counterPath(
+        "blue-mantis",
+        await seededTripId(page, "blue-mantis", "Two-Tank Reef — Molasses & French"),
+      ),
+  },
 ];
 
 test.describe("tap targets on a phone", () => {
   signedInAsOwner();
   test.use({ viewport: { width: 390, height: 844 } });
 
-  for (const path of TAP_TARGET_PAGES) {
-    test(`every control on ${path} clears the 44px floor`, async ({ page }) => {
-      await page.goto(path);
+  for (const target of TAP_TARGET_PAGES) {
+    test(`every control on ${target.name} clears the 44px floor`, async ({ page }) => {
+      await page.goto(await target.path(page));
       // The page's own first control, so this waits on the thing under test
       // rather than on a duration.
       await page.locator("main a, main button").first().waitFor();

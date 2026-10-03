@@ -826,8 +826,8 @@ describe("the roster's row geometry", () => {
 /**
  * **On the departure page the roster is spaced by the page** (K-262). It hung
  * `mt-5` there, one of five different steps between the page's sections; the
- * page's one `space-y-10` spaces it now. The standalone /guests compatibility
- * route, which has no stack, keeps its own step.
+ * page's one `space-y-10` spaces it now. A roster outside that stack keeps its
+ * own step.
  */
 describe("the roster's place on the departure page", () => {
   it("carries no top margin of its own when compact", () => {

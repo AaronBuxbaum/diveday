@@ -91,7 +91,6 @@ test("the command palette also finds dive sites, courses, and every gated nav de
   await page.keyboard.press("ControlOrMeta+k");
   const shortcuts = page.getByRole("combobox", { name: /Search divers/ });
   for (const [query, urlPattern] of [
-    ["Check-in", /\/check-in$/],
     ["Crew schedule", /\/staffing$/],
     ["Dive sites", /\/dive-sites$/],
     ["Courses", /\/courses$/],
@@ -136,7 +135,7 @@ test("the command palette finds a page by the headline it wears", {
   const box = page.getByRole("combobox", { name: /Search divers/ });
 
   for (const [headline, label, urlPattern] of [
-    ["Counter check-in", "Check-in", /\/check-in$/],
+    ["Dive-site library", "Dive sites", /\/dive-sites$/],
     ["Money", "Orders", /\/orders$/],
     ["Inbox", "Messages", /\/inbox$/],
   ] as const) {

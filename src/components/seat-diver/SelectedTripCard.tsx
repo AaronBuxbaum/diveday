@@ -3,8 +3,10 @@ import { SectionCard } from "@/components/ui/card";
 
 /**
  * "This is the boat you picked, and here is the way back to the list" — the
- * card both trip-first doors (the counter walk-in, the global Add-booking step
- * two) stand under while they choose a diver.
+ * card both trip-first doors (a departure's walk-in, the global Add-booking
+ * step two) stand under while they choose a diver. The walk-in has no list to
+ * go back to — it was opened from the boat itself — so its card has no change
+ * link.
  *
  * The summary sentence arrives already formatted: dates and money are the
  * page's job, because only it knows the shop's timezone and the negotiated
@@ -19,8 +21,8 @@ export function SelectedTripCard({
 }: {
   label: string;
   summary: string;
-  changeHref: string;
-  changeLabel: string;
+  changeHref?: string;
+  changeLabel?: string;
   className?: string;
 }) {
   return (
@@ -29,12 +31,14 @@ export function SelectedTripCard({
     <SectionCard className={className}>
       <p className="text-xs font-bold tracking-wide text-muted uppercase">{label}</p>
       <p className="mt-1 font-semibold">{summary}</p>
-      <Link
-        href={changeHref}
-        className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
-      >
-        {changeLabel}
-      </Link>
+      {changeHref && changeLabel ? (
+        <Link
+          href={changeHref}
+          className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline"
+        >
+          {changeLabel}
+        </Link>
+      ) : null}
     </SectionCard>
   );
 }

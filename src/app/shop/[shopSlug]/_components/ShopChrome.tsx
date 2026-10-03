@@ -49,8 +49,7 @@ import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
  * only copy** — not because this component is careful. Every staff *page*
  * below gates itself: 43 of the 47 call `requireShopSurface`
  * (`src/lib/session.ts`), which `notFound()`s when the session's shop
- * disagrees with the slug; `check-in`, `check-in/walk-in` and `courses` assert
- * the same two conditions inline; and the shop home does now too. The home is
+ * disagrees with the slug; `courses` asserts the same two conditions inline; and the shop home does now too. The home is
  * worth naming because it did **not** before this change — it resolved its own
  * shop by `session.user.shopId` and never compared the slug, because this
  * shell compared it on the home's behalf. A shell that streams beside the page

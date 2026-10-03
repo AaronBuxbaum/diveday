@@ -1,17 +1,14 @@
 {
-  "title": "Took a call",
-  "callerHeading": "Who called",
+  "title": "Full boat or another day?",
   "outcomeHeading": "What they wanted",
   "outcome": {
     "dateRequest": "A day that isn’t on the board",
-    "waitlist": "A seat on a full departure",
-    "booking": "A seat on a departure with room"
+    "waitlist": "A seat on a full departure"
   },
   "departureLabel": "Which departure",
   "departureUnchosen": "Choose a departure",
-  "departureOpen": "{title} · {date} · {time} · {seats, plural, one {# seat left} other {# seats left}}",
   "departureFull": "{title} · {date} · {time} · full",
-  "noDepartures": "There is nothing on the board to put anyone on. Add a departure first, or take this down as a request for a day.",
+  "noDepartures": "No departure is full, so there is no wait list to join.",
   "interestLabel": "What they asked about",
   "interestPlaceholder": "Two-tank reef in March",
   "preferredDateLabel": "Day they want",

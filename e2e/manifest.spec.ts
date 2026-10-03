@@ -1,9 +1,11 @@
 import type { Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
 import {
+  counterPath,
   manifestRow,
   offlineCopySaved,
   openBoatCheck,
+  openIfClosed,
   openManifestPerson,
   openOnThisPhone,
   openTripFromBoard,
@@ -1163,6 +1165,7 @@ test("a counter check-in made offline queues, then syncs and lands on the live c
   test.setTimeout(45_000);
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
+  const tripId = new URL(page.url()).pathname.split("/").at(-1) ?? "";
   await openTripTab(page, "Manifest");
 
   await offlineCopySaved(page);
@@ -1215,11 +1218,19 @@ test("a counter check-in made offline queues, then syncs and lands on the live c
   await context.setOffline(false);
   await expect(page.getByRole("status").filter({ hasText: "Everything’s sent" })).toBeVisible();
 
-  await page.goto("/shop/blue-mantis/check-in?q=Diego+Alvarez");
-  await expect(page.getByRole("button", { name: "Undo check-in for Diego Alvarez" })).toBeVisible();
+  // The live counter is this departure's Check-in tab. A boat still ahead
+  // keeps its receipts folded, so open them to reach Diego's row.
+  await page.goto(counterPath("blue-mantis", tripId));
+  const queue = page.getByRole("region", { name: "Check-in queue" });
+  const settledHeading = page.getByRole("heading", { name: /^Checked in — \d+$/ });
+  await expect(settledHeading).toBeVisible();
+  await openIfClosed(queue.locator("details").filter({ has: settledHeading }));
+  await expect(
+    queue.getByRole("button", { name: "Undo check-in for Diego Alvarez" }),
+  ).toBeVisible();
   // And still nobody aboard — the queue closed the arrival queue and nothing
   // else.
-  await expect(page.getByText("Boarded")).toHaveCount(0);
+  await expect(queue.getByText("Boarded")).toHaveCount(0);
 });
 
 /**
@@ -1239,8 +1250,8 @@ test("a failed reload of the counter lands on this device's saved copy", async (
   await openTripTab(page, "Manifest");
   await waitForShellPrimed(page);
 
-  await page.goto(`/shop/blue-mantis/check-in?trip=${tripId}`);
-  await expect(page.getByRole("heading", { name: "Counter check-in" })).toBeVisible();
+  await page.goto(counterPath("blue-mantis", tripId));
+  await expect(page.getByRole("region", { name: "Check-in queue" })).toBeVisible();
 
   await context.setOffline(true);
   await page.reload();

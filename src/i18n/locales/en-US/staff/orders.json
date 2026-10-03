@@ -172,7 +172,7 @@
     "owedRefunds": {
       "sectionLabel": "Refunds you still owe",
       "heading": "{count, plural, one {# diver is} other {# divers are}} still owed money for a departure you cancelled.",
-      "detail": "Their money couldn’t go back by card. Each of them has been told you’ll be in touch. Return it, then mark the seat refunded on the departure’s Guests tab.",
+      "detail": "Their money couldn’t go back by card. Each of them has been told you’ll be in touch. Return it, then mark the seat refunded on the departure’s Divers tab.",
       "depositOnly": "deposit only",
       "unrecordedAmount": "amount not recorded",
       "openTrip": "Open trip"

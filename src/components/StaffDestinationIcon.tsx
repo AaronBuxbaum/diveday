@@ -217,14 +217,6 @@ const ICON_PATHS: Record<StaffDestinationId, ReactNode> = {
       <path d="M4 19h16" />
     </>
   ),
-  // The counter clipboard with the tick that clears someone to board.
-  checkIn: (
-    <>
-      <rect x="8" y="2" width="8" height="4" rx="1" />
-      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-      <path d="m9 13.5 2 2 4-4" />
-    </>
-  ),
   // People — the roster of divers themselves.
   divers: (
     <>
@@ -258,19 +250,6 @@ const ICON_PATHS: Record<StaffDestinationId, ReactNode> = {
       <path d="M14 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2" />
       <path d="M18 8v8" />
       <path d="M14 12h8" />
-    </>
-  ),
-  // Took a call: the handset a diver rang in on.
-  tookACall: (
-    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92Z" />
-  ),
-  // Walk-in: someone through the door, at the counter.
-  walkIn: (
-    <>
-      <path d="M4 21V5a2 2 0 0 1 2-2h7a2 2 0 0 1 2 2v16" />
-      <path d="M2 21h20" />
-      <path d="M11.5 12.5h.01" />
-      <path d="M18 21v-6a2 2 0 0 1 2-2" />
     </>
   ),
   // Staffing: who is on which day — a person against a week.

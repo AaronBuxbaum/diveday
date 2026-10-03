@@ -51,9 +51,7 @@ export type TripRosterActions = {
 };
 
 /**
- * The shared Trip ledger body. The canonical Trip surface owns this body; the
- * legacy `/guests` compatibility route remains available for old deep links so
- * moving the roster does not strand existing bookmarks.
+ * The Trip ledger body, which the departure's Divers tab renders.
  */
 export function TripRosterContent({
   guests,

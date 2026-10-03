@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { after } from "next/server";
 import { Suspense } from "react";
 import { DayHeader } from "@/app/shop/[shopSlug]/_components/day/DayHeader";
+import { ArrivalLookup } from "@/app/shop/[shopSlug]/_components/today/ArrivalLookup";
 import {
   DaySpine,
   type EveningReading,
@@ -25,6 +26,7 @@ import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import { canPersonExportIncidentRecord } from "@/db/authz";
 import { inHorizonReadiness } from "@/db/blockers";
+import { hasArrivals, listCheckInQueue } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { getDayCloseout, listHeadCountCloses, shopHasSailedBefore } from "@/db/closeout";
 import { listDiveSites } from "@/db/dive-sites";
@@ -213,6 +215,8 @@ export default async function ShopPage({
     noted?: string;
     decision?: string;
     decisionState?: string;
+    /** Today's arrival lookup (`ArrivalLookup`). */
+    q?: string;
   }>;
 }) {
   // The session and the two route-param promises don't depend on one
@@ -220,7 +224,7 @@ export default async function ShopPage({
   const [
     session,
     { shopSlug },
-    { created, series, reset, email, notice, closed, noted, decision, decisionState },
+    { created, series, reset, email, notice, closed, noted, decision, decisionState, q },
   ] = await Promise.all([requireStaffSession(), params, searchParams]);
   const seriesCount = series ? Number.parseInt(series, 10) : 0;
 
@@ -254,6 +258,7 @@ export default async function ShopPage({
           noted={noted}
           decision={decision}
           decisionState={decisionState}
+          arrivalQuery={q?.trim() ?? ""}
         />
       </Suspense>
     </main>
@@ -300,6 +305,7 @@ async function TodayBody({
   noted,
   decision,
   decisionState,
+  arrivalQuery,
 }: {
   session: Awaited<ReturnType<typeof requireStaffSession>>;
   shopSlug: string;
@@ -315,6 +321,8 @@ async function TodayBody({
   /** A leftover just decided, and which way — the Undo toast's whole input. */
   decision?: string;
   decisionState?: string;
+  /** What the desk typed into the arrival lookup; `""` for none. */
+  arrivalQuery: string;
 }) {
   const db = await getDb();
   const shop = await getShopById(db, session.user.shopId);
@@ -419,6 +427,10 @@ async function TodayBody({
   );
   const { actions, withheldCount, nextDeparture, crewedTripIds, crewedSessions } = work;
   const spine = assembleDaySpine(work, tomorrowWork);
+  const [arrivalRows, counterOpen] = await Promise.all([
+    arrivalQuery ? listCheckInQueue(db, shop.id, { query: arrivalQuery, now }) : [],
+    arrivalQuery ? true : hasArrivals(db, shop.id, now),
+  ]);
   // **The day's closing state** (H-62; ADR 20260827-clearwater-surface-language,
   // decision 4). `/close-out` is a 308 to this page now, and its reader came
   // here with it — unchanged, including the trail it appends to.
@@ -956,13 +968,7 @@ async function TodayBody({
         ? (() => {
             // One href rule and one dismissal for both forms — only the words
             // and the chrome differ between the card and the line.
-            const tourHref = orientationTourHref(
-              shopSlug,
-              orientationRole,
-              nextDeparture
-                ? `/shop/${shopSlug}/trips/${nextDeparture.tripId}/manifest`
-                : undefined,
-            );
+            const tourHref = orientationTourHref(shopSlug, orientationRole, nextDeparture?.tripId);
             const tourText = orientationTourText(t, orientationRole);
             return hasWorkToShow ? (
               <RoleOrientationLine
@@ -988,6 +994,20 @@ async function TodayBody({
             );
           })()
         : null}
+
+      {/* The desk's first question when a diver walks up — which boat? —
+          over every departure the counter is open for. Only while some boat
+          has someone to check in, or while a lookup is open. */}
+      {counterOpen ? (
+        <ArrivalLookup
+          query={arrivalQuery}
+          rows={arrivalRows}
+          shopSlug={shopSlug}
+          locale={locale}
+          timeZone={shop.timezone}
+          t={t}
+        />
+      ) : null}
 
       {quietDay ? (
         <div className="mt-8 flex flex-col gap-4">

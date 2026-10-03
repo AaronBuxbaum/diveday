@@ -111,9 +111,6 @@ export type StaffNavOffers = { courses: boolean; gear: boolean };
 
 export type StaffDestinationId =
   | "today"
-  | "checkIn"
-  | "walkIn"
-  | "tookACall"
   | "divers"
   | "board"
   | "addBooking"
@@ -169,9 +166,6 @@ export type StaffDestinationTitles = Partial<Record<StaffDestinationId, string>>
  */
 export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessageKey> = {
   today: "shared.shopNavLinks.today",
-  checkIn: "shared.shopNavLinks.checkIn",
-  walkIn: "shared.shopNavLinks.walkIn",
-  tookACall: "shared.shopNavLinks.tookACall",
   divers: "shared.shopNavLinks.divers",
   board: "shared.shopNavLinks.board",
   addBooking: "shared.shopNavLinks.addBooking",
@@ -202,7 +196,6 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
  * of the day, so neither is a name anybody could search for.
  */
 export const STAFF_DESTINATION_TITLE_KEYS: Partial<Record<StaffDestinationId, StaffMessageKey>> = {
-  checkIn: "checkIn.title",
   // A tabbed section's pages wear the section's name (`STAFF_SECTION_TABS`):
   // its lead tab answers to it, so typing "Money" still finds Orders.
   inbox: "shared.shopSections.inbox",
@@ -243,10 +236,6 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // evening is a state Today settles into (ADR
   // 20260827-clearwater-surface-language, decision 4).
   { id: "today", suffix: "", section: "today", inPalette: true, badge: "blockers" },
-  // The counter and its walk-in door belong to the day until the departure
-  // page's own Check-in tab takes them (ADR 20261001-logbook, decision 2).
-  { id: "checkIn", suffix: "/check-in", section: "today", inPalette: true },
-  { id: "walkIn", suffix: "/check-in/walk-in", section: "today", inPalette: true },
   { id: "divers", suffix: "/divers", section: "divers", inPalette: true },
   // A departure is the board's detail view, so `/trips/**` lights Schedule.
   {
@@ -260,14 +249,13 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // registry is the only place a destination may be declared.
   { id: "addBooking", suffix: "/bookings/new", section: "schedule", inPalette: true },
   { id: "staffing", suffix: "/staffing", section: "schedule", inPalette: true },
-  // Everything a diver says to the shop is one section: messages, the desk
-  // phone's capture, days asked for, and reviews. Each is ungated — the
+  // Everything a diver says to the shop is one section: messages, days asked
+  // for, and reviews. Each is ungated — the
   // person best placed to answer is whoever is at the counter (issues #1505,
   // #1679). Reviews' private "asked us to fix" panel keeps its own gate inside
   // the page (issue #1410).
   { id: "inbox", suffix: "/inbox", section: "inbox", inPalette: true },
   { id: "requests", suffix: "/requests", section: "inbox", inPalette: true },
-  { id: "tookACall", suffix: "/calls", section: "inbox", inPalette: true },
   { id: "reviews", suffix: "/reviews", section: "inbox", inPalette: true },
   // Money: the orders a shop takes every day, then the month's reading of
   // them and the discounts that shaped them.
@@ -459,7 +447,7 @@ function destinationClaim(pathname: string, root: string, destination: StaffDest
  * claim wins, so `/settings/team` resolves to Team rather than the Settings
  * entry above it; ties fall to registry order (the shop root is Today).
  * Only the *section* is ever drawn, so whichever of two same-section
- * destinations claims a path (the walk-in counter under Check-in), the light
+ * destinations claims a path (Team under Settings), the light
  * is the same.
  */
 export function currentStaffDestination(

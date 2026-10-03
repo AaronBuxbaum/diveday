@@ -106,8 +106,8 @@ manifest beneath it keeps neither drawing nor coral (`illustration.test.ts`).
 [its canvas](canvases/20260827-the-departure-is-two-working-surfaces/README.md). Slices 5d and 5e
 now make Trip the canonical working surface: the compact About disclosure owns the departure facts,
 and the roster ledger owns who is coming and what still needs attention. The historical Guests route
-remains available as a compatibility redirect, so consolidating the visible surfaces did not remove
-the roster's actions or deep links.
+was deleted on 2026-10-03 (pre-pilot, no bookmarks to keep); the wait list is the trip page's
+`#waitlist`.
 
 - **One idea:** everyone who is coming, and whether they can. The roster *is* the page; what the
   dive is drops to a one-line summary that opens on request.
@@ -269,7 +269,9 @@ night (`BrandPreview`), and the contrast note reports whichever scheme moved the
 - **Composition:** a grouped ledger because orders share their date, and a shared fact belongs to
   the group (principle 9 applied to a table).
 
-### The counter — `/shop/[shopSlug]/check-in`
+### The counter — `/shop/[shopSlug]/trips/[id]/check-in`
+
+**Moved 2026-10-03** ([ADR 20261001-logbook](../architecture/decisions/20261001-logbook.md), decision 3): the counter is each departure's own Check-in tab rather than a page of its own. The departure chips and the search left with the page: the boat is the tab's, and "which boat is this diver on?" is answered by the arrival lookup on Today, whose matches open the boat's tab. The walk-in form is the tab's foot (`check-in/walk-in`, no boat picker), and the tab's header carries Print, which opens the trip packet. The "Remove first" line below is history.
 
 **Chosen 2026-09-07, the second look** ([ADR 20260907-in-your-hands](../architecture/decisions/20260907-in-your-hands.md), [canvas](canvases/20260907-in-your-hands/README.md)):
 a blocked row whose fix is the release gains *Sign here* as its primary, which locks the desk behind the diver's own waiver page on the shop's device and reopens the counter with the row settled once a staffer signs back in; the signature records the counter, the device, who handed it over and when. H-70 b decided yes.

@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
+import { buttonClass } from "@/components/ui/button";
 
 import { SettingsRow } from "./_components/SettingsRows";
 
@@ -35,10 +37,15 @@ export function CounterQrCard({
   url,
   title,
   description,
+  printHref,
+  printLabel,
 }: {
   url: string;
   title: string;
   description: string;
+  /** The card as an A6 sheet, encoded on the server for the printer. */
+  printHref: string;
+  printLabel: string;
 }) {
   const [open, setOpen] = useState(false);
   const [qr, setQr] = useState<string | null>(null);
@@ -71,6 +78,14 @@ export function CounterQrCard({
           <img src={qr} alt={title} className="size-full" />
         ) : null}
       </div>
+      <Link
+        href={printHref}
+        target="_blank"
+        rel="noreferrer"
+        className={buttonClass({ variant: "secondary", size: "sm", className: "mt-4" })}
+      >
+        {printLabel}
+      </Link>
     </SettingsRow>
   );
 }

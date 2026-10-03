@@ -1,4 +1,5 @@
 import { expect, test } from "./fixtures";
+import { openCounterFor } from "./helpers";
 
 /**
  * Every test here mints a shop of its own and signs in live, and that setup
@@ -22,14 +23,12 @@ test.describe("the shop on paper", () => {
     page,
     privateShop,
   }) => {
-    await page.goto(`/shop/${privateShop.slug}/check-in`);
-    // The counter's own hydration signal, as `check-in.spec.ts` waits on: a tap
-    // that lands before the row's handler is attached is lost, and on a loaded
-    // CI shard that left the settled group never appearing.
-    await expect(page.getByRole("searchbox", { name: "Scan or search diver" })).toHaveAttribute(
-      "data-hydrated",
-      "true",
-    );
+    // A boat inside the counter's window, found the way the desk finds one.
+    await openCounterFor(page, privateShop.slug, "Diego Alvarez");
+    // The counter's own hydration signal: a tap that lands before the row's
+    // handler is attached is lost, and on a loaded CI shard that left the
+    // settled group never appearing.
+    await expect(page.locator("[data-check-in-queue]")).toHaveAttribute("data-hydrated", "true");
 
     // Check one diver in, so the settled group has a row with a pass door.
     const checkIn = page.getByRole("button", { name: /^Check in / }).first();

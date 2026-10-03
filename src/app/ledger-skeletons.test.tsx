@@ -12,7 +12,6 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import PublicReviewsLoading from "./s/[shopSlug]/reviews/loading";
 import PublicSiteLoading from "./s/[shopSlug]/sites/[siteSlug]/loading";
 import BookingNewLoading from "./shop/[shopSlug]/bookings/new/loading";
-import CheckInLoading from "./shop/[shopSlug]/check-in/loading";
 import CoursesLoading from "./shop/[shopSlug]/courses/loading";
 import DiveSitesLoading from "./shop/[shopSlug]/dive-sites/loading";
 import { DiverFileGroupDisclosure } from "./shop/[shopSlug]/divers/[personId]/_components/DiverFileGroupDisclosure";
@@ -28,6 +27,7 @@ import ReportsLoading from "./shop/[shopSlug]/reports/loading";
 import RequestsLoading from "./shop/[shopSlug]/requests/loading";
 import StaffReviewsLoading from "./shop/[shopSlug]/reviews/loading";
 import StaffingLoading from "./shop/[shopSlug]/staffing/loading";
+import CheckInLoading from "./shop/[shopSlug]/trips/[id]/check-in/loading";
 import { SignatureLog } from "./shop/[shopSlug]/waivers/_components/SignatureLog";
 import WaiversLoading from "./shop/[shopSlug]/waivers/loading";
 

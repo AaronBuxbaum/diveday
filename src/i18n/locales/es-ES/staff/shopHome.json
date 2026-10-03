@@ -70,7 +70,7 @@
       "crew": {
         "title": "Registrando a los buceadores a su llegada",
         "desc": "Check-in muestra quién ha llegado, a quién le falta papeleo y qué hacer al respecto.",
-        "tryThis": "Abre Check-in para registrar a los buceadores a su llegada."
+        "tryThis": "Abre la pestaña Check-in del próximo barco para registrar a los buceadores a su llegada."
       }
     }
   },
@@ -185,5 +185,12 @@
     "needsYouLabel": "Pendiente"
   },
   "quietAddDeparture": "Añadir una salida",
-  "quietNextDepartureLabel": "Próxima salida"
+  "quietNextDepartureLabel": "Próxima salida",
+  "arrivals": {
+    "label": "Buscar a un buceador que llega",
+    "placeholder": "Nombre, teléfono, correo o ID de reserva",
+    "none": "Nadie de los que llegan coincide con “{query}”.",
+    "resultsFor": "Buceadores que llegan y coinciden con “{query}”",
+    "open": "Abrir el registro de {trip} para {name}"
+  }
 }

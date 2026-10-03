@@ -1,5 +1,5 @@
 import { expect, signedInAsOwner, test } from "./fixtures";
-import { HELD_SEND_TIMEOUT_MS, STAFF_DAY_HEADING } from "./helpers";
+import { HELD_SEND_TIMEOUT_MS, openCounterFor, STAFF_DAY_HEADING } from "./helpers";
 
 signedInAsOwner();
 
@@ -117,20 +117,13 @@ test("a diver blocked on the spine is the same diver waiting at the counter", as
   await page.goto("/shop/blue-mantis");
   await expect(page.getByText("Priya Sharma").first()).toBeVisible();
 
-  // Check-in is not a link on the page — which is the point of having removed
-  // the pivot. It was a nav tab; since slice 23b the bar wears three times and
-  // everything else is reached through the search, so that is how a staffer
-  // gets there and how this test does.
-  await page.locator("header").getByRole("button", { name: "Search" }).click();
-  await page.getByRole("combobox").fill("Check-in");
-  await page
-    .getByRole("option", { name: /Check-in/ })
-    .first()
-    .click();
-  await expect(page.getByRole("heading", { name: "Counter check-in", level: 1 })).toBeVisible();
+  // The counter is each departure's own Check-in tab now, and the way to it
+  // from Today is the arrival lookup — the desk types the name it was given.
+  await openCounterFor(page, "blue-mantis", "Priya Sharma");
+  await expect(page.getByRole("region", { name: "Check-in queue" })).toBeVisible();
   await expect(page.getByText("Priya Sharma").first()).toBeVisible();
 
-  // Counter mode explains neither its own lens nor the shared horizon — the
+  // The counter explains neither its own lens nor the shared horizon — the
   // list is the answer — and nothing links back to a tab.
   await expect(page.getByText(/Counter mode shows arrivals from the last/)).toHaveCount(0);
   await expect(

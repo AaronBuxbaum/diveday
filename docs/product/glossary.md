@@ -637,14 +637,17 @@ new domain concept, define it here in the same PR.
   timezone" of a UTC column, so the scan over-fetches and the caller filters by shop-local date.
   Twenty-six hours is what a local day can span either side of any instant inside it, plus slack
   for a daylight-saving transition. Never a readiness lens.
-- **Arrivals window** — counter mode's narrower lens on the operational horizon: departures from six
+- **Arrivals window** — the counter's narrower lens on the operational horizon: departures from six
   hours ago through the next thirty-six. The backwards reach is the one deliberate asymmetry (a
   diver still walks up to the desk for a boat that already sailed); forwards it never outruns the
-  horizon, so a departure can never reach **check-in** without also appearing in both of Today's
-  views.
+  horizon. It decides when a departure's Check-in tab is open and what the **arrival lookup**
+  searches.
+- **Arrival lookup** — Today's search for "which boat is this diver on?" (`?q=`): a name, phone,
+  email or booking ID matched across every departure in the **arrivals window**, each match a row
+  that opens that boat's Check-in tab at the diver's own row. The tab itself has no search.
 - **Check-in** — a recorded arrival state for a booked diver. It confirms the live readiness
   result and changes the booking to `checked_in`; it is not boarding, which remains a separate
-  departure-time manifest decision. A staffer's tap at the counter writes it. Readiness is confirmed **wherever the tap is applied**, which
+  departure-time manifest decision. A staffer's tap at the counter (the departure's Check-in tab) writes it. Readiness is confirmed **wherever the tap is applied**, which
   since the counter went offline-capable is at the desk for a live tap and at reconciliation —
   minutes or hours later, against readiness as it stands *then* — for a queued one.
 - **Arrival event** — one append-only row in `booking_arrival_events` recording a single tap at the

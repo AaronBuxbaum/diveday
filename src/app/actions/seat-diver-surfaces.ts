@@ -150,10 +150,10 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     refusalNotice: TRIP_REFUSAL_NOTICE,
   },
   /**
-   * The counter walk-in. A seated diver settles on the check-in queue, where
-   * they are the next row to work; a *refused* one lands back on the walk-in
-   * form with the boat still chosen, so the staffer can try someone else
-   * without re-picking the departure.
+   * The counter walk-in, from a departure's Check-in tab. A seated diver
+   * settles on that tab's queue, where they are the next row to work; a
+   * *refused* one lands back on the walk-in form for the same boat, so the
+   * staffer can try someone else.
    *
    * It used to speak a deliberately blunt three-code vocabulary
    * (`refusals: "coarse"`) that collapsed all eight gates into "can't add this
@@ -168,11 +168,10 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     entry: "walk_in",
     refusals: "specific",
     email: "optional",
-    seatedPath: ({ shopSlug }) => shopPath(shopSlug, "check-in"),
+    seatedPath: ({ shopSlug, tripId }) =>
+      tripId ? shopPath(shopSlug, "trips", tripId, "check-in") : shopPath(shopSlug),
     refusedPath: ({ shopSlug, tripId }) =>
-      tripId
-        ? shopPath(shopSlug, "check-in", "walk-in", tripId)
-        : shopPath(shopSlug, "check-in", "walk-in"),
+      tripId ? shopPath(shopSlug, "trips", tripId, "check-in", "walk-in") : shopPath(shopSlug),
     // The departure is a path segment on that landing route, which is what lets
     // the signature bind to something its reader can re-derive without trusting
     // the query — and what lets a refusal add only its own `?notice=` to a

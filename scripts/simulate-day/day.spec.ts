@@ -285,11 +285,9 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
 
     case "checked-in": {
       await advanceClock(at(id));
-      await staff.goto(`${shopPath()}/check-in`);
-      const search = staff.getByRole("searchbox", { name: "Scan or search diver" });
-      await expect(search).toHaveAttribute("data-hydrated", "true");
-      await search.fill(DIVER_NAME);
-      await search.press("Enter");
+      // The departure's own Check-in tab is the counter for this boat.
+      await staff.goto(`${shopPath()}/trips/${day.tripId}/check-in`);
+      await expect(staff.getByRole("region", { name: "Check-in queue" })).toBeVisible();
       const card = staff
         .locator("article")
         .filter({ hasText: DIVER_NAME })
@@ -307,6 +305,10 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
       await expect(settled.getByRole("heading", { name: /Checked in — \d+/ })).toBeVisible({
         timeout: 30_000,
       });
+      // A boat still ahead keeps its receipts folded; open them to reach the row.
+      if (!(await settled.evaluate((node) => (node as HTMLDetailsElement).open))) {
+        await settled.locator("> summary").click();
+      }
       await expect(
         staff.getByRole("button", { name: `Undo check-in for ${DIVER_NAME}` }),
       ).toBeVisible();

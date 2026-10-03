@@ -192,7 +192,7 @@ export const TONE_PANEL_IN_OVERLAY_CLASS = "rounded-panel border p-4 sm:p-5";
  *
  * **Not a note**, and so not this box: a sunken step a person works inside (a
  * form, the 16px group inset), and a bordered sunken tile or band — a row
- * that is itself a link (`TripPickerList`, `BookingRequestCards`), or a band
+ * that is itself a link (`BookingRequestCards`), or a band
  * on the page above a card rather than carved into one (orders' linked
  * booking, `StaffPreviewBar`). Those take their hairline and the 16px inset.
  */

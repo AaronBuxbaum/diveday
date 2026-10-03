@@ -1511,8 +1511,7 @@ export function RosterSection({
       id="roster"
       aria-label={showSummaryHeading ? undefined : t("trips.roster.heading")}
       // Compact is the departure page, whose `space-y-10` spaces this
-      // (K-262); the standalone /guests compatibility route has no stack and
-      // keeps its own step.
+      // (K-262); a roster rendered outside that stack keeps its own step.
       className={`${compact ? "" : "mt-10"} scroll-mt-24`}
     >
       {showSummaryHeading ? (

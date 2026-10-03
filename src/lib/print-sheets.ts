@@ -22,6 +22,9 @@ export type PrintSheetPaper = "A6 portrait";
 /** The paper pass's paper. */
 export const PAPER_PASS_PAPER: PrintSheetPaper = "A6 portrait";
 
+/** The counter card's paper: the same A6, stood on the desk. */
+export const COUNTER_CARD_PAPER: PrintSheetPaper = "A6 portrait";
+
 /**
  * The `@page` block a sheet carries.
  *

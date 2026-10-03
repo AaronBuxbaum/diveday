@@ -1,6 +1,7 @@
 import { expect, makeActivitySafe, signedInAs, signedInAsOwner, test } from "./fixtures";
 import {
   HELD_SEND_TIMEOUT_MS,
+  openCounterFor,
   openDiverFileGroup,
   openTripFromBoard,
   openTripTab,
@@ -804,10 +805,7 @@ test("a paper release is recorded from the diver's own record, not just from a d
 
   // And it is genuinely gone rather than merely hidden — the counter, which
   // reads the same evidence through readiness, now offers her a check-in.
-  await page.goto("/shop/blue-mantis/check-in");
-  const search = page.getByRole("searchbox", { name: "Scan or search diver" });
-  await search.fill("Priya Sharma");
-  await search.press("Enter");
+  await openCounterFor(page, "blue-mantis", "Priya Sharma");
   await expect(page.getByRole("button", { name: "Check in Priya Sharma" })).toBeVisible();
 });
 

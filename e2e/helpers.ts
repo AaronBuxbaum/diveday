@@ -311,7 +311,10 @@ export async function openTripTab(page: Page, tab: "Trip" | "Manifest" | "Prep")
  * departure does. English, like every other locator in this suite.
  */
 export function rosterRow(page: Page, diverName: string): Locator {
-  return page.getByRole("region", { name: "Guests" }).locator("li").filter({ hasText: diverName });
+  return page
+    .getByRole("region", { name: "Divers", exact: true })
+    .locator("li")
+    .filter({ hasText: diverName });
 }
 
 const TRIP_ROOT_URL = /\/trips\/[^/?#]+(?:[?#]|$)/;
@@ -649,6 +652,34 @@ export async function tripPathByTitle(
   return href;
 }
 
+/**
+ * Open the counter for the boat a diver is on, the way the desk finds it:
+ * Today's arrival lookup, then the match's own row, which lands on that
+ * departure's Check-in tab. Returns the trip id read off the landing URL.
+ */
+export async function openCounterFor(page: Page, shopSlug: string, diverName: string) {
+  await page.goto(`/shop/${shopSlug}?q=${encodeURIComponent(diverName)}`);
+  await page
+    .getByRole("link", { name: new RegExp(`check-in for ${escapeRegExp(diverName)}$`) })
+    .first()
+    .click();
+  await page.waitForURL(
+    new RegExp(`/shop/${shopSlug}/trips/[0-9a-f-]{36}/check-in(\\?[^#]*)?(#.*)?$`),
+  );
+  const tripId = new URL(page.url()).pathname.match(/\/trips\/([0-9a-f-]{36})\//)?.[1];
+  if (!tripId) throw new Error(`no trip id in ${page.url()} after opening ${diverName}'s counter`);
+  return tripId;
+}
+
+/** A departure's Check-in tab — the counter for that one boat. */
+export function counterPath(shopSlug: string, tripId: string): string {
+  return `/shop/${shopSlug}/trips/${tripId}/check-in`;
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 /** A seeded departure's trip id, found the way staff reach it. */
 export async function seededTripId(page: Page, shopSlug: string, title: string): Promise<string> {
   const href = await tripPathByTitle(page, shopSlug, title);
@@ -846,7 +877,7 @@ export async function openCantFillASize(page: Page): Promise<void> {
  * this ambiguous under strict mode — or, worse, click the wrong one and leave
  * the panel shut. A `<details>` is opened only by its own direct summary.
  */
-async function openIfClosed(details: Locator): Promise<void> {
+export async function openIfClosed(details: Locator): Promise<void> {
   const isOpen = await details.evaluate((el) => (el as HTMLDetailsElement).open);
   if (!isOpen) await details.locator("> summary").click();
   await disclosureSettled(details);

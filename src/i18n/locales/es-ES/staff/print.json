@@ -8,6 +8,10 @@
       "show": "Muestra esto en el mostrador o di tu nombre.",
       "code": "El código es tu reserva y nada más.",
       "beAtDock": "Preséntate en el muelle a las {time}"
+    },
+    "counterCard": {
+      "heading": "¿Primera vez? Escanea esto.",
+      "body": "Regístrate desde tu teléfono mientras esperas: tu nombre, tu certificación y tus tallas."
     }
   },
   "counter": {

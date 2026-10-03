@@ -127,12 +127,12 @@ describe("every staff page gates on the slug, not on the shell", () => {
   });
 
   /**
-   * The other direction. Four pages make the comparison by hand rather than
+   * The other direction. Two pages make the comparison by hand rather than
    * through the helper, each for a stated reason in its own comment, and a
-   * fifth appearing here silently would mean the helper is being worked around
+   * third appearing here silently would mean the helper is being worked around
    * rather than used. Adding to this list is a decision; it is not a fix.
    */
-  it("keeps the by-hand comparisons to the four that have a reason", async () => {
+  it("keeps the by-hand comparisons to the two that have a reason", async () => {
     const byHand: string[] = [];
     for (const file of await staffPages()) {
       const { source } = await renderingSource(file);
@@ -141,10 +141,8 @@ describe("every staff page gates on the slug, not on the shell", () => {
     }
     // Sorted by path, which is why the home comes last rather than first.
     expect(byHand).toEqual([
-      // These three read the shop by slug — the walk-in and course lookups are
-      // slug-scoped — and then compare ids. Each says why at the call site.
-      "check-in/page.tsx",
-      "check-in/walk-in/page.tsx",
+      // This one reads the shop by slug — the course lookup is slug-scoped —
+      // and then compares ids. It says why at the call site.
       "courses/page.tsx",
       // The home resolves its own shop from the session (`getShopById`) inside
       // the page's own boundary, so the slug is the half it has to check.

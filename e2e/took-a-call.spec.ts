@@ -1,37 +1,64 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 import { expect, signedInAsOwner, test } from "./fixtures";
+import { createTrip, daysFromNow, e2eNow, openTripFromBoard } from "./helpers";
 
 /**
- * **"Took a call"** (N-22): the desk phone's one door, and the three places a
- * call lands.
+ * **"Took a call"** (N-22): the desk phone's answer for a caller with no seat
+ * to book, kept at the foot of Add a booking as a disclosure (`#call`) titled
+ * "Full boat or another day?".
  *
  * What this pins is the *routing*, because that is the whole feature. Each of
- * the three answers is written by a door that already exists and already has
- * its own spec — a date request by `date-requests.spec.ts`, a seating by
- * `add-diver.spec.ts` — so what could break here is a call arriving at the
- * wrong one of them, or a caller's answers being dropped on the way.
+ * the two answers is written by a door that already exists and already has its
+ * own spec — a date request by `date-requests.spec.ts`, a wait-list entry by
+ * the trip page's own writer — so what could break here is a call arriving at
+ * the wrong one of them, or a caller's answers being dropped on the way.
  */
-const CALLS = "/shop/blue-mantis/calls";
+const ADD_BOOKING = "/shop/blue-mantis/bookings/new";
 
 /**
- * The first departure with a seat left, whatever the fixture's day holds.
- *
- * By the option's own seat count rather than by title: which of the seeded
- * boats is still ahead of the frozen clock is the seed's business, and a spec
- * that named one would fail the day the fixture's morning moved. It has to be
- * an *open* one for both of the departure-shaped tests below — the booking
- * because a full boat is refused, and the wait list because refusing a
- * wait-list join on a boat that still has a seat is the exact behaviour being
- * pinned.
+ * Open Add a booking with the call form showing. The `#call` hash opens the
+ * disclosure on arrival; the form is scoped to it so the page's own booking
+ * controls above can never answer a label meant for the call.
  */
-async function chooseOpenDeparture(page: Page) {
-  const select = page.getByLabel("Which departure");
-  const open = select
-    .locator("option")
-    .filter({ hasText: /seat(s)? left/ })
-    .first();
-  const value = await open.getAttribute("value");
-  expect(value, "the fixture's board holds no departure with a seat left").toBeTruthy();
+async function openCallForm(page: Page): Promise<Locator> {
+  await page.goto(`${ADD_BOOKING}#call`);
+  const call = page.locator("details#call");
+  await expect(call.getByRole("heading", { name: "Full boat or another day?" })).toBeVisible();
+  await expect(call).toHaveJSProperty("open", true);
+  return call;
+}
+
+/**
+ * A departure with no seat left, made for this test: the call form offers
+ * only full boats for the wait list, and which seeded boats are full is the
+ * seed's business. One seat, filled by one diver from the trip's own roster.
+ */
+async function fullDeparture(page: Page): Promise<string> {
+  const title = `Call Full Trip ${e2eNow().getTime()}`;
+  await createTrip(page, {
+    title,
+    date: daysFromNow(1),
+    departsAt: "09:00",
+    returnsAt: "11:00",
+    capacity: 1,
+  });
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, title);
+  await page.getByRole("link", { name: "Add diver" }).click();
+  await page.waitForURL(/\/divers\/new/);
+  await page.getByLabel("Full name").fill("Fills The Boat");
+  await page.getByLabel("Email").fill(`call-fills-${e2eNow().getTime()}@example.com`);
+  await page.getByRole("button", { name: "Add to trip" }).click();
+  await page.waitForURL(/\/trips\/[^/?#]+(?:[?#]|$)/);
+  await expect(page.getByRole("status")).toContainText("Diver added to the trip");
+  return title;
+}
+
+async function chooseDeparture(call: Locator, title: string) {
+  const select = call.getByLabel("Which departure");
+  const option = select.locator("option").filter({ hasText: title });
+  const value = await option.getAttribute("value");
+  expect(value, `the call form offers no full departure named ${title}`).toBeTruthy();
   await select.selectOption(value as string);
 }
 
@@ -39,13 +66,13 @@ test.describe("took a call", () => {
   signedInAsOwner();
 
   test("a caller asking for a day off the board lands with the date requests", async ({ page }) => {
-    await page.goto(CALLS);
-    await page.getByLabel("Full name").fill("Marisol Cabrera E2E");
-    await page.getByLabel("Phone").fill("+1 305 555 0184");
-    await page.getByLabel("A day that isn’t on the board").check();
-    await page.getByLabel("What they asked about").fill("A night dive over the holidays");
-    await page.getByLabel("How many divers").fill("3");
-    await page.getByRole("button", { name: "Log the call" }).click();
+    const call = await openCallForm(page);
+    await call.getByLabel("Full name").fill("Marisol Cabrera E2E");
+    await call.getByLabel("Phone").fill("+1 305 555 0184");
+    await call.getByLabel("A day that isn’t on the board").check();
+    await call.getByLabel("What they asked about").fill("A night dive over the holidays");
+    await call.getByLabel("How many divers").fill("3");
+    await call.getByRole("button", { name: "Log the call" }).click();
 
     // Lands where the lead now lives, saying so once.
     await page.waitForURL(/\/shop\/blue-mantis\/requests\?notice=call-logged/);
@@ -54,77 +81,66 @@ test.describe("took a call", () => {
     await expect(page.getByText("Marisol Cabrera E2E")).toBeVisible();
   });
 
-  test("a caller taking a seat is seated through the same door the booking form uses", async ({
-    page,
-  }) => {
-    await page.goto(CALLS);
-    await page.getByLabel("Full name").fill("Ifeoma Balogun E2E");
-    await page.getByLabel("Email").fill("ifeoma.balogun.e2e@example.com");
-    await page.getByLabel("A seat on a departure with room").check();
-    await chooseOpenDeparture(page);
-    await page.getByRole("button", { name: "Log the call" }).click();
-
-    // The trip's own roster, with the trip's own notice — which is the proof
-    // that this went through `seatNewDiverAction` rather than a fourth path to
-    // a booking (the waiver, the activity trail and the analytics event ride
-    // with it).
-    await page.waitForURL(/\/shop\/blue-mantis\/trips\/[0-9a-f-]{36}\?notice=diver-added/);
-    await expect(page.getByText("Ifeoma Balogun E2E").first()).toBeVisible();
-  });
-
   /**
-   * The wait list is only for a boat with no seat left, and the departure the
-   * picker offers here has one. The refusal is the trip page's own — this form
-   * never learns capacity for itself, which is what keeps one answer to "is
-   * this boat full" in the app.
+   * The wait list is only for a boat with no seat left, so the form offers
+   * only those — and the join is the trip page's own writer, which is what
+   * keeps one answer to "is this boat full" in the app.
    */
-  test("a wait-list call on a departure that still has room is refused where the seat is", async ({
+  test("a caller wanting a full boat is wait-listed by the trip page's own writer", async ({
     page,
   }) => {
-    await page.goto(CALLS);
-    await page.getByLabel("Full name").fill("Tobias Fenn E2E");
-    await page.getByLabel("Email").fill("tobias.fenn.e2e@example.com");
-    await page.getByLabel("A seat on a full departure").check();
-    await chooseOpenDeparture(page);
-    await page.getByRole("button", { name: "Log the call" }).click();
+    const title = await fullDeparture(page);
+    const call = await openCallForm(page);
+    await call.getByLabel("Full name").fill("Tobias Fenn E2E");
+    await call.getByLabel("Email").fill("tobias.fenn.e2e@example.com");
+    await call.getByLabel("A seat on a full departure").check();
+    await chooseDeparture(call, title);
+    await call.getByRole("button", { name: "Log the call" }).click();
 
-    await page.waitForURL(
-      /\/shop\/blue-mantis\/trips\/[0-9a-f-]{36}\?notice=diver-waitlist-available/,
-    );
+    await page.waitForURL(/\/shop\/blue-mantis\/trips\/[0-9a-f-]{36}\?notice=diver-waitlisted/);
+    await expect(page.getByText("Diver added to the wait list.")).toBeVisible();
+    await expect(page.getByText("Tobias Fenn E2E").first()).toBeVisible();
   });
 
   test("a caller nobody can ring back is refused beside the button, with the answer kept", async ({
     page,
   }) => {
-    await page.goto(CALLS);
-    await page.getByLabel("Full name").fill("Nobody Reachable E2E");
-    await page.getByLabel("A day that isn’t on the board").check();
-    await page.getByLabel("What they asked about").fill("Anything in June");
-    await page.getByRole("button", { name: "Log the call" }).click();
+    const call = await openCallForm(page);
+    await call.getByLabel("Full name").fill("Nobody Reachable E2E");
+    await call.getByLabel("A day that isn’t on the board").check();
+    await call.getByLabel("What they asked about").fill("Anything in June");
+    await call.getByRole("button", { name: "Log the call" }).click();
 
-    await page.waitForURL(/[?&]notice=call-reply/);
+    await page.waitForURL(/\/bookings\/new\?.*notice=call-reply/);
+    // The refusal reopens the disclosure on its own: a shut one would hide the
+    // answer the staffer is waiting for.
+    const refused = page.locator("details#call");
+    await expect(refused).toHaveJSProperty("open", true);
     await expect(
-      page.getByText("Take an email or a phone number, or nobody can ring them back."),
+      refused.getByText("Take an email or a phone number, or nobody can ring them back."),
     ).toBeVisible();
     // The branch the staffer chose survives the refusal: they are not asked to
-    // re-read three options with somebody on the line.
-    await expect(page.getByLabel("What they asked about")).toBeVisible();
+    // re-read the options with somebody on the line.
+    await expect(refused.getByLabel("What they asked about")).toBeVisible();
   });
 
   /**
    * A wait-list entry with no address has nobody to invite when a seat frees,
    * and this is the one refusal that differs by outcome — the same caller would
-   * have been a perfectly good booking.
+   * have been a perfectly good date request.
    */
   test("a wait-list call with only a phone number is refused for the address", async ({ page }) => {
-    await page.goto(CALLS);
-    await page.getByLabel("Full name").fill("Phone Only E2E");
-    await page.getByLabel("Phone").fill("+1 305 555 0199");
-    await page.getByLabel("A seat on a full departure").check();
-    await chooseOpenDeparture(page);
-    await page.getByRole("button", { name: "Log the call" }).click();
+    const title = await fullDeparture(page);
+    const call = await openCallForm(page);
+    await call.getByLabel("Full name").fill("Phone Only E2E");
+    await call.getByLabel("Phone").fill("+1 305 555 0199");
+    await call.getByLabel("A seat on a full departure").check();
+    await chooseDeparture(call, title);
+    await call.getByRole("button", { name: "Log the call" }).click();
 
-    await page.waitForURL(/[?&]notice=call-email/);
-    await expect(page.getByText(/A wait-list entry needs an email address/)).toBeVisible();
+    await page.waitForURL(/\/bookings\/new\?.*notice=call-email/);
+    await expect(
+      page.locator("details#call").getByText(/A wait-list entry needs an email address/),
+    ).toBeVisible();
   });
 });

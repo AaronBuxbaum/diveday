@@ -5,13 +5,7 @@ import { nowDate } from "@/lib/clock";
 import { displayStoredPhone } from "@/lib/forgiving-fields";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
-import {
-  checkInBooking,
-  listCheckInQueue,
-  listOtherMatchingDivers,
-  listWalkInTrips,
-  undoCheckInBooking,
-} from "./check-in";
+import { checkInBooking, listCheckInQueue, undoCheckInBooking } from "./check-in";
 import { listDepartureBoardedBookingIds, recordRollCall } from "./manifests";
 import { listTripsReadiness } from "./readiness";
 import {
@@ -200,32 +194,15 @@ describe("counter check-in", () => {
     expect([...seatsPerDiverPerBoat.values()].filter((seats) => seats > 1)).toEqual([]);
   });
 
-  it("offers the same day-of trips for a walk-in as the check-in queue reads", async () => {
+  it("narrows the queue to one departure for that departure's Check-in tab", async () => {
     const { db, shop, reef } = await context();
-    const options = await listWalkInTrips(db, shop.id);
-    expect(options.length).toBeGreaterThan(0);
-    expect(options.map((o) => o.tripId)).toContain(reef.id);
-    const reefOption = options.find((o) => o.tripId === reef.id);
-    expect(reefOption?.capacity).toBe(reef.capacity);
-    expect(reefOption?.booked).toBe(reef.booked);
-  });
-
-  it("excludes a departure that started more than an hour ago", async () => {
-    const { db, shop, reef } = await context();
-    const options = await listWalkInTrips(
-      db,
-      shop.id,
-      new Date(reef.startsAt.getTime() + 60 * 60 * 1000 + 1000),
+    const whole = await listCheckInQueue(db, shop.id);
+    const tab = await listCheckInQueue(db, shop.id, { tripId: reef.id });
+    expect(tab.length).toBeGreaterThan(0);
+    expect(tab.every((row) => row.tripId === reef.id)).toBe(true);
+    expect(tab.map((row) => row.bookingId)).toEqual(
+      whole.filter((row) => row.tripId === reef.id).map((row) => row.bookingId),
     );
-
-    expect(options.map((option) => option.tripId)).not.toContain(reef.id);
-  });
-
-  it("includes a departure that starts exactly now (with 1-hour buffer)", async () => {
-    const { db, shop, reef } = await context();
-    const options = await listWalkInTrips(db, shop.id, reef.startsAt);
-
-    expect(options.map((option) => option.tripId)).toContain(reef.id);
   });
 
   it("rechecks readiness, records a successful check-in, and is idempotent", async () => {
@@ -487,7 +464,7 @@ describe("searching the counter by phone", () => {
   /** What every staff surface prints for that row since #1712. */
   const onScreen = "+1 305 555 0653";
 
-  it("finds the booked diver in the queue, and never in the not-booked list", async () => {
+  it("finds the booked diver however the number is typed", async () => {
     const { db, shop, booking, personName } = await context();
     await db.update(people).set({ phone: stored }).where(eq(people.id, booking.personId));
     expect(displayStoredPhone(stored)).toBe(onScreen);
@@ -495,38 +472,7 @@ describe("searching the counter by phone", () => {
     for (const query of [onScreen, typed, stored]) {
       const queue = await listCheckInQueue(db, shop.id, { query });
       expect(queue.map((row) => row.personName)).toContain(personName);
-      // The page excludes whoever the queue already showed; the assertion that
-      // matters is that this lookup does not *also* claim them.
-      const others = await listOtherMatchingDivers(db, shop.id, {
-        query,
-        excludePersonIds: queue.map((row) => row.personId),
-      });
-      expect(others.map((row) => row.id)).not.toContain(booking.personId);
     }
-  });
-
-  it("finds a diver who holds no seat today, which is what the seat buttons are for", async () => {
-    const { db, shop } = await context();
-    const [person] = await db
-      .insert(people)
-      .values({ shopId: shop.id, fullName: "Walk-in Wanda", phone: stored })
-      .returning();
-    if (!person) throw new Error("person insert returned no row");
-    await db.insert(personRoles).values({ personId: person.id, role: "diver" });
-
-    const queue = await listCheckInQueue(db, shop.id, { query: onScreen });
-    expect(queue.map((row) => row.personId)).not.toContain(person.id);
-    const others = await listOtherMatchingDivers(db, shop.id, {
-      query: onScreen,
-      excludePersonIds: queue.map((row) => row.personId),
-    });
-    expect(others.map((row) => row.id)).toContain(person.id);
-  });
-
-  it("answers nothing for a blank query rather than the whole roster", async () => {
-    const { db, shop } = await context();
-    expect(await listOtherMatchingDivers(db, shop.id, { query: "   " })).toEqual([]);
-    expect(await listOtherMatchingDivers(db, shop.id, {})).toEqual([]);
   });
 });
 

@@ -36,8 +36,15 @@ describe("orientationTourHref", () => {
 
   /** A captain with a boat out today goes to that boat, not to the board. */
   it("prefers today's boarding surface for a captain when there is one", () => {
-    expect(
-      orientationTourHref("blue-mantis", "captain", "/shop/blue-mantis/trips/t1/manifest"),
-    ).toBe("/shop/blue-mantis/trips/t1/manifest");
+    expect(orientationTourHref("blue-mantis", "captain", "t1")).toBe(
+      "/shop/blue-mantis/trips/t1/manifest",
+    );
+  });
+
+  /** The counter is a departure's Check-in tab: crew go to the next boat's. */
+  it("sends crew to the next boat's counter when there is one", () => {
+    expect(orientationTourHref("blue-mantis", "crew", "t1")).toBe(
+      "/shop/blue-mantis/trips/t1/check-in",
+    );
   });
 });

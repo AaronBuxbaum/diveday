@@ -1,18 +1,15 @@
 {
-  "title": "Llamada recibida",
-  "callerHeading": "Quién llamó",
+  "title": "¿Barco lleno u otro día?",
   "outcomeHeading": "Qué quería",
   "outcome": {
     "dateRequest": "Un día que no está en el calendario",
-    "waitlist": "Una plaza en una salida llena",
-    "booking": "Una plaza en una salida con sitio"
+    "waitlist": "Una plaza en una salida llena"
   },
   "departureLabel": "Qué salida",
   "departureUnchosen": "Elige una salida",
-  "departureOpen": "{title} · {date} · {time} · {seats, plural, one {queda # plaza} other {quedan # plazas}}",
   "departureFull": "{title} · {date} · {time} · llena",
-  "noDepartures": "No hay nada en el calendario donde poner a nadie. Añade una salida primero, o anota esto como petición de un día.",
-  "interestLabel": "Por qué preguntó",
+  "noDepartures": "No hay ninguna salida llena, así que no hay lista de espera a la que apuntarse.",
+  "interestLabel": "Sobre qué preguntó",
   "interestPlaceholder": "Dos tanques en el arrecife en marzo",
   "preferredDateLabel": "Día que quiere",
   "diversLabel": "Cuántos buceadores",
@@ -25,7 +22,7 @@
     "reply": "Toma un correo o un teléfono, o nadie podrá devolverle la llamada.",
     "email": "Una entrada en lista de espera necesita un correo: por ahí se ofrece una plaza que se libera.",
     "departure": "Elige la salida por la que preguntó.",
-    "interest": "Di por qué preguntó.",
+    "interest": "Di sobre qué preguntó.",
     "logged": "Llamada anotada."
   }
 }

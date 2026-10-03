@@ -1,0 +1,719 @@
+// @vitest-environment jsdom
+
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { buttonClass } from "@/components/ui/button";
+import type { CheckInQueueRow } from "@/db/check-in";
+import { staffTranslator } from "@/i18n/staff-messages";
+import type { NoShowClaim } from "@/lib/no-show";
+import { CounterQueueRow, type CounterWaiverNotice } from "./CounterQueueRow";
+import type { NoShowSalvageCopy } from "./NoShowScript";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+  // `InlineConfirm` — the held seat's identity confirm — keys its disarm-on-
+  // revisit effect off `usePathname()`, so the row needs a stand-in for the
+  // router context this render has none of.
+  usePathname: () => "/shop/blue-mantis/check-in",
+  unstable_rethrow: vi.fn(),
+}));
+
+afterEach(() => {
+  cleanup();
+});
+
+const t = staffTranslator("en-US");
+
+/** The page resolves these; the row only places them (issue #1696). */
+const IDENTITY_COPY = {
+  trigger: "Confirm this is Nadia Petrov",
+  message: "Is the person at the counter Nadia Petrov?",
+  confirm: "Yes, this is them",
+  cancel: "Never mind",
+  confirming: "Confirming…",
+};
+
+function row(overrides: Partial<CheckInQueueRow> = {}): CheckInQueueRow {
+  return {
+    bookingId: "booking-1",
+    personId: "person-1",
+    personName: "Nadia Petrov",
+    email: "nadia@example.com",
+    dateOfBirth: null,
+    tripId: "trip-1",
+    tripTitle: "Two-Tank Reef — Molasses & French",
+    startsAt: new Date("2026-08-27T11:00:00.000Z"),
+    endsAt: new Date("2026-08-27T14:30:00.000Z"),
+    bookingStatus: "booked",
+    readiness: { status: "ready", blockers: [] },
+    boarded: false,
+    onTheWater: null,
+    missingEmergencyContact: false,
+    firstVisit: false,
+    ...overrides,
+  };
+}
+
+function renderRow(
+  overrides: Partial<CheckInQueueRow> = {},
+  showEmail = false,
+  showFirstVisit = true,
+  waiverNotice?: CounterWaiverNotice,
+  noShow: { claim?: NoShowClaim | null; salvage?: NoShowSalvageCopy } = {},
+) {
+  return render(
+    <CounterQueueRow
+      row={row(overrides)}
+      shopSlug="blue-mantis"
+      today="2026-08-27"
+      showEmail={showEmail}
+      showFirstVisit={showFirstVisit}
+      checkInAction={vi.fn().mockResolvedValue({ ok: true })}
+      undoAction={vi.fn().mockResolvedValue({ ok: true })}
+      waiverAction={vi.fn().mockResolvedValue(undefined)}
+      waiverNotice={waiverNotice}
+      noShowClaim={noShow.claim ?? null}
+      markNoShowAction={vi.fn().mockResolvedValue(undefined)}
+      undoNoShowAction={vi.fn().mockResolvedValue(undefined)}
+      confirmIdentityAction={vi.fn().mockResolvedValue(undefined)}
+      identityCopy={IDENTITY_COPY}
+      salvage={noShow.salvage}
+      t={t}
+    />,
+  );
+}
+
+/** A row whose paper release is the thing still owed — where the control lives. */
+const owesWaiver = {
+  readiness: { status: "blocked", blockers: [{ code: "waiver_not_sent" }] },
+} satisfies Partial<CheckInQueueRow>;
+
+const refusal = (bookingId: string): CounterWaiverNotice => ({
+  form: "waiver",
+  tone: "danger",
+  text: "That paper waiver could not be recorded.",
+  bookingId,
+});
+
+describe("a blocked row", () => {
+  /**
+   * The pin the counter's whole gate rests on: readiness decides who may
+   * board, so a blocked row offers the fix and never the tap. Offering both
+   * would be offering an act the server is about to refuse, in front of the
+   * diver it is about.
+   */
+  it("exposes its one fix and never a check-in control", () => {
+    renderRow({
+      readiness: { status: "blocked", blockers: [{ code: "waiver_not_sent" }] },
+    });
+    expect(screen.getByText("Blocked")).toBeInTheDocument();
+    // Not through the counter yet, so no arrival fact — the pairing that makes
+    // the assertion above it about this row rather than about a dead string.
+    expect(screen.queryByText(/Checked in/)).not.toBeInTheDocument();
+    expect(screen.getByText("Waiver has not been sent.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Check in / })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Undo check-in / })).not.toBeInTheDocument();
+  });
+
+  /**
+   * A diver who came through the counter and has been blocked since — a refund
+   * landing, a card corrected — is not a receipt, so the row stays out here in
+   * the working list with the badge and the reasons for the gate that has
+   * closed. No undo: un-checking somebody does not clear a blocker, and the
+   * rule that a blocked row carries no check-in control does not bend here.
+   *
+   * **And one state, not three.** It used to carry "Boarded", a drawn "Checked
+   * in" mark and "Blocked" on the same line, at three volumes, only one of
+   * which anybody on this screen can act on. Boarding is the rail's fact and
+   * the manifest's (the glossary is explicit that check-in is not boarding), so
+   * it goes. How far the diver got stays — otherwise this row and one for a
+   * diver who never turned up are the same row — but as a quiet fact beside
+   * the name rather than a second mark at badge volume, and it says *which* of
+   * the two: a diver already on the boat is a radio call to the rail, not work
+   * to do while they wait at the desk.
+   */
+  it("says a boarded diver has gone blocked, without offering the tap back", () => {
+    renderRow({
+      bookingStatus: "checked_in",
+      boarded: true,
+      readiness: { status: "blocked", blockers: [{ code: "payment_due" }] },
+    });
+    expect(screen.getByText("Blocked")).toBeInTheDocument();
+    // The word, in the row's quiet meta line with the other facts about the
+    // person rather than in the badge row with the gate — and it is "Boarded",
+    // because "Checked in" would send the staffer to the counter for somebody
+    // who is already at the rail.
+    const boarded = screen.getByText(/Boarded/);
+    expect(boarded).toHaveClass("text-muted");
+    expect(screen.queryByText(/Checked in/)).not.toBeInTheDocument();
+    expect(screen.getByText("Payment is outstanding for this trip.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Undo check-in / })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Check in / })).not.toBeInTheDocument();
+  });
+
+  /**
+   * The second of the three, kept beside the first: a diver standing at the
+   * counter who has gone blocked is work to do while they wait, and the row
+   * must not promote them to the boat.
+   */
+  it("says a diver who only reached the counter is checked in", () => {
+    renderRow({
+      bookingStatus: "checked_in",
+      boarded: false,
+      readiness: { status: "blocked", blockers: [{ code: "payment_due" }] },
+    });
+    expect(screen.getByText(/Checked in/)).toHaveClass("text-muted");
+    expect(screen.queryByText(/Boarded/)).not.toBeInTheDocument();
+  });
+
+  it("keeps the diver's record as a door and shows every reason it has", () => {
+    renderRow({
+      readiness: {
+        status: "blocked",
+        blockers: [{ code: "waiver_not_sent" }, { code: "payment_due" }],
+      },
+    });
+    expect(screen.getByRole("link", { name: "Nadia Petrov" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/divers/person-1",
+    );
+    expect(screen.getByText("Payment is outstanding for this trip.")).toBeInTheDocument();
+  });
+});
+
+/**
+ * **The counter's own identity confirm** (issue #1696). The walk this replaces
+ * was real: a walk-in seated off the name prompt produced a queue row whose
+ * only control was a link to the trip roster, so clearing it meant leaving the
+ * desk with a diver standing at it.
+ */
+describe("a held seat's identity confirm", () => {
+  const held: Partial<CheckInQueueRow> = {
+    readiness: { status: "blocked", blockers: [{ code: "identity_unconfirmed" }] },
+  };
+
+  it("offers the confirm on the row whose seat is held", () => {
+    renderRow(held);
+    expect(
+      screen.getByRole("button", { name: "Confirm this is Nadia Petrov" }),
+    ).toBeInTheDocument();
+  });
+
+  /**
+   * Unarmed it is a plain `button`, never a submit: the arming tap must not
+   * post the attestation (`InlineConfirm`). The consequence sentence is behind
+   * that tap, so it is not on the glass for the next person in the queue to
+   * read either.
+   */
+  it("arms before it submits, and says what confirming costs only once armed", () => {
+    renderRow(held);
+    const trigger = screen.getByRole("button", { name: "Confirm this is Nadia Petrov" });
+    expect(trigger).toHaveAttribute("type", "button");
+    expect(screen.queryByText(/Is the person at the counter/)).not.toBeInTheDocument();
+  });
+
+  /** Every other blocked row is unchanged: one control, for one blocker. */
+  it("is absent on a row blocked on anything else", () => {
+    renderRow({ readiness: { status: "blocked", blockers: [{ code: "waiver_not_sent" }] } });
+    expect(screen.queryByRole("button", { name: /^Confirm this is / })).not.toBeInTheDocument();
+  });
+
+  it("is absent on a ready row", () => {
+    renderRow();
+    expect(screen.queryByRole("button", { name: /^Confirm this is / })).not.toBeInTheDocument();
+  });
+
+  /**
+   * **One button on a held row, and it is the attestation** (`dive-domain-expert`
+   * review of issue #1696).
+   *
+   * The hold's own fix is "Open roster", rendered as a small secondary button
+   * immediately before this one — and on this surface it buys the staffer
+   * nothing, because the roster withholds the same particulars behind the same
+   * flag. Two identical-looking buttons with the walk-away on top is a mis-tap
+   * costing exactly what the row's own confirm bought.
+   */
+  it("drops the pointing link, so the attestation is the only button", () => {
+    renderRow(held);
+    expect(screen.queryByRole("link", { name: "Open roster" })).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Confirm this is Nadia Petrov" }),
+    ).toBeInTheDocument();
+    // The reason itself is untouched: the row still says why it cannot board.
+    expect(screen.getByText(/identity/i)).toBeInTheDocument();
+  });
+
+  /**
+   * …and only when the hold is what the link is about. A diver also held for a
+   * medical review is pointed at their record for *that*, which the confirm
+   * cannot clear — so suppressing it there would strand the row.
+   */
+  it("keeps a link that points at a different blocker", () => {
+    renderRow({
+      readiness: {
+        status: "blocked",
+        blockers: [{ code: "medical_review" }, { code: "identity_unconfirmed" }],
+      },
+    });
+    expect(screen.getByRole("link", { name: "Open Nadia’s record" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Confirm this is Nadia Petrov" }),
+    ).toBeInTheDocument();
+  });
+
+  /**
+   * **The flag gates disclosure as well as boarding** (security review
+   * 2026-09-11). The roster withholds the matched person's particulars behind
+   * this same blocker, and the fix for the walk was a control on the row, not a
+   * preview of the record: a held row says no more about the person than an
+   * ordinary one does.
+   */
+  it("prints nothing about the matched person that an ordinary row would not", () => {
+    renderRow({ ...held, dateOfBirth: "1996-04-02", missingEmergencyContact: true });
+    expect(screen.queryByText("1996")).not.toBeInTheDocument();
+    expect(screen.queryByText(/04\/02/)).not.toBeInTheDocument();
+    // The one fact the row already carried for every diver, unchanged.
+    expect(screen.getByText("No emergency contact")).toBeInTheDocument();
+  });
+});
+
+describe("an unblocked row", () => {
+  it("is one tap, named for the diver", () => {
+    renderRow();
+    expect(screen.getByRole("button", { name: "Check in Nadia Petrov" })).toBeInTheDocument();
+  });
+
+  /**
+   * **A settled row restates nothing the group above it already says.** It is
+   * one receipt inside "Checked in — 5 · all boarded", so the drawn mark and
+   * its two words were the same statement printed once per row (principle 9).
+   * The tap is untouched and still names itself — that accessible name is what
+   * a screen reader and `e2e/check-in.spec.ts` read, and the trailing slot was
+   * `aria-hidden` even when it drew.
+   */
+  it("keeps the undo as the row's own tap, without restating the group's state", () => {
+    const { container } = renderRow({ bookingStatus: "checked_in" });
+    expect(screen.getByRole("button", { name: "Undo check-in for Nadia Petrov" })).toBeVisible();
+    expect(screen.queryByText("Checked in")).not.toBeInTheDocument();
+    // No emoji arrived in the drawn mark's place either.
+    expect(container.textContent).not.toMatch(/[☑✅\uD83C-\uDBFF]/u);
+  });
+
+  /**
+   * **A settled row still says who this is** — everything that singles this
+   * person out from the four receipts around them. What it no longer repeats is
+   * the fact they all share: boarding is recorded at the rail *after* counter
+   * check-in, so `boarded && checked_in` is the ordinary path (task 149) and
+   * the pill printed identically on every line. It is stated once in the
+   * group's header now (`CounterQueue`).
+   */
+  it("keeps the quiet facts once the row has settled, and drops the shared one", () => {
+    renderRow({
+      bookingStatus: "checked_in",
+      boarded: true,
+      missingEmergencyContact: true,
+      firstVisit: true,
+    });
+    const undo = screen.getByRole("button", { name: "Undo check-in for Nadia Petrov" });
+    expect(undo).not.toHaveTextContent("Boarded");
+    expect(undo).toHaveTextContent("No emergency contact");
+    expect(undo).toHaveTextContent("First visit");
+  });
+});
+
+describe("the quiet facts a row carries", () => {
+  it("says a missing emergency contact in a neutral badge, never as a blocker", () => {
+    renderRow({ missingEmergencyContact: true });
+    expect(screen.getByText("No emergency contact")).toBeInTheDocument();
+    // Still checkable: this informs, it never gates.
+    expect(screen.getByRole("button", { name: "Check in Nadia Petrov" })).toBeInTheDocument();
+  });
+
+  it("renders no contact badge when the record has one", () => {
+    renderRow();
+    expect(screen.queryByText("No emergency contact")).not.toBeInTheDocument();
+  });
+
+  it("says a first visit as muted text after the name, never as a badge", () => {
+    renderRow({ firstVisit: true });
+    const firstVisit = screen.getByText("First visit");
+    expect(firstVisit).toBeInTheDocument();
+    // A badge is a pill; this is a line of quiet meta. The distinction is the
+    // point — boxing it would put a welcome at the volume of "Blocked".
+    expect(firstVisit.className).not.toMatch(/rounded-full/);
+    expect(firstVisit.className).toMatch(/text-muted/);
+  });
+
+  it("renders nothing for a diver who has been before", () => {
+    renderRow({ firstVisit: false });
+    expect(screen.queryByText("First visit")).not.toBeInTheDocument();
+  });
+
+  /**
+   * **A word every name carries marks nobody.** On a shop's first season every
+   * diver in the queue is a first visit, so the line rendered under all nine
+   * names at once — a row taller each, at exactly the queue length where this
+   * surface's promise is a name and one tap. The page judges it over the whole
+   * visible queue (`firstVisitMarksAnException`) and the row obeys.
+   */
+  it("renders nothing when a first visit would not single anybody out", () => {
+    renderRow({ firstVisit: true }, false, false);
+    expect(screen.queryByText("First visit")).not.toBeInTheDocument();
+    // The row is otherwise untouched — this is a word dropped, not a state.
+    expect(screen.getByRole("button", { name: "Check in Nadia Petrov" })).toBeInTheDocument();
+  });
+
+  it("carries a first visit on a blocked row too", () => {
+    renderRow({
+      firstVisit: true,
+      readiness: { status: "blocked", blockers: [{ code: "waiver_not_sent" }] },
+    });
+    expect(screen.getByText("First visit")).toBeInTheDocument();
+  });
+
+  it("prints an email only where two visible divers share a name", () => {
+    renderRow({}, false);
+    expect(screen.queryByText(/nadia@example\.com/)).not.toBeInTheDocument();
+    cleanup();
+    renderRow({}, true);
+    expect(screen.getByText(/nadia@example\.com/)).toBeInTheDocument();
+  });
+});
+
+/**
+ * **The counter can hold three families at once**, which is what makes an
+ * anonymous banner at the top of the page useless here: it says what went
+ * wrong and nothing about who it went wrong for, while the collapsed form it
+ * is about has just shut underneath it (issue 1574).
+ *
+ * The roster and the diver record both route a refusal to the form that
+ * produced it (`noticeForForm`, `src/lib/staff-notices.ts`); these pin that
+ * the counter now does too, and — the half that actually costs a staffer time
+ * — that it lands on the *right* row.
+ */
+describe("a refused paper waiver", () => {
+  it("says so on the row it names, and re-opens that row's form", () => {
+    renderRow(owesWaiver, false, true, refusal("booking-1"));
+
+    expect(screen.getByText("That paper waiver could not be recorded.")).toBeInTheDocument();
+    // Open, not merely present: the staffer has to correct what the message
+    // names, and the attestation checkbox only exists in the open form.
+    expect(screen.getByRole("checkbox")).toBeInTheDocument();
+  });
+
+  it("leaves the other families at the desk alone", () => {
+    renderRow(owesWaiver, false, true, refusal("booking-2"));
+
+    expect(screen.queryByText("That paper waiver could not be recorded.")).not.toBeInTheDocument();
+    // And this row's form stays shut, so one diver's problem does not reopen
+    // the form on every other row in the queue.
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  it("leaves a row alone when nothing was refused at all", () => {
+    renderRow(owesWaiver);
+
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  /**
+   * **The coupling the page depends on, pinned here.** A settled seat returns
+   * early as a compact receipt with no blocker block and no `extra` slot, so it
+   * can show no notice at all — which is why `page.tsx` stands the banner down
+   * only for a row that is *not* `isSettledAtCounter`.
+   *
+   * Found by looking, not by reasoning: pointed at a checked-in, cleared
+   * booking the first version suppressed the banner and rendered nothing on the
+   * row, so the refusal was said nowhere on the page. If someone later gives
+   * the settled row an `extra`, this test goes green-for-the-wrong-reason and
+   * the page's guard becomes needlessly strict — read it before changing that
+   * early return.
+   */
+  it("says nothing on a settled seat, which has nowhere to say it", () => {
+    renderRow(
+      { bookingStatus: "checked_in", readiness: { status: "ready", blockers: [] } },
+      false,
+      true,
+      refusal("booking-1"),
+    );
+
+    expect(screen.queryByText("That paper waiver could not be recorded.")).not.toBeInTheDocument();
+  });
+});
+
+describe("the no-show script", () => {
+  /**
+   * The door is drawn from the gate, never from the row alone: `noShowGate`
+   * (`src/lib/no-show.ts`) opens it when the boat leaves without the diver and
+   * shuts it when the arrivals window does, and the page is the layer that
+   * holds both. Offering "Not here?" over a diver who is not due for two hours
+   * is an invitation to a mistake on a shared desk tablet.
+   */
+  it("is not offered on a waiting row the gate has not opened", () => {
+    renderRow();
+    expect(screen.queryByText("Not here?")).not.toBeInTheDocument();
+    expect(screen.queryByText("Did not dive?")).not.toBeInTheDocument();
+  });
+
+  it("is offered under the tap once the gate opens, leaving the tap alone", () => {
+    renderRow({}, false, true, undefined, { claim: "frees_seat" });
+    expect(screen.getByText("Not here?")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Check in Nadia Petrov" })).toBeInTheDocument();
+  });
+
+  /**
+   * **The louder door, for the tap nobody comes back to undo**
+   * (dive-domain-expert review, 2026-09-11). Once the boat has gone the same
+   * tap stops being about a seat — there is no seat to sell — and becomes a
+   * statement that this person did not dive, which costs them their recap,
+   * their review, their tip and the day itself. The diver is at sea or gone
+   * home and will never tell the desk it was a mis-tap, so the words have to
+   * say what is being written before it is written.
+   */
+  it("asks the other question once the boat has gone, and says what it costs", () => {
+    renderRow({}, false, true, undefined, { claim: "did_not_dive" });
+    expect(screen.getByText("Did not dive?")).toBeInTheDocument();
+    expect(screen.queryByText("Not here?")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "The boat has gone, so this records that they did not dive. They get no recap and the day will not count for them. You can put them back.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Mark that Nadia Petrov did not dive" }),
+    ).toBeInTheDocument();
+  });
+
+  /**
+   * **The word on screen is the plain one.** A released seat is "Not here" —
+   * never archived, never deactivated, never "released" (ADR
+   * 20260820-every-delete-is-soft).
+   */
+  it("wears the plain word and an undo once the seat is released", () => {
+    renderRow({ bookingStatus: "no_show" });
+    expect(screen.getByText("Not here")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Put Nadia Petrov back on this boat’s list" }),
+    ).toBeInTheDocument();
+    // And no check-in tap: the counter is finished with this seat.
+    expect(screen.queryByRole("button", { name: "Check in Nadia Petrov" })).not.toBeInTheDocument();
+  });
+
+  it("renders the salvage under the released row", () => {
+    renderRow({ bookingStatus: "no_show" }, false, true, undefined, {
+      salvage: {
+        line: "2 divers are waiting for this seat",
+        links: [{ href: "/shop/blue-mantis/trips/trip-1#waitlist", label: "Open the wait list" }],
+        money: {
+          line: "Marking someone not here does not charge or refund anything.",
+          href: "/shop/blue-mantis/orders?personId=person-1",
+          label: "Open their orders",
+        },
+      },
+    });
+    expect(screen.getByText("2 divers are waiting for this seat")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open the wait list" })).toBeInTheDocument();
+  });
+
+  /** A released seat is not a settled one, so it never wears the drawn check. */
+  it("does not wear the settled check", () => {
+    renderRow({ bookingStatus: "no_show" });
+    expect(screen.queryByText("Checked in")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * **One box for every hairline row** (`FILL_ROOM`, src/components/ui/ledger.tsx).
+ * The row keeps 8px of room around its words and nothing inside it adds an
+ * inset of its own, so every name on the counter starts on the column its
+ * group labels and the walk-in door start on. The queue's own `px-4 sm:px-5`
+ * set the names 16px (20px from `sm`) inside that column, and the blocked row
+ * passed the same inset to the row itself, where it fought the row's room.
+ */
+describe("the row's box", () => {
+  const salvage: NoShowSalvageCopy = {
+    line: "2 divers are waiting for this seat",
+    links: [],
+    money: { line: "Nothing is charged.", href: "/shop/blue-mantis/orders", label: "Orders" },
+  };
+  const states: [string, () => ReturnType<typeof renderRow>][] = [
+    [
+      "ready, with the not-here door",
+      () => renderRow({}, false, true, undefined, { claim: "frees_seat" }),
+    ],
+    ["checked in", () => renderRow({ bookingStatus: "checked_in" })],
+    ["blocked", () => renderRow(owesWaiver)],
+    [
+      "not here, with its salvage",
+      () => renderRow({ bookingStatus: "no_show" }, false, true, undefined, { salvage }),
+    ],
+  ];
+
+  it.each(states)("adds no horizontal inset of its own inside a %s row", (_state, draw) => {
+    const { container } = draw();
+    const article = container.querySelector("article");
+    expect(article).not.toBeNull();
+    // A control carries its own size's padding (`buttonClass`, a summary's
+    // chip), and so does a painted box (a badge); a block that only holds the
+    // row's words may not. A one-sided indent under a disclosure's caret is
+    // not an inset of the row and is not asked about.
+    const painted = (element: Element) =>
+      [...element.classList].some((token) => /^(?:bg-|border$|border-)/.test(token));
+    const insets = [...(article?.querySelectorAll("*") ?? [])]
+      .filter((element) => !element.matches("button, a, summary, button *, a *, summary *"))
+      .filter((element) => !painted(element))
+      .flatMap((element) =>
+        [...element.classList]
+          .filter((token) => /^(?:\S*:)?px-/.test(token))
+          .map((token) => `${element.tagName.toLowerCase()}: ${token}`),
+      );
+    expect(insets).toEqual([]);
+    // And the row's own horizontal padding is the room, and nothing else.
+    const own = [...(article?.classList ?? [])].filter((token) => /^(?:\S*:)?p[xse]-/.test(token));
+    expect(own).toEqual(["px-2"]);
+  });
+
+  it("spans the one tap from rule to rule, with its words on the column", () => {
+    const { container } = renderRow();
+    const tap = container.querySelector("article form > button[type='submit']");
+    // The form takes the row's 8px of room back, and the button keeps it as its
+    // own padding: the fill is the row's whole box, as a door's is.
+    expect(tap?.parentElement).toHaveClass("-mx-2");
+    expect(tap).toHaveClass("w-full", "px-2");
+    expect(tap?.className).not.toMatch(/(?:^|\s)(?:sm:)?px-(?:4|5)(?:\s|$)/);
+  });
+
+  /**
+   * **Two acts on one line keep the row's gap between them** (dive-domain-expert
+   * review, 2026-09-25). The settled row trails "Print a pass" a `gap-3` (12px)
+   * after its undo. Taking the row's room back on both sides pushed the undo's
+   * fill 8px into that gap, leaving 4px between two targets a wet-handed desk
+   * worker taps one after the other: tick the diver off, hand them a pass. So
+   * the tap takes back only the start side, and draws no end padding; the gap
+   * is the room at its end. The ready row above has nothing after its tap and
+   * keeps both sides.
+   */
+  it("keeps the settled row's undo a whole gap clear of its pass", () => {
+    renderRow({ bookingStatus: "checked_in" });
+    const undo = screen.getByRole("button", { name: "Undo check-in for Nadia Petrov" });
+    const pass = screen.getByRole("link", { name: "Print a pass" });
+    expect(undo.compareDocumentPosition(pass) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    const form = undo.parentElement;
+    expect(form?.tagName).toBe("FORM");
+    expect(form).toHaveClass("-ms-2");
+    expect(form?.className).not.toMatch(/(?:^|\s)-m[xe]-/);
+    expect(undo).toHaveClass("w-full", "ps-2");
+    expect(undo.className).not.toMatch(/(?:^|\s)p[xe]-/);
+  });
+
+  /**
+   * **The pass's words end on the column** (pixel-craft class 3, K-320). A
+   * `link` paints nothing around its words, and `sm`'s `px-3` put "Print a
+   * pass" 12px inside the edge every badge and "All boarded" end on (1051
+   * against 1063 at 1280). `flush` drops the padding and keeps the 44px floor;
+   * the row's `gap-3` is still the room between the undo and the pass.
+   */
+  it("ends the settled row's pass on the column's edge", () => {
+    renderRow({ bookingStatus: "checked_in" });
+    const pass = screen.getByRole("link", { name: "Print a pass" });
+    expect(pass.className).toBe(buttonClass({ variant: "link", size: "sm", flush: true }));
+  });
+});
+
+/**
+ * **A row's state stays at the row's end, however much the name carries**
+ * (pixel-craft class 3, K-222). The first line was a wrapping row whose
+ * identity took only its content's width, so a name wearing a second badge
+ * ("No emergency contact") grew the identity until the row wrapped and the
+ * Blocked badge dropped under the name at the row's start, while every other
+ * row's badge stood at its end. The blocked row's line does not wrap; the
+ * identity takes the room and wraps its own badges inside itself. A released
+ * seat's line still wraps, and its cluster holds the end — see its own case.
+ */
+describe("a row's first line", () => {
+  const LONG = "Nadia Petrova-Castellanos de la Fuente";
+
+  function header(stateWord: string) {
+    const state = screen.getByText(stateWord);
+    // `LedgerRow`'s content box, then the row's own first line inside it.
+    const line = state.closest("article > div > div");
+    expect(line, "the row's first line").not.toBeNull();
+    return { line, identity: line?.firstElementChild, state };
+  }
+
+  it("keeps a blocked row's badge at the end beside a name with a badge of its own", () => {
+    renderRow({ ...owesWaiver, personName: LONG, missingEmergencyContact: true });
+    const { line, identity, state } = header("Blocked");
+    expect(line).toHaveClass("flex", "items-center");
+    expect(line).not.toHaveClass("flex-wrap");
+    expect(identity).toHaveClass("min-w-0", "flex-1");
+    // The gap badge rides with the name; the gate stays the line's last word.
+    expect(identity).toHaveTextContent("No emergency contact");
+    expect(identity).not.toContainElement(state);
+    expect(line?.lastElementChild).toContainElement(state);
+    // Laid out, never decided: still the gate, still no check-in control.
+    expect(screen.queryByRole("button", { name: `Check in ${LONG}` })).not.toBeInTheDocument();
+  });
+
+  /**
+   * **The blocked name is a 28px line with a 44px target** (pixel-craft class
+   * 12, K-321). The blocked row's name is its record's door, and it was a
+   * `tapTargetLinkClass` box, 44px tall around a 28px line, where the ready
+   * row's name is the plain line: the meta under it sat 36px from the name's
+   * cap top on a blocked row and 28px on a ready one. The link is the line, and
+   * its target reaches 8px above and below it as a stretched `::after`; the
+   * name truncates inside it, so the link's own box never clips that target.
+   */
+  it("spaces a blocked name and its meta as a ready row does, keeping the target", () => {
+    renderRow({ ...owesWaiver, bookingStatus: "checked_in" });
+    const link = screen.getByRole("link", { name: "Nadia Petrov" });
+    expect(link).toHaveAttribute("href", "/shop/blue-mantis/divers/person-1");
+    expect(link.className).not.toMatch(/(?:^|\s)(?:min-h-11|inline-flex|truncate)(?:\s|$)/);
+    expect(link).toHaveClass(
+      "relative",
+      "block",
+      "min-w-0",
+      "text-lg",
+      "after:absolute",
+      "after:inset-x-0",
+      "after:-inset-y-2",
+    );
+    const words = link.firstElementChild;
+    expect(words).toHaveTextContent("Nadia Petrov");
+    expect(words).toHaveClass("block", "truncate");
+    // The meta line still follows the name, as a ready row's does.
+    expect(screen.getByText(/Checked in/)).toHaveClass("mt-0.5");
+  });
+
+  /**
+   * **A released seat keeps its name whole, and its cluster gives way under
+   * it** (K-222). Its end is not one badge but "Not here" and a ghost "Put
+   * back on the list", about 240px in en-US and 280 in es-ES, so the blocked
+   * row's no-wrap line would leave a 357px phone column 70–110px for the name
+   * a staffer reads to walk the seat back, and push "No emergency contact"
+   * out under the badge. The line wraps as it always did; a cluster that
+   * wraps holds the row's end (`ms-auto`) rather than dropping to its start.
+   */
+  it("wraps a released seat's word and undo under a whole name, at the row's end", () => {
+    renderRow({ bookingStatus: "no_show", personName: LONG, missingEmergencyContact: true });
+    const { line, identity, state } = header("Not here");
+    expect(line).toHaveClass(
+      "flex",
+      "flex-wrap",
+      "items-center",
+      "justify-between",
+      "gap-x-2",
+      "gap-y-1",
+    );
+    expect(identity).toHaveClass("min-w-0");
+    expect(identity).not.toHaveClass("flex-1");
+    expect(identity).not.toContainElement(state);
+    const cluster = line?.lastElementChild;
+    expect(cluster).toContainElement(state);
+    expect(cluster).toContainElement(
+      screen.getByRole("button", { name: `Put ${LONG} back on this boat’s list` }),
+    );
+    expect(cluster).toHaveClass("ms-auto", "shrink-0");
+  });
+});

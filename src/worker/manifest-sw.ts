@@ -49,14 +49,13 @@ const OFFLINE_SHELL = "/offline-manifest";
 const LIVE_MANIFEST_PATTERN = /^\/shop\/[^/]+\/trips\/([^/]+)\/manifest(?:\/.*)?$/;
 // The counter, and only the counter — the second authenticated page this shell
 // backs up (ADR 20260907-the-counter-survives-offline). A staffer who reloads
-// the arrival queue with no signal lands on the saved copy of whichever
-// departure they were working rather than the browser's offline error. Its
-// focus lives in `?trip=`, the same place the live page keeps it, so the
-// redirect carries it across; with none, the shell's list answers instead.
-// The counter itself and nothing under it: the walk-in flow beneath this path
+// a departure's Check-in tab with no signal lands on the saved copy of that
+// departure rather than the browser's offline error; the departure is the
+// path segment, so the redirect carries it across as `?trip=`.
+// The tab itself and nothing under it: the walk-in flow beneath this path
 // seats a diver, which needs a server, so redirecting it to a roster it cannot
 // act on would be a worse answer than the browser's own.
-const COUNTER_PATTERN = /^\/shop\/[^/]+\/check-in\/?$/;
+const COUNTER_PATTERN = /^\/shop\/[^/]+\/trips\/([^/]+)\/check-in\/?$/;
 
 /**
  * Chunks the bundler's runtime loads *lazily*, which the shell HTML therefore
@@ -506,7 +505,9 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (event.request.mode === "navigate" && COUNTER_PATTERN.test(url.pathname)) {
+  const counterMatch = event.request.mode === "navigate" && url.pathname.match(COUNTER_PATTERN);
+  if (counterMatch) {
+    const tripId = counterMatch[1];
     event.respondWith(
       // Network-first, exactly like the live manifest below: the counter is
       // never served from cache, and this only ever substitutes the device's
@@ -515,8 +516,7 @@ self.addEventListener("fetch", (event) => {
         const cachedShell = await caches.match(OFFLINE_SHELL);
         if (!cachedShell) return Response.error();
         const redirectTarget = new URL(OFFLINE_SHELL, self.location.origin);
-        const tripId = url.searchParams.get("trip");
-        if (tripId) redirectTarget.searchParams.set("trip", tripId);
+        redirectTarget.searchParams.set("trip", tripId);
         return Response.redirect(redirectTarget.href, 302);
       }),
     );

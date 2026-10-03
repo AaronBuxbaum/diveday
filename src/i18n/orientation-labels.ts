@@ -5,6 +5,7 @@ import {
   staffDestinationHref,
   staffShopRoot,
 } from "@/lib/staff-destinations";
+import { shopPath } from "@/lib/staff-notices";
 import type { StaffTranslator } from "./staff-messages";
 
 /** The staff roles Today's first-visit orientation card has its own content for. */
@@ -64,9 +65,10 @@ export function orientationTourText(
 }
 
 /**
- * Where the role's "Try:" prompt points. Captain and crew point at the surface
- * built for their actual shift (today's manifest, check-in); every other role
- * points at a nav page since they have no single "the one boat/counter" today.
+ * Where the role's "Try:" prompt points. Captain and crew point at the next
+ * boat's tab built for their actual shift (its Boat tab, its Check-in tab);
+ * every other role points at a nav page since they have no single "the one
+ * boat" today.
  *
  * Every one of those pages is resolved from `staff-destinations.ts`, the one
  * place a staff destination may be declared, rather than spelled out here. The
@@ -78,7 +80,8 @@ export function orientationTourText(
 export function orientationTourHref(
   shopSlug: string,
   role: OrientationRole,
-  boatBoardingHref: string | undefined,
+  /** Today's next departure, when there is one. */
+  nextTripId: string | undefined,
 ): string {
   const hrefFor = (id: StaffDestinationId) =>
     staffDestinationHref(staffShopRoot(shopSlug), staffDestination(id));
@@ -100,8 +103,10 @@ export function orientationTourHref(
       // Falls back to the operations board when no boat is out today — the
       // manifest route needs a real trip id, and there is no "today's
       // manifest" page without one.
-      return boatBoardingHref ?? hrefFor("board");
+      return nextTripId ? shopPath(shopSlug, "trips", nextTripId, "manifest") : hrefFor("board");
     case "crew":
-      return hrefFor("checkIn");
+      // The counter is a departure's Check-in tab, so with no boat today there
+      // is no counter to open, and the day is the honest answer.
+      return nextTripId ? shopPath(shopSlug, "trips", nextTripId, "check-in") : hrefFor("today");
   }
 }
