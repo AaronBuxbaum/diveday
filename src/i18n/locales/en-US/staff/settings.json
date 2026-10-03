@@ -314,7 +314,7 @@
       "description": "Print this and put it on the desk. A walk-in scans it, fills in their name, certification and sizes, and their release goes out, all before they reach the front of the queue."
     },
     "integrations": {
-      "heading": "Shopify, QuickBooks, Xero & Zapier"
+      "heading": "Shop integrations"
     },
     "trial": {
       "heading": "Your trial",
@@ -577,7 +577,13 @@
     "unassigned": "No crew recorded"
   },
   "import": {
-    "title": "Import contacts",
+    "title": "Import",
+    "tabs": {
+      "label": "What to import",
+      "divers": "Divers",
+      "gear": "Gear history",
+      "diveSites": "Dive sites"
+    },
     "comingFrom": "Coming from <eve>EVE</eve>, <diveshop360>DiveShop360</diveshop360>, or <spreadsheet>a spreadsheet</spreadsheet>? See the matching guide, then come back here to bring it in.",
     "notice": {
       "notAuthorized": "Importing writes divers’ personal and medical records, so it’s limited to owners and managers."

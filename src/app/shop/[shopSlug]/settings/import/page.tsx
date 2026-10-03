@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { FlashParams } from "@/components/FlashParams";
+import { SectionTabs } from "@/components/SectionTabs";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { proseLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -14,6 +16,8 @@ import {
 import { requireShopSurface } from "@/lib/session";
 import { settingsPaneClass } from "../_components/settings-pane";
 import type { ImportActionErrorCode } from "./actions";
+import { DiveSiteImportPanel } from "./DiveSiteImportPanel";
+import { GearImportPanel } from "./GearImportPanel";
 import { ImportWizard } from "./ImportWizard";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -228,7 +232,20 @@ function importWizardCopy(t: StaffTranslator) {
   };
 }
 
-export const metadata: Metadata = { title: "Import contacts — DiveDay" };
+export const metadata: Metadata = { title: "Import — DiveDay" };
+
+/**
+ * **One Import page, a tab per kind of file** (Aaron, 2026-10-03). Divers,
+ * gear history and dive sites were three Settings pages and three rows on the
+ * hub and the rail, each a file picker and a submit. `?what=` picks the tab;
+ * anything else is the Divers tab, the one a switching shop arrives for.
+ */
+const IMPORT_TABS = ["divers", "gear", "dive-sites"] as const;
+type ImportTab = (typeof IMPORT_TABS)[number];
+
+function importTab(what: string | undefined): ImportTab {
+  return IMPORT_TABS.find((tab) => tab === what) ?? "divers";
+}
 
 /**
  * This surface's words for {@link IMPORT_HONESTY_TABLE}'s rows — the staff
@@ -328,12 +345,16 @@ function staysBehindChip(t: StaffTranslator): { label: string; className: string
  * front, what does and doesn't come across. Gated to owner/manager like the
  * export, and re-checked against the database in the commit action.
  */
-export default async function ImportContactsPage({
+export default async function ImportPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
+  searchParams: Promise<{ what?: string; notice?: string }>;
 }) {
   const { shopSlug } = await params;
+  const { what, notice } = await searchParams;
+  const tab = importTab(what);
   // Settings, not Today — Import is a Settings sub-page, and its parent is
   // where the refusal is legible. Same pattern as promos/WhatsApp/team.
   const { shop } = await requireShopSurface(shopSlug, {
@@ -343,20 +364,69 @@ export default async function ImportContactsPage({
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const staysBehind = staysBehindChip(t);
+  const base = `/shop/${shopSlug}/settings/import`;
 
   return (
     <main className={settingsPaneClass()}>
+      <FlashParams params={["notice"]} />
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${shopSlug}/settings`}
         title={t("settings.import.title")}
       />
 
+      <SectionTabs
+        label={t("settings.import.tabs.label")}
+        current={tab}
+        tabs={[
+          { id: "divers", href: base, label: t("settings.import.tabs.divers") },
+          { id: "gear", href: `${base}?what=gear`, label: t("settings.import.tabs.gear") },
+          {
+            id: "dive-sites",
+            href: `${base}?what=dive-sites`,
+            label: t("settings.import.tabs.diveSites"),
+          },
+        ]}
+      />
+
+      {tab === "gear" ? (
+        <div className="space-y-6">
+          <GearImportPanel t={t} notice={notice} />
+        </div>
+      ) : tab === "dive-sites" ? (
+        <div className="space-y-6">
+          <DiveSiteImportPanel t={t} notice={notice} />
+        </div>
+      ) : (
+        diversTab({ t, shopSlug, locale, staysBehind })
+      )}
+    </main>
+  );
+}
+
+/**
+ * The Divers tab: what comes across, then the wizard. Called, not rendered as
+ * a component, so the page's tree carries its rows directly (`page.test.tsx`
+ * walks it).
+ */
+function diversTab({
+  t,
+  shopSlug,
+  locale,
+  staysBehind,
+}: {
+  t: StaffTranslator;
+  shopSlug: string;
+  locale: string;
+  staysBehind: { label: string; className: string };
+}) {
+  return (
+    <>
       {/* Three links inside one sentence. The space between them is the words
           between them (", " and ", or "), so the pixel probe's uneven-gaps
           check, which measures 7.8 then 24.9px, is reading prose rather than
           layout (settled in docs/design/settled-questions.md). */}
-      <p className="-mt-2 mb-6 text-sm text-muted">
+      <p className="mb-6 text-sm text-muted">
         {t.rich("settings.import.comingFrom", {
           eve: (chunks) => (
             <a href="/switching/eve" target="_blank" rel="noreferrer" className={proseLinkClass}>
@@ -433,6 +503,6 @@ export default async function ImportContactsPage({
           locale={locale}
         />
       </div>
-    </main>
+    </>
   );
 }

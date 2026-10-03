@@ -2151,20 +2151,6 @@ export default async function SettingsPage({
               />
             ) : null}
 
-            {canImport ? (
-              <SettingsDoorRow
-                href={`/shop/${shopSlug}/settings/gear-import`}
-                heading={t("gear.import.title")}
-              />
-            ) : null}
-
-            {canImport ? (
-              <SettingsDoorRow
-                href={`/shop/${shopSlug}/settings/dive-site-import`}
-                heading={t("diveSites.import.title")}
-              />
-            ) : null}
-
             {canExport ? (
               <SettingsDoorRow
                 href={`/shop/${shopSlug}/settings/export`}
@@ -2192,6 +2178,7 @@ export default async function SettingsPage({
               informational, never a lockout. */}
             {canViewTrialStatus ? (
               <SettingsRow
+                sectionId="trial"
                 heading={t("settings.main.trial.heading")}
                 value={
                   trialExpired

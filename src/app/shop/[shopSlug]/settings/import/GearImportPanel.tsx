@@ -1,68 +1,32 @@
-import type { Metadata } from "next";
-import { FlashParams } from "@/components/FlashParams";
-import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { canPersonImportShopData } from "@/db/import";
-import { requestLocale } from "@/i18n/request";
-import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { requireShopSurface } from "@/lib/session";
+import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { CsvFileInput } from "../_components/CsvFileInput";
-import { settingsPaneClass } from "../_components/settings-pane";
-import { importGearServiceHistoryAction } from "./actions";
-
-// See the gear register's copy of this comment (ADR 20260804-instant-navigation).
-export const instant = true;
-
-export const metadata: Metadata = { title: "Import gear history — DiveDay" };
+import { importGearServiceHistoryAction } from "./gear-actions";
 
 const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   "import-empty": { tone: "danger", key: "gear.notice.importEmpty" },
   // Kebab, because `noticeUrl` writes kebab — `noticeCode` replaces every `_`,
   // so this key spelled `import-no_gear_column` matched nothing and a shop
-  // whose CSV had no gear-tag column saw no banner at all. Found while giving
-  // the dive-site importer beside this one the same map (issue #1771).
+  // whose CSV had no gear-tag column saw no banner at all (issue #1771).
   "import-no-gear-column": { tone: "danger", key: "gear.notice.importNoGearColumn" },
 };
 
 /**
- * Bulk CSV import for the fleet and its dated service records — moved out of
- * the gear register (where it sat beside the day-to-day fleet, unrelated to
- * anything a shop does there most days) and into Settings, beside the
- * sibling contacts importer it mirrors in shape (ADR 20260723-contact-importer).
- * Gated owner/manager, like every other bulk-write door in this group.
+ * Import's "Gear history" tab: bulk CSV import for the fleet and its dated
+ * service records. It had a Settings page of its own beside the contacts
+ * importer until the three importers became one page with a tab each (Aaron,
+ * 2026-10-03). Gated owner/manager by the page, and again in the action.
  */
-export default async function GearImportPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ notice?: string }>;
-}) {
-  const { shopSlug } = await params;
-  const { notice } = await searchParams;
-  const { shop } = await requireShopSurface(shopSlug, {
-    allow: canPersonImportShopData,
-    refusal: { notice: "gear-import-not-authorized" },
-  });
-  const locale = await requestLocale(shop.defaultLocale);
-  const t = staffTranslator(locale);
-
+export function GearImportPanel({ t, notice }: { t: StaffTranslator; notice?: string }) {
   const importedMatch = notice?.match(/^imported-(\d+)-(\d+)-(\d+)-(\d+)-(\d+)$/);
   const banner = noticeFromParam(notice, NOTICES);
 
   return (
-    <main className={settingsPaneClass()}>
-      <FlashParams params={["notice"]} />
-      <ShopPageHeader
-        eyebrow={t("settings.main.eyebrow")}
-        eyebrowHref={`/shop/${shopSlug}/settings`}
-        title={t("gear.import.title")}
-      />
-
+    <>
       {importedMatch ? (
         <StaffNoticeBanner tone="success">
           {t("gear.notice.imported", {
@@ -77,7 +41,7 @@ export default async function GearImportPage({
         <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner>
       ) : null}
 
-      <SectionCard padding="lg" className="mt-8">
+      <SectionCard padding="lg">
         <p className="text-sm text-muted">{t("gear.import.help")}</p>
         <a
           className={buttonClass({ variant: "secondary", className: "mt-4" })}
@@ -91,9 +55,8 @@ export default async function GearImportPage({
           encType="multipart/form-data"
           className="mt-5 flex flex-wrap items-end gap-3"
         >
-          {/* The same control Import contacts uses, one row above this page in
-              the same Settings group — not the operating system's grey
-              "Choose File / No file chosen" it rendered before. */}
+          {/* The same control the Divers tab uses, not the operating system's
+              grey "Choose File / No file chosen". */}
           <CsvFileInput
             name="file"
             required
@@ -110,6 +73,6 @@ export default async function GearImportPage({
           </SubmitButton>
         </form>
       </SectionCard>
-    </main>
+    </>
   );
 }

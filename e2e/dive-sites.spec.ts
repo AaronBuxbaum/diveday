@@ -934,8 +934,11 @@ test.describe("a site whose station is nowhere near it", () => {
  * not put back.
  */
 test("staff read a dive_sites.csv back into the library", async ({ page, privateShop }) => {
-  await page.goto(`/shop/${privateShop.slug}/settings/dive-site-import`);
-  await expect(page.getByRole("heading", { name: "Import dive sites", level: 1 })).toBeVisible();
+  await page.goto(`/shop/${privateShop.slug}/settings/import?what=dive-sites`);
+  await expect(page.getByRole("link", { name: "Dive sites" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
 
   // A subset of the bundle's columns, which is what a shop that trimmed its
   // copy hands over — only `name` is required, and a column that is not there
@@ -962,7 +965,7 @@ test("staff read a dive_sites.csv back into the library", async ({ page, private
   // half-way: this reads the export's own columns, so a column it does not know
   // is either one a later DiveDay wrote or one the shop added by hand, and
   // both are a restore that quietly loses a fact.
-  await page.goto(`/shop/${privateShop.slug}/settings/dive-site-import`);
+  await page.goto(`/shop/${privateShop.slug}/settings/import?what=dive-sites`);
   await page.getByLabel("Choose CSV file").setInputFiles({
     name: "dive_sites.csv",
     mimeType: "text/csv",

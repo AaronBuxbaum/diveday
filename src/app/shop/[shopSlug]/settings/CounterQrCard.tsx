@@ -56,7 +56,12 @@ export function CounterQrCard({
   }, [open, url]);
 
   return (
-    <SettingsRow heading={title} description={description} onToggle={setOpen}>
+    <SettingsRow
+      sectionId="counterCard"
+      heading={title}
+      description={description}
+      onToggle={setOpen}
+    >
       <code className="mt-3 block text-sm break-all text-muted">{url}</code>
       {/* Reserved at its final size whether or not the encoder has landed, so
           the row does not jump under a reader mid-print. */}

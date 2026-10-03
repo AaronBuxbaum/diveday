@@ -61,6 +61,7 @@ export const SECTION_IDS = [
   "reviewLink",
   "searchListing",
   "packing",
+  "counterCard",
   "dockCall",
   "units",
   "divingOptions",
@@ -70,6 +71,7 @@ export const SECTION_IDS = [
   "tax",
   "passThrough",
   "stripe",
+  "trial",
 ] as const;
 export type SectionId = (typeof SECTION_IDS)[number];
 
@@ -88,6 +90,7 @@ const SECTION_FRAGMENTS: Partial<Record<SectionId, string>> = {
   dockCall: "dock-call",
   rentalPricing: "rental-pricing",
   passThrough: "pass-through",
+  counterCard: "counter-card",
 };
 
 /** The `#fragment` that opens and scrolls to a hub section. */
@@ -108,7 +111,8 @@ export type SettingsRailGate =
   | "messaging"
   | "import"
   | "export"
-  | "boats";
+  | "boats"
+  | "trial";
 
 /**
  * The one warning a rail row may carry, named as a code rather than a
@@ -238,6 +242,12 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     gate: "waivers",
   },
   {
+    id: "counterCard",
+    labelKey: "settings.main.counterQr.heading",
+    group: "bookings-waivers",
+    target: { kind: "section", id: "counterCard" },
+  },
+  {
     id: "packing",
     labelKey: "settings.main.packing.heading",
     group: "bookings-waivers",
@@ -331,20 +341,6 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     gate: "import",
   },
   {
-    id: "gearImport",
-    labelKey: "gear.import.title",
-    group: "data",
-    target: { kind: "route", path: "/settings/gear-import" },
-    gate: "import",
-  },
-  {
-    id: "diveSiteImport",
-    labelKey: "diveSites.import.title",
-    group: "data",
-    target: { kind: "route", path: "/settings/dive-site-import" },
-    gate: "import",
-  },
-  {
     id: "dataExport",
     labelKey: "settings.export.title",
     group: "data",
@@ -362,6 +358,13 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     labelKey: "settings.main.calendar.heading",
     group: "account",
     target: { kind: "route", path: "/settings/calendar" },
+  },
+  {
+    id: "trial",
+    labelKey: "settings.main.trial.heading",
+    group: "account",
+    target: { kind: "section", id: "trial" },
+    gate: "trial",
   },
 ];
 

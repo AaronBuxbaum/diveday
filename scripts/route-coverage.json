@@ -519,19 +519,9 @@
     "visual": ["settings-export"],
     "a11y": ["a11y.spec.ts"]
   },
-  "/shop/[shopSlug]/settings/dive-site-import": {
-    "e2e": ["dive-sites.spec.ts"],
-    "visual": ["settings-dive-site-import"],
-    "a11y": ["a11y.spec.ts"]
-  },
-  "/shop/[shopSlug]/settings/gear-import": {
-    "e2e": ["gear.spec.ts"],
-    "visual": ["settings-gear-import"],
-    "a11y": ["a11y.spec.ts"]
-  },
   "/shop/[shopSlug]/settings/import": {
-    "e2e": ["import.spec.ts"],
-    "visual": ["settings-import"],
+    "e2e": ["dive-sites.spec.ts", "gear.spec.ts", "import.spec.ts"],
+    "visual": ["settings-dive-site-import", "settings-gear-import", "settings-import"],
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/settings/integrations": {

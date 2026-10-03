@@ -308,7 +308,7 @@ test.describe("automated accessibility scans of the static staff routes", () => 
     await scanStaticRoutes(page, [
       { path: "/shop/blue-mantis/settings", heading: "Settings" },
       { path: "/shop/blue-mantis/settings/team", heading: "Team" },
-      { path: "/shop/blue-mantis/settings/import", heading: "Import contacts" },
+      { path: "/shop/blue-mantis/settings/import", heading: "Import" },
       // One page, both halves: the download manifest and — since ADR
       // 20260806-one-data-out-surface folded `/settings/backup` into it — the
       // scheduled-backup credential form. That form is the reason this route
@@ -333,7 +333,7 @@ test.describe("automated accessibility scans of the static staff routes", () => 
    * settings pages the tables above had not reached. Cheap to add: each is a
    * `goto` and an `<h1>`, which is the whole reason the gap survived so long.
    *
-   * `/settings/security` and `/settings/gear-import` are both forms a shop
+   * `/settings/security` and Import's gear tab are both forms a shop
    * fills in once and gets wrong quietly if a field has no label, and the gear
    * register is the densest ledger in the product after the orders index —
    * grouped rows, each carrying its own act (ADR 20260827-the-shops-shelves).
@@ -357,8 +357,8 @@ test.describe("automated accessibility scans of the static staff routes", () => 
         path: "/shop/blue-mantis/settings/safety-checklist",
         heading: "Pre-departure checklist",
       },
-      { path: "/shop/blue-mantis/settings/gear-import", heading: "Import gear history" },
-      { path: "/shop/blue-mantis/settings/dive-site-import", heading: "Import dive sites" },
+      { path: "/shop/blue-mantis/settings/import?what=gear", heading: "Import" },
+      { path: "/shop/blue-mantis/settings/import?what=dive-sites", heading: "Import" },
     ]);
   });
 });

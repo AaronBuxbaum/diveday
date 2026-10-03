@@ -12,7 +12,6 @@ afterEach(() => {
 });
 
 const COPY = {
-  calendar: "Calendar subscription",
   language: "Language",
   signOut: "Sign out",
   signOutConfirm: "Sign out now?",
@@ -72,31 +71,11 @@ describe("ShopIdentityMenu", () => {
   });
 
   /**
-   * **The reader's own calendar feed leads this menu** (ADR 20261001-logbook).
-   * Settings has its own row in the nav now, so a second door here would be a
-   * duplicate control; what stays is about this reader, not the shop.
+   * **No calendar door here** (Aaron, 2026-10-03). The reader's calendar
+   * subscription is a row in Settings' Account group and in ⌘K; a third door
+   * in this menu was one too many. The menu opens on the language.
    */
-  it("opens on the reader's calendar subscription", async () => {
-    render(
-      <ShopIdentityMenu
-        shopName="Blue Mantis Divers"
-        calendarHref="/shop/blue-mantis/settings/calendar"
-        signOutAction={vi.fn()}
-        locale="en-US"
-        languages={[{ locale: "en-US", label: "English (US)" }]}
-        setLocaleAction={vi.fn()}
-        copy={COPY}
-      />,
-    );
-
-    await userEvent.click(screen.getByRole("button", { name: /Blue Mantis Divers/ }));
-    expect(screen.getByRole("link", { name: "Calendar subscription" })).toHaveAttribute(
-      "href",
-      "/shop/blue-mantis/settings/calendar",
-    );
-  });
-
-  it("leaves the reader's own half of the menu when no link leads it", async () => {
+  it("carries no calendar subscription link", async () => {
     render(
       <ShopIdentityMenu
         shopName="Blue Mantis Divers"
@@ -109,8 +88,7 @@ describe("ShopIdentityMenu", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: /Blue Mantis Divers/ }));
-    expect(screen.queryByRole("link", { name: "Calendar subscription" })).toBeNull();
-    // …and the reader's own half of the menu is still there.
+    expect(screen.queryByRole("link")).toBeNull();
     expect(screen.getByText("Language")).toBeInTheDocument();
   });
 });
@@ -137,7 +115,6 @@ describe("ShopIdentityMenu — the open panel", () => {
     render(
       <ShopIdentityMenu
         shopName="Blue Mantis Divers"
-        calendarHref="/shop/blue-mantis/settings/calendar"
         signOutAction={vi.fn()}
         locale="en-US"
         languages={LANGUAGES}
@@ -153,10 +130,9 @@ describe("ShopIdentityMenu — the open panel", () => {
   const horizontalPadding = (element: Element) =>
     [...element.classList].filter((token) => /^(p|px|pl|pr|ps|pe)-/.test(token));
 
-  it("puts Settings, the LANGUAGE label, both languages and Sign out on the tick gutter and no other inset", async () => {
+  it("puts the LANGUAGE label, both languages and Sign out on the tick gutter and no other inset", async () => {
     await openMenu();
     const starts = [
-      screen.getByRole("link", { name: "Calendar subscription" }),
       screen.getByText("Language"),
       screen.getByRole("button", { name: "English (US)" }),
       screen.getByRole("button", { name: "Español" }),
@@ -203,7 +179,6 @@ describe("ShopIdentityMenu — the open panel", () => {
     for (const token of MENU_PANEL.split(" ")) expect(panel).toHaveClass(token);
     expect(panel).not.toHaveClass("p-2");
     const rows = [
-      screen.getByRole("link", { name: "Calendar subscription" }),
       screen.getByRole("button", { name: "English (US)" }),
       screen.getByRole("button", { name: "Español" }),
       screen.getByRole("button", { name: "Sign out" }),

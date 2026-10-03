@@ -17,8 +17,6 @@ import {
   type StaffDestinationLabels,
   type StaffDestinationTitles,
   type StaffNavOffers,
-  staffDestination,
-  staffDestinationHref,
   staffNavSections,
   staffShopRoot,
 } from "@/lib/staff-destinations";
@@ -178,14 +176,12 @@ export function ShopNav({
             <ShopIdentityMenu
               shopName={shopName}
               logoUrl={logoUrl}
-              calendarHref={staffDestinationHref(root, staffDestination("calendarFeed"))}
               signOutAction={signOutAction}
               locale={locale}
               languages={languages}
               setLocaleAction={setLocale}
               copy={{
                 boatMode: t("shared.shopNav.boatMode"),
-                calendar: t("shared.shopNavLinks.calendarFeed"),
                 language: t("shared.shopNav.language"),
                 signOut: t("shared.shopNav.signOut"),
                 signOutConfirm: t("shared.shopNav.signOutConfirm"),
