@@ -34,5 +34,7 @@ export const WEEK_ROW_BOX_CLASS = "flex items-start gap-2.5 rounded-lg px-2 py-2
  * outside its line box. Every box is border-box, so `min-h-8` with `py-2` on
  * one element is a 16px floor under a 20px line: the floor does nothing, and
  * the words sat 6px above the weekday beside them.
+ *
+ * The day's "+ Add" shares the line, at its end, so an empty day is one line.
  */
-export const WEEK_EMPTY_DAY_CLASS = "my-2 flex min-h-8 items-center px-2";
+export const WEEK_EMPTY_DAY_CLASS = "my-2 flex min-h-8 items-center justify-between gap-3 px-2";
