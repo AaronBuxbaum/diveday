@@ -204,11 +204,14 @@ describe("saveRentalFit / getRentalFit", () => {
    */
   describe("an item the shop no longer offers", () => {
     const withoutDrysuit = (items: readonly string[]) => items.filter((k) => k !== "drysuit");
+    // The demo catalog does not rent drysuits (Aaron, 2026-10-03), so each
+    // case starts from one that does.
+    const withDrysuit = (items: readonly string[]) => [...withoutDrysuit(items), "drysuit"];
 
     it("keeps the flag as well as the size when a form could not have asked", async () => {
       const { db, shop, shopId, tripId } = await context();
       const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
-      expect(shop.rentalItems).toContain("drysuit");
+      await setShopRentalItems(db, shopId, withDrysuit(shop.rentalItems));
 
       await saveRentalFit(db, {
         ...baseFitInput(shopId, personId),
@@ -235,6 +238,7 @@ describe("saveRentalFit / getRentalFit", () => {
     it("gives the diver their own answer back when the shop re-adds it", async () => {
       const { db, shop, shopId, tripId } = await context();
       const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+      await setShopRentalItems(db, shopId, withDrysuit(shop.rentalItems));
 
       await saveRentalFit(db, {
         ...baseFitInput(shopId, personId),
@@ -243,7 +247,7 @@ describe("saveRentalFit / getRentalFit", () => {
       });
       await setShopRentalItems(db, shopId, withoutDrysuit(shop.rentalItems));
       await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsDrysuit: false });
-      await setShopRentalItems(db, shopId, [...shop.rentalItems]);
+      await setShopRentalItems(db, shopId, withDrysuit(shop.rentalItems));
 
       // Deliberate: it is still the diver's answer, nobody retracted it, and
       // the alternative is a shop's catalog edit speaking for a diver who was
@@ -254,8 +258,9 @@ describe("saveRentalFit / getRentalFit", () => {
     });
 
     it("still lets the diver untick a box the shop does offer", async () => {
-      const { db, shopId, tripId } = await context();
+      const { db, shop, shopId, tripId } = await context();
       const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+      await setShopRentalItems(db, shopId, withDrysuit(shop.rentalItems));
 
       await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsDrysuit: true });
       // The ordinary path, and the one a careless fix breaks: a flag that can
