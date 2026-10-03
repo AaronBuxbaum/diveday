@@ -36,30 +36,26 @@ export default function ScheduleBoardLoading() {
         <ShopPageHeaderSkeleton eyebrow={false} titleWidth="w-48" description={false} actions={2} />
         <ScheduleViewsSkeleton />
         <div className="mt-4">
-          {/* `WeekPager`: two 48px steps (`icon`) and the range, at every
-              width. */}
-          <div className="flex items-center gap-2">
-            <div className="size-12 rounded-lg bg-surface-sunken" />
-            <div className="size-12 rounded-lg bg-surface-sunken" />
-            <div className="ms-2 h-5 w-40 rounded bg-surface-sunken" />
-          </div>
-          {/* The week's label and its seat tally, over the board's rule. */}
-          <div className="mt-4 flex justify-between gap-3 border-b border-border pb-2">
-            <div className="flex h-4 items-center">
-              <div className="h-3 w-20 rounded bg-surface-sunken" />
+          {/* `WeekPager`: two 48px steps (`icon`) and the range, with the
+              week's seat tally at the line's end, over the board's rule. */}
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border pb-3">
+            <div className="flex items-center gap-2">
+              <div className="size-12 rounded-lg bg-surface-sunken" />
+              <div className="size-12 rounded-lg bg-surface-sunken" />
+              <div className="ms-2 h-5 w-40 rounded bg-surface-sunken" />
             </div>
-            <div className="flex h-4 items-center">
-              <div className="h-3 w-24 rounded bg-surface-sunken" />
+            <div className="flex h-5 items-center">
+              <div className="h-3.5 w-24 rounded bg-surface-sunken" />
             </div>
           </div>
           {DEPARTURES_PER_DAY.map((departures, day) => (
             // biome-ignore lint/suspicious/noArrayIndexKey: a skeleton day's only identity is its place in the week
             <div key={day} className="border-b border-border">
               <div className={WEEK_DAY_GRID_CLASS}>
-                {/* The day's label: its weekday line, and the numeral beside
-                    it on a phone or under it from `sm` up. */}
+                {/* The day's label: its weekday and the numeral beside it,
+                    one line at every width. */}
                 <div className="py-2">
-                  <div className="flex min-h-8 items-center gap-1.5 sm:flex-col sm:items-start sm:gap-0">
+                  <div className="flex min-h-8 items-center gap-1.5">
                     <div className="flex h-8 w-8 shrink-0 items-center">
                       <div className="h-3 w-8 rounded bg-surface-sunken" />
                     </div>
@@ -73,36 +69,42 @@ export default function ScheduleBoardLoading() {
                     // "No boats", on the first line the departures use.
                     <div className={WEEK_EMPTY_DAY_CLASS}>
                       <div className="h-3.5 w-16 rounded bg-surface-sunken" />
+                      {/* The day's "+ Add", at the line's end. */}
+                      <div className="h-3.5 w-10 rounded bg-surface-sunken" />
                     </div>
                   ) : (
                     Array.from({ length: departures }, (_, departure) => (
                       // biome-ignore lint/suspicious/noArrayIndexKey: a skeleton row's only identity is its place in the day
                       <div key={departure} className={WEEK_ROW_BOX_CLASS}>
-                        <div className="min-w-0 flex-1">
-                          {/* The first line: the time in its slot, the seat
-                              bar, and the meta inline from `md`. */}
-                          <div className="flex min-h-8 items-center gap-x-2 md:gap-x-3">
-                            <div className="w-19 shrink-0">
-                              <div className="h-4 w-16 rounded bg-surface-sunken" />
+                        {/* The row's columns: the time, the title over its
+                            facts, the seats. Below `md` the title and its
+                            facts take the line under the time. */}
+                        <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 md:grid-cols-[4.75rem_minmax(0,1fr)_auto]">
+                          <div className="col-start-1 row-start-1 flex min-h-8 items-center">
+                            <div className="h-4 w-16 rounded bg-surface-sunken" />
+                          </div>
+                          <div className="col-span-full row-start-2 md:col-span-1 md:col-start-2 md:row-start-1 md:pt-1">
+                            <div className="flex h-6 items-center">
+                              <div className="h-4 w-56 max-w-full rounded bg-surface-sunken" />
                             </div>
-                            <div className="h-1.5 w-14 shrink-0 rounded-full bg-surface-sunken sm:w-20" />
-                            <div className="hidden h-3.5 w-48 rounded bg-surface-sunken md:block" />
+                            <div className="mt-0.5 flex h-5 items-center">
+                              <div className="h-3.5 w-40 max-w-full rounded bg-surface-sunken" />
+                            </div>
                           </div>
-                          {/* Below `md` the meta is a line of its own. */}
-                          <div className="flex h-5 items-center md:hidden">
-                            <div className="h-3.5 w-44 max-w-full rounded bg-surface-sunken" />
-                          </div>
-                          <div className="mt-0.5 flex h-5 items-center">
-                            <div className="h-3.5 w-56 max-w-full rounded bg-surface-sunken" />
+                          <div className="col-start-2 row-start-1 flex min-h-8 items-center gap-2 md:col-start-3">
+                            <div className="hidden h-1.5 w-16 rounded-full bg-surface-sunken sm:block" />
+                            <div className="h-3.5 w-12 rounded bg-surface-sunken" />
                           </div>
                         </div>
                       </div>
                     ))
                   )}
-                  {/* The day's own "+ Add", a 44px ghost. */}
-                  <div className="mx-1 flex h-11 items-center px-3">
-                    <div className="h-3.5 w-10 rounded bg-surface-sunken" />
-                  </div>
+                  {/* A day with boats: its "+ Add" under them, a 36px ghost. */}
+                  {departures === 0 ? null : (
+                    <div className="flex h-9 items-center px-2 pb-1">
+                      <div className="h-3.5 w-10 rounded bg-surface-sunken" />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
