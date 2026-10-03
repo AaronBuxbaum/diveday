@@ -36,6 +36,7 @@ export type EmbedGeneratorCopy = {
   languageAuto: string;
   languages: Record<string, string>;
   preview: string;
+  openPreview: string;
   platform: string;
   platforms: Record<Platform, string>;
   platformNotes: Record<Platform, string>;
@@ -124,6 +125,15 @@ export function EmbedGenerator({
       ? null
       : embedSnippet(origin, shopSlug, kind, options, { button: copy.buttonText });
   const partnerUrl = partnerLinkUrl(origin, shopSlug, partner || "partner");
+  const frameUrl = FRAMED.has(kind)
+    ? embedFrameUrl(
+        origin,
+        shopSlug,
+        kind as "calendar" | "grid" | "departure" | "courses",
+        { ...DEFAULT_EMBED_OPTIONS, lang, show: show || null, look },
+        look === "site" ? previewHost : {},
+      )
+    : null;
 
   useEffect(() => {
     if (kind !== "qr") return;
@@ -150,92 +160,98 @@ export function EmbedGenerator({
   return (
     <div className="space-y-10">
       <SectionCard padding="lg" title={copy.what}>
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
-          <div className="space-y-5">
-            <fieldset>
-              <legend id={ids.kind} className="sr-only">
-                {copy.what}
-              </legend>
-              <div className="grid grid-cols-2 gap-2">
-                {EMBED_KINDS.map((k) => (
-                  <label
-                    key={k}
-                    className={`${tile(kind === k)} cursor-pointer has-[:focus-visible]:focus-ring`}
-                  >
-                    <input
-                      type="radio"
-                      name={`${ids.kind}-kind`}
-                      value={k}
-                      checked={kind === k}
-                      onChange={() => {
-                        // `show` holds a trip id for every kind but one, and a
-                        // course slug for `courses`. Crossing that line has to
-                        // clear it or the courses widget is framed with a UUID
-                        // and answers 404; staying on the same side keeps a
-                        // choice the shop already made, so picking "QR code"
-                        // after "One departure" still points at that boat.
-                        if ((k === "courses") !== (kind === "courses")) setShow("");
-                        setKind(k);
-                      }}
-                      className="sr-only"
-                    />
-                    <span className="font-semibold">{copy.kinds[k]}</span>
-                    <span className="text-xs text-muted">{copy.kindHints[k]}</span>
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-
-            {needsShow ? (
-              <Field label={copy.shows} error={showMissing ? copy.showRequired : undefined}>
-                <select
-                  value={show}
-                  onChange={(event) => setShow(event.target.value)}
-                  className={controlClass}
-                  required={kind === "departure"}
-                  aria-invalid={showMissing || undefined}
-                >
-                  <option value="">
-                    {kind === "departure"
-                      ? copy.showDeparture
-                      : kind === "courses"
-                        ? copy.showAllCourses
-                        : copy.showEverything}
-                  </option>
-                  {choices.map((choice) => (
-                    <option key={choice.id} value={choice.id}>
-                      {choice.label}
-                    </option>
+        {/* Side by side only when the *card* is wide enough to leave the
+            preview 28rem (`@4xl`, 56rem). Keyed to the viewport (`lg`) it sat
+            beside the form at 1280, where the staff sidebar and the Settings
+            rail left the preview 170px and the widget unreadable (Aaron,
+            2026-10-03). Narrower, it stacks under the form at full width. */}
+        <div className="@container">
+          <div className="grid gap-6 @4xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
+            <div className="space-y-5">
+              <fieldset>
+                <legend id={ids.kind} className="sr-only">
+                  {copy.what}
+                </legend>
+                <div className="grid grid-cols-2 gap-2">
+                  {EMBED_KINDS.map((k) => (
+                    <label
+                      key={k}
+                      className={`${tile(kind === k)} cursor-pointer has-[:focus-visible]:focus-ring`}
+                    >
+                      <input
+                        type="radio"
+                        name={`${ids.kind}-kind`}
+                        value={k}
+                        checked={kind === k}
+                        onChange={() => {
+                          // `show` holds a trip id for every kind but one, and a
+                          // course slug for `courses`. Crossing that line has to
+                          // clear it or the courses widget is framed with a UUID
+                          // and answers 404; staying on the same side keeps a
+                          // choice the shop already made, so picking "QR code"
+                          // after "One departure" still points at that boat.
+                          if ((k === "courses") !== (kind === "courses")) setShow("");
+                          setKind(k);
+                        }}
+                        className="sr-only"
+                      />
+                      <span className="font-semibold">{copy.kinds[k]}</span>
+                      <span className="text-xs text-muted">{copy.kindHints[k]}</span>
+                    </label>
                   ))}
-                </select>
-              </Field>
-            ) : null}
+                </div>
+              </fieldset>
 
-            {kind === "partner" ? (
-              <Field label={copy.partnerName}>
-                <input
-                  type="text"
-                  value={partner}
-                  onChange={(event) => setPartner(event.target.value)}
-                  placeholder={copy.partnerPlaceholder}
-                  maxLength={60}
-                  className={controlClass}
-                />
-              </Field>
-            ) : null}
+              {needsShow ? (
+                <Field label={copy.shows} error={showMissing ? copy.showRequired : undefined}>
+                  <select
+                    value={show}
+                    onChange={(event) => setShow(event.target.value)}
+                    className={controlClass}
+                    required={kind === "departure"}
+                    aria-invalid={showMissing || undefined}
+                  >
+                    <option value="">
+                      {kind === "departure"
+                        ? copy.showDeparture
+                        : kind === "courses"
+                          ? copy.showAllCourses
+                          : copy.showEverything}
+                    </option>
+                    {choices.map((choice) => (
+                      <option key={choice.id} value={choice.id}>
+                        {choice.label}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              ) : null}
 
-            {kind !== "qr" && kind !== "partner" ? (
-              // **One column.** Side by side in this 26rem column each field
-              // had 200px, and the select cut "Follow the visitor's browser"
-              // at "br" (K-144); the 54px Look track also stood beside the
-              // 44px select (K-445). Stacked, each control has the column's
-              // width and a row of its own.
-              <FieldGrid columns={1}>
-                {/* `group`: two radios are not one control, and wrapped in the
+              {kind === "partner" ? (
+                <Field label={copy.partnerName}>
+                  <input
+                    type="text"
+                    value={partner}
+                    onChange={(event) => setPartner(event.target.value)}
+                    placeholder={copy.partnerPlaceholder}
+                    maxLength={60}
+                    className={controlClass}
+                  />
+                </Field>
+              ) : null}
+
+              {kind !== "qr" && kind !== "partner" ? (
+                // **One column.** Side by side in this 26rem column each field
+                // had 200px, and the select cut "Follow the visitor's browser"
+                // at "br" (K-144); the 54px Look track also stood beside the
+                // 44px select (K-445). Stacked, each control has the column's
+                // width and a row of its own.
+                <FieldGrid columns={1}>
+                  {/* `group`: two radios are not one control, and wrapped in the
                     caption's label the caption named the first radio and a
                     click on it chose "Your site" (#1972, K-13 review). */}
-                <Field label={copy.look} hint={look === "site" ? copy.lookNote : undefined} group>
-                  {/* Two radios, so the segmented recipe rather than
+                  <Field label={copy.look} hint={look === "site" ? copy.lookNote : undefined} group>
+                    {/* Two radios, so the segmented recipe rather than
                       `SegmentedControl` (a `<nav>` of links): the look is a
                       form value, not a destination. The recipe is what nests
                       the segments in the track's corner and gives them the
@@ -243,89 +259,98 @@ export function EmbedGenerator({
                       radio's tap target, so it takes the 44px floor
                       (`min-h-11`, as `SegmentedControl`'s own options do):
                       it was `min-h-9`, 36px. */}
-                  <div className={segmentedTrackClass}>
-                    {(["site", "light"] as const).map((value) => (
-                      <label
-                        key={value}
-                        className={`flex min-h-11 flex-1 cursor-pointer items-center justify-center px-3 text-sm has-[:focus-visible]:focus-ring ${segmentClass(
-                          { selected: look === value },
-                        )}`}
-                      >
-                        <input
-                          type="radio"
-                          name={`${ids.look}-look`}
-                          value={value}
-                          checked={look === value}
-                          onChange={() => setLook(value)}
-                          className="sr-only"
-                        />
-                        {value === "site" ? copy.lookSite : copy.lookLight}
-                      </label>
-                    ))}
-                  </div>
-                </Field>
-                <Field label={copy.language}>
-                  <select
-                    value={lang}
-                    onChange={(event) => setLang(event.target.value)}
-                    className={controlClass}
-                  >
-                    <option value="auto">{copy.languageAuto}</option>
-                    {locales.map((locale) => (
-                      <option key={locale} value={locale}>
-                        {copy.languages[locale] ?? locale}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              </FieldGrid>
-            ) : null}
-          </div>
+                    <div className={segmentedTrackClass}>
+                      {(["site", "light"] as const).map((value) => (
+                        <label
+                          key={value}
+                          className={`flex min-h-11 flex-1 cursor-pointer items-center justify-center px-3 text-sm has-[:focus-visible]:focus-ring ${segmentClass(
+                            { selected: look === value },
+                          )}`}
+                        >
+                          <input
+                            type="radio"
+                            name={`${ids.look}-look`}
+                            value={value}
+                            checked={look === value}
+                            onChange={() => setLook(value)}
+                            className="sr-only"
+                          />
+                          {value === "site" ? copy.lookSite : copy.lookLight}
+                        </label>
+                      ))}
+                    </div>
+                  </Field>
+                  <Field label={copy.language}>
+                    <select
+                      value={lang}
+                      onChange={(event) => setLang(event.target.value)}
+                      className={controlClass}
+                    >
+                      <option value="auto">{copy.languageAuto}</option>
+                      {locales.map((locale) => (
+                        <option key={locale} value={locale}>
+                          {copy.languages[locale] ?? locale}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                </FieldGrid>
+              ) : null}
+            </div>
 
-          <div>
-            <p className="mb-2 text-sm font-medium">{copy.preview}</p>
-            <div className="rounded-panel border border-border bg-surface-sunken p-3">
-              {FRAMED.has(kind) && showMissing ? (
-                <p className="py-8 text-center text-sm text-muted">{copy.showRequired}</p>
-              ) : FRAMED.has(kind) ? (
-                <iframe
-                  key={`${kind}-${show}-${lang}-${look}`}
-                  title={copy.preview}
-                  src={embedFrameUrl(
-                    origin,
-                    shopSlug,
-                    kind as "calendar" | "grid" | "departure" | "courses",
-                    { ...DEFAULT_EMBED_OPTIONS, lang, show: show || null, look },
-                    look === "site" ? previewHost : {},
-                  )}
-                  className="h-[480px] w-full rounded-lg border-0 bg-surface"
-                />
-              ) : kind === "qr" ? (
-                <div className="flex flex-col items-center gap-3 py-4">
-                  {qr ? (
-                    <>
-                      {/* biome-ignore lint/performance/noImgElement: a data URL drawn in the browser */}
-                      <img src={qr} alt={copy.qrAlt} width={240} height={240} />
+            <div className="@container">
+              <p className="mb-2 text-sm font-medium">{copy.preview}</p>
+              <div className="rounded-panel border border-border bg-surface-sunken p-3">
+                {FRAMED.has(kind) && showMissing ? (
+                  <p className="py-8 text-center text-sm text-muted">{copy.showRequired}</p>
+                ) : FRAMED.has(kind) ? (
+                  // Under 28rem (a phone) the widget is not drawn small: it
+                  // opens at full size in a tab of its own instead.
+                  <>
+                    <iframe
+                      key={`${kind}-${show}-${lang}-${look}`}
+                      title={copy.preview}
+                      src={frameUrl ?? undefined}
+                      className="hidden h-[480px] w-full rounded-lg border-0 bg-surface @md:block"
+                    />
+                    <div className="flex items-center justify-center py-8 @md:hidden">
                       <a
-                        href={qr}
-                        download={`diveday-${shopSlug}.png`}
+                        href={frameUrl ?? undefined}
+                        target="_blank"
+                        rel="noopener"
                         className={buttonClass({ variant: "secondary" })}
                       >
-                        {copy.qrDownload}
+                        {copy.openPreview}
                       </a>
-                    </>
-                  ) : null}
-                  <p className="break-all text-center text-xs text-muted">{target}</p>
-                </div>
-              ) : kind === "partner" ? (
-                <p className="break-all py-4 text-sm">{partnerUrl}</p>
-              ) : (
-                <div className="flex items-center justify-center py-8">
-                  <a href={target} target="_blank" rel="noopener" className={buttonClass()}>
-                    {copy.buttonText}
-                  </a>
-                </div>
-              )}
+                    </div>
+                  </>
+                ) : kind === "qr" ? (
+                  <div className="flex flex-col items-center gap-3 py-4">
+                    {qr ? (
+                      <>
+                        {/* biome-ignore lint/performance/noImgElement: a data URL drawn in the browser */}
+                        <img src={qr} alt={copy.qrAlt} width={240} height={240} />
+                        <a
+                          href={qr}
+                          download={`diveday-${shopSlug}.png`}
+                          className={buttonClass({ variant: "secondary" })}
+                        >
+                          {copy.qrDownload}
+                        </a>
+                      </>
+                    ) : null}
+                    <p className="break-all text-center text-xs text-muted">{target}</p>
+                  </div>
+                ) : kind === "partner" ? (
+                  <p className="break-all py-4 text-sm">{partnerUrl}</p>
+                ) : (
+                  <div className="flex items-center justify-center py-8">
+                    <a href={target} target="_blank" rel="noopener" className={buttonClass()}>
+                      {copy.buttonText}
+                    </a>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
