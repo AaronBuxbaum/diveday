@@ -515,6 +515,20 @@ describe("the waiver group", () => {
     expect(screen.queryByText("Link sent; awaiting signature")).toBeNull();
   });
 
+  it("calls an expired release expired, and keeps a failed resend on the door", () => {
+    renderCard(
+      diver({
+        email: "priya@dive.day",
+        waiver: { state: "expired", signedAt: new Date("2025-08-27T14:00:00.000Z") },
+        waiverRequest: "failed",
+      } as Parameters<typeof diver>[0]),
+    );
+    const door = screen.getByTestId("diver-file-group-waiver").querySelector("summary");
+    expect(door).not.toHaveTextContent("Not signed");
+    expect(door).toHaveTextContent(/Last signed Aug 27, 2025/);
+    expect(door).toHaveTextContent("Failed to deliver");
+  });
+
   it("still says sent when a message actually went out", () => {
     renderCard(diver({ email: "priya@dive.day", waiverRequest: "not_signed" }));
     expect(screen.getAllByText("Link sent; awaiting signature").length).toBeGreaterThan(0);

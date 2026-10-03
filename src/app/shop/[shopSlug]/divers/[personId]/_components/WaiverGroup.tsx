@@ -129,7 +129,12 @@ function waiverSummary(
     return `${text} · ${t("divers.stats.waiverNotClearedOn", { date: date(diver.waiver.declinedAt) })}`;
   }
   if (diver.waiver.state === "expired") {
-    return `${text} · ${t("divers.stats.waiverLastSigned", { date: date(diver.waiver.signedAt) })}`;
+    // The expired word, not `text`: a failed send turns `state` into
+    // "failed", whose word is "Not signed", and "Not signed · Last signed …"
+    // contradicts itself. The failure rides along, since the door is now the
+    // only status line the group draws (dive-domain review, 2026-10-03).
+    const lastSigned = `${waiverRowStateText(t, "expired")} · ${t("divers.stats.waiverLastSigned", { date: date(diver.waiver.signedAt) })}`;
+    return state === "failed" ? `${lastSigned} · ${t("divers.stats.waiverFailed")}` : lastSigned;
   }
   if (state === "failed") return `${text} · ${t("divers.stats.waiverFailed")}`;
   if (diver.waiver.state === "guardian_missing") return text;
