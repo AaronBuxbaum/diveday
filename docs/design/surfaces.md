@@ -374,10 +374,17 @@ drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion
 
 **Annotated, 2026-09-24** (H-89, [brand.md](brand.md) "The two registers of the public pages"):
 each chapter is now the screen with the builder's notes under it, a numbered `MarginNotes` list
-of things visible in the mockup (the readiness list's three states, the roll call's “Offline copy ·
-up to date” line and its count, the recap's dive-log entry), each note giving a reason or a limit
+of things visible in the mockup (Today's readiness bar and its Needs you rows, the saved roll
+call's “Saved” time and its counts, the recap's dive-log entry), each note giving a reason or a limit
 and none an evaluation. The descriptive paragraphs the notes replaced are gone, not moved; the
 existing four demo doors stay, one per chapter, and the index and the honest-no are unchanged.
+
+**Redrawn, 2026-10-03**, after the Logbook redesign (ADR 20261001-logbook) changed the screens the
+mockups mirror: the readiness card became Today (a departure card, then two Needs you rows), the
+roll call became the saved offline copy in Boat mode (Divers, Boarded, Awaiting, and “Mark boarded”
+beside “Mark not boarded”), the prep list became the trip's Gear tab, and the night-before brief
+became the diver's trip page (the dock call line, then Done and Your turn). The notes were re-read
+against each redraw.
 
 ### The pricing page — `/pricing`
 
@@ -603,7 +610,7 @@ drawn on that canvas's `TryItWithYourBoats.dc.html`.
 - **One idea:** the page is the product's own screens, in the order a day runs them, with notes
   from the person who built them; the copy is the note, not a description of the screen.
 - **The question it arrives with:** "what does it actually look like when the day is running?"
-  — answered by the diver's booking page, the desk's readiness list, the captain's roll call and
+  — answered by the diver's booking page, Today at the desk, the captain's roll call and
   the diver's recap, each with three or four notes naming one visible thing and its reason or
   limit.
 - **What it never does:** evaluate. No note says a screen is fast, calm or simple; a note says

@@ -260,7 +260,7 @@ things, and the brand voice is the note.
 - A note is under twenty words and names **one visible thing** on the screen beside it. It may give
   a reason or a limit. It never gives an evaluation ("fast", "simple", "calm"), and it never asks
   for anything.
-- The app's own words are quoted as they appear on the screen: “Offline copy · up to date”,
+- The app's own words are quoted as they appear on the screen: “Ready when saved”,
   “Not recognized, so ignored”. The mockup mirrors the real screen element for element, so a note
   is re-read whenever the screen it annotates changes.
 - What is deliberately missing gets a note too ("There is no percentage bar; the count is the

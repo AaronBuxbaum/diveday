@@ -54,7 +54,7 @@ export const instant = true;
 export const metadata: Metadata = {
   title: "Dive shop software, from booking to head count — DiveDay",
   description:
-    "Four screens from a dive shop’s day, with notes from the person who made them: the schedule, the readiness list, the captain’s roll call and the diver’s recap. All of it runs in a live demo with no sign-up.",
+    "Four screens from a dive shop’s day, with notes from the person who made them: the schedule, Today, the captain’s roll call and the diver’s recap. All of it runs in a live demo with no sign-up.",
   alternates: { canonical: "/" },
   openGraph: {
     ...sharedLinkCard,

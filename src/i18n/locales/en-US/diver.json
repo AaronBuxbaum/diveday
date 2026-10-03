@@ -2178,12 +2178,12 @@
           "body": "Each diver’s certification is read against what the trip and the site require. Anyone who can’t board yet is listed, with the reason."
         },
         "blockersOnePlace": {
-          "title": "The day’s blockers in one place",
-          "body": "One screen lists who still can’t board and why: a missing waiver, or a certification nobody has verified yet."
+          "title": "Who can’t board yet, in one list",
+          "body": "Needs you, on Today, lists who still can’t board and why: a missing waiver, or a certification nobody has verified yet."
         },
         "diversBookThemselves": {
           "title": "Divers book and sign themselves",
-          "body": "A diver picks a seat and signs the waiver from a link, with no account and no app. An unsigned one shows on the blockers list the night before."
+          "body": "A diver picks a seat and signs the waiver from a link, with no account and no app. An unsigned one is on Today the night before, with the name."
         },
         "manifestHeadCount": {
           "title": "A manifest that is a head count",
@@ -2285,23 +2285,12 @@
     "tryDemo": "Try the live demo"
   },
   "fallback": {
-    "offlineCopy": "Offline copy · up to date",
-    "tripDetail": "Trip detail",
     "schedule": "Schedule",
-    "boatManifest": "Boat manifest",
     "tripName": "Two-Tank Reef",
     "tripTime": "Today · 7:30–11:00 AM",
     "diversLabel": "Divers",
-    "readyLabel": "Ready",
     "boardedLabel": "Boarded",
-    "rollCall": "Roll call",
-    "readyToBoard": "Ready to board",
     "markBoarded": "Mark boarded",
-    "readiness": "Readiness",
-    "answerBeforeDock": "The answer before the dock",
-    "noDiverClears": "No diver clears until everything checks out.",
-    "waiverNeedsAttention": "Waiver needs attention",
-    "certificationPending": "Certification pending",
     "upcomingTrips": "Upcoming trips",
     "findNextDive": "Find your next dive",
     "nightDive": "Night Dive",
@@ -2313,9 +2302,6 @@
       "label": "Dive recap",
       "greeting": "Nice diving, Priya.",
       "tripLine": "Two-Tank Reef · Saturday · Jun 14",
-      "completed": "Completed",
-      "visibility": "Visibility",
-      "water": "Water",
       "crewNoteLabel": "From your crew",
       "crewNote": "A calm first dive, then a brilliant drift over the reef. Thanks for diving with us.",
       "recordHeading": "Dive log entry",
@@ -2358,31 +2344,49 @@
       "notIncludedText": "passwords and device push keys, credentials no other system could use anyway."
     },
     "nightBefore": {
-      "label": "Ready brief",
-      "eyebrow": "Tomorrow’s briefing",
-      "title": "Two-Tank Reef",
-      "time": "Tomorrow · 7:30 AM arrival",
-      "weatherLabel": "Weather",
-      "weatherValue": "Sunny",
-      "checklist": "Your pre-trip checklist",
+      "label": "Your trip",
+      "time": "Tomorrow · 7:30 AM",
       "waiver": "Waiver",
       "cert": "Certification",
-      "payment": "Payment"
+      "dockLine": "Aim to be at the dock by 7:00 AM, Dock 4 before we sail.",
+      "gear": "Gear and setup",
+      "done": "Done",
+      "yourTurn": "Your turn"
     },
     "shopPrep": {
-      "label": "Trip prep",
-      "eyebrow": "Crew staging & roster",
-      "title": "Two-Tank Morning Reef",
-      "time": "Tomorrow · 8:00 AM departure",
-      "diversLabel": "Divers",
-      "rentalsLabel": "Rental kits",
-      "tanksLabel": "Tanks filled",
-      "checklistHeading": "Staging checklist",
-      "gearStaged": "Rental gear staged",
-      "tanksReady": "Tanks analyzed & loaded",
-      "crewAssigned": "Crew assigned (Mateo & Sarah)",
-      "manifestReady": "Roster & manifest ready"
-    }
+      "label": "Gear",
+      "time": "Tomorrow · 7:30 AM · 12 divers · 2 dives",
+      "tanksHeading": "Tanks",
+      "air": "Air",
+      "nitrox": "Nitrox",
+      "total": "Total",
+      "missingSizesHeading": "Sizes still missing",
+      "missingRow": "— no size for wetsuit",
+      "rentalKitHeading": "Rental kit",
+      "kitBcd": "BCD · M",
+      "kitWetsuit": "Wetsuit 3mm · L",
+      "kitRegulator": "Regulator"
+    },
+    "today": "Today",
+    "todayStart": "7:30 AM",
+    "todayUntil": "until 11:00 AM",
+    "phaseCheckin": "Check-in",
+    "readyCount": "7 of 9 ready",
+    "blockedCount": "2 blocked",
+    "spotsOpen": "3 spots open",
+    "needsYou": "Needs you",
+    "kindWaiver": "Waiver",
+    "kindCertifications": "Certifications",
+    "waiverNotSent": "Waiver has not been sent.",
+    "certPending": "Certification is waiting for staff verification.",
+    "sendWaiver": "Send waiver",
+    "tripLine": "Two-Tank Reef · 7:30 AM",
+    "offlineManifest": "Offline manifest",
+    "savedAt": "Saved 6:52 AM",
+    "awaitingLabel": "Awaiting",
+    "rollCallHeading": "Before departure roll call",
+    "readyWhenSaved": "Ready when saved",
+    "markNotBoarded": "Mark not boarded"
   },
   "demo": {
     "shopLabel": "Demo shop",
@@ -2429,7 +2433,7 @@
     "home": {
       "eyebrow": "Dive shop software",
       "heroTitle": "Four screens from a dive shop’s day, with notes from the person who made them.",
-      "heroDescription": "Booking, the readiness list, roll call and the recap. A diver who isn’t ready is named at the desk, hours before the dock, and every screen runs in the demo shop.",
+      "heroDescription": "Booking, Today, roll call and the recap. A diver who isn’t ready is named at the desk, hours before the dock, and every screen runs in the demo shop.",
       "heroPriceLine": "One flat price of {price} {cadence}, and no cut of your bookings.",
       "phoneFrameLabel": "A captain marking divers boarded on DiveDay’s roll-call screen, from the copy saved to the phone.",
       "dockEyebrow": "At the dock",
@@ -2448,23 +2452,23 @@
         },
         "frontDesk": {
           "when": "The morning of",
-          "title": "The readiness list",
-          "note1": "Each name gets words, never a color on its own. The desk phone is sometimes in sunlight.",
-          "note2": "A blocked name says which thing. Priya’s waiver is unsigned, and Diego’s card is waiting on a staff confirm.",
-          "note3": "There is no “mark everyone ready” button. I left it out on purpose.",
-          "note4": "“Ready to board” is Lena’s whole row. A cleared name gets no further detail.",
+          "title": "Today, and who can’t board yet",
+          "note1": "The words under the bar say what the bar says. The desk phone is sometimes in sunlight.",
+          "note2": "Each row under Needs you names one diver and what is missing.",
+          "note3": "Priya’s waiver was never sent, so her row carries the Send waiver button.",
+          "note4": "There is no “mark everyone ready” button. I left it out on purpose.",
           "door": "Open Today as the owner →",
-          "mockupLabel": "The trip’s readiness list, one diver ready and two blocked, with the reason beside each name."
+          "mockupLabel": "Today in the demo shop: one departure with 7 of 9 divers ready, then two rows under Needs you."
         },
         "dock": {
           "when": "At the dock",
           "title": "Roll call, on the captain’s phone",
           "note1": "Buttons this big so a wet thumb lands on the right name.",
-          "note2": "The three counts come from taps. Boarded reads 4 until a fifth name is tapped.",
-          "note3": "“Offline copy” in the corner means the manifest was saved to the phone. Readiness on it is as of that save.",
-          "note4": "Ready reads 7 of 9 divers. The two names still blocked are cleared ashore, at the desk, never here.",
+          "note2": "The counts come from taps. Boarded reads 4 until a fifth name is tapped.",
+          "note3": "“Saved” in the corner says when the copy reached this phone. Readiness on it is as of that save.",
+          "note4": "Each row says “Ready when saved”. A blocked name is cleared ashore, at the desk, never here.",
           "door": "Open the demo as the captain →",
-          "mockupLabel": "The captain’s roll call: three counts for the boat, then one row per diver with a Mark boarded button."
+          "mockupLabel": "The captain’s saved roll call: three counts for the boat, then one row per diver with Mark boarded and Mark not boarded."
         },
         "recap": {
           "when": "That evening",
@@ -2516,7 +2520,7 @@
       "ready": {
         "eyebrow": "Before the boat",
         "title": "Waivers, cards and medical answers arrive from home",
-        "summary": "The missing one shows on the readiness list days out, with the name and the thing beside it. A medical answer that needs a physician’s sign-off blocks the diver until it is in."
+        "summary": "The missing one shows on Today days out, with the name and the thing beside it. A medical answer that needs a physician’s sign-off blocks the diver until it is in."
       },
       "diveDay": {
         "eyebrow": "On the day",
@@ -2587,7 +2591,7 @@
       },
       "diveDay": {
         "title": "The dive day",
-        "item1": "One trip page: the dive plan, roster, prep list, and manifest",
+        "item1": "One page per departure, in five tabs: Divers, Check-in, Boat, Gear and Details",
         "item2": "Multi-day departures with one roster, one waiver, one crew",
         "item3": "One to four dives per departure, each with its own site briefing",
         "item4": "A head count before departure and after every dive, crew included, with an append-only history",
@@ -2612,7 +2616,7 @@
         "item4": "Check-out and return stamps, and a list of what’s due back today",
         "item5": "Service clocks (annual, hydro, visual, O2-clean) due by date or by dives",
         "item6": "A printable rental slip: what a diver has and when it’s due back",
-        "item7": "Overdue returns and due service on the Today board, and in the close-out"
+        "item7": "Overdue returns and due service under Needs you on Today, and in the close-out"
       },
       "money": {
         "title": "Money",
@@ -2630,7 +2634,7 @@
       },
       "shop": {
         "title": "Running the shop",
-        "item1": "A Today board that runs the day in clock order, what sails soonest first",
+        "item1": "Today: the day’s departures in clock order, then a Needs you list of what to fix first",
         "item2": "A landing page led by your own work: captain, instructor, owner",
         "item3": "The schedule as a builder: add, move, copy, remove in place",
         "item4": "Repeating trips with no end date, edited and rolled forward as one",
@@ -3095,7 +3099,7 @@
         "noSilentPasses": {
           "title": "No silent passes.",
           "body": "Software that waves a diver through because a field was blank is worse than paper. When nothing on file clears a diver, DiveDay stops and tells you which thing, and it would rather annoy your desk than let someone on the boat it can’t vouch for.",
-          "check": "open the blockers queue and read why each name is on it."
+          "check": "open Today and read why each name in Needs you is there."
         },
         "onePrice": {
           "title": "One price, no seats.",
@@ -3153,26 +3157,26 @@
       "bookingNote5": "Your brand, on your site or ours. A person here builds the website with you when asked.",
       "bookingMockupLabel": "The public DiveDay schedule a diver books from.",
       "readinessEyebrow": "Before departure",
-      "readinessTitle": "One readiness list, and the desk and the dock read the same one.",
+      "readinessTitle": "One answer for each diver, and the desk and the dock read the same one.",
       "readinessNote1": "The trip and the dive site decide what each diver needs. A site you mark deep asks for the deep card.",
       "readinessNote2": "When one thing on file does not clear a diver, the list says which thing, and the name stays blocked.",
       "readinessNote3": "The fix happens at the desk, while there is still time. The dock only reads the answer.",
-      "readinessMockupLabel": "The DiveDay readiness section used by a dive shop’s front desk.",
+      "readinessMockupLabel": "Today in DiveDay: a departure’s readiness bar, then the Needs you list with the reason beside each name.",
       "nightBeforeEyebrow": "The night before",
-      "prepTitle": "Two screens the night before: the crew’s prep list and the diver’s brief.",
+      "prepTitle": "Two screens the night before: the crew’s gear list and the diver’s brief.",
       "prepShopLabel": "At the shop",
-      "prepShopTitle": "A prep list written from the divers’ own sizes",
-      "prepShopBody": "Twelve divers, five rental kits, twenty-four tanks, counted off the manifest. The sizes are the ones divers typed when they booked.",
-      "prepShopMockupLabel": "A dive shop’s trip prep staging list showing rental kit allocations, tank fills, and crew assignments.",
+      "prepShopTitle": "A gear list written from the divers’ own sizes",
+      "prepShopBody": "Twelve divers, two dives, twenty-four tanks, counted off the roster. A diver with no size on file is named.",
+      "prepShopMockupLabel": "The Gear tab of a departure: tanks split into air and nitrox, a diver with a size missing, and the rental kit to pull.",
       "prepDiverLabel": "On the diver’s phone",
       "nightBeforeTitle": "A brief in plain words",
-      "nightBeforeBody": "Arrival time, the water and the forecast, and a checklist with the waiver, card and payment ticked. Written for someone’s first boat dive.",
-      "nightBeforeMockupLabel": "A diver’s pre-trip briefing page showing arrival times, weather conditions, and readiness checklist status.",
+      "nightBeforeBody": "The dock time, then a checklist that says what is done and what is the diver’s turn. The forecast comes in the night-before email.",
+      "nightBeforeMockupLabel": "A diver’s trip page the night before: the dock time, waiver and certification done, and gear and setup still to fill in.",
       "dockEyebrow": "At the dock",
       "dockTitle": "The manifest, on a phone with no signal.",
       "dockNote1": "A roll call for every dive, kept apart, so the second dive does not inherit the first.",
-      "dockNote2": "Ready 7, Divers 9: two names are blocked, and a blocked name gets no Mark boarded button.",
-      "dockNote3": "Mark boarded is the only verb on the screen. There is no “mark all” and no swipe.",
+      "dockNote2": "Boarded reads 4 of 9 divers, and it only moves when a name is tapped.",
+      "dockNote3": "Two verbs on each row, Mark boarded and Mark not boarded. There is no “mark all” and no swipe.",
       "dockNote4": "The print view comes off this same manifest.",
       "dockNote": "The crew saves the manifest to the phone before leaving the dock. Anything tapped with no signal is labeled that way until DiveDay is back in service, and a tap the live record has moved past comes back marked refused rather than written over.",
       "captainPhoneLabel": "A captain using the mobile roll-call view in DiveDay.",
@@ -3189,7 +3193,7 @@
       "yourAccountTitle": "The account is yours",
       "yourAccountBody": "Payouts, disputes and history sit in the Stripe account you already hold. There is no per-booking cut on top of the flat price.",
       "pricedTitle": "Paid before they board",
-      "pricedBody": "Payment is on the same readiness list as the waiver and the card, so nobody boards on someone else’s assumption.",
+      "pricedBody": "Payment counts toward ready, like the waiver and the card, so nobody boards on someone else’s assumption.",
       "pricingLink": "One flat {price} {cadence}. The pricing page lists what it covers →",
       "boxEyebrow": "The full list",
       "boxTitle": "Every shipped workflow, in one list.",
