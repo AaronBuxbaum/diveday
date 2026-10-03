@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { applyFormFields } from "@/components/apply-form-fields";
 import { FormDraft, type FormDraftActions, type FormDraftProps } from "@/components/FormDraft";
 import { RepeatFields } from "@/components/RepeatFields";
@@ -1357,7 +1357,17 @@ function RemovePanel({
         >
           {copy.removeConfirmButton}
         </SubmitButton>
-        <button type="button" onClick={onCancel} className={buttonClass({ variant: "ghost" })}>
+        {/* Focus lands on the way back out, as Move's and Copy's lands on
+            their first field: the "⋯" list that opened this unmounts, and
+            focus left with it would fall to the top of the page. The safe
+            answer rather than the destructive one, so an Enter pressed out of
+            habit keeps the trip. */}
+        <button
+          type="button"
+          ref={focusOnMount}
+          onClick={onCancel}
+          className={buttonClass({ variant: "ghost" })}
+        >
           {copy.removeCancel}
         </button>
       </div>
@@ -1591,13 +1601,6 @@ function MovePanel({
       className="mt-3 rounded-inset border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
     >
       <input type="hidden" name="tripId" value={trip.id} />
-      {/* **Which departure this is about.** The panel renders once for the
-          whole board, outside both compositions (issue #1309), so it is no
-          longer directly beneath the row that opened it — on a phone it leads
-          the day stream. Without the name it would be a date field with no
-          subject. Data, not copy: the shop's own title for its own departure,
-          so there is no bundle key to translate. */}
-      <p className="sm:col-span-2 text-sm font-medium">{trip.title}</p>
       <MoveImpact tripId={trip.id} target={target} copy={copy} loadPreflight={loadPreflight} />
       <Field
         label={copy.newDate}
@@ -1660,13 +1663,6 @@ function CopyPanel({
       className="mt-3 rounded-inset border border-border bg-surface-sunken/50 p-4 gap-y-4 animate-scale-in"
     >
       <input type="hidden" name="tripId" value={trip.id} />
-      {/* **Which departure this is about.** The panel renders once for the
-          whole board, outside both compositions (issue #1309), so it is no
-          longer directly beneath the row that opened it — on a phone it leads
-          the day stream. Without the name it would be a date field with no
-          subject. Data, not copy: the shop's own title for its own departure,
-          so there is no bundle key to translate. */}
-      <p className="sm:col-span-2 text-sm font-medium">{trip.title}</p>
       <Field label={copy.copyTo} description={copy.copyDescription}>
         <DateField
           name="date"
@@ -1827,24 +1823,9 @@ export function ScheduleBuilder({
     ? [...week.days.flatMap((day) => day.entries), ...week.spans]
     : [];
   const weekAdd = open?.startsWith("w:add:") ? open.slice("w:add:".length) : null;
-  // The grid's own action strip, and nothing else. Move, copy and remove used
-  // to resolve here too and render inside the grid's `hidden xl:block`
-  // wrapper; they now render once for the whole board — see `sharedPanel`.
-  const weekAction = ((): { entry: WeekDeparture } | null => {
-    const prefix = "w:menu:";
-    if (!open?.startsWith(prefix)) return null;
-    const tripId = open.slice(prefix.length);
-    const entry = weekDepartures.find((candidate) => candidate.tripId === tripId);
-    return entry ? { entry } : null;
-  })();
-
   /**
-   * **The panel a disclosure opens, resolved once.**
-   *
-   * Move, copy and remove render **outside** the week grid rather than inside
-   * the row that opened them: a move form is two date/time fields, and the
-   * row it hangs off is not a form. One node, so the values typed into its
-   * uncontrolled inputs survive anything that re-lays the rows above it.
+   * **The panel a disclosure opens, resolved once.** It renders under the row
+   * that opened it (`WeekBoard`'s `panel`), never at the foot of the week.
    *
    * The `w:` prefix on the key is what is left of the two compositions this
    * board used to have (#1923). It is now redundant — there is one "⋯" button
@@ -1877,6 +1858,15 @@ export function ScheduleBuilder({
   const toggle = (panel: string) => {
     setOpen((current) => (current === panel ? null : panel));
   };
+  // A row's "⋯" list: choosing an act swaps the list for that act's panel,
+  // and the list closes itself (outside tap, Escape) through
+  // `useMenuDismissal` in `WeekBoard`. Stable, because that hook lists it.
+  const chooseRowAction = useCallback((kind: "move" | "copy" | "remove", tripId: string) => {
+    setOpen(`w:${kind}:${tripId}`);
+  }, []);
+  const closeRowMenu = useCallback(() => {
+    setOpen((current) => (current?.startsWith("w:menu:") ? null : current));
+  }, []);
 
   // The add panel's selects, fetched the first time any add panel opens and
   // kept for the rest of the visit — the catalogue does not change while a
@@ -1903,42 +1893,6 @@ export function ScheduleBuilder({
     setOpen(null);
     toggleRefs.current[key]?.focus();
   };
-
-  // A row's "⋯" action strip is the one open-able thing here that isn't a
-  // form: it dismisses the way any disclosed menu does — Escape hands focus
-  // back to the trigger, a click anywhere else simply closes it (focus stays
-  // where the person clicked). Forms keep their explicit Cancel instead —
-  // half-typed work must never be swallowed by a stray click — so both
-  // listeners exist only while a strip is open.
-  //
-  // **Keyed `w:menu:`, which is what deleting the stream changed** (#1923).
-  // This listened for the stream's own `menu:` prefix, so the week's strip —
-  // now the board's only one — had no keyboard way out at all: it takes focus
-  // on mount and Escape did nothing. The behaviour moves with the surface
-  // rather than going down with the composition that happened to own it.
-  useEffect(() => {
-    const prefix = "w:menu:";
-    if (!open?.startsWith(prefix)) return;
-    const menuKey = open;
-    const tripId = open.slice(prefix.length);
-    const onPointerDown = (event: PointerEvent) => {
-      const target = event.target;
-      if (target instanceof Element && target.closest(`[data-row-menu="${CSS.escape(tripId)}"]`))
-        return;
-      setOpen((current) => (current === menuKey ? null : current));
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      setOpen((current) => (current === menuKey ? null : current));
-      toggleRefs.current[menuKey]?.focus();
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open]);
 
   // The schedule route has no dynamic id, so if `cacheComponents: true`'s
   // Activity-based navigation is ever re-enabled, this instance could
@@ -2034,11 +1988,11 @@ export function ScheduleBuilder({
           the row (`isUsualCrew` below), so what any row still prints about crew
           is, by construction, the exception. */}
 
-      {/* The week, at `xl` and up. Its own disclosures are keyed `w:` so a
-          control in the grid hands focus back to itself rather than to its
-          twin in the stream, which is display:none at this width and cannot
-          take it. The panels render full width beneath the grid: a move form
-          is two date/time fields, and a 160px column is not a form. */}
+      {/* The week. Every form it opens renders inside it, under the row or
+          the day that opened it (`panel`): a move under its departure, a
+          day's add under that day's boats. One node per open key, so what is
+          typed into a panel's uncontrolled inputs survives anything that
+          re-lays the rows around it. */}
       {week ? (
         <div className="mt-4">
           <WeekBoard
@@ -2047,113 +2001,76 @@ export function ScheduleBuilder({
             shopSlug={shopSlug}
             openKey={open}
             onToggle={toggle}
+            onChoose={chooseRowAction}
+            onCloseMenu={closeRowMenu}
             registerToggle={registerToggle}
+            panel={
+              !canConfigure
+                ? null
+                : weekAdd
+                  ? {
+                      under: "day",
+                      dateIso: weekAdd,
+                      node: (
+                        <AddPanel
+                          locale={locale}
+                          addDraft={addDraft}
+                          draftActions={actions.draft}
+                          loadPattern={loadPattern}
+                          loadTideWindow={loadTideWindow}
+                          dateIso={weekAdd}
+                          options={options}
+                          price={price}
+                          copy={copy}
+                          more={more}
+                          initialCourse={null}
+                          requestPlan={null}
+                          startExpanded={false}
+                          onAdd={actions.add}
+                          onCancel={() => closePanel(`w:add:${weekAdd}`)}
+                        />
+                      ),
+                    }
+                  : sharedPanel
+                    ? {
+                        under: "departure",
+                        tripId: sharedPanel.trip.id,
+                        node: (
+                          <>
+                            {sharedPanel.kind === "move" ? (
+                              <MovePanel
+                                locale={locale}
+                                trip={sharedPanel.trip}
+                                copy={copy}
+                                action={actions.move}
+                                loadPreflight={loadMovePreflight}
+                                onCancel={() => closePanel(sharedPanel.closeKey)}
+                              />
+                            ) : null}
+                            {sharedPanel.kind === "copy" ? (
+                              <CopyPanel
+                                locale={locale}
+                                trip={sharedPanel.trip}
+                                copy={copy}
+                                action={actions.duplicate}
+                                onCancel={() => closePanel(sharedPanel.closeKey)}
+                              />
+                            ) : null}
+                            {sharedPanel.kind === "remove" ? (
+                              <RemovePanel
+                                trip={sharedPanel.trip}
+                                copy={copy}
+                                action={actions.remove}
+                                onCancel={() => closePanel(sharedPanel.closeKey)}
+                              />
+                            ) : null}
+                          </>
+                        ),
+                      }
+                    : null
+            }
             copy={copy}
           />
-          <div>
-            {canConfigure && weekAdd ? (
-              <AddPanel
-                locale={locale}
-                addDraft={addDraft}
-                draftActions={actions.draft}
-                loadPattern={loadPattern}
-                loadTideWindow={loadTideWindow}
-                dateIso={weekAdd}
-                options={options}
-                price={price}
-                copy={copy}
-                more={more}
-                initialCourse={null}
-                requestPlan={null}
-                startExpanded={false}
-                onAdd={actions.add}
-                onCancel={() => closePanel(`w:add:${weekAdd}`)}
-              />
-            ) : null}
-            {canConfigure && weekAction ? (
-              // `data-row-menu` is what tells an outside click from a click
-              // inside the strip. Without it the listener above closes the
-              // strip on the way to its own buttons.
-              <div
-                data-row-menu={weekAction.entry.tripId}
-                className="mt-3 flex flex-wrap items-center gap-2 rounded-inset border border-border bg-surface-sunken/50 p-3"
-              >
-                <p className="text-sm font-medium">{weekAction.entry.ref}</p>
-                <div className="ms-auto flex items-center gap-1">
-                  <button
-                    type="button"
-                    ref={focusOnMount}
-                    onClick={() => toggle(`w:move:${weekAction.entry.tripId}`)}
-                    aria-label={fill(copy.moveAria, { ref: weekAction.entry.ref })}
-                    className={buttonClass({ variant: "ghost", size: "sm" })}
-                  >
-                    {copy.move}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => toggle(`w:copy:${weekAction.entry.tripId}`)}
-                    aria-label={fill(copy.copyAria, { ref: weekAction.entry.ref })}
-                    className={buttonClass({ variant: "ghost", size: "sm" })}
-                  >
-                    {copy.copy}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => toggle(`w:remove:${weekAction.entry.tripId}`)}
-                    aria-label={fill(copy.removeAria, { ref: weekAction.entry.ref })}
-                    className={buttonClass({ variant: "danger-ghost", size: "sm" })}
-                  >
-                    {copy.remove}
-                  </button>
-                </div>
-              </div>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-
-      {/* **The board's one move/copy/remove panel** (issue #1309).
-          Deliberately outside both compositions rather than inside either: the
-          day stream and the week grid are both mounted, hidden from each other
-          by CSS, so a panel rendered inside one of them disappeared the moment
-          a resize crossed `xl` — taking a half-typed date with it. One node
-          cannot be hidden by either media query, and because it never moves in
-          the tree its uncontrolled inputs keep what was typed into them.
-
-          Here rather than at the foot of the board so the desktop placement is
-          unchanged: a move form is two date/time fields and a 160px grid column
-          is not a form, so it has always rendered full width beneath the week.
-          Below `xl` it now leads the day stream instead of sitting under its
-          row; the date input takes focus on mount, which brings it into view. */}
-      {canConfigure && sharedPanel ? (
-        <div className="mt-4">
-          {sharedPanel.kind === "move" ? (
-            <MovePanel
-              locale={locale}
-              trip={sharedPanel.trip}
-              copy={copy}
-              action={actions.move}
-              loadPreflight={loadMovePreflight}
-              onCancel={() => closePanel(sharedPanel.closeKey)}
-            />
-          ) : null}
-          {sharedPanel.kind === "copy" ? (
-            <CopyPanel
-              locale={locale}
-              trip={sharedPanel.trip}
-              copy={copy}
-              action={actions.duplicate}
-              onCancel={() => closePanel(sharedPanel.closeKey)}
-            />
-          ) : null}
-          {sharedPanel.kind === "remove" ? (
-            <RemovePanel
-              trip={sharedPanel.trip}
-              copy={copy}
-              action={actions.remove}
-              onCancel={() => closePanel(sharedPanel.closeKey)}
-            />
-          ) : null}
         </div>
       ) : null}
     </section>
