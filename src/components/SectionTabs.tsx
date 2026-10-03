@@ -69,6 +69,8 @@ export function SectionTabs({
   );
 }
 
+const SKELETON_TAB_CLASS = "flex min-h-11 items-center justify-center px-2 sm:min-w-32 sm:px-4";
+
 /**
  * The tabs as a `loading.tsx` draws them: 44px tabs of one width on the rule.
  * From `sm` up each cell takes the width a typical widest label needs
@@ -81,7 +83,7 @@ export function SectionTabsSkeleton({ count }: { count: number }) {
       <div className={SECTION_TAB_LIST_CLASS}>
         {Array.from({ length: count }, (_, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: placeholders with no identity
-          <div key={index} className="flex min-h-11 items-center justify-center px-2 sm:min-w-32 sm:px-4">
+          <div key={index} className={SKELETON_TAB_CLASS}>
             <div className="h-4 w-16 rounded bg-surface-sunken" />
           </div>
         ))}
