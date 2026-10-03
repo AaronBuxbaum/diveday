@@ -241,9 +241,12 @@ test.describe("owner", () => {
   test("the shop's name holds the reader's own things, not a second Settings", async ({ page }) => {
     await page.goto("/shop/blue-mantis");
     await page.locator("header [data-identity-menu]").click();
-    await expect(page.locator("header").getByRole("link", { name: "Settings" })).toHaveCount(0);
-    await page.locator("header").getByRole("link", { name: "Calendar subscription" }).click();
-    await expect(page).toHaveURL(/\/settings\/calendar$/);
+    const header = page.locator("header");
+    await expect(header.getByRole("button", { name: "Sign out" })).toBeVisible();
+    await expect(header.getByRole("link", { name: "Settings" })).toHaveCount(0);
+    // Calendar subscriptions left this menu (Aaron, 2026-10-03); they live in
+    // Settings and in ⌘K.
+    await expect(header.getByRole("link", { name: /Calendar subscription/ })).toHaveCount(0);
   });
 
   test("Inbox and Money are one place each, its parts as tabs under the title", async ({
