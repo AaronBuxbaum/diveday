@@ -935,10 +935,11 @@ test.describe("a site whose station is nowhere near it", () => {
  */
 test("staff read a dive_sites.csv back into the library", async ({ page, privateShop }) => {
   await page.goto(`/shop/${privateShop.slug}/settings/import?what=dive-sites`);
-  await expect(page.getByRole("link", { name: "Dive sites" })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
+  await expect(
+    page
+      .getByRole("navigation", { name: "What to import" })
+      .getByRole("link", { name: "Dive sites" }),
+  ).toHaveAttribute("aria-current", "page");
 
   // A subset of the bundle's columns, which is what a shop that trimmed its
   // copy hands over — only `name` is required, and a column that is not there
