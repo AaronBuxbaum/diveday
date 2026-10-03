@@ -34,8 +34,8 @@ export type TookACallCopy = {
 export type CallDeparture = { id: string; label: string };
 
 /**
- * The half of "Took a call" that changes with the answer: which departure, or
- * what day they were asking for.
+ * The half of a call with no seat to book that changes with the answer: which
+ * full departure, or what day they were asking for.
  *
  * **Every group is always in the DOM, and the inactive ones are `disabled`
  * fieldsets.** A `disabled` fieldset submits none of its controls and runs none

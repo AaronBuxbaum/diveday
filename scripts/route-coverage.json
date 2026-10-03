@@ -229,6 +229,7 @@
     "e2e": [
       "boat-loop.spec.ts",
       "boat-stage.spec.ts",
+      "check-in.spec.ts",
       "day-close.spec.ts",
       "day-spine.spec.ts",
       "departure-log.spec.ts",
@@ -245,6 +246,7 @@
     "visual": [
       "today",
       "today-all-home",
+      "today-arrival-lookup",
       "identity-menu-open",
       "nav-more",
       "today-empty",
@@ -256,39 +258,13 @@
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/bookings/new": {
-    "e2e": ["add-diver.spec.ts"],
-    "visual": ["booking-new"],
+    "e2e": ["add-diver.spec.ts", "took-a-call.spec.ts"],
+    "visual": ["booking-new", "took-a-call"],
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/bookings/new/[tripId]": {
     "e2e": ["add-diver.spec.ts", "trip-admission.spec.ts"],
     "visual": ["booking-new-diver"]
-  },
-  "/shop/[shopSlug]/calls": {
-    "e2e": ["a11y.spec.ts", "took-a-call.spec.ts"],
-    "visual": ["took-a-call"],
-    "a11y": ["a11y.spec.ts"]
-  },
-  "/shop/[shopSlug]/check-in": {
-    "e2e": ["check-in.spec.ts", "tenant-isolation.spec.ts", "trip-admission.spec.ts"],
-    "visual": [
-      "check-in",
-      "check-in-checked",
-      "check-in-identity-held",
-      "check-in-no-show",
-      "check-in-no-show-sailed",
-      "check-in-waiver-refused"
-    ],
-    "a11y": ["a11y.spec.ts"]
-  },
-  "/shop/[shopSlug]/check-in/walk-in": {
-    "e2e": ["check-in.spec.ts", "trip-admission.spec.ts"],
-    "visual": ["check-in-walk-in", "check-in-walk-in-notice"],
-    "a11y": ["a11y.spec.ts"]
-  },
-  "/shop/[shopSlug]/check-in/walk-in/[tripId]": {
-    "e2e": ["check-in.spec.ts", "trip-admission.spec.ts"],
-    "visual": ["check-in-walk-in-diver"]
   },
   "/shop/[shopSlug]/courses": {
     "e2e": ["courses.spec.ts"],
@@ -602,38 +578,6 @@
     ],
     "a11y": ["a11y.spec.ts"]
   },
-  "/shop/[shopSlug]/trips/[id]/guests": {
-    "e2e": [
-      "a11y.spec.ts",
-      "add-diver.spec.ts",
-      "boat-loop.spec.ts",
-      "booking.spec.ts",
-      "check-in.spec.ts",
-      "depth-and-age-surfaces.spec.ts",
-      "divers.spec.ts",
-      "gear-fit-and-age.spec.ts",
-      "import.spec.ts",
-      "manifest.spec.ts",
-      "recap.spec.ts",
-      "refunds.spec.ts",
-      "trip-admission.spec.ts",
-      "trips.spec.ts",
-      "waivers.spec.ts"
-    ],
-    "visual": [
-      "trip-guests",
-      "trip-guests-deal-below-requirement",
-      "trip-guests-deal-recipients",
-      "trip-guests-depth-warning",
-      "trip-guests-identity",
-      "trip-guests-identity-open",
-      "trip-guests-note-undo",
-      "trip-guests-refusal-card",
-      "trip-guests-refusal-level",
-      "trip-guests-waitlist"
-    ],
-    "a11y": ["a11y.spec.ts"]
-  },
   "/shop/[shopSlug]/trips/[id]/log": {
     "e2e": ["a11y.spec.ts", "departure-log.spec.ts"],
     "visual": ["departure-log", "departure-log-every-checkpoint"],
@@ -735,6 +679,23 @@
   "/waivers/[token]": {
     "e2e": ["a11y.spec.ts", "guardian-co-signature.spec.ts", "waivers.spec.ts"],
     "visual": ["expired-link-unknown", "waiver-active", "waiver-guardian"],
+    "a11y": ["a11y.spec.ts"]
+  },
+  "/shop/[shopSlug]/trips/[id]/check-in": {
+    "e2e": ["check-in.spec.ts", "tenant-isolation.spec.ts", "trip-admission.spec.ts"],
+    "visual": [
+      "check-in",
+      "check-in-checked",
+      "check-in-identity-held",
+      "check-in-no-show",
+      "check-in-no-show-sailed",
+      "check-in-waiver-refused"
+    ],
+    "a11y": ["a11y.spec.ts"]
+  },
+  "/shop/[shopSlug]/trips/[id]/check-in/walk-in": {
+    "e2e": ["check-in.spec.ts", "trip-admission.spec.ts"],
+    "visual": ["check-in-walk-in", "check-in-walk-in-notice", "check-in-walk-in-diver"],
     "a11y": ["a11y.spec.ts"]
   }
 }

@@ -540,8 +540,6 @@
     "stillBlocked": "El buceador sigue bloqueado. <tripLink>Abre Salida para resolver el bloqueo</tripLink> y vuelve a intentarlo."
   },
   "guests": {
-    "cancelledBadge": "Cancelada",
-    "courseSession": "Sesión de curso · {title}",
     "demandSignal": "Demanda no cubierta",
     "demandHeading": "Esta salida podría admitir más capacidad",
     "scheduleAnotherDeparture": "Programar otra salida",

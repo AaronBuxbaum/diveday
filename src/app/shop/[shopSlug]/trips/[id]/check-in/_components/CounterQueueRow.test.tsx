@@ -503,7 +503,7 @@ describe("the no-show script", () => {
     renderRow({ bookingStatus: "no_show" }, false, true, undefined, {
       salvage: {
         line: "2 divers are waiting for this seat",
-        links: [{ href: "/shop/blue-mantis/trips/trip-1/guests", label: "Open the wait list" }],
+        links: [{ href: "/shop/blue-mantis/trips/trip-1#waitlist", label: "Open the wait list" }],
         money: {
           line: "Marking someone not here does not charge or refund anything.",
           href: "/shop/blue-mantis/orders?personId=person-1",

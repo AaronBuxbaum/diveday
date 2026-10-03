@@ -58,7 +58,7 @@ stay in `AGENTS.md`.
   titled "Schedule" under `schedule/_components/ScheduleViews.tsx`, which carries `?week=` across.
   A third reading of the week is a third view there, never a page of its own.
 - **A departure is five tabs under a stage stepper** (ADR 20261001-logbook, decision 3):
-  Divers (`trips/[id]/page.tsx`, the roster), Check-in (the day counter at `check-in?trip=`),
+  Divers (`trips/[id]/page.tsx`, the roster), Check-in (`check-in/`, the counter, its walk-in form at `check-in/walk-in`),
   Boat (`manifest/`), Gear (`prep/`, the packing list) and Details (`trips/[id]?view=details`,
   the About panel). One component draws them, `_components/TripTabs.tsx`, and the stepper's
   phase (Prep, Check-in, Aboard, Back) comes from `src/lib/trip-phase.ts`, where the crew's tap
@@ -66,8 +66,9 @@ stay in `AGENTS.md`.
   `prep#{PREP_SECTION_ID}`; an About form redirects to the departure with its `form`, which opens
   Details. **A cancelled departure keeps its Boat tab and packs nothing**: the roll call is a
   record of people, the packing list an instruction about a check-in that is not happening
-  (dive-domain review 20260920). `/guests` survives for bookmarks and `print/` composes prep as a
-  component for the paper day.
+  (dive-domain review 20260920). `print/` composes prep as a component for the paper day.
+  Finding which boat an arriving diver is on is Today's arrival lookup (`?q=`), never a search on
+  the tab.
 - **The shop home** is the day's departures, then one "Needs you" list (ADR 20261001-logbook,
   decision 4): `_components/today/DaySpine.tsx` composes them, `DayStation.tsx` is a departure
   card (time, stage pill from `tripPhaseOf`, readiness bar), and every job on the day, at a boat

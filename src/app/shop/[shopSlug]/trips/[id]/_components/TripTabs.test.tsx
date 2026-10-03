@@ -46,7 +46,7 @@ describe("TripTabs", () => {
 describe("tripTabHref", () => {
   it("points each tab at the surface that does that work", () => {
     expect(tripTabHref("s", "t", "divers")).toBe("/shop/s/trips/t");
-    expect(tripTabHref("s", "t", "checkin")).toBe("/shop/s/check-in?trip=t");
+    expect(tripTabHref("s", "t", "checkin")).toBe("/shop/s/trips/t/check-in");
     expect(tripTabHref("s", "t", "boat")).toBe("/shop/s/trips/t/manifest");
     expect(tripTabHref("s", "t", "gear")).toBe("/shop/s/trips/t/prep");
     expect(tripTabHref("s", "t", "details")).toBe("/shop/s/trips/t?view=details");

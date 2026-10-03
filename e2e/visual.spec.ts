@@ -13,12 +13,14 @@ import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   bookASeatAndOpenThread,
   choosePartySize,
+  counterPath,
   createTrip,
   daysFromNow,
   disclosureSettled,
   e2eNow,
   manifestRow,
   offlineCopySaved,
+  openCounterFor,
   openDiverFileGroup,
   openManifestPerson,
   openOnThisPhone,
@@ -160,8 +162,8 @@ const VIEWPORTS = [
  *
  * `VIEWPORTS` above is the standard responsive pair, and it is the right
  * default for a marketing page, a booking page and a diver's `/ready`. It is
- * the wrong device for the surfaces a dive shop works from: `/check-in` calls
- * itself "Counter mode", and a counter device is an iPad on a stand; the
+ * the wrong device for the surfaces a dive shop works from: a departure's Check-in
+ * tab is the counter, and a counter device is an iPad on a stand; the
  * manifest is read at the rail, often through a dry case.
  *
  * 768-1024px is also where Tailwind's `sm:`/`md:` breakpoints change a
@@ -193,8 +195,8 @@ const TABLET_VIEWPORT = { width: 820, height: 1180 } as const;
  *
  * Why each one:
  *
- * - `check-in` — "Counter mode" by its own heading. The front desk is a
- *   tablet on a stand and nothing else.
+ * - `check-in` — a departure's Check-in tab, the counter. The front desk is
+ *   a tablet on a stand and nothing else.
  * - `manifest` — worked at the rail in a dry case.
  * - `schedule-builder` — a dense two-column board a shop keeps open on
  *   whatever is on the desk.
@@ -3711,6 +3713,18 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "today", scheme);
       });
 
+      // **Which boat is this diver on?** Today's arrival lookup with a match:
+      // the desk's first question, answered as one row per booking that opens
+      // that boat's Check-in tab.
+      test(`the arrival lookup renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis?q=Priya%20Sharma");
+        await page
+          .getByRole("link", { name: /check-in for Priya Sharma$/ })
+          .first()
+          .waitFor();
+        await capture(page, "today-arrival-lookup", scheme);
+      });
+
       /**
        * **The identity menu, open** — the shop's name in the chrome bar opens
        * Settings, the language choices and Sign out (`ShopIdentityMenu` with
@@ -3811,34 +3825,23 @@ for (const scheme of ["light", "dark"] as const) {
       // in the `today` capture above, and `day-spine.spec.ts` holds the
       // redirect to a single hop.
 
-      // Counter mode itself — the third surface reading the shared
-      // operational window (task 141). Only its walk-in sub-page had a
-      // baseline before, so the queue staff actually stand in front of, and
-      // the window note the three surfaces now share, went uncaptured.
+      // The counter itself: one departure's Check-in tab, reached the way the
+      // desk reaches it — Today's arrival lookup, then the diver's own row.
+      // Priya Sharma is seeded blocked on a boat inside the arrivals window,
+      // so the frame holds the instrument, a working queue with a blocked row
+      // in it, the walk-in door at its foot and the Print button in the header.
       test(`counter check-in renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/check-in");
-        await page.getByRole("heading", { name: "Counter check-in", level: 1 }).waitFor();
-        // The h1 is server-rendered, so it is on screen before hydration — and
-        // `CheckInSearch` focuses its input from a mount effect, which paints a
-        // focus ring the baseline carries. Waiting on the heading alone
-        // therefore raced the ring in or out of the frame, which is what it did
-        // on 2026-09-02. `data-hydrated` is set in that same effect, one line
-        // after the `focus()` call, so it is the signal the page itself renders
-        // for exactly this.
-        await expect(page.getByLabel("Scan or search diver")).toHaveAttribute(
-          "data-hydrated",
-          "true",
-        );
+        await openCounterFor(page, "blue-mantis", "Priya Sharma");
+        await page.getByRole("region", { name: "Check-in queue" }).waitFor();
         await capture(page, "check-in", scheme);
       });
 
       // The counter's settled state, which is now a whole reading of the
       // surface rather than one row's styling: a departure that has already
       // sailed says so beside its hours, and arrives with its receipts open
-      // under the count. Reached through its own chip, because the instrument
-      // defaults to the next boat still to sail. Reading the seeded state keeps
-      // this capture independent of the mutable check-in action while the
-      // functional spec covers the toggle itself.
+      // under the count. Reading the seeded state keeps this capture
+      // independent of the mutable check-in action while the functional spec
+      // covers the toggle itself.
       //
       // **No earned line in this frame, and that is the point of it.** Every
       // diver on this boat is `checked_in`, which used to be the whole
@@ -3853,31 +3856,10 @@ for (const scheme of ["light", "dark"] as const) {
       test(`counter check-in's settled boat renders true to the design (${scheme})`, async ({
         page,
       }) => {
-        await page.goto("/shop/blue-mantis/check-in");
-        await page
-          .getByRole("navigation", { name: "Choose a departure" })
-          .getByRole("link", { name: /Dawn Two-Tank — Molasses Reef/ })
-          .click();
-        // **The heading that names the boat in focus, not one every departure
-        // renders.** This used to wait on `Checked in — <n>`, which the
-        // *origin* page renders too: the counter always has a departure in
-        // focus and always groups its checked-in divers under that heading, so
-        // the wait was satisfied before the click had navigated anywhere and
-        // the capture could shoot the default boat or a half-swapped frame
-        // (issue #1315). The focus `h2` is the one thing on this page that
-        // differs between the two — it links to *this* departure's manifest —
-        // so it is the destination's own signal, which is the rule the debug
-        // skill states for this whole class of race.
-        await page
-          .getByRole("heading", { level: 2 })
-          .getByRole("link", { name: "Dawn Two-Tank — Molasses Reef" })
-          .waitFor();
-        // Same frame, same search box, same race — this one simply has not lost
-        // it yet.
-        await expect(page.getByLabel("Scan or search diver")).toHaveAttribute(
-          "data-hydrated",
-          "true",
-        );
+        const tripId = await seededTripId(page, "blue-mantis", SAILED_TRIP);
+        await page.goto(counterPath("blue-mantis", tripId));
+        await page.getByRole("heading", { level: 1, name: SAILED_TRIP }).waitFor();
+        await page.getByRole("heading", { name: /^Checked in — \d+$/ }).waitFor();
         await capture(page, "check-in-checked", scheme);
       });
 
@@ -3905,9 +3887,8 @@ for (const scheme of ["light", "dark"] as const) {
        * `CounterQueueRow.test.tsx` holds that half. It is also how every other
        * notice on this surface is photographed (`check-in-walk-in-notice`).
        *
-       * **`?trip=` pins the departure**, rather than trusting whichever boat
-       * the instrument focuses, and every assertion below is scoped to the
-       * row. The notice falls back to a page banner for a row that is not
+       * **The departure is the path**, and every assertion below is scoped to
+       * the row. The notice falls back to a page banner for a row that is not
        * rendered or has settled (`waiverNoticeOnRow`, `check-in/page.tsx`), so
        * an unscoped `getByText` would pass just as happily on a capture of the
        * banner — the one way this test could photograph the wrong thing and
@@ -3926,15 +3907,8 @@ for (const scheme of ["light", "dark"] as const) {
           throw new Error("seed-trouble-states found no seat for the demo's minor");
 
         await page.goto(
-          `/shop/blue-mantis/check-in?trip=${blockedMinor.tripId}` +
-            `&notice=waiver-guardian-name&bid=${blockedMinor.bookingId}`,
-        );
-        // The search box focuses itself from a mount effect, and the ring it
-        // paints is in the frame — same race, same signal, as the two captures
-        // above.
-        await expect(page.getByLabel("Scan or search diver")).toHaveAttribute(
-          "data-hydrated",
-          "true",
+          `${counterPath("blue-mantis", blockedMinor.tripId)}` +
+            `?notice=waiver-guardian-name&bid=${blockedMinor.bookingId}`,
         );
         const refusal = page.getByText("The co-signer’s name is the diver’s own", { exact: false });
         // Said once, on the row it names: the page banner and the row are
@@ -3973,8 +3947,7 @@ for (const scheme of ["light", "dark"] as const) {
        * The route seats the diver through `seatDiver` with `fromNameMatch`, so
        * this is the row the counter's own name prompt makes.
        *
-       * `?trip=` pins the departure the route seated onto rather than trusting
-       * whichever boat the instrument focuses.
+       * The counter opened is the departure the route seated onto.
        */
       test(`a held seat's identity confirm renders true to the design (${scheme})`, async ({
         page,
@@ -3987,14 +3960,7 @@ for (const scheme of ["light", "dark"] as const) {
         };
         if (!identityHeld) throw new Error("seed-trouble-states could not hold a seat");
 
-        await page.goto(`/shop/blue-mantis/check-in?trip=${identityHeld.tripId}`);
-        // The search box focuses itself from a mount effect and the ring it
-        // paints is in the frame — the same signal the neighbouring captures
-        // wait on.
-        await expect(page.getByLabel("Scan or search diver")).toHaveAttribute(
-          "data-hydrated",
-          "true",
-        );
+        await page.goto(counterPath("blue-mantis", identityHeld.tripId));
         const row = page
           .locator("article")
           .filter({ hasText: identityHeld.diver })
@@ -4059,7 +4025,7 @@ for (const scheme of ["light", "dark"] as const) {
         // Odile Marchand is seeded carded and booked on nothing
         // (`src/db/seed-cert-gates.ts`), so she clears this trip's Open Water
         // baseline and arrives blocked on the release alone.
-        await page.goto(`/shop/blue-mantis/check-in/walk-in/${tripId}`);
+        await page.goto(`${counterPath("blue-mantis", tripId)}/walk-in`);
         const findDiver = page.getByRole("searchbox", {
           name: "Search by name, email, or phone",
         });
@@ -4079,9 +4045,7 @@ for (const scheme of ["light", "dark"] as const) {
         };
         await depart(10);
 
-        // `?trip=` pins the departure rather than trusting whichever boat the
-        // instrument focuses — the same reason the refusal capture above does.
-        await page.goto(`/shop/blue-mantis/check-in?trip=${tripId}`);
+        await page.goto(counterPath("blue-mantis", tripId));
         const row = page
           .locator("article")
           .filter({ hasText: "Odile Marchand" })
@@ -4101,13 +4065,6 @@ for (const scheme of ["light", "dark"] as const) {
         // The body animates in, so `open` flipping is not the frame it is laid
         // out in — waited on the arrival's end state, never a duration.
         await disclosureSettled(door);
-        // The search box focuses itself from a mount effect and the ring it
-        // paints is in the frame: the same race, and the same signal, as the
-        // three counter captures above.
-        await expect(page.getByLabel("Scan or search diver")).toHaveAttribute(
-          "data-hydrated",
-          "true",
-        );
         await capture(page, "check-in-no-show", scheme);
 
         // **The same row once the boat is really gone.** Ninety minutes past
@@ -4116,7 +4073,7 @@ for (const scheme of ["light", "dark"] as const) {
         // costs the diver. Nothing else about the row moves, which is the
         // comparison this second frame is for.
         await depart(90);
-        await page.goto(`/shop/blue-mantis/check-in?trip=${tripId}`);
+        await page.goto(counterPath("blue-mantis", tripId));
         const sailedRow = page
           .locator("article")
           .filter({ hasText: "Odile Marchand" })
@@ -4124,10 +4081,6 @@ for (const scheme of ["light", "dark"] as const) {
         const sailedDoor = sailedRow.locator("details").filter({ hasText: "Did not dive?" });
         await sailedDoor.locator("> summary").click();
         await disclosureSettled(sailedDoor);
-        await expect(page.getByLabel("Scan or search diver")).toHaveAttribute(
-          "data-hydrated",
-          "true",
-        );
         await capture(page, "check-in-no-show-sailed", scheme);
       });
 
@@ -4267,49 +4220,49 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "staffing-week-crew-clash", scheme);
       });
 
-      // The fast walk-in flow, both halves: pick today's boat, then search or
-      // hand-enter a diver — no trip page detour, no required email at the
-      // counter. Two captures and two tests, for the same reason the
-      // Add-booking door below has two: the picker and the diver form never
-      // share a screen, so one shot would leave half the surface with no
-      // baseline at all.
-      test(`the walk-in counter renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/check-in/walk-in");
+      // The walk-in door at the foot of a boat's Check-in tab, both halves:
+      // search for a returning diver or hand-enter one — no required email at
+      // the counter. The boat is the tab's own, so there is no picker. Two
+      // captures and two tests, for the same reason the Add-booking door below
+      // has two: the walk-in form and the diver form never share a screen, so
+      // one shot would leave half the surface with no baseline at all.
+      const openWalkIn = async (page: Page, query = "") => {
+        const tripId = await openCounterFor(page, "blue-mantis", "Priya Sharma");
+        await page.goto(`${counterPath("blue-mantis", tripId)}/walk-in${query}`);
         await page.getByRole("heading", { name: "Walk-in", level: 1 }).waitFor();
+      };
+
+      test(`the walk-in counter renders true to the design (${scheme})`, async ({ page }) => {
+        await openWalkIn(page);
         await capture(page, "check-in-walk-in", scheme);
       });
 
       /**
-       * **"Took a call"** (N-22), on the branch that shows the most: the date
-       * request, whose extra block is the only part of this form that is not
-       * the caller's own three boxes. Photographed with the branch chosen from
-       * the URL rather than by clicking, so the picture cannot depend on a
-       * click landing before the shot.
+       * **"Took a call"** (N-22), folded into Add a booking as its last
+       * disclosure, on the branch that shows the most: the date request, whose
+       * extra block is the only part of this form that is not the caller's own
+       * three boxes. Opened by its `#call` hash and the branch chosen from the
+       * URL rather than by clicking, so the picture cannot depend on a click
+       * landing before the shot.
        */
       test(`the desk phone's door renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/calls?outcome=date-request");
-        await page.getByRole("heading", { name: "Took a call", level: 1 }).waitFor();
+        await page.goto("/shop/blue-mantis/bookings/new?outcome=date-request#call");
+        await page.getByRole("heading", { name: "Full boat or another day?" }).waitFor();
         await page.getByLabel("What they asked about").waitFor();
+        await page.locator("#call").scrollIntoViewIfNeeded();
         await capture(page, "took-a-call", scheme);
       });
 
-      test(`the walk-in picker explains an invalid submission (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/check-in/walk-in?notice=walkin-invalid");
-        await expect(page.getByRole("alert").filter({ hasText: "Choose a boat" })).toBeVisible();
+      test(`the walk-in form explains an invalid submission (${scheme})`, async ({ page }) => {
+        await openWalkIn(page, "?notice=walkin-invalid");
+        await expect(
+          page.getByRole("alert").filter({ hasText: "Enter a name before adding a walk-in." }),
+        ).toBeVisible();
         await capture(page, "check-in-walk-in-notice", scheme);
       });
 
       test(`the walk-in diver step renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/check-in/walk-in");
-        await page.getByRole("heading", { name: "Walk-in", level: 1 }).waitFor();
-        // Scoped to the picker's own section, the same way check-in.spec.ts
-        // reaches this step. A page-wide match on the departure's *name* is how
-        // this first landed, and a title regex loose enough to catch whatever
-        // boat the seed puts first also catches the "Divers" nav tab — which is
-        // a link, contains "Dive", and comes first in the DOM.
-        const tripSection = page.locator("section").filter({ hasText: "Which boat?" });
-        await tripSection.locator("ul li a").filter({ visible: true }).first().click();
-        await page.waitForURL(/\/check-in\/walk-in\/[^/?]+$/);
+        await openWalkIn(page);
         await page.getByRole("link", { name: "Add diver", exact: true }).click();
         await page.waitForURL(/\/divers\/new/);
         await page.getByRole("heading", { name: "Add a diver", level: 1 }).waitFor();
@@ -5475,7 +5428,7 @@ for (const scheme of ["light", "dark"] as const) {
         // (`src/db/seed-cert-gates.ts`, `src/db/seed-cast.ts`), so seating
         // them here flips no other departure's manifest, readiness or queue.
         const seat = async (name: string) => {
-          await page.goto(`/shop/blue-mantis/check-in/walk-in/${tripId}`);
+          await page.goto(`${counterPath("blue-mantis", tripId)}/walk-in`);
           const findDiver = page.getByRole("searchbox", {
             name: "Search by name, email, or phone",
           });
@@ -5489,7 +5442,7 @@ for (const scheme of ["light", "dark"] as const) {
 
         // Both cleared the same way a staffer does, so neither row wears a
         // blocker that would compete with the one chip under test.
-        await page.goto(`/shop/blue-mantis/check-in?trip=${tripId}`);
+        await page.goto(counterPath("blue-mantis", tripId));
         const counterRow = (name: string) =>
           page.locator("article").filter({ hasText: name }).filter({ visible: true });
         for (const name of ["Odile Marchand", "Hana Kobayashi"]) {

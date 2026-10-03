@@ -26,14 +26,14 @@ export type TripTabsCopy = {
   phases: Record<TripPhase, string>;
 };
 
-/** Where each tab lives. Check-in is the day's counter, opened on this departure. */
+/** Where each tab lives. Every one is a page of this departure. */
 export function tripTabHref(shopSlug: string, tripId: string, tab: TripTab): string {
   const root = `/shop/${shopSlug}/trips/${tripId}`;
   switch (tab) {
     case "divers":
       return root;
     case "checkin":
-      return `/shop/${shopSlug}/check-in?trip=${tripId}`;
+      return `${root}/check-in`;
     case "boat":
       return `${root}/manifest`;
     case "gear":

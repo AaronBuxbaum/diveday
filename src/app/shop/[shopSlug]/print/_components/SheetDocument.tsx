@@ -5,7 +5,6 @@ import { PrintButton } from "@/components/PrintButton";
 import { buttonClass } from "@/components/ui/button";
 import type { BrandDisplayFontCode } from "@/lib/brand";
 import { type PrintSheetPaper, printSheetPageRule } from "@/lib/print-sheets";
-import { shopPath } from "@/lib/staff-notices";
 import { AutoPrint } from "../../trips/[id]/_components/AutoPrint";
 
 /**
@@ -23,21 +22,22 @@ import { AutoPrint } from "../../trips/[id]/_components/AutoPrint";
  *   print redefines the colour tokens (`globals.css`'s paper-sheet block says
  *   why).
  * - **The way back and the way out**, both `print:hidden`: the counter this
- *   was opened from, and a second Print for a staffer who dismissed the dialog.
+ *   was opened from (the departure's Check-in tab), and a second Print for a staffer who dismissed the dialog.
  *
  * `AutoPrint` opens the dialog on arrival, the same as the trip and day
  * packets: the door that reached this page said Print, so the page does not
  * ask again.
  */
 export function SheetDocument({
-  shopSlug,
+  backHref,
   paper,
   brandDisplayFont,
   backLabel,
   printLabel,
   children,
 }: {
-  shopSlug: string;
+  /** The counter this sheet was printed from. */
+  backHref: string;
   paper: PrintSheetPaper;
   /** The shop's display face. */
   brandDisplayFont: BrandDisplayFontCode | null;
@@ -53,10 +53,7 @@ export function SheetDocument({
       <BrandStyle brandColor={null} brandDisplayFont={brandDisplayFont} />
       <AutoPrint />
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 print:hidden">
-        <Link
-          href={shopPath(shopSlug, "check-in")}
-          className={buttonClass({ variant: "ghost", size: "sm" })}
-        >
+        <Link href={backHref} className={buttonClass({ variant: "ghost", size: "sm" })}>
           {backLabel}
         </Link>
         <PrintButton label={printLabel} />

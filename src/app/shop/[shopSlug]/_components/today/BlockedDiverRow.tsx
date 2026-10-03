@@ -50,6 +50,8 @@ type BlockedDiverRowProps = {
   fix: BlockerFix | null;
   /** Which surface the waiver send is attributed to (analytics + revalidation). */
   surface: SendProps["surface"];
+  /** The departure the send is revalidated on, for a surface that is one. */
+  tripId?: string;
   /** The send control's words, composed by the host (`waiverSendCopy(t)`). */
   waiverCopy: SendProps["copy"];
   t: StaffTranslator;
@@ -58,7 +60,7 @@ type BlockedDiverRowProps = {
   /**
    * Put the reasons behind a native disclosure instead of leaving them
    * open. **Only the counter passes this**, and only because of who is
-   * standing there: `/shop/[shopSlug]/check-in` calls itself Counter mode —
+   * standing there: a departure's Check-in tab is Counter mode —
    * the screen on the front desk that divers queue at — so a diver's
    * outstanding payment and missing certifications were legible to whoever
    * was next in line (issue #716).
@@ -76,6 +78,7 @@ export function BlockedDiverRow({
   blockers,
   fix,
   surface,
+  tripId,
   waiverCopy,
   extra,
   collapseReasons,
@@ -106,6 +109,7 @@ export function BlockedDiverRow({
     fix.sendsWaiver ? (
       <WaiverSendControl
         surface={surface}
+        tripId={tripId}
         bookingIds={[fix.bookingId]}
         label={fix.label}
         // The control's default alignment is the Today queue's right-hand

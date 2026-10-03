@@ -51,7 +51,7 @@ export function QueueRowButton({
       // walk-in door start. Both halves are chosen together, in
       // `CheckInActionForm`'s `ROW_ROOM`, because a row with an act after
       // this tap takes back only the start side.
-      className={`flex min-h-14 w-full touch-manipulation items-center justify-between gap-4 py-3 text-left transition-[background-color,transform] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 ${className}`}
+      className={`flex min-h-14 w-full touch-manipulation items-center justify-between gap-4 py-3 text-start transition-[background-color,transform] active:scale-[0.99] disabled:cursor-wait disabled:opacity-70 ${className}`}
     >
       <span className="min-w-0">{children}</span>
       {Children.toArray(slot).length > 0 ? (

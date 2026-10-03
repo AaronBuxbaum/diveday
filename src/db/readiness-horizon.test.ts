@@ -4,7 +4,7 @@ import { nowDate } from "@/lib/clock";
 import { arrivalsWindow, operationalWindow, withinWindow } from "@/lib/operational-window";
 import { seededShopContext } from "@/test/db";
 import { countBlockedDivers, inHorizonReadiness } from "./blockers";
-import { listCheckInQueue, listWalkInTrips } from "./check-in";
+import { listCheckInQueue } from "./check-in";
 import { getTodayWork } from "./today";
 
 /**
@@ -101,13 +101,5 @@ describe("one operational window across the readiness surfaces", () => {
     for (const row of upcomingBlocked) {
       expect(onNotReady.has(`${row.tripId}:${row.personId}`)).toBe(true);
     }
-  });
-
-  it("offers walk-ins only trips the counter queue itself reads", async () => {
-    const { db, shop } = await seededShopContext();
-    const arrivals = arrivalsWindow(NOW);
-    const options = await listWalkInTrips(db, shop.id, NOW);
-    expect(options.length).toBeGreaterThan(0);
-    for (const option of options) expect(withinWindow(arrivals, option.startsAt)).toBe(true);
   });
 });

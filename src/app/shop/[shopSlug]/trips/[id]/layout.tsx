@@ -23,8 +23,7 @@ export const instant = false;
  * Boat Mode is deliberately not owned here. It is a manifest-only working
  * surface, so its palette, sensor detector, and control live at the bottom of
  * `manifest/page.tsx`; Trip and Prep keep the ordinary staff treatment even
- * when a device has a stored Boat Mode preference. `/guests` remains a
- * compatibility route for old links, but its roster is now the Trip body.
+ * when a device has a stored Boat Mode preference.
  */
 export default async function TripLayout({
   children,

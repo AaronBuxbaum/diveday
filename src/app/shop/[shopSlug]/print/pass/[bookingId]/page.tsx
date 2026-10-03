@@ -9,6 +9,7 @@ import { formatDateWithYear, formatTime } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
 import { PAPER_PASS_PAPER, passCodePayload, storefrontAddress } from "@/lib/print-sheets";
 import { requireShopSurface } from "@/lib/session";
+import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { PaperSheet, SheetMark } from "../../_components/PaperSheet";
 import { SheetCode } from "../../_components/SheetCode";
@@ -67,10 +68,10 @@ export default async function PaperPassPage({
 
   return (
     <SheetDocument
-      shopSlug={shopSlug}
+      backHref={shopPath(shopSlug, "trips", booking.tripId, "check-in")}
       paper={PAPER_PASS_PAPER}
       brandDisplayFont={shop.brandDisplayFont}
-      backLabel={t("checkIn.title")}
+      backLabel={t("trips.tabs.checkin")}
       printLabel={t("print.sheet.door")}
     >
       <PaperSheet

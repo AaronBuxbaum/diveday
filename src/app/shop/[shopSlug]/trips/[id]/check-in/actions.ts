@@ -16,38 +16,13 @@ import { uuidParam } from "@/lib/uuid";
 import { counterQueuePath } from "./focus";
 
 /**
- * **The search the staffer found this diver by, as a `noticeUrl` extra.**
- *
- * Every refusal on this surface navigates — they have no row state to land on,
- * since `checkInBooking`'s `not_ready` leaves the row exactly as it was — and
- * every one of them is a diver standing at the desk, which is the case the
- * search was open for. Landing back with an empty box put the row that was
- * under the finger off the screen (issue #1803).
- *
- * **It goes on the redirect and never on the path.** The same string,
- * `counterQueuePath(shopSlug, focusTripId)`, is also the `revalidatePath`
- * argument, and a search string does not belong in a cache key. `noticeUrl`
- * percent-encodes its extras, so nothing here is concatenated by hand.
- *
- * `undefined` rather than `""` for an empty search: `noticeUrl` drops an
- * undefined extra instead of writing an empty param, so a staffer who searched
- * nothing lands on the URL they would have had before.
- */
-function foundBy(query: string | null): { q?: string } {
-  return { q: query?.trim() || undefined };
-}
-
-/**
  * **Every refusal lands back on the boat the staffer was working.**
  *
- * The counter is one instrument pointed at one departure (ADR
- * 20260827-clearwater-surface-language, decision 9), and the focus lives in
- * the URL as `?trip=`. So the path these three actions redirect to has to
- * carry it: without it a `not-ready` refusal re-points the instrument at the
- * morning boat while the diver it is about is standing at the desk for the
- * afternoon one. `counterQueuePath` (./focus.ts) is the one place that path is
- * built — including its `shopPath` escaping, since `shopSlug` reaches an
- * action as an ordinary caller-supplied argument.
+ * The counter is one departure's Check-in tab (ADR 20261001-logbook), bound
+ * to that departure by the page. `counterQueuePath` (./focus.ts) is the one
+ * place the path back is built — including its `shopPath` escaping, since
+ * `shopSlug` and `tripId` reach an action as ordinary caller-supplied
+ * arguments.
  *
  * **And the `bookingId` every one of them reads is shape-checked before it is
  * spent, not merely checked for empty** (`uuidParam`, src/lib/uuid.ts). These
@@ -60,16 +35,13 @@ function foundBy(query: string | null): { q?: string } {
  */
 export async function checkInAction(
   shopSlug: string,
-  focusTripId: string | null,
-  /** The queue's live search, bound by the page — see `found` below. */
-  query: string | null,
+  tripId: string,
   formData: FormData,
 ): Promise<{ ok: true }> {
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
-  const back = counterQueuePath(shopSlug, focusTripId);
-  const found = foundBy(query);
-  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid", found));
+  const back = counterQueuePath(shopSlug, tripId);
+  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
 
   const outcome = await checkInBooking(await getDb(), {
     shopId: session.user.shopId,
@@ -98,13 +70,13 @@ export async function checkInAction(
   // `not_ready` carries the diver's booking/trip so the notice can link
   // straight to their guest row instead of just naming the problem.
   if (outcome.reason === "not_ready" && outcome.tripId) {
-    redirect(noticeUrl(back, "not-ready", { bid: bookingId, tid: outcome.tripId, ...found }));
+    redirect(noticeUrl(back, "not-ready", { bid: bookingId, tid: outcome.tripId }));
   }
   // `outcome.reason` is a domain code in the domain's own casing; `noticeUrl`
   // encodes it and normalises it to the one spelling the queue's notice map
   // holds. Interpolating it raw was how a value carrying `&` or `#` could
   // append query params of its own.
-  redirect(noticeUrl(back, outcome.reason, found));
+  redirect(noticeUrl(back, outcome.reason));
 }
 
 /**
@@ -115,16 +87,13 @@ export async function checkInAction(
  */
 export async function undoCheckInAction(
   shopSlug: string,
-  focusTripId: string | null,
-  /** The queue's live search, bound by the page — see `found` below. */
-  query: string | null,
+  tripId: string,
   formData: FormData,
 ): Promise<{ ok: true }> {
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
-  const back = counterQueuePath(shopSlug, focusTripId);
-  const found = foundBy(query);
-  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid", found));
+  const back = counterQueuePath(shopSlug, tripId);
+  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
 
   const outcome = await undoCheckInBooking(await getDb(), {
     shopId: session.user.shopId,
@@ -139,9 +108,7 @@ export async function undoCheckInAction(
     return { ok: true };
   }
   revalidatePath(back);
-  redirect(
-    noticeUrl(back, outcome.reason === "not_checked_in" ? "not-bookable" : outcome.reason, found),
-  );
+  redirect(noticeUrl(back, outcome.reason === "not_checked_in" ? "not-bookable" : outcome.reason));
 }
 
 /**
@@ -161,16 +128,13 @@ export async function undoCheckInAction(
  */
 export async function markNoShowAction(
   shopSlug: string,
-  focusTripId: string | null,
-  /** The queue's live search, bound by the page — see `found` below. */
-  query: string | null,
+  tripId: string,
   formData: FormData,
 ): Promise<void> {
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
-  const back = counterQueuePath(shopSlug, focusTripId);
-  const found = foundBy(query);
-  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid", found));
+  const back = counterQueuePath(shopSlug, tripId);
+  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
 
   const outcome = await markBookingNoShow(await getDb(), {
     shopId: session.user.shopId,
@@ -185,7 +149,7 @@ export async function markNoShowAction(
     revalidatePath(back);
     return;
   }
-  revalidateAndRedirect(back, noticeUrl(back, `no_show_${outcome.reason}`, found));
+  revalidateAndRedirect(back, noticeUrl(back, `no_show_${outcome.reason}`));
 }
 
 /**
@@ -199,16 +163,13 @@ export async function markNoShowAction(
  */
 export async function undoNoShowAction(
   shopSlug: string,
-  focusTripId: string | null,
-  /** The queue's live search, bound by the page — see `found` below. */
-  query: string | null,
+  tripId: string,
   formData: FormData,
 ): Promise<void> {
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
-  const back = counterQueuePath(shopSlug, focusTripId);
-  const found = foundBy(query);
-  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid", found));
+  const back = counterQueuePath(shopSlug, tripId);
+  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
 
   const outcome = await undoBookingNoShow(await getDb(), {
     shopId: session.user.shopId,
@@ -219,7 +180,7 @@ export async function undoNoShowAction(
     revalidatePath(back);
     return;
   }
-  revalidateAndRedirect(back, noticeUrl(back, `no_show_${outcome.reason}`, found));
+  revalidateAndRedirect(back, noticeUrl(back, `no_show_${outcome.reason}`));
 }
 
 /**
@@ -244,13 +205,13 @@ export async function undoNoShowAction(
  */
 export async function markWaiverInPersonFromCheckIn(
   shopSlug: string,
-  focusTripId: string | null,
+  tripId: string,
   _state: PaperWaiverFormState,
   formData: FormData,
 ): Promise<PaperWaiverFormState> {
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
-  const back = counterQueuePath(shopSlug, focusTripId);
+  const back = counterQueuePath(shopSlug, tripId);
   // Not a seat this queue could be showing, so not a submission its form made.
   if (!uuidParam(bookingId)) return paperWaiverRefused("booking_not_found", formData);
 
@@ -267,9 +228,8 @@ export async function markWaiverInPersonFromCheckIn(
   });
   // Landing it in place, like the two above: the diver is standing at the
   // counter, and the answer they are waiting for is their own row losing its
-  // "Waiver has not been sent" blocker and offering check-in. Redirecting for
-  // a success banner threw away the search that found them, so the next act —
-  // actually checking them in — began by typing their name again.
+  // "Waiver has not been sent" blocker and offering check-in, right where the
+  // paper control was.
   if (outcome.ok) {
     revalidatePath(back);
     return PAPER_WAIVER_IDLE;
@@ -301,10 +261,7 @@ export async function markWaiverInPersonFromCheckIn(
  *
  * **Success answers in place, like every other tap on this surface.** The row
  * loses its confirm control and its identity blocker under the finger that did
- * it, and a redirect would throw away the search that found the diver — the
- * exact regression issue #1674 removed from the paper-waiver door two controls
- * over, on this same row. `counterQueuePath` carries the focused departure and
- * nothing else, so there is no landing that keeps a `?q=`.
+ * it.
  *
  * The refusal does navigate, because it has no row state to land on: the seat
  * was not held when the tap arrived — a double tap, or a row another staffer
@@ -312,28 +269,16 @@ export async function markWaiverInPersonFromCheckIn(
  * identity blocker and no confirm control, and a `useActionState` answer would
  * have nowhere to land. (For a booking this shop does not hold, the row is not
  * on the page at all.)
- *
- * **So the refusal carries the search with it** (`dive-domain-expert` review of
- * issue #1696). `counterQueuePath` holds the focused departure and nothing
- * else, and the branch that navigates is precisely the one with the diver still
- * at the desk — landing it on the bare queue threw away the `?q=` that found
- * them, which is the regression issue #1674 removed from the paper-waiver door
- * two controls along this row. Passed as a `noticeUrl` parameter, so it is
- * percent-encoded at the one door that builds these URLs rather than
- * concatenated here.
  */
 export async function confirmIdentityFromCheckIn(
   shopSlug: string,
-  focusTripId: string | null,
-  /** The queue's live search, bound by the page — see the refusal below. */
-  query: string | null,
+  tripId: string,
   formData: FormData,
 ): Promise<void> {
   const session = await requireStaffSession();
   const bookingId = String(formData.get("bookingId") ?? "");
-  const back = counterQueuePath(shopSlug, focusTripId);
-  const found = foundBy(query);
-  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid", found));
+  const back = counterQueuePath(shopSlug, tripId);
+  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
 
   const confirmed = await confirmBookingIdentity(await getDb(), {
     shopId: session.user.shopId,
@@ -347,5 +292,5 @@ export async function confirmIdentityFromCheckIn(
     revalidatePath(back);
     return;
   }
-  revalidateAndRedirect(back, noticeUrl(back, "identity-not-held", found));
+  revalidateAndRedirect(back, noticeUrl(back, "identity-not-held"));
 }

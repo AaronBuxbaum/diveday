@@ -261,10 +261,10 @@ describe("what each consumer derives", () => {
       visibleStaffDestinations(owner)
         .filter((destination) => destination.section === section)
         .map((destination) => destination.id);
-    expect(bySection("today")).toEqual(["today", "checkIn", "walkIn"]);
+    expect(bySection("today")).toEqual(["today"]);
     expect(bySection("schedule")).toEqual(["board", "addBooking", "staffing"]);
     expect(bySection("divers")).toEqual(["divers"]);
-    expect(bySection("inbox")).toEqual(["inbox", "requests", "tookACall", "reviews"]);
+    expect(bySection("inbox")).toEqual(["inbox", "requests", "reviews"]);
     expect(bySection("money")).toEqual(["orders", "reports", "promoCodes"]);
     expect(bySection("courses")).toEqual(["courses"]);
     expect(bySection("gear")).toEqual(["gear"]);
@@ -303,10 +303,6 @@ describe("what each consumer derives", () => {
   it("gives the daily crew Requests beside the Inbox", () => {
     expect(visibleStaffDestinations(crew).map((d) => d.id)).toContain("requests");
     expect(staffPaletteDestinations(crew).map((d) => d.id)).toContain("requests");
-    // The one that is not a nav question: `/calls` is ungated and its
-    // date-request outcome redirects here, so a captain who wrote a caller down
-    // used to be sent straight into a refusal for the row they had just made.
-    expect(visibleStaffDestinations(crew).map((d) => d.id)).toContain("requests");
   });
 
   it("puts Settings last in the whole registry, so no consumer can list it mid-menu", () => {
@@ -427,10 +423,9 @@ describe("currentStaffDestination and the section it lights", () => {
     expect(current(`${root}/settings/export`)).toBe("settings");
   });
 
-  it("lets the walk-in counter claim its own path, because the section is Today either way", () => {
-    expect(current(`${root}/check-in/walk-in`)).toBe("walkIn");
-    expect(section(`${root}/check-in/walk-in`)).toBe("today");
-    expect(section(`${root}/check-in`)).toBe("today");
+  it("files a boat's Check-in tab and its walk-in door under the boat's own section", () => {
+    expect(section(`${root}/trips/42/check-in`)).toBe("schedule");
+    expect(section(`${root}/trips/42/check-in/walk-in`)).toBe("schedule");
   });
 
   it("lights a borrowed claim for a page with no destination of its own", () => {
@@ -462,7 +457,7 @@ describe("currentStaffDestination and the section it lights", () => {
   });
 
   it("lights Inbox for everything a diver says to the shop", () => {
-    for (const suffix of ["/inbox", "/requests", "/calls", "/reviews"]) {
+    for (const suffix of ["/inbox", "/requests", "/reviews"]) {
       expect(section(`${root}${suffix}`), suffix).toBe("inbox");
     }
   });
@@ -500,7 +495,7 @@ describe("the calendar subscription survives the settings gate", () => {
 
 describe("one destination by id", () => {
   it("resolves, and throws on an id the registry lost", () => {
-    expect(staffDestination("checkIn").suffix).toBe("/check-in");
+    expect(staffDestination("inbox").suffix).toBe("/inbox");
     expect(() => staffDestination("gone" as StaffDestinationId)).toThrow(/unregistered/);
   });
 });

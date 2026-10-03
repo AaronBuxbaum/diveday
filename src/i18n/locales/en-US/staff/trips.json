@@ -540,8 +540,6 @@
     "stillBlocked": "Diver is still blocked. <tripLink>Open Trip to resolve the blocker</tripLink>, then try again."
   },
   "guests": {
-    "cancelledBadge": "Cancelled",
-    "courseSession": "Course session · {title}",
     "demandSignal": "Unmet demand",
     "demandHeading": "This departure could support more capacity",
     "scheduleAnotherDeparture": "Schedule another departure",

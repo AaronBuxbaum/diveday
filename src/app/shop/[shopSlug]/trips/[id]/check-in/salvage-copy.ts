@@ -42,14 +42,14 @@ export function noShowSalvageCopy(input: {
   };
   if (offer.kind === "waitlist") {
     return {
-      // The shipped invite control lives on the departure's guest list with its
+      // The shipped invite control lives on the departure's Divers tab with its
       // held send, its undo window and its copyable fallback
       // (`WaitlistSection.tsx`). The counter points at it rather than growing a
       // second sender beside it.
       line: t("checkIn.noShow.waiting", { count: offer.count }),
       links: [
         {
-          href: `/shop/${shopSlug}/trips/${tripId}/guests`,
+          href: `/shop/${shopSlug}/trips/${tripId}#waitlist`,
           label: t("checkIn.noShow.waitingDoor"),
         },
       ],

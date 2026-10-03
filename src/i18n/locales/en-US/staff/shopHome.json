@@ -70,7 +70,7 @@
       "crew": {
         "title": "Checking divers in as they arrive",
         "desc": "Check-in shows who’s arrived, who’s still missing paperwork, and what to do about it.",
-        "tryThis": "Open Check-in to check divers in as they arrive."
+        "tryThis": "Open the next boat’s Check-in tab to check divers in as they arrive."
       }
     }
   },
@@ -185,5 +185,12 @@
     "needsYouLabel": "Needs you"
   },
   "quietAddDeparture": "Add a departure",
-  "quietNextDepartureLabel": "Next departure"
+  "quietNextDepartureLabel": "Next departure",
+  "arrivals": {
+    "label": "Find an arriving diver",
+    "placeholder": "Name, email, or booking ID",
+    "none": "Nobody arriving matches “{query}”.",
+    "resultsFor": "Arriving divers matching “{query}”",
+    "open": "Open {trip} check-in for {name}"
+  }
 }

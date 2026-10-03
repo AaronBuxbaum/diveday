@@ -227,12 +227,9 @@
   "shopNavLinks": {
     "badgeBlocked": "{count, plural, one {# diver blocked} other {# divers blocked}}",
     "today": "Today",
-    "checkIn": "Check-in",
-    "walkIn": "Walk-in",
     "divers": "Divers",
     "board": "Schedule",
     "addBooking": "Add a booking",
-    "tookACall": "Took a call",
     "staffing": "Crew schedule",
     "diveSites": "Dive sites",
     "gear": "Gear",

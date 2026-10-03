@@ -227,12 +227,9 @@
   "shopNavLinks": {
     "badgeBlocked": "{count, plural, one {# buceador bloqueado} other {# buceadores bloqueados}}",
     "today": "Hoy",
-    "checkIn": "Registro",
-    "walkIn": "Walk-in",
     "divers": "Buceadores",
     "board": "Agenda",
     "addBooking": "Añadir una reserva",
-    "tookACall": "Llamada recibida",
     "staffing": "Turnos de la tripulación",
     "diveSites": "Sitios de buceo",
     "gear": "Equipo",

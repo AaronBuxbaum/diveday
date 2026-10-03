@@ -126,8 +126,8 @@ export async function releaseHeldSendAction(id: string): Promise<ReleasedSend> {
     const path =
       payload.surface === "today"
         ? shopPath(shop.slug)
-        : payload.surface === "check_in"
-          ? shopPath(shop.slug, "check-in")
+        : payload.surface === "check_in" && payload.tripId
+          ? shopPath(shop.slug, "trips", payload.tripId, "check-in")
           : payload.surface === "roster" && payload.tripId
             ? shopPath(shop.slug, "trips", payload.tripId)
             : shopPath(shop.slug, "divers", ...(payload.personId ? [payload.personId] : []));

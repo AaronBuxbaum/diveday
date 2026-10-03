@@ -10,11 +10,10 @@ import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTimeRange } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
-import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { noticeFromParam, noticeRole, shopPath } from "@/lib/staff-notices";
 import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
 import { uuidParam } from "@/lib/uuid";
-import { SeatDiverPanel } from "../../../_components/SeatDiverPanel";
+import { SeatDiverPanel } from "../../../../_components/SeatDiverPanel";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -60,7 +59,7 @@ const NOTICE_KEYS: Record<string, { tone: "danger" | "neutral"; key: StaffMessag
 };
 
 /**
- * The fast counter path, step two: who is taking the seat?
+ * A walk-in for this departure: who is taking the seat?
  *
  * Either pick a returning diver by name/email/phone or hand-enter a fresh one —
  * email optional, the crew can collect it later. The second half is
@@ -69,15 +68,15 @@ const NOTICE_KEYS: Record<string, { tone: "danger" | "neutral"; key: StaffMessag
  * and the email rule they differ on is read there from `SEAT_SURFACES["walk-in"]`
  * rather than hand-copied into a `required` attribute.
  *
- * A seated diver lands on the check-in queue — the next thing to work. A
- * *refused* one lands right back here, boat still chosen, which is what the
- * departure being a path segment buys.
+ * A seated diver lands on this departure's Check-in tab — the next thing to
+ * work. A *refused* one lands right back here, which is what the departure
+ * being a path segment buys.
  */
 export default async function WalkInDiverPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ shopSlug: string; tripId: string }>;
+  params: Promise<{ shopSlug: string; id: string }>;
   searchParams: Promise<{
     diverq?: string;
     notice?: string;
@@ -89,7 +88,7 @@ export default async function WalkInDiverPage({
   }>;
 }) {
   await connection(); // live seat counts — render per request, never a build-time shell
-  const { shopSlug, tripId } = await params;
+  const { shopSlug, id: tripId } = await params;
   // An unparseable id names no row. Guarded here rather than in the query
   // helper: comparing junk against a `uuid` column raises in Postgres, so
   // without this the page 500s where its own notFound() belongs.
@@ -109,17 +108,14 @@ export default async function WalkInDiverPage({
     notice === "walkin-trip-prerequisite"
       ? verifyTripAdmissionGate(gate, { kind: "trip", id: tripId })
       : null;
-  const picker = shopPath(shopSlug, "check-in", "walk-in");
+  const counter = shopPath(shopSlug, "trips", trip.id, "check-in");
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
-      {/* The way up is the queue, not the picker one step behind: the
-          departure this seats into is already on screen below, and
-          `SelectedTripCard` carries the change-of-mind door on the object it
-          is about. Principle 10 wants one link up, never a trail. */}
+    <div className="max-w-2xl">
+      {/* The way up is the boat's own counter, which is where this door is. */}
       <ShopPageHeader
-        eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.checkIn)}
-        eyebrowHref={shopPath(shopSlug, "check-in")}
+        eyebrow={t("trips.tabs.checkin")}
+        eyebrowHref={counter}
         title={t("checkIn.walkIn.title")}
         description={t("checkIn.walkIn.description")}
       />
@@ -139,8 +135,6 @@ export default async function WalkInDiverPage({
           booked: trip.booked,
           capacity: trip.capacity,
         })}
-        changeHref={picker}
-        changeLabel={t("checkIn.walkIn.changeTrip")}
       />
 
       <SeatDiverPanel
@@ -177,6 +171,6 @@ export default async function WalkInDiverPage({
           confirmMatchesSubmit: t("divers.page.confirmMatchesSubmit"),
         }}
       />
-    </main>
+    </div>
   );
 }

@@ -662,6 +662,7 @@ export function CounterQueueRow({
           first one in the summary (#759, #890). */}
       <BlockedDiverRow
         surface="check_in"
+        tripId={row.tripId}
         waiverCopy={waiverSendCopy(t)}
         blockers={row.readiness.blockers}
         // Nothing to point at when the hold *is* the blocker: the attestation

@@ -11,11 +11,10 @@ const copy = {
   outcome: {
     "date-request": "A day that isn’t on the board",
     waitlist: "A seat on a full departure",
-    booking: "A seat on a departure with room",
   },
   departureLabel: "Which departure",
   departureUnchosen: "Choose a departure",
-  noDepartures: "There is nothing on the board to put anyone on.",
+  noDepartures: "No departure is full, so there is no wait list to join.",
   interestLabel: "What they asked about",
   interestPlaceholder: "Two-tank reef in March",
   preferredDateLabel: "Day they want",
@@ -25,8 +24,8 @@ const copy = {
 };
 
 const departures: CallDeparture[] = [
-  { id: "11111111-1111-4111-8111-111111111111", label: "Reef morning · 8:00 AM · 4 seats left" },
-  { id: "22222222-2222-4222-8222-222222222222", label: "Wreck afternoon · 1:00 PM · full" },
+  { id: "11111111-1111-4111-8111-111111111111", label: "Reef morning · Mar 6 · 8:00 AM" },
+  { id: "22222222-2222-4222-8222-222222222222", label: "Wreck afternoon · Mar 6 · 1:00 PM" },
 ];
 
 function renderInForm(node: React.ReactNode) {
@@ -53,15 +52,15 @@ describe("TookACallFields", () => {
    * The inactive branches stay in the DOM as `disabled` fieldsets, so what
    * proves the reveal is what the form *submits*, not what is on screen.
    */
-  it("submits the departure once a seat is what the caller wanted, and never the request fields", () => {
+  it("submits the departure once a full boat is what the caller wanted, and never the request fields", () => {
     const form = renderInForm(<TookACallFields copy={copy} departures={departures} />);
-    fireEvent.click(screen.getByLabelText(copy.outcome.booking));
+    fireEvent.click(screen.getByLabelText(copy.outcome.waitlist));
     fireEvent.change(screen.getByLabelText(copy.departureLabel), {
       target: { value: departures[1]?.id },
     });
 
     expect(submitted(form)).toEqual({
-      outcome: "booking",
+      outcome: "waitlist",
       tripId: "22222222-2222-4222-8222-222222222222",
     });
   });
@@ -97,7 +96,7 @@ describe("TookACallFields", () => {
     });
   });
 
-  it("says so rather than offering an empty picker when the board holds nothing", () => {
+  it("says so rather than offering an empty picker when no boat is full", () => {
     renderInForm(<TookACallFields copy={copy} departures={[]} />);
     fireEvent.click(screen.getByLabelText(copy.outcome.waitlist));
 

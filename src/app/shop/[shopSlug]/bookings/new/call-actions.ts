@@ -2,7 +2,6 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { seatNewDiverAction } from "@/app/actions/seat-diver";
 import { addToWaitlistAction } from "@/app/shop/[shopSlug]/trips/[id]/actions";
 import { recordCourseInquiry } from "@/db/course-inquiries";
 import { discardFormDraft } from "@/db/form-drafts";
@@ -14,25 +13,16 @@ import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { type CallOutcome, type CallRefusal, callRefusal, isCallOutcome } from "@/lib/took-a-call";
 
 /**
- * **"Took a call"** (N-22): one submission from the desk phone, routed to
- * whichever of three existing writers the call turned out to be about.
+ * **A call with no seat to book** (N-22): one submission from the desk phone
+ * at the foot of Add a booking, routed to whichever of two existing writers
+ * the call turned out to be about.
  *
  * The routing is the whole feature. Nothing new is written here: a date request
- * is `recordCourseInquiry`, a wait-list entry is the trip page's own
- * `addToWaitlistAction`, and a booking is the shared `seatNewDiverAction` on the
- * `new-booking` surface — the same door the global "Add a booking" form
- * submits to, so a phone booking owes the identical consequences (the waiver
- * send, the activity trail, the duplicate-name confirmation, the analytics
- * event). A fourth path to a booking is exactly what `src/db/seat-diver.ts`
- * exists to prevent.
- *
- * Delegating rather than re-implementing also decides where a *refused* call
- * lands, correctly and for free: a booking refused for a full boat comes back
- * on `bookings/new/<tripId>` with the boat still chosen and the refusal in that
- * page's own words, and a wait-list join on a departure that turns out to have
- * a seat comes back on the trip page saying so. Only the refusals this form can
- * see before any of them runs — a caller with no name, no way to ring back, or
- * no answer to what they wanted — land back here.
+ * is `recordCourseInquiry`, and a wait-list entry is the trip page's own
+ * `addToWaitlistAction`, so a wait-list join on a departure that turns out to
+ * have a seat comes back on the trip page saying so. Only the refusals this
+ * form can see before either runs — a caller with no name, no way to ring
+ * back, or no answer to what they wanted — land back on Add a booking.
  */
 
 /** A `<input type="date">` value, refused unless it is a date that exists. */
@@ -74,7 +64,7 @@ const REFUSAL_NOTICE: Record<CallRefusal, string> = {
  * themselves.
  */
 function refuse(shopSlug: string, notice: string, outcome: CallOutcome | null): never {
-  const back = shopPath(shopSlug, "calls");
+  const back = shopPath(shopSlug, "bookings", "new");
   // The chosen branch rides back so the form reopens on it: a refusal that
   // collapsed the caller's answer to "nothing chosen" would make the staffer
   // re-read three options with somebody on the line.
@@ -129,19 +119,11 @@ export async function tookACallAction(shopSlug: string, formData: FormData): Pro
     revalidateAndRedirect(requests, noticeUrl(requests, "call-logged"));
   }
 
-  // The two outcomes that name a departure hand off to the doors that already
-  // own them; both redirect, so neither returns.
+  // The wait list hands off to the trip page's own writer, which redirects.
   const handoff = new FormData();
   handoff.set("fullName", fullName);
   if (email) handoff.set("email", email);
   if (phone) handoff.set("phone", phone);
-
-  if (outcome === "waitlist") {
-    // `tripId` is proved present by `callRefusal` above for this outcome.
-    await addToWaitlistAction(shopSlug, tripId as string, handoff);
-    return;
-  }
-
-  handoff.set("tripId", tripId as string);
-  await seatNewDiverAction("new-booking", shopSlug, handoff);
+  // `tripId` is proved present by `callRefusal` above for this outcome.
+  await addToWaitlistAction(shopSlug, tripId as string, handoff);
 }

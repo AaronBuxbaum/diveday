@@ -1,20 +1,13 @@
 {
-  "title": "Check-in de mostrador",
   "queueAriaLabel": "Cola de check-in",
-  "searchResultsFor": "Resultados de búsqueda para “{query}”.",
-  "diverCount": "{count, plural, one {# buceador} other {# buceadores}}",
-  "emptyTitle": "Nadie coincide con ese escaneo",
-  "emptyDescription": "Prueba con el nombre, el correo o el ID de reserva completo del buceador.",
-  "emptyClearSearch": "Ver a todos los que llegan",
-  "emptyQuietTitle": "Todavía no hay nadie en el mostrador",
-  "emptyQuietDescription": "Los buceadores aparecen aquí cerca de la hora de su salida.",
-  "emptyViewSchedule": "Ver el calendario",
-  "emptyNoTripsTitle": "No hay salidas en el calendario",
-  "emptyScheduleDeparture": "Programar una salida",
+  "emptyBoatTitle": "Todavía no hay nadie reservado en este barco",
+  "closed": {
+    "notYet": "El registro abre el día antes de que salga este barco.",
+    "gone": "Este barco salió hace demasiado para registrar a nadie.",
+    "cancelled": "Esta salida está cancelada."
+  },
   "clearedTitle": "Todos registrados",
   "boardedBadge": "Embarcado",
-  "departuresNavLabel": "Elige una salida",
-  "departed": "Ya salió",
   "instrument": {
     "hereOf": "<figure>{here}</figure> de {expected} aquí",
     "toCome": "{count} por llegar",
@@ -73,15 +66,6 @@
   "undoAriaLabel": "Deshacer el check-in de {name}",
   "undoing": "Deshaciendo…",
   "walkInAction": "Añadir un walk-in",
-  "otherDiversHeading": "Buceadores conocidos",
-  "otherDiversDescription": "Personas del registro del centro que no están reservadas en las salidas de hoy",
-  "addToDepartureFor": "Añadir a {departure}",
-  "addingToDeparture": "Añadiendo…",
-  "addWalkInAction": "Añadir a “{query}” sin reserva",
-  "search": {
-    "label": "Escanear o buscar buceador",
-    "placeholder": "Nombre, correo o ID de reserva"
-  },
   "notice": {
     "notReady": "La preparación ha cambiado. <tripLink>Abre Salida para resolver el bloqueo</tripLink> y vuelve a intentarlo.",
     "notBookable": "Esa reserva ya no está disponible para el check-in.",
@@ -104,7 +88,7 @@
     "walkinCourseMinAge": "Ese buceador está por debajo de la edad mínima del curso el día que se imparte, según la fecha de nacimiento registrada.",
     "walkinTripPrerequisite": "Las titulaciones de ese buceador no alcanzan lo que exigen este barco y sus sitios de buceo.",
     "walkinUnavailable": "Ese buceador no puede tomar una plaza en este barco ahora mismo.",
-    "walkinInvalid": "Elige un barco y escribe un nombre antes de añadir un walk-in.",
+    "walkinInvalid": "Escribe un nombre antes de añadir un walk-in.",
     "noShowAlreadyBoarded": "La tripulación embarcó a ese buceador, así que no se puede marcar que no buceó. Abre el manifiesto de la salida.",
     "noShowAlreadyMissingAfterDive": "La tripulación registró que ese buceador no volvió a bordo después de una inmersión. Llama al barco y abre el manifiesto de la salida.",
     "identityNotHeld": "Esa plaza ya no está retenida. Puede que alguien más ya la haya confirmado.",
@@ -112,7 +96,7 @@
     "noShowNotBooked": "Esa reserva se canceló, así que no hay nada que marcar.",
     "noShowTripCancelled": "Esa salida está cancelada, así que su lista de invitados no puede cambiar.",
     "noShowBeforeDeparture": "Ese barco todavía no ha salido, así que nadie lo ha perdido. Inténtalo de nuevo cuando salga.",
-    "noShowWindowClosed": "Esa salida queda demasiado atrás para el mostrador. Cambia la reserva desde la lista de invitados de la salida.",
+    "noShowWindowClosed": "Esa salida queda demasiado atrás para el mostrador. Cambia la reserva desde la pestaña Buceadores de la salida.",
     "noShowNotMarked": "Ese buceador no está marcado como que no vino.",
     "noShowTripFull": "La plaza liberada ya se ocupó, así que ese buceador no puede volver a esta salida.",
     "noShowCourseRatioFull": "Esa sesión está en su límite de ratio instructor-alumno, así que ese buceador no puede volver a ella. Asigna otro instructor primero."
@@ -120,17 +104,9 @@
   "walkIn": {
     "title": "Walk-in",
     "description": "No hace falta correo en el mostrador.",
-    "tripLabel": "¿Qué barco?",
-    "tripEmpty": "No sale ningún barco en el próximo día y medio.",
-    "tripEmptyAction": "Ver el calendario",
-    "changeTrip": "¿No es este? Elige otro barco.",
+    "tripLabel": "Barco",
     "addToBoat": "Añadir al barco",
-    "addPersonAriaLabel": "Añadir a {name} a este barco",
-    "handEntryDescription": "El correo es opcional y la tripulación puede recogerlo más tarde. Con el nombre basta para subirlo al barco ahora."
+    "addPersonAriaLabel": "Añadir a {name} a este barco"
   },
-  "blockerReasonsWithFirst": "{reason} {count, plural, one {Y # motivo más.} other {Y # motivos más.}}",
-  "notOnCounter": {
-    "text": "Esa salida no está en el mostrador ahora mismo.",
-    "open": "Abrir la salida"
-  }
+  "blockerReasonsWithFirst": "{reason} {count, plural, one {Y # motivo más.} other {Y # motivos más.}}"
 }

@@ -31,7 +31,7 @@ export type FormDraftKind = (typeof FORM_DRAFT_KINDS)[number];
 export const FORM_DRAFT_RESUME_SUFFIX: Record<FormDraftKind, string> = {
   add_departure: "/schedule/board?add=1",
   new_diver: "/divers/new",
-  took_a_call: "/calls",
+  took_a_call: "/bookings/new#call",
 };
 
 export const FORM_DRAFT_LABEL_KEYS: Record<FormDraftKind, StaffMessageKey> = {

@@ -162,14 +162,14 @@ describe("a refused session at the counter", () => {
    * in the roster above, so a seventh action cannot arrive without one.
    */
   const INVOKE: Record<string, (form: FormData) => Promise<unknown>> = {
-    checkInAction: (form) => checkInAction(SHOP_SLUG, FOCUS_TRIP_ID, null, form),
-    undoCheckInAction: (form) => undoCheckInAction(SHOP_SLUG, FOCUS_TRIP_ID, null, form),
-    markNoShowAction: (form) => markNoShowAction(SHOP_SLUG, FOCUS_TRIP_ID, null, form),
-    undoNoShowAction: (form) => undoNoShowAction(SHOP_SLUG, FOCUS_TRIP_ID, null, form),
+    checkInAction: (form) => checkInAction(SHOP_SLUG, FOCUS_TRIP_ID, form),
+    undoCheckInAction: (form) => undoCheckInAction(SHOP_SLUG, FOCUS_TRIP_ID, form),
+    markNoShowAction: (form) => markNoShowAction(SHOP_SLUG, FOCUS_TRIP_ID, form),
+    undoNoShowAction: (form) => undoNoShowAction(SHOP_SLUG, FOCUS_TRIP_ID, form),
     markWaiverInPersonFromCheckIn: (form) =>
       markWaiverInPersonFromCheckIn(SHOP_SLUG, FOCUS_TRIP_ID, PAPER_WAIVER_IDLE, form),
     confirmIdentityFromCheckIn: (form) =>
-      confirmIdentityFromCheckIn(SHOP_SLUG, FOCUS_TRIP_ID, null, form),
+      confirmIdentityFromCheckIn(SHOP_SLUG, FOCUS_TRIP_ID, form),
   };
 
   function bookingForm(): FormData {

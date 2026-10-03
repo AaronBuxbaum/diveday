@@ -1,18 +1,4 @@
-import {
-  and,
-  asc,
-  count,
-  desc,
-  eq,
-  gt,
-  gte,
-  inArray,
-  isNull,
-  lte,
-  ne,
-  notInArray,
-  or,
-} from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lte, ne, or } from "drizzle-orm";
 import { ARRIVAL_RETRACTION_SUPERSEDED } from "@/lib/arrival";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -37,12 +23,10 @@ import {
   bookingArrivalEvents,
   bookings,
   people,
-  personRoles,
   priorVisits,
   trips,
 } from "./schema";
 import { liveTrip } from "./trips-live";
-import { seatHeld } from "./trips-queries";
 
 export type CheckInQueueRow = {
   bookingId: string;
@@ -129,18 +113,15 @@ export type CheckInQueueRow = {
  * always comes from the shared service, never a second gate.
  *
  * The person half of the search is `personSearchMatch`
- * (`src/db/person-search.ts`), the same predicate
- * {@link listOtherMatchingDivers} runs — and that is load-bearing, not tidiness.
- * This page decides who is "already on today's list" from the rows *this* query
- * returns, so a query shape the queue cannot answer but the other lookup can
- * puts a diver who is booked today under the heading for divers who are not,
- * with a button offering to seat them again. The queue used to match name and
- * email only, so a phone number did exactly that (issue #1765).
+ * (`src/db/person-search.ts`), so Today's arrival lookup finds a diver by
+ * name, email or phone exactly as the diver search does (issue #1765).
+ *
+ * `tripId` narrows the read to one departure: the trip page's Check-in tab.
  */
 export async function listCheckInQueue(
   db: AppDb,
   shopId: string,
-  options: { query?: string; now?: Date } = {},
+  options: { query?: string; now?: Date; tripId?: string } = {},
 ): Promise<CheckInQueueRow[]> {
   const now = options.now ?? nowDate();
   const arrivals = arrivalsWindow(now);
@@ -174,6 +155,7 @@ export async function listCheckInQueue(
         inArray(bookings.status, ["booked", "checked_in", "no_show"]),
         gte(trips.startsAt, arrivals.from),
         lte(trips.startsAt, arrivals.to),
+        options.tripId ? eq(trips.id, options.tripId) : undefined,
         queryFilter,
       ),
     )
@@ -285,108 +267,6 @@ async function queueVisitHistory(
     if (upToHere === 1) firstVisitBookingIds.add(row.bookingId);
   }
   return { firstVisitBookingIds };
-}
-
-export type WalkInTripOption = {
-  tripId: string;
-  title: string;
-  startsAt: Date;
-  endsAt: Date;
-  capacity: number;
-  booked: number;
-};
-
-/**
- * Trips a counter walk-in can be added to — the same arrivals window
- * `listCheckInQueue` reads (`arrivalsWindow`), so "today's departures" means
- * the same thing on both halves of this surface.
- */
-export async function listWalkInTrips(
-  db: AppDb,
-  shopId: string,
-  now: Date = nowDate(),
-): Promise<WalkInTripOption[]> {
-  const arrivals = arrivalsWindow(now);
-  // `seatHeld` counts the seats somebody is holding: a seat released at the
-  // counter is one this picker may offer a walk-in again (issue #1209).
-  return db
-    .select({
-      tripId: trips.id,
-      title: trips.title,
-      startsAt: trips.startsAt,
-      endsAt: trips.endsAt,
-      capacity: trips.capacity,
-      booked: count(bookings.id),
-    })
-    .from(trips)
-    .leftJoin(bookings, and(eq(bookings.tripId, trips.id), seatHeld))
-    .where(
-      and(
-        liveTrip(),
-        eq(trips.shopId, shopId),
-        eq(trips.status, "scheduled"),
-        // A walk-in can only be seated on a departure that has not started.
-        // The check-in queue deliberately includes its short look-back window;
-        // reusing that lower bound here offered a boat already underway and
-        // made the picker hand a valid-looking choice to a refusal.
-        gt(trips.startsAt, new Date(now.getTime() - 60 * 60 * 1000)),
-        lte(trips.startsAt, arrivals.to),
-      ),
-    )
-    .groupBy(trips.id)
-    .having(gt(trips.capacity, count(bookings.id)))
-    .orderBy(asc(trips.startsAt));
-}
-
-export type OtherMatchingDiver = {
-  id: string;
-  fullName: string;
-  email: string | null;
-  phone: string | null;
-};
-
-/**
- * Divers the counter's search found who are **not** on today's list — the
- * "somebody is standing here and their name is not in the queue" case, which
- * ends in seating them onto one of `listWalkInTrips`' departures.
- *
- * `excludePersonIds` is who the queue already showed, so nobody appears under
- * both headings. Read from the queue the same search produced, which is why
- * this runs `personSearchMatch` and {@link listCheckInQueue} runs it too: a
- * query one of them can answer and the other cannot is a booked diver offered
- * a second seat (issue #1765).
- *
- * Lived in the check-in page as an inline `select` until that mismatch made it
- * the reported bug; a query nothing could test is how the two halves of one
- * screen came to disagree.
- */
-export async function listOtherMatchingDivers(
-  db: AppDb,
-  shopId: string,
-  options: { query?: string; excludePersonIds?: string[]; limit?: number } = {},
-): Promise<OtherMatchingDiver[]> {
-  const query = options.query?.trim() ?? "";
-  if (!query) return [];
-  const excluded = options.excludePersonIds ?? [];
-  return db
-    .select({
-      id: people.id,
-      fullName: people.fullName,
-      email: people.email,
-      phone: people.phone,
-    })
-    .from(people)
-    .innerJoin(personRoles, eq(personRoles.personId, people.id))
-    .where(
-      and(
-        eq(people.shopId, shopId),
-        eq(personRoles.role, "diver"),
-        isNull(people.deletedAt),
-        excluded.length > 0 ? notInArray(people.id, excluded) : undefined,
-        personSearchMatch(query),
-      ),
-    )
-    .limit(options.limit ?? 5);
 }
 
 /**
