@@ -122,12 +122,12 @@ export function ConversationSection({
           const body = entry.direction === "inbound" ? entry.message.body : entry.reply.body;
           return (
             // An inbound message answers to its own fragment, so the inbox's
-            // door lands on it (`inboxMessageAnchor`), and wears a tint while
-            // it is the page's target so the eye finds which one it was.
+            // door lands on it (`inboxMessageAnchor`) rather than on the top
+            // of a long conversation.
             <div
               key={key}
               id={entry.direction === "inbound" ? inboxMessageAnchor(entry.message.id) : undefined}
-              className="scroll-mt-24 px-5 py-4 transition-colors target:bg-surface-sunken sm:px-6"
+              className="scroll-mt-24 px-5 py-4 sm:px-6"
             >
               <p className="text-sm text-muted">{meta}</p>
               {/* Their words and the shop's, as typed. */}

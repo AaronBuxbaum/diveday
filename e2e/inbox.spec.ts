@@ -43,9 +43,10 @@ test("a staffer reads the inbox, opens the record, and answers the diver", async
   // message it was opened from rather than the top of the record.
   await page.getByRole("link", { name: "Open the record for Priya Sharma" }).click();
   await expect(page).toHaveURL(/\/shop\/blue-mantis\/divers\/.*#message-/);
-  const target = page.locator(":target");
+  const messageId = new URL(page.url()).hash.slice(1);
+  const target = page.locator(`[id="${messageId}"]`);
   await expect(target).toContainText(/Could I switch to the afternoon boat/);
-  await expect(target).toBeInViewport();
+  await expect(target).toBeInViewport({ ratio: 1 });
 
   // The group is a landmark of its own (`DiverFileGroupDisclosure` renders a
   // `<section aria-label>`), which is what lets this scope its assertions to
