@@ -16,11 +16,12 @@ import { sectionCardClass } from "@/components/ui/card";
  * **last**. It held the old order
  * — card, then a flat band — until 2026-08-28, and a skeleton that promises a
  * form where the pitch lands is a layout jump wearing a placeholder's clothes.
- * `max-w-xl` with the page: the thread's one measure (decision 1).
+ * `max-w-xl` with the page, the thread's one measure (decision 1), and two
+ * columns from `lg` as the page has.
  */
 export default function TripDetailLoading() {
   return (
-    <main className="mx-auto w-full max-w-xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
+    <main className="mx-auto w-full max-w-xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:max-w-5xl">
       <div className="animate-pulse">
         {/* No bar for a back link: the page dropped its standalone "← All
             trips" when the header's eyebrow became the way back, and the bar
@@ -43,7 +44,7 @@ export default function TripDetailLoading() {
         </div>
         {/* The page's one stack of sections, 40px apart (pixel-craft class 4,
             K-162), on the same `mt-10 space-y-10` the page stands them on. */}
-        <div className="mt-10 space-y-10">
+        <div className="mt-10 space-y-10 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10 lg:space-y-0">
           {/* "The day" — the run of dives, one row each. */}
           <div className="h-28 rounded bg-surface-sunken" />
           {/* The pitch, in its three parts — the fact chip, the three tiles,
@@ -66,8 +67,13 @@ export default function TripDetailLoading() {
           <div className="h-26 rounded bg-surface-sunken" />
           {/* The booking card's shell, from the same place `SectionCard` takes
               it — the one raised card the page streams in, and the last thing
-              on it. */}
-          <div className={sectionCardClass({ padding: "none", className: "h-96" })} />
+              on it; from `lg` the right-hand column, as the page sets it. */}
+          <div
+            className={sectionCardClass({
+              padding: "none",
+              className: "h-96 lg:col-start-2 lg:row-span-5 lg:row-start-1",
+            })}
+          />
         </div>
       </div>
     </main>

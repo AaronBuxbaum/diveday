@@ -32,7 +32,17 @@ describe("the public schedule identity composition", () => {
     expect(nextBoat).toBeLessThan(schedule);
     expect(nextBoat).toBeLessThan(weekLedger);
     expect(countOf("<NextBoatCard")).toBe(1);
-    expect(SOURCE).not.toContain("lg:grid-cols-[minmax(0,1fr)_20rem]");
+  });
+
+  it("stands the next boat beside the shop from lg up, and only when there is one", () => {
+    // ADR 20260827-clearwater-surface-language, decision 8: the identity leads
+    // "beside the next boat". Stacked, the photograph and the card filled the
+    // first screen at 1280 and the schedule started 1,220px down. The column
+    // is the band's panels, never a second card slot: one NextBoatCard, above.
+    expect(SOURCE).toContain(
+      'identityPanels > 0\n                ? "lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-6"',
+    );
+    expect(SOURCE).toContain("beside={identityPanels > 0}");
   });
 });
 

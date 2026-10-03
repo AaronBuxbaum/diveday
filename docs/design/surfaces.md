@@ -295,6 +295,8 @@ the instrument line's figures roll as a check-in lands, the sinking row's neighb
 
 ### The public schedule — `/s/[shopSlug]`
 
+**Widened 2026-10-03.** From `lg` up the next boat with space (and any other band panel) stands in a 20rem column beside the photograph, as ADR 20260827-clearwater-surface-language decision 8 drew it. Stacked, the photograph, its name band and the card filled the first screen at 1280×900 and the schedule started 1,220px down; now it starts on the first screen. A shop with no panel keeps the full-width photograph, and a phone keeps the stack.
+
 **Cut 2026-10-02** ([ADR 20261001-logbook](../architecture/decisions/20261001-logbook.md), decision 7): the boat that is out left the identity band with follow-the-boat, and the "Yours" group and "Your card clears this" lines left with the diver's shelf. The entries below that describe them are history.
 
 **Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): Harbor's face on the headings and the shop's colour on the one filled control, over the picked direction's rows: the boat that is out, the next boat with space and Book, the week, the courses — as groups (A), as the page with one floating capsule that books the next boat (B), or with two tiles for spots and the boat that is out (C). Pending H-87, one call: A · Inset, B · Glass or C · Figures. Superseded 2026-09-19.
@@ -325,6 +327,8 @@ routes took the display-scale h1 only.
   because a diver is choosing a shop before they are choosing a time slot.
 
 ### The public trip page — `/s/[shopSlug]/trips/[id]`
+
+**Two columns from `lg`, 2026-10-03.** At 1280 the page was a 576px column and the booking form stood about 1,500px down. From `lg` the column widens to `max-w-5xl`: the reading (the day, the pitch, the conditions line, the other boats and the requirement) runs down the left, and the form with the contact line under it takes a 22rem column on the right, level with the day. The source order, a phone and a screen reader still meet the form last (ADR 20260827-the-divers-thread, decision 2). The cancelled landing keeps `max-w-xl`.
 
 **Tidied 2026-09-17** (the "as rendered" sweep, slice F1). "What the crew logged, and when. It says what was seen, not what you will see." closed every "Seen here this month" block, so a two-tank day printed it twice, twelve lines apart. It is the **day's** sentence now — once, under the plan, whenever any site in the day has a month to show. And the embed's booking confirmation stopped offering three link-blue lines at one weight: the readiness page is the button, the way back into the widget is quiet text (and the readiness door demotes to `secondary` when there is a balance to pay, which is then the section's one primary).
 

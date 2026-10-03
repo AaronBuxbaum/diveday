@@ -177,3 +177,10 @@ lose. The step grammar lives inside one sheet instead.
   net every slice must keep green.
 - `surfaces.md` gains entries for the trip page (public), the thread, and the waiver; the recap's
   entry is the thread's after-state paragraph.
+
+**Amended 2026-10-03: the trip page widens on a desktop.** Decision 1's measure holds on a phone
+and on every other thread page, but on the trip page at 1280 it put the booking form about 1,500px
+down, the last thing a diver reached. From `lg` the trip page widens to `max-w-5xl`: the reading
+runs down a left column in decision 2's order and the form, with the contact line, stands in a
+22rem right column level with the day. The source order is unchanged, so a phone and a screen
+reader still meet the form last. Requested in the "marketing and untouched pages" review.

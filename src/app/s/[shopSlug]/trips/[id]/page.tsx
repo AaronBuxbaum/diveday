@@ -591,7 +591,7 @@ export default async function TripDetailPage({
         className={
           isEmbed
             ? "w-full flex-1 px-3 py-4"
-            : "mx-auto w-full max-w-xl flex-1 px-4 py-8 sm:px-6 sm:py-10"
+            : "mx-auto w-full max-w-xl flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:max-w-5xl"
         }
       >
         {structuredData ? <JsonLd data={structuredData} /> : null}
@@ -679,8 +679,18 @@ export default async function TripDetailPage({
             day's run to the shop's contact line stands 40px from the next, on
             this `space-y-10`, and none carries a margin of its own. Each used
             to spell its own — `mt-6`, `mt-8`, `mt-10` — and the page's
-            sections stood 24, 32 and 40px apart. */}
-        <div className="mt-10 space-y-10">
+            sections stood 24, 32 and 40px apart.
+
+            **Two columns from `lg` up.** At 1280 the column was 576px wide and
+            the form stood about 1,500px down, the last thing a diver reached.
+            From `lg` the form and the contact line take a right-hand column
+            level with the day's run, and the reading runs down the left in the
+            same order. The grid's five rows are the most sections the left
+            column holds; the last is `1fr`, so a form taller than the reading
+            stretches that row rather than the gaps between sections. A phone
+            keeps the one column and the form terminal (ADR
+            20260827-the-divers-thread, decision 2). */}
+        <div className="mt-10 space-y-10 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10 lg:space-y-0">
           {/* **The pitch, then the ask.** Everything that answers "is this my
               day?" runs above the form, and nothing runs below it but the fine
               print it owns and the shop's own contact line. It read the other way
@@ -785,80 +795,83 @@ export default async function TripDetailPage({
             ) : null}
           </div>
 
-          {/* The form, terminal — or whichever state stands in its place. */}
-          {confirmed ? (
-            <EmbedBookedNotice
-              shop={shop}
-              shopSlug={shopSlug}
-              locale={locale}
-              trip={trip}
-              confirmed={confirmed}
-              readinessLink={readinessLink}
-              emailsOnTheWay={emailsOnTheWay}
-              payCancelled={pay === "cancelled"}
-              paymentUrl={
-                pay === "due"
-                  ? ((await getLatestCheckoutForBooking(db, shop.id, confirmed.booking.id))
-                      ?.checkoutUrl ?? null)
-                  : null
-              }
-            />
-          ) : waitlistConfirmation ? (
-            <WaitlistConfirmation
-              firstName={waitlistConfirmation.person.fullName.split(" ")[0]}
-              shopSlug={shopSlug}
-              embed={isEmbed}
-            />
-          ) : inPast ? (
-            <TripSailedNotice shopSlug={shopSlug} embed={isEmbed} />
-          ) : trip.conditionsHold ? (
-            <ConditionsHoldSection />
-          ) : full ? (
-            <TripFullSection
-              shopSlug={shopSlug}
-              trip={trip}
-              tripRef={tripRef}
-              remaining={remaining}
-              errorMessage={errorMessage}
-              contactEmail={shop.contactEmail}
-              contactPhone={shop.contactPhone}
-              alternatives={alternatives}
-              terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
-            />
-          ) : (
-            <BookSpotSection
-              trip={trip}
-              tripRef={tripRef}
-              remaining={remaining}
-              errorMessage={errorMessage}
-              payAtBooking={payAtBooking}
-              perDiverPriceCents={perDiverPriceCents}
-              currency={shopCurrency}
-              locale={locale}
-              timeZone={shop.timezone}
-              contactEmail={shop.contactEmail}
-              contactPhone={shop.contactPhone}
-              rentalItems={shop.rentalItems}
-              rentalPricing={shop.rentalPricing}
-              passThroughFee={passThroughFee}
-              taxEnabled={shop.taxEnabled}
-              courseFeeCents={courseFeeCents}
-              eLearningFeeCents={eLearningFeeCents}
-              depositCents={depositCents}
-              balanceDueAt={trip.startsAt}
-              terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
-              knownDiver={knownDiverPanel}
-              offerHandoff={offerHandoff.bind(null, tripRef)}
-            />
-          )}
-          {/* The last line on the page: how to reach a human. Renders nothing at
+          {/* The form, terminal — or whichever state stands in its place —
+              and the contact line under it: the right-hand column from `lg`. */}
+          <div className="space-y-10 lg:col-start-2 lg:row-span-5 lg:row-start-1">
+            {confirmed ? (
+              <EmbedBookedNotice
+                shop={shop}
+                shopSlug={shopSlug}
+                locale={locale}
+                trip={trip}
+                confirmed={confirmed}
+                readinessLink={readinessLink}
+                emailsOnTheWay={emailsOnTheWay}
+                payCancelled={pay === "cancelled"}
+                paymentUrl={
+                  pay === "due"
+                    ? ((await getLatestCheckoutForBooking(db, shop.id, confirmed.booking.id))
+                        ?.checkoutUrl ?? null)
+                    : null
+                }
+              />
+            ) : waitlistConfirmation ? (
+              <WaitlistConfirmation
+                firstName={waitlistConfirmation.person.fullName.split(" ")[0]}
+                shopSlug={shopSlug}
+                embed={isEmbed}
+              />
+            ) : inPast ? (
+              <TripSailedNotice shopSlug={shopSlug} embed={isEmbed} />
+            ) : trip.conditionsHold ? (
+              <ConditionsHoldSection />
+            ) : full ? (
+              <TripFullSection
+                shopSlug={shopSlug}
+                trip={trip}
+                tripRef={tripRef}
+                remaining={remaining}
+                errorMessage={errorMessage}
+                contactEmail={shop.contactEmail}
+                contactPhone={shop.contactPhone}
+                alternatives={alternatives}
+                terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
+              />
+            ) : (
+              <BookSpotSection
+                trip={trip}
+                tripRef={tripRef}
+                remaining={remaining}
+                errorMessage={errorMessage}
+                payAtBooking={payAtBooking}
+                perDiverPriceCents={perDiverPriceCents}
+                currency={shopCurrency}
+                locale={locale}
+                timeZone={shop.timezone}
+                contactEmail={shop.contactEmail}
+                contactPhone={shop.contactPhone}
+                rentalItems={shop.rentalItems}
+                rentalPricing={shop.rentalPricing}
+                passThroughFee={passThroughFee}
+                taxEnabled={shop.taxEnabled}
+                courseFeeCents={courseFeeCents}
+                eLearningFeeCents={eLearningFeeCents}
+                depositCents={depositCents}
+                balanceDueAt={trip.startsAt}
+                terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
+                knownDiver={knownDiverPanel}
+                offerHandoff={offerHandoff.bind(null, tripRef)}
+              />
+            )}
+            {/* The last line on the page: how to reach a human. Renders nothing at
               all when the shop has published neither a phone nor an address. */}
-          {shop.contactPhone || shop.contactEmail ? (
-            <p className="flex flex-wrap items-baseline gap-x-2 text-sm text-muted">
-              {t("trip.questionsContact")}
-              <ShopContactLinks phone={shop.contactPhone} email={shop.contactEmail} />
-            </p>
-          ) : null}
+            {shop.contactPhone || shop.contactEmail ? (
+              <p className="flex flex-wrap items-baseline gap-x-2 text-sm text-muted">
+                {t("trip.questionsContact")}
+                <ShopContactLinks phone={shop.contactPhone} email={shop.contactEmail} />
+              </p>
+            ) : null}
+          </div>
         </div>
       </main>
     </DiverIntlProvider>

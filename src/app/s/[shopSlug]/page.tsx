@@ -696,8 +696,21 @@ export default async function SchedulePage({
               className="size-16 shrink-0 rounded-inset border border-border bg-surface object-cover"
             />
           ) : null}
-          <div className="min-w-0 flex-1">
+          {/* **The next boat beside the shop, from `lg` up.** Stacked, the
+              photograph, its name band and the next-boat card filled the whole
+              first screen of a 1280×900 window, and the schedule a diver came
+              for started 1,220px down. Side by side the card sits level with
+              the photograph and the schedule starts on the first screen. A
+              phone keeps the stack: one column is all it has. */}
+          <div
+            className={`min-w-0 flex-1 ${
+              identityPanels > 0
+                ? "lg:grid lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-6"
+                : ""
+            }`}
+          >
             <ShopfrontHero
+              beside={identityPanels > 0}
               name={shop.name}
               tagline={shop.tagline}
               description={shop.description}
@@ -724,7 +737,7 @@ export default async function SchedulePage({
                 is the reading order it has always been: the quiet, the boat
                 that is out, the next one with space. */}
             {identityPanels > 0 ? (
-              <div className="mt-6 grid gap-4 md:auto-cols-fr md:grid-flow-col">
+              <div className="mt-6 grid gap-4 md:auto-cols-fr md:grid-flow-col lg:mt-0 lg:grid-flow-row">
                 {/* **The quiet, before the boat** (N-45). A shop with nothing on
                     the water for a month leads with that fact rather than with a
                     departure seven weeks out, which a visitor would otherwise have

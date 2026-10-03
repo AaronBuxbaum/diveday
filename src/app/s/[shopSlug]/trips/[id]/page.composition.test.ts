@@ -137,6 +137,8 @@ describe("the trip page's order", () => {
   });
 
   it("runs pitch, then requirement, then the form, then the contact line", () => {
+    // From `lg` the form and the contact line stand in a right-hand column,
+    // but the source order — and so a phone's and a screen reader's — is this.
     const pitch = positionOf("<TripDayPlan");
     const conditions = positionOf("<ConditionsLine");
     const requirement = positionOf("{requirementNote ? (");
@@ -187,12 +189,16 @@ describe("the trip page's order", () => {
    */
   it("frames its column as every public page does, with nothing above the header", () => {
     const FRAME = "mx-auto w-full max-w-xl flex-1 px-4 py-8 sm:px-6 sm:py-10";
+    // The departure widens from `lg` to hold the form beside the reading; the
+    // cancelled landing has no form and keeps the one column.
+    const DEPARTURE = `${FRAME} lg:max-w-5xl`;
     const LOADING = readFileSync(join(__dirname, "loading.tsx"), "utf8");
     const HEADER = readFileSync(join(__dirname, "_components", "TripHeader.tsx"), "utf8");
     // Both of this page's non-embed columns — the departure and the cancelled
     // landing — and its loading skeleton.
-    expect(SOURCE.split(`: "${FRAME}"`).length - 1).toBe(2);
-    expect(LOADING).toContain(`<main className="${FRAME}">`);
+    expect(SOURCE.split(`: "${FRAME}"`).length - 1).toBe(1);
+    expect(SOURCE.split(`: "${DEPARTURE}"`).length - 1).toBe(1);
+    expect(LOADING).toContain(`<main className="${DEPARTURE}">`);
     for (const source of [SOURCE, LOADING]) expect(source).not.toContain("py-16");
     // The header opens the column; the staff preview bar keeps its own `mb-6`.
     expect(HEADER).toMatch(/return \(\s*<ShopPageHeader/);
@@ -208,7 +214,8 @@ describe("the trip page's order", () => {
    * one `space-y-10` now, and none carries a margin of its own.
    */
   it("stacks every section from the day's run to the contact line 40px apart", () => {
-    const opening = '<div className="mt-10 space-y-10">';
+    const opening =
+      '<div className="mt-10 space-y-10 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[repeat(4,auto)_1fr] lg:gap-x-12 lg:gap-y-10 lg:space-y-0">';
     const stack = positionOf(opening);
     expect(stack).toBeGreaterThan(-1);
     // The stack opens directly on the day's run, and holds everything to the
