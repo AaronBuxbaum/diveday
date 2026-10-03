@@ -236,7 +236,15 @@ export default async function DiverDetailPage({
    * bounced the staffer here from somewhere else, or one whose group this
    * staffer's role means the page never rendered.
    */
-  const diverNotice = resolveDiverNotice({ notice, form, gate, card, personId, locale });
+  const diverNotice = resolveDiverNotice({
+    notice,
+    form,
+    gate,
+    card,
+    personId,
+    locale,
+    canRaiseInvoice: collectHasSomewhereToGo,
+  });
   const detailsStatus = noticeForForm(diverNotice, "details");
   const pageNotice = noticeForForm(diverNotice, "page");
   // A card deletion with its undo capability has one outcome: the toast. The

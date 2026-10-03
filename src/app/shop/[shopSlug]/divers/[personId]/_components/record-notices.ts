@@ -560,6 +560,7 @@ export function resolveDiverNotice({
   card,
   personId,
   locale,
+  canRaiseInvoice = false,
 }: {
   notice?: string;
   /**
@@ -588,6 +589,12 @@ export function resolveDiverNotice({
    */
   personId: string;
   locale: string;
+  /**
+   * Whether this reader sees the story's "New invoice" link
+   * (`canRaiseInvoiceFor`). "Booked" tells them to create the invoice next, so
+   * a reader without that link is told only that it booked. Absent reads as no.
+   */
+  canRaiseInvoice?: boolean;
 }): DiverNotice | undefined {
   const banner = noticeFromParam(notice, NOTICE_KEYS);
   if (!banner) return undefined;
@@ -603,7 +610,9 @@ export function resolveDiverNotice({
       ? ""
       : refusal
         ? tripAdmissionRefusalText(t, refusal, locale)
-        : t(banner.key as StaffMessageKey),
+        : notice === "booked" && !canRaiseInvoice
+          ? t("divers.notices.bookedNoInvoice")
+          : t(banner.key as StaffMessageKey),
     code: notice,
     link: notice === undefined ? undefined : NOTICE_LINKS[notice],
     field: banner.field,

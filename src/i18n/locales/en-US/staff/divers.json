@@ -292,6 +292,7 @@
   "notices": {
     "alreadyBooked": "This diver is already booked on that activity.",
     "booked": "Booked. Review it below, then create and send the invoice.",
+    "bookedNoInvoice": "Booked.",
     "bookedWaiverUndelivered": "Booked, but their waiver wasn’t emailed. Open the trip’s guest list to send it or share the link.",
     "bookedIdentityUnconfirmed": "Booked, but the seat is held until you confirm it’s the same person. Open the trip’s guest list to confirm it.",
     "bookingInvalid": "Add an email and choose a departure.",

@@ -292,6 +292,7 @@
   "notices": {
     "alreadyBooked": "Este buceador ya está reservado en esa actividad.",
     "booked": "Reservado. Revísalo abajo, luego crea y envía la factura.",
+    "bookedNoInvoice": "Reservado.",
     "bookedWaiverUndelivered": "Reservado, pero no se envió su exención por correo. Abre la lista de invitados de la salida para enviarla o compartir el enlace.",
     "bookedIdentityUnconfirmed": "Reservado, pero la plaza queda retenida hasta que confirmes que es la misma persona. Abre la lista de invitados de la salida para confirmarlo.",
     "bookingInvalid": "Añade un correo electrónico y elige una salida.",
