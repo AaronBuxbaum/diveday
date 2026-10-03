@@ -685,14 +685,16 @@ export function LedgerRow({
         // but on what it holds (`pointer-events-none`, back on for its
         // children): an empty box took the lower 8px of the requests row's
         // address target, and kept a door row's line out of the door (K-458).
+        // While a row's "⋯" list is out (`RowMenu`) the slot lifts to `z-30`,
+        // so the list floats over the rows below instead of under their fixes.
         <div
           data-ledger-fix=""
           className={
             stacked
               ? kind
-                ? "relative z-10 -my-2 min-w-0 max-w-full shrink-0 max-sm:order-2 max-sm:-my-1 max-sm:ms-auto"
-                : "relative z-10 -my-2 min-w-0 max-w-full shrink-0 max-sm:order-3 max-sm:my-0 max-sm:flex max-sm:basis-full max-sm:justify-end max-sm:pointer-events-none max-sm:*:pointer-events-auto"
-              : "relative z-10 -my-2 min-w-0 max-w-full shrink-0"
+                ? "relative z-10 -my-2 min-w-0 has-[[data-row-menu-open]]:z-30 max-w-full shrink-0 max-sm:order-2 max-sm:-my-1 max-sm:ms-auto"
+                : "relative z-10 -my-2 min-w-0 has-[[data-row-menu-open]]:z-30 max-w-full shrink-0 max-sm:order-3 max-sm:my-0 max-sm:flex max-sm:basis-full max-sm:justify-end max-sm:pointer-events-none max-sm:*:pointer-events-auto"
+              : "relative z-10 -my-2 min-w-0 has-[[data-row-menu-open]]:z-30 max-w-full shrink-0"
           }
         >
           {trailing}

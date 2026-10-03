@@ -5,7 +5,12 @@ import { InsetGroup } from "@/components/ui/ledger";
 import type { ThreadEntry } from "@/db/inbound-messages";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
-import { REPLY_BODY_MAX_LENGTH, replyDestination, whatsAppReplyWindowOpen } from "@/lib/inbox";
+import {
+  inboxMessageAnchor,
+  REPLY_BODY_MAX_LENGTH,
+  replyDestination,
+  whatsAppReplyWindowOpen,
+} from "@/lib/inbox";
 import { replyToDiverAction } from "../actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
@@ -116,7 +121,14 @@ export function ConversationSection({
                   });
           const body = entry.direction === "inbound" ? entry.message.body : entry.reply.body;
           return (
-            <div key={key} className="px-5 py-4 sm:px-6">
+            // An inbound message answers to its own fragment, so the inbox's
+            // door lands on it (`inboxMessageAnchor`), and wears a tint while
+            // it is the page's target so the eye finds which one it was.
+            <div
+              key={key}
+              id={entry.direction === "inbound" ? inboxMessageAnchor(entry.message.id) : undefined}
+              className="scroll-mt-24 px-5 py-4 transition-colors target:bg-surface-sunken sm:px-6"
+            >
               <p className="text-sm text-muted">{meta}</p>
               {/* Their words and the shop's, as typed. */}
               <p

@@ -47,7 +47,7 @@ vi.mock("@/db/client", async (importOriginal) => {
 vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const { deleteInboxMessageAction } = await import("./actions");
+const { deleteInboxMessageAction, setInboxMessageDoneAction } = await import("./actions");
 
 /** The seeded row from an address nobody on the roster holds (`src/db/seed-inbox.ts`). */
 async function strangerMessageId(db: AppDb, shopId: string): Promise<string> {
@@ -193,6 +193,49 @@ describe("deleting a message from a sender nobody on the roster holds", () => {
     await redirectedTo(() => deleteInboxMessageAction(form(message)));
 
     const to = await redirectedTo(() => deleteInboxMessageAction(form(message)));
+
+    expect(to).toBe(`/shop/${shop.slug}/inbox?notice=gone`);
+  });
+});
+
+describe("marking a message done, and taking it back", () => {
+  function doneForm(messageId: string, done: boolean): FormData {
+    const formData = form(messageId);
+    formData.set("done", done ? "true" : "false");
+    return formData;
+  }
+
+  it("takes it off the worklist and Today's count, and puts it back", async () => {
+    const { db, shop, message, captain } = await context();
+    const before = await countUnansweredMessages(db, shop.id);
+    // A captain: the inbox's open gate, the same as the delete's.
+    signIn(shop, captain);
+
+    expect(await redirectedTo(() => setInboxMessageDoneAction(doneForm(message, true)))).toBe(
+      `/shop/${shop.slug}/inbox`,
+    );
+    expect(await countUnansweredMessages(db, shop.id)).toBe(before - 1);
+
+    expect(await redirectedTo(() => setInboxMessageDoneAction(doneForm(message, false)))).toBe(
+      `/shop/${shop.slug}/inbox`,
+    );
+    expect(await countUnansweredMessages(db, shop.id)).toBe(before);
+  });
+
+  it("404s a session whose claimed shop is not the acting person's", async () => {
+    const { db, shop, message, owner } = await context();
+    const before = await countUnansweredMessages(db, shop.id);
+    signIn({ id: "00000000-0000-4000-8000-000000000000", slug: "other-shop" }, owner);
+
+    await expect(setInboxMessageDoneAction(doneForm(message, true))).rejects.toThrow("NOT_FOUND");
+    expect(await countUnansweredMessages(db, shop.id)).toBe(before);
+  });
+
+  it("answers a posted id that is not an id with gone", async () => {
+    const { shop, owner } = await context();
+    signIn(shop, owner);
+
+    const to = await redirectedTo(() => setInboxMessageDoneAction(doneForm("not-a-uuid", true)));
 
     expect(to).toBe(`/shop/${shop.slug}/inbox?notice=gone`);
   });

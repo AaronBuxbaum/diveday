@@ -35,13 +35,17 @@ test("a staffer reads the inbox, opens the record, and answers the diver", async
 
   // The worklist shape: unanswered first, under a group carrying the count.
   await expect(page.getByRole("heading", { name: /Waiting on you/ })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Answered" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Done" })).toBeVisible();
   // A stranger's row has no record to open, so it shows the address instead.
   await expect(page.getByText("marta.keller@example.net")).toBeVisible();
 
-  // The row is the door to the diver it belongs to.
+  // The row is the door to the diver it belongs to, and it lands on the very
+  // message it was opened from rather than the top of the record.
   await page.getByRole("link", { name: "Open the record for Priya Sharma" }).click();
-  await expect(page).toHaveURL(/\/shop\/blue-mantis\/divers\//);
+  await expect(page).toHaveURL(/\/shop\/blue-mantis\/divers\/.*#message-/);
+  const target = page.locator(":target");
+  await expect(target).toContainText(/Could I switch to the afternoon boat/);
+  await expect(target).toBeInViewport();
 
   // The group is a landmark of its own (`DiverFileGroupDisclosure` renders a
   // `<section aria-label>`), which is what lets this scope its assertions to
@@ -88,6 +92,8 @@ test("a staffer deletes the message from a sender nobody on the roster holds", a
   await page.goto("/shop/blue-mantis/inbox");
   await expect(page.getByText("marta.keller@example.net")).toBeVisible();
 
+  // Delete lives behind the row's "⋯" with the row's other acts.
+  await page.getByRole("button", { name: "More for the message from Unknown sender" }).click();
   await page
     .getByRole("button", { name: "Delete the message from marta.keller@example.net" })
     .click();
@@ -97,4 +103,25 @@ test("a staffer deletes the message from a sender nobody on the roster holds", a
   await page.waitForURL(/notice=deleted/);
   await expect(page.getByText("Message deleted.")).toBeVisible();
   await expect(page.getByText("marta.keller@example.net")).toHaveCount(0);
+});
+
+/**
+ * **A message answered somewhere else, or no longer relevant, is marked done.**
+ *
+ * The row's "⋯" carries Mark done on a waiting message and Move back to
+ * waiting on a done one: the same `answered_at` a sent reply writes, so the
+ * row moves group and Today's count follows it.
+ */
+test("a staffer marks a message done and moves it back", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/inbox");
+  const waiting = page.getByRole("heading", { name: /Waiting on you · 3/ });
+  await expect(waiting).toBeVisible();
+
+  await page.getByRole("button", { name: "More for the message from Diego Alvarez" }).click();
+  await page.getByRole("button", { name: "Mark done" }).click();
+  await expect(page.getByRole("heading", { name: /Waiting on you · 2/ })).toBeVisible();
+
+  await page.getByRole("button", { name: "More for the message from Diego Alvarez" }).click();
+  await page.getByRole("button", { name: "Move back to waiting" }).click();
+  await expect(page.getByRole("heading", { name: /Waiting on you · 3/ })).toBeVisible();
 });

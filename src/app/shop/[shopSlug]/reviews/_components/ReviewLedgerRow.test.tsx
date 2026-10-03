@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StaffReview } from "@/db/reviews";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -132,15 +133,16 @@ describe("a review row", () => {
   });
 
   /** Restoring words the shop took down is a republish, and says so. */
-  it("offers Republish on a hidden row and Publish on a waiting one", () => {
+  it("offers Republish on a hidden row and Publish on a waiting one", async () => {
     row({ isHidden: true, hiddenReason: "spam" }, "hidden");
     expect(screen.getByRole("button", { name: "Republish" })).toBeInTheDocument();
-    // Hiding what is already hidden is not on offer.
-    expect(screen.queryByText("Hide")).toBeNull();
+    // Hiding what is already hidden is not on offer, so there is no ⋯ at all.
+    expect(screen.queryByRole("button", { expanded: false })).toBeNull();
     cleanup();
     row({});
     expect(screen.getByRole("button", { name: "Publish" })).toBeInTheDocument();
-    expect(screen.getByText("Hide")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { expanded: false }));
+    expect(screen.getByRole("button", { name: "Hide" })).toBeInTheDocument();
   });
 
   /**

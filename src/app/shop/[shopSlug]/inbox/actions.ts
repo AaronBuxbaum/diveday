@@ -3,7 +3,11 @@
 import { notFound } from "next/navigation";
 import { loadActiveStaffRoles } from "@/db/authz";
 import { getDb } from "@/db/client";
-import { deleteStrangerInboundMessage } from "@/db/inbound-messages";
+import {
+  deleteStrangerInboundMessage,
+  markInboundAnswered,
+  reopenInboundMessage,
+} from "@/db/inbound-messages";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -66,4 +70,34 @@ export async function deleteInboxMessageAction(formData: FormData): Promise<void
 
   const deleted = await deleteStrangerInboundMessage(db, session.user.shopId, messageId);
   revalidateAndRedirect(inbox, noticeUrl(inbox, deleted ? "deleted" : "gone"));
+}
+
+/**
+ * **Mark a message done, or put it back on the worklist** (the row's "⋯").
+ *
+ * Done is one state for "answered somewhere else" and "no longer relevant":
+ * both mean nobody here owes this message anything, which is all the worklist
+ * and Today's `unanswered_messages` ask. It is the same `answered_at` stamp a
+ * sent reply writes, so a message answered from the diver's record and one
+ * marked done here land in the same group. `done=false` clears it, for a
+ * message marked done too early.
+ *
+ * Same gate and the same tenant binding as the delete above, for the same
+ * reasons; any message of the shop qualifies, a diver's or a stranger's. The
+ * moved row is its own confirmation, so success redirects with no notice.
+ */
+export async function setInboxMessageDoneAction(formData: FormData): Promise<void> {
+  const session = await requireStaffSession();
+  const inbox = shopPath(session.user.shopSlug, "inbox");
+  const db = await getDb();
+  if (!(await loadActiveStaffRoles(db, session.user.shopId, session.user.personId))) notFound();
+
+  const messageId = uuidParam(String(formData.get("messageId") ?? ""));
+  if (!messageId) revalidateAndRedirect(inbox, noticeUrl(inbox, "gone"));
+
+  const done = formData.get("done") !== "false";
+  const changed = done
+    ? await markInboundAnswered(db, session.user.shopId, messageId)
+    : await reopenInboundMessage(db, session.user.shopId, messageId);
+  revalidateAndRedirect(inbox, changed ? inbox : noticeUrl(inbox, "gone"));
 }
