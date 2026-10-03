@@ -1507,6 +1507,14 @@ async function capture(
       timeout: 15_000,
     },
   );
+  // Settings' rail moves to the current row from an effect, after the page has
+  // painted, so a capture could catch it at its top or on the row depending on
+  // the run (`settings-embed`). The rail marks itself once it has moved.
+  await page.waitForFunction(
+    () => !document.querySelector("[data-settings-rail-scroller]:not([data-rail-settled])"),
+    undefined,
+    { timeout: 15_000 },
+  );
   // The standard pair, plus the portrait tablet for the five staff surfaces a
   // shop runs on one. Widest last is deliberate: the base viewport is restored
   // below either way, but a capture that fails mid-loop leaves the page at a

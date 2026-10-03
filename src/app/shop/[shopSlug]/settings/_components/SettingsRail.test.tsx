@@ -161,6 +161,19 @@ describe("the selection model", () => {
 });
 
 describe("the rail as it renders", () => {
+  /**
+   * The rail moves to the current row from an effect, after the page paints,
+   * so a screenshot fired early caught it at the top (`settings-embed` moved
+   * between two runs that never touched Settings). The mark is what the visual
+   * suite waits on, so it has to arrive once the move has run.
+   */
+  it("marks its scroll box settled once it has moved to the current row", () => {
+    pathname = `${BASE}/settings/embed`;
+    const { container } = renderRail();
+    const box = container.querySelector("[data-settings-rail-scroller]");
+    expect(box?.hasAttribute("data-rail-settled")).toBe(true);
+  });
+
   it("is a desktop control and nothing else", () => {
     renderRail();
     // Below `lg` the phone keeps the grouped list; the rail must never stack
