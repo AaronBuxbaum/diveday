@@ -3,7 +3,7 @@
     "emptyHeading": "Nothing is waiting on you",
     "emptyBody": "Every diver booked in the next week has their waiver, certifications, and payment in order.",
     "emptyAction": "View the schedule",
-    "boatsClear": "Today’s boats are all clear 🤙",
+    "boatsClear": "Today’s boats are all clear",
     "withheldDeskWork": "{count, plural, one {# job for the front desk} other {# jobs for the front desk}}"
   },
   "resendConfirmation": {

@@ -65,20 +65,19 @@ describe("the shop home's pinned sentences", () => {
     );
   });
 
-  it("keeps the shaka on the morning all-clear line, and no other emoji near it", () => {
-    // The coral budget's one sanctioned word-mark (ADR
-    // 20260827-clearwater-surface-language, decision 11): 🤙 stays where it
-    // ships, and every other celebration emoji left this surface with the
-    // recomposition.
-    expect(t("today.todayQueue.boatsClear")).toBe("Today’s boats are all clear 🤙");
-    // `raw` rather than `t`, so a message carrying a placeholder is scanned as
-    // it ships rather than as one rendering of it.
+  it("carries no emoji on the shop home's lines", () => {
+    // Aaron, 2026-10-03: the shaka on the morning all-clear and on a new
+    // departure's confirmation read as cute rather than useful, and went with
+    // the turtle beside the all-clear.
     for (const key of [
       "shopHome.spine.quietSentence",
       "shopHome.firstBookable.heading",
       "shopHome.firstBookable.headingSeries",
       "shopHome.demoReset",
       "today.todayQueue.emptyHeading",
+      "today.todayQueue.boatsClear",
+      "shopHome.createdNotice.single",
+      "shopHome.createdNotice.series",
     ] as const) {
       expect(t.raw(key), key).not.toMatch(/\p{Extended_Pictographic}/u);
     }

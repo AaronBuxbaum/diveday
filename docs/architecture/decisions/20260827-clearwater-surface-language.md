@@ -212,7 +212,7 @@ only on public pages and in the diver's own rating input, counts as one appearan
 stars a page fills, and never fires beside an earned moment; staff surfaces keep the shipped
 warning-amber fill, because a moderation queue is work, not a celebration. And **the words carry
 no emoji, with one exception**: the shaka (🤙) is the product's one word-mark gesture and stays
-where it ships; every other celebration emoji (🎉 and kin) leaves its string in the slice that
+where it ships *(amended 2026-10-03: Aaron removed the shaka from staff copy too, so the words carry no emoji)*; every other celebration emoji (🎉 and kin) leaves its string in the slice that
 recomposes its surface — the coral, the words, and the drawn marks are the celebration.
 
 ## Alternatives considered

@@ -76,7 +76,7 @@ because a work queue that surfaces work has nothing else to say. The right readi
 that the surface is joyless (issue #808): the warmth lives *outside* the rows, in two places that
 render **nothing at all** when they are not true.
 
-- **"Today's boats are all clear 🤙"** — an accent-toned line above the queue, shown once the
+- **"Today's boats are all clear"** — an accent-toned line above the queue, shown once the
   imminent and next-24-hour bands are empty while later work remains. The last blocker of the
   morning clearing is a finish, which is exactly what §3 rations joy to.
 - **"Nothing is waiting on you"** — the queue's own empty state, for when the whole week is in order.

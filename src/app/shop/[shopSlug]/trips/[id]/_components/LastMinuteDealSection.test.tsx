@@ -57,13 +57,15 @@ function requires(minimumCertificationLevel: CertRequirementSource["minimumCerti
 function renderSection(
   recipients: LastMinuteDealRecipient[],
   requirement: CertRequirementSource | null,
+  { openSeats = 4, hasWaitlist = false }: { openSeats?: number; hasWaitlist?: boolean } = {},
 ) {
   return render(
     <LastMinuteDealSection
       shopSlug="blue-mantis"
       recipients={recipients}
       requirement={requirement}
-      openSeats={4}
+      openSeats={openSeats}
+      hasWaitlist={hasWaitlist}
       cancelled={false}
       promos={[]}
       timezone="America/New_York"
@@ -349,5 +351,22 @@ describe("LastMinuteDealSection recipient review", () => {
     expect(container.textContent).not.toContain("Ravi Menon");
     expect(container.textContent).toContain("1 more");
     expect(screen.getByRole("button", { name: "Send to 10 divers" })).toBeDefined();
+  });
+});
+
+describe("LastMinuteDealSection on a full boat", () => {
+  it("points at the wait list only when someone is on it", () => {
+    // The `#waitlist` band renders only for a non-empty wait list, so the link
+    // on a full boat with nobody waiting went nowhere.
+    const { unmount } = renderSection([], null, { openSeats: 0, hasWaitlist: false });
+    expect(screen.getByText("Every seat is taken")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "See the wait list" })).toBeNull();
+    unmount();
+
+    renderSection([], null, { openSeats: 0, hasWaitlist: true });
+    expect(screen.getByRole("link", { name: "See the wait list" })).toHaveAttribute(
+      "href",
+      "#waitlist",
+    );
   });
 });

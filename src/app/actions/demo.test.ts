@@ -82,4 +82,14 @@ describe("switchDemoRoleAction", () => {
       }),
     );
   });
+
+  it("fails out loud, not by redirect, when the sign-in refuses the switch", async () => {
+    // The banner reads any redirect as a switch that worked; a refusal that
+    // redirected showed the visitor nothing.
+    const { APIError } = await import("better-auth/api");
+    hoisted.signInDiveDayCredentials.mockRejectedValueOnce(new APIError("UNAUTHORIZED"));
+    await expect(switchDemoRoleAction("instructor", "blue-mantis")).rejects.toThrow(
+      "The demo sign-in refused the role switch.",
+    );
+  });
 });

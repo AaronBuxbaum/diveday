@@ -63,6 +63,7 @@ export function LastMinuteDealSection({
   requirement,
   course = null,
   openSeats,
+  hasWaitlist,
   cancelled,
   promos,
   promoRecipients,
@@ -85,6 +86,11 @@ export function LastMinuteDealSection({
   requirement: CertRequirementSource | null;
   course?: CourseTargetInfo | null;
   openSeats: number;
+  /**
+   * Whether the trip's wait list has anyone on it. The wait list's `#waitlist`
+   * band renders only then, so a full boat with nobody waiting gets no link.
+   */
+  hasWaitlist: boolean;
   cancelled: boolean;
   promos: TripLastMinutePromo[];
   promoRecipients?: TripLastMinutePromoRecipientItem[];
@@ -223,7 +229,7 @@ export function LastMinuteDealSection({
       ) : (
         // Three different reasons there is no send button, each with the one
         // door that helps from here: a cancelled boat sends you back to the
-        // schedule, a full boat to the wait list this trip already keeps, and
+        // schedule, a full boat to its wait list when anyone is on it, and
         // an empty last-minute list to seating someone by hand.
         <EmptyState
           titleAs="h3"
@@ -250,7 +256,7 @@ export function LastMinuteDealSection({
               >
                 {t("trips.lastMinute.cancelledAction")}
               </Link>
-            ) : (
+            ) : openSeats > 0 || hasWaitlist ? (
               <a
                 href={openSeats <= 0 ? "#waitlist" : "#add-diver"}
                 className={buttonClass({ variant: "secondary", size: "sm" })}
@@ -259,7 +265,7 @@ export function LastMinuteDealSection({
                   ? t("trips.lastMinute.fullAction")
                   : t("trips.lastMinute.noneAroundAction")}
               </a>
-            )
+            ) : null
           }
         />
       )}

@@ -226,8 +226,11 @@ export async function switchDemoRoleAction(role: string, shopSlug: string) {
         headers: await headers(),
       });
     } catch (error) {
+      // A refusal is thrown, not redirected: the banner's catch passes every
+      // redirect through as the success it usually is, so a refusal sent to
+      // `?error=switch_failed` — a parameter no page read — said nothing at all.
       if (error instanceof APIError) {
-        redirect(`/shop/${shopSlug}?error=switch_failed`);
+        throw new Error("The demo sign-in refused the role switch.", { cause: error });
       }
       throw error;
     }

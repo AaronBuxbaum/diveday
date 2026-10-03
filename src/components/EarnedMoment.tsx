@@ -27,7 +27,7 @@ import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
  * built to stop.
  *
  * **The component supplies no glyph.** The departure board's `🎉` lived in
- * markup while Today's `🤙` lives inside its sentence in both locale bundles —
+ * markup while Today's shaka lived inside its sentence in both locale bundles —
  * two mechanisms for one idea, and the markup one is invisible to a translator.
  * The panel is the celebration; if a moment's words carry a mark, it belongs in
  * the words, where somebody translating them can see it. (This is not the
