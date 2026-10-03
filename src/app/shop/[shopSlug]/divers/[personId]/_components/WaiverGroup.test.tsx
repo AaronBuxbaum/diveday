@@ -90,6 +90,33 @@ describe("the waiver group", () => {
     expect(row.querySelector("details")).toBeNull();
   });
 
+  it("names a minor's co-signer on the plain row", () => {
+    renderCard(
+      diver({
+        email: "priya@dive.day",
+        waiver: {
+          state: "current",
+          signedAt: new Date("2026-07-21T15:00:00.000Z"),
+          expiresAt: new Date("2027-07-21T15:00:00.000Z"),
+          medical: {
+            at: new Date("2026-07-21T15:00:00.000Z"),
+            source: "cleared",
+            overriddenReferralAt: null,
+            clearance: null,
+            guardian: { name: "Jordan Guardian", relationship: "parent" },
+          },
+        } as DiverProfile["waiver"],
+      }),
+    );
+
+    // The row has no door, so who signed it with them has to be on it.
+    const row = screen.getByTestId("diver-file-group-waiver");
+    expect(row).toHaveTextContent(
+      /Good until Jul 21, 2027 · Co-signed by Jordan Guardian \(parent\)/,
+    );
+    expect(row.querySelector("details")).toBeNull();
+  });
+
   it("says only Not signed when nothing has been sent", () => {
     renderCard(diver({ email: "priya@dive.day" }));
     const door = screen.getByTestId("diver-file-group-waiver").querySelector("summary");

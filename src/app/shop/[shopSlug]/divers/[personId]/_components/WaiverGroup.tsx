@@ -107,7 +107,12 @@ function waiverSummary(
   const text = waiverRowStateText(t, state);
   const date = (value: Date) => formatCalendarDate(calendarDateInTimezone(value, timezone), locale);
   if (diver.waiver.state === "current") {
-    const goodUntil = `${text} · ${t("divers.stats.waiverGoodUntil", { date: date(diver.waiver.expiresAt) })}`;
+    const dated = `${text} · ${t("divers.stats.waiverGoodUntil", { date: date(diver.waiver.expiresAt) })}`;
+    // A minor's release names its co-signer on the closed door too: a current
+    // waiver with nothing to do is a plain row, and this is the one place the
+    // record says who signed it with them.
+    const guardian = diver.waiver.medical?.guardian;
+    const goodUntil = guardian ? `${dated} · ${guardianCoSignedText(t, guardian)}` : dated;
     // **A referral the current signature replaced instead of answering**
     // (issue #1282). "Signed · Good until …" is true and, on its own, the
     // wrong thing to read across a counter: the release standing today stands
