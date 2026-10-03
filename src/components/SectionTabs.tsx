@@ -69,14 +69,19 @@ export function SectionTabs({
   );
 }
 
-/** The tabs as a `loading.tsx` draws them: 44px tabs of one width on the rule. */
+/**
+ * The tabs as a `loading.tsx` draws them: 44px tabs of one width on the rule.
+ * From `sm` up each cell takes the width a typical widest label needs
+ * ("Discount codes", "Date requests"), so the placeholders sit where the
+ * loaded tabs will rather than bunched at the left.
+ */
 export function SectionTabsSkeleton({ count }: { count: number }) {
   return (
     <div data-section-tabs className="mb-6 border-b border-border">
       <div className={SECTION_TAB_LIST_CLASS}>
         {Array.from({ length: count }, (_, index) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: placeholders with no identity
-          <div key={index} className="flex min-h-11 items-center justify-center px-2 sm:px-4">
+          <div key={index} className="flex min-h-11 items-center justify-center px-2 sm:min-w-32 sm:px-4">
             <div className="h-4 w-16 rounded bg-surface-sunken" />
           </div>
         ))}
