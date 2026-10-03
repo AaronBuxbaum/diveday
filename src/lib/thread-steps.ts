@@ -120,9 +120,9 @@ export type ThreadStepsInput = {
    */
   rentalFitComplete: boolean;
   /**
-   * The recency question is answered. Pickup, the note and support needs live
-   * inside this step and never gate it: most divers have nothing to say to any
-   * of the three, and a step that could not settle without them is the bar
+   * The recency question is answered. Pickup and the note live inside this
+   * step and never gate it: most divers have nothing to say to either, and a
+   * step that could not settle without them is the bar
    * that could never fill, rebuilt one level down.
    */
   dayOfComplete: boolean;

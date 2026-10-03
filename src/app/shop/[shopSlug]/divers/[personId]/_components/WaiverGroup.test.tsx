@@ -207,6 +207,25 @@ describe("the waiver group", () => {
     expect(group).toHaveAttribute("open");
   });
 
+  it("keeps a physician's refusal behind a door, drawn as a refusal", () => {
+    renderCard(
+      diver({
+        email: "priya@dive.day",
+        waiver: {
+          state: "medical_not_cleared",
+          declinedAt: new Date("2026-07-21T15:00:00.000Z"),
+          evaluation: null,
+        } as unknown as DiverProfile["waiver"],
+      }),
+    );
+
+    const group = screen.getByTestId("diver-file-group-waiver");
+    // A disclosure, not the plain row a clean release gets: the state row
+    // inside carries the danger ink the closed summary cannot.
+    expect(group.tagName).toBe("DETAILS");
+    expect(group.querySelector(".text-danger, .text-danger-strong")).not.toBeNull();
+  });
+
   it("leaves a clean current release muted and shut", () => {
     renderCard(
       diver({

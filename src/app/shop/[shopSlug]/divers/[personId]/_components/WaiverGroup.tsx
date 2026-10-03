@@ -204,8 +204,17 @@ export function WaiverGroup({
         ? diver.waiver.evaluation
         : null;
   const clearanceDocument = canOpenClearance && clearance?.documentOnFile ? clearance : null;
+  // A physician's "no" is never a plain row: the state row is what draws it
+  // in danger ink, and the closed summary would leave it the grey of "Signed"
+  // (dive-domain review, 2026-10-03).
+  const notCleared = diver.waiver.state === "medical_not_cleared";
   const hasWork = Boolean(
-    needsAction || overriddenReferralAt || clearanceDocument || heldForMedical || status,
+    needsAction ||
+      overriddenReferralAt ||
+      clearanceDocument ||
+      heldForMedical ||
+      notCleared ||
+      status,
   );
   return (
     <DiverFileGroupDisclosure
