@@ -128,9 +128,12 @@ export function weekIsWhollyUnpriced(board: {
  * Who is *crewing* it is not here: that prints on its own line, and only on
  * the departures where it differs from the board's habit (`src/lib/usual-crew.ts`).
  *
- * A sailed boat still says only that it sailed and how full it was. Its hull
- * and its site are no longer decisions anyone can act on, and the row is being
- * read rather than worked.
+ * A sailed boat says only that it sailed. Its hull and its site are no longer
+ * decisions anyone can act on, and the row is being read rather than worked.
+ *
+ * **No seat count.** The row prints "10 of 12" beside its seat bar, at the
+ * row's end where a column of departures reads as one column of counts; in
+ * this line too it said the same fact twice on every row.
  *
  * Every segment arrives already localised and already formatted for the shop's
  * zone; this decides only which ones there are and in what order, which is why
@@ -147,9 +150,8 @@ export function weekEntryMeta(entry: {
   siteName: string | null;
   /** The hull's name, or the word for a shore or pool session. Null when neither is known. */
   vessel?: string | null;
-  seats: string;
   price: string | null;
 }): string {
-  if (entry.status === "sailed") return joinFacts([entry.sailedLabel, entry.seats]);
-  return joinFacts([entry.siteName, entry.vessel, entry.seats, entry.price]);
+  if (entry.status === "sailed") return entry.sailedLabel;
+  return joinFacts([entry.siteName, entry.vessel, entry.price]);
 }

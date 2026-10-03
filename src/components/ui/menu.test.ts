@@ -2,14 +2,20 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { MENU_PANEL, MENU_TICK_GUTTER, type MenuRowTone, menuRowClass } from "./menu";
+import {
+  MENU_NO_GUTTER,
+  MENU_PANEL,
+  MENU_TICK_GUTTER,
+  type MenuRowTone,
+  menuRowClass,
+} from "./menu";
 import { SEGMENT_CORNER, segmentedTrackClass } from "./segmented";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SRC_DIR = join(HERE, "..", "..");
 
 const tokens = (classes: string) => classes.split(/\s+/).filter(Boolean);
-const TONES: MenuRowTone[] = ["quiet", "current", "armed"];
+const TONES: MenuRowTone[] = ["quiet", "current", "armed", "danger"];
 
 /**
  * **A menu row's corner is the panel's corner less the panel's inset**
@@ -44,6 +50,15 @@ describe("menuRowClass", () => {
       for (const token of tokens(MENU_TICK_GUTTER)) expect(classes, tone).toContain(token);
       const inline = classes.filter((token) => /^(p|px|pl|pr|ps|pe)-/.test(token));
       expect(inline.sort(), tone).toEqual(tokens(MENU_TICK_GUTTER).sort());
+    }
+  });
+
+  it("drops the tick gutter for a menu of acts, keeping one even inset on both sides", () => {
+    for (const tone of TONES) {
+      const classes = tokens(menuRowClass(tone, { gutter: false }));
+      expect(classes, tone).toContain(SEGMENT_CORNER);
+      const inline = classes.filter((token) => /^(p|px|pl|pr|ps|pe)-/.test(token));
+      expect(inline, tone).toEqual(tokens(MENU_NO_GUTTER));
     }
   });
 

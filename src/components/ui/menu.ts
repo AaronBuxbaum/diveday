@@ -56,6 +56,11 @@ const MENU_ROW_TONES = {
    * arms.
    */
   armed: "text-danger ring-1 ring-danger/40 ring-inset hover:bg-danger-tint disabled:opacity-60",
+  /**
+   * A destructive row that opens its own confirm rather than arming in place:
+   * the schedule's "Remove", whose panel asks the second question.
+   */
+  danger: "text-danger hover:bg-danger-tint disabled:opacity-60",
 } as const;
 
 export type MenuRowTone = keyof typeof MENU_ROW_TONES;
@@ -70,6 +75,17 @@ export type MenuRowTone = keyof typeof MENU_ROW_TONES;
  * arbitrary `rounded-[…]` and wins. A derived corner passed through its
  * `className` would be inert.
  */
-export function menuRowClass(tone: MenuRowTone = "quiet"): string {
-  return `relative flex min-h-11 w-full cursor-pointer items-center ${MENU_TICK_GUTTER} text-sm font-medium transition-colors disabled:cursor-wait ${SEGMENT_CORNER} ${MENU_ROW_TONES[tone]}`;
+export function menuRowClass(
+  tone: MenuRowTone = "quiet",
+  { gutter = true }: { gutter?: boolean } = {},
+): string {
+  return `relative flex min-h-11 w-full cursor-pointer items-center ${gutter ? MENU_TICK_GUTTER : MENU_NO_GUTTER} text-sm font-medium transition-colors disabled:cursor-wait ${SEGMENT_CORNER} ${MENU_ROW_TONES[tone]}`;
 }
+
+/**
+ * **A menu none of whose rows can carry a tick** — a list of acts, such as a
+ * schedule row's Move, Copy and Remove. With no tick to line up with, the
+ * gutter would only push every word 20px off the panel's edge; the row keeps
+ * the tick gutter's 12px end inset on both sides instead.
+ */
+export const MENU_NO_GUTTER = "px-3";
