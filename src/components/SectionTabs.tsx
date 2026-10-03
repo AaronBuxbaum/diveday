@@ -11,6 +11,30 @@ import Link from "next/link";
  */
 export type SectionTab = { id: string; href: string; label: string };
 
+/**
+ * **Every tab is the same width** (Aaron, 2026-10-03: Money's "Discount codes"
+ * tab was wider than "Orders", so the targets jumped as you moved along).
+ *
+ * The list is a grid of `1fr` columns floored at their content. From `sm` up
+ * it is as wide as it needs (`w-fit`), which sizes every column to the widest
+ * tab. On a phone it spans the row and splits it evenly; a label too long for
+ * its share keeps its own width rather than clipping, and the rest stay equal.
+ * The rule under the tabs runs the full width either way, so it sits on the
+ * `<nav>`, and the current tab's underline sits on top of it.
+ *
+ * The departure's own tabs (`TripTabs`) wear these same two classes.
+ */
+export const SECTION_TAB_LIST_CLASS =
+  "grid grid-flow-col auto-cols-[minmax(min-content,1fr)] sm:w-fit";
+
+export function sectionTabClass(active: boolean): string {
+  return `-mb-px flex min-h-11 items-center justify-center whitespace-nowrap border-b-2 px-2 text-sm font-medium sm:px-4 ${
+    active
+      ? "border-primary text-foreground"
+      : "border-transparent text-muted hover:text-foreground"
+  }`;
+}
+
 export function SectionTabs({
   label,
   tabs,
@@ -24,20 +48,16 @@ export function SectionTabs({
 }) {
   if (tabs.length < 2) return null;
   return (
-    <nav aria-label={label} data-section-tabs className="mb-6 print:hidden">
-      <ul className="flex gap-1 overflow-x-auto border-b border-border">
+    <nav aria-label={label} data-section-tabs className="mb-6 border-b border-border print:hidden">
+      <ul className={SECTION_TAB_LIST_CLASS}>
         {tabs.map((tab) => {
           const active = tab.id === current;
           return (
-            <li key={tab.id} className="shrink-0">
+            <li key={tab.id} className="flex">
               <Link
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
-                className={`-mb-px inline-flex min-h-11 items-center border-b-2 px-3 text-sm font-medium ${
-                  active
-                    ? "border-primary text-foreground"
-                    : "border-transparent text-muted hover:text-foreground"
-                }`}
+                className={`grow ${sectionTabClass(active)}`}
               >
                 {tab.label}
               </Link>
@@ -49,16 +69,18 @@ export function SectionTabs({
   );
 }
 
-/** The tabs as a `loading.tsx` draws them: 44px tabs on the rule. */
+/** The tabs as a `loading.tsx` draws them: 44px tabs of one width on the rule. */
 export function SectionTabsSkeleton({ count }: { count: number }) {
   return (
-    <div className="mb-6 flex gap-1 border-b border-border">
-      {Array.from({ length: count }, (_, index) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: placeholders with no identity
-        <div key={index} className="flex min-h-11 items-center px-3">
-          <div className="h-4 w-12 rounded bg-surface-sunken" />
-        </div>
-      ))}
+    <div data-section-tabs className="mb-6 border-b border-border">
+      <div className={SECTION_TAB_LIST_CLASS}>
+        {Array.from({ length: count }, (_, index) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: placeholders with no identity
+          <div key={index} className="flex min-h-11 items-center justify-center px-2 sm:px-4">
+            <div className="h-4 w-16 rounded bg-surface-sunken" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

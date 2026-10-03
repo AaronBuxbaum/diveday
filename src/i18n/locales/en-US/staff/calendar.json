@@ -1,6 +1,5 @@
 {
   "title": "Calendar subscriptions",
-  "description": "Put your DiveDay departures on the calendar you already use.",
   "refreshNote": "Calendars can run hours behind. For a same-day change, trust DiveDay.",
   "scope": {
     "assignments": {

@@ -220,7 +220,6 @@ export default async function IntegrationsSettingsPage({
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
         title={t("integrations.title")}
-        description={t("integrations.description")}
       />
       {syncBanner ? (
         <StaffNoticeBanner tone={syncBanner.tone}>{syncBanner.text}</StaffNoticeBanner>

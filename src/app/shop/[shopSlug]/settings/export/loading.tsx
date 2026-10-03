@@ -19,13 +19,7 @@ export default function Loading() {
       <div className="animate-pulse">
         {/* The bundle's one-paragraph inventory is five lines at 390px and
             three at 1280, beside the download button. */}
-        <ShopPageHeaderSkeleton
-          titleWidth="w-56"
-          description
-          descriptionWidth="w-full max-w-xl"
-          descriptionLines={{ base: 5, sm: 3 }}
-          actions
-        />
+        <ShopPageHeaderSkeleton titleWidth="w-56" description={false} actions />
         {/* Shell and rhythm from the same places the page takes them — the
             page's two halves at `space-y-10`, the backups cards at the tighter
             within-a-section gap. */}

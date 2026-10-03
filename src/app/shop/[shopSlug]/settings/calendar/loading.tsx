@@ -7,7 +7,7 @@ export default function CalendarSettingsLoading() {
   return (
     <main className={settingsPaneClass()}>
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton titleWidth="w-56" description descriptionWidth="w-full max-w-xl" />
+        <ShopPageHeaderSkeleton titleWidth="w-56" description={false} />
         {/* Two feed panels are a list of like cards, not a run of sections, so
             they keep the page's own `gap-4` rather than the section rhythm. */}
         <div className="mt-8 grid gap-4">

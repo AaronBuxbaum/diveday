@@ -117,7 +117,6 @@ export default async function CalendarSubscriptionsPage({
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
         title={t("calendar.title")}
-        description={t("calendar.description")}
       />
 
       <p className="mb-6 text-sm text-muted">{t("calendar.refreshNote")}</p>
