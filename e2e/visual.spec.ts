@@ -4484,6 +4484,25 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **A row's "⋯" list, open under the button that opened it** (the "..."
+       * bugs, 2026-10). It used to render as a strip at the foot of the whole
+       * week, so no capture of the board ever showed it beside its row. The
+       * wait is on the list's own hook, which exists only while it is open.
+       */
+      test(`a row's ⋯ list opens under its row (${scheme})`, async ({ page }) => {
+        const title = "Wreck Trip — Spiegel Grove";
+        await page.goto("/shop/blue-mantis/schedule/board");
+        await page.getByRole("heading", { name: "Schedule", level: 1 }).waitFor();
+        await boardListSettled(page);
+        await page
+          .getByRole("button", { name: new RegExp(`^Move, copy, or remove ${title},`) })
+          .first()
+          .click();
+        await page.locator("[data-row-menu]").waitFor();
+        await capture(page, "schedule-builder-row-menu", scheme);
+      });
+
+      /**
        * **The move panel with its impact preview** (issue #1203, D43).
        *
        * The one seeded departure that has consequences worth stating: the

@@ -687,9 +687,9 @@ export default async function ScheduleBoardPage({
                 : entry.boatId
                   ? (boatMap.get(entry.boatId) ?? null)
                   : null,
-          seats,
           price,
         }),
+        seatsLabel: seats,
         // **Who is crewing it**, in the shop's own lead-first order. The row
         // decides nothing with this — `WeekBoard` votes on the week's habit and
         // prints only the departures that differ (`src/lib/usual-crew.ts`).
@@ -738,11 +738,8 @@ export default async function ScheduleBoardPage({
         title: span.title,
         // `joinFacts`, as a boat's meta is (`weekEntryMeta`): no wrapped line
         // of it starts with "·".
-        meta: joinFacts([
-          st("schedule.week.seats", { booked: span.booked, capacity: span.capacity }),
-          weekMoney(span.priceCents),
-          span.instructorName,
-        ]),
+        meta: joinFacts([weekMoney(span.priceCents), span.instructorName]),
+        seatsLabel: st("schedule.week.seats", { booked: span.booked, capacity: span.capacity }),
         // The course's own first day and departure time, not the column the
         // bar happens to start in: a run that began before this week still
         // moves from where it really starts.

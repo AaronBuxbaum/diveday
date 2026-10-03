@@ -287,8 +287,9 @@ function weekFrom(days: FixtureDay[], overrides: Partial<BuilderWeek> = {}): Bui
         startTime: trip.startTime,
         title: trip.title,
         time: trip.timeRange.split(" – ")[0] ?? trip.timeRange,
-        meta: [trip.diveSiteName, `${trip.booked} of ${trip.capacity}`].filter(Boolean).join(" · "),
+        meta: trip.diveSiteName ?? "",
         seats: { booked: trip.booked, capacity: trip.capacity },
+        seatsLabel: `${trip.booked} of ${trip.capacity}`,
         crew: trip.crew,
         dayCount: trip.dayCount,
         status: "upcoming" as const,
@@ -1360,8 +1361,9 @@ describe("ScheduleBuilder week board", () => {
       startTime: "07:00",
       title: "Two-Tank Reef",
       time: "7:00 AM",
-      meta: "10 of 12 · $95",
+      meta: "$95",
       seats: { booked: 10, capacity: 12 },
+      seatsLabel: "10 of 12",
       // Unstaffed by default, which is the loud case: a factory that defaulted
       // to a crew would let a row quietly stop printing its gap.
       crew: [] as string[],
@@ -1377,8 +1379,9 @@ describe("ScheduleBuilder week board", () => {
   function weekSpan(overrides: Partial<WeekSpan> & { tripId: string }): WeekSpan {
     return {
       title: "Open Water Diver — three-day course",
-      meta: "4 of 5 · $595 · Marcus Webb",
+      meta: "$595 · Marcus Webb",
       seats: { booked: 4, capacity: 5 },
+      seatsLabel: "4 of 5",
       runsLabel: "3 days",
       dateIso: "2026-08-28",
       startTime: "08:00",
@@ -1573,7 +1576,7 @@ describe("ScheduleBuilder week board", () => {
                     title: "Benwood & Elbow",
                     status: "sailed",
                     unpriced: true,
-                    meta: "Sailed · 9 of 12",
+                    meta: "Sailed",
                     ref: "Benwood & Elbow, Mon, Aug 24 11:30 AM – 3:00 PM",
                   }),
                 ],
@@ -1583,7 +1586,7 @@ describe("ScheduleBuilder week board", () => {
       }),
     );
 
-    expect(within(grid()).getByText("Sailed · 9 of 12")).toBeTruthy();
+    expect(within(grid()).getByText("Sailed")).toBeTruthy();
     // Every one of the three is refused by src/db/trips-schedule.ts for a
     // departure that has already sailed, so none of them is offered.
     expect(
@@ -1607,7 +1610,7 @@ describe("ScheduleBuilder week board", () => {
                     dateIso: "2026-08-30",
                     title: "Christ of the Abyss",
                     unpriced: true,
-                    meta: "0 of 12",
+                    meta: "",
                     ref: "Christ of the Abyss, Sun, Aug 30 11:30 AM – 3:00 PM",
                   }),
                 ],
@@ -1660,70 +1663,109 @@ describe("ScheduleBuilder week board", () => {
   });
 
   /**
-   * **The board has one panel, not one per composition** (issue #1309).
+   * **The "⋯" opens where the reader is looking** (the "..." bugs, 2026-10).
    *
-   * The day stream and the week grid are both mounted at once and hidden from
-   * each other by CSS, and each used to render its own Move/Copy/Remove keyed
-   * `move:<id>` and `w:move:<id>`. So the open panel belonged to exactly one of
-   * them, and crossing `xl` made it vanish with whatever had been typed into
-   * it — rotate a tablet, un-maximise a window, open devtools.
-   *
-   * jsdom applies no media query, so both compositions are *visible* here.
-   * That makes this the right place to pin the structural half, which is the
-   * half that fixes the bug: whichever side opens the panel, there is exactly
-   * one of it and it sits outside both subtrees, so no media query can reach
-   * it. A shared key alone would have produced two — two controls labelled
-   * "New date" in the DOM, breaking strict-mode locators and duplicating a
-   * labelled control for assistive technology.
+   * The list and every form it opened rendered at the foot of the whole week
+   * and took focus there, so a tap on a Friday "⋯" scrolled the page down to a
+   * strip that named the departure in words. A second tap on the same "⋯"
+   * re-opened the strip instead of closing it, because the outside-tap
+   * listener did not count the trigger as inside.
    */
-  it("renders one move panel, outside both compositions, from whichever opened it", async () => {
-    const user = userEvent.setup();
-    board(
+  describe("a row's ⋯", () => {
+    const friday = () =>
       week({
         days: week().days.map((day) =>
-          day.dateIso === "2026-08-27"
+          day.dateIso === "2026-08-28"
             ? {
                 ...day,
                 entries: [
-                  weekEntry({ tripId: "trip-1", dateIso: "2026-08-27", title: "Two-Tank Reef" }),
+                  weekEntry({ tripId: "trip-1", dateIso: "2026-08-28", title: "Two-Tank Reef" }),
+                  weekEntry({
+                    tripId: "trip-2",
+                    dateIso: "2026-08-28",
+                    title: "Night Dive",
+                    time: "7:30 PM",
+                    ref: "Night Dive, Fri, Aug 28 7:30 PM – 9:30 PM",
+                  }),
                 ],
               }
             : day,
         ),
-      }),
-    );
+      });
+    const trigger = (title: string) =>
+      screen.getByRole("button", { name: new RegExp(`^Move, copy, or remove ${title}`) });
+    const rowOf = (title: string) => trigger(title).closest("li") as HTMLElement;
 
-    const openFromGrid = async () => {
-      await user.click(
-        within(grid()).getByRole("button", { name: /^Move, copy, or remove Two-Tank Reef/ }),
-      );
-      await user.click(screen.getByRole("button", { name: /^Move Two-Tank Reef/ }));
-    };
+    it("drops its list inside the departure's own row", async () => {
+      const user = userEvent.setup();
+      board(friday());
+      await user.click(trigger("Two-Tank Reef"));
+      const move = screen.getByRole("button", { name: /^Move Two-Tank Reef/ });
+      expect(rowOf("Two-Tank Reef").contains(move)).toBe(true);
+      expect(trigger("Two-Tank Reef")).toHaveAttribute("aria-expanded", "true");
+      expect(move).toHaveFocus();
+    });
 
-    await openFromGrid();
-    // `getAllBy`, not `getBy`: the point is the count, and `getBy` would throw
-    // its own error rather than report two.
-    expect(screen.getAllByLabelText("New date")).toHaveLength(1);
-    const panel = screen.getByLabelText("New date");
-    // Outside the week grid — the subtree that is `display:none` below `xl`.
-    expect(grid().contains(panel)).toBe(false);
-    // And outside every row of the stream, the subtree hidden above it.
-    for (const row of screen.getAllByRole("listitem")) {
-      expect(row.contains(panel)).toBe(false);
-    }
+    it("closes on a second tap of the same ⋯", async () => {
+      const user = userEvent.setup();
+      board(friday());
+      await user.click(trigger("Two-Tank Reef"));
+      await user.click(trigger("Two-Tank Reef"));
+      expect(screen.queryByRole("button", { name: /^Move Two-Tank Reef/ })).toBeNull();
+      expect(trigger("Two-Tank Reef")).toHaveAttribute("aria-expanded", "false");
+    });
 
-    // The stream's own control opens the same single panel.
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
-    const streamRow = screen
-      .getAllByRole("listitem")
-      .find((row) => within(row).queryByRole("button", { name: /^Move, copy, or remove/ }));
-    if (!streamRow) throw new Error("the stream row’s actions control is missing");
-    await user.click(
-      within(streamRow).getByRole("button", { name: /^Move, copy, or remove Two-Tank Reef/ }),
-    );
-    await user.click(screen.getByRole("button", { name: /^Move Two-Tank Reef/ }));
-    expect(screen.getAllByLabelText("New date")).toHaveLength(1);
-    expect(streamRow.contains(screen.getByLabelText("New date"))).toBe(false);
+    it("closes on Escape, handing focus back to the ⋯, and on a tap anywhere else", async () => {
+      const user = userEvent.setup();
+      board(friday());
+      await user.click(trigger("Two-Tank Reef"));
+      await user.keyboard("{Escape}");
+      expect(screen.queryByRole("button", { name: /^Move Two-Tank Reef/ })).toBeNull();
+      expect(trigger("Two-Tank Reef")).toHaveFocus();
+
+      await user.click(trigger("Two-Tank Reef"));
+      await user.click(screen.getByText("Aug 24 – 30, 2026"));
+      expect(screen.queryByRole("button", { name: /^Move Two-Tank Reef/ })).toBeNull();
+    });
+
+    it("moves to another row's ⋯ in one tap", async () => {
+      const user = userEvent.setup();
+      board(friday());
+      await user.click(trigger("Two-Tank Reef"));
+      await user.click(trigger("Night Dive"));
+      expect(screen.queryByRole("button", { name: /^Move Two-Tank Reef/ })).toBeNull();
+      expect(
+        rowOf("Night Dive").contains(screen.getByRole("button", { name: /^Move Night Dive/ })),
+      ).toBe(true);
+    });
+
+    it("opens the chosen form under the row that asked for it, once", async () => {
+      const user = userEvent.setup();
+      board(friday());
+      for (const verb of ["Move", "Copy", "Remove"]) {
+        await user.click(trigger("Night Dive"));
+        await user.click(screen.getByRole("button", { name: new RegExp(`^${verb} Night Dive`) }));
+        // The list gives way to the form; it does not stay open over it.
+        expect(trigger("Night Dive")).toHaveAttribute("aria-expanded", "false");
+        const form = document.querySelector("form") as HTMLFormElement;
+        expect(document.querySelectorAll("form")).toHaveLength(1);
+        expect(rowOf("Night Dive").contains(form)).toBe(true);
+        expect(rowOf("Two-Tank Reef").contains(form)).toBe(false);
+        // Focus is in the form, never dropped to the top of the page.
+        expect(form.contains(document.activeElement)).toBe(true);
+      }
+    });
+
+    it("opens a day's add form under that day, not under the week", async () => {
+      const user = userEvent.setup();
+      board(friday());
+      await user.click(screen.getByRole("button", { name: "Add a departure on Day 28" }));
+      const form = document.querySelector("form") as HTMLFormElement;
+      const fridayList = screen.getByRole("list", { name: "Day 28" });
+      expect(fridayList.parentElement?.contains(form)).toBe(true);
+      const saturdayList = screen.getByRole("list", { name: "Day 29" });
+      expect(saturdayList.parentElement?.contains(form)).toBe(false);
+    });
   });
 
   it("opens move, copy and remove from a multi-day course bar too", async () => {
@@ -1791,7 +1833,7 @@ describe("ScheduleBuilder week board", () => {
     // price.
     board(
       week({
-        spans: [weekSpan({ tripId: "course-1", unpriced: true, meta: "4 of 5 · Marcus Webb" })],
+        spans: [weekSpan({ tripId: "course-1", unpriced: true, meta: "Marcus Webb" })],
       }),
     );
 
@@ -2040,12 +2082,12 @@ describe("ScheduleBuilder week board", () => {
       // about — principle 9, and the reason spans pass `crewLine={null}`.
       board(
         week({
-          spans: [weekSpan({ tripId: "course-1", meta: "4 of 5 · $595 · Marcus Webb" })],
+          spans: [weekSpan({ tripId: "course-1", meta: "$595 · Marcus Webb" })],
           days: week().days.map((day) => ({ ...day, entries: [] })),
         }),
       );
 
-      expect(within(grid()).getByText("4 of 5 · $595 · Marcus Webb")).toBeInTheDocument();
+      expect(within(grid()).getByText("$595 · Marcus Webb")).toBeInTheDocument();
       expect(within(grid()).queryByText(/^Crew:/)).toBeNull();
     });
   });

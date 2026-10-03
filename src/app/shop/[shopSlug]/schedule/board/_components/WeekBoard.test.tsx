@@ -10,7 +10,7 @@ import {
   type WeekEntry,
   type WeekSpan,
 } from "./WeekBoard";
-import { WEEK_EMPTY_DAY_CLASS } from "./week-geometry";
+import { WEEK_DAY_GRID_CLASS, WEEK_EMPTY_DAY_CLASS } from "./week-geometry";
 
 afterEach(cleanup);
 
@@ -25,6 +25,12 @@ const COPY: WeekBoardCopy = {
   add: "Add",
   addDepartureOnDay: "Add a departure on {day}",
   rowActionsAria: "Move, copy, or remove {ref}",
+  move: "Move",
+  moveAria: "Move {ref}",
+  copy: "Copy",
+  copyAria: "Copy {ref}",
+  remove: "Remove",
+  removeAria: "Remove {ref}",
   noPriceSet: "No price set",
   noPriceSetAria: "Set a price for {ref}",
   noPriceSetAll: "None of these departures has a price yet.",
@@ -50,7 +56,8 @@ function entry(overrides: Partial<WeekEntry> = {}): WeekEntry {
     ref: "Two-Tank Reef, Thu, Aug 27 7:00 AM",
     time: "7:00 AM",
     seats: { booked: 8, capacity: 12 },
-    meta: "Molasses Reef · 8 of 12 · $95",
+    seatsLabel: "8 of 12",
+    meta: "Molasses Reef · $95",
     crew: [],
     ...overrides,
   };
@@ -130,11 +137,16 @@ const ASKED = {
 };
 
 describe("the week's label rows (K-254)", () => {
-  it("set the seat tally as a group's meta, in the one spelling GroupLabel owns", () => {
-    const meta = groupMetaClasses();
-    expect(meta.length).toBeGreaterThan(0);
-    board(week());
-    expect([...screen.getByText("8 of 12 seats").classList]).toEqual(meta);
+  it("sets the seat tally on the pager's own line, with no label row naming the range again", () => {
+    // A "THE WEEK" group label stood between the pager and the days, saying
+    // what the range beside the arrows already said, to carry one number.
+    const { container } = board(week());
+    const tally = screen.getByText("8 of 12 seats");
+    expect(tally).toHaveAttribute("data-week-seat-tally", "");
+    const line = tally.parentElement as HTMLElement;
+    expect(within(line).getByRole("link", { name: "Next week" })).toBeTruthy();
+    expect(within(line).getByText("Aug 24 – 30, 2026")).toBeTruthy();
+    expect(container.querySelector("[data-week-board]")?.textContent).not.toContain("The week");
   });
 
   it("set the asked count the same way, under the label its section is named by", () => {
@@ -196,7 +208,7 @@ function firstLineCentre(box: Element, at: Width): number {
   let above = 0;
   for (
     let element: Element | null = box;
-    element && !element.classList.contains("grid");
+    element && element.className !== WEEK_DAY_GRID_CLASS;
     element = element.parentElement
   ) {
     above += spacing(element, ["mt", "my"], at) + spacing(element, ["pt", "py"], at);
@@ -214,16 +226,16 @@ describe("the day rail (K-326, K-327, K-328)", () => {
     const grid = label.closest("h3")?.parentElement as HTMLElement;
     const rail = Number(token(grid, /^grid-cols-\[([\d.]+)rem_/)) * 16;
     expect([...grid.classList].filter((name) => name.includes(":grid-cols-"))).toEqual([]);
-    const weekday = px(token(screen.getByText("Thu"), /^max-sm:w-(\d+)$/));
+    const weekday = px(token(screen.getByText("Thu"), /^w-(\d+)$/));
     const gap = px(token(label, /^gap-([\d.]+)$/));
     const disc = px(token(today, /^size-(\d+)$/));
     expect(weekday + gap + disc).toBeLessThanOrEqual(rail);
   });
 
-  it("starts every numeral at one x: below sm each weekday is one fixed width", () => {
+  it("starts every numeral at one x: each weekday is one fixed width", () => {
     // The numerals sat at x = 45.9 to 56.3 at 390, each after its own word.
     board(week());
-    const widths = WEEKDAYS.map((day) => token(screen.getByText(day), /^max-sm:w-(\d+)$/));
+    const widths = WEEKDAYS.map((day) => token(screen.getByText(day), /^w-(\d+)$/));
     expect(new Set(widths).size).toBe(1);
     for (const day of WEEKDAYS) expect(screen.getByText(day)).toHaveClass("shrink-0");
   });
@@ -241,23 +253,30 @@ describe("the day rail (K-326, K-327, K-328)", () => {
     // 20px line, so the floor did nothing and the words centred at 8 + 10.
     board(week({}, [entry()]));
     const weekday = screen.getByText("Thu");
-    const time = screen.getByText("7:00 AM").parentElement as HTMLElement;
-    const empty = screen.getAllByText("No boats");
+    const time = screen.getByText("7:00 AM");
+    const empty = screen.getAllByText("No boats").map((none) => none.parentElement as HTMLElement);
     expect(empty).toHaveLength(6);
-    // Below sm the weekday and its numeral share the line; from sm up the
-    // weekday takes it alone, over its numeral.
-    const labels: [Width, Element][] = [
-      ["phone", weekday.parentElement as HTMLElement],
-      ["sm", weekday],
-    ];
-    for (const [at, label] of labels) {
+    // The weekday and its numeral share one line at every width: stacked
+    // from `sm` up, every day was two lines tall and an empty one twice the
+    // height of what it says.
+    const label = weekday.parentElement as HTMLElement;
+    expect([...label.classList].filter((name) => name.startsWith("sm:"))).toEqual([]);
+    for (const at of ["phone", "sm"] as Width[]) {
       const rail = firstLineCentre(label, at);
       expect(rail).toBe(8 + 32 / 2);
       expect(firstLineCentre(time, at)).toBe(rail);
       for (const none of empty) expect(firstLineCentre(none, at)).toBe(rail);
     }
     // The skeleton draws an empty day from the same string (loading.test.tsx).
-    for (const none of empty) expect(none).toHaveClass(...WEEK_EMPTY_DAY_CLASS.split(" "));
+    for (const none of empty) expect(none.className).toBe(WEEK_EMPTY_DAY_CLASS);
+  });
+
+  it("offers an empty day's add on the line that says it is empty", () => {
+    // "No boats" and "+ Add" were two lines; a week with four empty days
+    // spent four extra rows on them.
+    board(week());
+    const line = screen.getAllByText("No boats").at(-1)?.parentElement as HTMLElement;
+    expect(within(line).getByRole("button", { name: /^Add a departure on / })).toBeTruthy();
   });
 
   /** The Logbook restart decorates only what carries data (ADR 20261001-logbook). */
@@ -302,8 +321,9 @@ describe("a departure row is one door (K-325, K-530)", () => {
     unpriced: false,
     rollCallOpen: null,
     ref: "Open Water Diver — three-day course, Aug 28 – 30, 2026",
-    meta: "4 of 5 · $595 · Marcus Webb",
+    meta: "$595 · Marcus Webb",
     seats: { booked: 4, capacity: 5 },
+    seatsLabel: "4 of 5",
     runsLabel: "3 days",
     startColumn: 5,
     columnSpan: 3,
@@ -342,7 +362,7 @@ describe("a departure row is one door (K-325, K-530)", () => {
       ]),
     );
     for (const menu of screen.getAllByRole("button", { name: /^Move, copy, or remove / })) {
-      expect(menu).toHaveClass("relative", "z-10");
+      expect(menu.parentElement).toHaveClass("relative", "z-10");
     }
     const flags = [
       screen.getByRole("link", { name: /^Set a price for / }),
@@ -407,52 +427,62 @@ describe("a departure row is one door (K-325, K-530)", () => {
 });
 
 describe("a departure's lead line (K-329, K-335, K-529)", () => {
-  const META = "Molasses Reef · 8 of 12 · $95";
+  /** The row's grid: the time, the title over its facts, the seats, the "⋯". */
+  const rowGrid = () =>
+    screen.getByText("Two-Tank Reef").closest("[data-week-row-grid]") as HTMLElement;
 
-  it("gives the time a fixed slot sized for '12:00 PM', so every seat bar starts at one x", () => {
-    // The bars began at x 320/321 after "5:30 AM" and 330/331 after
-    // "11:00 AM" at 1280, and from 640 to ~700px the time wrapped its
-    // meridiem. "12:00 PM" is ~74px at 16px semibold, tabular.
+  it("gives the time a fixed column sized for '12:00 PM', so every title starts at one x", () => {
+    // "12:00 PM" is ~74px at 16px semibold, tabular; a content-width time
+    // put each title after its own time, and from 640 to ~700px wrapped its
+    // meridiem.
     board(week({}, [entry({ time: "12:00 PM" })]));
-    const time = screen.getByText("12:00 PM");
-    expect(time).toHaveClass("shrink-0", "whitespace-nowrap");
-    expect(px(token(time, /^w-(\d+)$/))).toBeGreaterThanOrEqual(74);
+    expect(screen.getByText("12:00 PM")).toHaveClass("whitespace-nowrap");
+    const column = Number(token(rowGrid(), /^md:grid-cols-\[([\d.]+)rem_/)) * 16;
+    expect(column).toBeGreaterThanOrEqual(74);
   });
 
-  it("keeps the meta on a line of its own until md, where it has room to sit inline", () => {
-    // At 640 the text column is ~428px for a 459–490px line, so two metas
-    // truncated before their price; at 768 the room is 334px against the
-    // longest meta's 268px.
+  it("leads with the title, its facts under it, and the seats at the row's end", () => {
+    // The row opened on a seat bar and "Molasses Reef · Mantis I · 9 of 12 ·
+    // $95", with the trip's name under them: the line a reader scans for was
+    // the second one on every row.
     board(week({}, [entry()]));
-    const meta = screen.getByText(META);
-    const line = meta.parentElement as HTMLElement;
-    const small = (element: Element) =>
-      [...element.classList].filter((name) => name.startsWith("sm:"));
-    expect(small(meta)).toEqual([]);
-    expect(small(line)).toEqual([]);
-    expect(meta).toHaveClass(
-      "order-last",
-      "basis-full",
-      "md:order-none",
-      "md:min-w-0",
-      "md:flex-1",
-      "md:basis-auto",
-      "md:truncate",
+    const title = screen.getByText("Two-Tank Reef");
+    const meta = screen.getByText("Molasses Reef · $95");
+    expect(title.parentElement).toBe(meta.parentElement);
+    expect(title.compareDocumentPosition(meta) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const seats = screen.getByText("8 of 12");
+    expect(seats.closest("[data-week-row-grid]")).toBe(rowGrid());
+    expect(meta.textContent).not.toContain("8 of 12");
+  });
+
+  it("gives the title the row's whole measure on a phone, under the time and the seats", () => {
+    // At 390 there is no room for a title between a time and a count.
+    board(week({}, [entry()]));
+    const body = screen.getByText("Two-Tank Reef").parentElement as HTMLElement;
+    expect(body).toHaveClass(
+      "col-span-full",
+      "row-start-2",
+      "md:col-span-1",
+      "md:col-start-2",
+      "md:row-start-1",
     );
-    expect(line).toHaveClass("flex-wrap", "md:flex-nowrap");
+    expect(screen.getByText("7:00 AM")).toHaveClass("col-start-1", "row-start-1");
   });
 
-  it("sets the meta straight under the time's line, which the '⋯' overhangs by exactly its excess", () => {
-    // On a phone the meta started 21px under the time's baseline, against
-    // 13px from the meta to the title: a 4px row gap under a 36px line whose
-    // height was the "⋯" square's, not the time's.
+  it("keeps a sailed boat's seats in the column every other row's stand in", () => {
+    // A boat already home has no "⋯"; without a spacer its count slid into
+    // the menu's column, out of line with the rest of the day.
+    board(week({}, [entry({ status: "sailed", meta: "Sailed" })]));
+    expect(screen.queryByRole("button", { name: /^Move, copy, or remove / })).toBeNull();
+    expect(rowGrid().children).toHaveLength(4);
+  });
+
+  it("sets the '⋯' on the time's line, which it overhangs by exactly its excess", () => {
     board(week({}, [entry()]));
-    const line = screen.getByText(META).parentElement as HTMLElement;
-    expect([...line.classList].filter((name) => /(^|:)gap-y-/.test(name))).toEqual([]);
-    const first = screen.getByText("7:00 AM").parentElement as HTMLElement;
+    const first = screen.getByText("7:00 AM");
     const menu = screen.getByRole("button", { name: /^Move, copy, or remove / });
     const square = px(token(menu, /^w-(\d+)$/));
-    const overhang = px(token(menu, /^-my-([\d.]+)$/));
+    const overhang = px(token(menu.parentElement as HTMLElement, /^-my-([\d.]+)$/));
     expect(square - 2 * overhang).toBe(px(token(first, /^min-h-(\d+)$/)));
   });
 });
