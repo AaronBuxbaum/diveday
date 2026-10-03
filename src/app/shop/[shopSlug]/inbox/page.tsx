@@ -11,7 +11,7 @@ import { requireShopSurface } from "@/lib/session";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { InboxRow } from "./_components/InboxRow";
-import { deleteInboxMessageAction } from "./actions";
+import { deleteInboxMessageAction, setInboxMessageDoneAction } from "./actions";
 
 /**
  * `?notice=` codes this page redirects back to itself with. Read through
@@ -115,6 +115,7 @@ export default async function InboxPage({
                     timezone={shop.timezone}
                     t={t}
                     deleteAction={deleteInboxMessageAction}
+                    doneAction={setInboxMessageDoneAction}
                   />
                 ))}
               </ul>
@@ -133,6 +134,7 @@ export default async function InboxPage({
                     timezone={shop.timezone}
                     t={t}
                     deleteAction={deleteInboxMessageAction}
+                    doneAction={setInboxMessageDoneAction}
                   />
                 ))}
               </ul>

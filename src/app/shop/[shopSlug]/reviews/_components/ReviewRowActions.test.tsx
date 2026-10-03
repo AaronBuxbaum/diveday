@@ -140,21 +140,23 @@ describe("the review row's outcome", () => {
 });
 
 describe("the review row's responsive actions", () => {
-  it("keeps Hide and both standout labels on the shared touch-target line", () => {
+  it("keeps Hide and both standout labels on full-height menu rows", async () => {
     const { container } = render(moderatedBar());
     const actionLine = container.querySelector("div.w-full");
     if (!actionLine) throw new Error("the review action line did not render");
-
     expect(actionLine).toHaveClass("w-full", "sm:w-auto");
+
+    await userEvent.click(screen.getByLabelText("More for Yara’s review"));
     for (const control of [
-      screen.getByText(copy.hide),
+      screen.getByRole("button", { name: copy.hide }),
       screen.getByRole("button", { name: copy.markStandout }),
     ]) {
-      expect(control).toHaveClass("min-h-11", "items-center", "whitespace-nowrap");
+      expect(control).toHaveClass("min-h-11", "w-full", "items-center", "whitespace-nowrap");
     }
 
     cleanup();
     render(moderatedBar(true));
+    await userEvent.click(screen.getByLabelText("More for Yara’s review"));
     expect(screen.getByRole("button", { name: copy.removeStandout })).toHaveClass(
       "min-h-11",
       "items-center",
@@ -168,22 +170,67 @@ describe("the review row's responsive actions", () => {
    * per row now, and only Publish — the act a waiting row is on the page for —
    * keeps its own place outside it.
    */
-  it("keeps Hide and the standout toggle behind one per-row disclosure", () => {
+  it("keeps Hide and the standout toggle behind one per-row ⋯", async () => {
     const { container } = render(moderatedBar());
-    const details = container.querySelectorAll("details");
-    // The outer disclosure, and the reason picker nested inside it.
-    expect(details).toHaveLength(2);
-    const outer = details[0];
-    if (!outer) throw new Error("the row's disclosure did not render");
-    expect(outer.open).toBe(false);
-    expect(outer.querySelector("summary")).toHaveAttribute("aria-label", "More for Yara’s review");
-    // Both rare acts are inside it; nothing else in the slot is a control.
-    expect(outer.contains(screen.getByRole("button", { name: copy.markStandout }))).toBe(true);
-    expect(outer.contains(screen.getByText(copy.hide))).toBe(true);
+    const more = screen.getByLabelText("More for Yara’s review");
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    // Closed, neither rare act is on the row.
+    expect(screen.queryByRole("button", { name: copy.markStandout })).toBeNull();
+    expect(screen.queryByRole("button", { name: copy.hide })).toBeNull();
+
+    await userEvent.click(more);
+    expect(more).toHaveAttribute("aria-expanded", "true");
+    const panel = container.querySelector("[data-row-menu]");
+    expect(panel).toContainElement(screen.getByRole("button", { name: copy.markStandout }));
+    expect(panel).toContainElement(screen.getByRole("button", { name: copy.hide }));
   });
 
-  /** A review the shop already took down offers neither, so it draws no disclosure. */
-  it("draws no disclosure on a hidden row", () => {
+  /**
+   * **The ⋯ behaves like every menu in the app** (the Reviews bug, 2026-10-03).
+   * It was a `<details>` that opened inside the row: a second tap did close
+   * it, but Escape and a tap elsewhere did nothing, and the row grew under it.
+   */
+  it("closes on a second tap, on Escape and on a tap elsewhere", async () => {
+    render(
+      <>
+        <p>elsewhere</p>
+        {moderatedBar()}
+      </>,
+    );
+    const more = screen.getByLabelText("More for Yara’s review");
+    const isOpen = () => more.getAttribute("aria-expanded") === "true";
+
+    await userEvent.click(more);
+    expect(isOpen()).toBe(true);
+    await userEvent.click(more);
+    expect(isOpen()).toBe(false);
+
+    await userEvent.click(more);
+    await userEvent.keyboard("{Escape}");
+    expect(isOpen()).toBe(false);
+    expect(more).toHaveFocus();
+
+    await userEvent.click(more);
+    await userEvent.click(screen.getByText("elsewhere"));
+    expect(isOpen()).toBe(false);
+  });
+
+  it("swaps the list for the reason picker in the same panel, and reopens on the list", async () => {
+    const { container } = render(moderatedBar());
+    const more = screen.getByLabelText("More for Yara’s review");
+    await userEvent.click(more);
+    await userEvent.click(screen.getByRole("button", { name: copy.hide }));
+    const panel = container.querySelector("[data-row-menu]");
+    expect(panel).toContainElement(screen.getByLabelText(copy.hideReasonLabel));
+    expect(screen.queryByRole("button", { name: copy.markStandout })).toBeNull();
+
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(more);
+    expect(screen.getByRole("button", { name: copy.markStandout })).toBeInTheDocument();
+  });
+
+  /** A review the shop already took down offers neither, so it draws no ⋯. */
+  it("draws no ⋯ on a hidden row", () => {
     const { container } = render(
       <ReviewRowProvider>
         <ReviewRowActions
@@ -198,7 +245,7 @@ describe("the review row's responsive actions", () => {
         />
       </ReviewRowProvider>,
     );
-    expect(container.querySelectorAll("details")).toHaveLength(0);
+    expect(container.querySelector("[aria-expanded]")).toBeNull();
     expect(screen.getByRole("button", { name: copy.republish })).toBeInTheDocument();
   });
 });
@@ -215,7 +262,7 @@ describe("the hide's undo toast", () => {
     // behind its own inside that; the act is the button inside them (ADR
     // 20260813-review-moderation-has-a-floor).
     await userEvent.click(screen.getByLabelText("More for Yara’s review"));
-    await userEvent.click(screen.getByText(copy.hide));
+    await userEvent.click(screen.getByRole("button", { name: copy.hide }));
     await userEvent.selectOptions(screen.getByLabelText(copy.hideReasonLabel), "spam");
     await userEvent.click(screen.getByRole("button", { name: copy.hideConfirm }));
 

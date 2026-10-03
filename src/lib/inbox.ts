@@ -190,3 +190,12 @@ export function sesMessageIdFromHeader(header: string | null | undefined): strin
   const match = header.match(/<([^<>@\s]+)@[^<>@\s]*amazonses\.com>/i);
   return match ? match[1] : null;
 }
+
+/**
+ * The fragment one inbound message answers to on the diver's record, so the
+ * inbox's door lands on the message it was opened from rather than the top
+ * of the conversation. One spelling, shared by the link and the target.
+ */
+export function inboxMessageAnchor(messageId: string): string {
+  return `message-${messageId}`;
+}

@@ -12,6 +12,7 @@ import {
   personThread,
   recordInboundMessage,
   recordStaffReply,
+  reopenInboundMessage,
   shopIdForInboundEmailToken,
 } from "./inbound-messages";
 import { inboundMessages, people, personRoles, shops } from "./schema";
@@ -305,6 +306,22 @@ describe("the unanswered count and the inbox", () => {
     expect(await personThread(db, shop.id, linked.personId ?? "")).not.toEqual([]);
   });
 
+  it("marks a message done and puts it back on the worklist", async () => {
+    const { db, shop } = await seededShopContext();
+    const before = await countUnansweredMessages(db, shop.id);
+    const page = await pagedInboxMessages(db, shop.id, { page: 1 });
+    const waiting = page.rows.find((row) => row.message.answeredAt === null)?.message;
+    if (!waiting) throw new Error("seeded shop has no waiting message");
+
+    expect(await markInboundAnswered(db, shop.id, waiting.id, NOW)).toBe(true);
+    expect(await countUnansweredMessages(db, shop.id)).toBe(before - 1);
+
+    expect(await reopenInboundMessage(db, shop.id, waiting.id)).toBe(true);
+    expect(await countUnansweredMessages(db, shop.id)).toBe(before);
+    const after = await pagedInboxMessages(db, shop.id, { page: 1 });
+    expect(after.rows.find((row) => row.message.id === waiting.id)?.message.answeredAt).toBeNull();
+  });
+
   it("refuses to answer or delete another shop's message", async () => {
     const { db, shop } = await seededShopContext();
     const page = await pagedInboxMessages(db, shop.id, { page: 1 });
@@ -312,6 +329,7 @@ describe("the unanswered count and the inbox", () => {
     if (!target) throw new Error("no rows");
     const otherShopId = "00000000-0000-4000-8000-000000000000";
     expect(await markInboundAnswered(db, otherShopId, target.id, NOW)).toBe(false);
+    expect(await reopenInboundMessage(db, otherShopId, target.id)).toBe(false);
     const stranger = page.rows.find((row) => row.message.personId === null)?.message;
     if (!stranger) throw new Error("seeded shop has no unknown-sender row");
     expect(await deleteStrangerInboundMessage(db, otherShopId, stranger.id, NOW)).toBe(false);
