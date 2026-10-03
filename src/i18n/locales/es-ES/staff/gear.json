@@ -56,6 +56,7 @@
     "filterAriaLabel": "Filtrar por tipo",
     "filterAll": "Todo ({count})",
     "filterKind": "{label} ({count})",
+    "sizeOnly": "Talla {size}",
     "outWith": "Con {name} · vuelve el {dueOn}",
     "overdueWith": "Con {name} · debía volver el {dueOn}",
     "reservedFor": "Reservado para {name} · desde el {from}",
