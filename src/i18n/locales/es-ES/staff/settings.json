@@ -965,6 +965,6 @@
     "code": "Código de inserción",
     "partnerLinkField": "Enlace de referido",
     "showRequired": "Elige la salida de esta tarjeta.",
-    "fromFareharbor": "¿Vienes de FareHarbor? <link>Cada una de sus inserciones tiene aquí su equivalente</link>."
+    "fromFareharbor": "¿Te cambias desde FareHarbor? <link>Mira qué inserción sustituye a cada uno de sus widgets</link>."
   }
 }

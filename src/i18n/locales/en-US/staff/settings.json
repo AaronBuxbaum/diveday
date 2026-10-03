@@ -965,6 +965,6 @@
     "code": "Embed code",
     "partnerLinkField": "Referral link",
     "showRequired": "Pick the departure this card is for.",
-    "fromFareharbor": "Coming from FareHarbor? <link>Each of its embeds has its match here</link>."
+    "fromFareharbor": "Switching from FareHarbor? <link>See which embed replaces each of its widgets</link>."
   }
 }
