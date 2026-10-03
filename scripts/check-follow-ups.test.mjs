@@ -350,7 +350,9 @@ describe("a glob in Touches", () => {
    * request at once: the exact outage #1339's expansion was added to stop.
    */
   it("resolves a Next dynamic-route path, whose brackets are not a character class", async () => {
-    expect(await touchedPathExists(root, "src/app/shop/[shopSlug]/check-in/actions.ts")).toBe(true);
+    expect(
+      await touchedPathExists(root, "src/app/shop/[shopSlug]/trips/[id]/check-in/actions.ts"),
+    ).toBe(true);
     expect(
       await touchedPathExists(
         root,
