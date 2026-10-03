@@ -1,6 +1,5 @@
 {
   "title": "Backups",
-  "description": "Every week, a full copy of your shop’s records lands in storage you own. If you ever leave, or DiveDay ever disappears, the copy is already yours.",
   "notice": {
     "saved": "Backup destination saved.",
     "invalid": "Check the destination details and try again.",

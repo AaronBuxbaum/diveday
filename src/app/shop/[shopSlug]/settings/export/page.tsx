@@ -157,7 +157,6 @@ export default async function DataOutSettingsPage({
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
         title={t("settings.export.title")}
-        description={t("settings.export.description")}
         actions={
           <DownloadExportButton
             href={`${basePath}/download`}

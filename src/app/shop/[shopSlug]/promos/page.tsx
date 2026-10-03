@@ -352,10 +352,7 @@ export default async function PromosPage({
           "undoMaxRedemptions",
         ]}
       />
-      <ShopPageHeader
-        title={t("shared.shopSections.money")}
-        description={t("promos.description")}
-      />
+      <ShopPageHeader title={t("shared.shopSections.money")} />
       <StaffSectionTabs
         shopSlug={shopSlug}
         section="money"
@@ -566,23 +563,26 @@ export default async function PromosPage({
       <GroupLabel as="h2" id="trip-deals" className="mt-10">
         {t("promos.tripDeals.heading")}
       </GroupLabel>
-      <p className="mt-1 text-sm text-muted">{t("promos.tripDeals.description")}</p>
       {tripDeals.length === 0 ? (
         // A trip deal is sent from a departure, never from here, so the door is
-        // the board — the line above already says so; this is the way there.
-        <EmptyState
-          titleAs="h3"
-          title={t("promos.tripDeals.empty")}
-          action={
-            <Link
-              href={`/shop/${shopSlug}/schedule/board`}
-              className={buttonClass({ variant: "secondary", size: "sm" })}
-            >
-              {t("promos.tripDeals.emptyAction")}
-            </Link>
-          }
-          className="mt-3"
-        />
+        // the board. The one line saying so shows only here, where a reader
+        // needs to know how to make one; a list of deals needs no caption.
+        <>
+          <p className="mt-1 text-sm text-muted">{t("promos.tripDeals.description")}</p>
+          <EmptyState
+            titleAs="h3"
+            title={t("promos.tripDeals.empty")}
+            action={
+              <Link
+                href={`/shop/${shopSlug}/schedule/board`}
+                className={buttonClass({ variant: "secondary", size: "sm" })}
+              >
+                {t("promos.tripDeals.emptyAction")}
+              </Link>
+            }
+            className="mt-3"
+          />
+        </>
       ) : (
         <TripDealLedger className="mt-3" labelledBy="trip-deals" rows={dealRows} />
       )}
@@ -599,7 +599,6 @@ export default async function PromosPage({
       <GroupLabel as="h2" id="dive-packages" className="mt-10">
         {t("settings.main.divePackages.heading")}
       </GroupLabel>
-      <p className="mt-1 text-sm text-muted">{t("settings.main.divePackages.description")}</p>
       <Link
         href={`/shop/${shopSlug}/promos/packages`}
         className={buttonClass({ variant: "secondary", size: "sm", className: "mt-3" })}

@@ -91,10 +91,6 @@ test.describe("staff calendar subscriptions", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: "Calendar subscriptions" }),
     ).toBeVisible();
-    // And the page's own one-line lede is here, where it belongs.
-    await expect(
-      page.getByText("Put your DiveDay departures on the calendar you already use."),
-    ).toBeVisible();
   });
 
   test("an unknown feed token is a plain 404, never an existence oracle", async ({ request }) => {

@@ -119,7 +119,6 @@
   },
   "walkIn": {
     "title": "Walk-in",
-    "description": "No hace falta correo en el mostrador.",
     "tripLabel": "¿Qué barco?",
     "tripEmpty": "No sale ningún barco en el próximo día y medio.",
     "tripEmptyAction": "Ver el calendario",
