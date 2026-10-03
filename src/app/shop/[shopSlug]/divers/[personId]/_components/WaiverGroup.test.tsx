@@ -124,6 +124,29 @@ describe("the waiver group", () => {
   });
 
   /**
+   * **One status line, then the ways to fix it** (Aaron, 2026-10-03: "This is
+   * quite confusing!"). The open group used to say "Not signed" under the
+   * door's own "Not signed", add "Not sent", and hide the four routes behind a
+   * "Send options" button. An unsigned release keeps the diver off the boat,
+   * so the group opens on its own, onto the routes and nothing else.
+   */
+  it("opens an unsigned release straight onto the routes, without repeating the door", () => {
+    renderCard(diver({ email: "priya@dive.day" }));
+    expect(screen.getByTestId("diver-file-group-waiver")).toHaveAttribute("open");
+    expect(screen.getAllByText("Not signed")).toHaveLength(1);
+    expect(screen.queryByText("Not sent")).toBeNull();
+    expect(screen.queryByText("Send options")).toBeNull();
+    expect(screen.getByRole("button", { name: "Email waiver" })).toBeVisible();
+  });
+
+  it("gives the status ledger's Send the waiver a focusable place to land", () => {
+    renderCard(diver({ email: "priya@dive.day" }));
+    const anchor = document.getElementById("waiver-send");
+    expect(anchor).toHaveAttribute("tabindex", "-1");
+    expect(anchor).toContainElement(screen.getByRole("button", { name: "Copy link" }));
+  });
+
+  /**
    * A medical hold is the one waiver state with an act only this group can
    * take — the physician's answer goes in here and nowhere else in the product
    * — so it is open work, and the record lands with the door open on it.
@@ -181,21 +204,21 @@ describe("the waiver group", () => {
     expect(inset(clearance)).toEqual(inset(heldState));
     cleanup();
 
-    // The send options and a refusal's outcome line: an unsigned release.
+    // The routes and a refusal's outcome line: an unsigned release, which
+    // opens straight onto the routes with no state row above them.
     const unsigned = renderCard(diver({ email: "priya@dive.day" }), {
       form: "waiver",
       tone: "warning",
       text: "Confirm you reviewed the medical questionnaire before recording a paper waiver.",
     } as ComponentProps<typeof WaiverGroup>["status"]);
-    const unsignedState = unsigned.container.querySelector(".divide-y > :first-child");
-    const options = rowOf(screen.getByText("Send options"));
+    const options = rowOf(screen.getByRole("button", { name: "Copy link" }));
     const outcome = rowOf(
       screen.getAllByText(/Confirm you reviewed the medical questionnaire/).at(-1) as Element,
     );
-    expect(options?.tagName).toBe("DETAILS");
+    expect(unsigned.container.querySelector(".divide-y > :first-child")).toBe(options);
     expect(outcome).not.toBe(options);
-    expect(inset(options)).toEqual(inset(unsignedState));
-    expect(inset(outcome)).toEqual(inset(unsignedState));
+    expect(inset(options)).toEqual(inset(heldState));
+    expect(inset(outcome)).toEqual(inset(heldState));
   });
 
   /**
@@ -518,9 +541,9 @@ describe("a minor's release with no guardian on it", () => {
 
   it("says what is missing rather than 'Not signed'", () => {
     renderCard(diver({ waiver: { state: "guardian_missing", signedAt } }));
-    // Twice by design: the group's collapsed summary and the open row both
-    // carry the state word.
-    expect(screen.getAllByText("Guardian signature missing")).toHaveLength(2);
+    // Once, on the door: the open group carries only the sentence the door
+    // does not, and the ways out.
+    expect(screen.getAllByText("Guardian signature missing")).toHaveLength(1);
     expect(
       screen.getByText(
         "Signed Aug 27, 2026 by the diver alone; a parent or guardian still has to sign",
@@ -528,7 +551,7 @@ describe("a minor's release with no guardian on it", () => {
     ).toBeTruthy();
     expect(screen.queryByText("Not signed")).toBeNull();
     // The way out is the same as an expired release's: a fresh link.
-    expect(screen.getByText("Send options", { exact: true })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Copy link" })).toBeTruthy();
   });
 
   /**
@@ -540,7 +563,7 @@ describe("a minor's release with no guardian on it", () => {
    */
   it("keeps its word when the last waiver message failed to send", () => {
     renderCard(diver({ waiver: { state: "guardian_missing", signedAt }, waiverRequest: "failed" }));
-    expect(screen.getAllByText("Guardian signature missing")).toHaveLength(2);
+    expect(screen.getAllByText("Guardian signature missing")).toHaveLength(1);
     expect(screen.queryByText("Not signed")).toBeNull();
   });
 });

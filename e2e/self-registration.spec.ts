@@ -107,7 +107,6 @@ test.describe("a diver whose release already stands", () => {
     await page.getByRole("link", { name, exact: true }).click();
     await openDiverFileGroup(page, "Waiver");
     const waiverGroup = page.getByRole("region", { name: "Waiver" });
-    await waiverGroup.getByText("Send options", { exact: true }).click();
     await waiverGroup.getByRole("button", { name: "Copy link" }).click();
     await page.goto(await waiverLinkFromToast(page));
 

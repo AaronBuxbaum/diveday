@@ -260,7 +260,7 @@ export function WaiverDeliveryActions({
 
   return (
     <>
-      <div className="mt-5 flex flex-wrap items-start gap-2">
+      <div className="flex flex-wrap items-start gap-2">
         <SendHold
           className="contents"
           hold={holdSendAction}
