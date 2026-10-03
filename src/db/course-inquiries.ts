@@ -1,6 +1,7 @@
-import { and, count, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import type { CalendarDate } from "@/lib/calendar-date";
 import type { CourseInquiryExperience } from "@/lib/course-inquiry";
+import { normalizeEmailAddress } from "@/lib/inbox";
 import type { AppDb, DbExecutor } from "./client";
 import { type OffsetPage, offsetPage, PAGE_SIZE } from "./paging";
 import { courseInquiries, courses, people } from "./schema";
@@ -154,6 +155,62 @@ export type DateRequestRow = {
   createdAt: Date;
 };
 
+/**
+ * **Every request names the diver it came from, when the shop has them on
+ * file** — whenever the diver joined the roster.
+ *
+ * `person_id` is snapshotted at write time, so a request sent *before* the
+ * diver's record existed (they asked, then booked, or the shop added them by
+ * hand) stayed unlinked for good. The requests list then drew that diver's
+ * name as plain text with no door to their record: "Tomás Ferreira" in the
+ * demo shop, on the roster under the very address his request carries.
+ *
+ * So each reader resolves an unlinked row at read time, with the inbox's own
+ * email rule (`matchPersonByAddress` in inbound-messages.ts): an exact match on the lowercased
+ * address, live and un-erased divers of this shop only, the oldest winning
+ * among duplicates. **Email only, never the phone**, for the reason the write
+ * path gives: a household number is genuinely shared, and a partner's request
+ * would open the wrong diver's record. The stored column is left as written —
+ * erasure reaches these rows by address anyway (`anonymizeDiver`'s sweep).
+ */
+async function withRosterLinks(
+  db: DbExecutor,
+  shopId: string,
+  rows: DateRequestRow[],
+): Promise<DateRequestRow[]> {
+  const emails = [
+    ...new Set(
+      rows
+        .filter((row) => !row.personId)
+        .map((row) => normalizeEmailAddress(row.email))
+        .filter((email): email is string => Boolean(email)),
+    ),
+  ];
+  if (emails.length === 0) return rows;
+  // One read for the page. Oldest first, so the first id kept per address is
+  // the record the shop has used longest — `matchPersonByAddress`'s rule.
+  const matches = await db
+    .select({ id: people.id, email: sql<string>`lower(${people.email})` })
+    .from(people)
+    .where(
+      and(
+        eq(people.shopId, shopId),
+        isNull(people.deletedAt),
+        isNull(people.anonymizedAt),
+        inArray(sql`lower(${people.email})`, emails),
+      ),
+    )
+    .orderBy(asc(people.createdAt));
+  const byEmail = new Map<string, string>();
+  for (const match of matches) if (!byEmail.has(match.email)) byEmail.set(match.email, match.id);
+  return rows.map((row) => {
+    if (row.personId) return row;
+    const email = normalizeEmailAddress(row.email);
+    const personId = email ? byEmail.get(email) : undefined;
+    return personId ? { ...row, personId } : row;
+  });
+}
+
 /** How many requests one page of the staff list holds. */
 export const DATE_REQUESTS_PAGE_SIZE = PAGE_SIZE.list;
 
@@ -184,32 +241,36 @@ export async function listDateRequestsForStaff(
         .where(eq(courseInquiries.shopId, shopId));
       return row?.n ?? 0;
     },
-    fetchRows: (offset, limit) =>
-      db
-        .select({
-          id: courseInquiries.id,
-          courseId: courseInquiries.courseId,
-          courseTitle: courses.title,
-          interest: courseInquiries.interest,
-          personId: courseInquiries.personId,
-          name: courseInquiries.name,
-          email: courseInquiries.email,
-          phone: courseInquiries.phone,
-          experienceLevel: courseInquiries.experienceLevel,
-          timing: courseInquiries.timing,
-          preferredDate: courseInquiries.preferredDate,
-          alternateDate: courseInquiries.alternateDate,
-          dateFlexible: courseInquiries.dateFlexible,
-          divers: courseInquiries.divers,
-          message: courseInquiries.message,
-          createdAt: courseInquiries.createdAt,
-        })
-        .from(courseInquiries)
-        .leftJoin(courses, eq(courses.id, courseInquiries.courseId))
-        .where(eq(courseInquiries.shopId, shopId))
-        .orderBy(sql`${firstDate} asc nulls last`, desc(courseInquiries.createdAt))
-        .limit(limit)
-        .offset(offset),
+    fetchRows: async (offset, limit) =>
+      withRosterLinks(
+        db,
+        shopId,
+        await db
+          .select({
+            id: courseInquiries.id,
+            courseId: courseInquiries.courseId,
+            courseTitle: courses.title,
+            interest: courseInquiries.interest,
+            personId: courseInquiries.personId,
+            name: courseInquiries.name,
+            email: courseInquiries.email,
+            phone: courseInquiries.phone,
+            experienceLevel: courseInquiries.experienceLevel,
+            timing: courseInquiries.timing,
+            preferredDate: courseInquiries.preferredDate,
+            alternateDate: courseInquiries.alternateDate,
+            dateFlexible: courseInquiries.dateFlexible,
+            divers: courseInquiries.divers,
+            message: courseInquiries.message,
+            createdAt: courseInquiries.createdAt,
+          })
+          .from(courseInquiries)
+          .leftJoin(courses, eq(courses.id, courseInquiries.courseId))
+          .where(eq(courseInquiries.shopId, shopId))
+          .orderBy(sql`${firstDate} asc nulls last`, desc(courseInquiries.createdAt))
+          .limit(limit)
+          .offset(offset),
+      ),
   });
 }
 
@@ -225,7 +286,7 @@ export async function listDateRequestsByIds(
 ): Promise<DateRequestRow[]> {
   const ids = [...new Set(requestIds)];
   if (ids.length === 0) return [];
-  return db
+  const rows = await db
     .select({
       id: courseInquiries.id,
       courseId: courseInquiries.courseId,
@@ -248,6 +309,7 @@ export async function listDateRequestsByIds(
     .leftJoin(courses, eq(courses.id, courseInquiries.courseId))
     .where(and(eq(courseInquiries.shopId, shopId), inArray(courseInquiries.id, ids)))
     .orderBy(desc(courseInquiries.createdAt));
+  return withRosterLinks(db, shopId, rows);
 }
 
 /**
@@ -262,7 +324,7 @@ export async function listDateRequestsForCalendarDates(
 ): Promise<DateRequestRow[]> {
   const uniqueDates = [...new Set(dates)];
   if (uniqueDates.length === 0) return [];
-  return db
+  const rows = await db
     .select({
       id: courseInquiries.id,
       courseId: courseInquiries.courseId,
@@ -293,4 +355,5 @@ export async function listDateRequestsForCalendarDates(
       ),
     )
     .orderBy(desc(courseInquiries.createdAt));
+  return withRosterLinks(db, shopId, rows);
 }
