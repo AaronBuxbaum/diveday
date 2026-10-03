@@ -119,7 +119,6 @@
   },
   "walkIn": {
     "title": "Walk-in",
-    "description": "No email required at the counter.",
     "tripLabel": "Which boat?",
     "tripEmpty": "No boats sail in the next day and a half.",
     "tripEmptyAction": "View the schedule",

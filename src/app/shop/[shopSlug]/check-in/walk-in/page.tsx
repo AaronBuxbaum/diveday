@@ -122,7 +122,6 @@ export default async function WalkInPage({
         eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.checkIn)}
         eyebrowHref={shopPath(shopSlug, "check-in")}
         title={t("checkIn.walkIn.title")}
-        description={t("checkIn.walkIn.description")}
       />
 
       {banner ? (

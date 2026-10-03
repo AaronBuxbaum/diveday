@@ -61,7 +61,6 @@ export default async function GearImportPage({
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${shopSlug}/settings`}
         title={t("gear.import.title")}
-        description={t("gear.import.description")}
       />
 
       {importedMatch ? (

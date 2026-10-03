@@ -250,7 +250,6 @@ export default async function GearRegisterPage({
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice", "undoId"]} />
       <ShopPageHeader
-        eyebrow={t("gear.eyebrow")}
         title={t("gear.title")}
         // **No header action at all** (principle 8: two doors for one act is
         // one too many). The register ends in the "Add a unit" band the way the
@@ -363,10 +362,7 @@ export default async function GearRegisterPage({
               className: "min-h-11 scroll-mt-24 justify-between p-5 sm:p-6",
             })}
           >
-            <div className="min-w-0">
-              <h2 className={SECTION_TITLE_CLASS}>{t("gear.addUnit.title")}</h2>
-              <p className="mt-1 text-sm text-muted">{t("gear.addUnit.description")}</p>
-            </div>
+            <h2 className={`min-w-0 ${SECTION_TITLE_CLASS}`}>{t("gear.addUnit.title")}</h2>
             <SummaryCaret
               line={`h-lh ${SECTION_TITLE_CLASS}`}
               className="size-4 text-muted group-open/add-unit:rotate-90"

@@ -94,8 +94,15 @@ export function SettingsRail({
   // WhatsApp that is 19 grey rows and no selected one, the row itself
   // 140–750px below the box's fold. So whenever the current row changes, the
   // box comes to it — when it is out of sight, and only then.
+  //
+  // The box says when it has moved (`data-rail-settled`), because the move is
+  // an effect and lands after the page has painted: the visual suite shot
+  // `settings-embed` with the rail at its top on one run and on Website embed
+  // on the next, and now waits for this mark instead.
+  const [settledFor, setSettledFor] = useState<string | null | undefined>(undefined);
   useEffect(() => {
     if (currentId && scrollerRef.current) revealCurrentRow(scrollerRef.current);
+    setSettledFor(currentId);
   }, [currentId]);
 
   return (
@@ -109,7 +116,12 @@ export function SettingsRail({
           20260827-clearwater-surface-language, decision 10). Its frame is
           shared with the skeleton that stands in for it while it loads
           (`settings-rail-geometry.ts`). */}
-      <div ref={scrollerRef} className={`${SETTINGS_RAIL_FRAME_CLASS} overflow-y-auto`}>
+      <div
+        ref={scrollerRef}
+        data-settings-rail-scroller
+        data-rail-settled={settledFor === currentId ? "" : undefined}
+        className={`${SETTINGS_RAIL_FRAME_CLASS} overflow-y-auto`}
+      >
         {/* The inset is on what the box scrolls, never on the box: a sticky
             `top-0` sticks at its scroller's padding edge, so with `py-6` on
             the box a stuck label stood 24px under its top, and the rows
