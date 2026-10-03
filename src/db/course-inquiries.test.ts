@@ -413,4 +413,77 @@ describe("listDateRequestsForStaff", () => {
     expect(past.page).toBe(2);
     expect(past.rows).toHaveLength(3);
   });
+
+  /**
+   * **A request finds its diver whenever they joined** (the Tomás Ferreira
+   * row in the demo shop). The link written at capture time can only see the
+   * roster as it was then, so the reader resolves the rest by address.
+   */
+  describe("the diver behind an unlinked request", () => {
+    async function unlinkedRequest(
+      db: AppDb,
+      shopId: string,
+      contact: { email?: string; phone?: string },
+    ) {
+      await db.insert(courseInquiries).values({
+        shopId,
+        courseId: null,
+        interest: "a wreck dive",
+        experienceLevel: "certified",
+        preferredDate: "2026-09-12",
+        email: contact.email ?? null,
+        phone: contact.phone ?? null,
+      });
+    }
+
+    it("links a request to a diver added after it, by address, ignoring case", async () => {
+      const { db, shop } = await emptyRequestShop();
+      await unlinkedRequest(db, shop.id, { email: "Later.Lou@example.com" });
+      const diver = await createDiver(db, {
+        shopId: shop.id,
+        fullName: "Later Lou",
+        email: "later.lou@example.com",
+      });
+      if (!diver) throw new Error("diver insert failed");
+
+      const page = await listDateRequestsForStaff(db, shop.id);
+      expect(page.rows[0]?.personId).toBe(diver.id);
+      // Read-time only: the stored column is what capture wrote.
+      const [stored] = await db
+        .select({ personId: courseInquiries.personId })
+        .from(courseInquiries)
+        .where(eq(courseInquiries.shopId, shop.id));
+      expect(stored?.personId).toBeNull();
+    });
+
+    it("never links by phone, since a household number is shared", async () => {
+      const { db, shop } = await emptyRequestShop();
+      await unlinkedRequest(db, shop.id, { phone: "+1 305 555 0177" });
+      await createDiver(db, { shopId: shop.id, fullName: "Phone Pat", phone: "+1 305 555 0177" });
+
+      const page = await listDateRequestsForStaff(db, shop.id);
+      expect(page.rows[0]?.personId).toBeNull();
+    });
+
+    it("never links to a removed diver, or to another shop's", async () => {
+      const { db, shop } = await emptyRequestShop();
+      await unlinkedRequest(db, shop.id, { email: "gone@example.com" });
+      const removed = await createDiver(db, {
+        shopId: shop.id,
+        fullName: "Gone Gil",
+        email: "gone@example.com",
+      });
+      if (!removed) throw new Error("diver insert failed");
+      await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, removed.id));
+      const [rival] = await db
+        .insert(shops)
+        .values({ name: "Rival Reef", slug: "rival-reef-request-links", timezone: "UTC" })
+        .returning();
+      if (!rival) throw new Error("rival shop insert failed");
+      await createDiver(db, { shopId: rival.id, fullName: "Rival Gil", email: "gone@example.com" });
+
+      const page = await listDateRequestsForStaff(db, shop.id);
+      expect(page.rows[0]?.personId).toBeNull();
+    });
+  });
 });

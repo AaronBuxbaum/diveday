@@ -6562,6 +6562,21 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "staff-reviews", scheme);
       });
 
+      // The review row's "⋯" open, then its Hide: the list floats under its
+      // button and the reason picker takes its place in the same panel, and
+      // the row keeps its height throughout. Both used to open *inside* the
+      // row as nested disclosures, pushing the review down twice.
+      test(`the review row menu opens beside its button (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/reviews");
+        await page.getByRole("region", { name: /^Published/ }).waitFor();
+        const waiting = page.getByRole("region", { name: /^Waiting on you/ });
+        await waiting.getByRole("button", { name: /^More for/ }).click();
+        await capture(page, "staff-reviews-row-menu", scheme);
+        await waiting.getByRole("button", { name: "Hide", exact: true }).click();
+        await page.getByLabel("Why are you taking it down?").waitFor();
+        await capture(page, "staff-reviews-row-menu-hide", scheme);
+      });
+
       /**
        * **The panel that only exists when something has gone wrong** (D40,
        * issue #1200) — the class AGENTS.md says is photographed through a
@@ -6640,8 +6655,21 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the shop inbox renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/inbox");
         await page.getByRole("heading", { level: 1, name: "Inbox" }).waitFor();
-        await page.getByRole("heading", { name: "Answered" }).waitFor();
+        await page.getByRole("heading", { name: "Done" }).waitFor();
         await capture(page, "staff-inbox", scheme);
+      });
+
+      // A row's "⋯" open: the list floats under its button, over the rows
+      // below, and the row it belongs to keeps its height. The stranger's row,
+      // because it is the one whose list carries both acts.
+      test(`the inbox row menu opens beside its button (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/inbox");
+        await page.getByRole("heading", { name: "Done" }).waitFor();
+        await page
+          .getByRole("button", { name: "More for the message from Unknown sender" })
+          .click();
+        await page.locator("[data-row-menu]").waitFor();
+        await capture(page, "staff-inbox-row-menu", scheme);
       });
 
       // The other half of the same feature: one diver's conversation on their

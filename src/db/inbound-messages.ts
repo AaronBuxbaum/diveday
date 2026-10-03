@@ -374,6 +374,23 @@ export async function markInboundAnswered(
 }
 
 /**
+ * Put a message back on the worklist: the inbox's "Move back to waiting", for a
+ * message somebody marked done too early. Idempotent; a no-op outside the shop.
+ */
+export async function reopenInboundMessage(
+  db: DbExecutor,
+  shopId: string,
+  messageId: string,
+): Promise<boolean> {
+  const updated = await db
+    .update(inboundMessages)
+    .set({ answeredAt: null })
+    .where(and(liveMessage(shopId), eq(inboundMessages.id, messageId)))
+    .returning({ id: inboundMessages.id });
+  return updated.length > 0;
+}
+
+/**
  * Soft delete a message from a sender nobody on the roster holds (ADR
  * 20260820-every-delete-is-soft; issue 1506). A no-op outside the shop, and a
  * no-op on a row that has a diver behind it.

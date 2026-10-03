@@ -3,7 +3,7 @@
   "emptyDetail": "Las respuestas a los correos y mensajes de WhatsApp que envías llegan aquí.",
   "group": {
     "waiting": "Esperan tu respuesta · {count}",
-    "answered": "Respondidos"
+    "answered": "Resueltos"
   },
   "channel": {
     "email": "Correo",
@@ -23,6 +23,14 @@
     "actionFor": "Eliminar el mensaje de {address}",
     "confirm": "¿Eliminar este mensaje?",
     "pending": "Eliminando…"
+  },
+  "done": {
+    "action": "Marcar como resuelto",
+    "reopen": "Volver a pendientes",
+    "pending": "Guardando…"
+  },
+  "menu": {
+    "label": "Más opciones para el mensaje de {name}"
   },
   "pagination": {
     "total": "{count, plural, one {# mensaje} other {# mensajes}}"
