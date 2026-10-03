@@ -34,7 +34,7 @@ describe("resolveRegSuitKeys", () => {
   // head, which only the layer below's own run could publish — so the layer
   // above waited on it, and every middle layer had to spend six jobs to keep
   // that promise. The fork point from `main` was published by `main`'s own run
-  // long ago, so nothing waits and a middle layer can skip everything.
+  // long ago, so nothing waits.
   it("keys a stacked layer to the stack's fork point from main, not the layer below", () => {
     const keys = resolveRegSuitKeys({
       env: {

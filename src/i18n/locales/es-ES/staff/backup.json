@@ -1,6 +1,5 @@
 {
   "title": "Respaldos",
-  "description": "Cada semana, una copia completa de los registros de tu centro llega a un almacenamiento que es tuyo. Si algún día te vas, o DiveDay desaparece, la copia ya está en tus manos.",
   "notice": {
     "saved": "Destino de respaldo guardado.",
     "invalid": "Revisa los datos del destino e inténtalo de nuevo.",
