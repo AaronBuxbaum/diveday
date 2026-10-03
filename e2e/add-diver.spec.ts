@@ -370,11 +370,9 @@ test("booking a diver from their record issues their waiver, like every other do
   await page.getByText("Book a departure", { exact: true }).click();
   // The picker's option values are trip ids, so this targets *our* departure
   // without depending on how an option label is formatted for the locale.
-  await page.getByLabel("Course or dive").selectOption(tripId);
-  await page.getByRole("button", { name: "Book activity" }).click();
-  await expect(page.getByRole("status")).toContainText(
-    "Activity booked, but their waiver wasn’t emailed.",
-  );
+  await page.getByLabel("Departure", { exact: true }).selectOption(tripId);
+  await page.getByRole("button", { name: "Book", exact: true }).click();
+  await expect(page.getByRole("status")).toContainText("Booked, but their waiver wasn’t emailed.");
 
   await page.goto(`/shop/blue-mantis/trips/${tripId}`);
   await expect(page.getByRole("link", { name: "Priya Sharma" }).first()).toBeVisible();

@@ -53,8 +53,5 @@
   "pickupHotelColumn": "Hotel / Lodging",
   "pickupDiverColumn": "Diver",
   "pickupTimeUnset": "Unscheduled",
-  "supportHeading": "Dive support",
-  "supportToArrange": "{count, plural, one {# support diver to arrange} other {# support divers to arrange}}",
-  "supportOnTheManifest": "Anyone in the water goes on the manifest, whoever arranged them.",
   "cancelledNothingToPack": "The departure is cancelled. Nothing to pack."
 }

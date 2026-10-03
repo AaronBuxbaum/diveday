@@ -1,6 +1,6 @@
 # 20260827-support-needs-are-a-record-about-the-dive — Scoping an accessible-dive record
 
-- **Status:** Accepted — built 2026-08-27 (issue #1043)
+- **Status:** Deprecated — withdrawn. Removed 2026-10-03 at the owner's request during the Divers page cleanup: the `dive_support_needs` table (dropped by migration `drop-dive-support-needs`), the diver's question on `/ready/[token]`, the staff Dive support panel on the diver record, and every crew surface that read it (manifest, roll call, buddy teams, prep, offline manifests, export) are gone. Built 2026-08-27 (issue #1043); the record below is kept as history and describes nothing in the product
 - **Date:** 2026-08-27
 - **Issue:** #691
 - **Relates to:** [20260821-the-ready-page-asks-once](20260821-the-ready-page-asks-once.md), [20260820-shop-divemaster-ratio](20260820-shop-divemaster-ratio.md), [20260821-currency-is-what-catches-people](20260821-currency-is-what-catches-people.md)

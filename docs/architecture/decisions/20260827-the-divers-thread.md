@@ -82,9 +82,9 @@ at `?booked=1` — all-set settles into a plain success-ink line, because "paper
 waiver page's completed state (decision 6) and one moment does not fire twice; the receipt, the
 emails line and the per-row "Done" states collapse
 into their steps. Party seats, self-cancel and the shop card keep their places at the foot.
-Recency, the note, hotel pickup and the support-needs question
-(ADR 20260827-support-needs-are-a-record-about-the-dive) fold into Day-of details; support needs
-stays optional and never gates the step's settling.
+Recency, the note and hotel pickup fold into Day-of details. *(Amended 2026-10-03: a
+support-needs question also folded in here; it was removed at the owner's request during the Divers
+page cleanup, and ADR 20260827-support-needs-are-a-record-about-the-dive is deprecated.)*
 
 ### 4. After the dive, the same link (the after-state)
 

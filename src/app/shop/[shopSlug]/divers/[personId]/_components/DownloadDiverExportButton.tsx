@@ -27,7 +27,10 @@ export function DownloadDiverExportButton({
     <a
       href={href}
       download
-      className={buttonClass({ variant: "secondary" })}
+      // Ghost, flush, like "Delete …" beside it: the foot is the quiet things
+      // you do *to* a record, and a bordered box made this one read as the
+      // page's second button.
+      className={buttonClass({ variant: "ghost", flush: true })}
       aria-live="polite"
       onClick={() => {
         setAcknowledged(true);

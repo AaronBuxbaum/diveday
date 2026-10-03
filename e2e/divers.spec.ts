@@ -93,9 +93,9 @@ test("the record leads with what is open, and offers exactly one primary act", a
   // One primary, and it discloses the picker in place rather than navigating.
   const book = page.getByText("Book a departure", { exact: true });
   await expect(book).toBeVisible();
-  await expect(page.getByLabel("Course or dive")).toBeHidden();
+  await expect(page.getByLabel("Departure", { exact: true })).toBeHidden();
   await book.click();
-  await expect(page.getByLabel("Course or dive")).toBeVisible();
+  await expect(page.getByLabel("Departure", { exact: true })).toBeVisible();
 });
 
 /**

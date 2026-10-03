@@ -33,7 +33,6 @@ import {
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
-  diveSupportNeeds,
   executedDives,
   formDrafts,
   gearItems,
@@ -272,7 +271,6 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(nitroxCertifications).where(eq(nitroxCertifications.shopId, shopId));
   await db.delete(staffCredentials).where(eq(staffCredentials.shopId, shopId));
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
-  await db.delete(diveSupportNeeds).where(eq(diveSupportNeeds.shopId, shopId));
   await db.delete(priorVisits).where(eq(priorVisits.shopId, shopId));
   await db.delete(importedPaymentHistory).where(eq(importedPaymentHistory.shopId, shopId));
   await db.delete(diveSiteMoments).where(eq(diveSiteMoments.shopId, shopId));

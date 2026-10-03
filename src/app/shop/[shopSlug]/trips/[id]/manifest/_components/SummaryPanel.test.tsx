@@ -341,7 +341,6 @@ describe("the panel's chips and the roll call's rows are one jump", () => {
         />
         <DiverRollCall
           divers={roster}
-          crewNames={[]}
           checkpoint="after_dive_1"
           isDeparture={false}
           shopSlug="blue-mantis"
@@ -418,7 +417,6 @@ describe("the panel's chips and the roll call's rows are one jump", () => {
           />
           <DiverRollCall
             divers={[diver("b-1", "Ana Ruiz"), diver("b-3", "Priya Sharma")]}
-            crewNames={[]}
             checkpoint="after_dive_1"
             isDeparture={false}
             shopSlug="blue-mantis"

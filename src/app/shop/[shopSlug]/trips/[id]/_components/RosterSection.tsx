@@ -754,8 +754,8 @@ export function RosterSection({
     const outstanding = (
       <>
         {/* What this diver asked for when they said they were easing back, in
-            the open. A fact beside a name in the tone `src/i18n/support-needs-
-            labels.ts` sets — no warning colour, no mark that means careful:
+            the open. A fact beside a name in a muted tone — no warning
+            colour, no mark that means careful:
             a diver getting comfortable again is a diver the shop is ready for.
             What this seat *came for* is deliberately not here; the crew reads
             that as the departure's count on the team builder, never as a row

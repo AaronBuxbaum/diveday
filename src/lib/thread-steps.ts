@@ -17,10 +17,9 @@ import { RECAP_AUTOMATIC_DELAY_MS } from "./recap-schedule";
  *
  * **The figure must always be able to fill.** The page it replaced counted
  * `items.length + 2` and showed a wave-filled bar whose own copy admitted it
- * could never reach the end: the note, the support-needs question and the
- * hotel pickup were rendered as rows a diver could answer, left out of the
- * count, and three of the seven rows on screen therefore moved nothing when
- * answered. So every step this module emits is countable and every one of them
+ * could never reach the end: the note, the hotel pickup and the other optional
+ * questions were rendered as rows a diver could answer, left out of the count,
+ * and three of the seven rows on screen therefore moved nothing when answered. So every step this module emits is countable and every one of them
  * is finishable — the optional questions fold into Day-of details, which
  * settles on the one question that is genuinely asked of everybody (when did
  * you last dive), and the rest ride inside it without gating it.

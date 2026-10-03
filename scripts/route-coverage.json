@@ -87,7 +87,6 @@
       "returning-diver.spec.ts",
       "schedule-embed.spec.ts",
       "seat-claim.spec.ts",
-      "support-needs.spec.ts",
       "trip-admission.spec.ts",
       "waivers.spec.ts"
     ],
@@ -648,14 +647,12 @@
       "depth-and-age-surfaces.spec.ts",
       "divers.spec.ts",
       "manifest.spec.ts",
-      "sightings.spec.ts",
-      "support-needs.spec.ts"
+      "sightings.spec.ts"
     ],
     "visual": [
       "manifest",
       "manifest-buddy-divergence",
       "manifest-buddy-teams-panel",
-      "manifest-dive-support",
       "manifest-not-back-aboard",
       "manifest-not-here",
       "manifest-person-panel",
@@ -665,13 +662,7 @@
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/trips/[id]/prep": {
-    "e2e": [
-      "boat-loop.spec.ts",
-      "gear-fit-and-age.spec.ts",
-      "gear.spec.ts",
-      "nitrox.spec.ts",
-      "support-needs.spec.ts"
-    ],
+    "e2e": ["boat-loop.spec.ts", "gear-fit-and-age.spec.ts", "gear.spec.ts", "nitrox.spec.ts"],
     "visual": [
       "prep",
       "prep-assignments",

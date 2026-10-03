@@ -28,7 +28,6 @@ import {
   type SizedRentalKind,
   toRentableKinds,
 } from "./rentals";
-import { hasSupportNeeds, type SupportNeeds, supportDiversToArrange } from "./support-needs";
 
 export type RentalItemKind =
   | "bcd"
@@ -113,12 +112,6 @@ export type PrepDiver = {
   hotelPickupLocation?: string | null;
   /** Staff-set pickup time for this booking (e.g. "07:15"). */
   pickupTime?: string | null;
-  /**
-   * What this diver's dive needs set up, as they answered it on `/ready` (ADR
-   * 20260827-support-needs-are-a-record-about-the-dive). Null or absent when
-   * nobody has asked, which is the ordinary case.
-   */
-  supportNeeds?: SupportNeeds | null;
 };
 
 export type HotelPickupRun = {
@@ -346,40 +339,6 @@ export type DivePrepChecklist = {
      */
     flaggedDaysAgo: number;
   }[];
-  /**
-   * **What the day has been asked to set up, and for whom.**
-   *
-   * Divers who stated something a crew plans around, plus the departure's total
-   * in-water support requirement (ADR
-   * 20260827-support-needs-are-a-record-about-the-dive). Empty for almost every
-   * departure, and empty renders nothing.
-   *
-   * `supportDiversNeeded` is the figure a shop reads beside its rostered crew
-   * when deciding whether it has the day covered — the same relationship
-   * `src/lib/divemaster-ratio.ts` has with `inWaterDivemasterCount`, and the
-   * same authority: **none**. Nothing here compares the two and refuses
-   * anything. A departure short of this number sails, and the shop has a
-   * conversation.
-   */
-  supportNeeds: {
-    /**
-     * How many in-water supporters the **shop** has to find, which is not how
-     * many will be in the water: a diver bringing their own adaptive-trained
-     * buddy needs seats and a team, not crew.
-     */
-    supportDiversToArrange: number;
-    divers: { personId: string; fullName: string; needs: SupportNeeds }[];
-    /**
-     * Every name on this departure, divers and diving crew, for the "dives
-     * with" line to be checked against (issue #1068).
-     *
-     * Assembled here rather than at each surface so the prep list and the
-     * manifest cannot answer the same question differently — a diver who named
-     * the divemaster they always pair with must not read "on this departure"
-     * the day before and "not booked" at the rail.
-     */
-    rosterNames: string[];
-  };
 };
 
 /**
@@ -766,22 +725,9 @@ export function buildDivePrepChecklist(input: {
   const diversWithIncompleteFit: DivePrepChecklist["diversWithIncompleteFit"] = [];
   const now = input.now ?? nowDate();
   const diversNeedingStaffFit: DivePrepChecklist["diversNeedingStaffFit"] = [];
-  const diversWithSupportNeeds: DivePrepChecklist["supportNeeds"]["divers"] = [];
   let nitroxDivers = 0;
 
   for (const diver of input.divers) {
-    // Above the fit branches on purpose: this is the one fact here that has
-    // nothing to do with whether a fit was recorded, so a diver with no gear
-    // on file still brings their support arrangements onto the list. It is
-    // also why it is not folded into the `not_recorded` early-continue below.
-    if (hasSupportNeeds(diver.supportNeeds)) {
-      // Narrowed by `hasSupportNeeds`, which returns false for null.
-      diversWithSupportNeeds.push({
-        personId: diver.personId,
-        fullName: diver.fullName,
-        needs: diver.supportNeeds as SupportNeeds,
-      });
-    }
     if (nitroxTanksApproved(diver)) nitroxDivers += 1;
     else if (diver.wantsNitrox) {
       nitroxBlockers.push({
@@ -915,14 +861,6 @@ export function buildDivePrepChecklist(input: {
     diversNeedingStaffFit: diversNeedingStaffFit.sort((a, b) =>
       a.fullName.localeCompare(b.fullName),
     ),
-    supportNeeds: {
-      // Summed over the whole roster, not only the divers listed below: a
-      // stated 0 contributes 0 and a diver nobody asked contributes nothing, so
-      // the two agree by construction.
-      supportDiversToArrange: supportDiversToArrange(input.divers),
-      divers: diversWithSupportNeeds.sort((a, b) => a.fullName.localeCompare(b.fullName)),
-      rosterNames: [...input.divers.map((diver) => diver.fullName), ...(input.divingCrew ?? [])],
-    },
   };
 }
 

@@ -39,10 +39,6 @@ type ActivityParamShapes = {
   note_added: { actor: string; diver: string };
   /** That note was deleted. Soft, like every delete; the line stays. */
   note_deleted: { actor: string; diver: string };
-  /** What to set up for a diver's dives was answered, by staff or by the diver. */
-  support_needs_updated: { actor: string; diver: string; self: "yes" | "no" };
-  /** The same answers were cleared. */
-  support_needs_cleared: { actor: string; diver: string; self: "yes" | "no" };
   /**
    * A staffer attested that a booking flagged `identity_unconfirmed` really is
    * the diver it was attached to, **on the trip roster**. The trail is what
@@ -184,8 +180,6 @@ export const ACTIVITY_CODES = [
   "counter_check_in_undone",
   "note_added",
   "note_deleted",
-  "support_needs_updated",
-  "support_needs_cleared",
   "booking_removed",
   "booking_restored",
   "booking_no_show",

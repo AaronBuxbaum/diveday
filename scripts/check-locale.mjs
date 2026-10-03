@@ -342,7 +342,6 @@ export const DELIBERATELY_IDENTICAL = new Map([
     "the mail reply prefix, used unchanged in Spanish",
   ],
   ["diver.json demo.roles.instructor.title", "the same word in Spanish"],
-  ["diver.json ready.supportDiversNone", "the same word in Spanish"],
   ["diver.json trip.crewRole.instructor", "the same word in Spanish"],
   ["diver.json waiver.answerNo", "the same word in Spanish"],
   ["staff/diveSites.json form.route.zoomLabel", "the same word in Spanish"],

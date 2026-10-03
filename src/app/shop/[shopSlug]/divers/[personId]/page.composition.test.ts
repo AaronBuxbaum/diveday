@@ -11,10 +11,6 @@ function positionOf(marker: string): number {
   return SOURCE.indexOf(marker);
 }
 
-function countOf(marker: string): number {
-  return SOURCE.split(marker).length - 1;
-}
-
 /**
  * Every opening `<tag …>` in `source`, props and all. A `>` inside a `{…}`
  * expression (an arrow, a comparison) does not end the tag; the first one at
@@ -38,19 +34,12 @@ function openingTags(source: string, tag: string): string[] {
 }
 
 describe("the diver record file order", () => {
-  it("keeps Notes before the shared Dive support group", () => {
+  it("keeps Notes before the folded activity", () => {
     const notes = positionOf("<DiverNotesSection");
-    const support = positionOf("<SupportNeedsPanel");
     const activity = positionOf("<ActivitySection");
 
-    for (const marker of [notes, support, activity]) expect(marker).toBeGreaterThan(-1);
-    expect(notes).toBeLessThan(support);
-    expect(support).toBeLessThan(activity);
-    expect(countOf("<SupportNeedsPanel")).toBe(1);
-  });
-
-  it("keeps support outcomes routed to the support group's own anchor", () => {
-    expect(SOURCE).toContain('status={noticeForForm(diverNotice, "support")}');
+    for (const marker of [notes, activity]) expect(marker).toBeGreaterThan(-1);
+    expect(notes).toBeLessThan(activity);
   });
 
   /**

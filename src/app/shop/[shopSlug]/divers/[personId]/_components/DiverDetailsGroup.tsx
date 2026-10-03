@@ -61,13 +61,14 @@ export function DiverDetailsGroup({
           : t("divers.details.summaryNoEmergency")
       }
       summaryTone={emergencyName ? "muted" : "warning"}
+      stacked
       open={open}
     >
       <FieldGrid
         as="form"
         action={savePersonAction.bind(null, shopSlug, personId)}
         columns={2}
-        className={sectionCardClass({ className: "mt-3 w-full gap-y-3" })}
+        className={sectionCardClass({ className: "w-full gap-y-3" })}
       >
         {/* "SHARMA, PRIYA" turns around into "Priya Sharma"; ten digits in a
             Florida shop is a US number (ADR 20260906-before-you-ask,
@@ -123,18 +124,6 @@ export function DiverDetailsGroup({
             defaultValue={diver.person.dateOfBirth ?? ""}
           />
         </Field>
-        <Field
-          label={t("divers.header.diveInsuranceFieldLabel")}
-          hint={t("divers.header.optionalHint")}
-          description={t("divers.header.diveInsuranceDescription")}
-        >
-          <input
-            name="diveInsurance"
-            defaultValue={diver.person.diveInsurance ?? ""}
-            placeholder={t("divers.header.diveInsurancePlaceholder")}
-            className={controlClass}
-          />
-        </Field>
         {/* Task 144 — Today used to tell staff to "ask at the counter" and
             link to a roster with nowhere to type it in. This and the
             roster's per-diver card are the two staff entry points; both
@@ -160,6 +149,17 @@ export function DiverDetailsGroup({
             type="tel"
             autoComplete="tel"
             defaultValue={diver.person.emergencyContactPhone ?? ""}
+            className={controlClass}
+          />
+        </Field>
+        <Field
+          label={t("divers.header.diveInsuranceFieldLabel")}
+          hint={t("divers.header.optionalHint")}
+        >
+          <input
+            name="diveInsurance"
+            defaultValue={diver.person.diveInsurance ?? ""}
+            placeholder={t("divers.header.diveInsurancePlaceholder")}
             className={controlClass}
           />
         </Field>

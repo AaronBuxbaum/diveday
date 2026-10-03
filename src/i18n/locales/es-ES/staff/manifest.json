@@ -118,8 +118,6 @@
   "buddyTeamLabel": "Equipo {number, number, ::00}",
   "buddyCancelledName": "{name} (plaza cancelada)",
   "buddyCrewName": "{name} (tripulación)",
-  "buddyDivesWith": "Bucea con {name}",
-  "buddyDivesWithNotBooked": "Bucea con {name} — sin reserva",
   "buddyRecordedBy": "Registrado por {name}",
   "buddyDissolve": "Deshacer equipo",
   "buddyRemoveMember": "Quitar a {name}",
@@ -183,7 +181,6 @@
   "rollCallRecordedShort": "{label} · {time} · {name}",
   "markBackAboard": "Marcar de vuelta a bordo",
   "crewMarkBackAboard": "Marcar de vuelta a bordo",
-  "supportNeedsLabel": "Apoyo en la inmersión",
   "emergency": {
     "heading": "En una emergencia",
     "empty": "Este centro no tiene números de emergencia registrados.",

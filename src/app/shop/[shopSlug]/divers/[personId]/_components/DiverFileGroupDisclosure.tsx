@@ -7,7 +7,7 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
  * **One door per file group, at every width.**
  *
  * Every group in the diver's file — certification records, waiver, gear and
- * sizes, notes, dive support, conversation, activity — is a row that
+ * sizes, notes, conversation, activity — is a row that
  * states its one useful fact and opens on request. There is no second mode.
  *
  * It had one until this sweep: "legacy" groups hid their summary above `sm`
@@ -24,15 +24,17 @@ import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
  * a phone.
  *
  * The label is the group's heading and carries the group's fragment id, so the
- * `?notice=` redirects (`#gear`, `#waiver`, `#notes`, …) and the prep panel's
- * `#support` land on it — and `openHashTarget` below opens whichever group
+ * `?notice=` redirects (`#gear`, `#waiver`, `#notes`, …) and the status ledger's
+ * fixes land on it — and `openHashTarget` below opens whichever group
  * holds the target, which is what makes a deep link into a closed door work.
  *
- * **No outer margin, and no prop to hang one on.** The record stacks its
- * groups on one `space-y-10` (forms-and-controls.md, "Section rhythm"). A
- * `className` used to let each group bring its own, and five brought `mt-8`,
- * one `mt-10` and the shelf none, which the pixel probe measured as a
- * 32/40/32/32/0/32px stack with two rows sharing a hairline.
+ * **One list, not a stack of strips.** The record's file is a single run of
+ * rows that share their hairlines: each group draws the rule under itself and
+ * the first draws the one above it too (`first:border-t`). They used to sit
+ * 40px apart on the record's `space-y-10`, each with a rule above and below,
+ * which read as six floating strips with doubled lines (Divers cleanup,
+ * 2026-10-03). The rule bleeds into the ledger's 8px room (`-mx-2 px-2`, as
+ * `LedgerRow` does) so it ends where the story's rules end above it.
  */
 export function DiverFileGroupDisclosure({
   id,
@@ -62,7 +64,13 @@ export function DiverFileGroupDisclosure({
   open?: boolean;
   /** Put a long summary on its own, label-aligned line below `sm`. */
   stacked?: boolean;
-  children: ReactNode;
+  /**
+   * What the group opens onto. **None means it is a plain row**, not a door:
+   * a signed waiver with nothing to send or record opened onto one line that
+   * repeated the summary word for word, and a caret that leads to the fact
+   * you already read is a promise the row cannot keep.
+   */
+  children?: ReactNode;
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
   /**
@@ -164,8 +172,28 @@ export function DiverFileGroupDisclosure({
     ? `min-w-0 max-w-full text-sm ${toneClass} tabular-nums max-sm:ms-6 max-sm:basis-full max-sm:whitespace-normal max-sm:break-words sm:text-end`
     : `shrink-0 text-sm ${toneClass} tabular-nums`;
 
+  if (children == null || children === false) {
+    return (
+      <section
+        aria-label={label}
+        className="-mx-2 border-b border-border px-2 first:border-t"
+        data-testid={`diver-file-group-${id}`}
+      >
+        <div className={`flex min-h-13 items-center gap-3 py-3 ${summaryLayoutClass}`.trim()}>
+          {/* The caret's width, kept, so the label stays on the column the
+              doors' labels sit on. */}
+          <span aria-hidden="true" className="size-3 shrink-0" />
+          <h2 id={id} className={`${labelFloorClass} flex-1 scroll-mt-24 text-base font-medium`}>
+            {label}
+          </h2>
+          <span className={summaryFactClass}>{summary}</span>
+        </div>
+      </section>
+    );
+  }
+
   return (
-    <section aria-label={label}>
+    <section aria-label={label} className="-mx-2 border-b border-border px-2 first:border-t">
       <details
         ref={detailsRef}
         // `|| undefined` rather than a bare `false`: React writes an attribute
@@ -189,7 +217,7 @@ export function DiverFileGroupDisclosure({
             4px short of it, against the status ledger's kind and fix above. */}
         <summary
           aria-controls={`${id}-content`}
-          className={`flex min-h-11 cursor-pointer items-center gap-3 border-y border-border py-3 group-open/diver-file:border-b-0 ${summaryLayoutClass}`.trim()}
+          className={`flex min-h-13 cursor-pointer items-center gap-3 py-3 ${summaryLayoutClass}`.trim()}
         >
           <DisclosureCaret className="shrink-0 text-muted group-open/diver-file:rotate-90" />
           <h2 id={id} className={`${labelFloorClass} flex-1 scroll-mt-24 text-base font-medium`}>
@@ -197,7 +225,9 @@ export function DiverFileGroupDisclosure({
           </h2>
           <span className={summaryFactClass}>{summary}</span>
         </summary>
-        <div id={`${id}-content`}>{children}</div>
+        <div id={`${id}-content`} className="pb-6">
+          {children}
+        </div>
       </details>
     </section>
   );

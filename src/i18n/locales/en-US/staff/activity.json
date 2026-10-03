@@ -4,8 +4,6 @@
     "counter_check_in_undone": "{diver}’s counter check-in was undone",
     "note_added": "{actor} added a private note about {diver}",
     "note_deleted": "{actor} deleted a private note about {diver}",
-    "support_needs_updated": "{self, select, yes {{diver} updated what to set up for their dives} other {{actor} updated what to set up for {diver}’s dives}}",
-    "support_needs_cleared": "{self, select, yes {{diver} cleared what to set up for their dives} other {{actor} cleared what to set up for {diver}’s dives}}",
     "booking_removed": "{actor} removed {diver} from the trip",
     "booking_restored": "{actor} put {diver} back on the trip",
     "booking_no_show": "{actor} marked {diver} as not here, freeing the seat",

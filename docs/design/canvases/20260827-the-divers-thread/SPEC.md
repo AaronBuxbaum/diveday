@@ -186,8 +186,8 @@ export function buildThreadSteps(input: {
   checklist: DiverChecklistItem[];        // existing buildDiverChecklist output
   hasPayableOrder: boolean;               // this booking carries an order (paid or still owed)
   rentalFitComplete: boolean;             // fitStatedAt != null — "bringing my own" completes it
-  dayOfComplete: boolean;                 // true once the recency question is answered; pickup,
-                                          //   note and support needs do not gate it
+  dayOfComplete: boolean;                 // true once the recency question is answered; pickup
+                                          //   and note do not gate it
 }): { steps: ThreadStep[]; done: number; countable: number;
       current: ThreadStepId | null };     // current = first your_turn, else null
 ```
@@ -225,10 +225,10 @@ export function buildThreadSteps(input: {
   fires only at `?booked=1`; all-set settles into a plain success-ink line, never coral — its
   coral moment is the waiver page's completed state (decision 6), and one moment does not fire
   twice.
-- Day-of details absorbs recency, note, hotel pickup, and the support-needs question
-  ("anything we should set up for you" — ADR 20260827-support-needs-are-a-record-about-the-dive,
-  `saveSupportNeedsFromReady`); **the step counts, and settles when the recency question is
-  answered** (pickup, note and support needs stay optional within it and never gate settling), so
+- Day-of details absorbs recency, note and hotel pickup (a support-needs question was removed
+  2026-10-03 at the owner's request — ADR 20260827-support-needs-are-a-record-about-the-dive is
+  deprecated); **the step counts, and settles when the recency question is answered** (pickup and
+  note stay optional within it and never gate settling), so
   the figure can always fill. Packing renders in the prep state from booking onward (today's
   behavior); the dock-call line leads the page from 00:00 shop-time on the trip's start date
   (`ready.dockCallLine` exists; a calendar-date comparison in `shops.timezone` per the repo's

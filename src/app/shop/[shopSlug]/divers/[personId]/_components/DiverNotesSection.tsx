@@ -100,6 +100,9 @@ export function DiverNotesSection({
           </div>
         ))}
         <div className="px-5 py-4 sm:px-6">
+          {/* Above the box, where it is read before typing: who sees a note is
+              the one thing worth knowing before you write one. */}
+          <p className="mb-3 text-sm text-muted">{t("divers.notes.description")}</p>
           <PrivateNoteForm
             action={addDiverNoteAction.bind(null, shopSlug, personId)}
             resetKey={notes.length}
@@ -110,10 +113,11 @@ export function DiverNotesSection({
               adding: t("divers.notes.adding"),
             }}
           />
-          <p className="mt-2 text-sm text-muted">{t("divers.notes.description")}</p>
-          <FieldActions>
-            <DiverFormStatus status={status} />
-          </FieldActions>
+          {status ? (
+            <FieldActions>
+              <DiverFormStatus status={status} />
+            </FieldActions>
+          ) : null}
         </div>
       </InsetGroup>
     </DiverFileGroupDisclosure>

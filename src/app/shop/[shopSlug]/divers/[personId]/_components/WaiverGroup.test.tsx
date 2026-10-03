@@ -83,9 +83,11 @@ describe("the waiver group", () => {
       }),
     );
 
-    const door = screen.getByTestId("diver-file-group-waiver").querySelector("summary");
-    expect(door).toHaveTextContent(/Signed · Good until Jul 21, 2027/);
-    expect(screen.getByTestId("diver-file-group-waiver")).not.toHaveAttribute("open");
+    // Nothing to send or record, so the group is a plain row: the fact is
+    // the whole of it, and there is no door to open onto a copy of it.
+    const row = screen.getByTestId("diver-file-group-waiver");
+    expect(row).toHaveTextContent(/Signed · Good until Jul 21, 2027/);
+    expect(row.querySelector("details")).toBeNull();
   });
 
   it("says only Not signed when nothing has been sent", () => {
@@ -224,11 +226,9 @@ describe("the waiver group", () => {
     );
 
     const group = screen.getByTestId("diver-file-group-waiver");
-    expect(group.querySelector("summary")).not.toHaveTextContent(/not answered/);
-    expect(group.querySelector("summary")?.querySelector("span")?.className).toContain(
-      "text-muted",
-    );
-    expect(group).not.toHaveAttribute("open");
+    expect(group).not.toHaveTextContent(/not answered/);
+    expect(group.querySelector("span.text-sm")?.className).toContain("text-muted");
+    expect(group.querySelector("details")).toBeNull();
   });
 
   it("offers every route a staffer could take, and only the ones the record supports", () => {
@@ -288,7 +288,7 @@ describe("the waiver group", () => {
       }),
     );
 
-    expect(screen.getAllByText("Signed").length).toBeGreaterThan(0);
+    expect(screen.getByTestId("diver-file-group-waiver")).toHaveTextContent(/Signed/);
     expect(screen.queryByRole("button", { name: "Copy link" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Mark signed on paper" })).toBeNull();
   });

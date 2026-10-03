@@ -204,6 +204,9 @@ export function WaiverGroup({
         ? diver.waiver.evaluation
         : null;
   const clearanceDocument = canOpenClearance && clearance?.documentOnFile ? clearance : null;
+  const hasWork = Boolean(
+    needsAction || overriddenReferralAt || clearanceDocument || heldForMedical || status,
+  );
   return (
     <DiverFileGroupDisclosure
       id="waiver"
@@ -220,139 +223,143 @@ export function WaiverGroup({
       open={Boolean(status) || heldForMedical || Boolean(overriddenReferralAt)}
       stacked
     >
-      <InsetGroup>
-        <WaiverStateRow
-          as="div"
-          t={t}
-          state={state}
-          detail={waiverDetail(diver, t, locale, timezone)}
-        />
-        {overriddenReferralAt ? (
-          <p className="px-5 pb-3 text-sm font-medium text-warning-strong sm:px-6">
-            {t("divers.waiver.referralUnresolved", {
-              date: formatCalendarDate(
-                calendarDateInTimezone(overriddenReferralAt, timezone),
-                locale,
-              ),
-            })}
-          </p>
-        ) : null}
-        {/* The four routes are the state row's actions, laid out as their own
+      {/* Nothing to send, record or answer: the summary is the whole story,
+          so the group is a plain row rather than a door onto a copy of it. */}
+      {hasWork ? (
+        <InsetGroup>
+          <WaiverStateRow
+            as="div"
+            t={t}
+            state={state}
+            detail={waiverDetail(diver, t, locale, timezone)}
+          />
+          {overriddenReferralAt ? (
+            <p className="px-5 pb-3 text-sm font-medium text-warning-strong sm:px-6">
+              {t("divers.waiver.referralUnresolved", {
+                date: formatCalendarDate(
+                  calendarDateInTimezone(overriddenReferralAt, timezone),
+                  locale,
+                ),
+              })}
+            </p>
+          ) : null}
+          {/* The four routes are the state row's actions, laid out as their own
             row beneath it rather than in the row's right-hand column. The
             column is the width of its buttons, and the panel that drops out of
             it carries a medical attestation a staffer puts their name to —
             `DiverHeader` made the same call about the details editor, and for
             the same reason: a disclosure whose panel is wider than its trigger
             belongs on a line of its own. */}
-        {needsAction ? (
-          <details
-            className={`group ${FILE_ROW_INSET}`}
-            // A refusal aimed at this group re-opens it. The notice renders
-            // below, outside the disclosure, so the staffer is told *that*
-            // something was refused — but the box they must correct is shut,
-            // and the `defaultOpen` on the attestation below cannot help while
-            // its own parent is closed. A success needs no form back.
-            open={Boolean(status) && status?.tone !== "success"}
-          >
-            <summary
-              id={SEND_ANCHOR}
-              className={buttonClass({
-                variant: "secondary",
-                size: "sm",
-                className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
-              })}
+          {needsAction ? (
+            <details
+              className={`group ${FILE_ROW_INSET}`}
+              // A refusal aimed at this group re-opens it. The notice renders
+              // below, outside the disclosure, so the staffer is told *that*
+              // something was refused — but the box they must correct is shut,
+              // and the `defaultOpen` on the attestation below cannot help while
+              // its own parent is closed. A success needs no form back.
+              open={Boolean(status) && status?.tone !== "success"}
             >
-              {t("divers.waiver.sendOptions")}
-              <DisclosureCaret direction="down" className="group-open:rotate-180" />
-            </summary>
-            <div className="mt-3">
-              <WaiverDeliveryActions
-                personId={personId}
-                hasEmail={Boolean(diver.person.email)}
-                // The same rule the send itself applies: a number with no
-                // unambiguous country code cannot be texted, so offering the
-                // button would only ever produce "no number we can text".
-                hasPhone={Boolean(smsRecipient(diver.person.phone))}
-                channelStates={diver.waiverChannels}
-                copy={{
-                  email: t("divers.stats.sendWaiverViaEmail"),
-                  text: t("divers.stats.sendWaiverViaSms"),
-                  link: t("divers.stats.copyWaiverLink"),
-                  stateSent: t("divers.stats.waiverChannelSent"),
-                  stateCopied: t("divers.stats.waiverChannelCopied"),
-                  stateFailed: t("divers.stats.waiverChannelFailed"),
-                  stateUnavailable: t("divers.stats.waiverChannelUnavailable"),
-                }}
-                sendCopy={waiverSendCopy(t)}
+              <summary
+                id={SEND_ANCHOR}
+                className={buttonClass({
+                  variant: "secondary",
+                  size: "sm",
+                  className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
+                })}
               >
-                <PaperWaiverControl
-                  action={markWaiverInPersonAction.bind(null, shopSlug, personId)}
-                  copy={paperWaiverCopy(t, "diver")}
-                  // A minor's paper release names its co-signer too — measured
-                  // on today, the day the staffer records the signature
-                  // (ADR 20260907-guardian-co-signature).
-                  requiresGuardian={guardianSignatureRequired(
-                    diver.person.dateOfBirth,
-                    signingDate(nowDate(), timezone),
-                  )}
-                  // **No namesake confirmation here, deliberately** —
-                  // `offersNamesake` is left off. This door is the absentee
-                  // case — the family phoned ahead, or handed a release over
-                  // months before they booked (`waivers.ts`,
-                  // `InPersonWaiverSubject`) — and the confirmation asserts in
-                  // the first person that the staffer watched two people sign.
-                  // Offering it to somebody reading a scanned PDF in February
-                  // asks them to attest to a thing nobody witnessed, and the
-                  // value it writes exists to tell a regulator somebody did. A
-                  // namesake family is sent to the counter, where the words are
-                  // true (`divers.notices.waiverGuardianName`).
-                  variant="secondary"
-                  className=""
-                  // A page-level notice that landed the staffer back here
-                  // re-opens the form. A refused attestation no longer
-                  // navigates: it answers under the button with what they
-                  // typed still in the boxes (issue #1674).
-                  defaultOpen={Boolean(status) && status?.tone !== "success"}
-                />
-              </WaiverDeliveryActions>
+                {t("divers.waiver.sendOptions")}
+                <DisclosureCaret direction="down" className="group-open:rotate-180" />
+              </summary>
+              <div className="mt-3">
+                <WaiverDeliveryActions
+                  personId={personId}
+                  hasEmail={Boolean(diver.person.email)}
+                  // The same rule the send itself applies: a number with no
+                  // unambiguous country code cannot be texted, so offering the
+                  // button would only ever produce "no number we can text".
+                  hasPhone={Boolean(smsRecipient(diver.person.phone))}
+                  channelStates={diver.waiverChannels}
+                  copy={{
+                    email: t("divers.stats.sendWaiverViaEmail"),
+                    text: t("divers.stats.sendWaiverViaSms"),
+                    link: t("divers.stats.copyWaiverLink"),
+                    stateSent: t("divers.stats.waiverChannelSent"),
+                    stateCopied: t("divers.stats.waiverChannelCopied"),
+                    stateFailed: t("divers.stats.waiverChannelFailed"),
+                    stateUnavailable: t("divers.stats.waiverChannelUnavailable"),
+                  }}
+                  sendCopy={waiverSendCopy(t)}
+                >
+                  <PaperWaiverControl
+                    action={markWaiverInPersonAction.bind(null, shopSlug, personId)}
+                    copy={paperWaiverCopy(t, "diver")}
+                    // A minor's paper release names its co-signer too — measured
+                    // on today, the day the staffer records the signature
+                    // (ADR 20260907-guardian-co-signature).
+                    requiresGuardian={guardianSignatureRequired(
+                      diver.person.dateOfBirth,
+                      signingDate(nowDate(), timezone),
+                    )}
+                    // **No namesake confirmation here, deliberately** —
+                    // `offersNamesake` is left off. This door is the absentee
+                    // case — the family phoned ahead, or handed a release over
+                    // months before they booked (`waivers.ts`,
+                    // `InPersonWaiverSubject`) — and the confirmation asserts in
+                    // the first person that the staffer watched two people sign.
+                    // Offering it to somebody reading a scanned PDF in February
+                    // asks them to attest to a thing nobody witnessed, and the
+                    // value it writes exists to tell a regulator somebody did. A
+                    // namesake family is sent to the counter, where the words are
+                    // true (`divers.notices.waiverGuardianName`).
+                    variant="secondary"
+                    className=""
+                    // A page-level notice that landed the staffer back here
+                    // re-opens the form. A refused attestation no longer
+                    // navigates: it answers under the button with what they
+                    // typed still in the boxes (issue #1674).
+                    defaultOpen={Boolean(status) && status?.tone !== "success"}
+                  />
+                </WaiverDeliveryActions>
+              </div>
+            </details>
+          ) : null}
+          {clearanceDocument ? (
+            <p className="px-5 pb-3 text-sm sm:px-6">
+              <a
+                href={`/api/medical-clearances/${clearanceDocument.recordId}`}
+                // A new tab, because the response is an attachment and the
+                // browser would otherwise leave this page on a navigation that
+                // paints nothing.
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-primary underline underline-offset-2"
+              >
+                {t("divers.waiver.openClearanceDocument")}
+              </a>
+            </p>
+          ) : null}
+          {heldForMedical ? (
+            <div className={FILE_ROW_INSET}>
+              <MedicalClearanceControl
+                action={recordMedicalClearanceAction.bind(null, shopSlug, personId)}
+                copy={medicalClearanceCopy(t)}
+                // The shop's own today, so the date box cannot offer tomorrow: a
+                // Key Largo evening is already tomorrow in UTC, and the reader's
+                // browser zone is nobody's business here.
+                today={calendarDateInTimezone(nowDate(), timezone)}
+                className=""
+                defaultOpen={Boolean(status) && status?.tone !== "success"}
+              />
             </div>
-          </details>
-        ) : null}
-        {clearanceDocument ? (
-          <p className="px-5 pb-3 text-sm sm:px-6">
-            <a
-              href={`/api/medical-clearances/${clearanceDocument.recordId}`}
-              // A new tab, because the response is an attachment and the
-              // browser would otherwise leave this page on a navigation that
-              // paints nothing.
-              target="_blank"
-              rel="noreferrer"
-              className="font-medium text-primary underline underline-offset-2"
-            >
-              {t("divers.waiver.openClearanceDocument")}
-            </a>
-          </p>
-        ) : null}
-        {heldForMedical ? (
-          <div className={FILE_ROW_INSET}>
-            <MedicalClearanceControl
-              action={recordMedicalClearanceAction.bind(null, shopSlug, personId)}
-              copy={medicalClearanceCopy(t)}
-              // The shop's own today, so the date box cannot offer tomorrow: a
-              // Key Largo evening is already tomorrow in UTC, and the reader's
-              // browser zone is nobody's business here.
-              today={calendarDateInTimezone(nowDate(), timezone)}
-              className=""
-              defaultOpen={Boolean(status) && status?.tone !== "success"}
-            />
-          </div>
-        ) : null}
-        {status ? (
-          <div className={FILE_ROW_INSET}>
-            <DiverFormStatus status={status} />
-          </div>
-        ) : null}
-      </InsetGroup>
+          ) : null}
+          {status ? (
+            <div className={FILE_ROW_INSET}>
+              <DiverFormStatus status={status} />
+            </div>
+          ) : null}
+        </InsetGroup>
+      ) : null}
     </DiverFileGroupDisclosure>
   );
 }

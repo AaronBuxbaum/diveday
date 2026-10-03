@@ -1569,7 +1569,7 @@ record-level facts. **It renders nothing at all when the diver is clear**, and t
 pinned twice. The story folds Payments, Upcoming and Shop history into one chronological ledger
 where a seat appears exactly once carrying its own money fact, imported visits interleaved and
 never doors; the file is Certifications (all three card kinds as one group with one add flow),
-Waiver, Gear and sizes, Dive support, Notes, and the audit trail as a folded group. On a phone,
+Waiver, Gear and sizes, Notes, and the audit trail as a folded group (a Dive support group was removed 2026-10-03 at the owner's request, with the whole support-needs record — ADR [20260827-support-needs-are-a-record-about-the-dive](../architecture/decisions/20260827-support-needs-are-a-record-about-the-dive.md) is deprecated). On a phone,
 the long Gear summary stacks beneath its title so the size list stays readable without widening
 the record; compact file facts remain single-line doors. **Book a
 departure is the one primary**, pinned by a source sweep. Deleted (H-49): the jump nav, the stat
@@ -1710,7 +1710,7 @@ closed line, held there by one native `<details name>` accordion, so at most one
 (`src/lib/thread-steps.ts`, framework-free): certification renders only where the engine gates on
 it, Pay only where the booking carries an order, and **every step it emits is finishable** — which
 is what lets the figure always fill. Day-of details absorbed the three rows that could never
-settle (the note, hotel pickup, the support-needs record) and settles on the recency question
+settle (the note, hotel pickup, and a support-needs question since removed) and settles on the recency question
 alone. The receipt's figure is the Pay step's settled line, the cancellation window is the Pay
 step's fine print (closing ADR 20260820's dead `cancellationOnly`), and the emails line and the
 progress bar are gone. Coral fires once here, at `?booked=1`; all-set settles into plain success
