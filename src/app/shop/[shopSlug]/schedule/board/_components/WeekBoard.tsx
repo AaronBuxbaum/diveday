@@ -1,12 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { type ReactNode, useRef } from "react";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { GroupLabel, groupLabelClass } from "@/components/ui/ledger";
+import { MENU_PANEL, menuRowClass } from "@/components/ui/menu";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { WeekPager } from "@/components/ui/week-pager";
+import { useMenuDismissal } from "@/components/useMenuDismissal";
 import { fill } from "@/i18n/fill";
 import { isUsualCrew, mostCommonCrew } from "@/lib/usual-crew";
 import { isSoldOut, seatFill } from "@/lib/week-seats";
@@ -52,8 +55,8 @@ export type WeekDeparture = {
 };
 
 /**
- * The seats behind a departure's bar. The formatted `meta` beside it is the
- * sentence a reader gets; these are the two numbers the bar is a picture of,
+ * The seats behind a departure's bar. The formatted `seatsLabel` beside it is
+ * the words a reader gets; these are the two numbers the bar is a picture of,
  * and they are separate because `src/lib/week-seats.ts` cannot parse "10 of
  * 12" and must never have to try.
  */
@@ -64,7 +67,9 @@ export type WeekEntry = WeekDeparture & {
   /** Preformatted departure time, e.g. "7:00 AM". */
   time: string;
   seats: WeekSeats;
-  /** "Molasses Reef · Mantis II · 10 of 12 · $95", or "Sailed · 9 of 12" for a boat already home. */
+  /** "10 of 12", printed beside the bar. */
+  seatsLabel: string;
+  /** "Molasses Reef · Mantis II · $95", or "Sailed" for a boat already home. */
   meta: string;
   /**
    * **Who is crewing this departure**, in the shop's own order — lead first
@@ -81,9 +86,11 @@ export type WeekEntry = WeekDeparture & {
 
 /** A multi-day course session as one bar across the columns it owns. */
 export type WeekSpan = WeekDeparture & {
-  /** "4 of 5 · $595 · Marcus Webb". */
+  /** "$595 · Marcus Webb". */
   meta: string;
   seats: WeekSeats;
+  /** "4 of 5", printed beside the bar. */
+  seatsLabel: string;
   /**
    * "3 days" — how long the course runs, where a boat says when it leaves.
    * Formatted on the server rather than filled from a template here: it needs
@@ -175,6 +182,12 @@ export type WeekBoardCopy = {
   add: string;
   addDepartureOnDay: string;
   rowActionsAria: string;
+  move: string;
+  moveAria: string;
+  copy: string;
+  copyAria: string;
+  remove: string;
+  removeAria: string;
   noPriceSet: string;
   noPriceSetAria: string;
   noPriceSetAll: string;
@@ -192,43 +205,110 @@ export type WeekBoardCopy = {
   crewNobodyYet: string;
 };
 
+/** The three acts a departure still to sail can take from its row. */
+export type RowActionKind = "move" | "copy" | "remove";
+
+/** A form the builder has open, and the row or day it opens under. */
+export type WeekPanel =
+  | { under: "departure"; tripId: string; node: ReactNode }
+  | { under: "day"; dateIso: string; node: ReactNode };
+
 /**
- * Move / copy / remove, on whichever shape draws the departure. **A course bar
- * wears the same one as a day cell**: the bar deliberately replaces the entries
- * for the days it owns, so without this the desktop board is the one place in
- * the app where a multi-day course cannot be moved at all — a capability the
- * stream underneath still has. It opens the board's own panels; a boat already
+ * **Move / copy / remove, dropped from the "⋯" itself.** A course bar wears
+ * the same one as a boat: the bar replaces the entries for the days it owns,
+ * so without it a multi-day course could not be moved at all. A boat already
  * home is refused all three by `src/db/trips-schedule.ts`, so it is offered
  * none.
+ *
+ * **The list opens under the button that opened it.** It used to render as a
+ * strip at the foot of the whole week and take focus there, so a tap on a
+ * Friday "⋯" scrolled the page 700px to a bar that named the departure in
+ * words, and the row the reader was looking at sat off screen above it. A
+ * second tap on the same "⋯" re-opened the strip instead of closing it: the
+ * outside-tap listener did not count the trigger as inside.
+ *
+ * The trigger and the list share one root, so `useMenuDismissal` treats a tap
+ * on either as inside: the trigger's own click is the only thing that
+ * toggles. Escape and an outside tap close it as every staff menu does.
  */
 function RowActions({
   departure,
-  openKey,
+  open,
   onToggle,
+  onChoose,
+  onClose,
   registerToggle,
-  label,
+  copy,
   className,
 }: {
   departure: WeekDeparture;
-  openKey: string | null;
+  open: boolean;
   onToggle: (key: string) => void;
+  onChoose: (kind: RowActionKind, tripId: string) => void;
+  /** Closes this list, and only this list; referentially stable. */
+  onClose: () => void;
   registerToggle: (key: string) => (el: HTMLButtonElement | null) => void;
-  label: string;
+  copy: Pick<
+    WeekBoardCopy,
+    "rowActionsAria" | "move" | "moveAria" | "copy" | "copyAria" | "remove" | "removeAria"
+  >;
   className: string;
 }) {
   const key = `w:menu:${departure.tripId}`;
+  const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  useMenuDismissal({ open, close: onClose, inside: [rootRef], returnFocus: triggerRef });
+  const register = registerToggle(key);
+  const items: { kind: RowActionKind; label: string; aria: string }[] = [
+    { kind: "move", label: copy.move, aria: copy.moveAria },
+    { kind: "copy", label: copy.copy, aria: copy.copyAria },
+    { kind: "remove", label: copy.remove, aria: copy.removeAria },
+  ];
   return (
-    <button
-      type="button"
-      ref={registerToggle(key)}
-      onClick={() => onToggle(key)}
-      aria-expanded={openKey === key}
-      aria-label={fill(label, { ref: departure.ref })}
-      className={buttonClass({ variant: "ghost", size: "icon-sm", className })}
-    >
-      <DiveDayIcon name="more" className="size-4" />
-    </button>
+    // `data-row-menu` is the copy-free hook a spec asks "is this list open?" with.
+    <div ref={rootRef} className={`${open ? "z-30" : "z-10"} relative ${className}`.trim()}>
+      <button
+        type="button"
+        ref={(el) => {
+          triggerRef.current = el;
+          register(el);
+        }}
+        onClick={() => onToggle(key)}
+        aria-expanded={open}
+        aria-label={fill(copy.rowActionsAria, { ref: departure.ref })}
+        className={buttonClass({ variant: "ghost", size: "icon-sm" })}
+      >
+        <DiveDayIcon name="more" className="size-4" />
+      </button>
+      {open ? (
+        <div
+          data-row-menu={departure.tripId}
+          className={`absolute end-0 top-full mt-1 w-40 animate-scale-in ${MENU_PANEL}`}
+        >
+          {items.map((item, index) => (
+            <button
+              key={item.kind}
+              type="button"
+              // The first act takes focus, so a keyboard reader lands in the
+              // list they opened, and Escape hands it back to the "⋯".
+              ref={index === 0 ? focusOnMount : undefined}
+              onClick={() => onChoose(item.kind, departure.tripId)}
+              aria-label={fill(item.aria, { ref: departure.ref })}
+              className={menuRowClass(item.kind === "remove" ? "danger" : "quiet", {
+                gutter: false,
+              })}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
+}
+
+function focusOnMount(el: HTMLElement | null) {
+  el?.focus({ preventScroll: true });
 }
 
 /**
@@ -349,35 +429,41 @@ function PriceFlag({
  * than to its twin in the hidden stream.
  */
 /**
- * **A boat's seats as a bar.** Tide's week is a run of days and each boat on
- * one is a time, this, and the count (ADR 20260919-one-idea, decision I ·
- * Tide, slice 23f).
+ * **A departure's seats: a bar and its count.** Tide's week is a run of days
+ * and each boat on one is a time, this, and the count (ADR 20260919-one-idea,
+ * decision I · Tide, slice 23f).
  *
- * `aria-hidden`, because `meta` beside it already says "10 of 12" in words —
- * a bar that also announced itself would say one fact twice, and the words are
- * the half that survives a reader who cannot see a fill. That is the same
- * split `ProgressBar`'s own note describes: it owns the pixels, the caller
- * owns the meaning.
+ * The bar is `aria-hidden` and the count beside it is not: the words are the
+ * half that survives a reader who cannot see a fill, and a bar that also
+ * announced itself would say one fact twice. They sit together at the row's
+ * end, so a column of departures reads as one column of fills and counts.
+ * Below `sm` the bar gives its room to the title and the count stands alone.
  *
  * A sailed boat's bar is set down in the same muted ink its time and title
  * wear, rather than a fourth colour: the row already says "Sailed".
  */
-function SeatBar({ seats, sailed }: { seats: WeekSeats; sailed: boolean }) {
+function Seats({ seats, label, sailed }: { seats: WeekSeats; label: string; sailed: boolean }) {
   return (
-    <ProgressBar
-      aria-hidden="true"
-      className="h-1.5 w-14 shrink-0 sm:w-20"
-      segments={[
-        {
-          key: "sold",
-          fraction: seatFill(seats),
-          // Sold out is a win worth noticing, the same call
-          // `TripCapacityBadge` makes: "success" stands out where the ordinary
-          // fill recedes. Never the only carrier — the count says 12 of 12.
-          className: sailed ? "bg-border-strong" : isSoldOut(seats) ? "bg-success" : "bg-primary",
-        },
-      ]}
-    />
+    <div className="flex min-h-8 shrink-0 items-center gap-2">
+      <ProgressBar
+        aria-hidden="true"
+        className="hidden h-1.5 w-16 shrink-0 sm:block"
+        segments={[
+          {
+            key: "sold",
+            fraction: seatFill(seats),
+            // Sold out is a win worth noticing, the same call
+            // `TripCapacityBadge` makes: "success" stands out where the
+            // ordinary fill recedes. Never the only carrier — the count says
+            // 12 of 12.
+            className: sailed ? "bg-border-strong" : isSoldOut(seats) ? "bg-success" : "bg-primary",
+          },
+        ]}
+      />
+      <p className="text-sm whitespace-nowrap text-muted tabular-nums sm:min-w-14 sm:text-end">
+        {label}
+      </p>
+    </div>
   );
 }
 
@@ -385,10 +471,23 @@ function SeatBar({ seats, sailed }: { seats: WeekSeats; sailed: boolean }) {
  * One departure on a day's row — a boat, or a multi-day course on the day it
  * starts. Both wear the same move/copy/remove menu and the same flags, which
  * is what `WeekDeparture` exists to make unrepresentable otherwise.
+ *
+ * **Time, then what it is, then how full.** From `md` up the row is four
+ * columns: the time in a slot sized for "12:00 PM" (so every title starts at
+ * one x), the title over its facts, the seats, and the "⋯". Below `md` the
+ * time, the seats and the "⋯" share the first line and the title and its
+ * facts take the row's whole measure under them, because a phone has no room
+ * for a title between a time and a count.
+ *
+ * The title leads, not the facts. The row used to open on the seat bar and a
+ * run of facts — "Molasses Reef · Mantis I · 9 of 12 · $95" — with the name
+ * of the trip underneath it, so the line a reader scans for was the second
+ * one on every row.
  */
 function WeekBoat({
   departure,
   seats,
+  seatsLabel,
   meta,
   time,
   runs,
@@ -398,13 +497,16 @@ function WeekBoat({
   canConfigure,
   openKey,
   onToggle,
+  onChoose,
+  onCloseMenu,
   registerToggle,
   copy,
 }: {
   departure: WeekDeparture;
   seats: WeekSeats;
+  seatsLabel: string;
   meta: string;
-  /** Preformatted; a course bar has none of its own, so its day leads instead. */
+  /** Preformatted; a course bar has none of its own, so its slot stays empty. */
   time: string | null;
   /** "3 days", on a course that owns more than the day it starts. */
   runs: string | null;
@@ -425,161 +527,109 @@ function WeekBoat({
   canConfigure: boolean;
   openKey: string | null;
   onToggle: (key: string) => void;
+  onChoose: (kind: RowActionKind, tripId: string) => void;
+  onCloseMenu: () => void;
   registerToggle: (key: string) => (el: HTMLButtonElement | null) => void;
   copy: WeekBoardCopy;
 }) {
   const sailed = departure.status === "sailed";
+  const actions = canConfigure && !sailed;
   return (
     // **The row is the departure's door** (pixel-craft class 7) — the ledger
     // row's construction (`LedgerRow`, src/components/ui/ledger.tsx): a
     // stretched link, last in the row, named by the title, over a row that
-    // hovers and presses as one. The title was a 19–38px link inside a row
-    // that painted a hover fill it did not answer to. What else in the row
-    // is a control — the "⋯", a flag — stands above the door (`z-10`).
+    // hovers and presses as one. What else in the row is a control — the
+    // "⋯", a flag — stands above the door (`z-10`).
     <div
       className={`group/boat pressable-row relative ${WEEK_ROW_BOX_CLASS} hover:bg-surface has-[a:focus-visible]:bg-surface`}
     >
-      <div className="min-w-0 flex-1">
-        {/* The lead line is what the canvas draws: when it leaves, how full it
-            is, and the count. The bar sits between them rather than after, so
-            a reader scanning a column of times meets every fill at one x.
+      <div
+        data-week-row-grid=""
+        className={`grid w-full items-start gap-x-3 ${
+          canConfigure
+            ? "grid-cols-[minmax(0,1fr)_auto_auto] md:grid-cols-[4.75rem_minmax(0,1fr)_auto_auto]"
+            : "grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[4.75rem_minmax(0,1fr)_auto]"
+        }`}
+      >
+        {/* The first line is 32px whatever is on it (pixel-craft class 1), so
+            the rail's weekday and "No boats" beside it read level with it. */}
+        <p
+          className={`col-start-1 row-start-1 flex min-h-8 items-center text-base leading-tight font-semibold whitespace-nowrap tabular-nums ${sailed ? "text-muted" : ""}`}
+        >
+          {time}
+        </p>
+        <div className="col-span-full row-start-2 min-w-0 md:col-span-1 md:col-start-2 md:row-start-1 md:pt-1">
+          {/* **Two lines, never one clipped one.** A week's titles share their
+              prefix — "Dawn Two-Tank — …", "Morning Two-Tank — …" — so a
+              truncation eats exactly the half that says which boat this is.
 
-            **The time and its bar are the row's first line, and that line is
-            32px whatever else is on it** (pixel-craft class 1): the day's
-            weekday and "No boats" take the same box, so the rail reads level
-            with the first departure beside it. A box of its own rather than a
-            floor on the whole line: below `md` the line wraps the meta
-            beneath it, and a wrapped flex container's `min-height` is not its
-            first line's. A boat already home, or a staffer who cannot move
-            one, has no "⋯", and without the box their line fell to the
-            time's 20px.
-
-            **32px, and no row gap under it** (class 4): the meta is the next
-            line on a phone, and it sat 21px under the time's baseline against
-            13px from the meta to the title, under a 4px gap and a 36px line
-            that was the "⋯" square's height rather than the time's. The "⋯"
-            overhangs the line by its excess (44 − 2 × 6).
-
-            **The time has a slot of its own** (class 3): "12:00 PM" is ~74px
-            at 16px semibold, so every bar starts at one x after it, where
-            content-width times put "11:00 AM"'s 10px further on than
-            "5:30 AM"'s, and it never wraps its meridiem (class 8). */}
-        <div className="flex flex-wrap items-center gap-x-2 md:flex-nowrap md:gap-x-3">
-          <div className="flex min-h-8 shrink-0 items-center gap-x-2 md:gap-x-3">
-            {time ? (
-              <p
-                className={`w-19 shrink-0 text-base leading-tight font-semibold whitespace-nowrap tabular-nums ${sailed ? "text-muted" : ""}`}
-              >
-                {time}
-              </p>
+              **A course's length is in the title's own run** (pixel-craft
+              class 8), so it follows the last word at every width, and it is
+              never clamped: nothing else on its row says how long it runs. */}
+          <p
+            className={`text-base leading-snug font-semibold group-hover/boat:text-primary ${runs ? "" : "line-clamp-2"} ${sailed ? "text-muted" : ""}`}
+          >
+            {departure.title}
+            {runs ? (
+              <span className="ms-1.5 text-xs font-medium whitespace-nowrap text-primary tabular-nums">
+                {runs}
+              </span>
             ) : null}
-            <SeatBar seats={seats} sailed={sailed} />
-          </div>
-          {/* **A full line of its own below `md`, inline from `md` up.** The
-              week was a desktop-only grid until #1923 and this sentence had a
-              row's whole measure to sit in; at 390 it has about 120px between
-              the seat bar and the "⋯", which truncated "Molasses Reef ·
-              Mantis II · 10 of 12 · $95" to "Molas…" — every fact in it lost,
-              including the two the bar is a picture of. From 640 to ~700px it
-              still did, inline from `sm`: the text column there is ~428px for
-              a 459–490px line. At 768 the room is 334px against the longest
-              meta's 268px.
-
-              `basis-full order-last` drops it below the controls on a phone
-              and `md:` puts it back where the desktop design has it, so the
-              sentence is one node in one place in the reading order rather
-              than two copies fighting a media query. */}
-          <p className="order-last basis-full text-sm text-muted tabular-nums md:order-none md:min-w-0 md:flex-1 md:basis-auto md:truncate">
-            {meta}
           </p>
-          {canConfigure && !sailed ? (
-            <RowActions
-              departure={departure}
-              openKey={openKey}
-              onToggle={onToggle}
-              registerToggle={registerToggle}
-              label={copy.rowActionsAria}
-              className="relative z-10 -my-1.5 -me-2 ms-auto shrink-0 md:ms-0"
+          {meta ? <p className="mt-0.5 text-sm text-muted">{meta}</p> : null}
+          {/* **The one line a departure prints about its people**, and only
+              when it is the exception (#1923, principle 9). It sheds the muted
+              class where there *is* a habit — a line printed only when it
+              differs should not read like the caption it replaced. "Nobody
+              yet" is warning ink either way. */}
+          {crewLine ? (
+            <p className={`mt-0.5 text-sm ${hasUsualCrew ? "" : "text-muted"}`}>
+              {crewLine.names ? (
+                `${copy.crewLabel} ${crewLine.names}`
+              ) : (
+                <>
+                  {copy.crewLabel}{" "}
+                  <span className="font-medium text-warning">{copy.crewNobodyYet}</span>
+                </>
+              )}
+            </p>
+          ) : null}
+          {/* One slot, one grammar: an open head count outranks a missing
+              price rather than stacking two marks on one row. */}
+          {departure.rollCallOpen ? (
+            <RollCallFlag
+              departure={{ ...departure, rollCallOpen: departure.rollCallOpen }}
+              shopSlug={shopSlug}
+              copy={copy}
             />
+          ) : departure.unpriced && !sailed ? (
+            <PriceFlag departure={departure} shopSlug={shopSlug} copy={copy} />
           ) : null}
         </div>
-        {/* **Two lines, never one clipped one.** A week's titles share their
-            prefix — "Dawn Two-Tank — …", "Morning Two-Tank — …" — so a
-            truncation eats exactly the half that says which boat this is,
-            which is the one question the week exists to answer. A row is the
-            full measure now rather than a 150px column, so two lines is
-            generous rather than a compromise.
-
-            No `block` beside `line-clamp-2`: the clamp supplies its own
-            `display`, and two display utilities resolve by stylesheet order
-            rather than the order they are written.
-
-            **A course's length is in the title's own run** (pixel-craft class
-            8), so it follows the last word at every width. As a flex sibling
-            of a title that wrapped, it sat at the row's far end, 41px from
-            the title's ink at 390. The words are the door's name, not a link
-            of their own: the row's stretched link below is.
-
-            **And a course's run is never clamped**: nothing else on its row
-            says how long it runs (the meta is seats, price and instructor),
-            and a clamp ellipses the end of the run, which is where the length
-            is. A course's title is one of a day's few, not one of a week of
-            shared prefixes. */}
-        <p
-          className={`mt-0.5 text-sm leading-snug font-semibold group-hover/boat:text-primary ${runs ? "" : "line-clamp-2"} ${sailed ? "text-muted" : ""}`}
-        >
-          {departure.title}
-          {runs ? (
-            <span className="ms-1.5 text-xs font-medium whitespace-nowrap text-primary tabular-nums">
-              {runs}
-            </span>
-          ) : null}
-        </p>
-        {/* **The one line a departure prints about its people**, and only when
-            it is the exception (#1923, principle 9). The board ran with a
-            usual crew and said so on every row until this rule replaced the
-            standing caption; what survives is the row a manager opened the
-            board to find. It sheds the muted class where there *is* a habit —
-            a line printed only when it differs should not read like the
-            caption it replaced — and keeps caption grey on a week that has no
-            habit, where every row carries one.
-
-            "Nobody yet" is warning ink either way. That is the gap this line
-            exists to show, and a quiet week is exactly when it would otherwise
-            be missed. */}
-        {crewLine ? (
-          <p className={`mt-1 text-sm ${hasUsualCrew ? "" : "text-muted"}`}>
-            {crewLine.names ? (
-              `${copy.crewLabel} ${crewLine.names}`
-            ) : (
-              <>
-                {copy.crewLabel}{" "}
-                <span className="font-medium text-warning">{copy.crewNobodyYet}</span>
-              </>
-            )}
-          </p>
-        ) : null}
-        {/* One slot, one grammar: an open head count outranks a missing price
-            rather than stacking two marks on one row. */}
-        {departure.rollCallOpen ? (
-          <RollCallFlag
-            departure={{ ...departure, rollCallOpen: departure.rollCallOpen }}
-            shopSlug={shopSlug}
+        <div className="col-start-2 row-start-1 md:col-start-3">
+          <Seats seats={seats} label={seatsLabel} sailed={sailed} />
+        </div>
+        {actions ? (
+          <RowActions
+            departure={departure}
+            open={openKey === `w:menu:${departure.tripId}`}
+            onToggle={onToggle}
+            onChoose={onChoose}
+            onClose={onCloseMenu}
+            registerToggle={registerToggle}
             copy={copy}
+            // The "⋯" overhangs the 32px line by its excess (44 − 2 × 6).
+            className="col-start-3 row-start-1 -my-1.5 -me-2 md:col-start-4"
           />
-        ) : departure.unpriced && !sailed ? (
-          <PriceFlag departure={departure} shopSlug={shopSlug} copy={copy} />
+        ) : canConfigure ? (
+          // A boat already home has no "⋯", and keeps its column empty so its
+          // seats stand in the same column as every other row's.
+          <span aria-hidden="true" className="col-start-3 row-start-1 -me-2 w-11 md:col-start-4" />
         ) : null}
       </div>
-      {/* Last, so it paints over everything before it that is positioned —
-          the seat bar is — and under only what asks to be above it. Its ring
-          is drawn inside, on the row's own corner, as a ledger door's is.
-
-          `data-departure-door` is the copy-free hook a spec takes a departure
-          by: the door has no text of its own to filter on, and it follows the
-          row's flags, whose links go to the same trip's `#details` and
-          `/manifest`, so "the week's first trip link" is a flag on any week
-          whose first departure carries one. */}
+      {/* Last, so it paints over everything before it that is positioned, and
+          under only what asks to be above it. `data-departure-door` is the
+          copy-free hook a spec takes a departure by. */}
       <Link
         href={`/shop/${shopSlug}/trips/${departure.tripId}`}
         aria-label={departure.title}
@@ -617,7 +667,10 @@ export function WeekBoard({
   shopSlug,
   openKey,
   onToggle,
+  onChoose = () => {},
+  onCloseMenu = () => {},
   registerToggle,
+  panel = null,
   copy,
 }: {
   week: BuilderWeek;
@@ -625,7 +678,18 @@ export function WeekBoard({
   shopSlug: string;
   openKey: string | null;
   onToggle: (key: string) => void;
+  /** A row's "⋯" list chose an act: open that act's panel under the row. */
+  onChoose?: (kind: RowActionKind, tripId: string) => void;
+  /** Closes whichever "⋯" list is open; referentially stable. */
+  onCloseMenu?: () => void;
   registerToggle: (key: string) => (el: HTMLButtonElement | null) => void;
+  /**
+   * **The open form, and where it belongs.** A departure's move, copy or
+   * remove renders under that departure's row, and a day's add under that
+   * day's boats — where the reader's eye already is. They used to render
+   * beneath the whole week, so a tap on Friday opened a form below Sunday.
+   */
+  panel?: WeekPanel | null;
   copy: WeekBoardCopy;
 }) {
   // A course is drawn once, on the day it starts — `startColumn` is 1-based,
@@ -655,29 +719,28 @@ export function WeekBoard({
           — not a cursor. `WeekPager` (src/components/ui/week-pager.tsx) is
           shared with the staffing week, which reads the same `?week=`
           parameter over the same dates. */}
-      <WeekPager
-        rangeLabel={week.rangeLabel}
-        previousHref={week.previousHref}
-        nextHref={week.nextHref}
-        thisWeekHref={week.thisWeekHref}
-        words={week.words}
-      />
+      {/* The pager and the week's one number share a line: the seats are
+          the one figure a shop asks a week for, and they belong to the run
+          rather than to any day in it. A separate "THE WEEK" label row above
+          the days named what the range beside the arrows already says. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border pb-3">
+        <WeekPager
+          rangeLabel={week.rangeLabel}
+          previousHref={week.previousHref}
+          nextHref={week.nextHref}
+          thisWeekHref={week.thisWeekHref}
+          words={week.words}
+        />
+        <p data-week-seat-tally="" className="text-sm text-muted tabular-nums">
+          {week.seatTally}
+        </p>
+      </div>
 
       {/* When *every* departure still to sail this week is unpriced, the
           per-row warning is the same fact on seven rows. Said once here
           instead; the rows keep their mark only while some are priced and some
           are not, which is when a per-row mark distinguishes anything. */}
       {week.allUnpriced ? <AllUnpricedNotice>{copy.noPriceSetAll}</AllUnpricedNotice> : null}
-
-      {/* The week's own line. It is the one number a shop asks a week for, and
-          it belongs to the whole run rather than to any day in it. A group's
-          label and its meta, so `GroupLabel` draws them: the board spelled
-          the meta twice more by hand, 14px semibold here and 14px regular
-          over the asks, beside the 12px medium every other group carries
-          (pixel-craft class 12). The rule under it is the board's own. */}
-      <div className="mt-4 border-b border-border pb-2">
-        <GroupLabel meta={week.seatTally}>{week.ariaLabel}</GroupLabel>
-      </div>
 
       {/* **Not a list of days.** Each day's boats are a list, labelled by that
           day's own heading; wrapping the seven in a second list would nest
@@ -689,6 +752,56 @@ export function WeekBoard({
         {week.days.map((day) => {
           const spans = spansByDay.get(day.dateIso) ?? [];
           const empty = day.entries.length === 0 && spans.length === 0;
+          const addKey = `w:add:${day.dateIso}`;
+          // Never on a day that has already been: a departure is put on the
+          // board, and the board is ahead.
+          const addButton =
+            canConfigure && !day.isPast ? (
+              <button
+                type="button"
+                ref={registerToggle(addKey)}
+                onClick={() => onToggle(addKey)}
+                aria-expanded={openKey === addKey}
+                aria-label={fill(copy.addDepartureOnDay, { day: day.label })}
+                className={buttonClass({ variant: "ghost", size: "sm", className: "shrink-0" })}
+              >
+                <span aria-hidden="true">+</span> {copy.add}
+              </button>
+            ) : null;
+          const panelUnder = (tripId: string) =>
+            panel?.under === "departure" && panel.tripId === tripId ? panel.node : null;
+          const boatRow = (
+            departure: WeekDeparture,
+            row: Pick<WeekEntry, "seats" | "seatsLabel" | "meta"> & {
+              time: string | null;
+              runs: string | null;
+              crewLine: { names: string } | null;
+            },
+          ) => (
+            <li key={departure.tripId}>
+              <WeekBoat
+                departure={departure}
+                seats={row.seats}
+                seatsLabel={row.seatsLabel}
+                meta={row.meta}
+                time={row.time}
+                runs={row.runs}
+                crewLine={row.crewLine}
+                hasUsualCrew={usualCrew !== null}
+                shopSlug={shopSlug}
+                canConfigure={canConfigure}
+                openKey={openKey}
+                onToggle={onToggle}
+                onChoose={onChoose}
+                onCloseMenu={onCloseMenu}
+                registerToggle={registerToggle}
+                copy={copy}
+              />
+              {panelUnder(departure.tripId) ? (
+                <div className="px-2 pb-3">{panelUnder(departure.tripId)}</div>
+              ) : null}
+            </li>
+          );
           return (
             <div key={day.dateIso} className="border-b border-border">
               {/* One rail, 72px, at every width — sized, and shared with
@@ -696,38 +809,30 @@ export function WeekBoard({
               <div className={WEEK_DAY_GRID_CLASS}>
                 {/* **The day holds its place while its own boats scroll**
                     (ADR 20260827-clearwater-surface-language, decision 10).
-                    This was the day stream's behaviour and it moves here
-                    rather than going down with it (#1923): a run of rows on a
-                    phone is as easy to lose your place in as a stream was.
-
                     `top-(--chrome-h)`, never a number — the bar's height is a
-                    token and a measured pixel value went stale the first time
-                    the bar changed shape (`src/components/chrome/chrome.test.ts`
-                    has the incident). `self-start` so the sticky box is the
-                    header's own height rather than the grid row's, which
-                    would pin an invisible column beside every boat. */}
+                    token. `self-start` so the sticky box is the header's own
+                    height rather than the grid row's.
+
+                    **One line at every width**: "FRI 2", level with the
+                    first departure's time beside it. Stacked from `sm` up, the
+                    weekday and its numeral made every day two lines tall, and
+                    an empty day twice the height of the one line it says. */}
                 <h3
                   id={`week-day-${day.dateIso}`}
                   className="sticky top-(--chrome-h) z-10 self-start bg-background py-2"
                 >
                   <span className="sr-only">{day.label}</span>
-                  <span
-                    aria-hidden="true"
-                    className="flex min-h-8 items-center gap-1.5 sm:flex-col sm:items-start sm:gap-0"
-                  >
-                    {/* A fixed width below `sm`, so every numeral after it
-                        starts at one x; from `sm` up it is the first line of
-                        the stacked label, in the departures' 32px box. */}
+                  <span aria-hidden="true" className="flex min-h-8 items-center gap-1.5">
+                    {/* A fixed width, so every numeral after it starts at
+                        one x. */}
                     <span
-                      className={`${groupLabelClass(day.isToday ? "primary" : "muted")} shrink-0 max-sm:w-8 sm:flex sm:min-h-8 sm:items-center`}
+                      className={`${groupLabelClass(day.isToday ? "primary" : "muted")} w-8 shrink-0`}
                     >
                       {day.weekday}
                     </span>
-                    {/* Today is a *filled* disc, not a smaller numeral: the
-                        ramp's figure step stays inside it and the disc grows
-                        to hold it. Colour is never the only carrier — the
-                        pager's "This week" and the weekday's own ink say it
-                        too. */}
+                    {/* Today is a *filled* disc, not a smaller numeral.
+                        Colour is never the only carrier — the pager's "This
+                        week" and the weekday's own ink say it too. */}
                     <span
                       className={`${FIGURE_INLINE_CLASS} ${
                         day.isToday
@@ -752,73 +857,44 @@ export function WeekBoard({
                     </p>
                   ) : null}
                   <ul aria-labelledby={`week-day-${day.dateIso}`} className="flex flex-col">
-                    {spans.map((span) => (
-                      <li key={span.tripId}>
-                        <WeekBoat
-                          departure={span}
-                          seats={span.seats}
-                          meta={span.meta}
-                          time={null}
-                          runs={span.runsLabel}
-                          crewLine={null}
-                          hasUsualCrew={usualCrew !== null}
-                          shopSlug={shopSlug}
-                          canConfigure={canConfigure}
-                          openKey={openKey}
-                          onToggle={onToggle}
-                          registerToggle={registerToggle}
-                          copy={copy}
-                        />
-                      </li>
-                    ))}
-                    {day.entries.map((entry) => (
-                      <li key={entry.tripId}>
-                        <WeekBoat
-                          departure={entry}
-                          seats={entry.seats}
-                          meta={entry.meta}
-                          time={entry.time}
-                          runs={null}
-                          crewLine={
-                            isUsualCrew(entry.crew, usualCrew)
-                              ? null
-                              : { names: entry.crew.join(", ") }
-                          }
-                          hasUsualCrew={usualCrew !== null}
-                          shopSlug={shopSlug}
-                          canConfigure={canConfigure}
-                          openKey={openKey}
-                          onToggle={onToggle}
-                          registerToggle={registerToggle}
-                          copy={copy}
-                        />
-                      </li>
-                    ))}
+                    {spans.map((span) =>
+                      boatRow(span, {
+                        seats: span.seats,
+                        seatsLabel: span.seatsLabel,
+                        meta: span.meta,
+                        time: null,
+                        runs: span.runsLabel,
+                        crewLine: null,
+                      }),
+                    )}
+                    {day.entries.map((entry) =>
+                      boatRow(entry, {
+                        seats: entry.seats,
+                        seatsLabel: entry.seatsLabel,
+                        meta: entry.meta,
+                        time: entry.time,
+                        runs: null,
+                        crewLine: isUsualCrew(entry.crew, usualCrew)
+                          ? null
+                          : { names: entry.crew.join(", ") },
+                      }),
+                    )}
                   </ul>
-                  {/* A day with nothing on it says so. The grid could leave a
-                      column blank and be read, because six columns beside it
-                      gave the blank its meaning; one empty row in a run of
-                      rows is just a gap. */}
+                  {/* A day with nothing on it says so, and offers to fill it on
+                      the same line: one empty row in a run of rows is just a
+                      gap, and a second line for "+ Add" made it two. */}
                   {empty ? (
-                    <p className={`${WEEK_EMPTY_DAY_CLASS} text-sm text-muted`}>{copy.noBoats}</p>
+                    <div className={WEEK_EMPTY_DAY_CLASS}>
+                      <p className="text-sm text-muted">{copy.noBoats}</p>
+                      {addButton ? <div className="-my-1.5 -me-2">{addButton}</div> : null}
+                    </div>
+                  ) : addButton ? (
+                    <div className="px-2 pb-1">
+                      <div className="-ms-3">{addButton}</div>
+                    </div>
                   ) : null}
-                  {/* Never on a day that has already been: a departure is put
-                      on the board, and the board is ahead. */}
-                  {canConfigure && !day.isPast ? (
-                    <button
-                      type="button"
-                      ref={registerToggle(`w:add:${day.dateIso}`)}
-                      onClick={() => onToggle(`w:add:${day.dateIso}`)}
-                      aria-expanded={openKey === `w:add:${day.dateIso}`}
-                      aria-label={fill(copy.addDepartureOnDay, { day: day.label })}
-                      className={buttonClass({
-                        variant: "ghost",
-                        size: "sm",
-                        className: "mx-1 justify-start",
-                      })}
-                    >
-                      <span aria-hidden="true">+</span> {copy.add}
-                    </button>
+                  {panel?.under === "day" && panel.dateIso === day.dateIso ? (
+                    <div className="px-2 pb-3">{panel.node}</div>
                   ) : null}
                 </div>
               </div>
