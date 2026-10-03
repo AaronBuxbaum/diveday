@@ -35,10 +35,7 @@ test.describe("shop integrations settings", () => {
     page,
   }) => {
     await page.goto("/shop/blue-mantis/settings");
-    await page
-      .getByRole("main")
-      .getByRole("link", { name: "Shopify, QuickBooks, Xero & Zapier" })
-      .click();
+    await page.getByRole("main").getByRole("link", { name: "Shop integrations" }).click();
     await expect(page).toHaveURL(INTEGRATIONS_SETTINGS);
   });
 });

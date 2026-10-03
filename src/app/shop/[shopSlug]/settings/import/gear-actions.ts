@@ -20,7 +20,10 @@ import { noticeUrl, shopPath } from "@/lib/staff-notices";
 export async function importGearServiceHistoryAction(formData: FormData) {
   const session = await requireStaffSession();
   const db = await getDb();
-  const page = shopPath(session.user.shopSlug, "settings", "gear-import");
+  // One import page with a tab per kind (Aaron, 2026-10-03); the notice comes
+  // back on this tab.
+  const page = shopPath(session.user.shopSlug, "settings", "import");
+  const tab = `${page}?what=gear`;
   if (!(await canPersonImportShopData(db, session.user.shopId, session.user.personId))) {
     const home = shopPath(session.user.shopSlug);
     revalidateAndRedirect(home, noticeUrl(home, "gear-import-not-authorized"));
@@ -28,14 +31,14 @@ export async function importGearServiceHistoryAction(formData: FormData) {
 
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0)
-    revalidateAndRedirect(page, noticeUrl(page, "import-empty"));
+    revalidateAndRedirect(page, noticeUrl(tab, "import-empty"));
   const prepared = prepareGearImport(await file.text());
-  if (prepared.fatal) revalidateAndRedirect(page, noticeUrl(page, `import-${prepared.fatal}`));
+  if (prepared.fatal) revalidateAndRedirect(page, noticeUrl(tab, `import-${prepared.fatal}`));
   const summary = await commitGearImport(db, session.user.shopId, prepared, session.user.personId);
   revalidateAndRedirect(
     page,
     noticeUrl(
-      page,
+      tab,
       `imported-${summary.eventsAdded}-${summary.unitsCreated}-${summary.eventsSkipped}-${summary.assignmentsAdded}-${summary.assignmentsSkipped + summary.assignmentsUnmatched}`,
     ),
   );

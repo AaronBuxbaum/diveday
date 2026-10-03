@@ -34,7 +34,7 @@ test.describe("contact import", () => {
     page,
   }) => {
     await page.goto("/shop/blue-mantis/settings/import");
-    await expect(page.getByRole("heading", { name: "Import contacts" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Import", level: 1 })).toBeVisible();
     // The preview runs in the browser, so a file chosen before hydration is lost.
     await expect(page.locator('input[type="file"]').filter({ visible: true })).toHaveAttribute(
       "data-hydrated",

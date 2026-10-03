@@ -140,7 +140,6 @@
     "nothingToHandOver": "That set is already out."
   },
   "import": {
-    "title": "Import gear history",
     "help": "One row per unit, service event, or historical rental. Units match by tag first, then serial number; assignments match an existing diver by email or exact name, stay display-only, and never affect current availability.",
     "downloadTemplate": "Download gear CSV template",
     "submit": "Import gear history",

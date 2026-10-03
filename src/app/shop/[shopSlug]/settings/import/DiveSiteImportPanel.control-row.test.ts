@@ -3,11 +3,11 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * A source read: this is a Server Component page behind `requireShopSurface`,
+ * A source read: this is a Server Component panel on a page behind `requireShopSurface`,
  * so this pins the source that decides the geometry; nothing here measures it.
  * `CsvFileInput` is what draws the picker; its drawing is its own.
  */
-const SOURCE = readFileSync(join(import.meta.dirname, "page.tsx"), "utf8");
+const SOURCE = readFileSync(join(import.meta.dirname, "DiveSiteImportPanel.tsx"), "utf8");
 const FORM = SOURCE.slice(SOURCE.indexOf("<form"), SOURCE.indexOf("</form>"));
 
 /**

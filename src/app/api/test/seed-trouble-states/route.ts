@@ -403,10 +403,8 @@ export async function POST(request: Request) {
  * **One flag, no catalog edit.** The demo's `rentalItems` already lists no
  * torch, so ticking `rents_torch` on one existing fit reaches the state
  * without touching the catalog — which matters, because editing the catalog
- * would move every other diver's packing line. Every *sized* kind is in the
- * demo catalog on purpose (`src/db/seed-rental-fit.test.ts` asserts `drysuit`
- * for exactly that reason), so un-ticking one of those is not an option
- * either.
+ * would move every other diver's packing line. Un-ticking a kind the demo
+ * does rent is not an option either, for the same reason.
  *
  * **Not seeded into blue-mantis**, which is the rule this route exists for
  * (`.claude/rules/e2e.md`, `.claude/rules/db.md`). The reach is the argument:

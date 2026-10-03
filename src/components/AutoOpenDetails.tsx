@@ -20,6 +20,7 @@ export function AutoOpenDetails({
   id,
   name,
   className,
+  onToggle,
   children,
 }: {
   /** The fragment (no leading "#") this disclosure answers to — usually an
@@ -40,6 +41,8 @@ export function AutoOpenDetails({
    */
   name?: string;
   className?: string;
+  /** Told whether the disclosure is now open, however it opened. */
+  onToggle?: (open: boolean) => void;
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDetailsElement>(null);
@@ -62,7 +65,14 @@ export function AutoOpenDetails({
   }, [openOnHash]);
 
   return (
-    <details ref={ref} id={id} name={name} open={open} className={className}>
+    <details
+      ref={ref}
+      id={id}
+      name={name}
+      open={open}
+      className={className}
+      onToggle={onToggle ? (event) => onToggle(event.currentTarget.open) : undefined}
+    >
       {children}
     </details>
   );

@@ -140,7 +140,6 @@
     "nothingToHandOver": "Ese conjunto ya está fuera."
   },
   "import": {
-    "title": "Importar historial del equipo",
     "help": "Una fila por unidad o evento. Las unidades coinciden primero por etiqueta y luego por número de serie; las reimportaciones se deduplican.",
     "downloadTemplate": "Descargar plantilla CSV del equipo",
     "submit": "Importar historial",

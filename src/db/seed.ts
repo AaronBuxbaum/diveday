@@ -398,7 +398,7 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       addressCountry: "US",
       latitude: 25.0865,
       longitude: -80.4473,
-      // Rents the core kit plus both add-ons and fills nitrox, and prices them:
+      // Rents the core kit plus the GoPro and fills nitrox, and prices them:
       // a full set is cheaper than the pieces, each piece has its own price, and
       // nitrox is a per-dive surcharge. Divers see these when they set their
       // rental fit. Most real shops leave nitrox unticked (default off) — the
@@ -411,11 +411,8 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
         "weights",
         "dive_computer",
         "gopro",
-        // **The one add-on the demo offers, and the one that carries a size**
-        // (issue 1414). A shop with a drysuit renter on its fit book has to say
-        // it rents drysuits, or both fit forms read that fit as "not rented"
-        // and the next save clears it (`divers/[personId]/actions.ts`).
-        "drysuit",
+        // No drysuit on the demo's list (Aaron, 2026-10-03): it is an add-on a
+        // shop ticks for itself, and new shops start without it too.
         "nitrox",
       ],
       rentalPricing: {
@@ -428,7 +425,6 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
           weights: 500,
           dive_computer: 1000,
           gopro: 2000,
-          drysuit: 3500,
         },
         nitroxCents: 1200,
       },
@@ -648,7 +644,6 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, brand = false
             "weights",
             "dive_computer",
             "gopro",
-            "drysuit",
             "nitrox",
           ],
           rentalPricing: {
@@ -661,7 +656,6 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, brand = false
               weights: 500,
               dive_computer: 1000,
               gopro: 2000,
-              drysuit: 3500,
             },
             nitroxCents: 1200,
           },
