@@ -69,7 +69,10 @@ export default async function CounterCardPage({
         <p className="paper-sheet-muted mt-1 text-xs leading-snug">
           {t("print.sheet.counterCard.body")}
         </p>
-        <div className="mt-5 flex justify-center">
+        {/* `mt-10`, 8.5mm at the print root: the code's quiet zone, four of
+            its ~1.7mm modules, overhangs its box (`SheetCode`) and must stay
+            clear of the words above it. */}
+        <div className="mt-10 flex justify-center">
           <SheetCode value={registerUrl} label={t("print.sheet.counterCard.heading")} size={56} />
         </div>
       </PaperSheet>

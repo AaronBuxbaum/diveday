@@ -1222,7 +1222,7 @@ test("a counter check-in made offline queues, then syncs and lands on the live c
   // keeps its receipts folded, so open them to reach Diego's row.
   await page.goto(counterPath("blue-mantis", tripId));
   const queue = page.getByRole("region", { name: "Check-in queue" });
-  const settledHeading = queue.getByRole("heading", { name: /^Checked in — \d+$/ });
+  const settledHeading = page.getByRole("heading", { name: /^Checked in — \d+$/ });
   await expect(settledHeading).toBeVisible();
   await openIfClosed(queue.locator("details").filter({ has: settledHeading }));
   await expect(
