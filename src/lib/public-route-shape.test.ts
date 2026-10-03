@@ -21,7 +21,7 @@ describe("publicRouteShape", () => {
   });
 
   it("folds every shop-only child onto the one shop lookup", () => {
-    for (const child of ["courses", "reviews", "register", "availability.json", "year-card"]) {
+    for (const child of ["courses", "reviews", "register", "availability.json"]) {
       expect(publicRouteShape(`/s/${SHOP}/${child}`)).toEqual({ kind: "shop", shopSlug: SHOP });
     }
   });
@@ -62,7 +62,6 @@ describe("publicRouteShape", () => {
     expect(publicRouteShape(`/s/${SHOP}/trips/${TRIP_ID}/calendar`)).toEqual(shape);
     expect(publicRouteShape(`/s/${SHOP}/trips/${TRIP_ID}/arrival-card`)).toEqual(shape);
     expect(publicRouteShape(`/s/${SHOP}/trips/${TRIP_ID}/ready`)).toEqual(shape);
-    expect(publicRouteShape(`/s/${SHOP}/boats/${TRIP_ID}`)).toEqual(shape);
   });
 
   it("calls an id that is not a uuid malformed rather than putting it in a query", () => {
@@ -73,10 +72,6 @@ describe("publicRouteShape", () => {
       shopSlug: SHOP,
     });
     expect(publicRouteShape(`/s/${SHOP}/trips/nope/calendar`)).toEqual({
-      kind: "malformed",
-      shopSlug: SHOP,
-    });
-    expect(publicRouteShape(`/s/${SHOP}/boats/nope`)).toEqual({
       kind: "malformed",
       shopSlug: SHOP,
     });
@@ -155,50 +150,10 @@ describe("publicRouteShape", () => {
     expect(publicRouteShape("/switching/spreadsheet")).toBeNull();
   });
 
-  it("refuses an unknown demo story and passes the three that exist", () => {
-    expect(publicRouteShape("/demo/not-a-story")).toEqual({ kind: "absent" });
-    for (const story of ["first-booking", "returning-diver", "weather-day"]) {
-      expect(publicRouteShape(`/demo/${story}`), story).toBeNull();
-    }
-  });
-
-  it("refuses a town segment no locality could have produced, with no query", () => {
-    // `isRegionSlug` is the page's own first refusal (`dive/[region]/page.tsx`),
-    // and it is a *pattern*: this is the half of the region question that is
-    // free.
-    for (const segment of ["Key%20Largo", "key_largo", "-key-largo", "key-largo-"]) {
-      expect(publicRouteShape(`/dive/${segment}`), segment).toEqual({ kind: "absent" });
-    }
-  });
-
-  it("sends a well-shaped town to the database rather than calling it absent", () => {
-    // **The assertion a shape-only fix fails.** There is no closed list of
-    // towns — the set is a projection of `shops.region_slug` — so
-    // `/dive/not-a-town` passes every pattern check there is and the row has to
-    // decide. A module that answered `absent` here would 404 Key Largo.
-    expect(publicRouteShape("/dive/not-a-town")).toEqual({
-      kind: "region",
-      regionSlug: "not-a-town",
-    });
-    expect(publicRouteShape("/dive/key-largo")).toEqual({
-      kind: "region",
-      regionSlug: "key-largo",
-    });
-  });
-
-  it("has no opinion about the indexes above these routes, or anything below them", () => {
-    // `/dive` and `/demo` are static routes of their own, and a deeper path
-    // under any of the three names no route at all — Next answers those with a
-    // real 404 without being asked.
-    for (const path of [
-      "/dive",
-      "/dive/key-largo/extra",
-      "/demo",
-      "/demo/weather-day/extra",
-      "/switching/eve/extra",
-    ]) {
-      expect(publicRouteShape(path), path).toBeNull();
-    }
+  it("has no opinion about anything below the guides", () => {
+    // A deeper path names no route at all — Next answers it with a real 404
+    // without being asked.
+    expect(publicRouteShape("/switching/eve/extra")).toBeNull();
   });
 
   it("names the shop on a malformed shape too, so the refusal keeps its frame", () => {

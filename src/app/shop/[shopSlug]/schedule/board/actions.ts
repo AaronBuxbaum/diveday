@@ -9,7 +9,6 @@ import { listActiveCourses } from "@/db/courses";
 import { getDiveSite, listDiveSites } from "@/db/dive-sites";
 import { discardFormDraft } from "@/db/form-drafts";
 import { getMovePreflight } from "@/db/move-preflight";
-import { listSeasonEvents } from "@/db/season-events";
 import { getShopById } from "@/db/shops";
 import { createTripRequestInvitations } from "@/db/trip-invitations";
 import { getTripLens, listTripLenses } from "@/db/trip-lenses";
@@ -169,13 +168,12 @@ export async function loadBuilderOptionsAction() {
       diveSites: [],
       boats: [],
       lenses: [],
-      seasons: [],
       hasBoatDiving: true,
       hasShoreDiving: false,
       hasPoolDiving: false,
     };
   }
-  const [courses, diveSites, boats, lenses, seasons, shop] = await Promise.all([
+  const [courses, diveSites, boats, lenses, shop] = await Promise.all([
     listActiveCourses(db, shopId).then((rows) =>
       rows.map((row) => ({ id: row.id, title: row.title, agency: row.agency })),
     ),
@@ -183,28 +181,8 @@ export async function loadBuilderOptionsAction() {
     listBoats(db, shopId).then((rows) =>
       rows.map((row) => ({ id: row.id, name: row.name, capacity: row.capacity })),
     ),
-    // The shop's own words for its kinds of day (ADR
-    // 20260904-reef-all-the-way-down, decision 2).
+    // The shop's trip tags (ADR 20260904-reef-all-the-way-down, decision 2).
     listTripLenses(db, shopId).then((rows) => rows.map((row) => ({ id: row.id, title: row.name }))),
-    // The windows that name a kind of day, so the panel can offer that word for
-    // a date inside one *before* Save rather than the server filling it in
-    // silently afterwards (issue #1492). Four fields, and no more: the season's
-    // own name is here because the hint under the select names it, and its note
-    // is not, because nothing on this panel renders one.
-    listSeasonEvents(db, shopId).then((rows) =>
-      rows.flatMap((row) =>
-        row.lens
-          ? [
-              {
-                startsOn: row.startsOn,
-                endsOn: row.endsOn,
-                lensId: row.lens.id,
-                name: row.name,
-              },
-            ]
-          : [],
-      ),
-    ),
     getShopById(db, shopId),
   ]);
   return {
@@ -216,7 +194,6 @@ export async function loadBuilderOptionsAction() {
     // not run.
     boats: shop?.hasBoatDiving === false ? [] : boats,
     lenses,
-    seasons,
     hasBoatDiving: shop?.hasBoatDiving ?? true,
     hasShoreDiving: shop?.hasShoreDiving ?? false,
     hasPoolDiving: shop?.hasPoolDiving ?? false,

@@ -218,6 +218,7 @@
     }
   },
   "shopNav": {
+    "boatMode": "Modo barco",
     "language": "Idioma",
     "signOut": "Cerrar sesión",
     "signOutConfirm": "¿Cerrar sesión? Confirmar",
@@ -262,16 +263,6 @@
   "subSurfaceRipple": {
     "iconTitle": "Icono de pase de lista completo",
     "message": "Pase de lista completo"
-  },
-  "waterLocker": {
-    "rainAlt": "Lluvia",
-    "heading": "Pantalla bloqueada — se detectó agua",
-    "body": "Estamos ignorando toques aleatorios provocados por el agua en la pantalla. Mantén presionado para desbloquear en cuanto esté seca.",
-    "holdLine1": "MANTÉN",
-    "holdLine2": "2s",
-    "unlockingProgress": "Desbloqueando... {percent}%",
-    "holdToUnlock": "Mantén presionado el botón para desbloquear",
-    "disableToggleLabel": "Desactivar la protección contra salpicaduras en este dispositivo"
   },
   "undoToast": {
     "pendingLabel": "Deshaciendo…",
@@ -423,12 +414,6 @@
       "acknowledge": "Entendido"
     }
   },
-  "boatMode": {
-    "modeLabel": "Modo barco",
-    "labelAuto": "Automático",
-    "labelLand": "Modo tierra",
-    "labelBoat": "Modo barco"
-  },
   "haptics": {
     "toggleLabel": "Vibrar en cada toque"
   },
@@ -546,7 +531,6 @@
     "typedAs": "escrito como “{raw}”"
   },
   "sendHold": {
-    "sendingIn": "Se envía en {seconds} s.",
     "sendingNow": "Enviando…",
     "undo": "Deshacer"
   },

@@ -69,19 +69,6 @@ export function liveStageOf(
   return reading;
 }
 
-/**
- * May a stage be published to somebody who is not staff — the storefront's
- * anonymous visitor, a diver holding a link?
- *
- * `home` may not, and that is the narrowing rather than an oversight: "back at
- * the dock" is the shop's own reading of a day that is over, and a public
- * panel announcing it hours later is noise on a page about tomorrow. The
- * diver's own link still says it, because that diver was on the boat.
- */
-export function stageIsPublishable(stage: TripStage): boolean {
-  return stage !== "home";
-}
-
 /** `home` alone carries the roll call's success tone; the rest are lagoon. */
 export function stageTone(stage: TripStage): "success" | "primary" {
   return stage === "home" ? "success" : "primary";

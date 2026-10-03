@@ -31,7 +31,6 @@ import calls from "./calls.json";
 import checkIn from "./checkIn.json";
 import closeout from "./closeout.json";
 import courses from "./courses.json";
-import display from "./display.json";
 import divers from "./divers.json";
 import diveSites from "./diveSites.json";
 import feed from "./feed.json";
@@ -49,7 +48,6 @@ import reports from "./reports.json";
 import requests from "./requests.json";
 import reviews from "./reviews.json";
 import schedule from "./schedule.json";
-import seasonEvents from "./seasonEvents.json";
 import seatDiver from "./seatDiver.json";
 import settings from "./settings.json";
 import shared from "./shared.json";
@@ -71,7 +69,6 @@ const staff = {
   divers,
   courses,
   diveSites,
-  display,
   orders,
   orderLine,
   print,
@@ -102,7 +99,6 @@ const staff = {
   integrations,
   boats,
   lenses,
-  seasonEvents,
 };
 
 export default staff;

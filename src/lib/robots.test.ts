@@ -18,7 +18,6 @@ const TOKEN_ROUTE_PREFIXES = [
   "/invite/",
   "/calendar/",
   "/unsubscribe/",
-  "/board/",
 ];
 
 const ORIGIN = "https://dive.day";

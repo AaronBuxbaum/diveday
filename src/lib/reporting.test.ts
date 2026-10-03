@@ -38,7 +38,6 @@ function input(overrides: Partial<MonthlyReportInput> = {}): MonthlyReportInput 
     tipsCents: 0,
     tipCount: 0,
     partnerReferredSeats: 0,
-    giftSeats: { given: 0, claimed: 0 },
     buddyReferredSeats: 0,
     ...overrides,
   };
@@ -249,7 +248,6 @@ function report(overrides: Partial<MonthlyReport> = {}): MonthlyReport {
     waiverOutstanding: 9,
     waiverCompletion: 113 / 122,
     partnerReferredSeats: 0,
-    giftSeats: { given: 0, claimed: 0 },
     buddyReferredSeats: 0,
     ...overrides,
   };

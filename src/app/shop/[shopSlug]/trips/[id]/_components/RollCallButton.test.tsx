@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { RollCallAction, RollCallButtonCopy, RollCallResult } from "./RollCallButton";
@@ -124,5 +124,49 @@ describe("RollCallButton", () => {
     rerender(<Harness checkpoint="after_dive_1" action={action} />);
 
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  /**
+   * The water lock is gone (ADR 20261001-logbook), so the mark itself refuses
+   * the press a wet palm or a sheet of spray makes: several contacts at once.
+   */
+  describe("a press under more than one touch contact", () => {
+    function touch(type: "pointerDown" | "pointerUp", pointerId: number) {
+      fireEvent[type](document, { pointerId, pointerType: "touch", isPrimary: pointerId === 1 });
+    }
+
+    it("does not submit while two contacts were down", async () => {
+      const action = mockAction({ ok: true });
+      setup(action);
+      touch("pointerDown", 1);
+      touch("pointerDown", 2);
+      fireEvent.click(screen.getByRole("button", { name: "Board" }));
+      touch("pointerUp", 2);
+      touch("pointerUp", 1);
+      await Promise.resolve();
+      expect(action).not.toHaveBeenCalled();
+    });
+
+    it("submits a single deliberate touch, and a mouse or keyboard press", async () => {
+      const action = mockAction({ ok: true });
+      setup(action);
+      touch("pointerDown", 1);
+      touch("pointerUp", 1);
+      await userEvent.click(screen.getByRole("button", { name: "Board" }));
+      expect(action).toHaveBeenCalledOnce();
+    });
+
+    it("forgets a palm once every contact has lifted", async () => {
+      const action = mockAction({ ok: true });
+      setup(action);
+      touch("pointerDown", 1);
+      touch("pointerDown", 2);
+      touch("pointerUp", 1);
+      touch("pointerUp", 2);
+      touch("pointerDown", 3);
+      touch("pointerUp", 3);
+      await userEvent.click(screen.getByRole("button", { name: "Board" }));
+      expect(action).toHaveBeenCalledOnce();
+    });
   });
 });

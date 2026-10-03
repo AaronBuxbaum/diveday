@@ -295,6 +295,8 @@ the instrument line's figures roll as a check-in lands, the sinking row's neighb
 
 ### The public schedule — `/s/[shopSlug]`
 
+**Cut 2026-10-02** ([ADR 20261001-logbook](../architecture/decisions/20261001-logbook.md), decision 7): the boat that is out left the identity band with follow-the-boat, and the "Yours" group and "Your card clears this" lines left with the diver's shelf. The entries below that describe them are history.
+
 **Proposed 2026-09-18** ([ADR 20260918-nothing-to-explain](../architecture/decisions/20260918-nothing-to-explain.md), [canvas](canvases/20260918-nothing-to-explain/README.md)): Harbor's face on the headings and the shop's colour on the one filled control, over the picked direction's rows: the boat that is out, the next boat with space and Book, the week, the courses — as groups (A), as the page with one floating capsule that books the next boat (B), or with two tiles for spots and the boat that is out (C). Pending H-87, one call: A · Inset, B · Glass or C · Figures. Superseded 2026-09-19.
 
 **Decided 2026-09-19 (H-88)** ([ADR 20260919-one-idea](../architecture/decisions/20260919-one-idea.md), [canvas](canvases/20260919-one-idea/README.md)). Three whole products were drawn: Harbor's face and the shop's colour over the idea's own front page — the next boats led by their time under the noon sky and the week as seven days (I), the boat you are about to book with its empty seats visible (II), where we go on the shop's chart (III). **The pick: Tide** — the shop's name and the day over its own sky, the next boats led by their time, the week as seven days with seats left.
@@ -350,26 +352,6 @@ drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion
 - **Composition:** sell then close — the form is the page's terminal word, so the primary is where
   a decided diver already is; the arrival card follows the hero and the change ledger follows the
   conditions reading so practical wayfinding never competes with the pitch.
-
-### The regional pages — `/dive` and `/dive/[region]`
-
-**Built 2026-09-07** — N-49 (issue #1436), the one place DiveDay lists shops beside each other: a
-town, and the shops that dive out of it.
-
-- **One idea:** a diver who knows *where* they will be, and not yet *who* with, gets a way in.
-- **The question it arrives with:** "who runs boats out of Key Largo?" — answered by the town's own
-  page, one row per shop, each row the shop's own name and its own line about itself.
-- **Controls that dissolved:** every filter anyone would reach for. There is no search box, no map,
-  no sort: a town has a handful of shops and a list of them needs no instrument.
-- **Remove first:** anything DiveDay would be saying *about* a shop. A row carries only what the
-  shop authored and its storefront already shows a stranger, so a shop that has written no tagline
-  gets a shorter row rather than a generated one. Departures stay on the storefront one tap away —
-  putting "next out" on every row would fan an unbounded town out to three reads a shop on a page
-  crawlers hit. That is decided, not deferred: the owner settled it on 2026-09-10 (issue #1511)
-  against #1436's original spec, which asked for departures. The town page is a list of shops.
-- **Composition:** the marketing chrome with its trial pitch suppressed (a diver looking for a boat
-  is not that audience), the page's name, one line saying these shops book through DiveDay, then
-  the hairline ledger the diver-facing catalog already uses.
 
 ### The product page — `/product`
 
@@ -439,29 +421,6 @@ one line beside Add to calendar, *Add to Wallet*, on every state after booking; 
 - **Composition:** a step spine, because getting ready is a sequence, followed by the reusable
   arrival/change reading and the party hand-off; the same spine grammar the staff home speaks makes
   the product one product.
-
-### The shelf — `/shelf/[token]`
-
-**Built 2026-09-10** (slice 20t of [ADR 20260908-one-hand](../architecture/decisions/20260908-one-hand.md)).
-The first bearer surface anchored to a **person** rather than to a booking, so it outlives every
-seat: `person_shelf_tokens`, stored and revocable, and erasure closes it.
-
-- **One idea:** what this shop already holds for me, and the next reason to come back.
-- **The question it arrives with:** "when am I next out, and what do you have for me?" — answered by
-  the seat the diver holds, the same boat next time, and the crew's own "next time" from the day
-  just dived, in that order, before the file.
-- **Controls that dissolved:** none — this surface is new. What it deliberately never grows: a
-  medical answer, another diver's anything, a price. The reader (`src/db/shelf.ts`) cannot return
-  any of the three, and its test walks the whole object rather than the fields somebody remembered.
-- **Remove first:** the file's rows, before the reasons to come back. A shelf with nothing on it is
-  still worth opening for the next departure; a shelf with nothing ahead of it is a filing cabinet.
-- **Composition:** the thread's shell and measure, in the shop's brand — a diver who reached this
-  from their thread should not feel they left the shop. Two quiet lines close it: what is never here,
-  and "Forget this phone", which clears the storefront's greeting cookie and nothing else.
-- **What it leaves elsewhere:** the storefront reads that cookie and greets the diver by first name
-  with which visit the next one is, puts a "Yours" group above the week, and says why a departure
-  demanding a card is open to them instead of the warn pill. Without the cookie the storefront is
-  unchanged.
 
 ### The waiver — `/waivers/[token]`
 
@@ -562,7 +521,7 @@ primary-weight control lives on the page (`_lib/record-primaries.test.ts`).
 **Amended 2026-09-17, the file is one door grammar.** The 8b build shipped two: "legacy" groups
 (certification records, waiver, gear and sizes, diver notes, conversation) hid their summary above
 `sm` and rendered open as `InsetGroup` cards under a second, uppercase copy of their own label,
-while the newer groups (shelf, dive support) stayed doors at every width. Down one page they
+while the newer groups (dive support) stayed doors at every width. Down one page they
 interleaved — an open bordered card, a closed row, another open card — and the phone, which had
 only ever had the doors, was the cleaner page. Every group is now a door at every width, its row
 label is its `<h2>` and its fragment target, and its summary is its one **useful** fact rather than
@@ -578,44 +537,6 @@ standing on every row of a safety-critical group, is `danger-ghost`; and "Can't 
 sizes?" — a heading, a two-line caption, an input and a button under the gear facts on every diver
 who rents anything — is one link-weight door, its caption deleted (it described what the flag does
 to the packing list, which is the mechanism, not the outcome).
-
-### The departures board — `/board/[token]`
-
-**Built 2026-09-07** — N-23 (owner decision 2026-09-07, issue #1426), the shop's day on a screen
-nobody touches: a TV in the lobby, a tablet on the dock, behind a display link minted at
-Settings → Lobby display.
-
-- **One idea:** the boat you are looking for, from across a room — when it leaves, where it is,
-  how full.
-- **The question it arrives with:** "is my boat still boarding, and where do I go?" — answered by
-  the time, the crew's own stage word and the meeting line on the same row, at 24px or larger.
-- **Controls that dissolved:** all of them. No nav, no session, no tap; the page re-reads itself
-  every minute and the only act (revoke) lives on the settings page that made the link.
-- **Remove first:** anyone's name. The row is a count ("3 of 12 aboard"), a private charter is
-  "Private charter", and the crew line exists only on a link minted with names on.
-- **Composition:** the shop's name and the date, then one row per departure in clock order —
-  time · title, site, meeting point, outlook · stage word and count — on the manifest's
-  `boat-mode` ground so it follows the device's light or dark; the footer says when it last read.
-
-### Self check-in at the counter — `/check-in/[token]`
-
-**Built 2026-09-09** — N-24, the other thing a display link can open: a tablet on the counter that
-a diver operates unaided, behind the same credential and the same revocation door as the board.
-
-- **One idea:** type your last name, learn whether you are set — and if you are not, learn it
-  standing in front of somebody who can fix it.
-- **The question it arrives with:** "am I checked in, and where do I go?" — answered in one
-  submission, because a lookup step would mean a screen listing who was found.
-- **Controls that dissolved:** all but one box and one button. No nav, no session, no account, no
-  second step; the answer clears itself after twelve seconds so the next diver walks up to a blank
-  prompt.
-- **Remove first:** every reason. A miss, an ambiguous surname and a diver readiness will not clear
-  are one identical sentence — the screen is operated by whoever walks up to it, so an answer that
-  varied with *why* would answer questions about a stranger's booking to anyone willing to type.
-- **What it must never do:** board anybody. It records an arrival; boarding stays a roll-call act
-  the crew performs at the rail.
-- **Composition:** the shop's name and today's date, the prompt, one box, one button — then one
-  card, in success or caution tone, at 24-32px so it reads at arm's length across a counter.
 
 ### The doors — `/sign-in`, `/onboard`, and the token family
 

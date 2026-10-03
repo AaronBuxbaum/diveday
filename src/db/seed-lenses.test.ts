@@ -16,7 +16,7 @@ import { listTripLenses } from "./trip-lenses";
  * unique slug index — which took the whole seed transaction with it and left the
  * dev server answering 503 from its own health check.
  */
-describe("the demo's kinds of day", () => {
+describe("the demo's trip tags", () => {
   it("writes the six words in the order the shop wrote them", async () => {
     const { db, shop } = await seededShopContext();
 

@@ -183,6 +183,7 @@ export function ShopNav({
               languages={languages}
               setLocaleAction={setLocale}
               copy={{
+                boatMode: t("shared.shopNav.boatMode"),
                 calendar: t("shared.shopNavLinks.calendarFeed"),
                 language: t("shared.shopNav.language"),
                 signOut: t("shared.shopNav.signOut"),

@@ -162,7 +162,6 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "crew_assignment_requests.decided_by_person_id": "who answered the ask",
   "crew_availability_blocks.created_by_person_id": "who blocked the days",
   "day_closeouts.actor_person_id": "who closed the day",
-  "display_tokens.created_by_person_id": "who made the lobby screen's link",
   "dive_packages.created_by_person_id": "who wrote the package",
   "dive_sites.planning_note_by_person_id": "who wrote down what the site was like",
   "executed_dives.deleted_by_person_id": "who deleted the logged dive",
@@ -235,12 +234,6 @@ export const PERSON_TABLES_DELIBERATELY_UNMOVED: Readonly<Record<string, string>
   // 3), gone within a day. Written by someone at the desk, never about a
   // diver, so it belongs to whoever typed it and moves with nobody.
   form_drafts: "a staffer's own half-typed form, gone in a day",
-  // A shelf link names the record it was minted for, and a merge soft-deletes
-  // that record — so `verifyShelfToken`'s join refuses it from the moment the
-  // merge lands, and the link on the old phone dies on its own. Moving the row
-  // instead would hand the survivor a second live door onto their file that
-  // nobody at the shop knows they issued.
-  person_shelf_tokens: "a shelf link dies with the record it names; the survivor mints their own",
 };
 
 function quotedTable(tableName: string) {

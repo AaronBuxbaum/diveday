@@ -117,7 +117,7 @@ Implement slice 19e of ADR 20260907-in-your-hands. Read, in this order: the ADR 
 docs/architecture/decisions/20260907-in-your-hands.md (decision 1's four tests and decision 6), the
 slice's row in docs/product/features/roadmap.md section 19, the current code the slice touches
 (src/app/shop/[shopSlug]/_components/today/DaySpine.tsx, src/app/manifest.ts, the device-kept
-preference pattern in src/components/WaterLocker.tsx, and docs/design/principles.md section 3), and
+preference pattern in src/components/stated-diver-level.ts, and docs/design/principles.md section 3), and
 only then the artboard docs/design/canvases/20260907-in-your-hands/Device.dc.html. The ADR outranks
 the artboard; shipped code outranks a drawing for any slice already marked shipped in the README's
 slice table. Add one row under the day's spine, rendered only on a phone or tablet in a browser tab,

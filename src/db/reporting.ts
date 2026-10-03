@@ -27,7 +27,6 @@ import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { wallTimeToUtc } from "@/lib/zoned";
 import { buddyReferredSeatsForWindow } from "./buddy-referrals";
 import { type DbExecutor, queryAll } from "./client";
-import { giftCountsForWindow } from "./gifts";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import {
   boats,
@@ -511,12 +510,11 @@ export async function getMonthlyReport(
       ),
     );
 
-  // **The two rows lever W adds to the month** (ADR 20260908-one-hand,
-  // decision 6): seats given as gifts, and seats a diver's own link brought.
-  // Both counted on this window's live departures, the basis every other
-  // figure on this page uses, and both kept apart from `partnerReferredSeats`
-  // above — a hotel and a friend are not the same fact.
-  const giftSeats = await giftCountsForWindow(db, shopId, startUtc, endUtc);
+  // **The row lever W adds to the month** (ADR 20260908-one-hand, decision
+  // 6): seats a diver's own link brought. Counted on this window's live
+  // departures, the basis every other figure on this page uses, and kept apart
+  // from `partnerReferredSeats` above — a hotel and a friend are not the same
+  // fact.
   const buddyReferredSeats = await buddyReferredSeatsForWindow(db, shopId, startUtc, endUtc);
 
   const waiverByTrip = new Map(waiverRows.map((row) => [row.tripId, Number(row.waiverComplete)]));
@@ -563,7 +561,6 @@ export async function getMonthlyReport(
     tipsCents: Number(tipTotals?.total ?? 0),
     tipCount: Number(tipTotals?.tipCount ?? 0),
     partnerReferredSeats: Number(referredTotals?.seats ?? 0),
-    giftSeats,
     buddyReferredSeats,
   };
 }

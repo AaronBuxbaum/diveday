@@ -9,7 +9,6 @@ import { sectionCardClass } from "@/components/ui/card";
 import { LedgerRow, ledgerRowBoxClass } from "@/components/ui/ledger";
 import { diverTranslator } from "@/i18n/messages";
 import { staffTranslator } from "@/i18n/staff-messages";
-import PublicBoatLoading from "./s/[shopSlug]/boats/[tripId]/loading";
 import PublicReviewsLoading from "./s/[shopSlug]/reviews/loading";
 import PublicSiteLoading from "./s/[shopSlug]/sites/[siteSlug]/loading";
 import BookingNewLoading from "./shop/[shopSlug]/bookings/new/loading";
@@ -28,7 +27,6 @@ import PromosLoading from "./shop/[shopSlug]/promos/loading";
 import ReportsLoading from "./shop/[shopSlug]/reports/loading";
 import RequestsLoading from "./shop/[shopSlug]/requests/loading";
 import StaffReviewsLoading from "./shop/[shopSlug]/reviews/loading";
-import SettingsPrintLoading from "./shop/[shopSlug]/settings/print/loading";
 import StaffingLoading from "./shop/[shopSlug]/staffing/loading";
 import { SignatureLog } from "./shop/[shopSlug]/waivers/_components/SignatureLog";
 import WaiversLoading from "./shop/[shopSlug]/waivers/loading";
@@ -63,11 +61,9 @@ const SKELETONS: [name: string, loadedBy: string, Skeleton: ComponentType][] = [
   ["waivers", "SignatureLog", WaiversLoading],
   ["staffing", "StaffCredentials", StaffingLoading],
   ["staff reviews", "ReviewLedgerRow", StaffReviewsLoading],
-  ["print settings", "the Print register's SheetRows", SettingsPrintLoading],
   ["Today", "DaySpine's station rows", TodayLoading],
   ["public dive site", "the site's departures", PublicSiteLoading],
   ["public reviews", "ShopReviews", PublicReviewsLoading],
-  ["public boat", "BoatLine and the page's two door rows", PublicBoatLoading],
 ];
 
 /**
@@ -169,7 +165,7 @@ describe("the diver record's skeleton", () => {
     const { container } = render(<DiverProfileLoading />);
     expect(container.querySelectorAll(".rounded-panel")).toHaveLength(0);
     const doors = container.querySelectorAll(".border-y");
-    expect(doors).toHaveLength(8);
+    expect(doors).toHaveLength(7);
     for (const skeleton of doors) expect(box(skeleton, door)).toEqual(box(loaded, door));
   });
 
@@ -429,33 +425,6 @@ describe("the orders skeleton's rows", () => {
       expect(header).toHaveClass("h-4", `${listGap}`.replace(/^mt-/, "mb-"));
       expect(header).not.toHaveClass("pb-2");
     }
-  });
-});
-
-/**
- * **The Print register loads as the ledger it is** (class 11). Its skeleton
- * hand-drew the header's three bars (a 36px title bar under a 44px line box,
- * a description bar `mt-3 h-4` under `mt-2` and 24px lines) and three bordered,
- * shadowed cards for a page of ruled groups, so the groups dropped 12px at
- * 1280 and 36px at 390 when it landed, and the cards turned into rows (K-447).
- */
-describe("the Print register's skeleton", () => {
-  it("draws ruled rows at the ledger row's floor, and no card", () => {
-    const { container } = render(<SettingsPrintLoading />);
-    const rows = [...container.querySelectorAll("*")].filter((element) =>
-      element.classList.contains("last:border-b"),
-    );
-    expect(rows.length).toBeGreaterThan(0);
-    for (const row of rows) expect(row).toHaveClass("min-h-13", "py-2");
-    expect(container.querySelector(".shadow-bed, .rounded-panel")).toBeNull();
-  });
-
-  it("draws the header as the shared header skeleton does", () => {
-    const { container } = render(<SettingsPrintLoading />);
-    // The `<h1>`'s 44px line box, not a 36px bar; the description's 24px.
-    expect(container.querySelector(".h-9")).toBeNull();
-    expect(container.querySelector(".h-11")).not.toBeNull();
-    expect(container.querySelector(".mt-3.h-4")).toBeNull();
   });
 });
 

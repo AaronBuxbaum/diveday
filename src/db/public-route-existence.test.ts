@@ -234,7 +234,7 @@ describe("publicRouteLookup", () => {
    * The invariant, stated as the two cases that would break it. Both rows are
    * still on the board and each of their pages declines to render them in its
    * own way — a cancelled departure at 200 with its own soft landing, an
-   * unlisted one through `publicBoatLine`'s `notFound()`. The edge must hand
+   * unlisted one served only to whoever holds its link. The edge must hand
    * both to the page: a refusal here is the page's decision taken by a layer
    * that cannot see the reader, and it is how a working shop becomes a 404.
    */
@@ -250,34 +250,10 @@ describe("publicRouteLookup", () => {
     }
   });
 
-  /**
-   * The one shape with no shop over it (issue #1734). `shopExists: false` is
-   * not "the shop is gone" here, it is "there was never a shop in the URL" —
-   * the proxy reads it as "frame this as DiveDay's own refusal", which is what
-   * `/dive/<town>` is.
-   */
-  it("answers a town on one read, and names no shop to frame it as", async () => {
-    const counting = countingDb(ctx.db);
-    await expect(
-      publicRouteLookup(counting.db, { kind: "region", regionSlug: "key-largo" }),
-    ).resolves.toEqual({ exists: true, shopExists: false, hidden: false });
-    // Two `db.select()` calls, one statement: `listedShopScope` composes an
-    // `exists(...)` subquery that never leaves on its own, and reading the
-    // scope through the page's own fragment rather than hand-writing the join
-    // is the invariant. What matters is what is absent — the `shops.slug`
-    // probe every other shape opens with, which asks whose refusal a diver is
-    // about to read, and a town has no answer to that.
-    expect(counting.reads()).toBe(2);
-
-    await expect(
-      publicRouteLookup(ctx.db, { kind: "region", regionSlug: "not-a-town" }),
-    ).resolves.toEqual({ exists: false, shopExists: false, hidden: false });
-  });
-
   it("refuses a departure the shop took off the board", async () => {
     // The one status-shaped predicate the edge does carry, and only because
     // every public reader of a departure carries it too: `getTripWithBooked`
-    // and `publicBoatLine` both 404 a deleted row, so refusing it here matches
+    // 404s a deleted row, so refusing it here matches
     // the page rather than overruling it.
     const removed = await aDeparture();
     await ctx.db.update(trips).set({ deletedAt: nowDate() }).where(eq(trips.id, removed));

@@ -20,7 +20,7 @@ const WITH_A_NUMBER = `  finSize: z.string().trim().max(20).optional(),`;
 
 describe("a size accepted from outside", () => {
   it("names a field capped with its own number", () => {
-    const problems = unboundedSizeFields("src/app/shelf/[token]/actions.ts", WITH_A_NUMBER);
+    const problems = unboundedSizeFields("src/app/ready/[token]/actions.ts", WITH_A_NUMBER);
 
     expect(problems).toHaveLength(1);
     expect(problems[0]).toContain("finSize");
@@ -28,7 +28,7 @@ describe("a size accepted from outside", () => {
   });
 
   it("is quiet when the field reads the shared constant", () => {
-    expect(unboundedSizeFields("src/app/shelf/[token]/actions.ts", WITH_LIMITS)).toEqual([]);
+    expect(unboundedSizeFields("src/app/ready/[token]/actions.ts", WITH_LIMITS)).toEqual([]);
   });
 
   it("names every unbounded field, not just the first", () => {
@@ -67,7 +67,7 @@ describe("what is not a door", () => {
   it("does not read a JSX maxLength as a bound", () => {
     const source = `            <input name="finSize" maxLength={RENTAL_FIT_TEXT_LIMITS.size} />`;
 
-    expect(unboundedSizeFields("src/app/shelf/[token]/page.tsx", source)).toEqual([]);
+    expect(unboundedSizeFields("src/app/ready/[token]/page.tsx", source)).toEqual([]);
   });
 });
 

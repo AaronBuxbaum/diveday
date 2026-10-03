@@ -32,7 +32,7 @@ function mustCreate(lens: Awaited<ReturnType<typeof createTripLens>>) {
   return lens;
 }
 
-describe("a shop's own words for its kinds of day", () => {
+describe("a shop's trip tags", () => {
   it("writes them, keeps them in the order they were written, and reads one back", async () => {
     const { db, shop } = await seededShopContext();
     const before = await listTripLenses(db, shop.id);

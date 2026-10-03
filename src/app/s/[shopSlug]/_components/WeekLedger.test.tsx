@@ -28,7 +28,6 @@ function row(overrides: Partial<WeekLedgerRow> = {}): WeekLedgerRow {
     site: "Molasses Reef and French Reef",
     requirements: ["Open Water or higher"],
     aboveLevel: null,
-    clears: null,
     capacityText: "3 spots left",
     capacityTone: "quiet",
     price: "$95.00",
@@ -275,11 +274,6 @@ describe("a fact on the meta line moves whole", () => {
             requirements: ["Advanced Open Water or higher", "Deep"],
             aboveLevel: "Above your level",
           }),
-          row({
-            id: "clears",
-            requirements: ["Advanced Open Water or higher"],
-            clears: "Your Advanced card clears this",
-          }),
         ]}
         listLabel="Upcoming trips"
         stickyTop="top-(--chrome-h)"
@@ -297,9 +291,6 @@ describe("a fact on the meta line moves whole", () => {
       "Advanced Open Water or higher",
       "Deep",
       "Above your level",
-      "Molasses Reef and French Reef",
-      "Advanced Open Water or higher",
-      "Your Advanced card clears this",
     ]);
     for (const fragment of fragments) expect(fragment).toHaveClass("inline-block");
   });

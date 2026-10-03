@@ -6,89 +6,7 @@
     "surface": "{boat} está en superficie.",
     "headingIn": "{boat} va de regreso.",
     "home": "{boat} está de vuelta en el muelle.",
-    "said": "La tripulación lo dijo a las {time}.",
-    "liveEyebrow": "Ahora mismo",
-    "liveBack": "De vuelta hacia las {back}."
-  },
-  "boatLine": {
-    "stage": {
-      "boarding": "Embarcando en el muelle.",
-      "underway": "En {site}.",
-      "underwayNoSite": "En el agua.",
-      "surface": "En superficie entre inmersiones.",
-      "headingIn": "De regreso.",
-      "home": "De vuelta en el muelle."
-    },
-    "atTheDock": "En el muelle.",
-    "leavesAt": "Sale a las {time}.",
-    "said": "La tripulación lo dijo a las {when}.",
-    "asOf": "Según las {when}.",
-    "whenAndTrip": "{date} · {trip}",
-    "dayHeading": "El día",
-    "checkIn": "Registro",
-    "leaves": "Salida",
-    "back": "Regreso",
-    "diveNumber": "Inmersión {number}",
-    "note": "Esta página dice en qué punto de su día va el barco, según lo marca la tripulación. No dice quién va a bordo ni dónde está el barco en el agua.",
-    "directions": "Cómo llegar",
-    "callShop": "Llamar al centro",
-    "follow": "Seguir",
-    "share": {
-      "heading": "Compártelo con quien te espera",
-      "detail": "Un enlace a dónde va el barco, sin nombres.",
-      "action": "Compartir",
-      "copied": "Enlace copiado",
-      "copyFailed": "No se pudo copiar, selecciónalo a mano",
-      "text": "El día de {boat}, con {shop}"
-    }
-  },
-  "board": {
-    "empty": "Hoy no hay salidas.",
-    "aboard": "{boarded} de {booked, plural, one {# buceador} other {# buceadores}} a bordo",
-    "meetAt": "Punto de encuentro: {place}",
-    "privateCharter": "Salida privada",
-    "crew": "Tripulación: {names}",
-    "stage": {
-      "boarding": "Embarcando",
-      "underway": "En {site}",
-      "underwayNoSite": "En el agua",
-      "surface": "En superficie",
-      "headingIn": "De regreso",
-      "home": "De vuelta en el muelle"
-    },
-    "updated": "Actualizado a las {time}",
-    "unavailableHeading": "Este enlace de pantalla no está disponible",
-    "unavailableBody": "Crea uno nuevo en Configuración, en Pantalla del lobby.",
-    "seats": "{booked} de {capacity, plural, one {# plaza reservada} other {# plazas reservadas}}",
-    "hold": "En espera por condiciones",
-    "returned": "{boarded, plural, one {salió # buceador} other {salieron # buceadores}}"
-  },
-  "kiosk": {
-    "title": "Registro de llegada",
-    "prompt": "Apellido, o escanea tu código",
-    "submit": "Registrar llegada",
-    "submitting": "Verificando…",
-    "ready": "Todo listo, {name}.",
-    "readyAgain": "Ya estás registrado, {name}.",
-    "departure": "{title} · {time}",
-    "meetAt": "Punto de encuentro: {place}",
-    "deskHeading": "Pasa por el mostrador",
-    "deskBody": "Alguien del mostrador se encarga desde aquí.",
-    "unavailableHeading": "Esta tableta no está configurada",
-    "unavailableBody": "Crea uno nuevo en Configuración, en Pantalla del lobby."
-  },
-  "conservation": {
-    "shopClaimsDisclaimer": "Declarado por el centro, no verificado por DiveDay.",
-    "commitments": {
-      "green_fins_member": "Miembro de Green Fins",
-      "padi_aware_partner": "Socio de PADI AWARE",
-      "mooring_buoys_only": "Solo boyas de amarre",
-      "no_touch_policy": "Política de no tocar el arrecife",
-      "no_gloves_policy": "Política de no usar guantes",
-      "reef_cleanup_dives": "Inmersiones de limpieza de arrecifes",
-      "lionfish_containment": "Control de pez león",
-      "coral_nursery_support": "Apoyo a viveros de coral"
-    }
+    "said": "La tripulación lo dijo a las {time}."
   },
   "common": {
     "backToSchedule": "Volver al calendario",
@@ -130,12 +48,6 @@
       "feet": "{value} ft",
       "celsius": "{value} °C",
       "fahrenheit": "{value} °F"
-    },
-    "contrast": {
-      "modeLabel": "Contraste de la pantalla",
-      "labelAuto": "Automático",
-      "labelStandard": "Estándar",
-      "labelFull": "Alto"
     }
   },
   "shopChrome": {
@@ -146,22 +58,7 @@
     "footerLine": "{shop}",
     "spokenLanguages": "Hablamos {languages}",
     "languageFallback": "DiveDay todavía no está en {requested}. Esta página está en {shown}, el idioma en el que trabaja {shop}.",
-    "conservationCommitmentsHeading": "Compromisos de conservación declarados por el centro",
-    "conservationCommitmentsDisclaimer": "Estas son declaraciones del centro; DiveDay no las verifica ni las respalda.",
     "credit": "Reservas con DiveDay"
-  },
-  "regions": {
-    "index": {
-      "title": "Centros de buceo por localidad",
-      "description": "Centros que publican su calendario y aceptan reservas con DiveDay, agrupados por la localidad desde la que bucean.",
-      "shopCount": "{count, plural, one {# centro} other {# centros}}",
-      "emptyTitle": "Todavía no hay localidades",
-      "emptyBody": "Un centro aparece aquí en cuanto programa una salida."
-    },
-    "region": {
-      "title": "Centros de buceo en {name}",
-      "description": "Cada centro de esta lista publica su propio calendario y acepta reservas con DiveDay."
-    }
   },
   "schedule": {
     "eyebrow": "Salidas",
@@ -179,7 +76,6 @@
     "offSeason": {
       "heading": "No hay salidas durante un tiempo",
       "back": "Volvemos al agua el {date}.",
-      "nextSeason": "{name} comienza el {date}.",
       "requestHeading": "Pídenos un día"
     },
     "filters": {
@@ -212,7 +108,7 @@
       "eyebrowFiltered": "Próxima salida con plazas en esta vista"
     },
     "lenses": {
-      "railLabel": "Tipos de día",
+      "railLabel": "Etiquetas de salida",
       "all": "Todas las salidas"
     },
     "shopfront": {
@@ -222,11 +118,6 @@
     "moreWaysHeading": "Otras formas de ayudarte",
     "boatsHeading": "Las embarcaciones",
     "boatSeats": "{count, plural, one {# buceador} other {# buceadores}}"
-  },
-  "season": {
-    "eyebrow": "En temporada",
-    "through": "Hasta el {date}",
-    "lensLink": "Ver salidas de {lens}"
   },
   "trip": {
     "courseSession": "Sesión de curso",
@@ -255,13 +146,6 @@
     "arrivalImageAlt": "Referencia de llegada en {place}",
     "openArrivalMap": "Abrir en mapas",
     "saveArrivalCard": "Guardar tarjeta de llegada",
-    "arrivalCodeHeading": "Tu código de llegada",
-    "arrivalCodeBody": "Acércalo al escáner del mostrador y el personal te encontrará.",
-    "arrivalCodeAlt": "Código de llegada de tu reserva",
-    "arrivalCodeStop": "Anular el código de una tarjeta guardada",
-    "arrivalCodeStopConfirm": "¿Anular el código de cualquier tarjeta que hayas guardado o impreso? Ya no funcionará en el escáner del mostrador; vuelve a guardar la tarjeta para obtener uno nuevo.",
-    "arrivalCodeStopConfirmButton": "Sí, anular el código",
-    "arrivalCodeStopping": "Anulando…",
     "openPublicTrip": "Abrir la página pública de la salida",
     "arrivalShopDefault": "Punto de encuentro del centro",
     "changeLedgerHeading": "Qué ha cambiado",
@@ -321,26 +205,6 @@
     "diveNumber": "Inmersión {number}",
     "siteToBeConfirmed": "Sitio por confirmar",
     "sitesToBeConfirmed": "{count, plural, one {Una inmersión · sitio por confirmar} other {# inmersiones · sitios por confirmar}}",
-    "sky": {
-      "nightLine": "Puesta de sol a las {sunset}, oscuridad total a las {dusk}. {moon}, con un {percent} % de luz.",
-      "nightLineNoDusk": "Puesta de sol a las {sunset}. {moon}, con un {percent} % de luz.",
-      "dayLine": "Amanecer a las {sunrise}, puesta de sol a las {sunset}.",
-      "moonrise": "La luna sale a las {moonrise}.",
-      "nightLineNoMoon": "Puesta de sol a las {sunset}, oscuridad total a las {dusk}.",
-      "nightLineNoDuskNoMoon": "Puesta de sol a las {sunset}.",
-      "noMoon": "Sin luna durante la inmersión.",
-      "moonset": "La luna se pone a las {moonset}.",
-      "moon": {
-        "new": "Luna nueva",
-        "waxingCrescent": "Luna creciente",
-        "firstQuarter": "Cuarto creciente",
-        "waxingGibbous": "Luna gibosa creciente",
-        "full": "Luna llena",
-        "waningGibbous": "Luna gibosa menguante",
-        "lastQuarter": "Cuarto menguante",
-        "waningCrescent": "Luna menguante"
-      }
-    },
     "seen": {
       "heading": "Visto aquí este mes",
       "line": "{species} en {seen} de {dives, plural, one {# inmersión registrada} other {# inmersiones registradas}} aquí este mes",
@@ -366,7 +230,6 @@
     "forecastUpdateUnavailable": "Hora de actualización no disponible.",
     "forecastCrewCall": "Las condiciones se confirman en el muelle.",
     "forecastCreditPrefix": "Previsión de",
-    "tideWindow": "{turn, select, next {Próxima} other {Última}} {kind, select, high {pleamar} other {bajamar}} a las {time}; el barco llega al sitio {phase, select, slack {en el cambio de marea} flood {con marea entrante} other {con marea saliente}}{fit, select, met {, cuando mejor se bucea} missed {. Se bucea mejor {preference, select, slack {en la estoa} flood {con marea entrante} other {con marea saliente}}} other {}}.",
     "timeline": {
       "arrive": "Llegada y registro",
       "gearSetup": "Monta tu equipo",
@@ -439,8 +302,7 @@
       "crew": "Tripulación"
     },
     "pitchDoor": "El resto del briefing",
-    "pitchDoorSpecies": "{count, plural, one {# especie} other {# especies}}",
-    "tideStation": "Marea en {station}"
+    "pitchDoorSpecies": "{count, plural, one {# especie} other {# especies}}"
   },
   "factSource": {
     "forecast": "Pronóstico",
@@ -472,19 +334,6 @@
     },
     "promoLabel": "Código promocional",
     "promoHint": "(si tienes uno)",
-    "giftChoiceLabel": "Quién bucea",
-    "giftChoiceMe": "Yo",
-    "giftChoiceGift": "Otra persona, como regalo",
-    "giftReceiverLabel": "Su nombre",
-    "giftMessageLabel": "Una línea tuya",
-    "giftMessageHint": "Va en el pase. Nada más sobre ti va ahí.",
-    "giftGiverNameLabel": "Tu nombre",
-    "giftGiverEmailLabel": "Tu correo electrónico",
-    "giftGiverEmailHint": "Para el recibo y el enlace para reclamar.",
-    "giftHowItWorks": "Esa persona reclama la plaza con tu enlace, firma la exención y la plaza es suya. Si el barco no puede salir, el dinero vuelve a ti.",
-    "giftBookAndPay": "Pagar y crear el pase",
-    "giftBook": "Crear el pase",
-    "giftBooking": "Creando el pase…",
     "passThroughFee": "{name}: {price} por buceador (cargo de terceros)",
     "stripeHint": "Terminarás de pagar en una página segura de Stripe.",
     "ageAttestation": "Confirmo que todos los buceadores de esta reserva cumplen la edad mínima de {age}.",
@@ -542,8 +391,7 @@
       "nameTooLong": "Ese nombre es demasiado largo.",
       "emailInvalid": "Escribe un correo electrónico válido.",
       "phoneTooLong": "Ese número de teléfono es demasiado largo.",
-      "promoInvalid": "Ese código no está activo.",
-      "giftLineTooLong": "Esa línea es demasiado larga."
+      "promoInvalid": "Ese código no está activo."
     },
     "emailsOnTheWay": "Te llegarán dos correos: la confirmación de tu reserva y el enlace para firmar tu exención.",
     "embedPayNext": "Tu plaza está reservada. El pago se abre en la página segura de DiveDay, fuera de esta ventana.",
@@ -987,7 +835,6 @@
     "saveNote": "Guardar nota",
     "noteSaved": "Guardado. La tripulación lo verá.",
     "noteUnavailable": "No se ha guardado. Inténtalo otra vez o díselo a la tripulación ese día.",
-    "arrivalCodeStopped": "Tu código anterior ya no funciona. Vuelve a guardar la tarjeta para obtener uno nuevo.",
     "hotelPickupHeaderLine": "Recogida a las {time} en {location}",
     "hotelPickupLocationNotSet": "tu hotel",
     "hotelPickupLabel": "¿Quieres recogida por la mañana?",
@@ -1170,9 +1017,6 @@
     "submit": "Reclamar esta plaza",
     "claiming": "Reclamando…",
     "privacyNote": "Lo que escribas aquí solo lo ven el centro y tú. Quien organiza el grupo solo ve que la plaza está reclamada.",
-    "giftHeading": "Hay una plaza en {trip} que puedes reclamar",
-    "giftBody": "{giver} compró esta plaza en {shop} y ya está pagada. Recláma­la y se convierte en tu pase.",
-    "giftNext": "Después de reclamarla: firma la exención y cuéntale al centro qué titulación tienes.",
     "unavailableHeading": "Este enlace no está disponible",
     "unavailableBody": "Puede que ya se haya usado, que lo hayan reemplazado por uno más nuevo o que haya caducado. Pide un enlace nuevo a quien organiza el grupo o contacta con el centro.",
     "expiredBody": "Quien te envió este enlace puede decirte qué ha pasado con la plaza.",
@@ -1194,29 +1038,6 @@
     "waiverNeeded": "Falta completar la exención",
     "copyReminder": "Copiar enlace de recordatorio",
     "claimedNeedsWaiver": "Pídele que termine su exención desde su propio enlace."
-  },
-  "gift": {
-    "metaTitle": "Tu regalo",
-    "heading": "La plaza de {name}",
-    "when": "{date} · {time}",
-    "line": "“{message}”",
-    "claimed": "Reclamada · {when}",
-    "claimedPending": "Todavía sin reclamar",
-    "waiverSigned": "Exención firmada · {when}",
-    "waiverPending": "Exención todavía sin firmar",
-    "aboard": "A bordo · {when}",
-    "aboardPending": "Todavía no está a bordo",
-    "receipt": "Recibo · {amount}",
-    "receiptRefunded": "Reembolsado · {amount}",
-    "receiptAtShop": "Se paga en el centro",
-    "privacyNote": "Reclamada, firmada, a bordo. Nada más del día de {name} llega hasta ti.",
-    "cancelledHeading": "Esta salida no puede salir",
-    "cancelledRefunded": "Los {amount} ya van de vuelta a la tarjeta con la que se pagó.",
-    "cancelledRefundOwed": "{shop} te debe {amount} y se pondrá en contacto contigo.",
-    "cancelledUnpaid": "No se cobró nada por esta plaza.",
-    "giveAgain": "Regalar la misma plaza en la próxima salida",
-    "unavailableHeading": "Este enlace no está disponible",
-    "unavailableBody": "Puede que se haya agotado o que la plaza ya no exista."
   },
   "rental": {
     "ownGear": "Traes tu propio equipo, así que no hace falta alquiler.",
@@ -2602,22 +2423,6 @@
         "desc": "Lo que ven tus clientes: reservar un viaje, firmar la exención, pedir equipo de alquiler.",
         "tryThis": "Elige un viaje en el horario y reserva una plaza."
       }
-    },
-    "stories": {
-      "eyebrow": "Demo en vivo",
-      "enter": "Abrir esta historia",
-      "firstBooking": {
-        "title": "Una primera reserva",
-        "desc": "El calendario público del centro y el formulario que rellena quien nunca ha buceado con ellos."
-      },
-      "returningDiver": {
-        "title": "Alguien que ya ha venido",
-        "desc": "La lista de preparación de mañana, con las tallas que recepción ya tenía archivadas."
-      },
-      "weatherDay": {
-        "title": "Un día que se lleva el tiempo",
-        "desc": "Cancela una salida y mira cómo se entera cada buceador reservado, con otro sitio al que ir."
-      }
     }
   },
   "marketing": {
@@ -2743,7 +2548,6 @@
         "title": "Reservas y las páginas públicas",
         "item1": "Un horario público con páginas por salida y aforo que no se sobrevende",
         "item3": "Reserva en grupo de hasta veinte, con un enlace de reclamo por cada plaza que el organizador nombró",
-        "item4": "Reserva regalo, donde alguien paga por otra persona que aún no tiene cuenta",
         "item5": "Equipo de alquiler y solicitud de nitrox elegidos al reservar, pagados junto con la plaza",
         "item6": "Una lista de espera que llena la plaza liberada, y una lista de última hora con las fechas de cada buceador",
         "item7": "Códigos de descuento para todo el centro y ofertas de última hora por salida",
@@ -3343,7 +3147,7 @@
       "bookingEyebrow": "Días antes",
       "bookingTitle": "El horario toma la reserva, y el barco no se puede sobrevender.",
       "bookingNote1": "El recuento de plazas sale de la capacidad del barco, así que un barco lleno no toma más reservas.",
-      "bookingNote2": "Una reserva puede cubrir a un grupo, o ser un regalo para otra persona.",
+      "bookingNote2": "Una reserva puede cubrir a un grupo entero.",
       "bookingNote3": "Un código de descuento vale en todo el centro. Una oferta de última hora es un precio en un barco con plazas libres.",
       "bookingNote4": "El formulario de reserva que sigue a esta página pide las tallas, y caen en la lista de equipo.",
       "bookingNote5": "Tu marca, en tu web o en la nuestra. Una persona de aquí construye la web contigo si lo pides.",
@@ -3787,13 +3591,6 @@
       "note": "Esto es una invitación, no una reserva, así que todavía no hay ninguna plaza apartada.",
       "link": "Ver la salida y reservar tu plaza"
     },
-    "giftPass": {
-      "subject": "Tu regalo: {tripTitle}",
-      "body": "La plaza de {receiverName} con {shopName} en {tripTitle} ya está pagada.",
-      "forward": "Envíale a {receiverName} el enlace de abajo. Al reclamarlo la plaza pasa a ser suya y firma su propia exención.",
-      "claimLink": "Ver el pase",
-      "follow": "Seguir tu regalo"
-    },
     "lastMinuteDeal": {
       "subject": "{discountPercent}% de descuento en {tripTitle}: oferta de última hora",
       "body": "{shopName} acaba de abrir un {discountPercent}% de descuento en {tripTitle}.",
@@ -3925,12 +3722,6 @@
       "exampleShopName": "Blue Mantis Divers",
       "exampleMessage": "Reef Runner zarpa el sábado a las 8:00. Presentaos en el muelle 30 minutos antes.",
       "testMessage": "Este es un mensaje de prueba de DiveDay. Tu conexión de WhatsApp funciona."
-    },
-    "shelfLink": {
-      "subject": "Tu casillero en {shopName}",
-      "body": "{shopName} guarda una página para ti: tu próxima salida, los días que has buceado con ellos y las tallas que tienen archivadas.",
-      "openLink": "Abre tu casillero",
-      "never": "Tus respuestas médicas nunca aparecen ahí."
     }
   },
   "brand": {
@@ -3962,71 +3753,6 @@
       "daysAtSea": "Días en el mar",
       "mostDived": "El más buceado · {times, number}",
       "divers": "Buceadores"
-    },
-    "band": {
-      "eyebrow": "El año de un centro real",
-      "claim": "{shop} ha hecho {boats, plural, one {# salida} other {# salidas}} en DiveDay este año.",
-      "source": "Su tarjeta, dibujada por su registro. Cada número es un día que su equipo cerró.",
-      "note": "Se muestra aquí porque el centro lo activó.",
-      "door": "Ver su escaparate",
-      "alt": "Tarjeta del año de {shop}: {divers, plural, one {# buceador} other {# buceadores}}, {boats, plural, one {# salida} other {# salidas}}, {sites, plural, one {# sitio} other {# sitios}}."
     }
-  },
-  "shelf": {
-    "metaTitle": "Tu casillero — DiveDay",
-    "unavailableHeading": "Este enlace ya no sirve",
-    "unavailableBody": "Pídele uno nuevo a tu centro de buceo.",
-    "title": "Tu casillero",
-    "nextHeading": "Tu próxima salida",
-    "nextOpen": "Abre tu hilo",
-    "sameBoatBoat": "El mismo barco, el próximo {weekday}",
-    "sameBoatSeries": "La misma salida, el próximo {weekday}",
-    "sameBoatOpen": "Échale un vistazo",
-    "nextTimeHeading": "La próxima vez",
-    "divesHeading": "Tus días con {shopName}",
-    "divesCount": "{count, plural, one {# día} other {# días}} en el agua",
-    "divesRecap": "Lee el resumen",
-    "fileHeading": "En tu ficha",
-    "certification": "Certificación",
-    "certificationNone": "Nada archivado",
-    "certificationChecked": "Verificada por {name} el {date}",
-    "certificationCheckedNoName": "Verificada el {date}",
-    "certificationUnchecked": "Todavía sin verificar",
-    "waiver": "Exención",
-    "waiverSigned": "Firmada el {signedAt}, válida hasta el {expiresAt}",
-    "waiverNeedsSigning": "Sin firmar",
-    "waiverWithTheShop": "{shopName} la está revisando",
-    "sizes": "Tallas",
-    "sizeBcd": "BCD",
-    "sizeWetsuit": "Neopreno",
-    "sizeFinsBoots": "Aletas y escarpines",
-    "sizesSave": "Guardar tallas",
-    "sizesSaved": "Guardado.",
-    "sizesRefused": "No se guardó. Inténtalo otra vez.",
-    "buddyTeam": "Equipo de compañeros",
-    "buddyTeamSize": "{count, plural, one {Tú y # persona más} other {Tú y # personas más}} el {date}",
-    "emergencyContact": "Contacto de emergencia",
-    "emergencyContactOnFile": "Archivado",
-    "emergencyContactNone": "Nada archivado",
-    "emergencyContactName": "Nombre",
-    "emergencyContactPhone": "Teléfono",
-    "emergencyContactSave": "Guardar contacto",
-    "emergencyContactSaved": "Guardado.",
-    "emergencyContactRefused": "No se guardó. Inténtalo otra vez.",
-    "never": "Nunca aquí: tus respuestas médicas.",
-    "forgetHeading": "Olvidar este teléfono",
-    "forgetBody": "Quita el saludo de las páginas de {shopName}. Tu enlace sigue funcionando.",
-    "forgetButton": "Olvidar este teléfono",
-    "forgotten": "Olvidado.",
-    "welcomeTonight": "Hola de nuevo, {name}. Hoy es tu salida número {n}.",
-    "welcomeUpcoming": "Hola de nuevo, {name}. Tu salida número {n} con nosotros es el {day}.",
-    "welcomeCold": "Hola de nuevo, {name}.",
-    "yoursHeading": "Lo tuyo",
-    "yoursShelf": "Tu casillero",
-    "levelClears": "Tu certificación {level} te cubre",
-    "doorOpen": "Tu casillero",
-    "doorSend": "Envíame mi casillero",
-    "doorSent": "Enviado al correo de tu reserva.",
-    "doorFailed": "No se envió. Inténtalo otra vez."
   }
 }

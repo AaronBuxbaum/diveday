@@ -123,8 +123,4 @@ test("a diver reads the crew's month under the site on the trip page", async ({ 
       .getByText("What the crew logged, and when. It says what was seen, not what you will see.")
       .first(),
   ).toBeVisible();
-
-  // The sky rides the same beat: a morning charter says when the light arrives
-  // and when it goes, computed from the site's own coordinates.
-  await expect(page.getByText(/Sunrise .*, sunset .*\./)).toBeVisible();
 });

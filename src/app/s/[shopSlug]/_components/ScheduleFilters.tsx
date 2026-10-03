@@ -30,8 +30,8 @@ export type ScheduleFiltersCopy = {
  * above a list a diver had not begun reading — seven chips, two selects, one
  * or two checkboxes and a sentence — on a conversion surface whose one job is
  * to get somebody onto a boat (principle 8: collapse the rare path; principle
- * 10: remove until it breaks). The chips are the shop's own words for its
- * kinds of day and stay out; these four are the advanced ask.
+ * 10: remove until it breaks). The chips are the shop's trip tags and
+ * stay out; these four are the advanced ask.
  *
  * **Open when the reader is already filtering.** A URL carrying any of the
  * four parameters — a shared link, a reload, a step back — opens the

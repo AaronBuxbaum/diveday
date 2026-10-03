@@ -16,6 +16,7 @@ const COPY = {
   language: "Language",
   signOut: "Sign out",
   signOutConfirm: "Sign out now?",
+  boatMode: "Boat mode",
   signOutPending: "Signing out…",
 };
 
@@ -159,6 +160,7 @@ describe("ShopIdentityMenu — the open panel", () => {
       screen.getByText("Language"),
       screen.getByRole("button", { name: "English (US)" }),
       screen.getByRole("button", { name: "Español" }),
+      screen.getByRole("button", { name: "Boat mode" }),
       screen.getByRole("button", { name: "Sign out" }),
     ];
     for (const element of starts) {
@@ -181,6 +183,19 @@ describe("ShopIdentityMenu — the open panel", () => {
     // No inert placeholder is left in the other rows to hold their edge: the
     // gutter holds it.
     expect(screen.getByRole("button", { name: "Español" }).children).toHaveLength(0);
+  });
+
+  it("switches this device into Boat mode and back, ticking the row while it is on", async () => {
+    await openMenu();
+    const row = screen.getByRole("button", { name: "Boat mode" });
+    expect(row).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(row);
+    expect(row).toHaveAttribute("aria-pressed", "true");
+    expect(document.documentElement).toHaveClass("boat-mode");
+    expect(row.querySelector("svg")).not.toBeNull();
+    await userEvent.click(row);
+    expect(row).toHaveAttribute("aria-pressed", "false");
+    expect(document.documentElement).not.toHaveClass("boat-mode");
   });
 
   it("nests the panel's rows in its corner: a p-1 panel, and every row on the derived corner", async () => {

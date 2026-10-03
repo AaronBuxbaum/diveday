@@ -41,8 +41,7 @@ export async function listTripDiverContacts(db: AppDb, shopId: string, tripId: s
  * instant** — two divers seated in a spec, or a party booked in a single
  * `createBookingParty` transaction, tie *by construction* rather than by bad
  * luck. (Most seeded bookings do not: `nextCreatedAt` in `seed-clock.ts`
- * exists to give them distinct stamps, and the seeds use it.
- * `seed-year-band.ts` is the one that stamps none.) A roster is read at the
+ * exists to give them distinct stamps, and the seeds use it.) A roster is read at the
  * rail; it does not get to be nondeterministic.
  *
  * The tie-break used to be `asc(bookings.id)`, and that was the wrong half of

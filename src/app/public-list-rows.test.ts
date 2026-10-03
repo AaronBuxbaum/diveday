@@ -15,8 +15,7 @@ function classStrings(file: string): string[][] {
  * **A public list's hover fill spans rule to rule, square, with its words on
  * the column** (docs/design/pixel-craft.md, class 6; K-513).
  *
- * The regional index, a town's shops and a shop's course ladder each drew
- * their rows as a `-mx-3 rounded-lg px-3` link inside a `divide-y border-y`
+ * A shop's course ladder drew its rows as a `-mx-3 rounded-lg px-3` link inside a `divide-y border-y`
  * list: the fill ran 12px past both ends of the rules above and below it, and
  * its 12px corners sat entirely outside the ruled band, so a hovered row read
  * as a pill that had slipped out of the list. They take the ledger's geometry
@@ -26,8 +25,6 @@ function classStrings(file: string): string[][] {
  * is the row between two rules and not a box of its own.
  */
 const LISTS: readonly [page: string, skeleton: string][] = [
-  ["app/dive/page.tsx", "app/dive/loading.tsx"],
-  ["app/dive/[region]/page.tsx", "app/dive/[region]/loading.tsx"],
   ["app/s/[shopSlug]/courses/page.tsx", "app/s/[shopSlug]/courses/loading.tsx"],
 ];
 

@@ -34,10 +34,8 @@ describe("YearReport", () => {
    * shape. forms-and-controls.md's rule is `space-y-10` on the wrapper and
    * never `mt-*` on a section.
    */
-  it("stacks the strip, figures, sites, entries and share line on one mt-8 space-y-10 wrapper, with no child carrying its own top margin", () => {
-    render(
-      <YearReport year={YEAR} locale="en-US" shopSlug="blue-mantis" t={t} showsOnDiveday={false} />,
-    );
+  it("stacks the strip, figures, sites and entries on one mt-8 space-y-10 wrapper, with no child carrying its own top margin", () => {
+    render(<YearReport year={YEAR} locale="en-US" shopSlug="blue-mantis" t={t} />);
     const strip = screen.getByRole("region", { name: t("reports.year.stripLabel") });
     const figures = screen.getByRole("region", { name: t("reports.year.numbersLabel") });
     const sites = screen.getByRole("region", { name: t("reports.year.sitesLabel") });
@@ -46,24 +44,10 @@ describe("YearReport", () => {
     const stack = strip.parentElement;
     expect(stack).toHaveClass("mt-8", "space-y-10");
     for (const section of [figures, sites, entries]) expect(section.parentElement).toBe(stack);
-    expect(stack?.children).toHaveLength(5);
+    expect(stack?.children).toHaveLength(4);
     const margined = [...(stack?.children ?? [])].filter((child) =>
       [...child.classList].some((token) => /^(mt|my|m)-/.test(token)),
     );
     expect(margined).toEqual([]);
-  });
-
-  /**
-   * **The share line breaks at its dot, never inside its door.** At 390 the
-   * "Lobby display settings" link wrapped inside itself and left one word on
-   * a line of its own (K-574). Kept whole, the line breaks at the " · "
-   * before it and the door moves down entire.
-   */
-  it("keeps the display-settings door whole on the share line", () => {
-    render(
-      <YearReport year={YEAR} locale="en-US" shopSlug="blue-mantis" t={t} showsOnDiveday={false} />,
-    );
-    const door = screen.getByRole("link", { name: t("reports.year.shareDoor") });
-    expect(door).toHaveClass("whitespace-nowrap");
   });
 });

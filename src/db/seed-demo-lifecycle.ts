@@ -15,7 +15,6 @@ import {
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
-  bookingGifts,
   bookingPayments,
   bookingReferrals,
   bookings,
@@ -29,7 +28,6 @@ import {
   crewAssignmentRequests,
   crewAvailabilityBlocks,
   dayCloseouts,
-  displayTokens,
   divePackageEntitlements,
   divePackages,
   diveSiteCreatures,
@@ -62,7 +60,6 @@ import {
   people,
   personCourtesyEmailUnsubscribeTokens,
   personRoles,
-  personShelfTokens,
   preDepartureCheckEvents,
   preDepartureChecklistItems,
   priorGearAssignments,
@@ -74,12 +71,10 @@ import {
   reviewModerationEvents,
   rollCallCrewEvents,
   rollCallEvents,
-  seasonEvents,
   shopBackupDeliveries,
   shopBackupDestinations,
   shopContactEmailConfirmationTokens,
   shopIntegrations,
-  shopPrintRuns,
   shopPromoCodes,
   shopPromoRedemptions,
   shopStripeAccounts,
@@ -147,12 +142,8 @@ export const DEFAULT_DEMO_TTL_MS = 7 * DAY_MS;
  * there in the same change.
  *
  * Never call this on the canonical blue-mantis demo, or on any shop somebody
- * uses. There are two callers and each addresses one shop it minted itself: the
- * reaper below, which only ever passes a minted demo (`isDemo`, non-canonical
- * slug), and `dropYearBandShop` (src/db/seed-year-band.ts), which passes the
- * homepage band's e2e fixture — a shop that is not a demo, precisely because
- * the band refuses demos, and is therefore addressed by one reserved slug that
- * nothing else creates, from routes that exist only under `DIVEDAY_E2E`.
+ * uses. Its caller is the reaper below, which only ever passes a minted demo
+ * (`isDemo`, non-canonical slug).
  */
 export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Promise<void> {
   const shopTrips = await db.select({ id: trips.id }).from(trips).where(eq(trips.shopId, shopId));
@@ -191,13 +182,8 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
   await db.delete(tips).where(eq(tips.shopId, shopId));
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
-  // Shelf links reference `people` with no cascade, the same 23503 shape as
-  // the calendar feeds further down.
-  await db.delete(personShelfTokens).where(eq(personShelfTokens.shopId, shopId));
-  // The gift and the buddy referral both reference bookings, so both go before
-  // them (ADR 20260908-one-hand, decision 6, lever W). `booking_referrals`
-  // names two bookings and neither is deleted first, so it goes here too.
-  await db.delete(bookingGifts).where(eq(bookingGifts.shopId, shopId));
+  // The buddy referral references bookings (ADR 20260908-one-hand, decision 6,
+  // lever W) — two of them, and neither is deleted first — so it goes before them.
   await db.delete(bookingReferrals).where(eq(bookingReferrals.shopId, shopId));
   await db.delete(bookingArrivalEvents).where(eq(bookingArrivalEvents.shopId, shopId));
   await db.delete(rollCallCrewEvents).where(eq(rollCallCrewEvents.shopId, shopId));
@@ -206,9 +192,6 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
   await db.delete(tripStageEvents).where(eq(tripStageEvents.shopId, shopId));
   await db.delete(preDepartureChecklistItems).where(eq(preDepartureChecklistItems.shopId, shopId));
-  // The shop's print register — one row per sheet, owned by the shop and by
-  // nothing else.
-  await db.delete(shopPrintRuns).where(eq(shopPrintRuns.shopId, shopId));
   // The close-out trail references people and the shop, so it must clear
   // before both parents below (ADR 20260804-day-closeout).
   await db.delete(closeoutLeftoverDecisions).where(eq(closeoutLeftoverDecisions.shopId, shopId));
@@ -315,11 +298,6 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // decision 2). Same shape as `boats` above: it references `shops` with no
   // cascade, so a demo whose owner wrote a vocabulary made the final
   // `delete(shops)` throw 23503 and stranded the shop past its TTL.
-  // The shop's own year, before the words it points at: `season_events.lens_id`
-  // is `ON DELETE SET NULL`, so a surviving season would not FK-violate the
-  // vocabulary delete — but it does reference `shops`, so it has to be gone
-  // before the final `delete(shops)` for the same reason the words do.
-  await db.delete(seasonEvents).where(eq(seasonEvents.shopId, shopId));
   await db.delete(tripLenses).where(eq(tripLenses.shopId, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
   await db.delete(mediaDeletionAttempts).where(eq(mediaDeletionAttempts.shopId, shopId));
@@ -361,10 +339,6 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(crewAssignmentRequests).where(eq(crewAssignmentRequests.shopId, shopId));
   await db.delete(crewAvailabilityBlocks).where(eq(crewAvailabilityBlocks.shopId, shopId));
   await db.delete(calendarFeeds).where(eq(calendarFeeds.shopId, shopId));
-  // The lobby-display links (issue #1426): they reference `people` through
-  // `created_by_person_id` with no cascade, the same 23503 shape as the rows
-  // above.
-  await db.delete(displayTokens).where(eq(displayTokens.shopId, shopId));
   // Deliveries reference the destination they were sent to, so they go first.
   await db.delete(shopBackupDeliveries).where(eq(shopBackupDeliveries.shopId, shopId));
   await db.delete(shopBackupDestinations).where(eq(shopBackupDestinations.shopId, shopId));

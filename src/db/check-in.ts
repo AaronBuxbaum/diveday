@@ -13,21 +13,17 @@ import {
   notInArray,
   or,
 } from "drizzle-orm";
-import { isMinorOnDate } from "@/lib/age";
 import { ARRIVAL_RETRACTION_SUPERSEDED } from "@/lib/arrival";
 import { isStaff } from "@/lib/authz";
-import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { offlineEventOutOfBounds } from "@/lib/offline-events";
-import { arrivalsWindow, kioskArrivalsWindow } from "@/lib/operational-window";
+import { arrivalsWindow } from "@/lib/operational-window";
 import { priorVisitStanding } from "@/lib/prior-visits";
 import type { ReadinessResult } from "@/lib/readiness";
 import { isUuid } from "@/lib/uuid";
-import { listSelfReportedArrivalBookingIds } from "./arrival-provenance";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
-import { giftGiversByBooking } from "./gifts";
 import {
   departureRollCallForBooking,
   listAfterDiveRollCallByTrip,
@@ -40,11 +36,9 @@ import {
   activityEvents,
   bookingArrivalEvents,
   bookings,
-  diveSupportNeeds,
   people,
   personRoles,
   priorVisits,
-  shops,
   trips,
 } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -102,16 +96,6 @@ export type CheckInQueueRow = {
    */
   onTheWater: OnTheWater;
   /**
-   * This seat's arrival was **self-reported at the lobby tablet**, not seen by
-   * a staffer (N-24). The counter still counts them as here — they very
-   * probably are — but it will not draw its stop-chasing accent on a boat whose
-   * "everybody is here" rests on somebody typing a surname. See
-   * `listSelfReportedArrivalBookingIds` for why the two are not the same claim.
-   *
-   * False for every seat that is not checked in at all.
-   */
-  selfReported: boolean;
-  /**
    * No **usable** emergency contact on this diver's record — the same test
    * Today's Contact rows apply (`missingEmergencyContactByTrip` in
    * `src/db/today.ts`): a name *and* a phone, because a name with no number
@@ -123,20 +107,6 @@ export type CheckInQueueRow = {
    * decision 9).
    */
   missingEmergencyContact: boolean;
-  /**
-   * **An unclaimed gift on the day** (ADR 20260908-one-hand, decision 6,
-   * lever W): who gave this seat, when the person it was given to has not
-   * claimed it yet.
-   *
-   * The counter is where that matters, because the diver may well be standing
-   * there without ever having opened the link — the row is the shop's cue to
-   * seat the giver's friend by name rather than hunt for a booking under an
-   * address nobody has. Null for every ordinary seat, and null the moment the
-   * gift is claimed: after that it is simply that diver's booking.
-   *
-   * Batched over the whole queue, never one query per row.
-   */
-  giftGiverName: string | null;
   /**
    * This seat is the diver's **first** with the shop, counting DiveDay's own
    * bookings *and* the visits a migration carried across
@@ -190,7 +160,6 @@ export async function listCheckInQueue(
       startsAt: trips.startsAt,
       endsAt: trips.endsAt,
       bookingStatus: bookings.status,
-      claimedAt: bookings.claimedAt,
       emergencyContactName: people.emergencyContactName,
       emergencyContactPhone: people.emergencyContactPhone,
     })
@@ -221,29 +190,15 @@ export async function listCheckInQueue(
   // grouped query for the queue's trips, beside the departure read rather than
   // instead of it — the badge needs the dock and the gate needs both.
   const afterDiveByTrip = await listAfterDiveRollCallByTrip(db, shopId, tripIds);
-  const selfReportedBookingIds = await listSelfReportedArrivalBookingIds(
-    db,
-    shopId,
-    rows.map((row) => row.bookingId),
-  );
   const history = await queueVisitHistory(db, shopId, rows, arrivals.to);
-  // Only the seats that are still unclaimed: a claimed gift is that diver's
-  // own booking and the counter has nothing extra to do with it.
-  const giftGivers = await giftGiversByBooking(
-    db,
-    shopId,
-    rows.filter((row) => row.claimedAt === null).map((row) => row.bookingId),
-  );
 
-  return rows.map(({ emergencyContactName, emergencyContactPhone, claimedAt, ...row }) => ({
+  return rows.map(({ emergencyContactName, emergencyContactPhone, ...row }) => ({
     ...row,
-    giftGiverName: claimedAt === null ? (giftGivers.get(row.bookingId) ?? null) : null,
     bookingStatus: row.bookingStatus as "booked" | "checked_in" | "no_show",
     boarded: boardedBookingIds.has(row.bookingId),
     onTheWater: boardedBookingIds.has(row.bookingId)
       ? "boarded"
       : (afterDiveByTrip.get(row.tripId)?.get(row.bookingId) ?? null),
-    selfReported: selfReportedBookingIds.has(row.bookingId),
     missingEmergencyContact: !emergencyContactName || !emergencyContactPhone,
     firstVisit: history.firstVisitBookingIds.has(row.bookingId),
     readiness: readinessByBooking.get(row.bookingId) ?? {
@@ -764,217 +719,6 @@ export async function checkInBooking(
       occurredAt,
     });
     return { ok: true, bookingId: booking.id, personName: booking.personName };
-  });
-}
-
-/**
- * What the counter tablet gets back. Two outcomes reach the screen and no
- * more — `ok`, or "see the desk" — because the tablet is operated by whoever
- * walks up to it, and a refusal that varied with *why* would answer questions
- * about a stranger's booking to anyone willing to type. The `reason` here is
- * for the server's own logs and the test suite; the surface collapses every
- * one of them into one sentence.
- */
-export type KioskCheckInOutcome =
-  | { ok: true; bookingId: string; personName: string; alreadyArrived: boolean }
-  | { ok: false; reason: "not_found" | "not_bookable" | "not_ready" };
-
-/**
- * **A diver checks themselves in at the counter tablet** (N-24).
- *
- * The second door onto the arrival queue, and deliberately a *separate
- * function* rather than a flag on `checkInBooking`: that one opens with
- * `activeStaffRecorderId`, whose whole job is to refuse anybody who is not this
- * shop's live staff right now, and weakening it for a kiosk would weaken it for
- * the desk. What the two share is everything that matters — the row lock, the
- * bookable check, the **live readiness re-read**, the `bookings.status`
- * projection, the append-only `booking_arrival_events` trail, the activity line
- * and the crew's desk event.
- *
- * **This records an arrival and can never record a boarding.** Arrival is the
- * desk's question — "are you here?" — and boarding is the rail's, performed by
- * a crew member with the diver in front of them at roll call. The two
- * vocabularies are kept apart at the table (`arrival_status` has no `boarded`
- * value at all) and in the code: nothing here touches `roll_call_events`, and
- * `kiosk-check-in.test.ts` asserts that a kiosk arrival leaves the departure's
- * roll call exactly as it found it.
- *
- * **It does move something the manifest reads, and that took two reviews to
- * say out loud.** This writes `bookings.status = 'checked_in'`, which is
- * carried onto the roll-call screen as `ManifestDiverInput.checkedIn` and into
- * the counter's "here" count. An earlier draft of this comment claimed it
- * "touches nothing the manifest reads" — false, and it was the safety claim.
- * What is true is the narrower thing: no boarding is written, nobody sails
- * because of this, and `display_token_id` now reaches both surfaces
- * (`listSelfReportedArrivalBookingIds`) so a self-reported arrival never wears
- * the words a staffer's sighting earns.
- *
- * Readiness is what turns "You're set" into "See the desk". A diver whose
- * waiver is unsigned, whose card has expired or whose payment has not landed is
- * refused here exactly as they would be at the desk — and refused *ashore*,
- * while there is still somebody to talk to, which is the whole reason the
- * counter exists.
- *
- * The arrival is recorded as the diver's own act: `recorded_by_person_id` is
- * the diver, and `display_token_id` names the tablet. No read mark is written,
- * because nobody at the desk has seen this yet — which is precisely the state
- * the crew's catch-up strip exists to show.
- */
-export async function checkInAtKiosk(
-  db: AppDb,
-  input: { shopId: string; displayTokenId: string; bookingId: string; now?: Date },
-): Promise<KioskCheckInOutcome> {
-  const now = input.now ?? nowDate();
-  const kioskWindow = kioskArrivalsWindow(now);
-  return db.transaction(async (tx) => {
-    const [booking] = await tx
-      .select({
-        id: bookings.id,
-        status: bookings.status,
-        tripId: trips.id,
-        tripStatus: trips.status,
-        tripStartsAt: trips.startsAt,
-        personId: people.id,
-        personName: people.fullName,
-        dateOfBirth: people.dateOfBirth,
-        // The zone the minor rule below is decided in, read here rather than
-        // taken from the caller for the same reason every predicate on this
-        // query is written here.
-        shopTimezone: shops.timezone,
-      })
-      .from(bookings)
-      .innerJoin(trips, eq(trips.id, bookings.tripId))
-      .innerJoin(shops, eq(shops.id, input.shopId))
-      // The diver's own tenancy, stated for the same reason as the departure's
-      // below: this door has no staffer behind it, so nothing it depends on is
-      // inherited from the caller that supplied the booking id.
-      .innerJoin(people, and(eq(people.id, bookings.personId), eq(people.shopId, input.shopId)))
-      .where(
-        and(
-          eq(bookings.id, input.bookingId),
-          eq(bookings.shopId, input.shopId),
-          // The departure's own tenancy and liveness, restated rather than
-          // inherited. `checkInBooking` above can lean on `bookings.shop_id`
-          // alone because `activeStaffRecorderId` has already refused anyone
-          // who is not this shop's live staff; **this door has no staffer
-          // behind it**, so every predicate it depends on is written here
-          // rather than assumed of the caller that supplied the booking id.
-          eq(trips.shopId, input.shopId),
-          liveTrip(),
-          isNull(people.deletedAt),
-          // **The tablet's own window and its two desk-routing rules, restated
-          // for the same reason** — an earlier draft left all three to
-          // `findKioskSeats`, so a booking id that reached this door by any
-          // other route inherited none of them. Forward-only and six hours
-          // wide, so no tap can check a diver into a boat that sailed and
-          // returned, or into tomorrow's; and a diver with stated support
-          // needs meets a person, which is the whole point of stating them
-          // (`security-reviewer` and `dive-domain-expert` reviews, 2026-09-09).
-          gte(trips.startsAt, kioskWindow.from),
-          lte(trips.startsAt, kioskWindow.to),
-        ),
-      )
-      .limit(1)
-      .for("update");
-    if (!booking) return { ok: false, reason: "not_found" };
-    // A minor goes to the desk too, and not as a gate: a guardian's
-    // co-signature makes them `ready`. Calendar arithmetic rather than a SQL
-    // predicate, so it sits here and answers with the same refusal.
-    //
-    // On the **shop's** calendar day, the same one `src/db/manifests.ts`
-    // measures age and birthdays on. This read the departure's UTC date until
-    // 2026-09-12, which west of UTC is a day later than the trip for every
-    // afternoon boat: a diver turning eighteen the day after the trip cleared
-    // here and printed as a minor on the captain's manifest
-    // (`dive-domain-expert` review).
-    if (
-      booking.dateOfBirth &&
-      isMinorOnDate(
-        booking.dateOfBirth,
-        calendarDateInTimezone(booking.tripStartsAt, booking.shopTimezone),
-      )
-    ) {
-      return { ok: false, reason: "not_found" };
-    }
-    // And so does a stated support need. Its own statement rather than a join
-    // on the query above: `FOR UPDATE` cannot be applied to the nullable side
-    // of an outer join, and the row lock on the seat is the thing that must not
-    // be given up to make a routing rule read more tidily.
-    const [supportNeed] = await tx
-      .select({ id: diveSupportNeeds.id })
-      .from(diveSupportNeeds)
-      .where(
-        and(
-          eq(diveSupportNeeds.shopId, input.shopId),
-          eq(diveSupportNeeds.personId, booking.personId),
-        ),
-      )
-      .limit(1);
-    if (supportNeed) return { ok: false, reason: "not_found" };
-
-    // Already through: say so warmly rather than refusing. A diver who taps
-    // twice, or who was checked in at the desk a minute ago, is asking the
-    // same question they asked the first time and deserves the same answer.
-    if (booking.status === "checked_in") {
-      return {
-        ok: true,
-        bookingId: booking.id,
-        personName: booking.personName,
-        alreadyArrived: true,
-      };
-    }
-    if (booking.status !== "booked" || booking.tripStatus !== "scheduled") {
-      return { ok: false, reason: "not_bookable" };
-    }
-
-    const readiness = await getBookingReadiness(tx as DbExecutor, input.shopId, booking.id);
-    if (readiness?.status !== "ready") return { ok: false, reason: "not_ready" };
-
-    const [updated] = await tx
-      .update(bookings)
-      .set({ status: "checked_in" })
-      .where(and(eq(bookings.id, booking.id), eq(bookings.status, "booked")))
-      .returning({ id: bookings.id });
-    if (!updated) return { ok: false, reason: "not_bookable" };
-
-    await tx.insert(bookingArrivalEvents).values({
-      shopId: input.shopId,
-      tripId: booking.tripId,
-      bookingId: booking.id,
-      // The diver's own act, recorded as theirs. `display_token_id` is what
-      // stops this reading as a staffer's tap on a shop where staff also dive.
-      recordedByPersonId: booking.personId,
-      displayTokenId: input.displayTokenId,
-      status: "arrived",
-      source: "live",
-      occurredAt: now,
-    });
-    await tx.insert(activityEvents).values({
-      shopId: input.shopId,
-      tripId: booking.tripId,
-      bookingId: booking.id,
-      actorPersonId: booking.personId,
-      code: "kiosk_check_in",
-      params: { diver: booking.personName },
-      occurredAt: now,
-    });
-    // The crew's catch-up strip, with **no actor** — so no read mark is moved
-    // forward and the line stays unread. Nobody behind the desk has seen this;
-    // that is the fact the strip is for.
-    await recordDeskEvent(tx, {
-      shopId: input.shopId,
-      tripId: booking.tripId,
-      kind: "arrival",
-      bookingId: booking.id,
-      subjectPersonId: booking.personId,
-      occurredAt: now,
-    });
-    return {
-      ok: true,
-      bookingId: booking.id,
-      personName: booking.personName,
-      alreadyArrived: false,
-    };
   });
 }
 

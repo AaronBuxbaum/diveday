@@ -28,8 +28,8 @@ import { isBuddyReferralIdShape } from "./buddy-links";
  * alternative is a stored short-code table whose only job is to map a string
  * back to the row the id already names.
  *
- * Same construction and the same purpose separation as `recap-links.ts` and
- * `gift-links.ts`; unlike both it carries **no issued-at and never expires** —
+ * Same construction and the same purpose separation as `recap-links.ts`;
+ * unlike it, it carries **no issued-at and never expires** —
  * "the diver who brought them" is a fact about a seat rather than a credential
  * with a useful life, and a link that quietly stopped counting would look
  * identical to one nobody used.

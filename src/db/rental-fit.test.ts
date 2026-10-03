@@ -14,7 +14,6 @@ import {
   rentalFitByBooking,
   saveRentalFit,
   saveRentalFitNote,
-  saveRentalFitSizes,
   setNeedsStaffFit,
   toDiverRentalFit,
 } from "./rental-fit";
@@ -443,81 +442,6 @@ describe("saveRentalFitNote", () => {
     });
     expect(saved).toBeNull();
     expect(await getRentalFit(db, shopId, personId)).toBeNull();
-  });
-});
-
-/**
- * **The shelf's four sizes** — and the row it creates when the diver has no fit
- * on file, which is the ordinary case: the sizes form renders unconditionally
- * and the shelf has no checkbox to say what the diver rents.
- */
-describe("saveRentalFitSizes", () => {
-  it("states a fit that claims nothing, since the shelf never asked (#1755)", async () => {
-    const { db, shopId, tripId } = await context();
-    const { personId } = await bookVisitor(db, shopId, tripId, "Shelf Sheila");
-
-    await saveRentalFitSizes(db, {
-      shopId,
-      personId,
-      bcdSize: "M",
-      wetsuitSize: "3mm/M",
-      bootSize: "9",
-      finSize: "M",
-    });
-
-    const fit = await getRentalFit(db, shopId, personId);
-    // `fit_stated_at` is stamped here — four sizes typed by the diver are a
-    // stated fit — and stamping it is what makes the five `default(true)`
-    // columns readable by the packing list. So a diver correcting one size on
-    // their own phone claimed a BCD, a regulator, a wetsuit, a mask, fins and
-    // weights their shop may not even rent.
-    expect(fit?.fitStatedAt).toBeInstanceOf(Date);
-    expect(fit).toMatchObject(NOTHING_RENTED);
-    expect(fit?.bcdSize).toBe("M");
-  });
-
-  it("leaves what the diver already said they rent exactly as it was", async () => {
-    const { db, shopId, tripId } = await context();
-    const { personId } = await bookVisitor(db, shopId, tripId, "Shelf Sheila");
-    await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsDrysuit: true });
-
-    await saveRentalFitSizes(db, {
-      shopId,
-      personId,
-      bcdSize: "L",
-      wetsuitSize: "3mm/M",
-      bootSize: "9",
-      finSize: "M",
-    });
-
-    // The baseline is for the row this writer *creates*; an answer on file is
-    // the diver's own and is never rewritten by a size correction.
-    const fit = await getRentalFit(db, shopId, personId);
-    expect(fit?.rentsBcd).toBe(true);
-    expect(fit?.rentsDrysuit).toBe(true);
-    expect(fit?.bcdSize).toBe("L");
-  });
-
-  it("states no claim for a diver who had only left the crew a note", async () => {
-    const { db, shopId, tripId } = await context();
-    const { personId } = await bookVisitor(db, shopId, tripId, "Shelf Sheila");
-    // The row already exists with `fit_stated_at` null, so this writer takes
-    // the update path and its own baseline never runs — the note writer's row
-    // has to have been created claiming nothing for this to hold.
-    await saveRentalFitNote(db, { shopId, personId, note: "Titanium hip, runs heavy" });
-
-    await saveRentalFitSizes(db, {
-      shopId,
-      personId,
-      bcdSize: "M",
-      wetsuitSize: "3mm/M",
-      bootSize: "9",
-      finSize: "M",
-    });
-
-    const fit = await getRentalFit(db, shopId, personId);
-    expect(fit?.note).toBe("Titanium hip, runs heavy");
-    expect(fit).toMatchObject(NOTHING_RENTED);
   });
 });
 

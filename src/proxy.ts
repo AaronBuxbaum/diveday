@@ -439,9 +439,9 @@ function reportRefusedQuery(shape: PublicRouteShape["kind"], code: string, now: 
  * proving it works for one route since before this one generalised it.
  *
  * **Every dynamic public route, not one namespace.** This shipped for `/s/**`
- * alone, and the three dynamic routes outside it went on answering 200 —
- * `/dive/<town>`, `/switching/<incumbent>`, `/demo/<story>`, two of them
- * surfaces DiveDay wants indexed (issue #1734). Nothing failed while they did,
+ * alone, and the dynamic route outside it — `/switching/<incumbent>`, a surface
+ * DiveDay wants indexed — went on answering 200 (issue #1734). Nothing failed
+ * while it did,
  * because a pathname `publicRouteShape` has no opinion about is passed through
  * untouched, which is silence by construction. That is now the one thing a new
  * route cannot do quietly: `src/app/edge-refusal-coverage.test.ts` walks the
@@ -450,8 +450,7 @@ function reportRefusedQuery(shape: PublicRouteShape["kind"], code: string, now: 
  *
  * **What it costs.** One indexed read on `shops.slug` for a shop-level URL or
  * an unmintable segment under one, two for a URL that names a course, a dive
- * site or a departure inside a shop, one on `shops.region_slug` for a town —
- * paid on the request path by every diver on every public page, which is
+ * site or a departure inside a shop — paid on the request path by every diver on every public page, which is
  * exactly the latency ADR 20260804-instant-navigation set out to avoid. It is
  * the same read the page itself is about to do a few milliseconds later, so
  * the *work* is duplicated rather than new; the TTFB is not. If that proves to
@@ -459,9 +458,9 @@ function reportRefusedQuery(shape: PublicRouteShape["kind"], code: string, now: 
  * with a short TTL and never a negative one — a shop created a second ago must
  * not 404 — and it should be measured before it is written.
  *
- * A switching guide and a demo story cost nothing at all: both are closed lists
- * this repository holds, so `publicRouteShape` settles them and this function
- * never opens a database for them.
+ * A switching guide costs nothing at all: the guides are a closed list this
+ * repository holds, so `publicRouteShape` settles them and this function never
+ * opens a database for one.
  *
  * **What happens when the read fails or hangs.** A throw is not a refusal:
  * `catch` returns `null` and the request continues exactly as it does today,
@@ -495,11 +494,10 @@ async function refusedPublicRoute(
   const shape = publicRouteShape(pathname);
   if (!shape) return null;
   // Already an answer. A segment judged against a closed list this repository
-  // holds — a switching guide, a demo story, a town whose slug no locality
-  // could have produced — needs no database, so it never opens one: `getDb()`
-  // below is a connection a crawler probing `/demo/nope` would otherwise be
-  // able to ask a cold instance for. No shop frames it either; these are
-  // DiveDay's own pages, and issue #765's rule is about a diver stranded on a
+  // holds — a switching guide — needs no database, so it never opens one:
+  // `getDb()` below is a connection a crawler probing `/switching/nope` would
+  // otherwise be able to ask a cold instance for. No shop frames it either;
+  // these are DiveDay's own pages, and issue #765's rule is about a diver stranded on a
   // storefront. `PublicRouteQuery` is what makes this branch mandatory rather
   // than remembered — the lookup below does not accept an `absent` shape.
   if (shape.kind === "absent") return { liveShopSlug: null };
@@ -556,10 +554,7 @@ async function refusedPublicRoute(
     // reason: a well-formed shop with a segment no shop could have minted is
     // exactly the case that should still be framed as that shop's. A refused
     // `shop` shape *is* the missing shop, and `shopExists` is false there
-    // without a branch here saying so. A town is the one refused shape with no
-    // shop over it at all — the lookup already answers `shopExists: false`, and
-    // this says it in the one way the compiler can check.
-    if (shape.kind === "region") return { liveShopSlug: null };
+    // without a branch here saying so.
     return { liveShopSlug: shopExists ? shape.shopSlug : null };
   }
 }

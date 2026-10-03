@@ -5,7 +5,6 @@ import { createDemoShop, deleteDemoShopCascade } from "@/db/seed";
 import { getShopBySlug } from "@/db/shops";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
-import { isValidTimeZone } from "@/lib/format";
 
 /**
  * Mint a whole seeded shop of this test's own, so a spec that changes
@@ -59,17 +58,9 @@ export async function POST(request: Request) {
   if (requested !== null && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(requested)) {
     return NextResponse.json({ error: "bad_slug" }, { status: 400 });
   }
-  // **`?timezone=` pins the shop's clock**, for a visual capture of the water
-  // band and nothing else (ADR 20260904-reef-all-the-way-down, Budget rule 1).
-  // The fleet's frozen instant cannot move, so the shop does: four zones read
-  // one instant as four different hours. Refused rather than sanitised, for
-  // the same reason the slug is.
-  const timezone = params.get("timezone");
-  if (timezone !== null && !isValidTimeZone(timezone)) {
-    return NextResponse.json({ error: "bad_timezone" }, { status: 400 });
-  }
-  // **`?brand=1` dresses the shop** in the canonical demo's brand and a logo,
-  // for the one capture of the settings profile row and nothing else
+  // **`?brand=1` dresses the shop** in the brand fixture — the canonical
+  // demo's cover and badges plus a colour, a display face and a logo — for the
+  // settings profile capture and the storefront brand spec
   // (`createDemoShop`'s `brand`). A flag, never a URL: the caller picks
   // whether, not what.
   const brand = params.get("brand") === "1";
@@ -77,7 +68,6 @@ export async function POST(request: Request) {
     createDemoShop(tx, {
       history: false,
       slug: requested ?? undefined,
-      timezone: timezone ?? undefined,
       brand,
     }),
   );

@@ -24,9 +24,7 @@
   "row": {
     "arrived": "Registrado",
     "firstVisit": "Primera visita",
-    "missingEmergencyContact": "Sin contacto de emergencia",
-    "giftUnclaimed": "Un regalo de {giver}, todavía sin reclamar",
-    "giftDoor": "Registra por su nombre a quien recibió el regalo"
+    "missingEmergencyContact": "Sin contacto de emergencia"
   },
   "noShow": {
     "door": "¿No vino?",

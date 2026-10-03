@@ -17,7 +17,7 @@ import { nowDate } from "@/lib/clock";
  * the relative time and the email draft both depend on values only known in
  * the browser (the current instant, `window.location.origin`). */
 export type WaitlistInviteCopy = {
-  /** The held send's countdown row (ADR 20260906-before-you-ask, decision 2). */
+  /** The held send's undo row (ADR 20260906-before-you-ask, decision 2). */
   hold: SendHoldCopy;
   invitedRelative: string;
   inviteEmailed: string;
@@ -114,7 +114,7 @@ export function WaitlistInvite({
   // state value didn't change — same purpose as the `attempt` counter in
   // WaiverDeliveryActions.
   const [attempt, setAttempt] = useState(0);
-  // The tap holds the invite for eight seconds and the row counts it down with
+  // The tap holds the invite for eight seconds and the row says "Sending…" with
   // Undo where the button was (ADR 20260906-before-you-ask, decision 2). The
   // outcome lands here once the hold drains; the effect below does the same
   // post-send work the old submit did with it: open the mailto composer, or

@@ -27,7 +27,12 @@ import {
   trips,
   userAccounts,
 } from "./schema";
-import { createDemoShop, deleteDemoShopCascade, reapExpiredDemoShops } from "./seed";
+import {
+  createDemoShop,
+  deleteDemoShopCascade,
+  MINTED_DEMO_BRAND_COLOR,
+  reapExpiredDemoShops,
+} from "./seed";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -154,7 +159,12 @@ describe("createDemoShop", () => {
     expect(branded.brandHeroImageUrl).toBe(canonical.brandHeroImageUrl);
     expect(branded.brandHeroImageAlt).toBe(canonical.brandHeroImageAlt);
     expect(branded.brandBadges).toEqual(canonical.brandBadges);
-    expect(branded.brandColor).toBe(canonical.brandColor);
+    // The colour and face are the minted fixture's alone: the canonical demo
+    // wears Logbook's own (ADR 20261001-logbook).
+    expect(canonical.brandColor).toBeNull();
+    expect(canonical.brandDisplayFont).toBeNull();
+    expect(branded.brandColor).toBe(MINTED_DEMO_BRAND_COLOR);
+    expect(branded.brandDisplayFont).toBe("bricolage_grotesque");
     // A bundled file, as the cover photo is, so a capture draws it with no
     // media storage configured, and a different one, so the two read apart.
     expect(branded.logoUrl).toMatch(/^\/dive-sites\//);

@@ -218,6 +218,7 @@
     }
   },
   "shopNav": {
+    "boatMode": "Boat mode",
     "language": "Language",
     "signOut": "Sign out",
     "signOutConfirm": "Sign out? Confirm",
@@ -262,16 +263,6 @@
   "subSurfaceRipple": {
     "iconTitle": "Roll call complete icon",
     "message": "Roll call complete"
-  },
-  "waterLocker": {
-    "rainAlt": "Rain",
-    "heading": "Screen locked — water detected",
-    "body": "We’re ignoring random taps from water on the screen. Hold to unlock once it’s dry.",
-    "holdLine1": "HOLD",
-    "holdLine2": "2s",
-    "unlockingProgress": "Unlocking... {percent}%",
-    "holdToUnlock": "Hold button to unlock",
-    "disableToggleLabel": "Disable spray guard on this device"
   },
   "undoToast": {
     "pendingLabel": "Undoing…",
@@ -423,12 +414,6 @@
       "acknowledge": "Got it"
     }
   },
-  "boatMode": {
-    "modeLabel": "Boat mode",
-    "labelAuto": "Auto",
-    "labelLand": "Land mode",
-    "labelBoat": "Boat mode"
-  },
   "haptics": {
     "toggleLabel": "Buzz on each tap"
   },
@@ -546,7 +531,6 @@
     "typedAs": "typed as “{raw}”"
   },
   "sendHold": {
-    "sendingIn": "Sending in {seconds} s.",
     "sendingNow": "Sending…",
     "undo": "Undo"
   },

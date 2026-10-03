@@ -273,17 +273,13 @@ describe("diver copy has a provider above it", () => {
     // provider, so their remainder is named in ADR
     // 20260803-error-boundary-copy-bridge rather than covered here.
     expect(withCopy.sort()).toEqual([
-      "board/[token]/error.tsx",
-      "check-in/[token]/error.tsx",
       "claim/[token]/error.tsx",
       "confirm-contact/[token]/error.tsx",
-      "gift/[token]/error.tsx",
       "invite/[token]/error.tsx",
       "ready/[token]/error.tsx",
       "recap/[token]/error.tsx",
       "reset-password/[token]/error.tsx",
       "s/[shopSlug]/error.tsx",
-      "shelf/[token]/error.tsx",
       "unsubscribe/[token]/error.tsx",
       "verify/[token]/error.tsx",
       "waivers/[token]/error.tsx",

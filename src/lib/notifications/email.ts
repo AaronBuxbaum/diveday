@@ -106,25 +106,6 @@ type TripInvitationEmailInput = {
   bookingUrl: string;
 };
 
-type GiftPassEmailInput = {
-  locale: DiverLocale;
-  /** The giver — this message is addressed to them. */
-  giverName: string;
-  /** Whoever is diving, as the giver named them on the form. */
-  receiverName: string;
-  shopName: string;
-  tripTitle: string;
-  startsAt: Date;
-  endsAt: Date;
-  timezone: string;
-  /** The one line the giver wrote for the pass. */
-  message?: string;
-  /** The link the giver forwards; claiming it makes the seat the receiver's. */
-  claimUrl: string;
-  /** The giver's own page: claimed, signed, aboard, the receipt. */
-  giftUrl: string;
-};
-
 type LastMinuteDealEmailInput = {
   locale: DiverLocale;
   diverName: string;
@@ -176,8 +157,6 @@ type NightBeforeBriefInput = {
   whoToText?: string | null;
   /** Extra "what happens on the boat" reassurance for a first-timer, pre-resolved by the caller. */
   firstTimerNote?: string | null;
-  /** Sunset, dusk and moon for a night departure, pre-resolved by the caller; null in daylight. */
-  night?: string | null;
 };
 
 type TripReminderEmailInput = {
@@ -231,25 +210,24 @@ export type TripConditionsHoldEmailInput = {
  * satori `ImageResponse` can (see `src/lib/og-rasterizer.ts` and
  * `scripts/check-tokens.mjs`'s exemption list).
  */
-const BRAND_PRIMARY_COLOR = "#008080";
-const BRAND_PAGE_COLOR = "#FAF9F6";
-const BRAND_INK_COLOR = "#0C2A35";
+const BRAND_PRIMARY_COLOR = "#0b6e8a";
+const BRAND_PAGE_COLOR = "#f4f6f4";
+const BRAND_INK_COLOR = "#16232c";
 const BRAND_CONTAINER_COLOR = "#FFFFFF";
-const BRAND_BORDER_COLOR = "#E5E7EB";
+const BRAND_BORDER_COLOR = "#dde2df";
 
 /**
- * The dark half of the same palette, from `docs/design/brand.md`'s core
- * identity table: open ocean as the page, deep-sea ink's dark value as the
- * reading colour, lagoon's dark value as the action colour, and the app's own
- * dark `--surface` for a lifted panel.
+ * The dark half of the same palette: the Logbook dark theme's `--background`
+ * as the page, `--foreground` as the reading colour, `--primary` as the action
+ * colour, and `--surface` for a lifted panel (ADR 20261001-logbook).
  */
-const DARK_PAGE_COLOR = "#071720";
-const DARK_INK_COLOR = "#e9f3f4";
-const DARK_PRIMARY_COLOR = "#22d3ee";
-const DARK_PANEL_COLOR = "#0d222d";
-const DARK_BORDER_COLOR = "#1e3a47";
+const DARK_PAGE_COLOR = "#0f171c";
+const DARK_INK_COLOR = "#e4ebef";
+const DARK_PRIMARY_COLOR = "#4fbcd8";
+const DARK_PANEL_COLOR = "#162129";
+const DARK_BORDER_COLOR = "#25333c";
 
-const EMAIL_HEAD_STYLE = `<style>:root{color-scheme:light dark;}a{color:${BRAND_PRIMARY_COLOR};}.dd-btn{background-color:${BRAND_PRIMARY_COLOR}!important;color:#ffffff!important;}@media (prefers-color-scheme:dark){.dd-page{background-color:${DARK_PAGE_COLOR}!important;color:${DARK_INK_COLOR}!important;}.dd-card{background-color:${DARK_PANEL_COLOR}!important;border-color:${DARK_BORDER_COLOR}!important;color:${DARK_INK_COLOR}!important;}.dd-shop{color:${DARK_PRIMARY_COLOR}!important;}.dd-panel{background-color:${DARK_PANEL_COLOR}!important;border-left-color:${DARK_PRIMARY_COLOR}!important;}.dd-btn{background-color:${DARK_PRIMARY_COLOR}!important;color:#071720!important;}a{color:${DARK_PRIMARY_COLOR}!important;}}</style>`;
+const EMAIL_HEAD_STYLE = `<style>:root{color-scheme:light dark;}a{color:${BRAND_PRIMARY_COLOR};}.dd-btn{background-color:${BRAND_PRIMARY_COLOR}!important;color:#ffffff!important;}@media (prefers-color-scheme:dark){.dd-page{background-color:${DARK_PAGE_COLOR}!important;color:${DARK_INK_COLOR}!important;}.dd-card{background-color:${DARK_PANEL_COLOR}!important;border-color:${DARK_BORDER_COLOR}!important;color:${DARK_INK_COLOR}!important;}.dd-shop{color:${DARK_PRIMARY_COLOR}!important;}.dd-panel{background-color:${DARK_PANEL_COLOR}!important;border-left-color:${DARK_PRIMARY_COLOR}!important;}.dd-btn{background-color:${DARK_PRIMARY_COLOR}!important;color:#0f171c!important;}a{color:${DARK_PRIMARY_COLOR}!important;}}</style>`;
 
 /**
  * Bulletproof email call-to-action button, table-wrapped to render consistently
@@ -278,9 +256,9 @@ export function emailButton(url: string, label: string): string {
  */
 const EMAIL_MARK_HTML =
   '<table border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin-right: 10px;"><tr>' +
-  '<td width="10" height="24" valign="bottom" style="width: 10px;"><div style="width: 10px; height: 10px; border-radius: 50%; background-color: #008080; font-size: 1px; line-height: 1px;">&nbsp;</div></td>' +
+  '<td width="10" height="24" valign="bottom" style="width: 10px;"><div style="width: 10px; height: 10px; border-radius: 50%; background-color: #0b6e8a; font-size: 1px; line-height: 1px;">&nbsp;</div></td>' +
   '<td width="3" style="width: 3px; font-size: 1px; line-height: 1px;">&nbsp;</td>' +
-  '<td width="7" height="24" valign="middle" style="width: 7px;"><div style="width: 7px; height: 7px; border-radius: 50%; background-color: #008080; opacity: 0.75; font-size: 1px; line-height: 1px;">&nbsp;</div></td>' +
+  '<td width="7" height="24" valign="middle" style="width: 7px;"><div style="width: 7px; height: 7px; border-radius: 50%; background-color: #0b6e8a; opacity: 0.75; font-size: 1px; line-height: 1px;">&nbsp;</div></td>' +
   '<td width="3" style="width: 3px; font-size: 1px; line-height: 1px;">&nbsp;</td>' +
   '<td width="4" height="24" valign="top" style="width: 4px;"><div style="width: 4px; height: 4px; border-radius: 50%; background-color: #ff6b6b; font-size: 1px; line-height: 1px;">&nbsp;</div></td>' +
   "</tr></table>";
@@ -516,7 +494,6 @@ function briefSections(
   arrivalLine: string,
 ) {
   const forecast = brief?.forecast?.trim();
-  const night = brief?.night?.trim();
   const bring = (brief?.bring ?? []).map((item) => item.trim()).filter(Boolean);
   const whoToText = brief?.whoToText?.trim();
   const firstTimer = brief?.firstTimerNote?.trim();
@@ -531,13 +508,6 @@ function briefSections(
     const label = t("notifications.brief.conditionsLabel");
     textParts.push(`${label} ${forecast}`);
     htmlParts.push(`<p><strong>${label}</strong> ${escapeHtml(forecast)}</p>`);
-  }
-  // Under the conditions line and with no label of its own: it is the same
-  // answer to "what am I diving into", and a second heading for one sentence
-  // would be the caption this repository deletes.
-  if (night) {
-    textParts.push(night);
-    htmlParts.push(`<p>${escapeHtml(night)}</p>`);
   }
   if (bring.length) {
     const label = t("notifications.brief.bringLabel");
@@ -669,60 +639,6 @@ export function tripInvitationEmail(input: TripInvitationEmailInput): Notificati
  * Leads with the deal, not the shop's inventory problem — a diver doesn't
  * need to know the trip is under capacity to want a good price on a dive.
  */
-/**
- * **The gift pass** (ADR 20260908-one-hand, decision 6, lever W).
- *
- * Written to the giver, and it does two jobs in the order they matter: here is
- * the link your friend needs, and here is where you can see how it went. It
- * says nothing about the receiver that the giver did not type, and it offers
- * no readiness of any kind — the waiver and the certification are the diver's
- * own, asked for on their own page after they claim.
- *
- * **The giver's own line is not in it** (security review, finding 1b): free
- * text from an unauthenticated form does not travel in outbound mail, where a
- * quarantine digest or a shared inbox reads it. It renders on the claim page,
- * for the person it was written for.
- */
-export function giftPassEmail(input: GiftPassEmailInput): NotificationEmail {
-  const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.giverName, t("notifications.common.genericName"));
-  const date = formatShortDate(input.startsAt, input.locale, input.timezone);
-  const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
-  const title = escapeHtml(input.tripTitle);
-  const body = t("notifications.giftPass.body", {
-    receiverName: input.receiverName,
-    shopName: input.shopName,
-    tripTitle: input.tripTitle,
-  });
-  const bodyHtml = t("notifications.giftPass.body", {
-    receiverName: escapeHtml(input.receiverName),
-    shopName: escapeHtml(input.shopName),
-    tripTitle: `<strong>${title}</strong>`,
-  });
-  const forward = t("notifications.giftPass.forward", { receiverName: input.receiverName });
-  const forwardHtml = t("notifications.giftPass.forward", {
-    receiverName: escapeHtml(input.receiverName),
-  });
-  const claimLink = t("notifications.giftPass.claimLink");
-  const follow = t("notifications.giftPass.follow");
-  const greeting = t("notifications.common.greeting", { firstName });
-  const greetingHtml = t("notifications.common.greeting", { firstName: escapeHtml(firstName) });
-  return {
-    subject: t("notifications.giftPass.subject", { tripTitle: input.tripTitle }),
-    text: [
-      greeting,
-      body,
-      `${date} · ${time}`,
-      forward,
-      `${claimLink}:`,
-      input.claimUrl,
-      `${follow}:`,
-      input.giftUrl,
-    ].join("\n\n"),
-    html: `<p>${greetingHtml}</p><p>${bodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>${forwardHtml}</p>${emailButton(input.claimUrl, claimLink)}<p><a href="${escapeHtml(input.giftUrl)}">${escapeHtml(follow)}</a></p>`,
-  };
-}
-
 export function lastMinuteDealEmail(input: LastMinuteDealEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
   const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
@@ -1385,42 +1301,6 @@ export function readinessLinkEmail(input: ReadinessLinkEmailInput): Notification
       input.readinessUrl,
       openLink,
     )}<p>${t("notifications.readinessLink.expiry", { expiresAt: escapeHtml(expiresAt) })}</p>`,
-  };
-}
-
-type ShelfLinkEmailInput = {
-  locale: DiverLocale;
-  diverName: string;
-  shopName: string;
-  shelfUrl: string;
-};
-
-/**
- * **The shelf link, in three sentences and a button.**
- *
- * Nothing about a departure, because this message is not about one: the page it
- * opens is the diver's own file at this shop and it answers "when am I next
- * out" itself. No expiry line either — the link stands for a year and lives on
- * a phone, so a date says "this is running out" about something that is not.
- *
- * The one thing the mail states outright is what the page will never show,
- * because a link to "your file" arriving by email is exactly when a reader
- * wonders how much of them is behind it.
- */
-export function shelfLinkEmail(input: ShelfLinkEmailInput): NotificationEmail {
-  const t = diverTranslator(input.locale);
-  const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
-  const body = t("notifications.shelfLink.body", { shopName: input.shopName });
-  const bodyHtml = t("notifications.shelfLink.body", { shopName: escapeHtml(input.shopName) });
-  const never = t("notifications.shelfLink.never");
-
-  return {
-    subject: t("notifications.shelfLink.subject", { shopName: input.shopName }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${body}\n\n${input.shelfUrl}\n\n${never}\n`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${bodyHtml}</p>${emailButton(
-      input.shelfUrl,
-      t("notifications.shelfLink.openLink"),
-    )}<p>${escapeHtml(never)}</p>`,
   };
 }
 

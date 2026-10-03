@@ -25,11 +25,9 @@ function row(name: string, overrides: Partial<CheckInQueueRow> = {}): CheckInQue
   return {
     bookingId: `booking-${name}`,
     personId: `person-${name}`,
-    selfReported: false,
     personName: name,
     email: null,
     dateOfBirth: null,
-    giftGiverName: null,
     tripId: "trip-1",
     tripTitle: "Two-Tank Reef — Molasses & French",
     startsAt: new Date("2026-08-27T11:00:00.000Z"),

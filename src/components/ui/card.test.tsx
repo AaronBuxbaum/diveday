@@ -274,8 +274,6 @@ describe("TONE_PANEL_CLASS", () => {
  */
 describe("every tone panel wears the card's geometry", () => {
   const NOT_A_CARD_IN_A_TONE: Record<string, string> = {
-    "app/check-in/[token]/_components/KioskConsole.tsx":
-      "the kiosk's answer, at the kiosk's 24-32px type read from a step back: its inset is that scale's",
     "app/shop/[shopSlug]/trips/[id]/manifest/_components/SummaryPanel.tsx":
       "pinned under the chrome and floating over the list, with an overlay's own lift",
     "components/ui/disclosure.tsx":
@@ -598,17 +596,17 @@ describe("naming the region", () => {
 
   it("preserves aria-label when passed explicitly", () => {
     const { container: kebabContainer } = render(
-      <SectionCard aria-label="Conservation commitments">body</SectionCard>,
+      <SectionCard aria-label="Emergency reference">body</SectionCard>,
     );
     expect(kebabContainer.querySelector("section")?.getAttribute("aria-label")).toBe(
-      "Conservation commitments",
+      "Emergency reference",
     );
 
     const { container: camelContainer } = render(
-      <SectionCard ariaLabel="Conservation commitments">body</SectionCard>,
+      <SectionCard ariaLabel="Emergency reference">body</SectionCard>,
     );
     expect(camelContainer.querySelector("section")?.getAttribute("aria-label")).toBe(
-      "Conservation commitments",
+      "Emergency reference",
     );
   });
 });

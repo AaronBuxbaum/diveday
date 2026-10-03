@@ -65,7 +65,7 @@ export function DetailsSection({
   dayCount: number;
   /** The shop's live fleet, for the hull select. Empty means no boat rows yet. */
   boats: { id: string; name: string }[];
-  /** The shop's own words for its kinds of day, in the order it wrote them. */
+  /** The shop's trip tags, in the order it wrote them. */
   lenses: { id: string; name: string }[];
   hasBoatDiving: boolean;
   hasShoreDiving: boolean;

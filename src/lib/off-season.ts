@@ -9,21 +9,15 @@
  * has not started.
  *
  * The framework-free half: **is the board quiet, and what can the shop
- * honestly say about when it is not.** Codes, instants and calendar dates —
+ * honestly say about when it is not.** Codes and instants —
  * never sentences.
  *
- * **Nothing new is stored.** The two facts this needs are already written
- * down twice over: a departure the shop put on the board is the strongest
- * possible statement that it is running that day, and `season_events` is the
- * shop's own writing about the weeks its year turns on (issue #1485). A third
- * place to say "we open in March" would be the one nobody remembers to
- * update, and a storefront confidently naming a date the shop has moved on
- * from is worse than one that names none.
+ * **Nothing new is stored.** A departure the shop put on the board is the
+ * strongest possible statement that it is running that day. A second place to
+ * say "we open in March" would be the one nobody remembers to update, and a
+ * storefront confidently naming a date the shop has moved on from is worse
+ * than one that names none.
  */
-
-import type { CalendarDate } from "./calendar-date";
-import type { SeasonEventWindow } from "./season-events";
-import { seasonEventState } from "./season-events";
 
 /**
  * How long a board has to be empty before the storefront says so.
@@ -38,7 +32,7 @@ export const OFF_SEASON_QUIET_DAYS = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** What the storefront knows about a quiet board, and nothing it does not. */
-export type OffSeason<T> = {
+export type OffSeason = {
   /** True while nothing public is scheduled inside the quiet window. */
   quiet: boolean;
   /**
@@ -47,15 +41,6 @@ export type OffSeason<T> = {
    * then no departure to name, and inventing a date is not this module's job.
    */
   opensAt: Date | null;
-  /**
-   * The soonest season the shop has written that has not opened yet — the one
-   * honest date a shop with an empty board still has on file.
-   *
-   * Only ever set when `opensAt` is null. A departure the shop actually
-   * scheduled outranks a week it merely wrote about, and naming both would
-   * put two answers to one question on one card.
-   */
-  nextSeason: T | null;
 };
 
 /**
@@ -66,34 +51,17 @@ export type OffSeason<T> = {
  * is exactly it, and the storefront already reads it. A private charter and a
  * departure the shop deleted are both absent from it by construction, which is
  * what keeps this from telling a stranger about a day they cannot book.
- *
- * `today` is the shop's **own** calendar day (`calendarDateInTimezone(now,
- * shop.timezone)`), because a season is two calendar dates with no instant in
- * them: a window that opens on 29 July opens when it is 29 July at the shop,
- * not in UTC. The departure comparison is a real instant difference, since a
- * departure *is* a moment on a clock.
  */
-export function offSeason<T extends SeasonEventWindow>({
+export function offSeason({
   now,
   firstDeparture,
-  today,
-  seasons = [],
   quietDays = OFF_SEASON_QUIET_DAYS,
 }: {
   now: Date;
   firstDeparture: Date | null;
-  today: CalendarDate;
-  seasons?: readonly T[];
   quietDays?: number;
-}): OffSeason<T> {
+}): OffSeason {
   const quiet =
     firstDeparture === null || firstDeparture.getTime() - now.getTime() > quietDays * DAY_MS;
-  if (!quiet) return { quiet: false, opensAt: null, nextSeason: null };
-  if (firstDeparture) return { quiet: true, opensAt: firstDeparture, nextSeason: null };
-  const upcoming = seasons
-    .filter((season) => seasonEventState(season, today) === "upcoming")
-    // Calendar dates compare as plain strings — that is the whole reason they
-    // are stored as `YYYY-MM-DD` (src/lib/calendar-date.ts).
-    .sort((a, b) => (a.startsOn < b.startsOn ? -1 : a.startsOn > b.startsOn ? 1 : 0));
-  return { quiet: true, opensAt: null, nextSeason: upcoming[0] ?? null };
+  return { quiet, opensAt: quiet ? firstDeparture : null };
 }

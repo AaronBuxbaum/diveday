@@ -6,7 +6,6 @@ import {
   contactEmailConfirmationEmail,
   courseInquiryEmail,
   demoStartedAlertEmail,
-  giftPassEmail,
   guardianReleaseCopyEmail,
   lastMinuteDealEmail,
   type NotificationEmail,
@@ -14,7 +13,6 @@ import {
   passwordChangedEmail,
   passwordResetEmail,
   readinessLinkEmail,
-  shelfLinkEmail,
   staffInviteEmail,
   staffReplyEmail,
   tripBlowoutEmail,
@@ -97,7 +95,6 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "waiver_request") return waiverRequestEmail(notification);
   if (notification.kind === "guardian_release_copy") return guardianReleaseCopyEmail(notification);
   if (notification.kind === "readiness_link") return readinessLinkEmail(notification);
-  if (notification.kind === "shelf_link") return shelfLinkEmail(notification);
   if (notification.kind === "booking_handoff") return bookingHandoffEmail(notification);
   if (notification.kind === "welcome") return welcomeEmail(notification);
   if (notification.kind === "email_verification") return verifyAccountEmail(notification);
@@ -108,7 +105,6 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "staff_invite") return staffInviteEmail(notification);
   if (notification.kind === "checkout_recovery") return checkoutRecoveryEmail(notification);
   if (notification.kind === "last_minute_deal") return lastMinuteDealEmail(notification);
-  if (notification.kind === "gift_pass") return giftPassEmail(notification);
   if (notification.kind === "new_account_alert") return newAccountAlertEmail(notification);
   if (notification.kind === "demo_started_alert") return demoStartedAlertEmail(notification);
   if (notification.kind === "usage_ceiling_alert") return usageCeilingAlertEmail(notification);

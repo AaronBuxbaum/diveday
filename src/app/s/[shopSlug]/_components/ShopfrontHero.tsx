@@ -1,16 +1,10 @@
-import { SkyBand } from "@/components/day/SkyBand";
 import { StarRating } from "@/components/StarRating";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { PAGE_TITLE_CLASS } from "@/components/ui/typography";
 import type { DiverTranslator } from "@/i18n/messages";
 import type { BrandBadgeCode } from "@/lib/brand";
-import {
-  type ConservationCommitmentCode,
-  conservationCommitmentLabel,
-} from "@/lib/conservation-commitments";
 import { cachedFormatter } from "@/lib/intl-cache";
 import type { ReviewAggregate } from "@/lib/reviews";
-import type { SkyScheme } from "@/lib/sky-scheme";
 import { BadgeWall } from "./BadgeWall";
 
 /**
@@ -19,14 +13,13 @@ import { BadgeWall } from "./BadgeWall";
  * with the shop, not with the word "Schedule".
  *
  * The page used to open on a `text-2xl` h1 reading "Schedule" over a DiveDay
- * sentence about finding your next day on the water, with the shop's own
- * conservation claims in a bordered card beneath it. A diver comparing three
+ * sentence about finding your next day on the water. A diver comparing three
  * Key Largo shops in three tabs read the identical masthead in all three.
  *
  * **The one rule this component must not drift from: it renders only what the
  * shop authored.** The name is always there; the tagline line only when
  * `shops.tagline` is set; the rating line only once divers have actually left
- * one; the conservation line only when the shop ticked something. There is no
+ * one. There is no
  * DiveDay filler for the empty version of any of them — a hero apologising for
  * a shop that has not written a tagline yet is worse than a hero that is simply
  * shorter, and day zero (a name, and nothing else) is a real shipping shape
@@ -40,44 +33,26 @@ import { BadgeWall } from "./BadgeWall";
  * filled rating star is data ink, counts as one appearance however many are
  * lit, and never fires beside an earned moment (the storefront has none).
  *
- * **The storefront is the day too** — ADR 20260919-one-idea, decision I · Tide,
- * slice 23d. The band has always been a frame at the top of the page with the
- * shop's name in it; what fills that frame is now either the shop's own
- * photograph or, for a shop that has not uploaded one, the sky over the shop at
- * the hour the page is being read.
- *
- * **A shop with a cover photo already has its own sky**, so the photo branch is
- * untouched: no shop loses its photograph to a gradient, and the alternative —
- * sky above *and* photograph below — would be two mastheads. The two branches
- * are one object with a different filling, which is why the sky takes the
- * photograph's exact frame (`rounded-panel`, the same scrim padding) rather
- * than the staff home's full-bleed band. `/s/**` is a page inside a public
- * shell with a header above it; a band walked out to the viewport there would
- * be a stripe across somebody else's chrome.
- *
- * **The day is named because "today" is ambiguous here** and only here. A diver
- * in London reading a Key Largo shop's board has no way to know which day the
- * first row means; the staff home never has that problem, because a staffer is
- * standing in the shop. So the line is the shop's *own* date, in the shop's
- * zone — one fact the page could not otherwise state.
+ * **The band is the shop's photograph or nothing** — ADR 20260919-one-idea,
+ * slice 23d, as ADR 20261001-logbook left it. A shop with a cover photo gets
+ * its name on the photograph; a shop without one gets its name on the page's
+ * own surface. The sky that once filled a photo-less band is gone.
  */
 export function ShopfrontHero({
   name,
   tagline,
   description = null,
   aggregate,
-  commitments,
   heroImage = null,
   badges = [],
   establishedYear = null,
-  sky = null,
   locale,
   t,
 }: {
   name: string;
-  /** The shop's cover photograph (Harbor); the name and tagline sit on it. */
+  /** The shop's cover photograph; the name and tagline sit on it. */
   heroImage?: { url: string; alt: string } | null;
-  /** The badge wall, in the shop's order (Harbor). */
+  /** The badge wall, in the shop's order. */
   badges?: readonly BrandBadgeCode[];
   establishedYear?: number | null;
   /** `shops.tagline` — the shop's own line, or nothing at all. */
@@ -90,14 +65,6 @@ export function ShopfrontHero({
   description?: string | null;
   /** Rendered only at `count > 0`; a shop with no reviews says nothing about reviews. */
   aggregate: ReviewAggregate | null;
-  /** Every commitment the shop ticked, in the canonical order. */
-  commitments: readonly ConservationCommitmentCode[];
-  /**
-   * The sky over the shop right now, and the shop's own date under it. Null
-   * where the caller has no day to draw — and ignored entirely by a shop with a
-   * cover photograph, which already has a sky of its own.
-   */
-  sky?: { scheme: SkyScheme; day: string } | null;
   /** The negotiated request locale — a 4.3 is "4,3" to half the divers reading it. */
   locale: string;
   t: DiverTranslator;
@@ -109,43 +76,29 @@ export function ShopfrontHero({
           20260901-diveday-reimagined, decision 2); every fact beneath stays in
           Plex and ink, so the face can never label a rating, a count or a claim. */}
       {heroImage ? (
-        <div className="relative mb-6 overflow-hidden rounded-panel border border-border bg-surface-sunken shadow-bed">
+        <div className="mb-6 overflow-hidden rounded-panel border border-border bg-surface-sunken shadow-bed">
           <StoredPhoto
             src={heroImage.url}
             alt={heroImage.alt}
-            // Taller on a phone: at 390px a 16:7 frame is 170px, and the
-            // two-line title plus tagline in the scrim below it is more than
-            // that, so the name was cropped at the top of the picture.
-            className="aspect-[4/3] w-full sm:aspect-[16/7]"
+            // 16:9 on a phone, so the picture still reads as a picture above
+            // the band; 16:7 from `sm` up.
+            className="aspect-video w-full sm:aspect-[16/7]"
             sizes="(min-width: 1152px) 1152px, 100vw"
             priority
           />
-          {/* Paper on a scrim of ink, whatever the photograph: legibility does
-              not depend on the shop choosing a dark picture. */}
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-device-frame/85 via-device-frame/45 to-transparent px-5 pt-16 pb-5 text-device-frame-foreground sm:px-8 sm:pb-7">
+          {/* Paper on a flat band of solid ink under the photograph, whatever
+              the picture: legibility does not depend on the shop choosing a
+              dark one. Opaque and below the photo rather than a fade over it
+              (ADR 20261001-logbook: no gradients), so the name reads at the
+              ink's own contrast and a two-line name on a phone does not bury
+              the picture it sat on. */}
+          <div className="bg-device-frame px-5 py-4 text-device-frame-foreground sm:px-8 sm:py-5">
             <h1 className={`font-brand-display ${PAGE_TITLE_CLASS} text-balance sm:text-5xl`}>
               {name}
             </h1>
             {tagline ? <p className="mt-2 max-w-2xl text-lg text-pretty">{tagline}</p> : null}
           </div>
         </div>
-      ) : sky ? (
-        // The same frame the photograph gets, filled with the hour instead.
-        // `--sky-ink` is white in both colour schemes on purpose (a sky is dark
-        // in both), so the name and the tagline inherit it and the day's line
-        // takes the softer one — the tokens the staff band already measured.
-        <SkyBand
-          scheme={sky.scheme}
-          className="mb-6 rounded-panel px-5 pt-7 pb-6 sm:px-8 sm:pt-9 sm:pb-7"
-        >
-          <p className="text-sm font-semibold text-(--sky-ink-soft)">{sky.day}</p>
-          <h1 className={`font-brand-display ${PAGE_TITLE_CLASS} mt-1 text-balance sm:text-5xl`}>
-            {name}
-          </h1>
-          {tagline ? (
-            <p className="mt-2 max-w-2xl text-lg text-pretty text-(--sky-ink-soft)">{tagline}</p>
-          ) : null}
-        </SkyBand>
       ) : (
         <>
           <h1 className={`font-brand-display ${PAGE_TITLE_CLASS} text-balance sm:text-5xl`}>
@@ -182,36 +135,6 @@ export function ShopfrontHero({
         </p>
       )}
       <BadgeWall badges={badges} establishedYear={establishedYear} t={t} className="mt-4" />
-      {commitments.length > 0 ? (
-        <p className="mt-3 flex max-w-2xl items-start gap-2 text-sm text-muted">
-          <ReefGlyph />
-          <span>
-            {commitments.map((code) => conservationCommitmentLabel(code, t)).join(" · ")}{" "}
-            {/* Never deleted, never softened: it is what keeps a list of
-                unverified claims from reading as DiveDay vouching for them. */}
-            <span>{t("conservation.shopClaimsDisclaimer")}</span>
-          </span>
-        </p>
-      ) : null}
     </div>
-  );
-}
-
-/** One drawn mark for the whole conservation line — a coral head, in the line's own muted ink. */
-function ReefGlyph() {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      aria-hidden="true"
-      className="mt-0.5 size-4 shrink-0"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M10 17V9M10 9c0-3-3-4-3-4M10 9c0-3 3-4 3-4M10 13c-2-1-4-2-4-2M10 13c2-1 4-2 4-2" />
-      <path d="M3 17h14" />
-    </svg>
   );
 }

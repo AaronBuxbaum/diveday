@@ -118,7 +118,6 @@ export const test = base.extend<
     browserActivity: undefined;
     privateShop: PrivateShop;
     privateShopSlug: string | null;
-    privateShopTimezone: string | null;
     privateShopBrand: boolean;
   },
   { workerBaseURL: string; staffStorageState: (role: StaffRole) => Promise<string> }
@@ -369,41 +368,25 @@ export const test = base.extend<
   privateShopSlug: [null, { option: true }],
 
   /**
-   * Pin the minted shop's **zone**, for a visual capture and nothing else.
-   *
-   * The water band takes one of four washes by the shop's clock (ADR
-   * 20260904-reef-all-the-way-down, Budget rule 1), and the fleet's clock is
-   * one process-wide `DIVEDAY_CLOCK` no test can move — `seed-evening`'s own
-   * docblock says why. So the shop moves instead: at the frozen instant, four
-   * zones read as four different hours, which is also the more faithful test
-   * of a band that is supposed to follow the *shop's* clock rather than the
-   * server's. It moves the band, not the board — the seeded departures keep
-   * their instants and simply read at that zone's local hours.
-   */
-  privateShopTimezone: [null, { option: true }],
-
-  /**
-   * Dress the minted shop in a **logo, a cover photo and badges**, for a
-   * visual capture and nothing else.
+   * Dress the minted shop in a **logo, a cover photo, badges, a brand colour
+   * and a display face**, for a visual capture or the storefront brand spec.
    *
    * A minted shop is blank shop-wide config, and the canonical demo has a
-   * cover photo and badges but no logo, so no fixture showed the settings
-   * profile row with a stored logo to take back off. Uploading one through the
-   * form cannot work here: the fleet configures no media storage. Set it with
-   * `test.use({ privateShopBrand: true })` on the describe that captures.
+   * cover photo and badges but no logo and no colour of its own (it wears
+   * Logbook's, ADR 20261001-logbook), so no other fixture shows the settings
+   * profile row with a stored logo to take back off, or a storefront in a
+   * shop's own colour. Uploading through the form cannot work here: the fleet
+   * configures no media storage. Set it with
+   * `test.use({ privateShopBrand: true })` on the describe that needs it.
    */
   privateShopBrand: [false, { option: true }],
 
-  privateShop: async (
-    { demoReset, request, page, privateShopSlug, privateShopTimezone, privateShopBrand },
-    use,
-  ) => {
+  privateShop: async ({ demoReset, request, page, privateShopSlug, privateShopBrand }, use) => {
     // Named only for ordering: the reset purges the *previous* test's minted
     // shop, and it has to have run before this one mints its replacement.
     void demoReset;
     const mint = new URLSearchParams();
     if (privateShopSlug) mint.set("slug", privateShopSlug);
-    if (privateShopTimezone) mint.set("timezone", privateShopTimezone);
     if (privateShopBrand) mint.set("brand", "1");
     const query = mint.toString();
     const response = await request.post(

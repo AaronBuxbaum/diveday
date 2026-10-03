@@ -110,21 +110,6 @@ arrival queue is its own array on the envelope, and its writers cannot reach `ro
 all. A person is aboard when somebody at the rail says so. ADR
 [20260907-the-counter-survives-offline](../architecture/decisions/20260907-the-counter-survives-offline.md).
 
-## The reef's calendar (delivered 2026-09-07)
-
-N-02 of the improvement-ideas decision sheet (owner decision 2026-09-07, issue #1485). A shop writes
-the weeks it plans its year around in its own words — lobster mini-season, a grouper aggregation,
-turtle nesting, a lionfish derby — at Settings → Seasons and events: a name, its own sentence, an
-inclusive date range, and optionally one of the shop's kinds of day. While a window is live the
-storefront carries a band above the schedule with those words and a link to the narrowed board; a
-month before it opens, the shop's own queue carries one `later` row about it and then goes quiet
-once the week arrives. The dates are calendar dates with no instant in them and "live" is asked
-against today in the shop's timezone (`src/lib/season-events.ts`); `season_events` carries
-`deleted_at` and a partial index like every other table a user can delete from. DiveDay supplies the
-frame and nothing inside it — there is no seeded catalog of seasons, on the same argument as a dive
-site's briefing (ADR
-[20260813-dive-site-briefings-are-the-shops-own-words](../architecture/decisions/20260813-dive-site-briefings-are-the-shops-own-words.md)).
-
 ## Moon and light on night departures (delivered 2026-09-07)
 
 N-03 from the 2026-09-07 improvement-ideas decision sheet (issue #1467). Any departure still out at
@@ -179,49 +164,6 @@ typed consent is a sufficient assurance level is still H-03 — this shipped the
 the frame around them, not a minor-specific release. ADR
 [20260907-guardian-co-signature](../architecture/decisions/20260907-guardian-co-signature.md).
 
-## The regional pages (delivered 2026-09-07)
-
-N-49 from the 2026-09-07 improvement-ideas sheet (issue #1436). `/dive` and `/dive/[region]` are
-the one place DiveDay lists shops beside each other: a town, and the shops that dive out of it, for
-the diver who knows *where* they will be and not yet *who* with. One row per shop, carrying only
-what the shop authored and its storefront already shows a stranger — no search box, no map, no
-sort, because a town has a handful of shops and a list of them needs no instrument. Departures stay
-on the storefront one tap away: the owner settled that on 2026-09-10 (issue #1511) against #1436's
-original spec, because "next out" on every row would fan an unbounded town out to three reads a
-shop on a page crawlers hit. Written up in
-[design/surfaces.md](../design/surfaces.md#the-regional-pages--dive-and-diveregion).
-
-## Self check-in at the counter (delivered 2026-09-09)
-
-N-24 from the improvement-ideas decision sheet. A shop mints a second kind of **display link** at
-Settings → Lobby display — the choice of what a link opens is now explicit and has no default — and
-stands a tablet on the counter: `/check-in/[token]` asks for a last name, or takes the booking
-reference an arrival card's QR carries, and answers "You're set, {name}" with the departure and the
-meeting point, or "See the desk". **What it records is an arrival, never a boarding.** The writer
-(`checkInAtKiosk`, `src/db/check-in.ts`) re-reads live readiness, projects `bookings.status`, and
-appends the same `booking_arrival_events` row the desk does — stamped with `display_token_id` and
-recorded as the diver's own act — while touching nothing `roll_call_events` or the manifest reads;
-boarding stays a roll-call act the crew performs at the rail. Every refusal is one sentence: a miss,
-an ambiguous surname, a sailed departure and an unmet blocker are indistinguishable from the glass,
-so the tablet cannot be walked to enumerate a roster. Surnames match exactly and whole-word, never
-as a substring and never on an email; lookups are rate-limited per link. `display_tokens` grew a
-`purpose`, matched inside `verifyDisplayToken`'s predicate, so a board link handed to whoever mounts
-a TV can never open the one surface that writes.
-
-## The departures board (delivered 2026-09-07)
-
-N-23 from the improvement-ideas decision sheet (owner decision 2026-09-07, issue #1426). A shop mints
-a **display link** at Settings → Lobby display and opens it on a TV in the lobby or a tablet on the
-dock: `/board/[token]` shows today's boats in clock order — time, title, site and boat, the crew's
-stage word, "n of capacity aboard", the meeting point and the automated outlook — in display type,
-following the device's light or dark scheme at the manifest's `boat-mode` contrast, and re-reads the
-day every minute with no session. The reader (`src/db/departures-board.ts`) is the day spine's own
-readers in a lobby's shape and its row type is closed by test: no diver is ever named, no readiness,
-no phone, no money; the one switch on a link (`show_names`) adds the crew line. The token is hashed
-at rest (`src/lib/bearer-tokens.ts`), non-expiring like the calendar feed, revoked from the same
-settings page, redacted from telemetry (`CAPABILITY_ROUTE_PREFIXES`) and disallowed to crawlers. A
-private charter keeps its row under "Private charter", never its name.
-
 ## The tide window (delivered 2026-09-07)
 
 N-01 of the improvement-ideas sheet, owner decision 2026-09-07. A dive site names a NOAA CO-OPS
@@ -229,8 +171,8 @@ tide station and when it dives best (`any` / `slack` / `flood` / `ebb`); the sta
 the board's add panel and the departure page then say one line — "Next high water at 9:40 AM; this
 departure reaches the site on the flood" — read at the boat's own arrival there (`src/lib/tides.ts` for the
 window, `src/lib/departure-tides.ts` for the composition, `src/lib/tide-predictions.ts` for the
-seam). Divers read the same line on the public departure page only once the shop switches it on in
-Settings (`shops.tide_window_public`, default off). Informs; gates nothing. The demo reads both Key
+seam). Staff only: the diver-facing line and its Settings switch were cut by ADR
+[20261001-logbook](../architecture/decisions/20261001-logbook.md). Informs; gates nothing. The demo reads both Key
 Largo sites against Carysfort Reef (8723583). ADR
 [20260907-noaa-tide-predictions](../architecture/decisions/20260907-noaa-tide-predictions.md).
 
@@ -239,8 +181,8 @@ Largo sites against Carysfort Reef (8723583). ADR
 N-04 from the 2026-09-07 improvement-ideas decision sheet (issue #1425). Once the crew has logged
 the day, the thread's after-state and the `trip_recap` email say "{shop} asks you to wait at least
 until Wednesday 6:10 PM before flying: 24 hours after your last dive with us, following DAN's
-guidance" — the shop's own pair of hours (`shops.fly_safe_hours_single` / `_repetitive`, the
-Settings row headed **Earliest flight**, floored at DAN's 12 and 18), counted from the last recorded
+guidance" — DiveDay's fixed pair of hours (`DEFAULT_FLY_SAFE_HOURS`, 18 single and 24 repetitive,
+above DAN's 12 and 18; the per-shop Settings row was cut by ADR 20261001-logbook), counted from the last recorded
 exit by `src/lib/fly-safe.ts`, or from the buffered return once the boat is home; repetitive
 whenever the day held more than one dive by record or by plan. Where the figure rests on something
 the diver cannot check — a plan of more than one dive the log is short of, or a dive day in the two
@@ -1645,8 +1587,7 @@ instead of their ordinary success code. Pinned by `_lib/status.test.ts`,
 Slice 6i of [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md),
 decision 8. `/s/[shopSlug]` opens on **the shop**, not on the word "Schedule": the name at display
 scale as the page's `h1`, the shop's own tagline, the review aggregate — drawn stars in the accent,
-the figure and the count — and one conservation line joining every commitment the shop ticked,
-with the "stated by the shop, not verified by DiveDay" guard intact behind it. The band renders
+the figure and the count. The band renders
 **only what the shop authored**: no tagline it
 has not written, no rating nobody has left, no DiveDay filler in place of either. Day zero is a
 name and nothing else, and it is a shape rather than a failure state.

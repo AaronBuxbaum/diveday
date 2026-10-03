@@ -1222,8 +1222,7 @@ describe("Field's caption wraps prettily", () => {
   /**
    * `text-pretty` repairs a last line of one word, and after an ordinary space
    * the marker was a word of its own: "diving *" was two, and Chromium left it
-   * alone on the fly-safe caption's last line (K-586 review, settings-fly-safe
-   * at 1280 and 390). A no-break space makes the marker part of the last word.
+   * alone on a caption's last line (K-586 review, at 1280 and 390). A no-break space makes the marker part of the last word.
    */
   it("binds the required marker to the caption's last word", () => {
     render(
@@ -1684,8 +1683,8 @@ describe("source sweeps", () => {
    * a group caption drawn by hand, and the ones found sat 8px or 12px above
    * their choices where a field caption sits 4px: the rental "What to plan"
    * and nitrox groups (`mt-2`, and a pill written `mt-2` under its legend),
-   * the staff rental toggles, the ready page's re-entry answers, the booking
-   * form's gift choice and a departure's required specialties (`mt-3`), each
+   * the staff rental toggles, the ready page's re-entry answers and a
+   * departure's required specialties (`mt-3`), each
    * touched by the batch that moved its boxes (K-72 review). The rule's own
    * wording is that the rest follow as they are touched: the three below have
    * not been, and a file leaves this list the day it is. A bordered

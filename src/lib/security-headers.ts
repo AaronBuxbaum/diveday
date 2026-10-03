@@ -95,28 +95,6 @@ export const TOKEN_ROUTE_PREFIXES = [
   // the shop controls the address that becomes Reply-To, so the token must not
   // leave in a referrer either.
   "confirm-contact",
-  // The departures board's display link (issue #1426): the one capability
-  // page that renders an outbound link of its own — Open-Meteo's attribution,
-  // required by its licence — and the one whose browser is a TV left on all
-  // day. `rel="noreferrer"` on that anchor is a per-link promise; this is the
-  // header that holds for every subresource the page ever grows.
-  "board",
-  // The diver's shelf (slice 20t). A year-long capability over one person's
-  // whole file at one shop, on a page that loads the shop's own brand font from
-  // Google Fonts and renders the shop's logo — every one of those is a
-  // subresource request that would carry the token in a `Referer` under the
-  // baseline policy.
-  "shelf",
-  // The giver's page for a gift seat (slice 20q). A season-long signed token
-  // over one booking that nothing revokes — the recap link's exposure — on a
-  // page that renders the shop's logo and brand font the same way the shelf
-  // does.
-  "gift",
-  // The self check-in kiosk's display link (N-24): a tablet on the counter,
-  // left on all day, whose URL is the only thing standing between a passer-by
-  // and the shop's arrivals list. `CAPABILITY_ROUTE_PREFIXES` named it from the
-  // first commit; this list is the half the filesystem test above catches.
-  "check-in",
 ];
 
 export function securityHeaderRules(): ConfigHeaderRule[] {

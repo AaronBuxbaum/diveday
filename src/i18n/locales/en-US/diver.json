@@ -6,89 +6,7 @@
     "surface": "{boat} is on the surface.",
     "headingIn": "{boat} is heading in.",
     "home": "{boat} is back at the dock.",
-    "said": "The crew said so at {time}.",
-    "liveEyebrow": "Right now",
-    "liveBack": "Back around {back}."
-  },
-  "boatLine": {
-    "stage": {
-      "boarding": "Boarding at the dock.",
-      "underway": "Out on {site}.",
-      "underwayNoSite": "Out on the water.",
-      "surface": "On the surface between dives.",
-      "headingIn": "Heading in.",
-      "home": "Back at the dock."
-    },
-    "atTheDock": "At the dock.",
-    "leavesAt": "Leaves at {time}.",
-    "said": "The crew said so at {when}.",
-    "asOf": "As of {when}.",
-    "whenAndTrip": "{date} · {trip}",
-    "dayHeading": "The day",
-    "checkIn": "Check-in",
-    "leaves": "Leaves",
-    "back": "Back",
-    "diveNumber": "Dive {number}",
-    "note": "This page says where the boat is in its day, as the crew marks it. It does not say who is aboard or where the boat is on the water.",
-    "directions": "Directions",
-    "callShop": "Call the shop",
-    "follow": "Follow",
-    "share": {
-      "heading": "Share with whoever is waiting for you",
-      "detail": "A link to where the boat is, no names on it.",
-      "action": "Share",
-      "copied": "Link copied",
-      "copyFailed": "Couldn’t copy, select it manually",
-      "text": "{boat}’s day, from {shop}"
-    }
-  },
-  "board": {
-    "empty": "No departures today.",
-    "aboard": "{boarded} of {booked, plural, one {# diver} other {# divers}} aboard",
-    "meetAt": "Meet at {place}",
-    "privateCharter": "Private charter",
-    "crew": "Crew: {names}",
-    "stage": {
-      "boarding": "Boarding",
-      "underway": "Out on {site}",
-      "underwayNoSite": "Out on the water",
-      "surface": "On the surface",
-      "headingIn": "Heading in",
-      "home": "Back at the dock"
-    },
-    "updated": "Updated {time}",
-    "unavailableHeading": "This screen link isn’t available",
-    "unavailableBody": "Make a new one in Settings, under Lobby display.",
-    "seats": "{booked} of {capacity, plural, one {# seat booked} other {# seats booked}}",
-    "hold": "On a conditions hold",
-    "returned": "{boarded, plural, one {# diver} other {# divers}} went out"
-  },
-  "kiosk": {
-    "title": "Check in",
-    "prompt": "Last name, or scan your code",
-    "submit": "Check in",
-    "submitting": "Checking…",
-    "ready": "You’re set, {name}.",
-    "readyAgain": "Already checked in, {name}.",
-    "departure": "{title} · {time}",
-    "meetAt": "Meet at {place}",
-    "deskHeading": "See the desk",
-    "deskBody": "Someone at the counter will take it from here.",
-    "unavailableHeading": "This tablet isn’t set up",
-    "unavailableBody": "Make a new one in Settings, under Lobby display."
-  },
-  "conservation": {
-    "shopClaimsDisclaimer": "Stated by the shop, not verified by DiveDay.",
-    "commitments": {
-      "green_fins_member": "Green Fins member",
-      "padi_aware_partner": "PADI AWARE partner",
-      "mooring_buoys_only": "Mooring buoys only",
-      "no_touch_policy": "No-touch reef policy",
-      "no_gloves_policy": "No-gloves policy",
-      "reef_cleanup_dives": "Reef cleanup dives",
-      "lionfish_containment": "Lionfish containment",
-      "coral_nursery_support": "Coral nursery support"
-    }
+    "said": "The crew said so at {time}."
   },
   "common": {
     "backToSchedule": "Back to the schedule",
@@ -130,12 +48,6 @@
       "feet": "{value} ft",
       "celsius": "{value}°C",
       "fahrenheit": "{value}°F"
-    },
-    "contrast": {
-      "modeLabel": "Screen contrast",
-      "labelAuto": "Auto",
-      "labelStandard": "Standard",
-      "labelFull": "High"
     }
   },
   "shopChrome": {
@@ -146,22 +58,7 @@
     "footerLine": "{shop}",
     "spokenLanguages": "We speak {languages}",
     "languageFallback": "DiveDay isn’t in {requested} yet. This page is in {shown}, the language {shop} works in.",
-    "conservationCommitmentsHeading": "Shop-stated conservation commitments",
-    "conservationCommitmentsDisclaimer": "These are the shop’s claims; DiveDay does not verify or endorse them.",
     "credit": "Bookings by DiveDay"
-  },
-  "regions": {
-    "index": {
-      "title": "Dive shops by town",
-      "description": "Shops that publish a schedule and take bookings through DiveDay, grouped by the town they dive out of.",
-      "shopCount": "{count, plural, one {# shop} other {# shops}}",
-      "emptyTitle": "No towns listed yet",
-      "emptyBody": "A shop appears here once it puts a departure on its schedule."
-    },
-    "region": {
-      "title": "Dive shops in {name}",
-      "description": "Every shop here publishes its own schedule and takes bookings through DiveDay."
-    }
   },
   "schedule": {
     "eyebrow": "Trips",
@@ -179,7 +76,6 @@
     "offSeason": {
       "heading": "Nothing on the water for a while",
       "back": "We’re back out {date}.",
-      "nextSeason": "{name} opens {date}.",
       "requestHeading": "Ask us for a day"
     },
     "filters": {
@@ -212,7 +108,7 @@
       "eyebrowFiltered": "Next boat with space in this view"
     },
     "lenses": {
-      "railLabel": "Kinds of day",
+      "railLabel": "Trip tags",
       "all": "Every departure"
     },
     "shopfront": {
@@ -222,11 +118,6 @@
     "moreWaysHeading": "Other ways we can help",
     "boatsHeading": "The boats",
     "boatSeats": "{count, plural, one {# diver} other {# divers}}"
-  },
-  "season": {
-    "eyebrow": "In season",
-    "through": "Through {date}",
-    "lensLink": "See {lens} departures"
   },
   "trip": {
     "courseSession": "Course session",
@@ -255,13 +146,6 @@
     "arrivalImageAlt": "Arrival landmark at {place}",
     "openArrivalMap": "Open in maps",
     "saveArrivalCard": "Save arrival card",
-    "arrivalCodeHeading": "Your arrival code",
-    "arrivalCodeBody": "Hold it under the scanner at the counter and the staff will find you.",
-    "arrivalCodeAlt": "Arrival code for your booking",
-    "arrivalCodeStop": "Stop the code on a saved card",
-    "arrivalCodeStopConfirm": "Stop the code on any card you saved or printed? It will not scan at the counter; save the card again for a new one.",
-    "arrivalCodeStopConfirmButton": "Yes, stop the code",
-    "arrivalCodeStopping": "Stopping…",
     "openPublicTrip": "Open the public trip page",
     "arrivalShopDefault": "Shop meeting point",
     "changeLedgerHeading": "What changed",
@@ -321,26 +205,6 @@
     "diveNumber": "Dive {number}",
     "siteToBeConfirmed": "Site to be confirmed",
     "sitesToBeConfirmed": "{count, plural, one {One dive · site to be confirmed} other {# dives · sites to be confirmed}}",
-    "sky": {
-      "nightLine": "Sunset {sunset}, dark by {dusk}. {moon}, {percent}% lit.",
-      "nightLineNoDusk": "Sunset {sunset}. {moon}, {percent}% lit.",
-      "dayLine": "Sunrise {sunrise}, sunset {sunset}.",
-      "moonrise": "Moon up at {moonrise}.",
-      "nightLineNoMoon": "Sunset {sunset}, dark by {dusk}.",
-      "nightLineNoDuskNoMoon": "Sunset {sunset}.",
-      "noMoon": "No moon during the dive.",
-      "moonset": "Moon sets at {moonset}.",
-      "moon": {
-        "new": "New moon",
-        "waxingCrescent": "Waxing crescent",
-        "firstQuarter": "First quarter",
-        "waxingGibbous": "Waxing gibbous",
-        "full": "Full moon",
-        "waningGibbous": "Waning gibbous",
-        "lastQuarter": "Last quarter",
-        "waningCrescent": "Waning crescent"
-      }
-    },
     "seen": {
       "heading": "Seen here this month",
       "line": "{species} on {seen} of {dives, plural, one {# logged dive} other {# logged dives}} here this month",
@@ -366,7 +230,6 @@
     "forecastUpdateUnavailable": "Update time unavailable.",
     "forecastCrewCall": "The crew confirms conditions and makes the final call at the dock.",
     "forecastCreditPrefix": "Forecast by",
-    "tideWindow": "{turn, select, next {Next} other {Last}} {kind, select, high {high} other {low}} water at {time}; the boat reaches the site {phase, select, slack {at the turn of the tide} flood {on the flood} other {on the ebb}}{fit, select, met {, when it dives best} missed {. It dives best {preference, select, slack {at slack water} flood {on the flood} other {on the ebb}}} other {}}.",
     "timeline": {
       "arrive": "Arrive and check in",
       "gearSetup": "Set up your gear",
@@ -439,8 +302,7 @@
       "crew": "Crew"
     },
     "pitchDoor": "The rest of the briefing",
-    "pitchDoorSpecies": "{count, plural, one {# species} other {# species}}",
-    "tideStation": "Tide at {station}"
+    "pitchDoorSpecies": "{count, plural, one {# species} other {# species}}"
   },
   "factSource": {
     "forecast": "Forecast",
@@ -472,19 +334,6 @@
     },
     "promoLabel": "Promo code",
     "promoHint": "(if you have one)",
-    "giftChoiceLabel": "Who is diving",
-    "giftChoiceMe": "Me",
-    "giftChoiceGift": "Someone else, as a gift",
-    "giftReceiverLabel": "Their name",
-    "giftMessageLabel": "A line from you",
-    "giftMessageHint": "Goes on the pass. Nothing else about you does.",
-    "giftGiverNameLabel": "Your name",
-    "giftGiverEmailLabel": "Your email",
-    "giftGiverEmailHint": "For the receipt and the claim link.",
-    "giftHowItWorks": "They claim the seat with your link, sign the waiver themselves, and the seat is theirs. If the boat cannot go, the money comes back to you.",
-    "giftBookAndPay": "Pay and make the pass",
-    "giftBook": "Make the pass",
-    "giftBooking": "Making the pass…",
     "passThroughFee": "{name}: {price} per diver (third-party charge)",
     "stripeHint": "You’ll finish paying on a secure Stripe page.",
     "ageAttestation": "I confirm every diver on this booking meets the minimum age of {age}.",
@@ -542,8 +391,7 @@
       "nameTooLong": "That name is too long.",
       "emailInvalid": "Enter a valid email address.",
       "phoneTooLong": "That phone number is too long.",
-      "promoInvalid": "That code isn’t active.",
-      "giftLineTooLong": "That line is too long."
+      "promoInvalid": "That code isn’t active."
     },
     "emailsOnTheWay": "Two emails are on their way: your booking confirmation, and the link to sign your waiver.",
     "embedPayNext": "Your seat’s held. Paying opens on DiveDay’s secure page, outside this window.",
@@ -987,7 +835,6 @@
     "saveNote": "Save note",
     "noteSaved": "Saved. The crew will see that.",
     "noteUnavailable": "That did not save. Try again, or tell the crew on the day.",
-    "arrivalCodeStopped": "Your old code no longer scans. Save the card again for a new one.",
     "hotelPickupHeaderLine": "{time} pickup at {location}",
     "hotelPickupLocationNotSet": "your hotel",
     "hotelPickupLabel": "Want a morning pickup?",
@@ -1170,9 +1017,6 @@
     "submit": "Claim this seat",
     "claiming": "Claiming…",
     "privacyNote": "Only you and the shop see what you enter here. Your organizer just sees that the seat is claimed.",
-    "giftHeading": "A seat on {trip} is yours to claim",
-    "giftBody": "{giver} bought this seat at {shop}, and it is paid for. Claim it and it becomes your pass.",
-    "giftNext": "After you claim it: sign the waiver, and tell the shop what you are certified for.",
     "unavailableHeading": "This link isn’t available",
     "unavailableBody": "It may already have been used, replaced with a newer link, or expired. Ask your organizer for a fresh link, or contact the shop.",
     "expiredBody": "Whoever sent you this link can tell you what’s happened with the seat.",
@@ -1194,29 +1038,6 @@
     "waiverNeeded": "Waiver still needed",
     "copyReminder": "Copy reminder link",
     "claimedNeedsWaiver": "Ask them to finish their waiver from their own link."
-  },
-  "gift": {
-    "metaTitle": "Your gift",
-    "heading": "{name}’s seat",
-    "when": "{date} · {time}",
-    "line": "“{message}”",
-    "claimed": "Claimed · {when}",
-    "claimedPending": "Not claimed yet",
-    "waiverSigned": "Waiver signed · {when}",
-    "waiverPending": "Waiver not signed yet",
-    "aboard": "Aboard · {when}",
-    "aboardPending": "Not aboard yet",
-    "receipt": "Receipt · {amount}",
-    "receiptRefunded": "Refunded · {amount}",
-    "receiptAtShop": "Settled at the shop",
-    "privacyNote": "Claimed, signed, aboard. Nothing else about {name}’s day reaches you.",
-    "cancelledHeading": "This departure cannot go out",
-    "cancelledRefunded": "The {amount} is on its way back to the card that paid it.",
-    "cancelledRefundOwed": "{shop} owes you {amount} and will be in touch.",
-    "cancelledUnpaid": "Nothing was charged for this seat.",
-    "giveAgain": "Give the same seat on the next departure",
-    "unavailableHeading": "This link isn’t available",
-    "unavailableBody": "It may have run out, or the seat it was for may be gone."
   },
   "rental": {
     "ownGear": "Bringing own gear, so no rental needed.",
@@ -2602,22 +2423,6 @@
         "desc": "What your customers see: book a trip, sign the waiver, request rental gear.",
         "tryThis": "Pick a trip on the schedule and book a spot."
       }
-    },
-    "stories": {
-      "eyebrow": "Live demo",
-      "enter": "Open this story",
-      "firstBooking": {
-        "title": "A first booking",
-        "desc": "The shop’s public schedule, and the form a diver who has never dived with them fills in."
-      },
-      "returningDiver": {
-        "title": "A diver who has been before",
-        "desc": "Tomorrow’s prep list, with the sizes the front desk already had on file."
-      },
-      "weatherDay": {
-        "title": "A day the weather takes",
-        "desc": "Call off a departure and watch every booked diver hear about it, with somewhere else to go."
-      }
     }
   },
   "marketing": {
@@ -2743,7 +2548,6 @@
         "title": "Booking and the public pages",
         "item1": "A public schedule, per-departure pages, and capacity that can’t be oversold",
         "item3": "Party booking for up to twenty, with a claim link for every seat the organizer named",
-        "item4": "Gift booking, where a giver pays for someone who has no account yet",
         "item5": "Rental gear and a nitrox request picked at booking, paid with the seat",
         "item6": "A wait list that fills a freed seat, and a last-minute list divers join with their free dates",
         "item7": "Shop-wide discount codes and one-trip last-minute deals",
@@ -3343,7 +3147,7 @@
       "bookingEyebrow": "Days before",
       "bookingTitle": "The schedule takes the booking, and the boat cannot be oversold.",
       "bookingNote1": "The seat count comes off the boat’s capacity, so a full boat takes no more bookings.",
-      "bookingNote2": "One booking can cover a party, or be a gift for someone else.",
+      "bookingNote2": "One booking can cover a whole party.",
       "bookingNote3": "A discount code works shop-wide. A last-minute deal is one price on one under-booked boat.",
       "bookingNote4": "The booking form after this page asks for sizes, and they land on the prep list.",
       "bookingNote5": "Your brand, on your site or ours. A person here builds the website with you when asked.",
@@ -3787,13 +3591,6 @@
       "note": "This is an invitation, not a booking, so no seat is held yet.",
       "link": "See the trip and book your spot"
     },
-    "giftPass": {
-      "subject": "Your gift: {tripTitle}",
-      "body": "{receiverName}’s seat with {shopName} on {tripTitle} is paid for.",
-      "forward": "Send {receiverName} the link below. Claiming it makes the seat theirs, and they sign their own waiver.",
-      "claimLink": "See the pass",
-      "follow": "Follow your gift"
-    },
     "lastMinuteDeal": {
       "subject": "{discountPercent}% off {tripTitle} — last-minute deal",
       "body": "{shopName} just opened up {discountPercent}% off {tripTitle}.",
@@ -3925,12 +3722,6 @@
       "exampleShopName": "Blue Mantis Divers",
       "exampleMessage": "Reef Runner departs Saturday at 8:00 AM. Dock call 30 minutes early.",
       "testMessage": "This is a test message from DiveDay. Your WhatsApp connection is working."
-    },
-    "shelfLink": {
-      "subject": "Your shelf at {shopName}",
-      "body": "{shopName} keeps a page for you: your next departure, the days you have dived with them, and the sizes they have on file.",
-      "openLink": "Open your shelf",
-      "never": "Your medical answers are never on it."
     }
   },
   "brand": {
@@ -3962,71 +3753,6 @@
       "daysAtSea": "Days at sea",
       "mostDived": "Most dived · {times, number}",
       "divers": "Divers"
-    },
-    "band": {
-      "eyebrow": "A real shop’s year",
-      "claim": "{shop} has run {boats, plural, one {# boat} other {# boats}} on DiveDay this year.",
-      "source": "Their card, drawn by their log. Every number on it is a day their crew closed out.",
-      "note": "Shown here because the shop turned it on.",
-      "door": "See their storefront",
-      "alt": "{shop}’s year card: {divers, plural, one {# diver} other {# divers}}, {boats, plural, one {# boat out} other {# boats out}}, {sites, plural, one {# site} other {# sites}}."
     }
-  },
-  "shelf": {
-    "metaTitle": "Your shelf — DiveDay",
-    "unavailableHeading": "This link has run out",
-    "unavailableBody": "Ask your dive shop for a fresh one.",
-    "title": "Your shelf",
-    "nextHeading": "Next out",
-    "nextOpen": "Open your thread",
-    "sameBoatBoat": "Same boat, next {weekday}",
-    "sameBoatSeries": "Same trip, next {weekday}",
-    "sameBoatOpen": "Take a look",
-    "nextTimeHeading": "Next time",
-    "divesHeading": "Your dives with {shopName}",
-    "divesCount": "{count, plural, one {# day} other {# days}} in the water",
-    "divesRecap": "Read the recap",
-    "fileHeading": "On file",
-    "certification": "Certification",
-    "certificationNone": "Nothing on file",
-    "certificationChecked": "Checked by {name} on {date}",
-    "certificationCheckedNoName": "Checked on {date}",
-    "certificationUnchecked": "Not checked yet",
-    "waiver": "Waiver",
-    "waiverSigned": "Signed {signedAt}, good until {expiresAt}",
-    "waiverNeedsSigning": "Not signed",
-    "waiverWithTheShop": "{shopName} is looking at it",
-    "sizes": "Sizes",
-    "sizeBcd": "BCD",
-    "sizeWetsuit": "Wetsuit",
-    "sizeFinsBoots": "Fins & boots",
-    "sizesSave": "Save sizes",
-    "sizesSaved": "Saved.",
-    "sizesRefused": "That did not save. Try again.",
-    "buddyTeam": "Buddy team",
-    "buddyTeamSize": "{count, plural, one {You and # other} other {You and # others}} on {date}",
-    "emergencyContact": "Emergency contact",
-    "emergencyContactOnFile": "On file",
-    "emergencyContactNone": "Nothing on file",
-    "emergencyContactName": "Name",
-    "emergencyContactPhone": "Phone",
-    "emergencyContactSave": "Save contact",
-    "emergencyContactSaved": "Saved.",
-    "emergencyContactRefused": "That did not save. Try again.",
-    "never": "Never here: your medical answers.",
-    "forgetHeading": "Forget this phone",
-    "forgetBody": "Clears the greeting on {shopName}’s pages. Your link keeps working.",
-    "forgetButton": "Forget this phone",
-    "forgotten": "Forgotten.",
-    "welcomeTonight": "Welcome back, {name}. Tonight’s your {n, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}.",
-    "welcomeUpcoming": "Welcome back, {name}. Your {n, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} with us is {day}.",
-    "welcomeCold": "Welcome back, {name}.",
-    "yoursHeading": "Yours",
-    "yoursShelf": "Your shelf",
-    "levelClears": "Your {level} card clears this",
-    "doorOpen": "Your shelf",
-    "doorSend": "Send me my shelf",
-    "doorSent": "Sent to the address on your booking.",
-    "doorFailed": "That did not send. Try again."
   }
 }

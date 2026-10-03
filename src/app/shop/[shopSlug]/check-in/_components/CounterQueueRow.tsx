@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { BlockedDiverRow } from "@/app/shop/[shopSlug]/_components/today/BlockedDiverRow";
-import { printPassAction } from "@/app/shop/[shopSlug]/print/actions";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { paperWaiverCopy } from "@/components/paper-waiver-copy";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -19,6 +18,7 @@ import type { CalendarDate } from "@/lib/calendar-date";
 import { guardianSignatureRequired } from "@/lib/guardian";
 import type { NoShowClaim } from "@/lib/no-show";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
+import { paperPassPath } from "@/lib/print-sheets";
 import type { FormNotice } from "@/lib/staff-notices";
 import { primaryBlocker } from "@/lib/today";
 import { counterBlockerDisclosure } from "../blocker-disclosure";
@@ -142,10 +142,6 @@ function DiverIdentity({
       ? t(row.boarded ? "checkIn.boardedBadge" : "checkIn.row.arrived")
       : null,
     showEmail && row.email ? row.email : null,
-    // The one instruction the gift row needs, in the quiet slot the row already
-    // has for a fact rather than as a second control: the diver in front of the
-    // counter is checked in by the name on the seat.
-    row.giftGiverName ? t("checkIn.row.giftDoor") : null,
     // **Quiet text, never a badge.** A badge marks an exceptional state
     // somebody has to act on; a first visit is a fact a staffer can be warmer
     // for, and boxing it would put it at the same volume as "Blocked".
@@ -169,17 +165,6 @@ function DiverIdentity({
             moment in the day when asking costs nothing. */}
         {row.missingEmergencyContact ? (
           <Badge tone="neutral">{t("checkIn.row.missingEmergencyContact")}</Badge>
-        ) : null}
-        {/* **A gift nobody has claimed, on the day** (ADR 20260908-one-hand,
-            decision 6, lever W). A warning rather than a neutral fact, because
-            it is a thing the counter has to act on: the person standing there
-            may never have opened the link, and the seat is under a name the
-            giver typed. Never a boarding blocker — readiness owns that line,
-            and it is already saying its own piece on this row. */}
-        {row.giftGiverName ? (
-          <Badge tone="warning">
-            {t("checkIn.row.giftUnclaimed", { giver: row.giftGiverName })}
-          </Badge>
         ) : null}
       </span>
       {meta.length > 0 ? (
@@ -399,7 +384,7 @@ export function CounterQueueRow({
           }
         >
           {/* **A settled row still says who this is** — the contact gap, the
-              first visit, the unclaimed gift, everything that singles this
+              first visit, everything that singles this
               person out from the four receipts around them. What it no longer
               repeats is the one fact every row in the group shares: boarding
               is stated once in the group's own header, because `boarded &&
@@ -716,29 +701,23 @@ export function CounterQueueRow({
 }
 
 /**
- * A form rather than a link, because printing a pass records that the shop
- * printed one — the Print register's own fact (`shop_print_runs`). It carries
- * the booking, and the register keeps only the day.
+ * The pass for the diver standing at the desk: a link to the sheet, which
+ * opens its own print dialog on arrival.
  */
 function PassDoor({ shopSlug, row, t }: { shopSlug: string; row: QueueRow; t: StaffTranslator }) {
   return (
-    <RowActionForm action={printPassAction} sendFailedLabel={t("checkIn.sendFailedButton")}>
-      <input type="hidden" name="shopSlug" value={shopSlug} />
-      <input type="hidden" name="bookingId" value={row.bookingId} />
-      {/* `link` weight, not `ghost`: it is the settled row's one remaining act
-          and the row beside it is a receipt. A filled-looking control repeated
-          down five finished rows is the loudest thing in a group whose whole
-          point is that there is nothing left to do in it. `flush`, because a
-          link paints nothing around its words: `sm`'s `px-3` ended them 12px
-          inside the column every badge and "All boarded" end on (K-320). The
-          row's `gap-3` is still the room between the undo and the pass. */}
-      <SubmitButton
-        pendingLabel={t("print.counter.passDoor")}
-        ariaLabel={t("print.counter.passDoor")}
-        className={buttonClass({ variant: "link", size: "sm", flush: true })}
-      >
-        {t("print.counter.passDoor")}
-      </SubmitButton>
-    </RowActionForm>
+    // `link` weight, not `ghost`: it is the settled row's one remaining act
+    // and the row beside it is a receipt. A filled-looking control repeated
+    // down five finished rows is the loudest thing in a group whose whole
+    // point is that there is nothing left to do in it. `flush`, because a
+    // link paints nothing around its words: `sm`'s `px-3` ended them 12px
+    // inside the column every badge and "All boarded" end on (K-320). The
+    // row's `gap-3` is still the room between the undo and the pass.
+    <Link
+      href={paperPassPath(shopSlug, row.bookingId)}
+      className={buttonClass({ variant: "link", size: "sm", flush: true })}
+    >
+      {t("print.counter.passDoor")}
+    </Link>
   );
 }

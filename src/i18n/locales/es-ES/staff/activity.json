@@ -1,7 +1,6 @@
 {
   "line": {
     "counter_check_in": "{diver} hizo el check-in en el mostrador",
-    "kiosk_check_in": "{diver} hizo el check-in en la tableta del mostrador",
     "counter_check_in_undone": "Se deshizo el check-in de {diver} en el mostrador",
     "note_added": "{actor} agregó una nota privada sobre {diver}",
     "note_deleted": "{actor} eliminó una nota privada sobre {diver}",

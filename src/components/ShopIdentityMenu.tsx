@@ -1,17 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { type LanguageChoice, LanguageChoices } from "@/components/LanguageChoices";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { GroupLabel } from "@/components/ui/ledger";
-import { MENU_PANEL, MENU_TICK_GUTTER, menuRowClass } from "@/components/ui/menu";
+import { MENU_PANEL, MENU_TICK, MENU_TICK_GUTTER, menuRowClass } from "@/components/ui/menu";
 import { useExitAnimation } from "@/components/useExitAnimation";
 import { useMenuDismissal } from "@/components/useMenuDismissal";
+import { isBoatModeOn, setBoatMode } from "@/lib/boat-mode";
 import { motionMs } from "@/lib/motion";
 
 export type ShopIdentityMenuCopy = {
+  boatMode: string;
   calendar: string;
   language: string;
   signOut: string;
@@ -188,6 +190,9 @@ export function ShopIdentityMenu({
               />
             </div>
           </div>
+          <div className="mt-1 border-t border-border pt-1">
+            <BoatModeRow label={copy.boatMode} />
+          </div>
           {/* Signing out is the destructive end of the menu, so it sits below
               the rule rather than in the same stack as the language rows. */}
           <form
@@ -211,5 +216,36 @@ export function ShopIdentityMenu({
         </div>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Boat mode, by hand (ADR 20261001-logbook, decision 6): the Night Dive
+ * palette on every page of this device, for a crew reading in sun or at
+ * night. Ticked like the language in force, because it is the same kind of
+ * choice: about this reader on this device.
+ */
+function BoatModeRow({ label }: { label: string }) {
+  // Read after mount: the stored choice lives in this browser, and the
+  // pre-paint script has already put the class on the page.
+  const [on, setOn] = useState(false);
+  useEffect(() => setOn(isBoatModeOn()), []);
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={() => {
+        setBoatMode(!on);
+        setOn(!on);
+      }}
+      className={menuRowClass(on ? "current" : "quiet")}
+    >
+      {on ? (
+        <span aria-hidden="true" className={`${MENU_TICK} text-primary`}>
+          <DiveDayIcon name="check" className="size-3" strokeWidth={2.2} />
+        </span>
+      ) : null}
+      {label}
+    </button>
   );
 }

@@ -313,12 +313,11 @@ const pricedRentals: RentalPricing = {
 
 /**
  * **The card's groups are captioned one way** (docs/design/pixel-craft.md,
- * class 12): "Who is diving" was `font-medium`, "Number of divers"
- * `font-semibold` and "Your details" `font-semibold` in muted ink — three
- * spellings of one thing in one card.
+ * class 12): "Number of divers" and "Your details" were each spelled their
+ * own way — two spellings of one thing in one card.
  */
 describe("BookSpotSection — the group captions", () => {
-  it("draws who is diving, how many, and the lead's details in one caption style", () => {
+  it("draws how many and the lead's details in one caption style", () => {
     renderDiver(
       <BookSpotSection
         trip={trip()}
@@ -333,7 +332,7 @@ describe("BookSpotSection — the group captions", () => {
         rentalPricing={EMPTY_RENTAL_PRICING}
       />,
     );
-    for (const caption of ["Who is diving", "Number of divers", "Your details"]) {
+    for (const caption of ["Number of divers", "Your details"]) {
       const node = screen.getByText(caption);
       expect(node).toHaveClass("text-sm", "font-semibold");
       expect(node).not.toHaveClass("font-medium");

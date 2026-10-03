@@ -51,12 +51,15 @@ test("the departure's tabs reach its gear and its manifest", async ({ page }) =>
   await expect(page).toHaveURL(/\/manifest/);
 
   // Every per-device preference rests behind the "On this phone" line (ADR
-  // 20260827-the-departure-is-two-working-surfaces, decision 2), so opening
-  // that group is how a staffer reaches the boat-mode control at all.
+  // 20260827-the-departure-is-two-working-surfaces, decision 2), the last
+  // thing on the page.
   await openOnThisPhone(page);
-  const boatMode = page.getByRole("group", { name: "Boat mode" });
-  await expect(boatMode).toBeVisible();
-  const distanceFromPageEnd = await boatMode.evaluate((element) => {
+  const onThisPhone = page
+    .locator("details")
+    .filter({ has: page.locator("#offline-heading") })
+    .first();
+  await expect(onThisPhone).toBeVisible();
+  const distanceFromPageEnd = await onThisPhone.evaluate((element) => {
     element.scrollIntoView({ block: "end" });
     const scrolling = document.scrollingElement;
     return scrolling
@@ -73,7 +76,6 @@ test("the departure's tabs reach its gear and its manifest", async ({ page }) =>
     .getByRole("link", { name: "Divers" })
     .click();
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
-  await expect(boatMode).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Guests" })).toBeVisible();
 });
 

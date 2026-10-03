@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { mailShelfFromRecapAction } from "@/app/actions/shelf-door";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
 import { buildAfterStateProps } from "@/app/ready/[token]/_lib/after-state-data";
 import { EntryDone } from "@/components/account/EntryShell";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
-import { ShelfDoor } from "@/components/ShelfDoor";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { getRecapPageData, getRecapPageState, type RecapSite } from "@/db/recap";
@@ -110,13 +108,11 @@ export default async function DiveRecapPage({
     tip?: string;
     review?: string;
     pulse?: string;
-    /** What the shelf door's send did, if it was tapped. */
-    shelf?: string;
   }>;
 }) {
   await connection();
   const { token } = await params;
-  const { photo, tip, review, pulse, shelf } = await searchParams;
+  const { photo, tip, review, pulse } = await searchParams;
   // A dead link resolves no shop, so there is no `shops.default_locale` to fall
   // back to — negotiate from the visitor's own device alone for those branches.
   const anonT = diverTranslator(await requestLocale());
@@ -250,29 +246,7 @@ export default async function DiveRecapPage({
       timeZone={data.shop.timezone}
       namespaces={["recap", "common", "booking", "reviews", "trip"]}
     >
-      <AfterState
-        {...props}
-        buddyLinkUrl={buddyLinkUrl}
-        // **The recap's door sends; it never opens.** This link is signed for
-        // 180 days, cannot be revoked, and the page above it offers "share with
-        // a buddy" — so a shelf minted for whoever is holding it would hand a
-        // stranger a standing door onto this diver's file. The mail goes to the
-        // address on the booking, which only the diver reads
-        // (`src/app/actions/shelf-door.ts`).
-        shelfDoor={
-          <ShelfDoor
-            action={mailShelfFromRecapAction.bind(null, token)}
-            label={t("shelf.doorSend")}
-            status={
-              shelf === "sent"
-                ? { tone: "success", text: t("shelf.doorSent") }
-                : shelf === "failed"
-                  ? { tone: "danger", text: t("shelf.doorFailed") }
-                  : null
-            }
-          />
-        }
-      />
+      <AfterState {...props} buddyLinkUrl={buddyLinkUrl} />
     </DiverIntlProvider>
   );
 }

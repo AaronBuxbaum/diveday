@@ -31,14 +31,13 @@ describe("the hero renders only what the shop authored", () => {
         name="Blue Mantis Divers"
         tagline={null}
         aggregate={NO_REVIEWS}
-        commitments={[]}
         locale="en-US"
         t={t}
       />,
     );
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Blue Mantis Divers");
-    // No tagline line, no rating line, no conservation line — and above all no
+    // No tagline line, no rating line — and above all no
     // DiveDay sentence standing in for any of them.
     expect(screen.queryAllByRole("paragraph")).toHaveLength(0);
     expect(screen.queryByText(/reviews/i)).not.toBeInTheDocument();
@@ -50,7 +49,6 @@ describe("the hero renders only what the shop authored", () => {
         name="Blue Mantis Divers"
         tagline="Small-boat reef and wreck diving out of Key Largo."
         aggregate={NO_REVIEWS}
-        commitments={[]}
         locale="en-US"
         t={t}
       />,
@@ -64,7 +62,6 @@ describe("the hero renders only what the shop authored", () => {
         name="Blue Mantis Divers"
         tagline={null}
         aggregate={NO_REVIEWS}
-        commitments={[]}
         locale="en-US"
         t={t}
       />,
@@ -80,7 +77,6 @@ describe("the hero renders only what the shop authored", () => {
         name="Blue Mantis Divers"
         tagline={null}
         aggregate={{ count: 83, average: 4.3, suppressedCount: 0 }}
-        commitments={[]}
         locale="en-US"
         t={t}
       />,
@@ -97,7 +93,6 @@ describe("the hero renders only what the shop authored", () => {
         name="Blue Mantis Divers"
         tagline={null}
         aggregate={{ count: 83, average: 4.3, suppressedCount: 0 }}
-        commitments={[]}
         locale="en-US"
         t={t}
       />,
@@ -115,7 +110,6 @@ describe("the hero renders only what the shop authored", () => {
         name="Blue Mantis Divers"
         tagline={null}
         aggregate={{ count: 83, average: 4.3, suppressedCount: 0 }}
-        commitments={[]}
         locale="es-ES"
         t={es}
       />,
@@ -132,7 +126,6 @@ describe("the accent is the stars, and it is data ink", () => {
         name="Blue Mantis Divers"
         tagline={null}
         aggregate={{ count: 83, average: 4.3, suppressedCount: 0 }}
-        commitments={[]}
         locale="en-US"
         t={t}
       />,
@@ -149,7 +142,6 @@ describe("the accent is the stars, and it is data ink", () => {
         name="Blue Mantis Divers"
         tagline="Small-boat reef and wreck diving out of Key Largo."
         aggregate={NO_REVIEWS}
-        commitments={["green_fins_member"]}
         locale="en-US"
         t={t}
       />,
@@ -157,56 +149,6 @@ describe("the accent is the stars, and it is data ink", () => {
 
     expect(container.querySelector(".text-accent")).toBeNull();
     expect(container.querySelector(".bg-accent")).toBeNull();
-  });
-});
-
-describe("the conservation line", () => {
-  it("joins every commitment the shop chose, behind one drawn glyph", () => {
-    render(
-      <ShopfrontHero
-        name="Blue Mantis Divers"
-        tagline={null}
-        aggregate={NO_REVIEWS}
-        commitments={["green_fins_member", "no_touch_policy", "coral_nursery_support"]}
-        locale="en-US"
-        t={t}
-      />,
-    );
-
-    expect(visibleText(screen.getByRole("paragraph"))).toBe(
-      "Green Fins member · No-touch reef policy · Coral nursery support " +
-        "Stated by the shop, not verified by DiveDay.",
-    );
-  });
-
-  it("keeps the claims guard — it is never deleted and never softened", () => {
-    render(
-      <ShopfrontHero
-        name="Blue Mantis Divers"
-        tagline={null}
-        aggregate={NO_REVIEWS}
-        commitments={["green_fins_member"]}
-        locale="en-US"
-        t={t}
-      />,
-    );
-
-    expect(screen.getByText("Stated by the shop, not verified by DiveDay.")).toBeInTheDocument();
-  });
-
-  it("renders nothing at all when the shop has ticked nothing", () => {
-    render(
-      <ShopfrontHero
-        name="Blue Mantis Divers"
-        tagline={null}
-        aggregate={NO_REVIEWS}
-        commitments={[]}
-        locale="en-US"
-        t={t}
-      />,
-    );
-
-    expect(screen.queryByText(/Stated by the shop/)).not.toBeInTheDocument();
   });
 });
 
@@ -221,7 +163,6 @@ describe("the shop's face", () => {
         name="Blue Mantis Divers"
         tagline={null}
         aggregate={{ average: 4.3, count: 83, suppressedCount: 0 }}
-        commitments={[]}
         locale="en-US"
         t={t}
       />,
@@ -238,7 +179,6 @@ describe("the shop's face", () => {
         name="Blue Mantis Divers"
         tagline="Two tanks before lunch."
         aggregate={null}
-        commitments={[]}
         heroImage={{ url: "/dive-sites/reef.jpg", alt: "Elkhorn coral" }}
         badges={["padi_5_star"]}
         establishedYear={1998}
@@ -254,75 +194,36 @@ describe("the shop's face", () => {
 });
 
 /**
- * **The storefront is the day** — ADR 20260919-one-idea, decision I · Tide,
- * slice 23d. The band at the top of the page is one frame with two fillings:
- * the shop's own photograph, or the sky over the shop at the hour the page is
- * read. The rule the tests below hold is which of the two wins, because getting
- * it backwards means a shop loses its photograph to a gradient.
+ * The band at the top of the page is the shop's own photograph, or, for a shop
+ * that has not uploaded one, the bare name on the page's own surface.
  */
-describe("the day over the shop's own sky", () => {
-  const SKY = { scheme: "dusk" as const, day: "Saturday, September 19" };
-
-  it("wears the hour, and names the shop's own day above its name", () => {
-    const { container } = render(
-      <ShopfrontHero
-        name="Blue Mantis Divers"
-        tagline="Two tanks before lunch."
-        aggregate={NO_REVIEWS}
-        commitments={[]}
-        sky={SKY}
-        locale="en-US"
-        t={t}
-      />,
-    );
-    const band = container.querySelector(".sky");
-    expect(band).not.toBeNull();
-    expect(band?.getAttribute("data-scheme")).toBe("dusk");
-    // The date is the shop's, not the reader's — a diver in another timezone
-    // has no other way to know which day the board's first row means.
-    expect(screen.getByText("Saturday, September 19")).toBeInTheDocument();
-    expect(band).toContainElement(screen.getByRole("heading", { level: 1 }));
-  });
-
-  /**
-   * **A shop with a cover photo already has its own sky.** Two mastheads is the
-   * failure this guards against, and a shop silently losing the photograph it
-   * uploaded is the worse half of it.
-   */
-  it("leaves a shop's photograph alone, whatever the hour is doing", () => {
-    const { container } = render(
+describe("the masthead is the shop's photograph or its name", () => {
+  it("puts the name on the shop's photograph", () => {
+    render(
       <ShopfrontHero
         name="Blue Mantis Divers"
         tagline={null}
         aggregate={NO_REVIEWS}
-        commitments={[]}
         heroImage={{ url: "/dive-sites/reef.jpg", alt: "Elkhorn coral" }}
-        sky={SKY}
         locale="en-US"
         t={t}
       />,
     );
     expect(screen.getByAltText("Elkhorn coral")).toBeInTheDocument();
-    expect(container.querySelector(".sky")).toBeNull();
-    expect(screen.queryByText("Saturday, September 19")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Blue Mantis Divers");
   });
 
-  /**
-   * Day zero still ships: a caller with no day to draw gets the bare name it
-   * always got, not an empty band waiting to be filled.
-   */
-  it("falls back to the bare name when there is no day and no photograph", () => {
-    const { container } = render(
+  it("falls back to the bare name when there is no photograph", () => {
+    render(
       <ShopfrontHero
         name="Blue Mantis Divers"
         tagline={null}
         aggregate={NO_REVIEWS}
-        commitments={[]}
         locale="en-US"
         t={t}
       />,
     );
-    expect(container.querySelector(".sky")).toBeNull();
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Blue Mantis Divers");
   });
 });

@@ -407,7 +407,7 @@ function classStringsWith(source: string, anchor: string, needs: readonly string
  * (ProductChapterNav.test.tsx), the command palette's field
  * (CommandPalette.test.tsx), `RowLink` (table.test.tsx), the tip picker
  * (TipAmountPicker.test.tsx), the roll-call mark (DiverRollCall.test.tsx,
- * CrewRollCall.test.tsx), the diver record's shelf rows (ShelfGroup.test.tsx),
+ * CrewRollCall.test.tsx),
  * "Remove address" (AddressSearch.test.tsx) and the roster seat's foot row
  * (RosterSection.test.tsx).
  */
@@ -462,12 +462,6 @@ const CUT_RINGS: readonly (readonly [file: string, anchor: string, needs: readon
     "group flex gap-4 px-2",
     ["focus-visible:focus-ring-inset"],
   ],
-  ["app/dive/page.tsx", "group flex items-baseline", ["focus-visible:focus-ring-inset"]],
-  [
-    "app/dive/[region]/page.tsx",
-    "group flex items-center gap-4 px-2",
-    ["focus-visible:focus-ring-inset"],
-  ],
   // The page rail's one row: the editor's section rail and the settings map
   // both draw it (EditorRail.test.tsx, SettingsRail.test.tsx). Its box is
   // `RAIL_ROW_BOX`, which the settings rail's skeleton wears too (K-345), and
@@ -475,12 +469,6 @@ const CUT_RINGS: readonly (readonly [file: string, anchor: string, needs: readon
   ["components/ui/rail.ts", "min-h-11 items-center rounded-lg px-3 py-2", []],
   ["components/ui/rail.ts", "RAIL_ROW_BOX} text-sm", ["focus-visible:focus-ring-inset"]],
   ["components/JumpNav.tsx", "focus-visible:focus-ring-inset", []],
-  // The contrast switch's pills scroll sideways in a 4px track.
-  [
-    "components/AmbientGlareDetector.tsx",
-    "rounded-full px-3 text-sm font-semibold",
-    ["has-[:focus-visible]:focus-ring-inset"],
-  ],
 ];
 
 describe("no ring the probe measured cut is cut any more", () => {
@@ -490,22 +478,5 @@ describe("no ring the probe measured cut is cut any more", () => {
       classStringsWith(source, anchor, needs),
       `a class string with "${anchor}" carrying ${needs.join(", ") || "it"}`,
     ).not.toHaveLength(0);
-  });
-});
-
-/**
- * **On the sky, the ring is the sky's ink.** `--focus-ring` is `--primary`,
- * measured against the app's light surfaces, and a `SkyBand` is none of
- * them: lagoon on the day sky measured 1.78–1.89:1 and 1.28:1 at the band's
- * foot, under the 3:1 a focus indicator owes (pixel probe, state atlas, the
- * BOARD back link on `trip-repeating-panel`). Every focusable on a band —
- * `VoyageHeader`, `DayHeader`, `ShopfrontHero` — stands on the sky itself, so
- * the band retokens the ring once for all of them.
- */
-describe("the ring on a SkyBand", () => {
-  it("is the band's own ink", () => {
-    const sky = unlayeredRules(CSS).find((rule) => rule.prelude === ".sky");
-    expect(sky, "a .sky rule").toBeDefined();
-    expect(declarations(sky?.body ?? "")["--focus-ring"]).toBe("var(--sky-ink)");
   });
 });

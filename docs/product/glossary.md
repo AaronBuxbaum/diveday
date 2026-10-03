@@ -24,9 +24,8 @@ new domain concept, define it here in the same PR.
 - **Arrival card** — the place-to-go projection for one departure: meeting label and address,
   optional shop-authored landmark guidance, a map hand-off, public support contacts, and the
   departure time. The panel on the public trip page is public and non-sensitive. The **download**
-  is not: it is the booked diver's own card, released only against their `/ready` capability, and
-  it carries an **arrival code**. It still contains no waiver, readiness or medical state, and no
-  booking id.
+  is not: it is the booked diver's own card, released only against their `/ready` capability. It
+  contains no waiver, readiness or medical state, no credential, and no booking id.
 - **Change ledger** — the chronological, diver-visible record of material meeting-point and
   conditions changes. Each event stores before/after public-safe snapshots, a broad source
   (`shop` or `crew`), and a timestamp; it never names a staffer or carries private operational
@@ -670,10 +669,7 @@ new domain concept, define it here in the same PR.
   views.
 - **Check-in** — a recorded arrival state for a booked diver. It confirms the live readiness
   result and changes the booking to `checked_in`; it is not boarding, which remains a separate
-  departure-time manifest decision. **Two doors write it**: a staffer's tap at the counter, which
-  is a sighting, and a diver's own tap at a **self check-in** tablet, which is a claim. The two are
-  told apart by `booking_arrival_events.display_token_id` and wear different words wherever a
-  person reads them. Readiness is confirmed **wherever the tap is applied**, which
+  departure-time manifest decision. A staffer's tap at the counter writes it. Readiness is confirmed **wherever the tap is applied**, which
   since the counter went offline-capable is at the desk for a live tap and at reconciliation —
   minutes or hours later, against readiness as it stands *then* — for a queued one.
 - **Arrival event** — one append-only row in `booking_arrival_events` recording a single tap at the
@@ -685,10 +681,6 @@ new domain concept, define it here in the same PR.
   checkpoint, and its writers cannot reach `roll_call_events`: an arrival is never promoted to
   aboard by the queue
   ([ADR 20260907-the-counter-survives-offline](../architecture/decisions/20260907-the-counter-survives-offline.md)).
-  Two doors write these rows. A staffer at the desk is the usual one. The other is
-  **self check-in**: `display_token_id` names the counter tablet it was tapped on, and
-  `recorded_by_person_id` is the diver themselves — which is what lets a shop reading its own trail
-  tell "Dana checked Priya in" from "Priya checked herself in", on a shop where staff dive too.
 - **No-show** — one staffer's recorded statement that a booked diver did not come. The status is
   `bookings.status = "no_show"`, written only by `markBookingNoShow` (`src/db/no-show.ts`), behind
   the counter's "Not here?" disclosure and its confirm tap. **It is not the three things it is most easily mistaken
@@ -975,8 +967,7 @@ new domain concept, define it here in the same PR.
   site may say when it **dives best** (`any` / `slack` / `flood` / `ebb`) and the sentence says
   whether this departure meets it. The time named is the tide table's turn, not a current
   measurement — real slack on a reef lags it by a site-specific amount, which is the crew's to know.
-  Staff read it wherever a site has a station; divers read it only once the shop switches
-  `tide_window_public` on. Informs; never a gate.
+  Staff read it wherever a site has a station; divers never do. Informs; never a gate.
 - **Station echo** — NOAA's own name for the station a site points at, shown under the id on the
   dive-site editor. `isTideStationId` is `/^\d{7}$/` and can be no stricter — a subordinate
   station's id looks exactly like a harmonic one's and every seven-digit id answers — so a station
@@ -1048,50 +1039,16 @@ new domain concept, define it here in the same PR.
   raises it and the schedule board badges the departure — **for crew as well as divers**. It comes
   in six distinct kinds, which are deliberately never worded or ranked alike — see **unaccounted
   for** below.
-  Two rules travel with it onto paper, and the **boat card** below carries both in as many words:
-  **the app is the record and the card is the fallback**, so nothing printed is ever a second,
+  Two rules travel with it onto paper: **the app is the record and paper is the fallback**, so
+  nothing printed is ever a second,
   quieter register; and **the roll is called by name**, every diver and every crew member, by two
   people — a head count is the practice that leaves people behind, which is why no DiveDay surface
   asks for one. The number printed beside each name is a line number and never an identity; see
   **roll-call order**.
 - **Roll-call order** — the order the manifest lists divers in: **oldest seat first, then the diver's name, then the booking id** (`getTripRoster`, `src/db/trips-roster.ts`). The screen, the departure log and the saved dock copy all read that one query, so the three can never disagree about who sits where in the list. The **number beside each name is a line number, not the diver's number**: it is that row's position in today's list, so it shifts when a seat is cancelled, when a released seat is resold to somebody else, and when a name is corrected inside a group of seats sold in the same instant. It exists so a person can keep their place down a wet list, and for nothing else — **the roll is still called by name** (see **Manifest**), and no note, message, export or radio call ever refers to a diver as a number. A shop wanting a number a diver keeps for the day (a tank station, a group) does not have one: that is a stored fact about a person on a departure, not a position in a list. The order is stable against a re-read and against a fresh seed of the same data; it is not stable against the roster's own contents changing (issue #1720, and #1759 for the stronger promise).
-- **Print register** — the pane in Settings that lists the shop's own printable sheets in the
-  groups of where the paper goes: at the dock and the door, on the boat, for a diver, on the wall
-  (ADR 20260908-one-hand, decision 6, lever X). Every row names the sheet, the paper it prints on,
-  one sentence, and the day it was last printed; its door is a form rather than a link, because
-  opening a sheet is what records that day. A sheet reads what its page reads at the moment it is
-  drawn — nothing on paper is stored copy.
-- **Print run** — one row of `shop_print_runs`: the day a shop last printed one sheet (and, for the
-  boat card, one hull). One row per sheet per subject, replaced in place rather than appended, and
-  the whole of what the register keeps. The paper pass records the day and never the diver.
 - **Hull** — the *drawn* boat, above a departure's roster: an outline from transom to bow with one rounded seat per place the vessel has, the wheelhouse and the helm (`src/lib/hull.ts` for the geometry, `src/components/boat/Hull.tsx` for the element; ADR 20260919-one-idea, decision I · Tide). It is the count made spatial — how full, how many cannot board, how much room is left — and it adds no fact: every seat it draws is a row in words beneath it, and taking the picture away leaves the page saying everything it said. It informs and gates nothing, exactly like the sky: no capacity, readiness, admission or manifest rule reads a coordinate from it. **A seat is never numbered and never assigned**, and the absent numeral is not what makes that true — what does is that nothing stores a position and nothing reads one (see **Roll-call order**); seats fill in booking order, so the layout is deliberately unstable, and a released seat resold moves everyone after it. The hull is drawn only for a departure that has a boat *and* is sailing: a shore dive has no vessel to draw, and a **blow-out** leaves every booking active, so a cancelled trip would otherwise draw a full, happy boat over words saying the day is off. **It prints**, which it did not until the paper had a treatment of its own: the print palette flattens `--success` and `--warning` onto one near-black, so *aboard* and *ashore* — the only two answers a head count has — came off a printer identical, and the picture stood down rather than lie. `@media print` now re-cuts all eight by fill, stroke weight, dash and an inner mark, and gives the shop's colour back to the page's ink; hue carries nothing, because hue is the channel a mono laser does not keep (ADR 20260919-one-idea §3b.4). The rows still carry the same facts in words beside it, and on paper the hull's own sentence prints beneath it — a letterless hull is a grid of unlabelled boxes otherwise, on the one artifact used when the app is not there to explain it. **The wheelhouse holds two**, so a departure with more guides than that draws a boat with people missing from it; the sentence says how many, because a picture of a whole boat that omits a soul is the one thing a manifest may not be. **A guide carries a roll-call state, as a diver does** (§3b.6): five of the six words are a diver's own, because the derivation under both is one function, and the three a guide cannot wear — *open*, *booked*, *blocked* — are readiness, which gates boarding against a booking a crew member does not hold. The sixth is *rostered*, and it exists so that a surface with no head count in it does not paint every guide as a question: the departure page has no roll call, and an alarm is earned by a recorded fact rather than by the absence of one.
 - **Seat state** — the eight things a place on a **hull** can be wearing, derived once in `seatReadingFor`: **open** (nobody has taken it), **booked** (held, nothing recorded, nothing stopping them boarding), **blocked** (held, and readiness says they cannot board), **awaiting** (nobody has said anything about this person at this head count — at the dock, nobody has read their readiness; after a dive, nobody has counted them back, and readiness is not the question there at all), and **aboard**, **ashore**, **ashoreImplied** and **missing**, the ones a human *recorded* at a roll call (see **Roll-call**). A recorded fact outranks readiness, because a body on the boat is a fact and readiness is a decision — but the reading keeps what readiness said either way, so "aboard, and nobody ever cleared them" is a sentence the picture can still be asked for. A **stated** ashore and one **carried forward** from the dock's silence are separate states and separately drawn, because an alarm is earned by a recorded fact and never by the absence of one. The seats a hull draws are the ones **seat held** counts, so the boat and the sentence beside it can never count different sets.
 - **Hull colour** — `boats.hull_color`, a `#rrggbb` a shop picks once per boat in Settings, so a crew recognises the vessel before reading its name and two morning departures become two objects rather than two rows with different text. Null until a shop picks one, and **null is not a gap to fill with a random colour** — an unpainted hull is drawn in the page's own ink, which is a perfectly good boat. It informs nothing: no capacity, readiness, admission or manifest rule reads it. It leaves with the shop in `boats.csv`.
-- **Boat card** — the laminated A5 card taped to a console: two faces of one lamination, a day side
-  and a night side, one per hull. It exists for the minute the app is not there, so it carries the
-  roll by name, what to do if someone is missing, the shop's own emergency numbers and vessel, the
-  shop's emergency action plan, and ruled blanks for the oxygen and first aid kits. **It wears the
-  boat's colours, never the shop's** — the same ban that keeps a storefront palette off a manifest —
-  and the night side is read under a red torch, so its ink is off-white rather than any hue. Nothing
-  about a diver is on it: no name, no count of who is aboard, and no medical fact of any kind. The
-  card cannot paginate, and says on its own fold line that the app is the record.
-- **Dock sign** — the A3 sheet at the slip: the shop's name and meeting point, its boats with their
-  capacity and the shop's own sentence for each, the counter's number, the shop's dock call, and two
-  codes. **No names, ever** — who is on a boat is the manifest's business, and a manifest is not a
-  public document.
-- **Window sticker** — the 100 mm square for the door and the boat's console: one sentence and the
-  storefront's code. No name on it either.
-- **Site briefing card** — the A5 card on the crew's clipboard, one per dive site: the site editor's
-  own briefing and the field guide the shop picked, so the words a diver hears on the boat are the
-  words on the storefront. The briefing is the shop's; the species names are DiveDay's, in the
-  reader's language.
-- **Arrival code** — the QR on a diver's downloaded arrival card: an `arrival`-purpose booking
-  capability, minted fresh each download, hashed at rest, and dying with the booking it names. It
-  authorizes **one thing** — being recognised at the counter tablet, the same thing saying a surname
-  there already buys — and nothing on `/ready`: not the waiver, not the medical answers, not
-  payment. Deliberately **not** the paper pass's booking id: that id is safe on paper because only a
-  staff session resolves it, and an id printed on a diver-facing surface can never be revoked. A
-  forwarded card is therefore worth what the manifest already shows a staffer.
 - **Paper pass** — the A6 pass printed at the counter for a diver without a phone: the departure,
   the hull, the meeting point, the shop's dock call, what to bring, and a code carrying **the
   booking's id and nothing else**. A booking id is not a capability — the counter resolves it inside
@@ -1206,9 +1163,6 @@ new domain concept, define it here in the same PR.
   text throughout, including the phone lines: an international dive line is not a `tel:`-shaped
   string until the shop writes it, and nothing on this card links, dials, escalates, or opens an
   incident. It is a laminated card retyped, priced at zero words of DiveDay's own.
-  The **boat card** below is the same card, printed: it reads these values and prints a ruled blank
-  wherever the shop has recorded nothing, because the rule that forbids a plausible wrong number on
-  the screen forbids it on the console too.
 - **Roll-call event** — an append-only record that a staff member marked one booking boarded,
   not boarded, or cleared, including the time and who recorded it. It carries **no free text**: the
   note field was removed in 2026-08, which also means a roll call records *that* a diver did not
@@ -1370,6 +1324,7 @@ new domain concept, define it here in the same PR.
   aboard" that a non-rejected source states — silently demoting a missing diver to "awaiting" is the
   one direction that takes an alarm off the screen — while it still may never resurrect a superseded
   "aboard", which is the stale optimism reconciliation exists to overrule.
+- **Boat mode** — the Night Dive palette (navy, white ink, safety yellow, Atkinson Hyperlegible) for reading a screen on deck (ADR 20261001-logbook, decision 6). The roll call always wears it; anyone can put the rest of a device in it from the staff identity menu (`src/lib/boat-mode.ts`). A manual switch only: there is no light sensor, water lock or glare skin.
 - **Boarding** — the fast pre-departure pass: get every ready diver aboard before the boat leaves,
   waiver/cert/payment confirmed at a glance. It is not a separate surface — it is the **Manifest's**
   "Before departure" checkpoint, where readiness pills and a resolve-blockers link show alongside the
@@ -1381,7 +1336,7 @@ new domain concept, define it here in the same PR.
 - **Trip stage** — where a departure is, in the crew's own word: one of five (`boarding`,
   `underway`, `surface`, `heading_in`, `home`) tapped on the **manifest** and then repeated, with
   the time it was tapped, everywhere DiveDay draws that boat — the shop home's station chip, the
-  storefront's live line, the **follow link**, the **departures board**, and a diver's own link (ADR
+  storefront's live line, the **follow link**, and a diver's own link (ADR
   [20260904-reef-all-the-way-down](../architecture/decisions/20260904-reef-all-the-way-down.md),
   decision 2; `src/lib/trip-stages.ts`). **Never inferred and never a position.** A clock implies no
   stage: a departure nobody tapped has none, renders nothing, and never renders "Unknown"; and
@@ -1642,22 +1597,21 @@ new domain concept, define it here in the same PR.
   one**: a cancelled booking, a no-show, an imported visit standing `did_not_happen`, and a
   cancelled departure are all excluded, the last of those because a blow-out leaves its bookings
   active by design and the count read them as days until a review caught it (2026-08-28). **A
-  `no_show` has no escape in any of the four readers** (issue #1558, settled the other way by a
+  `no_show` has no escape in any of the three readers** (issue #1558, settled the other way by a
   `dive-domain-expert` review on 2026-09-11). The fly-safe reader and the counter's name-match
   prompt used to let a standing desk sighting outrank it, to keep a close-of-day sweep from erasing
   the 06:40 tap. No sweep exists and none is coming: `markBookingNoShow` (`src/db/no-show.ts`) is
   the only writer of that status, it is one staffer's deliberate tap on one seat, and check-in
   refuses anything but a `booked` seat — so the sighting is always the older statement, and the
   escape only ever let 06:40 beat 07:15. **One exclusion still has an escape, and only two of the
-  four readers carry it.** A cancelled departure the crew logged dives on is a dive day to the
+  three readers carry it.** A cancelled departure the crew logged dives on is a dive day to the
   fly-safe reader (`peopleWhoDivedBefore`, `src/db/executed-dives.ts`) and to the counter's
-  name-match prompt (`SimilarDiver.lastDiveDayAt`, `src/db/divers.ts`) — and to neither the recap's
-  own count (`getRecapPageData`, `src/db/recap.ts`) nor the diver shelf (`src/db/shelf.ts`), which
-  still read a plain non-`scheduled` departure as disqualifying. The gap is deliberate: the two that
-  widened answer a staffer who can see the person and can shake their head, while this count tells
-  the diver "your 3rd dive day" with nobody there to correct it and feeds `visitMilestone`'s exact
-  equality, where a day that moves skips a stamp permanently rather than blurring it. Putting all
-  four behind one predicate is issue #1694.
+  name-match prompt (`SimilarDiver.lastDiveDayAt`, `src/db/divers.ts`) — but not to the recap's own
+  count (`getRecapPageData`, `src/db/recap.ts`), which still reads a plain non-`scheduled` departure
+  as disqualifying. The gap is deliberate: the two that widened answer a staffer who can see the
+  person and can shake their head, while this count tells the diver "your 3rd dive day" with nobody
+  there to correct it and feeds `visitMilestone`'s exact equality, where a day that moves skips a
+  stamp permanently rather than blurring it. Putting all three behind one predicate is issue #1694.
 - **Milestone stamp** — the drawn double-ring roundel beside the dive record, on the dive days
   `src/lib/visit-milestones.ts` names and no others: the 1st, 10th, 25th, 50th and 100th. Exact
   equality, not "at least", so a miscounted day does not blur a milestone — it skips it permanently.
@@ -2053,12 +2007,12 @@ new domain concept, define it here in the same PR.
   sits nowhere near the roll call's commit path or the manifest's head count — and it never
   promises: a site's summary counts *logged* dives in a trailing month, dates itself to the
   departure rather than to the tap, and says what was logged and when, never what a diver will see.
-- **Earliest flight** — the instant a shop's preflight wait ends, after the day's diving
+- **Earliest flight** — the instant DiveDay's fixed preflight wait ends, after the day's diving
   (`src/lib/fly-safe.ts`, issue #1425). **Never a clearance, and since #1433 the copy does not
   read as one**: whether a diver may fly is between them, their profile and their physician, and a
   shop knows one interval — so the sentence asks them to wait at least until this instant rather
-  than telling them they may go, and attributes both the number and the practice. The shop's own hours (`shops.fly_safe_hours_single` and
-  `_repetitive`, defaults 18 and 24, floored at DAN's published minimums of 12 and 18) counted from
+  than telling them they may go, and attributes both the number and the practice. DiveDay's fixed hours
+  (`DEFAULT_FLY_SAFE_HOURS`: 18 single, 24 repetitive, above DAN's published minimums of 12 and 18) counted from
   the **last recorded exit**, or from the **buffered return** — the scheduled return plus the
   one-hour departure buffer — once the boat is home by that buffer. The gate and the anchor are the
   same instant on purpose: a boat that came in late must not read an hour early in a sentence that
@@ -2072,7 +2026,7 @@ new domain concept, define it here in the same PR.
   a live booking on a live departure the shop still says ran, not a dive log row: crews do not
   reliably log, and requiring a row would have let today's boat speak from its plan while
   yesterday's fell silent. The longer wait is the one that costs nothing if wrong, and reaching
-  repetitive can never shorten one, because a shop's `repetitive` may not be set below its `single`.
+  repetitive can never shorten one, because the fixed `repetitive` is longer than the fixed `single`.
   A record that is short of its plan, or missing its last exit, anchors on the return, never on an
   earlier dive. Rendered on the thread's after-state and in the recap email, in the shop's zone. The
   sentence states its reason on the two routes a diver cannot check for themselves — the earlier
@@ -2142,55 +2096,6 @@ new domain concept, define it here in the same PR.
   since revoked, never satisfies it. Being signed in is not being stepped up; **and step-up is
   only demanded of an account that has enabled two-factor**, so it is a control a staff member
   opts into rather than a floor under every account.
-- **Display link** — a revocable bearer URL (`display_tokens`) a shop opens on a screen of its own,
-  with no sign-in on that screen. Hashed at rest, revoked from Settings → Lobby display. A link says
-  which of two surfaces it opens, and the two never cross: a **board** link (`/board/[token]`) is
-  the **departures board** — today's boats, the crew's stage word, an "n of capacity" count, the
-  meeting point and the outlook, never a diver's name; its one switch, *show names*, adds the crew
-  line (issue #1426). A **check-in** link (`/check-in/[token]`) is the **self check-in kiosk**
-  below, and unlike the board it writes (N-24). **Only the check-in link expires** — 180 days
-  (`CHECK_IN_LINK_TTL_DAYS`), renewed from the same settings page; a board link is non-expiring like
-  a calendar feed, because a screen on a wall going dark is noticed by nobody (issue #1609).
-- **Follow link** — the public page for one departure's day (`/s/<shopSlug>/boats/<tripId>`), which
-  a diver hands to whoever is waiting for them on the dock. Deliberately **not** a bearer credential
-  and deliberately not revocable: the trip id is in the URL unhashed because the page holds no
-  secret — the stage word a crew member tapped, the time they tapped it, and the departure's own
-  line of times. Never a name, never a count of people, never a position. Two divers on the same
-  boat share one page. A shop publishes it, its storefront's live line and its Follow door together
-  through one switch, `shops.public_boat_line`, which is **off** until the shop turns it on and
-  takes all three with it when it goes back off; a private charter, a cancelled departure and a day
-  that has closed are each a 404 rather than an empty state (ADR
-  [20260908-one-hand](../architecture/decisions/20260908-one-hand.md), decision 6, lever U).
-- **Self check-in** — a diver typing their own last name on a counter tablet behind a check-in
-  display link, and reading "You're set" or "See the desk". What it records is an **arrival**,
-  never a boarding: the tablet writes the same `booking_arrival_events` row the desk does, stamped
-  with the tablet it was tapped on (`display_token_id`) and recorded as the diver's own act.
-  Boarding stays a roll-call act a crew member performs at the rail with the diver in front of
-  them. Readiness is re-read at the tap, so a diver with an unsigned waiver is turned toward the
-  desk while there is still somebody to talk to (N-24).
-  It **does** move `bookings.status`, which the counter's "here" count and the roll-call screen's
-  arrival pill both read — so those surfaces distinguish it: a kiosk arrival reads *"Says they're
-  here"*, and one alone holds back the counter's stop-chasing accent, because "everybody is here"
-  is a claim only a human can make. Proxy check-in is the ordinary use of a self-serve kiosk, not
-  an abuse of one. The tablet answers only for a departure within the next six hours (or half an
-  hour past its start) — never one that has sailed and returned, and never tomorrow's — and never
-  for a diver with stated support needs or a minor, who meet a person, which is the whole point of
-  stating either. A diver's own two departures inside that window resolve to the nearer one; two
-  different people sharing a surname still go to the desk. Both apellidos of a two-apellido name
-  work, and so does a tussenvoegsel: the lookup matches any word of the stored name but the given
-  ones, whole and exactly, because a prompt reading "Apellido" that accepted only the maternal one
-  refused every Hispanic diver (issue #1610).
-  Every refusal is one identical sentence *and* one length: the lookup path and the blocked-diver
-  path do different amounts of work, so response time used to tell them apart, and every answer is
-  now held to a floor (`KIOSK_RESPONSE_FLOOR_MS`, issue #1608). The floor hides the difference only
-  while the slow path stays under it.
-  **A second tap is answered warmly, and that is an accepted disclosure.** A diver already arrived
-  reads *"Already checked in, Diego."* rather than the generic "See the desk", so a link holder can
-  learn that somebody by that surname has turned up today. It stands because the alternative
-  discloses more, not less: typing a name that has *not* arrived answers "You're set" and records
-  an arrival, so presence is readable from the success path either way, and folding the second tap
-  into the refusal would only send a diver who is already through into a queue for nothing (issue
-  #1611).
 - **Recovery code** — one of ten single-use strings issued at two-factor enrolment, shown once and
   stored only as a salted HMAC under the deployment's own sealing key. It is a second factor, not
   a password reset: presenting one satisfies the same check a TOTP code does.
@@ -2207,22 +2112,12 @@ new domain concept, define it here in the same PR.
 
 ## What a shop says about itself
 
-- **Conservation commitment** — one of a fixed set of codes a shop ticks to state its own practice
-  (Green Fins member, PADI AWARE partner, mooring buoys only, no-touch policy, no-gloves policy,
-  reef cleanup dives, lionfish containment, coral nursery support). DiveDay **cannot verify these
-  and does not**: they are shop claims, displayed as such, and no operational rule reads them — a
-  no-gloves commitment gates nothing at the rail (ADR
-  [20260826-shop-stated-conservation](../architecture/decisions/20260826-shop-stated-conservation.md)).
-  The vocabulary is `src/lib/conservation-commitments.ts` and there is exactly one of it; the
-  words for each code are DiveDay's, in every language, like the marine-life catalog and unlike a
-  site briefing.
 - **Conservation note** — a shop's own prose about its conservation practice at one dive site.
   The shop's words, in the shop's language, alongside the rest of the briefing — not a code and
   not a claim DiveDay renders on the shop's behalf.
 - **Lens** — the shop's own word for a kind of day ("Easygoing reef", "After dark", "First time
-  back in a while"), written once in `trip_lenses` and hung on a departure by `trips.lens_id`. It
-  is **shop prose**, like a site briefing and unlike the conservation codes or the marine-life
-  catalog: DiveDay never translates it, and the whole value is that the schedule sounds like the
+  back in a while"), called a **trip tag** on every screen (Settings → Trip tags), written once in `trip_lenses` and hung on a departure by `trips.lens_id`. It
+  is **shop prose**, like a site briefing and unlike the marine-life catalog: DiveDay never translates it, and the whole value is that the schedule sounds like the
   shop rather than like every other shop. Shop prose is a decision rather than a default: the owner
   chose it on 2026-09-10 (issue #1392) over the fixed DiveDay taxonomy issue #1162's triage
   recommended, and the untranslated rail is the accepted cost. A diver filters the public schedule
@@ -2238,22 +2133,6 @@ new domain concept, define it here in the same PR.
   nothing at all (ADR
   [20260904-reef-all-the-way-down](../architecture/decisions/20260904-reef-all-the-way-down.md),
   decision 2).
-- **Season event** — a week the shop plans its year around, written in the shop's own words:
-  lobster mini-season, a goliath grouper aggregation, turtle nesting, the lionfish derby it runs
-  every August. A `season_events` row is a name, an optional sentence, an inclusive calendar-date
-  range, and optionally one **lens** — the kind of day the week fills the board with. Like a site
-  briefing and unlike the conservation codes, the words are **the shop's** and DiveDay writes only
-  the frame around them; there is deliberately no catalog of seasons to pick from, because the
-  dates move by state rule and by species and the sentence that makes a visitor care is the one
-  the shop would say across the counter.
-  **The dates have no instant in them.** "The last Wednesday and Thursday of July" is two days on a
-  wall calendar, inclusive at both ends; whether the window is *live* is the only question with a
-  zone in it, and it is asked once, at the edge, against today's date in the shop's own timezone
-  (`src/lib/season-events.ts`). While it is live the storefront carries a band above the schedule;
-  a month before it opens the shop's own work queue carries one row about it, and then goes quiet
-  once the shop is standing in the week. It **informs and never gates** — nothing in
-  `src/lib/trip-admission.ts` or `src/lib/readiness.ts` reads one, and a season puts no departure
-  on the board by itself.
 - **Crew public name** — the string a consenting staff member shows divers on the departures they
   crew (`people.crew_public_name`). Theirs to type, not derived: `full_name` is one free-text box
   a shop fills in, so taking its first whitespace token assumes the given name was typed first and

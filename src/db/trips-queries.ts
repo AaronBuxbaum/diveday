@@ -295,9 +295,8 @@ export const seatHeld = inArray(bookings.status, [...SEAT_HELD_STATUSES]);
 
 /**
  * The join that makes `booked` a count of the seats somebody is holding rather
- * than of every row. Exported so the departures board
- * (`./departures-board.ts`) counts seats with the same predicate the schedule
- * does, rather than a second spelling of it.
+ * than of every row. Exported so every reader counts seats with the same
+ * predicate the schedule does, rather than a second spelling of it.
  */
 export const liveBookingJoin = and(eq(bookings.tripId, trips.id), seatHeld);
 

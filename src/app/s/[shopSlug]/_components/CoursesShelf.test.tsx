@@ -95,20 +95,19 @@ describe("a card's inset", () => {
   });
 });
 
-describe("the wave placeholder", () => {
-  it("stands in for a course with no photo, in the primary tint and never the accent", () => {
+describe("the photo-less tile", () => {
+  it("keeps a course's photo slot as a plain sunken tile, with nothing drawn on it", () => {
     const { container } = render(
       <CoursesShelf courses={[course(1)]} allCoursesHref="/s/blue-mantis/courses" t={t} />,
     );
 
-    const placeholder = container.querySelector(".bg-primary-tint");
+    const placeholder = container.querySelector(".bg-surface-sunken");
     expect(placeholder).not.toBeNull();
-    // Decision 11's budget spends the storefront's one accent on the review
-    // stars; a decorative wave may not take it.
+    // Logbook draws no ornament (ADR 20261001-logbook): no wave, no accent.
+    expect(placeholder?.querySelector("svg")).toBeNull();
+    expect(placeholder?.childElementCount).toBe(0);
     expect(container.querySelector(".text-accent")).toBeNull();
     expect(container.querySelector(".bg-accent")).toBeNull();
-    // Drawn, never an emoji, and decorative rather than announced.
-    expect(placeholder?.querySelector("svg")).not.toBeNull();
     expect(placeholder?.getAttribute("aria-hidden")).toBe("true");
   });
 
@@ -121,7 +120,7 @@ describe("the wave placeholder", () => {
       />,
     );
 
-    expect(container.querySelector(".bg-primary-tint")).toBeNull();
+    expect(container.querySelector("[aria-hidden='true'].bg-surface-sunken")).toBeNull();
   });
 });
 

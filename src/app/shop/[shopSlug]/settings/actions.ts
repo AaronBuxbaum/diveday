@@ -16,21 +16,17 @@ import { queueAndAttemptMediaDeletion, retryMediaDeletion } from "@/db/media-del
 import { sendNotification } from "@/db/notifications";
 import { maxLineItemUnitAmountCents } from "@/db/orders";
 import { dischargeProcessorErasure, retryProcessorErasure } from "@/db/processor-erasure";
-import { createSeasonEvent, deleteSeasonEvent, updateSeasonEvent } from "@/db/season-events";
 import { issueShopContactEmailConfirmation } from "@/db/shop-contact-email";
 import {
   getShopById,
   markShopUnitsConfirmed,
   setShopAddress,
-  setShopConservationCommitments,
   setShopContact,
   setShopCurrency,
   setShopDepthUnit,
   setShopDivingOptions,
   setShopDockDayRhythm,
   setShopEmergencyReference,
-  setShopFlySafeHours,
-  setShopHospitalityNotes,
   setShopPackingList,
   setShopPassThroughFee,
   setShopProfile,
@@ -39,10 +35,8 @@ import {
   setShopReviewUrl,
   setShopSearchListing,
   setShopSeasonStart,
-  setShopSendWindow,
   setShopTaxEnabled,
   setShopTemperatureUnit,
-  setShopTideWindowPublic,
   setShopTimezone,
 } from "@/db/shops";
 import {
@@ -51,7 +45,7 @@ import {
   getShopStripeAccount,
   refreshShopStripeAccountStatus,
 } from "@/db/stripe-accounts";
-import { createTripLens, deleteTripLens, getTripLens, renameTripLens } from "@/db/trip-lenses";
+import { createTripLens, deleteTripLens, renameTripLens } from "@/db/trip-lenses";
 import { toDiverLocale } from "@/i18n/settings";
 import {
   type AddressLookupResult,
@@ -60,7 +54,6 @@ import {
   toFilterCountry,
 } from "@/lib/address-lookup";
 import { isBrandDisplayFontCode, parseBrandBadges, parseBrandColor } from "@/lib/brand";
-import { parseConservationCommitments } from "@/lib/conservation-commitments";
 import { confirmContactLinkPath } from "@/lib/contact-email-confirmation";
 import { validateDivePackage } from "@/lib/dive-packages";
 import {
@@ -70,7 +63,6 @@ import {
 } from "@/lib/divemaster-ratio";
 import { DOCK_DAY_FIELDS, parseDockDayRhythm } from "@/lib/diver-planning";
 import { MAX_EMERGENCY_LINES, normalizeEmergencyReference } from "@/lib/emergency-reference";
-import { FLY_SAFE_FIELDS, parseFlySafeHours } from "@/lib/fly-safe";
 import { isValidTimeZone } from "@/lib/format";
 import {
   isShopCurrency,
@@ -92,12 +84,6 @@ import {
   toRentableKinds,
 } from "@/lib/rentals";
 import { parseSeasonStart } from "@/lib/season";
-import {
-  SEASON_EVENT_NAME_MAX,
-  SEASON_EVENT_NOTE_MAX,
-  seasonEventIssues,
-} from "@/lib/season-events";
-import { parseSendWindow } from "@/lib/send-window";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { storeShopHeroImage, storeShopLogoImage } from "@/lib/storage";
@@ -121,8 +107,8 @@ import { uuidParam } from "@/lib/uuid";
  * The notice codes are matched by `noticeMessages()` in `SettingsPage.tsx` and
  * the section ids by its `SECTION_IDS` — a new action here needs a row in both.
  *
- * **Four editors answer on a page of their own**, not in a hub row: boats,
- * kinds of day, seasons and events, and dive packages. Their actions still live
+ * **Three editors answer on a page of their own**, not in a hub row: boats,
+ * trip tags, and dive packages. Their actions still live
  * here, beside the ones they share validation and vocabulary with, but they
  * name `page` rather than `settings` and carry no `?saved=` — there is no row
  * to reopen, and the page's own banner renders the code
@@ -231,22 +217,6 @@ export async function savePackingAction(formData: FormData) {
   }
   await setShopPackingList(await getDb(), session.user.shopId, packingList);
   revalidateAndRedirect(settings, noticeUrl(settings, "packing-saved", { saved: "packing" }));
-}
-
-/**
- * Saves the shop's self-reported conservation commitments.
- */
-export async function saveConservationCommitmentsAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-  const rawCommitments = formData.getAll("commitment");
-  const commitments = parseConservationCommitments(rawCommitments);
-  await setShopConservationCommitments(await getDb(), session.user.shopId, commitments);
-  revalidateAndRedirect(
-    settings,
-    noticeUrl(settings, "conservation-saved", { saved: "conservation" }),
-  );
 }
 
 /**
@@ -412,53 +382,6 @@ export async function saveEmergencyReferenceAction(formData: FormData) {
   });
   await setShopEmergencyReference(await getDb(), session.user.shopId, reference);
   revalidateAndRedirect(settings, noticeUrl(settings, "emergency-saved", { saved: "emergency" }));
-}
-
-/**
- * The hours the shop's automated messages may reach a diver.
- *
- * A fixed 14:00 UTC reminder batch is 10am in Florida and 03:00 in Fiji, and a
- * recap four hours after a night dive lands at 3 AM anywhere (issue #697). The
- * default is 08:00–20:00; a dawn-boat operation legitimately lowers the floor,
- * which is why this is a setting and not a constant.
- */
-export async function saveSendWindowAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-  const window = parseSendWindow({
-    startHour: formData.get("sendWindowStartHour"),
-    endHour: formData.get("sendWindowEndHour"),
-  });
-  if (!window) {
-    redirect(noticeUrl(settings, "send-window-invalid", { saved: "sendWindow" }));
-  }
-  await setShopSendWindow(await getDb(), session.user.shopId, window);
-  revalidateAndRedirect(
-    settings,
-    noticeUrl(settings, "send-window-saved", { saved: "sendWindow" }),
-  );
-}
-
-/**
- * How long after the last dive this shop tells a diver they may fly
- * (`src/lib/fly-safe.ts`, issue #1425). Refused whole, with a notice, on any
- * value outside DAN's floors and the three-day ceiling — never clamped, so a
- * forged form cannot quietly write a wait shorter than the guidance the
- * recap's own sentence then names.
- */
-export async function saveFlySafeHoursAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-  const hours = parseFlySafeHours(
-    Object.fromEntries(FLY_SAFE_FIELDS.map((field) => [field, formData.get(field)])),
-  );
-  if (!hours) {
-    redirect(noticeUrl(settings, "fly-safe-invalid", { saved: "flySafe" }));
-  }
-  await setShopFlySafeHours(await getDb(), session.user.shopId, hours);
-  revalidateAndRedirect(settings, noticeUrl(settings, "fly-safe-saved", { saved: "flySafe" }));
 }
 
 /**
@@ -856,38 +779,6 @@ export async function saveProfileAction(formData: FormData) {
   revalidatePath(`/s/${session.user.shopSlug}`);
   revalidatePath(settings);
   revalidateAndRedirect(settings, noticeUrl(settings, "profile-saved", { saved: "profile" }));
-}
-
-const hospitalitySchema = z.object({
-  welcomeNote: z.string().trim().max(280),
-  dockCallNote: z.string().trim().max(280),
-  signOffNote: z.string().trim().max(280),
-});
-
-/**
- * **The shop's own words** (issue #1212), saved as typed.
- *
- * Nothing is templated, interpolated or previewed with a diver's name in it:
- * these are the shop's sentences and they reach a reader verbatim, so the only
- * thing this refuses is a sentence too long to be one (ADR
- * 20260814-course-depth-markers — shop prose never routes through ICU).
- */
-export async function saveHospitalityAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-
-  const parsed = hospitalitySchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) {
-    redirect(noticeUrl(settings, "hospitality-too-long", { saved: "hospitality" }));
-  }
-
-  await setShopHospitalityNotes(await getDb(), session.user.shopId, parsed.data);
-  revalidatePath(`/s/${session.user.shopSlug}`);
-  revalidateAndRedirect(
-    settings,
-    noticeUrl(settings, "hospitality-saved", { saved: "hospitality" }),
-  );
 }
 
 /** Where the post-trip recap's "leave us a review" link sends a diver. */
@@ -1321,7 +1212,7 @@ export async function deleteBoatAction(formData: FormData) {
 }
 
 /**
- * **The shop's own words for its kinds of day** — ADR
+ * **The shop's trip tags** — ADR
  * 20260904-reef-all-the-way-down, decision 2 (issue #1162).
  *
  * The same three actions the fleet row above has, for the same reason: this is
@@ -1330,7 +1221,7 @@ export async function deleteBoatAction(formData: FormData) {
  */
 export async function createTripLensAction(formData: FormData) {
   const session = await requireStaffSession();
-  const page = shopPath(session.user.shopSlug, "settings", "kinds-of-day");
+  const page = shopPath(session.user.shopSlug, "settings", "trip-tags");
   await settingsBlock(session);
 
   const name = String(formData.get("name") ?? "")
@@ -1349,7 +1240,7 @@ export async function createTripLensAction(formData: FormData) {
 /** Corrects the word a shop wrote. The slug it was published under does not move. */
 export async function updateTripLensAction(formData: FormData) {
   const session = await requireStaffSession();
-  const page = shopPath(session.user.shopSlug, "settings", "kinds-of-day");
+  const page = shopPath(session.user.shopSlug, "settings", "trip-tags");
   await settingsBlock(session);
 
   const rawLensId = formData.get("lensId");
@@ -1370,7 +1261,7 @@ export async function updateTripLensAction(formData: FormData) {
 /** Stamps the word and leaves every departure that wore it saying so. */
 export async function deleteTripLensAction(formData: FormData) {
   const session = await requireStaffSession();
-  const page = shopPath(session.user.shopSlug, "settings", "kinds-of-day");
+  const page = shopPath(session.user.shopSlug, "settings", "trip-tags");
   await settingsBlock(session);
 
   const rawLensId = formData.get("lensId");
@@ -1383,108 +1274,4 @@ export async function deleteTripLensAction(formData: FormData) {
   await deleteTripLens(db, session.user.shopId, lensId);
 
   revalidateAndRedirect(page, noticeUrl(page, "lens-deleted"));
-}
-
-/**
- * **The reef's calendar** — the shop's own year (issue #1485).
- *
- * The same three actions the vocabulary above has, and for the same reasons:
- * shop-owned words, a soft delete, and notice codes riding the `?saved=`
- * section so the row that changed comes back open.
- *
- * Every refusal is one code. `seasonEventIssues` distinguishes six of them and
- * a form that reported each separately would be six sentences a shop reads once
- * — the one message names the two facts a season needs, which is what the
- * reader has to act on either way.
- */
-function seasonEventFields(formData: FormData) {
-  const name = String(formData.get("name") ?? "")
-    .trim()
-    .slice(0, SEASON_EVENT_NAME_MAX);
-  const rawNote = String(formData.get("note") ?? "")
-    .trim()
-    .slice(0, SEASON_EVENT_NOTE_MAX);
-  const rawLensId = formData.get("lensId");
-  return {
-    name,
-    note: rawNote || null,
-    startsOn: String(formData.get("startsOn") ?? "").trim(),
-    endsOn: String(formData.get("endsOn") ?? "").trim(),
-    lensId: typeof rawLensId === "string" && rawLensId ? uuidParam(rawLensId) : null,
-  };
-}
-
-export async function createSeasonEventAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const page = shopPath(session.user.shopSlug, "settings", "seasons");
-  await settingsBlock(session);
-
-  const fields = seasonEventFields(formData);
-  if (seasonEventIssues(fields).length > 0) {
-    redirect(noticeUrl(page, "season-event-invalid"));
-  }
-
-  const db = await getDb();
-  // The word has to be this shop's own before its id is stored, the same check
-  // every write on a departure runs before it takes a `lensId` off a form.
-  const lensId = fields.lensId
-    ? ((await getTripLens(db, session.user.shopId, fields.lensId))?.id ?? null)
-    : null;
-  await createSeasonEvent(db, session.user.shopId, { ...fields, lensId });
-
-  revalidateAndRedirect(page, noticeUrl(page, "season-event-created"));
-}
-
-export async function updateSeasonEventAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const page = shopPath(session.user.shopSlug, "settings", "seasons");
-  await settingsBlock(session);
-
-  const rawEventId = formData.get("eventId");
-  const eventId = typeof rawEventId === "string" ? uuidParam(rawEventId) : null;
-  const fields = seasonEventFields(formData);
-  if (!eventId || seasonEventIssues(fields).length > 0) {
-    redirect(noticeUrl(page, "season-event-invalid"));
-  }
-
-  const db = await getDb();
-  const lensId = fields.lensId
-    ? ((await getTripLens(db, session.user.shopId, fields.lensId))?.id ?? null)
-    : null;
-  await updateSeasonEvent(db, session.user.shopId, eventId, { ...fields, lensId });
-
-  revalidateAndRedirect(page, noticeUrl(page, "season-event-updated"));
-}
-
-/** Stamps the season and leaves the row (ADR 20260820-every-delete-is-soft). */
-export async function deleteSeasonEventAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const page = shopPath(session.user.shopSlug, "settings", "seasons");
-  await settingsBlock(session);
-
-  const rawEventId = formData.get("eventId");
-  const eventId = typeof rawEventId === "string" ? uuidParam(rawEventId) : null;
-  if (!eventId) {
-    redirect(noticeUrl(page, "season-event-invalid"));
-  }
-
-  const db = await getDb();
-  await deleteSeasonEvent(db, session.user.shopId, eventId);
-
-  revalidateAndRedirect(page, noticeUrl(page, "season-event-deleted"));
-}
-
-/**
- * Whether divers read a site's tide window on the public departure page (ADR
- * 20260907-noaa-tide-predictions). One checkbox, off by default: the sentence
- * names a clock time beside a Book button, and publishing it is the shop's call.
- */
-export async function saveTideWindowAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const settings = shopPath(session.user.shopSlug, "settings");
-  await settingsBlock(session);
-  const on = formData.get("tideWindowPublic") === "on";
-  await setShopTideWindowPublic(await getDb(), session.user.shopId, on);
-  const notice = on ? "tide-window-on" : "tide-window-off";
-  revalidateAndRedirect(settings, noticeUrl(settings, notice, { saved: "tideWindow" }));
 }

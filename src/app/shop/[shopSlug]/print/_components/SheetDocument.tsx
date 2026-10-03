@@ -21,9 +21,8 @@ import { AutoPrint } from "../../trips/[id]/_components/AutoPrint";
  * - **The shop's face.** `BrandStyle` with the display font only — the band's
  *   colour is resolved by the sheet itself and handed down as a value, because
  *   print redefines the colour tokens (`globals.css`'s paper-sheet block says
- *   why). A sheet that rides a boat passes no font either, so nothing about a
- *   hull's card depends on the storefront.
- * - **The way back and the way out**, both `print:hidden`: the register this
+ *   why).
+ * - **The way back and the way out**, both `print:hidden`: the counter this
  *   was opened from, and a second Print for a staffer who dismissed the dialog.
  *
  * `AutoPrint` opens the dialog on arrival, the same as the trip and day
@@ -40,7 +39,7 @@ export function SheetDocument({
 }: {
   shopSlug: string;
   paper: PrintSheetPaper;
-  /** The shop's display face, or null for a sheet that rides a boat. */
+  /** The shop's display face. */
   brandDisplayFont: BrandDisplayFontCode | null;
   backLabel: string;
   printLabel: string;
@@ -55,7 +54,7 @@ export function SheetDocument({
       <AutoPrint />
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 print:hidden">
         <Link
-          href={shopPath(shopSlug, "settings", "print")}
+          href={shopPath(shopSlug, "check-in")}
           className={buttonClass({ variant: "ghost", size: "sm" })}
         >
           {backLabel}

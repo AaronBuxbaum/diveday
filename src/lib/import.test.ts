@@ -181,11 +181,10 @@ describe("prepareContactImport — explicit bounds (CR-016)", () => {
 
 describe("prepareContactImport — rental sizes every fit form can re-submit (#1754)", () => {
   // The importer was the one door onto the four size columns with no cap at
-  // all, while all three writers of `rental_fit_profiles` re-post whatever is
+  // all, while both writers of `rental_fit_profiles` re-post whatever is
   // stored and cap it at `RENTAL_FIT_TEXT_LIMITS.size`. An over-long imported
-  // size therefore made that diver's fit unsaveable from the staff editor, the
-  // `/ready` gear form and the diver's own shelf alike, on forms where every
-  // visible box read right.
+  // size therefore made that diver's fit unsaveable from the staff editor and
+  // the `/ready` gear form alike, on forms where every visible box read right.
   const noteFiledAsASize = "Medium Large, long torso, prefers 5mm not 3mm";
 
   it("declines a size longer than a fit form can hold, and says so on the report", () => {

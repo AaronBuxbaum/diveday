@@ -40,9 +40,8 @@ export type SettingsGroupSpec = (typeof SETTINGS_GROUPS)[number];
  * (the same rule the trip About panel's rows state).
  *
  * **A row whose editor is a list, or more than about three fields, is not on
- * this list — it has a page.** Boats, kinds of day, seasons and events, and
- * dive packages each opened onto a run of forms with a Save and a Delete on
- * every line; "Seasons and events" alone held six of them inside one `⌄`. The
+ * this list — it has a page.** Boats, trip tags and dive packages each opened
+ * onto a run of forms with a Save and a Delete on every line. The
  * hub is a directory, and a directory row states an answer and opens the form
  * that changes it (ADR 20260827-clearwater-surface-language, decision 6). Those
  * are `route` rows below and `SettingsDoorRow`s on the hub (dive packages has
@@ -58,16 +57,11 @@ export const SECTION_IDS = [
   "season",
   "contact",
   "profile",
-  "hospitality",
   "address",
   "reviewLink",
   "searchListing",
-  "tideWindow",
-  "conservation",
   "packing",
   "dockCall",
-  "sendWindow",
-  "flySafe",
   "units",
   "divingOptions",
   "emergency",
@@ -92,8 +86,6 @@ const SECTION_FRAGMENTS: Partial<Record<SectionId, string>> = {
   searchListing: "search-listing",
   divingOptions: "diving-options",
   dockCall: "dock-call",
-  sendWindow: "send-window",
-  flySafe: "fly-safe",
   rentalPricing: "rental-pricing",
   passThrough: "pass-through",
 };
@@ -189,12 +181,6 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     target: { kind: "section", id: "address" },
   },
   {
-    id: "print",
-    labelKey: "print.settings.title",
-    group: "shop",
-    target: { kind: "route", path: "/settings/print" },
-  },
-  {
     id: "team",
     labelKey: "settings.main.team.heading",
     group: "team",
@@ -239,22 +225,10 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     target: { kind: "section", id: "dockCall" },
   },
   {
-    id: "tideWindow",
-    labelKey: "settings.main.tideWindow.heading",
-    group: "boats-sites",
-    target: { kind: "section", id: "tideWindow" },
-  },
-  {
-    id: "lenses",
+    id: "tripTags",
     labelKey: "lenses.heading",
     group: "boats-sites",
-    target: { kind: "route", path: "/settings/kinds-of-day" },
-  },
-  {
-    id: "seasonEvents",
-    labelKey: "seasonEvents.heading",
-    group: "boats-sites",
-    target: { kind: "route", path: "/settings/seasons" },
+    target: { kind: "route", path: "/settings/trip-tags" },
   },
   {
     id: "waivers",
@@ -268,12 +242,6 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     labelKey: "settings.main.packing.heading",
     group: "bookings-waivers",
     target: { kind: "section", id: "packing" },
-  },
-  {
-    id: "flySafe",
-    labelKey: "settings.main.flySafe.heading",
-    group: "bookings-waivers",
-    target: { kind: "section", id: "flySafe" },
   },
   {
     id: "rentals",
@@ -312,12 +280,6 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     badgeSource: "payments",
   },
   {
-    id: "sendWindow",
-    labelKey: "settings.main.sendWindow.heading",
-    group: "messages",
-    target: { kind: "section", id: "sendWindow" },
-  },
-  {
     id: "reviewLink",
     labelKey: "settings.main.reviewLink.heading",
     group: "messages",
@@ -343,28 +305,10 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     target: { kind: "section", id: "searchListing" },
   },
   {
-    id: "hospitality",
-    labelKey: "settings.main.hospitality.heading",
-    group: "website",
-    target: { kind: "section", id: "hospitality" },
-  },
-  {
-    id: "conservation",
-    labelKey: "settings.main.conservation.heading",
-    group: "website",
-    target: { kind: "section", id: "conservation" },
-  },
-  {
     id: "embed",
     labelKey: "settings.main.embed.heading",
     group: "website",
     target: { kind: "route", path: "/settings/embed" },
-  },
-  {
-    id: "display",
-    labelKey: "settings.main.display.heading",
-    group: "website",
-    target: { kind: "route", path: "/settings/display" },
   },
   {
     id: "integrations",

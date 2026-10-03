@@ -12,140 +12,12 @@ test.describe.configure({ timeout: 60_000 });
 /**
  * **The shop on paper** — ADR 20260908-one-hand, decision 6, lever X.
  *
- * Settings gains a Print register, and every row in it opens a sheet drawn from
- * the same rows the app already reads. What is worth driving in a browser is
- * the part no unit test can reach: that a door records the print run and the
- * register comes back saying so, that a sheet carries the day it was printed,
- * and that the boat card reaches the shop's own numbers.
- *
- * **A private shop, not blue-mantis.** Printing writes a `shop_print_runs`
- * row, that table is shop *configuration* rather than schedule, and the
- * per-test reset restores the schedule alone (`RESET_KEEPS`). Doing this to the
- * shared fixture would hand a dated register to whichever spec ran next in this
- * worker (ADR 20260815-per-test-private-shops).
+ * The paper pass, printed at the counter for a diver without a phone. What is
+ * worth driving in a browser is the part no unit test can reach: that the
+ * counter's door reaches the sheet, and that the sheet carries the diver's
+ * name and nothing about their readiness.
  */
 test.describe("the shop on paper", () => {
-  test("the register prints the dock sign, and remembers that it did", async ({
-    page,
-    privateShop,
-  }) => {
-    // Settings' own door, rather than a typed URL: the row has to be findable
-    // from the hub, which is the half a route test cannot see.
-    await page.goto(`/shop/${privateShop.slug}/settings`);
-    // The hub's own door, not the rail's — both name the same page, and the
-    // rail is a desktop convenience rendered beside it.
-    await page.getByRole("main").getByRole("link", { name: "Print", exact: true }).click();
-    await expect(page).toHaveURL(new RegExp(`/shop/${privateShop.slug}/settings/print$`));
-    await expect(page.getByRole("heading", { level: 1, name: "Print" })).toBeVisible();
-
-    // Nothing has been printed yet, and the register says so rather than
-    // showing a date it does not have.
-    await expect(page.getByText("Never printed").first()).toBeVisible();
-
-    // The door is a form: it records the run and hands over the sheet.
-    await page
-      .locator('form:has(input[value="dock_sign"])')
-      .getByRole("button", { name: "Print" })
-      .click();
-    await page.waitForURL(new RegExp(`/shop/${privateShop.slug}/print/dock-sign$`));
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Our boats leave from here." }),
-    ).toBeVisible();
-    // The seeded fleet, on the sign.
-    await expect(page.getByText("Mantis II")).toBeVisible();
-    // The fold line carries the day the sheet was printed. The fleet's clock is
-    // frozen, so this is the same date the register will show.
-    const printedOn = page.getByText(/^Printed /).first();
-    await expect(printedOn).toBeVisible();
-    const printedText = (await printedOn.innerText()).replace(/^Printed /, "").replace(/\.$/, "");
-
-    // Back to the register: the row is dated now. The row states the date
-    // inside its own sentence, so the match is not anchored the way the fold
-    // line's own text node is.
-    await page.goto(`/shop/${privateShop.slug}/settings/print`);
-    await expect(page.getByText(/Printed /).first()).toBeVisible();
-    expect(printedText.length).toBeGreaterThan(0);
-  });
-
-  test("the boat card prints both sides, the shop's numbers and the rule about the app", async ({
-    page,
-    privateShop,
-  }) => {
-    await page.goto(`/shop/${privateShop.slug}/settings/print`);
-
-    // One row per hull. The seeded fleet is two boats, so the register lists
-    // two cards and each door carries its own subject.
-    const boatDoors = page.locator('form:has(input[value="boat_card"])');
-    await expect(boatDoors).toHaveCount(2);
-    await boatDoors.first().getByRole("button", { name: "Print" }).click();
-    await page.waitForURL(new RegExp(`/shop/${privateShop.slug}/print/boat-card/`));
-
-    // Two sides of one card, so every heading appears twice.
-    await expect(page.getByRole("heading", { name: "Before the boat moves" })).toHaveCount(2);
-    await expect(page.getByRole("heading", { name: "If someone is missing" })).toHaveCount(2);
-    // The roll the glossary insists on: by name, crew included, before
-    // departure *and* after every dive.
-    await expect(page.getByText(/Call the roll by name/).first()).toBeVisible();
-    await expect(page.getByText(/after every dive/).first()).toBeVisible();
-    // A missing diver is worked in the order search and rescue needs: the time
-    // and the position first, and nobody leaves the site.
-    await expect(page.getByText(/Note the time and mark the position/).first()).toBeVisible();
-    await expect(page.getByText(/Do not leave the site/).first()).toBeVisible();
-    // The one rule the card exists to state.
-    await expect(page.getByText(/the app is the record/i).first()).toBeVisible();
-    // The numbers block names every slot whether or not the shop has filled it
-    // in — the vessel first, which is what a rescue coordinator asks the crew
-    // reading this card for.
-    await expect(page.getByText("Vessel").first()).toBeVisible();
-    await expect(page.getByText("Shop").first()).toBeVisible();
-    // Both kits get a rule of their own to fill in by hand.
-    await expect(page.getByText("Oxygen and first aid").first()).toBeVisible();
-    await expect(page.getByText("First aid kit, where").first()).toBeVisible();
-
-    // **A minted shop has recorded none of it, and the card says nothing it
-    // does not know.** Every slot is a ruled blank rather than a plausible
-    // number, and the plan block is absent rather than a heading over nothing —
-    // which on a boat would read as a plan somebody forgot to follow. The
-    // seeded shop's filled-in card is asserted where it is photographed
-    // (`e2e/visual.spec.ts`).
-    await expect(page.locator(".paper-sheet-blank").first()).toBeVisible();
-    await expect(page.getByText("If something goes wrong")).toHaveCount(0);
-
-    // **Every blank is a line a skipper can write on**: from its label to its
-    // column's edge, lying on the baseline the label's words stand on. It was
-    // 8ch of rule ending wherever the label ended (three blanks, three right
-    // edges), then a one-line block whose rule fell 3.4px under the words.
-    // Measured on paper, because the stylesheet test beside `PaperSheet` can
-    // say what the rule asks for and not where it lands.
-    await page.emulateMedia({ media: "print" });
-    const blanks = await page.locator(".paper-sheet-blank").evaluateAll((elements) =>
-      elements.map((blank) => {
-        const definition = blank.closest("dd");
-        const label = definition?.previousElementSibling;
-        // An empty inline block sits on its line's baseline, so its bottom
-        // edge is where the label's first line of words stands.
-        const probe = document.createElement("span");
-        probe.style.display = "inline-block";
-        label?.prepend(probe);
-        const baseline = probe.getBoundingClientRect().bottom;
-        probe.remove();
-        const rule = blank.getBoundingClientRect();
-        return {
-          label: label?.textContent?.trim() || "(no label)",
-          shortOfEdge: (definition?.getBoundingClientRect().right ?? Number.NaN) - rule.right,
-          belowBaseline: rule.bottom - baseline,
-        };
-      }),
-    );
-    expect(blanks.length).toBeGreaterThan(0);
-    expect(
-      blanks.filter(
-        (blank) => !(Math.abs(blank.shortOfEdge) <= 0.5 && Math.abs(blank.belowBaseline) <= 0.5),
-      ),
-    ).toEqual([]);
-    await page.emulateMedia({ media: "screen" });
-  });
-
   test("the counter prints a pass for the diver it just checked in", async ({
     page,
     privateShop,
@@ -167,7 +39,7 @@ test.describe("the shop on paper", () => {
     await expect(settled).toBeVisible();
     await settled.locator("> summary").click();
 
-    await page.getByRole("button", { name: "Print a pass" }).first().click();
+    await page.getByRole("link", { name: "Print a pass" }).first().click();
     await page.waitForURL(new RegExp(`/shop/${privateShop.slug}/print/pass/`));
     // Scoped to the sheet, not the page: the staff chrome around it carries a
     // nav badge, and what this asserts is what comes out of the printer.

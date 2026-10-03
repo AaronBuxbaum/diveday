@@ -32,7 +32,6 @@ import {
   bookingArrivalEvents,
   bookingCheckoutBookings,
   bookingCheckouts,
-  bookingGifts,
   bookingPaymentEvents,
   bookingPayments,
   bookingReferrals,
@@ -73,7 +72,6 @@ import {
   reviewModerationEvents,
   rollCallCrewEvents,
   rollCallEvents,
-  seasonEvents,
   shopPromoCodes,
   shopPromoRedemptions,
   shops,
@@ -507,15 +505,8 @@ export async function loadShopExportBundleInput(
         .where(eq(bookingPayments.shopId, shopId));
       const paymentByBooking = new Map(paymentRows.map((row) => [row.bookingId, row]));
 
-      // The gift on a seat and the diver's link that brought one, both folded
-      // into bookings.csv beside `party_lead_booking_id` (ADR 20260908-one-hand,
-      // decision 6, lever W).
-      const giftByBooking = new Map(
-        (await tx.select().from(bookingGifts).where(eq(bookingGifts.shopId, shopId))).map((row) => [
-          row.bookingId,
-          row,
-        ]),
-      );
+      // The diver's link that brought a seat, folded into bookings.csv beside
+      // `party_lead_booking_id` (ADR 20260908-one-hand, decision 6, lever W).
       const buddyReferralByBooking = new Map(
         (await tx.select().from(bookingReferrals).where(eq(bookingReferrals.shopId, shopId))).map(
           (row) => [row.bookingId, row.referredByBookingId],
@@ -772,7 +763,7 @@ export async function loadShopExportBundleInput(
 
       const boatName = new Map(boatRows.map((row) => [row.id, row.name]));
 
-      // The shop's own words for its kinds of day. Plainly a shop record — the
+      // The shop's trip tags. Plainly a shop record — the
       // shop wrote them and its public schedule shows them — so they leave with
       // the shop (ADR 20260904-reef-all-the-way-down, decision 2). Deleted
       // words ride along with their stamp, the same as every other soft-deleted
@@ -782,15 +773,6 @@ export async function loadShopExportBundleInput(
         .from(tripLenses)
         .where(eq(tripLenses.shopId, shopId))
         .orderBy(asc(tripLenses.createdAt), asc(tripLenses.id));
-
-      // The shop's own year — mini-season, the derby, the weeks it plans around
-      // (issue #1485). A shop record on exactly the same argument as the words
-      // above it: the shop wrote them and its own storefront shows them.
-      const seasonEventRows = await tx
-        .select()
-        .from(seasonEvents)
-        .where(eq(seasonEvents.shopId, shopId))
-        .orderBy(asc(seasonEvents.startsOn), asc(seasonEvents.id));
 
       // Per-person rollups for contacts.csv. Archived cards never represent a
       // diver in a migration file; archived people still export, marked.
@@ -879,7 +861,6 @@ export async function loadShopExportBundleInput(
             "currency",
             "tax_enabled",
             "pass_through_fee",
-            "conservation_commitments",
             "medical_jurisdiction",
             "depth_unit",
             "temperature_unit",
@@ -916,23 +897,11 @@ export async function loadShopExportBundleInput(
             // the backup: a shop restoring from one must come back with the
             // chamber's number on its manifests, not an empty card.
             "emergency_reference",
-            // The hours its automated messages may reach a diver
-            // (`src/lib/send-window.ts`). Exported because restoring from a
-            // backup must not silently put a shop back on the default and start
-            // texting at hours it had deliberately ruled out.
-            "send_window_start_hour",
-            "send_window_end_hour",
-            // The shop's own fly-safe hours (`src/lib/fly-safe.ts`). A restore
-            // that put a stricter shop back on the defaults would shorten a
-            // wait it had deliberately lengthened.
-            "fly_safe_hours_single",
-            "fly_safe_hours_repetitive",
             // Where the shop's season starts (ADR
-            // 20260904-reef-all-the-way-down, Budget rule 3). Exported for the
-            // same reason as the window above: it is a date the shop chose,
-            // and a restore that silently put it back on 1 January would make
-            // the home's one fact of scale count from a year the shop never
-            // named.
+            // 20260904-reef-all-the-way-down, Budget rule 3). Exported because
+            // it is a date the shop chose, and a restore that silently put it
+            // back on 1 January would make the home's one fact of scale count
+            // from a year the shop never named.
             "season_start_month",
             "season_start_day",
             // Whether the shop asked to stay out of search engines
@@ -940,11 +909,6 @@ export async function loadShopExportBundleInput(
             // bundle is also the *backup*: a shop that opted out and later
             // restored from one must not come back published.
             "search_listing_opt_out_at",
-            "tide_window_public",
-            "public_boat_line",
-            // The shop's yes for its year card on DiveDay's pages, which is the
-            // shop's setting and so the shop's to take with it.
-            "show_year_on_diveday",
             "tagline",
             "description",
             "logo_url",
@@ -954,12 +918,6 @@ export async function loadShopExportBundleInput(
             "brand_hero_image_alt",
             "established_year",
             "brand_badges",
-            // The shop's own three sentences (issue #1212). Written by hand,
-            // in one language, and read verbatim by divers — so they are the
-            // shop's to take away rather than something DiveDay regenerates.
-            "welcome_note",
-            "dock_call_note",
-            "sign_off_note",
             "created_at",
           ],
           rows: [
@@ -971,7 +929,6 @@ export async function loadShopExportBundleInput(
               shop.currency,
               shop.taxEnabled,
               JSON.stringify(shop.passThroughFee),
-              JSON.stringify(shop.conservationCommitments),
               shop.jurisdiction,
               shop.depthUnit,
               shop.temperatureUnit,
@@ -997,16 +954,9 @@ export async function loadShopExportBundleInput(
               JSON.stringify(shop.rentalItems),
               JSON.stringify(shop.rentalPricing),
               JSON.stringify(shop.emergencyReference),
-              shop.sendWindowStartHour,
-              shop.sendWindowEndHour,
-              shop.flySafeHoursSingle,
-              shop.flySafeHoursRepetitive,
               shop.seasonStartMonth,
               shop.seasonStartDay,
               shop.searchListingOptOutAt,
-              shop.tideWindowPublic,
-              shop.publicBoatLine,
-              shop.showYearOnDiveday,
               shop.tagline,
               shop.description,
               shop.logoUrl,
@@ -1016,9 +966,6 @@ export async function loadShopExportBundleInput(
               shop.brandHeroImageAlt,
               shop.establishedYear,
               JSON.stringify(shop.brandBadges),
-              shop.welcomeNote,
-              shop.dockCallNote,
-              shop.signOffNote,
               shop.createdAt,
             ],
           ],
@@ -1051,20 +998,6 @@ export async function loadShopExportBundleInput(
             row.deletedAt,
           ]),
           note: EXPORT_FILE_NOTES["trip_lenses.csv"],
-        },
-        {
-          file: "season_events.csv",
-          header: ["id", "name", "note", "starts_on", "ends_on", "lens_id", "deleted_at"],
-          rows: seasonEventRows.map((row) => [
-            row.id,
-            row.name,
-            row.note,
-            row.startsOn,
-            row.endsOn,
-            row.lensId,
-            row.deletedAt,
-          ]),
-          note: EXPORT_FILE_NOTES["season_events.csv"],
         },
         {
           file: "contacts.csv",
@@ -1873,18 +1806,11 @@ export async function loadShopExportBundleInput(
             // CSV cell either — `csvCell`'s formula guard covers the one
             // reachable shape, a leading `-`.
             "referral_source",
-            // **A seat one person bought for another** (ADR 20260908-one-hand,
-            // decision 6, lever W), and **which diver's link brought this one**
-            // (the buddy seat). Both are plain facts about the seat, in exactly
-            // the class `party_lead_booking_id` and `referral_source` above are
-            // in, so both travel with it rather than in files of their own: a
-            // shop that exported its bookings and got them back would otherwise
-            // have lost who paid for a third of Saturday's boat, which is the
-            // one thing a refund conversation needs.
-            "gift_giver_name",
-            "gift_giver_email",
-            "gift_receiver_name",
-            "gift_message",
+            // **Which diver's link brought this one** (the buddy seat, ADR
+            // 20260908-one-hand, decision 6, lever W). A plain fact about the
+            // seat, in exactly the class `party_lead_booking_id` and
+            // `referral_source` above are in, so it travels with it rather
+            // than in a file of its own.
             "referred_by_booking_id",
             // The diver's own consent to have the crew told this is a first
             // trip, or a return after a long gap (issue #1182). A statement
@@ -1915,7 +1841,6 @@ export async function loadShopExportBundleInput(
           ],
           rows: bookingRows.map((row) => {
             const payment = paymentByBooking.get(row.id);
-            const gift = giftByBooking.get(row.id);
             return [
               row.id,
               row.tripId,
@@ -1932,10 +1857,6 @@ export async function loadShopExportBundleInput(
               row.partyLeadBookingId,
               row.claimedAt,
               row.referralSource,
-              gift?.giverName,
-              gift?.giverEmail,
-              gift?.receiverName,
-              gift?.message,
               buddyReferralByBooking.get(row.id),
               row.welcomeSharedAt,
               row.carriedFactsConfirmedAt,
@@ -5010,9 +4931,6 @@ export async function loadShopExportCounts(
     ),
     "trip_lenses.csv": await countOf(
       db.select({ n: count() }).from(tripLenses).where(eq(tripLenses.shopId, shopId)),
-    ),
-    "season_events.csv": await countOf(
-      db.select({ n: count() }).from(seasonEvents).where(eq(seasonEvents.shopId, shopId)),
     ),
     // One flat import-ready row per person, so the count mirrors people.csv.
     "contacts.csv": peopleCount,

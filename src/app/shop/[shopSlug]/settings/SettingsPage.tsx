@@ -62,7 +62,6 @@ import {
 } from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
 import { configuredValue } from "@/lib/configured";
-import { CONSERVATION_COMMITMENT_CODES } from "@/lib/conservation-commitments";
 import { MAX_DIVERS_PER_DIVEMASTER, MIN_DIVERS_PER_DIVEMASTER } from "@/lib/divemaster-ratio";
 import {
   DOCK_DAY_FIELDS,
@@ -71,14 +70,7 @@ import {
   dockDayOffsets,
 } from "@/lib/diver-planning";
 import { EMERGENCY_LINE_SLOTS, hasEmergencyReference } from "@/lib/emergency-reference";
-import { FLY_SAFE_FIELDS, FLY_SAFE_LIMITS } from "@/lib/fly-safe";
-import {
-  formatHourOfDay,
-  formatMoneyScanned,
-  formatMonthDay,
-  formatShortDate,
-  monthNames,
-} from "@/lib/format";
+import { formatMoneyScanned, formatMonthDay, formatShortDate, monthNames } from "@/lib/format";
 import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
@@ -107,13 +99,10 @@ import {
   resendContactConfirmationAction,
   retryMediaDeletionAction,
   retryProcessorErasureAction,
-  saveConservationCommitmentsAction,
   saveContactAction,
   saveDivingOptionsAction,
   saveDockDayRhythmAction,
   saveEmergencyReferenceAction,
-  saveFlySafeHoursAction,
-  saveHospitalityAction,
   savePackingAction,
   savePassThroughFeeAction,
   saveProfileAction,
@@ -122,9 +111,7 @@ import {
   saveReviewUrlAction,
   saveSearchListingAction,
   saveSeasonStartAction,
-  saveSendWindowAction,
   saveTaxAction,
-  saveTideWindowAction,
   saveTimezoneAction,
   saveUnitsAction,
 } from "./actions";
@@ -151,10 +138,6 @@ function noticeMessages(
     "dock-saved": { tone: "success", text: t("settings.main.notice.dockSaved") },
     "emergency-saved": { tone: "success", text: t("settings.main.notice.emergencySaved") },
     "dock-invalid": { tone: "danger", text: t("settings.main.notice.dockInvalid") },
-    "send-window-saved": { tone: "success", text: t("settings.main.notice.sendWindowSaved") },
-    "send-window-invalid": { tone: "danger", text: t("settings.main.notice.sendWindowInvalid") },
-    "fly-safe-saved": { tone: "success", text: t("settings.main.notice.flySafeSaved") },
-    "fly-safe-invalid": { tone: "danger", text: t("settings.main.notice.flySafeInvalid") },
     "package-saved": { tone: "success", text: t("settings.main.notice.packageSaved") },
     "package-deleted": { tone: "success", text: t("settings.main.notice.packageDeleted") },
     "package-invalid": { tone: "danger", text: t("settings.main.notice.packageInvalid") },
@@ -178,11 +161,6 @@ function noticeMessages(
     "contact-invalid": { tone: "danger", text: t("settings.main.notice.contactInvalid") },
     "profile-saved": { tone: "success", text: t("settings.main.notice.profileSaved") },
     "profile-invalid": { tone: "danger", text: t("settings.main.notice.profileInvalid") },
-    "hospitality-saved": { tone: "success", text: t("settings.main.hospitality.notice.saved") },
-    "hospitality-too-long": {
-      tone: "danger",
-      text: t("settings.main.hospitality.notice.tooLong"),
-    },
     "address-saved": { tone: "success", text: t("settings.main.notice.addressSaved") },
     "address-removed": { tone: "success", text: t("settings.main.notice.addressRemoved") },
     "address-invalid": { tone: "danger", text: t("settings.main.notice.addressInvalid") },
@@ -190,10 +168,6 @@ function noticeMessages(
     "review-url-invalid": { tone: "danger", text: t("settings.main.notice.reviewUrlInvalid") },
     "search-listing-on": { tone: "success", text: t("settings.main.notice.searchListingOn") },
     "search-listing-off": { tone: "success", text: t("settings.main.notice.searchListingOff") },
-    "tide-window-on": { tone: "success", text: t("settings.main.notice.tideWindowOn") },
-    "tide-window-off": { tone: "success", text: t("settings.main.notice.tideWindowOff") },
-    "conservation-saved": { tone: "success", text: t("settings.main.notice.conservationSaved") },
-    "conservation-invalid": { tone: "danger", text: t("settings.main.notice.conservationInvalid") },
     connected: { tone: "success", text: t("settings.main.notice.connected") },
     "connect-failed": { tone: "danger", text: t("settings.main.notice.connectFailed") },
     "not-configured": { tone: "warning", text: t("settings.main.notice.notConfigured") },
@@ -234,10 +208,6 @@ function noticeMessages(
     "lens-updated": { tone: "success", text: t("lenses.updated") },
     "lens-deleted": { tone: "success", text: t("lenses.deleted") },
     "lens-invalid": { tone: "danger", text: t("lenses.invalid") },
-    "season-event-created": { tone: "success", text: t("seasonEvents.created") },
-    "season-event-updated": { tone: "success", text: t("seasonEvents.updated") },
-    "season-event-deleted": { tone: "success", text: t("seasonEvents.deleted") },
-    "season-event-invalid": { tone: "danger", text: t("seasonEvents.invalid") },
   };
 }
 
@@ -592,12 +562,6 @@ export default async function SettingsPage({
       : ready
         ? null
         : t("settings.main.stripe.notReadyBadge");
-  // How many of the three the shop has written. The words themselves are too
-  // long to sit on a closed row, and which one is missing is a question the
-  // open row answers better than a summary line could.
-  const hospitalityWritten = [shop.welcomeNote, shop.dockCallNote, shop.signOffNote].filter(
-    (note) => (note ?? "").trim().length > 0,
-  ).length;
   const zoneId = shop.timezone || DEFAULT_TIMEZONE;
   const timezoneValue =
     zoneId in CURATED_TIMEZONE_KEYS ? t(CURATED_TIMEZONE_KEYS[zoneId as CuratedTimeZone]) : zoneId;
@@ -645,23 +609,11 @@ export default async function SettingsPage({
       return shop.reviewUrl;
     }
   })();
-  const conservationValue =
-    shop.conservationCommitments.length > 0
-      ? t("settings.main.conservation.value", { count: shop.conservationCommitments.length })
-      : notSet;
   const packingValue =
     shop.packingList.length > 0
       ? t("settings.main.packing.value", { count: shop.packingList.length })
       : notSet;
   const dockCallValue = t("settings.main.dockCall.value", { count: shop.dockCallMinutes });
-  const sendWindowValue = t("settings.main.sendWindow.value", {
-    start: formatHourOfDay(shop.sendWindowStartHour, locale),
-    end: formatHourOfDay(shop.sendWindowEndHour, locale),
-  });
-  const flySafeValue = t("settings.main.flySafe.value", {
-    single: shop.flySafeHoursSingle,
-    repetitive: shop.flySafeHoursRepetitive,
-  });
   const unitsValue = (
     <FactLine
       facts={[
@@ -1064,13 +1016,6 @@ export default async function SettingsPage({
                 }}
               />
             </SettingsRow>
-
-            {/* The shop's own paper (ADR 20260908-one-hand, decision 6, lever
-                X). */}
-            <SettingsDoorRow
-              href={`/shop/${shopSlug}/settings/print`}
-              heading={t("print.settings.title")}
-            />
           </InsetGroup>
         </SettingsGroup>
 
@@ -1395,58 +1340,14 @@ export default async function SettingsPage({
               ) : null}
             </SettingsRow>
 
-            {/* Whether the tide window a stationed site carries reaches
-                divers. Off by default
-                (ADR 20260907-noaa-tide-predictions). */}
-            <SettingsRow
-              heading={t("settings.main.tideWindow.heading")}
-              value={
-                shop.tideWindowPublic
-                  ? t("settings.main.tideWindow.valueOn")
-                  : t("settings.main.tideWindow.valueOff")
-              }
-              detail={t("settings.main.tideWindow.detail")}
-              sectionId="tideWindow"
-              activeSection={activeSection}
-            >
-              <SectionNotice banner={banner} section="tideWindow" active={activeSection} />
-              <FieldGrid as="form" action={saveTideWindowAction} columns={1} className="mt-4">
-                <ChoiceRow
-                  name="tideWindowPublic"
-                  type="checkbox"
-                  defaultChecked={shop.tideWindowPublic}
-                  className="text-sm"
-                >
-                  {t("settings.main.tideWindow.label")}
-                </ChoiceRow>
-                <FieldActions>
-                  <SubmitButton
-                    pendingLabel={t("settings.main.tideWindow.submitting")}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {t("settings.main.tideWindow.submit")}
-                  </SubmitButton>
-                </FieldActions>
-              </FieldGrid>
-            </SettingsRow>
-
-            {/* **Kinds of day** — ADR 20260904-reef-all-the-way-down, decision 2
-              (issue #1162). The shop's own words for its departures, which a
+            {/* **Trip tags** — ADR 20260904-reef-all-the-way-down, decision 2
+              (issue #1162). The shop's own tags for its departures, which a
               diver then filters the public schedule by. Unconditional: a
-              shore-diving shop with no hull still names its kinds of day, so
+              shore-diving shop with no hull still tags its departures, so
               this row carries no `hasBoatDiving` gate. */}
             <SettingsDoorRow
-              href={`/shop/${shopSlug}/settings/kinds-of-day`}
+              href={`/shop/${shopSlug}/settings/trip-tags`}
               heading={t("lenses.heading")}
-            />
-
-            {/* **The reef's calendar** (issue #1485). The shop types
-              mini-season, its two days and what it wants divers to know, and
-              the storefront shows exactly that while the week is on. Ungated
-              like kinds of day — a shore-diving shop still has a mini-season. */}
-            <SettingsDoorRow
-              href={`/shop/${shopSlug}/settings/seasons`}
-              heading={t("seasonEvents.heading")}
             />
           </InsetGroup>
         </SettingsGroup>
@@ -1496,54 +1397,6 @@ export default async function SettingsPage({
                     className={buttonClass({ variant: "secondary" })}
                   >
                     {t("settings.main.packing.submit")}
-                  </SubmitButton>
-                </FieldActions>
-              </FieldGrid>
-            </SettingsRow>
-
-            {/* Two whole numbers of hours, one save (issue #1425). The floors
-              are DAN's published minimums, read from the same table the
-              action and the column's CHECK read, so the form can never offer
-              a wait the recap's own sentence would then misattribute. */}
-            <SettingsRow
-              heading={t("settings.main.flySafe.heading")}
-              value={flySafeValue}
-              description={t("settings.main.flySafe.description")}
-              sectionId="flySafe"
-              activeSection={activeSection}
-            >
-              <SectionNotice banner={banner} section="flySafe" active={activeSection} />
-              <FieldGrid as="form" action={saveFlySafeHoursAction} columns={2} className="mt-4">
-                {FLY_SAFE_FIELDS.map((field) => (
-                  <Field
-                    key={field}
-                    label={t(
-                      field === "single"
-                        ? "settings.main.flySafe.singleLabel"
-                        : "settings.main.flySafe.repetitiveLabel",
-                    )}
-                  >
-                    <input
-                      name={field}
-                      type="number"
-                      inputMode="numeric"
-                      required
-                      min={FLY_SAFE_LIMITS[field].min}
-                      max={FLY_SAFE_LIMITS[field].max}
-                      step={1}
-                      defaultValue={
-                        field === "single" ? shop.flySafeHoursSingle : shop.flySafeHoursRepetitive
-                      }
-                      className={`${controlClass} tabular-nums`}
-                    />
-                  </Field>
-                ))}
-                <FieldActions>
-                  <SubmitButton
-                    pendingLabel={t("settings.main.flySafe.submitting")}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {t("settings.main.flySafe.submit")}
                   </SubmitButton>
                 </FieldActions>
               </FieldGrid>
@@ -1846,51 +1699,6 @@ export default async function SettingsPage({
 
         <SettingsGroup group={MESSAGES_GROUP} label={t(MESSAGES_GROUP.labelKey)}>
           <InsetGroup>
-            {/* **When the shop's own messages may reach a diver.** */}
-            <SettingsRow
-              heading={t("settings.main.sendWindow.heading")}
-              value={sendWindowValue}
-              description={t("settings.main.sendWindow.description")}
-              sectionId="sendWindow"
-              activeSection={activeSection}
-            >
-              <SectionNotice banner={banner} section="sendWindow" active={activeSection} />
-              <FieldGrid as="form" action={saveSendWindowAction} columns={2} className="mt-4">
-                <Field label={t("settings.main.sendWindow.startLabel")}>
-                  <input
-                    name="sendWindowStartHour"
-                    type="number"
-                    inputMode="numeric"
-                    required
-                    min={0}
-                    max={23}
-                    defaultValue={shop.sendWindowStartHour}
-                    className={`${controlClass} tabular-nums`}
-                  />
-                </Field>
-                <Field label={t("settings.main.sendWindow.endLabel")}>
-                  <input
-                    name="sendWindowEndHour"
-                    type="number"
-                    inputMode="numeric"
-                    required
-                    min={1}
-                    max={24}
-                    defaultValue={shop.sendWindowEndHour}
-                    className={`${controlClass} tabular-nums`}
-                  />
-                </Field>
-                <FieldActions>
-                  <SubmitButton
-                    pendingLabel={t("settings.main.sendWindow.submitting")}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {t("settings.main.sendWindow.submit")}
-                  </SubmitButton>
-                </FieldActions>
-              </FieldGrid>
-            </SettingsRow>
-
             {/* One of the few rows another surface links straight to: the Reviews
               page's empty state names this box, so it opens itself on the
               `#review-link` fragment rather than dropping a shop at a closed
@@ -2150,110 +1958,9 @@ export default async function SettingsPage({
               </FieldGrid>
             </SettingsRow>
 
-            {/* **The shop's own three sentences** (issue #1212). Free text,
-              rendered verbatim on the thread, the arrival card and the recap —
-              which is why the one line here names the consequence a shop
-              cannot see from this page: what they type is what a diver reads,
-              in the language they typed it (ADR
-              20260813-dive-site-briefings-are-the-shops-own-words). */}
-            <SettingsRow
-              heading={t("settings.main.hospitality.heading")}
-              value={
-                hospitalityWritten > 0
-                  ? t("settings.main.hospitality.value", { count: hospitalityWritten })
-                  : notSet
-              }
-              description={t("settings.main.hospitality.hint")}
-              sectionId="hospitality"
-              activeSection={activeSection}
-            >
-              <SectionNotice banner={banner} section="hospitality" active={activeSection} />
-              <FieldGrid as="form" action={saveHospitalityAction} columns={1} className="mt-4">
-                <Field label={t("settings.main.hospitality.welcomeLabel")}>
-                  <textarea
-                    name="welcomeNote"
-                    rows={2}
-                    maxLength={280}
-                    defaultValue={shop.welcomeNote ?? ""}
-                    className={textareaClassFor(2)}
-                  />
-                </Field>
-                <Field label={t("settings.main.hospitality.dockCallLabel")}>
-                  <textarea
-                    name="dockCallNote"
-                    rows={2}
-                    maxLength={280}
-                    defaultValue={shop.dockCallNote ?? ""}
-                    className={textareaClassFor(2)}
-                  />
-                </Field>
-                <Field label={t("settings.main.hospitality.signOffLabel")}>
-                  <textarea
-                    name="signOffNote"
-                    rows={2}
-                    maxLength={280}
-                    defaultValue={shop.signOffNote ?? ""}
-                    className={textareaClassFor(2)}
-                  />
-                </Field>
-                <FieldActions>
-                  <SubmitButton
-                    pendingLabel={t("settings.main.hospitality.saving")}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {t("settings.main.hospitality.save")}
-                  </SubmitButton>
-                </FieldActions>
-              </FieldGrid>
-            </SettingsRow>
-
-            <SettingsRow
-              heading={t("settings.main.conservation.heading")}
-              value={conservationValue}
-              detail={t("settings.main.conservation.detail")}
-              sectionId="conservation"
-              activeSection={activeSection}
-            >
-              <SectionNotice banner={banner} section="conservation" active={activeSection} />
-              <FieldGrid
-                as="form"
-                action={saveConservationCommitmentsAction}
-                columns={1}
-                className="mt-4"
-              >
-                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                  {CONSERVATION_COMMITMENT_CODES.map((code) => (
-                    <ChoiceRow
-                      key={code}
-                      name="commitment"
-                      type="checkbox"
-                      value={code}
-                      defaultChecked={shop.conservationCommitments.includes(code)}
-                      className="text-sm"
-                    >
-                      {t(`settings.main.conservation.commitments.${code}`)}
-                    </ChoiceRow>
-                  ))}
-                </div>
-                <FieldActions>
-                  <SubmitButton
-                    pendingLabel={t("settings.main.conservation.submitting")}
-                    className={buttonClass({ variant: "secondary" })}
-                  >
-                    {t("settings.main.conservation.submit")}
-                  </SubmitButton>
-                </FieldActions>
-              </FieldGrid>
-            </SettingsRow>
-
             <SettingsDoorRow
               href={`/shop/${shopSlug}/settings/embed`}
               heading={t("settings.main.embed.heading")}
-            />
-
-            <SettingsDoorRow
-              href={`/shop/${shopSlug}/settings/display`}
-              heading={t("settings.main.display.heading")}
             />
           </InsetGroup>
         </SettingsGroup>

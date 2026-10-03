@@ -24,11 +24,7 @@ import { formatShortDate } from "@/lib/format";
 import { capturePhoto } from "@/lib/marine-life-tiles";
 import { publicDiveSitePath } from "@/lib/public-routes";
 import type { SiteSightings } from "@/lib/sightings";
-import { nightSkyFor } from "@/lib/sky";
-import { sunMoonFor } from "@/lib/sun-moon";
 import { type DayCeilingOption, DayCeilingPicker } from "./DayCeilingPicker";
-import { DaySkyLine } from "./DaySkyLine";
-import { NightSkyLine } from "./NightSkyLine";
 import type { DiveBriefing, Shop, SiteBriefing } from "./types";
 
 /**
@@ -193,8 +189,6 @@ function SiteSeen({
 export function TripDayPlan({
   briefings,
   shop,
-  startsAt,
-  endsAt,
   locale,
   profile,
   sightings,
@@ -202,14 +196,10 @@ export function TripDayPlan({
 }: {
   briefings: DiveBriefing[];
   /**
-   * The shop, for the coordinates and zone the sky line is computed from —
-   * and for its own slug, which is half of every site page's URL.
+   * The shop, for its zone and for its own slug, which is half of every site
+   * page's URL.
    */
-  shop: Pick<Shop, "slug" | "timezone" | "latitude" | "longitude">;
-  /** When this departure leaves. */
-  startsAt: Date;
-  /** When it comes home — a departure still out at sunset dives in the dark. */
-  endsAt: Date;
+  shop: Pick<Shop, "slug" | "timezone">;
   /** The negotiated request locale, not the shop's stored default. */
   locale: string;
   /**
@@ -233,52 +223,7 @@ export function TripDayPlan({
   nextOpensOnRule?: boolean;
 }) {
   const t = diverTranslator(locale);
-  // The sky belongs to the day, so it rides in this beat rather than opening a
-  // section of its own — and a departure with no dive plan at all still gets
-  // it, because "sunset is at 7:35" is a fact about the departure, not about
-  // the sites nobody has picked yet.
-  //
-  // **The site's own coordinates, falling back to the shop's.** A shop with a
-  // dock in Key Largo runs departures to the Dry Tortugas, and sunset there is
-  // eighteen minutes later — small, and exactly the kind of small that reads as
-  // the product being approximately right rather than right. The first site of
-  // the day that carries a position speaks for the day; a shop that has set
-  // neither its address nor a site's position carries no line at all, which is
-  // the ordinary case for a shop that has done the least setup.
-  const sitePlace = briefings
-    .map(({ diveSite }) => diveSite)
-    .find((site) => site?.forecastLatitude != null && site?.forecastLongitude != null);
-  const latitude = sitePlace?.forecastLatitude ?? shop.latitude;
-  const longitude = sitePlace?.forecastLongitude ?? shop.longitude;
-  const nightSky = nightSkyFor({
-    startsAt,
-    endsAt,
-    timeZone: shop.timezone,
-    latitude,
-    longitude,
-  });
-  const sunMoon = sunMoonFor({ at: startsAt, timeZone: shop.timezone, latitude, longitude });
-  // Two ends of one fact, and a departure is only ever one of them: a day trip
-  // wants the light it has, a night charter wants the dark and the moon it will
-  // dive under. Neither wants the other's half.
-  const sky = nightSky ? (
-    <NightSkyLine sky={nightSky} timeZone={shop.timezone} locale={locale} />
-  ) : (
-    <DaySkyLine
-      sunriseAt={sunMoon?.sunriseAt ?? null}
-      sunsetAt={sunMoon?.sunsetAt ?? null}
-      timeZone={shop.timezone}
-      locale={locale}
-    />
-  );
-  if (briefings.length === 0) {
-    return nightSky || sunMoon?.sunriseAt ? (
-      <section>
-        <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
-        {sky}
-      </section>
-    ) : null;
-  }
+  if (briefings.length === 0) return null;
   // Durations, never a clock. The beat stays time-neutral — the day's hours
   // belong to the thread a booked diver walks — but how long a dive runs and
   // how long the boat sits between two of them are facts about the day itself,
@@ -331,7 +276,6 @@ export function TripDayPlan({
     return (
       <section>
         <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
-        {sky}
         <p className="mt-2 text-sm text-muted">
           {t("trip.sitesToBeConfirmed", { count: briefings.length })}
         </p>
@@ -350,7 +294,6 @@ export function TripDayPlan({
   return (
     <section>
       <GroupLabel as="h2">{t("trip.theDay")}</GroupLabel>
-      {sky}
       <ul className="mt-2">
         {briefings.map(({ dive, diveSite }) => {
           const bottomTime = bottomTimes.get(dive.diveNumber) ?? null;

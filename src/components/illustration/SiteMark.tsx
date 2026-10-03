@@ -129,9 +129,7 @@ function Drawing({ mark, coral }: { mark: ReefDrawingCode; coral: boolean }) {
       );
     case "boat":
       // The hand's eighth drawing (ADR 20260904-reef-all-the-way-down, Budget
-      // rule 2): a hull, a wheelhouse and the swell under it. The only drawing
-      // that ever moves, and only once, when the crew says the boat is
-      // underway — see `BoatDrift`.
+      // rule 2): a hull, a wheelhouse and the swell under it.
       //
       // Its lines run x 3–117 and y 13–67, centred on the canvas's (60, 40).
       // They ran x 6–120 and y 22–76, which sat the ink 2.5px low in the 44×30

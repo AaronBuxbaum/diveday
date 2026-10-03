@@ -15,20 +15,16 @@
  *
  * ## Two namespaces, one question
  *
- * `/s/**` is a shop's storefront and every segment in it is a row. The three
- * dynamic routes outside it — `/dive/<town>`, `/switching/<incumbent>`,
- * `/demo/<story>` — were left soft when that namespace was fixed, and answered
- * 200 with a not-found page for six more weeks on two surfaces DiveDay wants
- * indexed (issue #1734). They are judged here too, each against the *very same
- * list its own page judges the segment against*: `getMigrationGuide` and
- * `isDemoStoryId` are closed lists this repository holds, so both settle with
- * no query at all; `isRegionSlug` is only a shape test, so a well-shaped town
- * still goes to the database (there is no closed list of towns — the set is a
- * projection of `shops.region_slug`, and `/dive/not-a-town` passes every
- * pattern check there is).
+ * `/s/**` is a shop's storefront and every segment in it is a row. The one
+ * dynamic route outside it — `/switching/<incumbent>` — was left soft when that
+ * namespace was fixed, and answered 200 with a not-found page for six more
+ * weeks on a surface DiveDay wants indexed (issue #1734). It is judged here
+ * too, against the *very same list its own page judges the segment against*:
+ * `getMigrationGuide` is a closed list this repository holds, so it settles
+ * with no query at all.
  *
  * **A route this module does not recognise is passed through untouched**, which
- * is how the three above stayed soft while `/s/**` was hard. So the recognition
+ * is how the one above stayed soft while `/s/**` was hard. So the recognition
  * is pinned to the route tree rather than to memory:
  * `src/app/edge-refusal-coverage.test.ts` walks `src/app` for dynamic public
  * routes and fails on the first one this function has no opinion about. Adding
@@ -41,7 +37,7 @@
  * segments this module judges by *shape* are the two the pages themselves
  * already judge by shape before they query — a dive-site slug through
  * `parseDiveSiteSlug` (`sites/[siteSlug]/page.tsx`) and a trip id through
- * `uuidParam` (`trips/[id]/page.tsx`, `boats/[tripId]/page.tsx`) — plus the
+ * `uuidParam` (`trips/[id]/page.tsx`) — plus the
  * embed catalogue, whose widget names are a closed list in this repository
  * rather than a row. A shop slug and a course slug are *not* pattern-checked
  * here even though both are minted from a known charset: the page does not
@@ -54,7 +50,7 @@
  *
  * `null` means "this module has no opinion" — the URL is outside the
  * namespace, or names no route in it at all, which Next already answers with a
- * real 404 of its own, or it names a guide or a story that is really there.
+ * real 404 of its own, or it names a guide that is really there.
  * `{ kind: "malformed" }` means "this names nothing and cannot name anything",
  * which needs no query; `{ kind: "absent" }` is the same verdict for a URL with
  * no shop over it, and it is the one shape that is already an answer rather
@@ -71,12 +67,10 @@
  * up by is the honest one, so it rides on the shape.
  */
 
-import { isDemoStoryId } from "./demo-stories";
 import { parseDiveSiteSlug } from "./dive-site-slug";
 import { EMBEDDED_TRIP_SEGMENT, isEmbedWidget } from "./embed-routes";
 import { getMigrationGuide } from "./migration-guides";
 import { PUBLIC_SHOP_PREFIX } from "./public-routes";
-import { isRegionSlug, REGIONS_PATH } from "./region";
 import { uuidParam } from "./uuid";
 
 export type PublicRouteShape =
@@ -85,8 +79,6 @@ export type PublicRouteShape =
   | { kind: "site"; shopSlug: string; siteSlug: string }
   | { kind: "trip"; shopSlug: string; tripId: string }
   | { kind: "malformed"; shopSlug: string }
-  /** A town, which only the listed shops in it can answer for. */
-  | { kind: "region"; regionSlug: string }
   /** Judged against a closed list here and absent from it. Already an answer. */
   | { kind: "absent" };
 
@@ -103,17 +95,11 @@ const ABSENT: PublicRouteShape = { kind: "absent" };
 
 /**
  * Routes below `/s/<shopSlug>` that name nothing but the shop — the course
- * catalogue, the review archive, the counter's self-registration door, the
- * availability document and the year card. Each 404s only when the shop does,
- * so each folds to one lookup.
+ * catalogue, the review archive, the counter's self-registration door and the
+ * availability document. Each 404s only when the shop does, so each folds to
+ * one lookup.
  */
-const SHOP_ONLY_CHILDREN = new Set([
-  "courses",
-  "reviews",
-  "register",
-  "availability.json",
-  "year-card",
-]);
+const SHOP_ONLY_CHILDREN = new Set(["courses", "reviews", "register", "availability.json"]);
 
 /**
  * The children of one departure that live under its own id: the `.ics`
@@ -143,19 +129,14 @@ export function publicRouteShape(pathname: string): PublicRouteShape | null {
 const SHOP_NAMESPACE = PUBLIC_SHOP_PREFIX.slice(1);
 
 /**
- * The three one-segment routes outside `/s/**`, each judged against its own
- * page's own list.
+ * The one-segment route outside `/s/**`, judged against its own page's own
+ * list.
  *
- * The two closed lists settle here: `/switching/checkfront` and
- * `/demo/not-a-story` are refused with no query, and a slug that *is* on the
- * list gets `null` — "no opinion", which is how every live guide and story goes
- * on being served. A town cannot settle here, because `isRegionSlug` is a
- * pattern and not a membership test: the shape half is free (`/dive/Key%20Largo`
- * is refused without a read, exactly as `dive/[region]/page.tsx` refuses it
- * before its own query), and a well-shaped town becomes the one question the
- * database answers.
+ * The closed list settles here: `/switching/checkfront` is refused with no
+ * query, and a slug that *is* on the list gets `null` — "no opinion", which is
+ * how every live guide goes on being served.
  *
- * The segment names are literals because neither closed list ships a path
+ * The segment name is a literal because the closed list ships no path
  * constant to import; `src/app/edge-refusal-coverage.test.ts` derives these
  * route paths from the route tree, so a renamed directory turns this red rather
  * than quietly restoring the 200.
@@ -172,19 +153,9 @@ function closedListShape(namespace: string, rest: string[]): PublicRouteShape | 
   // `src/app/edge-refusal-coverage.test.ts` reads these off the route tree, so
   // the next one cannot be forgotten here.
   if (STATIC_SIBLINGS.has(`${namespace}/${candidate}`)) return null;
-  switch (namespace) {
-    case REGION_NAMESPACE:
-      return isRegionSlug(candidate) ? { kind: "region", regionSlug: candidate } : ABSENT;
-    case "switching":
-      return getMigrationGuide(candidate) ? null : ABSENT;
-    case "demo":
-      return isDemoStoryId(candidate) ? null : ABSENT;
-    default:
-      return null;
-  }
+  if (namespace === "switching") return getMigrationGuide(candidate) ? null : ABSENT;
+  return null;
 }
-
-const REGION_NAMESPACE = REGIONS_PATH.slice(1);
 
 /** Real pages that sit where a closed-list segment would otherwise be read. */
 const STATIC_SIBLINGS = new Set(["switching/spreadsheet"]);
@@ -204,7 +175,7 @@ function shopNamespaceShape(segments: string[]): PublicRouteShape | null {
       const siteSlug = parseDiveSiteSlug(second);
       return siteSlug ? { kind: "site", shopSlug, siteSlug } : { kind: "malformed", shopSlug };
     }
-    if (first === "trips" || first === "boats") return tripShape(shopSlug, second);
+    if (first === "trips") return tripShape(shopSlug, second);
     // The proxy answers an unknown widget before it ever asks for a shape
     // (`isUnknownEmbedWidgetRoute`), because that refusal needs no shop. Said
     // again here so this function stays true on its own terms rather than by

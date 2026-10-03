@@ -86,7 +86,7 @@ export const IDLE_WAIVER_SEND_STATE: WaiverSendState = {
  * from the staff bundle (`staff/<namespace>.json`) and passed down as plain data, the same pattern as
  * `ResendConfirmationCopy` and `WaitlistInviteCopy`. */
 export type WaiverSendCopy = {
-  /** The held send's countdown row (ADR 20260906-before-you-ask, decision 2). */
+  /** The held send's undo row (ADR 20260906-before-you-ask, decision 2). */
   hold: SendHoldCopy;
   /** Default pending label for the send button; a caller may override per-tap. */
   sending: string;

@@ -6,7 +6,6 @@ import {
   STAGE_SENTENCE_KEYS,
   STAGE_TAP_KEYS,
   STAGE_WORD_KEYS,
-  stageIsPublishable,
   stageTone,
   TRIP_STAGES,
   type TripStageReading,
@@ -92,13 +91,6 @@ describe("the five stages", () => {
     expect(stageTone("home")).toBe("success");
     for (const stage of TRIP_STAGES.filter((s) => s !== "home")) {
       expect(stageTone(stage)).toBe("primary");
-    }
-  });
-
-  it("publishes every stage but home", () => {
-    expect(stageIsPublishable("home")).toBe(false);
-    for (const stage of TRIP_STAGES.filter((s) => s !== "home")) {
-      expect(stageIsPublishable(stage)).toBe(true);
     }
   });
 });

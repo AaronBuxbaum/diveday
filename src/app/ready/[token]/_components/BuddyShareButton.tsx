@@ -6,18 +6,15 @@ import { buttonClass } from "@/components/ui/button";
 
 /**
  * A constant rather than `useId`: React 19 mints ids containing `«»`, which
- * `document.getElementById` accepts and a CSS selector does not — and this
- * element is how `e2e/gift.spec.ts` reads the referral link now that the page
- * no longer prints it. One buddy section renders per page, so there is nothing
- * to collide with.
+ * `document.getElementById` accepts and a CSS selector does not. One buddy
+ * section renders per page, so there is nothing to collide with.
  */
 const BUDDY_LINK_ID = "buddy-link";
 
 /**
  * **Bring a buddy next time** — ADR 20260908-one-hand, decision 6, lever W.
  *
- * The share sheet first, a clipboard copy where there is none, which is the
- * same shape `FollowShareRow` uses one state earlier in this thread. A browser
+ * The share sheet first, a clipboard copy where there is none. A browser
  * without the Web Share API is a laptop, where a copied link is what a person
  * wanted anyway.
  *

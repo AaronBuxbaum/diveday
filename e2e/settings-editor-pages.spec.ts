@@ -5,7 +5,7 @@ import { expect, test } from "./fixtures";
  *
  * The settings hub is a directory: a row states its current answer and opens
  * the form that changes it (ADR 20260827-clearwater-surface-language, decision
- * 6). Four rows had stopped obeying that — their "form" was a *list* of forms,
+ * 6). Some rows had stopped obeying that — their "form" was a *list* of forms,
  * each line carrying its own Save and Delete, behind one `⌄`. They are pages
  * now, and the hub lists them as doors.
  *
@@ -15,18 +15,14 @@ import { expect, test } from "./fixtures";
  * redirect lands the shop back on the page they were working on rather than at
  * the top of the hub.
  *
- * `e2e/season-events.spec.ts` covers the seasons page's own flow end to end
- * (a season the shop writes, and the storefront reading it), so it is not
- * repeated here.
- *
- * Every test takes a **shop of its own**. Boats, kinds of day and dive packages
+ * Every test takes a **shop of its own**. Boats, trip tags and dive packages
  * are shop *configuration*, which `resetDemoSchedule` deliberately leaves
  * standing — a hull written into blue-mantis would survive into whatever spec
  * this worker runs next, including the captures that photograph that shop
  * (ADR 20260815-per-test-private-shops).
  */
 
-test("the hub's four editors are doors, and each opens its own page", async ({
+test("the hub's list editors are doors, and each opens its own page", async ({
   page,
   privateShop,
 }) => {
@@ -38,8 +34,7 @@ test("the hub's four editors are doors, and each opens its own page", async ({
   const main = page.getByRole("main");
   for (const [name, segment] of [
     ["Boats", "boats"],
-    ["Kinds of day", "kinds-of-day"],
-    ["Seasons and events", "seasons"],
+    ["Trip tags", "trip-tags"],
   ] as const) {
     await expect(main.getByRole("link", { name, exact: true })).toHaveAttribute(
       "href",
@@ -47,7 +42,7 @@ test("the hub's four editors are doors, and each opens its own page", async ({
     );
   }
 
-  // And the hub is a directory: none of the four editors' controls is on it.
+  // And the hub is a directory: none of the editors' controls is on it.
   await expect(main.getByRole("button", { name: "Add a boat" })).toHaveCount(0);
   await expect(main.getByRole("button", { name: "Add package" })).toHaveCount(0);
 });

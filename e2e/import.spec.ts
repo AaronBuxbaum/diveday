@@ -424,11 +424,11 @@ test.describe("import ↔ switching guides", () => {
   }) => {
     await page.goto("/shop/blue-mantis/settings/import");
     // **`exact`, on all three.** An accessible name matches as a
-    // case-insensitive *substring* by default, so "EVE" also matched the
-    // settings rail's "Seasons and events" the day that row landed (issue
-    // #1485) — a strict-mode violation naming two links, in a spec that has
-    // nothing to do with either. The incumbent's name is the whole name of the
-    // link this test means; nothing here wants a substring.
+    // case-insensitive *substring* by default, so "EVE" also matched a
+    // settings-rail row named "Seasons and events" the day that row landed
+    // (issue #1485) — a strict-mode violation naming two links, in a spec that
+    // has nothing to do with either. The incumbent's name is the whole name of
+    // the link this test means; nothing here wants a substring.
     await expect(page.getByRole("link", { name: "EVE", exact: true })).toHaveAttribute(
       "href",
       "/switching/eve",

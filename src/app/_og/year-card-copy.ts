@@ -7,14 +7,8 @@ import type { YearCardCopy } from "./year-card";
  * Every word on the year card, in one place (ADR 20260908-one-hand, decision
  * 6, lever T).
  *
- * Two routes render the card — the staff act on the year page and the public
- * one DiveDay's homepage embeds — and the homepage's whole claim is that what
- * it shows is the card the shop has, so the sentence and the three facts are
- * resolved here rather than twice.
- *
  * **The diver bundle, not the staff one.** The card leaves the shop: it is read
- * by a landlord, a marina and a visitor to DiveDay's homepage, none of whom
- * work there. Its words belong with the other copy DiveDay writes for people
+ * by a landlord or a marina, neither of whom work there. Its words belong with the other copy DiveDay writes for people
  * who are not staff.
  *
  * It takes a `ShopYearCard` rather than the whole summary, so the close-outs —

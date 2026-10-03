@@ -9,8 +9,7 @@ The offline manifest is differentiator #2 and it has never met salt water. The e
 record is the V-02 row in the
 [verification queue](../human-decisions.md#human-verification-queue); this sheet is that row turned
 into steps, matched against what the manifest surfaces actually do today
-(`src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx`, `src/components/OfflineManifestView.tsx`,
-`src/components/WaterLocker.tsx`).
+(`src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx`, `src/components/OfflineManifestView.tsx`).
 
 Expected observations are printed so you can tick "as described" or write what really happened.
 **Anything that differs is the finding** — do not smooth it out afterwards. A manifest or readiness
@@ -43,9 +42,7 @@ defect found here is a stop-the-line fix (AGENTS.md safety rules), not a punch-l
 - [ ] The **stop rule** said out loud to the crew before boarding (H-05): a missing, expired, or
       corrupt device copy is **not** a boarding source — fall back to a fresh live load or the
       printed manifest. Never board from stale or absent data.
-- [ ] One person ashore, signed in on a laptop, available by phone — step 8 needs them.
-- [ ] Spray guard left **on** (its default). Do not touch "Disable spray guard on this device" until
-      step 5 tells you to.
+- [ ] One person ashore, signed in on a laptop, available by phone — step 7 needs them.
 
 ---
 
@@ -55,8 +52,8 @@ defect found here is a stop-the-line fix (AGENTS.md safety rules), not a punch-l
 
 Open the trip's manifest on Phone A.
 
-Expect: a **Boat mode** control in the trip header (**Auto** / **Land mode** / **Boat mode**); an
-**Offline safety copy** panel; inside it a connectivity pill reading **Online**, a freshness pill
+Expect: the roll call in Boat mode (deep navy, white ink, yellow actions) whatever the phone's own
+scheme; an **Offline safety copy** panel; inside it a connectivity pill reading **Online**, a freshness pill
 (**Fresh copy** / **Aging copy** / **Stale copy**), and a saved-summary line reading *Saved {date} ·
 {n} waiting to send · {n} need a look*.
 
@@ -83,8 +80,8 @@ Outdoors, in the worst light of the day. Phone at arm's length, as a captain hol
 - [ ] Can you read a diver's name at arm's length without shading the screen? Y / N
 - [ ] Can you tell a **blocked** row from a **boarded** row *by its words*, not by colour alone?
       (Rows carry a **Ready to board** / **Blocked** badge as well as the red/green fill.) Y / N
-- [ ] Cycle the **Boat mode** control through **Auto / Land mode / Boat mode**. Which was usable in
-      sun? __________ Did Auto pick it by itself? Y / N
+- [ ] If the phone has an accessibility "increase contrast" setting, turn it on. Better or worse in
+      sun? __________
 - [ ] Screen brightness at max — still readable? Y / N. Photograph the screen in sun.
 - Worst thing you couldn't read: _________________________________________
 
@@ -96,40 +93,7 @@ Outdoors, in the worst light of the day. Phone at arm's length, as a captain hol
 - [ ] Any tap that hit the wrong diver's row? Y / N — which and why: ______________
 - [ ] Scroll the diver list with a wet thumb. Usable? Y / N
 
-### 5 — Spray-guard false-trigger rate (DOM-L3) — measure this properly
-
-The spray guard blanks the screen when it thinks water is tapping it, and it takes a **two-second
-hold** to unlock. It engages on either of two things (`src/components/WaterLocker.tsx`): **three or
-more fingers touching at once**, or **two taps 5–150 ms apart and more than ~30 px apart**. A
-two-thumb roll call produces exactly that second pattern, so the concern is real and the number is
-what settles it. Keep the guard **on** for trials A–D.
-
-Run each trial and count. A "false trigger" is a lock that engaged during ordinary deliberate use.
-
-| Trial | What you do | Locks | Rate |
-| --- | --- | --- | --- |
-| A | Dry hands, **two thumbs**, 20 consecutive roll-call taps at your natural speed | ____ | ____ / 20 |
-| B | Dry hands, **one thumb**, 20 taps at natural speed | ____ | ____ / 20 |
-| C | **Wet hands + spray on the screen**, one thumb, 20 taps | ____ | ____ / 20 |
-| D | **No fingers** — spray or splash the screen 10 times, hands away (this measures whether it works at all) | ____ | ____ / 10 |
-
-Then:
-
-- [ ] Time lost per false lock, wall clock, including reorientation: ______ s (the hold alone is 2 s).
-- [ ] Did any tap leak through to the roll call underneath while locked? Y / N — **a Y here is a
-      safety finding**, not a UX one.
-- [ ] After unlocking, was the roll call exactly where you left it? Y / N
-- [ ] Did anyone reach for **Disable spray guard on this device** unprompted? Y / N — after how many
-      locks? ____
-- [ ] Now *do* disable it, and repeat trial A. Locks: ____ / 20 (expect 0). Did anything else about
-      roll call change? _______________
-- [ ] Re-enable it before step 7.
-
-**Judgement to record:** at what false-trigger rate would you turn this off on a real boat? ____ / 20.
-Anything above zero in trial A is a defect worth writing up: the guard covers the roll call it
-interrupts, and the crew loses the thread mid-count.
-
-### 6 — Departure roll call, with a blocked diver
+### 5 — Departure roll call, with a blocked diver
 
 Readiness gates boarding **at departure only**.
 
@@ -143,7 +107,7 @@ Readiness gates boarding **at departure only**.
 - [ ] Progress bar and the *"still to call"* line track the count correctly. Y / N
 - [ ] Undo one boarding (tap the boarded button again). Does it undo cleanly? Y / N
 
-### 7 — Airplane mode, then roll call with the radio off
+### 6 — Airplane mode, then roll call with the radio off
 
 - [ ] Put Phone A in airplane mode. Reload the page.
 - [ ] Expect **No signal · device copy** and *"Offline — showing the last saved copy."*; open
@@ -160,7 +124,7 @@ Readiness gates boarding **at departure only**.
 - [ ] Switch to the **after dive 1** checkpoint offline. Does it work? Y / N
 - Time spent offline before reconnecting: ______ min
 
-### 8 — A deliberate conflict, then reconnection
+### 7 — A deliberate conflict, then reconnection
 
 This is the step most likely to surface something. Do not skip it.
 
@@ -176,9 +140,9 @@ This is the step most likely to surface something. Do not skip it.
       do? Y / N
 - [ ] Do the counts on the live manifest now match the printed manifest plus your pen marks? Y / N
 
-### 9 — After-dive roll call, on the water — **this is the step that tests the crew half**
+### 8 — After-dive roll call, on the water — **this is the step that tests the crew half**
 
-Do this one **still offline**, on `/offline-manifest`, before step 10. A checkpoint needs both
+Do this one **still offline**, on `/offline-manifest`, before step 9. A checkpoint needs both
 halves — every diver accounted for *and* every rostered crew member — and until 2026-08-14 the crew
 half could not be recorded without signal at all, so an after-dive checkpoint could never be closed
 at sea. It can now, and this step is the only thing that will tell us whether that is true on a
@@ -234,7 +198,7 @@ with an empty crew list — do it ashore in the V-04 dry run if you cannot rig i
       people on the trip's crew list, so an unrostered hand is invisible to the count.)
 - [ ] Second dive: repeat on **after dive 2** if the trip has one. Notes: ______________
 
-### 10 — The stale / expired / missing copy
+### 9 — The stale / expired / missing copy
 
 A copy expires at the earlier of 14 days after it was saved or 7 days after the trip ends, so you
 cannot force a genuine expiry in one day. Test what you *can*, and record honestly that the rest was
@@ -251,13 +215,13 @@ not exercised in the field.
       board from it.)
 - [ ] Expiry and undecryptable-copy recovery **not** exercised in the field. Confirmed: Y / N
 
-### 11 — The printed fallback
+### 10 — The printed fallback
 
 - [ ] Could you have run the whole trip from the printed manifest alone? Y / N
 - [ ] What was missing from the print that you needed? ____________________
 - [ ] Did the print carry emergency contacts, rental fit, and the blocked/ready state? Y / N
 
-### 12 — The phone itself
+### 11 — The phone itself
 
 - [ ] Battery at end: ____ % (started ____ %). Elapsed: ____ h.
 - [ ] Screen sleep/lock interrupted roll call? Y / N — how often: ____
@@ -269,13 +233,9 @@ not exercised in the field.
 
 | Measurement | Value |
 | --- | --- |
-| Spray-guard false triggers, two-thumb dry (trial A) | ____ / 20 |
-| Spray-guard false triggers, wet + spray (trial C) | ____ / 20 |
-| Spray-guard true triggers, water only (trial D) | ____ / 10 |
-| Seconds lost per false lock | ____ |
 | Wet-hand taps registering first time | ____ / 10 dry-hand baseline ____ / 10 |
 | Roll-call results recorded offline | ____ divers + ____ crew |
-| After-dive checkpoints **closed** with the radio off (step 9d) | ____ of ____ attempted |
+| After-dive checkpoints **closed** with the radio off (step 8) | ____ of ____ attempted |
 | Offline results that reconciled cleanly | ____ |
 | Offline results rejected on reconnect | ____ |
 | Minutes offline before reconnect | ____ |

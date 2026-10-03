@@ -6,6 +6,7 @@ import {
   Noto_Sans_Symbols_2,
 } from "next/font/google";
 import { Suspense } from "react";
+import { boatModeScript } from "@/lib/boat-mode";
 import { THEME_COLORS } from "./_brand/colors";
 import "./globals.css";
 import { PreserveFormScroll } from "@/components/PreserveFormScroll";
@@ -157,6 +158,11 @@ export default function RootLayout({
           suppressHydrationWarning
           // biome-ignore lint/security/noDangerouslySetInnerHtml: static, locally-generated script (no user input) that corrects `lang` before first paint — see lang-script.ts
           dangerouslySetInnerHTML={{ __html: localeCorrectionScript() }}
+        />
+        <script
+          suppressHydrationWarning
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: static, locally-generated script (no user input) that applies a stored Boat mode before first paint — see boat-mode.ts
+          dangerouslySetInnerHTML={{ __html: boatModeScript() }}
         />
       </head>
       <body className="min-h-full flex flex-col">

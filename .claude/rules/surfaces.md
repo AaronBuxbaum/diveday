@@ -80,9 +80,7 @@ stay in `AGENTS.md`.
   "Data" group in `settings/SettingsPage.tsx`. `/shop/[shopSlug]/reports` is the
   shop's own reading of itself and nothing else: the month by default, the year at `?range=year`,
   one segmented control between them, and **no money at all on the year** (ADR 20260908-one-hand,
-  decision 6, lever T). The year prints as a 3:2 card at `reports/card`, and with the shop's yes
-  (`shops.show_year_on_diveday`, one row on Settings' Lobby display page) the same card is public
-  at `/s/<slug>/year-card` and stands under DiveDay's own homepage hero.
+  decision 6, lever T). The year prints as a 3:2 card at `reports/card`, staff-only.
 - **A diver asking for a day not on the board**: one composer, `src/components/DateRequestForm.tsx`,
   behind one action `src/app/actions/inquiry.ts`; staff read them at `shop/[shopSlug]/requests`.
   Never the wait list or the last-minute deal list — those answer "tell me when a seat frees".
@@ -104,8 +102,7 @@ stay in `AGENTS.md`.
   `where`, `having`, `now`), or the pager promises pages that render nothing.
 - **Link previews and icons** (`ImageResponse`): every surface that rasterizes at request time —
   DiveDay's own card at `link-card/route.tsx`, the three `opengraph-image.tsx` cards under
-  `/recap/` and `/s/`, `pwa-icon-maskable/route.tsx`, `/s/[shopSlug]/year-card` and
-  `/shop/[shopSlug]/reports/card` — calls `allowSvgRasterization()` (`src/lib/og-rasterizer.ts`)
+  `/recap/` and `/s/`, `pwa-icon-maskable/route.tsx` and `/shop/[shopSlug]/reports/card` — calls `allowSvgRasterization()` (`src/lib/og-rasterizer.ts`)
   first, and so does any new one: `next/image` disables libvips' SVG loader process-wide on first
   use and satori's output is SVG, so without it the card severs the socket mid-stream (ADR
   20260804-og-svg-rasterizer). **A metadata module that imports `next/og` reaches every page entry

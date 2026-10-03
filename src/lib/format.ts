@@ -172,11 +172,7 @@ export function formatWeekdayTime(date: Date, locale = "en-US", timeZone: string
 /**
  * "Saturday" — the weekday alone, in the shop's zone.
  *
- * For a sentence whose subject is the *day of the week* rather than a date:
- * the shelf's "Same boat, next Saturday", where the point is that this
- * departure repeats on the day the diver already knows. A date beside it would
- * answer a question the reader is not asking, and the row links to the
- * departure, which states its own.
+ * For a sentence whose subject is the *day of the week* rather than a date.
  */
 export function formatWeekday(date: Date, locale = "en-US", timeZone: string): string {
   return cachedFormatter("dt", Intl.DateTimeFormat, locale, {
@@ -202,39 +198,6 @@ export function formatWeekday(date: Date, locale = "en-US", timeZone: string): s
  * Falls back to the id when a runtime has no long name for the zone — a raw id
  * is worse than a name, and far better than an empty label.
  */
-/**
- * A bare hour of the day — "8:00 AM" — for a setting that names an hour rather
- * than an instant, like a shop's send window (`src/lib/send-window.ts`).
- *
- * `timeZone: "UTC"` deliberately, and it is not the shop's zone going missing:
- * a wall-clock hour has no instant in it, so there is nothing to convert. The
- * shop's own zone is what the hour is *read in*, which the label beside the
- * field says in words. `24` renders as midnight, which is what an exclusive end
- * of 24 means.
- */
-export function formatHourOfDay(hour: number, locale = "en-US"): string {
-  return formatTime(new Date(Date.UTC(2000, 0, 1, hour)), locale, "UTC");
-}
-
-/**
- * **An hour with no minutes** — "6 AM", never "6:00 AM".
- *
- * For a tick on the day strip (ADR 20260919-one-idea, decision I · Tide) and
- * anywhere else an hour is a *label* rather than a time: four full times side
- * by side touch at 390, and `:00` under a tick is two digits nobody reads. The
- * hour is a wall-clock number with no instant in it, so `timeZone: "UTC"` is
- * the honest answer rather than a shortcut — same reason as
- * {@link formatHourOfDay}, which this is the short form of.
- */
-export function formatHourShort(hour: number, locale = "en-US"): string {
-  return keepUnitsWhole(
-    cachedFormatter("dt", Intl.DateTimeFormat, locale, {
-      hour: "numeric",
-      timeZone: "UTC",
-    }).formatToParts(new Date(Date.UTC(2000, 0, 1, hour))),
-  );
-}
-
 export function formatTimeZoneName(locale = "en-US", timeZone: string, now = nowDate()): string {
   const parts = cachedFormatter("dt", Intl.DateTimeFormat, locale, {
     timeZone,
@@ -322,10 +285,9 @@ export function formatTimeRangeTz(
  * not be standing in it.
  *
  * The public schedule leaves its times bare on purpose: local time is the
- * honest default for somebody in the shop's own town. The follow-the-boat page
- * is the case that argues the other way — it is a link a diver pastes into a
- * group chat, and whoever opens it may be three zones away, deciding when to
- * leave for the dock.
+ * honest default for somebody in the shop's own town. A message a diver
+ * forwards is the case that argues the other way — whoever opens it may be
+ * three zones away, deciding when to leave for the dock.
  */
 export function formatTimeTz(date: Date, locale = "en-US", timeZone: string): string {
   return keepUnitsWhole(
@@ -507,8 +469,8 @@ export function formatCalendarDateRange(
  *
  * Trip titles are free text a shop types, and they are "X — Y" throughout. A
  * balanced heading (`text-balance`) breaks at whichever space evens its lines,
- * and the space before the dash is often it: the departures board and the
- * thread's pages opened line two with "— Benwood & Elbow". Binding the space
+ * and the space before the dash is often it: the thread's pages opened line
+ * two with "— Benwood & Elbow". Binding the space
  * before the dash leaves the one after it free, so a line may end on the dash
  * and never begin with it. For a title rendered as a balanced heading; a title
  * in running text needs nothing.

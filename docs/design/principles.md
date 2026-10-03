@@ -588,14 +588,13 @@ booking page and a diver's `/ready`.
 
 It is the wrong device for the surfaces a dive shop actually works from. `/check-in` calls itself
 "Counter mode", and a counter device is an iPad on a stand; the manifest is read at the rail,
-frequently through a dry case, which is the entire premise of `boat-mode` above. So eight captures
-— the counter check-in, the live manifest, the schedule board, the trip prep list, the departure
-log (at rest and with every checkpoint), the departures board and the self check-in kiosk — take a
-**third, portrait-tablet width of 820x1180**, named in `TABLET_SURFACES` in that spec; the
-departures board also takes a lobby TV's 1920x1080 (`TV_SURFACES`).
+frequently through a dry case, which is the entire premise of `boat-mode` above. So six captures
+— the counter check-in, the live manifest, the schedule board, the trip prep list and the departure
+log (at rest and with every checkpoint) — take a **third, portrait-tablet width of 820x1180**,
+named in `TABLET_SURFACES` in that spec.
 `node scripts/screenshot.mjs <path> --tablet` gives a design review the tablet width.
 
-Eight, not every surface: a third width everywhere would add half the run again and the baseline
+Six, not every surface: a third width everywhere would add half the run again and the baseline
 churn to match, and most routes have nothing new to say at 820px. The list being a constant with a
 comment is what keeps the cost bounded and the choice arguable.
 

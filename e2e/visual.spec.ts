@@ -54,20 +54,18 @@ import { E2E_FROZEN_CLOCK, ONBOARD_FORM_PATH } from "./servers";
  * "correct the prose" instruction above ended up chasing a number that was
  * never right.
  *
- * Ten more come from the `print` block at the bottom: the manifest, prep,
- * trip-packet, day-packet, departure-log, dock-sign, window-sticker,
- * boat-card, site-briefing-cards and paper-pass pages as they render for the
- * printer. Print
+ * Six more come from the `print` block at the bottom: the manifest, prep,
+ * trip-packet, day-packet, departure-log and paper-pass pages as they render
+ * for the printer. Print
  * is its own concern, not a light/dark one — the `@media print` token override
  * collapses both schemes to one black-and-white palette — so each is captured
  * once, at a US-Letter width (or a wider sheet's own), via `capturePrint()`.
  *
  * `captureStickyFoot()` adds 4 more (one surface × light/dark × both widths),
- * `TABLET_SURFACES` adds 16 — eight surfaces a shop runs on a tablet get a
- * third, portrait width, at one screenshot per scheme rather than two — and
- * `TV_SURFACES` adds 2 for the one board a lobby screen shows. That brings the
- * run to 1,038 screenshots: the extra widths are a 2% addition, not the 50% a
- * third viewport applied to every surface would have cost.
+ * and `TABLET_SURFACES` adds 12 — six surfaces a shop runs on a tablet get a
+ * third, portrait width, at one screenshot per scheme rather than two. The
+ * extra width is a small addition, not the 50% a third viewport applied to
+ * every surface would have cost.
  *
  * Three of the 254 are the same surface twice, in a second language: see
  * {@link SPANISH}. A Spanish sibling takes the standard pair and keys its own
@@ -164,9 +162,7 @@ const VIEWPORTS = [
  * default for a marketing page, a booking page and a diver's `/ready`. It is
  * the wrong device for the surfaces a dive shop works from: `/check-in` calls
  * itself "Counter mode", and a counter device is an iPad on a stand; the
- * manifest is read at the rail, often through a dry case, which is the whole
- * reason `glare-mode` exists in `globals.css` with its >=16px text and >=44px
- * targets.
+ * manifest is read at the rail, often through a dry case.
  *
  * 768-1024px is also where Tailwind's `sm:`/`md:` breakpoints change a
  * layout's *shape* — where a two-column `FieldGrid` stands in columns while
@@ -186,7 +182,7 @@ const PHONE_VIEWPORT = VIEWPORTS[0];
 const TABLET_VIEWPORT = { width: 820, height: 1180 } as const;
 
 /**
- * The capture names that get `TABLET_VIEWPORT` as a third width — **eight, not
+ * The capture names that get `TABLET_VIEWPORT` as a third width — **six, not
  * every surface in this file.**
  *
  * A third width applied everywhere is another 506 screenshots and the baseline
@@ -199,8 +195,7 @@ const TABLET_VIEWPORT = { width: 820, height: 1180 } as const;
  *
  * - `check-in` — "Counter mode" by its own heading. The front desk is a
  *   tablet on a stand and nothing else.
- * - `manifest` — worked at the rail in a dry case; `glare-mode`'s whole
- *   premise is this device in this light.
+ * - `manifest` — worked at the rail in a dry case.
  * - `schedule-builder` — a dense two-column board a shop keeps open on
  *   whatever is on the desk.
  * - `prep` — the same, the day before.
@@ -218,23 +213,7 @@ const TABLET_SURFACES: ReadonlySet<string> = new Set([
   "prep",
   "departure-log",
   "departure-log-every-checkpoint",
-  // The dock tablet is one of the two devices the departures board is for
-  // (issue #1426); the other is the TV below.
-  "departures-board",
-  // A counter tablet is what the self check-in kiosk *is* (N-24), so its
-  // tablet width is the width it ships at rather than a third variant.
-  "self-check-in",
 ]);
-
-/**
- * **A TV on the lobby wall** — the other device the departures board is built
- * for (issue #1426, N-23), and the one width nothing else in this file has any
- * reason to photograph. 1920×1080 is what a lobby screen actually is; the
- * 1280 "desktop" is a laptop. Same shape as `TABLET_SURFACES`: a bounded set
- * checked against the captures that exist, never a global width.
- */
-const TV_VIEWPORT = { width: 1920, height: 1080 } as const;
-const TV_SURFACES: ReadonlySet<string> = new Set(["departures-board"]);
 
 /**
  * A name in `TABLET_SURFACES` that no `capture()` call uses photographs
@@ -243,10 +222,10 @@ const TV_SURFACES: ReadonlySet<string> = new Set(["departures-board"]);
  * this file back is the cheapest thing that can tell a typo from a decision.
  * Once per worker process, against a file already on the page cache.
  */
-for (const name of [...TABLET_SURFACES, ...TV_SURFACES]) {
+for (const name of TABLET_SURFACES) {
   if (!readFileSync("e2e/visual.spec.ts", "utf8").includes(`capture(page, "${name}"`)) {
     throw new Error(
-      `TABLET_SURFACES/TV_SURFACES names "${name}", which no capture() call uses — it would ` +
+      `TABLET_SURFACES names "${name}", which no capture() call uses — it would ` +
         "silently photograph nothing. Fix the name or drop it from the set.",
     );
   }
@@ -641,7 +620,6 @@ const FLOW_TIMEOUT_MS = SURFACE_TIMEOUT_MS + FLOW_ALLOWANCE_MS;
 const REEF_TRIP = "Two-Tank Reef — Molasses & French";
 
 /** The demo's night charter: 7:30 PM to 11:00 PM, in the water after dark. */
-const NIGHT_TRIP = "Night Dive — City of Washington";
 
 /**
  * A departure far enough out that D18's re-entry offers are still worth making.
@@ -1537,11 +1515,7 @@ async function capture(
   // rather than inheriting a third width: those sets are about the *device* a
   // surface runs on, and a second language has nothing new to say at 820px
   // that it does not say louder at 390.
-  const viewports = [
-    ...VIEWPORTS,
-    ...(TABLET_SURFACES.has(baseline) ? [TABLET_VIEWPORT] : []),
-    ...(TV_SURFACES.has(baseline) ? [TV_VIEWPORT] : []),
-  ];
+  const viewports = [...VIEWPORTS, ...(TABLET_SURFACES.has(baseline) ? [TABLET_VIEWPORT] : [])];
   // Light only: geometry does not change with the scheme, and checking one
   // scheme is the owner's standing rule for anything that is not colour work.
   // The import happens here, inside the flag, so an unset flag loads nothing.
@@ -1751,11 +1725,6 @@ const SAILED_TRIP = "Dawn Two-Tank — Molasses Reef";
 /** The seeded reef charter's card on the public schedule, once it is real. */
 function publicReefCard(page: Page) {
   return page.locator("li").filter({ hasText: REEF_TRIP });
-}
-
-/** The same card, for the night charter. */
-function publicNightCard(page: Page) {
-  return page.locator("li").filter({ hasText: NIGHT_TRIP });
 }
 
 /** Open the seeded reef charter's staff record, the way staff reach it. */
@@ -2187,79 +2156,6 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "shopfront-register", scheme);
       });
 
-      /**
-       * **The departures board** (issue #1426, N-23): a lobby TV's read of the
-       * day behind a display link and no session. Minted through the test
-       * seed route because the token is hashed at rest and shown once; with
-       * names on, so the crew line — the one thing the switch adds — is in the
-       * picture. Phone, laptop, the dock tablet and the TV wall
-       * (`TV_SURFACES`).
-       */
-      test(`the departures board renders true to the design (${scheme})`, async ({
-        page,
-        request,
-      }) => {
-        const seeded = await request.post("/api/test/seed-display-token", {
-          data: { label: "Lobby TV", showNames: true },
-        });
-        expect(seeded.ok()).toBe(true);
-        const { path } = (await seeded.json()) as { path: string };
-        await page.goto(path);
-        await page.getByRole("heading", { level: 1, name: "Blue Mantis Divers" }).waitFor();
-        await page.getByText("Two-Tank Reef — Molasses & French").waitFor();
-        await capture(page, "departures-board", scheme);
-      });
-
-      /**
-       * **Self check-in at the counter** (N-24): the other thing a display link
-       * can open, and the one surface in DiveDay a stranger operates unaided.
-       * Minted through the test seed route, like the board above — the token is
-       * hashed at rest and shown once.
-       *
-       * **The idle prompt, and deliberately not the answer card.** The answer
-       * names a diver and stands in a lobby, so it wipes itself after twelve
-       * seconds (`CLEAR_AFTER_MS`) — which is shorter than a multi-viewport
-       * `capture()` takes, and a baseline that sometimes photographs a blank
-       * panel is worse than no baseline at all. What the card says is pinned by
-       * `e2e/self-check-in.spec.ts`, which reads it in one pass and is done.
-       */
-      test(`the counter kiosk renders true to the design (${scheme})`, async ({
-        page,
-        request,
-      }) => {
-        const seeded = await request.post("/api/test/seed-display-token", {
-          data: { label: "Counter tablet", purpose: "check_in" },
-        });
-        expect(seeded.ok()).toBe(true);
-        const { path } = (await seeded.json()) as { path: string };
-        await page.goto(path);
-        await page.getByRole("heading", { level: 1, name: "Blue Mantis Divers" }).waitFor();
-        await page.getByLabel("Last name").waitFor();
-        await page.mouse.move(0, 0);
-        await capture(page, "self-check-in", scheme);
-      });
-
-      /**
-       * **The regional pages** (issue #1436, N-49), the two anonymous surfaces
-       * a diver meets before a shop's own storefront. The demo shop is a demo
-       * and is excluded from both, so what is in the picture is the pair of
-       * real Key Largo neighbours `seedRegionNeighbours` seeds — a populated
-       * state on purpose, since an empty ledger would photograph the empty
-       * state rather than the page.
-       */
-      test(`the regional index renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/dive");
-        await page.getByRole("heading", { level: 1, name: "Dive shops by town" }).waitFor();
-        await capture(page, "regions-index", scheme);
-      });
-
-      test(`one town's dive shops render true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/dive/key-largo");
-        // The town's own <h1>, which the index never renders.
-        await page.getByRole("heading", { level: 1, name: "Dive shops in Key Largo" }).waitFor();
-        await capture(page, "region-shops", scheme);
-      });
-
       test(`the landing page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/");
         await capture(page, "landing", scheme);
@@ -2408,10 +2304,6 @@ for (const scheme of ["light", "dark"] as const) {
        * row three sections down. A diff on this one is a diff on the shape of
        * an empty page, which is exactly the thing a passing e2e assertion
        * cannot see.
-       *
-       * The line under the heading is the demo shop's own "Lobster mini-season"
-       * eighteen days out — the fallback for a shop with nothing scheduled at
-       * all (`src/db/seed-season-events.ts`).
        */
       test(`the off-season storefront renders true to the design (${scheme})`, async ({
         page,
@@ -2468,46 +2360,7 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("link")
           .first()
           .waitFor();
-        // The current chip sits past a phone's edge until `FilterChipsScroller`
-        // hydrates and scrolls the row to it; a capture taken before that drew
-        // the row at its start, so wait until the chip lies whole inside its row.
-        const chip = page.locator('[aria-current="true"]', { hasText: "After dark" });
-        await expect
-          .poll(() =>
-            chip.evaluate((element) => {
-              const row = element.parentElement?.closest("div");
-              if (!row) return false;
-              const a = element.getBoundingClientRect();
-              const b = row.getBoundingClientRect();
-              return a.left >= b.left && a.right <= b.right;
-            }),
-          )
-          .toBe(true);
         await capture(page, "schedule-lens", scheme);
-      });
-
-      /**
-       * **Follow the boat** — ADR 20260908-one-hand, decision 6, lever U.
-       *
-       * The page a diver hands to whoever is waiting on the dock: the stage
-       * word the crew tapped in the shop's own face, what they said and when,
-       * the departure's own line with its dots, and two doors. The picture is
-       * the only thing that can tell a marked line from an unmarked one — the
-       * done/now/todo dot is the entire state vocabulary and carries no word.
-       *
-       * The trip id is read off the storefront's own Follow door rather than
-       * hard-coded, since a seeded departure's id differs on every run.
-       */
-      test(`the boat's public page renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/s/blue-mantis");
-        const follow = page.getByRole("link", { name: "Follow", exact: true });
-        await follow.waitFor();
-        await follow.click();
-        // The line's own last row, not the `<h1>`: the header resolves before
-        // the day beneath it, and a shot fired between the two photographs a
-        // page with a title and no line.
-        await page.getByText("Back", { exact: true }).waitFor();
-        await capture(page, "follow-the-boat", scheme);
       });
 
       // A departure that no longer exists, which is what a link on a flyer or
@@ -2650,32 +2503,6 @@ for (const scheme of ["light", "dark"] as const) {
         // the form mounting.
         await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
         await capture(page, "site-briefing", scheme);
-      });
-
-      /**
-       * **The one departure whose sky is an operational fact** (issue #1467).
-       *
-       * `site-briefing` above photographs the reef morning, where there is
-       * nothing to say about the light and the line is correctly absent. The
-       * night charter casts off at 7:30 PM, half an hour before a July sunset,
-       * and dives both tanks in the dark — so it is the only departure on the
-       * demo board that renders sunset, civil dusk and the moon, and without
-       * this capture that line has no baseline anywhere.
-       *
-       * The clock is frozen (`E2E_FROZEN_CLOCK`) and the shop's coordinates are
-       * seeded, so both times and the phase are fixed: a diff here is a change
-       * in the arithmetic or the copy, never the calendar moving.
-       */
-      test(`the night charter names the light and the moon (${scheme})`, async ({ page }) => {
-        await page.goto("/s/blue-mantis");
-        await publicNightCard(page).getByRole("link", { name: NIGHT_TRIP }).click();
-        await page.getByRole("heading", { name: "The day" }).waitFor();
-        // The line this capture exists for. Waiting on it means the shot can
-        // never be of a page that quietly decided the departure sails in
-        // daylight.
-        await page.getByText(/^Sunset /).waitFor();
-        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
-        await capture(page, "site-briefing-night-sky", scheme);
       });
 
       /**
@@ -3230,43 +3057,6 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **Stopping the code on a card that is already on paper** — issue #1729.
-       *
-       * The one control on this thread whose subject is never on screen: the
-       * arrival code rides a QR inside the saved file, and the page shows only
-       * the card that file was made from. So what a baseline can catch here is
-       * the *armed* state — whether a consequence sentence long enough to be
-       * honest still reads at phone width, and whether a destructive confirm
-       * sitting inside a card of facts reads as a decision rather than as one
-       * more fact.
-       *
-       * Its own capture rather than a row added to `readiness` above, and the
-       * download below is why: the control is offered only where a card has
-       * actually been saved, so folding it into the calm thread would mean
-       * every night-before baseline pretending a diver had downloaded one. The
-       * calm capture correctly has no control at all.
-       */
-      test(`the thread offers a way out of a lost arrival card (${scheme})`, async ({ page }) => {
-        test.setTimeout(FLOW_TIMEOUT_MS);
-        await bookAVisualRegressionSeat(page, scheme);
-        const thread = new URL(page.url()).pathname;
-        // Fetched rather than clicked: the link carries `download`, and a real
-        // click hands the file to the browser instead of the route. The GET is
-        // what mints the `arrival` capability, which is the state being
-        // photographed.
-        const cardHref = await page
-          .getByRole("link", { name: "Save arrival card" })
-          .getAttribute("href");
-        if (!cardHref) throw new Error("the arrival card offers no download");
-        expect((await page.request.get(cardHref)).status()).toBe(200);
-        await page.goto(thread);
-        await threadStatus(page).waitFor();
-        await page.getByRole("button", { name: "Stop the code on a saved card" }).click();
-        await expect(page.getByRole("button", { name: "Yes, stop the code" })).toBeVisible();
-        await capture(page, "thread-arrival-code", scheme);
-      });
-
-      /**
        * **The thread's Day-of step, answered "Getting comfortable again"** (D12
        * and D18).
        *
@@ -3298,49 +3088,6 @@ for (const scheme of ["light", "dark"] as const) {
         const dayOf = await openThreadStep(page, "dayof");
         await expect(dayOf.getByText("Anything that would help?")).toBeVisible();
         await capture(page, "readiness-easing-back", scheme);
-      });
-
-      /**
-       * **The same thread with the contrast turned up** (issue #1214, delight
-       * report D54).
-       *
-       * `.glare-mode` is the app's whole answer to a phone in direct sun — an
-       * AAA palette, a 16px floor on type, a 44px floor on every target, all
-       * declared on `documentElement` — and until this it was mounted only on
-       * the crew's offline manifest, so nothing on the diver's side had ever
-       * rendered it and nothing at all had photographed it on this page.
-       *
-       * Captured in both schemes deliberately, even though the mode resolves to
-       * the same light AAA palette in each: that *is* the behaviour, it is what
-       * a diver who keeps their phone in dark mode will actually see, and a
-       * baseline is the only thing that would notice if a future palette edit
-       * quietly broke the dark path into it.
-       *
-       * The chosen mode is the boundary this feature must not cross, so the
-       * assertions below are part of the capture rather than a separate test:
-       * every fact the standard page carries is still on the page after the
-       * switch. Turning the contrast up may not take anything away.
-       */
-      test(`the thread in high contrast renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
-        test.setTimeout(FLOW_TIMEOUT_MS);
-        await bookAVisualRegressionSeat(page, scheme);
-        await page.goto(new URL(page.url()).pathname);
-        await threadStatus(page).waitFor();
-
-        const contrast = page.getByRole("group", { name: "Screen contrast" });
-        // The radios are `sr-only` and the label is the target — which is the
-        // point of the control, so tap it the way a wet thumb does.
-        await contrast.getByText("High", { exact: true }).click();
-        await expect(page.locator("html")).toHaveClass(/glare-mode/);
-
-        // Nothing hidden: the status line, the way to the shop, and the door
-        // out are all still there at maximum contrast.
-        await expect(threadStatus(page)).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Where to go" })).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Pack with confidence" })).toBeVisible();
-        await capture(page, "thread-high-contrast", scheme);
       });
 
       /**
@@ -3444,61 +3191,6 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(new URL(page.url()).pathname);
         await page.getByRole("heading", { name: /readiness link isn.t available/ }).waitFor();
         await capture(page, "expired-link-readiness", scheme);
-      });
-
-      /**
-       * **The diver's shelf** (slice 20t of ADR 20260908-one-hand) — the
-       * standing door onto a diver's own file at one shop, in the shop's face.
-       *
-       * Three things this is the only picture of: the top rows that are the
-       * reason to come back, the file as one card of rows with the sizes
-       * editable inside it, and the two quiet lines at the foot — what is never
-       * here, and how to take the greeting off a phone. Captured at both
-       * viewports like everything else, because it is written phone-first and
-       * the rail of past days is the piece that changes shape between them.
-       *
-       * Reached through `/api/test/seed-shelf-token`, which mints the same
-       * `person_shelf_tokens` row the thread's door writes; walking the thread
-       * would mean a departure that has come home.
-       */
-      test(`the diver's shelf renders true to the design (${scheme})`, async ({
-        page,
-        request,
-      }) => {
-        test.setTimeout(FLOW_TIMEOUT_MS);
-        await bookAVisualRegressionSeat(page, scheme);
-        const seeded = await request.post("/api/test/seed-shelf-token", {
-          data: { shopSlug: "blue-mantis", email: `visual-regression-${scheme}@example.com` },
-        });
-        expect(seeded.ok()).toBe(true);
-        const { href } = (await seeded.json()) as { href: string };
-        await page.goto(href);
-        await page.getByRole("heading", { name: "Your shelf" }).waitFor();
-        await capture(page, "diver-shelf", scheme);
-
-        /**
-         * **The storefront a returning diver opens**, which is the same page
-         * every visitor gets with one group above the week: the greeting, the
-         * seat they hold, and the way back to the shelf. Opening the shelf
-         * above set the cookie this reads; without it the storefront's own
-         * baseline elsewhere in this file is the picture.
-         */
-        await page.goto("/s/blue-mantis");
-        await page.getByRole("region", { name: "Yours" }).waitFor();
-        await capture(page, "shopfront-known-diver", scheme);
-      });
-
-      /**
-       * **A demo story's door** (issue #1215, delight report D55) — one stable
-       * link per story, the thing somebody pastes into an email to a shop
-       * owner. The weather day because it is the one with the most to prove:
-       * three lines and one button, and the only claim on the page is a
-       * description of what the visitor is about to see.
-       */
-      test(`a demo story door renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/demo/weather-day");
-        await page.getByRole("heading", { level: 1, name: "A day the weather takes" }).waitFor();
-        await capture(page, "demo-story-door", scheme);
       });
 
       /**
@@ -5150,52 +4842,6 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **The shelf, as one row of the diver's file** (slice 20t) — open, so
-       * the two facts a staffer uses and the one act are on screen.
-       *
-       * A link is minted and opened first, because the row's whole job is to
-       * say how the diver's link is doing and the interesting state is the one
-       * with a number in it. The `?opened=` walk is the shipped path: the
-       * shelf's own client effect counts the open, so this photographs what a
-       * shop actually sees rather than a hand-written row.
-       */
-      test(`the diver record's shelf row renders true to the design (${scheme})`, async ({
-        page,
-        request,
-      }) => {
-        test.setTimeout(FLOW_TIMEOUT_MS);
-        await openDiverProfile(page, "Priya", "Priya Sharma");
-        const seeded = await request.post("/api/test/seed-shelf-token", {
-          data: { shopSlug: "blue-mantis", email: "priya.sharma@example.com" },
-        });
-        expect(seeded.ok()).toBe(true);
-        const { href } = (await seeded.json()) as { href: string };
-        // **Wait for the open to be *counted*, not merely for the shelf to
-        // paint.** `RememberShelf` fires a server action from a client effect,
-        // so the diver record -- server-rendered, once, on the way back -- shows
-        // whichever side of that race this landed on. Both sides also read as
-        // "open" ("Sent, not opened" against "1 open"), so the assertion below
-        // could not tell them apart and the baseline drifted between the two
-        // between pull requests. The action posts to the shelf's own URL.
-        const counted = page.waitForResponse(
-          (response) =>
-            response.request().method() === "POST" && response.url().includes("/shelf/"),
-        );
-        await page.goto(href);
-        await page.getByRole("heading", { name: "Your shelf" }).waitFor();
-        await counted;
-        await openDiverProfile(page, "Priya", "Priya Sharma");
-        const shelf = page.getByRole("region", { name: "Shelf" });
-        // A count, not the word: the state this capture exists for is the one
-        // with a number in it.
-        await expect(shelf.getByText(/^\d+ opens?$/)).toBeVisible();
-        await shelf.getByText("Shelf", { exact: true }).click();
-        await expect(shelf.getByRole("button", { name: "Send the link" })).toBeVisible();
-        await page.mouse.move(0, 0);
-        await capture(page, "diver-record-shelf", scheme);
-      });
-
-      /**
        * **The record with nothing outstanding** — the state the design is
        * really about, and the one a seeded demo never shows: every seeded
        * diver has a card, a signature or a balance waiting on somebody. The
@@ -6292,27 +5938,10 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * The shop's own year, open (issue #1485) — the reef's calendar, where a
-       * shop writes mini-season and the sentence a diver reads on the
-       * storefront while it is running.
-       *
-       * Its own page rather than a hub row since three season forms and an add
-       * form turned out to be a page wearing a disclosure. The seeded calendar
-       * carries a window that is live, so the "Running now" badge — the one
-       * badge on the page, and the whole reason a shop can find the week that
-       * is on its storefront at a glance — is in frame rather than theoretical.
-       */
-      test(`the seasons page renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings/seasons");
-        await page.getByRole("heading", { level: 1, name: "Seasons and events" }).waitFor();
-        await page.getByRole("button", { name: "Add" }).last().waitFor();
-        await capture(page, "settings-seasons", scheme);
-      });
-
-      /**
        * The shop's fleet — a name, a capacity and a line of description per
        * hull, with the delete confirm that names how many departures one has
-       * carried. Off the hub for the same reason the seasons page is.
+       * carried. Its own page rather than a hub row: a list plus an add form
+       * stopped fitting inside a disclosure.
        */
       test(`the boats page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/settings/boats");
@@ -6324,14 +5953,13 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * The shop's own words for its kinds of day (ADR
-       * 20260904-reef-all-the-way-down, decision 2) — the list a diver then
-       * filters the public schedule by.
+       * The shop's trip tags (ADR 20260904-reef-all-the-way-down, decision 2)
+       * — the list a diver then filters the public schedule by.
        */
-      test(`the kinds-of-day page renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings/kinds-of-day");
-        await page.getByRole("heading", { level: 1, name: "Kinds of day" }).waitFor();
-        await capture(page, "settings-kinds-of-day", scheme);
+      test(`the trip-tags page renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/trip-tags");
+        await page.getByRole("heading", { level: 1, name: "Trip tags" }).waitFor();
+        await capture(page, "settings-trip-tags", scheme);
       });
 
       /**
@@ -6353,27 +5981,9 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * Earliest flight, open (issue #1425) — two whole-hour boxes whose
-       * floors are DAN's minimums. Its own capture for the reason the row
-       * above has one: closed everywhere else, and the form is the only place
-       * a shop sets the number the recap then credits to it. The card read
-       * "Fly-safe hours" until issue #1433 took "safe" out of the diver's
-       * sentence as a verdict the wait does not earn; the baseline key stays
-       * `settings-fly-safe` so the reworded card diffs against the old one
-       * rather than arriving as an unreviewable new capture.
-       */
-      test(`the earliest-flight card renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "Earliest flight" }).waitFor();
-        await openSettingsRow(page, "Earliest flight");
-        await page.getByLabel("After repetitive dives or more than one day of diving").waitFor();
-        await capture(page, "settings-fly-safe", scheme);
-      });
-
-      /**
        * The emergency reference, open — the five number slots, the vessel and
        * shore-contact boxes, and the free-text plan (issue #688). Its own
-       * capture for the same reason as the two rows above: it is closed in
+       * capture for the same reason as the dock-day row above: it is closed in
        * `settings-payments`, so the only form in the app whose output a crew
        * reads offshore is otherwise never looked at.
        *
@@ -6393,20 +6003,6 @@ for (const scheme of ["light", "dark"] as const) {
         await openSettingsRow(page, "Emergency reference");
         await page.getByRole("button", { name: "Save emergency reference" }).waitFor();
         await capture(page, "settings-emergency", scheme);
-      });
-
-      /**
-       * When the shop's automated messages may reach a diver. Its own capture
-       * for the same reason as the two rows above — closed in
-       * `settings-payments` — and because it is the only screen standing
-       * between a shop in Fiji and a 3 AM text (issue #697).
-       */
-      test(`the message-hours card renders true to the design (${scheme})`, async ({ page }) => {
-        await page.goto("/shop/blue-mantis/settings");
-        await page.getByRole("heading", { name: "When we message divers" }).waitFor();
-        await openSettingsRow(page, "When we message divers");
-        await page.getByRole("button", { name: "Save message hours" }).waitFor();
-        await capture(page, "settings-send-window", scheme);
       });
 
       /**
@@ -6737,39 +6333,6 @@ for (const scheme of ["light", "dark"] as const) {
         // heading resolves before the interesting part has mounted.
         await page.getByRole("button", { name: "Create subscription link" }).first().waitFor();
         await capture(page, "settings-calendar", scheme);
-      });
-
-      // Lobby display (issue #1426) with both kinds of screen listed — minted
-      // through the seed route rather than the form, so the shown-once link
-      // block is *not* in the picture: it carries a token that differs on every
-      // run. Both kinds, because the rows are not the same shape: only the
-      // check-in link expires, so only it prints an expiry line and carries a
-      // Renew beside its Revoke (issue #1609). The date is stable because the
-      // e2e harness freezes the clock (src/lib/clock.ts) — which is also why
-      // the kiosk link asks for a `createdAtOffsetSeconds`. The panel lists
-      // newest first and breaks a tie on `id`, a fresh uuid every run, so two
-      // links minted in the same frozen second rendered in a random order and
-      // reported this capture as changed on pull requests that touched nothing
-      // near it. The offset stays inside the frozen minute, so every stamp in
-      // the picture reads the same and only the order is settled: the kiosk row
-      // is the newer of the two, and sits on top.
-      test(`the lobby display settings render true to the design (${scheme})`, async ({
-        page,
-        request,
-      }) => {
-        const seeded = await request.post("/api/test/seed-display-token", {
-          data: { label: "Lobby TV" },
-        });
-        expect(seeded.ok()).toBe(true);
-        const kiosk = await request.post("/api/test/seed-display-token", {
-          data: { label: "Counter tablet", purpose: "check_in", createdAtOffsetSeconds: 30 },
-        });
-        expect(kiosk.ok()).toBe(true);
-        await page.goto("/shop/blue-mantis/settings/display");
-        await page.getByRole("button", { name: "Create link" }).waitFor();
-        await page.getByText("Lobby TV").waitFor();
-        await page.getByRole("button", { name: "Renew Counter tablet" }).waitFor();
-        await capture(page, "settings-display", scheme);
       });
 
       // The courses catalog as one ledger (slice 9g of ADR
@@ -7282,47 +6845,6 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(seen.getByRole("listitem")).toHaveCount(2);
         await page.mouse.move(0, 0);
         await capture(page, "manifest-seen", scheme);
-      });
-
-      /**
-       * **The same group with the contrast turned up.**
-       *
-       * These are 56px targets a crew taps with one wet hand on a moving deck,
-       * and boat mode is the state they are actually tapped in. A chip row that
-       * reads at desk contrast and disappears in glare is a regression nothing
-       * else here would catch — the thread's own high-contrast capture proves
-       * the same thing for the diver's side (issue #1214).
-       */
-      test(`the Seen group in boat mode renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
-        test.setTimeout(FLOW_TIMEOUT_MS);
-        await openSailedTrip(page);
-        await openTripTab(page, "Manifest");
-        await offlineCopySaved(page);
-        await page
-          .getByRole("link", { name: "After dive 1" })
-          .evaluate((link: HTMLElement) => link.click());
-        await page.waitForURL(/checkpoint=after_dive_1/);
-        // Every per-device preference rests behind "On this phone" (ADR
-        // 20260827-the-departure-is-two-working-surfaces, decision 2).
-        await openOnThisPhone(page);
-        // The option's own label, which is what a thumb lands on. Not the bare
-        // text — the fieldset's legend reads "Boat mode" too, so that resolves
-        // to two nodes — and not the radio, which is `sr-only` and therefore
-        // never actionable. The thread's high-contrast capture clicks the same
-        // control the same way; only the collision with the legend is new.
-        const boatMode = page.getByRole("group", { name: "Boat mode" });
-        await boatMode.locator("label").filter({ hasText: "Boat mode" }).click();
-        const seen = page.getByRole("region", { name: "Seen" });
-        const chip = seen.getByRole("button", { name: "Southern stingray", exact: true });
-        await chip.evaluate((button) => button.scrollIntoView({ block: "center" }));
-        await chip.click();
-        await expect(
-          seen.getByRole("listitem").filter({ hasText: "Southern stingray" }),
-        ).toContainText("1");
-        await page.mouse.move(0, 0);
-        await capture(page, "manifest-seen-boat-mode", scheme);
       });
 
       /**
@@ -7997,38 +7519,6 @@ for (const scheme of ["light", "dark"] as const) {
         });
 
         /**
-         * **The same roll call in Boat mode**, the way it is read at the rail
-         * in sun. Glare mode floors every `text-xs` at 16px, so the stat
-         * tiles' "Embarcados" / "Buceadores" / "Pendientes" are wider than any
-         * inset a phone tile can give them: they measured fine in the capture
-         * above and spilled past the 8px gap into the next tile here (K-473
-         * review). The probe sweeps this at 360 as well. Switched by the
-         * control's own change event, which is what the Boat mode button
-         * sends, so the capture does not depend on a light sensor.
-         */
-        test(`the offline roll call in Boat mode reads in Spanish (${scheme})`, async ({
-          page,
-        }) => {
-          test.setTimeout(FLOW_TIMEOUT_MS);
-          await openReefTrip(page);
-          await page.goto(`${new URL(page.url()).pathname}/manifest`);
-          await settleOfflineShellWorker(page);
-          await openOnThisPhone(page);
-          await page.getByRole("link", { name: "Abrir pase de lista sin conexión" }).click();
-          await page.waitForURL(/offline-manifest/);
-          await expect(page.getByRole("heading", { name: "Priya Sharma" })).toBeVisible();
-          await page.evaluate(() =>
-            window.dispatchEvent(
-              new CustomEvent("diveday:contrast-mode-change", { detail: { mode: "full" } }),
-            ),
-          );
-          await expect(page.locator("html")).toHaveClass(/glare-mode/);
-          await capture(page, "offline-manifest-roll-call-high-contrast", scheme, {
-            locale: SPANISH,
-          });
-        });
-
-        /**
          * **The manifest's checkpoint track**, whose tabs carry a checkpoint
          * name and a state word in a row that has to stay one line: "Punto de
          * control activo" against "Active checkpoint", and "No embarcado"
@@ -8336,60 +7826,11 @@ test.describe("print", () => {
     await capturePrint(page, "departure-log");
   });
 
-  /**
-   * **The shop's own paper** (ADR 20260908-one-hand, decision 6, lever X).
-   *
-   * Five sheets that exist only to come out of a printer, so the print
-   * rendering *is* the artifact: a fixed box in millimetres, a band in the
-   * shop's colour, and a fold line carrying the day it was printed. They are
-   * the one family of pages that keeps its ink under `@media print`, which is
-   * exactly the kind of rule no assertion can look at.
-   *
-   * Reached by URL rather than through the register's doors on purpose. A door
-   * is a form that records a print run, and `shop_print_runs` survives the
-   * schedule reset (RESET_KEEPS), so clicking one here would date a row for
-   * whichever spec ran next in this worker. A `GET` of a sheet writes nothing.
-   */
-  test("the dock sign prints A3 in the shop's colour", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/print/dock-sign");
-    await page.getByRole("heading", { level: 1, name: "Our boats leave from here." }).waitFor();
-    await capturePrint(page, "dock-sign");
-  });
-
-  test("the window sticker prints 100mm square", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/print/window-sticker");
-    await page.getByText("Book a seat with your phone").first().waitFor();
-    await capturePrint(page, "window-sticker");
-  });
-
-  // Two pages, one document: the day side on white and the night side on the
-  // ground a red torch reads. The boat id comes off the register's own door,
-  // which is a hidden input rather than a link, so reading it is a page load
-  // and not a submit.
-  test("the boat card prints both its sides in boat colours", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/settings/print");
-    const boatId = await page
-      .locator('form:has(input[value="boat_card"]) input[name="subjectId"]')
-      .first()
-      .inputValue();
-    await page.goto(`/shop/blue-mantis/print/boat-card/${boatId}`);
-    await page.getByRole("heading", { name: "Before the boat moves" }).first().waitFor();
-    // The seeded shop has filled its emergency reference in, so this is where
-    // the card's two read-from-settings halves are proven: the vessel a rescue
-    // coordinator asks for, and the shop's own plan in the shop's own words.
-    // `shop-on-paper.spec.ts` asserts the other side of the same rule — a
-    // minted shop that has recorded none of it gets ruled blanks and no plan.
-    await expect(page.getByText("Mantis II - VHF 16, MMSI 338055501").first()).toBeVisible();
-    await page.getByRole("heading", { name: "If something goes wrong" }).first().waitFor();
-    await capturePrint(page, "boat-card");
-  });
-
-  test("the site briefing cards print one per site", async ({ page }) => {
-    await page.goto("/shop/blue-mantis/print/site-briefings");
-    await page.getByRole("heading", { name: "The briefing" }).first().waitFor();
-    await capturePrint(page, "site-briefing-cards");
-  });
-
+  // **The shop's own paper** (ADR 20260908-one-hand, decision 6, lever X). The
+  // pass exists only to come out of a printer, so the print rendering *is* the
+  // artifact: a fixed box in millimetres, a band in the shop's colour, and a
+  // fold line carrying the day it was printed.
+  //
   // **The pinned booking, not the counter's first row.** The pass renders a QR
   // of `passCodePayload` — the booking's id and nothing else — and
   // `bookings.id` is `defaultRandom()`, so a capture that reads whichever id
@@ -8421,49 +7862,6 @@ test.describe("print", () => {
  * blue-mantis would hand a blank emergency card to whichever spec ran next in
  * this worker (ADR 20260815-per-test-private-shops).
  */
-for (const scheme of ["light", "dark"] as const) {
-  /**
-   * **The storefront is the day** — ADR 20260919-one-idea, decision I · Tide,
-   * slice 23d. The band at the top of a shop's public page is one frame with
-   * two fillings, and `blue-mantis` can only ever photograph one of them: it
-   * has a cover photograph, by design, because it is the demo a shop leaving
-   * FareHarbor sees. A minted shop has none — which is the ordinary shape for a
-   * shop that has just signed up — so its storefront is where the sky renders.
-   *
-   * **The zone does not pick the hour on this surface**, and the capture is what
-   * showed it. A minted shop carries the canonical demo's *address* — Key Largo,
-   * a real street, so the address path is exercised end to end — while
-   * `privateShopTimezone` moves only its clock. `skyReadingFor` prefers the
-   * almanac wherever a shop has coordinates, so the sky here is the sun over
-   * Florida at the fleet's frozen instant, and the Maldives zone shows up in the
-   * *date line* rather than in the gradient. That is the right precedence (a
-   * whole timezone is far too coarse to derive a sunrise from) and it means this
-   * capture is the day sky; a dusk or night storefront needs a shop whose
-   * coordinates say so, which is a fixture that does not exist yet.
-   */
-  test.describe(`${scheme} mode — the storefront over its own sky`, () => {
-    test.use({
-      colorScheme: scheme,
-      viewport: { width: 1280, height: 800 },
-      privateShopSlug: "harbour-lantern-divers",
-      privateShopTimezone: "Indian/Maldives",
-    });
-
-    test(`a shop with no cover photo wears the hour (${scheme})`, async ({ page, privateShop }) => {
-      await page.goto(`/s/${privateShop.slug}`);
-      // The band having *chosen* an hour, not merely rendered: `data-scheme` is
-      // server-rendered from the shop's own coordinates or clock, so its
-      // presence is the page having resolved this shop's sky rather than the
-      // shell's. Waiting on the attribute rather than on a timeout.
-      const sky = page.locator(".sky").first();
-      await expect(sky).toHaveAttribute("data-scheme", /^(dawn|day|dusk|night)$/);
-      // The shop's name is inside the band, and no photograph replaced it.
-      await expect(sky.getByRole("heading", { level: 1 })).toBeVisible();
-      await capture(page, "storefront-sky", scheme);
-    });
-  });
-}
-
 for (const scheme of ["light", "dark"] as const) {
   test.describe(`${scheme} mode — the unanswered emergency reference`, () => {
     // **A pinned identity, or this capture is noise.** The minted shop's name
@@ -8508,35 +7906,6 @@ for (const scheme of ["light", "dark"] as const) {
       // The row's own words, not a timing guess.
       await page.getByText(/guessed from your timezone/).waitFor();
       await capture(page, "today-units-unconfirmed", scheme);
-    });
-
-    /**
-     * **The shop's own three sentences** (issue #1212).
-     *
-     * Filled through the shop's own form, in its own shop, because this writes
-     * shop-wide settings (ADR 20260815-per-test-private-shops) — the same
-     * reason the emergency capture below takes one.
-     */
-    test(`the shop's own words render true to the design (${scheme})`, async ({
-      page,
-      privateShop,
-    }) => {
-      await page.goto(`/shop/${privateShop.slug}/settings`);
-      await openSettingsRow(page, "Your own words");
-      await page
-        .getByLabel("What a first-timer reads before diving with you")
-        .fill("First time with us? Come find whoever is holding the clipboard — that’s us.");
-      await page
-        .getByLabel("What to expect at the dock")
-        .fill("Park by the blue gate. We’ll wave you down from the second slip.");
-      await page
-        .getByLabel("How you sign off a finished day")
-        .fill("Thanks for diving with us. The kettle's always on.");
-      await page.getByRole("button", { name: "Save your words" }).click();
-      // The row comes back open with its saved notice — the destination's own
-      // render, not a timing guess.
-      await page.getByText("Saved.").first().waitFor();
-      await capture(page, "settings-hospitality", scheme);
     });
 
     /**
@@ -8758,139 +8127,6 @@ for (const scheme of ["light", "dark"] as const) {
       await page.getByRole("checkbox", { name: "Remove current logo" }).waitFor();
       await page.getByRole("checkbox", { name: "Remove the cover photo" }).waitFor();
       await capture(page, "settings-profile", scheme);
-    });
-  });
-}
-
-/**
- * **The proof band on DiveDay's own homepage** (ADR 20260908-one-hand,
- * decision 6, lever T): a real shop's year card, the one sentence a number on
- * the card can prove, and the line that says why it is there.
- *
- * **A real shop, seeded for this**, not the `privateShop` mint: the band and the
- * public card both refuse an `isDemo` tenant, because a demo's shop, boat and
- * site names are typed by whichever visitor minted it (security review, finding
- * 1) — so a demo cannot reach this band at all. `/api/test/seed-year-band-shop`
- * mints the real one (`src/db/seed-year-band.ts`): fixed name, fixed
- * departures, out of search, dropped here and again by every `/api/test/reset`.
- *
- * Fixed rather than random because the shop's *name* is half of what this
- * photographs — on the card, in the claim beside it, and in the storefront door
- * — so a random identity would report as changed on the very next pull request.
- */
-for (const scheme of ["light", "dark"] as const) {
-  test.describe(`${scheme} mode — a shop's year on DiveDay's homepage`, () => {
-    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
-
-    test(`the homepage carries a real shop's year card (${scheme})`, async ({ page, request }) => {
-      // The seed and the card render come out of this test's own budget.
-      test.setTimeout(FLOW_TIMEOUT_MS);
-      const seeded = await request.post("/api/test/seed-year-band-shop");
-      expect(seeded.ok()).toBe(true);
-
-      await page.goto("/");
-      await page.getByText("Shown here because the shop turned it on.").waitFor();
-      // The card is an image route, so the band is not finished until its bytes
-      // have arrived — a capture fired on the sentence alone photographs an
-      // empty frame where the year is.
-      await page
-        .locator('img[alt*="year card"]')
-        .first()
-        .evaluate((node: HTMLImageElement) =>
-          node.complete
-            ? undefined
-            : new Promise<void>((done) => {
-                node.addEventListener("load", () => done());
-              }),
-        );
-      await capture(page, "landing-year-band", scheme);
-      // Dropped here rather than left for the next test's reset, so the
-      // cascade is charged to the test that asked for the shop.
-      await request.delete("/api/test/seed-year-band-shop");
-    });
-  });
-}
-
-/**
- * **The Print register** (ADR 20260908-one-hand, decision 6, lever X) — the
- * pane in Settings that lists the shop's paper in the groups of where it goes:
- * at the dock and the door, on the boat, for a diver, on the wall.
- *
- * Read-only here. Every row reads "Never printed" on the seeded shop, and the
- * doors are deliberately not clicked — see the print block above for why.
- */
-for (const scheme of ["light", "dark"] as const) {
-  test.describe(`${scheme} mode — the print register`, () => {
-    signedInAsOwner();
-    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
-
-    test(`the print register lists the shop's sheets (${scheme})`, async ({ page }) => {
-      await page.goto("/shop/blue-mantis/settings/print");
-      await page.getByRole("heading", { level: 1, name: "Print" }).waitFor();
-      await capture(page, "settings-print", scheme);
-    });
-  });
-}
-
-/**
- * **Give a dive** (ADR 20260908-one-hand, decision 6, lever W; owner's call
- * (l)) — the three surfaces the lever adds, on their own describe so a failure
- * costs one capture rather than re-premising a shard.
- *
- * The form's gift state is a click on the public trip page; the claim and the
- * giver's page both need a real gift seat, minted through
- * `/api/test/seed-gift` for the reason the trouble states are seeded that way:
- * a demo shop where a third of every boat is somebody's birthday present is a
- * worse demo, and the branch worth photographing is the rare one.
- */
-for (const scheme of ["light", "dark"] as const) {
-  test.describe(`${scheme} mode — give a dive`, () => {
-    test.use({ colorScheme: scheme, viewport: { width: 1280, height: 800 } });
-
-    test(`the booking form's gift state renders true to the design (${scheme})`, async ({
-      page,
-      request,
-    }) => {
-      const seeded = await request.post("/api/test/seed-gift");
-      expect(seeded.ok(), await seeded.text()).toBe(true);
-      const { tripId } = (await seeded.json()) as { tripId: string };
-      await page.goto(`/s/blue-mantis/trips/${tripId}`);
-      await page.getByRole("radio", { name: "Someone else, as a gift" }).check();
-      // The three gift questions replacing the party's five is the whole
-      // subject of the frame; waiting on the last of them is what proves the
-      // swap fired rather than photographing the ordinary form twice.
-      await page.getByLabel("Your email", { exact: true }).waitFor();
-      await page.mouse.move(0, 0);
-      await capture(page, "booking-gift-form", scheme);
-    });
-
-    test(`the gift's claim page renders true to the design (${scheme})`, async ({
-      page,
-      request,
-    }) => {
-      const seeded = await request.post("/api/test/seed-gift");
-      expect(seeded.ok(), await seeded.text()).toBe(true);
-      const { claimPath } = (await seeded.json()) as { claimPath: string };
-      await page.goto(claimPath);
-      await page.getByText("From Hannah, for your birthday").waitFor();
-      await page.getByRole("button", { name: "Claim this seat" }).waitFor();
-      await capture(page, "gift-claim", scheme);
-    });
-
-    test(`the giver's own page renders true to the design (${scheme})`, async ({
-      page,
-      request,
-    }) => {
-      const seeded = await request.post("/api/test/seed-gift");
-      expect(seeded.ok(), await seeded.text()).toBe(true);
-      const { giftPath } = (await seeded.json()) as { giftPath: string };
-      await page.goto(giftPath);
-      await page.getByRole("heading", { name: "Ben Carter’s seat" }).waitFor();
-      // The four rows are the frame, and the page mints nothing — no token
-      // renders here at all, which is what keeps this baseline stable run to
-      // run as well as keeping the page read-only.
-      await page.getByText("Not aboard yet").waitFor();
-      await capture(page, "gift-giver-page", scheme);
     });
   });
 }

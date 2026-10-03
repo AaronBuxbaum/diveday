@@ -35,13 +35,11 @@ cannot see it.
 | Recap pulse: submit, revise or withdraw | same file, `submitRecapPulseAction` | IP **and** booking (IP before the token is verified) | `RATE_LIMITS.recapPulseByIp` (30/hour) + `RATE_LIMITS.recapPulseByToken` (10/hour) |
 | Wait-list join | `src/app/s/[shopSlug]/trips/[id]/actions.ts` `joinWaitlist` | IP, **and** the address any certification claim is *about* | `RATE_LIMITS.waitlistJoin` (10/hour) + `RATE_LIMITS.declarationByPerson` (5/hour) |
 | Booking | same file, `bookSpot` | IP | `RATE_LIMITS.booking` (10/hour) |
-| The gift pass (a seat bought for someone else) | `src/db/gifts.ts` `sendPendingGiftPasses` | recipient address | `RATE_LIMITS.giftPassByRecipient` (3/hour) — drops the send, never the seat. The public gift form takes an address nobody has proved anything about and mails it the shop's branded pass; on a priced departure the pass now waits for the settled checkout, so money is the real bound, and this is what bounds an unpriced or pay-at-the-shop one |
 | Booking-confirmation actions (rental fit, pay, "sign your waiver now") | same file, `confirmContextFor` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` (60/hour) |
 | Last-minute-list join | `src/app/s/[shopSlug]/actions.ts` | IP, **and** the address any certification claim is *about* | `RATE_LIMITS.lastMinuteListJoin` (10/hour) + `RATE_LIMITS.declarationByPerson` (5/hour) |
 | Course inquiry | `src/app/s/[shopSlug]/courses/[slug]/actions.ts` | IP | `RATE_LIMITS.courseInquiry` (10/hour) |
 | Self-registration (the counter QR) | `src/app/s/[shopSlug]/register/actions.ts` | IP | `RATE_LIMITS.selfRegisterByIp` (10/hour) |
 | Self-registration (the counter QR) | `src/app/s/[shopSlug]/register/actions.ts` | shop | `RATE_LIMITS.selfRegisterByShop` (120/hour) |
-| Self check-in (the lobby tablet) | `src/app/check-in/[token]/actions.ts` | IP **and** the display token (IP first, before the token is verified, so an unresolvable link is not free) — the per-token net exists because every tap comes from the same tablet on the same network, so an IP key alone would bound the whole lobby as one caller | `RATE_LIMITS.kioskLookupByIp` (60/hour) + `RATE_LIMITS.kioskLookup` (120/hour) |
 | Self-registration's waiver mail | `src/app/s/[shopSlug]/register/actions.ts` | recipient address | `RATE_LIMITS.selfRegisterEmailByRecipient` (3/hour) — drops the send, never the registration |
 | Contact-email confirmation link (a save that changes the address, or the resend control; issue #1288) | `src/app/shop/[shopSlug]/settings/actions.ts` | shop, **and** the recipient address | `RATE_LIMITS.contactConfirmationByShop` (3/hour) + `RATE_LIMITS.contactConfirmationByRecipient` (3/hour) — drops the send, never the save; the settings form takes any address and a demo owner login is one click away, so this is what keeps it from being a branded-mail relay |
 | Readiness actions | `src/app/ready/[token]/actions.ts` `contextFor` | IP, checked before token verification | `RATE_LIMITS.capabilityAction` (60/hour) |
@@ -50,7 +48,6 @@ cannot see it.
 | Waiver draft/complete | `src/app/waivers/[token]/page.tsx` | IP | `RATE_LIMITS.capabilityAction` (60/hour) |
 | Emailing a fresh waiver link from a dead one | `src/app/waivers/[token]/actions.ts` | IP, **and** the booking whose inbox receives it | `RATE_LIMITS.capabilityAction` (60/hour) + `RATE_LIMITS.waiverLinkResendByBooking` (5/hour) |
 | Emailing a fresh trip-prep link from a dead one | `src/app/ready/[token]/actions.ts` | IP, **and** the booking whose inbox receives it | `RATE_LIMITS.capabilityAction` (60/hour) + `RATE_LIMITS.readinessLinkResendByBooking` (5/hour) |
-| Mailing the shelf link from a recap | `src/app/actions/shelf-door.ts` | the booking whose inbox receives it | `RATE_LIMITS.shelfLinkSendByBooking` (3/hour) |
 | Seat-claim link | `src/app/claim/[token]/actions.ts` | IP | `RATE_LIMITS.capabilityAction` (60/hour) |
 | Address autocomplete in shop settings | `src/app/shop/[shopSlug]/settings/actions.ts` | signed-in staff member | `RATE_LIMITS.addressLookup` (120/hour) |
 | Core Web Vitals beacon | `src/app/api/vitals/route.ts` | IP | `RATE_LIMITS.webVitalsBeacon` (300/hour) |
@@ -117,11 +114,7 @@ say nothing for reasons of their own, one of them by accident.
   identical-response assertion. The account-token
   actions (verify, reset submit, invite accept, unsubscribe confirm) bounce
   back to their own page, which re-derives the same "this link isn't valid"
-  notice a genuinely dead token gets. The self check-in kiosk answers a spent
-  bucket with its one "see the desk" card — the same card, in the same words,
-  that it answers an unknown link, a name nobody holds and a diver readiness
-  will not clear with, and since issue #1608 after the same wall-clock floor, so
-  neither the sentence nor the wait says which it was. Naming the limiter on any
+  notice a genuinely dead token gets. Naming the limiter on any
   of these would turn it into an oracle for "is this an account" / "is this a
   live token".
 - **Explicit where the caller already holds the secret.** A diver on

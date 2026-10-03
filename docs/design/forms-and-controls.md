@@ -14,18 +14,16 @@ cards sat at two elevations on one page.
 
 One spelling now, and it is the one `ShopStat` and the `<Table>` shell already shared —
 `rounded-panel border border-border bg-surface shadow-bed` — so **a card, a stat tile and a table
-shell read as the same object**. `rounded-panel` is the panel rung, 20px (the ladder is under
+shell read as the same object**. `rounded-panel` is the panel rung, 12px (the ladder is under
 [The rungs, as they ship](#the-rungs-as-they-ship)).
 
-**A resting panel sits on the bed.** `shadow-bed` is the one soft shadow a panel wears: a token
-(`--shadow-bed`, two neutral layers, redrawn for the night palette), so it moves with the palette
-and never with a call site. Clearwater took every panel's shadow away on 2026-08-28 (ADR
-20260827-clearwater-surface-language, decision 1: **elevation is earned**), and Reef put this one
-back for the panel alone (ADR 20260901-diveday-reimagined, 13a). Everything else still follows
-Clearwater: a menu, a sheet, a dialog and a toast carry `shadow-lg`/`shadow-2xl` because they float
-above the page, and `card.test.tsx` fails the build on any `rounded-panel` class string that also
-carries `shadow-sm`. Round 2's surface (ADR 20260918-nothing-to-explain, slice 22b) says "no bed".
-The code has kept it, and whether it should stay is #1965.
+**A resting panel is set off by its hairline, not a lift** (ADR 20261001-logbook, decision 5).
+`shadow-bed` survives as a token (`--shadow-bed`), so every panel's elevation is still one value that
+moves with the palette and never with a call site, and Logbook sets it to draw nothing (a
+zero-offset transparent shadow rather than the keyword `none`, which would void the ring shadows
+Tailwind joins it with). The primary button carries no shadow either. A menu, a sheet, a dialog and a
+toast still carry `shadow-lg`/`shadow-2xl` because they float above the page, and `card.test.tsx`
+fails the build on any `rounded-panel` class string that also carries `shadow-sm`.
 
 ```tsx
 import { SectionCard } from "@/components/ui/card";
@@ -650,7 +648,7 @@ them cut it away. The pixel probe's first pass counted 1,700 clipped rings.
 - **`focus-visible:focus-ring-inset`** is for an element flush with an `overflow-hidden` or
   scrolling edge: a list card's rows, a scroll box's options, the command palette's field, a
   `flush` ghost whose 8px of fill leave less than the ring's 5px to a clipping edge (a `p-3` row in
-  a clipped list: kinds of day, boats) or to a visible one the ring would cross (a
+  a clipped list: trip tags, boats) or to a visible one the ring would cross (a
   `Copyable` panel's 12px inset, a security session row), and an `outdent` button whose box ends
   4px above a clipped list's rule (the team card's Disable). A ledger row's door and a
   folded horizon's `<summary>` take it too: each is the row's whole box, rule to rule, so the
@@ -666,8 +664,7 @@ them cut it away. The pixel probe's first pass counted 1,700 clipped rings.
   negative top margin collapses through a parent with no top border or padding, so that parent is
   `flow-root`. Not for underline tabs: the product page's chapter strip padded its tabs that way and
   floated the active underline 4px above the bar's rule (K-400), so its tabs take the ring inset and
-  sit on the rule. Room too where the row's padding was the defect: the diver record's shelf rows
-  had `px-1` in an `InsetGroup` and now take its `px-5 py-4 sm:px-6`.
+  sit on the rule.
 - **Never switch the outline off** on an `a`, `button`, `input`, `select`, `textarea` or
   `summary`. In `@layer base` the global rule loses to `outline-none`, so it now does what it
   says and leaves a keyboard user nothing. The two exceptions show focus on another box:
@@ -703,9 +700,8 @@ import { buttonClass } from "@/components/ui/button";
 Variants: `primary`, `secondary`, `outline` (`secondary` with the `--border-strong` edge that holds
 3:1 against the page's ground, for the public pages; staff keep the hairline), `ghost`, `danger`,
 `danger-ghost` (the danger hue without the box, for a destructive row in a quiet menu),
-`danger-solid`, `link` (reads as inline text but still claims a full target), `sky` (a translucent
-chip for a control standing on a `SkyBand`), and `bare` (shape and target only, for a control whose
-fill is the state of its row). Sizes: `md` (the
+`danger-solid`, `link` (reads as inline text but still claims a full target), and `bare` (shape and
+target only, for a control whose fill is the state of its row). Sizes: `md` (the
 default, 48px with a 16px label), `sm` (44px with a 14px label), `boat` (56px with a 16px
 semibold label), `icon` (a 48px square), `icon-sm` (a 44px square, for a glyph in a row of `sm`
 controls), and `mark` (a 56px circle, for the roll call). The corner is the control rung,
@@ -771,8 +767,7 @@ by its edge, not its label, so the type refuses `flush` on them.
 Mid-row, among other words, a quiet button keeps its padding: that is what keeps its hover fill
 off its neighbours. Where it starts a line, its padding was part of the space to the next control,
 so the row's gap takes it back — 12px more beside a padded neighbour (the staff credentials' review
-and Remove, `gap-2` to `gap-5`), 24px more between two flush ones (the display links' Renew and
-Revoke) — or the fill ends where the next box begins. A component that draws the button for many
+and Remove, `gap-2` to `gap-5`), 24px more between two flush ones — or the fill ends where the next box begins. A component that draws the button for many
 callers takes `flush` as a prop (`Copyable`), because only the caller knows where it sits. The
 button test refuses the hand cancels `flush` replaced, in a `buttonClass` call and on a row that
 wraps a quiet button.

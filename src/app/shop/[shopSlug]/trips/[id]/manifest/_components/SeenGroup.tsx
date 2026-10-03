@@ -118,8 +118,8 @@ function SeenTap({
  * gone — and a page of species buttons nobody can press is paper spent on an
  * ornament. The tally is on the trip page and in the shop's own export.
  *
- * **Boat targets and boat contrast.** 44px chips with `touch-manipulation`, and
- * the manifest's own ambient contrast control above them. A crew is doing this
+ * **Boat targets and boat contrast.** 44px chips with `touch-manipulation`, on the
+ * manifest's Boat mode palette. A crew is doing this
  * with one wet hand on a moving deck, holding a tank with the other.
  *
  * `sm` rather than the 56px `boat` size, which is what a wrapping row of chips

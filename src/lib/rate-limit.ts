@@ -381,51 +381,6 @@ export const RATE_LIMITS = {
    * (ADR 20260724-per-visitor-demo-shops).
    */
   demoCreate: perHour(10),
-  /**
-   * Lookups at a self check-in kiosk, per display link (N-24).
-   *
-   * The tablet stands unattended in a lobby, so what this bounds is somebody
-   * standing in front of it typing surnames to see which ones come back with a
-   * first name. Generous enough that a real morning never meets it — a
-   * twelve-diver boat is twelve taps, and a mistyped name is a thirteenth —
-   * and low enough that working through a name list is not a thing anybody can
-   * do in an afternoon. Keyed on the token, not the IP, because every tap comes
-   * from the same tablet on the same network: an IP key alone would bound the
-   * whole lobby as one caller. `kioskLookupByIp` below is that second key, and
-   * it is deliberately the wider-reaching, smaller one.
-   *
-   * **This number was sized against surname entropy, and the lookup no longer
-   * has only that.** Issue #1610 widened the match to every word of a stored
-   * name but the given ones, which #1655's `security-reviewer` pass read as
-   * enumerable rather than merely guessable. `matchableNameTokens` answered
-   * that where it could — a particle and an initial are no longer keys — but a
-   * middle given name in a three-word name still is, and no positional rule can
-   * change that. So this budget now covers a wider dictionary than the one it
-   * was chosen for. Whether it comes down, or the tablet asks a second cheap
-   * thing a stranger does not hold, is issue #1657 and a human's call; the
-   * number is left where a person set it until then.
-   */
-  kioskLookup: perHour(120),
-  /**
-   * Kiosk lookups **per caller**, spent before the display token is verified
-   * (issue #1609).
-   *
-   * `kioskLookup` above bounds what one link may spend; this bounds what one
-   * caller may spend across every link, including links that resolve to
-   * nothing. That second half is the gap it closes: the per-link bucket cannot
-   * be keyed until a token has already been verified, so until this existed a
-   * stranger who never held a working link paid nothing at all for guessing at
-   * one, and each guess was a free database read. Same two-net shape as
-   * `recapUploadByToken` / `recapUploadByIp` below.
-   *
-   * 60 is comfortable for a whole lobby behind one NAT address — a twelve-diver
-   * morning is twelve taps plus retypes — and useless for working a name list
-   * from somewhere else. A shop whose tablet shares an egress address with its
-   * staff laptops spends one bucket between them; that is the accepted trade,
-   * and it is why this is a second net rather than a replacement for the
-   * per-link one. Issue #1657 owns whether `kioskLookup` itself comes down.
-   */
-  kioskLookupByIp: perHour(60),
   /** Credentials sign-in attempts, per IP — the wider net. */
   signInByIp: per15Min(20),
   /** Credentials sign-in attempts, per attempted email — the narrow net. */
@@ -478,22 +433,6 @@ export const RATE_LIMITS = {
    * release itself.
    */
   selfRegisterEmailByRecipient: perHour(3),
-  /**
-   * The gift pass, per **recipient address** (security review of the gift
-   * slice, finding 1c).
-   *
-   * `selfRegisterEmailByRecipient`'s shape and its reason exactly. The public
-   * gift form takes an address nobody has proved anything about and mails it
-   * the shop's own branded pass, and neither the booking limiter (per IP) nor
-   * the checkout (per seat) is keyed on the inbox being written *to*. On a
-   * priced departure money is the real bound — the pass now goes out from the
-   * paid cascade — but an unpriced or pay-at-the-shop departure has no such
-   * bound at all, and that is the one this exists for.
-   *
-   * An empty bucket drops the *send*, never the seat: the giver still holds
-   * their own page and the counter can seat the friend by name.
-   */
-  giftPassByRecipient: perHour(3),
   /**
    * Contact-email confirmation links (issue #1288), per **shop** and per
    * **recipient address**. The settings form takes any address and the resend
@@ -647,26 +586,6 @@ export const RATE_LIMITS = {
    * because the first was made would read as the feature being broken.
    */
   readinessLinkResendByBooking: perHour(5),
-  /**
-   * The shelf link, asked for from the **recap** (slice 20t).
-   *
-   * Tighter than its two siblings above, and the reason is who can reach it. A
-   * recap link is signed for 180 days, cannot be revoked, and is written to be
-   * forwarded — the page it sits on has a "share with a buddy" control. So the
-   * bearer of that link is not reliably the diver, and the door mails the
-   * address on the booking: without a bucket it is a way to send one person as
-   * much mail as an attacker can tap, from a link they were handed rather than
-   * one they had to guess.
-   *
-   * Three an hour is past any honest use (a diver asks once, and once more when
-   * the first went to spam) and far under a flood. **An empty bucket answers
-   * exactly as a successful send does** — see `mailShelfFromRecapAction` — so
-   * the door cannot be read as an oracle for whether an address is on file.
-   *
-   * The thread's own door needs no bucket: it mints and navigates rather than
-   * sending, so there is no inbox to fill.
-   */
-  shelfLinkSendByBooking: perHour(3),
   /**
    * Core Web Vitals beacons to `/api/vitals`, per IP.
    *

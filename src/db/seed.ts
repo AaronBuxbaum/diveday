@@ -21,7 +21,6 @@ import {
   bookingCapabilities,
   bookingCheckoutBookings,
   bookingCheckouts,
-  bookingGifts,
   bookingPayments,
   bookingReferrals,
   bookings,
@@ -35,7 +34,6 @@ import {
   crewAssignmentRequests,
   crewAvailabilityBlocks,
   dayCloseouts,
-  displayTokens,
   divePackageEntitlements,
   diveSiteCreatures,
   diveSiteMoments,
@@ -67,7 +65,6 @@ import {
   people,
   personCourtesyEmailUnsubscribeTokens,
   personRoles,
-  personShelfTokens,
   preDepartureCheckEvents,
   priorGearAssignments,
   priorVisits,
@@ -135,6 +132,7 @@ import { seedGear } from "./seed-gear";
 import { seedHistory } from "./seed-history";
 import { seedInbox } from "./seed-inbox";
 import { seedLenses } from "./seed-lenses";
+import { seedListedShops } from "./seed-listed-shops";
 import { seedMedicalReview } from "./seed-medical-review";
 import { seedMinimumSeats } from "./seed-minimum-seats";
 import { seedMoreTrips } from "./seed-more-trips";
@@ -145,9 +143,7 @@ import { seedPartnerReferrals } from "./seed-partner-referrals";
 import { seedPreDepartureChecklist } from "./seed-pre-departure-checklist";
 import { seedPromos } from "./seed-promos";
 import { seedRecentRecaps } from "./seed-recent-recaps";
-import { seedRegionNeighbours } from "./seed-region-neighbours";
 import { seedRentalFit } from "./seed-rental-fit";
-import { seedSeasonEvents } from "./seed-season-events";
 import { seedSelfDeclaredJoiners } from "./seed-self-declared";
 import { seedSightings } from "./seed-sightings";
 import { seedSupportNeeds } from "./seed-support-needs";
@@ -283,17 +279,15 @@ export async function seedIfEmpty(db: DbExecutor): Promise<void> {
 }
 
 /**
- * **Blue Mantis wears its own brand** (Harbor, ADR 20260901-diveday-reimagined):
- * the demo is where a shop leaving FareHarbor first sees a storefront that is
- * not DiveDay-coloured, so the demo shop has a colour, a face, a cover photo
- * and a badge wall. Mantis green, chosen because it is not the product's teal
- * and dark enough for white text as typed (so the demo's Settings carry no
- * darkening hint); the photo is one of the bundled Molasses Reef frames the
- * site catalog already ships.
+ * **Blue Mantis's storefront: a cover photo and a badge wall, in Logbook's own
+ * colour and face.** It set no brand colour and no display face (ADR
+ * 20261001-logbook, decision 8): the demo is what every diver-facing capture
+ * photographs, and a demo in its own green and Bricolage showed the retheme
+ * nowhere. The per-shop brand is still a shop feature; the minted fixture
+ * below is where it is exercised. The photo is one of the bundled Molasses
+ * Reef frames the site catalog already ships.
  */
 const DEMO_SHOP_BRAND: Partial<typeof shops.$inferInsert> = {
-  brandColor: "#158462",
-  brandDisplayFont: "bricolage_grotesque",
   brandHeroImageUrl: `/dive-sites/${encodeURIComponent("Elkhorn coral 8 Molasses Reef 20080309.jpg")}`,
   // i18n-exempt: a shop writes its own alt text, like its tagline.
   brandHeroImageAlt: "Elkhorn coral on Molasses Reef, sunlight from above",
@@ -302,8 +296,16 @@ const DEMO_SHOP_BRAND: Partial<typeof shops.$inferInsert> = {
 };
 
 /**
- * **The brand a minted shop wears when a visual capture asks for one**: Blue
- * Mantis's own, and a logo, which Blue Mantis has none of. The settings
+ * The colour a branded minted shop wears: mantis green, chosen because it is
+ * not the product's teal and dark enough for white text as typed. Exported for
+ * `e2e/storefront-brand.spec.ts`, which proves the storefront wears it.
+ */
+export const MINTED_DEMO_BRAND_COLOR = "#158462";
+
+/**
+ * **The brand a minted shop wears when a visual capture or a brand spec asks
+ * for one**: Blue Mantis's cover photo and badges, plus the colour, display
+ * face and logo Blue Mantis itself does not carry. The settings
  * profile row takes a stored logo and cover photo back off, and
  * `settings-profile` is the only capture that shows it with both on file. The
  * canonical demo cannot be that fixture: a logo on it would sit in the header
@@ -315,6 +317,8 @@ const DEMO_SHOP_BRAND: Partial<typeof shops.$inferInsert> = {
  */
 const MINTED_DEMO_BRAND: Partial<typeof shops.$inferInsert> = {
   ...DEMO_SHOP_BRAND,
+  brandColor: MINTED_DEMO_BRAND_COLOR,
+  brandDisplayFont: "bricolage_grotesque",
   logoUrl: `/dive-sites/${encodeURIComponent("French Angelfish Molasses Reef 20080309.jpg")}`,
 };
 
@@ -392,9 +396,6 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       addressRegion: "FL",
       addressPostalCode: "33037",
       addressCountry: "US",
-      // What `setShopAddress` would derive from the locality above; seeded
-      // inserts bypass that writer, so they say it themselves (issue #1436).
-      regionSlug: "key-largo",
       latitude: 25.0865,
       longitude: -80.4473,
       // Rents the core kit plus both add-ons and fills nitrox, and prices them:
@@ -533,10 +534,9 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
   // (ADR 20260824-pre-departure-safety-check) — seeded once here, never
   // re-seeded by a reset, which is why it is not inside seedDemoSchedule.
   await seedPreDepartureChecklist(db, shop.id);
-  // Two listed neighbours in the same town, so `/dive/key-largo` has shops
-  // to show beside a demo it cannot list (issue #1436). Stable half: real
+  // Two listed shops beside a demo no listing may show. Stable half: real
   // rows a reset never touches.
-  await seedRegionNeighbours(db);
+  await seedListedShops(db);
 }
 
 /**
@@ -586,12 +586,7 @@ const DEMO_IDENTITY_ATTEMPTS = 5;
  * identity on a name collision — never patching the slug alone, since every
  * staff email is derived from it and would otherwise disagree with the shop.
  */
-async function insertDemoShop(
-  db: DbExecutor,
-  pinnedSlug?: string,
-  timezone?: string,
-  brand = false,
-) {
+async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, brand = false) {
   let lastError: unknown;
   for (let attempt = 0; attempt < DEMO_IDENTITY_ATTEMPTS; attempt += 1) {
     // A pinned identity has nothing to retry *to* — it is the caller's own
@@ -604,7 +599,7 @@ async function insertDemoShop(
         .values({
           name: identity.name,
           slug: identity.slug,
-          timezone: timezone ?? DEMO_SHOP_TIMEZONE,
+          timezone: DEMO_SHOP_TIMEZONE,
           // **Deliberately left unconfirmed**, unlike the canonical demo above.
           // A minted shop genuinely has not answered the units question, and
           // pre-answering it on the shop's behalf would make the one fixture
@@ -643,7 +638,6 @@ async function insertDemoShop(
           addressRegion: "FL",
           addressPostalCode: "33037",
           addressCountry: "US",
-          regionSlug: "key-largo",
           latitude: 25.0865,
           longitude: -80.4473,
           rentalItems: [
@@ -693,19 +687,13 @@ async function insertDemoShop(
 export async function createDemoShop(
   db: DbExecutor,
   /**
-   * `timezone` moves the shop, not the board: `seed-clock.ts` anchors every
-   * seeded departure to `DEMO_SHOP_TIMEZONE`, so a shop minted in another zone
-   * reads those same instants at its own local hours. It exists so a visual
-   * capture can photograph a water band other than the fleet clock's (ADR
-   * 20260904-reef-all-the-way-down, Budget rule 1), which no test can do by
-   * moving `DIVEDAY_CLOCK` — that is one process-wide value.
-   *
    * `brand` dresses the shop in `MINTED_DEMO_BRAND` (a logo, a cover photo,
-   * badges), for the one capture of the profile row that needs them on file.
+   * badges, a colour and a display face), for the profile row's capture and
+   * the storefront brand spec.
    * Left off, a minted shop is blank shop-wide config, as every behavioural
    * spec expects.
    */
-  opts: { history?: boolean; slug?: string; timezone?: string; brand?: boolean } = {},
+  opts: { history?: boolean; slug?: string; brand?: boolean } = {},
 ): Promise<{ slug: string; ownerEmail: string }> {
   // Aggregate storage cap (security review, finding 1): the per-IP rate limit
   // bounds one visitor's burst but not the fleet-wide total, so an IP-rotating
@@ -714,7 +702,7 @@ export async function createDemoShop(
   // ceiling — the canonical demo and real shops are never eligible (see below).
   await enforceMintedDemoCap(db);
 
-  const { shop, identity } = await insertDemoShop(db, opts.slug, opts.timezone, opts.brand);
+  const { shop, identity } = await insertDemoShop(db, opts.slug, opts.brand);
 
   await db.insert(boats).values([
     {
@@ -895,7 +883,7 @@ export async function seedDemoSchedule(
   const { siteByName, benwood, french } = await seedDiveSites(db, shopId);
   // Which NOAA station the two Key Largo sites read their tide from; the
   // public toggle rides the history flag (ADR 20260907-noaa-tide-predictions).
-  await seedTides(db, shopId, opts.history !== false);
+  await seedTides(db, shopId);
   const { tripRows, captainId, divemasterId } = await seedTrips(db, shopId, {
     boatByName,
     instructor,
@@ -928,14 +916,10 @@ export async function seedDemoSchedule(
     waiverTemplate,
   });
 
-  // The shop's own words for its kinds of day, and which departure wears which
+  // The shop's trip tags, and which departure wears which
   // (ADR 20260904-reef-all-the-way-down, decision 2). After `seedMoreTrips`,
   // because it hangs the words on those departures by title.
   await seedLenses(db, shopId);
-
-  // The shop's own year (issue #1485). After the words above, because a season
-  // may name one — a mini-season fills the board with easygoing reef days.
-  await seedSeasonEvents(db, shopId);
 
   await seedPromos(db, shopId, promoRedemptionBooking);
 
@@ -1192,10 +1176,6 @@ export async function resetDemoSchedule(
   // against them are schedule-scoped operational history.
   await db.delete(preDepartureCheckEvents).where(eq(preDepartureCheckEvents.shopId, shopId));
   await db.delete(tripStageEvents).where(eq(tripStageEvents.shopId, shopId));
-  // Lobby-display links (issue #1426): nothing seeds one, so a reset clears
-  // them outright and every spec starts with no screens — which is also what
-  // lets the visual captures mint exactly one and photograph exactly one.
-  await db.delete(displayTokens).where(eq(displayTokens.shopId, shopId));
   await db.delete(heldSends).where(eq(heldSends.shopId, shopId));
   await db.delete(formDrafts).where(eq(formDrafts.shopId, shopId));
   // Neither of these is seeded — both are written only by what a visitor does
@@ -1241,15 +1221,8 @@ export async function resetDemoSchedule(
   await db.delete(bookingPayments).where(eq(bookingPayments.shopId, shopId));
   // Readiness/confirm capabilities reference bookings, so they must go before them.
   await db.delete(bookingCapabilities).where(eq(bookingCapabilities.shopId, shopId));
-  // Shelf links reference `people`, and the purge below takes every diver, so
-  // they go shop-wide rather than by id: a reset restores the fixture's
-  // schedule, and a credential minted at a diver who is about to be re-seeded
-  // is part of that schedule, not part of the shop's configuration.
-  await db.delete(personShelfTokens).where(eq(personShelfTokens.shopId, shopId));
-  // The gift and the buddy referral both reference bookings, so both go before
-  // them (ADR 20260908-one-hand, decision 6, lever W). `booking_referrals`
-  // names two bookings and neither is deleted first, so it goes here too.
-  await db.delete(bookingGifts).where(eq(bookingGifts.shopId, shopId));
+  // The buddy referral references bookings (ADR 20260908-one-hand, decision 6,
+  // lever W) — two of them, and neither is deleted first — so it goes before them.
   await db.delete(bookingReferrals).where(eq(bookingReferrals.shopId, shopId));
   // Tips reference bookings, so they must go before them — same FK this
   // cascade's sibling (deleteDemoShopCascade) already fixed (Codex finding:

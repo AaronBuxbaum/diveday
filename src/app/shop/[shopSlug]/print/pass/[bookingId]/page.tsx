@@ -7,7 +7,7 @@ import { DIVEDAY_BRAND_COLOR, deriveBrandTheme } from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
 import { formatDateWithYear, formatTime } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications";
-import { passCodePayload, printSheetSpec, storefrontAddress } from "@/lib/print-sheets";
+import { PAPER_PASS_PAPER, passCodePayload, storefrontAddress } from "@/lib/print-sheets";
 import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 import { PaperSheet, SheetMark } from "../../_components/PaperSheet";
@@ -56,7 +56,6 @@ export default async function PaperPassPage({
 
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const spec = printSheetSpec("paper_pass");
   const theme = deriveBrandTheme(shop.brandColor ?? DIVEDAY_BRAND_COLOR);
   // The shop's own dock call, which is when a diver should *be there* — not
   // when a counter opens. The same figure the confirmation email states.
@@ -69,13 +68,13 @@ export default async function PaperPassPage({
   return (
     <SheetDocument
       shopSlug={shopSlug}
-      paper={spec.paper}
+      paper={PAPER_PASS_PAPER}
       brandDisplayFont={shop.brandDisplayFont}
-      backLabel={t("print.settings.title")}
-      printLabel={t("print.settings.door")}
+      backLabel={t("checkIn.title")}
+      printLabel={t("print.sheet.door")}
     >
       <PaperSheet
-        paper={spec.paper}
+        paper={PAPER_PASS_PAPER}
         tone={{ band: theme.primary, bandInk: theme.primaryForeground }}
         band={
           <>

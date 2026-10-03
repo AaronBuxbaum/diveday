@@ -84,34 +84,4 @@ describe("the print palette", () => {
     expect(token("foreground")).toBeDefined();
     expect(token("primary-foreground")).toBe(token("foreground"));
   });
-
-  /**
-   * **And glare mode does not take it back.** `AmbientGlareDetector` puts
-   * `.glare-mode` on `<html>`, and its palettes (light and dark) redeclare
-   * `--primary-foreground` as white and, in the dark, `--foreground` too. A
-   * bare `.glare-mode` weighs what `:root` does and stands later in the file,
-   * so it won while printing: a page outside a `.boat-mode` box printed its
-   * primary labels white on the stripped fills. `:root.glare-mode` outranks it
-   * wherever either stands.
-   */
-  it("outranks glare mode's palettes on paper", () => {
-    const glare = rules.filter(
-      (rule) =>
-        rule !== palette &&
-        rule.selectors.some((selector) => selector.includes(".glare-mode")) &&
-        /--primary-foreground:/.test(rule.body),
-    );
-    expect(glare.length, "glare mode's light and dark palettes").toBeGreaterThan(0);
-    for (const rule of glare) expect(rule.selectors).toEqual([".glare-mode"]);
-    expect(palette?.selectors).toContain(":root.glare-mode");
-
-    document.documentElement.className = "glare-mode";
-    try {
-      expect(document.documentElement.matches(palette?.selectors.join(", ") ?? ":not(*)")).toBe(
-        true,
-      );
-    } finally {
-      document.documentElement.className = "";
-    }
-  });
 });

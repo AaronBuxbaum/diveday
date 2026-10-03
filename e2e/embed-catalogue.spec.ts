@@ -102,8 +102,10 @@ test.describe("the widget views", () => {
     const primary = await page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue("--primary").trim(),
     );
-    // The seeded shop's own green (src/db/seed.ts), derived the same way.
-    expect(primary).toBe(deriveBrandTheme("#158462").primary);
+    // The seeded shop sets no colour, so it wears Logbook's own sea teal —
+    // never the colour the URL asked for.
+    expect(primary).not.toBe(deriveBrandTheme("#b45309").primary);
+    expect(primary).toBe("#0b6e8a");
   });
 });
 

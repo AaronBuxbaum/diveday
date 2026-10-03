@@ -31,12 +31,9 @@ describe("AddPanel", () => {
     expect(screen.getByLabelText("Boat name")).toBeInTheDocument();
   });
 
-  it.each(["kinds-of-day", "seasons", "boats"])(
-    "is the only add panel the %s page draws",
-    (page) => {
-      const source = readFileSync(join(import.meta.dirname, "..", page, "page.tsx"), "utf8");
-      expect(source).toContain("<AddPanel");
-      expect(source, "no hand-rolled dashed panel").not.toContain("border-dashed");
-    },
-  );
+  it.each(["trip-tags", "boats"])("is the only add panel the %s page draws", (page) => {
+    const source = readFileSync(join(import.meta.dirname, "..", page, "page.tsx"), "utf8");
+    expect(source).toContain("<AddPanel");
+    expect(source, "no hand-rolled dashed panel").not.toContain("border-dashed");
+  });
 });

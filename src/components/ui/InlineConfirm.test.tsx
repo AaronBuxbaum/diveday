@@ -92,7 +92,7 @@ describe("InlineConfirm", () => {
 
   /**
    * One size per row: the Cancel stands beside the confirm, so it is drawn at
-   * the row's size rather than a fixed `sm`. Kinds of day's rows are `md`, and
+   * the row's size rather than a fixed `sm`. Trip tags' rows are `md`, and
    * an `md` confirm beside a fixed `sm` Cancel was a 16px word beside a 14px
    * one; its call site used to shrink the confirm to `sm` to match instead.
    */
@@ -165,9 +165,9 @@ describe("InlineConfirm", () => {
 
 /**
  * **A delete beside the Save it shares a row with** (pixel-craft class 12).
- * Settings' kinds of day, seasons and boats drew each row's Delete in a form
+ * Settings' trip tags and boats drew each row's Delete in a form
  * of its own after the edit form, because `InlineConfirm` submits the form it
- * sits in and forms cannot nest — so at 390px a kind of day became a 180px
+ * sits in and forms cannot nest — so at 390px a trip tag became a 180px
  * block: the name field, Save alone on the right, Delete alone on the left. A
  * button's `formaction` overrides its form's action, so the confirm can live
  * in the edit form's own action row and post somewhere else; `formnovalidate`

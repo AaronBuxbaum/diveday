@@ -20,10 +20,8 @@ import { type AppDb, getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { tripRequirementSummaries } from "@/db/readiness";
 import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
-import { listSeasonEvents } from "@/db/season-events";
 import { shopBySlugCached } from "@/db/shops";
 import { listTripLenses } from "@/db/trip-lenses";
-import { liveShopStage } from "@/db/trip-stages";
 import {
   countShopTrips,
   nextSessionStartByCourse,
@@ -40,20 +38,16 @@ import { timeZoneLabel } from "@/i18n/timezone-labels";
 import { courseDepthFormat } from "@/i18n/unit-labels";
 import { parseBrandBadges } from "@/lib/brand";
 import { addMonths, type MonthRef, monthKey, monthLabel, parseMonthKey } from "@/lib/calendar";
-import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { parseConservationCommitments } from "@/lib/conservation-commitments";
 import { courseTotalCents, resolveCourseContentDepths, resolveImageAlt } from "@/lib/courses";
 import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import {
   formatDayParts,
   formatMoneyScanned,
-  formatMonthDay,
   formatRelativeDay,
   formatShortDate,
   formatTime,
   formatTimeRange,
-  formatWeekday,
 } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { toShopCurrency } from "@/lib/money";
@@ -61,7 +55,6 @@ import { publicAppUrl } from "@/lib/notifications";
 import { offSeason } from "@/lib/off-season";
 import {
   publicAvailabilityPath,
-  publicBoatPath,
   publicCoursePath,
   publicCoursesPath,
   publicSchedulePath,
@@ -75,31 +68,23 @@ import {
   popCursor,
   pushCursor,
 } from "@/lib/schedule-pagination";
-import { liveSeasonEvents } from "@/lib/season-events";
-import { cardClearsDeparture, chooseShelfGreeting } from "@/lib/shelf-greeting";
 import { openGraphSite, shopSearchListingRobots } from "@/lib/site-metadata";
-import { skyReadingFor } from "@/lib/sky-scheme";
 import { absoluteUrl, scheduleJsonLd } from "@/lib/structured-data";
 import { resolveLens } from "@/lib/trip-lenses";
-import { STAGE_SENTENCE_KEYS } from "@/lib/trip-stages";
 import { capacityLabel, nextBookableDeparture } from "@/lib/trips";
-import { shopDayBounds, toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
+import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { CoursesShelf } from "./_components/CoursesShelf";
 import { FindMyBookingForm } from "./_components/FindMyBookingForm";
 import { LastMinuteListForm } from "./_components/LastMinuteListForm";
-import { LiveBoatPanel } from "./_components/LiveBoatPanel";
 import { NextBoatCard } from "./_components/NextBoatCard";
 import { OffSeasonPanel } from "./_components/OffSeasonPanel";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
-import { SeasonBand } from "./_components/SeasonBand";
 import { ShopfrontHero } from "./_components/ShopfrontHero";
 import {
   WEEK_LEDGER_FOLLOWER_CLASS,
   WeekLedger,
   type WeekLedgerRow,
 } from "./_components/WeekLedger";
-import { YoursGroup, type YoursRow } from "./_components/YoursGroup";
-import { readShelfWelcome } from "./_lib/shelf-welcome";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
 // read below sits inside this segment's `loading.tsx` boundary, so the frame
@@ -242,28 +227,6 @@ export default async function SchedulePage({
   const { locale, t } = await requestTranslator(shop.defaultLocale);
   const currency = toShopCurrency(shop.currency);
   const now = nowDate();
-  /**
-   * **The shop's own day, in words** (slice 23d). Not the reader's: a diver in
-   * London opening a Key Largo board has no way to know which day its first row
-   * means, and the whole page is written in a zone they are not standing in.
-   * The weekday leads because that is how a diver picks a dive day.
-   */
-  const shopfrontDay = `${formatWeekday(now, locale, tz)}, ${formatMonthDay(
-    utcToWallTime(now, tz).month,
-    utcToWallTime(now, tz).day,
-    locale,
-  )}`;
-
-  /**
-   * **Who is reading this, when their phone carries their shelf** (slice 20t).
-   *
-   * Null for every anonymous visitor, for a cookie minted at another shop, and
-   * for a token that has since been revoked or expired — all of which render
-   * this page exactly as it ships. Never in embed mode: `?embed=1` is a window
-   * onto the schedule pasted into somebody else's site, and greeting a diver by
-   * name inside a third party's iframe is not a thing this product does.
-   */
-  const shelf = isEmbed ? null : await readShelfWelcome(db, { shopId: shop.id, now });
 
   // Shop-local month boundaries, in UTC, for a given calendar month.
   const monthBoundsUtc = (ref: MonthRef) => {
@@ -286,7 +249,7 @@ export default async function SchedulePage({
   const listMonthBounds = explicitMonth ? monthBoundsUtc(explicitMonth) : null;
 
   /**
-   * **The shop's own words for its kinds of day** — ADR
+   * **The shop's trip tags** — ADR
    * 20260904-reef-all-the-way-down, decision 2 (issue #1162).
    *
    * Read before the batch below rather than inside it, because the list query
@@ -301,25 +264,6 @@ export default async function SchedulePage({
    */
   const lenses = isEmbed ? [] : await listTripLenses(db, shop.id);
   const activeLens = resolveLens(lens, lenses);
-
-  /**
-   * **The reef's calendar** (issue #1485) — the weeks the shop plans its year
-   * around, in the shop's own words, while one of them is live.
-   *
-   * Read beside the vocabulary above and for the same reason: both are the
-   * shop's own writing about its schedule, and both stand down inside the
-   * frame, where a band would spend a third of a 900px widget on something the
-   * host page did not ask for.
-   *
-   * "Live" is asked on the shop's own calendar day, never the server's: a Key
-   * Largo mini-season closes at midnight in Key Largo (`src/lib/season-events.ts`).
-   */
-  const today = calendarDateInTimezone(now, tz);
-  // The whole calendar, not only the live half: the off-season card below
-  // needs the *upcoming* windows, which is the one honest date a shop with an
-  // empty board still has on file (`src/lib/off-season.ts`).
-  const seasonRows = isEmbed ? [] : await listSeasonEvents(db, shop.id);
-  const liveSeasons = liveSeasonEvents(seasonRows, today);
 
   // The view a diver has built — month, embed mode, the lens, and every list
   // filter — must survive every link that re-renders this page. A pager or
@@ -358,32 +302,6 @@ export default async function SchedulePage({
     return `${publicSchedulePath(shopSlug)}${query ? `?${query}` : ""}`;
   };
 
-  /**
-   * The live seasons as words. The name, the sentence and the days are the
-   * shop's; "Through …" and the link's label are DiveDay's frame.
-   *
-   * The end date is a `CalendarDate` with no instant in it, so
-   * `formatCalendarDate` reads it through UTC rather than converting a moment —
-   * "Oct 31" is October 31st wherever it is read.
-   *
-   * The link is offered only when the season names a word the rail still
-   * carries: `listSeasonEvents` narrows its join to live lenses, so a season
-   * pointing at a deleted word renders its own sentence and no link, rather
-   * than a chip that lands on the unfiltered board.
-   */
-  const seasonEntries = liveSeasons.map((event) => ({
-    id: event.id,
-    name: event.name,
-    note: event.note,
-    through: t("season.through", { date: formatCalendarDate(event.endsOn, locale) }),
-    lens: event.lens
-      ? {
-          href: lensHref(event.lens.slug),
-          label: t("season.lensLink", { lens: event.lens.name }),
-        }
-      : null,
-  }));
-
   // The published-review *list* still streams in separately (below, via
   // <ScheduleReviewsSection>) — it is the slower, independent read the shell
   // and trip list never needed to wait behind (docs task 119 follow-up:
@@ -398,7 +316,7 @@ export default async function SchedulePage({
   //
   // Both, and the courses shelf, stand down inside the frame: `?embed=1`
   // renders neither the hero nor the shelves.
-  const [range, { trips: upcoming, nextCursor }, reviewAggregate, activeCourses, boats, liveStage] =
+  const [range, { trips: upcoming, nextCursor }, reviewAggregate, activeCourses, boats] =
     await Promise.all([
       upcomingScheduleRange(db, shop.id, now, { publicOnly: true }),
       pagedUpcomingTripsWithCounts(db, shop.id, {
@@ -415,44 +333,7 @@ export default async function SchedulePage({
       // The fleet, for the storefront's boats section (Harbor). Not in the
       // widget: an embed is the list-first window and names no hulls.
       isEmbed ? [] : listBoats(db, shop.id),
-      // The boat a crew said is out (ADR 20260904-reef-all-the-way-down,
-      // Budget rule 4). Bounded to today's own window so a stage nobody
-      // cleared cannot speak for a week, and never read inside the frame.
-      // A shop that has not said the world may read its boats publishes none
-      // of this (ADR 20260908-one-hand, decision 6, lever U, owner call j):
-      // the panel, its Follow door and the boat's own page go together, and
-      // the switch is off until a shop turns it on.
-      isEmbed || !shop.publicBoatLine
-        ? null
-        : liveShopStage(db, shop.id, now, shopDayBounds(now, shop.timezone).from),
     ]);
-  // The sentences, composed here because word order and the site's place in
-  // them are a locale's choice rather than a component's. The boat is the
-  // hull's name when the shop has one on file and the departure's own title
-  // when it does not — never "the boat", which names nothing a visitor can
-  // recognise from the dock.
-  const liveStageSentence = liveStage
-    ? liveStage.stage === "underway" && !liveStage.siteName
-      ? t("tripStage.underwayNoSite", { boat: liveStage.boatName ?? liveStage.tripTitle })
-      : t(STAGE_SENTENCE_KEYS[liveStage.stage], {
-          boat: liveStage.boatName ?? liveStage.tripTitle,
-          site: liveStage.siteName ?? "",
-        })
-    : "";
-  const liveStageMeta = liveStage
-    ? [
-        t("tripStage.said", {
-          time: formatTime(liveStage.recordedAt, locale, shop.timezone),
-        }),
-        liveStage.endsAt
-          ? t("tripStage.liveBack", {
-              back: formatTime(liveStage.endsAt, locale, shop.timezone),
-            })
-          : null,
-      ]
-        .filter(Boolean)
-        .join(" ")
-    : "";
   // The widget shows a window; the page shows the schedule. Sliced here rather
   // than asked for in the query so the two surfaces read the same list and can
   // never disagree about what is next (issue #805).
@@ -491,8 +372,8 @@ export default async function SchedulePage({
    * Nothing public on the board for the next thirty days is a state the
    * storefront is now designed for rather than an empty list under "No trips
    * on the books yet" — see `src/lib/off-season.ts` for why the answer is
-   * derived from a departure the shop scheduled or a season it wrote, and
-   * never from a fourth column somebody has to remember to update.
+   * derived from a departure the shop scheduled, and never from a column
+   * somebody has to remember to update.
    *
    * Never inside the frame. `?embed=1` is a window onto the next few
    * departures on somebody else's website; a card about the shop's year, and
@@ -500,25 +381,17 @@ export default async function SchedulePage({
    * the widget already keeps its own terminal state below.
    */
   const quiet = isEmbed
-    ? { quiet: false, opensAt: null, nextSeason: null }
-    : offSeason({ now, firstDeparture: range.first, today, seasons: seasonRows });
+    ? { quiet: false, opensAt: null }
+    : offSeason({ now, firstDeparture: range.first });
   /**
    * The one sentence the card is allowed, already zoned and already worded.
    *
-   * A departure outranks a written season and only one ever renders — see
-   * `offSeason`. `formatShortDate` for the departure (a real instant, read in
-   * the shop's own zone, the same words the week rows below use) and
-   * `formatCalendarDate` for the season, whose two dates have no instant in
-   * them at all.
+   * `formatShortDate` for the departure (a real instant, read in the shop's
+   * own zone, the same words the week rows below use).
    */
   const quietLine = quiet.opensAt
     ? t("schedule.offSeason.back", { date: formatShortDate(quiet.opensAt, locale, tz) })
-    : quiet.nextSeason
-      ? t("schedule.offSeason.nextSeason", {
-          name: quiet.nextSeason.name,
-          date: formatCalendarDate(quiet.nextSeason.startsOn, locale),
-        })
-      : null;
+    : null;
   // Where each departure on this page actually goes. One read for the page,
   // not one per card — and read off the *dives* rather than `trips.dive_site_id`
   // (dive one's site, copied onto the trip row), so a two-site day names both
@@ -561,28 +434,6 @@ export default async function SchedulePage({
           .map((trip) => trip.id)
       : [],
   );
-
-  /**
-   * **Why a departure that demands a card is open to this reader** — one
-   * sentence per row, and only for a reader whose shelf cookie verified.
-   *
-   * The decision is `cardClearsDeparture`, which is the ladder only and never a
-   * gate; a course session is outside it for the same reason its requirement is
-   * not rendered at all.
-   */
-  const shelfCard =
-    shelf && shelf.file.certification.state !== "none" ? shelf.file.certification : null;
-  const clearedByCard = new Map<string, string>();
-  if (shelfCard) {
-    const worded = t("shelf.levelClears", {
-      level: t(DIVER_CERTIFICATION_LEVEL_KEYS[shelfCard.level]),
-    });
-    for (const trip of upcoming) {
-      if (trip.course) continue;
-      const required = requirementsByTrip.get(trip.id)?.minimumCertificationLevel;
-      if (cardClearsDeparture(shelfCard.level, required)) clearedByCard.set(trip.id, worded);
-    }
-  }
 
   const visibleUpcoming = hideAboveFilter
     ? upcoming.filter((trip) => !aboveStatedLevel.has(trip.id))
@@ -634,16 +485,12 @@ export default async function SchedulePage({
   const firstSkippedBoat = skippedBoats > 0 ? visibleUpcoming[0] : null;
   /**
    * How many panels the identity band has to lay out. Counted rather than
-   * inferred from the rendered children, because a grid wrapper around four
+   * inferred from the rendered children, because a grid wrapper around three
    * conditionals still draws its own top margin when every one of them is
    * false — an empty 24px band above the schedule on the commonest shop of
-   * all, the one with no live boat and no season written down.
+   * all, the one with no next boat.
    */
-  const identityPanels =
-    (quiet.quiet ? 1 : 0) +
-    (liveStage ? 1 : 0) +
-    (nextBoat ? 1 : 0) +
-    (seasonEntries.length > 0 ? 1 : 0);
+  const identityPanels = (quiet.quiet ? 1 : 0) + (nextBoat ? 1 : 0);
 
   // The month rail: one row of "where am I / step a month" instead of the
   // full month grid this page used to open with. The grid duplicated every
@@ -770,16 +617,7 @@ export default async function SchedulePage({
       requirements: requirement ? tripRequirementMarkers(t, requirement) : [],
       // Marked, never removed, unless the reader asked for the shorter list
       // (issue #696) — and the word is what gives the dimming a name.
-      // **The reader's own card wins over the filter's warn.** A diver whose
-      // phone carries their shelf is not guessing at a level: the shop holds
-      // their card, so a departure that demands one either is or is not open to
-      // them, and saying "Above your level" beside a card that clears it would
-      // be the page arguing with the file.
-      aboveLevel:
-        aboveStatedLevel.has(trip.id) && !clearedByCard.has(trip.id)
-          ? t("schedule.filters.aboveLevelChip")
-          : null,
-      clears: clearedByCard.get(trip.id) ?? null,
+      aboveLevel: aboveStatedLevel.has(trip.id) ? t("schedule.filters.aboveLevelChip") : null,
       capacityText: seats.text,
       capacityTone: seats.tone,
       price:
@@ -831,63 +669,6 @@ export default async function SchedulePage({
     };
   });
 
-  /**
-   * **The greeting, and the two rows under it** (slice 20t).
-   *
-   * The sentence names the diver and which visit the next one is — `diveCount`
-   * is days already behind them, so the *next* is one past it, and both
-   * surfaces read the same number because both read the same field. Which of
-   * the two sentences it is turns on whether the seat they hold is today in
-   * **the shop's own day**, never the reader's: a diver reading from a hotel
-   * three zones east must not be told tonight about tomorrow.
-   */
-  const yours = shelf
-    ? (() => {
-        const rows: YoursRow[] = [];
-        if (shelf.next) {
-          rows.push({
-            id: shelf.next.tripId,
-            href: publicTripPath(shopSlug, shelf.next.tripId),
-            title: shelf.next.title,
-            when: `${formatRelativeDay(shelf.next.startsAt, now, locale, tz)} · ${formatTime(shelf.next.startsAt, locale, tz)}`,
-            because: null,
-          });
-        }
-        if (shelf.sameBoat) {
-          rows.push({
-            id: shelf.sameBoat.tripId,
-            href: publicTripPath(shopSlug, shelf.sameBoat.tripId),
-            title: shelf.sameBoat.title,
-            when: `${formatShortDate(shelf.sameBoat.startsAt, locale, tz)} · ${formatTime(shelf.sameBoat.startsAt, locale, tz)}`,
-            because: t(
-              shelf.sameBoat.because === "boat" ? "shelf.sameBoatBoat" : "shelf.sameBoatSeries",
-              { weekday: formatWeekday(shelf.sameBoat.startsAt, locale, tz) },
-            ),
-          });
-        }
-        const name = shelf.diver.firstName;
-        const choice = chooseShelfGreeting({
-          diveCount: shelf.diveCount,
-          nextStartsAt: shelf.next?.startsAt ?? null,
-          now,
-          timeZone: tz,
-        });
-        const greeting =
-          choice.kind === "cold"
-            ? t("shelf.welcomeCold", { name })
-            : choice.kind === "tonight"
-              ? t("shelf.welcomeTonight", { name, n: choice.ordinal })
-              : t("shelf.welcomeUpcoming", {
-                  name,
-                  n: choice.ordinal,
-                  // Not null on this branch by construction — `upcoming` is the
-                  // answer only when a seat was passed in.
-                  day: formatRelativeDay(shelf.next?.startsAt ?? now, now, locale, tz),
-                });
-        return { greeting, rows };
-      })()
-    : null;
-
   return (
     <main
       className={
@@ -921,7 +702,6 @@ export default async function SchedulePage({
               tagline={shop.tagline}
               description={shop.description}
               aggregate={reviewAggregate}
-              commitments={parseConservationCommitments(shop.conservationCommitments)}
               heroImage={
                 shop.brandHeroImageUrl
                   ? { url: shop.brandHeroImageUrl, alt: shop.brandHeroImageAlt ?? "" }
@@ -929,22 +709,6 @@ export default async function SchedulePage({
               }
               badges={parseBrandBadges(shop.brandBadges)}
               establishedYear={shop.establishedYear}
-              // **The storefront is the day** (ADR 20260919-one-idea, decision
-              // I · Tide, slice 23d). The hour over *this* shop, from its own
-              // coordinates where it has them and from its clock where it does
-              // not, and the shop's own date under it — which is the one thing
-              // a diver reading this board from another timezone cannot work
-              // out for themselves. A shop with a cover photograph ignores
-              // both: it already has a sky.
-              sky={{
-                scheme: skyReadingFor({
-                  at: now,
-                  timeZone: tz,
-                  latitude: shop.latitude,
-                  longitude: shop.longitude,
-                }).scheme,
-                day: shopfrontDay,
-              }}
               locale={locale}
               t={t}
             />
@@ -952,14 +716,13 @@ export default async function SchedulePage({
                 held `max-w-md` of its own, so on a 1152px page they stacked
                 down the left third and left the other two-thirds empty — three
                 boxes reading as three unrelated things with nothing beside
-                them. They are one band: the same four facts, laid out as a row
+                them. They are one band: the same three facts, laid out as a row
                 at `md` and up and as the old stack on a phone. `grid-flow-col`
                 with `auto-cols-fr` rather than a fixed `grid-cols-3`, because
                 how many of them render is a fact about the shop's day — no
-                live boat, no season — and the row has to read at one, two,
-                three or four. Order is the reading order it has always been:
-                the quiet, the boat that is out, the next one with space, the
-                season. */}
+                live boat — and the row has to read at one, two or three. Order
+                is the reading order it has always been: the quiet, the boat
+                that is out, the next one with space. */}
             {identityPanels > 0 ? (
               <div className="mt-6 grid gap-4 md:auto-cols-fr md:grid-flow-col">
                 {/* **The quiet, before the boat** (N-45). A shop with nothing on
@@ -972,28 +735,6 @@ export default async function SchedulePage({
                     no bookable boat. */}
                 {quiet.quiet ? (
                   <OffSeasonPanel heading={t("schedule.offSeason.heading")} line={quietLine} />
-                ) : null}
-                {/* **The boat that is out** — ADR 20260904-reef-all-the-way-down,
-                    decision 2, Budget rule 4. Before the next departure, because a
-                    visitor who can see a boat leave from the dock is asking about
-                    today before they are asking about Saturday. Never in embed
-                    mode: `?embed=1` is a window onto the schedule, and a live
-                    panel would spend a third of a widget on a fact the host page
-                    did not ask for. */}
-                {liveStage ? (
-                  <LiveBoatPanel
-                    stage={liveStage.stage}
-                    eyebrow={t("tripStage.liveEyebrow")}
-                    sentence={liveStageSentence}
-                    meta={liveStageMeta}
-                    // The door to that boat's own day (ADR 20260908-one-hand,
-                    // decision 6, lever U). Reached only when the switch is on,
-                    // because `liveStage` is null without it.
-                    follow={{
-                      href: publicBoatPath(shopSlug, liveStage.tripId),
-                      label: t("boatLine.follow"),
-                    }}
-                  />
                 ) : null}
                 {nextBoat ? (
                   <NextBoatCard
@@ -1018,32 +759,11 @@ export default async function SchedulePage({
                     t={t}
                   />
                 ) : null}
-                {/* **The reef's calendar** (issue #1485). After the next boat,
-                    because the page's one primary is still the bookable object —
-                    but above the schedule, because a week that changes what the
-                    diving is like changes which day somebody picks out of it. */}
-                <SeasonBand eyebrow={t("season.eyebrow")} entries={seasonEntries} />
               </div>
             ) : null}
           </div>
         </div>
       )}
-
-      {/* **"Yours", above the week** (slice 20t). A diver whose phone carries
-          their shelf is checking one of two things — when they are next out,
-          and whether the boat they liked runs again — so both sit above the
-          board rather than inside it. The week below is unchanged and complete:
-          being greeted hides nothing. Renders nothing at all without the
-          cookie, which is every anonymous visitor. */}
-      {yours ? (
-        <YoursGroup
-          heading={t("shelf.yoursHeading")}
-          greeting={yours.greeting}
-          rows={yours.rows}
-          shopSlug={shopSlug}
-          shelfLabel={t("shelf.yoursShelf")}
-        />
-      ) : null}
 
       {/* **The board itself, and nothing where there is no board** (N-45).
           A shop with nothing public on the books renders no "Schedule"
@@ -1116,7 +836,7 @@ export default async function SchedulePage({
           ) : null}
 
           {/* **The lens rail** — ADR 20260904-reef-all-the-way-down, decision 2
-              (issue #1162): the shop's own words for its kinds of day, as a row
+              (issue #1162): the shop's trip tags, as a row
               of views onto the list below.
 
               **Above the filter form, never between it and the list.** Seven

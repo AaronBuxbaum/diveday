@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { ShelfDoor } from "@/components/ShelfDoor";
 import type { RecapSite } from "@/db/recap";
 import type { DiverMessageKey, DiverTranslator } from "@/i18n/messages";
 import { DIVEDAY_BRAND_COLOR } from "@/lib/brand";
@@ -48,7 +47,6 @@ function props(overrides: Partial<AfterStateProps> = {}): AfterStateProps {
       depthUnit: "meters",
       temperatureUnit: "celsius",
       reviewUrl: null,
-      signOffNote: null,
       brandColor: null,
       brandDisplayFont: null,
     },
@@ -501,7 +499,6 @@ describe("one primary at rest", () => {
             reviewUrl: "https://g.page/r/blue-mantis/review",
             brandColor: null,
             brandDisplayFont: null,
-            signOffNote: null,
           },
           ownReview: { rating: 5, comment: "Vis was unreal." },
           params: { review: "published" },
@@ -525,7 +522,6 @@ describe("one primary at rest", () => {
             reviewUrl: "https://g.page/r/blue-mantis/review",
             brandColor: null,
             brandDisplayFont: null,
-            signOffNote: null,
           },
           ownReview: { rating: 5, comment: "Vis was unreal." },
         })}
@@ -611,36 +607,6 @@ describe("the keepsake prints like a logbook page", () => {
     const facts = screen.getByTestId(AFTER_STATE_TEST_IDS.record).querySelector("dl");
     expect(facts).toHaveClass("print:border-t", "divide-y");
     expect(facts).not.toHaveClass("border-t");
-  });
-});
-
-/**
- * **The shop's own sign-off, and only where the crew wrote none** (issue
- * #1212). Two answers to one question is the defect, so the crew's words
- * always win, and the standing sentence stands in only for the days nobody
- * wrote anything.
- */
-describe("the shop's sign-off", () => {
-  const signOff = "Thanks for diving with us. The kettle's always on.";
-  const withSignOff = (overrides: Partial<AfterStateProps> = {}) =>
-    props({
-      ...overrides,
-      shop: { ...props().shop, signOffNote: signOff },
-    });
-
-  it("renders when the crew wrote no shout-out", () => {
-    render(<AfterState {...withSignOff({ shoutout: null })} />);
-    expect(screen.getByText(signOff)).toBeInTheDocument();
-  });
-
-  it("stays silent under a shout-out somebody wrote today", () => {
-    render(<AfterState {...withSignOff({ shoutout: "Come back for the wreck." })} />);
-    expect(screen.queryByText(signOff)).toBeNull();
-  });
-
-  it("leaves the page with exactly one primary", () => {
-    const { container } = render(<AfterState {...withSignOff({ shoutout: null })} />);
-    expect(primaries(container)).toHaveLength(1);
   });
 });
 
@@ -778,30 +744,6 @@ describe("the doors stay quiet", () => {
       />,
     );
     expect(screen.getByText("recap.tipCrew")).toBeInTheDocument();
-  });
-});
-
-/**
- * The footer's two ways onward were drawn two ways: "See what's next" a bare
- * 20px link and the shelf door a 48px link button whose 16px padding opened a
- * 33px gap where the footer's gap is 16 (the pixel audit, recap). One drawing
- * now — the flush link button, whose box is a target and whose words sit where
- * the footer's gap puts them.
- */
-describe("the footer's two doors", () => {
-  it("draws the way back to the board and the shelf door as one control", () => {
-    render(
-      <AfterState
-        {...props({
-          shelfDoor: <ShelfDoor action={async () => {}} label="shelf.doorSend" />,
-        })}
-      />,
-    );
-
-    const board = screen.getByRole("link", { name: "recap.seeWhatsNext" });
-    const shelf = screen.getByRole("button", { name: "shelf.doorSend" });
-    expect(board.className).toBe(shelf.className);
-    expect(board).toHaveClass("min-h-12", "px-0", "text-primary");
   });
 });
 

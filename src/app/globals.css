@@ -61,12 +61,11 @@
   --primary-hover: #08566c;
   --primary-foreground: #ffffff;
   /* Derived, not redeclared per skin: resolves against whichever --primary is
-     in scope (default/dark/boat-mode/glare-mode). */
+     in scope (default/dark/boat-mode). */
   --primary-sunken: color-mix(in srgb, var(--primary) 65%, black);
   /*
    * Keyboard focus indicator: full-strength --primary, derived lazily so every
    * skin gets its own ring. Worst case light is 4.93:1 on --surface-sunken.
-   * `.sky` retokens it to white ink on the dark bands.
    */
   --focus-ring: var(--primary);
 
@@ -104,8 +103,12 @@
   --radius: 0.5rem;
   --radius-inset: 0.5rem;
   --radius-panel: 0.75rem;
-  /* A resting panel is set off by its hairline, not a lift. */
-  --shadow-bed: 0 1px 2px rgba(22, 35, 44, 0.05);
+  /* A resting panel is set off by its hairline, not a lift: the token stays so
+     every `shadow-bed` call site is still valid, and draws nothing. Not the
+     keyword `none` — Tailwind joins this into a comma list with the ring
+     shadows, where `none` would void the whole declaration (and a ring with
+     it); a zero-offset transparent shadow is Tailwind's own "nothing". */
+  --shadow-bed: 0 0 #0000;
 
   /*
    * Tell the browser which way our palette runs, so native form parts (date
@@ -158,7 +161,6 @@
     --success-tint: #123022;
     --warning-tint: #33280f;
     --danger-tint: #3a191c;
-    --shadow-bed: 0 1px 2px rgba(0, 0, 0, 0.45);
   }
 }
 
@@ -241,8 +243,8 @@
   --motion-quick: 150ms;
   /**
    * The default, and what nearly everything already chose independently: a
-   * figure rolling, a row sliding, a disclosure body arriving, a toast, a
-   * sheet leaving, a panel opening from its control.
+   * row sliding, a disclosure body arriving, a toast, a sheet leaving, a panel
+   * opening from its control.
    */
   --motion-base: 200ms;
   /**
@@ -484,16 +486,11 @@ body {
 }
 
 /*
- * Dock/boat surfaces follow the device's own light/dark preference — bright
- * light by day so the manifest reads in full sun, dark for a night dive when a
- * white screen would blind the deck. What boat-mode adds on top of the app
- * palette is *contrast*: it darkens ink, borders, and the action color in light
- * and lifts them in dark, so the roll call reads well above the rest of the
- * app — every boat-mode ink/action token clears 6.2:1 against its own surfaces
- * in both schemes, where the app palette's worst token sits at 4.4:1. That is
- * comfortably past AA and short of AAA's 7:1 for normal text; don't describe it
- * as AAA. Big touch targets live in the components. Keep this semantic so the
- * roll-call screens can opt in without changing the app.
+ * Dock/boat surfaces wear Boat mode (`.boat-mode`, below): one Night Dive
+ * palette in both schemes, high contrast rather than following the device's
+ * light or dark preference (ADR 20261001-logbook, decision 6). Big touch
+ * targets live in the components. Keep this semantic so the roll-call
+ * screens can opt in without changing the app.
  */
 
 /*
@@ -550,9 +547,12 @@ body {
  * both schemes: deep navy, white ink, and marine safety yellow as the one
  * action colour, in Atkinson Hyperlegible. Every pair clears AA by a wide
  * margin: ink 15.0 on the surface, muted 8.3, yellow 11.2, ink on yellow 12.6.
- * It replaces the ambient-light switch and the separate glare skin as the
- * single high-contrast surface.
+ * It is the single high-contrast surface: there is no ambient-light switch
+ * and no separate glare skin. Anyone can put a whole device in it from the
+ * identity menu, which sets the class on `<html>` (`src/lib/boat-mode.ts`);
+ * `:root.boat-mode` outranks the dark scheme's `:root` block.
  */
+:root.boat-mode,
 .boat-mode {
   color-scheme: dark;
   --background: #0a141c;
@@ -637,7 +637,7 @@ textarea {
  * Drawn from two gradient triangles rather than an SVG data URI so the arrow
  * is painted in `currentColor`: a data URI cannot interpolate a CSS variable,
  * which would have meant hard-coding a hex per skin and re-hard-coding it for
- * dark, boat mode, and glare mode. `padding-inline-end` reserves the strip it
+ * dark and boat mode. `padding-inline-end` reserves the strip it
  * occupies so a long option label never runs under it.
  *
  * Multi-selects and sized list boxes render as an open list, not a closed
@@ -746,8 +746,7 @@ summary {
  * on the settings rail's selected `bg-primary-tint`; 4.75:1 on
  * `bg-surface-sunken` (4.95:1 on boat mode's, under the offline manifest's
  * rows); 4.83:1 on the palette's active `bg-primary/10`; and on the roll
- * call's tone rows 4.09:1 at worst, a boarded row's `bg-success/20` (5.53:1
- * and up with glare on). On the manifest the ring is `:root`'s `--primary`,
+ * call's tone rows 4.09:1 at worst, a boarded row's `bg-success/20`. On the manifest the ring is `:root`'s `--primary`,
  * not boat mode's, because `.boat-mode` redeclares `--primary` on a
  * descendant, which a `var()` resolved on `:root` never sees (#1988).
  *
@@ -822,26 +821,24 @@ textarea {
 /*
  * **The shop on paper** — ADR 20260908-one-hand, decision 6, lever X.
  *
- * The five sheets under `/shop/<slug>/print/**` are the one family of pages in
- * the app whose *output* is paper rather than a screen, and they are the one
- * place the rules below are deliberately inverted:
+ * The paper pass under `/shop/<slug>/print/pass/**` is the one page in the
+ * app whose *output* is a sheet of the shop's own paper rather than a screen,
+ * and it is the one place the rules below are deliberately inverted:
  *
  * 1. **They print in colour, on purpose.** The `@media print` block repaints
  *    the whole app black-on-white and strips every fill, which is right for a
- *    manifest a shop prints on a mono laser and wrong for the sign at the slip:
+ *    manifest a shop prints on a mono laser and wrong for a diver's pass:
  *    the whole point of these sheets is that they carry the shop's own colour
  *    and face. So each sheet restores its own ground and band under print, at
  *    class specificity, and asks the UA for the ink with `print-color-adjust`.
  * 2. **The band's colour is set inline by the sheet, never read from
  *    `--primary`.** Print redefines that token, so a band drawn from it would
- *    print grey; the sheet resolves the shop's derived brand (or the boat's own
- *    action colour) at render and hands it down as `--sheet-band`.
+ *    print grey; the sheet resolves the shop's derived brand at render and
+ *    hands it down as `--sheet-band`.
  * 3. **A sheet is a box in millimetres**, sized to its paper less the `@page`
  *    margin the route declares - a floor rather than a ceiling, and never a
- *    clip. A shop's own briefing is prose of whatever length the shop wrote,
- *    and a card that silently cut it off would be read on a boat as the whole
- *    briefing. So a sheet that outgrows its paper takes a second page, and no
- *    sheet ever loses a word.
+ *    clip. A sheet that outgrows its paper takes a second page, and no sheet
+ *    ever loses a word.
  *
  * On screen the sheet sits in a frame that scrolls sideways rather than
  * squashing the layout - this is a document, and a document that reflows to a
@@ -872,14 +869,6 @@ textarea {
   -webkit-print-color-adjust: exact;
 }
 
-/* The night side of the boat card: the ground a red torch reads against. */
-.paper-sheet-night {
-  --sheet-ground: #000a0f;
-  --sheet-ink: #f4fbfc;
-  --sheet-muted: #b9cdd4;
-  --sheet-rule: #1c3a47;
-}
-
 .paper-sheet + .paper-sheet {
   margin-top: 1.5rem;
 }
@@ -891,22 +880,6 @@ textarea {
   padding: 0.75rem 1.25rem;
   background: var(--sheet-band);
   color: var(--sheet-band-ink);
-}
-
-/*
- * The one sheet that may not paginate. The boat card is two faces of one
- * lamination, so a face that grew would be laminated across two cards; content
- * that overruns is cut at the card's own edge, where the fold line makes the
- * cut visible. Its caller bounds the one unbounded thing it prints, the shop's
- * emergency plan (`boatCardPlan`).
- */
-.paper-sheet-fit {
-  overflow: hidden;
-}
-
-/* The night side's band is its own ground, so it needs the rule to show. */
-.paper-sheet-night .paper-sheet-band {
-  border-bottom: 1px solid var(--sheet-rule);
 }
 
 .paper-sheet-mark {
@@ -926,21 +899,6 @@ textarea {
   padding: 1.25rem;
 }
 
-/*
- * A sign rather than a document (`PaperSheet`'s `layout="poster"`): the dock
- * sign and the window sticker hold a few fixed things and none of the shop's
- * prose, so their content is centred on the paper instead of running from the
- * band and leaving the rest of the sheet blank. The body already fills the
- * sheet's height, so this is the only place the centring can live: a child's
- * `h-full` has no definite height to resolve against in a sheet whose height
- * is a floor.
- */
-.paper-sheet-body-poster {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
 .paper-sheet-muted {
   color: var(--sheet-muted);
 }
@@ -956,19 +914,6 @@ textarea {
   font-family: var(--font-mono), ui-monospace, monospace;
   font-size: 0.5rem;
   letter-spacing: 0.02em;
-}
-
-/* A ruled blank a skipper fills in by hand - never an invented number. It
-   runs to its column's edge and lies on its label's baseline. An 8ch inline
-   block was 13mm of rule ending wherever its label ended, three blanks at
-   three x positions; a one-line block reached the edge but dropped its rule
-   to the foot of the line, 3.4px under the words. Inline-level and as wide as
-   its definition, it is both: an empty inline block's bottom edge is the
-   line's baseline (`PaperSheet.test.tsx`, `e2e/shop-on-paper.spec.ts`). */
-.paper-sheet-blank {
-  display: inline-block;
-  width: 100%;
-  border-bottom: 1px solid var(--sheet-rule);
 }
 
 @page {
@@ -1016,13 +961,8 @@ textarea {
     display: none;
   }
 
-  /* `:root.glare-mode` because glare mode's own palettes (light and dark,
-     further down) are a bare `.glare-mode`: as heavy as `:root` and later in
-     the file, they won on paper, and a page outside a `.boat-mode` box
-     printed its primary labels white (and, in the dark, all its ink). One
-     class heavier, the print palette wins wherever either stands. */
   :root,
-  :root.glare-mode,
+  :root.boat-mode,
   .boat-mode {
     color-scheme: light;
     --background: #ffffff;
@@ -1430,7 +1370,7 @@ textarea {
 
   /*
    * **The sheets keep their ink.** Everything above repaints the app for a
-   * shop's mono laser; a dock sign in the shop's colour is the one document
+   * shop's mono laser; a pass in the shop's colour is the one document
    * that is *for* the colour, so each sheet restores its own ground and band at
    * class specificity - which beats the `*` rule above without another
    * `!important` arms race - and the frame around it stops being a frame.
@@ -1455,7 +1395,7 @@ textarea {
     padding: 0;
   }
 
-  /* One sheet, one page - the boat card's two sides, every briefing card. */
+  /* One sheet, one page. */
   .paper-sheet + .paper-sheet {
     margin-top: 0;
     break-before: page;
@@ -1533,107 +1473,6 @@ textarea {
 .boat-leaves {
   display: inline-flex;
   animation: boat-leaves 520ms var(--ease-out-soft) both;
-}
-
-/*
- * **The four skies** — ADR 20260919-one-idea, decision I · Tide.
- *
- * Tide's premise is that the app *is* the day, so a day-shaped surface opens
- * with the sky over the shop at the hour it is being read. `skyReadingFor`
- * (`src/lib/sky-scheme.ts`) decides which of the four it is, from the almanac
- * where the shop has coordinates and from its clock where it does not; this is
- * the only place those four are drawn.
- *
- * **One flat gradient per sky, never a painting.** Three or four stops down the
- * band and nothing else — no photograph, no noise, no drawn cloud. The risk the
- * canvas named for this idea is kitsch, and the rule that holds it off is that
- * every sky is the same shape and differs only in its hue.
- *
- * **Every stop is dark enough for the ink that sits on it.** Reading ink on the
- * sky is white, and the secondary line is white at 90% — so the measurement
- * that matters is the *lightest* stop of each gradient, which is where white
- * has least to work with. Measured against that stop: white 5.24 (dawn), 7.17
- * (day), 5.70 (dusk), 16.44 (night); the soft ink 4.61 / 6.14 / 4.97 / 13.43.
- * A dawn that reached a real sunrise peach would put the secondary line at
- * 3.1:1, which is why dawn stops at a dusty rose.
- *
- * **A wash carries no fact** — the same rule the water band lives under. The
- * sky says what hour it is and nothing whatever about a booking, a blocker or
- * a departure.
- */
-:root {
-  --sky-dawn: linear-gradient(180deg, #0d2452 0%, #2a4a86 52%, #6b4f7a 84%, #8f5f68 100%);
-  --sky-day: linear-gradient(180deg, #0b3f74 0%, #12508f 58%, #15589f 100%);
-  --sky-dusk: linear-gradient(180deg, #14183f 0%, #3b2a63 44%, #7a3f56 78%, #9a5340 100%);
-  --sky-night: linear-gradient(180deg, #04060f 0%, #0a1330 62%, #131c44 100%);
-  /* The sky's own ink, which does not follow the scheme: a sky is dark in both,
-     exactly like `--device-frame`, so ink that flipped would vanish at night. */
-  --sky-ink: #ffffff;
-  --sky-ink-soft: rgba(255, 255, 255, 0.9);
-  /* Lines drawn on the sky rather than read from it: the arc, the ticks, the
-     horizon. A graphical object needs 3:1, and every one of these clears it on
-     every stop by being white. */
-  --sky-rule: rgba(255, 255, 255, 0.45);
-  --sky-rule-faint: rgba(255, 255, 255, 0.28);
-  --sky-sun: #ffd479;
-  /* Now: an amber pill with its own dark ink (6.6:1), because a white pill on a
-     white-inked sky is not an emphasis. The line under it is white — amber on
-     dawn's rose measures 2.9:1, under the 3:1 a line owes. */
-  --sky-now: #ff9500;
-  --sky-now-ink: #331c00;
-}
-
-.sky {
-  background: var(--sky-day);
-  color: var(--sky-ink);
-  /* Every focusable on a band stands on the sky itself, where lagoon's ring
-     measured under 2:1; the band's white ink clears 5.2:1 on every stop (the
-     ratios are under `--focus-ring`). */
-  --focus-ring: var(--sky-ink);
-}
-
-.sky[data-scheme="dawn"] {
-  background: var(--sky-dawn);
-}
-
-.sky[data-scheme="dusk"] {
-  background: var(--sky-dusk);
-}
-
-.sky[data-scheme="night"] {
-  background: var(--sky-night);
-}
-
-/*
- * Under `prefers-contrast: more`, and in the crew's own glare mode, the sky
- * flattens to one deep colour. A gradient is a range of contrasts by
- * definition, and a reader who has asked for more contrast has asked for the
- * range to stop — the hour is still said in words above it either way.
- */
-@media (prefers-contrast: more) {
-  .sky,
-  .sky[data-scheme="dawn"],
-  .sky[data-scheme="dusk"],
-  .sky[data-scheme="night"] {
-    background: #0b1c33;
-  }
-}
-
-.glare-mode .sky,
-.glare-mode .sky[data-scheme="dawn"],
-.glare-mode .sky[data-scheme="dusk"],
-.glare-mode .sky[data-scheme="night"] {
-  background: #08182c;
-}
-
-@media print {
-  .sky,
-  .sky[data-scheme="dawn"],
-  .sky[data-scheme="dusk"],
-  .sky[data-scheme="night"] {
-    background: none;
-    color: var(--foreground);
-  }
 }
 
 /* Marketing sections reveal once, only after the browser has confirmed they
@@ -1788,8 +1627,8 @@ textarea {
   animation: fade-in var(--motion-quick) var(--ease-out-soft) both;
 }
 
-/* The inverse of fade-in, for a scrim/backdrop layer closing (WaterLocker) —
-   issue #832. Nothing on a fade needs a transform; opacity alone reverses. */
+/* The inverse of fade-in, for a scrim/backdrop layer closing (Modal,
+   CommandPalette, PersonSheet) — issue #832. Nothing on a fade needs a transform; opacity alone reverses. */
 @keyframes fade-out {
   from {
     opacity: 1;
@@ -1885,114 +1724,6 @@ textarea {
  * way a second hard-coded `200ms` eventually would.
  */
 /*
- * **A figure rolls** — `RollingFigure`, ADR 20260907-nothing-from-nowhere,
- * decision 3.
- *
- * A slot is one character's worth of clipped space: as wide as the character,
- * one line tall, `overflow: hidden` so the digit on its way out is cut off by
- * the slot's own edge rather than overlapping the line above. The slot stays
- * in the flow and keeps its width, so the words beside a figure never move
- * while it changes — which is the whole reason this is two absolutely
- * positioned children inside a relative box rather than a `translateY` on the
- * text itself.
- *
- * `1ch`-ish sizing is deliberately *not* used: the app's figures are
- * `tabular-nums`, so a digit already occupies the font's figure width, and the
- * slot inherits it by containing exactly one character.
- *
- * Both halves are on the ladder's base rung and on the two curves §5 already
- * names: the leaving digit departs on `--ease-in-soft` (and says so in its
- * name, for `check-exit-curves.mjs`), the arriving one lands on
- * `--ease-out-soft`. The kill-switch below shortens both, but the component
- * decides not to render a roll at all for a reduced-motion reader, so this is
- * belt and braces rather than the mechanism.
- */
-.rolling-figure-slot {
-  position: relative;
-  display: inline-block;
-  overflow: hidden;
-  /* The slot clips a digit travelling a full line-height, so it must be a line
-     tall and no taller; `vertical-align` keeps it sitting on the text's own
-     baseline rather than on the inline box's bottom. */
-  vertical-align: bottom;
-  line-height: inherit;
-}
-
-/* The arriving digit takes the slot's space and keeps it in the flow, so the
-   slot is exactly one digit wide; the leaving one is lifted out so the two
-   occupy one column rather than two. */
-.rolling-figure-slot > span {
-  display: inline-block;
-}
-
-.rolling-digit-out,
-.rolling-digit-out-down {
-  position: absolute;
-  inset-inline-start: 0;
-  top: 0;
-}
-
-@keyframes rolling-digit-out {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(-100%);
-  }
-}
-
-@keyframes rolling-digit-out-down {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateY(100%);
-  }
-}
-
-@keyframes rolling-digit-in {
-  from {
-    opacity: 0;
-    transform: translateY(100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes rolling-digit-in-down {
-  from {
-    opacity: 0;
-    transform: translateY(-100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.rolling-digit-out {
-  animation: rolling-digit-out var(--motion-base) var(--ease-in-soft) both;
-}
-
-.rolling-digit-out-down {
-  animation: rolling-digit-out-down var(--motion-base) var(--ease-in-soft) both;
-}
-
-.rolling-digit-in {
-  animation: rolling-digit-in var(--motion-base) var(--ease-out-soft) both;
-}
-
-.rolling-digit-in-down {
-  animation: rolling-digit-in-down var(--motion-base) var(--ease-out-soft) both;
-}
-
-/*
  * **The press: what every tappable thing does under a finger** — ADR
  * 20260907-nothing-from-nowhere, decision 2.
  *
@@ -2082,142 +1813,6 @@ textarea {
     transform, filter, backdrop-filter;
   transition-timing-function: var(--default-transition-timing-function);
   transition-duration: var(--default-transition-duration);
-}
-
-/*
- * Glare Mode: the app's highest-contrast palette, ≥16px text, ≥44px targets
- * everywhere. Enabled automatically in direct sun/glare.
- *
- * Ink and surfaces are AAA by a wide margin (pure black/white on white/black,
- * 13:1 and up). The feedback colors are the floor and are not AAA: 4.56:1
- * worst case in light, 6.48:1 in dark. So this is "AA everywhere, AAA wherever
- * the palette allows", not blanket AAA — the remaining gap is tracked in
- * docs/product/features/roadmap.md under the accessibility contrast fixes.
- */
-.glare-mode {
-  /* Enforce AAA contrast colors on both schemes */
-  --foreground: #000000;
-  --muted: #1f2937;
-  --border: #4b5563;
-  --border-strong: #000000;
-  --primary: #075985;
-  --primary-hover: #0369a1;
-  --primary-foreground: #ffffff;
-  --background: #ffffff;
-  --surface: #ffffff;
-  --surface-sunken: #f3f4f6;
-  --success: #15803d;
-  --warning: #b45309;
-  --danger: #b91c1c;
-  --info: #3730a3;
-
-  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to scale any text sizing */
-  font-size: 16px !important;
-}
-
-/* Force smaller Tailwind font utilities to be at least 1rem (16px) */
-.glare-mode .text-xs,
-.glare-mode .text-sm,
-.glare-mode [class*="text-xs"],
-.glare-mode [class*="text-sm"] {
-  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to scale any text sizing */
-  font-size: 1rem !important; /* 16px */
-  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to scale any text sizing */
-  line-height: 1.5rem !important;
-}
-
-/*
- * Every target at least 44px high and wide: **a floor, never a ceiling.**
- *
- * In `@layer base` and without `!important`, and that is load-bearing. It was
- * unlayered and important, which beats every utility, so it replaced every
- * *larger* minimum as well as the smaller ones: the roll call's `min-h-19`
- * person button rendered at 52px beside its 56px mark, the name and index
- * riding 11–13px above the mark's centre (pixel probe,
- * `manifest-seen-boat-mode`). Layered, an element with no minimum of its own
- * still gets 44px, and a component that asks for more keeps it.
- * `glare-mode.test.ts` holds both halves.
- */
-@layer base {
-  .glare-mode button,
-  .glare-mode select,
-  .glare-mode textarea,
-  .glare-mode input:not([type="hidden"]),
-  .glare-mode summary,
-  .glare-mode [role="button"],
-  .glare-mode a {
-    min-height: 44px;
-    min-width: 44px;
-  }
-}
-
-/*
- * Standalone navigation links / controls in lists or bars centre their label
- * in that box.
- *
- * **Not a link that already lays out its own box** (`inline-flex`), for the
- * reason the prose reset below gives. Every tap-target link carries its own
- * display and alignment, and this rule's `!important` overrode them: the
- * eyebrow back link stands its words on its 44px box's bottom edge
- * (`items-end`, K-395), and forced to centre them it lifted the eyebrow 14px
- * off its line in glare, further from the title than on land (the pixel
- * probe, manifest-seen-boat-mode).
- */
-.glare-mode a:not(.inline-flex) {
-  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to enforce layout display */
-  display: inline-flex !important;
-  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to center labels */
-  align-items: center !important;
-  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to center labels */
-  justify-content: center !important;
-}
-
-/*
- * A link inside a sentence stays in the sentence: no box, no floor.
- *
- * **Not a link that is already a tap target.** `EyebrowBackLink` is an
- * `inline-flex min-h-11` link whose wrapper is a `<span>`, and `span a` turned
- * it inline at 33×28, its chevron on a line of its own above "TRIP". Prose
- * links carry no `inline-flex`; every tap-target link does.
- *
- * Unlayered, so its `auto` minimums beat the layered floor above without an
- * `!important`; `display` keeps one, to beat the one on
- * `.glare-mode a:not(.inline-flex)`.
- */
-.glare-mode :is(p, span, .inline) a:not(.inline-flex) {
-  min-height: auto;
-  min-width: auto;
-  /* biome-ignore lint/complexity/noImportantStyles: inline link resets need !important to beat the display forced on .glare-mode a:not(.inline-flex) */
-  display: inline !important;
-}
-
-/* Glare mode active indicator badge */
-.glare-mode-indicator {
-  /* biome-ignore lint/complexity/noImportantStyles: hidden by default indicator needs !important to override any utilities */
-  display: none !important;
-}
-.glare-mode .glare-mode-indicator {
-  /* biome-ignore lint/complexity/noImportantStyles: glare-mode overrides need !important to force display the indicator */
-  display: inline-flex !important;
-}
-
-@media (prefers-color-scheme: dark) {
-  .glare-mode {
-    --background: #000000;
-    --surface: #0c0c0c;
-    --surface-sunken: #171717;
-    --border: #888888;
-    --border-strong: #ffffff;
-    --foreground: #ffffff;
-    --muted: #e5e5e5;
-    --primary: #38dbf3;
-    --primary-hover: #7fe9f9;
-    --primary-foreground: #000000;
-    --success: #4ade80;
-    --warning: #fbbf24;
-    --danger: #f87171;
-    --info: #a5b4fc;
-  }
 }
 
 /*
@@ -2619,84 +2214,26 @@ details[open]::details-content {
   }
 }
 
-/* Waiver Signature Coral Bubbles */
-@keyframes coral-bubble-rise {
+/*
+ * The roll call's all-aboard confirmation: one flat panel, a hairline and the
+ * panel's 12px corner, shown and then gone (ADR 20261001-logbook — no lift and
+ * no ornament; the expanding ring that used to sit behind it went). Opacity is
+ * the only thing that moves. Under reduced motion the fade is dropped outright
+ * rather than shortened: the global kill-switch cuts it to 0.01ms with
+ * `forwards`, which lands on the last keyframe, opacity 0, so a reader who
+ * asked for less motion saw no confirmation at all.
+ */
+@keyframes sub-surface-message-fade {
   0% {
-    transform: translateY(100%) scale(0.5);
     opacity: 0;
   }
   15% {
-    opacity: 0.6;
-  }
-  90% {
-    opacity: 0.4;
-  }
-  100% {
-    transform: translateY(-150px) scale(1.1);
-    opacity: 0;
-  }
-}
-
-.bubble-container {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 0;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.coral-bubble {
-  position: absolute;
-  bottom: 0;
-  border-radius: 50%;
-  background: radial-gradient(
-    circle at 30% 30%,
-    color-mix(in srgb, var(--surface) 60%, transparent) 0%,
-    color-mix(in srgb, var(--accent) 30%, transparent) 70%,
-    color-mix(in srgb, var(--accent) 60%, transparent) 100%
-  );
-  border: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
-  opacity: 0;
-}
-
-.animate-bubble {
-  animation-name: coral-bubble-rise;
-  animation-timing-function: ease-in-out;
-  animation-iteration-count: infinite;
-}
-
-/* Clean-slate close-out: a restrained signal that the board is clear and ready. */
-@keyframes sub-surface-ripple {
-  0% {
-    transform: scale(0.35);
-    opacity: 0.45;
-  }
-  70% {
-    opacity: 0.18;
-  }
-  100% {
-    transform: scale(2.7);
-    opacity: 0;
-  }
-}
-
-@keyframes sub-surface-message-fade {
-  0% {
-    transform: translateY(4px) scale(0.96);
-    opacity: 0;
-  }
-  20% {
-    transform: translateY(0) scale(1);
     opacity: 1;
   }
-  76% {
-    transform: scale(1);
+  80% {
     opacity: 1;
   }
   100% {
-    transform: translateY(-2px) scale(0.98);
     opacity: 0;
   }
 }
@@ -2714,21 +2251,6 @@ details[open]::details-content {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background-color: color-mix(in srgb, var(--background) 18%, transparent);
-}
-
-.sub-surface-ripple-ring {
-  position: absolute;
-  width: 180px;
-  height: 180px;
-  border-radius: 50%;
-  border: 2px solid color-mix(in srgb, var(--primary) 70%, transparent);
-  opacity: 0;
-  pointer-events: none;
-}
-
-.sub-surface-ripple-ring:nth-child(1) {
-  animation: sub-surface-ripple 1.4s var(--ease-out-soft) forwards;
 }
 
 .sub-surface-ripple-message {
@@ -2737,11 +2259,17 @@ details[open]::details-content {
   align-items: center;
   gap: 0.75rem;
   background: var(--surface);
-  border: 1px solid color-mix(in srgb, var(--primary) 40%, var(--border));
-  box-shadow: 0 8px 20px color-mix(in srgb, var(--foreground) 10%, transparent);
+  border: 1px solid var(--primary);
   padding: 1rem 1.5rem;
-  border-radius: 1rem;
+  border-radius: var(--radius-panel);
   animation: sub-surface-message-fade 1.4s var(--ease-out-soft) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sub-surface-ripple-message {
+    /* biome-ignore lint/complexity/noImportantStyles: must beat the kill-switch's duration override, which would leave the panel at its final opacity 0 */
+    animation-name: none !important;
+  }
 }
 
 /*

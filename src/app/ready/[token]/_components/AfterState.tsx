@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { BrandStyle } from "@/components/BrandStyle";
 import { EarnedMoment } from "@/components/EarnedMoment";
 import { ImageFileInput } from "@/components/ImageFileInput";
@@ -132,12 +131,6 @@ export type AfterStateProps = {
      */
     brandColor: string | null;
     brandDisplayFont: BrandDisplayFontCode | null;
-    /**
-     * How this shop signs off a finished day (issue #1212). Read only where
-     * the crew wrote nothing of their own: a standing sentence never talks
-     * over one somebody wrote today.
-     */
-    signOffNote: string | null;
   };
   /** The day's site, drawn in the illustration hand on the record's face. */
   siteMark: SiteMarkCode;
@@ -247,14 +240,6 @@ export type AfterStateProps = {
   /** The pick's booking page carrying this diver's own handoff, or null. */
   nextDiveHref?: string | null;
   /**
-   * The way to this diver's shelf, already built by whichever page is rendering
-   * (`src/components/ShelfDoor.tsx`). Null on a page that has no shelf to offer
-   * — this component decides nothing about which door it is, because the thread
-   * and the recap are allowed different ones and the reason is a security one
-   * (`src/app/actions/shelf-door.ts`).
-   */
-  shelfDoor?: ReactNode;
-  /**
    * **The buddy seat** (ADR 20260908-one-hand, decision 6, lever W): this
    * diver's own link to the shop, carrying a non-secret referral id, for them
    * to hand to a friend.
@@ -350,7 +335,6 @@ export function AfterState({
   nextDive,
   nextDiveWorded,
   nextDiveHref = null,
-  shelfDoor = null,
   buddyLinkUrl = null,
   actions,
   siteMark,
@@ -470,11 +454,6 @@ export function AfterState({
           </blockquote>
           <figcaption className="mt-2 text-sm text-muted">{t("recap.fromYourCrew")}</figcaption>
         </figure>
-      ) : shop.signOffNote?.trim() ? (
-        // The shop's standing sign-off, in the shop's own words and only where
-        // the crew wrote none for this diver (issue #1212). Uncaptioned: it is
-        // a sentence, not a quotation the reader has to attribute.
-        <p className="mt-10 text-base print:hidden">{shop.signOffNote.trim()}</p>
       ) : null}
 
       {/* What a course day left the student holding — before the review ask,
@@ -796,18 +775,12 @@ export function AfterState({
             {nextDeparture.title} · {nextDeparture.when}
           </p>
         ) : null}
-        {/* The same flush link button as the shelf door beside it: one
-            drawing for the footer's two ways onward, each a target, with the
-            footer's own gap between their words. */}
         <Link
           href={publicSchedulePath(shop.slug)}
           className={buttonClass({ variant: "link", flush: true })}
         >
           {t("recap.seeWhatsNext")}
         </Link>
-        {/* ——— The way to this diver's own shelf, beside the way back to the
-            board: the two things a finished day leaves a diver wanting. */}
-        {shelfDoor}
       </footer>
     </main>
   );

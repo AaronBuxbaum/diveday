@@ -7,8 +7,7 @@ import { Switch } from "./ui/Switch";
 /**
  * **The vibration switch, on the device that does the vibrating.**
  *
- * Per device rather than per person, and beside the boat-mode contrast control
- * for the same reason: both are properties of the phone in a wet pocket, not
+ * Per device rather than per person, like Boat mode: both are properties of the phone in a wet pocket, not
  * of whoever picked it up. A shop's spare deck phone is shared.
  *
  * It exists because the roll call's completion pattern is
