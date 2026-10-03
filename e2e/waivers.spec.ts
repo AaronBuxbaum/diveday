@@ -756,14 +756,12 @@ test("a paper release is recorded from the diver's own record, not just from a d
   await page.getByRole("link", { name: "Priya Sharma", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Priya Sharma", level: 1 })).toBeVisible();
   // The Waiver group leads with where the release stands; the four routes to a
-  // signature are its one row's actions, disclosed together as peers rather
-  // than one send button with the rest ranked behind it.
+  // signature sit under it as peers rather than one send button with the rest
+  // ranked behind it.
   await expect(page.getByText("Not signed")).toBeVisible();
-  // Every file group is a closed door at every width (slice A), and an unsent
-  // release is not open work.
+  // An unsigned release opens its group onto the ways to get it signed.
   await openDiverFileGroup(page, "Waiver");
   const waiverGroup = page.getByRole("region", { name: "Waiver" });
-  await waiverGroup.getByText("Send options", { exact: true }).click();
   await expect(waiverGroup.getByRole("button", { name: "Email waiver" })).toBeVisible();
   await expect(waiverGroup.getByRole("button", { name: "Copy link" })).toBeVisible();
 
@@ -782,10 +780,10 @@ test("a paper release is recorded from the diver's own record, not just from a d
     page.getByText("Confirm you reviewed the medical questionnaire", { exact: false }),
   ).toBeVisible();
   // Beside the form that earned it, never a banner at the top of a record this
-  // long (docs/design/forms-and-controls.md). Scoped to the group's body: the
-  // door above it carries the same word as its one settled fact, so an
-  // unscoped query now names two elements that both say the truth.
-  await expect(page.locator("#waiver-content").getByText("Not signed")).toBeVisible();
+  // long (docs/design/forms-and-controls.md). The standing is still "Not
+  // signed", said once, on the group's door: the body below it holds only the
+  // ways to get it signed.
+  await expect(waiverGroup.getByText("Not signed")).toBeVisible();
 
   // The refused attestation left the form standing rather than collapsing over
   // its own error: the box is right there to tick.
@@ -827,11 +825,9 @@ test("a diver without a booking can receive an independent waiver from their rec
   await expect(
     page.getByRole("heading", { name: `Unscheduled E2E Diver ${stamp}`, level: 1 }),
   ).toBeVisible();
-  // The four routes are one row behind the waiver group's "Send options"
-  // disclosure (ADR 20260827-people-not-lists): what a record leads with is
-  // where the release stands, not four ways to chase it.
+  // The four routes sit in the open under the waiver group's door, which an
+  // unsigned release opens on its own.
   await openDiverFileGroup(page, "Waiver");
-  await page.getByText("Send options", { exact: true }).click();
   // A diver with both an address and a textable number is offered both, beside
   // the link every record always carries.
   await expect(page.getByRole("button", { name: "Email waiver" })).toBeVisible();

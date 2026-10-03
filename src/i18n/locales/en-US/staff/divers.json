@@ -416,7 +416,6 @@
   },
   "waiver": {
     "referralUnresolved": "Re-signed after a referral, with no physician clearance on file ({date}). Record one, or ask.",
-    "sendOptions": "Send options",
     "openClearanceDocument": "Open the physician’s evaluation"
   },
   "details": {

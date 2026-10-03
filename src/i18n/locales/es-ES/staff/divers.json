@@ -416,7 +416,6 @@
   },
   "waiver": {
     "referralUnresolved": "Firmada de nuevo tras una derivación médica: no consta autorización de un médico ({date}). Regístrala o pregunta.",
-    "sendOptions": "Opciones de envío",
     "openClearanceDocument": "Abrir la evaluación médica"
   },
   "details": {

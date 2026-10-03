@@ -4,8 +4,6 @@ import { medicalClearanceCopy } from "@/components/medical-clearance-copy";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { paperWaiverCopy } from "@/components/paper-waiver-copy";
 import { FILE_ROW_INSET, WaiverStateRow } from "@/components/person/rows";
-import { buttonClass } from "@/components/ui/button";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { InsetGroup } from "@/components/ui/ledger";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -28,9 +26,10 @@ import { WaiverDeliveryActions } from "./WaiverDeliveryActions";
  * `text-lg`, a detail line, and four delivery buttons laid out as a control
  * group — a whole section for a single fact about the person. It is now the
  * shared `WaiverStateRow` (8a) inside the file's inset group, with the tone in
- * the ink rather than in a fill, and the four routes behind one disclosure.
+ * the ink rather than in a fill — and, for a release that still needs signing,
+ * not even that: the door says "Not signed" and opens straight onto the routes.
  *
- * **The routes stay four peers, disclosed together.** A staffer with an
+ * **The routes stay four peers, side by side.** A staffer with an
  * unsigned release in front of them is choosing between the diver's inbox,
  * their phone, a link to paste into a conversation of their own, and the sheet
  * of paper already in the diver's hand — and which is right is a fact about the
@@ -40,7 +39,7 @@ import { WaiverDeliveryActions } from "./WaiverDeliveryActions";
  * review, not by mailing another link.
  */
 
-/** The anchor the status ledger's "Send the waiver" lands on — a focusable `<summary>`. */
+/** The anchor the status ledger's "Send the waiver" lands on — the row of routes. */
 const SEND_ANCHOR = "waiver-send";
 
 /**
@@ -130,7 +129,12 @@ function waiverSummary(
     return `${text} · ${t("divers.stats.waiverNotClearedOn", { date: date(diver.waiver.declinedAt) })}`;
   }
   if (diver.waiver.state === "expired") {
-    return `${text} · ${t("divers.stats.waiverLastSigned", { date: date(diver.waiver.signedAt) })}`;
+    // The expired word, not `text`: a failed send turns `state` into
+    // "failed", whose word is "Not signed", and "Not signed · Last signed …"
+    // contradicts itself. The failure rides along, since the door is now the
+    // only status line the group draws (dive-domain review, 2026-10-03).
+    const lastSigned = `${waiverRowStateText(t, "expired")} · ${t("divers.stats.waiverLastSigned", { date: date(diver.waiver.signedAt) })}`;
+    return state === "failed" ? `${lastSigned} · ${t("divers.stats.waiverFailed")}` : lastSigned;
   }
   if (state === "failed") return `${text} · ${t("divers.stats.waiverFailed")}`;
   if (diver.waiver.state === "guardian_missing") return text;
@@ -229,24 +233,36 @@ export function WaiverGroup({
       // The two facts a closed "Signed" door would hide are the two that stand
       // on somebody's word rather than on a document: a signature that ended a
       // referral without answering it is the second (issue #1282).
-      summaryTone={overriddenReferralAt ? "warning" : "muted"}
+      //
+      // An unsigned release wears the same ink now that the door is its only
+      // status line: the row inside that used to draw it is gone.
+      summaryTone={overriddenReferralAt || needsAction ? "warning" : "muted"}
       // A hold is the one waiver state with work that only this group can take:
       // the physician's answer goes in here, and nowhere else in the product.
       // An unanswered referral is the other: the sentence naming it, and the
       // clearance door that resolves it, are both inside.
-      open={Boolean(status) || heldForMedical || Boolean(overriddenReferralAt)}
+      //
+      // An unsigned release is the third: it keeps the diver off the boat, and
+      // the ways to fix it are the whole of what is inside.
+      open={Boolean(status) || heldForMedical || Boolean(overriddenReferralAt) || needsAction}
       stacked
     >
       {/* Nothing to send, record or answer: the summary is the whole story,
           so the group is a plain row rather than a door onto a copy of it. */}
       {hasWork ? (
         <InsetGroup>
-          <WaiverStateRow
-            as="div"
-            t={t}
-            state={state}
-            detail={waiverDetail(diver, t, locale, timezone)}
-          />
+          {/* The state row restates the door, so it is drawn only where its
+              ink says more than the door can: a hold, a physician's refusal,
+              a current release with a referral or a clearance behind it. An
+              unsigned release opens straight onto the ways to get it signed. */}
+          {needsAction ? null : (
+            <WaiverStateRow
+              as="div"
+              t={t}
+              state={state}
+              detail={waiverDetail(diver, t, locale, timezone)}
+            />
+          )}
           {overriddenReferralAt ? (
             <p className="px-5 pb-3 text-sm font-medium text-warning-strong sm:px-6">
               {t("divers.waiver.referralUnresolved", {
@@ -257,86 +273,74 @@ export function WaiverGroup({
               })}
             </p>
           ) : null}
-          {/* The four routes are the state row's actions, laid out as their own
-            row beneath it rather than in the row's right-hand column. The
-            column is the width of its buttons, and the panel that drops out of
-            it carries a medical attestation a staffer puts their name to —
-            `DiverHeader` made the same call about the details editor, and for
-            the same reason: a disclosure whose panel is wider than its trigger
-            belongs on a line of its own. */}
+          {/* **The ways to get it signed, out in the open** (Aaron, 2026-10-03:
+            "This is quite confusing!"). The group used to open onto a state
+            row that repeated the door's own "Not signed", a "Not sent" under
+            it, and one "Send options" button between the staffer and the four
+            routes. The door already says where the release stands, so the
+            body is the routes themselves, each named for what it does. The one
+            sentence the door does not carry — a minor's solo signature, and
+            whose is missing — stays as a line above them. */}
           {needsAction ? (
-            <details
-              className={`group ${FILE_ROW_INSET}`}
-              // A refusal aimed at this group re-opens it. The notice renders
-              // below, outside the disclosure, so the staffer is told *that*
-              // something was refused — but the box they must correct is shut,
-              // and the `defaultOpen` on the attestation below cannot help while
-              // its own parent is closed. A success needs no form back.
-              open={Boolean(status) && status?.tone !== "success"}
-            >
-              <summary
-                id={SEND_ANCHOR}
-                className={buttonClass({
-                  variant: "secondary",
-                  size: "sm",
-                  className: "w-fit cursor-pointer list-none [&::-webkit-details-marker]:hidden",
-                })}
+            // Focusable so the status ledger's "Send the waiver" (`#waiver-send`)
+            // lands the cursor on the row of routes, as it landed on the
+            // disclosure it replaces.
+            <div id={SEND_ANCHOR} tabIndex={-1} className={`${FILE_ROW_INSET} outline-none`}>
+              {diver.waiver.state === "guardian_missing" ? (
+                <p className="mb-3 text-sm text-muted">
+                  {waiverDetail(diver, t, locale, timezone)}
+                </p>
+              ) : null}
+              <WaiverDeliveryActions
+                personId={personId}
+                hasEmail={Boolean(diver.person.email)}
+                // The same rule the send itself applies: a number with no
+                // unambiguous country code cannot be texted, so offering the
+                // button would only ever produce "no number we can text".
+                hasPhone={Boolean(smsRecipient(diver.person.phone))}
+                channelStates={diver.waiverChannels}
+                copy={{
+                  email: t("divers.stats.sendWaiverViaEmail"),
+                  text: t("divers.stats.sendWaiverViaSms"),
+                  link: t("divers.stats.copyWaiverLink"),
+                  stateSent: t("divers.stats.waiverChannelSent"),
+                  stateCopied: t("divers.stats.waiverChannelCopied"),
+                  stateFailed: t("divers.stats.waiverChannelFailed"),
+                  stateUnavailable: t("divers.stats.waiverChannelUnavailable"),
+                }}
+                sendCopy={waiverSendCopy(t)}
               >
-                {t("divers.waiver.sendOptions")}
-                <DisclosureCaret direction="down" className="group-open:rotate-180" />
-              </summary>
-              <div className="mt-3">
-                <WaiverDeliveryActions
-                  personId={personId}
-                  hasEmail={Boolean(diver.person.email)}
-                  // The same rule the send itself applies: a number with no
-                  // unambiguous country code cannot be texted, so offering the
-                  // button would only ever produce "no number we can text".
-                  hasPhone={Boolean(smsRecipient(diver.person.phone))}
-                  channelStates={diver.waiverChannels}
-                  copy={{
-                    email: t("divers.stats.sendWaiverViaEmail"),
-                    text: t("divers.stats.sendWaiverViaSms"),
-                    link: t("divers.stats.copyWaiverLink"),
-                    stateSent: t("divers.stats.waiverChannelSent"),
-                    stateCopied: t("divers.stats.waiverChannelCopied"),
-                    stateFailed: t("divers.stats.waiverChannelFailed"),
-                    stateUnavailable: t("divers.stats.waiverChannelUnavailable"),
-                  }}
-                  sendCopy={waiverSendCopy(t)}
-                >
-                  <PaperWaiverControl
-                    action={markWaiverInPersonAction.bind(null, shopSlug, personId)}
-                    copy={paperWaiverCopy(t, "diver")}
-                    // A minor's paper release names its co-signer too — measured
-                    // on today, the day the staffer records the signature
-                    // (ADR 20260907-guardian-co-signature).
-                    requiresGuardian={guardianSignatureRequired(
-                      diver.person.dateOfBirth,
-                      signingDate(nowDate(), timezone),
-                    )}
-                    // **No namesake confirmation here, deliberately** —
-                    // `offersNamesake` is left off. This door is the absentee
-                    // case — the family phoned ahead, or handed a release over
-                    // months before they booked (`waivers.ts`,
-                    // `InPersonWaiverSubject`) — and the confirmation asserts in
-                    // the first person that the staffer watched two people sign.
-                    // Offering it to somebody reading a scanned PDF in February
-                    // asks them to attest to a thing nobody witnessed, and the
-                    // value it writes exists to tell a regulator somebody did. A
-                    // namesake family is sent to the counter, where the words are
-                    // true (`divers.notices.waiverGuardianName`).
-                    variant="secondary"
-                    className=""
-                    // A page-level notice that landed the staffer back here
-                    // re-opens the form. A refused attestation no longer
-                    // navigates: it answers under the button with what they
-                    // typed still in the boxes (issue #1674).
-                    defaultOpen={Boolean(status) && status?.tone !== "success"}
-                  />
-                </WaiverDeliveryActions>
-              </div>
-            </details>
+                <PaperWaiverControl
+                  action={markWaiverInPersonAction.bind(null, shopSlug, personId)}
+                  copy={paperWaiverCopy(t, "diver")}
+                  // A minor's paper release names its co-signer too — measured
+                  // on today, the day the staffer records the signature
+                  // (ADR 20260907-guardian-co-signature).
+                  requiresGuardian={guardianSignatureRequired(
+                    diver.person.dateOfBirth,
+                    signingDate(nowDate(), timezone),
+                  )}
+                  // **No namesake confirmation here, deliberately** —
+                  // `offersNamesake` is left off. This door is the absentee
+                  // case — the family phoned ahead, or handed a release over
+                  // months before they booked (`waivers.ts`,
+                  // `InPersonWaiverSubject`) — and the confirmation asserts in
+                  // the first person that the staffer watched two people sign.
+                  // Offering it to somebody reading a scanned PDF in February
+                  // asks them to attest to a thing nobody witnessed, and the
+                  // value it writes exists to tell a regulator somebody did. A
+                  // namesake family is sent to the counter, where the words are
+                  // true (`divers.notices.waiverGuardianName`).
+                  variant="secondary"
+                  className=""
+                  // A page-level notice that landed the staffer back here
+                  // re-opens the form. A refused attestation no longer
+                  // navigates: it answers under the button with what they
+                  // typed still in the boxes (issue #1674).
+                  defaultOpen={Boolean(status) && status?.tone !== "success"}
+                />
+              </WaiverDeliveryActions>
+            </div>
           ) : null}
           {clearanceDocument ? (
             <p className="px-5 pb-3 text-sm sm:px-6">
