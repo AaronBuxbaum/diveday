@@ -350,7 +350,6 @@ export default async function ImportContactsPage({
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${shopSlug}/settings`}
         title={t("settings.import.title")}
-        description={t("settings.import.description")}
       />
 
       {/* Three links inside one sentence. The space between them is the words

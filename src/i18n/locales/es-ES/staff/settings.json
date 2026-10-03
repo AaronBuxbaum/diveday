@@ -420,7 +420,6 @@
     },
     "divePackages": {
       "heading": "Paquetes de inmersiones",
-      "description": "Inmersiones prepagadas que un buceador compra una vez y usa en varias salidas.",
       "summary": "{dives, plural, one {# inmersión} other {# inmersiones}} · {price} · {scope}",
       "scopeAll": "Cualquier salida",
       "scopeFunDives": "Solo inmersiones recreativas",
@@ -523,7 +522,7 @@
   },
   "safetyChecklist": {
     "title": "Lista de verificación previa a la salida",
-    "description": "Las líneas que tu tripulación confirma antes de que el barco zarpe. Tú escribes cada elemento, y DiveDay no añade ninguno propio.",
+    "description": "Las líneas que tu tripulación confirma antes de que el barco zarpe.",
     "listHeading": "Lista de verificación",
     "empty": {
       "title": "Aún no hay nada en la lista",
@@ -546,7 +545,6 @@
   },
   "export": {
     "title": "Exportar datos",
-    "description": "Todo lo que el centro guarda en DiveDay, en CSV simple: buceadores, registros de certificación, salidas, reservas, exenciones firmadas, tallas de alquiler, pedidos, listas de espera, sitios de buceo y cursos. Incluye un archivo de contactos listo para importar.",
     "downloadButton": {
       "idle": "Descargar exportación",
       "acknowledged": "En camino, revisa tus descargas"
@@ -580,7 +578,6 @@
   },
   "import": {
     "title": "Importar contactos",
-    "description": "Trae buceadores, registros de certificación, tallas de alquiler y exenciones ya aceptadas desde un CSV, sea de tu sistema anterior o de la propia exportación de DiveDay.",
     "comingFrom": "¿Vienes de <eve>EVE</eve>, <diveshop360>DiveShop360</diveshop360>, o de <spreadsheet>una hoja de cálculo</spreadsheet>? Consulta la guía correspondiente y vuelve aquí para importar.",
     "notice": {
       "notAuthorized": "La importación escribe datos personales y médicos de los buceadores, así que está limitada a propietarios y gerentes."
@@ -877,7 +874,7 @@
   },
   "embed": {
     "title": "Inserción en tu web",
-    "description": "Pon tu calendario, una salida o un botón de reserva en tu propia web. Una línea cada uno; aquí eliges qué muestra y cómo se ve.",
+    "description": "Pon tu calendario, una salida o un botón de reserva en tu propia web.",
     "notConfigured": "Los enlaces de inserción necesitan una dirección pública configurada para esta instancia de DiveDay; escribe a {email} para activarla.",
     "what": "Qué insertar",
     "shows": "Qué muestra",

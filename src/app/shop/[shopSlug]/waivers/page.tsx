@@ -22,8 +22,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate } from "@/lib/format";
 import { OPERATIONAL_HORIZON_DAYS } from "@/lib/operational-window";
 import { requireShopSurface } from "@/lib/session";
-import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import type { NoticeTone } from "@/lib/staff-notices";
+import { type NoticeTone, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { DEFAULT_WAIVER_BODY } from "@/lib/waivers";
 import { PublishRelease, type PublishReleaseCopy } from "./_components/PublishRelease";
@@ -216,7 +215,8 @@ export default async function WaiversPage({
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <FlashParams params={["notice", "count"]} />
       <ShopPageHeader
-        eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.waivers)}
+        eyebrow={t("settings.main.eyebrow")}
+        eyebrowHref={shopPath(shopSlug, "settings")}
         title={t("waiversStaff.title")}
         // The version line is a fact about the release the page is named
         // after, so it rides under the title where a reader meets it before

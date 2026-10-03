@@ -138,7 +138,12 @@ export function DiverFileGroupDisclosure({
           window.requestAnimationFrame(scrollOnceRendered);
           return;
         }
-        target.scrollIntoView({ block: "nearest" });
+        // `start`, as a fragment load does natively: `nearest` stopped as
+        // soon as the target's last line was on screen, so the inbox's door
+        // to a message left that message at the foot of the viewport, 21px
+        // from where the record opened (the target's own `scroll-mt-*` keeps
+        // it clear of the sticky header).
+        target.scrollIntoView({ block: "start" });
         const focusTarget =
           target instanceof HTMLElement && target.tabIndex >= 0
             ? target

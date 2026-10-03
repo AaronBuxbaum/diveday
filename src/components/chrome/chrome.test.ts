@@ -329,7 +329,7 @@ describe("the title folds into the bar", () => {
     const staff = await read("src/components/ShopNav.tsx");
     const shopfront = await read("src/components/PublicShopChrome.tsx");
     expect(staff, "the staff bar has nowhere to fold a title into").toContain(
-      "data-chrome-title-slot",
+      "<ChromeTitleSlot />",
     );
     // The storefront's gate is this absence: `ShopPageHeader` serves ten-plus
     // surfaces under `src/app/s/`, and `FoldedPageTitle`'s portal no-ops with
@@ -337,10 +337,11 @@ describe("the title folds into the bar", () => {
     expect(shopfront, "the storefront grew a fold the ADR says it does not take").not.toContain(
       "data-chrome-title-slot",
     );
+    expect(shopfront).not.toContain("ChromeTitleSlot");
   });
 
   it("hides the label from assistive technology, so the words are not announced twice", async () => {
-    const staff = withoutComments(await read("src/components/ShopNav.tsx"));
+    const staff = withoutComments(await read("src/components/chrome/ChromeTitleSlot.tsx"));
     const slot = staff.slice(staff.indexOf("data-chrome-title-slot"));
     expect(slot.slice(0, slot.indexOf("/>")), "the folded label is exposed twice").toContain(
       "aria-hidden",
@@ -361,7 +362,7 @@ describe("the title folds into the bar", () => {
    * that says why.
    */
   it("sets the folded label on the shop name's own 24px line box", async () => {
-    const staff = withoutComments(await read("src/components/ShopNav.tsx"));
+    const staff = withoutComments(await read("src/components/chrome/ChromeTitleSlot.tsx"));
     const slot = staff.slice(staff.indexOf("data-chrome-title-slot"));
     const tag = slot.slice(0, slot.indexOf("/>"));
     expect(tag).toContain("className=");

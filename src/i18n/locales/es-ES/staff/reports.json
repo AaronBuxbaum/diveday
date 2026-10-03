@@ -44,7 +44,8 @@
   "row": {
     "seats": "{booked} de {capacity, plural, one {# plaza} other {# plazas}}",
     "crew": "{count, plural, one {# tripulante} other {# tripulantes}}",
-    "waivers": "{complete} de {total, plural, one {# exención} other {# exenciones}}"
+    "waiversAllIn": "Exenciones al día",
+    "waiversToCollect": "{count, plural, one {# exención por recoger} other {# exenciones por recoger}}"
   },
   "pagination": {
     "total": "{count, plural, one {# salida} other {# salidas}}"

@@ -41,7 +41,7 @@ provider-specific folders are adapters and must not introduce unique requirement
 | `pnpm dev` | dev server at localhost:3000, supervised by `scripts/dev-server.mjs`. Wait for its **`dev: serving … — warmed in Ns`**; Next's `✓ Ready` lands ~26s earlier and means only "listening". The supervisor restarts an OOM-bound `next dev` before the kernel does and says so. One dev server per *checkout*: the lock is `.next/dev/lock`, so `--port` does not buy a second (ADR 20260903-the-dev-server-is-supervised; the **run** skill) |
 | `pnpm task:context <area>` | bounded paths, invariants, and validation for a task |
 | `pnpm check:env` / `pnpm env:manual` | the two structural facts about configuration, and the one file a human edits — see `.claude/rules/infra.md` |
-| `pnpm check:repo` | 50 static guards over the repository, spawned concurrently so one run reports every failure rather than the first. Each guard names itself and prints the offending line; the ones whose *why* is not obvious from that message are written up in [docs/agents/repo-checks.md](docs/agents/repo-checks.md) |
+| `pnpm check:repo` | 49 static guards over the repository, spawned concurrently so one run reports every failure rather than the first. Each guard names itself and prints the offending line; the ones whose *why* is not obvious from that message are written up in [docs/agents/repo-checks.md](docs/agents/repo-checks.md) |
 | `pnpm check:follow-ups` | every open `needs-triage` issue is still actionable cold. The one guard that calls `gh`, so the one that can report **SKIPPED** rather than pass or fail ([docs/agents/issue-tracker.md](docs/agents/issue-tracker.md)'s "Filing a follow-up") |
 | `pnpm check` | repository safeguards + lint + typecheck + unit tests, concurrently and fail-slow (`scripts/check-all.mjs`) — **the bar, and CI is where you clear it**. Locally, run its four halves: `pnpm check:repo`, `pnpm lint`, `pnpm typecheck`, `pnpm test:changed` ([docs/agents/verifying.md](docs/agents/verifying.md)) |
 | `pnpm check:context-budget` | the words every session loads before it reads any code — this file, `CLAUDE.md`, any unscoped `.claude/rules/*.md`, and every skill's and reviewer agent's `description:` line — ratcheted (`--write` banks a fall, `--absorb "<why>"` records a deliberate rise), plus a 240-word cap on any single line. The fix for red is never to compress the prose: move the long half into `docs/` or a path-scoped rule and leave a pointer |
@@ -169,13 +169,13 @@ for anything touching auth, tokens, personal or medical data, or export/import.
   shared files (a `check:repo` row, a baseline, a message bundle), and on a stack those merge once,
   while the change is being written. Pixels are not an exception. Cut each branch from the one
   below, open each PR as a **draft at its first commit** with `base` set to that branch, bottom one
-  first, every body naming its position; `.github/workflows/stack.yml` registers the chain. Only the
-  bottom and top layers run CI: a middle layer runs nothing, its green means "nothing ran", and
-  opening a layer cancels the superseded run below it.
+  first, every body naming its position; `.github/workflows/stack.yml` registers the chain as a
+  GitHub stack. Never open the parts as independent PRs off `main`. Every layer runs the whole CI
+  gate.
   What still goes on its own branch off `main` (nothing of yours open, a fix that must merge now,
   another session's branch — never depth: a stack has no cap, and a long one is the point) and the
   mechanics are in the **stacked-prs** skill and ADRs 20260821-stacked-pull-requests,
-  20260919-stack-ci-cancels-superseded-layers and 20260907-a-runner-registers-the-stack.
+  20261003-every-stack-layer-runs-ci and 20260907-a-runner-registers-the-stack.
 - Before fixing a failing or flaky test, search open PRs for one that already touches the same spec
   or test name; coordinate in that thread instead of pushing a competing fix.
 

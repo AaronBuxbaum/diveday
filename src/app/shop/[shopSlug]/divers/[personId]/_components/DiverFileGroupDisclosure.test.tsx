@@ -273,7 +273,7 @@ describe("a deep link into a group", () => {
     // control).
     runFrame();
     expect(target.scrollIntoView).toHaveBeenCalledTimes(1);
-    expect(target.scrollIntoView).toHaveBeenCalledWith({ block: "nearest" });
+    expect(target.scrollIntoView).toHaveBeenCalledWith({ block: "start" });
     expect(document.activeElement).toBe(
       screen.getByRole("button", { name: "Verify certification record" }),
     );

@@ -8,12 +8,7 @@ export default function WhatsAppSettingsLoading() {
     <main className={settingsPaneClass()}>
       <div className="animate-pulse">
         {/* The description is three lines at 390px and two at 1280 (K-97). */}
-        <ShopPageHeaderSkeleton
-          titleWidth="w-56"
-          description
-          descriptionWidth="w-full max-w-xl"
-          descriptionLines={{ base: 3, sm: 2 }}
-        />
+        <ShopPageHeaderSkeleton titleWidth="w-56" description={false} />
         {/* The card shell comes from the same place the page's cards do, and
             the gap is the page's own `space-y-10` — a skeleton that drifts
             from what replaces it is a layout jump on every navigation. */}

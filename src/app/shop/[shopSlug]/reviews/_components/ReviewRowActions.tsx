@@ -1,13 +1,14 @@
 // i18n-exempt-file: every visible label arrives as an already-translated prop.
 "use client";
 
-import { createContext, useActionState, useContext } from "react";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { createContext, useActionState, useContext, useState } from "react";
+import { RowMenu } from "@/components/RowMenu";
 import { SubmitButton } from "@/components/SubmitButton";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { FormStatus } from "@/components/ui/form";
 import { ListItemActions } from "@/components/ui/list-item-actions";
+import { menuRowClass } from "@/components/ui/menu";
 import type { NoticeTone } from "@/lib/staff-notices";
 import { type ReviewActionResult, reviewRowAction } from "../actions";
 import { ReviewHideForm } from "./ReviewHideForm";
@@ -42,19 +43,8 @@ export type ReviewRowCopy = {
   error: string;
 };
 
-/** Keep the three quiet moderation controls aligned at every breakpoint. */
-const REVIEW_GHOST_ACTION_CLASS = buttonClass({
-  variant: "ghost",
-  size: "sm",
-  className: "whitespace-nowrap",
-});
-
-/** The "more" disclosure: one glyph, on the same 44px square as its row. */
-const REVIEW_MORE_CLASS = buttonClass({
-  variant: "ghost",
-  size: "icon-sm",
-  className: "list-none [&::-webkit-details-marker]:hidden",
-});
+/** A row inside the "⋯" list: a list of acts, so no tick gutter. */
+const MENU_ROW_CLASS = `${menuRowClass("quiet", { gutter: false })} whitespace-nowrap`;
 
 /** The release control shares the same height and label protection. */
 const REVIEW_SECONDARY_ACTION_CLASS = buttonClass({
@@ -177,6 +167,9 @@ export function ReviewRowActions({
   // all on a row the shop has already taken down, so such a row draws no
   // disclosure either.
   const hasQuietActs = !isHidden || canStandout;
+  // Whether the "⋯" panel shows the hide's reason picker instead of the list.
+  // Reset whenever the panel closes, so it always reopens on the list.
+  const [hiding, setHiding] = useState(false);
 
   return (
     <>
@@ -203,56 +196,59 @@ export function ReviewRowActions({
           /* **The rare acts are revealed, not standing.** Hide and the standout
              toggle used to sit on every row: twenty-four links down a page
              whose job is reading what divers wrote, for two acts a shop
-             performs a handful of times a month. They live behind one small
-             disclosure per row now — the same `<details>` grammar the reason
-             picker inside it already used, so it needs no JavaScript and the
-             keyboard reaches it the same way the mouse does (principles §8,
-             §10). Publish keeps its own place outside: it is the one act a
-             waiting row is on the page for. */
-          <details className="shrink-0">
-            <summary aria-label={moreLabel} className={REVIEW_MORE_CLASS}>
-              <DiveDayIcon name="more" className="size-4" />
-            </summary>
-            <div className="mt-3 flex flex-col items-end gap-2">
-              {canStandout ? (
-                <form action={formAction}>
-                  <input type="hidden" name="intent" value="standout" />
-                  <input type="hidden" name="reviewId" value={reviewId} />
-                  <input type="hidden" name="standout" value={isStandout ? "false" : "true"} />
-                  <SubmitButton pendingLabel={copy.saving} className={REVIEW_GHOST_ACTION_CLASS}>
-                    {isStandout ? copy.removeStandout : copy.markStandout}
-                  </SubmitButton>
-                </form>
-              ) : null}
-              {!isHidden ? (
+             performs a handful of times a month. They live behind the row's
+             "⋯" (`RowMenu`), which floats its list beside the button rather
+             than opening it inside the row. Publish keeps its own place
+             outside: it is the one act a waiting row is on the page for. */
+          <RowMenu
+            label={moreLabel}
+            panelClassName={hiding ? "w-72" : "w-48"}
+            onClosed={() => setHiding(false)}
+          >
+            {(close) =>
+              hiding ? (
                 /* Hiding states a case, so it cannot be a bare button (ADR
-                   20260813-review-moderation-has-a-floor). The picker waits
-                   behind its own disclosure: the shop that opens this is
-                   already sure, and the reason list is the whole point — a shop
-                   that finds none of them true is telling itself something.
-                   Available before publication as well: hiding a waiting review
-                   records the decision and keeps it out of the public set. */
-                <details>
-                  <summary
-                    className={`${REVIEW_GHOST_ACTION_CLASS} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
-                  >
-                    {copy.hide}
-                  </summary>
-                  <ReviewHideForm
-                    reviewId={reviewId}
-                    action={formAction}
-                    className="mt-3 w-64 max-w-[70vw]"
-                    reasons={reasons}
-                    reasonLabel={copy.hideReasonLabel}
-                    reasonPlaceholder={copy.hideReasonPlaceholder}
-                    noteLabel={copy.hideNoteLabel}
-                    hideLabel={copy.hideConfirm}
-                    savingLabel={copy.saving}
-                  />
-                </details>
-              ) : null}
-            </div>
-          </details>
+                   20260813-review-moderation-has-a-floor). The reason list
+                   takes the menu's place, in the same panel, so the form
+                   opens where the reader's eye already is. Available before
+                   publication as well: hiding a waiting review records the
+                   decision and keeps it out of the public set. */
+                <ReviewHideForm
+                  reviewId={reviewId}
+                  action={formAction}
+                  className="p-2"
+                  reasons={reasons}
+                  reasonLabel={copy.hideReasonLabel}
+                  reasonPlaceholder={copy.hideReasonPlaceholder}
+                  noteLabel={copy.hideNoteLabel}
+                  hideLabel={copy.hideConfirm}
+                  savingLabel={copy.saving}
+                />
+              ) : (
+                <>
+                  {canStandout ? (
+                    <form action={formAction} onSubmit={close}>
+                      <input type="hidden" name="intent" value="standout" />
+                      <input type="hidden" name="reviewId" value={reviewId} />
+                      <input type="hidden" name="standout" value={isStandout ? "false" : "true"} />
+                      <SubmitButton pendingLabel={copy.saving} className={MENU_ROW_CLASS}>
+                        {isStandout ? copy.removeStandout : copy.markStandout}
+                      </SubmitButton>
+                    </form>
+                  ) : null}
+                  {!isHidden ? (
+                    <button
+                      type="button"
+                      className={MENU_ROW_CLASS}
+                      onClick={() => setHiding(true)}
+                    >
+                      {copy.hide}
+                    </button>
+                  ) : null}
+                </>
+              )
+            }
+          </RowMenu>
         ) : null}
         {/* `basis-full` drops it onto its own line of the wrapping slot, so a
             refusal never squeezes the controls it is about off the row. */}

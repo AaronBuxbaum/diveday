@@ -67,7 +67,6 @@ export default async function DivePackagesSettingsPage({
         eyebrow={t("shared.shopNavLinks.promoCodes")}
         eyebrowHref={`/shop/${shopSlug}/promos`}
         title={t("settings.main.divePackages.heading")}
-        description={t("settings.main.divePackages.description")}
       />
       {banner ? <StaffNoticeBanner tone={banner.tone}>{banner.text}</StaffNoticeBanner> : null}
 

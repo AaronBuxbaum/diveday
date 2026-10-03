@@ -1,6 +1,5 @@
 {
   "title": "Integraciones del centro",
-  "description": "Conecta los sistemas que deben compartir el catálogo, los registros de dinero o los eventos automáticos de tu centro.",
   "notice": {
     "connected": "Integración conectada.",
     "saved": "Ajustes de integración guardados.",

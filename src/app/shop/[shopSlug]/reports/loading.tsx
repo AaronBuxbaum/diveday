@@ -2,7 +2,7 @@ import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { SEGMENT_CORNER, SEGMENT_RAISED, segmentedTrackClass } from "@/components/ui/segmented";
 import { StaffSectionTabsSkeleton } from "../_components/StaffSectionTabs";
-import { CREW_COLUMN, METER_COLUMN } from "./_components/DepartureLedger";
+import { CREW_COLUMN, SEATS_COLUMN, WAIVERS_COLUMN } from "./_components/DepartureLedger";
 import { figureCellClass } from "./_components/MonthFigures";
 
 /**
@@ -73,19 +73,25 @@ export default function ReportsLoading() {
             `py-2`) holding the loaded row's two lines: the title's 24px line,
             then the facts' 20px line, 8px down on a phone and 4px from `sm`
             (DepartureLedger). 69px and 65px, as the rows that replace them.
-            From `lg` the facts' bars fill the ledger's own seats, crew and
-            waivers columns (K-285), so they end where the loaded ones do. */}
+            From `lg` the facts move to the title's right, into the ledger's
+            own seats, crew and waivers columns, as the loaded rows do. */}
         <div className="mt-2">
           {[0, 1, 2, 3, 4, 5].map((row) => (
             <div key={row} className={`flex min-h-13 items-center py-2 ${ledgerRowBoxClass}`}>
-              <div className="min-w-0 flex-1">
-                <div className="flex h-6 items-center">
+              <div className="flex min-w-0 flex-1 flex-col gap-2 sm:gap-1 lg:flex-row lg:items-center lg:gap-6">
+                <div className="flex h-6 items-center lg:flex-1">
                   <div className="h-4 w-3/4 rounded bg-surface-sunken sm:w-80" />
                 </div>
-                <div className="mt-2 flex h-5 items-center gap-4 sm:mt-1">
-                  <div className={`h-3 w-20 rounded bg-surface-sunken ${METER_COLUMN}`} />
-                  <div className={`h-3 w-12 rounded bg-surface-sunken ${CREW_COLUMN}`} />
-                  <div className={`h-3 w-20 rounded bg-surface-sunken ${METER_COLUMN}`} />
+                <div className="flex h-5 items-center gap-4 lg:gap-6">
+                  <div className={`h-3 w-20 shrink-0 ${SEATS_COLUMN}`}>
+                    <div className="h-3 w-20 rounded bg-surface-sunken" />
+                  </div>
+                  <div className={`h-3 w-12 shrink-0 ${CREW_COLUMN}`}>
+                    <div className="h-3 w-12 rounded bg-surface-sunken" />
+                  </div>
+                  <div className={`h-3 w-24 shrink-0 ${WAIVERS_COLUMN}`}>
+                    <div className="h-3 w-24 rounded bg-surface-sunken" />
+                  </div>
                 </div>
               </div>
             </div>

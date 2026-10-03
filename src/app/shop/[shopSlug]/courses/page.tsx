@@ -198,7 +198,6 @@ export default async function CoursesPage({
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <ShopPageHeader
-        eyebrow={st("courses.list.eyebrow")}
         title={st("courses.list.title")}
         actions={
           // The one door to the catalog a diver sees — replacing the

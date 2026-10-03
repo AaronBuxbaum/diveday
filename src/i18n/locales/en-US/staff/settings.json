@@ -420,7 +420,6 @@
     },
     "divePackages": {
       "heading": "Dive packages",
-      "description": "Prepaid dives a diver buys once and spends across departures.",
       "summary": "{dives, plural, one {# dive} other {# dives}} · {price} · {scope}",
       "scopeAll": "Any departure",
       "scopeFunDives": "Fun dives only",
@@ -523,7 +522,7 @@
   },
   "safetyChecklist": {
     "title": "Pre-departure checklist",
-    "description": "The lines your crew confirms before a boat leaves the dock. You write every item, and DiveDay adds none of its own.",
+    "description": "The lines your crew confirms before a boat leaves the dock.",
     "listHeading": "Checklist",
     "empty": {
       "title": "Nothing on the list yet",
@@ -546,7 +545,6 @@
   },
   "export": {
     "title": "Data export",
-    "description": "Everything this shop keeps in DiveDay, as plain CSV: divers, certification records, trips, bookings, signed waivers, rental sizes, orders, wait lists, dive sites, and courses. Includes a ready-to-import contacts file.",
     "downloadButton": {
       "idle": "Download export",
       "acknowledged": "On its way, check your downloads"
@@ -580,7 +578,6 @@
   },
   "import": {
     "title": "Import contacts",
-    "description": "Bring divers, certification records, rental sizes, and prior waiver acceptance in from a CSV, whether your old system’s or DiveDay’s own export.",
     "comingFrom": "Coming from <eve>EVE</eve>, <diveshop360>DiveShop360</diveshop360>, or <spreadsheet>a spreadsheet</spreadsheet>? See the matching guide, then come back here to bring it in.",
     "notice": {
       "notAuthorized": "Importing writes divers’ personal and medical records, so it’s limited to owners and managers."
@@ -877,7 +874,7 @@
   },
   "embed": {
     "title": "Website embed",
-    "description": "Put your schedule, a departure or a booking button on your own website. One line each; what it shows and how it looks are chosen here.",
+    "description": "Put your schedule, a departure or a booking button on your own website.",
     "notConfigured": "Embed links need a configured public hosting address for this DiveDay instance. Contact {email} to get it set up.",
     "what": "What to embed",
     "shows": "What it shows",

@@ -1,10 +1,11 @@
+import { RowMenu } from "@/components/RowMenu";
 import { SubmitButton } from "@/components/SubmitButton";
-import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
+import { menuRowClass } from "@/components/ui/menu";
 import type { InboxRow as InboxMessageRow } from "@/db/inbound-messages";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
-import type { InboundChannel } from "@/lib/inbox";
+import { type InboundChannel, inboxMessageAnchor } from "@/lib/inbox";
 import { shopPath } from "@/lib/staff-notices";
 
 /**
@@ -29,6 +30,10 @@ const KEYWORD_KEYS: Record<"cancel" | "move" | "confirm", StaffMessageKey> = {
   move: "inbox.keyword.move",
   confirm: "inbox.keyword.confirm",
 };
+
+/** A row of the "⋯" list: a list of acts, so no tick gutter. */
+const MENU_ROW_CLASS = `${menuRowClass("quiet", { gutter: false })} whitespace-nowrap`;
+const MENU_DANGER_ROW_CLASS = `${menuRowClass("danger", { gutter: false })} whitespace-nowrap`;
 
 /**
  * The first line of what a diver wrote, for a list that is scanned rather than
@@ -59,34 +64,26 @@ function excerpt(body: string): string {
  * promise the surface cannot keep, and the address is half of what that row is
  * for.
  *
- * **That same row is the only one that can be deleted** (issue #1506). With no
- * record there is no door and no composer, so a stranger's message could be
- * read and never answered, and it went on counting against Today's
- * `unanswered_messages` with nothing on any surface able to clear it. Delete
- * is that missing move. A row that *has* a record gets none: it already has a
- * door and a composer, and the way to finish it is to answer it.
+ * **Every row ends on a "⋯"** (`RowMenu`), the one place a row's acts live,
+ * floating its list beside the button the way every row menu in the app does.
+ * A waiting message offers **Mark done** — one state for "answered somewhere
+ * else" and "no longer relevant", the same `answered_at` a sent reply stamps —
+ * and a done one offers **Move back to waiting**, for a message marked done too
+ * early. Both rows sit at the same edge, so every date in the column ends on
+ * the same line whatever the row offers.
  *
- * The control asks first, which principles.md §7 ("Undo over confirm")
- * otherwise reserves for the irreversible. The write is a soft delete (ADR
- * 20260820-every-delete-is-soft), but no surface a staffer can reach offers a
- * restore — from where they stand this is one-way, and a confirm is the honest
- * shape for that. Give the inbox a restore and this becomes an undo toast.
+ * **Only a stranger's row offers Delete** (issue #1506). With no record there
+ * is no door and no composer, so a stranger's message could be read and never
+ * answered. A row that *has* a record gets none: what a diver wrote belongs to
+ * their conversation. The invariant that actually holds is `person_id is null`
+ * in `deleteStrangerInboundMessage`'s `where` (`security-reviewer`, issue
+ * 1506); a render guard decides what a staffer is offered, never what the
+ * server accepts. The delete asks first: the write is soft (ADR
+ * 20260820-every-delete-is-soft), but nothing a staffer can reach restores it.
  *
- * **The form is the last line of the row's body, not a slot beside the date**
- * (pixel-craft classes 3 and 4, K-459 and K-465). In `trailing` it pushed the
- * stranger's date 50px left of every other date in the column, and on a phone
- * its 44px box set the height of the kind's line, so that row's first line sat
- * 12px lower than its neighbours'. The date is now the only thing `trailing`
- * holds on any row, and a stranger's row keeps the door's slot after it.
- *
- * The body is under a door's overlay link, so a button there would be
- * unreachable on a door row — and it is only ever on a row with no door. It is
- * never inside an anchor either way (the overlay is an empty sibling). So
- * nothing about the markup is what keeps Delete off a diver's row — the
- * product decision above is, and the invariant that actually holds is
- * `person_id is null` in `deleteStrangerInboundMessage`'s `where`
- * (`security-reviewer`, issue 1506). A render guard decides what a staffer is
- * offered; it has never decided what the server accepts.
+ * **The door lands on the message, not the top of the conversation.** Each
+ * inbound message on the record carries `id="message-<id>"`, and the record's
+ * disclosure opens whichever group holds the fragment and scrolls it in.
  */
 export function InboxRow({
   row,
@@ -95,6 +92,7 @@ export function InboxRow({
   timezone,
   t,
   deleteAction,
+  doneAction,
 }: {
   row: InboxMessageRow;
   shopSlug: string;
@@ -103,15 +101,18 @@ export function InboxRow({
   t: StaffTranslator;
   /** A prop rather than an import so this renders under jsdom. */
   deleteAction: (formData: FormData) => Promise<void>;
+  /** Marks the message done (`done=true`) or puts it back (`done=false`). */
+  doneAction: (formData: FormData) => Promise<void>;
 }) {
   const { message, personName } = row;
+  const done = message.answeredAt !== null;
   const name = personName ?? t("inbox.unknownSender");
   const subject = message.subject?.trim() || null;
   // A stranger's row has no door, and keeps the door's slot: its date ends
   // on the edge every other date in the column ends on (K-459).
   const door = message.personId
     ? {
-        href: `${shopPath(shopSlug, "divers", message.personId)}#conversation`,
+        href: `${shopPath(shopSlug, "divers", message.personId)}#${inboxMessageAnchor(message.id)}`,
         linkLabel: t("inbox.openRecord", { name }),
       }
     : { reserveDoorSlot: true };
@@ -140,9 +141,35 @@ export function InboxRow({
       align="first-line"
       kind={{ word: t(CHANNEL_KEYS[message.channel]), tone: "neutral" }}
       trailing={
-        <span className="text-sm text-muted tabular-nums">
-          {formatDateTimeTz(message.receivedAt, locale, timezone)}
-        </span>
+        <div className="flex items-center gap-1">
+          <span className="text-sm text-muted tabular-nums">
+            {formatDateTimeTz(message.receivedAt, locale, timezone)}
+          </span>
+          <RowMenu label={t("inbox.menu.label", { name })}>
+            <form action={doneAction}>
+              <input type="hidden" name="messageId" value={message.id} />
+              <input type="hidden" name="done" value={done ? "false" : "true"} />
+              <SubmitButton pendingLabel={t("inbox.done.pending")} className={MENU_ROW_CLASS}>
+                {done ? t("inbox.done.reopen") : t("inbox.done.action")}
+              </SubmitButton>
+            </form>
+            {message.personId ? null : (
+              <form action={deleteAction}>
+                <input type="hidden" name="messageId" value={message.id} />
+                <SubmitButton
+                  pendingLabel={t("inbox.delete.pending")}
+                  className={MENU_DANGER_ROW_CLASS}
+                  confirmMessage={t("inbox.delete.confirm")}
+                  // One "Delete" per row would name them all the same, so the
+                  // accessible name carries the address the row is about.
+                  ariaLabel={t("inbox.delete.actionFor", { address: message.fromAddress })}
+                >
+                  {t("inbox.delete.action")}
+                </SubmitButton>
+              </form>
+            )}
+          </RowMenu>
+        </div>
       }
       {...door}
     >
@@ -169,37 +196,6 @@ export function InboxRow({
           ) : null}
         </div>
       </div>
-      {message.personId ? null : (
-        // The row's last line, at the body's end edge (K-459, K-465). `mt-1`
-        // keeps the hover fill 4px clear of the address above it.
-        <div className="mt-1 flex justify-end">
-          <form action={deleteAction}>
-            <input type="hidden" name="messageId" value={message.id} />
-            <SubmitButton
-              pendingLabel={t("inbox.delete.pending")}
-              // The word ends on the body's edge (`flush`), and the unseen
-              // half of its target sinks into the row's inset (`outdent`), so
-              // the row has as much room under "Delete" as over its first
-              // line — the team card's pair (`settings/team/page.tsx`). That
-              // leaves the box 0–4px from the row's rule, so its ring is drawn
-              // inside it rather than across the rule and the row below.
-              className={buttonClass({
-                variant: "danger-ghost",
-                size: "sm",
-                flush: true,
-                outdent: "block-end",
-                className: "focus-visible:focus-ring-inset",
-              })}
-              confirmMessage={t("inbox.delete.confirm")}
-              // One "Delete" per row would name them all the same, so the
-              // accessible name carries the address the row is about.
-              ariaLabel={t("inbox.delete.actionFor", { address: message.fromAddress })}
-            >
-              {t("inbox.delete.action")}
-            </SubmitButton>
-          </form>
-        </div>
-      )}
     </LedgerRow>
   );
 }

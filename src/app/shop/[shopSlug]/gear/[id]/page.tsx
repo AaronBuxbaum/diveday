@@ -40,6 +40,7 @@ import {
 } from "@/lib/gear";
 import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { requireShopSurface } from "@/lib/session";
+import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type NoticeTone, noticeFromParam } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 // The register's restore, not a second one: one act, one code path, and a tag
@@ -179,7 +180,7 @@ export default async function GearUnitPage({
       <FlashParams params={["notice"]} />
       <div>
         <ShopPageHeader
-          eyebrow={t("gear.unit.backToRegister")}
+          eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.gear)}
           eyebrowHref={`/shop/${shopSlug}/gear`}
           title={item.label}
           description={identity}

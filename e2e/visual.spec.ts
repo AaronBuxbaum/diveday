@@ -1507,6 +1507,14 @@ async function capture(
       timeout: 15_000,
     },
   );
+  // Settings' rail moves to the current row from an effect, after the page has
+  // painted, so a capture could catch it at its top or on the row depending on
+  // the run (`settings-embed`). The rail marks itself once it has moved.
+  await page.waitForFunction(
+    () => !document.querySelector("[data-settings-rail-scroller]:not([data-rail-settled])"),
+    undefined,
+    { timeout: 15_000 },
+  );
   // The standard pair, plus the portrait tablet for the five staff surfaces a
   // shop runs on one. Widest last is deliberate: the base viewport is restored
   // below either way, but a capture that fails mid-loop leaves the page at a
@@ -4122,12 +4130,17 @@ for (const scheme of ["light", "dark"] as const) {
           .filter({ hasText: "Odile Marchand" })
           .filter({ visible: true });
         const sailedDoor = sailedRow.locator("details").filter({ hasText: "Did not dive?" });
-        await sailedDoor.locator("> summary").click();
-        await disclosureSettled(sailedDoor);
+        // Hydrated before the tap, not after: this frame opens the door
+        // straight off a page load, and a summary tapped while the page is
+        // still the server's markup did not stay open on CI or locally. The
+        // first frame reached its door through the release form, which only
+        // answers once the page is live.
         await expect(page.getByLabel("Scan or search diver")).toHaveAttribute(
           "data-hydrated",
           "true",
         );
+        await sailedDoor.locator("> summary").click();
+        await disclosureSettled(sailedDoor);
         await capture(page, "check-in-no-show-sailed", scheme);
       });
 
@@ -6566,6 +6579,21 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "staff-reviews", scheme);
       });
 
+      // The review row's "⋯" open, then its Hide: the list floats under its
+      // button and the reason picker takes its place in the same panel, and
+      // the row keeps its height throughout. Both used to open *inside* the
+      // row as nested disclosures, pushing the review down twice.
+      test(`the review row menu opens beside its button (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/reviews");
+        await page.getByRole("region", { name: /^Published/ }).waitFor();
+        const waiting = page.getByRole("region", { name: /^Waiting on you/ });
+        await waiting.getByRole("button", { name: /^More for/ }).click();
+        await capture(page, "staff-reviews-row-menu", scheme);
+        await waiting.getByRole("button", { name: "Hide", exact: true }).click();
+        await page.getByLabel("Why are you taking it down?").waitFor();
+        await capture(page, "staff-reviews-row-menu-hide", scheme);
+      });
+
       /**
        * **The panel that only exists when something has gone wrong** (D40,
        * issue #1200) — the class AGENTS.md says is photographed through a
@@ -6644,8 +6672,21 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the shop inbox renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis/inbox");
         await page.getByRole("heading", { level: 1, name: "Inbox" }).waitFor();
-        await page.getByRole("heading", { name: "Answered" }).waitFor();
+        await page.getByRole("heading", { name: "Done" }).waitFor();
         await capture(page, "staff-inbox", scheme);
+      });
+
+      // A row's "⋯" open: the list floats under its button, over the rows
+      // below, and the row it belongs to keeps its height. The stranger's row,
+      // because it is the one whose list carries both acts.
+      test(`the inbox row menu opens beside its button (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/inbox");
+        await page.getByRole("heading", { name: "Done" }).waitFor();
+        await page
+          .getByRole("button", { name: "More for the message from Unknown sender" })
+          .click();
+        await page.locator("[data-row-menu]").waitFor();
+        await capture(page, "staff-inbox-row-menu", scheme);
       });
 
       // The other half of the same feature: one diver's conversation on their

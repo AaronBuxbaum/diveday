@@ -103,7 +103,6 @@ export function BackupsSection({
     // carries no outer margin (docs/design/forms-and-controls.md).
     <section id="backups" className="scroll-mt-8">
       <h2 className={SECTION_TITLE_CLASS}>{t("backup.title")}</h2>
-      <p className="mt-1 max-w-2xl text-sm text-muted">{t("backup.description")}</p>
 
       {/* The cards under this group are a stack within one section, not a run
           of sections — so they take the tighter list gap, and their headings

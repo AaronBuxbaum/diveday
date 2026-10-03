@@ -113,7 +113,6 @@ export default async function WhatsAppSettingsPage({
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
         title={t("whatsapp.title")}
-        description={t("whatsapp.description")}
       />
 
       {banner ? (

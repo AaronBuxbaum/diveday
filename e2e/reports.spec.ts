@@ -117,7 +117,9 @@ test.describe("owner", () => {
     const ledger = page.getByRole("region", { name: "Trips this month" });
     await expect(ledger.getByText(/\d+ of \d+ seats?$/).first()).toBeVisible();
     await expect(ledger.getByText(/^\d+ crew$/).first()).toBeVisible();
-    await expect(ledger.getByText(/\d+ of \d+ waivers?$/).first()).toBeVisible();
+    await expect(
+      ledger.getByText(/^(All waivers in|\d+ waivers? to collect)$/).first(),
+    ).toBeVisible();
   });
 
   test("downloads this month's report as a CSV, distinct from the full-shop export", {

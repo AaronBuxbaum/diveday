@@ -574,7 +574,8 @@ export default async function CheckInPage({
           counter is working in, not a message. */}
       <FlashParams params={["notice", "bid", "tid"]} />
       <ShopPageHeader
-        eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.checkIn)}
+        eyebrow={t(STAFF_DESTINATION_LABEL_KEYS.today)}
+        eyebrowHref={shopPath(shopSlug)}
         title={t("checkIn.title")}
         // What this queue *is* — how far either side of now it reaches — which
         // is a fact about the rows below it and nothing a reader can find

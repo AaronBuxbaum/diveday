@@ -1,5 +1,4 @@
 {
-  "eyebrow": "The wall",
   "title": "Gear",
   "itemKinds": {
     "mask": "Mask",
@@ -93,7 +92,6 @@
   "addUnit": {
     "door": "Add gear",
     "title": "Add a unit",
-    "description": "One row per physical thing on the wall, tagged the way you’d say it out loud.",
     "submit": "Add to the register",
     "pending": "Adding…"
   },
@@ -142,7 +140,6 @@
   },
   "import": {
     "title": "Import gear history",
-    "description": "Bring your fleet and its dated service records across from another system.",
     "help": "One row per unit, service event, or historical rental. Units match by tag first, then serial number; assignments match an existing diver by email or exact name, stay display-only, and never affect current availability.",
     "downloadTemplate": "Download gear CSV template",
     "submit": "Import gear history",
@@ -155,7 +152,6 @@
       "badge": "Deleted",
       "restore": "Restore unit"
     },
-    "backToRegister": "Gear register",
     "where": {
       "title": "Where it is",
       "inShop": "In the shop, nothing reserved.",

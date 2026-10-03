@@ -62,13 +62,10 @@ branch later and by hand. That saving *grows* with depth: the thirteen branches 
 conflicted with each other thirteen ways, and the same thirteen stacked conflict zero. The reason
 to cut from `main` never grows the same way.
 
-The CI arithmetic that used to bound depth at "about six" was retired on 2026-08-27 and finished off
-on 2026-09-19 by [20260919-stack-ci-cancels-superseded-layers](../../../docs/architecture/decisions/20260919-stack-ci-cancels-superseded-layers.md). **A middle layer runs nothing at all** — not the gate, and no longer the
-visual path either, which it used to owe the layer above. So the twentieth layer costs what the
-fourth does: only the bottom and the top run anything. What that costs you is attention, not
-runners: a middle layer's green means "nothing ran", so the layer that actually states something
-about the merged result is the top, and the one whose red blocks everything is the bottom. Read
-those two. The only hard ceiling is GitHub's own — a registered stack holds at most 100 pull
+CI does not bound depth either. **Every layer runs the whole gate**, wherever it sits in the stack
+(ADR [20261003-every-stack-layer-runs-ci](../../../docs/architecture/decisions/20261003-every-stack-layer-runs-ci.md)), so a green check on any layer
+means that layer was tested. The middle-layer skip and cancel of
+[20260919-stack-ci-cancels-superseded-layers](../../../docs/architecture/decisions/20260919-stack-ci-cancels-superseded-layers.md) are gone. The only hard ceiling is GitHub's own — a registered stack holds at most 100 pull
 requests, and `scripts/stack-register.mjs` refuses a longer chain rather than truncating it
 (`MAX_LAYERS`).
 
@@ -172,31 +169,16 @@ to its own change.
 
 ## What our pipeline does with it
 
-- **Only the bottom and the top layer run CI; a middle layer runs nothing, and a layer that stops
-  being the top has its run cancelled.** `.github/workflows/ci.yml` triggers on a bare
-  `pull_request:` with no branch filter, so a base of `claude/<slug>-1-schema` gets the identical
-  gate offered to it — but a middle layer skips every job, on a condition read straight out of
-  `github.event.pull_request.stack` (ADR [20260919-stack-ci-cancels-superseded-layers](../../../docs/architecture/decisions/20260919-stack-ci-cancels-superseded-layers.md)). Four things follow, and only the first is something
-  to do:
+- **Every layer runs the whole CI gate.** `.github/workflows/ci.yml` triggers on a bare
+  `pull_request:` with no branch filter and no stack condition, so a base of
+  `claude/<slug>-1-schema` gets the identical gate `main` does (ADR [20261003-every-stack-layer-runs-ci](../../../docs/architecture/decisions/20261003-every-stack-layer-runs-ci.md)).
+  Read every layer's checks: each one's green means it ran. Two things follow:
 
-  1. **A middle layer's checks read "Skipped", and GitHub counts a skip as success.** So a green
-     middle layer means *nothing ran*, never *nothing is wrong* — read the bottom's and the top's
-     runs instead. Every layer does get its own full gate eventually, at the moment it becomes the
-     bottom: the cascading rebase force-pushes it, which fires `synchronize`. That only happens if
-     you **merge a layer at a time**; one atomic `gh stack merge` from the top lands the middles
-     ungated.
-  2. **Opening a layer cancels the one below's run, and that is working correctly.** The layer you
-     just built on was the top a minute ago, so its full gate started and is now answering nothing.
-     `scripts/stack-cancel.mjs` stops it from the same pull request event that registers the chain.
-     Its checks read "Cancelled" rather than "Skipped" — do not re-run them, and do not read them as
-     a failure of that layer.
-  3. **The visual path skips too, and every layer is keyed to `main`.** It used to be exempt,
-     because a layer's baseline was the layer below's published snapshot. Each layer now compares
-     against the stack's fork point from `main`, so a layer's visual diff is **cumulative** — it
-     shows every layer at or below it, not that layer's own pixels.
-  4. **A fork's pull request always runs in full.** `stack` is populated only for a pull request
-     somebody with write access registered in a stack, so an unregistered one reads `null` — which
-     is the *run* branch. Every shape the condition does not recognise fails open into the gate.
+  1. **Every layer is keyed to `main` for visual regression.** Each layer compares against the
+     stack's fork point from `main`, so a layer's visual diff is **cumulative** — it shows every
+     layer at or below it, not that layer's own pixels.
+  2. **Opening a layer above does not cancel the run below.** Only a new push to the same branch
+     supersedes a run (per-ref concurrency in `ci.yml`).
 - **`pnpm test:changed` and the destructive-migration guard** anchor on
   `git merge-base origin/main HEAD`, which in a stack is the fork point of the whole stack. Upper
   layers re-run lower layers' affected tests and re-check their migrations. Slower, never wrong —
@@ -205,8 +187,7 @@ to its own change.
   *named* rather than inferred: `regconfig.json` uses `reg-simple-keygen-plugin` and
   `scripts/reg-suit-keys.mjs` resolves **every** layer's baseline to
   `git merge-base origin/main HEAD` — the stack's fork point, whatever branch the layer targets.
-  `main` published that snapshot long before your run started, so no layer waits on another, which
-  is what lets a middle layer skip the visual jobs it used to owe upward (ADR [20260919-stack-ci-cancels-superseded-layers](../../../docs/architecture/decisions/20260919-stack-ci-cancels-superseded-layers.md), superseding the
+  `main` published that snapshot long before your run started, so no layer waits on another (ADR [20260919-stack-ci-cancels-superseded-layers](../../../docs/architecture/decisions/20260919-stack-ci-cancels-superseded-layers.md), superseding the
   20-minute poll from
   [20260821-stacked-pull-requests](../../../docs/architecture/decisions/20260821-stacked-pull-requests.md)).
 

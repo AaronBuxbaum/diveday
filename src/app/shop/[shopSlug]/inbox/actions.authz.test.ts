@@ -2,7 +2,7 @@ import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { countUnansweredMessages } from "@/db/inbound-messages";
-import { inboundMessages } from "@/db/schema";
+import { inboundMessages, shops } from "@/db/schema";
 import { seededShopContext } from "@/test/db";
 import {
   redirectedTo,
@@ -47,7 +47,7 @@ vi.mock("@/db/client", async (importOriginal) => {
 vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const { deleteInboxMessageAction } = await import("./actions");
+const { deleteInboxMessageAction, setInboxMessageDoneAction } = await import("./actions");
 
 /** The seeded row from an address nobody on the roster holds (`src/db/seed-inbox.ts`). */
 async function strangerMessageId(db: AppDb, shopId: string): Promise<string> {
@@ -193,6 +193,80 @@ describe("deleting a message from a sender nobody on the roster holds", () => {
     await redirectedTo(() => deleteInboxMessageAction(form(message)));
 
     const to = await redirectedTo(() => deleteInboxMessageAction(form(message)));
+
+    expect(to).toBe(`/shop/${shop.slug}/inbox?notice=gone`);
+  });
+});
+
+describe("marking a message done, and taking it back", () => {
+  function doneForm(messageId: string, done: boolean): FormData {
+    const formData = form(messageId);
+    formData.set("done", done ? "true" : "false");
+    return formData;
+  }
+
+  it("takes it off the worklist and Today's count, and puts it back", async () => {
+    const { db, shop, message, captain } = await context();
+    const before = await countUnansweredMessages(db, shop.id);
+    // A captain: the inbox's open gate, the same as the delete's.
+    signIn(shop, captain);
+
+    expect(await redirectedTo(() => setInboxMessageDoneAction(doneForm(message, true)))).toBe(
+      `/shop/${shop.slug}/inbox`,
+    );
+    expect(await countUnansweredMessages(db, shop.id)).toBe(before - 1);
+
+    expect(await redirectedTo(() => setInboxMessageDoneAction(doneForm(message, false)))).toBe(
+      `/shop/${shop.slug}/inbox`,
+    );
+    expect(await countUnansweredMessages(db, shop.id)).toBe(before);
+  });
+
+  it("404s a session whose claimed shop is not the acting person's", async () => {
+    const { db, shop, message, owner } = await context();
+    const before = await countUnansweredMessages(db, shop.id);
+    signIn({ id: "00000000-0000-4000-8000-000000000000", slug: "other-shop" }, owner);
+
+    await expect(setInboxMessageDoneAction(doneForm(message, true))).rejects.toThrow("NOT_FOUND");
+    expect(await countUnansweredMessages(db, shop.id)).toBe(before);
+  });
+
+  it("answers another shop's real message with gone, and leaves it alone", async () => {
+    const { db, shop, owner } = await context();
+    const [rival] = await db
+      .insert(shops)
+      .values({ name: "Rival Reef", slug: "rival-reef-inbox-done", timezone: "UTC" })
+      .returning();
+    if (!rival) throw new Error("rival shop insert failed");
+    const [theirs] = await db
+      .insert(inboundMessages)
+      .values({
+        shopId: rival.id,
+        channel: "email",
+        fromAddress: "someone@example.com",
+        body: "Theirs, not ours.",
+        providerMessageId: "rival-inbox-done-1",
+        receivedAt: new Date("2026-07-21T13:30:00.000Z"),
+      })
+      .returning({ id: inboundMessages.id });
+    if (!theirs) throw new Error("rival message insert failed");
+    signIn(shop, owner);
+
+    const to = await redirectedTo(() => setInboxMessageDoneAction(doneForm(theirs.id, true)));
+
+    expect(to).toBe(`/shop/${shop.slug}/inbox?notice=gone`);
+    const [row] = await db
+      .select({ answeredAt: inboundMessages.answeredAt })
+      .from(inboundMessages)
+      .where(eq(inboundMessages.id, theirs.id));
+    expect(row?.answeredAt).toBeNull();
+  });
+
+  it("answers a posted id that is not an id with gone", async () => {
+    const { shop, owner } = await context();
+    signIn(shop, owner);
+
+    const to = await redirectedTo(() => setInboxMessageDoneAction(doneForm("not-a-uuid", true)));
 
     expect(to).toBe(`/shop/${shop.slug}/inbox?notice=gone`);
   });
