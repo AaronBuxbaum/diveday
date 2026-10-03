@@ -384,7 +384,6 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "specialty_certifications",
   "nitrox_certifications",
   "rental_fit_profiles",
-  "dive_support_needs",
   "prior_visits",
   "prior_gear_assignments",
   "imported_payment_history",

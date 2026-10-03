@@ -98,16 +98,17 @@ export function BookActivity({
               </select>
             </Field>
           </FieldGrid>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <SubmitButton
-              pendingLabel={t("divers.bookActivity.booking")}
-              className={buttonClass({ variant: "secondary" })}
-            >
-              {t("divers.bookActivity.bookActivityButton")}
-            </SubmitButton>
-            <DiverFormStatus status={status} />
-          </div>
+          <SubmitButton
+            pendingLabel={t("divers.bookActivity.booking")}
+            className={buttonClass({ variant: "secondary" })}
+          >
+            {t("divers.bookActivity.bookActivityButton")}
+          </SubmitButton>
         </div>
+        {/* On its own line under the picker, never beside the button: in the
+            row it took the width the picker needed and squeezed the chosen
+            departure down to "Cho…" (Divers cleanup, 2026-10-03). */}
+        <DiverFormStatus status={status} className="mt-3" />
         {/* Not a refusal — a heads-up. The seat is real either way; the waiver
             link just has nowhere to be emailed, so somebody has to hand it over. */}
         {diver.person.email ? null : (

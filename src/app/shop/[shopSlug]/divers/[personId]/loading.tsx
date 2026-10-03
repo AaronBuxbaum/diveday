@@ -2,15 +2,7 @@ import { ShopPageHeaderSkeleton } from "@/components/ShopPageHeader";
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 
 /** The file's groups that every record renders a door for (`page.tsx`). */
-const FILE_DOORS = [
-  "details",
-  "certifications",
-  "waiver",
-  "gear",
-  "notes",
-  "support",
-  "activity",
-] as const;
+const FILE_DOORS = ["details", "certifications", "waiver", "gear", "notes", "activity"] as const;
 
 /**
  * Body-shaped skeleton for a diver's record (design principle 1). Without one,
@@ -73,14 +65,19 @@ export default function DiverProfileLoading() {
               ))}
             </div>
           </div>
-          {FILE_DOORS.map((group) => (
-            <div key={group} className="flex items-center gap-3 border-y border-border py-3">
-              <div className="flex h-6 flex-1 items-center">
-                <div className="h-4 w-40 rounded bg-surface-sunken" />
+          <div>
+            {FILE_DOORS.map((group) => (
+              <div
+                key={group}
+                className="-mx-2 flex min-h-13 items-center gap-3 border-b border-border px-2 py-3 first:border-t"
+              >
+                <div className="flex h-6 flex-1 items-center">
+                  <div className="h-4 w-40 rounded bg-surface-sunken" />
+                </div>
+                <div className="h-4 w-24 rounded bg-surface-sunken" />
               </div>
-              <div className="h-4 w-24 rounded bg-surface-sunken" />
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </main>

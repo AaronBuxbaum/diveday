@@ -17,7 +17,6 @@ import { canPersonExportShopData } from "@/db/export";
 import { personThread } from "@/db/inbound-messages";
 import { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
-import { getSupportNeeds } from "@/db/support-needs";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -42,7 +41,6 @@ import { NoticeBanner } from "./_components/NoticeBanner";
 import { RemoveDiver } from "./_components/RemoveDiver";
 import { RestoreDiver } from "./_components/RestoreDiver";
 import { resolveDiverNotice } from "./_components/record-notices";
-import { SupportNeedsPanel } from "./_components/SupportNeedsPanel";
 import { WaiverGroup } from "./_components/WaiverGroup";
 import { canRaiseInvoiceFor } from "./_lib/invoice-door";
 import { bookingIsAhead } from "./_lib/status";
@@ -83,7 +81,7 @@ const BOOK_ACTIVITY_TRIP_SCAN_LIMIT = 50;
  * 3. **The story** — one chronological ledger of bookings, imported visits and
  *    person-level orders, each row carrying its own money fact.
  * 4. **The file** — inset groups in the settings grammar: certifications,
- *    waiver, gear and sizes, dive support, notes, and the folded activity
+ *    waiver, gear and sizes, notes, and the folded activity
  *    trail.
  * 5. **The quiet foot** — the things you do *to* a record: download it, merge a
  *    duplicate, delete it, and (on a deleted record, for an owner only) erase
@@ -163,7 +161,6 @@ export default async function DiverDetailPage({
     stripeAccount,
     notes,
     activityPage,
-    supportNeeds,
     thread,
   ] = await Promise.all([
     canPersonDeleteDiver(db, shop.id, session.user.personId),
@@ -197,7 +194,6 @@ export default async function DiverDetailPage({
     // page. A non-numeric `?activity=` reads as page 1 and the query clamps
     // anything past the end, so a stale bookmark lands on the last real page.
     pagedDiverActivity(db, shop.id, personId, { page: Number.parseInt(activity ?? "", 10) }),
-    getSupportNeeds(db, shop.id, personId),
     // What this diver wrote and what the shop wrote back, interleaved by time.
     // Shop-scoped from the session like every read here.
     personThread(db, shop.id, personId),
@@ -240,7 +236,15 @@ export default async function DiverDetailPage({
    * bounced the staffer here from somewhere else, or one whose group this
    * staffer's role means the page never rendered.
    */
-  const diverNotice = resolveDiverNotice({ notice, form, gate, card, personId, locale });
+  const diverNotice = resolveDiverNotice({
+    notice,
+    form,
+    gate,
+    card,
+    personId,
+    locale,
+    canRaiseInvoice: collectHasSomewhereToGo,
+  });
   const detailsStatus = noticeForForm(diverNotice, "details");
   const pageNotice = noticeForForm(diverNotice, "page");
   // A card deletion with its undo capability has one outcome: the toast. The
@@ -337,13 +341,11 @@ export default async function DiverDetailPage({
         timezone={shop.timezone}
         shopSlug={shopSlug}
       />
-      {/* **One rhythm, owned here.** The story and every file group are the
-          record's sections, and they stack on this wrapper's `space-y-10`
-          (forms-and-controls.md, "Section rhythm"). Each used to hang its own
-          margin — the story and certifications `mt-10`, five others `mt-8`,
-          one none — and the pixel probe measured the stack at
-          32/40/32/32/0/32/32/32px. A section that renders nothing (a diver
-          who never wrote, an empty activity log) takes no space in it. */}
+      {/* **One rhythm, owned here.** The story and the file are the record's
+          two sections, and they stack on this wrapper's `space-y-10`
+          (forms-and-controls.md, "Section rhythm"). A group that renders
+          nothing (a diver who never wrote, an empty activity log) takes no
+          row in the file. */}
       <div className="mt-10 space-y-10">
         <DiverStory
           diver={diver}
@@ -358,102 +360,97 @@ export default async function DiverDetailPage({
           status={noticeForForm(diverNotice, "story")}
           now={now}
         />
-        {/* After the story and before the file: what happened, then what was
+        {/* **The file is one list.** Every group below is a row that shares
+            its hairline with the next (`DiverFileGroupDisclosure`), so they
+            stack flush rather than on the section rhythm above. */}
+        <div>
+          {/* After the story and before the file: what happened, then what was
             said about it, then the record's own paperwork. Renders nothing for a
             diver who has never written. */}
-        <ConversationSection
-          entries={thread}
-          diverName={diver.person.fullName}
-          shopSlug={shopSlug}
-          personId={personId}
-          locale={locale}
-          timezone={shop.timezone}
-          now={now}
-          // `removed` alone, never `removed || anonymizedAt`: the CHECK
-          // `people_anonymized_stays_removed` makes an anonymized person removed
-          // by construction, so the second term could never add a case.
-          removed={removed}
-          t={t}
-          status={noticeForForm(diverNotice, "reply")}
-        />
-        <DiverDetailsGroup
-          diver={diver}
-          shopSlug={shopSlug}
-          personId={personId}
-          t={t}
-          locale={locale}
-          country={shop.addressCountry}
-          status={detailsStatus}
-          // \`edit=1\` is only ever set by the roster's "Add a diver" form, which
-          // lands here with a name and little else. \`FlashParams\` strips it
-          // from the URL straight away, so a reload or a shared link is the
-          // ordinary collapsed page. A refused save keeps the group open so the
-          // staffer can correct the fields in place.
-          open={edit === "1" || detailsStatus?.tone === "danger"}
-        />
-        <CertificationsGroup
-          diver={diver}
-          shop={shop}
-          shopSlug={shopSlug}
-          personId={personId}
-          locale={locale}
-          t={t}
-          status={cardsStatus}
-        />
-        <WaiverGroup
-          diver={diver}
-          shopSlug={shopSlug}
-          personId={personId}
-          locale={locale}
-          t={t}
-          timezone={shop.timezone}
-          canOpenClearance={canOpenClearance}
-          status={noticeForForm(diverNotice, "waiver")}
-        />
-        <GearAndSizes
-          diver={diver}
-          shopSlug={shopSlug}
-          personId={personId}
-          rentalItems={shop.rentalItems}
-          canOverride={canOverrideFit}
-          locale={locale}
-          t={t}
-          status={noticeForForm(diverNotice, "fit")}
-        />
-        <DiverNotesSection
-          notes={notes}
-          shopSlug={shopSlug}
-          personId={personId}
-          locale={locale}
-          timezone={shop.timezone}
-          t={t}
-          status={notesStatus}
-        />
-        {/* After notes in the file, because support is a quieter planning fact
-            than the record context staff write for the crew. A staffer arriving
-            from the prep panel's link still lands on this group's own #support
-            target (issue #1069). */}
-        <SupportNeedsPanel
-          needs={supportNeeds}
-          shopSlug={shopSlug}
-          personId={personId}
-          canOverride={canOverrideFit}
-          t={t}
-          status={noticeForForm(diverNotice, "support")}
-        />
-        <ActivitySection
-          page={activityPage}
-          shopSlug={shopSlug}
-          personId={personId}
-          locale={locale}
-          timezone={shop.timezone}
-          t={t}
-        />
+          <ConversationSection
+            entries={thread}
+            diverName={diver.person.fullName}
+            shopSlug={shopSlug}
+            personId={personId}
+            locale={locale}
+            timezone={shop.timezone}
+            now={now}
+            // `removed` alone, never `removed || anonymizedAt`: the CHECK
+            // `people_anonymized_stays_removed` makes an anonymized person removed
+            // by construction, so the second term could never add a case.
+            removed={removed}
+            t={t}
+            status={noticeForForm(diverNotice, "reply")}
+          />
+          <DiverDetailsGroup
+            diver={diver}
+            shopSlug={shopSlug}
+            personId={personId}
+            t={t}
+            locale={locale}
+            country={shop.addressCountry}
+            status={detailsStatus}
+            // \`edit=1\` is only ever set by the roster's "Add a diver" form, which
+            // lands here with a name and little else. \`FlashParams\` strips it
+            // from the URL straight away, so a reload or a shared link is the
+            // ordinary collapsed page. A refused save keeps the group open so the
+            // staffer can correct the fields in place.
+            open={edit === "1" || detailsStatus?.tone === "danger"}
+          />
+          <CertificationsGroup
+            diver={diver}
+            shop={shop}
+            shopSlug={shopSlug}
+            personId={personId}
+            locale={locale}
+            t={t}
+            status={cardsStatus}
+          />
+          <WaiverGroup
+            diver={diver}
+            shopSlug={shopSlug}
+            personId={personId}
+            locale={locale}
+            t={t}
+            timezone={shop.timezone}
+            canOpenClearance={canOpenClearance}
+            status={noticeForForm(diverNotice, "waiver")}
+          />
+          <GearAndSizes
+            diver={diver}
+            shopSlug={shopSlug}
+            personId={personId}
+            rentalItems={shop.rentalItems}
+            canOverride={canOverrideFit}
+            locale={locale}
+            t={t}
+            status={noticeForForm(diverNotice, "fit")}
+          />
+          <DiverNotesSection
+            notes={notes}
+            shopSlug={shopSlug}
+            personId={personId}
+            locale={locale}
+            timezone={shop.timezone}
+            t={t}
+            status={notesStatus}
+          />
+          <ActivitySection
+            page={activityPage}
+            shopSlug={shopSlug}
+            personId={personId}
+            locale={locale}
+            timezone={shop.timezone}
+            t={t}
+          />
+        </div>
       </div>
       {/* **The quiet foot** — the things you do *to* a record rather than with
-          it. Nothing here is primary-weight, and reaching the two destructive
-          ones costs a scroll on purpose (ADR 20260802-diver-data-erasure). */}
-      <div className="mt-12 space-y-6 border-t border-border pt-8">
+          it. No rule of its own: the file's last hairline already closes the
+          record above it, and a second one 48px lower read as a stray line.
+          Nothing here is primary-weight, and reaching the two destructive ones
+          costs a scroll on purpose (ADR 20260802-diver-data-erasure). */}
+      <div className="mt-10 space-y-6">
         {canMerge && !removed && mergeCandidates.length > 0 ? (
           <MergeDiver
             candidates={mergeCandidates}
@@ -463,7 +460,7 @@ export default async function DiverDetailPage({
             status={noticeForForm(diverNotice, "merge")}
           />
         ) : null}
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
           {canExport ? (
             <DownloadDiverExportButton
               href={`/shop/${shopSlug}/divers/${personId}/export`}

@@ -15,7 +15,6 @@ import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { diveRecencyText } from "@/i18n/readiness-labels";
 import { rentalItemLabel, statedSizesText } from "@/i18n/rental-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
-import { supportNeedsLines } from "@/i18n/support-needs-labels";
 import {
   type PrepGrouping,
   type PrepPiece,
@@ -268,7 +267,7 @@ export function PrepBody({
    * record**: the 44px floor (`tapTargetLinkClass`, principles §2), with the
    * (44 − 20) / 2 it adds handed back above and below, so the target grows and
    * the 20px line the name sits on does not — the give-back `EntryShell`'s
-   * footer links make. The never-asked run and Dive support were 17px words
+   * footer links make. The never-asked run was 17px words
    * (pixel-craft class 7). A name inside a sentence (the bullet lines) stays
    * that sentence's link.
    *
@@ -583,73 +582,6 @@ export function PrepBody({
                     ))}
                   </ul>
                 </section>
-              ) : null}
-
-              {/* **What the day has been asked to set up.**
-
-              A neutral panel, deliberately — `SectionCard`'s ordinary border
-              and surface, not the warning tone of the staff-fit block above it.
-              A diver who arranged a lift is a diver this shop is ready for, and
-              a crew reading that as an alert is being told the opposite of what
-              the record exists to say (ADR
-              20260827-support-needs-are-a-record-about-the-dive; the tone
-              standard is `src/lib/dive-recency.ts`'s doc comment).
-
-              The boat's total is stated because it is what a shop reads beside
-              its rostered crew when deciding whether the day is covered. It
-              refuses nothing — a departure short of it sails, and the shop has
-              a conversation. Renders nothing at all when nobody has asked for
-              anything, which is almost every departure. */}
-              {checklist.supportNeeds.divers.length > 0 ? (
-                <SectionCard title={t("tripPrep.supportHeading")}>
-                  {/* Only what the shop has to *find*. A diver bringing their own
-                  adaptive-trained buddy needs a seat and a team, not crew, and
-                  summing them here would have a manager staff up for people who
-                  are already coming. */}
-                  {checklist.supportNeeds.supportDiversToArrange > 0 ? (
-                    <p className="text-sm font-medium">
-                      {t("tripPrep.supportToArrange", {
-                        count: checklist.supportNeeds.supportDiversToArrange,
-                      })}
-                    </p>
-                  ) : null}
-                  <ul className="mt-2 flex flex-col gap-2 text-sm">
-                    {checklist.supportNeeds.divers.map((diver) => (
-                      <li key={diver.personId}>
-                        {/* Straight to the record's own Dive support section, not
-                        the top of a 6,400px page: a staffer following this link
-                        is going to read or correct the thing they were just
-                        looking at (issue #1069). */}
-                        <Link
-                          href={`/shop/${shopSlug}/divers/${diver.personId}#support`}
-                          className={nameLinkClass}
-                        >
-                          {diver.fullName}
-                        </Link>
-                        {/* One line per fact rather than a comma-separated run:
-                        two of them carry the diver's own free text, and a
-                        sentence inside a joined list is where a crew loses
-                        track of which fact is which. `gap-1` keeps that true
-                        when a fact wraps: its second line sits 20px under it
-                        and the next fact 24px, where both used to be 20. */}
-                        <ul className="mt-0.5 flex flex-col gap-1 text-muted">
-                          {supportNeedsLines(
-                            t,
-                            diver.needs,
-                            checklist.supportNeeds.rosterNames,
-                          ).map((line) => (
-                            <li key={line}>{line}</li>
-                          ))}
-                        </ul>
-                      </li>
-                    ))}
-                  </ul>
-                  {/* Whoever arranged them, they are people on a boat — and the
-                  manifest is the authoritative list of every person aboard, which
-                  is what a coastguard reads. A support diver the diver brought
-                  has no booking unless somebody makes one. */}
-                  <p className="mt-3 text-sm text-muted">{t("tripPrep.supportOnTheManifest")}</p>
-                </SectionCard>
               ) : null}
             </>
           )}

@@ -68,7 +68,6 @@ const EXPECTED_FILES = [
   "waiver_materiality_decisions.csv",
   "waiver_records.csv",
   "rental_fit.csv",
-  "dive_support_needs.csv",
   "gear_items.csv",
   "gear_service_events.csv",
   "gear_reservations.csv",
@@ -148,7 +147,6 @@ const EXPORTED_TABLES = [
   "waiver_materiality_decisions",
   "waiver_records",
   "rental_fit_profiles",
-  "dive_support_needs",
   "gear_items",
   "gear_service_events",
   "gear_reservations",
@@ -482,7 +480,6 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // exporting it would carry an internal flag out and re-derive it anyway.
     "fit_stated_at",
   ],
-  dive_support_needs: ["shop_id"],
   gear_items: ["shop_id"],
   gear_service_events: ["shop_id"],
   gear_reservations: ["shop_id"],

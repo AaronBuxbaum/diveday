@@ -952,9 +952,10 @@ alongside them moved several of these prerequisites.
   says which dive exceeds its depth before the seat is sold, using `depth-ceiling.ts`. *Effort:* S.
   *Needs:* domain. (N-38, guardian co-signature, shipped — this is its sibling.)
 - **N-40 Adaptive-diving readiness.** Adaptive programs (HSA, DDI) set buddy counts by level; the
-  ratio math reads the support-need record, the staffing week says "adaptive-trained crew aboard"
-  from a new credential kind, and the departure page can state "adaptive-capable" when the shop
-  says so. *Effort:* M. *Needs:* domain, owner (scope).
+  ratio math would read a support-need record (the one built in ADR 20260827 was removed
+  2026-10-03 at the owner's request, so this starts from nothing), the staffing week says
+  "adaptive-trained crew aboard" from a new credential kind, and the departure page can state
+  "adaptive-capable" when the shop says so. *Effort:* M. *Needs:* domain, owner (scope).
 
 ### The crew
 

@@ -21,7 +21,6 @@ import {
 } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { supportNeedsLines } from "@/i18n/support-needs-labels";
 import { welcomeCueText } from "@/i18n/welcome-cue-labels";
 import { diverRowId, scopedId } from "@/lib/element-id";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
@@ -66,7 +65,6 @@ function DiverFacts({
   locale,
   timezone,
   columns,
-  rosterNames,
   t,
 }: {
   diver: TripManifest["divers"][number];
@@ -85,15 +83,8 @@ function DiverFacts({
    * a boat to carry and lose, to buy width nothing needed.
    */
   columns: 1 | 2;
-  /**
-   * Every name on this departure, so the "dives with" line can say whether that
-   * person is actually on it (issue #1068). Divers and crew both, because a
-   * diver may name the divemaster they always pair with.
-   */
-  rosterNames: readonly string[];
   t: StaffTranslator;
 }) {
-  const diveSupportLines = supportNeedsLines(t, diver.supportNeeds, rosterNames);
   return (
     <div className={`grid gap-2 text-base${columns === 2 ? " sm:grid-cols-2" : ""}`}>
       <p>
@@ -141,33 +132,6 @@ function DiverFacts({
           <span className="mt-0.5 block text-muted">
             {rentalFitLineText(t, locale, diver.rentalFit)}
             {diver.nitroxRequested ? t("manifest.nitroxRequestedSuffix") : ""}
-          </span>
-        </p>
-      ) : null}
-      {/* What this diver's dive needs set up. Same voice as the rental fit and
-          the pickup above it — a fact to plan around, in the muted body tone
-          every other marker on this row uses, never a warning. A diver who
-          arranged a lift is a diver this shop is ready for (ADR
-          20260827-support-needs-are-a-record-about-the-dive).
-
-          Only when something was stated: a line reading "nothing needed" down
-          the whole boat is the absence of information formatted as information
-          (principle 9). */}
-      {diveSupportLines.length > 0 ? (
-        <p>
-          <span className="font-bold">{t("manifest.supportNeedsLabel")}</span>
-          {/* One line per fact, not a joined run — for the reason
-              `support-needs-labels.ts` returns a list: two of these carry the
-              diver's own free text, and a sentence inside a `·`-joined line is
-              where a crew loses track of which fact is which. It matters most
-              here, of the two surfaces, because this is the one read at the
-              rail. */}
-          <span className="mt-0.5 block text-muted">
-            {diveSupportLines.map((line) => (
-              <span key={line} className="block">
-                {line}
-              </span>
-            ))}
           </span>
         </p>
       ) : null}
@@ -286,7 +250,6 @@ export type ManifestNote = {
 export function DiverRollCall({
   idPrefix,
   divers,
-  crewNames,
   crew,
   checkpoint,
   isDeparture,
@@ -305,13 +268,6 @@ export function DiverRollCall({
   /** Scopes this section's element ids to one departure — see `scopedId`. */
   idPrefix?: string;
   divers: TripManifest["divers"];
-  /**
-   * The crew rostered on this departure, by name. Read only to answer whether
-   * the person a diver must dive with is on this boat (issue #1068) — a diver
-   * may name the divemaster they always pair with, so a divers-only roster
-   * would answer "not booked" about somebody standing next to them.
-   */
-  crewNames: readonly string[];
   /** Full crew rows for resolving buddy states inside a diver's sheet. */
   crew?: TripManifest["crew"];
   checkpoint: RollCallCheckpoint;
@@ -357,10 +313,6 @@ export function DiverRollCall({
   // Which row the reader sees first, which is not `divers[0]` once an alarm
   // pulls one up. Derived from the same `rollCallRowState` the rows use, so the
   // hairline above the top row cannot disagree with what `order-first` moved.
-  // Every name on this departure, divers and crew — what a diver's "dives with"
-  // line is checked against (issue #1068). Derived once here rather than per
-  // row: it is a property of the departure, not of any diver on it.
-  const rosterNames = [...divers.map((diver) => diver.fullName), ...crewNames];
   const firstOnScreenBookingId =
     divers.find((diver) => rollCallRowState(checkpoint, diver.rollCall).notBackAboard)?.bookingId ??
     divers[0]?.bookingId;
@@ -754,7 +706,6 @@ export function DiverRollCall({
                       locale={locale}
                       timezone={timezone}
                       columns={1}
-                      rosterNames={rosterNames}
                       t={t}
                     />
                     {/* The facts the row's one capsule could not carry — who
@@ -929,7 +880,6 @@ export function DiverRollCall({
                       locale={locale}
                       timezone={timezone}
                       columns={2}
-                      rosterNames={rosterNames}
                       t={t}
                     />
                   </div>

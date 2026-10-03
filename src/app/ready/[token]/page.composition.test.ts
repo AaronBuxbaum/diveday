@@ -302,12 +302,10 @@ describe("anything changed", () => {
   });
 
   it("keeps the sensitive record out of the confirm-at-a-glance panel", () => {
-    // Support needs are a record about a person's dive and the crew note is
-    // their own words — both stay inside Day-of details (#1179's privacy call).
-    // A door here bound to either would be restating one in a panel built for
-    // skimming.
+    // The crew note is the diver's own words — it stays inside Day-of details
+    // (#1179's privacy call). A door here bound to it would be restating it in
+    // a panel built for skimming.
     const panel = SOURCE.slice(positionOf("<ChangedFacts"), positionOf('case "dayof"'));
-    expect(panel).not.toContain("saveSupportNeedsFromReady");
     expect(panel).not.toContain("saveDiveRecencyFromReady");
     expect(panel).not.toContain("saveNoteFromReady");
   });

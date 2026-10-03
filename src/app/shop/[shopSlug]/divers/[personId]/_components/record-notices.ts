@@ -272,12 +272,6 @@ const NOTICE_KEYS: DiverNoticeMap = {
   "fit-flagged": { form: "fit", tone: "success", key: "divers.notices.fitFlagged" },
   "fit-cleared": { form: "fit", tone: "success", key: "divers.notices.fitCleared" },
   "not-authorized-fit": { form: "fit", tone: "danger", key: "divers.notices.notAuthorizedFit" },
-  "support-saved": { form: "support", tone: "success", key: "divers.notices.supportSaved" },
-  "not-authorized-support": {
-    form: "support",
-    tone: "danger",
-    key: "divers.notices.notAuthorizedSupport",
-  },
   "not-authorized-waiver": {
     form: "waiver",
     tone: "danger",
@@ -394,7 +388,7 @@ const NOTICE_KEYS: DiverNoticeMap = {
   // This door books a diver the staffer picked by identity, so it has never
   // raised the hold — the flag is `createBooking`'s call, not the door's, and a
   // door with no sentence for it would answer a held seat with a plain
-  // "Activity booked" (`seatedIdentityUnconfirmedNotice`).
+  // "Booked" (`seatedIdentityUnconfirmedNotice`).
   "booked-identity-unconfirmed": {
     form: "book",
     tone: "warning",
@@ -503,7 +497,6 @@ const DIVER_FORMS = new Set([
   "cards",
   "waiver",
   "fit",
-  "support",
   "story",
   "book",
   "notes",
@@ -567,6 +560,7 @@ export function resolveDiverNotice({
   card,
   personId,
   locale,
+  canRaiseInvoice = false,
 }: {
   notice?: string;
   /**
@@ -595,6 +589,12 @@ export function resolveDiverNotice({
    */
   personId: string;
   locale: string;
+  /**
+   * Whether this reader sees the story's "New invoice" link
+   * (`canRaiseInvoiceFor`). "Booked" tells them to create the invoice next, so
+   * a reader without that link is told only that it booked. Absent reads as no.
+   */
+  canRaiseInvoice?: boolean;
 }): DiverNotice | undefined {
   const banner = noticeFromParam(notice, NOTICE_KEYS);
   if (!banner) return undefined;
@@ -610,7 +610,9 @@ export function resolveDiverNotice({
       ? ""
       : refusal
         ? tripAdmissionRefusalText(t, refusal, locale)
-        : t(banner.key as StaffMessageKey),
+        : notice === "booked" && !canRaiseInvoice
+          ? t("divers.notices.bookedNoInvoice")
+          : t(banner.key as StaffMessageKey),
     code: notice,
     link: notice === undefined ? undefined : NOTICE_LINKS[notice],
     field: banner.field,

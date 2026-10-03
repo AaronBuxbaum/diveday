@@ -49,7 +49,6 @@ import {
   diveSiteCreatures,
   diveSiteMoments,
   diveSites,
-  diveSupportNeeds,
   executedDives,
   gearItems,
   gearReservations,
@@ -681,12 +680,6 @@ export async function loadShopExportBundleInput(
         .from(rentalFitProfiles)
         .where(eq(rentalFitProfiles.shopId, shopId))
         .orderBy(asc(rentalFitProfiles.createdAt), asc(rentalFitProfiles.id));
-
-      const supportNeedsRows = await tx
-        .select()
-        .from(diveSupportNeeds)
-        .where(eq(diveSupportNeeds.shopId, shopId))
-        .orderBy(asc(diveSupportNeeds.createdAt), asc(diveSupportNeeds.id));
 
       const gearItemRows = await tx
         .select()
@@ -2653,46 +2646,6 @@ export async function loadShopExportBundleInput(
           note: EXPORT_FILE_NOTES["rental_fit.csv"],
         },
         {
-          file: "dive_support_needs.csv",
-          header: [
-            "person_id",
-            "person_name",
-            "support_divers_needed",
-            "support_divers_provided_by",
-            "needs_boarding_assistance",
-            "needs_water_lift",
-            "briefing_in_sign",
-            "briefing_in_writing",
-            "briefing_aloud",
-            "briefing_by_signals",
-            "equipment_adaptation",
-            "dives_with_name",
-            // When the diver last answered. Every boolean beside it defaults to
-            // false, so without this an all-false row and a row nobody ever
-            // filled in read identically — and "nothing needed" and "nobody
-            // asked" are different facts.
-            "stated_at",
-            "updated_at",
-          ],
-          rows: supportNeedsRows.map((row) => [
-            row.personId,
-            personName.get(row.personId),
-            row.supportDiversNeeded,
-            row.supportDiversProvidedBy,
-            row.needsBoardingAssistance,
-            row.needsWaterLift,
-            row.briefingInSign,
-            row.briefingInWriting,
-            row.briefingAloud,
-            row.briefingBySignals,
-            row.equipmentAdaptation,
-            row.divesWithName,
-            row.statedAt,
-            row.updatedAt,
-          ]),
-          note: EXPORT_FILE_NOTES["dive_support_needs.csv"],
-        },
-        {
           file: "gear_items.csv",
           header: [
             "id",
@@ -4045,11 +3998,6 @@ export async function loadDiverExportBundleInput(
         .from(rentalFitProfiles)
         .where(and(eq(rentalFitProfiles.shopId, shopId), eq(rentalFitProfiles.personId, personId)));
 
-      const supportNeedsRows = await tx
-        .select()
-        .from(diveSupportNeeds)
-        .where(and(eq(diveSupportNeeds.shopId, shopId), eq(diveSupportNeeds.personId, personId)));
-
       const gearReservationRows = await tx
         .select()
         .from(gearReservations)
@@ -4613,38 +4561,6 @@ export async function loadDiverExportBundleInput(
           note: "This diver's rental kit and sizes on file.",
         },
         {
-          file: "dive_support_needs.csv",
-          header: [
-            "support_divers_needed",
-            "support_divers_provided_by",
-            "needs_boarding_assistance",
-            "needs_water_lift",
-            "briefing_in_sign",
-            "briefing_in_writing",
-            "briefing_aloud",
-            "briefing_by_signals",
-            "equipment_adaptation",
-            "dives_with_name",
-            "stated_at",
-            "updated_at",
-          ],
-          rows: supportNeedsRows.map((row) => [
-            row.supportDiversNeeded,
-            row.supportDiversProvidedBy,
-            row.needsBoardingAssistance,
-            row.needsWaterLift,
-            row.briefingInSign,
-            row.briefingInWriting,
-            row.briefingAloud,
-            row.briefingBySignals,
-            row.equipmentAdaptation,
-            row.divesWithName,
-            row.statedAt,
-            row.updatedAt,
-          ]),
-          note: "What you told this shop your dive needs set up. Answered on your own readiness page, and about the dive rather than about you — this shop holds no condition, classification or medical answer from you here, and nothing in it can refuse you a seat or a place on a boat.",
-        },
-        {
           file: "gear_reservations.csv",
           header: [
             "id",
@@ -5121,9 +5037,6 @@ export async function loadShopExportCounts(
     ),
     "rental_fit.csv": await countOf(
       db.select({ n: count() }).from(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId)),
-    ),
-    "dive_support_needs.csv": await countOf(
-      db.select({ n: count() }).from(diveSupportNeeds).where(eq(diveSupportNeeds.shopId, shopId)),
     ),
     "gear_items.csv": await countOf(
       db.select({ n: count() }).from(gearItems).where(eq(gearItems.shopId, shopId)),

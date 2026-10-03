@@ -86,9 +86,9 @@ describe("buildThreadSteps", () => {
   });
 
   it("settles Day-of details on the recency answer alone", () => {
-    // The note, the hotel pickup and the support-needs record live inside this
-    // step and answer to nobody: they were three permanently-"Optional" rows,
-    // which is exactly what made the old figure unfillable.
+    // The note and the hotel pickup live inside this step and answer to
+    // nobody: they were permanently-"Optional" rows, which is exactly what
+    // made the old figure unfillable.
     expect(spine({ dayOfComplete: false }).steps.at(-1)).toMatchObject({
       id: "dayof",
       state: "your_turn",

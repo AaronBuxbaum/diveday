@@ -36,7 +36,6 @@ function renderPanel(teams: TripBuddyTeam[]) {
       diverOptions={[]}
       crewOptions={[]}
       unteamedDivers={[]}
-      divesWithByBooking={new Map()}
       buddyErrorText={null}
       buddyErrorForm={null}
       formBuddyTeamAction={noop}
