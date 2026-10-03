@@ -12,6 +12,7 @@ import { brandDisplayFontFamily, DIVEDAY_BRAND_COLOR, isBrandDisplayFontCode } f
 import { nowDate } from "@/lib/clock";
 import { EMBED_KINDS, type EmbedKind, PLATFORMS, type Platform } from "@/lib/embed-snippets";
 import { formatDayParts, formatTime } from "@/lib/format";
+import { WEBSITE_LEDGER_ID } from "@/lib/migration-guides";
 import { publicAppUrl } from "@/lib/notifications";
 import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { publicSchedulePath } from "@/lib/public-routes";
@@ -160,7 +161,10 @@ export default async function EmbedSettingsPage({
       <p className="mt-2 text-sm text-muted">
         {t.rich("settings.embed.fromFareharbor", {
           link: (chunks) => (
-            <a href="/switching/fareharbor" className="text-primary underline">
+            <a
+              href={`/switching/fareharbor#${WEBSITE_LEDGER_ID}`}
+              className="text-primary underline"
+            >
               {chunks}
             </a>
           ),
