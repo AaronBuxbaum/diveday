@@ -8,6 +8,7 @@ import {
 } from "@/lib/readiness";
 import { hasSailed } from "@/lib/trips";
 import {
+  type CardAwaitingKind,
   cardsNeedingLookCount,
   type DiverProfile,
   firstOpenOrderId,
@@ -88,6 +89,12 @@ export type DiverStatusRow = {
   tripContext?: { tripId: string; bookingId: string; startsAt: Date };
   /** The order a `collect` fix opens, when one has been raised. */
   orderId?: string;
+  /**
+   * Which card a `verify` fix is about, when the row is about one kind. The
+   * ledger lands on the first card of that kind waiting for a look
+   * (`cardAwaitingAnchor`); without it, on the first card waiting at all.
+   */
+  verifies?: CardAwaitingKind;
 };
 
 type BookingEntry = DiverProfile["bookings"][number];
@@ -181,6 +188,13 @@ const CERTIFICATION_FIX: Record<
     readiness_unavailable: null,
   };
 })();
+
+/** The kind of card a certification blocker is about, for the `verify` landing. */
+function blockerCardKind(blocker: ReadinessBlocker): CardAwaitingKind | undefined {
+  if (blocker.code.startsWith("certification_")) return "level";
+  if (blocker.code.startsWith("nitrox_")) return "nitrox";
+  return blocker.params?.specialty;
+}
 
 /** The first blocker in a family, or nothing. One row per kind — a ledger, not a log. */
 function firstBlockerIn(
@@ -294,6 +308,10 @@ export function buildDiverStatus(
       sentence: { blocker: certBlocker },
       action: CERTIFICATION_FIX[certBlocker.code] ?? undefined,
       tripContext: certSource ? contextOf(certSource.entry) : tripContext,
+      verifies:
+        CERTIFICATION_FIX[certBlocker.code]?.target === "verify"
+          ? blockerCardKind(certBlocker)
+          : undefined,
     });
   } else if (awaiting > 0) {
     rows.push({

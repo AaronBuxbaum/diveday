@@ -31,7 +31,13 @@ import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { MarkCertifiedControl } from "./MarkCertifiedControl";
 import { markCertifiedCopy } from "./mark-certified-copy";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
-import { AGENCY_KEYS, type DiverProfile, type Shop } from "./shared";
+import {
+  AGENCY_KEYS,
+  type CardAwaitingKind,
+  cardAwaitingAnchor,
+  type DiverProfile,
+  type Shop,
+} from "./shared";
 
 /**
  * **Every card this diver holds, as one group** (ADR 20260827-people-not-lists,
@@ -81,6 +87,7 @@ function CardRow({
   imported,
   actions,
   anchor,
+  rowAnchor,
 }: {
   t: StaffTranslator;
   title: ReactNode;
@@ -90,6 +97,8 @@ function CardRow({
   actions: ReactNode;
   /** Set on the first card that is waiting for somebody, for the ledger's fix. */
   anchor?: boolean;
+  /** Set on the first card of its kind waiting for somebody — see `cardAwaitingAnchor`. */
+  rowAnchor?: string;
 }) {
   return (
     <CertificationCardRow
@@ -106,6 +115,7 @@ function CardRow({
       // controls under it. Marking a card verified is what moves the anchor, so
       // that took the success toast and its Undo down with it.
       actionsId={anchor ? AWAITING_ANCHOR : undefined}
+      rowId={rowAnchor}
     />
   );
 }
@@ -268,6 +278,14 @@ export function CertificationsGroup({
     anchored = true;
     return true;
   };
+  // And the first of each *kind*, for a ledger row that is about one kind: a
+  // blocker on the Advanced card must not land on a pending Deep card.
+  const claimedKinds = new Set<CardAwaitingKind>();
+  const claimKindAnchor = (awaiting: boolean, kind: CardAwaitingKind) => {
+    if (!awaiting || claimedKinds.has(kind)) return undefined;
+    claimedKinds.add(kind);
+    return cardAwaitingAnchor(kind);
+  };
 
   /**
    * **Quiet ink, not a bordered button.** A filled `danger` control stood on
@@ -307,6 +325,7 @@ export function CertificationsGroup({
         key={`level:${card.id}`}
         t={t}
         anchor={claimAnchor(awaiting)}
+        rowAnchor={claimKindAnchor(awaiting, "level")}
         state={certificationCardRowState("level", card)}
         imported={isImportedCard(card) ? { source: card.importedFromLabel } : undefined}
         title={
@@ -385,6 +404,7 @@ export function CertificationsGroup({
         key={`specialty:${card.id}`}
         t={t}
         anchor={claimAnchor(awaiting)}
+        rowAnchor={claimKindAnchor(awaiting, card.specialty)}
         state={certificationCardRowState("specialty", card)}
         imported={isImportedCard(card) ? { source: card.importedFromLabel } : undefined}
         title={
@@ -432,6 +452,7 @@ export function CertificationsGroup({
         key={`nitrox:${card.id}`}
         t={t}
         anchor={claimAnchor(awaiting)}
+        rowAnchor={claimKindAnchor(awaiting, "nitrox")}
         state={certificationCardRowState("nitrox", card)}
         imported={isImportedCard(card) ? { source: card.importedFromLabel } : undefined}
         title={

@@ -9,11 +9,7 @@ import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { personNamesMatch } from "@/lib/person-name";
 import type { ReEntryAsk } from "@/lib/re-entry";
-import {
-  type CertificationLevel,
-  certificationRank,
-  hasVerifiedCertificationAtLeast,
-} from "@/lib/readiness";
+import { type CertificationLevel, hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import { partnerReferralSlug } from "@/lib/referrals";
 import {
   decideTripAdmission,
@@ -513,7 +509,7 @@ async function levelsInTrainingBefore(
         .limit(1),
     () => listCourseSeatsInTraining(tx, shopId, [personId]),
   ]);
-  return trip ? inTrainingBefore(seats, trip).map((course) => course.level) : [];
+  return trip ? inTrainingBefore(seats, trip, nowDate()).map((course) => course.level) : [];
 }
 
 /** What a diver this shop knows nothing about has on file — and what an unread evidence lookup stands in for. */
@@ -763,17 +759,7 @@ async function createBookingRecord(
             isNull(certifications.deletedAt),
           ),
         );
-      // A course that finishes before this one starts and certifies the
-      // level counts too: Open Water on Saturday, Advanced from Sunday is a
-      // plan the shop sells all the time. The student still boards on the
-      // card the first course's instructor issues (readiness waits for it).
-      const minimumLevel = course.minimumCertificationLevel;
-      if (
-        !hasVerifiedCertificationAtLeast(cardRows, minimumLevel) &&
-        !(await levelsInTrainingBefore(tx, req.shopId, person.id, trip.id)).some(
-          (level) => certificationRank(level) >= certificationRank(minimumLevel),
-        )
-      ) {
+      if (!hasVerifiedCertificationAtLeast(cardRows, course.minimumCertificationLevel)) {
         return { ok: false, reason: "course_prerequisite" };
       }
     }

@@ -768,7 +768,7 @@
       "certificationPending": "Tus datos de certificación están con el centro para verificarlos.",
       "certificationSelfDeclared": "Le dijiste al centro tu nivel de certificación, pero aún no está verificado en tu ficha. Añade los datos de certificación abajo para que queden archivados antes de la salida.",
       "certificationInsufficient": "Esta salida requiere un nivel de certificación superior. Tu centro puede hablar contigo sobre las opciones.",
-      "certificationInTraining": "Tu curso termina antes de esta salida. En cuanto tu instructor emita tu certificación, quedas listo para ella.",
+      "certificationInTraining": "Estás inscrito en un curso que termina antes de esta salida. Cuando lo completes y tu instructor te certifique, este paso queda listo.",
       "specialtyMissing": "Esta inmersión necesita una certificación de especialidad. Comparte sus datos con el centro o ponte en contacto para que puedan añadirla.",
       "specialtyPending": "Tu certificación de especialidad está con el centro para verificación.",
       "specialtyImportUnconfirmed": "Tu certificación de especialidad llegó del sistema anterior de tu centro y está pendiente de que la confirmen.",

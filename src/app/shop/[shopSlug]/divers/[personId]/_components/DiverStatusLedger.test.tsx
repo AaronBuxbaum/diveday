@@ -236,7 +236,7 @@ describe("a level the diver does not hold", () => {
     ]);
     expect(
       screen.getByText(
-        "Not certified for this trip. It needs Advanced Open Water or higher, and the highest verified card is Open Water.",
+        "Not certified for this trip. It needs Advanced Open Water or higher, and the highest certified card on file is Open Water.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open the booking" })).toHaveAttribute(
@@ -257,6 +257,24 @@ describe("a level the diver does not hold", () => {
     expect(screen.getByRole("link", { name: "Add certification" })).toHaveAttribute(
       "href",
       "#card-add",
+    );
+  });
+});
+
+describe("a card blocker about one kind of card", () => {
+  it("lands on the first card of that kind, not the first unchecked card", () => {
+    renderLedger([
+      {
+        kind: "certification",
+        tone: "danger",
+        sentence: { blocker: { code: "certification_pending" } },
+        action: { labelKey: "divers.status.acts.verify", target: "verify" },
+        verifies: "level",
+      },
+    ]);
+    expect(screen.getByRole("link", { name: "Verify it" })).toHaveAttribute(
+      "href",
+      "#card-awaiting-level",
     );
   });
 });

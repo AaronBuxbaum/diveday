@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
+import { inTrainingBefore } from "./certifications-in-training";
 import type { AppDb } from "./client";
 import { listTripReadiness, upsertTripRequirements } from "./readiness";
 import { type certificationLevel, certifications, courses, tripAssignments } from "./schema";
@@ -173,7 +174,9 @@ describe("a fun dive after the course that certifies for it", () => {
     ]);
   });
 
-  it("lets a student book Advanced straight after the Open Water course that qualifies them", async () => {
+  it("leaves the course prerequisite as it was: Advanced still asks for a certified Open Water card", async () => {
+    // H-08's course baseline (human-decisions.md, "Course admission") is the
+    // owner's rule; enrolling in Open Water does not stand in for the card.
     const { db, shop } = ctx;
     const start = BASE() + 10 * DAY;
     const ow = await courseSession(db, shop.id, "open-water-diver", start);
@@ -181,21 +184,39 @@ describe("a fun dive after the course that certifies for it", () => {
     if (!student.ok) throw new Error(`course booking refused: ${student.reason}`);
 
     const aowAfter = await courseSession(db, shop.id, "advanced-open-water-diver", start + 2 * DAY);
-    expect(await book(db, shop.id, aowAfter.id, student.personId)).toMatchObject({ ok: true });
-
-    // The same pair the other way round is still refused: Advanced first, then
-    // the course that would have qualified them for it.
-    const second = await book(db, shop.id, ow.id, { name: "Ruth Okoye" });
-    if (!second.ok) throw new Error(`course booking refused: ${second.reason}`);
-    const aowBefore = await courseSession(
-      db,
-      shop.id,
-      "advanced-open-water-diver",
-      start - 2 * DAY,
-    );
-    expect(await book(db, shop.id, aowBefore.id, second.personId)).toEqual({
+    expect(await book(db, shop.id, aowAfter.id, student.personId)).toEqual({
       ok: false,
       reason: "course_prerequisite",
     });
+  });
+});
+
+describe("inTrainingBefore", () => {
+  const now = new Date("2026-10-04T12:00:00.000Z");
+  const trip = { id: "fun", startsAt: new Date("2026-10-10T13:00:00.000Z") };
+  const seat = (finishesAt: string, tripId = "course") => ({
+    personId: "p",
+    tripId,
+    level: "open_water" as const,
+    finishesAt: new Date(finishesAt),
+  });
+
+  it("counts a course that is still ahead and ends before the trip", () => {
+    expect(inTrainingBefore([seat("2026-10-09T17:00:00.000Z")], trip, now)).toHaveLength(1);
+  });
+
+  it("stops counting a course that has already ended, at the sale as at the rail", () => {
+    // A student who sat two days in May and quit is not in training in October.
+    expect(inTrainingBefore([seat("2026-05-12T17:00:00.000Z")], trip, now)).toEqual([]);
+  });
+
+  it("ignores a course that ends after the trip, and the trip itself", () => {
+    expect(
+      inTrainingBefore(
+        [seat("2026-10-11T17:00:00.000Z"), seat("2026-10-09T17:00:00.000Z", "fun")],
+        trip,
+        now,
+      ),
+    ).toEqual([]);
   });
 });

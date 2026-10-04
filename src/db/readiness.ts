@@ -1619,10 +1619,14 @@ export async function listTripsReadiness(
         // Measured against this departure: only a course that finishes before
         // it sails can be the card this diver boards on.
         certificationsInTraining: courseRow
-          ? inTrainingBefore(courseSeatsByPerson.get(row.person.id) ?? [], {
-              id: tripId,
-              startsAt: courseRow.startsAt,
-            })
+          ? inTrainingBefore(
+              courseSeatsByPerson.get(row.person.id) ?? [],
+              {
+                id: tripId,
+                startsAt: courseRow.startsAt,
+              },
+              now,
+            )
           : [],
         specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
         nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],

@@ -61,14 +61,24 @@ export async function listCourseSeatsInTraining(
   });
 }
 
-/** The course seats that finish by the time this trip starts, and are not the trip itself. */
+/**
+ * The course seats that finish by the time this trip starts, are not the trip
+ * itself, and **have not finished yet**. A course that ended without a card
+ * is not training any more: the diver did not finish, or the instructor has a
+ * tap to make, and either way it stops counting at the sale and at the rail
+ * alike. One window, here, so the two gates cannot drift apart.
+ */
 export function inTrainingBefore(
   seats: readonly CourseSeatInTraining[],
   trip: { id: string; startsAt: Date },
+  now: Date,
 ): CertificationInTraining[] {
   return seats
     .filter(
-      (seat) => seat.tripId !== trip.id && seat.finishesAt.getTime() <= trip.startsAt.getTime(),
+      (seat) =>
+        seat.tripId !== trip.id &&
+        seat.finishesAt.getTime() <= trip.startsAt.getTime() &&
+        seat.finishesAt.getTime() > now.getTime(),
     )
     .map(({ level, finishesAt }) => ({ level, finishesAt }));
 }

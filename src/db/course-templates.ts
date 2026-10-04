@@ -3611,10 +3611,11 @@ export { courseTemplateSnapshot };
  * edited: a shop copy reads it through `courses.source_template_slug`.
  *
  * Only the courses whose card *is* a rung of DiveDay's ladder. Specialties,
- * refreshers and tasters issue no level. The SSI and SDI "Advanced
- * Adventurer" courses are left out on purpose: their cards are adventure
- * dives logged, not an Advanced Open Water rung, and counting them would let
- * a booking promise a level the card will not carry.
+ * refreshers and tasters issue no level. SSI's Advanced Adventurer and SDI's
+ * Advanced Adventure Diver are the Advanced rung here because they are
+ * everywhere else: the importer maps the card to `advanced_open_water`
+ * (`src/lib/import.ts`), the SSI page quotes its 30 m limit, and the SDI
+ * continuing-education templates name it as their Advanced prerequisite.
  *
  * Read by `src/db/certifications-in-training.ts`, which is what lets a diver
  * booked on the course be booked on the dive after it.
@@ -3625,8 +3626,10 @@ const CERTIFIED_LEVEL_BY_TEMPLATE: Readonly<Record<string, CertificationLevel>> 
   "rescue-diver": "rescue",
   divemaster: "divemaster",
   "ssi-open-water-diver": "open_water",
+  "ssi-advanced-adventurer": "advanced_open_water",
   "ssi-diver-stress-and-rescue": "rescue",
   "sdi-open-water-scuba-diver": "open_water",
+  "sdi-advanced-adventure-diver": "advanced_open_water",
   "sdi-rescue-diver": "rescue",
   "sdi-divemaster": "divemaster",
 };

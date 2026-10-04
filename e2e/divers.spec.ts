@@ -110,9 +110,12 @@ test("the status ledger's fix lands on the control that clears it", async ({ pag
 
   const fix = page.getByRole("link", { name: "Verify it" });
   await expect(fix).toBeVisible();
-  await expect(fix).toHaveAttribute("href", "#card-awaiting");
+  // `#card-awaiting` for "cards are waiting", or the first card of the kind a
+  // blocker is about (`#card-awaiting-level`, `-deep`, `-nitrox`).
+  await expect(fix).toHaveAttribute("href", /^#card-awaiting(-[a-z_]+)?$/);
+  const target = (await fix.getAttribute("href")) ?? "";
   await fix.click();
-  await expect(page.locator("#card-awaiting")).toBeInViewport();
+  await expect(page.locator(target)).toBeInViewport();
 });
 
 test("a diver note is shared with the live boat manifest", async ({ page }) => {

@@ -6,6 +6,7 @@ import { readinessBlockerText } from "@/i18n/readiness-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTime } from "@/lib/format";
 import type { DiverStatusKind, DiverStatusRow, DiverStatusTarget } from "../_lib/status";
+import { cardAwaitingAnchor } from "./shared";
 
 /**
  * **The status ledger — what is open about this diver, and the one fix each.**
@@ -64,6 +65,11 @@ function fixHref(row: DiverStatusRow, shopSlug: string, recordPath: string): str
     return row.tripContext
       ? `/shop/${shopSlug}/trips/${row.tripContext.tripId}#booking-${row.tripContext.bookingId}`
       : "";
+  }
+  // A row about one kind of card lands on that kind (the original bug: a
+  // blocker about the Advanced card landed on an unrelated pending Deep card).
+  if (target === "verify" && row.verifies) {
+    return `${recordPath}#${cardAwaitingAnchor(row.verifies)}`;
   }
   return target ? `${recordPath}${STATUS_TARGET_ANCHORS[target]}` : "";
 }

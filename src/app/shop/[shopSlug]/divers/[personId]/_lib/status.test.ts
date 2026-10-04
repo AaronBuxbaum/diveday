@@ -447,3 +447,24 @@ describe("the fix beside a card the boat will not take", () => {
     });
   });
 });
+
+describe('which card "Verify it" is about', () => {
+  it("sends a level blocker to the level card, a specialty blocker to that specialty", () => {
+    const level = buildDiverStatus(
+      diver({ bookings: [booking("b1", TOMORROW)] }),
+      blocked("certification_pending"),
+      { now: NOW },
+    );
+    expect(level[0]).toMatchObject({ action: { target: "verify" }, verifies: "level" });
+
+    const deep = buildDiverStatus(
+      diver({ bookings: [booking("b1", TOMORROW)] }),
+      {
+        status: "blocked",
+        blockers: [{ code: "specialty_pending", params: { specialty: "deep" } }],
+      },
+      { now: NOW },
+    );
+    expect(deep[0]).toMatchObject({ action: { target: "verify" }, verifies: "deep" });
+  });
+});
