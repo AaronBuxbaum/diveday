@@ -264,6 +264,19 @@ describe("the rail as it renders", () => {
     );
   });
 
+  it("ends a row that opens its own page in the door's chevron, and only that row", () => {
+    // Aaron, 2026-10-03: the rail should say which rows open a new page. A
+    // sub-route row wears the door glyph every other door wears; a hub section
+    // scrolls in place and carries nothing.
+    renderRail();
+    const chevron = (name: string) =>
+      screen.getByRole("link", { name }).querySelector("svg[aria-hidden='true']");
+    expect(chevron("team")).not.toBeNull();
+    expect(chevron("boats")).not.toBeNull();
+    expect(chevron("tax")).toBeNull();
+    expect(chevron("timezone")).toBeNull();
+  });
+
   it("points a section link back at the hub from a sub-route", () => {
     pathname = `${BASE}/settings/team`;
     renderRail();

@@ -110,6 +110,13 @@ export type CutoverSection = {
  * person's commitment with `{email}` to write to, never a turnaround time or a
  * page count.
  */
+/**
+ * The fragment of a guide's website ledger, so a link from inside the app (the
+ * Settings embed page's "Switching from FareHarbor?") lands on the ledger
+ * itself rather than the top of a long guide (Aaron, 2026-10-03).
+ */
+export const WEBSITE_LEDGER_ID = "website-ledger";
+
 export type WebsiteFraming = {
   heading: DiverMessageKey;
   intro: DiverMessageKey;

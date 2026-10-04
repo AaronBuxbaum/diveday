@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { GroupLabel } from "@/components/ui/ledger";
+import { DoorChevron, GroupLabel } from "@/components/ui/ledger";
 import { RAIL_ROW_CLASS, RAIL_ROW_CURRENT, RAIL_ROW_IDLE } from "@/components/ui/rail";
 import {
   currentSettingsRailRowId,
@@ -183,6 +183,7 @@ export function SettingsRail({
                   {group.rows.map((row) => {
                     const selected = row.id === currentId;
                     const badge = badges?.[row.id];
+                    const isDoor = row.target.kind === "route";
                     return (
                       <li key={row.id}>
                         <RailLink
@@ -202,11 +203,20 @@ export function SettingsRail({
                           <span className="min-w-0 text-pretty">{labels[row.id]}</span>
                           {/* At most one badge per row, and only for a warning —
                             the settled states of these rows are quiet text on
-                            the pane, not a pill on the map. */}
-                          {badge ? (
-                            <Badge tone="warning" size="sm" toneMark={false}>
-                              {badge}
-                            </Badge>
+                            the pane, not a pill on the map. A row that opens
+                            a page of its own ends in the door's chevron, the
+                            glyph every other door in the app wears; a row
+                            that scrolls to a form on this page carries none,
+                            so the two read apart (Aaron, 2026-10-03). */}
+                          {badge || isDoor ? (
+                            <span className="flex shrink-0 items-center gap-2">
+                              {badge ? (
+                                <Badge tone="warning" size="sm" toneMark={false}>
+                                  {badge}
+                                </Badge>
+                              ) : null}
+                              {isDoor ? <DoorChevron /> : null}
+                            </span>
                           ) : null}
                         </RailLink>
                       </li>

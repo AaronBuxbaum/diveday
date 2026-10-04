@@ -32,6 +32,7 @@ const copy: EmbedGeneratorCopy = {
   languageAuto: "Follow the browser",
   languages: { "en-US": "English", "es-ES": "Español" },
   preview: "Preview",
+  openPreview: "Open the preview",
   platform: "Where it goes",
   platforms: Object.fromEntries(
     PLATFORMS.map((p) => [p, `platform ${p}`]),
@@ -81,6 +82,19 @@ describe("EmbedGenerator", () => {
     expect((screen.getByLabelText("Embed code") as HTMLTextAreaElement).value).toContain(
       'data-diveday="calendar"',
     );
+  });
+
+  /**
+   * Too narrow to read (a phone), the widget is not drawn small: the same
+   * frame opens in a tab of its own (Aaron, 2026-10-03). Which of the two
+   * shows is a container query, so both are in the DOM and must agree.
+   */
+  it("offers the framed widget full size in a new tab, at the frame's own URL", () => {
+    renderGenerator();
+    const frame = screen.getByTitle("Preview") as HTMLIFrameElement;
+    const open = screen.getByRole("link", { name: "Open the preview" });
+    expect(open.getAttribute("href")).toBe(frame.getAttribute("src"));
+    expect(open.getAttribute("target")).toBe("_blank");
   });
 
   it("changes the snippet as the shop chooses", async () => {
