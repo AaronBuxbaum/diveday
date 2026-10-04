@@ -51,7 +51,6 @@ import {
   type AddressLookupResult,
   addressLookupConfigFromEnvironment,
   isLookupWorthy,
-  toFilterCountry,
 } from "@/lib/address-lookup";
 import { isBrandDisplayFontCode, parseBrandBadges, parseBrandColor } from "@/lib/brand";
 import { confirmContactLinkPath } from "@/lib/contact-email-confirmation";
@@ -959,15 +958,15 @@ export async function suggestAddressAction(query: string): Promise<AddressLookup
   const bias =
     (await shopSearchAnchor(db, session.user.shopId)) ??
     (shop ? timeZoneAnchor(shop.timezone) : null);
-  // Confines results outright, so it comes only from an address the shop has
-  // already saved — and only when that value is really alpha-2, since the
-  // column is free text that predates the lookup.
-  const country = toFilterCountry(shop?.addressCountry);
+  // Never confined to the saved country: this box is how a shop *changes* its
+  // address, and a country filter taken from the old one hid every place
+  // abroad (Aaron, 2026-10-03: Barefoot Dive Center, Cozumel, from a shop
+  // saved in the US). The bias above still ranks the shop's own region first.
 
   // Imported here rather than at module scope so a deployment with no
   // credentials never loads the AWS SDK at all.
   const { awsAddressLookupProvider } = await import("@/lib/address-lookup-aws");
-  return awsAddressLookupProvider(config).suggest(query, { bias, country });
+  return awsAddressLookupProvider(config).suggest(query, { bias });
 }
 
 /* -------------------------------------------------------------------------- *

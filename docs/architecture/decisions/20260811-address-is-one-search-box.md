@@ -65,12 +65,12 @@ be forgotten, never usefully reconsidered.
   3. **`WORLD_BOUNDING_BOX`**, only for a timezone the table has never placed. An invented centre
      would silently rank a shop's own street below a same-named place near a coordinate nobody
      chose.
-- **A saved country confines results outright.** `Filter.IncludeCountries` is a different field from
-  the mutually-exclusive anchors and rides alongside a bias (Amazon Location's own guide shows the
-  pair). It is taken *only* from an address the shop already saved — a shop that has said it is in
-  `MX` is not looking for its storefront in Malta — and only when that stored value is really ISO
-  alpha-2, since the column is free text that predates the lookup and passing `us` or `M` through
-  would turn the shop's own stale data into a rejected request.
+- **~~A saved country confines results outright.~~ No country filter (amended 2026-10-03).** This
+  shipped as `Filter.IncludeCountries` taken from the shop's saved country, on the reasoning that a
+  shop in `MX` is not looking for its storefront in Malta. It hid exactly the search the box exists
+  for: a shop *changing* its address. Aaron, with the demo shop saved in Key Largo, US, could not
+  find Barefoot Dive Center in Cozumel at all. The bias above already ranks the shop's own region
+  first without excluding anything, so the filter was removed rather than loosened.
 - **A suggestion shows the place's name with its address beneath it.** For a business those are two
   different facts, and the second is the only thing separating one franchise location from the next.
   For a plain address result they are the same string and the second line is omitted.

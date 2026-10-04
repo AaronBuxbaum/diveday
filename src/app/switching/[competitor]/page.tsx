@@ -24,6 +24,7 @@ import {
   getMigrationGuide,
   MIGRATION_GUIDE_SLUGS,
   type MigrationGuide,
+  WEBSITE_LEDGER_ID,
 } from "@/lib/migration-guides";
 import {
   ClosingCta,
@@ -260,7 +261,7 @@ async function GuideBody({
           of the two, as everywhere on these pages. No third door of its own:
           the offer's one action is the address to write to. */}
       {guide.website && (
-        <section className="border-b border-border">
+        <section id={WEBSITE_LEDGER_ID} className="scroll-mt-48 border-b border-border">
           <div className={GUIDE_BAND_CLASS}>
             <p className={MARKETING_EYEBROW_CLASS}>{t("switching.competitor.websiteEyebrow")}</p>
             <h2 className={`mt-3 ${BANNER_TITLE_CLASS} sm:text-4xl`}>{t(guide.website.heading)}</h2>

@@ -191,30 +191,19 @@ describe("Amazon Location address suggestions", () => {
     }
   });
 
-  it("confines results to a country the shop has already claimed", async () => {
-    // `IncludeCountries` excludes rather than ranks, so it only ever comes from
-    // an address the shop itself saved — and it is not one of the mutually
-    // exclusive anchors, so it rides *with* the bias rather than replacing it.
+  it("never confines results to one country", async () => {
+    // The search shipped with `IncludeCountries` set from the shop's saved
+    // country, so a shop whose address read Key Largo, US could not find
+    // Barefoot Dive Center in Cozumel at all (Aaron, 2026-10-03). The box is
+    // most used to *change* an address, so the saved country is the one fact
+    // it must not trust; the bias still ranks the shop's own region first.
     const client = clientReturning({ ResultItems: [] });
-    await awsAddressLookupProvider(config, { client }).suggest("Barefoot Di", {
+    await awsAddressLookupProvider(config, { client }).suggest("Barefoot Dive Center", {
       bias: { longitude: -80.4, latitude: 25.0117 },
-      country: "US",
     });
     const input = (client.send.mock.calls[0][0] as { input: Record<string, unknown> }).input;
     expect(input.BiasPosition).toEqual([-80.4, 25.0117]);
-    expect(input.Filter).toEqual({ IncludeCountries: ["US"] });
-  });
-
-  it("keeps the whole-globe box and the country filter in one Filter object", async () => {
-    // Both live inside `Filter`, so assembling them separately would have the
-    // second silently overwrite the first and drop the anchor.
-    const client = clientReturning({ ResultItems: [] });
-    await awsAddressLookupProvider(config, { client }).suggest("Barefoot Di", { country: "MX" });
-    const input = (client.send.mock.calls[0][0] as { input: Record<string, unknown> }).input;
-    expect(input.Filter).toEqual({
-      BoundingBox: [-180, -90, 180, 90],
-      IncludeCountries: ["MX"],
-    });
+    expect(input.Filter).toBeUndefined();
   });
 
   it("never spends a request the query is too long for", async () => {
