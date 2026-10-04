@@ -316,7 +316,12 @@ describe("an asked-for day's row (K-333, K-338)", () => {
     expect([...askRow().classList].filter((name) => /^-?[pm][xse]-/.test(name))).toEqual([]);
     const act = within(askRow()).getByRole("link", { name: "Add a departure" });
     expect(act.className).toBe(
-      buttonClass({ variant: "ghost", size: "sm", flush: true, className: "shrink-0 print:hidden" }),
+      buttonClass({
+        variant: "ghost",
+        size: "sm",
+        flush: true,
+        className: "shrink-0 print:hidden",
+      }),
     );
   });
 
