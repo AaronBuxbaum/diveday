@@ -3604,3 +3604,36 @@ export function getCourseTemplate(slug: string): CourseTemplate | null {
 
 /** The baseline persisted beside a shop copy when it begins following a template. */
 export { courseTemplateSnapshot };
+
+/**
+ * **The rung a course leaves its students on**, for the templates that issue
+ * one. Agency fact, not shop content, so it is keyed by template and never
+ * edited: a shop copy reads it through `courses.source_template_slug`.
+ *
+ * Only the courses whose card *is* a rung of DiveDay's ladder. Specialties,
+ * refreshers and tasters issue no level. The SSI and SDI "Advanced
+ * Adventurer" courses are left out on purpose: their cards are adventure
+ * dives logged, not an Advanced Open Water rung, and counting them would let
+ * a booking promise a level the card will not carry.
+ *
+ * Read by `src/db/certifications-in-training.ts`, which is what lets a diver
+ * booked on the course be booked on the dive after it.
+ */
+const CERTIFIED_LEVEL_BY_TEMPLATE: Readonly<Record<string, CertificationLevel>> = {
+  "open-water-diver": "open_water",
+  "advanced-open-water-diver": "advanced_open_water",
+  "rescue-diver": "rescue",
+  divemaster: "divemaster",
+  "ssi-open-water-diver": "open_water",
+  "ssi-diver-stress-and-rescue": "rescue",
+  "sdi-open-water-scuba-diver": "open_water",
+  "sdi-rescue-diver": "rescue",
+  "sdi-divemaster": "divemaster",
+};
+
+/** The level a course built from this template certifies its students at, if any. */
+export function courseTemplateCertifiedLevel(
+  slug: string | null | undefined,
+): CertificationLevel | null {
+  return slug ? (CERTIFIED_LEVEL_BY_TEMPLATE[slug] ?? null) : null;
+}

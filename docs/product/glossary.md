@@ -112,6 +112,17 @@ new domain concept, define it here in the same PR.
   unique index (keyed on `identifier`) cannot catch. Scoped to `certifications` only — the level
   ladder — not the **specialty** or **nitrox** tables, which stay one-tap-away from this treatment on
   purpose (see their own entries on why even an *imported* row waits for a staff confirm there).
+- **In training** — a diver with no card at a trip's level yet, holding a seat on a course session
+  that certifies that level (or higher) and ends before the trip starts. Which courses certify a
+  rung is agency fact, kept by template in `src/db/course-templates.ts`
+  (`courseTemplateCertifiedLevel`); specialties, refreshers, tasters and the SSI/SDI "Advanced
+  Adventurer" courses certify none. It is **never evidence**. At booking it counts toward the
+  trip's level, so a fun dive the morning after an Open Water course, or Advanced straight after
+  Open Water, can be sold. At boarding it is still a blocker (`certification_in_training`), worded
+  as a plan rather than a problem, and only the card the instructor issues clears it
+  (**Shop-issued certification**). Once the course session has ended without a card, the diver is
+  read as uncertified again, because a diver who did not finish and an instructor who has not
+  tapped both need somebody to act.
 - **Self-declared certification** — a level (or a nitrox tick) a **diver typed about themselves** on
   one of the three public forms that ask: the shop-wide last-minute-deal list, a full trip's wait
   list, or — since 2026-08-20 — the trip booking form itself. It lands on the person as a `pending`

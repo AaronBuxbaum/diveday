@@ -583,6 +583,128 @@ describe("calculateReadiness", () => {
  * exactly one blocker, in the waiver category, and never doubles up with the
  * line an unsigned or expired release already carries.
  */
+describe("calculateReadiness — a course that gets them there", () => {
+  const tomorrow = new Date("2026-07-19T16:00:00.000Z");
+  const yesterday = new Date("2026-07-17T16:00:00.000Z");
+
+  function certificationBlockers(
+    certifications: Certification[],
+    certificationsInTraining: { level: Certification["level"]; finishesAt: Date }[],
+  ) {
+    return calculateReadiness({
+      requirement,
+      waiver: signedWaiver,
+      certifications,
+      certificationsInTraining,
+      now,
+    }).blockers.filter((blocker) => blocker.code.startsWith("certification"));
+  }
+
+  it("names the level a booked course will reach, and still blocks", () => {
+    const result = calculateReadiness({
+      requirement,
+      waiver: signedWaiver,
+      certifications: [certification({ level: "open_water" })],
+      certificationsInTraining: [{ level: "advanced_open_water", finishesAt: tomorrow }],
+      now,
+    });
+    // Boarding still waits for the card: enrollment never clears a gate.
+    expect(result.status).toBe("blocked");
+    expect(result.blockers).toEqual([
+      { code: "certification_in_training", params: { requiredLevel: "advanced_open_water" } },
+    ]);
+  });
+
+  it("covers a diver with no card at all, booked on the course", () => {
+    expect(
+      certificationBlockers([], [{ level: "advanced_open_water", finishesAt: tomorrow }]),
+    ).toEqual([expect.objectContaining({ code: "certification_in_training" })]);
+  });
+
+  it("counts a course that certifies above the trip's level", () => {
+    expect(certificationBlockers([], [{ level: "rescue", finishesAt: tomorrow }])).toEqual([
+      expect.objectContaining({ code: "certification_in_training" }),
+    ]);
+  });
+
+  it("does not count a course that stops short of the trip's level", () => {
+    expect(
+      certificationBlockers(
+        [certification({ level: "open_water" })],
+        [{ level: "open_water", finishesAt: tomorrow }],
+      ),
+    ).toEqual([
+      {
+        code: "certification_insufficient",
+        params: { requiredLevel: "advanced_open_water", heldLevel: "open_water" },
+      },
+    ]);
+  });
+
+  it("goes back to the serious line once the course ends without a card", () => {
+    // Either the diver did not finish, or the instructor has a tap to make;
+    // both are somebody's job now, and the soft line would hide it.
+    expect(
+      certificationBlockers(
+        [certification({ level: "open_water" })],
+        [{ level: "advanced_open_water", finishesAt: yesterday }],
+      ),
+    ).toEqual([expect.objectContaining({ code: "certification_insufficient" })]);
+    expect(
+      certificationBlockers([], [{ level: "advanced_open_water", finishesAt: yesterday }]),
+    ).toEqual([{ code: "certification_missing" }]);
+  });
+
+  it("prefers a card on file at the level over the course", () => {
+    expect(
+      certificationBlockers(
+        [certification({ status: "pending", level: "advanced_open_water" })],
+        [{ level: "advanced_open_water", finishesAt: tomorrow }],
+      ),
+    ).toEqual([{ code: "certification_pending" }]);
+  });
+
+  it("clears on the issued card, course or no course", () => {
+    expect(
+      calculateReadiness({
+        requirement,
+        waiver: signedWaiver,
+        certifications: [certification()],
+        certificationsInTraining: [{ level: "advanced_open_water", finishesAt: tomorrow }],
+        now,
+      }),
+    ).toEqual({ status: "ready", blockers: [] });
+  });
+
+  it("names the highest verified card beside a level the diver does not reach", () => {
+    expect(
+      certificationBlockers(
+        [
+          certification({ level: "open_water" }),
+          certification({ level: "advanced_open_water", status: "pending" }),
+        ],
+        [],
+      ),
+    ).toEqual([{ code: "certification_pending" }]);
+    expect(
+      calculateReadiness({
+        requirement: { ...requirement, minimumCertificationLevel: "rescue" } as TripRequirement,
+        waiver: signedWaiver,
+        certifications: [
+          certification({ level: "open_water" }),
+          certification({ level: "advanced_open_water" }),
+        ],
+        now,
+      }).blockers,
+    ).toEqual([
+      {
+        code: "certification_insufficient",
+        params: { requiredLevel: "rescue", heldLevel: "advanced_open_water" },
+      },
+    ]);
+  });
+});
+
 describe("calculateReadiness — the guardian co-signature", () => {
   /** Signed 2026-07-18 at 23:30 New York, which is the 19th in UTC. */
   const signedAt = new Date("2026-07-19T03:30:00.000Z");

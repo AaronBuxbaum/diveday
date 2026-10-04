@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { CertificationCardRow } from "@/components/person/rows";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -62,6 +63,9 @@ import { AGENCY_KEYS, type DiverProfile, type Shop } from "./shared";
 
 /** The anchor the status ledger's "Verify it" lands on — see `STATUS_TARGET_ANCHORS`. */
 const AWAITING_ANCHOR = "card-awaiting";
+
+/** The anchor the ledger's "Add certification" lands on: the capture form's own disclosure. */
+const ADD_ANCHOR = "card-add";
 
 /**
  * The one card row every kind renders through, so the three tables cannot
@@ -558,7 +562,10 @@ export function CertificationsGroup({
             before it starts reading is exactly what stops being true. Every
             non-row block in this group is one for the same reason. */}
         <li className="px-5 py-3 sm:px-6">
-          <details className="group">
+          {/* The status ledger's "Add certification" lands here
+              (`STATUS_TARGET_ANCHORS.add_card`), and opens it: a fix that
+              scrolled to a shut door would leave the form one more tap away. */}
+          <AutoOpenDetails id={ADD_ANCHOR} openOnHash={ADD_ANCHOR} className="group scroll-mt-8">
             <summary
               className={buttonClass({
                 variant: "link",
@@ -625,7 +632,7 @@ export function CertificationsGroup({
                 </SubmitButton>
               </FieldActions>
             </FieldGrid>
-          </details>
+          </AutoOpenDetails>
           <DiverFormStatus status={groupStatus} className="mt-3" />
         </li>
       </InsetGroup>

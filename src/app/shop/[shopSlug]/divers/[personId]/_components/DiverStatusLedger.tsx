@@ -44,8 +44,12 @@ const KIND_WORD: Record<DiverStatusKind, StaffMessageKey> = {
  * JavaScript at all. `collect` is the exception: an order is a page of its own
  * and stays first-class on the Orders ledger.
  */
-export const STATUS_TARGET_ANCHORS: Record<Exclude<DiverStatusTarget, "collect">, string> = {
+export const STATUS_TARGET_ANCHORS: Record<
+  Exclude<DiverStatusTarget, "collect" | "open_booking">,
+  string
+> = {
   verify: "#card-awaiting",
+  add_card: "#card-add",
   send_waiver: "#waiver-send",
   edit_contact: "#edit-details",
 };
@@ -54,6 +58,12 @@ function fixHref(row: DiverStatusRow, shopSlug: string, recordPath: string): str
   const target = row.action?.target;
   if (target === "collect") {
     return row.orderId ? `/shop/${shopSlug}/orders/${row.orderId}` : `${recordPath}#the-story`;
+  }
+  // The seat itself, on its departure's roster: the Today queue's deep link.
+  if (target === "open_booking") {
+    return row.tripContext
+      ? `/shop/${shopSlug}/trips/${row.tripContext.tripId}#booking-${row.tripContext.bookingId}`
+      : "";
   }
   return target ? `${recordPath}${STATUS_TARGET_ANCHORS[target]}` : "";
 }

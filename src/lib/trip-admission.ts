@@ -90,6 +90,14 @@ export type TripAdmissionEvidence = {
   certifications: readonly Certification[];
   specialtyCertifications: readonly SpecialtyCertification[];
   nitroxCertifications: readonly NitroxCertification[];
+  /**
+   * Levels this diver is booked to be certified at before the trip starts:
+   * a course that certifies the level, finishing before the trip
+   * (`src/db/certifications-in-training.ts`). A fun dive the morning after an
+   * Open Water course is the plan, so the seat sells; readiness still waits
+   * for the card the instructor issues.
+   */
+  levelsInTraining?: readonly CertificationLevel[];
 };
 
 /**
@@ -328,10 +336,17 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
   // or the sentence they just typed. Taking the higher of the two is what stops
   // a stale Open Water row refusing somebody who has since qualified and says so.
   const heldLevel = highestOf(highestLevelOnFile(certifications), declaredLevel);
+  // A course that gets them there before the boat counts toward the rung, but
+  // not toward `heldLevel`: the refusal names what the diver holds, and a
+  // course they are booked on is not a card.
+  const reachedLevel = (evidence.levelsInTraining ?? []).reduce<CertificationLevel | null>(
+    (best, level) => highestOf(best, level),
+    heldLevel,
+  );
   const requiredLevel =
     effective.minimumCertificationLevel &&
-    (!heldLevel ||
-      certificationRank(heldLevel) < certificationRank(effective.minimumCertificationLevel))
+    (!reachedLevel ||
+      certificationRank(reachedLevel) < certificationRank(effective.minimumCertificationLevel))
       ? effective.minimumCertificationLevel
       : null;
 

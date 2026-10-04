@@ -361,3 +361,89 @@ describe("the Collect act, and whether it has anywhere to go", () => {
     });
   });
 });
+
+describe("the fix beside a card the boat will not take", () => {
+  const NEXT_WEEK = new Date("2026-09-02T11:00:00.000Z");
+
+  /**
+   * The bug this pins: an Open Water diver on an Advanced trip was offered
+   * "Verify it", which landed on their unrelated Deep card. No card on the
+   * record fixes a level they do not hold; the booking is where it gets fixed.
+   */
+  it("sends a level the diver does not reach to the booking, as danger", () => {
+    const rows = buildDiverStatus(
+      diver({
+        bookings: [booking("b1", TOMORROW)],
+        specialtyCertifications: [{ id: "s1", status: "pending" }],
+      }),
+      {
+        status: "blocked",
+        blockers: [
+          {
+            code: "certification_insufficient",
+            params: { requiredLevel: "advanced_open_water", heldLevel: "open_water" },
+          },
+        ],
+      },
+      { now: NOW },
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      kind: "certification",
+      tone: "danger",
+      action: { labelKey: "divers.status.acts.openBooking", target: "open_booking" },
+      tripContext: { tripId: "trip-b1", bookingId: "b1" },
+    });
+  });
+
+  it("offers the capture form when nothing is on file", () => {
+    const rows = buildDiverStatus(
+      diver({ bookings: [booking("b1", TOMORROW)] }),
+      blocked("certification_missing"),
+      { now: NOW },
+    );
+    expect(rows[0]).toMatchObject({ tone: "danger", action: { target: "add_card" } });
+  });
+
+  it("reads a diver booked on the course that gets them there as a plan, with no fix", () => {
+    const rows = buildDiverStatus(
+      diver({ bookings: [booking("b1", TOMORROW)] }),
+      {
+        status: "blocked",
+        blockers: [{ code: "certification_in_training", params: { requiredLevel: "open_water" } }],
+      },
+      { now: NOW },
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ kind: "certification", tone: "warning" });
+    expect(rows[0]?.action).toBeUndefined();
+  });
+
+  it("measures the card row against the departure the loader picked, not only the next one", () => {
+    const later = booking("b2", NEXT_WEEK);
+    const rows = buildDiverStatus(
+      diver({ bookings: [booking("b1", TOMORROW), later] }),
+      { status: "ready", blockers: [] },
+      {
+        now: NOW,
+        certification: {
+          entry: later,
+          readiness: {
+            status: "blocked",
+            blockers: [
+              {
+                code: "certification_insufficient",
+                params: { requiredLevel: "advanced_open_water", heldLevel: "open_water" },
+              },
+            ],
+          },
+        },
+      },
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      tone: "danger",
+      tripContext: { tripId: "trip-b2", bookingId: "b2", startsAt: NEXT_WEEK },
+    });
+  });
+});
