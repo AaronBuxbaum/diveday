@@ -47,7 +47,10 @@ test("staff captures and verifies level and specialty certifications before eith
   // group opens itself only for work aimed at it.
   await openDiverFileGroup(page, "Certification records");
   // Level certification: capture lands as pending, only an explicit verify trusts it.
-  await page.getByText("Add certification", { exact: true }).click(); // open the collapsed capture form
+  await page
+    .getByTestId("diver-file-group-certifications")
+    .getByText("Add certification", { exact: true })
+    .click(); // open the collapsed capture form
   const form = captureForm(page);
   // No photo picker on either capture form: a card is trusted because a
   // staffer looked its number up with the issuing agency ("Mark certified"),
@@ -78,7 +81,10 @@ test("staff captures and verifies level and specialty certifications before eith
 
   // Specialty certification: gated exactly the same way, through the same one
   // form on the same record.
-  await page.getByText("Add certification", { exact: true }).click();
+  await page
+    .getByTestId("diver-file-group-certifications")
+    .getByText("Add certification", { exact: true })
+    .click();
   const cardNo = `PADI-WRECK-${e2eNow().getTime()}`;
   const specialty = captureForm(page);
   await specialty.locator('select[name="agency"]').selectOption("padi");
