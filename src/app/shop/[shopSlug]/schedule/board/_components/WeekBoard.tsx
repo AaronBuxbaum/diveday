@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { type ReactNode, useRef } from "react";
+import { PrintButton } from "@/components/PrintButton";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { GroupLabel, groupLabelClass } from "@/components/ui/ledger";
@@ -143,7 +144,7 @@ export type BuilderWeek = {
    * with nothing upcoming anywhere.
    */
   nextDeparture: { label: string; href: string } | null;
-  words: { previous: string; next: string; thisWeek: string; today: string };
+  words: { previous: string; next: string; thisWeek: string; today: string; print: string };
   /**
    * "62 of 84 seats" — the one number a shop asks a week for, formatted for
    * the reader from `weekSeatTally` (`src/lib/week-seats.ts`). Data rather
@@ -266,7 +267,10 @@ function RowActions({
   ];
   return (
     // `data-row-menu` is the copy-free hook a spec asks "is this list open?" with.
-    <div ref={rootRef} className={`${open ? "z-30" : "z-10"} relative ${className}`.trim()}>
+    <div
+      ref={rootRef}
+      className={`${open ? "z-30" : "z-10"} relative print:hidden ${className}`.trim()}
+    >
       <button
         type="button"
         ref={(el) => {
@@ -723,7 +727,10 @@ export function WeekBoard({
           the one figure a shop asks a week for, and they belong to the run
           rather than to any day in it. A separate "THE WEEK" label row above
           the days named what the range beside the arrows already says. */}
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border pb-3">
+      <div
+        data-week-line=""
+        className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border pb-3"
+      >
         <WeekPager
           rangeLabel={week.rangeLabel}
           previousHref={week.previousHref}
@@ -731,9 +738,15 @@ export function WeekBoard({
           thisWeekHref={week.thisWeekHref}
           words={week.words}
         />
-        <p data-week-seat-tally="" className="text-sm text-muted tabular-nums">
-          {week.seatTally}
-        </p>
+        <div className="flex items-center gap-x-2">
+          <p data-week-seat-tally="" className="text-sm text-muted tabular-nums">
+            {week.seatTally}
+          </p>
+          {/* The week a shop pins by the dock: beside the range it prints.
+              Desk-sized only: on a phone it would push the tally onto a
+              line of its own, and nobody prints the schedule from one. */}
+          <PrintButton label={week.words.print} quiet className="max-sm:hidden" />
+        </div>
       </div>
 
       {/* When *every* departure still to sail this week is unpriced, the
@@ -763,7 +776,11 @@ export function WeekBoard({
                 onClick={() => onToggle(addKey)}
                 aria-expanded={openKey === addKey}
                 aria-label={fill(copy.addDepartureOnDay, { day: day.label })}
-                className={buttonClass({ variant: "ghost", size: "sm", className: "shrink-0" })}
+                className={buttonClass({
+                  variant: "ghost",
+                  size: "sm",
+                  className: "shrink-0 print:hidden",
+                })}
               >
                 <span aria-hidden="true">+</span> {copy.add}
               </button>
@@ -940,7 +957,7 @@ export function WeekBoard({
                       variant: "ghost",
                       size: "sm",
                       flush: true,
-                      className: "shrink-0",
+                      className: "shrink-0 print:hidden",
                     })}
                   >
                     {copy.addDeparture}

@@ -49,7 +49,10 @@ export default function ShopLayout({
           sidebar is its own boundary, holding its width while it streams, so
           the page never shifts sideways when the nav arrives. Below `lg` the
           tab bar is fixed to the foot and `--tabbar-h` pads the page clear of
-          it. */}
+          it. On paper the tab bar is `print:hidden` and the pad goes with it:
+          a page's width on Letter is below `lg`, so it printed 52px of nothing
+          after every page, and pushed an A6 card's fold line onto a sheet of
+          its own. */}
       <div className="flex min-h-0 flex-1">
         <Suspense fallback={<ShopSidebarSkeleton />}>
           <ShopSidebarSlot params={params} />
@@ -57,7 +60,7 @@ export default function ShopLayout({
         <div
           id="shop-main-content"
           tabIndex={-1}
-          className="min-h-0 min-w-0 flex-1 pb-(--tabbar-h) outline-none"
+          className="min-h-0 min-w-0 flex-1 pb-(--tabbar-h) outline-none print:pb-0"
         >
           {children}
         </div>

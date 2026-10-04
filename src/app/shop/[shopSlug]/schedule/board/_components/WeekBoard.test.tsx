@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { GroupLabel } from "@/components/ui/ledger";
 import {
@@ -86,7 +86,13 @@ function week(overrides: Partial<BuilderWeek> = {}, entries: WeekEntry[] = []): 
     seatTally: "8 of 12 seats",
     asked: [],
     askedCount: "0 days",
-    words: { previous: "Previous week", next: "Next week", thisWeek: "This week", today: "Today" },
+    words: {
+      previous: "Previous week",
+      next: "Next week",
+      thisWeek: "This week",
+      today: "Today",
+      print: "Print",
+    },
     days: DAY_ISOS.map((dateIso, index) => ({
       dateIso,
       weekday: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][index] ?? "",
@@ -143,10 +149,23 @@ describe("the week's label rows (K-254)", () => {
     const { container } = board(week());
     const tally = screen.getByText("8 of 12 seats");
     expect(tally).toHaveAttribute("data-week-seat-tally", "");
-    const line = tally.parentElement as HTMLElement;
+    const line = tally.closest("[data-week-line]") as HTMLElement;
     expect(within(line).getByRole("link", { name: "Next week" })).toBeTruthy();
     expect(within(line).getByText("Aug 24 – 30, 2026")).toBeTruthy();
     expect(container.querySelector("[data-week-board]")?.textContent).not.toContain("The week");
+  });
+
+  it("prints the week from its own line, and stays off the paper it prints", () => {
+    // The rota a shop pins up by the dock: the door sits beside the range it
+    // prints rather than in the header's cluster of acts.
+    board(week());
+    const print = vi.spyOn(window, "print").mockImplementation(() => {});
+    const door = screen.getByRole("button", { name: "Print" });
+    expect(door.closest("[data-week-line]")).toBeTruthy();
+    expect(door).toHaveClass("print:hidden");
+    fireEvent.click(door);
+    expect(print).toHaveBeenCalledOnce();
+    print.mockRestore();
   });
 
   it("set the asked count the same way, under the label its section is named by", () => {
@@ -297,7 +316,12 @@ describe("an asked-for day's row (K-333, K-338)", () => {
     expect([...askRow().classList].filter((name) => /^-?[pm][xse]-/.test(name))).toEqual([]);
     const act = within(askRow()).getByRole("link", { name: "Add a departure" });
     expect(act.className).toBe(
-      buttonClass({ variant: "ghost", size: "sm", flush: true, className: "shrink-0" }),
+      buttonClass({
+        variant: "ghost",
+        size: "sm",
+        flush: true,
+        className: "shrink-0 print:hidden",
+      }),
     );
   });
 

@@ -272,7 +272,13 @@ function weekFrom(days: FixtureDay[], overrides: Partial<BuilderWeek> = {}): Bui
     seatTally: "",
     asked: [],
     askedCount: "0 days",
-    words: { previous: "Previous week", next: "Next week", thisWeek: "This week", today: "Today" },
+    words: {
+      previous: "Previous week",
+      next: "Next week",
+      thisWeek: "This week",
+      today: "Today",
+      print: "Print",
+    },
     days: days.map((day) => ({
       dateIso: day.dateIso,
       weekday: day.parts.weekday,
@@ -1413,6 +1419,7 @@ describe("ScheduleBuilder week board", () => {
         next: "Next week",
         thisWeek: "This week",
         today: "Today",
+        print: "Print",
       },
       days: DAY_ISOS.map((dateIso, index) => ({
         dateIso,

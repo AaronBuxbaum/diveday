@@ -14,7 +14,7 @@ export function DisclosureCaret({
     <DiveDayIcon
       name="caret"
       direction={direction}
-      className={`size-3 shrink-0 transition-transform ${className}`}
+      className={`size-3 shrink-0 transition-transform print:hidden ${className}`}
     />
   );
 }

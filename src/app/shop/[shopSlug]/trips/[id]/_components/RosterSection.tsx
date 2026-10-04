@@ -803,7 +803,7 @@ export function RosterSection({
             ) ? (
               <Link
                 href={`/shop/${shopSlug}/divers/${person.id}#cards`}
-                className="mt-2 -mb-3 inline-flex min-h-11 items-center align-bottom text-sm font-semibold text-primary hover:underline"
+                className="mt-2 -mb-3 inline-flex min-h-11 items-center align-bottom text-sm font-semibold text-primary hover:underline print:hidden"
               >
                 {t("trips.roster.reviewCertificationsLink")}
               </Link>
@@ -1604,7 +1604,13 @@ export function RosterSection({
           {/* One box, so `#add-diver` holds the form its links and specs
               scope to; the box draws the group's rule (K-354). */}
           {addDiverGroup ? (
-            <RosterGroup id="add-diver" label={t("trips.addDiver.heading")}>
+            // `print:hidden`: a search box and an Add button, which a printed
+            // roster has no use for.
+            <RosterGroup
+              id="add-diver"
+              label={t("trips.addDiver.heading")}
+              className="print:hidden"
+            >
               <div className="px-4 py-5 sm:px-5">{addDiverGroup}</div>
             </RosterGroup>
           ) : null}

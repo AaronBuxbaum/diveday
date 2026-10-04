@@ -97,7 +97,9 @@ export function EyebrowBackLink({
   className?: string;
 }) {
   return (
-    <span className={`${EYEBROW_TAP_WRAPPER} ${className}`.trim()}>
+    // `print:hidden` on every back-link: paper has no way back up, and the
+    // eyebrow printed as a stray "‹ ORDERS" over every page's title.
+    <span className={`${EYEBROW_TAP_WRAPPER} print:hidden ${className}`.trim()}>
       <Link
         href={href}
         className={`${EYEBROW_TAP_TARGET} ${EYEBROW_SHAPE} text-primary hover:underline`}
@@ -151,6 +153,7 @@ export function ShopPageHeader({
    * button/print row. Use "start" when actions can grow much taller than the
    * title — an expandable form — so opening it doesn't drag the title down. */
   align = "end",
+  printActions = false,
 }: {
   eyebrow?: string;
   /**
@@ -173,6 +176,12 @@ export function ShopPageHeader({
     description?: string | null;
   };
   align?: "start" | "end";
+  /**
+   * The actions are facts rather than doors, and belong on paper. The offline
+   * manifest's are its connection and freshness pills: a printed copy has to
+   * say how old it is.
+   */
+  printActions?: boolean;
   /** The greeting rung (`GREETING_TITLE_CLASS`) instead of the title rung — the shop home only. */
   display?: boolean;
   /**
@@ -270,8 +279,13 @@ export function ShopPageHeader({
             manifest's actions are two status pills, and growing every child
             stretched each into a half-width bar with its words hugging the
             left and 91px of empty fill beside them (K-65). */}
+        {/* Off the paper unless the caller says its actions are facts: a door
+            ("Add a departure", "Connect payments") is a tap, and on a printed
+            page it reads as an instruction nobody can follow. */}
         {actions ? (
-          <div className="flex shrink-0 flex-wrap gap-2 max-sm:[&>:is(a,button,form)]:grow">
+          <div
+            className={`flex shrink-0 flex-wrap gap-2 max-sm:[&>:is(a,button,form)]:grow ${printActions ? "" : "print:hidden"}`.trim()}
+          >
             {actions}
           </div>
         ) : null}

@@ -55,14 +55,17 @@ export function RosterGroup({
   id,
   label,
   children,
+  className = "",
 }: {
   id: string;
   label: ReactNode;
   /** The group's body, under the band. */
   children: ReactNode;
+  /** Placement only — the add-diver group stays off paper with it. */
+  className?: string;
 }) {
   return (
-    <div id={id} className={`scroll-mt-24 ${GROUP_RULE}`}>
+    <div id={id} className={`scroll-mt-24 ${GROUP_RULE} ${className}`.trim()}>
       <div className={BAND}>
         <GroupLabel as="h3">{label}</GroupLabel>
       </div>

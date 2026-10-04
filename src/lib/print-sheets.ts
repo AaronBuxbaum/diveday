@@ -13,9 +13,10 @@ import { publicSchedulePath } from "./public-routes";
 import { shopPath } from "./staff-notices";
 
 /**
- * A `@page size` value. Named rather than measured: a sheet is drawn to the
- * paper it is meant for, so the shop's printer is told what to load rather than
- * asked to scale a letter-sized render down to A6.
+ * The paper a sheet is drawn to. A sheet is drawn to the paper it is meant
+ * for, so the shop's printer is told what to load rather than asked to scale a
+ * letter-sized render down to A6 ({@link PRINT_SHEET_PAPER_MM} is how it is
+ * told).
  */
 export type PrintSheetPaper = "A6 portrait";
 
@@ -35,8 +36,24 @@ export const COUNTER_CARD_PAPER: PrintSheetPaper = "A6 portrait";
  */
 export const PRINT_SHEET_MARGIN_MM = 6;
 
+/**
+ * The paper's own size, in millimetres, as `@page size` is told it.
+ *
+ * **Measured, never named.** `size: A6 portrait` is valid CSS that Chromium
+ * drops as an unknown keyword (it knows A3 to A5, and not A6), so the whole
+ * declaration went and the counter card printed as a postcard in the corner of
+ * a Letter page. Two lengths are understood by every engine that reads `size`.
+ */
+export const PRINT_SHEET_PAPER_MM: Record<PrintSheetPaper, { width: number; height: number }> = {
+  "A6 portrait": { width: 105, height: 148 },
+};
+
 export function printSheetPageRule(paper: PrintSheetPaper): string {
-  return `@page{size:${paper};margin:${PRINT_SHEET_MARGIN_MM}mm}`;
+  const { width, height } = PRINT_SHEET_PAPER_MM[paper];
+  // The page number the app's own `@page` prints in its corner is for a
+  // packet that runs to several pages; a card is one sheet, and the number
+  // would land on the shop's fold line.
+  return `@page{size:${width}mm ${height}mm;margin:${PRINT_SHEET_MARGIN_MM}mm;@bottom-right{content:none}}`;
 }
 
 /**
@@ -47,8 +64,8 @@ export function printSheetPageRule(paper: PrintSheetPaper): string {
  */
 export const PRINT_SHEET_BOX_MM: Record<PrintSheetPaper, { width: number; height: number }> = {
   "A6 portrait": {
-    width: 105 - 2 * PRINT_SHEET_MARGIN_MM,
-    height: 148 - 2 * PRINT_SHEET_MARGIN_MM,
+    width: PRINT_SHEET_PAPER_MM["A6 portrait"].width - 2 * PRINT_SHEET_MARGIN_MM,
+    height: PRINT_SHEET_PAPER_MM["A6 portrait"].height - 2 * PRINT_SHEET_MARGIN_MM,
   },
 };
 

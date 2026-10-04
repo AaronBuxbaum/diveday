@@ -4,6 +4,8 @@ import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { nowDate } from "@/lib/clock";
+import { formatDateTimeTz } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { uuidParam } from "@/lib/uuid";
 import { AutoPrint } from "../_components/AutoPrint";
@@ -93,6 +95,14 @@ export default async function TripPrintPage({
       <header className="mb-10 border-b border-border pb-6 print:mb-6">
         <p className={EYEBROW_CLASS}>DiveDay</p>
         <h1 className={`mt-2 ${SHELL_TITLE_CLASS}`}>{t("shared.printPacket.title")}</h1>
+        {/* The roll call on this paper is the moment it was printed, not the
+            boat's: a packet printed before boarding and read after it would
+            otherwise pass for the current head count. */}
+        <p className="mt-2 text-muted">
+          {t("print.sheet.printed", {
+            date: formatDateTimeTz(nowDate(), locale, shop.timezone),
+          })}
+        </p>
       </header>
       {packet}
       <PacketReady />

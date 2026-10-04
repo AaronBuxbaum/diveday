@@ -160,8 +160,9 @@ describe("the eyebrow's line box", () => {
       <EyebrowBackLink href="/shop/blue-mantis/settings">Settings</EyebrowBackLink>,
     );
     const link = screen.getByRole("link", { name: "Settings" });
-    // No caller class here, so the wrapper is exactly the constant.
-    expect(link.parentElement?.className).toBe(EYEBROW_TAP_WRAPPER);
+    // No caller class here, so the wrapper is exactly the constant, plus the
+    // `print:hidden` every back-link wears.
+    expect(link.parentElement?.className).toBe(`${EYEBROW_TAP_WRAPPER} print:hidden`);
     expect(container.firstElementChild).toBe(link.parentElement);
     // The paired negative: no vertical margin anywhere on the link. One left
     // behind would silently re-open the gap this closed, and would read as

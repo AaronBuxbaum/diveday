@@ -1432,6 +1432,7 @@ export function OfflineManifestView() {
         <div className="border-b border-border pb-6">
           <ShopPageHeader
             align="start"
+            printActions
             eyebrow={t("shared.offlineManifest.single.eyebrow")}
             title={manifest.trip.title}
             description={t("shared.offlineManifest.single.savedAt", {

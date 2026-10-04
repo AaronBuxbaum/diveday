@@ -439,6 +439,7 @@ export default async function StaffingPage({
               next: t("staffing.week.next"),
               thisWeek: t("staffing.week.thisWeek"),
               today: t("staffing.week.today"),
+              print: t("print.sheet.door"),
               person: t("staffing.week.person"),
               needsCrew: t("staffing.week.needsCrew"),
               assign: t("staffing.week.assign"),
@@ -613,7 +614,7 @@ export default async function StaffingPage({
           {/* `mt-10`, the gap the credentials keep above themselves too: the
               tail's groups sat 24px and then 40px apart (K-195). */}
           <CompactDisclosureRow
-            className="mt-10"
+            className="mt-10 print:hidden"
             label={t("staffing.crewConsent.rowLabel")}
             value={
               crewConsented
@@ -779,7 +780,10 @@ function AddDoor({
     // row's box, so `last:` closes the list and its rules end where the rows'
     // do. On the page (`div`) it hangs under the week, which has already
     // closed itself, so it draws only its own closing rule (K-195).
-    <Tag className={`list-none ${Tag === "li" ? ledgerRowBoxClass : weekTailRowClass}`}>
+    // `print:hidden`: a door opens a form, and the printed week is the rota.
+    <Tag
+      className={`list-none print:hidden ${Tag === "li" ? ledgerRowBoxClass : weekTailRowClass}`}
+    >
       <AutoOpenDetails id={id} openOnHash={id} open={open} className="group/add scroll-mt-8">
         <summary
           className={buttonClass({

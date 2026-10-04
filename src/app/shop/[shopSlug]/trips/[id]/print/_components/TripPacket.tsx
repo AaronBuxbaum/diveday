@@ -116,7 +116,10 @@ export async function TripPacket({
           t={t}
         />
       </section>
-      <section aria-labelledby={`print-manifest-${tripId}`} className="print-bundle-page">
+      <section
+        aria-labelledby={`print-manifest-${tripId}`}
+        className="print-bundle-page print-bundle-continues"
+      >
         <h2 id={`print-manifest-${tripId}`} className="sr-only">
           {t("trips.surfaces.manifest")}
         </h2>

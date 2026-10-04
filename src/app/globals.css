@@ -918,6 +918,22 @@ textarea {
 
 @page {
   margin: 0.5in;
+
+  /*
+   * **Every printed page says which page it is, and of how many.** Paper
+   * outlives the morning it was printed and comes apart on a wet deck: a
+   * captain holding a manifest's third page has no other way to know a fourth
+   * exists, or that the second blew overboard. Numbers only, so there is no
+   * word here for a bundle to own, and a browser that does not draw page-margin
+   * boxes prints exactly what it printed before. The A6 sheets turn it off in
+   * their own `@page` (`printSheetPageRule`).
+   */
+  @bottom-right {
+    content: counter(page) " / " counter(pages);
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-size: 8pt;
+    color: #4b5563;
+  }
 }
 
 /*
@@ -958,6 +974,17 @@ textarea {
    * DOM what this selector matches.
    */
   .trip-print-bundle :is(button:not([data-print-content]), select, textarea, input) {
+    display: none;
+  }
+
+  /*
+   * **A submit button is an act, never a fact.** Its words only ever say what
+   * a tap would do — Remove, Send waiver, Request, Save — and on paper each one
+   * read as an instruction nobody holding the sheet could follow. Everywhere,
+   * not only in the packet: a staffer prints a page to carry what it says, and
+   * a form's facts live in its fields, which stay.
+   */
+  button[type="submit"] {
     display: none;
   }
 
@@ -1354,6 +1381,21 @@ textarea {
 
   .trip-print-bundle .print-bundle-page:first-of-type {
     break-before: auto;
+  }
+
+  /*
+   * **The dive plan and the roll call share a sheet.** The plan is a title, a
+   * meeting point and a line per dive, so on a page of its own it left most of
+   * the packet's first sheet blank and put the boat's name on the captain's
+   * clipboard twice before a single diver. The manifest runs on beneath it
+   * instead, with a rule between; the packing list still starts its own page,
+   * because it goes to the gear room and not to the boat.
+   */
+  .trip-print-bundle .print-bundle-page.print-bundle-continues {
+    break-before: auto;
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1.5rem;
   }
 
   /*
