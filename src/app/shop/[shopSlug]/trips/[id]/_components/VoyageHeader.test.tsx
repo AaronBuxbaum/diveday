@@ -81,6 +81,29 @@ describe("VoyageHeader", () => {
   });
 
   /**
+   * **The crew's names are the desktop's** (phone text density pass). Below
+   * `sm` a crew fact steps aside with its own dot and the space after it, so
+   * the phone's line is the boat, the count, the day and the price, and never
+   * starts or ends on a stray dot.
+   */
+  it("hides a desktop fact below `sm` together with its dot", () => {
+    render(
+      <VoyageHeader
+        back={<a href="/back">Board</a>}
+        hour="7:00 AM"
+        title="Two-Tank Reef"
+        facts={["Mantis I", { text: "Sal Moretti", desktop: true }, "9 of 12 seats taken"]}
+      />,
+    );
+    const line = factsLine("Mantis I · Sal Moretti · 9 of 12 seats taken");
+    const crew = [...line.children].find((piece) => piece.textContent?.startsWith("Sal"));
+    expect(crew).toHaveClass("inline-block", "max-sm:hidden");
+    expect(crew?.textContent).toBe("Sal Moretti\u00a0·");
+    expect(crew?.nextElementSibling).toHaveClass("max-sm:hidden");
+    expect(screen.getByText("Mantis I", { exact: false })).not.toHaveClass("max-sm:hidden");
+  });
+
+  /**
    * **The header's two controls stand 8px apart** (pixel-craft class 4, K-163).
    * The page hands Manifest and Add diver over as a fragment, and two inline
    * boxes from a fragment have no space between them, so one painted over the

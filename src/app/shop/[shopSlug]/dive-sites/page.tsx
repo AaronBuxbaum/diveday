@@ -361,6 +361,7 @@ async function CatalogView({
           eyebrowHref={back}
           title={t("diveSites.catalog.title")}
           description={t("diveSites.catalog.description")}
+          descriptionIsCaption
         />
       </div>
       {/* The same ledger grammar as the library this feeds (ADR

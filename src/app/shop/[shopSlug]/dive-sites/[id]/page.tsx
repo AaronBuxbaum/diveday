@@ -430,6 +430,7 @@ export default async function EditDiveSitePage({
           eyebrowHref={back}
           title={site.name}
           description={t("diveSites.edit.description")}
+          descriptionIsCaption
           // The default `end`: a static door sits at the foot of the title
           // block, as on every records header; `start` is for actions that
           // grow, and hung this one from the eyebrow (K-491).

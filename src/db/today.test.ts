@@ -990,9 +990,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
 
     const row = work.actions.find((action) => action.id === `uncrewed:${reef.id}`);
     expect(row?.kind).toBe("uncrewed_departure");
-    expect(row?.detail).toBe(
-      `${reef.booked} divers are booked and no divemaster or instructor is assigned to supervise this departure.`,
-    );
+    expect(row?.detail).toBe(`${reef.booked} divers booked, no divemaster or instructor assigned.`);
     // The boundary this ticket must not blur: instructor_missing is an
     // agency training ratio and only ever fires for a course session. This
     // trip carries no course.

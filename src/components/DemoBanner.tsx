@@ -122,15 +122,21 @@ export function DemoBanner({
             <Badge tone="warning" size="sm" toneMark={false} className="tracking-wide uppercase">
               {copy.shopLabel}
             </Badge>
+            {/* Below `sm` the row is the badge, the role and the switch on one
+                line: "Viewing as" and the person's name are the desktop's
+                spelling of what the badge and the role already say, and on a
+                phone they pushed the switch onto a second row above every page. */}
             <p className="text-sm text-foreground">
-              {copy.viewingAs}{" "}
+              <span className="max-sm:sr-only">{copy.viewingAs} </span>
               <span className="font-semibold text-primary">{activeInfo?.title}</span>
               {/* One unit: the name wraps whole, never leaving "Reyes)" alone on a
                   line, so the space before it sits outside the unbreakable span. */}
               {currentName && currentRole !== "diver" ? (
                 <>
                   {" "}
-                  <span className="whitespace-nowrap text-muted text-xs">({currentName})</span>
+                  <span className="whitespace-nowrap text-muted text-xs max-sm:hidden">
+                    ({currentName})
+                  </span>
                 </>
               ) : null}
             </p>

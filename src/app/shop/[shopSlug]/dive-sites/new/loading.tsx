@@ -22,7 +22,12 @@ export default function NewDiveSiteLoading() {
         {/* The header's eyebrow bar is the back link: the page draws one,
             as the header's own eyebrow. A second, standalone bar above it
             stood every bar below 36px lower than what replaced it (K-423). */}
-        <ShopPageHeaderSkeleton titleWidth="w-56" description descriptionWidth="w-80 max-w-full" />
+        <ShopPageHeaderSkeleton
+          titleWidth="w-56"
+          description
+          descriptionIsCaption
+          descriptionWidth="w-80 max-w-full"
+        />
 
         <div className="mt-8 lg:grid lg:grid-cols-[13.75rem_1fr] lg:gap-x-14">
           {/* The jump row on a phone, the rail on a desktop: the rail's own

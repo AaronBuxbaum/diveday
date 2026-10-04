@@ -46,7 +46,7 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   await page.goto("/shop/blue-mantis");
   const nudge = page
     .locator("li")
-    .filter({ hasText: "3 seats open with no last-minute deal sent yet." })
+    .filter({ hasText: "3 seats open, no last-minute deal sent." })
     // The row itself, not the day station that contains it. Since the home
     // became the day's spine every row about a departure nests inside that
     // departure's own `<li>`, and `hasText` matches an ancestor as readily as
@@ -110,7 +110,7 @@ test("a failed send attempt does not silence the Today nudge — nothing actuall
   await page.goto("/shop/blue-mantis");
   const nudge = page
     .locator("li")
-    .filter({ hasText: "3 seats open with no last-minute deal sent yet." })
+    .filter({ hasText: "3 seats open, no last-minute deal sent." })
     // The row itself, not the day station that contains it. Since the home
     // became the day's spine every row about a departure nests inside that
     // departure's own `<li>`, and `hasText` matches an ancestor as readily as
@@ -132,7 +132,7 @@ test("a failed send attempt does not silence the Today nudge — nothing actuall
   await expect(page.getByText(/off · /)).toBeVisible({ timeout: HELD_SEND_TIMEOUT_MS });
 
   await page.goto("/shop/blue-mantis");
-  await expect(page.getByText("3 seats open with no last-minute deal sent yet.")).toBeVisible();
+  await expect(page.getByText("3 seats open, no last-minute deal sent.")).toBeVisible();
 });
 
 // /api/test/seed-last-minute-unsubscribe-token mints a real
@@ -207,7 +207,7 @@ test("a joiner's declared level reaches the staffer before they send a deal", as
   await page.goto("/shop/blue-mantis");
   const nudge = page
     .locator("li")
-    .filter({ hasText: "3 seats open with no last-minute deal sent yet." })
+    .filter({ hasText: "3 seats open, no last-minute deal sent." })
     // The row itself, not the day station that contains it. Since the home
     // became the day's spine every row about a departure nests inside that
     // departure's own `<li>`, and `hasText` matches an ancestor as readily as

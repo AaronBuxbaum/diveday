@@ -127,6 +127,7 @@ export default async function PublicCoursesPage({
       <ShopPageHeader
         title={t("courses.index.title")}
         description={t("courses.index.description")}
+        descriptionIsCaption
       />
 
       {/* Which ladder a diver is reading. It replaces the per-row agency pill

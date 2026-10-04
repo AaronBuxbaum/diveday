@@ -34,11 +34,12 @@ export default function PublicCoursesLoading() {
       <div className="animate-pulse">
         {/* No eyebrow bar: the page's header has none ("COURSES" over
             "Courses" was cut), and the default drew one anyway. The
-            description is two lines on a phone. */}
+            description is a desktop caption, absent on a phone. */}
         <ShopPageHeaderSkeleton
           eyebrow={false}
           titleWidth="w-48"
           description
+          descriptionIsCaption
           descriptionWidth="w-full max-w-2xl"
           descriptionLines={{ base: 2, sm: 1 }}
         />

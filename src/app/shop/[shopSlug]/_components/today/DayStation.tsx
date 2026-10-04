@@ -105,12 +105,19 @@ export function DayStation({
   const open = Math.max(0, station.capacity - station.booked);
   const share = (count: number) =>
     station.capacity > 0 ? `${Math.min(100, (count / station.capacity) * 100)}%` : "0%";
+  // **The crew's names are the desktop's**: on a phone the card is the time,
+  // the boat and the bar, and who is crewing is one tap away on the departure
+  // (and on Schedule's Crew view). Their names ran the line onto a second row.
   const meta = [
-    station.siteName,
-    station.boatName,
-    station.crewNames.length > 0 ? station.crewNames.join(", ") : null,
-    station.priceCents === null ? null : formatMoneyCents(station.priceCents, currency, locale),
-  ].filter((fact): fact is string => Boolean(fact));
+    { text: station.siteName, phone: true },
+    { text: station.boatName, phone: true },
+    { text: station.crewNames.length > 0 ? station.crewNames.join(", ") : null, phone: false },
+    {
+      text:
+        station.priceCents === null ? null : formatMoneyCents(station.priceCents, currency, locale),
+      phone: true,
+    },
+  ].filter((fact): fact is { text: string; phone: boolean } => Boolean(fact.text));
   const intentLine = staffDiveIntentLine(t, station.intents ?? [], locale);
   const [titleHead, titleLast] = lastWordApart(station.title);
   const crewRollCallOpen =
@@ -165,8 +172,26 @@ export function DayStation({
         </Link>
         {crewed ? <Badge tone="primary">{t("shopHome.spine.crewing")}</Badge> : null}
       </h3>
-      {meta.length > 0 ? <p className="mt-1 text-sm text-muted">{meta.join(" · ")}</p> : null}
-      {intentLine ? <p className="mt-1 text-sm text-muted">{intentLine}</p> : null}
+      {meta.length > 0 ? (
+        <p className="mt-1 text-sm text-muted">
+          {meta.map((fact, index) => {
+            // A separator a phone would show at the head of its line (the
+            // crew hidden in front of it) is a desktop separator.
+            const firstOnPhone = fact.phone && !meta.slice(0, index).some((f) => f.phone);
+            return (
+              <span key={fact.text} className={fact.phone ? undefined : "max-sm:hidden"}>
+                {index > 0 ? (
+                  <span className={firstOnPhone ? "max-sm:hidden" : undefined}>{" · "}</span>
+                ) : null}
+                {fact.text}
+              </span>
+            );
+          })}
+        </p>
+      ) : null}
+      {/* What the divers said they came for is the briefing's colour, not the
+          day's work: a desktop line, never a phone's third row of grey. */}
+      {intentLine ? <p className="mt-1 text-sm text-muted max-sm:hidden">{intentLine}</p> : null}
 
       {/* **The readiness bar.** Ready, then blocked, then the open seats, as
           one bar the boat's capacity wide; the words under it are the

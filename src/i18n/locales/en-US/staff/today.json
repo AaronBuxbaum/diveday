@@ -160,18 +160,18 @@
     "openCrewRollCallStale": "The dive {dive} crew count was never closed. {uncounted, plural, one {# of {total} crew still has} other {# of {total} crew still have}} no result. Too old to settle on the dock, so reconstruct it from the manifest.",
     "departureCountOpen": "The dock count never finished. {uncounted, plural, one {# of {total} divers has} other {# of {total} divers have}} no result at departure. This is paperwork, not a diver in the water. Settle it so the next count starts from a real list.",
     "noRollCall": "No roll call was run. {total, plural, one {# diver} other {# divers}} sailed with nothing recorded. Nobody was reported missing; the record is empty.",
-    "missingFit": "{count, plural, one {# diver is} other {# divers are}} missing rental sizes, so the prep list is incomplete.",
+    "missingFit": "{count, plural, one {# diver} other {# divers}} missing rental sizes.",
     "ungatedNitrox": "{count, plural, one {# diver wants} other {# divers want}} Nitrox without verified certification, so those tanks are planned as air.",
     "highWindAlert": "Forecast calls for {speed} kt wind{hasDirection, select, yes { from {direction}} other {}}{hasGusts, select, yes { (gusts {gusts} kt)} other {}}. Check conditions before sailing.",
     "instructorMissing": "This course session has no instructor assigned and cannot take enrolments.",
     "uncrewedCourse": "{divers, plural, one {# diver is} other {# divers are}} booked with nobody in the water. This session cannot take enrolments until an instructor is assigned.",
     "overRatio": "{booked} booked, but the assigned crew only covers {capacity} at PADI’s published entry-level ratio.",
     "overRatioIntro": "{booked} booked on this intro session, and crew covers {capacity} at {perInstructor} per instructor for the open-water dive. A certified assistant does not raise it; only another instructor adds seats.",
-    "uncrewedDeparture": "{divers, plural, one {# diver is} other {# divers are}} booked and no divemaster or instructor is assigned to supervise this departure.",
+    "uncrewedDeparture": "{divers, plural, one {# diver} other {# divers}} booked, no divemaster or instructor assigned.",
     "crewBelowTarget": "{divers, plural, one {# diver} other {# divers}} booked with {divemasterCount, plural, one {# supervisor} other {# supervisors}} rostered, short of your {ratio}:1 target.",
-    "missingContact": "{count, plural, one {# diver has} other {# divers have}} no emergency contact on file. Ask at the counter; it prints on the manifest.",
-    "missingContactNamed": "No emergency contact on file. Ask at the counter; it prints on the manifest.",
-    "lastMinuteFill": "{seats, plural, one {# seat} other {# seats}} open with no last-minute deal sent yet.",
+    "missingContact": "{count, plural, one {# diver has} other {# divers have}} no emergency contact. Ask at the counter.",
+    "missingContactNamed": "No emergency contact. Ask at the counter.",
+    "lastMinuteFill": "{seats, plural, one {# seat} other {# seats}} open, no last-minute deal sent.",
     "waitlistSeat": "{seats, plural, one {# seat} other {# seats}} opened up and {waiting, plural, one {# person is} other {# people are}} on the wait list.",
     "emailNotConfigured": {
       "waiver": "Their waiver link never sent because email is not configured.",
@@ -266,7 +266,7 @@
     "overdueDetail": "{credential} for this staff member expired {dueOn}. Update the record."
   },
   "sayHello": {
-    "firstTrip": "{count, plural, one {{names} is diving with you for the first time.} other {{names} are diving with you for the first time.}}",
+    "firstTrip": "{names}: first dive with you.",
     "returning": "{name} is back after {years, plural, one {# year} other {# years}}."
   },
   "unfinished": {

@@ -207,7 +207,7 @@
     "sitesToBeConfirmed": "{count, plural, one {One dive · site to be confirmed} other {# dives · sites to be confirmed}}",
     "seen": {
       "heading": "Seen here this month",
-      "line": "{species} on {seen} of {dives, plural, one {# logged dive} other {# logged dives}} here this month",
+      "line": "{species} on {seen} of {dives, plural, one {# logged dive} other {# logged dives}}",
       "lastSeen": "Last seen {date}",
       "honest": "What the crew logged, and when. It says what was seen, not what you will see."
     },

@@ -34,38 +34,33 @@ const ITEMS: BookingRequestCardItem[] = [
  * row's right; and on every row the link was a 20px word.
  */
 describe("RelevantBookingRequests", () => {
-  it("keeps every row's link on the row's right from `sm` up", () => {
+  it("keeps every row's door on the row's right at every width", () => {
     render(<RelevantBookingRequests title="Relevant requests" items={ITEMS} openLabel="Book" />);
 
     for (const row of screen.getAllByRole("listitem")) {
-      expect(row).toHaveClass("flex-wrap", "sm:flex-nowrap");
-      // `flex-1` only from `sm` up: in the phone's wrapping row a zero basis
-      // would never let the link wrap, and squeeze the words beside it instead.
+      expect(row).not.toHaveClass("flex-wrap");
       const words = row.firstElementChild;
-      expect(words).toHaveClass("min-w-0", "sm:flex-1");
-      expect(words).not.toHaveClass("flex-1");
+      expect(words).toHaveClass("min-w-0", "flex-1");
     }
   });
 
-  it("makes every row's link a 44px target, with the wrapped line's air in its box", () => {
+  it("makes every row's link a 44px target", () => {
     render(<RelevantBookingRequests title="Relevant requests" items={ITEMS} openLabel="Book" />);
 
     const links = screen.getAllByRole("link", { name: "Book" });
     expect(links).toHaveLength(2);
     for (const link of links) expect(link).toHaveClass("inline-flex", "min-h-11", "items-center");
-    for (const row of screen.getAllByRole("listitem")) expect(row).toHaveClass("gap-y-0");
   });
 
-  it("hands the wrapped link's lower half back to the row's inset on a phone", () => {
-    // Below `sm` the link wraps under the words. Its box's top half is the
-    // gap; its bottom half stacked on the row's own py-3 and left the link
-    // 27px above the row's edge against the name's 18px under the top (K-457
-    // review, booking-new@390). From `sm` up it shares the words' line.
+  it("makes the whole row the door on a phone, its words kept for a reader", () => {
+    // Below `sm` "Book from this request" under every request doubled the
+    // list's lines (phone text density pass): the row is the target and a
+    // chevron draws it, and the words stay in the link's accessible name.
     render(<RelevantBookingRequests title="Relevant requests" items={ITEMS} openLabel="Book" />);
     for (const link of screen.getAllByRole("link", { name: "Book" })) {
-      expect(link).toHaveClass("max-sm:-mb-3");
-      expect(link.className).not.toMatch(/(^|\s)-m[by]-/);
-      expect(link.closest("li")).toHaveClass("py-3");
+      expect(link).toHaveClass("max-sm:after:absolute", "max-sm:after:inset-0");
+      expect(link.closest("li")).toHaveClass("relative");
+      expect(link.querySelector(".max-sm\\:sr-only")).toHaveTextContent("Book");
     }
   });
 });

@@ -12,6 +12,7 @@ export default function SafetyChecklistLoading() {
           titleWidth="w-56"
           titleLines={{ base: 2, sm: 1 }}
           description
+          descriptionIsCaption
           descriptionWidth="w-full max-w-md"
           descriptionLines={{ base: 3, sm: 2 }}
         />

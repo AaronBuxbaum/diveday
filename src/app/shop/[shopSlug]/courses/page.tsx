@@ -123,8 +123,21 @@ export default async function CoursesPage({
    * be missing — a course a shop has not priced yet says nothing about price
    * rather than saying nothing at all.
    */
-  const metaLine = (course: (typeof courseList)[number]) => {
+  const nextLine = (course: (typeof courseList)[number]) => {
     const nextStart = nextSessions.get(course.id);
+    return nextStart
+      ? st("courses.list.nextSession", {
+          // The shop's own zone, never the server's: a 7:30 AM session in Key
+          // West renders as the previous day in UTC often enough to matter.
+          date: formatShortDate(nextStart, locale, shop.timezone),
+        })
+      : st("courses.list.notScheduled");
+  };
+  const priceLine = (course: (typeof courseList)[number]) =>
+    course.priceCents === null
+      ? null
+      : formatMoneyScanned(course.priceCents, toShopCurrency(shop.currency), locale);
+  const metaLine = (course: (typeof courseList)[number]) => {
     // `joinFacts`, not `.join(" · ")`: the line wraps only after a separator,
     // never inside "2 dives" or before a lone price.
     return joinFacts([
@@ -134,23 +147,14 @@ export default async function CoursesPage({
       // 390, in the same muted grey as the price, and "Not scheduled" read as
       // one more item in a run rather than a gap to act on. Leading with it
       // puts every row's answer at the same x, which is how a list is scanned.
-      nextStart
-        ? st("courses.list.nextSession", {
-            // The shop's own zone, never the server's: a 7:30 AM session in
-            // Key West renders as the previous day in UTC often enough to
-            // matter.
-            date: formatShortDate(nextStart, locale, shop.timezone),
-          })
-        : st("courses.list.notScheduled"),
+      nextLine(course),
       course.minimumCertificationLevel
         ? st("courses.list.orHigher", {
             level: st(CERTIFICATION_LEVEL_KEYS[course.minimumCertificationLevel]),
           })
         : st("courses.list.openToUncertified"),
       course.durationText?.trim() || null,
-      course.priceCents === null
-        ? null
-        : formatMoneyScanned(course.priceCents, toShopCurrency(shop.currency), locale),
+      priceLine(course),
     ]);
   };
 
@@ -160,7 +164,18 @@ export default async function CoursesPage({
     title: course.title,
     href: `/shop/${shop.slug}/courses/${course.slug}/edit`,
     linkLabel: st("courses.list.editSrLabel", { title: course.title }),
-    meta: <span className="tabular-nums">{metaLine(course)}</span>,
+    // **A phone reads when it next runs and what it costs**; who it is for
+    // and how long it takes are the desktop's scan, and on a phone they ran
+    // every one of twenty rows onto a second and third line. The full line
+    // leads the markup, so a "first match" reads the desktop's words.
+    meta: (
+      <>
+        <span className="tabular-nums max-sm:hidden">{metaLine(course)}</span>
+        <span className="tabular-nums sm:hidden">
+          {joinFacts([nextLine(course), priceLine(course)])}
+        </span>
+      </>
+    ),
     ...(course.isActive ? {} : { hiddenLabel: st("courses.list.hidden") }),
     // The catalog's whole point is that a course gets taught. This hands the
     // board's add panel (`?course=` opens it with the course preselected and
@@ -184,8 +199,6 @@ export default async function CoursesPage({
               className={buttonClass({
                 variant: "link",
                 size: "sm",
-                outdent: "block-end-phone",
-                className: "max-sm:focus-visible:focus-ring-inset",
               })}
             >
               {st("courses.list.schedule")}

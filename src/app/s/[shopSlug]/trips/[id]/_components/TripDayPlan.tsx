@@ -160,7 +160,9 @@ function SiteSeen({
         {lines.map((line) => (
           <li key={line.slug} className="text-sm leading-relaxed">
             <span className="block">{line.line}</span>
-            <span className="block text-muted">{line.lastSeen}</span>
+            {/* The heading already says "this month"; the exact day is a
+                desktop's second line, and on a phone it doubled the list. */}
+            <span className="block text-muted max-sm:hidden">{line.lastSeen}</span>
           </li>
         ))}
       </ul>

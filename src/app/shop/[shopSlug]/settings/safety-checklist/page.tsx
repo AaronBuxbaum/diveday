@@ -78,6 +78,7 @@ export default async function SafetyChecklistPage({
         eyebrowHref={`/shop/${shopSlug}/settings`}
         title={t("settings.safetyChecklist.title")}
         description={t("settings.safetyChecklist.description")}
+        descriptionIsCaption
       />
 
       {message ? <StaffNoticeBanner tone={message.tone}>{message.text}</StaffNoticeBanner> : null}

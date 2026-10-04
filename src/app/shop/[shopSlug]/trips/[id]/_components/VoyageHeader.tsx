@@ -30,6 +30,13 @@ const FACT_SEPARATOR = " ·";
 /** The line of facts' type, whose line box (15px at the inherited 1.5) the skeleton's bars take. */
 const FACTS_LINE_CLASS = "mt-1 text-[15px]";
 
+/**
+ * One fact on the line. `desktop` facts (the crew's names) step aside below
+ * `sm`, each taking its own trailing dot with it: a phone reads the boat, how
+ * full it is, the day and the price, and finds who is crewing on Details.
+ */
+export type VoyageFact = string | { text: string; desktop: true };
+
 export function VoyageHeader({
   back,
   hour,
@@ -49,7 +56,7 @@ export function VoyageHeader({
    * fact already worded, read as one line and set so it breaks only between
    * two of them.
    */
-  facts: readonly string[];
+  facts: readonly VoyageFact[];
   /** The header's one action. */
   action?: ReactNode;
   /**
@@ -88,14 +95,15 @@ export function VoyageHeader({
       <p className={`${FACTS_LINE_CLASS} text-muted`}>
         {facts.map((fact, index) => {
           const last = index === facts.length - 1;
+          const desktop = typeof fact !== "string";
           return (
             // biome-ignore lint/suspicious/noArrayIndexKey: two crew members may share a name, and the facts never reorder
             <Fragment key={index}>
-              <span className="inline-block">
-                {fact}
+              <span className={desktop ? "inline-block max-sm:hidden" : "inline-block"}>
+                {desktop ? fact.text : fact}
                 {last ? null : FACT_SEPARATOR}
               </span>
-              {last ? null : " "}
+              {last ? null : desktop ? <span className="max-sm:hidden"> </span> : " "}
             </Fragment>
           );
         })}

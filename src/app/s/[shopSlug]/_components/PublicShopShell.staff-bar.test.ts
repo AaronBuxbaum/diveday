@@ -58,13 +58,18 @@ describe("the public staff bar", () => {
     expect(spacing(row(), "gap-x")).toBeGreaterThanOrEqual(RING);
   });
 
-  it("keeps the link's ring off the sentence when it wraps under it on a phone", () => {
+  it("keeps the link's ring off the sentence if they wrap from `sm` up", () => {
     expect(spacing(row(), "gap-y")).toBeGreaterThanOrEqual(RING);
   });
 
-  it("stands the sentence 44px tall only where it shares the link's row", () => {
-    // On a phone the sentence is a line of its own, and a 44px floor there
-    // only grew the bar (to 88px); from `sm` it sits level with the link.
+  it("holds a phone's bar to one row, the short sentence beside the link", () => {
+    // Phone text density pass: the long sentence wrapped and the link fell
+    // under it, three lines over every public page. Below `sm` the row does
+    // not wrap and says the short spelling; the row's items-center sets the
+    // sentence level with the 44px link, so the sentence needs no floor.
+    expect(row()).not.toContain("flex-wrap");
+    expect(row()).toContain("sm:flex-wrap");
+    expect(staffBar()).toContain('staffT("shared.publicPreview.divesSee")');
     expect(sentence()).toContain("sm:min-h-11");
     expect(sentence()).not.toContain("min-h-11");
   });

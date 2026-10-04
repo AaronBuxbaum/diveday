@@ -7,7 +7,11 @@ export default function EmbedSettingsLoading() {
   return (
     <main className={settingsPaneClass("5xl")}>
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton description descriptionWidth="w-full max-w-xl" />
+        <ShopPageHeaderSkeleton
+          description
+          descriptionIsCaption
+          descriptionWidth="w-full max-w-xl"
+        />
         {/* Shell and gap from the same places the page takes them, so the
             skeleton cannot drift into a layout jump. */}
         <div className="space-y-10">
