@@ -207,7 +207,7 @@
     "sitesToBeConfirmed": "{count, plural, one {Una inmersión · sitio por confirmar} other {# inmersiones · sitios por confirmar}}",
     "seen": {
       "heading": "Visto aquí este mes",
-      "line": "{species} en {seen} de {dives, plural, one {# inmersión registrada} other {# inmersiones registradas}} aquí este mes",
+      "line": "{species} en {seen} de {dives, plural, one {# inmersión registrada} other {# inmersiones registradas}}",
       "lastSeen": "Visto por última vez el {date}",
       "honest": "Lo que registró la tripulación, y cuándo. Dice lo que se vio, no lo que verás."
     },

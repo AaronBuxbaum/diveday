@@ -121,8 +121,15 @@ export function RequestDayGroup({
           </Link>
         ) : null}
       </div>
+      {/* Planning advice is a desk job: below `sm` it shows only when it
+          carries a warning (no hull holds the group), and otherwise leaves
+          the phone the people and what they asked for. */}
       {advice.length > 0 ? (
-        <p className="mt-2 text-sm text-muted tabular-nums">
+        <p
+          className={`mt-2 text-sm text-muted tabular-nums ${
+            advice.some((line) => line.tone === "warning") ? "" : "max-sm:hidden"
+          }`}
+        >
           {advice.map((line, index) => (
             <Fragment key={line.text}>
               {index > 0 ? " · " : null}

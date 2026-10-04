@@ -33,7 +33,9 @@
     "orderCreated": "Se crea un pedido",
     "orderPaid": "Se paga un pedido",
     "orderRefunded": "Se reembolsa un pedido",
-    "notAvailable": "Todavía no está disponible. Escribe a {email} y la activamos."
+    "notAvailable": "Todavía no está disponible. Escribe a {email} y la activamos.",
+    "notAvailableShort": "Todavía no está disponible.",
+    "notAvailableAsk": "¿Quieres alguna? Escribe a {email} y la activamos."
   },
   "shopify": {
     "name": "Shopify",

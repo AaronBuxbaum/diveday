@@ -205,9 +205,13 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
               20px line and the link wraps under it: the row gap keeps the
               ring off the sentence there, and the column gap does where the
               two share a row. */}
-          <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-1.5 px-4 py-1.5 text-sm sm:px-6">
-            <p className="flex items-center text-muted sm:min-h-11">
-              {staffT("shared.publicPreview.youWorkHere")}
+          {/* On a phone the bar is one row too: its sentence is the short
+              spelling, the link beside it, so the strip costs a line rather
+              than three above the diver's page. */}
+          <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-x-4 gap-y-1.5 px-4 py-1.5 text-sm sm:flex-wrap sm:px-6">
+            <p className="flex min-w-0 items-center text-muted sm:min-h-11">
+              <span className="sm:hidden">{staffT("shared.publicPreview.divesSee")}</span>
+              <span className="max-sm:hidden">{staffT("shared.publicPreview.youWorkHere")}</span>
             </p>
             <Link
               href={`/shop/${shop.slug}/schedule/board`}

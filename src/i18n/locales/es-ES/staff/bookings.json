@@ -2,7 +2,7 @@
   "new": {
     "title": "Añadir una reserva",
     "tripHeading": "¿Qué salida?",
-    "fullExcluded": "Las salidas completas no aparecen en esta lista. Cambia las plazas de un barco, o programa otra salida ese día, desde el tablero.",
+    "fullExcluded": "Las salidas completas no aparecen. Añade plazas, u otra salida ese día, desde el tablero.",
     "tripEmpty": "No queda ninguna plaza en las próximas salidas.",
     "tripEmptyAction": "Abrir el calendario",
     "seatsLeft": "{count, plural, one {# plaza libre} other {# plazas libres}}",

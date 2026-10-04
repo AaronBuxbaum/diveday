@@ -212,8 +212,11 @@ export function ClosingStation({
           No trailing door: the station's own title is a link to this
           departure, and a second path to the same page from the same panel is
           what copy-restraint deletes. */}
+      {/* A desktop reading: on a phone the evening's work is the recap, and a
+          paragraph about why seats went unsold sat between the head count and
+          it on every sailed boat. */}
       {openSeats ? (
-        <ul className="mt-3">
+        <ul className="mt-3 max-sm:hidden">
           <LedgerRow
             stacked
             kind={{ word: t("shopHome.spine.close.openSeats.label"), tone: "neutral" }}
@@ -232,7 +235,13 @@ export function ClosingStation({
           so it is as long as the unsold-seats row's rule it stands in for. */}
       {children ? (
         <div
-          className={openSeats ? "pt-3" : `mt-3 border-t border-border pt-3 ${ledgerRowRoomClass}`}
+          className={
+            openSeats
+              ? // Below `sm` the unsold-seats row is not drawn, so its rule is
+                // this block's again.
+                `pt-3 max-sm:mt-3 max-sm:border-t max-sm:border-border ${ledgerRowRoomClass}`
+              : `mt-3 border-t border-border pt-3 ${ledgerRowRoomClass}`
+          }
         >
           {children}
         </div>

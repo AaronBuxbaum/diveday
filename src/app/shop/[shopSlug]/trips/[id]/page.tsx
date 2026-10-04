@@ -60,7 +60,7 @@ import { TripAddDiverLink, TripCapacityBadge } from "./_components/TripPageHeade
 import { TripRosterContent } from "./_components/TripRosterContent";
 import { TripTabs } from "./_components/TripTabs";
 import { tripTabsCopy } from "./_components/trip-tabs-copy";
-import { VoyageHeader } from "./_components/VoyageHeader";
+import { type VoyageFact, VoyageHeader } from "./_components/VoyageHeader";
 import {
   addInternalNoteAction,
   addToWaitlistAction,
@@ -512,8 +512,9 @@ export default async function ManageTripPage({
    * it appears on this page is as an editable field behind About's disclosure.
    * A staffer quoting a walk-in should not have to open an editor to read it.
    */
-  const voyageFacts = [
-    ...(boatAndCrew.length > 0 ? boatAndCrew : [t("trips.about.noBoat")]),
+  const voyageFacts: VoyageFact[] = [
+    boatName ?? (assignedCrew.length > 0 ? null : t("trips.about.noBoat")),
+    ...assignedCrew.map((name) => ({ text: name, desktop: true as const })),
     t("trips.voyage.seats", { booked: trip.booked, capacity: trip.capacity }),
     formatShortDate(trip.startsAt, locale, shop.timezone),
     ...(trip.priceCents === null
@@ -521,7 +522,7 @@ export default async function ManageTripPage({
       : [
           `${formatMoneyCents(trip.priceCents, toShopCurrency(shop.currency), locale)} ${t("trips.about.perSeat")}`,
         ]),
-  ];
+  ].filter((fact): fact is VoyageFact => fact !== null);
   const repeatsSummary = series
     ? recurrenceSummaryText(
         t,

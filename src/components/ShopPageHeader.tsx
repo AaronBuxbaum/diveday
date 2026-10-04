@@ -144,6 +144,7 @@ export function ShopPageHeader({
   eyebrowHref,
   title,
   description,
+  descriptionIsCaption = false,
   meta,
   actions,
   brand,
@@ -167,6 +168,14 @@ export function ShopPageHeader({
   eyebrowHref?: string;
   title: string;
   description?: string;
+  /**
+   * The description explains the page rather than naming its subject
+   * ("The lines your crew confirms before a boat leaves the dock."), so it
+   * steps aside below `sm`, where it stood between the title and the first
+   * thing to tap. A description that *is* content (an order's "Counter sale",
+   * a unit's make and size) leaves this off and shows at every width.
+   */
+  descriptionIsCaption?: boolean;
   meta?: React.ReactNode;
   actions?: React.ReactNode;
   /** Optional shop-owned identity shown above a public booking header. */
@@ -267,7 +276,13 @@ export function ShopPageHeader({
               on the storefront, which has no slot to portal into — this header
               serves both shells and only one of them folds. */}
           <FoldedPageTitle title={title} />
-          {description ? <p className="mt-2 max-w-2xl text-muted">{description}</p> : null}
+          {description ? (
+            <p
+              className={`mt-2 max-w-2xl text-muted ${descriptionIsCaption ? "max-sm:hidden" : ""}`}
+            >
+              {description}
+            </p>
+          ) : null}
           {/* `empty:hidden`: a meta whose content renders nothing (check-in's
               offline-only pill, online) leaves no 12px of margin behind. */}
           {meta ? <div className="mt-3 empty:hidden">{meta}</div> : null}
@@ -330,6 +345,7 @@ export function ShopPageHeaderSkeleton({
   description,
   descriptionWidth = "w-80",
   descriptionLines = 1,
+  descriptionIsCaption = false,
   meta,
   actions = false,
 }: {
@@ -353,6 +369,8 @@ export function ShopPageHeaderSkeleton({
    * had, and a drop of everything below it when the page landed.
    */
   description: boolean;
+  /** The header's `descriptionIsCaption`: the bar is absent below `sm` too. */
+  descriptionIsCaption?: boolean;
   /** Tailwind width classes for the description bar. */
   descriptionWidth?: string;
   /** How many lines the description wraps to — see `SkeletonLines`. */
@@ -382,7 +400,7 @@ export function ShopPageHeaderSkeleton({
         <SkeletonLineBars lines={titleLines} height="h-11" width={titleWidth} />
       </div>
       {description ? (
-        <div className="mt-2">
+        <div className={descriptionIsCaption ? "mt-2 max-sm:hidden" : "mt-2"}>
           <SkeletonLineBars lines={descriptionLines} height="h-6" width={descriptionWidth} />
         </div>
       ) : null}

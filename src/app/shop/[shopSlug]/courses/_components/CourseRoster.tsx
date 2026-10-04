@@ -114,7 +114,9 @@ export function CourseRoster({
                   href={course.href}
                   linkLabel={course.linkLabel}
                   trailing={course.actions}
-                  stacked
+                  // Not `stacked`: a phone's meta line is two facts now (the
+                  // page's `meta`), so Schedule fits beside the words and the
+                  // row loses the line it used to stand on alone.
                   pad="lg"
                 >
                   <div className="min-w-0">

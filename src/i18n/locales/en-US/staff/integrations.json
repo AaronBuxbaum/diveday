@@ -33,7 +33,9 @@
     "orderCreated": "An order is created",
     "orderPaid": "An order is paid",
     "orderRefunded": "An order is refunded",
-    "notAvailable": "Not available yet. Email {email} and we’ll switch it on."
+    "notAvailable": "Not available yet. Email {email} and we’ll switch it on.",
+    "notAvailableShort": "Not available yet.",
+    "notAvailableAsk": "Want one of these? Email {email} and we’ll switch it on."
   },
   "shopify": {
     "name": "Shopify",

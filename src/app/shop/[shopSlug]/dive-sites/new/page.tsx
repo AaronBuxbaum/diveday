@@ -163,6 +163,7 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
           eyebrowHref={back}
           title={t("diveSites.new.title")}
           description={t("diveSites.new.description")}
+          descriptionIsCaption
         />
       </div>
       <div className="mt-8 lg:grid lg:grid-cols-[13.75rem_1fr] lg:gap-x-14">

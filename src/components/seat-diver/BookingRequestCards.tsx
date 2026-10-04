@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
@@ -76,20 +77,15 @@ export function RelevantBookingRequests({
   return (
     <SectionCard title={title} description={description} className={className} padding="lg">
       <ul className="grid gap-2">
-        {/* From `sm` up a row never wraps: the words take the width and wrap
-            themselves, so "Book from this request" stays at the row's right on
-            every row instead of dropping under the one whose words ran long.
-            On a phone the link wraps under the words, and the top half of its
-            44px box is the air between them; the bottom half overhangs the
-            row's own inset (`max-sm:-mb-3`), or it stacked 12px of invisible
-            box on the row's 12px and left the link 27px above the row's edge
-            against the name's 18px under the top (K-457 review). */}
+        {/* A row never wraps: the words take the width and wrap themselves,
+            so the door stays at the row's right on every row instead of
+            dropping under the one whose words ran long. */}
         {items.map((item) => (
           <li
             key={item.id}
-            className="flex flex-wrap items-center justify-between gap-x-3 gap-y-0 rounded-inset border border-border bg-surface-sunken px-4 py-3 sm:flex-nowrap"
+            className="relative flex items-center justify-between gap-x-3 rounded-inset border border-border bg-surface-sunken px-4 py-3"
           >
-            <div className="min-w-0 sm:flex-1">
+            <div className="min-w-0 flex-1">
               <p className="font-medium">
                 {item.name} <span className="font-normal text-muted">({item.diversLabel})</span>
               </p>
@@ -98,11 +94,15 @@ export function RelevantBookingRequests({
                 {item.dateLabel ? <> · {item.dateLabel}</> : null}
               </p>
             </div>
+            {/* Below `sm` the whole row is the door and a chevron says so: the
+                words "Book from this request" under every request doubled the
+                list's lines on a phone. The words stay for a screen reader. */}
             <Link
               href={item.href}
-              className={`${tapTargetLinkClass} shrink-0 text-sm font-medium text-primary hover:underline max-sm:-mb-3`}
+              className={`${tapTargetLinkClass} shrink-0 text-sm font-medium text-primary hover:underline max-sm:after:absolute max-sm:after:inset-0`}
             >
-              {openLabel}
+              <span className="max-sm:sr-only">{openLabel}</span>
+              <DiveDayIcon name="chevron-right" className="size-4 text-muted sm:hidden" />
             </Link>
           </li>
         ))}

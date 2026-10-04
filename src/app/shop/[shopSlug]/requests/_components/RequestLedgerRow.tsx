@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Fragment } from "react";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
@@ -110,11 +109,13 @@ export function RequestLedgerRow({
     request.divers ? { text: t("requests.divers", { count: request.divers }), whole: true } : null,
     experienceFact ? { text: experienceFact, whole: false } : null,
     request.dateFlexible ? { text: t("requests.flexible"), whole: true } : null,
+    // When they asked is the desk's sorting fact; a phone reads who and what.
     {
       text: t("requests.askedOn", { date: formatShortDate(request.createdAt, locale, timezone) }),
       whole: true,
+      desktop: true,
     },
-  ].filter((fact): fact is { text: string; whole: boolean } => fact !== null);
+  ].filter((fact): fact is { text: string; whole: boolean; desktop?: boolean } => fact !== null);
 
   return (
     <LedgerRow
@@ -162,10 +163,10 @@ export function RequestLedgerRow({
           <p className="font-medium">{ask}</p>
           <p className="mt-0.5 text-sm text-muted tabular-nums">
             {facts.map((fact, index) => (
-              <Fragment key={fact.text}>
+              <span key={fact.text} className={fact.desktop ? "max-sm:hidden" : undefined}>
                 {index > 0 ? SEPARATOR : null}
                 <span className={fact.whole ? "whitespace-nowrap" : undefined}>{fact.text}</span>
-              </Fragment>
+              </span>
             ))}
           </p>
           {request.email || request.phone ? (

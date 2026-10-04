@@ -146,10 +146,18 @@ function ConnectedMeta({
  * as disabled primaries a shop could fix by clicking, and nothing on this page
  * can fix them (principle 8 — a control that cannot act is not a control).
  */
-function NotAvailable({ t }: { t: StaffTranslator }) {
+/**
+ * A card whose provider is not switched on. With `askedAbove` the way to ask
+ * for it is said once, over the cards, and each card keeps only its state:
+ * four cards each ending in the same support address read as a page of
+ * repeated small print, worst on a phone where they stack.
+ */
+function NotAvailable({ t, askedAbove }: { t: StaffTranslator; askedAbove: boolean }) {
   return (
     <p className="text-sm text-muted">
-      {t("integrations.common.notAvailable", { email: SUPPORT_EMAIL })}
+      {askedAbove
+        ? t("integrations.common.notAvailableShort")
+        : t("integrations.common.notAvailable", { email: SUPPORT_EMAIL })}
     </p>
   );
 }
@@ -214,12 +222,27 @@ export default async function IntegrationsSettingsPage({
         }
       : banner;
 
+  const unavailable = [
+    !shopify && !shopifyConfigured,
+    !quickbooks && !quickbooksConfigured,
+    !xero && !xeroConfigured,
+    !zapier && !zapierConfigured,
+  ].filter(Boolean).length;
+  const askOnce = unavailable > 1;
+
   return (
     <main className={settingsPaneClass()}>
       <ShopPageHeader
         eyebrow={t("settings.main.eyebrow")}
         eyebrowHref={`/shop/${session.user.shopSlug}/settings`}
         title={t("integrations.title")}
+        meta={
+          askOnce ? (
+            <p className="text-sm text-muted">
+              {t("integrations.common.notAvailableAsk", { email: SUPPORT_EMAIL })}
+            </p>
+          ) : undefined
+        }
       />
       {syncBanner ? (
         <StaffNoticeBanner tone={syncBanner.tone}>{syncBanner.text}</StaffNoticeBanner>
@@ -272,7 +295,7 @@ export default async function IntegrationsSettingsPage({
               </FieldActions>
             </FieldGrid>
           ) : (
-            <NotAvailable t={t} />
+            <NotAvailable t={t} askedAbove={askOnce} />
           )}
         </SectionCard>
 
@@ -332,7 +355,7 @@ export default async function IntegrationsSettingsPage({
               </SubmitButton>
             </form>
           ) : (
-            <NotAvailable t={t} />
+            <NotAvailable t={t} askedAbove={askOnce} />
           )}
         </SectionCard>
 
@@ -403,7 +426,7 @@ export default async function IntegrationsSettingsPage({
               </SubmitButton>
             </form>
           ) : (
-            <NotAvailable t={t} />
+            <NotAvailable t={t} askedAbove={askOnce} />
           )}
         </SectionCard>
 
@@ -464,7 +487,7 @@ export default async function IntegrationsSettingsPage({
               </FieldActions>
             </FieldGrid>
           ) : (
-            <NotAvailable t={t} />
+            <NotAvailable t={t} askedAbove={askOnce} />
           )}
         </SectionCard>
       </div>
