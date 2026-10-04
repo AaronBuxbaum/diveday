@@ -1,0 +1,174 @@
+{
+  "lensId": "L20",
+  "lens": "The action grammar",
+  "reading": "DiveDay has 301 server actions — 284 exported from 71 module-level \"use server\" files and 17 inline closures in 11 pages — so the rule at docs/engineering/workflow.md:66 and .claude/rules/surfaces.md:40 (\"server actions default to inline\") describes 5.6% of them, and ADR 20260803-invoicing-role-gate:22 already recorded why the inline form was abandoned. Authorization has one documented helper, requireShopSurface (src/lib/session.ts:164), reached by 12 action files and 33 calls, while bare requireStaffSession appears in 44 files and 143 calls, ten files wrap it in a preamble of their own (settingsBlock, teamManagementBlock, paymentSettingsBlock, requireBoardAuthor, requireUnitSurface, requireGearSurface, requireDiverActionContext, requireTripConfig, requireStaffingManager, requirePromoManager), and all 11 [token]/actions.ts files hand-roll the same rate-limit → verify → load preamble that only ready/[token]/actions.ts:90 and shelf/[token]/actions.ts name contextFor. Parsing is 351 formData.get( hand-reads in 47 files beside 150 safeParse( in 36 files. The outcome has three transports — redirect with ?notice= (289 revalidateAndRedirect, 335 noticeUrl, 26 pages each holding their own Record<code,{tone…}> map of which 7 are typed by NoticeCodeOf), return-state for useActionState (30 client consumers, 11 per-file *Result/*FormState types), and void-plus-revalidatePath (check-in/actions.ts:94, divers/[personId]/actions.ts:245, manifest/actions.ts:169) — plus three rival query dialects beside ?notice= (49 files): ?error= in 18 files, ?saved= in 8, ?builder= in schedule/board/actions.ts alone (19 uses). Taking an act back is four grammars chosen per call site — <UndoToast in 13 files, <InlineConfirm in 14, <SendHold in 4, re-tap per docs/design/principles.md §7 — with 13 hand-written inverse actions (undo*/restore*/reinstate*) and the undo target carried through six different URL extras (undo, undoId, bid, noteBody, cardType, id). Of the twenty-two actions read, no two files share a whole shape: settings/actions.ts:217 hand-parses and redirects, manifest/actions.ts:479 zod-parses and returns state inside a try, divers/[personId]/actions.ts:226 redirects on refusal but only revalidates on success, actions/held-sends.ts:80 throws new Error(\"not_authorized\"), and orders/[id]/page.tsx:129-147 runs a four-rung gate ladder (canPersonRefund, hasRequiredStepUp, isDemoShop) as separate redirects. Because the grammar is a convention rather than a type, two guards police it by lexical scan — scripts/check-notice-codes.mjs (371 lines, five syntactic shapes) and scripts/check-redirect-in-try.mjs (439 lines) — and trips/[id]/actions.authz.test.ts:31-48 mocks five modules to test one action's gate. The one place a per-surface decision is data is src/app/actions/seat-diver-surfaces.ts (seatedPath, refusedPath, gateScope, three notice codes per door), and the one place take-back is a property of the act rather than a component is src/app/actions/held-sends.ts (hold/undo/release over one held_sends row).",
+  "measurements": [
+    {
+      "what": "Files containing \"use server\"",
+      "value": "86 (71 action-bearing non-test files; 8 tests, 5 *-types/order-form/seat-diver-surfaces companions, 2 kiosk/notice type files)"
+    },
+    {
+      "what": "Server actions in total",
+      "value": "301 = 284 exported async functions in module-level files + 17 inline closures in 11 page/component files"
+    },
+    {
+      "what": "Inline share vs the written default (workflow.md:66)",
+      "value": "17 / 301 = 5.6%"
+    },
+    {
+      "what": "Largest action files",
+      "value": "settings/actions.ts 39 actions / 1479 lines; trips/[id]/actions.ts 28 / 1566; divers/[personId]/actions.ts 23 / 1597; ready/[token]/actions.ts 20 / 947; manifest/actions.ts 17 / 733"
+    },
+    {
+      "what": "requireShopSurface( in action files",
+      "value": "12 files, 33 calls"
+    },
+    {
+      "what": "requireStaffSession( in action files",
+      "value": "44 files, 143 calls"
+    },
+    {
+      "what": "Per-file gate/preamble helpers",
+      "value": "10 (settingsBlock, teamManagementBlock, paymentSettingsBlock, requireBoardAuthor, requireUnitSurface, requireGearSurface, requireDiverActionContext, requireTripConfig, requireStaffingManager, requirePromoManager)"
+    },
+    {
+      "what": "Bearer-token action files hand-rolling rate-limit → verify → load",
+      "value": "11 of 11 call checkRateLimit; 2 name the helper contextFor"
+    },
+    {
+      "what": "Hand parse vs schema parse",
+      "value": "formData.get( 351 uses in 47 files; safeParse( 150 uses in 36 files"
+    },
+    {
+      "what": "Redirect-with-notice transport",
+      "value": "revalidateAndRedirect 289 uses in 38 files; noticeUrl 335 uses in 33 files; redirect( 395 uses in 42 files"
+    },
+    {
+      "what": "Return-state transport",
+      "value": "useActionState in 30 non-test client files; 11 per-file *Result/*FormState/*Outcome types in action files"
+    },
+    {
+      "what": "Page-local notice maps",
+      "value": "26 pages with Record<…,{tone…}>; 7 typed with NoticeCodeOf"
+    },
+    {
+      "what": "Rival outcome query params in src/app",
+      "value": "?notice= 49 files/187; ?error= 18 files/80; ?saved= 8 files/24 (saved: extra 64 uses in 15 files); ?builder= 1 file/19"
+    },
+    {
+      "what": "Distinct noticeUrl extra keys",
+      "value": "16 (saved 44, form 21, bid 9, noted 7, outcome 4, rolesFor 3, id 3, count 3, prepared 2, undoId, site, reason, personId, noteBody, deleted, contactFor)"
+    },
+    {
+      "what": "Take-it-back controls at call sites",
+      "value": "<UndoToast 13 files; <InlineConfirm 14; <SendHold 4; re-tap per principles §7"
+    },
+    {
+      "what": "Hand-written inverse actions",
+      "value": "13 (undoRemoveBookingAction, restoreCardAction, restoreDiverNoteAction, restoreInternalNoteAction, restorePersonAction, restoreGearItemAction, restorePromoAction, restoreStaffAction, restoreDiveSitesAction, reinstateTripAction, undoCheckInAction, undoNoShowAction, undoHeldSendAction)"
+    },
+    {
+      "what": "Record step location",
+      "value": "recordDeskEvent called from 8 src/db modules and 0 action files; recordTripActivity from 2 action files; trackEvent from 13 action files (37 calls); after( in 12 files (22)"
+    },
+    {
+      "what": "Guards that exist because the grammar is a convention",
+      "value": "scripts/check-notice-codes.mjs 371 lines; scripts/check-redirect-in-try.mjs 439 lines"
+    },
+    {
+      "what": "Action test coverage",
+      "value": "24 actions*.test.ts files for 47 actions.ts files; trips authz test mocks 5 modules"
+    },
+    {
+      "what": "Declared-property precedents",
+      "value": "src/app/actions/seat-diver-surfaces.ts (4 doors as data rows); src/lib/held-sends.ts HELD_SEND_KINDS (3 kinds, hold/undo/release)"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "The staff page preamble is one helper whose refusals all throw, and whose option type makes 'gated with no landing' a compile error; pinned by src/lib/session.test.ts and held in callers by check-redirect-in-try",
+      "where": "src/lib/session.ts:82-187"
+    },
+    {
+      "what": "The write half of ?notice= is one door: 216 hand-built lines folded into noticeUrl, codes normalised once by noticeCode, slugs escaped by shopPath, and NoticeCodeOf makes a reason with no words a compile error at the map",
+      "where": "src/lib/staff-notices.ts:43-233"
+    },
+    {
+      "what": "Seating a diver from four doors is one consequence path with the per-door presentation as data rows (seatedPath, refusedPath, gateScope, notice codes)",
+      "where": "src/app/actions/seat-diver.ts + seat-diver-surfaces.ts, src/db/seat-diver.ts"
+    },
+    {
+      "what": "Manifest actions take one named bound context object rather than three positional strings, and re-prove it inside the write",
+      "where": "src/app/shop/[shopSlug]/trips/[id]/manifest/actions.ts:43-109"
+    },
+    {
+      "what": "A send you can take back is modelled as a row with three moves (hold, undo, release) over three declared kinds, not as a confirm per call site",
+      "where": "src/app/actions/held-sends.ts, src/lib/held-sends.ts:26, src/db/held-sends.ts"
+    },
+    {
+      "what": "The record step lives in the db write, not the action: recordDeskEvent takes a DbExecutor so the event is written in the same transaction as the act, from 8 src/db modules and 0 action files",
+      "where": "src/db/desk-events.ts:27-38"
+    },
+    {
+      "what": "Mutate-then-navigate is one helper",
+      "where": "src/lib/navigation.ts:19"
+    },
+    {
+      "what": "The return-state transport's rendering is being folded into FormStatus (ActionResultNotice → FormStatus, row 20d)",
+      "where": "docs/architecture/decisions/20260908-one-hand.md:90,311; src/components/ui/form.tsx:603"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L20-1",
+      "title": "One declared action replaces ten preambles and three outcome transports",
+      "kind": "shape",
+      "reading": "Of 301 actions (284 module-level in 71 files, 17 inline in 11 pages), 12 files reach requireShopSurface (src/lib/session.ts:164) and 44 call requireStaffSession bare, ten of them behind a preamble of their own (settingsBlock, teamManagementBlock, paymentSettingsBlock, requireBoardAuthor, requireUnitSurface, requireGearSurface, requireDiverActionContext, requireTripConfig, requireStaffingManager, requirePromoManager). All 11 [token]/actions.ts files call checkRateLimit and then verify and load by hand; only ready/[token]/actions.ts:90 and shelf/[token]/actions.ts name the preamble contextFor. Input is read by hand 351 times in 47 files (formData.get() and by schema 150 times in 36 (safeParse(). The answer travels three ways: 289 revalidateAndRedirect + 335 noticeUrl into 26 page-local notice maps (7 typed by NoticeCodeOf), 11 per-file *Result/*FormState types returned to 30 useActionState consumers, and bare revalidatePath on check-in/actions.ts:94 and divers/[personId]/actions.ts:245. Beside ?notice= (49 files) three dialects survive: ?error= in 18 files (80 uses), ?saved= in 8 (24), ?builder= in schedule/board/actions.ts (19). The same gate is a redirect in trips/[id]/actions.ts:300, a notFound() in inbox/actions.ts:56, a throw new Error(\"not_authorized\") in actions/held-sends.ts:80 and a four-rung ladder in orders/[id]/page.tsx:129-147. src/app/actions/seat-diver-surfaces.ts already proves the alternative: four doors share one seatDiver consequence and differ only by a data row (seatedPath, refusedPath, gateScope, three notice codes).",
+      "idea": "A single defineAction in src/lib/action.ts (beside session.ts, which already imports next/navigation) turns a declaration into the server action: gate (\"staff\", a ShopSurfaceGate with its refusal, or bearer(purpose, rateLimit)), input (a zod schema), run(ctx, input) (one src/db call answering {ok} | {ok:false, reason}), landing(ctx, input) built through shopPath, words: Record<NoticeCodeOf<Reason>, {tone, key}>, and answer: \"navigate\" | \"inline\". The pipeline is then the only code that calls requireShopSurface, safeParse, trackEvent, revalidateAndRedirect and noticeUrl, and a reason with no words is a compile error at the declaration rather than a silent blank banner. answer: \"inline\" hands the same {ok, reason, values} to useActionState and the folded FormStatus (ADR 20260908-one-hand 20d) instead of redirecting, so the two transports carry one message and a surface picks by declaring, not by writing a second action shape. The 26 page maps move onto the actions that produce their codes — still per surface, which is the reason staff-notices.ts:8-13 keeps them local, but beside the act rather than the render — and the page draws one <ActionOutcome>. ?error=, ?saved= and ?builder= become noticeUrl extras or are deleted; the ten preamble helpers, the 351 hand-reads and the bearer files' eleven copies of rate-limit → verify → load go with them. Shared actions keep their per-door table: SeatSurface becomes the landing/words half of a defineAction, unchanged in content.",
+      "dissolves": "The ten per-file gate helpers, the eleven hand-rolled bearer preambles and the three rival outcome transports; a server action becomes a declaration rather than an assembly.",
+      "scope": "src/lib/action.ts (+ action.test.ts); 71 action files and the 11 pages holding inline closures (301 actions); 26 notice maps in src/app; e2e assertions on ?error=/?builder= (18 + 1 files); docs/engineering/workflow.md:66, .claude/rules/surfaces.md:40, docs/architecture/overview.md; one ADR. Notice codes and bundle keys are kept, so en-US and es-ES are untouched.",
+      "firstSlice": "Ship defineAction with gate: \"staff\" | ShopSurfaceGate and answer: \"navigate\", and convert the 39 actions of settings/actions.ts — every one already runs requireStaffSession → settingsBlock → shopPath(…, \"settings\") → noticeUrl(…, { saved }) — deleting settingsBlock and the hand-passing of saved.",
+      "effort": "L",
+      "reviews": [
+        "security",
+        "ADR"
+      ],
+      "conflicts": "workflow.md 'server actions default to inline' (settled shape, brief line 74) — measured at 17 of 301, with ADR 20260803-invoicing-role-gate:22 recording why the form was left; ADR 20260908-one-hand 20d (ActionResultNotice → FormStatus) is where the inline answer lands, extended not contradicted; ADR 20260724-role-authorization and ADR-0006 (server re-checks) are honoured because the gate is re-read live inside the pipeline; issues #1869/#1855 (confirm-to-clear copy) untouched.",
+      "confidence": "high"
+    },
+    {
+      "id": "L20-2",
+      "title": "Take-it-back is a property the action declares, not a component",
+      "kind": "surface",
+      "reading": "Taking an act back is four grammars chosen at the call site: <UndoToast in 13 files, <InlineConfirm in 14, <SendHold in 4, and re-tap on the settled control (docs/design/principles.md §7, check-in/actions.ts:80-90). docs/design/principles.md §7 and ADR 20260906-before-you-ask §2/§4 already state the rule — reversible → undo, a holdable send → hold, an unholdable send or money → confirm, a toggle → re-tap — and its four carve-outs (sign out, an untouched departure, a recap photo, a booking inside the refund window). Thirteen inverse actions are hand-written (undoRemoveBookingAction, restoreCardAction, restoreDiverNoteAction, restoreInternalNoteAction, restorePersonAction, restoreGearItemAction, restorePromoAction, restoreStaffAction, restoreDiveSitesAction, reinstateTripAction, undoCheckInAction, undoNoShowAction, undoHeldSendAction), each a preamble around one src/db restore. The undo target rides in six different noticeUrl extras (undo, undoId, bid, noteBody, cardType, id) and each page re-wires UndoToast with its own hidden fields (UndoToast.tsx:26-43 is 'deliberately generic'). InlineConfirm is client-only (ui/InlineConfirm.tsx:62-67: 'nothing here is optimistic'), so the server never learns a confirm was required and a crafted POST reaches the action without the second tap. The one act modelled as a property is the held send: holdSendAction / undoHeldSendAction / releaseHeldSendAction over one held_sends row for three declared kinds (src/lib/held-sends.ts:26).",
+      "idea": "The L20-1 declaration gains takeBack: { kind: \"undo\", inverse } | { kind: \"hold\" } | { kind: \"confirm\" } | { kind: \"retap\" } | \"none\", and the pipeline does what the kind says. undo: the landing carries { undo: id } and the page's one <ActionOutcome> renders UndoToast bound to a single generic undoAction(actionId, id) that dispatches to the declared inverse through a registry shaped like HELD_SEND_KINDS — the 13 inverse exports become 13 registry rows, each still calling the src/db restore that holds the real re-checks (restoreBooking's capacity and ratio refusals stay where they are). hold: the pipeline writes the held_sends row and returns the HeldTicket, which is what holdSendAction already does for three kinds; a fourth send declares itself and gets the hold without touching held-sends.ts. confirm: the pipeline refuses a submission that lacks the confirmed field InlineConfirm posts, so the second tap is proved on the server. retap: answer: \"inline\" and no toast — the settled control is the affordance, as check-in/actions.ts:80-90 argues. Principles §7's rule becomes a check on the declaration: a run that soft-deletes must declare undo, one that sends must declare hold or confirm, and the four carve-outs are confirm declarations rather than exceptions in prose.",
+      "dissolves": "The 13 hand-written inverse actions and the per-call-site choice among UndoToast, InlineConfirm, SendHold and re-tap.",
+      "scope": "src/lib/action.ts; UndoToast.tsx, SendHold.tsx, ui/InlineConfirm.tsx kept as renderers chosen by the pipeline; the 13 inverse actions across trips/[id], divers/[personId], check-in, gear, promos, settings/team, settings/dive-site-import, actions/held-sends; the six undo extras; docs/design/principles.md §7; e2e specs on the 13 UndoToast surfaces; an ADR amending 20260906 §2/§4. No bundle changes: Undo, Sent and the confirm labels already exist.",
+      "firstSlice": "Add takeBack: { kind: \"undo\", inverse } and the generic undoAction, and convert the five restore pairs on divers/[personId]/actions.ts (cards, notes, person) and trips/[id]/actions.ts (internal note, booking) — deleting five exports and five toast wirings.",
+      "effort": "M",
+      "reviews": [
+        "design",
+        "domain",
+        "ADR"
+      ],
+      "conflicts": "docs/design/principles.md §7 as amended by ADR 20260906-before-you-ask §4 — this makes the amendment a type rather than a sentence; ADR 20260911-the-confirm-tap-is-the-release (a no-show frees the seat on the confirm tap, no second act) becomes a confirm declaration, unchanged in behaviour; ADR 20260906 §2's four carve-outs become confirm declarations; ADR 20260820-every-delete-is-soft is what makes undo the default for a delete; issues #1869/#1855 (confirm-to-clear copy) untouched.",
+      "confidence": "high"
+    },
+    {
+      "id": "L20-3",
+      "title": "Make the action grammar a type and retire two grep guards",
+      "kind": "governance",
+      "reading": "docs/engineering/workflow.md:66 and .claude/rules/surfaces.md:40 say 'server actions default to inline'; 17 of 301 actions are inline (5.6%). ADR 20260803-invoicing-role-gate:22 records why the form was left ('any gate added to it could only be exercised through the page — precisely the layer a crafted POST skips') and manifest/actions.ts:43-62 records the same move for 17 more. Because any file may emit ?notice= and call redirect, two lexical guards police the convention: scripts/check-notice-codes.mjs (371 lines, five syntactic shapes, the fifth added for the done/backTo helpers of three files) and scripts/check-redirect-in-try.mjs (439 lines). 24 actions*.test.ts files cover 47 actions.ts; trips/[id]/actions.authz.test.ts:31-48 mocks next/navigation, next/cache, @/db/client, @/lib/session and @/lib/analytics to reach one gate. src/lib/session.ts:153-162 explains that the helper's contract can only be pinned in callers by a script 'because the failure renders nothing, so nothing goes red'.",
+      "idea": "With L20-1 the emitter of ?notice= and the caller of redirect inside an action are one function, so the grammar is proved by the type and the guards shrink: check-notice-codes keeps only its reader shape (notice === \"literal\") and check-redirect-in-try drops the action roots and keeps guarding pages. workflow.md and surfaces.md are rewritten to the measured truth — a mutation is a defineAction declaration in the segment's actions.ts; an inline closure is the exception and names its reason — and a 30-line guard refuses a \"use server\" file exporting an async function not built by defineAction. Action tests stop mocking the framework: src/lib/action.test.ts proves the pipeline once (gate throws, refusal lands, reason → code, inline answer), and each action's test calls its run with a seededShopContext. AGENTS.md's check:repo count falls by two and docs/agents/repo-checks.md loses two entries.",
+      "dissolves": "The inline-default rule, the emitter halves of two lexical guards, and the five-mock test ladder per gated action.",
+      "scope": "docs/engineering/workflow.md:66-69, .claude/rules/surfaces.md:40, docs/agents/repo-checks.md, scripts/check-notice-codes.mjs (+ .test.mjs), scripts/check-redirect-in-try.mjs (+ .test.mjs), scripts/check-repo.mjs, AGENTS.md check:repo row, src/lib/session.ts:153-162 docblock, 24 action test files.",
+      "firstSlice": "Rewrite workflow.md:66-69 and surfaces.md:40 to the measured default (a sibling actions.ts taking a bound context; inline is the exception) citing ADR 20260803-invoicing-role-gate — a one-PR doc fix that is true today, before any code moves.",
+      "effort": "M",
+      "reviews": [
+        "ADR"
+      ],
+      "conflicts": "The settled 'server actions default to inline' (brief line 74, workflow.md:66) — the measurement is that practice reversed it on 2026-08-03 and the rule was never updated; .claude/rules/scripts.md 'a guard gets a test beside it' and 'a guard is spawned by check-repo.mjs' — the retired guards' tests and rows go with them; ADR 20260723-event-instrumentation (trackEvent seam) unchanged, only its call site moves into the pipeline.",
+      "confidence": "high"
+    }
+  ]
+}

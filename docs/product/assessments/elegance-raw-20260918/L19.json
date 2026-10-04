@@ -1,0 +1,163 @@
+{
+  "lensId": "L19",
+  "lens": "L19 — Seeds, stories and scenarios",
+  "reading": "There is no one scenario model: a shop's state is arranged by five grammars — 47 ordered steps in `src/db/seed.ts` (1,670 lines) over 49 `seed-*.ts` modules (11,689 lines, plus 26 test files of 2,422 lines), 25 `/api/test/*` route directories (5,016 lines) that mutate the seeded shop after the fact, a parametrised mint (`createDemoShop` with `history`/`slug`/`timezone`), three unit-test template variants (`lean`/`history`/`empty` in `src/test/db-template.ts`, hydrated by 224 test files), and 69 unit-test files that `insert(shops)` by hand. The routes are already a proto fact vocabulary: `seed-trouble-states/route.ts` (1,129 lines) reads ten `searchParams.get` flags (`blockedAboard`, `crewGap`, `gearOut`…) and is called bare 11 times and flagged 20 times from `e2e/*.spec.ts`, while nine sibling routes each write exactly one state (`seed-gift`, `seed-returning-diver`, `seed-changed-dive-site`, `seed-observed-species`, `seed-dive-times`, `seed-recap-pulse`, `seed-booking-handoff`, `seed-arrival-code`, `seed-off-season`) under docblocks that repeat the same four paragraphs. Time is arranged by moving rows: `seed-evening` (576 + 339 test lines), `depart-trip` (90 + 216) and `seed-off-season` (97) exist because `DIVEDAY_CLOCK` is one process-wide value per worker (`e2e/servers.ts:106`), yet `scripts/simulate-day/day.spec.ts` moves that same clock 12 times through `/api/test/clock` because it owns its server. Two hand-maintained topological deletes — `resetDemoSchedule` (99 delete calls, `src/db/seed.ts` 1102–1660 including `restoreMissingStableStaff`) and `deleteDemoShopCascade` (`src/db/seed-demo-lifecycle.ts`) — carry three guards (`delete-path-coverage.test.ts` 379 lines with `RESET_KEEPS`, `reap-demos.test.ts`, 17 reset cases in `seed.test.ts`) and a `VACUUM` (`reset/route.ts`) to hold the reset at ~1.2s per test across 919 e2e tests. The cast (89 names in `seed-cast.ts`) is addressed positionally (`customers[N]` 24 times across 5 modules) and by literal name (`eq(people.fullName, \"…\")` 7 times in routes and `demo-refresh.ts`); 37 specs, 112 unit tests and 2 routes name a cast member, and 91 of 109 specs spell `blue-mantis`. ADR 20260803's own revisit clause (\"if the per-step context objects start growing past a handful of fields\") has tripped: `seedTrips` takes 9 fields, `seedCertGates` 8, and 21 of 49 modules branch on `history` through 10 branch points in the orchestrator. The three demo stories in `src/lib/demo-stories.ts` are destinations in a fresh mint, not states; the simulator's `DAY_STATES` (15 entries, `scripts/simulate-day/lib.mjs`) and the persona walk's 32 `{ path, as }` stops (`scripts/persona-bots/personas.mjs`) are two more scenario grammars, each with its own `playwright.config.ts` and `topology.ts`, sharing only the mint and the frozen instant `2026-07-21T13:30:00.000Z`. What is right: one mint primitive reaches the visitor demo, `privateShop`, the simulator and `scripts/check-db-concurrency.mjs`; the routes write through product writers (14 writer calls to 7 raw inserts) where the seed writes 140 raw inserts; and `scripts/check-e2e-fixtures.mjs` plus `seed-routes.test.ts` register and gate every handler.",
+  "measurements": [
+    {
+      "what": "Seed scenario modules (non-test) / seed test files / lines of non-test seed code",
+      "value": "49 modules + src/db/seed.ts (1,670 lines) = 11,689 lines; 26 seed-*.test.ts = 2,422 lines"
+    },
+    {
+      "what": "Steps the orchestrator calls in fixed order; modules branching on the `history` flag; branch points in seed.ts",
+      "value": "47 / 21 of 49 / 10"
+    },
+    {
+      "what": "/api/test route directories, by kind",
+      "value": "25: 3 mint-or-reset, 4 time-shape (clock, seed-evening, depart-trip, seed-off-season), 9 single-state, 7 token mints, 2 other (inbound-message, email-previews); 5,016 lines incl. tests"
+    },
+    {
+      "what": "seed-trouble-states flags and callers",
+      "value": "10 searchParams flags; 11 bare calls + 20 flagged calls across e2e specs; 1,129 lines"
+    },
+    {
+      "what": "resetDemoSchedule delete calls / cost / rows churned",
+      "value": "99 db.delete calls; ~1.2s per reset with VACUUM; ~4,400 rows deleted and re-inserted per test (reset/route.ts docblock)"
+    },
+    {
+      "what": "e2e specs / tests / visual captures / test-route calls inside visual.spec.ts",
+      "value": "109 specs, 919 tests, 254 captures in 8,453 lines, 40 request.post(\"/api/test/…\") calls, 5 pinned privateShop slugs"
+    },
+    {
+      "what": "Specs and unit tests coupled to the seed by literal name",
+      "value": "91/109 specs spell blue-mantis; 37 specs, 112 unit tests and 2 routes name one of 89 cast members; customers[N] indexed 24 times in 5 seed modules; 7 eq(people.fullName, …) lookups"
+    },
+    {
+      "what": "Unit-test fixture styles",
+      "value": "224 files on seededTestDb/seededShopContext/fileScopedShopContext; 12 unseededTestDb; 4 createTestDb direct; 69 insert(shops) by hand; 56 insert(people) by hand"
+    },
+    {
+      "what": "Raw inserts vs product writers",
+      "value": "seed modules: 140 .insert( calls; test routes: 7 .insert( vs 14 calls to seatDiver/createGiftBooking/upsertExecutedDive/moveTrip/createTrip/recordRollCall/… "
+    },
+    {
+      "what": "Per-step context objects (ADR 20260803's revisit signal)",
+      "value": "seedTrips 9 fields, seedCertGates 8, seedMoreTrips 4+, seedDeskTrail/seedOpenInvoice 4 each"
+    },
+    {
+      "what": "Other scenario grammars",
+      "value": "3 demo stories (destinations); 15 DAY_STATES with 12 advanceClock calls in the simulator; 32 persona stops; 3 demo-refresh keeper passes; 2 extra Playwright configs + 2 topology.ts + 2 workflows"
+    },
+    {
+      "what": "Clock instants",
+      "value": "fleet frozen at 2026-07-21T13:30:00.000Z (e2e/servers.ts); simulator starts 2026-07-21T10:00:00.000Z (scripts/simulate-day/topology.ts)"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "One mint primitive: createDemoShop serves the visitor demo, the privateShop e2e fixture, the one-day simulator and the concurrency check, with slug and timezone pinnable for captures",
+      "where": "src/db/seed.ts createDemoShop; src/app/actions/demo.ts; src/app/api/test/seed-private-shop/route.ts; scripts/simulate-day/day.spec.ts; scripts/check-db-concurrency.mjs"
+    },
+    {
+      "what": "Trouble states are kept out of the demo and written through the product's own writers (createGiftBooking, upsertExecutedDive, submitRecapPulse, seatDiver, moveTrip), so a photographed state is one the product could reach",
+      "where": ".claude/rules/surfaces.md §'A panel that only renders when something has gone wrong'; src/app/api/test/seed-gift, seed-changed-dive-site, seed-observed-species, seed-recap-pulse"
+    },
+    {
+      "what": "Every /api/test handler is gated by two independent checks and registered in one table that the fixture guard cross-checks against the directory",
+      "where": "src/lib/e2e-test-routes.ts; src/app/api/test/seed-routes.test.ts; scripts/check-e2e-fixtures.mjs"
+    },
+    {
+      "what": "Unit tests hydrate a migrated-and-seeded PGlite snapshot per test instead of reseeding (~0.3s vs ~8.5s), with lean/history/empty variants",
+      "where": "src/test/db.ts; src/test/db-template.ts; src/test/global-setup.ts"
+    },
+    {
+      "what": "Delete-path coverage is a structural sweep of the foreign-key graph, not a list of remembered cases; unreached tables must carry a written reason",
+      "where": "src/db/delete-path-coverage.test.ts (UNSCOPED_REASONS, RESET_KEEPS)"
+    },
+    {
+      "what": "One frozen instant backs the whole fleet on both sides (server env + browser Date proxy), and nothing is masked",
+      "where": "ADR 20260721-argos-frozen-clock; e2e/servers.ts E2E_FROZEN_CLOCK; e2e/fixtures.ts context init script; scripts/check-clock.mjs"
+    },
+    {
+      "what": "The seed split by story rather than by table, with order declared load-bearing and verified by fingerprint",
+      "where": "ADR 20260803-seed-scenario-modules; src/db/seed-clock.ts (one clock, one nextCreatedAt counter)"
+    },
+    {
+      "what": "Demo stories are destinations in a fresh mint, never a seeded failure; the persona walk files under a ceiling and never opens a live capability URL",
+      "where": "src/lib/demo-stories.ts; src/db/demo-stories.ts; ADR 20260907-persona-bots-file-under-a-ceiling (DEAD_CAPABILITY_TOKENS)"
+    },
+    {
+      "what": "The canonical demo is kept alive by keepers rather than by re-seeding on boot, matched on isDemo as well as slug",
+      "where": "src/db/demo-refresh.ts; ADR 20260812-demo-schedule-keeper"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L19-1",
+      "title": "A test shop's state is a list of named facts, not twenty routes",
+      "kind": "governance",
+      "reading": "Twenty of the 25 `src/app/api/test/*` routes do one thing each: put the seeded shop into a state the demo refuses to carry, or mint a capability a spec cannot reach — `seed-trouble-states` alone holds 14 named state functions behind 10 query flags (`blockedAboard`, `crewGap`, `gearOut`, `identityHeld`…), and the nine single-state siblings (`seed-gift`, `seed-returning-diver`, `seed-changed-dive-site`, `seed-observed-species`, `seed-dive-times`, `seed-recap-pulse`, `seed-booking-handoff`, `seed-arrival-code`, `seed-off-season`) each open with the same four docblock paragraphs (why not the seed, written through the product's writer, safe per worker, gated like reset). `e2e/visual.spec.ts` makes 40 `request.post(\"/api/test/…\")` calls, 31 of them to trouble-states (11 bare, so a capture that wants one panel gets all fourteen states written), and `privateShop` cannot combine with any of them except by `?slug=` on the three routes that accept it. Each route resolves the shop by `DEMO_SHOP_SLUG`, an actor by `orderBy(people.createdAt).limit(1)` and a diver by literal `eq(people.fullName, \"Nadia Petrov\")` (7 such lookups), and each adds a row to `seed-routes.test.ts` (475 lines) for `scripts/check-e2e-fixtures.mjs` to cross-check. The seven token routes (`seed-account-token`, `seed-display-token`, `seed-shelf-token`, two unsubscribe tokens, `seed-contact-email-confirmation-token`, `seed-stripe-account`) are the same shape with a return value. `src/lib/demo-stories.ts` cannot ask for a state at all — a story is only `{ role, destination }` — which is why the weather-day story lands on the blow-out *confirm* page rather than on a weather day.",
+      "idea": "One fact vocabulary in `src/db/facts/<fact>.ts`, each `(db, shop, cast) => Promise<Record<string, unknown>>` written through the product's writers exactly as the routes are today, registered in `src/db/facts/index.ts` (the ten trouble flags become ten facts; each single-state route becomes one; each token route becomes a fact that returns its token). One route replaces twenty: `POST /api/test/shop { slug?, timezone?, facts: [\"gear-out\", \"returning-diver\", \"account-token:owner\"] }` applies the list to blue-mantis (the reset restores it) or, with `mint: true`, to a fresh mint — so `privateShop` gains `facts` and stops needing `?slug=` per route. The response carries `values` keyed by fact name, which is what the token routes returned. `check-e2e-fixtures` then checks one handler and one registry, `seed-routes.test.ts` shrinks to five rows, and the four repeated paragraphs are written once on the route. A demo story becomes `{ role, facts, at }` in `src/lib/demo-stories.ts` — the weather-day story can open on a departure with `facts: [\"weather-hold\"]` — a visual capture is the same record plus a scheme, and a persona stop is the record with no facts, so the demo, the fleet and the walk finally read one shape. The five that stay are `shop`, `reset`, `clock`, `inbound-message` (delivers a webhook) and `email-previews` (a GET over templates).",
+      "dissolves": "Twenty route directories (~3,500 lines with their tests), the `?flag=1` grammar on trouble-states, the per-route `DEMO_SHOP_SLUG`/first-person/literal-name resolution, and the gap between what a demo story and a visual capture can ask for.",
+      "scope": "src/app/api/test/** (20 dirs deleted, `shop/route.ts` added), src/db/facts/** (new, ~26 modules moved from route bodies), src/app/api/test/seed-routes.test.ts, scripts/check-e2e-fixtures.mjs, e2e/fixtures.ts (privateShop gains facts), e2e/visual.spec.ts (40 calls rewritten) and ~30 specs, src/lib/demo-stories.ts + src/db/demo-stories.ts + src/app/actions/demo.ts, .claude/rules/surfaces.md and e2e.md (the trouble-states paragraph), docs/engineering/testing.md, one ADR.",
+      "firstSlice": "Add `src/db/facts/` with the ten trouble flags as fact modules and `POST /api/test/shop` applying a `facts` list to blue-mantis; rewrite the 31 trouble calls in the specs to name only the facts each capture photographs; delete `seed-trouble-states`.",
+      "effort": "M",
+      "reviews": [
+        "security",
+        "ADR"
+      ],
+      "conflicts": ".claude/rules/surfaces.md and .claude/rules/e2e.md name `/api/test/seed-trouble-states` as the door for trouble panels (reworded to the facts route, rule unchanged); ADR 20260815-per-test-private-shops (privateShop keeps its lazy/no-teardown properties and gains `facts`); docs/engineering/testing.md 'Every /api/test/* route is guarded' (one route, one registry); #1813 (same principle — the seed's crew writes through `setTripCrew` is a fact written through the product); N-61's persona stops and the D55 demo stories (#1215) gain a facts field, nothing they do today changes.",
+      "confidence": "high"
+    },
+    {
+      "id": "L19-2",
+      "title": "The seed is the same facts; a shop is a named fact set",
+      "kind": "shape",
+      "reading": "`seedDemoSchedule` in `src/db/seed.ts` threads return values through 47 ordered steps — `seedTrips` receives 9 fields, `seedCertGates` 8, `seedMoreTrips`, `seedDeskTrail` and `seedOpenInvoice` 4–5 each — which is the exact condition ADR 20260803 wrote down as its revisit signal ('if the per-step context objects start growing past a handful of fields'). A second axis runs through the same steps as a flag: 21 of 49 modules branch on `history`, the orchestrator has 10 `opts.history`/`isCanonicalDemo` branch points, and `pinRecapBooking: isCanonicalDemo` marks blue-mantis inside a module that also seeds every mint. Four fixture shapes are then spelled four ways: blue-mantis (`seedDemo`, history + pins), a visitor mint (`createDemoShop`, history), `privateShop` (`history: false`), and the unit tests' `lean`/`history`/`empty` variants in `src/test/db-template.ts` — while `src/db/seed-year-band.ts` is a fifth, parallel seed with its own `dropYearBandShop` because the band refuses `isDemo`. Inside the modules the cast is reached by position (`customers[12]` 11 times, 24 positional reads across 5 modules) and 7 lookups by literal `fullName`, and 37 specs plus 112 unit tests depend on those names. The seed writes 140 raw `.insert(` calls where the test routes write 7 against 14 product-writer calls, so a rule the product enforces at its writer (capacity, ratio, the readiness gate on a `boarded` roll call) is not enforced on the fixture — `seed-evening/route.ts` says so about `roll_call_events` in as many words. ADR 20260803 rejected a YAML/JSON fixture format because prose comments and derived expressions would not survive; a typed TypeScript fact keeps both.",
+      "idea": "The 47 steps become facts in the same `src/db/facts/` registry as L19-1, reading and extending one typed `Cast` context (`{ shop, staff, customers, courses, sites, trips, bookings }`) that the base facts build and every later fact reads — the threaded return values become one object, which is the decomposition the ADR said to make when the seams strained. A shop is then a named fact set: `demo = [cast, catalog, sites, board, bookings, …]`, `canonical = demo + [history, recap-pin, medical-review]`, `visitor = demo + [history]`, `private = demo`, `lean/history/empty` are the same three names in `db-template.ts`, and `year-band = [real-shop, year]` instead of a parallel seed. `history` stops being a flag threaded through 21 modules and becomes a set the caller names. The cast gains story handles (`cast.uncardedDiver`, `cast.todaysMinor`, `cast.returningRegular`, `cast.crewWithNoContact`) that replace `customers[12]` and the seven literal-name lookups; specs keep asserting on names because the screen shows names, but nothing arranging state does. Each fact writes through the product's writer where one exists, so the fixture is a day the product could have produced. The order stays declared and load-bearing — a fact list is ordered — and the one fingerprint change is one visual re-baseline, which H-49 and ADR 20260729 make a merge rather than a migration.",
+      "dissolves": "The `history`/`isCanonicalDemo` flag axis, the return-value threading through the orchestrator, positional and literal-name addressing of the cast, the year-band's parallel seed and drop, and the seed-versus-route distinction — a fact is a fact whether the seed or a spec asks for it.",
+      "scope": "src/db/seed.ts (orchestrator becomes fact sets), all 49 src/db/seed-*.ts (moved into src/db/facts/ and given the Cast context), src/db/seed-year-band.ts, src/test/db-template.ts, src/app/api/test/seed-private-shop and reset, src/db/demo-refresh.ts, the 26 seed test files, e2e/visual.spec.ts baselines (one re-baseline), ADR 20260803 superseded by a new ADR, .claude/rules/db.md 'Demo/seed data' row, docs/engineering/testing.md.",
+      "firstSlice": "Replace the threaded return values with one typed `Cast` context and turn `history` into a named fact set, byte-identical output proven by re-running ADR 20260803's fingerprint harness; no baseline moves in this PR.",
+      "effort": "L",
+      "reviews": [
+        "ADR",
+        "domain"
+      ],
+      "conflicts": "ADR 20260803-seed-scenario-modules (its YAML rejection does not reach a typed TS fact — comments and expressions survive; its 'order is data' rule holds since a fact list is ordered; its own revisit clause is the trigger; superseded, not contradicted); ADR 20260729-reg-suit-visual-regression and H-49 (one deliberate re-baseline, approved by merging); docs/product/human-decisions.md 'Demo training fixture (2026-08-05)' (the unresolved medical_review row survives as the `medical-review` fact in `canonical`); ADR 20260908-one-hand lever T (year-band becomes a `real-shop` base + `year` fact; the isDemo refusal is untouched); ADR 20260812 (the keeper's `seedRecentRecaps` becomes a fact the cron applies); #1813 (subsumed: crew writes go through `setTripCrew` as every fact goes through a writer).",
+      "confidence": "medium"
+    },
+    {
+      "id": "L19-3",
+      "title": "The clock is a fact the reset restores, so evening needs no route",
+      "kind": "system",
+      "reading": "`seed-evening/route.ts` (576 lines, 339 test lines) lays today's departures back to back and inserts `roll_call_events` directly, walking past `recordRollCall`'s readiness gate, and its docblock says why: 'DIVEDAY_CLOCK is a single process-wide value … moving it to an evening instant moves it for every test in the worker'. `depart-trip/route.ts` (90 + 216) slides one departure into the past for the same reason, `seed-off-season` deletes the board, and `clock/route.ts` says 'The e2e fleet never calls this'. Yet the simulator moves that same per-server clock 12 times in `scripts/simulate-day/day.spec.ts` and keeps the browser in step with a `diveday_sim_clock` cookie its init script reads (lines 543–590) — machinery duplicating `e2e/fixtures.ts`'s own `Date` proxy. The reason the fleet cannot move the clock is not that the value is process-wide; it is that `/api/test/reset` restores every row (99 deletes, `src/db/seed.ts`) and never the instant, so a moved clock would leak the way a leaked setting did before ADR 20260815. `privateShop` already dodges the same wall the other way — `?timezone=` moves the shop because 'the fleet's frozen instant cannot move' (`seed-private-shop/route.ts`) — and five pinned-timezone capture blocks in `e2e/visual.spec.ts` (lines 8005–8295) exist for it.",
+      "idea": "Time becomes a fact: `POST /api/test/clock` is the fleet's too, `e2e/fixtures.ts` gains a `clock` fixture that posts the instant and sets the simulator's cookie (the init script already written in `day.spec.ts` moves into the fixture), and `/api/test/reset` resets `process.env.DIVEDAY_CLOCK` to `E2E_FROZEN_CLOCK` before it reseeds, exactly as it puts every row back — the reset is the one caller allowed to move the clock backwards. The evening is then the morning's shop read at 23:00 shop time (`clock: \"evening\"` resolves to the last half-hour of `shopDayBounds`), with the seeded night dive home and every boat's story intact; `?heads=closed` becomes a `counted` fact written through `recordRollCall` so the fixture stops bypassing the readiness gate; `depart-trip` becomes `clock: sailAt + 61 minutes`; the simulator's `advanceClock` becomes the same fixture call. Visual baselines stay byte-stable because every capture names its instant; the default is the frozen one. Production is untouched: `src/lib/clock.ts` already refuses any override whenever `DATABASE_URL` is set.",
+      "dissolves": "`seed-evening` and `depart-trip` with their tests (~1,220 lines), the simulator's private clock/cookie machinery, the fixture-only board shape 'not reachable through the product', and three docblocks explaining why departures move instead of the clock.",
+      "scope": "src/app/api/test/reset/route.ts (restore the instant), src/app/api/test/clock/route.ts (docblock), e2e/fixtures.ts (clock fixture + cookie init script), e2e/servers.ts, scripts/simulate-day/day.spec.ts (uses the fixture), src/app/api/test/seed-evening/** and depart-trip/** deleted, e2e/visual.spec.ts today-evening captures, e2e/day-close.spec.ts and day-spine.spec.ts and the specs calling depart-trip (4), src/db/facts/counted.ts (L19-1's registry), docs/engineering/testing.md, ADR 20260721 amended.",
+      "firstSlice": "Make `/api/test/reset` restore `DIVEDAY_CLOCK` to `E2E_FROZEN_CLOCK` and add the `clock` fixture (server post + the simulator's cookie init script); re-express the two `today-evening` captures as the seeded board at 23:00 shop time plus a `counted` fact, and delete `seed-evening`.",
+      "effort": "M",
+      "reviews": [
+        "security",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260721-argos-frozen-clock ('one deterministic instant backs the whole fleet' stays the default; its DIVEDAY_CLOCK escape hatch becomes per-test, with the reset as the restore); ADR 20260815-per-test-private-shops ('a per-shop cron would be a product change made for a test' — this touches only the harness route and the reset, never the product); ADR 20260827-clearwater decision 4 (the evening reading is unchanged, it is reached by time rather than by re-laying the board); N-60 (the simulator's advanceClock moves into the shared fixture; its DAY_STATES are untouched); the `seed-evening`, `depart-trip` and `clock` docblocks and `.claude/rules/e2e.md`'s 'clock is frozen at the harness boundary' line (still true; the boundary gains a per-test hand).",
+      "confidence": "medium"
+    },
+    {
+      "id": "L19-4",
+      "title": "Reset is a snapshot hydrate; the schedule restore and its guards go",
+      "kind": "governance",
+      "reading": "`/api/test/reset` runs `resetDemoSchedule` (99 delete calls in `src/db/seed.ts` 1102–1533, plus `restoreMissingStableStaff` to 1660), reseeds ~4,400 rows and then `VACUUM`s, because PGlite has no autovacuum and the reset grew from 1.2s to 8.6s by the 120th call (`reset/route.ts` docblock); it deliberately leaves the shop's configuration alone (`RESET_KEEPS` in `delete-path-coverage.test.ts`), which is why ADR 20260815 added `privateShop` and why every spec is now one of two kinds. A second delete ordering, `deleteDemoShopCascade` (`seed-demo-lifecycle.ts`), serves the reaper and privateShop's teardown; both orderings are hand-maintained topological sorts guarded by `delete-path-coverage.test.ts` (379 lines), `reap-demos.test.ts`, and 17 reset cases in `seed.test.ts` (2 of them named for Codex findings about a missed child table). The unit suite solved the same problem the other way: `src/test/db-template.ts` snapshots a migrated-and-seeded PGlite once per run and 224 test files hydrate an isolated clone in a few hundred milliseconds. `docs/architecture/overview.md`'s settled row says 'PGlite stays per-test … a migrate-once template db is a plausible perf follow-up, but it needs its own design and ADR' — half of which the unit tests have already shipped without one. Each e2e worker's server holds its database in memory (`src/db/client.ts`, the `dataDir === \"memory\"` branch), so the same hydrate is available to it; the one thing a fresh snapshot loses is the worker's cached better-auth session rows (`staffStorageState` in `e2e/fixtures.ts`).",
+      "idea": "The e2e reset becomes a hydrate: `src/db/client.ts` gains an e2e-only `replaceDb(template)` seam (refused whenever `DATABASE_URL` is set, like the clock), the fleet's global setup builds the `history` template once, and `/api/test/reset` swaps the worker's PGlite for a fresh clone — every test starts from a pristine shop including its settings, so the blue-mantis/privateShop split disappears and `privateShop` is only the name for 'mint a second shop', with the four dev logins' sessions seeded into the template under fixed `DIVEDAY_E2E`-only tokens so no test signs in at all. `resetDemoSchedule`, `restoreMissingStableStaff`, `RESET_KEEPS`, `reclaimDeadTuples` and the `READ_ONLY` tag are deleted. Production keeps one delete ordering: the demo keeper (`demo-refresh.ts`) and `resetDemoAction` restore blue-mantis by `deleteDemoShopCascade` + `createDemoShop({ slug: \"blue-mantis\", canonical: true })` — `insertDemoShop` already takes a pinned slug — at the cost of bouncing a signed-in demo visitor once every ~6 weeks at 03:45. One ordering, one guard, one lifecycle: mint and drop.",
+      "dissolves": "The second topological delete and its reset-side guard, the reset-versus-settings distinction that made two kinds of spec, the VACUUM workaround, per-worker sign-in, and the settled question about a template database.",
+      "scope": "src/db/client.ts (replaceDb seam), src/db/seed.ts (resetDemoSchedule, restoreMissingStableStaff deleted, ~560 lines), src/db/seed.test.ts (17 cases), src/db/delete-path-coverage.test.ts (RESET_KEEPS half), src/app/api/test/reset/route.ts, e2e/global-setup.ts, e2e/fixtures.ts (demoReset, privateShop, staffStorageState, READ_ONLY), e2e/helpers.ts (storage-state generation), src/test/db-template.ts (shared with the fleet), src/db/demo-refresh.ts and src/app/actions/demo.ts (drop + re-mint), docs/architecture/overview.md settled row, ADRs 20260815 and 20260812 amended, one new ADR.",
+      "firstSlice": "Add the `replaceDb` seam and make `/api/test/reset` hydrate the `history` template instead of running `resetDemoSchedule`, measuring per-test time against the 1.2s baseline on a full local run; keep the sign-in cache as is for this slice.",
+      "effort": "L",
+      "reviews": [
+        "security",
+        "ADR"
+      ],
+      "conflicts": "docs/architecture/overview.md 'PGlite stays per-test' (isolation is kept — every test still owns a clone; the row's 'needs its own design and ADR' is this ADR, and `src/test/db-template.ts` already made it half-stale); ADR 20260815-per-test-private-shops (superseded: every test's shop is private by construction, privateShop remains for a second shop); ADR 20260812-demo-schedule-keeper ('demo sign-ins survive a restore' becomes a bounce every ~6 weeks; the runway and today passes are unchanged); ADR 20260724-per-visitor-demo-shops (the canonical demo is minted like any other with its slug pinned); ADR 20260723-concurrency-safe-demo-bootstrap (unchanged); `src/db/seed.test.ts`'s 17 reset cases and `delete-path-coverage.test.ts`'s RESET_KEEPS (deleted with the path they guard); #1820 and #1624 (test-budget flakes on the reset-dependent suite are not fixed by this but the reset cost they sit on goes).",
+      "confidence": "medium"
+    }
+  ]
+}

@@ -1,0 +1,186 @@
+{
+  "lensId": "L11",
+  "lens": "Settings",
+  "reading": "`src/app/shop/[shopSlug]/settings/` is 19,025 lines: 18 `page.tsx` routes each with a `loading.tsx`, a 2,426-line `SettingsPage.tsx` hub (61 import lines, 23 `SettingsRow` inline editors, 21 `SettingsDoorRow` doors, a 67-code `noticeMessages` map, 9 permission predicates), a 1,479-line `actions.ts` exporting 39 server actions, and 27 `setShop*` setters in `src/db/shops.ts` over the 64-column `shops` table at `src/db/schema.ts:69-519` with 14 CHECK constraints. The hub's 43 rows are mirrored one-for-one by `SETTINGS_RAIL_ROWS` in `settings-groups.ts` (22 `section` rows, 21 `route` rows) and worded by 368 leaf keys under `settings.main` in `src/i18n/locales/en-US/staff/settings.json` (735 keys, 1,038 lines). Three kinds of thing share that one hub: facts of the shop set once (timezone, units, currency, address, contact — written by `src/app/onboard/actions.ts:135-152` from `shopDefaultsForTimeZone` and nagged into confirmation by `shops.units_confirmed_at`), registers of things with identity (boats, kinds of day, seasons, dive packages, checklist lines, team — 6 under `/settings`, while dive sites, gear, courses, waivers and promos live at `/shop/<slug>/<noun>`, 3 of those with a hub door and 2 without), and connections to the outside (Stripe on the hub, `/settings/whatsapp`, `/settings/integrations`, `/settings/calendar`, `/settings/embed`, `/settings/display`, backups inside `/settings/export`, three import pages). Two of the 18 pages belong to the reader rather than the shop — `settings/security/page.tsx` (TOTP, sessions, recovery codes keyed on `session.user.personId`) and the `assignments` half of `settings/calendar/page.tsx` — and `layout.tsx:38-46`, `staff-destinations.ts:364-376` and the calendar page each spend a paragraph explaining that exception. The eleven register pages are built in three component vocabularies (`SectionCard`+form+`InlineConfirm` on boats/kinds-of-day/seasons/dive-packages; the `ledger` `InsetGroup` on team/dive-sites/gear/waivers/promos; `Pager`+`CourseRoster` on courses; `EmptyState` on safety-checklist), and the six connections spell \"connected\" six ways (`shop_stripe_accounts.disconnected_at`+`canAcceptPayments`, `shop_integrations.status`, `calendar_feeds.revoked_at`, `display_tokens.revoked_at`/`expires_at`, no state column at all on `shop_whatsapp_accounts`, and `export/_components/BackupsSection.tsx`'s 382 lines) with 9 connect/disconnect/revoke actions and the words `connected`/`notConnected`/`disconnected` appearing four times each across the bundles. Twenty of the 64 `shops` columns are defaults or publication switches for some other object — the 6 dock-day columns read by `src/lib/diver-planning.ts`, `packing_list` by `s/[shopSlug]/trips/[id]/_components/PackingSection.tsx`, `emergency_reference` by the manifest and boat card, `tide_window_public` by exactly one file, `public_boat_line` by two, `show_year_on_diveday` by two. ADR 20260911-clear-the-deck already counts \"43 rows and 12 pages\" and proposes concept 5 \"the shop's card\" (nine facts, twelve decided lines, 12 pages → 0), open as slice 21d under H-77 (c); its canvas `TheCard.dc.html` folds \"Boats · Team\" into \"two facts on the card\" and \"Account security\" into \"the Sign-in fact\", which is where the by-who and by-rhythm reading below diverges from it. Issues #1854 (five more sub-pages) and #1870 (13 private eyebrow keys, one shared key used 5 times) are both symptoms of the same missing criterion: nothing in the tree says what a setting is versus a register versus the reader's own account.",
+  "measurements": [
+    {
+      "what": "page.tsx routes under settings/ (each with a loading.tsx)",
+      "value": "18 (+18 loading.tsx)"
+    },
+    {
+      "what": "lines under src/app/shop/[shopSlug]/settings/",
+      "value": "19,025"
+    },
+    {
+      "what": "SettingsPage.tsx size / import lines / SettingsRow / SettingsDoorRow / notice codes / permission predicates",
+      "value": "2,426 lines / 61 / 23 / 21 / 67 / 9"
+    },
+    {
+      "what": "settings/actions.ts size and exported server actions",
+      "value": "1,479 lines, 39 actions"
+    },
+    {
+      "what": "setShop* setters in src/db/shops.ts",
+      "value": "27 (of 750 lines)"
+    },
+    {
+      "what": "shops table columns / CHECK constraints (src/db/schema.ts:69-519)",
+      "value": "64 / 14"
+    },
+    {
+      "what": "SETTINGS_RAIL_ROWS in settings-groups.ts (section / route)",
+      "value": "43 (22 / 21)"
+    },
+    {
+      "what": "en-US staff/settings.json lines / leaf keys / keys under settings.main",
+      "value": "1,038 / 735 / 368"
+    },
+    {
+      "what": "distinct eyebrow keys across settings sub-pages (issue #1870)",
+      "value": "14 (1 shared used 5×, 13 private)"
+    },
+    {
+      "what": "register pages (things with identity) under /settings vs at /shop/<slug>/<noun>",
+      "value": "6 vs 5; 3 of the 5 have a hub door, 2 do not"
+    },
+    {
+      "what": "component vocabularies across the 11 register pages",
+      "value": "3 (SectionCard+InlineConfirm; ledger InsetGroup; Pager+roster) plus EmptyState"
+    },
+    {
+      "what": "pages under /settings that are the reader's, not the shop's",
+      "value": "2 (security; calendar's `assignments` scope)"
+    },
+    {
+      "what": "connection tables / connect-disconnect-revoke actions / surfaces",
+      "value": "6 / 9 / 5 (+ Stripe row on the hub)"
+    },
+    {
+      "what": "shops columns that are defaults or publication switches of another object",
+      "value": "20 of 64"
+    },
+    {
+      "what": "readers of tide_window_public / public_boat_line / show_year_on_diveday outside settings and tests",
+      "value": "1 / 2 / 2 files"
+    },
+    {
+      "what": "rail gates partitioning the hub",
+      "value": "8 (payments, team, waivers, promos, messaging, import, export, boats)"
+    },
+    {
+      "what": "test files under settings/ / e2e specs touching settings surfaces / distinct /settings routes captured in e2e/visual.spec.ts",
+      "value": "13 / 14 / 17"
+    },
+    {
+      "what": "noticeMessages maps beside the hub's 67-code one",
+      "value": "8 files (sub-page-notices.ts + 7 page-local maps)"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "One selection model for the rail and the pane — `currentSettingsRailRowId` decides in one place, and the rail is pinned to the hub's own render so a row added on one side fails the test on the other",
+      "where": "src/app/shop/[shopSlug]/settings/settings-groups.ts:461-478 and _components/SettingsRail.test.tsx"
+    },
+    {
+      "what": "One row grammar — summary first, form on intent, the whole row is the disclosure control, door rows carry no standing caption; the chevron's direction (› vs ⌄) is the one distinction, recorded as a settled question",
+      "where": "settings/_components/SettingsRows.tsx docblock; docs/design/settled-questions.md:42; ADR 20260827-clearwater-surface-language decision 6"
+    },
+    {
+      "what": "The four register extractions (boats, kinds-of-day, seasons, dive-packages) with their `?notice=` codes kept in one file so the action and the page cannot disagree on a spelling",
+      "where": "settings/sub-page-notices.ts; e2e/settings-editor-pages.spec.ts"
+    },
+    {
+      "what": "One data-out surface: export and backups share one route, `/settings/backup` is a 308 to it — the precedent the connections idea below extends to data-in and to the outside",
+      "where": "ADR 20260806-one-data-out-surface; settings/export/page.tsx"
+    },
+    {
+      "what": "Every `shops` column states its reason and its reader in its docblock, including why one-per-shop data stays on `shops` rather than a 1:1 table (`emergency_reference`: read wholesale on every manifest, rides the offline snapshot) — a recorded reason that still holds, so no table split is proposed here",
+      "where": "src/db/schema.ts:246-264, 130-145, 113-129"
+    },
+    {
+      "what": "Onboarding derives currency and both units from the timezone and asks the shop to confirm rather than assume — the set-once facts already arrive filled",
+      "where": "src/lib/curated-defaults.ts; src/app/onboard/actions.ts:145-152; shops.units_confirmed_at"
+    },
+    {
+      "what": "Settings is measured as the calmest surface in the app (9.1 controls per 1,000 px at rest), so density is not the problem — kind-confusion is",
+      "where": "docs/design/settled-questions.md:50"
+    },
+    {
+      "what": "Every Save on the hub demotes to secondary and only the Stripe Connect CTA keeps primary weight — one primary, held",
+      "where": "docs/design/forms-and-controls.md:812-830"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L11-1",
+      "title": "The reader's own account leaves the shop's Settings",
+      "kind": "surface",
+      "reading": "Two of the 18 pages under `/settings` are about the signed-in person, not the shop: `settings/security/page.tsx` reads `userAccounts` by `session.user.personId` and holds TOTP enrol/disable, session revoke and recovery codes (30 `settings.security.*` keys), and `settings/calendar/page.tsx` issues an `assignments`-scope feed for the reader's own shifts (`calendar_feeds.scope`, `src/db/schema.ts:6455`). Both run `requireShopSurface` with no `allow` gate, which is why `layout.tsx:38-46` explains a flex-not-grid layout for a reader who gets the pane but no rail, why `staff-destinations.ts:364-376` gives the calendar feed its own destination \"filed there by URL only\" so the Set up group never renders empty, and why the security page carries a paragraph on the tenant read its old `generateMetadata` leaked. ADR 20260813-more-is-the-shops-other-door already decided that the identity menu holds \"what is about this reader, this device, this session — language and sign out\" (`src/components/ShopIdentityMenu.tsx:21-24`), and these two pages are exactly that kind of thing living at the wrong address. The clear-the-deck canvas folds security into \"the Sign-in fact\" on the shop's card, which mistakes a person's second factor for a fact of the shop. The calendar page's own comment says the `shop_trips` feed is \"a rolling export of the operation\" — the shop half already knows where it belongs.",
+      "idea": "One surface for the reader — `/shop/<slug>/me` (or `/account`) — reached from the identity menu beside language and sign out, holding sign-in security and the reader's own calendar feed as two rows in the same `InsetGroup` grammar the hub uses. `/settings` then means one thing: the shop, gated by `canPersonManageShopSettings` in the layout itself, with no ungated exception to explain. The `shop_trips` feed row moves to `/settings/export` beside backups, where the page's own words already file it. The identity menu's rule (\"this reader, this device, this session\") becomes the one criterion for what lives on Me, and the Set up group no longer needs a personal destination to stay non-empty. #1870 loses two of its thirteen private eyebrow keys for free because the two pages are no longer under Settings at all.",
+      "dissolves": "The ungated exception in `settings/layout.tsx`, the `calendarFeed` destination's special-case paragraph, the `settings.security` and `calendar` eyebrow keys, and the idea that a person's TOTP is a shop setting.",
+      "scope": "Routes `settings/security` and `settings/calendar` → `me/security` and `me/calendar` (no redirects, H-49); `src/lib/staff-destinations.ts` (`calendarFeed` entry and the `settings` gate); `src/components/ShopIdentityMenu.tsx` (one door); `settings/layout.tsx` and `settings-groups.ts` (two route rows go, layout gains the gate); `settings/export` gains the `shop_trips` feed row; bundles `settings.security.*` and `calendar.*` move namespace in en-US and es-ES; `e2e/security-settings.spec.ts`, the 4 `/settings/calendar` visual captures, `scripts/route-coverage.json`; ADR 20260907-in-your-hands's sentence \"created in Settings → Security\" amended; docs/design/surfaces.md.",
+      "firstSlice": "Move `settings/security` to `me/security`, add the identity-menu door, put the `canPersonManageShopSettings` gate on `settings/layout.tsx`, delete the flex-not-grid comment, and re-point `security-settings.spec.ts`; the calendar split follows as slice two.",
+      "effort": "S",
+      "reviews": [
+        "security",
+        "design",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260907-in-your-hands (passkey \"created in Settings → Security\" — the mechanism stays, the address moves); ADR 20260813-more-is-the-shops-other-door (applies its own identity-menu rule to two pages that predate it); H-70 (passkeys — untouched); ADR 20260911-clear-the-deck concept 5 (its \"Sign-in fact\" on the card is a person's, not the shop's — this idea gives it the right owner whichever way H-77 c goes); #1870 (subsumes two of its thirteen keys).",
+      "confidence": "high"
+    },
+    {
+      "id": "L11-2",
+      "title": "A register is not a setting: eleven registers, one grammar, one address",
+      "kind": "concept",
+      "reading": "Eleven shop-owned vocabularies share one table shape — `shop_id`, a `name`/`label`/`title`, and `deleted_at` on 9 of them (`boats`, `trip_lenses`, `season_events`, `dive_packages`, `pre_departure_checklist_items`, `dive_sites`, `waiver_templates`, `gear_items`, `staff_credentials`) — and a departure, a diver or a booking points at every one of them. Six of the eleven live under `/settings` (team, boats, kinds-of-day, seasons, dive-packages under the Money group, safety-checklist) and five at `/shop/<slug>/<noun>` (dive-sites, gear, courses, waivers, promos); the hub gives three of those five a `SettingsDoorRow` that leaves the namespace and gives courses and gear none (`settings-groups.ts:161-173, 313-318`). The eleven pages are built in three vocabularies — `SectionCard`+form+`InlineConfirm` on the four newest, the `ledger` `InsetGroup` on team/dive-sites/gear/waivers/promos, `Pager`+`CourseRoster` on courses — so a shop learns three ways to add a thing. The criterion the four extractions used (`settings-groups.ts:32-40`: \"a row whose editor is a list, or more than about three fields, is not on this list — it has a page\") is about form length, not about what a thing is, which is why #1854 now proposes five more `/settings` pages for rental prices, dock-day rhythm, profile, emergency reference and what-we-rent: forms of the shop's facts mistaken for registers. ADR 20260815-minimal-gear-register already states the register's rule — opt-in by presence, zero rows means no UI anywhere — and only gear obeys it. The clear-the-deck canvas folds \"Boats · Team\" into \"two facts on the card, edited in place\", which is right for a two-hull shop and wrong for a register as such: a register's rhythm is the world's (a new hull, a hire, a season), not onboarding's.",
+      "idea": "Name the concept: a **register** is a table of the shop's things with identity (`shop_id` + a name + `deleted_at`) that a departure, a diver or a booking points at, edited whenever the world changes; a **setting** is a fact of the shop with no identity, set once. Every register lives at `/shop/<slug>/<noun>` in one anatomy — the `ledger` `InsetGroup`, a row whose own tap opens its editor, one Add at the foot, opt-in by presence (no rows, no UI — the gear rule generalised), Delete soft and worded Delete — and carries its own gate (gear is any-staff per H-14's 2026-08-20 amendment; team is `canManageStaffAccounts`) rather than borrowing Settings'. The shop's page states each register as one row with its count (\"Boats · 2\", \"Kinds of day · 7\"), never as a door list; Settings keeps facts and connections only. #1854's five whole-form rows are facts, so they stay on the shop's page (or become the card under H-77 c) and no new sub-pages are cut. The glossary gains \"register\" as a term, and `check:architecture` can hold the shape mechanically: a table with that column triple gets a page in that grammar.",
+      "dissolves": "Six `/settings/<register>` routes, the three out-of-namespace door rows, `sub-page-notices.ts`, two of the three register vocabularies, and #1854.",
+      "scope": "Routes `settings/{team,boats,kinds-of-day,seasons,dive-packages,safety-checklist}` → `/{team,boats,kinds-of-day,seasons,packages,checklist}` with no redirects (H-49); `settings-groups.ts` (6 route rows and 3 door rows go); `SettingsPage.tsx` (door rows → one count inset); `src/lib/staff-destinations.ts` (`team` suffix); the four `SectionCard` pages and `safety-checklist` rewritten onto `src/components/ui/ledger.tsx`; `e2e/settings-editor-pages.spec.ts`, `season-events.spec.ts`, `schedule-lenses.spec.ts`, `role-lens.spec.ts`; six visual captures; `scripts/route-coverage.json`; bundles `boats`, `lenses`, `seasonEvents`, `settings.team`, `settings.safetyChecklist`, `settings.main.divePackages` (en-US, es-ES); docs/product/glossary.md; docs/design/surfaces.md; an ADR.",
+      "firstSlice": "Move the four newest registers (boats, kinds-of-day, seasons, dive-packages — they already share one `SectionCard`+`InlineConfirm` anatomy) up to `/shop/<slug>/<noun>` on the ledger grammar, replace their four hub doors with one count inset, and delete `sub-page-notices.ts`; write the ADR that defines register versus setting.",
+      "effort": "L",
+      "reviews": [
+        "design",
+        "ADR",
+        "domain"
+      ],
+      "conflicts": "ADR 20260911-clear-the-deck concept 1 \"Three words\" (this is the grammar of its \"Shop\" drawer, decided independently of the H-77 a pick) and concept 5 (a register is a count-row on the card, not \"two facts edited in place\"); ADR 20260827-clearwater-surface-language decision 6 (the rail shrinks to facts and connections; the pane grammar is untouched); ADR 20260815-minimal-gear-register (its opt-in-by-presence rule generalised to eleven registers); ADR 20260824-pre-departure-safety-check and 20260804-boat-resource-model (tables untouched, addresses move); H-14 (each register's gate is its own); #1854 (subsumed and reversed — its five rows are facts, not registers); #1870 (six fewer sub-pages to re-key).",
+      "confidence": "medium"
+    },
+    {
+      "id": "L11-3",
+      "title": "A setting is one registry row; hub, rail, notices and actions derive",
+      "kind": "shape",
+      "reading": "One setting is spelled in five parallel places today: an id in `SECTION_IDS` (22) with a fragment override in `SECTION_FRAGMENTS` (8), a rail row in `SETTINGS_RAIL_ROWS` (43) carrying label key, group and gate, a `SettingsRow` block in `SettingsPage.tsx` (23 blocks across 2,426 lines) that formats the value and embeds the form, a `save*Action` in `actions.ts` (39 exports, 1,479 lines) that parses and calls one of 27 `setShop*` setters in `src/db/shops.ts`, and a set of `?notice=` codes in the hub's 67-code `noticeMessages` map — plus 8 more notice maps in sub-pages that exist because importing the hub's would \"drag a 3,000-line module into its graph to read four strings\" (`sub-page-notices.ts:7-11`). `settings-groups.ts:42-44` already argues that two lists of section ids \"is exactly the drift decision 6 would otherwise produce\", and its tests pin the rail to the hub's render — the registry instinct is there, stopped at two of the five lists. The precedent is `src/lib/staff-destinations.ts`: one registry, three consumers, a single `currentStaffNavDestinationId`. The clear-the-deck floor's \"switch\" row (H-77 c) says each retired switch takes \"its guard, test, message keys and the conditional it drove\" with it — five edits per row under the current shape.",
+      "idea": "One `SHOP_SETTINGS` registry in `settings-groups.ts` (or `src/lib/shop-settings.ts`): per row an id, group, kind (`fact` with columns and a whole-record parser in the `parseDockDayRhythm` style, or `door` with a path), the label key, the gate, and the setter. The hub renders the registry in order; the rail derives as it already half does; the notice grammar collapses to three outcomes per row — saved, invalid, not-authorized — worded once, so the 67 codes and the 8 side maps become one derivation; and one `saveShopSettingAction(formData)` dispatches by the row's id under the row's own gate, replacing 22 near-identical actions while keeping the dock-day rule that a record saves whole or not at all. Retiring a switch under H-77 c becomes deleting one registry row and the column; adding one is one row and one column; the eyebrow, the `loading.tsx` shape and the route-coverage entry follow from the row's kind. `SettingsPage.tsx` shrinks from a 2,426-line hand-kept document to a render over the registry, and the sub-page notice files go.",
+      "dissolves": "`SECTION_IDS`, `SECTION_FRAGMENTS`, the hub's 67-code `noticeMessages`, `sub-page-notices.ts` and the seven page-local notice maps, and 22 of the 39 actions in `settings/actions.ts`.",
+      "scope": "`settings-groups.ts` (becomes the registry), `SettingsPage.tsx`, `settings/actions.ts`, `src/db/shops.ts` (setters keyed from the registry), `settings/_components/SettingsRail.tsx` and its test, `SettingsPage.test.tsx`, `actions.authz.test.ts` (one dispatcher must prove every gate), `settings.main.notice.*` keys in en-US and es-ES, `scripts/check-repo` notice-code guard; an ADR.",
+      "firstSlice": "Fold `SECTION_IDS`, `SECTION_FRAGMENTS` and the hub's notice map into `SETTINGS_RAIL_ROWS` as one typed registry with a `kind` per row, and make the hub's three-outcome notice derive from it — no action or setter changes yet, so `SettingsRail.test.tsx` and `SettingsPage.test.tsx` stay the proof.",
+      "effort": "M",
+      "reviews": [
+        "security",
+        "ADR"
+      ],
+      "conflicts": "workflow.md \"server actions default to inline\" (the settings tree already colocates `actions.ts`; one dispatcher is fewer actions, not more); ADR 20260812-configurable-dock-day-rhythm (\"saved as one record\" — the registry keeps one whole-record parser per row); ADR 20260827-clearwater-surface-language decision 6g (ids and fragments stay put — the registry carries the fragment); ADR 20260911-clear-the-deck slice 21d (this makes its sweep a row deletion); #1870 (the eyebrow derives from the row); #1845 (a notice map keyed the wrong way — the derivation removes the hand-keyed maps that fail this way).",
+      "confidence": "medium"
+    },
+    {
+      "id": "L11-4",
+      "title": "Six ways to be connected are one Connection with one state word",
+      "kind": "system",
+      "reading": "The Data & integrations group is 12 rail rows over 11 pages, and six of them are the same kind of thing — something outside the shop that DiveDay talks to or that reads DiveDay — each in its own table, page, action set and state vocabulary: `shop_stripe_accounts` (state from `disconnected_at` and `canAcceptPayments`, edited on the hub), `shop_whatsapp_accounts` (no state column; `settings/whatsapp/page.tsx` 266 lines, `actions.ts` 261), `shop_integrations` (`integration_connection_status` enum; `settings/integrations/page.tsx` 469 lines, `actions.ts` 267, four providers), `calendar_feeds` (`revoked_at`, `last_accessed_at`), `display_tokens` (`revoked_at`, `expires_at`, `last_shown_at`; `settings/display` 234 + 283 lines), and `shop_backup_destinations` with `shop_backup_deliveries` (`export/_components/BackupsSection.tsx` 382 lines), plus the embed snippet (`settings/embed/EmbedGenerator.tsx` 360 lines). Nine actions spell the same two acts — `disconnectAction`, `disconnectBackupAction`, `disconnectIntegrationAction`, `disconnectWhatsAppAction`, three `start*ConnectionAction`s, `revokeSessionAction`, `revokeAllSessionsAction` — and the bundles carry `connected`, `notConnected` and `disconnected` four times each beside `summaryNotConnected`, `notReadyBadge`, `revoked`, `expired` and `active`. Every one of the six tables already holds a last-activity instant (`last_synced_at`, `last_accessed_at`, `last_shown_at`, `connected_at`, a delivery row), so the shared shape — name, state, last seen, one act — is in the data and missing only from the concept. ADR 20260806-one-data-out-surface merged export and backups into one route because \"a shop arrives at Settings asking one of two questions\"; the clear-the-deck floor asks for \"three connects\", \"one embed with one look\" and \"the lobby display is the storefront full-screen\" (H-77 c) but says nothing about the grammar those three land in.",
+      "idea": "One concept, **Connection**: a thing outside the shop, with one state vocabulary — not connected · connected · needs attention · disconnected — derived per provider by a single `connectionState()` in `src/lib/connections.ts` from each table's own columns (no new state column, no new table), one ledger surface `/settings/connections` where each row is the provider, its state word, when it was last seen and the one act (Connect / Disconnect / Revoke), and one notice grammar. Things that push out (Stripe, WhatsApp, Shopify/QuickBooks/Xero/Zapier, the backup destination) and things that read in (the shop calendar feed, display links, the embed snippet) are two sections of the same ledger, because a shop asks the same question of both: is it on, and when did it last work. The provider flows keep their own mechanism inside the row's act — Meta's embedded signup button, Stripe's Connect redirect, the OAuth starts — but the pages around them go. The credential tables stay, since they seal different secrets; only the surfaces and the words merge. Data-in (three import pages, one wizard each) and data-out (export) stay as the group's other two rows, so the group reads as three rows: Connections, Bring data in, Take data out.",
+      "dissolves": "`/settings/whatsapp`, `/settings/integrations`, `/settings/display`, `/settings/embed`, the hub's Stripe row and the backups half of `/settings/export` — five pages and a section become one; four spellings of \"connected\" become one.",
+      "scope": "`src/lib/connections.ts` (new, framework-free state derivation with tests); `settings/connections/page.tsx` + `loading.tsx` on the ledger grammar; `settings/{whatsapp,integrations,display,embed}` deleted, their actions moved beside the ledger; `export/_components/BackupsSection.tsx` folded; `settings-groups.ts` (11 rows → 3); `src/features/integrations` (registry untouched; the dispatcher's status feeds `connectionState`); bundles `integrations`, `whatsapp`, `display`, `settings.embed`, `settings.main.stripe`, `backup` in en-US and es-ES; `e2e/integrations.spec.ts`, `whatsapp-settings.spec.ts`, `embed-catalogue.spec.ts`, `backup.spec.ts`, `follow-the-boat.spec.ts`; visual captures for 5 routes; `scripts/route-coverage.json`; glossary (\"connection\"); an ADR.",
+      "firstSlice": "Write `src/lib/connections.ts` with `connectionState()` over the six existing row shapes and its test, then render `/settings/connections` as a read-only ledger beside the existing pages so the one vocabulary is visible before any page is deleted; the Stripe row and the backups section are the first two to move in.",
+      "effort": "L",
+      "reviews": [
+        "security",
+        "design",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260911-clear-the-deck floor rows \"The outside\" (three connects, one embed, lobby display as the storefront full-screen — this is the ledger those reductions land in, whichever way H-77 c goes); ADR 20260806-one-data-out-surface (its two-questions argument extended; export keeps its own row as data, not connection); ADR 20260730-feature-module-contracts (`src/features/integrations` keeps its public surface; the state derivation is lib); ADR 20260908-one-hand lever U (the boat-line switch on Display goes with the page — it is a publication switch, and H-77 c decides its fate); #1766, #1767, #1769 (WhatsApp connect ordering and chains — live inside the row's act, unchanged); N-23 (display links — the rows survive as \"reads in\" connections).",
+      "confidence": "medium"
+    }
+  ]
+}

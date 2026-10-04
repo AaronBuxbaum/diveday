@@ -1,0 +1,208 @@
+{
+  "lensId": "L17",
+  "lens": "Feature slices versus layers",
+  "reading": "The substrate is 450 modules and 147,654 lines across src/lib (299 modules) and src/db (203, of which 74 are seed-*.ts), beside 3 feature modules that 16 files under src/app import. Its file graph is nearly acyclic (461 nodes, 3 cycles, 17 files) but its centre is one 13-file knot (src/db/today.ts, bookings.ts, manifests.ts, trips.ts, trips-crew.ts, trips-queries.ts, trips-record.ts, blockers.ts, crew-requests.ts, gifts.ts, refunds.ts, trip-promos.ts, src/lib/trip-dives.ts) and a hub tier (src/lib/clock.ts 172 substrate importers, src/db/trips-live.ts 59, src/lib/calendar-date.ts 49, src/lib/readiness.ts 37), so no pillar is a leaf: src/db/gear.ts is read by 8 trips-*/bookings modules, waivers by readiness, manifests and bookings by today. Slicing by pillar is therefore the wrong unit; the pillar is docs/product/vision.md's vocabulary, not the code's grammar. The code's own unit is the concept twin: 52 basenames exist in both src/lib and src/db, 46 with db/x importing lib/x, 48,676 lines between them, and each twin is spread over six directories (src/lib/today.ts, src/db/today.ts, src/i18n/today-labels.ts, src/i18n/locales/en-US/staff/today.json, src/app/shop/[shopSlug]/page.tsx, e2e), with 33 of 35 src/i18n/*-labels.ts files read only by routes. Around the knot, 141 of 450 modules have no substrate importer (125 reached only from src/app), and an importers-first peel at twin granularity moves 116 concepts in wave one and 198 in six waves without editing anything that stays; ADR 20260730-feature-module-contracts named these \"the next candidate\" but no mechanism, so 3 modules moved in 7 weeks while src/lib grew 166 to 299. Pages pay for the flatness: src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx imports 17 lib + 12 db modules, src/app/s/[shopSlug]/trips/[id]/page.tsx 22 + 14, and 265 app files reach 136 distinct src/db modules directly. The one written substrate contract, src/db/trips.ts's \"never a trips-* sibling\", is breached by 14 outside files and omits 4 of its 12 siblings, and 29 files import past src/lib/notifications|observability|storage/index.ts; scripts/check-architecture.mjs guards only src/features and scripts/architecture-baseline.json is empty. The map is hand-written in three places (scripts/task-context-data.mjs with 17 areas, 151 lib/db paths and 381 quoted lines; AGENTS.md's route map; .claude/rules/{db,domain}.md) with no src/lib/README.md or src/db/README.md and a leading doc comment on 128/299 lib and 13/153 db modules. Verdict: keep src/lib and src/db flat for the knot and hub (129 modules with substrate fan-in of 3 or more), give every zero-fan-in concept the feature-module folder in peel order, make every index a guarded door, lift Today above the graph it reads, and let the module's README be the map.",
+  "measurements": [
+    {
+      "what": "src/lib modules (non-test, including 5 subdirs) / top-level",
+      "value": "299 / 251"
+    },
+    {
+      "what": "src/db modules (non-test) / seed-*.ts among them / query modules",
+      "value": "203 / 74 / 129"
+    },
+    {
+      "what": "Substrate lines (src/lib + src/db, non-test, non-seed) / seed lines",
+      "value": "147,654 / 11,689"
+    },
+    {
+      "what": "src/features modules / app files importing them (backup-export, calendar-sync, integrations)",
+      "value": "3 / 16 (6, 5, 6)"
+    },
+    {
+      "what": "Basenames present in both src/lib and src/db (twins) / with db/x importing lib/x / lines in twins",
+      "value": "52 / 46 / 48,676"
+    },
+    {
+      "what": "src/lib files importing @/db / src/db files importing @/lib",
+      "value": "29 / 169"
+    },
+    {
+      "what": "lib-to-lib import edges / db-to-db edges / db modules importing another db module",
+      "value": "850 / 490 / 140 of 203"
+    },
+    {
+      "what": "manifest/page.tsx imports: lib / db / i18n / components / local (1,214 lines)",
+      "value": "17 / 12 / 8 / 10 / 12"
+    },
+    {
+      "what": "s/[shopSlug]/trips/[id]/page.tsx imports: lib / db / i18n (872 lines); shop/[shopSlug]/trips/[id]/page.tsx lib / db (1,006 lines); shop/[shopSlug]/page.tsx lib / db (1,095 lines); check-in/page.tsx lib / db (932 lines); gear/page.tsx lib / db",
+      "value": "22 / 14 / 9; 15 / 5; 18 / 15; 10 / 5; 7 / 1"
+    },
+    {
+      "what": "App files importing @/db directly / distinct db modules reached / distinct lib modules reached / app files importing @/lib",
+      "value": "265 / 136 / 235 / 403"
+    },
+    {
+      "what": "Lib modules imported by exactly one app file / by one app file and nothing else / by 5+ app files",
+      "value": "71 / 25 / 68"
+    },
+    {
+      "what": "Substrate modules (excl. seed, schema, client) / with zero substrate importers / of those reached from app or components",
+      "value": "450 / 141 / 125"
+    },
+    {
+      "what": "Substrate modules with substrate fan-in >= 3 / >= 5 / >= 10 / >= 20",
+      "value": "129 / 72 / 27 / 8 (clock 172, trips-live 59, calendar-date 49, readiness 37, zoned 28, trips 27, authz 27, log 22)"
+    },
+    {
+      "what": "Importers-first peel at twin granularity: concepts / wave sizes / downstream of a cycle",
+      "value": "364 / 116, 49, 22, 7, 3, 1 / 166"
+    },
+    {
+      "what": "Strongly connected components: file graph / concept graph (twins merged)",
+      "value": "3 SCCs, 17 files (one of 13) / 4 SCCs, 37 concepts (one of 30)"
+    },
+    {
+      "what": "Outside files importing a @/db/trips-* sibling past the barrel / siblings missing from the barrel's table / files deep-importing lib subdirs that have an index / lib subdirs without an index",
+      "value": "14 / 4 of 12 / 29 / 2 (payments, usage)"
+    },
+    {
+      "what": "src/db/today.ts + src/lib/today.ts lines and db/lib imports; today+closeout+blockers unit",
+      "value": "2,315 (22 db) + 1,515 (9 lib); 6 files, 5,991 lines"
+    },
+    {
+      "what": "Substrate importers pinning Today (symbol taken)",
+      "value": "db/closeout, db/crew-requests:22 and db/staffing:22 (courseCrewCountsByTrip), lib/blockers:3 (blockerDestination)"
+    },
+    {
+      "what": "src/db/schema.ts imports from src/lib (lines 21-32): type-only / value",
+      "value": "9 / 3 (certification-options, plan-change, rentals)"
+    },
+    {
+      "what": "src/i18n/*-labels.ts files / importing lib or db / type-only / read only by routes; src/components files importing @/lib / @/db",
+      "value": "35 / 35 / 25 / 33; 64 / 6"
+    },
+    {
+      "what": "scripts/task-context-data.mjs areas / src/lib+src/db paths / src/app paths / quoted lines",
+      "value": "17 / 151 / 26 / 381"
+    },
+    {
+      "what": "Scripts naming src/lib or src/db; markdown files naming them: ADRs / live docs",
+      "value": "58; 205 / 81"
+    },
+    {
+      "what": "Modules opening with a doc comment: src/lib / src/db (non-seed); README.md under src/lib or src/db",
+      "value": "128 of 299 / 13 of 153; 0"
+    },
+    {
+      "what": "check-in twin (lib 179 + db 1,129 lines) + kiosk-check-in (338 + 285): substrate importers / app importers / route-folder files",
+      "value": "0 / 11 / 45"
+    },
+    {
+      "what": "2-cycles inside the substrate seam",
+      "value": "src/db/client.ts:13 <-> demo-refresh, client <-> seed, db/dive-packages <-> db/orders, db/schema <-> lib/courses"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "The dependency direction app -> features -> lib/db is enforced with zero outstanding violations: the ratchet in architecture-baseline.json has wound to an empty file, and the forbidden table covers src/lib, src/db, src/features, src/components, src/worker and src/i18n.",
+      "where": "scripts/check-architecture.mjs lines 57-69; scripts/architecture-baseline.json"
+    },
+    {
+      "what": "The three feature modules honour the ADR's shape: index-only surfaces, READMEs with owns / does not own / invariants, and backup-export composing calendar-sync through its index, so the ADR's 'revisit if two features share logic' clause is already exercised without pain.",
+      "where": "src/features/{backup-export,calendar-sync,integrations}/{index.ts,README.md}; ADR 20260730-feature-module-contracts"
+    },
+    {
+      "what": "The substrate's file graph is almost a DAG for its size: 461 files, 3 cycles, 17 files in them, across 147,654 lines.",
+      "where": "src/lib, src/db (measured by SCC over import edges)"
+    },
+    {
+      "what": "src/db/trips.ts is a genuine barrel with a sibling table and the rule 'adding a function to a sibling does not publish it'; src/lib/notifications/index.ts is a 77-line surface over its siblings; src/db/seed.ts orchestrates 74 scenario modules.",
+      "where": "src/db/trips.ts lines 1-25; src/lib/notifications/index.ts; ADR 20260803-seed-scenario-modules"
+    },
+    {
+      "what": "The lib/db split's contract is stated in words where it matters most: Today's framework-free half says it never queries and that src/db/today.ts gathers the facts and calls in.",
+      "where": "src/lib/today.ts lines 1-16"
+    },
+    {
+      "what": "The one substrate primitive with 59 importers has its own guard: every read of trips must carry liveTrip() or say why.",
+      "where": "src/db/trips-live.ts; scripts/check-live-trips.mjs"
+    },
+    {
+      "what": "pnpm task:context carries a real specification per area (381 quoted lines of goals, invariants and focused validation), and check:agents verifies every path it names exists.",
+      "where": "scripts/task-context-data.mjs; scripts/check-agents.mjs"
+    },
+    {
+      "what": "The settled ruling that the dive-site helpers stay split is respected by every idea here: files move into folders, nothing is merged.",
+      "where": "docs/architecture/overview.md 'Settled shape decisions'"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L17-1",
+      "title": "Slice by concept twin in fan-in order, never by pillar",
+      "kind": "shape",
+      "reading": "No pillar is a leaf: src/db/gear.ts is imported by 8 substrate modules (bookings, move-preflight, today, trips-minimum, trips-prep, trips-record, trips-schedule, trips-series), src/lib/waivers.ts by 15, src/lib/readiness.ts by 37, and src/db/bookings.ts, src/db/manifests.ts and src/db/today.ts sit inside one 13-file import cycle. The code's own unit is the twin: 52 basenames exist in both src/lib and src/db, 46 with db/x importing lib/x, 48,676 lines between them, and src/lib/today.ts lines 7-9 state the contract in words. 141 of 450 substrate modules have no substrate importer and 125 of those are reached only from src/app; peeling the twin graph importers-first moves 116 concepts in wave one and 198 across six waves with no edit to anything that stays. src/lib/check-in.ts (179 lines) + src/db/check-in.ts (1,129) + the kiosk-check-in twin (338 + 285) have zero substrate importers, 11 app importers in 9 folders, a 45-file route folder that already colocates blocker-disclosure.ts, focus.ts and salvage-copy.ts with their tests, staff/checkIn.json and an e2e spec: a feature module in every respect but the folder. ADR 20260730-feature-module-contracts §What stays where says 'the next feature that has its own tables, its own queries, and a non-trivial surface is the next candidate' and names no mechanism; since it was written src/lib grew 166 to 299 and src/db 105 to 203 while 3 modules moved. Two couplings bound the move and are measured: src/db/schema.ts lines 21-32 import 12 src/lib modules (9 type, 3 value) that rule 4 of scripts/check-architecture.mjs refuses once their owners move, and 35 of 35 src/i18n/*-labels.ts files import lib/db (33 read only by routes) while 64 src/components files import @/lib, both under the guard's 'may not import src/features' rows at lines 61 and 68.",
+      "idea": "The verdict: the flat substrate is the right shape for the knot and the hub (the 129 modules with substrate fan-in of 3 or more, led by clock 172, trips-live 59, calendar-date 49, readiness 37) and the wrong shape for everything with fan-in 0. The grammar becomes one sentence: a module nothing in src/lib or src/db imports is a feature module, src/features/<concept>/{rules.ts, store.ts, labels.ts, index.ts, README.md} in ADR 20260730's shape, with lib/x becoming rules.ts, db/x store.ts and src/i18n/x-labels.ts labels.ts, moved in importers-first waves of 116, 49, 22, 7, 3 and 1. What remains in src/lib and src/db is named for what it is: primitives (clock, calendar-date, zoned, intl-cache, money, format, log, uuid, authz, paging, trips-live) and the departure/readiness knot. scripts/check-architecture.mjs gains rule 5: a substrate module with zero substrate importers is a leaf still in substrate, counted per file in architecture-baseline.json, and that count may only fall; the ratchet is already written and the baseline is empty today. Schema's 12 lib imports are cut first, the three constants into src/db beside the enums they feed and the nine jsonb shapes into src/db/json-shapes.ts, so rule 4 holds for every subsequent move. A predicate a shared component needs (src/components/OfflineManifestView.tsx line 46 takes two from src/lib/check-in.ts) stays in a src/lib primitive, which is where #1694's one 'did this person dive' predicate lands. Nothing merges, so the settled 'dive-site helpers stay split' ruling is untouched.",
+      "dissolves": "The reading of src/lib as 'domain' and src/db as 'queries' as the primary axis for anything outside the knot, and the ADR's unfulfilled 'next candidate' clause, which becomes a measured count that only falls.",
+      "scope": "scripts/check-architecture.mjs (+ its test) and scripts/architecture-baseline.json; src/db/schema.ts lines 21-32 and a new src/db/json-shapes.ts; per wave, the moved lib/db/labels files, their tests, and a codemod over their src/app importers (@/lib/x, @/db/x, @/i18n/x-labels to @/features/x); the 58 scripts naming src/lib|src/db roots (check-clock, check-domain-strings proseFreeFiles, check-live-trips) reviewed once for src/features coverage; AGENTS.md route-map rows, .claude/rules/domain.md and db.md 'Where things are', scripts/task-context-data.mjs's 151 paths; docs/architecture/overview.md Layout; an ADR superseding 20260730's 'not a migration order'. No message bundle, e2e spec or visual baseline moves.",
+      "firstSlice": "Add rule 5 and bank the leaf count into architecture-baseline.json, cut schema.ts's three value and nine type imports into src/db, and move check-in + kiosk-check-in (four files, 1,931 lines, zero substrate importers, 11 app importers) with their route-folder helpers into src/features/check-in with README and index, leaving the two OfflineManifestView predicates in src/lib; one PR, no user-visible change.",
+      "effort": "L",
+      "reviews": [
+        "ADR",
+        "security",
+        "domain"
+      ],
+      "conflicts": "ADR 20260730-feature-module-contracts (extended: supersedes 'nothing existing moves', keeps rules 1-4 and the single schema file); ADR-0005 one schema file (respected, only imports move); overview.md settled 'dive-site helpers stay split' (no merge); ADR 20260803-seed-scenario-modules (seed untouched); roadmap 'check-in as boarding's first rung' (the first slice gives that concept its folder); #1694 (the shared predicate is where a module boundary lands); L17-4 (needed before the six twins pinned by today can move); L17-2 (makes a moved module already inside the door rule).",
+      "confidence": "high"
+    },
+    {
+      "id": "L17-2",
+      "title": "Every index is a door, and one guard knows them all",
+      "kind": "governance",
+      "reading": "scripts/check-architecture.mjs lines 166-191 enforce index-only imports for src/features alone, while the same contract exists twice more in prose with no guard. src/db/trips.ts lines 3-5 say 'everything the rest of the app reaches for is @/db/trips, never a trips-* sibling', yet 14 files under src/app and src/components import trips-live (7), trips-guests (3), trips-overview (2), trips-crew (2) and trips-prep (1) directly, and the sibling table at lines 9-19 lists 8 of the 12 trips-*.ts files. src/lib/notifications, src/lib/observability and src/lib/storage each publish an index.ts and 29 app, component and feature files import past one; src/lib/payments (the seam named in .claude/rules/domain.md) and src/lib/usage have no index at all. docs/product/shipped.md line 2514 records the trips split as 'every public export byte-identical and no importer changed', so the barrel was a contract on day one and drifted with nothing to say so. The ratchet that would hold it is already written: scripts/architecture-baseline.json is an empty file whose one comment says the number may only go down.",
+      "idea": "One rule replaces three conventions: any directory under src/lib, src/db or src/features that contains an index.ts is a module, and from outside that directory only the index is importable. The trips siblings move into src/db/trips/ with the barrel as its index.ts so the same rule covers them, with no export changed and the sibling table becoming the folder listing; payments and usage get the index they lack. Rule 2's featureOf() becomes moduleOf() keyed on 'has an index.ts', the 43 current breaches (14 + 29) are banked into the baseline and wound down, and 'adding a function to a sibling does not publish it' stops being prose and becomes the guard's refusal message. Afterwards a feature module, a lib subdir and a db barrel are the same thing to the guard, which is what lets L17-1's waves cost nothing in enforcement: a moved module is already inside the rule.",
+      "dissolves": "The distinction between feature module, lib subdir with an index, and db barrel as three door conventions, and the prose-only half of src/db/trips.ts's contract.",
+      "scope": "scripts/check-architecture.mjs and scripts/check-architecture.test.mjs; scripts/architecture-baseline.json; src/db/trips-*.ts to src/db/trips/*.ts with src/db/trips/index.ts and the 14 outside importers rewritten to @/db/trips; new src/lib/payments/index.ts and src/lib/usage/index.ts; 29 deep-import call sites; scripts/check-live-trips.mjs (reads src/db/trips-live.ts by path); .claude/rules/db.md 'two barrels' bullet; docs/architecture/overview.md Layout; ADR 20260730's rule list; scripts/task-context-data.mjs database and payments code lists.",
+      "firstSlice": "Generalise rule 2 to any index-bearing directory, bank the 43 breaches into the baseline, and fold the trips siblings into src/db/trips/ with the barrel as index; the guard's first run reports 43 pre-existing to unwind and every later sibling import fails naming the index.",
+      "effort": "S",
+      "reviews": [
+        "ADR"
+      ],
+      "conflicts": "ADR 20260730-feature-module-contracts (rule 2 widens, its text changes); shipped.md ARCH-3 trips barrel (kept, moved into a folder); .claude/rules/db.md 'import from the barrel; edit the sibling' (stays true, now enforced); scripts/check-live-trips.mjs (follows the file); L17-1 (its moved modules land inside this rule).",
+      "confidence": "high"
+    },
+    {
+      "id": "L17-3",
+      "title": "The module carries its map; task:context reads it",
+      "kind": "governance",
+      "reading": "scripts/task-context-data.mjs hand-lists 17 areas with 151 src/lib|src/db paths, 26 src/app paths and 381 quoted lines of goals, invariants and validation commands, and scripts/check-agents.mjs verifies only that each path exists. The three src/features/*/README.md files carry the same shape (owns, does not own, invariants, where the tests are) for their own module, so the manifests area's 10 invariants at task-context-data.mjs lines 165-176 and a feature README's invariants are one document in two grammars. AGENTS.md's route map and the 'Where things are' bullets in .claude/rules/{db,domain,surfaces,i18n,e2e}.md restate the paths a third time, and 81 live documents outside the ADRs name a src/lib or src/db path. Nothing inside the substrate explains itself: no src/lib/README.md or src/db/README.md exists, 128 of 299 lib modules and 13 of 153 non-seed db modules open with a doc comment, and the only in-tree map is src/db/trips.ts's sibling table. src/i18n/locales/en-US/staff/ holds 40 namespaces (today.json, checkIn.json, closeout.json, manifest.json, gear.json) that name the same concepts a fourth time, cross-checked against none of the other three.",
+      "idea": "The map lives with the module and everything else derives from it. Each module (a src/features/<x>/ from L17-1, and for the knot a folder with an index from L17-2) carries one README.md in the feature grammar: owns, does not own, invariants, tests, its staff namespace and its e2e spec. pnpm task:context <area> becomes a reader that prints that README, the index's exports and the tests beside it, and scripts/task-context-data.mjs shrinks to the four cross-cutting areas (design, brand-voice, database, auth) that have no folder. scripts/check-agents.mjs verifies each README's cited paths, as it already does for the data file, so 'add a task:context area' turns into 'write the module's README' and an area with no README is what 'no task context' means. AGENTS.md's route-map rows for a module become one pointer to the README, and the rules files' module bullets keep only what has no module: the primitives. The 40 staff namespaces stop being a parallel map because the README names its namespace and the guard checks it exists.",
+      "dissolves": "Three of the four hand-written copies of the module map (the data file's per-area code, tests and invariants, the route-map rows for modules, the rules files' module bullets) and the 'planned or not present yet' annotation at scripts/task-context.mjs line 25, since a README cannot cite a file that does not exist.",
+      "scope": "scripts/task-context.mjs and scripts/task-context-data.mjs; scripts/check-agents.mjs (+ test); src/features/*/README.md (3 exist; one per module as waves land); AGENTS.md route map and its Commands row; .claude/rules/domain.md and db.md; docs/agents/ where task:context is explained; pnpm check:context-budget (AGENTS.md shrinks, a fall to bank with --write).",
+      "firstSlice": "Teach pnpm task:context to read src/features/<area>/README.md when it exists and fall back to the data file otherwise, and write the check-in README from the existing area grammar; the first PR deletes no data-file entry and proves the reader.",
+      "effort": "M",
+      "reviews": [],
+      "conflicts": "AGENTS.md 'Read first' §3 (task:context stays the command, its source changes); scripts/check-agents.mjs 'every task:context path exists' (moves to READMEs); ADR 20260730 (the README's owns / does not own is already meant to be the map); pnpm check:context-budget (a deliberate fall); L17-1 and L17-2 (READMEs land per wave; the knot keeps data-file areas until it has folders).",
+      "confidence": "medium"
+    },
+    {
+      "id": "L17-4",
+      "title": "Today reads everything, so it belongs above the graph, not below",
+      "kind": "shape",
+      "reading": "src/db/today.ts (2,315 lines) imports 22 src/db modules and src/lib/today.ts (1,515 lines) imports 9 src/lib modules; with closeout and blockers the unit is 6 files and 5,991 lines that read every pillar and are read by almost nothing. Its substrate importers are four: src/db/closeout.ts (which moves with it), src/db/crew-requests.ts line 22 and src/db/staffing.ts line 22 (both take one symbol, courseCrewCountsByTrip), and src/lib/blockers.ts line 3 (one symbol, blockerDestination). Those pins put today inside the substrate's only real cycle, the 13-file SCC of db/today, db/bookings, db/manifests, db/trips, trips-crew, trips-queries, trips-record, db/blockers, crew-requests, gifts, refunds, trip-promos and lib/trip-dives, which at twin granularity grows to 30 concepts and swallows notifications, shops and storage. Six leaf twins are held in src/db only by today's reads: reviews.ts and staff-credentials.ts by today alone, help-requests, inbound-messages, trip-promos and season-events by today plus one to three siblings. ADR 20260720-today-work-queue puts the rules in src/lib/today.ts, ADR 20260804-day-closeout says closeout composes from Today's own readers and never a second detector, and H-62 makes the home the shop's day, so Today is the product's composition root, yet scripts/check-architecture.mjs lines 57-59 place it below src/features. The i18n pin is types only: src/i18n/today-labels.ts line 6 and closeout-labels.ts lines 1 and 10 import type from @/lib/today and @/lib/closeout.",
+      "idea": "Today (today, closeout, blockers and the day spine) becomes src/features/today, the one module allowed to import every other module's index, and the two symbols pinning it move down to where they belong: courseCrewCountsByTrip into src/db/trips-crew.ts (it counts crew per trip) and blockerDestination into src/lib/staff-destinations.ts (it maps a blocker to the surface that clears it, which is the destinations registry's job). today-labels.ts and closeout-labels.ts move into the module as its labels.ts, since 33 of 35 label files are read only by routes and src/i18n may not import features. The guard then enforces the ADR's own direction read honestly: features import lib/db and other features' indexes, and nothing in lib/db or another feature imports today. ADR 20260720's ranking rules and the 'no second detector' invariant are unchanged because the files move whole. Breaking this one cycle turns the 166 concepts the peel could not reach into peelable ones and releases the six pinned twins to L17-1's waves. What is deleted is the pretence that a 5,991-line reader of 22 modules is substrate.",
+      "dissolves": "The 13-file cycle at the substrate's centre, the four upward pins on today, and the six leaf twins' only reason to stay in src/db.",
+      "scope": "src/lib/today.ts, src/db/today.ts, src/lib/closeout.ts, src/db/closeout.ts, src/lib/blockers.ts, src/db/blockers.ts and their tests to src/features/today/; src/i18n/today-labels.ts and closeout-labels.ts to src/features/today/labels.ts; src/db/crew-requests.ts, src/db/staffing.ts, src/db/trips-crew.ts (one function moves); src/lib/staff-destinations.ts (one function moves); importers under src/app/shop/[shopSlug]/page.tsx and the closeout and ready routes; scripts/task-context-data.mjs today area; .claude/rules/domain.md 'The Today work queue' bullet; docs/architecture/overview.md; an ADR amending 20260720 and 20260804 with the new location.",
+      "firstSlice": "Move courseCrewCountsByTrip to src/db/trips-crew.ts and blockerDestination to src/lib/staff-destinations.ts (two functions, four importers), then move the six files, the two label files and their tests into src/features/today with an index re-exporting today's public names byte for byte; check:architecture passes with no new baseline entry and the SCC measurement shows the 13-file cycle gone.",
+      "effort": "M",
+      "reviews": [
+        "domain",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260720-today-work-queue (rules unchanged, location amended); ADR 20260804-day-closeout (closeout still composes from Today's readers, both move together); H-62 (supports: the home is the day and the day is the top of the graph); .claude/rules/domain.md 'no second detector' (preserved); scripts/check-architecture.mjs line 68 (src/i18n may not import features, which is why the label files move); #1776 'Say on Today that a departure is standing in a crew clash' (lands inside the new module); L17-1 (unblocks its six pinned twins).",
+      "confidence": "high"
+    }
+  ]
+}

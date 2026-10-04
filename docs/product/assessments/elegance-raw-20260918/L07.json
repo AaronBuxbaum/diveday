@@ -1,0 +1,196 @@
+{
+  "lensId": "L07",
+  "lens": "The person spine",
+  "reading": "`people` (src/db/schema.ts:548) is already the one spine: 69 tables reference it through 41 subject `person_id` columns and 52 `*_by_person_id` actor columns, roles hang off `person_roles` (8 values, schema.ts:537), and the glossary's modelling note (docs/product/glossary.md:2255) says \"model roles, not separate person types\". What is not one thing is how the system records *how it knows* a fact about a person: card provenance is five display states in `src/i18n/card-labels.ts` decoded from `status` plus three nullable timestamps on three tables with the same columns (schema.ts:6607, :6868, :7919), and `src/lib/readiness.ts:178-201` spends 10 of its 22 blocker codes restating missing/pending/self-declared/import-unconfirmed per kind. Seat identity is one timestamp, `bookings.identity_unconfirmed_at` (schema.ts:2758), raised by two writers, cleared by one whose door lives in the trail, read by 29 non-test files and by `src/lib/manifests.ts` zero times, with 7 open issues (#1690, #1790, #1789, #1698, #1697, #1702, #1855) circling it. A person row is minted at 7 non-seed `.insert(people)` sites, 4 of which hand-insert the diver role beside it. The login is a second identity row: `user_accounts` (schema.ts:5634) carries a globally unique `email` beside the per-shop `people.email`, a `name` that is \"an empty string forever\", and a 1:1 `user_accounts_person_unique` index that H-60 (docs/product/human-decisions.md:115, status Ready) names as what keeps a two-shop divemaster out, while `account_sessions` snapshots personId/shopId/shopSlug/roles/name — a membership row that exists only as a cache. The person's closure is classified four times in four vocabularies — `src/db/diver-merge.ts` (25 + 9 + 2 tables and a 63-entry unmoved map), `src/db/export.test.ts` (70/4/47), `src/db/delete-path-coverage.test.ts` (14 unscoped reasons), `src/db/erasure-coverage.test.ts` (a source-text sweep) — each checked by a different instrument, over a 2,109-line `src/db/anonymize.ts`. The guardian (six columns on `waiver_records`, ADR 20260907), the emergency contact (two columns on `people`) and the support diver (`dive_support_needs.dives_with_name`) are named humans that are rightly not `people` rows, and that reasoning holds.",
+  "measurements": [
+    {
+      "what": "Tables with a foreign key to people (src/db/schema.ts)",
+      "value": "69 tables; 41 subject person_id columns, 52 *_by_person_id actor columns"
+    },
+    {
+      "what": "people columns, by purpose",
+      "value": "25 total: 6 identity, 10 diver-only, 3 staff-only (spoken_languages, crew_public_*), 6 lifecycle (deleted/anonymized/merged)"
+    },
+    {
+      "what": "person_role enum values / trip_assignment_role values",
+      "value": "8 / 4"
+    },
+    {
+      "what": "Non-seed .insert(people) sites / hand-written role:diver inserts / real findOrCreatePerson callers",
+      "value": "7 / 4 / 5"
+    },
+    {
+      "what": "Diver card tables and their non-test importing files",
+      "value": "3 tables; certifications 62, specialtyCertifications 22, nitroxCertifications 21"
+    },
+    {
+      "what": "Card provenance encoding",
+      "value": "5 display states (card-labels.ts) from status + importedAt + reviewedAt + selfDeclaredAt + issuedByShopAt; 10 of 22 readiness blocker codes are per-kind card codes; 36 en-US staff copy keys spell a provenance word; 17 ADR filenames carry card/cert; 8 glossary entries word provenance states"
+    },
+    {
+      "what": "identity_unconfirmed_at readers",
+      "value": "29 non-test files; src/lib/manifests.ts: 0; writers: 3 in bookings.ts + seat-diver.ts; one clearer with a 2-value IdentityConfirmDoor"
+    },
+    {
+      "what": "Open issues in this lens's orbit (open-issues.md)",
+      "value": "17 (#1869 #1855 #1852 #1850 #1853 #1790 #1789 #1698 #1697 #1702 #1690 #1673 #1694 #1813 #1814 #1708 #1759)"
+    },
+    {
+      "what": "Account-side tables",
+      "value": "7 (user_accounts, account_tokens, account_sessions, account_security, account_step_ups, auth_provider_accounts, auth_verifications); 2 described as unused adapter scaffolding"
+    },
+    {
+      "what": "session.user.shopId reads (non-test) — H-60's stated blast radius",
+      "value": "289"
+    },
+    {
+      "what": "Diver identity capabilities",
+      "value": "5 booking_capabilities purposes (readiness, confirm, claim, handoff, arrival); 9 token-hash tables"
+    },
+    {
+      "what": "Per-table classification lists of the person's closure",
+      "value": "merge: 25 history + 9 staff + 2 staff-only tables + 63 unmoved columns; export: 70 exported / 4 folded / 47 excluded; delete: 14 unscoped reasons; erasure: 2 lists; four different instruments"
+    },
+    {
+      "what": "Module sizes",
+      "value": "anonymize.ts 2,109 lines; divers.test.ts 2,843; divers.ts 928; trips-crew.ts 891; self-declared-cards.ts 859"
+    },
+    {
+      "what": "Tables carrying a human's name/email as plain text (not a people row)",
+      "value": "8: course_inquiries, waiver_records (signer, guardian, physician), dive_support_needs, booking_gifts, people (emergency contact), booking_checkouts, trip_last_minute_promo_recipients, user_accounts/account_sessions"
+    },
+    {
+      "what": "Exported TS types whose name contains Person/Diver/Guest/Crew/Staff/Signer/Guardian/Candidate",
+      "value": "148"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "One person spine with roles hanging off it: staff-ness and diver-ness are independent facts on the same row, an invite attaches roles to an existing person rather than forking one",
+      "where": "src/db/schema.ts:548 (people), :884 (person_roles); docs/product/glossary.md:2255; ADR 20260719-diver-person-spine; ADR 20260726-staff-invite-accounts; src/db/staff-accounts.ts:392-412"
+    },
+    {
+      "what": "One conflict-safe reuse door with the name-match flag, so two racing writers converge on one person and a shared inbox is flagged rather than silently inherited",
+      "where": "src/db/people.ts:56 findOrCreatePerson; ADR 20260723-person-email-uniqueness; H-13"
+    },
+    {
+      "what": "Exhaustiveness guards over the schema for merge, erasure, export and reap — a forgotten table fails a test that names it",
+      "where": "src/db/diver-merge.test.ts:264 (information_schema %person_id); src/db/erasure-coverage.test.ts; src/db/export.test.ts:586; src/db/delete-path-coverage.test.ts"
+    },
+    {
+      "what": "A guardian, an emergency contact and a support diver are parties to one record, not customers — no people row is invented for a human the shop never met",
+      "where": "ADR 20260907-guardian-co-signature decision 2 and alternatives; src/db/schema.ts:577-579; dive_support_needs.dives_with_name"
+    },
+    {
+      "what": "One row vocabulary for a card, a waiver state and a money fact across the record, the counter and the roster; one reader for a diver's live card evidence",
+      "where": "src/components/person/rows.tsx (ADR 20260827-people-not-lists decision 6); src/db/certification-evidence.ts"
+    },
+    {
+      "what": "The counter's name-match prompt has one rule for the day behind a name and one for when silence is honest",
+      "where": "src/db/divers.ts:795 SimilarDiver; src/lib/name-match-evidence.ts"
+    },
+    {
+      "what": "Crew is a per-trip job that can only narrow what a person is worth; the in-water ratio has one definition; roll call is per person",
+      "where": "src/lib/crew-roles.ts:75 inWaterCrewRole; src/db/schema.ts:5444 trip_assignment_role; ADR 20260804-crew-roll-call-is-per-person"
+    },
+    {
+      "what": "Every staff page opens with one gate and re-reads live roles from the database, never the session snapshot",
+      "where": "src/lib/session.ts:164 requireShopSurface; src/db/authz.ts:62 loadActiveStaffRoles"
+    },
+    {
+      "what": "Reversible delete and one-way erasure are two columns with a check constraint, so a half-erased person can never be restored",
+      "where": "src/db/schema.ts:800-823 anonymized_at, people_anonymized_stays_removed; ADR 20260802-diver-data-erasure"
+    },
+    {
+      "what": "A record about the dive lives on the person so a returning diver is never asked twice",
+      "where": "ADR 20260827-support-needs-are-a-record-about-the-dive; dive_support_needs_shop_person_unique"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L07-1",
+      "title": "Three card tables and five provenance timestamps are one card ledger",
+      "kind": "concept",
+      "reading": "Three tables hold a diver's cards — `certifications` (src/db/schema.ts:6607), `specialty_certifications` (:6868), `nitrox_certifications` (:7919) — with the same `status`, `reviewNote`, `reviewedAt`, `reviewedByPersonId`, `importedAt`, `importedFromLabel`, `selfDeclaredAt`, `issuedBy*` and `deletedAt` columns, and `staff_credentials` (:2517) repeats the review half with a `kind` and a `renewsAt`. The nitrox table's own comment gives the reason for the split as \"that table is the recreational ladder … a specialty is a distinct yes/no gate\", which is a comparison rule (`certificationRank`) rather than a storage fact. 62, 22 and 21 non-test files import the three tables; `src/db/certification-evidence.ts` reads all three, `src/db/anonymize.ts` updates all three, `src/db/diver-merge.ts` lists all three, `src/db/export.ts` writes three CSVs, and `src/components/person/rows.tsx` already renders them as \"all three kinds as one group of card rows, one add flow\" (ADR 20260827-people-not-lists, decision 1). Provenance is spelled as timestamps: `src/i18n/card-labels.ts` derives five display states (`verified`, `pending`, `self_declared`, `imported_unconfirmed`, `confirm_to_clear`) from `status` plus `importedAt`, `reviewedAt`, `selfDeclaredAt` and `issuedByShopAt` (src/lib/readiness.ts:491, src/lib/certification-cards.ts:44-50), and `verified` means two things — sighted here, or imported and trusted with `reviewedAt` null (ADR 20260724-import-verified-cards). `src/lib/readiness.ts:178-201` spends 10 of its 22 blocker codes restating missing/pending/self-declared/import-unconfirmed per kind, with 10 matching entries in `src/i18n/readiness-labels.ts` and 36 en-US staff keys that spell a provenance word. 17 ADR filenames under docs/architecture/decisions/ carry card or cert, and 8 glossary entries word provenance states.",
+      "idea": "One `cards` table: `kind` (`level` | `specialty` | `nitrox`, and `professional` for what `staff_credentials` holds), `code` (the rung, the specialty, `eanx`, or the rating kind), agency or issuing body, `identifier`, one `source` code (`sighted` | `imported` | `shop_issued` | `self_declared` | `staff_typed`) written once at birth and never changed, `verified_at`/`verified_by` set only by a sighting, `renews_at` for the professional kind, and the ordinary soft delete. \"Verified\" then means exactly one thing, and every rule that today decodes timestamps — imported clears boarding but asks for a confirm (H-24), a self-declaration buys a seat and never a place on the boat (ADR 20260820), a shop-issued card is attested — becomes one line reading `source` beside `verified_at`. Readiness collapses its ten card codes to `card_missing`, `card_unsighted` and `card_insufficient` carrying `{kind, source}`, and `card-labels.ts` words the five sources once for the record, the counter, the roster and the manifest. The ladder comparison stays where it is, `certificationRank` over `code` where `kind = level`; the nitrox fill gate stays a reader over `kind = nitrox`; H-59's \"inform only\" stays a reader over `kind = professional`. Export writes one `cards.csv`, merge and erasure touch one table, and the counter's and the importer's one add flow writes one row shape.",
+      "dissolves": "`specialty_certifications`, `nitrox_certifications` (and optionally `staff_credentials`), the `certification_status` enum, three provenance timestamps and the five-state derivation in `card-labels.ts`, seven of the ten card readiness codes, and two of the export's CSVs.",
+      "scope": "src/db/schema.ts (three or four tables, `certification_status`, `dive_specialty`); src/db/certification-evidence.ts, certifications*.ts, self-declared-cards.ts (859 lines), staff-credentials.ts, import.ts, anonymize.ts, diver-merge.ts, export.ts; src/lib/readiness.ts, trip-admission.ts, certification-cards.ts; src/i18n/card-labels.ts, readiness-labels.ts, locales/{en-US,es-ES}/staff/*.json (36 keys); src/components/person/rows.tsx; the diver record and the verify queue under src/app/shop/[shopSlug]/divers; e2e/certifications.spec.ts, e2e/nitrox.spec.ts, visual baselines; seed-* modules; a superseding ADR over the 17 card ADRs; 8 glossary entries.",
+      "firstSlice": "Create `cards` with `kind` + `code` and the existing review/provenance columns carried over unchanged; migrate the three diver tables into it (H-49: no backfill code, a plain migration) and repoint `readCertificationEvidence`, anonymize, merge and export to one table and one `cards.csv`. The `source` column and the readiness-code collapse are slice two; folding `staff_credentials` is slice three.",
+      "effort": "L",
+      "reviews": [
+        "domain",
+        "security",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260724-import-verified-cards (its `verified`+`importedAt` encoding is replaced; its rule that an imported card clears boarding is kept as one readiness line); ADR 20260814-self-declared-cards (\"where a record began is history\" holds because `source` is immutable); ADRs 20260827-shop-issued-specialty-cards-are-attested and 20260824-shop-issued-certification-is-verified (become `source = shop_issued`); ADR 20260804-card-evidence-is-the-number (unchanged: `verified_at` is the sighting); H-24 and H-48 unchanged; H-59 unchanged as a reader rule if staff credentials fold in; the nitrox schema comment's ladder-vs-gate reason moves to `certificationRank` over `kind`; subsumes #1869 (one label table) and gives #1850, #1852, #1853 one ledger to read.",
+      "confidence": "high"
+    },
+    {
+      "id": "L07-2",
+      "title": "A seat's identity basis is one code; confirm and withholding derive",
+      "kind": "system",
+      "reading": "`bookings.identity_unconfirmed_at` (src/db/schema.ts:2758) is the whole of what the row records about how a seat was tied to a person: raised by `findOrCreatePerson`'s `nameMatches` at src/db/bookings.ts:884/926/976 (H-13) and by the counter's similar-name tap through src/db/seat-diver.ts:115 (#1556), and cleared by `confirmBookingIdentity` (src/db/bookings.ts:1759), whose `IdentityConfirmDoor` (:1718) is `counter | roster` and lives in the activity trail, not on the row. 29 non-test files read the flag; `src/lib/manifests.ts` reads it 0 times, which is issue #1690, and `RosterSection.tsx:513` derives its own `showsPersonDetail = !identityUnconfirmed` locally. The strongest identity evidence the system ever receives — a diver acting through their own bearer link (`/ready`, `/claim`, `/check-in` via `readKnownDiver` at src/db/booking-handoff.ts:75, self-registration at src/db/self-registration.ts:99) — is recorded nowhere except `claimed_at` (schema.ts:2780) for the claim case, and a party seat that \"rides under whatever the organizer typed\" (:2776) is indistinguishable from a staff-typed one. Seven open issues circle the one boolean — #1690, #1790, #1789, #1698, #1697, #1702, #1855 — each asking what the counter or the manifest should show or allow for a seat whose basis the row cannot say. `src/db/people.ts:201` already needs the basis to decide whether a locale signal is the diver's own.",
+      "idea": "`bookings.identity_basis`, one code for how this seat came to name this person: `own_link` (the diver acted on their own capability or registered themselves), `email_match` (a public form and the name agreed), `name_mismatch` (H-13), `staff_pick` (an exact search hit at the counter), `staff_guess` (the similar-name tap), `organizer_word` (a party seat), `confirmed` (a staffer vouched; actor and door stay in the trail as today). `identityUnconfirmed` becomes a one-line predicate in `src/lib` over the basis, and readiness, the roster, the counter, blow-out offers, seat claims, the locale recorder and the manifest all import that predicate instead of each reading a timestamp. What a surface withholds or shows derives from the basis in one rule — the manifest's withholding is the roster's `showsPersonDetail`, moved into `src/lib/manifests.ts` — and the confirm prompt can say why it is asking (\"booked under this address with a different name\" versus \"you picked a look-alike\"), which is #1789's and #1855's whole complaint. A claim flips the basis to `own_link` and `claimed_at` stays as the claim's own timestamp. The grammar afterwards is readiness's own: a code on the row, a label table in `src/i18n`, one predicate in `src/lib`.",
+      "dissolves": "`bookings.identity_unconfirmed_at`, the two-raiser/one-clearer arrangement, and the roster's private `showsPersonDetail` rule; the manifest's withholding stops being a separate issue.",
+      "scope": "src/db/schema.ts (bookings); src/db/bookings.ts (three writers, `confirmBookingIdentity`, `IdentityConfirmDoor`), seat-diver.ts, seat-claims.ts, self-registration.ts, booking-handoff.ts, readiness.ts, people.ts:201, blowouts.ts, export.ts (bookings.csv), anonymize.ts; src/lib/readiness.ts, readiness-summary.ts, manifests.ts, today.ts, blowout.ts, trip-admission.ts, activity.ts; src/app/shop/[shopSlug]/trips/[id]/_components/RosterSection.tsx and shared-facts.ts, check-in/_components/CounterQueueRow.tsx, check-in/actions.ts, trips/[id]/actions.ts; src/i18n/readiness-labels.ts, today-labels.ts and identity keys in 6 staff namespaces, both locales; e2e/self-check-in.spec.ts, seat-claim.spec.ts, self-registration.spec.ts; glossary \"Identity match key\"; an ADR amending 20260723's H-13 section.",
+      "firstSlice": "Add `bookings.identity_basis` (enum), write it at the three writers and the confirm, replace every `identityUnconfirmedAt !== null` with one exported predicate in `src/lib`, make `manifests.ts` withhold through it, and drop `identity_unconfirmed_at` in the same migration (H-49).",
+      "effort": "M",
+      "reviews": [
+        "domain",
+        "security"
+      ],
+      "conflicts": "H-13 / ADR 20260723-person-email-uniqueness (the name-mismatch safeguard is kept as `basis = name_mismatch`); ADR 20260804-seat-claim-links (`claimed_at` stays; the claim flips the basis); ADR 20260910-the-trail-is-a-code-and-names (the confirm's door stays in the trail); subsumes #1690 and #1790; gives #1789, #1698, #1697, #1702 and #1855 one place to answer; docs/product/features/participant-types.md is untouched.",
+      "confidence": "high"
+    },
+    {
+      "id": "L07-3",
+      "title": "One person-column registry feeds merge, erasure, export and reap",
+      "kind": "shape",
+      "reading": "69 tables reference `people` through 41 subject `person_id` columns and 52 `*_by_person_id` actor columns (src/db/schema.ts). What happens to those rows when a person is merged, erased, exported or deleted is classified four times: `src/db/diver-merge.ts` holds `DIVER_HISTORY_TABLES` (25), `STAFF_HISTORY_TABLES` (9), `STAFF_PERSON_ONLY_TABLES` (2) and a 63-entry `PERSON_COLUMNS_DELIBERATELY_UNMOVED` map; `src/db/export.test.ts` holds `EXPORTED_TABLES` (70), `FOLDED_TABLES` (4) and `EXCLUDED_TABLES` (47); `src/db/delete-path-coverage.test.ts` holds 14 `UNSCOPED_REASONS`; `src/db/erasure-coverage.test.ts` holds `OUTSIDE_PARTY_SEGMENTS` and `FREE_TEXT_COLUMN_TYPES`. Each list is checked by a different instrument — `information_schema` for `%person_id` (diver-merge.test.ts:264), drizzle's `getTableName` over the schema module (export.test.ts:586), a recording proxy over a seeded reap (delete-path-coverage.test.ts), and a read of `anonymize.ts`'s source text (erasure-coverage's own doc says a proxy sees \"~30 of the tables the path writes\"). `src/db/anonymize.ts` is 2,109 lines of hand-enumerated writes to 52 tables. `.claude/rules/db.md` tells every schema change to run \"the four coverage guards\" by path. The same column — `buddy_pair_members.crew_person_id`, say — is answered in the merge map (\"a crew member on a team, refused as a staff record\"), somewhere in erasure, somewhere in export and somewhere in the reap ordering, in four vocabularies.",
+      "idea": "One registry, `src/db/person-columns.ts`: for every column that references `people`, one row with its `kind` (`subject` | `actor` | `crew` | `login`) and its fate under each operation — merge (`move` | `refuse` | `leave`), erase (`null` | `delete` | `keep`), export (which file, or excluded), reap (its order). `diver-merge.ts` derives its three lists and its map from the registry; `anonymize.ts` iterates the erase column for the mechanical half and keeps hand-written code only for what is genuinely bespoke (the seal re-versioning, the Stripe customer deletes, the media ledger); export's three lists and the reap's unscoped reasons read the same rows. One test replaces four: every `people`-referencing column in `information_schema` has a registry row, and every registry row names a live column. The person's data story becomes readable in one place — the text the erasure page and the export README could show a shop — and adding a `person_id` column fails one guard with one message. What stays hand-written is the order of deletes, which `reap-demos.test.ts` already proves separately.",
+      "dissolves": "Three hand lists and a 63-entry map in `diver-merge.ts`, the export test's three lists, the reap guard's `UNSCOPED_REASONS`, the erasure guard's two lists, and the four instruments that check them.",
+      "scope": "new src/db/person-columns.ts; src/db/diver-merge.ts, anonymize.ts (2,109 lines, the mechanical half), export.ts and export.test.ts, delete-path-coverage.test.ts, erasure-coverage.test.ts, diver-merge.test.ts, reap-demos.test.ts, retention.ts; .claude/rules/db.md (\"four coverage guards\"); docs/agents/repo-checks.md; ADR 20260802-diver-data-erasure consequences.",
+      "firstSlice": "Write the registry from what the four lists already say, make `diver-merge.ts` and `diver-merge.test.ts` read it, and delete the three lists and the map they replace; erasure, export and reap follow one at a time.",
+      "effort": "M",
+      "reviews": [
+        "security",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260802-diver-data-erasure (the promise is unchanged; the registry is one more reader of it); ADR 20260824-diver-record-export; `.claude/rules/db.md`'s four-guards paragraph rewrites to one; issues #1673 (guardian address erasure) and #1726 (booking_capabilities retention) become registry rows rather than code paths.",
+      "confidence": "medium"
+    },
+    {
+      "id": "L07-4",
+      "title": "A login is a key to a person at a shop, not a second identity",
+      "kind": "concept",
+      "reading": "`user_accounts` (src/db/schema.ts:5634) is a second identity row beside `people`: its own `email` under a global unique index (:5705) next to the per-shop `people_shop_email_unique` (:842), a `name` the comment says is \"an empty string forever\" (:5685), an `image` that stays null, an `updated_at` \"exactly as stale as created_at\" (:5702), and `user_accounts_person_unique` (:5706) making login and person 1:1. Around it sit six more account tables (`account_tokens`, `account_sessions`, `account_security`, `account_step_ups`, `auth_provider_accounts`, `auth_verifications`), two of which the schema calls \"required adapter scaffolding, functionally unused\" (:5836-5844). `account_sessions` (:5760) snapshots `personId`, `shopId`, `shopSlug`, `roles` and `name` — exactly a membership record, held as a cache rather than a row — and src/lib/auth.ts:183-198 declares those five as better-auth `additionalFields`. H-60 (docs/product/human-decisions.md:115, status Ready) names the 1:1 index as what keeps a freelance divemaster who works two operators off the product's safety surface, recommends shape (c) \"one login reaching several people rows\", and names the blast radius as every `session.user.shopId` read — 289 of them, non-test. src/db/staff-accounts.ts:381-389 refuses an invite because the address has a login at another shop, and its own comment calls that \"a fact about a shop this one has no relationship with\". Divers have no login at all — docs/product/vision.md:44 says they \"never need an account manual\" — and their identity is the bearer thread: 5 `booking_capabilities` purposes and 9 token-hash tables.",
+      "idea": "A login is a key, not a person: `user_accounts` becomes `logins` (email, password, second factor — the better-auth `user` model), and a `memberships` row (`login_id`, `person_id`, `status` invited/active/disabled) is what ties a key to one person at one shop. `people` stays per-shop with its own email and its roles; a session resolves one membership and acts as it, so `session.user.shopId`, `personId` and `roles` are read off the membership and the 289 call sites do not change. `status` moves from the login to the membership, because \"disabled at Blue Mantis\" is a fact about the person there and not about the key, and the last-owner guard and every H-14 gate keep reading `person_roles` through `loadActiveStaffRoles` unchanged. This is H-60's shape (c) made structural: the freelance divemaster's second shop invites the same address and gets a second membership, and the `email_registered_elsewhere` refusal has nothing left to refuse. The grammar afterwards is one, and it is the one the diver already has: a person at a shop, and the keys — a login, a bearer link — that open them.",
+      "dissolves": "`user_accounts_person_unique`, the `email_registered_elsewhere` refusal and its cross-shop read, and the five person columns snapshotted onto `account_sessions`.",
+      "scope": "src/db/schema.ts (user_accounts → logins, new memberships, account_sessions snapshot → membership id); src/lib/auth.ts (better-auth user/session mapping), credentials.ts, session.ts, authz.ts; src/db/authz.ts, user-accounts.ts, staff-accounts.ts (677 lines), anonymize.ts, export.ts, diver-merge.ts (`STAFF_PERSON_ONLY_TABLES`); src/app/onboard/actions.ts, invite/[token], sign-in, settings/team, src/proxy.ts; src/lib/demo-identity.ts and seed-* modules; e2e/staff-invite.spec.ts, staff-session-revalidation.spec.ts, staff-nav.spec.ts; an ADR superseding 20260824's schema section; the H-60 row.",
+      "firstSlice": "An ADR answering H-60 with shape (c), then a `memberships` table populated with exactly one row per existing account (behaviour-preserving) that `requireStaffSession` resolves through, so the session's five snapshot columns become one membership id; the second-membership invite is slice two.",
+      "effort": "L",
+      "reviews": [
+        "security",
+        "ADR"
+      ],
+      "conflicts": "H-60 (Ready — this is its shape (c), not a licence to start; the row says \"do not start without an answer\"); ADR 20260824-migrate-staff-auth-to-better-auth (\"extend user_accounts, don't replace it\" — the table stays as the `user` model, memberships are additive); ADR 20260726-staff-invite-accounts (the invite still attaches to the existing person; only its cross-shop refusal dissolves); ADR 20260724-staff-session-and-capability-migration-policy and 20260824-staff-session-live-revalidation (live re-read now goes through the membership); settled: `/shop/**` is staff-only and tenant isolation rides `session.user.shopId`, which keeps resolving to exactly one shop per session; not roadmap §4 multi-shop.",
+      "confidence": "medium"
+    },
+    {
+      "id": "L07-5",
+      "title": "One door mints a person and records its origin",
+      "kind": "shape",
+      "reading": "A `people` row is minted at seven non-seed `.insert(people)` sites — src/app/onboard/actions.ts:178, src/db/people.ts:77, src/db/bookings.ts:890, src/db/import.ts:452, src/db/staff-accounts.ts:407, src/db/self-registration.ts:86, src/db/divers.ts:89 — and four of them hand-insert `personRoles { role: \"diver\" }` beside it. `findOrCreatePerson` (src/db/people.ts:56) is the reuse door for 5 callers, while the no-email walk-in at bookings.ts:886-901 and the phone-only registrant at self-registration.ts:81 each repeat its insert branch, the first saying so in its own comment (\"same shape as findOrCreatePerson's own insert branch\"). src/lib/person-fields.ts:4-10 records that six actions once carried drifted copies of the name/email/phone bounds. Where a record came from is one timestamp, `people.self_registered_at` (schema.ts:785), \"set only when the row is created\" — so it equals `created_at` when set and says nothing for the other six doors; it has 5 readers. `createDiver` at divers.ts:74 invents the display name \"Unnamed diver\" on its own.",
+      "idea": "One writer, `createPerson(tx, { shopId, fullName, email, phone, origin, roles })` in `src/db/people.ts`, and `people.origin` — `public_booking` | `waitlist` | `last_minute` | `self_registration` | `counter` | `import` | `invite` | `onboard` — written once at birth. `findOrCreatePerson` keeps its conflict-safe reuse contract and calls `createPerson` on the miss; the six other insert sites call it directly; the diver role is written by the door, never by a caller. `self_registered_at` is deleted: `origin = self_registration` with `created_at` is the same fact, and the counter's \"registered this morning\" reads it the same way. The grammar afterwards matches L07-2's basis and L07-1's source: every person-fact carries how it came to be, as a code, from the one place that wrote it.",
+      "dissolves": "Six of seven `.insert(people)` sites, four hand-written diver-role inserts, and `people.self_registered_at`.",
+      "scope": "src/db/people.ts; src/db/divers.ts:67, bookings.ts:886-901, import.ts:452, staff-accounts.ts:406, self-registration.ts:81, src/app/onboard/actions.ts:178; src/db/schema.ts (people.origin enum, drop self_registered_at); the 5 selfRegisteredAt readers; export.ts (people.csv), anonymize.ts; seed-* modules; glossary; both bundles only where the counter words the origin.",
+      "firstSlice": "Add `createPerson` and `people.origin`, route the seven insert sites through it, and delete `self_registered_at` with its five readers rewritten over `origin`.",
+      "effort": "S",
+      "reviews": [
+        "security"
+      ],
+      "conflicts": "ADR 20260723-person-email-uniqueness (`findOrCreatePerson` stays the reuse door and calls the new writer on the miss); issue #1236's self-registration stamp becomes `origin = self_registration`; H-13 unchanged; ADR 20260726 (the invite door creates through the same writer with `roles` from the form).",
+      "confidence": "medium"
+    }
+  ]
+}

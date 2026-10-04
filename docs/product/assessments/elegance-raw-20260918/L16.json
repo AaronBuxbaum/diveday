@@ -1,0 +1,189 @@
+{
+  "lensId": "L16",
+  "lens": "States of the world",
+  "reading": "The lens's fourteen entry-point modules are 2,658 lines of mostly pure, zone-aware, well-argued per-axis code (src/lib/off-season.ts, water-band.ts, trial.ts, season-events.ts, demo-bypass.ts), and no module composes them: the composition happens on the shop home, where src/app/shop/[shopSlug]/page.tsx lines 380–600 derive 16 world-state constants (showFirstRunChecklist referenced 14 times, quietDay 7) and read shop.isDemo 5 times. isDemo is read raw in 56 files (80 occurrences) with at least four meanings — bypass eligibility (src/lib/demo-bypass.ts), \"no first moments\" (4 sites on the home plus schedule/board/actions.ts:688), \"no real integrations\" (3 callbacks under src/app/api/integrations/ plus api/stripe/connect/callback/route.ts:51), and the e2e fixture gate, hand-rolled in 14 /api/test/* routes in four spellings while src/lib/e2e-test-routes.ts already shares the env half across 25 of the 26. Shop maturity is presence-derived through six separate src/db predicates (countShopTrips, shopFirstBooking, shopHasSailedBefore, shopHasEverTakenAnOrder, shopHasPricedRecords, isOrientationDismissed); countShopTrips has four readers that cross-reference each other in comments (page.tsx:468, src/db/today.ts:2016, board/actions.ts:688, s/[shopSlug]/page.tsx:456), and firstBookableMoment is the same formula in two files (page.tsx:529-532, board/actions.ts:687-688) under a comment saying the two must never differ. \"Is today quiet\" has three predicates — spineIsQuiet (src/lib/today.ts:1409), the all-clear condition at DaySpine.tsx:792, and nextDeparture's \"only when nothing sails today\" (src/db/today.ts:310, which page.tsx:455-462 documents as null in three different situations) — plus Reports' own stripQuietDay word (reports.json:68). \"What time is it\" has two band tables that disagree — getTimeOfDayGreeting at 5/12/17/22 (src/lib/today.ts:1168) and waterBandFor at 5/8/17/20 (src/lib/water-band.ts:32, the ADR 20260904 bounds) — and \"what season is it\" has four notions: getSeasonalBriefing (today.ts:1145, June–August hard-coded as summer for every hemisphere, printed at DaySpine.tsx:799), the counting season (season.ts), the shop's written season_events, and the derived off-season (off-season.ts, read by the storefront alone at s/[shopSlug]/page.tsx:474). The one written sequence of a dive day — DAY_STATES, 15 states from shop-open to recap-read — lives in scripts/simulate-day/lib.mjs:35 rather than src/lib, and e2e/visual.spec.ts photographs 13 today-* states and 10 other state-named captures (of 278) through 26 hand-built /api/test/* routes. The principle this lens wants is already written twice — \"no second detector\" (ADR 20260804-day-closeout; .claude/rules/domain.md) and \"the product does not know what time it is\" (ADR 20260904-reef-all-the-way-down, line 39) — but each was applied to one axis, and H-77 (Ready) will redraw the home \"for the same shop on the same morning\" from six concepts, none of which names what that shop and that morning are.",
+  "measurements": [
+    {
+      "what": "Entry-point modules for this lens (src/lib + src/db), lines",
+      "value": "14 files, 2,658 lines (src/lib/closeout.ts alone 1,020; src/db/today.ts 2,315 beside them)"
+    },
+    {
+      "what": "shop.isDemo / shops.isDemo occurrences in src",
+      "value": "80 occurrences across 56 files; 5 on src/app/shop/[shopSlug]/page.tsx; ~20 non-test files under src/app"
+    },
+    {
+      "what": "/api/test/* routes, and how many hand-roll the demo-tenant gate",
+      "value": "26 routes; 14 gate on isDemo inline in 4 spellings (not_demo ×6, not_available ×5, block form ×1, {ok:true,dropped:false} ×1, positive ×1); 25 call the shared e2eTestRouteAuthorized"
+    },
+    {
+      "what": "World-state constants derived on the shop home (page.tsx lines 380–600)",
+      "value": "16 (eveningClose, firstBoatEver, orientationRole, totalTrips, showFirstRunChecklist, firstRunDoneCount, paymentsRowCandidate, showPaymentsRow, firstBooking, season, factOfScale, firstBookableMoment, showOrientation, shareOrigin, firstName, quietDay); showFirstRunChecklist referenced 14×, quietDay 7×"
+    },
+    {
+      "what": "Shop-maturity predicates in src/db",
+      "value": "6: countShopTrips (trips-queries.ts:63), shopFirstBooking (first-booking.ts:78), shopHasSailedBefore (closeout.ts:957), shopHasEverTakenAnOrder (orders.ts:814), shopHasPricedRecords (shops.ts:273), isOrientationDismissed (user-accounts.ts:136, the one stored flag)"
+    },
+    {
+      "what": "Readers of countShopTrips as a maturity signal",
+      "value": "4 (page.tsx:468, src/db/today.ts:2016, schedule/board/actions.ts:688, s/[shopSlug]/page.tsx:456); firstBookableMoment formula duplicated in 2 files"
+    },
+    {
+      "what": "Predicates for 'today is quiet'",
+      "value": "3 (spineIsQuiet src/lib/today.ts:1409; DaySpine.tsx:792 jobs===0&&!closing&&!firstRun; nextDeparture null semantics src/db/today.ts:310) plus reports.json stripQuietDay"
+    },
+    {
+      "what": "Time-of-day models",
+      "value": "3: getTimeOfDayGreeting (5/12/17/22, today.ts:1168), waterBandFor (5/8/17/20, water-band.ts:32, called once at ShopChrome.tsx:193), nightSkyFor (sky.ts:169, astronomical, per dive)"
+    },
+    {
+      "what": "Season notions",
+      "value": "4: getSeasonalBriefing (today.ts:1145, hemisphere hard-coded, 4 sentences ×2 locales), season.ts counting season (shops.season_start_month/day, schema:324-325), season-events.ts (season_events, states upcoming/live/over), off-season.ts (derived, storefront-only) — plus trip_lenses as the shop's kinds of day"
+    },
+    {
+      "what": "shops.created_at as a clock",
+      "value": "2 meanings: 21-day trial (src/lib/trial.ts, read by SettingsPage.tsx:546-548 only, 7 copy keys in settings.json) and 7-day minted-demo TTL (seed-demo-lifecycle.ts:130)"
+    },
+    {
+      "what": "Presence-derived shop gates read across src/app (non-test files)",
+      "value": "hasBoatDiving 10, searchListingOptOutAt 8, canAcceptPayments( 9, showYearOnDiveday 4, publicBoatLine 2, unitsConfirmedAt 1"
+    },
+    {
+      "what": "Message-bundle keys for these states",
+      "value": "shopHome.json 149 leaf keys (firstRun 36, spine 60); diver.json demo 35, schedule.offSeason 4; settings.json main.trial 7"
+    },
+    {
+      "what": "Visual captures named for a world state",
+      "value": "13 today-* (today, today-empty, today-evening, today-evening-closed, today-all-home, today-band-dawn/dusk/night, today-first-bookable, today-orientation-line, today-units-unconfirmed, today-blocked-aboard, today-crew-uncounted) + schedule-off-season, settings-trial, demo-story-door, site-briefing-night-sky, of 278 captures; no capture or spec assertion for spine.quietHeading ('A quiet day at the dock')"
+    },
+    {
+      "what": "Simulator day states",
+      "value": "DAY_STATES = 15 ids in scripts/simulate-day/lib.mjs:35 (shop-open … recap-read); read by scripts/simulate-day/day.spec.ts (669 lines) and nothing in src/"
+    },
+    {
+      "what": "ADRs whose filename names demo, trial, first-light, closeout, blowout or day rhythm",
+      "value": "16 (20260718-demo-mode … 20260827-first-light), all read or grepped for this lens"
+    },
+    {
+      "what": "Entry points that are not world-state detectors",
+      "value": "src/lib/configured.ts (env override resolution), src/lib/onboarding.ts (Zod schemas + FIRST_RUN_STEP_COUNT), src/lib/day-profile.ts (planned dives and surface intervals), src/lib/blowout.ts (per-diver rebooking offers)"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "Shop maturity is presence-derived with zero columns — the first morning, first bookable, first booking and first boat home are all re-derived reads, and stored progress was explicitly rejected",
+      "where": "ADR 20260827-first-light decision 6; src/db/first-booking.ts (limit 2); FirstRunChecklist.tsx's five persisted facts; src/db/closeout.ts:957 shopHasSailedBefore"
+    },
+    {
+      "what": "A composition rule lives in src/lib so nothing downstream can compose two states by forgetting an && — first-run and the quiet-day collapse are exclusive by rule",
+      "where": "spineIsQuiet, src/lib/today.ts:1409-1422; docs/product/shipped.md 'The first morning is a state of the day spine'"
+    },
+    {
+      "what": "Three page-side readiness horizons were replaced by one module the surfaces agree with by construction — the precedent a world reading would copy",
+      "where": "src/lib/operational-window.ts (operationalWindow, arrivalsWindow, kioskArrivalsWindow, shopDayWindow, arrivalsWindowIsInsideHorizon)"
+    },
+    {
+      "what": "The evening is assembly, never a second detector: the close-out composes from Today's own readers and the day's closing state is a state of the home, not a mode",
+      "where": "ADR 20260804-day-closeout; H-62; src/lib/closeout.ts:956 assembleEveningClose; .claude/rules/domain.md"
+    },
+    {
+      "what": "The off-season stores nothing and is derived from two facts the shop already wrote, with a scheduled departure outranking a written season",
+      "where": "src/lib/off-season.ts (N-45, shipped 2026-09); src/app/s/[shopSlug]/_components/OffSeasonPanel.tsx"
+    },
+    {
+      "what": "Demo and trial are deliberately different things, the bypass is one module with three independent conditions, and the kill switch fails closed",
+      "where": "ADR 20260720-trial-shops-are-not-demo; ADR 20260724-per-visitor-demo-shops; src/lib/demo-bypass.ts; src/lib/demo-identity.ts (.invalid namespace)"
+    },
+    {
+      "what": "The water band's clock is the shop's, requires a zone, and 'a wash is not a status'",
+      "where": "src/lib/water-band.ts; ADR 20260904-reef-all-the-way-down budget rules 1 and 8; H-67(a) decided"
+    },
+    {
+      "what": "A boat's stage is a thing a crew member said — never inferred, never a detector",
+      "where": "src/db/trip-stages.ts; ADR 20260904-reef-all-the-way-down budget rule 4; s/[shopSlug]/page.tsx:388-397 liveShopStage bounded to today"
+    },
+    {
+      "what": "One shared, fail-closed gate for the env half of every test route (25 of 26)",
+      "where": "src/lib/e2e-test-routes.ts e2eTestRouteAuthorized"
+    },
+    {
+      "what": "A machine rehearses one whole day nightly against one honest, forward-only clock, and fails on the first state it cannot reach",
+      "where": "N-60 shipped 2026-09-07; scripts/simulate-day/; src/app/api/test/clock/route.ts"
+    },
+    {
+      "what": "Kinds of day are the shop's own words hung on departures and season events, not a detector, and a stale ?lens= link falls back to everything rather than to somebody else's word",
+      "where": "src/lib/trip-lenses.ts resolveLens; settings/kinds-of-day/page.tsx; glossary 'Lens' (line 2209)"
+    },
+    {
+      "what": "The demo's three stories are keys, not words, and each mints a fresh shop so no story seeds a failure state",
+      "where": "src/lib/demo-stories.ts; ADR 20260805-demo-try-alerts; .claude/rules/surfaces.md 'A panel that only renders when something has gone wrong'"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L16-1",
+      "title": "One world reading, computed once, read by every surface",
+      "kind": "concept",
+      "reading": "src/app/shop/[shopSlug]/page.tsx lines 380–600 compute 16 world-state constants from nine src/db reads, and the same page re-derives firstBookableMoment that schedule/board/actions.ts:679-698 also derives, under a comment saying the two must stay identical or 'one of the two renders a card the other denies'. The demo exclusion is spelled !shop.isDemo && at 5 sites on the home, three of them (page.tsx:464-467, 497-499, 526-528) carrying the same paragraph about a minted demo arriving with its board seeded. spineIsQuiet (src/lib/today.ts:1409-1422) is the repository's own proof that a composition rule belongs in src/lib — it exists so 'nothing downstream can compose them by forgetting' — and DaySpine.tsx:792 composes a second quiet predicate anyway. src/lib/operational-window.ts is the precedent: three page-side horizons replaced by one module whose surfaces 'agree by construction'. requireShopSurface (src/lib/session.ts) already hands { db, session, shop } to every staff page, so a per-request reading has a door and costs no new call. ADR 20260827-first-light decision 6 rules that maturity is presence-derived with zero columns, which a reader keeps and a table would break.",
+      "idea": "src/lib/world.ts (pure) defines one ShopWorld reading — tenancy (real, demo-minted, demo-canonical, with trial as a phase of a real shop), maturity (first-morning, bookable, first-booking, sailed, established), day (quiet, working, closing, closed), clock (the wall hour and the one band), season (live season events, the counting season, the off-season) — and src/db/world.ts is its one bounded reader, composed from the six maturity predicates, getTodayWork, assembleEveningClose, offSeason and waterBandFor exactly the way assembleEveningClose composes from Today's readers. requireShopSurface returns world beside shop and the storefront layout reads the same reader, so the home, the board action, Settings, the storefront and both shells read one answer. A demo shop's maturity is established by definition inside the reader (its board arrives seeded), so the five !shop.isDemo clauses on the home become world.maturity === 'first-morning' and the explanatory paragraph is written once, in world.ts. spineIsQuiet, the DaySpine.tsx:792 predicate and the 'nextDeparture is null in three situations' comment collapse into world.day; firstBookableMoment is computed once and handed to landAfterAdd. getTimeOfDayGreeting derives its word from world.clock instead of its own table, and the off-season reading reaches the staff home for the first time. The grammar afterwards: a surface never asks the database what kind of shop or day this is; it reads world and renders, and a new state of the world is one enum value with one reader branch and one test — which is also the input any of H-77's six home concepts would draw from.",
+      "dissolves": "The 16-constant block on the home, the duplicated first-bookable formula, four countShopTrips call sites, five raw isDemo reads on the home, and the second quiet predicate in DaySpine.tsx.",
+      "scope": "src/lib/world.ts (+test), src/db/world.ts (+test), src/lib/session.ts, src/app/shop/[shopSlug]/page.tsx, _components/today/DaySpine.tsx, schedule/board/actions.ts, settings/SettingsPage.tsx, src/app/s/[shopSlug]/page.tsx and layout.tsx, _components/ShopChrome.tsx, _components/PublicShopShell.tsx, src/lib/today.ts (spineIsQuiet, getTimeOfDayGreeting); glossary terms World reading, Tenancy, Maturity, Day kind; one ADR; no schema change; no copy-key rename (bundles untouched); visual baselines unchanged by construction.",
+      "firstSlice": "Add src/lib/world.ts and src/db/world.ts with the maturity and day axes only, thread the reading through requireShopSurface, and rewrite the home's lines 440–588 and board/actions.ts's landAfterAdd to read it — the 13 today-* captures and e2e/first-ten-minutes.spec.ts pin that no pixel and no step moved.",
+      "effort": "L",
+      "reviews": [
+        "domain",
+        "design",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260827-first-light d6 (kept — the reader is the presence derivation, named once); ADR 20260804-day-closeout 'no second detector' (extended from the day-work axis to every axis); ADR 20260904-reef-all-the-way-down rule 1 and H-67(a) (its clock becomes world.clock); H-62 and the roadmap's 'The home becomes the shop's day' row (its 'the phase the clock is in' becomes world.day, never a ?view=); H-77 (Ready — upstream of all six concepts, each of which redraws 'the same shop on the same morning' and would draw from this reading); N-42 First shift (After pilot — a staffer-maturity axis would sit here later); N-45 (shipped storefront-only — this carries the off-season to the home); #1836 (a status word after the dive erases the dive day — a day-kind bug that would have one owner).",
+      "confidence": "high"
+    },
+    {
+      "id": "L16-2",
+      "title": "Tenancy is one closed reading; isDemo is never read raw",
+      "kind": "shape",
+      "reading": "shops.is_demo (src/db/schema.ts:338) is read in 56 files, 80 times, and the canonical-versus-minted distinction is shop.slug !== DEMO_SHOP_SLUG spelled in ShopChrome.tsx:231 and PublicShopShell.tsx:191. shops.created_at is two clocks: the 21-day trial (src/lib/trial.ts, read by exactly one surface, settings/SettingsPage.tsx:546-548, 7 copy keys) and the 7-day minted-demo reaper (DEFAULT_DEMO_TTL_MS, src/db/seed-demo-lifecycle.ts:130). Fourteen /api/test/* routes hand-roll if (!shop?.isDemo) in four spellings — not_demo ×6, not_available ×5, a block form, and { ok: true, dropped: false } — beside a shared e2eTestRouteAuthorized (src/lib/e2e-test-routes.ts) that 25 of the 26 routes already call for the env half. orders/[id]/page.tsx:78-80 declares its own isDemoShop(db, shopId) and calls it at three sites; the three integration callbacks and the Stripe callback each write if (!shop || shop.isDemo) inline (api/integrations/{xero,quickbooks,shopify}/callback/route.ts, api/stripe/connect/callback/route.ts:51). ADRs 20260720 and 20260724 say why trial is not demo and why blue-mantis is retained, but neither names the reading a surface should ask, and the glossary defines 'Demo mode' (line 1707) and no 'Trial'.",
+      "idea": "shopTenancy(shop, now) in src/lib/tenancy.ts returns { kind: 'real' | 'demo-minted' | 'demo-canonical', trial: { daysLeft, endsAt, expired } | null } and is the only reader of is_demo, slug === DEMO_SHOP_SLUG and the trial arithmetic; src/lib/trial.ts folds into it. requireDemoTenant(request, db) beside e2eTestRouteAuthorized in src/lib/e2e-test-routes.ts is the one demo-fixture gate with one refusal shape, and the 14 test routes call it; orders/[id]'s private helper and the four callbacks' inline reads go. Surfaces then ask the question they mean — tenancy.kind !== 'real' for 'no outbound integration', tenancy.trial for the Settings card, tenancy.kind === 'demo-minted' for the banner's don't-enter-real-data warning — while demoBypassAccepted keeps its own three-condition gate untouched, because sign-in must never depend on anything a surface derives. The glossary gains Tenancy and Trial as terms, and Demo mode stops being the entry that defines a trial by negation. This is L16-1's tenancy axis, shippable first and alone, because it renames a read and moves no pixel.",
+      "dissolves": "Raw isDemo reads across ~20 non-test files under src/app, four spellings of the demo-fixture gate, and src/lib/trial.ts as a separate module.",
+      "scope": "src/lib/tenancy.ts (+test), src/lib/e2e-test-routes.ts, 14 src/app/api/test/*/route.ts, api/integrations/{xero,quickbooks,shopify}/callback/route.ts, api/stripe/connect/callback/route.ts, orders/[id]/page.tsx, orders/new/page.tsx, ShopChrome.tsx, PublicShopShell.tsx, settings/SettingsPage.tsx, s/[shopSlug]/year-card/route.tsx, src/lib/trial.ts (deleted), src/app/api/test/seed-routes.test.ts, docs/product/glossary.md; no schema change; src/lib/demo-bypass.ts untouched.",
+      "firstSlice": "Add requireDemoTenant to src/lib/e2e-test-routes.ts and rewrite the 14 test routes to call it, with seed-routes.test.ts asserting the one refusal shape across all of them.",
+      "effort": "M",
+      "reviews": [
+        "security"
+      ],
+      "conflicts": "ADR 20260720-trial-shops-are-not-demo and ADR 20260724-per-visitor-demo-shops (kept, given the named reading they lacked); ADR 20260803-demo-bypass-containment (untouched by design — the bypass must not read a derived value); ADR 20260812-demo-schedule-keeper (its isDemo-and-slug match becomes tenancy.kind === 'demo-canonical'); #1858 (the demo banner's glyph — the banner's caller changes here, the fix is orthogonal).",
+      "confidence": "high"
+    },
+    {
+      "id": "L16-3",
+      "title": "One clock, and only the shop's own seasons",
+      "kind": "system",
+      "reading": "getTimeOfDayGreeting (src/lib/today.ts:1168-1175) bands the shop's hour at 5/12/17/22 and waterBandFor (src/lib/water-band.ts:32-38) at 5/8/17/20, so at 20:30 the home greets 'Good evening' over a night wash and at 08:30 'Good morning' over a day wash — and the ADR that set the second table (20260904-reef-all-the-way-down, line 39) opens with 'the product does not know what time it is'. getSeasonalBriefing (today.ts:1145-1151) assigns summer to June–August for every shop on earth, and DaySpine.tsx:799 prints 'Grab some shade' or 'Warm up with a dry coat' from it on the all-clear day, four sentences in each of two locales (today.seasonalBriefing.*). The shop already states its year three ways DiveDay honours — season_start_month/day (src/lib/season.ts), season_events (src/lib/season-events.ts; glossary line 2228: 'deliberately no catalog of seasons'), and the derived off-season (src/lib/off-season.ts) — and the fourth, DiveDay's own, is the only one that can be wrong. The off-season reading is read by one surface, the storefront (s/[shopSlug]/page.tsx:474); the staff home has no season reading at all, so a shop closed until March reads 'A quiet day at the dock' (shopHome.json spine.quietHeading) every morning for ninety days. nightSkyFor (src/lib/sky.ts:169) is the third clock, astronomical and per site, and is right to stay separate: it is about a dive, not about the shop's day.",
+      "idea": "world.clock is { hour, band } from waterBandFor's table — the one the owner accepted in H-67 — and the greeting is a word chosen over that reading (GREETING_KEYS keyed by band, with the hour deciding morning versus afternoon inside 'day'), never a second band function. getSeasonalBriefing, TodaySeason, seasonalBriefingText and the eight today.seasonalBriefing.* strings are deleted; the all-clear empty state prints the shop's own live season event's note when one is live and nothing otherwise, which is what the glossary's 'no catalog of seasons' already says and what copy-restraint asks. world.season carries { live: SeasonEvent[], counting: SeasonStart, offSeason: OffSeason }, read from the same listSeasonEvents and upcomingScheduleRange the storefront already reads, so the staff home's quiet day inside an off-season window says 'Between seasons — back {date}' with the storefront's own offSeason arithmetic and no new column. The grammar afterwards: DiveDay knows the hour; the shop knows the year; nothing DiveDay authors claims to know what the water is like in July.",
+      "dissolves": "One of two time-of-day band tables; DiveDay's hemisphere-bound seasonal sentences; the storefront-only status of the off-season reading.",
+      "scope": "src/lib/today.ts (getSeasonalBriefing, TodaySeason, getTimeOfDayGreeting), src/lib/water-band.ts, src/i18n/today-labels.ts, src/i18n/locales/{en-US,es-ES}/staff/today.json and shopHome.json, _components/today/DaySpine.tsx, src/app/shop/[shopSlug]/page.tsx, src/db/world.ts (or the home's reads until L16-1 lands); visual baselines today-empty and today-band-* re-approved with the reason in the PR; no schema change.",
+      "firstSlice": "Delete getSeasonalBriefing and its eight strings; the all-clear body becomes the live season event's note or nothing, pinned by one case in DaySpine.test.tsx and the today-empty baseline re-approved.",
+      "effort": "S",
+      "reviews": [
+        "design"
+      ],
+      "conflicts": "ADR 20260904-reef-all-the-way-down rule 1 and H-67(a) (adopted as the one clock); N-45 (shipped — extended from the storefront to the home); N-44 The season letter (After pilot — world.season.counting is its input); ADR 20260813-dive-site-briefings-are-the-shops-own-words (the same principle, applied to the year); docs/design/settled-questions.md line 48 (the home's two good-news lines stay; only the seasonal sentence under one of them goes).",
+      "confidence": "high"
+    },
+    {
+      "id": "L16-4",
+      "title": "The day's states are written once and the harness reads them",
+      "kind": "governance",
+      "reading": "DAY_STATES — 15 named states from shop-open to recap-read — is the only place the tree writes down the sequence of a dive day, and it lives in scripts/simulate-day/lib.mjs:35, read by scripts/simulate-day/day.spec.ts and by nothing in src/. e2e/visual.spec.ts (278 captures) photographs the home in 13 today-* states and the app in 4 other state-named captures (schedule-off-season, settings-trial, demo-story-door, site-briefing-night-sky), each reached through a different hand-built door among the 26 /api/test/* routes: seed-evening moves departures because a worker's clock is process-wide, seed-off-season empties a board, depart-trip sails one, and today-empty onboards a whole shop. The canonical demo 'never runs dry' by design (ensureDemoSailsToday, src/db/demo-refresh.ts:38-41; e2e/visual.spec.ts:3393), so quiet and first-morning states can only be photographed on an onboarded shop, which the spec explains in a 22-line comment (visual.spec.ts:3390-3412), and the quiet-day collapse (spine.quietHeading) has no capture and no spec assertion at all. pnpm check:route-coverage holds that every route has a capture; nothing holds that every world state has one, because no list of world states exists to hold it to.",
+      "idea": "src/lib/world.ts exports WORLD_STATES, the enumeration of readable states the product designs for (first-morning, bookable, quiet, working, closing, closed, off-season, trial, demo-minted, demo-canonical, and the four bands), and it is the same enum L16-1's reader returns — so the product's states and the harness's are one list. One /api/test/world route takes { state } and puts the fixture into it by the acts the existing seed routes already perform (move departures, empty the board, sail a boat, onboard a shop), replacing seed-evening, seed-off-season and depart-trip; token-minting and trouble-state routes stay, because a token and a failure are not states of the world. The simulator's DAY_STATES imports its day axis from WORLD_STATES and keeps its act-level steps beneath each, e2e/visual.spec.ts iterates WORLD_STATES for the home and the storefront, and a check:world-coverage guard (or a case in check:route-coverage) fails on a state with no capture in both schemes. The grammar afterwards: adding a state of the world is one enum value, one reader branch and one harness line, and the guard names the capture that is missing.",
+      "dissolves": "Three seed routes and the per-spec prose explaining how each state is reached; the simulator's private state list.",
+      "scope": "src/lib/world.ts, src/app/api/test/world/route.ts (new), src/app/api/test/{seed-evening,seed-off-season,depart-trip}/route.ts (deleted), src/app/api/test/seed-routes.test.ts, scripts/simulate-day/lib.mjs, e2e/visual.spec.ts, e2e/off-season.spec.ts, scripts/check-route-coverage.mjs or a new guard registered in check:repo, docs/engineering/testing.md, docs/agents/repo-checks.md, .claude/rules/e2e.md.",
+      "firstSlice": "Export WORLD_STATES from src/lib/world.ts and add the coverage guard that reads the visual spec's capture names, red on the states with no capture — the quiet day is the first one it names.",
+      "effort": "M",
+      "reviews": [
+        "security"
+      ],
+      "conflicts": "N-60 (shipped — the simulator becomes a reader of the list rather than its owner); ADR 20260729-reg-suit-visual-regression (baselines keyed by commit — deleting routes moves no pixels); .claude/rules/e2e.md's per-test reset and the process-wide clock rule in src/app/api/test/clock/route.ts (kept — the world route moves departures, never the clock); #1785 (a dark capture moving 463 pixels — orthogonal, but a state-named capture list is where such a diff gets a name).",
+      "confidence": "medium"
+    }
+  ]
+}

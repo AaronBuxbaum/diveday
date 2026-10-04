@@ -1,0 +1,197 @@
+{
+  "lensId": "L14",
+  "lens": "Three faces, one system",
+  "reading": "The tree has six screen shells and two paper ones: MarketingNavView.tsx (130 lines, composed by 26 files under src/app), the Harbor chrome in PublicShopShell.tsx + PublicShopChrome.tsx (542 lines), the Reef chrome in ShopChrome.tsx + ShopNav.tsx + ShopNavLinks.tsx + StaffTabBar.tsx (1,279 lines), EntryShell.tsx (239) and ThreadShell.tsx (126) for the token family, a boat \"shell\" that is the string `boat-mode` hand-written on 7 roots, plus SheetDocument/PaperSheet (199 lines) and the `@media print` repaint at globals.css:820–990. Only two of the six wear `ChromeBar` (ADR 20260827 decision 10, delivered per shipped.md:1872): marketing keeps a padded content-driven bar (MarketingNavView.tsx:54–66, `max-w-7xl` against the bar's `max-w-6xl`), and the boat, board, kiosk and doors have no bar at all. The sharpest mode leak is the live manifest, a page inside the Reef shell that un-wears it through three `:has()` selectors (globals.css:470, 478, 482), a pathname branch (StaffTabBar.tsx:74) and `ChromeBar`'s `staffChrome` prop, whose only consumer is that selector (globals.css:478). The embed is the second leak: a proxy header (proxy.ts:669–738) becomes `isEmbed` threaded through 36 sites in s/[shopSlug]/page.tsx, 31 in trips/[id]/page.tsx, 32 in trips/[id]/actions.ts and three child components, while the three newer widgets are already path-based routes (embed-routes.ts:20, embed/[widget]/page.tsx 247 lines). Paper is two systems with opposite rules: the sheet register prints in colour on six `--sheet-*` tokens (globals.css:721–727), the packets print through a 16-token mono repaint (globals.css:842–860), a `.trip-print-bundle` backstop (:838) and 104 `print:hidden` branches in 50 screen files, and the two fight \"at class specificity\" (globals.css:958–967). Eleven shared components carry a prop that names the face they are under (`staffChrome`, `hideCta`, `compactMobile`, `wordmark`, `hostFont`, `titleFace`, `contrastCopy`, SegmentedControl's `boat` size, SheetDocument's null font, PaperSheet's `night`, PublicShopChrome's five `!isEmbed` gates); `ShopPageHeader.titleFace` is passed by 15 files under src/app/s and none of 109 under src/app/shop, and its own docblock (ShopPageHeader.tsx:102–103) says both values render Geist wherever no `BrandStyle` is above. Thirteen `[token]/layout.tsx` files (379 lines) each render only `ErrorBoundaryIntlProvider`. Two recorded reasons no longer hold: ADR 20260830 and globals.css:476 say the offline manifest \"keeps the staff shell\" while src/app/offline-manifest/page.tsx renders under the root layout with no `ShopNav` and no layout.tsx of its own (globals.css:467 says the opposite three lines earlier), and roadmap.md:142 says whether boat mode hides the dock \"remains open\" while StaffTabBar.tsx:74 already does it. The owner is mid-decision on the surface itself (H-77, ADR 20260911: glare as a crew's word wrapping `.boat-mode` at line 300, \"one embed with one look\", \"every page prints\" and \"the lobby display is the storefront full-screen\" at line 82), so the ideas below are about where a face lives, not what it looks like.",
+  "measurements": [
+    {
+      "what": "Screen shells in the tree (Marketing, Harbor, Reef, boat-by-class, EntryShell doors, ThreadShell) + paper shells (SheetDocument, @media print repaint)",
+      "value": "6 + 2"
+    },
+    {
+      "what": "Shells composing ChromeBar (ADR 20260827 d10)",
+      "value": "2 of 6 (ShopNav.tsx:129, PublicShopChrome.tsx:73); MarketingNavView.tsx:54 is a py-4 padded row"
+    },
+    {
+      "what": "layout.tsx files under src/app / of which [token] layouts rendering only ErrorBoundaryIntlProvider",
+      "value": "18 / 13 (379 lines total, 17–35 each)"
+    },
+    {
+      "what": "Hand-written `boat-mode` roots in pages and components",
+      "value": "7 (manifest/page.tsx:676, board:136, check-in:100, OfflineManifestView.tsx:821/871/995/1393) + 2 loading.tsx"
+    },
+    {
+      "what": "Mechanisms by which the live manifest un-wears the staff shell",
+      "value": "3 CSS :has() rules (globals.css:470,478,482) + StaffTabBar.tsx:74 pathname branch + ChromeBar.staffChrome (sole consumer globals.css:478)"
+    },
+    {
+      "what": "`.boat-mode {` blocks in globals.css / `--primary:` redeclarations",
+      "value": "5 / 7 in globals.css (lines 62,205,493,512,851,1603,1687) + 2 blocks in BrandStyle.tsx"
+    },
+    {
+      "what": "print:hidden occurrences / files (src/app/shop, src/components, src/app/s)",
+      "value": "104 / 50 (25, 18, 0)"
+    },
+    {
+      "what": "@media print mono repaint tokens / backstop rule",
+      "value": "16 tokens at globals.css:842–860 / `.trip-print-bundle :is(button,select,textarea,input){display:none}` at :838"
+    },
+    {
+      "what": "Embed flag threading: isEmbed/embed mentions per file",
+      "value": "s/[shopSlug]/page.tsx 36, trips/[id]/page.tsx 31, trips/[id]/actions.ts 32, BookingSections 12, EmbedBookedNotice 10, TripHeader 5, PublicShopShell 5 gates; 14 non-test files carry literal `embed=1`"
+    },
+    {
+      "what": "Embed widgets already path-based (no ?embed=1)",
+      "value": "3 (grid, departure, courses — embed-routes.ts:20); calendar and trip page still on ?embed=1"
+    },
+    {
+      "what": "Shared components carrying a face/mode prop",
+      "value": "11 (ChromeBar, MarketingNavView, EntryShell, BrandStyle, ShopPageHeader, ThreadShell, SegmentedControl, SheetDocument, PaperSheet, StaffTabBar, PublicShopChrome)"
+    },
+    {
+      "what": "ShopPageHeader.titleFace='brand' callers under src/app/s / src/app/shop",
+      "value": "15 / 0 of 109 (both values render Geist without a BrandStyle above — ShopPageHeader.tsx:102–103)"
+    },
+    {
+      "what": "Files under src/app composing MarketingNav themselves / hideCta call sites / compactMobile call sites",
+      "value": "26 / 8 / 1"
+    },
+    {
+      "what": "AmbientGlareDetector mounts (writes .glare-mode on documentElement)",
+      "value": "3 (ThreadShell.tsx:102, OfflineManifestView.tsx:1395, manifest/page.tsx:677)"
+    },
+    {
+      "what": "Visual captures / TV_SURFACES / TABLET_SURFACES extra widths",
+      "value": "278 capture( calls / 1 (departures-board) / +16"
+    },
+    {
+      "what": "Recorded reasons that no longer hold",
+      "value": "2 (ADR 20260830 + globals.css:476 'offline keeps the staff shell'; roadmap.md:142 'dock question remains open')"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "One chrome spec: both shop shells render one ChromeBar at one token height (--chrome-h), and chrome.test.ts scans src/app, src/components, src/features and e2e for any hand-written offset under it, with its own fixture test",
+      "where": "src/components/chrome/ChromeBar.tsx, src/components/chrome/chrome.test.ts, src/app/globals.css:350–363, ADR 20260827 decision 10, shipped.md:1872"
+    },
+    {
+      "what": "Both shop shells stream beside {children} behind a boundary that holds the bar's height, so no request read sits above a page (staff: six reads moved out of the layout; public: four components each behind their own boundary sharing one memoized shop read)",
+      "where": "src/app/shop/[shopSlug]/_components/ShopChrome.tsx:33–75 and ShopChromeSkeleton, src/app/s/[shopSlug]/_components/PublicShopShell.tsx:262–292, ADR 20260804-instant-navigation"
+    },
+    {
+      "what": "The public shell is reproducible from parts: PublicShopShell exports the four chrome components byte-for-byte so /_not-found composes the same shell for the slug the proxy named",
+      "where": "src/app/s/[shopSlug]/_components/PublicShopShell.tsx:1–22, src/app/not-found.tsx (imports all four)"
+    },
+    {
+      "what": "Harbor's brand is a token overlay, not a component branch: BrandStyle emits only --primary/-hover/-tint/-foreground and --brand-display, in a light block and a dark block, and BrandStyle.test.tsx pins that no other token is named — so a status, a manifest or a waiver can never wear the shop's colour",
+      "where": "src/components/BrandStyle.tsx:10–41, ADR 20260901 decision 2"
+    },
+    {
+      "what": "The sheet register is one component with five contents on its own six --sheet-* tokens, with the paper box in millimetres and the fold line (date, address) on every document",
+      "where": "src/app/shop/[shopSlug]/print/_components/PaperSheet.tsx, SheetDocument.tsx, src/lib/print-sheets.ts, ADR 20260908 decision 6 lever X"
+    },
+    {
+      "what": "Staff destinations are one registry that the header tabs, the phone dock and ⌘K all derive from, so a destination is added once",
+      "where": "src/lib/staff-destinations.ts, src/components/ShopNavLinks.tsx, StaffTabBar.tsx, search/CommandPalette.tsx"
+    },
+    {
+      "what": "The token family has two anatomies whose skeletons wear the same measure constants (THREAD_MEASURE_CLASS, entryMainClass, entryPanelClass), so a loading.tsx cannot drift from its page",
+      "where": "src/components/thread/ThreadShell.tsx:18, src/components/account/EntryShell.tsx:98–127, EntryShellSkeleton.tsx"
+    },
+    {
+      "what": "The water band's hour streams in as a <style> from the staff chrome rather than an attribute above {children}, keeping the shop-clock read off the static shell",
+      "where": "src/components/WaterBandStyle.tsx, ShopChrome.tsx:184–193, src/app/globals.css:1126–1137"
+    },
+    {
+      "what": "Boat-mode contrast is measured (every ink/action token ≥6.2:1 in both schemes) and prefers-contrast:more was lifted from .boat-mode-only to :root so every page honours the OS signal",
+      "where": "src/app/globals.css:433–444, 522–562, docs/design/principles.md:30–36"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L14-1",
+      "title": "The boat is a layout, not a class name",
+      "kind": "shape",
+      "reading": "`boat-mode` is hand-written on 7 roots: manifest/page.tsx:676 (inside the Reef shell), board/[token]/page.tsx:136, check-in/[token]/page.tsx:100 and OfflineManifestView.tsx:821, 871, 995, 1393, plus the two loading.tsx twins. The live manifest un-wears the staff shell it sits in through three selectors — globals.css:470 zeroes `--dock-clearance`, :478 hides `[data-staff-chrome]` below 1024px, :482 re-pins the offline notice — plus StaffTabBar.tsx:74's `isLiveManifestPath` branch, and `ChromeBar`'s `staffChrome` prop (ChromeBar.tsx:86–90) exists only to be that selector's target. The board and the kiosk hand-roll the same display header — an h1 with the shop's name at `text-[2rem]` and the date beside it — at board/[token]/page.tsx:139–146 and check-in/[token]/page.tsx:101–108, and each refuses with the door's `EntryDone glyph=\"expired\"` (board:79, check-in:85). The offline manifest is one 2,791-line client component rendered under the root layout by a 32-line page with no layout.tsx, while ADR 20260830 and globals.css:476 still say it \"keeps the staff shell\" and roadmap.md:142 still lists the dock question as open. `AmbientGlareDetector` is mounted three times (manifest/page.tsx:677, OfflineManifestView.tsx:1395, ThreadShell.tsx:102) and writes `.glare-mode` on `documentElement` (AmbientGlareDetector.tsx:93) — a per-device skin mounted per page. ADR 20260830 already calls the manifest \"intentionally a full-viewport exception on a phone\" and it is one of the eight TABLET_SURFACES (e2e/visual.spec.ts:62); the exception is a design decision implemented as a CSS override of a shell the page should not be under.",
+      "idea": "The boat becomes DiveDay's fourth screen shell, owned by a route group: `src/app/(boat)/layout.tsx` for `/board/[token]`, `/check-in/[token]` and `/offline-manifest`, and `src/app/shop/[shopSlug]/(boat)/trips/[id]/manifest/` beside a `(staff)` group that takes today's shop layout — URLs unchanged, because a route group scopes a layout without adding a segment. The shell is one `BoatShell`: `<main className=\"boat-mode\">`, `AmbientGlareDetector` mounted once, and one display header (shop name · date · an optional way back) that the board, the kiosk, the offline copy and the live manifest take as props instead of drawing. With the live manifest outside the Reef layout there is nothing to un-wear: the three `:has()` rules, `isLiveManifestPath`, `staffChrome`, `data-staff-chrome` and the dock-clearance zeroing are deleted, and `ChromeBar` loses its only face prop. The grammar afterwards: a face is a layout, a page never writes a skin class, and \"boat\" means \"under the boat layout\" — the shape ADR 20260911 round 5 needs when glare becomes a crew's word, because the word then toggles a skin on a device rather than a route deciding a shell. The desktop manifest loses the staff tab strip at every width rather than only below `lg`, and the way back is the shell's one link, which ADR 20260830's \"full-viewport exception\" already argues for.",
+      "dissolves": "The CSS-and-pathname mechanism by which one staff page hides its own shell, seven hand-written `boat-mode` roots and two hand-rolled display headers; the stale \"offline keeps the staff shell\" sentences in ADR 20260830 and globals.css:476.",
+      "scope": "src/app/(boat)/layout.tsx (new); src/app/board/[token]/**, src/app/check-in/[token]/**, src/app/offline-manifest/page.tsx and src/components/OfflineManifestView.tsx (4 mains); src/app/shop/[shopSlug]/layout.tsx → (staff)/layout.tsx with trips/[id]/layout.tsx under it and a second trips/[id] folder under (boat) for the manifest; src/components/chrome/ChromeBar.tsx (staffChrome), src/components/StaffTabBar.tsx:69–76, src/lib/staff-destinations.ts (isLiveManifestPath) and its tests; src/app/globals.css:463–485; ADR 20260830 amendment; roadmap.md:142; docs/design/surfaces.md board and kiosk entries; e2e/visual.spec.ts baselines for board, kiosk, offline and manifest (about 55 captures); staff shared.json boatMode keys unchanged.",
+      "firstSlice": "Add `src/app/(boat)/layout.tsx` with `BoatShell` and move `/board/[token]`, `/check-in/[token]` and `/offline-manifest` under it, deleting their hand-written `boat-mode` mains and the two display headers; the live manifest follows in a second PR with the CSS, pathname and `staffChrome` deletions.",
+      "effort": "M",
+      "reviews": [
+        "domain",
+        "design",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260830-responsive-surface-consistency — its \"the deferred offline manifest keeps the staff shell\" sentence is already false and is amended; ADR 20260827 decision 10 — `staffChrome` was the exception's hook and leaves with it; ADR 20260911 round 5 / H-77(p) — glare as a crew's word decides who turns the skin on, this decides where the shell lives, and the two compose; H-77(c) \"the lobby display is the storefront full-screen\" — partial conflict: if the board folds into Harbor the group still holds the kiosk, the offline copy and the live manifest; ADR 20260803-instant-opt-out-placement — trips/[id]/layout.tsx's `instant = false` stays on the (staff) copy and the manifest's group layout makes its own call; N-23 and N-24 are cited, not re-proposed; #1840 is subsumed (one shell, one roll-call control set); roadmap.md:142 closes.",
+      "confidence": "high"
+    },
+    {
+      "id": "L14-2",
+      "title": "The embed is a path, not a request header",
+      "kind": "shape",
+      "reading": "The proxy computes `isEmbedRequest` from a `?embed=1` query on two page shapes plus three widget paths (proxy.ts:669–683) and forwards it as `x-diveday-embed` (:738); a layout cannot see searchParams, so `PublicShopChrome` reads the header and gates five bands on `!isEmbed` (PublicShopShell.tsx:80, 87, 115, 142, 209) and the footer returns null on it (:241). Below the shell the flag is threaded by hand: 36 `isEmbed` uses in src/app/s/[shopSlug]/page.tsx (reads skipped at :236, :272, :291, :383–387; sections dropped at :867, :999; `&embed=1` re-appended to every link at :300, :711, :1040, :1054), 31 in trips/[id]/page.tsx, 32 in trips/[id]/actions.ts (a `TripRef.embed` boolean and an `embedParam` helper at :92–101 so every redirect keeps the mode), and 12, 10 and 5 in BookingSections, EmbedBookedNotice and TripHeader. 14 non-test files carry the literal `embed=1`, and structured-data.ts carries a rule that JSON-LD never renders in embed mode. The three newer widgets are already a route tree — `EMBED_WIDGETS = [\"grid\",\"departure\",\"courses\"]` served by embed/[widget]/page.tsx (247 lines) — which embed-routes.ts:16–17 describes as \"an embed request by path alone — no `?embed=1` to forget or to smuggle\". ADR 20260726 rejected \"a dedicated /embed/* route tree\" because it would \"duplicate the booking/capacity logic\"; that logic now lives once in src/db/bookings.ts and the shared trips/[id]/actions.ts, and the ADR's own 2026-09-02 amendment built the route tree for three of the five embeds.",
+      "idea": "The embed becomes a face with a layout: `src/app/s/[shopSlug]/(embed)/embed/` holds `calendar` and `trip/[id]` beside the existing `grid`, `departure` and `courses`, and its layout.tsx renders `PublicShopBrand` (host colour and face) and nothing else, while `(storefront)/layout.tsx` is today's shop layout with its five `!isEmbed` gates gone. The calendar and trip embed pages compose the same ledger and booking sections the storefront uses, without a flag: what an embed omits — the shelf, the lenses, the season band, reviews, the boats block, JSON-LD — is simply not in the page, so the 36 and 31 conditionals are deleted rather than moved. The proxy's `isEmbeddableShopRoute` collapses to one path prefix, `?embed=1` on the two old shapes becomes a 308 to the new path (the mechanism ADR 20260726's amendment already uses for pasted snippets), and `public/embed.js` points its calendar and lightbox at the new paths with no data-attribute change. The one flag that survives is the action's return path — `TripRef` names which page called it — because a redirect must know where to land; it is a destination, not a rendering mode. The grammar afterwards is the one the three widgets already have: a face is where the URL is, and no component under `/s` asks which frame it is in.",
+      "dissolves": "The `x-diveday-embed` request header and the `isEmbed` flag threaded through 11 files; `?embed=1` as a mode on two storefront pages.",
+      "scope": "src/proxy.ts (isEmbedRequest, :600–683, :738); src/lib/embed-routes.ts; src/lib/public-routes.ts (the 308s); src/lib/public-route-shape.ts and src/app/edge-refusal-coverage.test.ts; src/lib/embed-snippets.ts + public/embed.js (calendar and lightbox URLs; data attributes unchanged); src/app/s/[shopSlug]/layout.tsx → (storefront), new (embed)/layout.tsx with calendar and trip pages; PublicShopShell.tsx; s/[shopSlug]/page.tsx, trips/[id]/page.tsx, BookingSections.tsx, EmbedBookedNotice.tsx, TripHeader.tsx; trips/[id]/actions.ts (TripRef); src/lib/structured-data.ts; e2e/schedule-embed.spec.ts and the 31 embed captures in e2e/visual.spec.ts; ADR 20260726 amendment; docs/product/shipped.md embed entries.",
+      "firstSlice": "Add `(embed)/layout.tsx` and move the three existing widgets under it unchanged, then add `embed/calendar` as a page that renders the schedule ledger with no flag and 308 `/s/<slug>?embed=1` to it; the trip embed and the flag deletions follow.",
+      "effort": "M",
+      "reviews": [
+        "security",
+        "design",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260726-schedule-embed — the rejected alternative; its reason (duplicated booking logic) no longer holds and its 2026-09-02 amendment already reversed it for three widgets; ADR 20260901 decision 2 — the catalogue and its data-attribute contract (embed-snippets.test.ts) are unchanged; H-77(c) \"one embed with one look\" — subsumed: one embed is one page in the group, and the group survives if the catalogue shrinks; ADR 20260912-the-public-namespace-refuses-at-the-edge — `publicRouteShape` learns two shapes and edge-refusal-coverage.test.ts will demand them; ADR 20260804-instant-navigation — the group layout is synchronous like today's.",
+      "confidence": "high"
+    },
+    {
+      "id": "L14-3",
+      "title": "Paper is one face: packets become sheets, the repaint leaves",
+      "kind": "system",
+      "reading": "Two paper systems coexist: `PaperSheet` + `SheetDocument` (199 lines) draw five documents on six `--sheet-*` tokens and print in colour on purpose (globals.css:686–712), while the trip packet and the day packet are screen pages that print through the `@media print` block — a 16-token mono repaint at globals.css:842–860, `html{font-size:13px}` at :862, `*{background:transparent !important}` at :875–882, and a `.trip-print-bundle :is(button,select,textarea,input){display:none}` backstop at :838 written after 42 buttons and 48 inputs printed beside a roster (issue #814). The sheet block has to win back its ground from the packet block \"at class specificity — which beats the `*` rule above without another `!important` arms race\" (globals.css:958–967). Every screen component that might land on a packet carries a paper branch: 104 `print:hidden` in 50 files (25 under src/app/shop, 18 in src/components, 0 under src/app/s), `print:min-w-0`/`print:overflow-visible` in ui/table.tsx:50–142, `print:max-w-none print:px-10 print:py-8` on trips/[id]/layout.tsx:44, and Switch.test.tsx:74 and MissingDiversGrid.test.tsx:193 pin `print:hidden` as a contract. ADR 20260908 decision 6 lever X made the sheet \"one component with different contents, which is what keeps five documents one design rather than five\" (PaperSheet.tsx:9–10); the packets are the two documents that were not given it. H-72 (the printed-by line) is open against print/page.tsx's header, where a sheet's fold line already carries the date and the address for all five documents (PaperSheet.tsx:28–30, 87–90).",
+      "idea": "A document is a sheet and a screen never prints: the trip packet and the day packet are re-composed as `PaperSheet` pages — roster, manifest, dive plan, kit list, and the day as one sheet per boat — from the same readers (src/lib/manifests.ts, src/db/today.ts, the prep readers), rendered through `SheetDocument`, in colour, with the boat's or the shop's band. The `@media print` repaint, the font-size step, the transparent-background rule, the `.trip-print-bundle` rules and the `@page` default are deleted, and with them all 104 `print:hidden` and the table's print variants — `ChromeBar`, `StaffTabBar`, `Toast`, `UndoToast`, `Switch`, `SegmentedControl`, `JumpNav` and `DemoBanner` stop knowing paper exists, because nothing that renders them is ever printed. H-72's line lands once, on the fold, for every document, and the manifest H-05 names as the fallback boarding source is a sheet with no control on it by construction rather than by a `display:none` backstop. The grammar afterwards: five screen faces on the tokens, one paper face on `--sheet-*`, and no component wearing both.",
+      "dissolves": "The mono print repaint and its 104 per-component branches; the second paper system.",
+      "scope": "src/app/globals.css:659–990 (deleted); src/app/shop/[shopSlug]/trips/[id]/print/** (TripPacket.tsx, PacketDives.tsx, kept-sheets.ts and test); src/app/shop/[shopSlug]/print/page.tsx (the day packet); print/_components/PaperSheet.tsx and SheetDocument.tsx with A4/Letter papers in src/lib/print-sheets.ts (+ print-sheets.test.ts); the 50 files carrying print:hidden; src/components/ui/table.tsx; trips/[id]/layout.tsx:44; Switch.test.tsx and MissingDiversGrid.test.tsx; the 9 print captures in e2e/visual.spec.ts; ADR 20260908 amendment; H-72's row in human-decisions.md; docs/design/principles.md:485; docs/engineering print runbook lines if any.",
+      "firstSlice": "Re-compose the trip packet as `PaperSheet`s behind `SheetDocument` (roster · manifest · plan · kit, one `@page` from print-sheets.ts) and route trips/[id]/print to it, leaving the `@media print` block in place until the day packet follows; the third PR deletes the block and sweeps `print:hidden`.",
+      "effort": "L",
+      "reviews": [
+        "domain",
+        "design",
+        "ADR"
+      ],
+      "conflicts": "H-77(c) floor row \"every page prints\" (ADR 20260911:82) — the opposite direction: that row deletes the register and keeps the browser repaint, this keeps the register and deletes the repaint; the comparison is 199 lines and six tokens against about 140 lines of CSS and 104 branches in 50 screen files; ADR 20260908 decision 6 lever X — extended to seven documents, not reversed; H-72 — relocated to the fold line for every document; H-05 — the print/PDF fallback survives as a sheet; issue #814 — its backstop dissolves by construction.",
+      "confidence": "medium"
+    },
+    {
+      "id": "L14-4",
+      "title": "The marketing face wears the one bar under one layout",
+      "kind": "surface",
+      "reading": "ADR 20260827 decision 10 unified \"both shells\" and named the marketing, legal and error surfaces \"outside every recomposition here — carried by decision 1's shared-primitive mechanics only\" (ADR lines 13–15, 177–182); shipped.md:1872 delivered it for the staff app and the shopfront. MarketingNavView.tsx:54–66 is still the bar decision 10 replaced: a `py-4` padded row whose height is content-driven, `bg-background/95` with no `supports-[backdrop-filter]` fallback, `max-w-7xl` against the bar's `max-w-6xl`, and a two-row phone layout its docblock explains at :57–62. There is no marketing layout: 26 files under src/app compose `MarketingNav` or `MarketingNavFallback` themselves, each inside its own `<Suspense>` (dive/page.tsx:58–59, dive/[region]/page.tsx:135–136, onboard/page.tsx:294), and 12 loading.tsx twins repeat the fallback. Two face flags ride it: `hideCta` at 8 call sites and `compactMobile` at one (onboard, \"keeps only the wordmark in the phone header\", MarketingNavView.tsx:40) — and that one is a door `EntryShell` already knows how to wear without a nav (EntryShell.tsx:15–18, `wordmark`). chrome.test.ts:32 already scans src/app for hand-written offsets, so the marketing pages are held to a token they do not use.",
+      "idea": "DiveDay's own pages get a `src/app/(marketing)/layout.tsx` that renders `MarketingNav` once, beside `{children}` behind a Suspense that holds `--chrome-h` (the shape of ShopChrome.tsx:33–51), and `MarketingNavView` composes `ChromeBar` — wordmark leading, links and the one CTA trailing — so all four screen faces share one bar, one height token and one blur fallback. The 26 per-page placements and 12 fallback twins are deleted; `hideCta` becomes a fact of the route (the regional pages sit in the group without a pitch), and `compactMobile` goes with onboard becoming an `EntryShell wordmark` door outside the group. If H-77(d) shrinks the pages to three plus two legal ones, the layout is the same file over five routes instead of twelve; if H-77(h) gives them the picked surface, it is one layout that changes. The grammar afterwards: every screen face is a route group whose layout composes `ChromeBar`, and a marketing page is a body.",
+      "dissolves": "The one padded, content-driven header left in the tree, and per-page composition of the marketing chrome.",
+      "scope": "src/app/(marketing)/layout.tsx (new); src/app/_components/MarketingNav.tsx; src/components/MarketingNavView.tsx + MarketingNavView.test.tsx; src/components/MarketingFooter*.tsx; the 26 pages and 12 loading.tsx files under src/app that place MarketingNav (/, about, dive, dive/[region], pricing, privacy, product, status, switching, switching/[competitor], switching/spreadsheet, terms, sign-in, forgot-password, onboard); src/app/onboard/page.tsx (EntryShell wordmark); marketing captures in e2e/visual.spec.ts; ADR 20260827 decision 10 amendment; docs/design/surfaces.md homepage and product entries.",
+      "firstSlice": "Make `MarketingNavView` compose `ChromeBar` (leading wordmark, trailing links + CTA) and drop its two-row phone layout; the route group and the deletion of the 26 placements follow.",
+      "effort": "M",
+      "reviews": [
+        "design"
+      ],
+      "conflicts": "ADR 20260827 decision 10 — its scoping sentence excluded marketing for scope, not design, and is amended; H-77(d)/(h) — independent: fewer pages under one layout is still one layout, and the picked surface lands in one file; PR #1881 (six brand voices on the homepage) — copy only, touches no chrome; ADR 20260901 (\"DiveDay's own face\") — the bar is a primitive, the wordmark is the face.",
+      "confidence": "high"
+    },
+    {
+      "id": "L14-5",
+      "title": "A shared component never asks which face it is under",
+      "kind": "shape",
+      "reading": "13 `[token]/layout.tsx` files (board, check-in, claim, confirm-contact, gift, invite, ready, recap, reset-password, shelf, unsubscribe, verify, waivers) total 379 lines and each renders only `<ErrorBoundaryIntlProvider messagesByLocale={ERROR_BOUNDARY_MESSAGES_BY_LOCALE}>`, with the reason (ADR 20260803-error-boundary-copy-bridge, synchronous per ADR 20260804) rewritten in each docblock. `EntryShell.wordmark` (EntryShell.tsx:56–57) means \"there is no nav above me\", passed by the token pages and not by the pages under MarketingNav — a fact of the layout stated per call. `ShopPageHeader.titleFace` (ShopPageHeader.tsx:98–105) is passed as `\"brand\"` by 15 files under src/app/s and by none of 109 under src/app/shop, and its own docblock says that with no `BrandStyle` above \"the utility resolves to Geist anyway\" — both values render identically on every staff page. `ThreadShell.contrastCopy` (ThreadShell.tsx:72–83) and `SheetDocument.brandDisplayFont: null` \"for a sheet that rides a boat\" (SheetDocument.tsx:43) are the same shape: a prop whose value is decided by which face the caller is. With L14-1, L14-2 and L14-4 in place every face is a route group, so each of these flags is a question the layout has already answered.",
+      "idea": "One `src/app/(token)/layout.tsx` carries the provider and the docblock once for the 11 token routes that are doors or thread pages (the board and the kiosk go to `(boat)` under L14-1), and the doors' wordmark band is that layout's, so `wordmark` leaves `EntryShell`. `titleFace` is deleted: `ShopPageHeader`'s h1 always wears `font-brand-display`, which is the shop's face under Harbor's `BrandStyle` and Geist everywhere else by the token's own default (globals.css:405). The rule is written where it can be held: a shared component takes content and tone, never a face — a guard beside chrome.test.ts refuses a boolean prop named for a shell (`staffChrome`, `wordmark`, `hideCta`, `compactMobile`, `isEmbed`) in src/components. The grammar afterwards: five route groups, five layouts, and a component tree that renders the same under every one of them.",
+      "dissolves": "Twelve copies of one layout; the face-naming props on `EntryShell`, `ShopPageHeader`, `ChromeBar` and `MarketingNavView`.",
+      "scope": "The 13 [token]/layout.tsx files → src/app/(token)/layout.tsx (route folders moved into the group, URLs unchanged); src/components/account/EntryShell.tsx + EntryShell.test.tsx + EntryShellSkeleton.tsx; src/components/ShopPageHeader.tsx and its 15 diver-side callers; src/components/chrome/chrome.test.ts (the new rule) and docs/agents/repo-checks.md; src/i18n/provider-coverage.test.ts (the provider's new home); docs/design/surfaces.md \"The doors\" entry.",
+      "firstSlice": "Replace the 13 token layouts with one `(token)/layout.tsx` and delete `ShopPageHeader.titleFace` with its 15 call sites; the guard lands in the same PR.",
+      "effort": "S",
+      "reviews": [
+        "design"
+      ],
+      "conflicts": "ADR 20260803-error-boundary-copy-bridge — the mechanism is unchanged, only its home moves; ADR 20260804-instant-navigation — the group layout stays synchronous; ADR 20260901 decision 2 (\"the display face labels headings only\") — unchanged, since no staff page has a BrandStyle above; #1870 (settings eyebrow keys) — adjacent, not subsumed; L14-1 and L14-4 — this idea presumes their groups exist but can land first on the token family alone.",
+      "confidence": "high"
+    }
+  ]
+}

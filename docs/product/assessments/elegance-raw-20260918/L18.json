@@ -1,0 +1,206 @@
+{
+  "lensId": "L18",
+  "lens": "The database layer",
+  "reading": "`src/db` holds 203 non-test modules — 74 `seed-*.ts` scenarios and 129 query modules — plus 197 test files (10 of them `.postgres.test.ts`), for 192,189 lines of which 94,184 are tests. The layer's grammar is real but unwritten: 52 `src/lib`/`src/db` same-basename pairs (rules in lib, rows in db), a verb split of 124 `list*`/91 `get*`/18 `count*` reads against 52 `set*`/35 `record*`/27 `create*`/26 `delete*`/19 `mark*` writes, and a second kind of module — the surface reader (`today.ts`, `closeout.ts`, `roster-facts.ts`, `departures-board.ts`, `trips-overview.ts`, `boat-line.ts`) — whose \"one call, no second detector\" rule appears only in docblocks (`departures-board.ts:33-42`, `roster-facts.ts:22-26`) and in none of AGENTS.md, `.claude/rules/db.md` or `docs/architecture/overview.md`. Where a page lacks a reader it becomes one: `src/app/shop/[shopSlug]/page.tsx` imports 15 `@/db/` modules, `trips/[id]/manifest/page.tsx` 12, `orders/page.tsx` 10, `divers/[personId]/page.tsx` 10, and 316 files under `src/app` import `@/db/` directly. Predicates are the layer's weakest grammar: 22 tables carry `deleted_at` but only `trips` has a named predicate (`liveTrip()`, 62 modules) and a guard (`scripts/check-live-trips.mjs`), while `isNull(people.deletedAt)` is hand-typed 73 times, `ne(bookings.status, \"cancelled\")` 91 times against one exported `seatHeld` (`trips-queries.ts:302`), and 38 modules re-join bookings ⋈ people ⋈ trips. `src/db/schema.ts` is 9,613 lines, 121 tables, 83 enums, 247 indexes, 106 checks and 0 `relations()`; `drizzle.config.ts` names that one file, four sweeps (`export.test.ts`, `delete-path-coverage.test.ts`, `retention.test.ts`, `diver-merge.test.ts`) iterate `Object.values(schema)`, and 8 of the 14 `pnpm task:context` areas in `scripts/task-context-data.mjs` name `src/db/schema.ts` whole as a bounded path. The trips aggregate is where the two module kinds collide: 12 `trips-*.ts` files, 8 named in the barrel `src/db/trips.ts`, 6 in `.claude/rules/db.md:19`, and 14 files outside `src/db` import a sibling directly despite `trips.ts:4-5`'s promise. What is guarded has held — `queryAll`/`check-db-concurrency.mjs` over 120 `DbExecutor` files and 114 `.transaction(` sites, the four schema sweeps, `check-live-trips.mjs`, `check-migrations.mjs`, `check-migration-graph.mjs` — and what is narrated has drifted: `db.md:16` says \"8,700 lines\", `trips-overview.ts:38` cites a \"codes and data, never sentences (AGENTS.md)\" rule grep cannot find while 10 db modules call `staffTranslator`/`diverTranslator`, and 3 `src/lib` files (`credentials.ts`, `security-step-up.ts`, `usage/alert-ledger.ts`) run Drizzle queries. The three ideas below name the reader/table grammar and enforce it, make every live predicate one export under one guard, and split the schema along the twelve areas the rules and readers already use.",
+  "measurements": [
+    {
+      "what": "src/db non-test modules / seed scenarios / query modules",
+      "value": "203 / 74 / 129"
+    },
+    {
+      "what": "src/db test files, of which real-Postgres (.postgres.test.ts)",
+      "value": "197 / 10"
+    },
+    {
+      "what": "src/db lines total / test lines",
+      "value": "192,189 / 94,184"
+    },
+    {
+      "what": "non-test src/db modules over 600 lines (test files over 600)",
+      "value": "37 (47)"
+    },
+    {
+      "what": "largest src/db modules",
+      "value": "schema.ts 9,613; export.ts 5,331; course-templates.ts 3,606; waivers.ts 2,437; today.ts 2,315; anonymize.ts 2,109; gear.ts 2,004"
+    },
+    {
+      "what": "exported functions in src/db; verb prefixes",
+      "value": "901 — list 124, get 91, set 52, seed 48, record 35, create 27, delete 26, mark 19, count 18, issue 16, send 15, update 13, save 13"
+    },
+    {
+      "what": "src/lib ↔ src/db same-basename pairs",
+      "value": "52"
+    },
+    {
+      "what": "schema.ts tables / enums / indexes / checks / relations()",
+      "value": "121 / 83 / 247 / 106 / 0"
+    },
+    {
+      "what": "schema.ts widest table spans (lines)",
+      "value": "shops 479 (58 columns), waiverRecords 365, people 336, trips 283, diveSites 278, certifications 261, bookings 240"
+    },
+    {
+      "what": "schema lines by proposed area",
+      "value": "board 1,938 (24 tables), core 1,553 (16), money 1,132 (15), readiness 1,104 (7), seats 1,052 (18), waivers 528 (4), recap 490 (7), day-of 462 (7), messages 444 (7), integrations 413 (8), gear 245 (4), crew 183 (4)"
+    },
+    {
+      "what": "cross-table references in schema.ts, all lazy callbacks",
+      "value": "321 `.references(`, 116 third-argument callbacks, 0 module-scope cross-table expressions"
+    },
+    {
+      "what": "tables with deleted_at / tables with a named live predicate and guard",
+      "value": "22 / 1 (trips)"
+    },
+    {
+      "what": "hand-typed isNull(<table>.deletedAt) in src/db",
+      "value": "people 73, certifications 25, nitroxCertifications 21, diveSites 19, specialtyCertifications 17, waiverTemplates 7, tripLenses 7, executedDives 7, recapPulses 6; trips 7 beside liveTrip() in 62 modules"
+    },
+    {
+      "what": "seat predicate spellings in src/db",
+      "value": "ne(bookings.status, \"cancelled\") 91; SEAT_HELD_STATUSES 10; seatHeld exported once (trips-queries.ts:302); eq(trips.status, \"scheduled\") 62"
+    },
+    {
+      "what": "modules joining bookings→people / bookings→trips / both",
+      "value": "31 (49 sites) / 39 (72 sites) / 38"
+    },
+    {
+      "what": "staff page.tsx files by distinct @/db imports",
+      "value": "60 pages: 0→4, 1→13, 2→16, 3→11, 4→5, 5→5, 6→1, 8→1, 10→2, 12→1, 15→1"
+    },
+    {
+      "what": "files importing @/db directly: src/app / src/lib / src/features / src/components",
+      "value": "316 / 49 / 23 / 9"
+    },
+    {
+      "what": "files outside src/db importing @/db/schema; src/lib value (non-type) imports; src/lib files running Drizzle queries",
+      "value": "140; 13; 3"
+    },
+    {
+      "what": "trips-*.ts files / named in trips.ts barrel / named in db.md / outside files bypassing the barrel",
+      "value": "12 / 8 / 6 / 14 (trips-live 7, trips-guests 3, trips-overview 2, trips-crew 2, trips-prep 1)"
+    },
+    {
+      "what": "db modules calling a translator (staffTranslator/diverTranslator)",
+      "value": "10 (closeout, export, import, push-subscriptions, recap, reminders, reply-keywords, staff-reply, today, waiver-issue); today.ts imports 55 sentence builders from @/i18n/today-labels"
+    },
+    {
+      "what": "DbExecutor-typed files / .transaction( sites / queryAll users",
+      "value": "120 / 114 / 13"
+    },
+    {
+      "what": "append-only event/attempt tables; modules inserting activityEvents directly",
+      "value": "17; 5"
+    },
+    {
+      "what": "pnpm task:context areas naming src/db/schema.ts whole",
+      "value": "8 of 14"
+    },
+    {
+      "what": ".claude/rules/db.md stated schema size vs actual",
+      "value": "8,700 vs 9,613"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "The departure aggregate split along reader-navigable seams behind one barrel, with materialization primitives kept internal so no caller can assemble a trip without its safety rows",
+      "where": "src/db/trips.ts:1-25 (2,003 → 94-line barrel, docs/product/shipped.md:2514)"
+    },
+    {
+      "what": "Seed decomposed into story-named scenario modules behind one orchestrator, verified by fingerprinting the seeded database; flat siblings chosen over a directory for a stated reason",
+      "where": "docs/architecture/decisions/20260803-seed-scenario-modules.md; 74 src/db/seed-*.ts"
+    },
+    {
+      "what": "202 migration folders squashed to one name-reused baseline (drizzle/ 83 MB → 1.3 MB) with the three hand-carried statements and a convergence migration proven on real Postgres",
+      "where": "docs/architecture/decisions/20260904-squash-migration-baseline.md"
+    },
+    {
+      "what": "Migrations and lock contention rehearsed on a real postgres:16 in CI, gated on db-surface changes plus nightly; suites picked up by glob",
+      "where": "docs/architecture/decisions/20260806-real-postgres-ci-job.md; 10 src/db/*.postgres.test.ts"
+    },
+    {
+      "what": "One executor type and queryAll fanning out only on the pool, enforced by a token-accurate scanner over typescript/unstable/ast",
+      "where": "src/db/client.ts:26-65; scripts/check-db-concurrency.mjs"
+    },
+    {
+      "what": "Every schema table must answer four questions or fail — export/fold/exclude, delete path, retention window, merge — as sweeps over Object.values(schema), not remembered cases",
+      "where": "src/db/export.test.ts:586, delete-path-coverage.test.ts:1-50, retention.test.ts:436-456, diver-merge.test.ts; .claude/rules/db.md:66-74"
+    },
+    {
+      "what": "The soft-delete predicate for trips is one greppable export with a guard that fails any unfiltered board read (the pattern L18-2 generalizes)",
+      "where": "src/db/trips-live.ts; scripts/check-live-trips.mjs; ADR 20260820-every-delete-is-soft"
+    },
+    {
+      "what": "One offset-paging shape and three named page-depth tiers replacing four grammars and nineteen constants; keyset cursors kept only for streams",
+      "where": "src/db/paging.ts:1-60; src/db/cursor.ts; ADR 20260803-one-pagination-model"
+    },
+    {
+      "what": "One readiness detector shared by the nav badge, the day spine and the roster so two surfaces cannot disagree about who is blocked; the roster's facts read through it rather than a second pass",
+      "where": "src/db/blockers.ts:7-32; src/db/roster-facts.ts:22-26; ADR 20260827-people-not-lists decision 2"
+    },
+    {
+      "what": "Migrate-once template databases (~10x cheaper per test) — the settled question's 'plausible perf follow-up' is done — and a query-count harness so an N+1 fails a test",
+      "where": "src/test/db-template.ts; src/test/query-count.ts; docs/architecture/overview.md:84-85"
+    },
+    {
+      "what": "Constraint violations read as truth through one error-chain walker (sqlStateOf, violatesUniqueIndex, violatesExclusionConstraint) rather than pre-checks",
+      "where": "src/db/client.ts:67-140"
+    },
+    {
+      "what": "Migration safety split into an offline commutativity walk on every PR and an expand/contract refusal with a required written acknowledgement",
+      "where": "scripts/check-migration-graph.mjs; scripts/check-migrations.mjs; ADR 20260806-destructive-migration-guard"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L18-1",
+      "title": "Every staff page reads through one reader; tables keep transitions",
+      "kind": "shape",
+      "reading": "`src/db` holds 129 non-seed query modules of two unnamed kinds side by side: table modules (`bookings.ts`, `orders.ts`, `waivers.ts`, `gear.ts`) and surface readers named for a page's question (`today.ts`, `closeout.ts`, `roster-facts.ts`, `departures-board.ts`, `boat-line.ts`, `first-day.ts`, `trips-overview.ts`, `trips-guests.ts`, `trips-prep.ts`, `crew-sheet.ts`, `print-pass.ts`, `next-dive.ts`). The reader convention lives only in docblocks — `trips-overview.ts:33` \"Everything the trip's Overview page is about, in one call\", `departures-board.ts:33-42` \"the departures board's one reader … detects nothing of its own\", `roster-facts.ts:22-26` \"No second detector\" — and grep finds it in none of AGENTS.md, `.claude/rules/db.md` or `docs/architecture/overview.md`. Where a page has no reader it becomes one: `src/app/shop/[shopSlug]/page.tsx` imports 15 `@/db/` modules (two of them the readers `today` and `closeout`, plus `blockers`, `first-booking`, `form-drafts`, `season-scale`, `orders`, `rental-fit`, `stripe-accounts`, `dive-sites`, `trips`), `trips/[id]/manifest/page.tsx` 12, `orders/page.tsx` 10, `divers/[personId]/page.tsx` 10, and 316 files under `src/app` import `@/db/` directly. The exported verb grammar already separates the kinds — 124 `list*`, 91 `get*`, 18 `count*` reads against 52 `set*`, 35 `record*`, 27 `create*`, 26 `delete*`, 19 `mark*`, 16 `issue*`, 8 `release*`, 7 `claim*`, 6 `consume*`, 6 `restore*` transitions — but 13 `update*` and 13 `save*` stay generic. The trips aggregate shows the kinds colliding: 12 `trips-*.ts` files, of which the barrel `src/db/trips.ts` names 8 and `.claude/rules/db.md:19` names 6, while `trips-overview`/`-guests`/`-prep` are page readers wearing the aggregate's prefix and 14 files outside `src/db` import a sibling directly against `trips.ts:4-5`'s promise. 10 db modules call `staffTranslator(`/`diverTranslator(` (`today.ts` alone imports 55 sentence builders from `@/i18n/today-labels`), while `trips-overview.ts:38` cites a \"`src/db` returns codes and data, never sentences (AGENTS.md)\" rule that grep cannot find in AGENTS.md or any rule file. `scripts/check-architecture.mjs:59` bans only direction from `src/db`; every other promise the layer makes is a comment.",
+      "idea": "Name the two kinds and write them into `.claude/rules/db.md` as the layer's grammar: a table module (`src/db/<table>.ts`) holds rows and the transitions on them, named by transition (`record`, `mark`, `issue`, `claim`, `release`, `consume`, `restore`, `cancel`) and never `update`/`save`; a surface reader (`src/db/<surface>.ts`) answers one page's question in one call, detects nothing of its own, and returns codes and data, never a sentence. Every staff `page.tsx` reads through `requireShopSurface` plus exactly one reader, so the four pages importing 10–15 modules get `getShopHome`, `getTripManifest`, `getOrdersIndex` and `getDiverRecord`, each with a `src/test/query-count.ts` budget, and the 13 pages already at one import are the model. `trips-overview/-guests/-prep.ts` drop the `trips-` prefix (they are readers, not the aggregate), the barrel then covers exactly the departure aggregate, and `scripts/check-architecture.mjs` refuses deep imports into `@/db/trips-*` and `@/db/seed-*` the way it already refuses them into `src/features/*/`. The same table gets two more rows: `src/db` may not import a translator (`@/i18n/messages`, `@/i18n/staff-messages`), and `src/lib` may not import `drizzle-orm` or table values from `@/db/schema` — moving the query halves of `src/lib/credentials.ts`, `security-step-up.ts` and `usage/alert-ledger.ts` into the `src/db` twin the 52 name pairs already model, and the 10 translator callers' sentences to where the translator lives. The stale narrations (`trips.ts:4`, `trips-overview.ts:38`, `db.md:19`) are deleted in favour of the guard's name. Afterwards a page's question has one place to be answered, a table's transitions one place to be written, \"a second detector\" a rule to be refused by, and a promise about the layer is a grep of one script.",
+      "dissolves": "The unnamed third kind of module — a `page.tsx` that is itself a reader over 10–15 db modules — and the `trips-` prefix on three page readers, the generic `update*`/`save*` verbs, and four docblock promises that drifted.",
+      "scope": ".claude/rules/db.md; docs/architecture/overview.md (layer paragraph); scripts/check-architecture.mjs (+test) with four new rows; src/db/trips-overview.ts, trips-guests.ts, trips-prep.ts renamed and their 6 importers; the 14 barrel-bypassing files; src/app/shop/[shopSlug]/page.tsx, trips/[id]/manifest/page.tsx, orders/page.tsx, divers/[personId]/page.tsx and four new readers; src/db/today.ts + src/i18n/today-labels.ts consumers and the other 9 translator callers; src/lib/credentials.ts, security-step-up.ts, usage/alert-ledger.ts; 13 update*/13 save* renames across src/db and their callers; docs/agents/repo-checks.md; AGENTS.md check:repo count.",
+      "firstSlice": "Write the two-kind rule into `.claude/rules/db.md`, rename `trips-overview/-guests/-prep.ts` out of the aggregate prefix, and add the `@/db/trips-*`/`@/db/seed-*` deep-import refusal to `scripts/check-architecture.mjs`, fixing its 14 hits (7 of which vanish under L18-2's `live.ts`).",
+      "effort": "L",
+      "reviews": [
+        "ADR",
+        "domain"
+      ],
+      "conflicts": "ADR 20260803-seed-scenario-modules — keeps its flat-sibling ruling (no `src/db/read/` directory), only the naming changes; ADR 20260730-feature-module-contracts — borrows its deep-import refusal for the trips barrel; ADR 20260827-people-not-lists decision 2 — `roster-facts.ts` is the model reader, unchanged; issue #632 lineage (`getTripPrep`/`getTripOverview`/`getTripGuests`) — completed and generalized rather than restated; issue #1813 (seed crew writes through `setTripCrew`) — subsumed by \"one transition path per write\"; docs/product/features/roadmap.md concept-model rows — untouched, this is codebase shape not product concept.",
+      "confidence": "high"
+    },
+    {
+      "id": "L18-2",
+      "title": "Twenty-two soft-deleted tables get one live predicate and one guard",
+      "kind": "system",
+      "reading": "22 tables in `src/db/schema.ts` carry `deleted_at`, and exactly one has a named predicate and a guard: `liveTrip()` in `src/db/trips-live.ts`, used in 62 modules and enforced by `scripts/check-live-trips.mjs`, whose own header (lines 11-16) names the failure it exists for — a forgotten reader showing an anonymous visitor a departure the shop took off the board. The other 21 are spelled by hand: `isNull(people.deletedAt)` 73 times, `certifications` 25, `nitroxCertifications` 21, `diveSites` 19, `specialtyCertifications` 17, `waiverTemplates` 7, `tripLenses` 7, `executedDives` 7, `recapPulses` 6, and the remaining twelve fewer than 6 each — so nothing can say whether a certification reader somewhere shows a card its owner deleted. \"A seat is held\" has one named spelling, `seatHeld` at `src/db/trips-queries.ts:302` (`SEAT_HELD_STATUSES` = booked, checked_in; 10 uses in `src/db`), beside 91 hand-typed `ne(bookings.status, \"cancelled\")` — which also counts `no_show` (`booking_status` at `schema.ts:2555-2560`), so two meanings share one unnamed shape and `trips-queries.ts:286-301` spends a paragraph explaining which readers want which. \"On the board\" is `liveTrip()` composed by hand with `eq(trips.status, \"scheduled\")` at 62 sites; `departures-board.ts:36-40` lists by name the four readers it must share to avoid a second answer. The seat row — bookings ⋈ people ⋈ trips — is re-joined in 38 modules (49 `bookings→people` sites, 72 `bookings→trips`), with `liveBookingJoin` (`trips-queries.ts:302`) the one exported join. `schema.ts` has 0 `relations()`, so there is no relational-query grammar competing with `.select()` and no reason to add one.",
+      "idea": "One module, `src/db/live.ts` (absorbing `trips-live.ts`), exports the predicate every soft-deleted table's readers mean — `liveTrip()`, `livePerson()`, `liveCard()`, `liveSite()`, and one per remaining `deleted_at` table — plus the status-set predicates with their meanings named (`seatHeld`, `seatNotCancelled`, `onTheBoard()` = live + scheduled) and the seat joins (`seatJoin` for bookings→trips, `diverJoin` for bookings→people) as the one spelling of the row 38 modules build. `scripts/check-live-trips.mjs` becomes `check-live-reads.mjs`, driven by a table→predicate map derived from `getTableColumns` so every `deleted_at` column must name an export (a new soft-deleted table without a predicate fails `check:repo`, the failure naming the table), and refuses a `.from(<table>)` or join that carries neither the predicate nor `diveday:allow-deleted-<table>: <why>` — the same window-and-acknowledgement mechanics the trips guard already proves. `ne(bookings.status, \"cancelled\")` is refused outright in favour of `seatNotCancelled`, so a reader states which of the two meanings it wants. The mechanical half of `.claude/rules/db.md`'s \"every delete is soft\" rule then covers every table, not one, and `docs/agents/repo-checks.md`'s live-trips entry becomes the live-reads entry. Afterwards a reader says what it means in one identifier — `onTheBoard()`, `seatHeld` — and a reviewer greps a name instead of reading a clause.",
+      "dissolves": "Nine hand-typed live clauses (about 180 sites), the unnamed \"not cancelled\" meaning (91 sites), the hand-composed \"on the board\" pair (62 sites), and a guard that protects one table out of twenty-two.",
+      "scope": "src/db/live.ts (new; replaces src/db/trips-live.ts and its 7 outside importers); ~350 call sites across src/db, src/lib, src/features, src/app; scripts/check-live-trips.mjs → check-live-reads.mjs + its test; docs/agents/repo-checks.md; .claude/rules/db.md (soft-delete section); AGENTS.md check:repo count row; ADR amending 20260820-every-delete-is-soft.",
+      "firstSlice": "Create `src/db/live.ts` with `livePerson()` and `seatNotCancelled`, codemod the 73 + 91 spellings, and teach the guard a two-row map (trips, people) — the generalization proven on the two widest tables before the map is derived from the schema.",
+      "effort": "M",
+      "reviews": [
+        "security",
+        "domain",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260820-every-delete-is-soft — extends its guard from one table to all 22, amends rather than supersedes; ADR 20260827-people-not-lists — `roster-facts.ts` already reads through `liveTrip()` and would read through `seatJoin`; `src/lib/no-show.ts` `SEAT_HELD_STATUSES` — stays the source of the status set, `live.ts` only names the Drizzle predicate over it; docs/design/settled-questions.md — nothing there touches predicates; no open issue in open-issues.md concerns soft-delete reads.",
+      "confidence": "high"
+    },
+    {
+      "id": "L18-3",
+      "title": "The schema is twelve area files, not one 9,613-line file",
+      "kind": "shape",
+      "reading": "`src/db/schema.ts` is 9,613 lines holding 121 tables and 83 enums interleaved (first enum at line 41, last at 9,384), 87 of the tables carrying a docblock and no area divider anywhere — a grep for section comments finds only per-table docblocks. The repository's context economy is built on bounding — the Read guard refuses any file over 600 lines whole, `.claude/rules/*.md` load by path, `pnpm task:context <area>` names bounded paths — yet 8 of the 14 areas in `scripts/task-context-data.mjs` can only name `src/db/schema.ts` whole, and `.claude/rules/db.md:16` carries a hand-written \"8,700 lines\" already 913 lines stale. Grouped by the seams the rules and readers already use, the 121 tables fall into twelve areas: board 1,938 lines (24 tables), core 1,553 (16), money 1,132 (15), readiness 1,104 (7), seats 1,052 (18), waivers 528 (4), recap 490 (7), day-of 462 (7), messages 444 (7), integrations 413 (8), gear 245 (4), crew 183 (4). The reasons on record for one file are not about one file: ADR 0005 says \"`src/db/schema.ts` is the single source of truth\" (a directory with an index is still one source), `docs/architecture/overview.md:63` keeps tables out of `src/features/*` so \"a feature owns its rows' lifecycle, not their definition\" (an argument against feature ownership, not against `src/db/schema/*`), and ADR 20260803's rejection of a `seed/` directory was that `seed.ts` and `seed/` would both answer `@/db/seed`, which does not arise once `schema.ts` is gone. The mechanics tolerate a split: `drizzle.config.ts` `schema:` takes a directory or glob, the four sweeps and the 140 outside importers use `@/db/schema` as a namespace an `index.ts` re-export preserves, and all 321 cross-table references in `schema.ts` are lazy callbacks (316 inline `() =>`, 5 typed or multi-line) inside 116 third-argument callbacks with 0 module-scope cross-table expressions, so import order cannot bite. H-49 makes this a file move with no migration: no table or column name changes, so `pnpm db:generate` must emit nothing.",
+      "idea": "`src/db/schema.ts` becomes `src/db/schema/` with one file per area named for the seam the readers already use — `core.ts`, `board.ts`, `seats.ts`, `money.ts`, `readiness.ts`, `waivers.ts`, `gear.ts`, `crew.ts`, `messages.ts`, `integrations.ts`, `day-of.ts`, `recap.ts` — each holding its tables and the enums only it uses, and an `index.ts` re-exporting everything so `@/db/schema`, the four sweeps and `drizzle-kit` see one namespace. The area files form a DAG rooted at `core.ts` (`shops`, `people`, `personRoles`, `userAccounts`, the token tables), `board.ts` above it, `seats.ts` on both, and `scripts/check-architecture.mjs` gets one row refusing an upward import between area files, so a cycle is a lint failure rather than a runtime surprise. `scripts/task-context-data.mjs` then names `src/db/schema/gear.ts` (245 lines) for gear instead of 9,613, a path-scoped rule can point at an area's tables, and seven of the twelve files pass the 600-line Read guard whole. The hand-written line count leaves `.claude/rules/db.md`, and the reason for the shape — bounded context for the agents that develop this repository, the same reason `.claude/rules/` is path-scoped — is written in the ADR that supersedes 0005's file-location clause. Nothing about a table changes: same names, same constraints, same baseline migration, and an empty `pnpm db:generate` is the proof.",
+      "dissolves": "The one 9,613-line file every area rule, every task context and every schema Read has to grep across, and the stale line count that stands in for a map.",
+      "scope": "src/db/schema.ts → src/db/schema/{index,core,board,seats,money,readiness,waivers,gear,crew,messages,integrations,day-of,recap}.ts; drizzle.config.ts; scripts/task-context-data.mjs (8 area entries); scripts/check-architecture.mjs (one row + test); .claude/rules/db.md:15-16; docs/architecture/overview.md:63; AGENTS.md route-map row \"DB schema\"; an ADR superseding ADR 0005's file clause; the schema-change skill's \"edit src/db/schema.ts\" line; no migration, no message bundle, no e2e spec, no baseline.",
+      "firstSlice": "Move the four gear tables (245 lines, `gearItems`, `gearServiceEvents`, `gearReservations`, `priorGearAssignments`) and their enums into `src/db/schema/gear.ts`, add `index.ts` re-exporting `./gear` and the remainder, point `drizzle.config.ts` at the directory, and prove `pnpm db:generate` emits nothing and the four sweeps still count 121 tables.",
+      "effort": "M",
+      "reviews": [
+        "ADR"
+      ],
+      "conflicts": "ADR 0005-database — its file-location clause is superseded, the Drizzle/PGlite/Postgres decision stands; ADR 20260803-seed-scenario-modules — its directory objection does not apply (no `schema.ts` remains beside `schema/`), and its flat-sibling ruling for seeds is untouched; ADR 20260904-squash-migration-baseline — `drizzle-kit` reads the schema path; the baseline folder name and contents are unchanged and the empty regenerate is the check; the schema-change skill and `pnpm task:context database` — updated in the same PR; open-issues.md has no entry touching schema shape.",
+      "confidence": "medium"
+    }
+  ]
+}

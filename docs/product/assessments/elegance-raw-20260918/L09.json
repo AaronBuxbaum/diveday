@@ -1,0 +1,183 @@
+{
+  "lensId": "L09",
+  "lens": "Ubiquitous language",
+  "reading": "docs/product/glossary.md:3 promises terms \"agents must use correctly — in code, UI copy, and data models\", yet its entry is titled \"Trip / charter\" (line 836), its prose says \"departure\" 154 times to \"trip\" 149, and its first entry (lines 6-7) uses both nouns in one sentence. The en-US bundles' 7,981 values split 215 \"departure\" to 298 \"trip\", and inside one file it is a coin toss — staff.checkIn 8 to 8, staff.manifest 6 to 6 — while staff.incidentExport is 10 to 0 and diver.ready 0 to 14. Spanish already converged (salida 498, viaje 26; plaza 184, asiento 3) because src/i18n/locales/es-ES/README.md decided it in 17 headed sections and scripts/check-shop-word.mjs holds it with 10 rules; en-US has no README and no rule. scripts/check-glossary.mjs (78 lines) detects only a decapitated definition and scripts/check-domain-strings.mjs (376 lines) enforces codes-not-sentences, so no guard in the 48 registered by scripts/check-repo.mjs reads a term. Every other known pair has the same shape and no decision behind it: route settings/kinds-of-day, namespace staff/lenses.json, table trip_lenses and glossary \"Lens\" for one concept; \"roster\" across src/db/trips-roster.ts, ADR 20260806-staffing-is-the-shift-roster, ADR 20260815-course-roster, src/db/roster-facts.ts and the switching guides, in 282 non-test files with no glossary entry; \"Guests\" on the trip sub-nav beside \"Divers\" on the primary tab, people plus 3 person_* tables, src/db/trips-guests.ts, and \"customer\" in 44 values. ADR 20260804-buddy-pairs was superseded the same day by 20260804-buddy-teams, yet buddy_pair_members, src/db/buddy-pairs.ts, seed-buddy-pairs.ts and 129 buddyPair symbols stand beside 450 buddyTeam symbols and buddy_team_events. Bearer pages say the ADR's name to the diver — \"Your shelf\" and \"Open your thread\" in diver.shelf.* — against docs/design/principles.md:121 \"Never surface the implementation\". The repo's own guards have already written the diagnosis twice: check-shop-word.mjs's header says a binding README \"does not stop them\", and check-soft-delete.mjs's says copy \"drifts toward the code\".",
+  "measurements": [
+    {
+      "what": "Glossary size and noun split (docs/product/glossary.md)",
+      "value": "2,350 lines, 216 bold entries, 30 citing a code symbol; 'departure' 154 mentions, 'trip' 149, 'charter' 13, 'roster' 50, 'guest' 1; entries for Roster/Guest/Shelf/Thread/Kind of day: 0; 12 commits in git log"
+    },
+    {
+      "what": "en-US bundle values (7,981 leaf strings) by noun",
+      "value": "departure 215 / trip 298 / charter 10 / session 43; seat 153 / spot 44; roster 41 / manifest 83 / roll call 73; diver 716 / guest 19 / customer 44 / people 34 / person 46; buddy team 21 / buddy pair 1; lens 2 / kind of day 10; shelf 9 / thread 1; station 22"
+    },
+    {
+      "what": "en-US key names by noun",
+      "value": "trip 1,005 / departure 78; diver 3,487 / guest 13; manifest 353 / roster 118; seat 86 / spot 32; shelf 73; lens 27 / kindOfDay 0; thread 19"
+    },
+    {
+      "what": "Per-namespace departure:trip in values",
+      "value": "staff.trips 24:42, staff.settings 23:9, staff.schedule 19:9, staff.checkIn 8:8, staff.manifest 6:6, staff.today 7:6, staff.incidentExport 10:0, staff.closeout 8:1, diver.ready 0:14, diver.marketing 15:44"
+    },
+    {
+      "what": "es-ES bundle values (7,981, matched by check:locale)",
+      "value": "salida 498 / viaje 26 / excursión 0; plaza 184 / asiento 3; buceador 648 / cliente 47 / invitado 12; manifiesto 55 / lista 216; README: 17 sections, 21 decisions, 'A departure is la salida' settled 2026-09-04 by 302 to 7"
+    },
+    {
+      "what": "Schema (src/db/schema.ts)",
+      "value": "121 tables, 83 enums; 22 trip_* tables, 0 'departure'; people + 3 person_* tables, 0 'diver' table; buddy_pair_members beside buddy_team_events; trip_lenses; trip_stage includes 'boarding'"
+    },
+    {
+      "what": "Modules in src/lib + src/db by noun",
+      "value": "40 trip*-named files vs 5 departure-named (departures-board, departure-tides, similar-departures, pre-departure-check x2); 'departure' 4,590 hits in non-test .ts; trips-guests.ts, trips-roster.ts, roster-facts.ts, roster-rows.ts, roster-filters.ts, divers.ts, people.ts, person-*.ts, shelf.ts, thread-steps.ts, trip-lenses.ts, seed-lenses.ts"
+    },
+    {
+      "what": "Symbols",
+      "value": "buddyTeam/buddy_team 450 vs buddyPair/buddy_pair 129; 'roster' in 282 non-test files; bookSpot 25"
+    },
+    {
+      "what": "Routes and nav words",
+      "value": "shop segments: trips, divers, check-in, schedule/board, settings/kinds-of-day; trip sub-nav (trips.json subNav): Trip / Overview / Guests / Manifest / Prep; primary tabs (staff-destinations.ts): today, checkIn, divers, board (/schedule/board, alsoMatch /trips); bearer routes /board/[token], /shelf/[token]; /s/[shopSlug]/trips"
+    },
+    {
+      "what": "Guards that touch words",
+      "value": "check-glossary.mjs 78 lines (decapitation only); check-domain-strings.mjs 376 lines (codes not sentences, baseline empty); check-shop-word.mjs 10 es-ES rules with scope; check-soft-delete.mjs (Archive/Deactivate refused, both locales); check-voice.mjs (regex word list over every value per locale); 48 guards in check-repo.mjs; label maps 35, 23 of them Record<code,key>"
+    },
+    {
+      "what": "ADRs and design docs by noun",
+      "value": "filenames: departure 4 / trip 13 / roster 2 / buddy 2 (same day, one superseded); docs/design/surfaces.md departure 25 / trip 11; ADR 20260827-the-departure-is-two-working-surfaces names its tab 'Trip' and its list 'Guests'"
+    },
+    {
+      "what": "e2e exposure to a noun rename",
+      "value": "109 specs; 78 contain 'departure', 24 contain 'Trip'"
+    },
+    {
+      "what": "Open issues whose titles carry two words for one thing",
+      "value": "#1759 'manifest roster', #1690 'boat manifest, as the roster now does', #1852 'manifest, the log', #1795 buddy_pairs.csv, #1869 glossary vs card-labels tone"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "A per-locale word guard that reads written decisions and refuses their synonyms, with per-rule scope and an innocent-reading exclusion",
+      "where": "scripts/check-shop-word.mjs (10 rules quoted from src/i18n/locales/es-ES/README.md): salida 498 vs viaje 26, plaza 184 vs asiento 3"
+    },
+    {
+      "what": "'Delete' is the one word for every soft delete, in both locales, held by a guard",
+      "where": "scripts/check-soft-delete.mjs, ADR 20260820-every-delete-is-soft, .claude/rules/i18n.md:47"
+    },
+    {
+      "what": "Codes live in src/lib and src/db, words in src/i18n — the seam a vocabulary contract sits on already exists",
+      "where": "scripts/check-domain-strings.mjs (baseline empty), 23 of 35 src/i18n/*-labels.ts are Record<code, key> maps, ADR 20260731-domain-layer-copy-leaks"
+    },
+    {
+      "what": "One registry for where staff can go; three surfaces derive their words from it",
+      "where": "src/lib/staff-destinations.ts; src/components/ShopNavLinks.tsx, StaffTabBar.tsx, search/CommandPalette.tsx"
+    },
+    {
+      "what": "Readiness has one vocabulary, Blocked / Ready, with its one exception named",
+      "where": "src/i18n/readiness-labels.ts; glossary 'Blocked / Ready'; src/components/OfflineManifestView.tsx cited by name"
+    },
+    {
+      "what": "The storage word for a person is settled: one people table with roles, never person types",
+      "where": "docs/product/glossary.md Modeling notes (line 2255); ADR 20260719-diver-person-spine; ADR 20260827-people-not-lists"
+    },
+    {
+      "what": "Locale file sets and leaf counts are proven identical across locales, so a rename cannot orphan a key",
+      "where": "pnpm check:locale (src/i18n/locales/en-US/staff/index.ts head comment); en-US and es-ES both 7,981 values"
+    },
+    {
+      "what": "The kinds-of-day concept's shape is decided — a set the shop names, not a reusable tag",
+      "where": "ADR 20260901-diveday-reimagined:166-172; issue #1395; roadmap.md:401"
+    },
+    {
+      "what": "Machine-voice words are refused mechanically over every bundle value per locale — the exact mechanism a noun guard needs",
+      "where": "scripts/check-voice.mjs; docs/design/brand.md 'What gives us away'"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L09-1",
+      "title": "The glossary opens with a table one guard reads",
+      "kind": "governance",
+      "reading": "docs/product/glossary.md:3 claims authority over code, copy and data model, but scripts/check-glossary.mjs (78 lines) only catches a decapitated entry, and scripts/check-repo.mjs registers it as the one 'glossary' guard among 48. The vocabulary that is actually held is held by two one-off scripts: check-soft-delete.mjs (Archive/Deactivate refused in both locales, ADR 20260820-every-delete-is-soft) and check-shop-word.mjs (10 Spanish rules quoted from src/i18n/locales/es-ES/README.md, each with a scope and an innocent-reading exclusion). check-shop-word.mjs's header records that the README's binding decisions 'do not stop them' and came back within a fortnight; check-soft-delete.mjs's header records that copy 'drifts toward the code that' names the storage model. .claude/rules/i18n.md:47 lists 'Vocabulary the guards refuse' as prose, and docs/agents/domain.md:27 asks agents to 'Use the glossary's vocabulary' with nothing behind it. The es-ES README's 17 sections are, in effect, the vocabulary contract en-US does not have; ls src/i18n/locales/en-US/ shows diver.json and staff/, no README.",
+      "idea": "The glossary opens with one machine-readable table — one row per concept: the concept, its en-US screen word, its es-ES screen word, its storage and identifier word, its route segment, and the synonyms refused — and one guard, scripts/check-vocabulary.mjs, reads that table and refuses a listed synonym in any bundle value or key, route segment, or exported identifier, per locale, ratcheted at zero the way check-domain-strings.mjs is. check-shop-word.mjs and check-soft-delete.mjs become rows (el centro, la salida, la exención, Delete, Blocked/Ready, plaza) and are deleted as scripts; the es-ES README keeps its register and reasoning and hands its terminology tables to the glossary's Spanish column. check-glossary.mjs keeps its decapitation check and gains one rule: every table row has a bold entry, and every bold entry that names a screen word is a row. The grammar afterwards: a concept has at most two names — the storage name and the screen name — and the row is where a reader learns both; a third name anywhere is a guard failure, not a translation the reader performs.",
+      "dissolves": "check-shop-word.mjs and check-soft-delete.mjs as separate scripts, the i18n.md 'Vocabulary the guards refuse' prose list, and the es-ES README as a second vocabulary of record.",
+      "scope": "docs/product/glossary.md (head table); scripts/check-vocabulary.mjs + .test.mjs; scripts/check-repo.mjs rows 58, 70, 71; scripts/check-shop-word.mjs and scripts/check-soft-delete.mjs (deleted with their tests); .claude/rules/i18n.md; src/i18n/locales/es-ES/README.md; docs/agents/repo-checks.md; docs/agents/domain.md; one ADR superseding the guard halves of 20260820-every-delete-is-soft's enforcement note.",
+      "firstSlice": "Write the table with only the rows already decided (Delete, el centro, la salida, la exención, Blocked/Ready, plaza) and port check-shop-word.mjs's 10 rules and check-soft-delete.mjs's patterns to read from it — zero behaviour change, two scripts become one.",
+      "effort": "M",
+      "reviews": [
+        "ADR",
+        "design"
+      ],
+      "conflicts": "ADR 20260820-every-delete-is-soft — the rule is kept, its guard folds into a row; roadmap.md:617 'Departure as the one noun' — supplies the mechanism that row lacks; #1869 (glossary vs card-labels tone on confirm-to-clear) — subsumed as a row; docs/agents/domain.md 'Use the glossary's vocabulary' — becomes enforceable; pnpm check:context-budget — the table lives in docs/, never in always-loaded context.",
+      "confidence": "high"
+    },
+    {
+      "id": "L09-2",
+      "title": "Departure is the screen word, trip the storage word, ratcheted",
+      "kind": "concept",
+      "reading": "docs/product/features/roadmap.md:617 says 'Departure as the one noun … copy-level only, no schema rename' and names no mechanism; en-US values stand at 298 'trip', 215 'departure', 10 'charter', 43 'session', and 24 of 109 e2e specs hard-code 'Trip'. Spanish reached 498 salida to 26 viaje by exactly the mechanism that row lacks: a README decision counted rather than argued (es-ES README §'A departure is la salida', settled 2026-09-04 by 302 to 7) and a check-shop-word rule. The storage side is settled by weight and by URL: 22 trip_* tables, 40 trip*-named modules in src/lib and src/db, 1,005 bundle keys, /shop/[shopSlug]/trips and /s/[shopSlug]/trips, and 13 ADR filenames — while five modules (departures-board.ts, departure-tides.ts, similar-departures.ts, pre-departure-check.ts twice) and 4,590 hits already say 'departure' inside src/lib and src/db. The same split repeats for the seat: 153 'seat' values against 44 'spot' (diver.booking.heading 'Grab a spot'), 25 bookSpot symbols, glossary entries 'Seat claim' and 'Seat held', and Spanish plaza 184 to asiento 3. ADR 20260827-the-departure-is-two-working-surfaces is titled with 'departure' and names its tab 'Trip' (staff/trips.json subNav.trip).",
+      "idea": "The contract row for the outing says: screen 'departure' / 'salida'; storage and route 'trip'; refused on screen 'trip', 'charter' and 'session' (a course departure is a departure with a curriculum, as the roadmap row already says); and new modules take the trips-* spelling so departures-board.ts stops being a second naming convention inside src/db. The en-US guard ratchets 'trip' in values from 298 to zero the way es-ES was driven from 7 to 0, with diver.marketing (44) scoped out as the brief's out-of-scope surface until the owner asks. The seat row does the same: screen 'seat', refused 'spot', bookSpot renamed once. The trip sub-nav's 'Trip' tab becomes 'Departure', since ADR 20260827 decides which surfaces exist, not the tab's word. Afterwards a reader meets 'trip' in a path, a table or a symbol and 'departure' in a sentence, and never has to decide which one a file means.",
+      "dissolves": "'Trip', 'charter', 'session' and 'spot' as screen words in both locales; the per-namespace coin toss (staff.checkIn 8:8, staff.manifest 6:6).",
+      "scope": "src/i18n/locales/en-US/diver.json and staff/*.json (298 + 44 + 43 values); es-ES stragglers (26 viaje, 3 asiento); 24 e2e specs; visual baselines for every surface with a 'Trip' heading; bookSpot → bookSeat across 25 symbols; docs/product/glossary.md 'Trip / charter' → 'Departure'; docs/design/surfaces.md (11 'trip'); roadmap.md:617; five departure-named modules in src/lib and src/db renamed or declared.",
+      "firstSlice": "Add the departure and seat rows to the contract with the guard's baseline seeded at today's counts (298, 44), and clear one namespace — staff.checkIn, 8 values — so the ratchet has its first fall.",
+      "effort": "L",
+      "reviews": [
+        "design",
+        "ADR"
+      ],
+      "conflicts": "roadmap.md:617 'Departure as the one noun' — cited; deeper (a ratchet and a storage/screen boundary) and wider (seat/spot, charter, session, the src/db naming split); ADR 20260827-the-departure-is-two-working-surfaces — its 'Trip' tab label changes, its decision does not; ADR 20260804-seat-claim-links and 20260821-the-diver-may-release-their-own-seat — agree, 'seat' is their word; brief's out-of-scope marketing copy — diver.marketing is scoped out of the rule; settled 'the diver's trip page and the staff trip page stay separate' — untouched.",
+      "confidence": "high"
+    },
+    {
+      "id": "L09-3",
+      "title": "Five words for the people aboard become diver and manifest",
+      "kind": "concept",
+      "reading": "The person on a departure is 'Guests' on the trip sub-nav (staff/trips.json subNav.guests) and 'Divers' on the primary tab (src/lib/staff-destinations.ts id divers); the module behind the tab is src/db/trips-guests.ts, the rows come from people and 3 person_* tables with no divers table, and 'customer' appears in 44 values, 'people' in 34, 'guest' in 19, 'diver' in 716. 'Roster' has five referents: the departure's divers (src/db/trips-roster.ts getTripRoster, trips.json 8), the staff shifts (ADR 20260806-staffing-is-the-shift-roster, staffing.json 5), a course's enrolments (ADR 20260815-course-roster, CourseRoster.tsx), the Divers list (src/db/roster-facts.ts, divers.json 5), and an imported customer file (diver.switching.common.importReadyTitle) — 282 non-test files, 118 key names, and no glossary entry. The glossary defines Manifest (line 1032) as 'the authoritative list of every person on a boat' and Roll-call order (line 1048) by citing getTripRoster, so the glossary needs 'roster' to define 'manifest'. Open issues #1759, #1690 and #1852 each title themselves with 'manifest' and 'roster' side by side. The glossary's modeling note (line 2255) settles the storage word: a person carries roles, not types.",
+      "idea": "On screen there are two nouns: 'diver' for a person on a departure wherever staff read it, and 'manifest' for the boat's list; 'roster' is deleted as a screen word, 'guest' and 'customer' with it (marketing keeps 'customer' in the switching guides only). The trip sub-nav becomes Departure / Divers / Manifest / Prep so the tab word matches the primary tab; trips-guests.ts and trips-roster.ts become trips-divers.ts and trips-manifest.ts; roster-facts.ts, roster-rows.ts and roster-filters.ts take the surface they serve. Staffing's list is 'shifts' (its own glossary word 'Working shift', line 755) and a course's list is its students, so 'roster' stops carrying five meanings. Storage stays person/people per the modeling note, declared on the row as the storage word for 'diver'. The grammar afterwards: a diver is a diver on every staff surface, a manifest is the one boat instrument, and 'roster' is a word the codebase no longer contains.",
+      "dissolves": "'Guests', 'roster' and 'customer' as product words; the five-way 'roster' overload; the Guests/Divers double name for one tab pair.",
+      "scope": "staff/trips.json, divers.json, staffing.json, manifest.json, shared.json (roster 41, guest 19, customer 44 values); es-ES (lista 216 to audit, invitado 12, cliente 47); src/db/trips-guests.ts, trips-roster.ts, roster-facts.ts; src/lib/roster-rows.ts, roster-filters.ts; 8 Roster*/CourseRoster components; ADR titles 20260806 and 20260815 retained with a superseded-in-word note; glossary Manifest and Roll-call order entries; e2e specs naming Guests; visual baselines for the trip tabs.",
+      "firstSlice": "Rename the sub-nav tab 'Guests' to 'Divers' in both locales and add the diver and manifest rows to the contract with 'roster', 'guest' and 'customer' refused, baseline seeded at today's counts.",
+      "effort": "M",
+      "reviews": [
+        "domain",
+        "design"
+      ],
+      "conflicts": "ADR 20260827-the-departure-is-two-working-surfaces — names the tab 'Guests'; its decision on which surfaces exist holds, the label changes; ADR 20260827-people-not-lists and 20260719-diver-person-spine — agree, storage stays person; ADR 20260806-staffing-is-the-shift-roster and 20260815-course-roster-and-material-tracking — decisions hold, their word is retired on screen; #1759, #1690, #1852, #1840 — touch the same surfaces and inherit the single word; roadmap 5d/5e 'Guests roster' rows — shipped history, not a conflict.",
+      "confidence": "high"
+    },
+    {
+      "id": "L09-4",
+      "title": "Lens, shelf, thread, board: implementation names stop reaching the screen",
+      "kind": "concept",
+      "reading": "One concept is named four ways: route src/app/shop/[shopSlug]/settings/kinds-of-day, namespace staff/lenses.json whose heading reads 'Kinds of day', table trip_lenses with src/db/trip-lenses.ts and seed-lenses.ts, and glossary entry 'Lens' (line 2209) defined as 'the shop's own word for a kind of day'; screen values say 'lens' 2 times and 'kind of day' 10, key names 'lens' 27 and 'kindOfDay' 0. ADR 20260901-diveday-reimagined:168-171 says 'the lens vocabulary stays a lens' — but its ground is shape (a set, not a tag; single-select; never a safety signal; #1395), and no sentence of it defends the word. The diver's bearer pages say the ADR's own names to the diver: 'Your shelf' and 'Open your thread' (diver.shelf.title, diver.shelf.nextOpen, diver.notifications.shelfLink.*, 73 and 19 key names), while ADR 20260820-one-page-after-booking already made 'your trip' the one link and neither word has a glossary entry. docs/design/principles.md:121-126 says 'Never surface the implementation' and names 'our own process artifacts' explicitly. 'Board' is the staff tab at /schedule/board whose detail views are /trips/[id] (staff-destinations.ts:248-255), the lobby /board/[token] fed by src/db/departures-board.ts, and the trip_stage value 'boarding'.",
+      "idea": "The contract's rule for these rows is that an internal name may live in an ADR, a table and a module, but the screen word is the shop's or the diver's, and the namespace and route carry the screen word: lenses.json becomes kindsOfDay.json beside the route that already says kinds-of-day, and trip_lenses becomes trip_kinds_of_day (H-49 makes the table rename a migration and nothing else), so 'lens' survives only in the ADR that coined it. The diver's shelf and thread are named for what they are to the diver — the page is 'your trip' (ADR 20260820) and the shelf takes the word a design pass chooses — with 'shelf' and 'thread' refused in values and kept in module names (shelf.ts, thread-steps.ts) and ADR titles. The staff 'Board' tab is 'Schedule', the word its own URL already uses, leaving 'board' to the lobby display and 'boarding' to the stage. Afterwards the screen never asks a reader to know an ADR.",
+      "dissolves": "'lens', 'shelf', 'thread' and the staff 'Board' as screen words; the four-name kinds-of-day concept.",
+      "scope": "staff/lenses.json → kindsOfDay.json in both locales plus staff/index.ts import; src/db/trip-lenses.ts, seed-lenses.ts; schema trip_lenses and trips.lens_id with one migration; glossary 'Lens' entry; diver.shelf.* and diver.notifications.shelfLink.* (9 values); staff/shared.json destinations.board; e2e specs and visual baselines for /shelf/[token] and the settings page; a note on ADR 20260901 that the word, not the shape, changed.",
+      "firstSlice": "Rename staff/lenses.json to kindsOfDay.json in both locales and the staff 'Board' label to 'Schedule', and add the four rows to the contract with the internal words refused in values.",
+      "effort": "M",
+      "reviews": [
+        "design",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260901-diveday-reimagined and 20260904-reef-all-the-way-down 'lens vocabulary stays a lens' — the shape decision holds, the word does not, since #1395 decided set-versus-tag; ADR 20260827-the-divers-thread — its name stays, the diver stops reading it; ADR 20260820-one-page-after-booking — agrees, 'your trip' is the link; docs/design/principles.md 'Never surface the implementation' — this enforces it; ADR 20260813-more-is-the-shops-other-door — tab count unchanged.",
+      "confidence": "medium"
+    },
+    {
+      "id": "L09-5",
+      "title": "Buddy pairs are dead; delete the name, keep the team",
+      "kind": "concept",
+      "reading": "ADR 20260804-buddy-pairs ('a pair is exactly two') was superseded the same day by 20260804-buddy-teams ('teams of any size, crew included'). The schema still has buddy_pair_members beside buddy_team_events and the buddy_team_event_action enum; src/db/buddy-pairs.ts and seed-buddy-pairs.ts sit beside 450 buddyTeam symbols, with 129 buddyPair symbols and one 'buddy pair' bundle value against 21 'buddy team'. The export writes buddy_pairs.csv, which open issue #1795 is about. The glossary entry is 'Buddy team' (line 1252) and src/i18n/buddy-labels.ts already says team. AGENTS.md's hard rule 'There is no legacy. Delete it' (H-49) names exactly this: a name nothing decides for.",
+      "idea": "Rename buddy_pair_members to buddy_team_members in one migration, buddy-pairs.ts and seed-buddy-pairs.ts to buddy-teams.ts and seed-buddy-teams.ts, buddy_pairs.csv to buddy_teams.csv in export and import, and the 129 symbols to the team spelling; the contract row says 'buddy team' on screen, buddy_team in storage, 'pair' refused. The superseded ADR is retained (settled: superseded ADRs stay) and is the only place 'buddy pair' survives. It is the smallest complete proof of the contract: one concept, one name, at every layer.",
+      "dissolves": "buddy_pair_members, buddy-pairs.ts, seed-buddy-pairs.ts, buddy_pairs.csv and the pair/team double reading.",
+      "scope": "src/db/schema.ts (1 table) and one migration; src/db/buddy-pairs.ts + test; src/db/seed-buddy-pairs.ts; src/db/export.ts and import.ts (csv name); src/lib/manifests.ts references; 1 staff bundle value in each locale; glossary; #1795.",
+      "firstSlice": "The rename PR itself; it is one slice and closes #1795 by giving the renamed file its order.",
+      "effort": "S",
+      "reviews": [
+        "domain"
+      ],
+      "conflicts": "ADR 20260804-buddy-pairs — superseded, retained per the settled decision; ADR 20260804-buddy-teams — agrees; #1795 (buddy_pairs.csv order) — subsumed; H-49 — applies.",
+      "confidence": "high"
+    }
+  ]
+}

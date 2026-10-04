@@ -1,0 +1,179 @@
+{
+  "lensId": "L24",
+  "lens": "The governance apparatus",
+  "reading": "The agent-governance layer is 5,229 always-loaded words (AGENTS.md 4,264, 20 skill descriptions 786, 4 agent descriptions 130, CLAUDE.md 49 — exactly at budget per scripts/check-context-budget.mjs), 7,206 words of path-scoped rules in 8 .claude/rules/*.md files, 28,367 words in 20 SKILL.md bodies, 18,876 words in 6 docs/agents/*.md, and 395,649 words in 311 ADRs under docs/architecture/decisions/. Its mechanical half is 50 guards (12,294 lines of scripts/check-*.mjs, with 7,787 test lines beside 39 of them) spawned from a hand-kept table in scripts/check-repo.mjs, 8 hook scripts (1,631 lines) wired in .claude/settings.json, 10 ratchet baselines, and scripts/check-agents.mjs, which keeps prose and scripts in step by regex over AGENTS.md. The cost model is coherent — .claude/skills/README.md lines 11–16 name three mechanisms and three costs, all 8 rules carry paths: (0 unscoped words), every hook fails open, and 198 of 311 ADRs are reachable from a comment in src/ — but the registries have accreted: where a thing lives is written in AGENTS.md (122 literal paths), again in the rules' \"Where things are\" sections (77 of those 122, 2,119 words), again in scripts/task-context-data.mjs (49 of them, 602 lines) and again in docs/README.md (46 rows). The guard count is 43 in scripts/check-repo.mjs line 37, 48 and 27 in docs/agents/repo-checks.md lines 3 and 9, and 50 in AGENTS.md line 44, and only the last is checked; 27 guards carry their own walk() (471 lines, 0 import a shared walker), 15 table labels have no write-up, 10 have no package.json alias, 11 have no test, and 33 further guards live as tree-scanning vitest files in src/ (src/app/instant-coverage.test.ts, src/app/shop/tenant-gate-coverage.test.ts) that no roster, report or count sees. The ADR corpus grew by 112 files in July and 165 in August and is found only by filename (docs/architecture/decisions/README.md, \"found by descriptive filename and do not need a central index entry\"), so 31 records are cited from nowhere, 5 of 32 superseding records do not cite what they supersede, and 167 records exceed the adr skill's \"Keep it under a page\" (line 15) with the seven surface-language ADRs alone at 26,487 words. Six skills have a doc twin (new-feature/workflow.md, verify/verifying.md, triage/issue-tracker.md, adr/decisions README, run+debug/explain-failure.mjs, e2e-and-visual+visual-triage/testing.md) and one operative sentence recurs in up to 14 governance files (\"needs-triage\" 14, \"test:changed\" 12, \"screenshots\" 10). A smaller, composable layer is four moves: one guard registry that the spawner, the sync check, the health report and explain-failure all read; a generated ADR digest with a citation invariant; one route map (task:context deleted, rules no longer restating where); and skills reduced to trigger plus pointer with the body in the doc they twin.",
+  "measurements": [
+    {
+      "what": "Always-loaded words per session (node scripts/check-context-budget.mjs, read-only)",
+      "value": "5,229 words (~7,100 tokens): AGENTS.md 4,264, skill descriptions 786, agent descriptions 130, CLAUDE.md 49, unscoped rules 0 — at budget; 17 recorded raises in scripts/context-budget-baseline.json"
+    },
+    {
+      "what": "Path-scoped rules",
+      "value": "8 files, 7,206 words; surfaces.md 2,125, db.md 1,580, domain.md 958, e2e.md 768, scripts.md 609, i18n.md 608, infra.md 502, docs.md 374; 'Where things are' sections total 2,119 words (surfaces 994, domain 565, db 560)"
+    },
+    {
+      "what": "Skills and reviewer agents",
+      "value": "20 SKILL.md bodies = 28,367 words (debug 4,516, stacked-prs 2,817, backlog-routine 2,805, e2e-and-visual 2,210); 4 agents; skills changed in 2 of the last 364 commits (history shallow from 2026-09-08) vs ADRs 42, guards 23, AGENTS.md 8"
+    },
+    {
+      "what": "docs/agents/*.md",
+      "value": "6 files, 18,876 words: repo-checks.md 11,102 (2 h2, 30 h3), issue-tracker.md 3,532, session-hooks.md 2,457, verifying.md 1,304, domain.md 294, triage-labels.md 187"
+    },
+    {
+      "what": "Scripts",
+      "value": "214 entries: 114 non-test .mjs, 84 .test.mjs, 10 ratchet baselines + route-coverage.json + image-sizes.json, 2 subdirs; 53 non-test check-*.mjs (50 spawned by check-repo.mjs, plus check-all, check-e2e-build, check-repo); 80 package.json scripts, 40 of them check:* aliases"
+    },
+    {
+      "what": "Guards: table vs disk vs docs vs aliases vs tests",
+      "value": "check-repo.mjs spawns 50; its line-37 comment says 43; repo-checks.md says 48 (line 3) and 27 written up (line 9), actual h3 sections 30; 15 table labels have no write-up (env, architecture, clock, intl-cache, adrs, glossary, context-budget, route-coverage, icu-plurals, timezone, domain-strings, critical-text, stack-ci-skip, docs, text); 10 guards have no package alias; 11 have no test (agent-health lists them)"
+    },
+    {
+      "what": "Guard code sharing",
+      "value": "12,294 lines across the 50 guards; 27 define their own walk() totalling 471 lines; 0 import a shared walker; skip-set literals restated 52× (drizzle) and 49× (coverage); only 6 guards import any local helper (subprocess.mjs ×4, task-context-data, image-sizes-lib, logical-properties-lib, dotenv); 0 use an AST; 19 carry inline allowlists; 12 have ratchet flags; exit codes 0/1/2 with SKIPPED=2"
+    },
+    {
+      "what": "Guards in test clothing",
+      "value": "33 tree-scanning *.test.ts files in src/ (readdir/readdirSync) act as coverage guards; AGENTS.md test:changed row says 'name the three guards by path', docs/agents/verifying.md names four"
+    },
+    {
+      "what": "Overlapping scans",
+      "value": "22 guards read src/app, 13 src/components, 12 src/lib, 11 src/db, 8 src/i18n, 8 e2e, 7 docs, 19 scripts; the eight copy/text guards (copy, domain-strings, source-text, critical-text, voice, shop-word, icu-plurals, locale) are 2,823 lines with four separate baselines"
+    },
+    {
+      "what": "ADR corpus",
+      "value": "313 files = 311 records + README.md + 0000-template.md; 395,649 words; 253 Accepted, 31 Superseded (18 'in part'), 9 Proposed; by month 112 (Jul), 165 (Aug), 28 (Sep); median ~1,034 words; 167 > 1,000, 40 > 2,000, 15 > 3,000, largest 7,797 (20260814-self-declared-cards.md); seven surface-language ADRs = 26,487 words"
+    },
+    {
+      "what": "ADR reachability",
+      "value": "198/311 ids cited from src/, 235/311 from docs outside decisions/, 31 cited nowhere; 32 Superseded records name a successor, 27 successors cite the old id back; 60 records carry a Supersedes/Extends/Amends line; AGENTS.md cites 8 ids, rules 30, skills 21, src 220 distinct id-like tokens; 50 ADRs name a guard, 22 guards cite an ADR"
+    },
+    {
+      "what": "ADR finding aids",
+      "value": "scripts/check-adrs.mjs is 55 lines (id, status, date, 4 section names, duplicates; no test beside it); decisions/README.md hand-kept 'Historical index' has 6 rows; no digest, no topic field; titles start with 'A' 41×, 'The' 17×, 'Keep' 13×, 'Use' 12×"
+    },
+    {
+      "what": "Route-map duplication",
+      "value": "AGENTS.md route map 55 rows / 1,177 words / 122 literal paths; 77 of the 122 also in a .claude/rules file; 49 also in scripts/task-context-data.mjs (14 areas, 377 invariant/validate lines, 'pnpm check' 14× in validate arrays — refused by scripts/guard-bash.mjs line 67); docs/README.md 46 rows"
+    },
+    {
+      "what": "Rules naming their guard",
+      "value": "90 rule bullets across 8 files; 7 name a guard (scripts.md 4, e2e.md 1, i18n.md 1, infra.md 1); distinct check:* labels named per rule: surfaces 5, domain 5, docs 4, i18n 2, scripts 2, db 1, e2e 1, infra 1"
+    },
+    {
+      "what": "Skill/doc twins",
+      "value": "new-feature 713 w vs docs/engineering/workflow.md 697; verify 1,009 vs docs/agents/verifying.md 1,304; triage 842 vs triage-labels.md 187 + issue-tracker.md 3,532; adr 196 vs decisions/README.md 261; run 1,142 + debug 4,516 vs explain-failure.mjs (9 signatures) + session-hooks.md 2,457; e2e-and-visual 2,210 + visual-triage 1,641 vs testing.md 5,238 + e2e.md 759; new-feature line 33 still says 'ADR index'"
+    },
+    {
+      "what": "Phrase recurrence across governance prose",
+      "value": "needs-triage 14 files, test:changed 12, tail 11, message bundle 10, screenshots 10, dive-domain-expert 9, loading.tsx 6, security-reviewer 5, check:copy 5"
+    },
+    {
+      "what": "Hooks",
+      "value": "8 scripts, 1,631 lines, 9 wirings across 8 events in .claude/settings.json; 10 deny rules; session-hooks.md lists 4 things deliberately not a hook; explain-failure.mjs holds 9 error signatures"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "Always-loaded context is a one-way ratchet with a per-line cap and a recorded reason for every rise (17 raises logged), and the fix for red is to move prose out, never compress it",
+      "where": "scripts/check-context-budget.mjs header and scripts/context-budget-baseline.json; measured 5,229 words at budget"
+    },
+    {
+      "what": "Every rule file is path-scoped (0 unscoped words) so a session pays for a rule only beside the files it governs; check-agents §5b refuses a rule without paths:",
+      "where": ".claude/rules/*.md frontmatter; scripts/check-agents.mjs lines 138–194"
+    },
+    {
+      "what": "The agent layer polices its own drift in eight classes: skill frontmatter, skill index, reviewer agents, task-context paths, AGENTS.md and rules paths on disk, allowlist entries, hook wiring, guards spawned, MCP launch",
+      "where": "scripts/check-agents.mjs (339 lines) with scripts/check-agents.test.mjs"
+    },
+    {
+      "what": "Hooks fail open, name the correct form on refusal, honour stop_hook_active, and the four things deliberately not hooks are written down",
+      "where": ".claude/rules/scripts.md; docs/agents/session-hooks.md 'What is deliberately not a hook'; scripts/guard-bash.mjs, guard-read.mjs"
+    },
+    {
+      "what": "Guards run concurrently, fail slow, are bounded at 90s each, and have a third outcome (SKIPPED=2) so a guard that could not run is not reported as passed",
+      "where": "scripts/check-repo.mjs lines 40, 139–186"
+    },
+    {
+      "what": "One bounded-subprocess helper is used by 39 scripts; only 1 spawner bypasses it",
+      "where": "scripts/subprocess.mjs (runBounded, readBounded, SUBPROCESS_TIMEOUTS)"
+    },
+    {
+      "what": "Long-form guard reasoning was moved out of AGENTS.md (2,553 words on 2026-08-27) into a doc read only when a check goes red, and the check:repo count is the one number check-agents pins",
+      "where": "docs/agents/repo-checks.md; scripts/check-agents.mjs lines 282–298"
+    },
+    {
+      "what": "ADRs are reached from the code they bind — 198 of 311 ids appear in src/ comments and 235 in docs — so a session already in the right file finds its ADR without an index",
+      "where": "src/**/*.ts(x) doc comments; docs/product/shipped.md (139 ADR links)"
+    },
+    {
+      "what": "A report, never a gate, states the guards without tests, the hooks wired, and the coverage shares, so drift that never goes red is still visible",
+      "where": "scripts/agent-health.mjs (`pnpm agent:health`)"
+    },
+    {
+      "what": "Follow-ups moved from a file register to GitHub issues, with the superseded ADR retained and pointing forward",
+      "where": "docs/architecture/decisions/20260808-agent-follow-up-register.md → 20260821-follow-ups-are-github-issues"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L24-1",
+      "title": "Fifty guards read one registry, not fifty headers and four rosters",
+      "kind": "governance",
+      "reading": "scripts/check-repo.mjs spawns 50 guards from a hand-kept table while its own line-37 comment says 43, docs/agents/repo-checks.md line 3 says 48 and line 9 says 27, and AGENTS.md line 44 says 50 — only the last is checked, by a regex over prose in scripts/check-agents.mjs lines 286–298. 27 of the 50 guards define their own walk() (471 lines across scripts/check-*.mjs), 0 import a shared walker, the skip set is restated 52 times for drizzle and 49 for coverage, and only 6 guards import any local helper at all. Per-guard metadata is scattered: 22 guard headers cite an ADR, 50 ADRs name a guard, 30 h3 sections in repo-checks.md cover 35 of 50 labels (15 have no write-up), package.json aliases 40 of 50 (check-uuid-segments.mjs, check-live-trips.mjs and 8 others cannot be run alone by name), and 11 have no test despite .claude/rules/scripts.md's 'A guard gets a test beside it'. 33 further guards are tree-scanning vitest files in src/ (src/app/instant-coverage.test.ts, src/app/shop/tenant-gate-coverage.test.ts, src/i18n/provider-coverage.test.ts) that no roster or report lists; AGENTS.md's test:changed row says 'name the three guards by path' and docs/agents/verifying.md names four. Of 90 rule bullets in .claude/rules/*.md only 7 say which guard enforces them, so a session reading a rule cannot tell remembered from mechanical. The steelman holds only in part: check-repo.mjs's header says it 'only spawns them' and per-process isolation with the 90s ceiling is worth keeping, but isolation is a property of spawning, not of hand-copied tables and walkers.",
+      "idea": "One `scripts/guards.mjs` registry, one record per guard: label, script (or vitest path), the rule in one sentence, the ADR id, the repo-checks.md anchor, the roots it scans, its baseline, and kind (script|vitest). scripts/check-repo.mjs spawns from it; scripts/check-agents.mjs §7 and scripts/agent-health.mjs read it instead of readdir plus regex; `pnpm check:repo <label>` replaces the 40 package.json aliases and `pnpm check:repo --why <label>` prints the rule, ADR and doc anchor; scripts/explain-failure.mjs uses the same record to signpost a red guard. One `scripts/lib/source-files.mjs` (skip set, source predicate, ranged read) replaces the 27 walk() bodies, and the eight copy/text guards (2,823 lines) become rules over one pass. The AGENTS.md row stops carrying a number; repo-checks.md's roster paragraph is deleted and its 30 essays stay, anchored by label; the 33 vitest guards appear in the registry so the schema.ts advice in AGENTS.md and verifying.md derives from one list. The grammar afterwards: a rule bullet names its label, the label resolves to script, ADR and essay, and every roster is a view.",
+      "dissolves": "The hand-kept checks table, four drifting counts, 40 package aliases, 471 lines of duplicated walkers, and the invisible second guard mechanism in src/.",
+      "scope": "scripts/guards.mjs (new), scripts/lib/source-files.mjs (new), scripts/check-repo.mjs, scripts/check-agents.mjs + test, scripts/agent-health.mjs, scripts/explain-failure.mjs, 27 scripts/check-*.mjs walkers, package.json, AGENTS.md (check:repo and test:changed rows), docs/agents/repo-checks.md, docs/agents/verifying.md, .claude/rules/scripts.md, the 7 rule bullets that name guards plus the 83 that could.",
+      "firstSlice": "Add scripts/guards.mjs with the 50 records and make check-repo.mjs, check-agents.mjs §7 and agent-health.mjs read it; delete the counts in check-repo.mjs line 37, repo-checks.md lines 3 and 9 and the AGENTS.md row, and ship `pnpm check:repo <label>` in place of the aliases.",
+      "effort": "M",
+      "reviews": [
+        "ADR"
+      ],
+      "conflicts": "#1738 (verify ADR code citations in check:adrs — the registry's adr field is the link it would verify); #1845 and #1714 (each proposes a guard nobody can see — under this design a guard enters as one record); .claude/rules/scripts.md bullet 'A guard is spawned by check-repo.mjs or it never runs' is reworded to 'is a record in scripts/guards.mjs'; no ADR governs the guard layer today, so this needs the first one.",
+      "confidence": "high"
+    },
+    {
+      "id": "L24-2",
+      "title": "A generated digest and a citation guard make 311 ADRs navigable",
+      "kind": "governance",
+      "reading": "docs/architecture/decisions/ holds 311 records (313 files with README.md and 0000-template.md), 395,649 words: 253 Accepted, 31 Superseded (18 'in part'), 9 Proposed; 112 landed in July, 165 in August, 28 in September. The only finder is the filename — docs/architecture/decisions/README.md says new records 'are found by descriptive filename and do not need a central index entry, avoiding merge conflicts' — its hand-kept Historical index has 6 rows, and scripts/check-adrs.mjs (55 lines, no test) validates id, status, date and four section names and nothing about reach. Filenames such as 20260906-before-you-ask.md, 20260907-nothing-from-nowhere.md, 20260908-one-hand.md, 20260911-clear-the-deck.md, 20260907-in-your-hands.md and 20260904-reef-all-the-way-down.md carry no domain noun, and 41 of 305 dated titles begin with 'A' and 17 with 'The'. Reach today: 198 of 311 ids are cited from src/, 235 from docs outside decisions/, 31 from nowhere; of 32 Superseded records naming a successor, 5 successors do not cite the record they replace. .claude/skills/adr/SKILL.md line 15 says 'Keep it under a page', yet 167 records exceed 1,000 words, 40 exceed 2,000 and 15 exceed 3,000 (largest 7,797, 20260814-self-declared-cards.md), and .claude/skills/new-feature/SKILL.md line 33 still tells a session to update an 'ADR index' the README says not to keep. The merge-conflict reason holds for a hand-edited table and not for a generated one: docs/engineering/manual-actions.md is already generated from the registry in infra/lib/infra-stack.ts, and scripts/route-coverage.json is a ledger a guard maintains.",
+      "idea": "`pnpm adr [words]` (scripts/adr-digest.mjs) prints one line per record from the files themselves — id, status, the heading's decision clause, the first sentence of `## Decision`, and a cited-by count — so there is nothing to hand-edit and nothing to conflict; the same module regenerates the README's index on main in CI, replacing the 6-row historical table. scripts/check-adrs.mjs gains two invariants and a test: an Accepted record is cited from at least one file outside decisions/ (31 fail today; each gets a citation from the code it binds or becomes Deprecated), and a superseding record cites the one it supersedes (5 fail). The heading clause becomes the digest line, which gives the template's 'imperative title' rule its first reader, and the 'under a page' rule is either enforced as a `## Decision` word cap with the essay allowed beneath it or deleted from the adr skill. AGENTS.md 'Read first' gains one clause — `pnpm adr <noun>` before structural work — and the stale 'ADR index' step in new-feature is corrected. Superseded records stay, listed with their status, as the settled decision requires.",
+      "dissolves": "The hand-kept Historical index, the 'found by filename' convention that poetic titles defeat, and the 31 records nothing points at.",
+      "scope": "scripts/adr-digest.mjs (new) + test, scripts/check-adrs.mjs + first test, package.json (`adr`), docs/architecture/decisions/README.md, .claude/skills/adr/SKILL.md, .claude/skills/new-feature/SKILL.md line 33, AGENTS.md Read-first, .github/workflows/ci.yml (regenerate on main), the 31 orphan ADRs and 5 non-citing successors.",
+      "firstSlice": "Ship scripts/adr-digest.mjs with `pnpm adr`, and add the orphan and successor invariants to check-adrs.mjs in report mode naming the 31 and the 5, with a test beside it.",
+      "effort": "M",
+      "reviews": [
+        "ADR"
+      ],
+      "conflicts": "Settled: 'Superseded ADRs are retained' (docs/architecture/overview.md line 67 section) — respected, the digest lists them; #1738 (verify ADR code citations — the cited-by count is the reverse direction of the same link, and one pass can do both); #1818 (decisions recorded in code never written to docs — an orphan invariant is the general form of that complaint).",
+      "confidence": "high"
+    },
+    {
+      "id": "L24-3",
+      "title": "Four route maps become one; task:context is deleted",
+      "kind": "governance",
+      "reading": "Where a thing lives is written four times: AGENTS.md's route map (55 rows, 1,177 words, 122 literal paths), the 'Where things are' sections of .claude/rules/{surfaces,domain,db}.md (2,119 words restating 77 of those 122 paths — the staff-destinations registry is AGENTS.md line 85 and .claude/rules/domain.md line 52), scripts/task-context-data.mjs (602 lines, 14 areas, 49 of the 122 paths, 377 invariant and validate lines), and docs/README.md's 46-row map. scripts/task-context-data.mjs's validate arrays say 'pnpm check' 14 times and its shared.rules say 'then pnpm check before commit', which scripts/guard-bash.mjs line 67 refuses as a whole-suite command and AGENTS.md's hard rules forbid locally. AGENTS.md 'Read first' step 3 asks every session to run `pnpm task:context <area>`, scripts/check-agents.mjs §4 spends 15 lines keeping its paths alive, and the 14 areas map onto rules that already load themselves the moment a matching file is read. The rules exist so that 'the rules and the route-map detail for one area live there, not in AGENTS.md' (.claude/skills/README.md lines 11–13), but AGENTS.md's map is what a session reads before it knows which file to open, so the where must stay always-loaded and the rules' copy is the redundant one. A staff-page session today loads AGENTS.md 4,264 + surfaces.md 2,125 + domain.md 958 + 916 descriptions = 8,263 words, of which roughly the 77 restated paths' prose is paid twice.",
+      "idea": "Delete `pnpm task:context`: scripts/task-context.mjs, scripts/task-context-data.mjs, its package script, the AGENTS.md step and command row, check-agents §4 and the .claude/settings.json allow entry; each area's invariants that are not already a rule bullet move into the matching .claude/rules file, which loads on read. The rules' 'Where things are' sections keep only what the AGENTS.md row does not say (the consumer list, the trap, the ADR), and every AGENTS.md row ends with the rule that governs it, so the grammar is: AGENTS.md says where, the rule says how and why, the guard says no. docs/README.md stays the map of documents and nothing else. The measured after: AGENTS.md loses about 70 words, and a surfaces+domain session drops the restated share of 2,119 words (estimate 1,000) with no rule lost.",
+      "dissolves": "The fourth registry, one always-loaded 'Read first' step, 49 restated paths, and 14 validate lines that contradict the bash guard.",
+      "scope": "scripts/task-context.mjs, scripts/task-context-data.mjs, package.json, AGENTS.md (Read first, Commands, route-map rows), scripts/check-agents.mjs + test, .claude/settings.json, .claude/rules/{db,domain,surfaces,i18n,scripts}.md, .claude/skills/README.md, .claude/skills/brand-voice/SKILL.md, docs/product/features/roadmap.md P1 item 1, scripts/context-budget-baseline.json (--write banks the fall).",
+      "firstSlice": "Delete the two task-context scripts, the alias, the allow entry, the AGENTS.md step and check-agents §4; move any of the 14 areas' invariants not already a rule bullet into the matching rule file.",
+      "effort": "S",
+      "reviews": [],
+      "conflicts": "docs/product/shipped.md line 3054 and roadmap.md P1 'Provider adapters for non-Claude agents' list task:context as a checked surface (history stays, the roadmap line is trimmed); docs/product/archive/specialist-optimization-audit-20260731.md introduced it and is archived; #1870 and #1854 touch settings rows the surfaces.md where-section names.",
+      "confidence": "high"
+    },
+    {
+      "id": "L24-4",
+      "title": "A skill is a trigger plus pointer; docs hold the body",
+      "kind": "governance",
+      "reading": "20 skill bodies total 28,367 words, 8 of them over 1,300 words (debug 4,516; stacked-prs 2,817; backlog-routine 2,805; e2e-and-visual 2,210), and their descriptions are 786 of the 5,229 words every session loads. Six skills have a doc twin: .claude/skills/new-feature/SKILL.md (713 words) restates docs/engineering/workflow.md (697) as 'the executable order' and its step 7 names an 'ADR index' the ADR README says not to keep; verify (1,009) beside docs/agents/verifying.md (1,304); triage (842) beside docs/agents/triage-labels.md (187) and issue-tracker.md (3,532); adr (196) beside docs/architecture/decisions/README.md (261); run (1,142) and debug (4,516) beside scripts/explain-failure.mjs's 9 signatures and docs/agents/session-hooks.md (2,457); e2e-and-visual (2,210) and visual-triage (1,641) beside docs/engineering/testing.md (5,238) and .claude/rules/e2e.md (759). The same operative sentence recurs across governance files — 'screenshots' in 10, 'test:changed' in 12, 'needs-triage' in 14, 'reg-suit' in 7. AGENTS.md says provider folders are adapters that 'must not introduce unique requirements', .claude/skills/README.md line 52 says a skill states how and a doc states what and why, and .claude/rules/docs.md's last bullet says long-form reasoning belongs in docs/. In the shallow history from 2026-09-08 skills changed in 2 of 364 commits while ADRs changed in 42 and guards in 23, so the twin most likely to rot is the one nobody edits.",
+      "idea": "Each SKILL.md becomes frontmatter plus one screen: the trigger, the ordered pointers into the single doc that holds the body, and the commands, with scripts/check-doc-links.mjs already checking every pointer. The bodies fold into their twins — verify into docs/agents/verifying.md, new-feature into workflow.md, triage into issue-tracker.md, adr into decisions/README.md, run and debug into one docs/agents/running-and-debugging.md whose sections explain-failure.mjs's 9 signatures link to, e2e-and-visual and visual-triage into testing.md — so each operative sentence has one home and a skill links it rather than restating it. scripts/check-agents.mjs gains one invariant, a SKILL.md body over N lines fails, the way check-context-budget caps a line. The four reviewer agents keep their bodies, since a reviewer prompt has no doc twin. Afterwards the provider adapter is thin by construction, which is what roadmap.md P1's 'Provider adapters' item is asking for.",
+      "dissolves": "Six duplicated playbooks and the drift between them, and the skill as a second long-form document type.",
+      "scope": "20 .claude/skills/*/SKILL.md, .claude/skills/README.md, docs/agents/{verifying,issue-tracker,session-hooks}.md, docs/agents/running-and-debugging.md (new, absorbing run + debug), docs/engineering/{workflow,testing}.md, docs/architecture/decisions/README.md, scripts/check-agents.mjs + test, scripts/explain-failure.mjs signposts, docs/README.md map rows.",
+      "firstSlice": "Fold new-feature into workflow.md and verify into verifying.md — the two closest twins — leaving 15-line skills, and correct the 'ADR index' step.",
+      "effort": "M",
+      "reviews": [],
+      "conflicts": "roadmap.md P1 item 1 'Provider adapters for non-Claude agents' (this is the shape that makes adapters thin; subsumes its open half); ADR 20260821-stacked-pull-requests and the stacked-prs skill (2,817 words beside a 5,323-word ADR — the skill's mechanics move into docs, the ADR is untouched); .claude/skills/README.md 'Maintenance' bullet that a skill 'states how' is reworded to 'points at how'.",
+      "confidence": "medium"
+    }
+  ]
+}

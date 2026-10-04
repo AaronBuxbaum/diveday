@@ -1,0 +1,182 @@
+{
+  "lensId": "L05",
+  "lens": "Time — is there one primitive for the shop's day, and what would derive from it?",
+  "reading": "The instant has one seam (src/lib/clock.ts, 60 lines, guarded by scripts/check-clock.mjs) and the zone has one column (shops.timezone, src/db/schema.ts:76, guarded by scripts/check-timezone.mjs), but nothing joins them: no ShopClock or ShopDay type exists anywhere in src (grep: 0 hits). So 55 signatures in 23 src/lib files take `timeZone: string`, 128 functions across src/lib, src/db and src/features default `now = nowDate()`, 105 src/app files thread `shop.timezone` by hand (47 of them beside `nowDate()`), and \"today at the shop\" is recomputed as `calendarDateInTimezone(now, tz)` at 28 call sites, twice inside src/db/today.ts (lines 1963 and 2042). The shop's day itself has two spellings — the exact pair `shopDayBounds` (src/lib/zoned.ts:127, 13 callers) and the loose ±26h `shopDayWindow` (src/lib/operational-window.ts:187, one real caller at src/db/today.ts:168) with its own glossary term \"Shop day scan\". Three fixed-hour partitions of that day live in three modules: the water band at 5/8/17/20 (src/lib/water-band.ts:34), the greeting at 5/12/17/22 (src/lib/today.ts:1171), the send window at 8–20 as a shop setting (src/lib/send-window.ts:43), while sunrise arithmetic already exists in src/lib/sun-moon.ts and shops carry latitude/longitude (schema 431–432). \"Season\" has three origins: shops.season_start_month/day (schema 324–325) is the denominator for the home's fact of scale (src/db/season-scale.ts), season_events (src/db/season-events.ts, 146 lines; settings/seasons) is the reef's calendar of lens-bearing windows, and src/db/reporting.ts:804 anchors the year page, the card and DiveDay's homepage proof at `${year}-01-01`. Departure-relative windows are nine offsets in eight modules, all measured from trips.starts_at/ends_at: reminders 168h/24h, push −6h/+12h-after-end, kiosk −30m/+6h, arrivals −6h/+36h, sailed and returned +1h, recap +4h, stage stale +2h, roll-call lookback 48h and residue 30d. Across src there are 94 exported and 71 private duration constants, vercel.json has 11 crons with 11 Sentry monitor slugs, and the three hourly passes (trip-reminders :10, recaps :00, minimum-seats :20) each carry a header explaining why they are not the daily 14:00 UTC tick. The 15 entry modules total 2,419 lines and the wider \"when\" cluster (zoned, timezones, today, trip-days, week-board, staffing-week, season-events, three tide modules, weekday-pattern, season-scale, seed-clock, the two guards) adds 5,636 more.",
+  "measurements": [
+    {
+      "what": "Lines in the 15 entry modules (clock, calendar-date, format, season, shop-year, operational-window, send-window, push-window, day-profile, off-season, cron-schedule, recurrence, reminders, recap-schedule, departure-tides)",
+      "value": "2,419"
+    },
+    {
+      "what": "Lines in the wider time cluster (src/lib zoned, timezones, today, trip-days, week-board, staffing-week, season-events, tides, tide-predictions, tide-stations, year-card, schedule-pagination, date-requests; src/db weekday-pattern, season-events, season-scale, seed-clock; scripts check-clock, check-timezone, check-intl-cache, check-locale)",
+      "value": "5,636"
+    },
+    {
+      "what": "`timeZone: string` parameters in src/lib (non-test)",
+      "value": "55 across 23 files"
+    },
+    {
+      "what": "Functions defaulting `now = nowDate()` / `nowMs()` in src/lib, src/db, src/features",
+      "value": "128"
+    },
+    {
+      "what": "src/app files threading `shop.timezone` by hand / of which also reading `nowDate()`",
+      "value": "105 / 47"
+    },
+    {
+      "what": "Call sites computing `calendarDateInTimezone(now, tz)` themselves (non-test)",
+      "value": "28 (src/db/today.ts does it twice)"
+    },
+    {
+      "what": "Callers of `shopDayBounds` / real callers of the loose `shopDayWindow`",
+      "value": "13 files / 1 (src/db/today.ts:168)"
+    },
+    {
+      "what": "Exported / private duration constants matching `*_HOURS|_DAYS|_MS|_MINUTES|_WEEKS` in src",
+      "value": "94 / 71"
+    },
+    {
+      "what": "Fixed-hour partitions of the shop's day",
+      "value": "3 — water-band.ts (5/8/17/20), today.ts greeting (5/12/17/22), send-window.ts (8–20 setting)"
+    },
+    {
+      "what": "Origins of 'season'",
+      "value": "3 — shops.season_start_*, season_events, calendar year at src/db/reporting.ts:804"
+    },
+    {
+      "what": "Departure-relative window offsets / modules declaring them",
+      "value": "9 / 8 (reminders, push-window, operational-window, trips, recap-schedule, trip-stages, src/db/today, src/db/recap)"
+    },
+    {
+      "what": "vercel.json cron entries / Sentry CRON_MONITOR_SLUG declarations / hourly passes",
+      "value": "11 / 11 / 3"
+    },
+    {
+      "what": "Test fixtures spelling `timezone: \"America/New_York\"` / `timezone: \"UTC\"`",
+      "value": "107 / 60"
+    },
+    {
+      "what": "A ShopClock / ShopDay / ShopTime type anywhere in src",
+      "value": "0"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "One clock seam for the instant, frozen only under the e2e harness and refused when a real DATABASE_URL is set, with a guard that includes test files",
+      "where": "src/lib/clock.ts, scripts/check-clock.mjs, ADR 20260721-argos-frozen-clock"
+    },
+    {
+      "what": "Every formatter takes a required timeZone and every raw Intl call must name one; a value with no instant says UTC explicitly",
+      "where": "src/lib/format.ts, scripts/check-timezone.mjs, .claude/rules/domain.md 'Every formatter names its zone'"
+    },
+    {
+      "what": "CalendarDate as a zone-free ISO string that compares as text, with leap-day validation and pure day/month shifts",
+      "where": "src/lib/calendar-date.ts"
+    },
+    {
+      "what": "DST-safe wall-clock conversion with forward gap resolution, pinned by hostile-zone tests; exact shop day and month bounds derive from it",
+      "where": "src/lib/zoned.ts (wallTimeToUtc, shopDayBounds, shopMonthBounds), src/lib/zoned-hostile.test.ts"
+    },
+    {
+      "what": "Three readiness horizons (operational, arrivals, kiosk) defined once with a containment invariant so the counter can never show a departure the home dropped",
+      "where": "src/lib/operational-window.ts, arrivalsWindowIsInsideHorizon"
+    },
+    {
+      "what": "Shop-local quiet hours plus hourly passes so every longitude gets a send inside its own daytime; cancellations exempt by name",
+      "where": "src/lib/send-window.ts, src/app/api/cron/trip-reminders, issue #697"
+    },
+    {
+      "what": "Recurrence computed as shop-local calendar dates and shifted by whole wall-clock days so a 7:30 charter stays 7:30 across DST",
+      "where": "src/lib/recurrence.ts, src/lib/trip-days.ts"
+    },
+    {
+      "what": "One ?week= grammar and one Monday-first week for the schedule board and the staffing week",
+      "where": "src/lib/week-board.ts, src/lib/staffing-week.ts"
+    },
+    {
+      "what": "The daily tick stated as the honest retry floor and asserted equal to vercel.json by a test",
+      "where": "src/lib/cron-schedule.ts, src/lib/cron-schedule.test.ts"
+    },
+    {
+      "what": "The dock-day rhythm as six shop-set minute columns, never inferred, with per-leg travel minutes as the one per-departure override",
+      "where": "ADR 20260812-configurable-dock-day-rhythm, src/lib/diver-planning.ts"
+    },
+    {
+      "what": "The sailed/returned hour asked through two predicates with a repo guard refusing a sixteenth spelling of the buffer",
+      "where": "src/lib/trips.ts hasSailed/hasReturned (36 callers), .claude/rules/domain.md"
+    },
+    {
+      "what": "The seed's dates all flow from the same clock, anchored to the demo shop's wall clock rather than UTC hours",
+      "where": "src/db/seed-clock.ts"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L05-1",
+      "title": "The shop's clock is one value, minted once per request",
+      "kind": "system",
+      "reading": "src/lib/clock.ts gives the instant and shops.timezone (src/db/schema.ts:76) gives the zone, and no type in src joins them (grep for ShopClock/ShopDay/ShopTime: 0 hits). The consequence is 55 `timeZone: string` parameters across 23 src/lib files, 128 `now = nowDate()` defaults in src/lib+src/db+src/features, and 105 src/app files passing `shop.timezone` by hand, 47 of them beside `nowDate()`. 'Today at the shop' is re-derived at 28 call sites, twice in src/db/today.ts alone (1963, 2042), and `requireShopSurface` (src/lib/session.ts:164) hands every staff page `{session, db, shop}` with no clock. The shop's day has two spellings: the exact `shopDayBounds` (src/lib/zoned.ts:127, 13 callers) and the loose ±26h `shopDayWindow` (src/lib/operational-window.ts:187) whose only real caller is src/db/today.ts:168 and whose own docstring in zoned.ts:120 concedes the exact pair exists; src/db/divers.ts:410 already narrows a COUNT(*) with the exact pair. Two fixed-hour partitions of the same day live apart — `waterBandFor` (water-band.ts:32) and `getTimeOfDayGreeting` (today.ts:1168) — each taking `(Date, timezone)`. Tests spell the zone 107 times as `timezone: \"America/New_York\"` and 60 times as `\"UTC\"`.",
+      "idea": "Introduce one frozen value, `ShopClock`, built by `shopClock(shop, now = nowDate())` in a new src/lib/shop-clock.ts and composed from what already exists: `now`, `timeZone`, `today: CalendarDate`, `day: {from, to}` (shopDayBounds), `wall: WallTime`, `band: WaterBand`, `greeting`, `season: {startsOn}` (seasonStartInstant) and `maySend(kind)` (send-window). `requireShopSurface` returns `clock` beside `shop`; the storefront layout and bearer-token pages mint the same value from the shop row; every per-shop cron loop (src/db/reminders.ts, recap.ts, trips-series.ts) mints one per shop. Every `(now: Date, timeZone: string)` twin in src/lib and src/db becomes `clock: ShopClock`, `calendarDateInTimezone(now, tz)` at a call site becomes `clock.today`, `shopDayBounds(now, tz)` becomes `clock.day`, and `waterBandFor`/`getTimeOfDayGreeting` become fields. `shopDayWindow`, `SHOP_DAY_SCAN_HOURS` and the glossary's 'Shop day scan' are deleted outright (H-49): `todayNextDepartureTripId` reads `clock.day` exactly, the way divers.ts already does. scripts/check-timezone.mjs keeps guarding raw Intl; the type carries the rest, and one `testClock()` fixture replaces 167 zone literals. The grammar afterwards: a surface has a clock, a domain function takes a clock, and 'the shop's day' is one noun that H-62's 'the home becomes the shop's day' can finally point at.",
+      "dissolves": "The loose shop-day scan and its glossary term; the now-plus-timeZone twin parameter as a pattern; 28 hand-derived 'today's; the two separate fixed-hour partition functions.",
+      "scope": "src/lib/shop-clock.ts (new), src/lib/session.ts, zoned.ts, operational-window.ts, water-band.ts, today.ts, send-window.ts, season.ts, calendar-date.ts; src/db/today.ts, closeout.ts, divers.ts, reminders.ts, recap.ts, trips-series.ts, season-scale.ts, departures-board.ts, trips-queries.ts, demo-refresh.ts, weekday-pattern.ts; the 47 src/app pages reading both nowDate() and shop.timezone; src/app/s/[shopSlug]/layout.tsx; test fixtures; docs/product/glossary.md ('Shop day scan'), docs/architecture/overview.md:103, .claude/rules/domain.md 'Read time through the clock', scripts/check-clock.mjs header.",
+      "firstSlice": "Add src/lib/shop-clock.ts and `clock` on `requireShopSurface`'s return, migrate src/db/today.ts and src/db/closeout.ts to take it, and delete `shopDayWindow`/`SHOP_DAY_SCAN_HOURS` with `todayNextDepartureTripId` reading `clock.day`.",
+      "effort": "L",
+      "reviews": [
+        "ADR",
+        "domain"
+      ],
+      "conflicts": "Extends ADR 20260721-argos-frozen-clock (the seam stays; the clock value is built from it); satisfies ADR 20260720-today-work-queue's 'departures in the shop's own timezone' by construction; retires the glossary term 'Shop day scan'; gives H-62 / roadmap 'The home becomes the shop's day' its noun; adjacent to #1762 (readers ordering by uuid under a frozen clock) without subsuming it.",
+      "confidence": "high"
+    },
+    {
+      "id": "L05-2",
+      "title": "The shop's year starts where its season does",
+      "kind": "concept",
+      "reading": "shops.season_start_month/day (src/db/schema.ts:324–325, chosen under H-67 and ADR 20260904 decision 2) is the denominator for 'your 400th diver of the season' on the home (src/db/season-scale.ts, src/app/shop/[shopSlug]/page.tsx). src/db/reporting.ts:804 anchors `getShopYear` at `${year}-01-01`, and src/lib/shop-year.ts:56–58 draws January 1 to December 31 with a 'since May' special case (`openedThisYear`, `sinceMonth`) for a shop that opened mid-year; the same `ShopYear` feeds reports?range=year, reports/card, /s/[slug]/year-card and DiveDay's homepage proof band (ADR 20260908-one-hand lever T, roadmap 20p). season_events (src/db/season-events.ts, settings/seasons) is a third calendar — lens-bearing windows the storefront and Today read — and N-44's season letter (After pilot) is specified 'at the shop-set season end'. A shop whose season starts 1 May therefore reads one count on the home and a different denominator on the year page, and the card its marina reads names a January it was closed. `monthIsComplete` and `quietestMonth` (shop-year.ts:166, 225) are calendar arithmetic that already works over any twelve-month window.",
+      "idea": "One `ShopSeason` — the twelve months from the shop's season start, resolved by `seasonStartInstant` — becomes the year everywhere. `getShopYear` takes `{startsOn, endsOn, label}` instead of a calendar year; the strip runs from `startsOn`, the 'since May' rule becomes the general case rather than a flag, and the segmented control on Reports reads 'This season / Last season', which for a January-start shop is the calendar year on the same code path. The card and the homepage proof label '2026–27 season' where the start is not January. season_events stay what they are — the events inside the season — and off-season.ts's `nextSeason` and N-44's letter read the same origin, so 'season' has one start, one end and one word. `openedThisYear`/`sinceMonth` are deleted where the season origin subsumes them.",
+      "dissolves": "The calendar year as a reporting unit distinct from the shop's season; the 'since May' special case; a second denominator for the shop's own year.",
+      "scope": "src/lib/shop-year.ts, src/lib/season.ts (a `seasonWindow`), src/lib/off-season.ts, src/db/reporting.ts getShopYear, src/app/shop/[shopSlug]/reports/{page.tsx,card,download}, src/app/s/[shopSlug]/year-card, the homepage proof band in src/app/page.tsx, staff `reports.*` and diver year-card keys in en-US and es-ES, e2e/visual.spec.ts captures of the year page and card, docs/product/glossary.md ('Season event', 'Dive day'), an amendment to ADR 20260908-one-hand lever T and ADR 20260904 decision 2.",
+      "firstSlice": "`getShopYear` takes `{startsOn, endsOn}` resolved from `seasonStartInstant` instead of `${year}-01-01`, with the label unchanged for a January-start shop so the demo shop's year page and card move no pixels.",
+      "effort": "M",
+      "reviews": [
+        "design",
+        "ADR"
+      ],
+      "conflicts": "Amends ADR 20260908-one-hand lever T (the year page becomes the season page); extends ADR 20260904 decision 2 and H-67 (the season-start setting reaches the year); gives N-44 'the season letter' (After pilot) its one origin; N-45 (shipped, off-season) reads the same window; no open issue touches it.",
+      "confidence": "high"
+    },
+    {
+      "id": "L05-3",
+      "title": "Every departure-relative window is one ladder on the departure's clock",
+      "kind": "system",
+      "reading": "Nine offsets in eight modules are all measured from trips.starts_at/ends_at: reminders 168h/24h (src/lib/reminders.ts:24–25), push −6h and +12h after end (push-window.ts:22–24), kiosk −30m/+6h and arrivals −6h/+36h (operational-window.ts:59–107), sailed and returned +1h (trips.ts:38), recap +4h after end (recap-schedule.ts:7), stage stale +2h (trip-stages.ts:46), roll-call lookback 48h and residue 30d (src/db/today.ts:342, 362), and the offline board's 48h (src/app/api/offline-manifests/upcoming/route.ts:23); today.ts:58–61 slices the same axis into 3h/24h/72h urgency. Each module declares its own trip input (`PushWindowTrip`, `DueReminderInput`, `OperationalWindow`) and its own predicate. `hasSailed`/`hasReturned` (36 callers) already prove the better shape — a named question over `(trip, now)` — and .claude/rules/domain.md records that the hour reached fifteen spellings before a check:repo guard refused the sixteenth. trip-stages.ts is deliberately not a clock ('never inferred', Budget rule 4) and must stay separate.",
+      "idea": "One src/lib/departure-clock.ts: an ordered offset table and `departurePhase(trip, now)` returning where a departure is on its own timeline (week_out → day_before → morning_of → boarding → sailed → returned → settled → past), with every window a named question on it — `reminderDue`, `pushIsLive`, `kioskMayCheckIn`, `deskMaySeat`, `recapIsDue`, `rollCallStillOpen`, `urgencyOf`. push-window.ts, recap-schedule.ts's due predicates, `kioskArrivalsWindow`/`arrivalsWindow` and the per-module trip input types are deleted; operational-window.ts keeps only the horizon, the one window anchored on now rather than on a departure. The domain rule 'ask through hasSailed, never a second buffer' generalises to 'ask the departure's clock', and the existing guard widens to refuse a fresh `startsAt.getTime() - N * HOUR_MS` anywhere in src/lib or src/db. What the crew said (trip-stages) and what the clock implies (this) remain two things by design.",
+      "dissolves": "push-window.ts and recap-schedule.ts as separate modules, the two counter/kiosk windows, and twelve-plus scattered offset constants, replaced by one table and one phase function.",
+      "scope": "src/lib/{reminders,push-window,recap-schedule,operational-window,trips,today,trip-stages}.ts; src/db/{today,recap,reminders,push-subscriptions,kiosk-check-in}.ts; src/app/api/offline-manifests/upcoming/route.ts; docs/product/glossary.md ('Arrivals window', 'Operational horizon', 'Reminder cadence'); the buffer-spelling guard in scripts/ and docs/agents/repo-checks.md; ADR.",
+      "firstSlice": "Create departure-clock.ts with the table and `departurePhase`, and re-express `hasSailed`, `hasReturned`, `isInPushWindow` and `recapAutoSendIsDue` as one-liners over it with their existing tests untouched.",
+      "effort": "M",
+      "reviews": [
+        "domain",
+        "ADR"
+      ],
+      "conflicts": "Keeps ADR 20260804-manifest-web-push's rule that the window derives from the trip row at send time; keeps ADR 20260721-scheduled-reminder-cadence's half-open buckets as rungs of the ladder; keeps N-24's kiosk window as a rung; retires the glossary term 'Arrivals window'; adjacent to #1838 (a reclaimed seat forgets check-in) and #1814 (crew roll-call gap), which read the same phases.",
+      "confidence": "medium"
+    },
+    {
+      "id": "L05-4",
+      "title": "Shop cadences are one hourly tick in the shop's own night",
+      "kind": "system",
+      "reading": "vercel.json lists 11 crons and src/app/api/cron holds 11 CRON_MONITOR_SLUG declarations, one per route. Three passes are hourly — trip-reminders at :10, recaps at :00, minimum-seats at :20 — and each route's header (src/app/api/cron/trip-reminders/route.ts, recaps/route.ts) explains why it is not the daily 14:00 UTC tick, while src/lib/reminders.ts:47 explains the :10 exists only to dodge the :00. src/lib/send-window.ts:108 states that any shop-local window needs an hourly caller. The series roll (`rollSeriesForward`, src/db/trips-series.ts:456) selects `shops.timezone` per series yet fires at a fixed 03:15 UTC, so 'nightly' is 23:15 in Key Largo and 15:15 in Fiji — the same one-longitude defect issue #697 fixed for reminders. reminders/route.ts:95 already has `runScan`, which isolates six scans with per-scan Sentry tags so one bad row cannot stop the rest.",
+      "idea": "One `/api/cron/shop-tick`, hourly: list shops, mint a ShopClock (L05-1) per shop, and run that shop's due work as isolated scans — reminders, recaps, minimum-seats decisions, season-event reminders, and the series roll when `clock.wall.hour === 3` for that shop, so nightly means the shop's night. One Sentry monitor with per-scan tags, one maxDuration, one route; the daily 14:00 UTC tick keeps only the platform-wide retry drains (src/lib/cron-schedule.ts), which are not about any shop's day. The grammar afterwards is two sentences: platform cadences are UTC (retention, backups, the retry drain, integrations); shop cadences are the shop tick. `RECAP_CRON_CRONTAB` and `TRIP_REMINDER_CRON_CRONTAB` collapse to one constant tested against vercel.json the way `DAILY_TICK_CRONTAB` already is.",
+      "dissolves": "Three cron routes, three monitor slugs and their env vars, three 'why not the daily tick' headers, and a series roll that is nightly for one longitude.",
+      "scope": "vercel.json; src/app/api/cron/{trip-reminders,recaps,minimum-seats,trip-series}; src/lib/cron-schedule.ts, reminders.ts:47, recap-schedule.ts:18; src/db/trips-series.ts, reminders.ts, recap.ts, minimum-seats.ts; config/env-registry.mjs (SENTRY_*_CRON_MONITOR_SLUG rows); infra/lib/observability.ts; docs/engineering runbooks naming the monitors; ADR.",
+      "firstSlice": "Fold trip-reminders and recaps into one hourly route with two isolated `runScan` calls and one monitor, leaving minimum-seats and the series roll for the second slice.",
+      "effort": "M",
+      "reviews": [
+        "ADR"
+      ],
+      "conflicts": "Answers the per-route monitor rationale in trip-series/route.ts and minimum-seats/route.ts ('a different incident') with per-scan Sentry tags; supersedes ADR 20260721-scheduled-reminder-cadence's 'daily on the Hobby plan' (already superseded in practice by the hourly passes); leaves OPS-6's retry floor untouched; adjacent to #1826 (a send that gives up tells nobody), which a single tick log line would make visible.",
+      "confidence": "medium"
+    }
+  ]
+}

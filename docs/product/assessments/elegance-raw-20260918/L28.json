@@ -1,0 +1,179 @@
+{
+  "lensId": "L28",
+  "lens": "Numbers the shop is shown",
+  "reading": "The shop reads numbers on nine surfaces: the month's five figures, three quiet count lines and a departure ledger in `src/app/shop/[shopSlug]/reports/page.tsx` (726 lines, 86 keys in `staff/reports.json`); the year's four figures, strip and close-out entries in `reports/_components/YearReport.tsx`; the booked-of-capacity dial in `_components/today/DayStation.tsx`; the evening's \"N divers and M crew out, K back\" (six `{back}` sentences in `staff/shopHome.json`); tomorrow's and the week's job counts in `DaySpine.tsx`; the trip pulse in `trips/[id]/_components/TripPulse.tsx`; the manifest's `HeadCount.tsx`; the lobby board's three-question count in `src/app/board/[token]/page.tsx`; and the season's fact of scale from `src/db/season-scale.ts`. There is a stance, but it is spread across five ADRs (20260720 \"not a dashboard\", 20260723 \"one clock\", 20260804 \"assembly, not detection\", 20260904 rule 3 \"divers or boats, never money, a comparison, a streak or a rank\", 20260908 lever T \"no money on the year\") plus `docs/design/principles.md:425` \"counts are facts, not alerts\", and no file states it once. \"One hand\" breaks first on the noun: `seatsBooked` in `src/lib/reporting.ts:144` counts seats, `getShopYear` labels `count(bookings.id)` per day \"Divers\" (`reports.year.figures.diversLabel`), `seasonScale` counts `countDistinct(bookings.personId)` (`src/db/season-scale.ts:69`), and the evening's `divers` is `sailed` seats less `not_boarded`/`no_show` (`src/lib/closeout.ts:901-911`) — four numbers, one word, and the year's is the one printed on the public card and DiveDay's homepage (`src/app/_components/ShopYearBand.tsx:54-58`). It breaks second on the reader: 12 reader modules under `src/db` (17 files less the schema and four seeds) compute or carry `boarded`, 35 files read `capacity` with `booked` per trip, and the only shared per-trip count helpers are `crewCountsByTrip` (`src/db/reporting.ts:758`) and `courseCrewCountsByTrip` (`src/db/today.ts:1017`); `getMonthlyReport` alone spans lines 129-580 with 24 selects. It breaks third on the wording: 13 en-US sentences interpolate `{capacity}` and four more say \"seats left\"/\"spots left\", so one fact has roughly eleven spellings across `shared.json`, `shopHome.json`, `trips.json` and `diver.json`. The rhythms are settled by accident rather than stated — day, month, season (`shops.season_start_month/day`, `src/db/schema.ts:324-325`), year — and there is no week, though `docs/product/rollout.md:285` names a per-week north star and N-56's `src/lib/north-star.ts` does not exist. The only recorded plan to join the day and the month is lever O (slice 20j, \"open\" at `docs/design/canvases/20260908-one-hand/README.md:188`, waiting on H-71 g), and lever T shipped the year over it — `getShopYear` already reads `day_closeouts` joined to `people` as \"entries\". Numbers have 93 `scripts/check-*.mjs` guards and none about a figure, a `{capacity}` sentence or a `FIGURE_*_CLASS` site (12 components use one), while `upcomingScheduleStats` (`src/db/trips-queries.ts:586`) still returns four figures \"for the staff stat tiles\" ADR 20260720 removed and its one consumer reads `.departures` (`check-in/page.tsx:297`).",
+  "measurements": [
+    {
+      "what": "Surfaces on which the shop reads a count or figure",
+      "value": "9 (reports month, reports year, Today station dial, evening close sentence, DaySpine job counts, trip pulse, manifest head count, lobby board, fact of scale)"
+    },
+    {
+      "what": "ADRs and principles that each state part of the numbers rule",
+      "value": "5 ADRs (20260720, 20260723, 20260804, 20260904 rule 3, 20260908 lever T) + principles.md §9 line 425; no single statement"
+    },
+    {
+      "what": "Definitions of 'diver' as a number",
+      "value": "4 — seats (src/lib/reporting.ts:144), seats-per-day labelled Divers (getShopYear, src/db/reporting.ts), distinct people (src/db/season-scale.ts:69), sailed seats less not_boarded/no_show (src/lib/closeout.ts:901-911)"
+    },
+    {
+      "what": "src/db files that compute or carry `boarded` per trip",
+      "value": "17 (12 readers + schema.ts + 4 seed modules)"
+    },
+    {
+      "what": "src/db files reading `capacity` together with `booked`",
+      "value": "35"
+    },
+    {
+      "what": "Shared per-trip count helpers in src/db",
+      "value": "2 — crewCountsByTrip (reporting.ts:758), courseCrewCountsByTrip (today.ts:1017); none for seats/boarded/back"
+    },
+    {
+      "what": "en-US sentences interpolating {capacity}",
+      "value": "13, plus 4 'seats left'/'spots left' keys"
+    },
+    {
+      "what": "reports/page.tsx length; src/db/reporting.ts length; getMonthlyReport span and selects",
+      "value": "726 lines; 971 lines; lines 129-580 with 24 `.select(` calls; getShopYear 6 selects"
+    },
+    {
+      "what": "Keys in staff/reports.json; `{count}` placeholders across staff bundles",
+      "value": "86 keys; 107 `{count}` in 14 bundle files"
+    },
+    {
+      "what": "tabular-nums under src/app/shop",
+      "value": "120 occurrences in 59 files"
+    },
+    {
+      "what": "Components using FIGURE_LARGE_CLASS / FIGURE_DIAL_CLASS",
+      "value": "12 (MonthFigures, DayStation, ClosingStation, HeadCount, ScheduleBuilder, prep/page, OfflineManifestView, NextBoatCard, TripHeader, CourseSections, WeekLedger, ThreadSpine)"
+    },
+    {
+      "what": "Guards among 93 scripts/check-*.mjs about figures, counts or {capacity} sentences",
+      "value": "0"
+    },
+    {
+      "what": "MonthFigures column forks",
+      "value": "2 (FIGURE_COLUMNS {4, 5}, MonthFigures.tsx:99-102) — because month and year disagree on figure count"
+    },
+    {
+      "what": "Rhythms shown to the shop",
+      "value": "day, month, season, year; no week (north star is per week, rollout.md:285; src/lib/north-star.ts absent)"
+    },
+    {
+      "what": "upcomingScheduleStats figures returned vs read",
+      "value": "4 returned (departures, booked, openSeats, atCapacity); 1 read (`.departures`, check-in/page.tsx:297)"
+    },
+    {
+      "what": "CSV export shape (reports/download/route.ts:54-83)",
+      "value": "9-row summary duplicating the page's figures + 7-column ledger, English literal headers"
+    },
+    {
+      "what": "Lever O (the log, slice 20j) status",
+      "value": "open, waits on H-71 g; lever T shipped over it and reads day_closeouts as 'entries'"
+    },
+    {
+      "what": "e2e coverage of Reports",
+      "value": "reports.spec.ts + shop-year.spec.ts; 18 'reports' mentions in e2e/visual.spec.ts"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "Today is not a dashboard: no tiles, no vanity counts; the only numbers are job counts behind a link and the dial on the station",
+      "where": "ADR 20260720-today-work-queue; src/lib/today.ts spineJobCount/DaySpine.week.jobs; _components/today/DaySpine.tsx:875-919"
+    },
+    {
+      "what": "One clock on Reports — every month figure anchored to departures in the shop's zone, pure arithmetic in one module, small-base comparisons suppressed and ratio deltas in points",
+      "where": "ADR 20260723-owner-reporting; src/lib/reporting.ts summarizeMonth, COUNT_SMALL_BASE=10, compareRatio, compareMonthlyReports"
+    },
+    {
+      "what": "Money never leaves the shop: the year read carries no money at all and the card type drops the close-out actors",
+      "where": "src/lib/shop-year.ts (ShopYearCard = Omit<ShopYearSummary,'entries'>); src/db/reporting.ts getShopYear; reports/card/route.tsx"
+    },
+    {
+      "what": "Counts are facts, not alerts: a fact at zero renders nothing, the ledger tones the remainder not the fill, an empty month renders no figure row",
+      "where": "TripPulse.tsx; DepartureLedger.tsx; MonthFigures.tsx:116-118; src/lib/reporting.ts monthHasActivity; principles.md §9"
+    },
+    {
+      "what": "The board states which of three questions a count answers (seats before boarding, aboard-of-booked while out, returned after) and why the numerator and denominator must match",
+      "where": "src/app/board/[token]/page.tsx:266-288"
+    },
+    {
+      "what": "The evening's numbers are sums of what the close-out already decided — never a second reading of the water",
+      "where": "src/lib/closeout.ts EveningClose doc (lines 869-944); ADR 20260804-day-closeout"
+    },
+    {
+      "what": "The fact of scale is a read, never a cache, bounded to divers or boats, once a season",
+      "where": "src/db/season-scale.ts; src/lib/today.ts factOfScaleFor (lines 1448-1515); ADR 20260904 rule 3"
+    },
+    {
+      "what": "A count is rendered, a stranger's text never is — partner seats stay a number by type",
+      "where": "src/lib/reporting.ts partnerReferredSeats doc; reports/page.tsx:657-672; issue #1294"
+    },
+    {
+      "what": "Codes not sentences for demand: the domain returns numbers and the Guests tab words them",
+      "where": "src/lib/demand.ts; issue #1655"
+    },
+    {
+      "what": "The trip page's counts deliberately reuse the manifest's boarded reader and the readiness predicate so the strip cannot disagree with the roster",
+      "where": "src/db/trips-overview.ts:112-161"
+    },
+    {
+      "what": "Every readiness surface shares one horizon so three lists cannot disagree on who is blocked; Reports is deliberately outside it",
+      "where": "src/lib/operational-window.ts (OPERATIONAL_HORIZON_DAYS=7, module note line 31)"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L28-1",
+      "title": "One departure count, read once, worded once, drawn once",
+      "kind": "system",
+      "reading": "Booked, boarded, blocked and back are computed per departure by separate readers: 12 modules under `src/db` compute or carry `boarded` and 35 files read `capacity` with `booked`, while the only shared per-trip count helpers are `crewCountsByTrip` (`src/db/reporting.ts:758`) and `courseCrewCountsByTrip` (`src/db/today.ts:1017`). `src/db/trips-overview.ts:112-161` already says the strip must use 'the manifest's own boarded reader' so the counts 'can never' disagree, yet `src/db/departures-board.ts:267-283` re-derives `boarded` from roll-call rows in its own loop and `src/lib/closeout.ts:800-832` derives `sailed` and `back` a third way with a comment admitting it 'reads one too high' on a two-gap boat. The same fact has about eleven spellings — 13 en-US sentences interpolate `{capacity}` ('{booked} of {capacity}', '{booked}/{capacity} booked', 'of {capacity}', '# seats open') and four more say 'seats left'/'spots left' in `diver.json` and `shared.json`. `src/app/board/[token]/page.tsx:266-288` records the bug this grammar caused — '4 of 12 aboard' from a roll-call numerator over a commercial denominator — and fixes it locally with three keys (`board.seats`, `board.aboard`, `board.returned`) no other surface shares. The glossary's 'Fill rate' entry (`docs/product/glossary.md:1728-1738`) spends eleven lines explaining that the report's count and the manifest's count are different sets, a definition living in prose because no type holds it. `upcomingScheduleStats` (`src/db/trips-queries.ts:586`) still returns four figures 'for the staff stat tiles' that ADR 20260720 deleted; its one consumer reads `.departures` (`check-in/page.tsx:297`).",
+      "idea": "One record, `DepartureCount { capacity, booked, sailed, boarded, back, blocked }`, each field defined once in its doc comment, and one reader `departureCounts(db, shopId, tripIds, now)` in `src/db/departure-counts.ts` that every surface calls: the spine station, the trip pulse, the board, the counter, the evening station, the manifest head count, the schedule cell, the reports ledger and the year's days. Three sentences word it everywhere in `shared.count.*` — booked of capacity before the dock, boarded of sailed while out, back of sailed after — which is the board's three-question rule promoted from one file's comment to the product's grammar; `capacityLabel`'s 'spots left' in `src/lib/trips.ts:140` becomes the diver-side spelling of the first. One component draws it: `BoardingSeats` in `src/components/BoardingBar.tsx` already takes booked/boarded/blocked/capacity, so the dial in `DayStation.tsx`, the strip in `TripPulse.tsx` and the glass in `HeadCount.tsx` become three sizes of one drawing on Reef's tokens. The glossary paragraph becomes the type's comment, and `blocked` comes from the single 'did this person dive / may they board' predicate #1694 asks for. The manifest's rules do not move — the roll call keeps its checkpoints and its own writes; it stops being one of six places that add them up. `upcomingScheduleStats` shrinks to `countUpcomingDepartures`.",
+      "dissolves": "A dozen per-trip count aggregations become one reader; ten of the thirteen `{capacity}` sentences, the board's private `board.seats/aboard/returned` trio and the three dead figures on `upcomingScheduleStats` are deleted.",
+      "scope": "src/db/today.ts, trips-overview.ts, departures-board.ts, closeout.ts, check-in.ts, manifests.ts, reporting.ts, trips-queries.ts, no-show.ts, recap.ts, shelf.ts, season-scale.ts (new departure-counts.ts); src/lib/trips.ts capacityLabel, src/lib/closeout.ts StationClose, src/lib/today.ts SpineDeparture; src/components/BoardingBar.tsx, manifest/_components/HeadCount.tsx, today/DayStation.tsx, trips/[id]/_components/TripPulse.tsx, schedule/board ScheduleBuilder.tsx:2669, s/[shopSlug]/_components/WeekLedger.tsx and NextBoatCard.tsx, board/[token]/page.tsx; bundles shared.json, shopHome.json, trips.json, diver.json (en-US and es-ES); glossary 'Fill rate' and 'Souls on board'; e2e reports/shop-year/manifest/board specs; visual baselines for Today, trip, manifest, board; one ADR",
+      "firstSlice": "Add `departureCounts` and its typed record in `src/db/departure-counts.ts` with a test pinning the four definitions against one seeded departure (a no-show, a not_boarded, a missing diver), then switch `trips-overview.ts` and `departures-board.ts` to it — deleting the board's own `boarded` loop — before any surface changes a pixel.",
+      "effort": "L",
+      "reviews": [
+        "domain",
+        "design",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260804-day-closeout's 'no second detector' — strengthened, the record is the one detector; ADR 20260720-today-work-queue — unchanged; ADR 20260904 rule 4 (a stage is what the crew said) — untouched, the record carries counts not stages; #1694 subsumed; #1677 (naming the pulse's ratio chips), #1851 (tank count reads shop roles) and #1814 (a crew member who never came) become definitions on the record's fields; N-11 break-even would add a money field to the day and needs the owner's call first.",
+      "confidence": "high"
+    },
+    {
+      "id": "L28-2",
+      "title": "A numbers sheet: four rhythms, five nouns, one definition each",
+      "kind": "concept",
+      "reading": "What a shop may be shown as a number is stated in five ADRs and one principle and nowhere once: 'not a dashboard' (20260720-today-work-queue), 'one clock' (20260723-owner-reporting), 'assembly, not detection' (20260804-day-closeout), 'divers or boats, never money, a comparison, a streak or a rank' (20260904-reef-all-the-way-down rule 3), 'no money on the year' (20260908-one-hand lever T) and 'counts are facts, not alerts' (`docs/design/principles.md:425`). The noun 'diver' is four numbers: `seatsBooked` counts seats (`src/lib/reporting.ts:144`), `getShopYear` labels `count(bookings.id)` per day 'Divers' (`src/db/reporting.ts`, `reports.year.figures.diversLabel`), `seasonScale` counts `countDistinct(bookings.personId)` (`src/db/season-scale.ts:69`), and the evening's `divers` is sailed seats less `not_boarded`/`no_show` (`src/lib/closeout.ts:901-911`). So the home can say 'your 100th diver of the season' while the year page says '412 divers' for the same shop, and the year's is the figure on the printed card and in DiveDay's homepage claim (`src/app/_components/ShopYearBand.tsx:54-58`, `shopYear.band.alt`). The rhythms are day (`DayStation.tsx`, `board/[token]`), month (`reports/page.tsx`), season (`shops.season_start_month/day`, `src/db/schema.ts:324-325`) and year (`YearReport.tsx`), with no week — `OPERATIONAL_HORIZON_DAYS = 7` is a work window, and the rollout's per-week north star (`docs/product/rollout.md:285`, N-56) has no reader. Reports is growing a second tier one lever at a time: `partnerArrivals`, `giftSeats` and `buddySeats` are three quiet lines under the figures (`reports/page.tsx:657-695`), each its own reader inside a `getMonthlyReport` of 450 lines and 24 selects. The voice got a sheet in ADR 20260908 decision 2 and a grown `check:voice`; numbers have 93 `scripts/check-*.mjs` guards and none about a figure, a `{capacity}` sentence or one of the 12 `FIGURE_*_CLASS` sites.",
+      "idea": "Write the numbers sheet once, beside the voice sheet in `docs/design/brand.md` or as the second half of principles §9: the four rhythms and what each may count (the day: seats booked, divers boarded and back, jobs; the month: seats, boats, signatures, and money for the owner; the season: one fact of scale; the year: divers, boats, days, sites — never a week, never a tile, a comparison only on the month); five nouns with one definition each (a seat is sold, a diver is a distinct person who boarded, a boat is a departure that sailed, a day is a shop day with a boat, a site is a place dived); and the never-list gathered from the five ADRs. Every figure then derives from the sheet: the year's 'Divers' becomes distinct people so the card agrees with the hundredth-diver line; the month's 'Bookings' says 'Seats'; the three seat-source lines fold into the seats figure's one detail ('9 by partner link · 4 gifts, 2 claimed · 3 buddy seats') read from one `seatSources` record. A guard, `check:figures`, holds the mechanical half the way `check:voice` holds the voice's: no `{capacity}`/`{booked}` sentence outside `shared.count.*`, no `FIGURE_*_CLASS` outside the registered figure components, no money key in a bundle namespace the sheet marks as leaving the shop. The CSV's nine-row summary block goes — the ledger rows are what #700 asked for, the figures are the page's.",
+      "dissolves": "The five-ADR hunt for the rule and the glossary's prose definitions of 'fill rate' and 'diver'; the three source lines and the reader each carries; the duplicate CSV summary block.",
+      "scope": "docs/design/principles.md §9 or brand.md (the sheet); docs/product/glossary.md (Fill rate, Owner reporting, Souls on board); src/lib/reporting.ts, src/lib/shop-year.ts, src/db/reporting.ts (getShopYear divers → countDistinct; the three source readers → one seatSources); reports/page.tsx, MonthFigures.tsx, download/route.ts; src/app/_og/year-card-copy.ts and ShopYearBand.tsx copy; bundles staff/reports.json and diver.json shopYear.* (en-US and es-ES); scripts/check-figures.mjs + docs/agents/repo-checks.md; e2e reports.spec.ts, shop-year.spec.ts; visual baselines for reports and the year card",
+      "firstSlice": "Write the sheet and the noun table, switch `getShopYear`'s divers to `countDistinct(bookings.personId)` over boarded seats with a test asserting the year and `seasonScale` agree on one seeded shop, and land `check:figures` with a ratcheting baseline.",
+      "effort": "M",
+      "reviews": [
+        "design",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260723 (one clock) — kept; ADR 20260827-the-shops-shelves decision 3 'no new arithmetic' — the divers change is new arithmetic and needs that decision amended; H-71 k (a real shop's year on DiveDay's pages) — the public figure changes meaning, so the band's claim and alt move with it; N-56 stays founder-only and off every shop surface by the sheet; N-11 (break-even on the board) and N-18 (cash at close-out) put money on the day and would need the owner to amend the never-list; N-44 (season letter) is largely the year page and can close against it; #1860 (marketing.md hard-codes counts) is this guard's marketing twin.",
+      "confidence": "high"
+    },
+    {
+      "id": "L28-3",
+      "title": "Month and year are one page at two zooms, not two vocabularies",
+      "kind": "surface",
+      "reading": "The month renders five figures — two money, one count, two percentages carrying '+6pp' and '+12%' comparison lines (`reports/page.tsx:424-490`, `src/lib/reporting.ts:344-352`) — over a departure ledger with three meters per row (`DepartureLedger.tsx`). The year, one segmented control away (`ReportRangeTabs.tsx`), renders a sentence, a strip of 5px squares (`YearStrip.tsx`, `ShopYearFill` 0-3), four counts, a sites ledger and a close-outs ledger (`YearReport.tsx:129-232`) with no percentage, no comparison and no money by rule. `MonthFigures.tsx:99-102` carries `FIGURE_COLUMNS = {4, 5}` precisely because the two zooms disagree on how many figures a period has, and its own comment calls a second component 'a second spelling of one grammar'. The month's lower half has grown three private count lines and a warning notice (`reports/page.tsx:637-695`) while the year's lower half is two `LedgerRow` lists; the CSV (`download/route.ts:54-83`) exports the month as a nine-row summary plus a seven-column ledger with English literal headers. Lever O (slice 20j, 'open' at `docs/design/canvases/20260908-one-hand/README.md:188`, waiting on H-71 g) changes the month's *source* to close-out entries, and lever T shipped the year over it — `getShopYear` already reads `day_closeouts` joined to `people` as 'entries' — so the log exists at the year zoom and not at the month zoom. Two e2e specs (`e2e/reports.spec.ts`, `e2e/shop-year.spec.ts`) and 18 'reports' mentions in `e2e/visual.spec.ts` cover the two shapes separately.",
+      "idea": "Reports is one page and one grammar at three zooms — month, season, year — each rendering the same four things: a strip of days (the month is its 28-31 squares on the same `ShopYearFill`), the sheet's counts for that rhythm (seats, boats, days at sea, sites, signatures), one ledger (departures for the month; sites and close-out days for the year), and, for an owner on the month only, one money line (net · tips · tax) rather than two of five figures. The percentages stop being figures and stay as the meters they already are: fill is the strip's shade and the seats meter, waiver completion is the remainder-toned meter — the figure row says what happened, the meters say what is left. The year-ago comparison survives on the month as one line under the row ('August 2025: 118 seats, 14 boats, $6,690') instead of a delta per figure, so `compareMetric`, `compareRatio` and `formatPointsChange` are deleted with the per-figure deltas. `MonthFigures` takes one column count, `ReportRangeTabs` becomes the zoom, and the CSV is the ledger at any zoom with headers from the bundle. This is wider than O: O moves the month's source to entries, this makes month and year one drawing, so when O lands it lands once rather than into two shapes.",
+      "dissolves": "The month's KPI vocabulary — five figures with `+pp`/`+%` deltas, `compareMonthlyReports`, `FIGURE_COLUMNS`, the three source lines, the CSV summary block — and the two-shape split that gives Reports two e2e specs and two visual families.",
+      "scope": "reports/page.tsx (726 lines), _components/MonthFigures.tsx, YearReport.tsx, YearStrip.tsx, ReportRangeTabs.tsx, DepartureLedger.tsx, download/route.ts; src/lib/reporting.ts (comparison half deleted), src/lib/shop-year.ts (summary over a window), src/db/reporting.ts (getMonthlyReport split into seats and money halves); bundles staff/reports.json en-US and es-ES; docs/design/surfaces.md Reports entry; glossary 'Owner reporting'; e2e reports.spec.ts + shop-year.spec.ts merged; visual baselines; ADR amending 20260723 and 20260827-the-shops-shelves decision 3",
+      "firstSlice": "Generalise `YearStrip` and `summarizeShopYear` to a window and render the month's strip above the existing five figures, with the comparison lines untouched — one visual diff that explains itself — so the zoom grammar exists before any figure moves.",
+      "effort": "L",
+      "reviews": [
+        "design",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260827-the-shops-shelves decision 3 (figures-then-ledger, 'no new arithmetic') — shape kept, figure count amended; ADR 20260723's named follow-up 'a trailing-months trend' is declined by this; issue #700's per-figure year-ago comparison becomes one baseline line and needs the owner's nod; H-71 g and slice 20j (lever O) — composes, O's entries become the month zoom's source; N-44 (season letter) becomes the season zoom; ADR 20260904 rule 3 ('never a comparison') stays a day rule and the month keeps its one line.",
+      "confidence": "medium"
+    }
+  ]
+}

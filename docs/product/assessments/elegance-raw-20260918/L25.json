@@ -1,0 +1,162 @@
+{
+  "lensId": "L25",
+  "lens": "Seams",
+  "reading": "Twenty-two vendor-facing seams live in 15 modules or directories under src/lib, 2 under src/features and the Sentry wiring in src/instrumentation*.ts + src/app/observability.ts, all governed by one paragraph at docs/architecture/overview.md:107-111 that promises every vendor is \"selected by env var and zod-validated at the boundary\". That promise holds unevenly: 13 seams parse their config with zod, 7 hand-trim it (src/lib/address-lookup.ts:334, src/lib/observability/cloudwatch-config.ts:51 with a written 375 KB-bundle reason at lines 30-35, src/lib/notifications/web-push.ts:44, the three OAuth integrations, src/features/backup-export/platform-backup.ts:108), and 3 (Open-Meteo, the two NOAA modules) have no config at all. Degradation has three grammars: 8 `disabled*Provider` constants answering `{status:\"not_configured\"}` (45 non-test files return that status), 7 config readers answering `null`, and src/lib/rate-limit.ts:205 swapping in a real in-memory store. The same four lines are re-spelled per seam — 11 private `*Environment = Readonly<Record<string, string | undefined>>` aliases (five identical `PaymentEnvironment` in five Stripe files), 13 `type Fetch = typeof fetch` aliases, fetch injection spelled three ways (17 `fetchImpl: typeof fetch`, 12 `fetchImpl: Fetch`, 3 `fetcher: Fetcher`), and 20 `*FromEnvironment`/config functions. The e2e fleet's \"never calls a vendor\" promise is a union rather than a mechanism: `DIVEDAY_DISABLE_EXTERNAL_HTTP` is checked in 8 files in three grammars (flag alone → null; flag && real fetch → null; flag → fixture), 20 credential keys are blanked by hand at playwright.config.ts:110-129, and the comment at line 105 still says the flag \"only covers the three integrations that read it directly\". config/env-registry.mjs opens by claiming to hold \"Every environment variable DiveDay reads\" and holds 62 keys in 21 groups, while src/ reads 99 distinct keys — 41 unregistered, among them VAPID ×3 (web-push.ts:50-52, called \"environment secrets\" by ADR 20260804-manifest-web-push), UPSTASH ×2 (rate-limit.ts:202) and 10 per-cron `SENTRY_*_CRON_MONITOR_SLUG` overrides — and nothing in scripts/check-env.mjs ties a read in src/ to a row. Five registries each key on a vendor-shaped thing with no shared id — config/env-registry.mjs (21 groups), src/lib/cost-guardrails.ts (6 ceilings, `CostProvider`), infra/lib/manual-actions.ts (`ManualAction`), infra/lib/observability.ts (27 signals), src/features/integrations/registry.ts (4 providers) — plus two hand-written vendor tables at docs/README.md:41-55 and docs/architecture/aws-migration-dossier.md:45-51. Sentry is the one vendor whose SDK is imported outside a seam: 15 `@sentry/nextjs` import sites, 30 `Sentry.captureCheckIn(` calls, and 11 cron routes (1,592 lines) each carrying the same posture by hand — `CRON_SECRET` bearer gate (11), `maxDuration` (11), a monitor slug (10), a `checkinMargin` block (10), a completion log line (11) — while src/lib/cron-schedule.ts, whose test pins lockstep with vercel.json, is imported by exactly one of them. Runbook coverage is 13 files and 4,539 lines in docs/engineering, per-vendor for SES (580), SMS receipts (104), WhatsApp (120), CloudWatch (245), Sentry (97), rate limiting (300) and cost (241), and absent for Stripe, AWS Location, Open-Meteo, NOAA, web push and the four integrations (which have src/features/integrations/README.md instead).",
+  "measurements": [
+    {
+      "what": "Vendor-facing seams (SES out, SES inbound, SNS, WhatsApp, web push, Stripe, S3 media, S3 backup, AWS Location, Open-Meteo, NOAA, CloudWatch Logs, CloudWatch RUM, Vercel Analytics, Vercel usage, Neon usage, Upstash, Shopify, QuickBooks, Xero, Zapier, Sentry)",
+      "value": "22"
+    },
+    {
+      "what": "Exported `*FromEnvironment` functions in src/ (plus readCloudWatchLogsConfig and webPushConfig)",
+      "value": "18 (+2 = 20 selection points)"
+    },
+    {
+      "what": "`disabled*Provider` constants / non-test files returning \"not_configured\" / config readers returning null",
+      "value": "8 / 45 / 7"
+    },
+    {
+      "what": "Private `*Environment` type aliases of the same Readonly<Record<string,string|undefined>> / `type Fetch = typeof fetch` aliases",
+      "value": "11 (5 identical PaymentEnvironment) / 13"
+    },
+    {
+      "what": "Fetch-injection spellings: `fetchImpl: typeof fetch` / `fetchImpl: Fetch` / `fetcher: Fetcher`",
+      "value": "17 / 12 / 3"
+    },
+    {
+      "what": "Files checking DIVEDAY_DISABLE_EXTERNAL_HTTP (non-test) and grammars used; credential keys blanked by hand in playwright.config.ts",
+      "value": "8 files, 3 grammars; 20 keys"
+    },
+    {
+      "what": "Keys in config/env-registry.mjs (groups) vs distinct keys read in src/ vs unregistered",
+      "value": "62 (21 groups) vs 99 vs 41"
+    },
+    {
+      "what": "Seams parsing config with zod / hand-trimming / no config",
+      "value": "13 / 7 / 3"
+    },
+    {
+      "what": "Vendor SDK import sites outside src/lib and src/features (all @sentry/nextjs)",
+      "value": "15"
+    },
+    {
+      "what": "Sentry.captureCheckIn / captureException / captureMessage call sites (non-test)",
+      "value": "30 / 17 / 7"
+    },
+    {
+      "what": "Cron routes, total lines, and routes restating CRON_SECRET / maxDuration / monitor slug / checkinMargin / completion log",
+      "value": "11, 1,592 lines; 11 / 11 / 10 / 10 / 11"
+    },
+    {
+      "what": "Registries keyed on a vendor-shaped id with no shared key (env-registry, cost-guardrails, manual-actions, observability, integrations) plus hand-written vendor tables (docs/README.md, aws-migration-dossier.md)",
+      "value": "5 + 2"
+    },
+    {
+      "what": "Cost ceilings in src/lib/cost-guardrails.ts (of which console_only) / providers in the cost runbook's \"Who bills us\" table",
+      "value": "6 (2) / 6"
+    },
+    {
+      "what": "Runbooks in docs/engineering and their total lines; vendors with a runbook / without",
+      "value": "13, 4,539 lines; 7 / 8"
+    },
+    {
+      "what": "Unit test files across the seven seam directories; tests passing a fake env object; vi.mock of a vendor SDK",
+      "value": "54; 13; 3"
+    },
+    {
+      "what": "ADR filenames naming a vendor, env, cost, usage or integration",
+      "value": "26"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "The email seam is the complete shape: a provider interface with two owed behaviours (reserved-recipient refusal, degrade to not_configured), a disabled provider, an SDK-slice fake (`SesEmailClient`), a zod config schema, one env-selection function, a 580-line runbook and a superseding ADR",
+      "where": "src/lib/notifications/provider.ts, src/lib/notifications/ses.ts:44-61, src/lib/notifications/index.ts:55-69, docs/engineering/ses-email-runbook.md, ADR 20260803-ses-sole-email-provider"
+    },
+    {
+      "what": "The usage probes name the shared seam shape explicitly — `ProbeOptions {env, fetcher, now}`, `externalHttpBlocked`, and four sample states with the rule that not_configured and unavailable never flatten into ok",
+      "where": "src/lib/usage/probe.ts:24-71, ADR 20260806-provider-usage-guardrails lines 46-63"
+    },
+    {
+      "what": "\"One reading of the media storage environment\" — the one-accessor rule argued from a real failure (issue #1283) inside the storage seam",
+      "where": "src/lib/storage/index.ts:120-145"
+    },
+    {
+      "what": "Env provenance is one registry with three provenances, a generated .env.example, a refused merge, and compiled-in defaults with deliberate empty-means-off override semantics",
+      "where": "config/env-registry.mjs:1-58, src/lib/configured.ts, scripts/check-env.mjs, ADR 20260812-env-provenance-registry and its 2026-08-13 amendment"
+    },
+    {
+      "what": "Human steps are one record type (`ManualAction` with when/why/run/store/verify) rendered to a generated doc, and cost ceilings are one registry that labels what it cannot see as console_only rather than omitting it",
+      "where": "infra/lib/manual-actions.ts:37-68, src/lib/cost-guardrails.ts:60-123, docs/engineering/manual-actions.md"
+    },
+    {
+      "what": "A contract test hands the raw-fetch Stripe seam real-shaped payloads pinned to one API version, so a moved field fails somewhere",
+      "where": "src/lib/payments/stripe-contract.test.ts, src/lib/payments/__fixtures__/stripe/"
+    },
+    {
+      "what": "A seam shape propagates by ADR citation: the NOAA ADR adopts marine-forecast.ts's seam by name (injectable fetcher, four-second bound, flag honoured, null on failure) and adds the fixture-on-block rule with its reason",
+      "where": "docs/architecture/decisions/20260907-noaa-tide-predictions.md:29-37,121-122; src/lib/tide-predictions.ts:141-163"
+    },
+    {
+      "what": "The shop-owned backup seam hand-signs SigV4 rather than importing the SDK, with the written reason that the SDK's credential resolution must never run against a shop's own key",
+      "where": "src/features/backup-export/s3-client.ts:1-17, ADR 20260804-shop-owned-backup-export"
+    },
+    {
+      "what": "Framework-bound hooks are injected into framework-free seams rather than imported (`FlushDeferrer` for Next's after())",
+      "where": "src/lib/observability/cloudwatch.ts:48-56"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L25-1",
+      "title": "Twenty-two seams, five registries, and no vendor id",
+      "kind": "governance",
+      "reading": "docs/architecture/overview.md:107-111 is the only place the seam concept is stated, and it states it as prose: measured against the code, 13 of 22 seams zod-validate, 7 hand-trim and 3 have no config. Five registries already key on a vendor-shaped thing with no shared id — config/env-registry.mjs (21 groups), src/lib/cost-guardrails.ts (`CostProvider`, 6 ceilings), infra/lib/manual-actions.ts, infra/lib/observability.ts (27 signals), src/features/integrations/registry.ts (4 providers) — and docs/README.md:41-55 and docs/architecture/aws-migration-dossier.md:45-51 hand-list vendors a sixth and seventh time. config/env-registry.mjs:1-2 claims to hold every variable DiveDay reads, and src/ reads 41 keys it does not hold, including VAPID ×3, UPSTASH ×2 and 10 SENTRY_*_CRON_MONITOR_SLUG overrides; scripts/check-env.mjs checks .env.example against the registry and .env.manual's provenance but never a read in src/. playwright.config.ts:110-129 blanks 20 credential keys by hand because nothing says which seams degrade on credentials and which on the flag. docs/engineering/cost-guardrails-runbook.md:181 says it outright: \"a new vendor is invisible\". Seven vendors have a runbook and eight do not, and no row anywhere says which.",
+      "idea": "One seam registry, config/seams.mjs (plain .mjs for the same three-consumer reason env-registry gives at lines 16-20), with one row per seam: id, purpose, module path, provider and fake names, env group, degrade mode (`credentials` | `flag` | `fixture`), runbook path or `none:` with a reason, ADR ids, cost-ceiling ids, manual-action ids. env-registry's groups gain `seam:` (the four compiled-in overrides get an `override` provenance instead of being unlisted), `CostProvider` and manual-actions' vendor references become seam ids, and docs/README.md's runbook rows and the dossier's vendor table are rendered from the registry the way manual-actions.md already is. A `check:seams` guard holds three lines: every `env.X`/`process.env.X` read under src/ names a registered key or a listed exemption; every vendor SDK import and external host literal under src/ sits inside a registered seam's module; every seam row names a runbook or a reason. playwright.config.ts derives its blank list from every seam whose degrade mode is `credentials`, and `pnpm agent:health` gains a seam-coverage table (interface / fake / config parse / degrade mode / runbook / ceiling per seam) beside its \"guards with no test\" table. The grammar afterwards: a vendor is a row, and everything that mentions a vendor — env, cost, manual steps, runbook index, the e2e blank list — derives from it.",
+      "dissolves": "The overview's prose promise and env-registry's false \"every variable\" claim; the two hand-written vendor tables; the 20 hand-blanked keys; the possibility of a vendor with no runbook, no ceiling and no env row going unnoticed.",
+      "scope": "New config/seams.mjs (+ .d.mts); config/env-registry.mjs; scripts/check-seams.mjs + test and a check:repo row; scripts/check-env.mjs; scripts/agent-health.mjs; src/lib/cost-guardrails.ts (CostProvider); infra/lib/manual-actions.ts; playwright.config.ts:60-129; docs/README.md, docs/architecture/overview.md:107, docs/agents/repo-checks.md, docs/architecture/aws-migration-dossier.md:45-51; .claude/rules/infra.md and domain.md pointers; one ADR.",
+      "firstSlice": "Land config/seams.mjs with 22 rows and `check:seams` in report-only mode naming the 41 unregistered keys and the 15 out-of-seam SDK imports; add `seam:` to every env-registry group and render docs/README.md's runbook rows from it.",
+      "effort": "M",
+      "reviews": [
+        "ADR",
+        "security"
+      ],
+      "conflicts": "ADR 20260812-env-provenance-registry (extended one level up — its \"a value the repo knows does not belong\" rule is kept as an `override` provenance rather than silence); ADR 20260806-provider-usage-guardrails (CostProvider becomes derived, ceilings unchanged); ADR 20260805-cdk-minted-credentials-and-manual-actions (rows gain a seam id); H-45 and the aws-migration-dossier (its AWS-n rows stay, its vendor table becomes a view); #1826 (a send queue that gives up tells nobody — the per-seam \"who watches\" column is where that answer lives); #1721 (erasure for non-payment providers — a per-seam holds-personal-data column subsumes the question); #1661 (S3 cost attribution — seam rows name their buckets).",
+      "confidence": "high"
+    },
+    {
+      "id": "L25-2",
+      "title": "Every seam re-spells four lines; one seam kit replaces them",
+      "kind": "shape",
+      "reading": "Twenty selection points (18 exported `*FromEnvironment` plus readCloudWatchLogsConfig and webPushConfig) each re-declare their inputs: 11 private `*Environment` aliases of one Readonly<Record> type, five of them the identical `PaymentEnvironment` in src/lib/payments/{checkout,connect,customers,invoicing,promotions}.ts, and 13 `type Fetch = typeof fetch` aliases with injection spelled three ways (17/12/3). Those five Stripe files also each parse `STRIPE_SECRET_KEY` through five one-key `configSchema`s (checkout.ts:149, customers.ts:51, invoicing.ts:150, promotions.ts:94, connect.ts:69) and each keep a `disabled*Provider`. Degradation is three grammars — 8 disabled providers answering not_configured, 7 readers answering null, rate-limit.ts:205 substituting a real store — so a caller learns each seam's answer by reading it. The kill switch is checked in 8 files in three grammars (cloudwatch-config.ts:54 and web-push.ts:49 ignore injection; marine-forecast.ts:335, usage/probe.ts:70, analytics.ts:264 and ingest-url.ts:144 gate on the real fetch; tide-predictions.ts:155-163 and tide-stations.ts:172 serve a fixture behind a DIVEDAY_E2E belt), and every SDK-backed seam ignores it, which is why playwright.config.ts blanks 20 keys and its line-105 comment counts three readers where there are eight. src/lib/usage/probe.ts:24-71 already names the shape — ProbeOptions, externalHttpBlocked, four sample states — for two seams only.",
+      "idea": "One module, src/lib/seam.ts, holds the four lines every seam needs: `Environment`, `Fetch`, `externalHttpBlocked(env, fetcher)` promoted out of usage/probe.ts, and `seam({ env, read, build, disabled, blocked? })` — one selection function shape that trims flat string config (generalising cloudwatch-config.ts's no-zod reason; zod stays for payload parsing, which is what most of the 22 zod importers already are), returns `disabled` when a key is missing, and returns `blocked ?? disabled` under the flag whatever the credentials say. Every `*FromEnvironment` becomes a `seam()` call; Stripe's five become one `stripeConfigFromEnvironment` feeding five builders; the two tide modules pass their fixture as `blocked`, keeping ADR 20260907's rule as a parameter instead of a belt. Because the flag now beats credentials inside the kit, playwright.config.ts stops blanking keys and one test in seam.test.ts proves the fleet's no-vendor promise for every seam at once; `check:seams` (L25-1) refuses a new selection function outside the kit. The grammar afterwards is one sentence: a seam reads its env through `seam()`, degrades to `disabled`, and is blocked by the flag.",
+      "dissolves": "11 env aliases, 13 fetch aliases, three injection spellings, 8 disabled constants plus 7 null-returning readers, three kill-switch grammars, and the 20-key blank list — one grammar in one file.",
+      "scope": "src/lib/seam.ts (new) and its test; the 20 selection points across src/lib/notifications (index, sms, whatsapp-signup, inbound-mail-store, web-push), src/lib/payments ×5, src/lib/storage (index, blob-host), src/lib/address-lookup.ts, src/lib/rate-limit.ts, src/lib/observability/cloudwatch-config.ts, src/lib/usage (probe, neon, vercel), src/lib/marine-forecast.ts, src/lib/tide-predictions.ts, src/lib/tide-stations.ts, src/lib/analytics.ts, src/lib/storage/ingest-url.ts, src/features/integrations ×3, src/features/backup-export/platform-backup.ts; their 54 test files; playwright.config.ts:60-129 and e2e/servers.ts:119-127; docs/architecture/overview.md:107; ADR 20260907-noaa-tide-predictions cross-reference; one ADR.",
+      "firstSlice": "Create src/lib/seam.ts with Environment, Fetch, externalHttpBlocked and seam(); migrate usage/probe.ts, marine-forecast.ts and the two tide modules (the seams that already read the flag), deleting their local aliases and checks.",
+      "effort": "M",
+      "reviews": [
+        "security",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260907-noaa-tide-predictions (fixture-on-block survives as the `blocked` parameter; \"right or absent\" is kept); ADR 20260806-provider-usage-guardrails (probe.ts's shape is promoted, not changed); ADR 20260719-msw-offline-sync-only (unchanged — injection stays the unit-test seam, MSW stays at the offline boundary); src/lib/observability/cloudwatch-config.ts:30-35's no-zod reason (honoured and generalised); #1826 (the kit's not_configured/unavailable split is what lets a queue say which one it hit).",
+      "confidence": "high"
+    },
+    {
+      "id": "L25-3",
+      "title": "Sentry is the vendor without a seam; the cron routes are its door",
+      "kind": "shape",
+      "reading": "Every vendor SDK in src/ is imported inside its seam except one: `@sentry/nextjs` is imported at 15 sites — 11 cron routes, src/app/api/webhooks/stripe/route.ts, src/app/observability.ts and the two instrumentation files — with 30 captureCheckIn, 17 captureException and 7 captureMessage calls spread across src/. The 11 cron routes total 1,592 lines and each restates one posture by hand: a CRON_SECRET bearer gate (11 files), maxDuration (11), a per-route monitor slug read from an unregistered SENTRY_*_CRON_MONITOR_SLUG key (10), a checkinMargin block (10) and a completion log line (11); src/app/api/cron/usage/route.ts:82-86 says it \"fails closed exactly like /api/cron/retention and /api/cron/reminders\", which is the copy admitting it is a copy. src/lib/cron-schedule.ts exists to pin one schedule to vercel.json by test and is imported by exactly one of the eleven, so ten schedules are asserted nowhere. The dossier names \"AWS-3a Sentry decoupling\" as a sequencing item (docs/architecture/aws-migration-dossier.md, H-45) and docs/engineering/monitoring-runbook.md is 97 lines, the shortest vendor runbook. src/lib/observability/cloudwatch.ts:48-56 already shows how a framework-bound hook enters src/lib: injected, never imported.",
+      "idea": "Two things become one shape. First, an error-and-check-in seam in src/lib/observability (a `Reporter` interface: captureException, captureMessage, checkIn; a disabled reporter; a sink registered once from src/instrumentation.ts the way FlushDeferrer is), so the 24 capture sites import `@/lib/observability` and the SDK is imported in three files. Second, `cronRoute({ id, schedule, maxDuration, run })` in src/lib — the bearer gate, the check-in pair around `run`, the `diveday-<id>` slug with one `SENTRY_<ID>_CRON_MONITOR_SLUG` override read in one place, the `cron_<id>.scan_complete` line, and the vercel.json lockstep assertion extended from one schedule to eleven through cron-schedule.test.ts. Each route becomes its `run` body; the ten slug keys become one registered pattern row in the seam registry (L25-1). The grammar afterwards: a cron is a name, a schedule and a body, and Sentry is a seam like SES.",
+      "dissolves": "The hand-copied posture in 11 routes, 12 of 15 SDK import sites, ten unregistered env keys, and the unasserted lockstep of ten schedules.",
+      "scope": "src/lib/observability/ (new reporter + cron-route modules and tests), src/instrumentation.ts, src/app/observability.ts, the 11 src/app/api/cron/*/route.ts files and their tests, src/app/api/webhooks/stripe/route.ts, src/lib/cron-schedule.ts + test, vercel.json (read by the test), config/env-registry.mjs (slug pattern row), docs/engineering/monitoring-runbook.md, .claude/rules/infra.md, one ADR.",
+      "firstSlice": "Add `cronRoute()` with a test asserting 503-unconfigured, 401-wrong-token and the check-in pair, and adopt it in the three smallest routes (integrations 29 lines, recaps 51, trip-reminders 78) — no reporter seam yet.",
+      "effort": "M",
+      "reviews": [
+        "security",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260806-provider-usage-guardrails (\"copying /api/cron/retention's posture exactly\" becomes one call; posture unchanged); ADR 20260727-sentry-error-monitoring-q7fk2p (kept — the seam is where its redaction and DSN already live); dossier AWS-3a / H-45 (this is the code half of the decoupling, not a migration); ADR 20260806-cloudwatch-log-shipping's FlushDeferrer precedent (reused for the reporter sink); .claude/rules/domain.md's framework-free src/lib (honoured by injection).",
+      "confidence": "medium"
+    }
+  ]
+}

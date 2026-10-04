@@ -1,0 +1,196 @@
+{
+  "lensId": "L22",
+  "lens": "The message bundles",
+  "reading": "Copy reaches a screen through three grammars: two separately typed JSON bundles (`src/i18n/locales/en-US/diver.json`, 241,934 bytes, 48 namespaces, 2,965 leaves; `staff/*.json`, 39 files, 5,016 leaves, composed by `staff/index.ts`), 35 `src/i18n/*-labels.ts` code-to-key maps (3,718 lines; `today-labels.ts` 857, `readiness-labels.ts` 525), and a words-as-props layer for staff client components (66 hand-typed `*Copy`/`*Labels` types in 64 files, 74 `copy={{`/`labels={{` sites, `ScheduleBuilder.tsx`'s type alone 159 lines). The per-area staff split holds up on its own terms — 20 of 39 namespaces mirror a `src/app/shop/[shopSlug]/<route>/` directory, 7 are settings sub-pages, 12 are components or cross-cutting (`shared`, `today`, `shopHome`, `lenses`, `feed`, `orderLine`) — but its counts drifted (26 at the split in ADR 20260807, \"31\" at `staff-messages.ts:12`, 39 on disk). Namespaces are not read where they are named: of the 47 non-test files that spell a staff `trips.` key, 20 sit under `trips/`; `shared` is read by 59; the diver `courses` namespace is read from 16 directories including `src/app/shop`, and 9 files under `src/app/shop` call `diverTranslator`. Of 7,981 en-US leaves, 701 English values sit under 2+ keys (1,951 keys, 24%), 528 across bundle files, 282 in both the diver and the staff bundle (936 keys); \"Saving…\" is a key in 18 files (57 keys), and the progress verbs total 224 keys for 84 distinct values. That duplication drifts in Spanish: 144 of the 701 values carry 2+ different Spanish renderings (430 keys) — \"Never mind\" ×12 → 3, \"Email\" ×14 → 2, \"Captain\" ×4 → 3, \"BCD\" ×5 → 3, \"Boots\" ×3 → 3 — which is what the 433-line `src/i18n/locales/es-ES/README.md` and `scripts/check-shop-word.mjs`'s ~20 regex rules exist to chase after the fact. A word is decided in four unlinked places: `docs/product/glossary.md` (2,350 lines, 216 terms, 3 lines naming a bundle key or label map), the README's terminology tables (naming 2 keys), `staff/shared.json` (45 top keys, 424 leaves) plus `diver.common` (38 leaves), and the label maps — open issue #1869 is a three-way reconcile of the glossary, `card-labels.ts` and a door. The \"domain returns codes\" rule (ADR 20260731; `scripts/check-copy.mjs` header) is bypassed by the translator itself: 15 non-test files in `src/lib`/`src/db` import a translator or label map at runtime, 8 parameters default to `staffTranslator(\"en-US\")` (`src/lib/today.ts:857,903,948,1029`, `src/db/today.ts:1083`), and `scripts/check-architecture.mjs:58` bans lib→app/features only. Two translator types make three maps (`guardian-labels.ts`, `readiness-labels.ts`, `tide-labels.ts`) carry a `DIVER_*` and a `STAFF_*` key map for one code set, and put readiness words at both `shared.readiness` (33 leaves) and `trip.*`. 1,258 of the 2,965 diver leaves (42%: `marketing` 689, `switching` 107, `marineLife` 462) are DiveDay-authored content rather than chrome, while `src/i18n/messages.ts:40` and ADR 20260803 still price the bundle at \"~80 KB\". The mechanical half is already guarded: `check-copy` and `check-domain-strings` at zero baseline, `check-locale`'s three rules with 206 per-key `DELIBERATELY_IDENTICAL` declarations, `check-bundle-reach` (57 dead keys across 12 files in its baseline), `check-voice`, `check-icu-plurals` (324 plural, 20 select clauses), `check-shop-word`.",
+  "measurements": [
+    {
+      "what": "diver.json size / namespaces / leaf strings",
+      "value": "241,934 bytes / 48 / 2,965"
+    },
+    {
+      "what": "diver.json leaves that are content, not chrome (marketing + switching + marineLife)",
+      "value": "689 + 107 + 462 = 1,258 of 2,965 (42%)"
+    },
+    {
+      "what": "staff bundles / leaf strings / largest four",
+      "value": "39 files / 5,016 / settings 802, trips 572, shared 424, divers 395"
+    },
+    {
+      "what": "staff namespaces mirroring a route dir / settings sub-pages / components or cross-cutting",
+      "value": "20 / 7 / 12"
+    },
+    {
+      "what": "namespace count as documented vs on disk",
+      "value": "26 (ADR 20260807) / 31 (staff-messages.ts:12) / 39 (staff/index.ts)"
+    },
+    {
+      "what": "label-map .ts modules / lines / reading a bundle key type / holding both a diver and a staff map",
+      "value": "35 / 3,718 / 33 / 3 (guardian, readiness, tide)"
+    },
+    {
+      "what": "English values under 2+ keys / keys involved / across bundle files / in both diver and staff",
+      "value": "701 / 1,951 (24% of 7,981) / 528 / 282 (936 keys)"
+    },
+    {
+      "what": "duplicated English values with 2+ different Spanish renderings / keys",
+      "value": "144 / 430"
+    },
+    {
+      "what": "\"Saving…\" keys / files; progress-verb keys / distinct values",
+      "value": "57 / 18; 224 / 84"
+    },
+    {
+      "what": "staff client components taking a hand-typed words object / all use-client files under shop+components",
+      "value": "48 / 133 (66 *Copy|*Labels types in 64 files; 74 copy={{ sites in 40 files; 78 files typing t: StaffTranslator)"
+    },
+    {
+      "what": "largest hand-typed copy types",
+      "value": "ScheduleBuilder.tsx 159 lines, ImportWizard.tsx 106, SubSurfaceRipple.tsx 62, CommandPalette.tsx 56"
+    },
+    {
+      "what": "src/lib + src/db non-test files importing a translator or label map at runtime / Translator(\"en-US\") defaults",
+      "value": "15 / 8"
+    },
+    {
+      "what": "readers of staff `trips.` keys / under trips/ ; readers of `shared`",
+      "value": "47 / 20 ; 59"
+    },
+    {
+      "what": "files under src/app/shop calling diverTranslator; useTranslations under src/app/shop",
+      "value": "9 ; 0"
+    },
+    {
+      "what": "fan-in of label maps: most / single-importer maps",
+      "value": "readiness-labels 42 importers / 7 maps with one importer"
+    },
+    {
+      "what": "vocabulary governance: glossary lines and terms / lines naming a bundle key or label map; es-ES README lines; check-shop-word rules",
+      "value": "2,350 and 216 / 3; 433; ~20"
+    },
+    {
+      "what": "dead keys in check-bundle-reach baseline",
+      "value": "57 across 12 bundle files"
+    },
+    {
+      "what": "e2e specs importing a bundle / hard-coded English locator literals",
+      "value": "4 of 109 / 3,157"
+    },
+    {
+      "what": "i18n-exempt markers under src/",
+      "value": "124"
+    },
+    {
+      "what": "ICU plural / select clauses in en-US",
+      "value": "324 / 20"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "Per-area staff bundles composed by an index: the merge-conflict reason in ADR 20260807 still holds and per-area beats per-route — 27 of the 47 readers of `trips.*` are outside trips/, so route-colocated bundles would scatter keys, and the es-ES README's 'a reviewer reads the bundles end to end' argument depends on them staying under src/i18n",
+      "where": "src/i18n/locales/en-US/staff/index.ts, docs/architecture/decisions/20260807-per-area-staff-bundles.md"
+    },
+    {
+      "what": "Codes-not-sentences enforced at both roots with zero baselines, plus the key-registry prose-free rule",
+      "where": "scripts/check-copy.mjs, scripts/check-domain-strings.mjs, scripts/copy-baseline.json, scripts/domain-strings-baseline.json"
+    },
+    {
+      "what": "Every key in every locale, ICU parity, and 'translated means translated' with per-key deliberate-identical declarations instead of a blanket exemption",
+      "where": "scripts/check-locale.mjs (three rules, DELIBERATELY_IDENTICAL), scripts/check-icu-plurals.mjs"
+    },
+    {
+      "what": "Dead copy is already measured and ratcheted (57 keys in 12 files), so an unused-key sweep is not a lens finding",
+      "where": "scripts/check-bundle-reach.mjs, scripts/bundle-reach-baseline.json, docs/agents/repo-checks.md:69-75"
+    },
+    {
+      "what": "Locale resolution is one ordered function with three distinct questions about one header (render / remember / acknowledge) and the lobby board's deliberate inversion is written down",
+      "where": "src/i18n/request.ts, src/i18n/negotiate.ts, .claude/rules/i18n.md, ADR 20260812-reader-chosen-language"
+    },
+    {
+      "what": "Provider cost is per named namespace, and a consumer without a provider fails a test rather than rendering a blank 200",
+      "where": "src/i18n/messages.ts messagesForNamespaces, src/i18n/DiverIntlProvider.tsx, src/i18n/provider-coverage.test.ts, ADR 20260803"
+    },
+    {
+      "what": "The offline manifest reads two staff namespaces through its own module and a raw-text test refuses a third, after #1353's 62-module payload",
+      "where": "src/i18n/offline-manifest-messages.ts, offline-manifest-messages.test.ts"
+    },
+    {
+      "what": "Label maps are total over their enum (a new code is a compile error, never a raw code on screen) and asserted in one test file",
+      "where": "src/i18n/label-maps.test.ts (40 KB), src/i18n/gear-labels.ts KIND_SOURCES, readiness-labels.ts"
+    },
+    {
+      "what": "Spanish ships in the same change, and the terminology decisions are memory plus a guard rather than a queue",
+      "where": "src/i18n/locales/es-ES/README.md, scripts/check-shop-word.mjs"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L22-1",
+      "title": "The product's nouns and verbs are written once, in a words bundle",
+      "kind": "concept",
+      "reading": "282 English values live in both the diver and the staff bundle (936 keys), and 144 duplicated values already carry 2+ different Spanish renderings (430 keys): \"Never mind\" ×12 → Mejor no / Déjalo / Cancelar, \"Captain\" ×4 → Patrón / Capitán / Patrón/patrona, \"BCD\" ×5 → 3 forms, \"Boots\" ×3 → Botas / Botines / Escarpines. \"Saving…\" is a key in 18 bundle files (57 keys) and the progress verbs total 224 keys for 84 values; `diver.common` (38 leaves) and `staff/shared.json` (424 leaves, 45 top keys: readiness, tide, compass, depth, rentalFit, buddyTeam…) are the de-facto vocabulary with no rule saying what belongs there. ADR 20260908-one-hand line 110 already decided \"Duplicated strings move to `shared.json`\" and docs/product/shipped.md has 0 mentions of it landing. Three label maps (`guardian-labels.ts`, `readiness-labels.ts`, `tide-labels.ts`) carry a `DIVER_*` and a `STAFF_*` key map for one code set because the two bundles are typed apart. The glossary (216 terms) names a bundle key on 3 lines and the es-ES README's tables name 2, so a noun is decided in prose and re-derived per key — issue #1869 is exactly that three-way drift. Some duplication is legitimate: \"Deleted\" ×4 has 4 Spanish forms because participles agree, and \"Schedule\" ×4 → Calendario / Horario / Programar is an English noun/verb homonym, which argues for keys by object and speech act rather than by surface.",
+      "idea": "A third bundle file per locale, `locales/<locale>/words.json`, composed into both `DiverMessages` and `StaffMessages` as the `words` namespace, organised by object (`words.departure`, `words.diver`, `words.seat`, `words.waiver`, `words.gear.<kind>`, `words.crew.<role>`, `words.readiness.<status>`) and by speech act (`words.busy.saving`, `words.dismiss.neverMind`, `words.did.copied`, `words.field.email`). A word goes in `words.*` when it is invariant across surfaces — a noun, a role, a kind, a status, a progress verb, a dismissal, a field name; a participle or adjective that agrees in Spanish stays on its object, and a homonym gets two keys named by its part of speech. Label maps become one `Record<Code, \"words.…\">` each and lose the DIVER_/STAFF_ pairs; `diver.common` and the vocabulary half of `staff/shared.json` are deleted into it. The rule that keeps it: every glossary term names its `words.*` key, and `scripts/check-words.mjs` fails when a glossary term's key is missing from a locale, when an English value present in `words.*` reappears verbatim under another key (ratcheted from today's 701 like `check-copy`), and when the es-ES README's terminology tables disagree with `words.json` — so the README shrinks to register and reasoning and the tables become checked data. The grammar afterwards is one sentence: a product noun or a speech act has one key in `words`, a sentence about a surface has a key in that surface's bundle.",
+      "dissolves": "`diver.common`, the vocabulary half of `staff/shared.json`, the DIVER_/STAFF_ key-map pairs, roughly 140 progress-verb keys, and the terminology tables as prose-only memory.",
+      "scope": "src/i18n/locales/{en-US,es-ES}/words.json (new); src/i18n/messages.ts, staff-messages.ts, staff/index.ts, next-intl.d.ts; 35 label maps and label-maps.test.ts; diver.json and 39 staff bundles (keys move, values do not, so the 3,157 e2e literals and visual baselines stay); scripts/check-words.mjs + test, scripts/check-locale.mjs BUNDLES, check-bundle-reach.mjs; docs/product/glossary.md, src/i18n/locales/es-ES/README.md, .claude/rules/i18n.md, the i18n-copy skill; one ADR.",
+      "firstSlice": "Create `words.json` in both locales holding the 84 progress-verb values collapsed to their stems and the 30 most-duplicated nouns and field names, retarget the three dual label maps and every \"Saving…\" key to it, and land `check-words` with the one-word-one-key ratchet banked at its current count.",
+      "effort": "M",
+      "reviews": [
+        "ADR",
+        "design",
+        "domain"
+      ],
+      "conflicts": "ADR 20260908-one-hand — delivers its 'duplicated strings move to shared.json' clause with a home and a guard; ADR 20260807-per-area-staff-bundles — one more file per locale, the index still composes; ADR 20260730-staff-copy-localization — staff stays server-only, `words` crosses to the client only through `messagesForNamespaces` picks; #1869 — subsumed (glossary, card-labels and the door read one key); N-36 pt-BR — a third locale translates the vocabulary once; docs/design/settled-questions.md — untouched.",
+      "confidence": "high"
+    },
+    {
+      "id": "L22-2",
+      "title": "One translator, two deliveries: staff client components read a provider",
+      "kind": "system",
+      "reading": "ADR 20260730-staff-copy-localization made the staff bundle server-only for two reasons — `src/i18n/next-intl.d.ts` augments one global `AppConfig.Messages` with `DiverMessages`, and staff words must not ship to an anonymous diver — and `staff-messages.ts:11-25` calls the resulting props discipline 'a real constraint on how staff UI is written, and it is the point'. The cost is measurable: 48 of the 133 `\"use client\"` files under src/app/shop and src/components take a hand-typed words object (66 `*Copy`/`*Labels` types in 64 files, 74 `copy={{`/`labels={{` assemblies in 40 files), `ScheduleBuilder.tsx`'s type is 159 lines and `ImportWizard.tsx`'s 106, and 78 files pass `t: StaffTranslator` by hand. The diver side already has the answer: `DiverIntlProvider` takes a required `namespaces` list, `messagesForNamespaces` (`src/i18n/messages.ts:43`) serializes only those, and `provider-coverage.test.ts` fails a consumer without one (ADR 20260803). The one staff client surface, `/offline-manifest`, ships two namespaces through `offline-manifest-messages.ts`; the 62-module incident (#1353) came from importing the barrel, not from a provider. The staff bundle is 5,016 leaves in 39 files and `staff/index.ts:10-19` records that one namespace's key union stops resolving at ~560 keys, which is a constraint on the shape of any unified type.",
+      "idea": "One `Messages` type with three sections — `words`, `diver`, `staff` — one `translator(locale)`, one `IntlProvider namespaces={[\"staff.trips\", \"words\"]}` whose namespaces are dotted section paths, and `useTranslations` in a staff client component exactly as in a diver one. The two recorded reasons are met by mechanism rather than by prohibition: a `staff.*` namespace may only be named by a provider mounted under `src/app/shop/**` or `src/app/offline-manifest/**` (a `check-provider-scope` guard using the walk `provider-coverage.test.ts` already does), so staff copy still never reaches an anonymous page; and a diver component calling `t(\"staff.…\")` is the existing provider-coverage failure rather than a silent runtime miss. The 66 hand-typed copy types and 74 `copy={{ }}` assemblies are deleted; `staffTranslator`/`diverTranslator` become `translator(locale)` with section-typed keys, and `offline-manifest-messages.ts` becomes a two-namespace provider pick. The sectioned type keeps every namespace's key union the size it is today, which is how the ~560-key ceiling is respected without a cast.",
+      "dissolves": "Two translator APIs and two key spaces; the words-as-props grammar for staff client components; the `*Copy`/`*Labels` type files.",
+      "scope": "src/i18n/messages.ts, staff-messages.ts, next-intl.d.ts, DiverIntlProvider.tsx → IntlProvider.tsx, provider-coverage.test.ts, offline-manifest-messages.ts; 48 client components and 64 type files under src/app/shop and src/components; scripts/check-provider-scope.mjs (new) + test; .claude/rules/i18n.md, .claude/skills/i18n-copy/SKILL.md; an ADR superseding 20260730 §1 and amending 20260803.",
+      "firstSlice": "Mount `IntlProvider namespaces={[\"staff.settings.calendar\"]}` in settings/calendar/layout.tsx and rewrite `CalendarFeedPanel.tsx` (the skill's own worked example, `feed-panel-types.ts` 64 lines) to `useTranslations`, landing the scope guard that refuses a `staff.*` namespace outside src/app/shop.",
+      "effort": "L",
+      "reviews": [
+        "security",
+        "ADR",
+        "design"
+      ],
+      "conflicts": "ADR 20260730-staff-copy-localization — supersedes its 'server-side only, no StaffIntlProvider' decision while keeping both of its reasons by guard; ADR 20260803-error-boundary-copy-bridge — extends per-namespace provider pricing to staff; #1353 — the barrel-import incident this must not repeat, hence per-namespace picks only; staff/index.ts's ~560-key inference ceiling — a risk for any unified type, mitigated by sections but not proven; L22-1 is a prerequisite for the `words` section and can land under the current two-translator regime.",
+      "confidence": "medium"
+    },
+    {
+      "id": "L22-3",
+      "title": "Two renderers speak words; everything else in lib and db returns codes",
+      "kind": "governance",
+      "reading": "ADR 20260731-domain-layer-copy-leaks says 'the domain layer never imports from src/i18n or picks a bundle' and `scripts/check-copy.mjs`'s header states the rule as 'src/lib and src/db return codes, src/app and src/components choose words'. On disk, 15 non-test files under src/lib and src/db import a translator or a label map at runtime (`src/lib/today.ts`, `src/db/today.ts`, `src/db/closeout.ts`, `src/db/import.ts`, `src/lib/blockers.ts`, `src/lib/palette-answer.ts`, `src/db/export.ts`, `src/lib/night-before-brief.ts`, and 7 message senders: `src/lib/notifications/email.ts`, `src/db/reminders.ts`, `waiver-issue.ts`, `recap.ts`, `reply-keywords.ts`, `staff-reply.ts`, `push-subscriptions.ts`), and 8 parameters default to `staffTranslator(\"en-US\")` (`src/lib/today.ts:857,903,948,1029`, `src/db/today.ts:1083`) — an English default in the layer whose rule is to have no words. `src/lib/today.ts:39-50` states its own exception: `TodayAction.detail` is a rendered string 'so it stays `string` rather than forking into a second, code-carrying shape'. No guard can see any of this: `scripts/check-architecture.mjs:58-59` bans src/lib and src/db from importing src/app and src/features only, and `check-domain-strings.mjs` matches literal sentences, so a `t()` call in lib passes both. The senders are a real second renderer the ADR never named — an email must be rendered in the recipient's locale at send time, not on a page — and `src/db/export.ts` (CSV headers, field-guide cards) is a third.",
+      "idea": "Name the renderers and make the rule mechanical: the page (`src/app`, `src/components`), the message (`src/lib/notifications/**` and the seven `src/db` senders), and the file (`src/db/export.ts`, the print routes). Words are chosen in a renderer and nowhere else; `TodayAction.detail`/`actionLabel`, `BlockerDestination`, the close-out summary, the import report and the palette answer become a `Copy` value (`{ key, params }` in `src/lib/copy.ts`, resolved by one `resolveCopy(t, copy)` at the renderer), which is the shape `readiness.ts` already returns as `ReadinessBlockerCode` and `readiness-labels.ts` already resolves. `check-architecture.mjs` gains `{ root: \"src/lib\", banned: [\"src/app\", \"src/features\", \"src/i18n\"], except: [\"src/lib/notifications/**\", \"src/i18n/settings\"] }` and the matching `src/db` row naming its sender files, seeded as a ratchet over the 15 today; the 8 `\"en-US\"` defaults are deleted. The grammar afterwards is one line in `.claude/rules/domain.md`: codes cross the layer boundary, and a renderer is the only module that may import a translator.",
+      "dissolves": "The translator as a hidden dependency of Today, close-out, import and the command palette; the `staffTranslator(\"en-US\")` default; the exception paragraph in `src/lib/today.ts`.",
+      "scope": "src/lib/today.ts, src/db/today.ts, src/db/closeout.ts, src/db/import.ts, src/lib/blockers.ts, src/lib/palette-answer.ts, src/lib/night-before-brief.ts, src/db/export.ts and their tests; src/lib/copy.ts (new); scripts/check-architecture.mjs + check-architecture.test.mjs, scripts/architecture-baseline.json; docs/agents/repo-checks.md, .claude/rules/domain.md; an amendment to ADR 20260731.",
+      "firstSlice": "Add the two architecture rows with the current 15 files as a ratcheted allowlist and convert `src/lib/blockers.ts` (the smallest importer, `staffTranslator` only) to return `Copy` values resolved by its page callers.",
+      "effort": "M",
+      "reviews": [
+        "ADR",
+        "domain"
+      ],
+      "conflicts": "ADR 20260731-domain-layer-copy-leaks — sharpened: names the renderers it left implicit and gives the rule a guard; ADR 20260730-staff-copy-localization §3 — the same rule, now checked; ADR 20260730-feature-module-contracts — src/features already sits on the lib/db side and takes the same row; the src/lib/today.ts doc-comment exception — removed; N-36 pt-BR — a third locale then touches renderers only.",
+      "confidence": "high"
+    },
+    {
+      "id": "L22-4",
+      "title": "diver.json is the diver's chrome; DiveDay's content is its own bundle",
+      "kind": "shape",
+      "reading": "1,258 of `diver.json`'s 2,965 leaves (42%) are `marketing` (689), `switching` (107) and `marineLife` (462) — words DiveDay authors about itself and the reef, not words the app says to a booked diver — and the file is 241,934 bytes while `src/i18n/messages.ts:40` and ADR 20260803 still price it at '~80 KB'. ADR 20260730-frontend-strings-i18n-extraction rejected a `marketing.json` because 'splitting per-surface was already flagged in 20260729 as the move to make *if* the diver bundle grows large, not before', and ADR 20260729 says 'it is one small namespace today; if it grows, split it and load per-surface'; the trigger both wrote has fired. The content has grown a grammar of its own: `src/lib/marketing.ts`, `migration-guides.ts`, `demo-stories.ts` and `demo-roles.ts` are the 4 `proseFreeFiles` in `scripts/check-domain-strings.mjs` — key registries in src/lib holding `DiverMessageKey`s under a stricter rule than any other domain file. `marketing.*` is read by 16 files, `switching.*` by 5, and `marineLife.*` only through `marine-life-labels.ts` (10 importers), so the three namespaces have three reader sets disjoint from the trip, ready, booking and waiver readers. `request.ts:27-47` records that the marketing pages are the only ones a `headers()` read keeps from being static, and that the fix is a body cached per locale — a body that today would carry the whole diver `Messages` type.",
+      "idea": "`diver.json` keeps what a browsing or booked diver reads (trip, ready, booking, recap, waiver, schedule, shelf, course, notifications: 1,707 leaves) and three content bundles leave it — `content/marketing.json`, `content/switching.json`, `content/field-guide.json` — composed as a `content` section read by a `contentTranslator` that only the marketing routes, the switching guides and `marine-life-labels.ts` import. The key registries in src/lib become the bundle's own structure (`marketing.sections[]`, `switching.<competitor>.steps[]`) or move beside it as `src/i18n/content/*.ts`, which removes `proseFreeFiles` as a scanner special case and lets the marketing pages' future `\"use cache\"` body key on a bundle that is theirs. `check:locale`, `check:bundle-reach` and `check:voice` read one more directory, the same way they learned `staff/`. The diver `Messages` type is 58% of today's, and 'diver copy' means the diver product again.",
+      "dissolves": "`proseFreeFiles` as a category; the '~80 KB' claim; marketing and switching copy as members of the diver bundle.",
+      "scope": "src/i18n/locales/{en-US,es-ES}/diver.json and content/*.json (new), src/i18n/messages.ts, settings.ts, marine-life-labels.ts; src/lib/marketing.ts, migration-guides.ts, demo-stories.ts, demo-roles.ts; scripts/check-domain-strings.mjs, check-locale.mjs BUNDLES, check-bundle-reach.mjs, check-voice.mjs; src/app/(marketing) and src/app/switching readers (16 + 5 files); an ADR amending 20260730-frontend-strings-i18n-extraction.",
+      "firstSlice": "Move `marketing` and `switching` (796 leaves) to `content/*.json` behind a `contentTranslator`, leaving every key path and value unchanged so the marketing e2e literals and visual baselines do not move.",
+      "effort": "S",
+      "reviews": [
+        "ADR"
+      ],
+      "conflicts": "ADR 20260730-frontend-strings-i18n-extraction — its rejection of a separate marketing bundle was conditional on size and the condition lapsed; ADR 20260729-diver-copy-localization — executes the split it deferred; ADR 20260813-marine-life-is-diveday-copy — the file moves, the decision that species words are DiveDay's stands; ADR 20260807 — the same per-file split applied to the diver side, as its last paragraph foresaw; L22-2 — a `content` section is the fourth section of that idea's one type.",
+      "confidence": "medium"
+    }
+  ]
+}

@@ -1,0 +1,178 @@
+{
+  "lensId": "L01",
+  "lens": "The concept count — how many domain nouns the product asks a shop to hold, how many concepts they stand for, and which nouns are one thing wearing different names",
+  "reading": "src/db/schema.ts holds 121 tables and 83 enums in 9,613 lines, docs/product/glossary.md carries 216 bold terms, and src/lib has 491 entries, so the shop is asked to hold roughly one noun per table. The accidental nouns cluster in two families: four \"someone wants a seat\" tables (trip_waitlist_entries, last_minute_list_entries, trip_invitations, course_inquiries — 1,042 lines of src/db modules and 7 components on the staff trip page) and fifteen `*_events` tables, of which 11 carry a `seq` tiebreak and 4 carry the identical offline `client_event_id` plus `cleared`-undo grammar. Every one of those splits is defended by an ADR (20260727, 20260813, 20260814, 20260816, 20260907, 20260804-crew-roll-call-is-per-person), and every defence is about scope, direction or vocabulary, never about the shape of the row — which is the same row in each case. Two files (src/db/bookings.ts, src/db/seat-diver.ts) already write one act into two staff trails (activity_events and trip_desk_events), and src/lib/offline-events.ts exists because one rule had been written three times. The candidate families that are three concepts on inspection, not one: boats (schema.ts:1720) vs boat-line (src/lib/boat-line.ts, a diver-facing reading of trip_stage_events) vs trip_dives/executed_dives (kept apart by D24 at schema.ts:2397); support needs vs medical vs guardian (ADR 20260827 vs 17 medical and guardian columns on waiver_records at 6067–6246); buddy pairs vs teams (one table, one trail, ADR 20260804-buddy-teams). The trips row already carries its kinds as 7 columns (series_id, lens_id, course_id, is_private, self_guided, dive_mode, boat_id), so the schema already agrees with the roadmap's \"Departure as the one noun\" row. The roadmap's six known rows cover two of the four lead tables and one of the four tap ledgers; the three ideas below widen those rows rather than restate them. Left to system lenses on purpose: 9 `tokenHash` columns behind one primitive in src/lib/bearer-tokens.ts, and 7 outbox-shaped tables (heldSends, notificationSendQueue, integrationDeliveries, integrationSyncRecords, mediaDeletionAttempts, processorErasureObligations, shopIntegrations).",
+  "measurements": [
+    {
+      "what": "pgTable definitions in src/db/schema.ts",
+      "value": "121 (9,613 lines)"
+    },
+    {
+      "what": "pgEnum definitions in src/db/schema.ts",
+      "value": "83"
+    },
+    {
+      "what": "Bold glossary terms in docs/product/glossary.md",
+      "value": "216"
+    },
+    {
+      "what": "Entries in src/lib / src/db",
+      "value": "491 / 401"
+    },
+    {
+      "what": "Staff message namespaces (src/i18n/locales/en-US/staff/*.json) vs StaffDestinationId values in src/lib/staff-destinations.ts",
+      "value": "40 / 21"
+    },
+    {
+      "what": "Tables named *_events",
+      "value": "15"
+    },
+    {
+      "what": "Tables carrying a `seq` bigserial tiebreak",
+      "value": "11 (activityEvents, tripChangeEvents, tripStageEvents, tripDeskEvents, waiverMaterialityDecisions, rollCallEvents, rollCallCrewEvents, preDepartureCheckEvents, bookingArrivalEvents, dayCloseouts, closeoutLeftoverDecisions)"
+    },
+    {
+      "what": "Tables carrying `client_event_id` (the offline tap ledgers)",
+      "value": "4 (roll_call_events, roll_call_crew_events, pre_departure_check_events, booking_arrival_events)"
+    },
+    {
+      "what": "'Someone wants a seat' tables",
+      "value": "4 (trip_waitlist_entries, last_minute_list_entries, trip_invitations, course_inquiries) + 2 request tables of a different actor (crew_assignment_requests, trip_help_requests)"
+    },
+    {
+      "what": "src/db lines behind the four lead tables",
+      "value": "1,042 (waitlist.ts 249, last-minute-list.ts 270, trip-invitations.ts 227, course-inquiries.ts 296); with trip-promos, shop-promos, help-requests, crew-requests and the four src/lib helpers: 3,395"
+    },
+    {
+      "what": "Staff trip-page components rendering the lead family",
+      "value": "7 (WaitlistSection, WaitlistInvite, TripInvitationSection, LastMinuteDealSection, LastMinuteSendHold, LastMinuteSendButton, AddDiverSection)"
+    },
+    {
+      "what": "held_send_kind values that are 'offer a seat to a lead'",
+      "value": "2 of 3 (waitlist_invite, last_minute_deal)"
+    },
+    {
+      "what": "anonymize.ts references per lead table",
+      "value": "tripWaitlistEntries 3, lastMinuteListEntries 5, courseInquiries 10, tripInvitations 0"
+    },
+    {
+      "what": "Files writing the same act into both activity_events and trip_desk_events",
+      "value": "2 (src/db/bookings.ts, src/db/seat-diver.ts); recordDeskEvent appears in 8 files, the two activity recorders in 9"
+    },
+    {
+      "what": "Retention windows for the departure trails (src/lib/retention.ts)",
+      "value": "activity_events 1095 d (line 196), trip_desk_events 30 d (268), trip_read_marks 30 d (275), trip_change_events and all four tap ledgers: none"
+    },
+    {
+      "what": "Glossary nouns for the ledger family / the lead family",
+      "value": "9 (Change ledger, Activity event, Departure log, Arrival event, Roll-call event, Crew roll-call event, Payment event, Trip stage, Waiver activity) / 5 (Wait list, Last-minute list, Last-minute deal, Demand signal, Day-of help request)"
+    },
+    {
+      "what": "`tokenHash` columns behind src/lib/bearer-tokens.ts",
+      "value": "9"
+    },
+    {
+      "what": "Outbox-shaped tables (attempt/run_at/next_attempt columns)",
+      "value": "7"
+    },
+    {
+      "what": "ADRs in docs/architecture/decisions/",
+      "value": "313; ADR 20260804-boat-resource-model still reads 'Status: Proposed' while src/db/boats.ts and trips.boat_id exist"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "Boats, the boat line and trip legs are three concepts, not one noun in three coats: a hull with a capacity and one sentence; a diver-facing reading of the crew's stage taps that never uses a clock; ordered plan legs kept apart from what was actually dived (D24: 'record the change, never overwrite the plan'). Hold.",
+      "where": "src/db/schema.ts:1720 (boats), src/lib/boat-line.ts:5–28, src/db/schema.ts:2346–2411 (trip_dives, executed_dives)"
+    },
+    {
+      "what": "Support needs, the medical questionnaire and guardian consent are three concepts by written decision — 'what the dive needs, not what the person is' never gates and never touches medical; medical (10 columns) and guardian (7 columns) are sections of the one signed document. Hold.",
+      "where": "ADR 20260827-support-needs-are-a-record-about-the-dive lines 84–90; src/db/schema.ts:7419–7453 and 6067–6246"
+    },
+    {
+      "what": "Buddy pairs became buddy teams as one concept: one membership table, one append-only trail, 'team' in every word a human reads; only the physical name `buddy_pair_members`/`pair_id` remains, and H-49 has since made that rename free of the 'applied history' cost the ADR cited.",
+      "where": "ADR 20260804-buddy-teams (Alternatives: 'Rename the table'); src/db/schema.ts:8429–8453"
+    },
+    {
+      "what": "A date request and a course inquiry are already one table with a nullable course and a subject check constraint — the exact merge pattern L01-1 extends to the other three lead tables.",
+      "where": "ADR 20260814-a-date-request-is-a-course-inquiry; src/db/schema.ts:1287–1396"
+    },
+    {
+      "what": "The activity trail already speaks codes and names, never sentences, with one labels module and a test that walks every code against both locales — L01-3 builds on this rather than around it.",
+      "where": "ADR 20260910-the-trail-is-a-code-and-names; src/db/schema.ts:2942–3029; src/i18n/activity-labels.ts"
+    },
+    {
+      "what": "The offline staleness rule was unified once it had been written three times; the sync route already counts three queues as one.",
+      "where": "src/lib/offline-events.ts:1–16; ADR 20260907-the-counter-survives-offline §7"
+    },
+    {
+      "what": "One destination registry feeds the nav, the dock and the command palette, with a five-tab ceiling deliberately holding four.",
+      "where": "src/lib/staff-destinations.ts:3–19, 76–88"
+    },
+    {
+      "what": "One bearer-token primitive under every URL-is-the-credential table, with lifetime left to each caller on purpose.",
+      "where": "src/lib/bearer-tokens.ts:3–59; 9 tokenHash columns in src/db/schema.ts"
+    },
+    {
+      "what": "The trips row already carries every kind of departure as columns (series, lens, course, private, self-guided, dive mode, boat), so 'Departure as the one noun' is a copy change, as the roadmap says.",
+      "where": "src/db/schema.ts:2045–2325; docs/product/features/roadmap.md:617"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L01-1",
+      "title": "Four 'someone wants a seat' tables are one Lead with a scope",
+      "kind": "concept",
+      "reading": "Four tables hold 'a person who wants a seat the shop has not sold them': trip_waitlist_entries (src/db/schema.ts:3307), last_minute_list_entries (3402), trip_invitations (3355) and course_inquiries (1305), each with shop, a person or contact snapshot, created_at and an outreach mark (invited_at on two, unsubscribed_at on one). Their only distinguishing axis is scope — one departure, one date (preferred_date/alternate_date/date_flexible at 1342–1345) or any date (available_from/available_until at 3412–3413) — plus who moved first. The staff trip page renders them through 7 components (WaitlistSection, WaitlistInvite, TripInvitationSection, LastMinuteDealSection, LastMinuteSendHold, LastMinuteSendButton, AddDiverSection), `/requests` through 3 more, and `held_send_kind` (3154) spends two of its three values (`waitlist_invite`, `last_minute_deal`) on the one act of offering a seat to a lead. The four src/db modules total 1,042 lines (waitlist.ts 249, last-minute-list.ts 270, trip-invitations.ts 227, course-inquiries.ts 296) with src/lib/date-requests.ts 169, src/lib/last-minute-list.ts 382 and src/lib/request-advisor.ts 164 beside them, and anonymize.ts sweeps three of the four (tripInvitations: 0 references). ADRs 20260813, 20260814, 20260816 and 20260727 each defend a split against the wait list, and every rejection names scope or direction ('this one asks for a departure to exist', 'suitable for several future departures', 'per-trip and gated to full trips only'), never a difference in what the row holds. ADR 20260816's own amendment (#1616) dropped the `waitlist` bridge column because nothing ever wrote it — the bridge between two of these tables was never needed because they are one thing. The glossary carries five nouns for the family (Wait list, Last-minute list, Last-minute deal, Demand signal, Day-of help request) and the roadmap's 'One Deal, one Interest' row merges only the first two. Today's `last_minute_fill` card (src/lib/today.ts, 4 references) and src/lib/demand.ts (23 lines) are two nudges about the same lead pool, seen from an empty and a full departure.",
+      "idea": "One `leads` table: shop, optional person_id plus contact snapshot, `scope` (departure | date | anytime) with that scope's own columns (trip_id; preferred/alternate date and flexibility; available range), what it is about (course_id or interest), party size, and one lifecycle — asked_at, offered_at, closed_at (declined or unsubscribed). trip_invitations stops being a table: a lead a staffer attaches to a departure is a departure-scoped lead row copied from the date lead with offered_at set, which is exactly what the `(trip_id, course_inquiry_id)` unique index at 3379 models today. The staff grammar becomes one panel on every departure — 'Who wants in': this departure's leads, date leads within reach of its date, and anytime leads whose range covers it (the three reads the trip page already does in three components) — with one act, Offer a seat, which is one held-send kind; `/requests` keeps its by-day grouping and shows every scope. The Stripe coupon (trip_last_minute_promos) stays what it is: a lead is who you tell and a deal is what you tell them, and the two stop being entangled in src/lib/last-minute-list.ts. The Demand signal becomes a count of departure-scoped leads on a full departure and the Today card becomes the same count on an empty one — one number, two readings. Deleted: three tables, the `trip_invitation_source` enum, two held-send kinds, four of the seven trip-page components, five ADRs' worth of 'why this is not the wait list' prose, and three glossary nouns. Kept from ADR 20260813: a lead is unordered and buys no standing; from 20260814: one table for course and dive asks; from 20260816: a lead reserves nothing and never enters a manifest. Crew requests (crew_assignment_requests) and day-of help requests stay out — a different actor whose approval runs changeTripCrew, and a seated diver's ask, respectively.",
+      "dissolves": "Wait list, last-minute list, trip invitation and date request as four nouns, and 'demand signal' as a fifth; the product has leads with a scope, and one act on them.",
+      "scope": "src/db/schema.ts (4 tables → 1, 1 enum dropped, held_send_kind narrowed); src/db/waitlist.ts, last-minute-list.ts, trip-invitations.ts, course-inquiries.ts, anonymize.ts, export.ts, seed-course-inquiries.ts; src/lib/date-requests.ts, last-minute-list.ts, demand.ts, request-advisor.ts, held-sends.ts, today.ts; src/app/shop/[shopSlug]/trips/[id]/_components (7 → 3), requests/, promos/page.tsx, schedule/board, _components/today/DaySpine.tsx; src/components/DateRequestForm.tsx, src/app/s/[shopSlug]/_components/LastMinuteListForm.tsx, src/app/unsubscribe/[token]; bundles staff/trips, today, calls, manifest and diver.json in en-US and es-ES; e2e/date-requests.spec.ts, e2e/last-minute-fill.spec.ts, visual captures of the trip page and /requests; glossary (5 entries → 2); one ADR superseding 20260719, 20260813, 20260816 and the list half of 20260727; roadmap 'One Deal, one Interest' row.",
+      "firstSlice": "Add `leads` with `scope`, move trip_waitlist_entries and trip_invitations onto it (both are already per-departure with an invited_at), delete both tables, and replace WaitlistSection, WaitlistInvite and TripInvitationSection with one panel and one Offer act; the date and anytime scopes follow in two further slices.",
+      "effort": "L",
+      "reviews": [
+        "domain",
+        "security",
+        "design",
+        "ADR"
+      ],
+      "conflicts": "roadmap.md 'One Deal, one Interest' (subsumed and widened: four tables not two, and the lead is separated from the deal rather than merged with it); ADR 20260813-wait-list-is-a-lead-list (kept in full); ADR 20260816-trip-invitations-are-outreach (superseded: offered_at on a departure-scoped lead is the outreach record); ADR 20260814-a-date-request-is-a-course-inquiry (kept and extended); ADR 20260727-last-minute-fill-promos (list half superseded, coupon half kept); H-09 (auto-invite stays blocked — the merge adds no automation); #1831 (the requests page's role gate, subsumed); #1616 (already dropped the waitlist bridge).",
+      "confidence": "high"
+    },
+    {
+      "id": "L01-2",
+      "title": "Four tap ledgers are one mark at a checkpoint",
+      "kind": "concept",
+      "reading": "roll_call_events (src/db/schema.ts:8028), roll_call_crew_events (8158), pre_departure_check_events (8278) and booking_arrival_events (8359) share one column set — shop, trip, a subject (booking_id, person_id or checklist_item_id), a status with a `cleared` undo, `source` (all four reuse the `rollCallSource` enum), `client_event_id`, `offline_snapshot_saved_at`, `occurred_at`, `seq` and `recorded_by_person_id`. They are the only 4 tables carrying `client_event_id`, and their docblocks say the sameness in words: 'exactly like rollCallEvents' (8275, 8337) and 'mirrors roll call's own undo grammar' (8261, 8322). `roll_call_events.checkpoint` (8046) is already free text — `departure` or `after_dive_N` — so the ledger already knows that a mark belongs to a checkpoint. src/lib/offline-events.ts opens by admitting its staleness rule 'was written out three times before this module existed', and src/app/api/offline-manifests/sync/route.ts dispatches three queues that ADR 20260907 §7 counts as one. The glossary spends five nouns on the family (Roll-call event, Crew roll-call event, Arrival event, Roll-call checkpoint, Pre-departure checklist), and none of the four tables is in src/lib/retention.ts — they are one class of evidence. Three open issues are each a divergence between two of the four ledgers: #1814 (a crew member who never came raises no gap), #1838 (a reclaimed seat forgets its check-in), #1840 (the offline roll call uses a different control). ADR 20260907 keeps arrival and boarded 'apart at the type and the table so a queue reconciling with no human present cannot promote one into the other', and ADR 20260804-crew-roll-call-is-per-person separates crew because crew hold no booking — both reasons are about vocabulary and subject, not storage. The roadmap's 'Check-in = boarding's first rung' row already wants arrival as a rung on the departure's first checkpoint and stops there.",
+      "idea": "One `departure_marks` table: trip, `checkpoint` (arrival | pre_departure | departure | after_dive_N), `subject_kind` (seat | crew | item) with its id, `status`, source, client_event_id, snapshot time and seq — one row per tap, newest wins, `cleared` is the undo everywhere. The safety constraint ADR 20260907 states in one line is kept as one line: a check constraint that an `arrival` checkpoint admits only `arrived|cleared` and a boarding checkpoint only `boarded|not_boarded|cleared`, so no body a device can send promotes an arrival to aboard — the same guarantee, by the mechanism this schema already prefers (compare `buddy_pair_members_one_subject` at 8490). Crew stay a subject kind and never a booking, which is all ADR 20260804-crew-roll-call-is-per-person asked for. One reader, `latestMark(trip, checkpoint, subject)`, replaces the three newest-wins derivations in src/db/manifests.ts, src/db/check-in.ts and the pre-departure reader; one sync branch replaces three; one incident-export timeline replaces four stitched ones. The known roadmap row falls out as a consequence: arrival is the first checkpoint on the ledger and 'arrived → aboard' is the same subject reaching the next one, which is what the Departure log already narrates. Deleted: three tables, the `arrivalStatus` and `preDepartureCheckStatus` enums, three 'mirrors roll call' docblocks, three sync branches and three glossary nouns. Nothing about who may sail changes: readiness, admission and the ratio arithmetic read marks exactly as they read events today, and H-46 and H-51 are untouched. The offline worker (src/worker/manifest-sw.ts) queues one event shape instead of three, which is the day-the-network-dies half of the idea.",
+      "dissolves": "Arrival event, crew roll-call event and pre-departure check event as separate nouns: there is one mark at a checkpoint, and seats, crew and checklist items are its subjects.",
+      "scope": "src/db/schema.ts (4 tables → 1, 2 enums dropped); src/db/manifests.ts, check-in.ts, the crew roll-call and pre-departure writers, incident-export readers; src/lib/roll-call.ts, manifests.ts, offline-manifests.ts, offline-events.ts, pre-departure-check.ts, check-in.ts, arrival.ts; src/worker/manifest-sw.ts; src/app/api/offline-manifests/sync/route.ts; the manifest, counter and offline-manifest surfaces; print/departure log; e2e roll-call, offline-manifest and check-in specs plus their visual captures; glossary (5 nouns → 2); ADRs 20260907, 20260804-crew-roll-call-is-per-person, 20260824-pre-departure-safety-check amended by one new ADR; roadmap 'Check-in = boarding's first rung' row.",
+      "firstSlice": "Fold roll_call_crew_events into roll_call_events behind a `subject_kind` (seat | crew) — the two already share checkpoint, status and source — delete the crew table and its sync branch, and prove the per-checkpoint check constraint on that pair before arrival and pre-departure join.",
+      "effort": "L",
+      "reviews": [
+        "domain",
+        "security",
+        "ADR"
+      ],
+      "conflicts": "roadmap.md 'Check-in = boarding's first rung' (subsumed: the data half becomes a checkpoint on one ledger); ADR 20260907-the-counter-survives-offline (its 'never promoted' guarantee is kept as a check constraint; its separate-table mechanism is superseded); ADR 20260804-crew-roll-call-is-per-person (kept: crew is a subject kind); ADR 20260815-roll-call-order-is-a-property-of-the-data (untouched); H-46 crew head count at sea and H-51 whether pre-departure gates (untouched); #1814, #1838, #1840 (each a two-ledger divergence this removes).",
+      "confidence": "medium"
+    },
+    {
+      "id": "L01-3",
+      "title": "Three staff-and-diver trails about a departure are one trail with an audience",
+      "kind": "concept",
+      "reading": "activity_events (src/db/schema.ts:2943), trip_desk_events (3222) and trip_change_events (3036) are three append-only ledgers about one departure, each with an actor, a subject, `occurred_at` and a `seq` tiebreak — 3 of the 11 `seq` tables. activity_events and trip_desk_events both hold codes and never prose (ADR 20260910; the desk docblock at 3200), rendered by two parallel modules, src/i18n/activity-labels.ts and src/i18n/desk-event-labels.ts. Two files, src/db/bookings.ts and src/db/seat-diver.ts, write the same act into both tables; recordDeskEvent appears in 8 files and the two activity recorders in 9. The three differ only in audience and retention: staff for 1,095 days, staff for 30 days with a read mark (trip_read_marks at 3278), and diver-visible with no window (src/lib/retention.ts:196, 268, 275). The desk docblock's reason for a separate table is disclosure (#1202): 'one query can never accidentally serve a diver a staff fact'. That same class of hazard — an unfiltered read showing a visitor a departure the shop took off the board — is already held by a where-clause and a guard rather than by a table: `liveTrip()` plus scripts/check-live-trips.mjs (.claude/rules/db.md). The glossary spends four nouns on the trails (Activity event, Change ledger, Departure log, Waiver activity), and open issue #1774 asks for one more line on 'the booking's trail', a phrase that today names two tables.",
+      "idea": "One `departure_events` table: code, params, `audience` (staff | diver), subject_person_id, actor and seq; a desk line is an activity code flagged `desk: true` in src/lib/activity.ts, and a diver-visible change is a code with `audience = 'diver'` whose before/after values ride in params. trip_read_marks keeps its shape and points `last_seen_seq` at the one table, so the catch-up strip is 'desk-flagged codes after my mark' — what it is today, minus a table. The disclosure boundary becomes a guard on the check-live-trips pattern: a script that refuses any read of the table outside src/db that neither filters `audience = 'diver'` nor says `diveday:allow-staff-events: <why>`, with one diver-facing reader function. Retention becomes a per-code window in src/lib/retention.ts (desk codes 30 days, staff codes 1,095, diver codes none), which is the rule as it stands, written once. One recorder, `recordDepartureEvent`, replaces recordTripActivity, recordDiverActivity, recordDeskEvent and recordTripChangeEvent; one labels module replaces two; anonymize.ts sweeps one table instead of three. Deleted: two tables, three recorders, one labels module, the double write in bookings.ts and seat-diver.ts, and two glossary nouns. trip_stage_events stays: a stage is a state the boat line reads, not a line in a trail, and folding it in would put a position-like fact under an audience column.",
+      "dissolves": "'Desk event' and 'change ledger' as separate nouns: there is one trail of what happened to a departure, and who may read a line is a column on it.",
+      "scope": "src/db/schema.ts (3 tables → 1); src/db/activity writers (operations.ts, bookings.ts, seat-diver.ts, seat-claims.ts, find-my-booking.ts), desk-events.ts, trip-change-events.ts, check-in.ts, trips-record.ts, executed-dives.ts, help-requests.ts, gear.ts, anonymize.ts, export.ts, seed-desk-trail.ts, seed-diver-trail.ts; src/lib/activity.ts, desk-events.ts, trip-change-events.ts, retention.ts; src/i18n/activity-labels.ts, desk-event-labels.ts and the `activity` staff namespace in both locales; ActivityLog, the catch-up strip on the trip page, the diver's change ledger on /ready/[token] and /s/[shopSlug]/trips/[id]; a new scripts/check-departure-events.mjs in check:repo; glossary; ADR 20260910 extended; a security review for the diver-facing read.",
+      "firstSlice": "Fold trip_desk_events into activity_events by marking the eight desk codes in src/lib/activity.ts and pointing trip_read_marks.last_seen_seq at activity_events.seq; delete the desk table, desk-event-labels.ts and the second write in bookings.ts and seat-diver.ts.",
+      "effort": "M",
+      "reviews": [
+        "security",
+        "design",
+        "ADR"
+      ],
+      "conflicts": "#1202 (its disclosure boundary is kept, by a guard rather than a table); ADR 20260910-the-trail-is-a-code-and-names (extended to the desk and change ledgers); ADR 20260906-before-you-ask (the catch-up strip's contract is unchanged); H-02 retention (the 30-day desk window becomes a per-code window); #1774 (one trail makes the requested line one write); #1694 (one trail is where 'did this person dive' has one reader).",
+      "confidence": "medium"
+    }
+  ]
+}

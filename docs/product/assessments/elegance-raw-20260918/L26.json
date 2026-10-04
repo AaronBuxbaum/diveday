@@ -1,0 +1,162 @@
+{
+  "lensId": "L26",
+  "lens": "Test-serving code inside the product",
+  "reading": "Test-serving code inside the product is 25 route directories under src/app/api/test/ (32 files, 5,016 lines of route.ts), eight seam modules totalling 854 lines (src/lib/e2e-test-routes.ts 37, e2e-port.ts 35, demo-bypass.ts 119, demo-identity.ts 251, demo-roles.ts 51, src/db/seed-clock.ts 116, dev-credentials.ts 12, demo-refresh.ts 233), and 50 src/db/seed-*.ts scenario modules. The 25 handlers are fenced well at the door: every one opens with the same e2eTestRouteAuthorized line, src/app/api/test/seed-routes.test.ts registers 27 (path, method) rows, and scripts/check-e2e-fixtures.mjs checks 3-4 refuse an unregistered handler, but that apparatus exists because there are 25 doors rather than one. \"Is this a rehearsal?\" is answered in six predicate shapes across 19 product files: !DATABASE_URL (src/lib/clock.ts:47, rate-limit.ts:301), !DATABASE_URL && (NODE_ENV!=='production' || DIVEDAY_E2E) (e2e-test-routes.ts:27-33), DIVEDAY_E2E || NODE_ENV!=='production' (tide-predictions.ts:156, tide-stations.ts:171), DIVEDAY_E2E alone (marine-life-tiles.ts:131), DIVEDAY_DISABLE_EXTERNAL_HTTP alone (analytics.ts:264, marine-forecast.ts:335, storage/ingest-url.ts:144), and a cookie secure flag spelled DIVEDAY_E2E !== \"1\" at src/proxy.ts:114/286/312 and src/lib/auth.ts:233 but NODE_ENV === \"production\" at src/app/actions/set-locale.ts:39, shelf/[token]/actions.ts:83, settings/connect/route.ts:53 and settings/security/actions.ts:73. Product code reads five harness variables by name in 11 files (DIVEDAY_E2E, DIVEDAY_E2E_SECRET, DIVEDAY_CLOCK, DIVEDAY_RATE_LIMIT_DISABLED, DIVEDAY_DISABLE_EXTERNAL_HTTP) and none of the five appears in config/env-registry.mjs (0 hits), the file AGENTS.md calls the one registry. Scenarios have two grammars: 50 boot-time src/db/seed-*.ts modules under ADR 20260803-seed-scenario-modules, and 20 request-time seed-* routes whose two largest, seed-trouble-states/route.ts (1,129 lines) and seed-evening/route.ts (576), import 30 distinct @/db modules from inside src/app against the \"routes stay thin\" layout rule. shops.is_demo (src/db/schema.ts:338) is read in about 20 product files for six different questions, and when the harness needed a non-demo shop for the homepage band it grew a third kind of fixture shop (src/db/seed-year-band.ts, its own POST/DELETE route, its own line at reset/route.ts:6, dropped by a function named deleteDemoShopCascade whose docblock at seed-demo-lifecycle.ts:150-156 says the shop \"is not a demo\"). The frozen instant \"2026-07-21T13:30:00.000Z\" is written twice (src/test/frozen-clock.ts, e2e/servers.ts:106), DEV_STAFF_LOGINS is mirrored verbatim at scripts/screenshot.mjs:77-84, and .claude/rules/e2e.md:63 names the unit-test constant for the e2e boundary. The driver side is already one seam: playwright.config.ts exports e2eServerEnv and scripts/simulate-day/playwright.config.ts:61 and scripts/persona-bots/playwright.config.ts:72 spread it, and the clock seam (src/lib/clock.ts plus scripts/check-clock.mjs) and the bypass module (ADR 20260803-demo-bypass-containment) are the pattern the remaining 18 files should fold into.",
+  "measurements": [
+    {
+      "what": "Route directories under src/app/api/test/ (files, route.ts lines)",
+      "value": "25 directories, 32 files, 5,016 lines"
+    },
+    {
+      "what": "Largest test routes",
+      "value": "seed-trouble-states/route.ts 1,129 lines; seed-evening/route.ts 576; next largest reset/route.ts 135"
+    },
+    {
+      "what": "(path, method) handler rows registered in seed-routes.test.ts",
+      "value": "27 rows in a 476-line file"
+    },
+    {
+      "what": "Distinct @/db modules imported by the 25 test routes",
+      "value": "30"
+    },
+    {
+      "what": "src files matching DIVEDAY_E2E|process.env.NODE_ENV|isDemo|E2E",
+      "value": "92 total, 51 excluding *.test.* and api/test/"
+    },
+    {
+      "what": "Product files reading process.env.DIVEDAY_* by name / distinct variables / in config/env-registry.mjs",
+      "value": "11 files / 5 variables / 0 registered"
+    },
+    {
+      "what": "Product files reading process.env.NODE_ENV",
+      "value": "12"
+    },
+    {
+      "what": "Distinct predicate shapes for \"this is a rehearsal\"",
+      "value": "6 (plus demo-bypass.ts's own NODE_ENV-recognised gate)"
+    },
+    {
+      "what": "Cookie secure-flag derivations",
+      "value": "4 sites from DIVEDAY_E2E (proxy.ts x3, auth.ts) vs 4 sites from NODE_ENV (set-locale, shelf, settings/connect, settings/security)"
+    },
+    {
+      "what": "Boot-time scenario modules src/db/seed-*.ts",
+      "value": "50"
+    },
+    {
+      "what": "Request-time scenario routes (seed-* under api/test)",
+      "value": "20 of the 25 routes; 8 of them are the same {shop,email} -> issue*Token -> path shape"
+    },
+    {
+      "what": "Seam modules and their size",
+      "value": "8 modules, 854 lines (e2e-test-routes 37, e2e-port 35, demo-bypass 119, demo-identity 251, demo-roles 51, seed-clock 116, dev-credentials 12, demo-refresh 233)"
+    },
+    {
+      "what": "e2e specs calling /api/test/* URLs directly / calling reset directly / total specs",
+      "value": "33 / 19 / 109"
+    },
+    {
+      "what": "Specs using privateShop / signedInAsOwner",
+      "value": "24 / 65"
+    },
+    {
+      "what": "Files referencing each route outside its directory (top and bottom)",
+      "value": "reset 33, seed-stripe-account 9, seed-trouble-states 9, seed-private-shop 6, seed-evening 5; clock 0 in e2e (scripts/simulate-day/day.spec.ts only), email-previews 0"
+    },
+    {
+      "what": "Kinds of fixture shop the harness maintains",
+      "value": "3 (canonical blue-mantis isDemo, minted private shops isDemo, year-band shop isDemo:false with a reserved slug)"
+    },
+    {
+      "what": "Product files reading shop.isDemo / distinct meanings",
+      "value": "about 20 / 6 (bypass, banner+switcher, public-aggregate exclusion, first-run/trial/orientation suppression, external-connect refusal, fixture marker)"
+    },
+    {
+      "what": "Copies of the frozen instant literal / of DEV_STAFF_LOGINS",
+      "value": "2 (src/test/frozen-clock.ts, e2e/servers.ts:106) / 2 (src/db/dev-credentials.ts, scripts/screenshot.mjs:77-84)"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "One clock seam with a mechanical guard and a fail-closed production refusal: nowDate()/nowMs() are the only readers of DIVEDAY_CLOCK, the override is ignored whenever DATABASE_URL is set, and pnpm check:clock refuses bare new Date()/Date.now() in src/lib, src/db and src/features",
+      "where": "src/lib/clock.ts:41-59, scripts/check-clock.mjs, ADR 20260721-argos-frozen-clock, .claude/rules/domain.md"
+    },
+    {
+      "what": "The demo sign-in bypass is one module with three independent required conditions, takes its env as a parameter, and both real-account writers refuse the demo.invalid namespace",
+      "where": "src/lib/demo-bypass.ts, src/lib/demo-identity.ts:50, src/app/onboard/actions.ts:100, src/db/staff-accounts.ts:347, ADR 20260803-demo-bypass-containment"
+    },
+    {
+      "what": "One guard function for every test route, failing closed on a missing secret and on any DATABASE_URL, with per-handler registration enforced mechanically after the 2026-09-13 drift",
+      "where": "src/lib/e2e-test-routes.ts, scripts/check-e2e-fixtures.mjs checks 3-4, src/app/api/test/seed-routes.test.ts, issue #1791"
+    },
+    {
+      "what": "The harness driver environment is one exported object reused by every runner rather than re-derived per script",
+      "where": "playwright.config.ts e2eServerEnv, scripts/simulate-day/playwright.config.ts:61, scripts/persona-bots/playwright.config.ts:72, scripts/dev-server.mjs:667-679"
+    },
+    {
+      "what": "Per-worker production server plus in-memory PGlite, reset before every test, with a lazy per-test private shop for settings writers instead of finally blocks",
+      "where": "ADRs 20260720-e2e-parallel-prod-fleet, 20260815-per-test-private-shops, 20260816-e2e-server-process-groups; e2e/fixtures.ts demoReset and privateShop"
+    },
+    {
+      "what": "Boot-time seed data is 50 scenario modules behind one orchestrator with one clock and one tick counter, so parallel sessions touch different files",
+      "where": "src/db/seed.ts, src/db/seed-clock.ts, ADR 20260803-seed-scenario-modules"
+    },
+    {
+      "what": "Trouble states are staged on request rather than seeded permanently into the demo, keeping the demo calm and the coverage real",
+      "where": "src/app/api/test/seed-trouble-states/route.ts docblock, .claude/rules/surfaces.md \"A panel that only renders when something has gone wrong\""
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L26-1",
+      "title": "One rehearsal seam answers every \"is this real?\" question",
+      "kind": "system",
+      "reading": "Six predicate shapes decide whether the process is a rehearsal: !DATABASE_URL at src/lib/clock.ts:47 and rate-limit.ts:301; !DATABASE_URL plus NODE_ENV/DIVEDAY_E2E at e2e-test-routes.ts:27-33; DIVEDAY_E2E || NODE_ENV!=='production' at tide-predictions.ts:156 and tide-stations.ts:171; DIVEDAY_E2E alone at marine-life-tiles.ts:131; DIVEDAY_DISABLE_EXTERNAL_HTTP alone at analytics.ts:264, marine-forecast.ts:335 and storage/ingest-url.ts:144. The cookie secure flag is derived from DIVEDAY_E2E at src/proxy.ts:114/286/312 and src/lib/auth.ts:233 but from NODE_ENV at set-locale.ts:39, shelf/[token]/actions.ts:83, settings/connect/route.ts:53 and settings/security/actions.ts:73, and under the fleet (NODE_ENV=production, DIVEDAY_E2E=1) those two halves disagree. The production refusal (!DATABASE_URL) that clock.ts and rate-limit.ts apply is absent from marine-life-tiles.ts, analytics.ts, marine-forecast.ts and ingest-url.ts, so four overrides have no hard guard at all. 11 product files read five DIVEDAY_* variables by name and 12 read NODE_ENV, and none of the five is in config/env-registry.mjs. ADR 20260720-e2e-parallel-prod-fleet is why NODE_ENV cannot be the fact (the fleet is a production build) and ADR 20260721-argos-frozen-clock is why DATABASE_URL absence is the hard guard; both reasons hold, and neither says the derivation must be repeated at every site. tide-predictions.ts:148-154 records what the repetition costs: a branch guarded on NODE_ENV alone was dead in the one environment it served, and the tide capture waited 210s on every run.",
+      "idea": "One module, src/lib/rehearsal.ts, derives the whole answer once from the three facts (DATABASE_URL absent, NODE_ENV, the DIVEDAY_* opt-ins) and exports a frozen record: rehearsal().active, .clock, .externalHttp, .rateLimited, .secureCookies, .syntheticFixtures, .testRoutesOpen(request), every field live/false whenever DATABASE_URL is set so one fail-closed rule covers all of them. clock.ts, rate-limit.ts, tide-predictions.ts, tide-stations.ts, marine-life-tiles.ts, analytics.ts, marine-forecast.ts, storage/ingest-url.ts, auth.ts, proxy.ts, e2e-test-routes.ts and the four cookie sites stop spelling process.env and read the record; demo-bypass.ts's runtime-recognised gate reads the same record with its semantics unchanged. scripts/check-clock.mjs widens to refuse process.env.NODE_ENV and process.env.DIVEDAY_ anywhere in src/ outside the seam, the way it already refuses new Date(), so the count of product files that know a harness variable's name goes from 11 (plus 12 for NODE_ENV) to 1. The five variables enter config/env-registry.mjs under a harness provenance so pnpm check:env and the generated docs stop being blind to them, and docs/engineering/testing.md points at the seam. The grammar afterwards: product code asks the seam a question (may I fetch outside, is the clock live, are cookies secure) and only the seam knows how a rehearsal is switched on.",
+      "dissolves": "Six predicate shapes and two derivations of one cookie flag; the names of harness variables leave every product file but one.",
+      "scope": "src/lib/rehearsal.ts (new, with test); src/lib/clock.ts, rate-limit.ts, tide-predictions.ts, tide-stations.ts, marine-life-tiles.ts, analytics.ts, marine-forecast.ts, storage/ingest-url.ts, auth.ts, e2e-test-routes.ts, demo-bypass.ts; src/proxy.ts; src/app/actions/set-locale.ts, src/app/shelf/[token]/actions.ts, src/app/shop/[shopSlug]/settings/connect/route.ts, settings/security/actions.ts; scripts/check-clock.mjs and its test; config/env-registry.mjs; docs/engineering/testing.md; .claude/rules/domain.md; one ADR extending 20260721 and 20260720.",
+      "firstSlice": "Land src/lib/rehearsal.ts with its test and move the five readers that already carry the !DATABASE_URL guard or the DIVEDAY_E2E/NODE_ENV pair (clock.ts, rate-limit.ts, e2e-test-routes.ts, tide-predictions.ts, tide-stations.ts) onto it, with check-clock widened to refuse process.env.DIVEDAY_ outside the seam; the cookie sites and NODE_ENV readers follow in the second slice.",
+      "effort": "M",
+      "reviews": [
+        "security",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260720-e2e-parallel-prod-fleet (its DIVEDAY_E2E opt-in becomes one input to the seam, meaning unchanged); ADR 20260721-argos-frozen-clock (status Superseded, yet its seam decision is what clock.ts and seed-clock.ts still cite, so the new ADR must say which parts survive 20260727); ADR 20260803-demo-bypass-containment (env-as-parameter pattern kept, the seam takes env the same way); H-81/#1762 frozen-clock ordering (untouched).",
+      "confidence": "high"
+    },
+    {
+      "id": "L26-2",
+      "title": "A scenario is a seed module whatever hour it is staged",
+      "kind": "shape",
+      "reading": "50 src/db/seed-*.ts modules put the fixture shop into boot-time states under ADR 20260803-seed-scenario-modules' rule that a new scenario is a new module plus one orchestrator line. 20 src/app/api/test/seed-*/route.ts files put the same shop into request-time states, and the two largest, seed-trouble-states/route.ts (1,129 lines) and seed-evening/route.ts (576), sit under src/app where AGENTS.md says routes stay thin and domain logic lives in src/lib or src/db. Together the 25 routes import 30 distinct @/db modules and repeat one guard line 27 times, and keeping those 27 registered costs seed-routes.test.ts (476 lines) plus checks 3-4 of scripts/check-e2e-fixtures.mjs, written after issue #1791 found the table five routes short. Eight routes (seed-account-token, seed-arrival-code, seed-booking-handoff, seed-contact-email-confirmation-token, seed-courtesy-email-unsubscribe-token, seed-display-token, seed-last-minute-unsubscribe-token, seed-shelf-token) are one shape, parse {shop,email}, find the row, call an issue*Token, return the path, written eight times at 38-120 lines each. 33 of 109 specs call a /api/test/* URL directly and e2e/helpers.ts (850 lines) wraps some of them, so the spec side already speaks in named states. ADR 20260803's rejected alternative, a feature module, carried the clause \"revisit if the demo grows behaviour of its own\", and 5,016 lines of request-time scenario behaviour is that growth.",
+      "idea": "Every scenario, boot-time or request-time, is a src/db/seed-<scenario>.ts module; the request-time ones export stage(db, shop, params) and are named in one registry, src/db/stages.ts (name, module, zod params, method). One route, src/app/api/test/[stage]/route.ts, is the only door: one guard call, one registry lookup, one body parse, one {ok, links} answer; reset and the private-shop mint are stages too (reset; shop with POST and DELETE), clock moves to L26-1's rehearsal seam, and email-previews is the one GET stage. The eight token mints collapse to one stage, mint, with a kind discriminant over the eight issue* functions. seed-routes.test.ts shrinks to one guard test plus a registry-completeness test, check-e2e-fixtures checks 3-4 become \"the one handler calls the guard\", and each stage gets a PGlite unit test in src/db beside the boot-time scenarios, where createTestDb() already lives. The sentence in .claude/rules/surfaces.md and e2e.md, \"add the state to seed-trouble-states/route.ts\", becomes \"add a stage\", the same sentence db.md already says for boot-time data.",
+      "dissolves": "25 route directories and 27 copies of the guard; the boot-time/request-time split in how a scenario is written; the per-handler registration apparatus.",
+      "scope": "src/app/api/test/** collapsed to one [stage] route; about 12 new src/db/seed-*.ts modules plus src/db/stages.ts; src/app/api/test/seed-routes.test.ts; scripts/check-e2e-fixtures.mjs and its test; e2e/fixtures.ts, e2e/global-setup.ts, e2e/helpers.ts and the 33 specs' URLs; scripts/simulate-day/day.spec.ts; .claude/rules/surfaces.md, e2e.md, db.md; docs/engineering/testing.md; an ADR extending 20260803-seed-scenario-modules.",
+      "firstSlice": "Add the [stage] route and src/db/stages.ts, move seed-trouble-states and seed-evening into src/db/seed-trouble-states.ts and seed-evening.ts with PGlite unit tests, and teach check-e2e-fixtures that a stage must be in the registry; the remaining 23 routes move in later slices behind the same door.",
+      "effort": "L",
+      "reviews": [
+        "security",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260803-seed-scenario-modules (extended: its one-module-one-line rule now covers request-time scenarios; its rejected src/db/seed/ directory stays rejected, flat siblings only); #1791 (subsumed: one handler, one registration); #1813 (the seed's crew writes, orthogonal but easier once stages are db modules); the surfaces.md trouble-states rule (reworded, its reason kept); ADR 20260815-per-test-private-shops (the mint becomes a stage, unchanged in behaviour).",
+      "confidence": "high"
+    },
+    {
+      "id": "L26-3",
+      "title": "is_demo is a playground; the fixture is the process",
+      "kind": "concept",
+      "reading": "src/db/schema.ts:338's is_demo is read for six questions in about 20 product files: the sign-in bypass (src/lib/demo-bypass.ts:116), the banner and role switcher (ShopChrome.tsx:107, PublicShopShell.tsx:80), exclusion from public aggregates (src/db/shops.ts:126 and 747, courses.ts:200, dive-sites.ts:1404, platform-backup.ts:99, s/[shopSlug]/year-card/route.tsx:54), suppression of the first-run checklist, orientation, trial and payments rows (shop/[shopSlug]/page.tsx:448-531, settings/SettingsPage.tsx:540, schedule/board/actions.ts:688, src/lib/trial.ts), refusal of external connects (stripe/connect/callback and the shopify, quickbooks and xero callbacks, stripe-accounts.ts:80), and \"this is the fixture\" (seed-private-shop, seed-stripe-account's isDemo check). ADR 20260815-per-test-private-shops made every minted fixture isDemo on purpose (property 3, \"renders identically\"), so no fixture shop can ever show the non-demo branches, which are reached only by the 12 specs that onboard a real shop through /onboard. When the homepage band refused demos (ADR 20260908-one-hand, lever T) the harness grew a third kind of shop: src/db/seed-year-band.ts, its own POST/DELETE route, its own drop line at reset/route.ts:6, a reserved slug, and deletion through deleteDemoShopCascade, whose docblock at seed-demo-lifecycle.ts:150-156 explains that the shop it deletes is not a demo. ADR 20260720-trial-shops-are-not-demo already split \"seeded\" from \"demo\" once and fixed the flag's meaning as a throwaway playground; the harness has re-conflated the two from the other side. DEV_STAFF_LOGINS (src/db/dev-credentials.ts) and DEMO_ROLE_META (src/lib/demo-roles.ts:14-20) are two lists of the same four people, and scripts/screenshot.mjs:77-84 mirrors the first verbatim.",
+      "idea": "is_demo keeps exactly its product meaning, a visitor's playground (banner, role switcher, bypass, out of public aggregates, no external connects) and stops meaning \"a test fixture\". Fixture-ness moves to the process: under L26-1's rehearsal().active, which is false whenever DATABASE_URL is set, the demo password admits any *.demo.invalid account whether or not its shop is a demo, so condition (2) of ADR 20260803-demo-bypass-containment becomes \"isDemo or rehearsal\" while the namespace condition (3) stays untouched. createDemoShop takes {demo: boolean} and the shop stage mints either shape, so privateShop({demo: false}) is a real-shaped shop on which the first-run checklist, orientation, trial row and payments row all render and can be photographed; src/db/seed-year-band.ts, its route and its reset line are deleted, the year band being one demo:false private shop with a year of departures. deleteDemoShopCascade is renamed for what it does (dropShopCascade) and keeps the one refusal it needs, never the canonical slug. One cast list: DEV_STAFF_LOGINS derives from DEMO_ROLE_META, and screenshot.mjs reads it from a small JSON that module emits instead of a mirror.",
+      "dissolves": "The third kind of fixture shop and the rule that every fixture is a playground; the second meaning of is_demo.",
+      "scope": "src/lib/demo-bypass.ts and its test, src/lib/credentials.ts, src/db/seed.ts createDemoShop, src/db/seed-demo-lifecycle.ts, src/db/seed-year-band.ts (deleted), the seed-private-shop and seed-year-band-shop routes (or their stages under L26-2), reset, e2e/fixtures.ts privateShop option, e2e/shop-year.spec.ts, the year-band captures in e2e/visual.spec.ts, src/db/dev-credentials.ts, src/lib/demo-roles.ts, scripts/screenshot.mjs; amendments to ADR 20260803-demo-bypass-containment and 20260815-per-test-private-shops.",
+      "firstSlice": "Widen the bypass's condition (2) under rehearsal().active with the adversarial test (production-shaped env with DATABASE_URL set is refused), give createDemoShop its demo flag, and re-point e2e/shop-year.spec.ts at privateShop({demo: false}), deleting seed-year-band.ts and its route.",
+      "effort": "M",
+      "reviews": [
+        "security",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260803-demo-bypass-containment (condition 2 widened only inside the seam's DATABASE_URL guarantee; an amendment, and the security reviewer decides whether a sign-in-link stage is the safer shape); ADR 20260815-per-test-private-shops (property 3 becomes the default rather than a law); ADR 20260908-one-hand lever T (the band still refuses demos, unchanged); ADR 20260720-trial-shops-are-not-demo (its meaning of the flag is restored, not changed); depends on L26-1 for rehearsal().active.",
+      "confidence": "medium"
+    }
+  ]
+}

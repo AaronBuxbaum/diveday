@@ -1,0 +1,188 @@
+{
+  "lensId": "L10",
+  "lens": "The route tree as the mental model",
+  "reading": "Of the 99 page routes, 60 sit under src/app/shop/[shopSlug] at depths 0/1/2/3/5 = 1/16/31/11/1, and 18 of the 31 depth-2 routes are settings/*. 12 of the 16 depth-1 staff pages wear a Pager over one table (divers, orders, gear, dive-sites, courses, waivers, reviews, requests, inbox, promos, reports, plus the bookings/new picker), so the flat layer of the staff tree is the schema's tables with a search box. The departure is where the tree is the shop's day: 10 staff routes are keyed by one trip id (trips/[id] with its guests, manifest, prep, prep/ticket/[bookingId], log and print, plus schedule/blowout/[tripId], bookings/new/[tripId] and check-in/walk-in/[tripId]), and ADR 20260827-the-departure-is-two-working-surfaces settled that three of them are working surfaces. Of those ten, trips/[id]/guests/page.tsx is a 510-line live duplicate of the roster trips/[id]/page.tsx renders at line 969, described as \"a compatibility redirect\" in docs/design/surfaces.md:98 and linked from exactly one file (check-in/salvage-copy.ts:52). Acts have routes: bookings/new, bookings/new/[tripId], check-in/walk-in, check-in/walk-in/[tripId] and calls are five pages for one consequence path (src/db/seat-diver.ts, four rows in SEAT_SURFACES plus the call's three writers), and src/lib/staff-destinations.ts:255-277 marks all three navGroup: null as \"an act, not a place\". \"Add one\" has three grammars: an inline form on the index (gear 4 forms, promos 7, settings/team 10, settings/boats 3, staffing 6), the board's ?add= panel (ADR 20260806-one-trip-create-form), and four /new routes (divers, orders, dive-sites, bookings). Portability is 72 CSVs out of one page (src/db/export.ts, 5,331 lines) and three table-named routes in (settings/import, settings/gear-import, settings/dive-site-import) with three prepare*/commit* pairs. The pending half of the \"from divers\" pages already lives on the home: 33 row kinds across src/db/today.ts and src/lib/today.ts include unanswered_messages, reviews_pending, help_request, waitlist_seat and last_minute_fill, so /inbox, /reviews and /requests are archives with a Pager. No one file says what the tree is: staff-destinations.ts registers 21 places, settings-groups.ts 43 rail rows, TripSubNav.tsx 3 tabs, print-sheets.ts the sheets, scripts/route-coverage.json 100 entries of test coverage, and 23 scripts and tests re-walk page.tsx with their own exemption lists (14 exemption mentions in check-loading-skeletons.mjs, 6 in eyebrow-way-up.test.ts, 6 in edge-refusal-coverage.test.ts). ADR 20260911-clear-the-deck (pending H-77) already proposes folding the 21 destinations into three words, settings into a card, print into every page and DiveDay's own 17 pages into five; what it does not touch is the departure's seven satellites, the five act routes and the three import doors, which fold under any pick.",
+  "measurements": [
+    {
+      "what": "page.tsx routes under src/app",
+      "value": "99"
+    },
+    {
+      "what": "staff routes under src/app/shop/[shopSlug], by depth below the slug (0/1/2/3/5)",
+      "value": "60 = 1/16/31/11/1"
+    },
+    {
+      "what": "settings/* pages (hub + sub-pages) and settings rail rows",
+      "value": "18 pages; 43 rail rows (22 hub sections, 21 doors)"
+    },
+    {
+      "what": "depth-1 staff pages wearing Pager over one table",
+      "value": "12 of 16 (11 index pages + the bookings/new picker)"
+    },
+    {
+      "what": "staff routes keyed by one trip id",
+      "value": "10 (trips/[id], guests, manifest, prep, prep/ticket/[bookingId], log, print, schedule/blowout/[tripId], bookings/new/[tripId], check-in/walk-in/[tripId])"
+    },
+    {
+      "what": "trips/[id]/guests/page.tsx vs trips/[id]/page.tsx",
+      "value": "510 lines vs 1,006 lines; both call getTripGuests and render the roster; one inbound link (check-in/salvage-copy.ts:52); five doc comments and two docs call it a compatibility route/redirect"
+    },
+    {
+      "what": "doors that seat a diver / routes among them",
+      "value": "5 doors (SEAT_SURFACES × 4 + /calls) / 5 pages (bookings/new ×2, check-in/walk-in ×2, calls)"
+    },
+    {
+      "what": "creation grammars under /shop",
+      "value": "3: inline form on index (5 pages), ?add= panel (board), /new route (divers 378, orders 389, dive-sites 199, bookings 284 + [tripId] 279 lines)"
+    },
+    {
+      "what": "export CSVs written vs import kinds read",
+      "value": "72 files out (src/db/export.ts) / 3 kinds in, each its own route and prepare*/commit* pair"
+    },
+    {
+      "what": "Today row kinds (src/db/today.ts + src/lib/today.ts)",
+      "value": "33, including unanswered_messages, reviews_pending, help_request, waitlist_seat, last_minute_fill"
+    },
+    {
+      "what": "staff destinations in the registry / primary tabs / palette-only acts",
+      "value": "21 / 4 / 3"
+    },
+    {
+      "what": "bearer-token route families at src/app/*/[token]",
+      "value": "14"
+    },
+    {
+      "what": "public pages under src/app/s/[shopSlug]",
+      "value": "9"
+    },
+    {
+      "what": "scripts and tests that walk src/app for page.tsx",
+      "value": "23; route-coverage.json has 100 entries, 3 exempt"
+    },
+    {
+      "what": "print page routes",
+      "value": "7 under /shop/[shopSlug]/print/** plus trips/[id]/print, reports/card and settings/print"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "The departure's configuration folded into an About disclosure and the roster became the Trip body; three tabs, not four; the manifest is a boat instrument with its own chrome",
+      "where": "ADR 20260827-the-departure-is-two-working-surfaces; docs/design/surfaces.md:87-137; trips/[id]/_components/TripSubNav.tsx (3 tabs)"
+    },
+    {
+      "what": "One place a trip is created — the board's ?add= panel; /trips/new is a 308 route handler",
+      "where": "ADR 20260806-one-trip-create-form; schedule/board/actions.ts"
+    },
+    {
+      "what": "One registry of staff places with one 'you are here' resolver and a unique-URL invariant; the dock's sixth slot is More and that is the ceiling",
+      "where": "src/lib/staff-destinations.ts (STAFF_DESTINATIONS, currentStaffNavDestinationId); ADR 20260813-more-is-the-shops-other-door"
+    },
+    {
+      "what": "The home is the day's spine and its evening state is the close-out; /close-out, /blockers and ?view= 308 home; a row's own tap is its only door (clear-the-deck floor row 1 shipped 2026-09-17)",
+      "where": "src/app/shop/[shopSlug]/_components/today/DaySpine.tsx; H-62; docs/design/surfaces.md:37"
+    },
+    {
+      "what": "Today ranks 33 row kinds, so the pending half of inbox, reviews, requests and the wait list is already answered where the question arises; the index pages are archives",
+      "where": "src/db/today.ts, src/lib/today.ts; ADR 20260720-today-work-queue"
+    },
+    {
+      "what": "One page after booking: /ready is the diver's link, the trip page's confirmation branch and three duplicate actions deleted",
+      "where": "ADR 20260820-one-page-after-booking"
+    },
+    {
+      "what": "The public tree is a namespace with every path from one module and a 4-row legacy 308 table",
+      "where": "src/lib/public-routes.ts:220-236; ADR 20260803-public-shop-namespace"
+    },
+    {
+      "what": "Settings is a directory: a row states its answer and opens its form; a row whose editor is a list gets a page; the rail covers every section and door and a test pins it against the hub",
+      "where": "settings/settings-groups.ts:27-40, 136-150; _components/SettingsRail.test.tsx"
+    },
+    {
+      "what": "The trip packet and the day's paper compose one TripPacket with zero controls under print media",
+      "where": "trips/[id]/print/page.tsx:20-58; print/page.tsx:41-50; e2e/trips.spec.ts"
+    },
+    {
+      "what": "Seating a diver has one consequence path; per-door presentation is a data table, not four action files",
+      "where": "src/db/seat-diver.ts; src/app/actions/seat-diver-surfaces.ts"
+    },
+    {
+      "what": "Every page.tsx has a ledger row naming its spec and its capture or a typed reason",
+      "where": "scripts/route-coverage.json (100 entries); scripts/check-route-coverage.mjs"
+    },
+    {
+      "what": "The departure log is a signed document generated from the evening, owner-only, with a SHA-256 integrity code — a route that earns its URL",
+      "where": "trips/[id]/log/page.tsx:61-80; ADR 20260804-day-closeout"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L10-1",
+      "title": "A departure owns three routes; its seven satellites are its states",
+      "kind": "surface",
+      "reading": "Ten staff routes are keyed by one trip id: trips/[id], its guests, manifest, prep, prep/ticket/[bookingId], log and print, plus schedule/blowout/[tripId], bookings/new/[tripId] and check-in/walk-in/[tripId]. ADR 20260827 §1 folded Guests into Trip, but trips/[id]/guests/page.tsx is a 510-line page that reads getTripGuests and renders RosterSection while trips/[id]/page.tsx (1,006 lines) renders the same roster through TripRosterContent at line 969; docs/design/surfaces.md:98 calls it \"a compatibility redirect\", docs/product/shipped.md:353 \"a compatibility route for bookmarks\", five doc comments keep it alive (TripSurfaceNav.tsx:9, TripSubNav.tsx:60-68, TripRosterContent.tsx:51, layout.tsx:25, src/lib/trip-admission-gate.ts:44), and the only link into it is check-in/salvage-copy.ts:52. schedule/blowout/[tripId]/page.tsx:67-73 is \"two modes on the same URL\" — the confirm, then \"the cascade record: who was messaged, who has rebooked, who is still unresolved\" — with the trip as its eyebrow (line 106), while the trip page's \"More for this departure\" list already holds \"Cancel this departure\" behind an InlineConfirm (surfaces.md:132-137). prep/ticket/[bookingId] is the tree's only depth-5 route and print/pass/[bookingId] is a second per-booking sheet in a different subtree; trips/[id]/print and the day's /print compose the same TripPacket (print/page.tsx:41-50). The trip page already carries AddDiverSection (page.tsx:532), so bookings/new/[tripId] (279 lines) and check-in/walk-in/[tripId] (182 lines) are two more doors to a section it renders. The log stands: log/page.tsx:61-80 is a signed document with a SHA-256 integrity code, owner-only, \"what a shop hands to authorities\", generated from the evening (ADR 20260804-day-closeout). H-49 says a code path that only tolerates old rows is deleted, and a pre-pilot shop has no bookmarks.",
+      "idea": "A departure has three routes — Trip, Manifest (the boat instrument, with its own chrome and offline shell), Prep — and one document, the log; nothing else is keyed by a trip id. /guests is deleted outright and becomes the 308 the docs already describe. The blow-out's confirm is the trip page's cancel row (the InlineConfirm grammar its \"More for this departure\" list already uses), and its cascade record is the cancelled departure's roster grouped messaged → rebooked → unresolved, since the trip page already branches on cancelled and a roster grouped by state is its one grammar (ADR 20260827 §1). The rental ticket is the prep page printed for one diver (/trips/[id]/prep?diver=<bookingId> under the print stylesheet), and the trip packet is the trip page's own print stylesheet — clear-the-deck's \"every page prints\" row applied to this subtree first. The two trip-keyed seat routes go with L10-2. The count for one departure goes from 10 routes to 4 and the depth-5 route disappears. This holds under every H-77 pick: clear-the-deck round 4 folds the three tabs into one instrument, and this folds the satellites that instrument would otherwise inherit.",
+      "dissolves": "The guests page, the blowout route, the rental-ticket route and the trip print route; the \"compatibility\" comments in five files and the /guests special case in TripSubNav.tsx:68.",
+      "scope": "src/app/shop/[shopSlug]/trips/[id]/{guests,print,prep/ticket}/, schedule/blowout/, trips/[id]/_components/{TripSubNav,TripSurfaceNav,TripRosterContent}.tsx, trips/[id]/layout.tsx, src/lib/trip-admission-gate.ts, check-in/salvage-copy.ts, next.config.ts (308), staff bundles blowout.* and trips.guests.* in en-US and es-ES, e2e/trips.spec.ts (print-control-count assertion) and the blowout e2e/visual captures, scripts/route-coverage.json, docs/design/surfaces.md:98, docs/product/shipped.md:353, docs/design/settled-questions.md (the trip-overview row).",
+      "firstSlice": "Delete trips/[id]/guests/page.tsx and its loading.tsx, point check-in/salvage-copy.ts:52 at the trip root, strip the five \"compatibility\" comments and the TripSubNav special case, and add the 308 in next.config.ts — one PR, no design call needed.",
+      "effort": "M",
+      "reviews": [
+        "domain",
+        "design",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260827-the-departure-is-two-working-surfaces (keeps its three tabs; amends its Consequence \"the old Overview route redirects\" to delete); ADR 20260911-clear-the-deck round 4 (goes further on the tabs, pending H-77 — this is independent of the pick); H-49 (the guests page is the legacy it forbids); ADR 20260804-day-closeout (the log's door stays on the home, unchanged); overview.md settled shape (the diver's trip page stays separate, untouched); issue #1863 (the settled-questions row about the trip overview's three primaries retires in the same sweep); issue #1785 (the prep-by-diver dark capture — the ticket fold changes what is captured).",
+      "confidence": "high"
+    },
+    {
+      "id": "L10-2",
+      "title": "\"Add one\" is one grammar; the eight act and /new routes go",
+      "kind": "surface",
+      "reading": "Three grammars add a thing under /shop: an inline form on the object's own list (gear/page.tsx 4 forms, promos 7, settings/team 10, settings/boats 3, staffing 6), the board's ?add= panel (\"the one place a trip is created\", ADR 20260806-one-trip-create-form, which made /trips/new a 308), and a /new route (divers/new 378 lines, orders/new 389, dive-sites/new 199, bookings/new 284 + bookings/new/[tripId] 279). Seating a diver is one consequence path (src/db/seat-diver.ts) with five doors: the four rows of SEAT_SURFACES in src/app/actions/seat-diver-surfaces.ts (trip-guests, walk-in, diver-record, new-booking) plus /calls (191 lines, three writers). Three of the five doors are routes, five pages in all — bookings/new, bookings/new/[tripId], check-in/walk-in, check-in/walk-in/[tripId], calls — and the registry marks each navGroup: null because \"it is an act, not a place\" (staff-destinations.ts:255-277). Two of them carry a bounded <select> of 40 upcoming departures (calls/page.tsx:43 and the add-booking picker it cites) to answer a question the trip page already knows. Principle 10 says \"actions ride on their objects\", and ADR 20260806 chose the panel over the page for the act with the most fields, rejecting a drawer because the panel \"opens under the day header it belongs to\". Every SEAT_SURFACES row's refusedPath lands on a URL with the trip in the path so a refusal can append ?notice= — a ?seat= panel on /trips/[id] satisfies the same rule (.claude/rules/surfaces.md, \"the trip is a path segment, not a ?tripId=\").",
+      "idea": "One grammar: a thing is added on its object's own page, in a panel opened by ?add= (the board's), landing back on the same URL with ?notice=. A diver is seated on the departure (/trips/[id]?seat=1, which is AddDiverSection today) or from the person (/divers/[personId]?book=1); the walk-in is the counter's own panel (/check-in?seat=1, landing on the queue as it does now); \"Took a call\" is the home's panel (?call=1) and stays palette-only as a command. A diver, an order and a dive site are added on their index the way gear and promos already are; the long-form site editor is dive-sites/[id] with no id, one route family. SEAT_SURFACES drops the new-booking row and its notice vocabulary; the 40-departure pickers go because a panel on a departure already knows the departure, and the palette's departure search (ADR 20260906-before-you-ask) answers the global case. Eight routes go to zero: bookings/new ×2, check-in/walk-in ×2, calls, divers/new, orders/new, dive-sites/new. The /new segment stops being a concept, and the registry's three palette-only \"acts\" become commands like \"close the day\", which is what its own comment says they are.",
+      "dissolves": "The act-as-a-page and the /new segment; the new-booking seat surface and its notice codes; two 40-row departure <select>s.",
+      "scope": "src/app/shop/[shopSlug]/{bookings,calls,check-in/walk-in,divers/new,orders/new,dive-sites/new}/, src/app/actions/seat-diver-surfaces.ts and seat-diver.ts, src/lib/staff-destinations.ts (three navGroup: null rows become palette commands), src/components/search/CommandPalette.tsx, trips/[id]/page.tsx and divers/[personId]/page.tsx (panel open state), check-in/page.tsx, the calls.*, walkin.*, bookingsNew.* and divers.new.* bundle namespaces in en-US and es-ES, e2e specs for walk-in, add-booking and took-a-call, their visual captures, scripts/route-coverage.json, AGENTS.md route-map rows naming bookings/new and check-in/walk-in, .claude/rules/surfaces.md's seating paragraph.",
+      "firstSlice": "Fold bookings/new/[tripId] into /trips/[id]?seat=1 (the trip page already renders the section), delete the new-booking row from SEAT_SURFACES, and make the palette's \"Add a booking\" a command that opens the board's departure picker — ADR 20260806's shape applied to the second-most-used act.",
+      "effort": "L",
+      "reviews": [
+        "domain",
+        "design",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260806-one-trip-create-form (extended to every add; its \"one schema, one action\" rule is the model); ADR 20260813-more-is-the-shops-other-door (unchanged — the dock loses nothing; three palette-only rows become commands); N-22 \"Took a call\" (kept as an act, loses its route); ADR 20260827-the-shops-shelves §4 (\"Add-booking picker — unchanged flow, ledger grammar\": this changes the flow); .claude/rules/surfaces.md (\"the trip is a path segment\" — a ?seat= panel on /trips/[id] keeps it so); ADR 20260911-clear-the-deck concept 4 \"Ask\" (compatible: the field opens the same panels); issues #1790, #1789, #1698 (the counter's identity attestation and name-match prompts move with the panel, not solved here); #1867 (the date-request form's required fields — the call panel inherits it).",
+      "confidence": "medium"
+    },
+    {
+      "id": "L10-3",
+      "title": "Import is one door that reads by header, not three table-named routes",
+      "kind": "system",
+      "reading": "Export writes 72 CSVs from one page (settings/export, src/db/export.ts at 5,331 lines); import reads three kinds through three routes named after their destination tables: settings/import (416 lines, prepareContactImport → commitContactImport), settings/gear-import (115, prepareGearImport → commitGearImport), settings/dive-site-import (120, prepareDiveSiteImport → commitDiveSiteImport). That is three parser modules in src/lib/ and three commit modules in src/db/, plus three rail rows under one import gate (settings-groups.ts:407-427), beside two export rows pointing at one route (/settings/export and /settings/export#backups, lines 400-434). Nothing reads DiveDay's own 72 files back: src/features/backup-export/README.md:18-28 points at a runbook's restore procedure, and the roadmap's wedge (§1, lines 51-75) describes a read API \"over the export schema\" with no inbound half. Issue #1846 (the gear importer reads an unbounded CSV) is a defect in one of three copies of the same door, and #1841 (a restored site comes back without its field guide) is the missing inbound half. src/features/integrations/registry.ts already names providers and their event types in one registry, the shape an import-kinds registry would take.",
+      "idea": "One import at /settings/import: drop a file, the page names what it is by its header — a DiveDay export file by its own column set, a competitor's contacts, gear or sites by the forgiving mappers that exist — previews, commits. The three prepare*/commit* pairs become one registry of importable kinds keyed by header signature, each row naming its parser, its commit and its gate, and the two table-named routes delete. The grammar afterwards: what export writes, import can read, file by file; a competitor's CSV is one more signature in the same registry; a restore is the same door. Settings loses two rows and two pages, #1846's class of defect gets one size limit, and #1841's field guide comes back because dive_site_creatures.csv is a kind the registry knows. This lands before H-77 c and is smaller than the card: it removes doors, not switches.",
+      "dissolves": "settings/gear-import and settings/dive-site-import as routes and rail rows; three separate CSV size limits; the idea that a file's destination is chosen by the page it is dropped on.",
+      "scope": "src/app/shop/[shopSlug]/settings/{import,gear-import,dive-site-import}/, src/lib/{import,gear-import,dive-site-import}.ts (a new src/lib/import-kinds.ts registry), src/db/{import,gear-import,dive-site-import}.ts, settings/settings-groups.ts, settings.import.*, gear.import.* and diveSites.import.* bundles in en-US and es-ES, the import e2e specs and captures, docs/product/switching guides and src/lib/migration-guides.ts links to the three pages, src/features/backup-export/README.md, scripts/route-coverage.json.",
+      "firstSlice": "Add a header-signature detector in src/lib/import-kinds.ts that routes a pasted CSV to one of the three existing prepare* functions, mount it on settings/import, and 308 the two table-named routes to it; the parsers and commits move untouched.",
+      "effort": "M",
+      "reviews": [
+        "security",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260827-shop-authorized-provider-connectors (\"never reading a provider's data back in as truth\" — a CSV the shop drops is the shop's own file, already the importer's stance); ADR 20260816-imported-payment-history-is-evidence (unchanged: evidence stays evidence); issue #1846 (subsumed — one size limit); #1841 (subsumed — restore is a header signature); roadmap §1 data-portability wedge (gains its inbound half); ADR 20260911-clear-the-deck concept 5 / H-77 c (settings as the shop's card — this removes two rows before that call and composes with any pick).",
+      "confidence": "medium"
+    },
+    {
+      "id": "L10-4",
+      "title": "One route manifest; the guards and the eyebrow read it, not the disk",
+      "kind": "governance",
+      "reading": "scripts/route-coverage.json already carries one entry per page.tsx (100 entries, 3 exempt) but only for test coverage. The tree's other facts sit in five partial registries — src/lib/staff-destinations.ts (21 places, an alsoMatch for /trips), settings/settings-groups.ts (43 rail rows, route vs section), trips/[id]/_components/TripSubNav.tsx (3 tabs, /guests special-cased at line 68), src/lib/print-sheets.ts (PRINT_SHEETS), src/lib/public-routes.ts (the /s paths and 4 legacy 308s) — and nowhere for the act routes or the record routes. 23 scripts and tests re-walk src/app for page.tsx, each with its own exemption vocabulary: 14 mentions in scripts/check-loading-skeletons.mjs, 42 in check-route-coverage.mjs, 6 in src/app/shop/eyebrow-way-up.test.ts (which hand-types at line 53 that \"/schedule has no page, so the board is a depth-1 surface\"), 6 in src/app/edge-refusal-coverage.test.ts. docs/design/principles.md:500 says \"a two-level app does not need [a breadcrumb]\" while 12 staff routes sit at depth 3 or 5, and the parent relation that decides a page's way up is inferred from directories, which is why /schedule/board needs an exemption. ADR 20260911-clear-the-deck's cover count (\"96 page routes: 57 staff, 9 storefront, 13 reached by link, 17 DiveDay's own\") was hand-counted, and its Consequences ask that \"the next canvas can measure whether the number went down\".",
+      "idea": "Widen the one ledger that already lists every route into the tree's declaration: each entry gains kind (place, record, instrument, act, document, door, own-page), parent (the route whose eyebrow it names, null at depth 1) and destination (the registry id it lights), and the walkers become readers — eyebrow-way-up.test.ts reads parent and loses its typed exemption table, check-loading-skeletons and instant-coverage read kind (a document prints, an instrument owns the viewport), currentStaffNavDestinationId reads destination and alsoMatch deletes, check:route-coverage keeps its coverage half. The registries that hold words and gates (staff-destinations.ts, settings-groups.ts) stay; the manifest holds shape only, and the guard fails when a page.tsx has no row or a row no page — the closure check:route-coverage already enforces. Afterwards this lens's question is a query: kind: act lists what L10-2 deletes, parent: trips/[id] lists what L10-1 folds, and clear-the-deck's cover count regenerates from the file. The grammar is the one the repository already trusts — a registry other code derives from, never a second copy.",
+      "dissolves": "Per-guard exemption lists for tree shape, alsoMatch, the /guests special case in TripSubNav.tsx:68, and the hand-counted route census in ADR 20260911.",
+      "scope": "scripts/route-coverage.json and check-route-coverage.mjs (+ its test), src/app/shop/eyebrow-way-up.test.ts, scripts/check-loading-skeletons.mjs, src/app/instant-coverage.test.ts, src/app/edge-refusal-coverage.test.ts, src/lib/staff-destinations.ts (alsoMatch), trips/[id]/_components/TripSubNav.tsx, docs/agents/repo-checks.md, docs/design/principles.md §10 (\"names its parent\" becomes \"is named by the manifest\").",
+      "firstSlice": "Add kind and parent to every entry of scripts/route-coverage.json, make check:route-coverage refuse a missing or dangling parent, and rewrite eyebrow-way-up.test.ts to read parent from it, deleting its exemption table.",
+      "effort": "M",
+      "reviews": [
+        "ADR"
+      ],
+      "conflicts": "ADR 20260911-clear-the-deck (supplies the reproducible count its Consequences ask for); ADR 20260813-more-is-the-shops-other-door (its one-resolver rule keeps; alsoMatch becomes a manifest column); ADR 20260804-instant-navigation (instant-coverage reads kind instead of walking); issue #1863 (the settled row it retires becomes a kind fact); #1738 (parked — verifying ADR code citations is the same class of \"written down so it cannot rot\"); #1857 (the header skeleton's eyebrow bar — a kind column tells the skeleton guard which pages wear one).",
+      "confidence": "medium"
+    }
+  ]
+}

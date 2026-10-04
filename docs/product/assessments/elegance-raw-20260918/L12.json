@@ -1,0 +1,167 @@
+{
+  "lensId": "L12",
+  "lens": "The diver's one thread, end to end",
+  "reading": "The thread is real and pinned: `ThreadShell` and `THREAD_MEASURE_CLASS` (src/components/thread/ThreadShell.tsx, 127 lines) are mounted by 5 of the 6 thread pages and the test walks all 6 plus their 6 `loading.tsx`, and `/recap/[token]/page.tsx` is a 278-line thin route rendering the same 1,332-line `AfterState` as `/ready` — so the roadmap row at docs/product/features/roadmap.md:614 that still calls the recap fold \"still open\" is stale against roadmap.md:187 and docs/product/shipped.md:571. The object is anchored to a booking, and the person-anchored surface built 2026-09-10 became a second object rather than the first one promoted: `/ready/[token]` (9,002 lines in 30 files; a 2,442-line page.tsx importing 20 server actions and 5 components across the route boundary from `trips/[id]/_components`) and `/shelf/[token]` (978 lines, 7 files) are two token tables (`booking_capabilities` purpose `readiness` and `person_shelf_tokens`, both SHA-256 through src/lib/bearer-tokens.ts, both capped at 20 live rows), two doors that each mint the other's token (src/app/actions/shelf-door.ts:75-104 and src/app/shelf/[token]/actions.ts:220-245), and two writers apiece for sizes and the emergency contact. Because a hashed token cannot be read back, 18 sites in src mint or verify `purpose: \"readiness\"` just to point at the thread — src/app/waivers/[token]/page.tsx mints on render (479-486) and again on completion (907-914), src/db/reminders.ts:385 per reminder, src/app/claim/[token]/actions.ts:82 on claim — and three modules exist to send a diver their own link (src/db/find-my-booking.ts 184 lines, src/db/readiness-link-rescue.ts 223, src/db/shelf-link-send.ts 87). The waiver stands outside the thread: `/waivers/[token]` is 3,895 lines in 14 files with a token module that duplicates bearer-tokens.ts's two functions (src/lib/waiver-tokens.ts:55-63), a `token_sealed` column and ADR 20260820-waiver-links-are-reused-not-reissued whose whole problem is supersede-on-reissue, which `booking_capabilities` never had; the thread's Sign step exits through `signWaiverFromReady` (src/app/ready/[token]/actions.ts:124-133) to a second token and returns on a third. The public booking page recognises a diver only through a ten-minute single-use `handoff` capability (\"through a handoff and nothing else\", src/app/s/[shopSlug]/trips/[id]/page.tsx:343-349) while the storefront one segment above already reads the HttpOnly `diveday_shelf` cookie (src/app/s/[shopSlug]/_lib/shelf-welcome.ts, 40 lines) scoped to `/s/<slug>`, a path the trip page also receives. Seven token constructions reach a diver (five `booking_capability_purpose` values, `waiver_records`, `person_shelf_tokens`, the HMAC recap and gift links, the signed buddy link, two unsubscribe tables); docs/engineering/capability-telemetry-runbook.md's table has 18 rows and src/lib/capability-urls.ts redacts 14 prefixes and 3 query params. On the message side, src/lib/notifications/kinds.ts (1,092 lines) declares 28 kinds with 32 render cases, 17 of them about a diver's own thread across 6 link families, and the 24h reminder re-renders the Day-of step in email (`outstanding`, `forecast`, `bring`, `whoToText`, `firstTimerNote`, kinds.ts:388-408); diver.json carries 180 `ready`, 109 `recap`, 81 `waiver`, 55 `shelf` and 172 `notifications` keys. docs/product/glossary.md has an \"After-state\" entry (line 1604) but no \"Thread\" or \"Shelf\" term — 7 and 2 passing mentions.",
+  "measurements": [
+    {
+      "what": "Bearer-token route families under src/app/*/[token]",
+      "value": "14; diver-facing sizes: ready 9,002 lines/30 files, waivers 3,895/14, recap 980/7, shelf 978/7, claim 524/6, gift 298/4"
+    },
+    {
+      "what": "src/app/ready/[token]/page.tsx",
+      "value": "2,442 lines; 20 server actions imported from ./actions (947 lines); 5 components imported across the route boundary from src/app/s/[shopSlug]/trips/[id]/_components"
+    },
+    {
+      "what": "Token constructions that reach a diver",
+      "value": "7: booking_capabilities (5 purposes: readiness, confirm, claim, handoff, arrival), waiver_records token_hash+token_sealed, person_shelf_tokens, recap-links.ts HMAC (180d), gift-links.ts HMAC (180d), buddy-tokens.ts signed, 2 unsubscribe tables"
+    },
+    {
+      "what": "Sites minting or verifying purpose \"readiness\" (non-test, src)",
+      "value": "18 (grep `purpose: \"readiness\"`)"
+    },
+    {
+      "what": "Modules that send a diver their own link",
+      "value": "3: src/db/find-my-booking.ts (184), src/db/readiness-link-rescue.ts (223), src/db/shelf-link-send.ts (87); kinds readiness_link and shelf_link"
+    },
+    {
+      "what": "Live-row caps",
+      "value": "MAX_LIVE_CAPABILITIES_PER_PURPOSE = 20 (src/db/booking-capabilities.ts:32); MAX_LIVE_SHELF_TOKENS = 20 (src/db/person-shelf-tokens.ts:46)"
+    },
+    {
+      "what": "Notification kinds in src/lib/notifications/kinds.ts",
+      "value": "28 kinds, 32 render cases, 1,092 lines; 17 kinds address a diver about their thread; 6 link families (readinessUrl, waiver, ?handoff=, shelf, claim, recapUrl)"
+    },
+    {
+      "what": "Runbook capability table",
+      "value": "18 rows (docs/engineering/capability-telemetry-runbook.md:71-88); capability-urls.ts redacts 14 prefixes + 3 query params"
+    },
+    {
+      "what": "diver.json namespaces (en-US, 2,965 leaf keys in 48 namespaces)",
+      "value": "ready 180, notifications 172, recap 109, waiver 81, shelf 55, seatClaim 32, gift 21, thread 12, findMyBooking 6"
+    },
+    {
+      "what": "Diver-side cookies",
+      "value": "3: diveday_shelf (180d, path /s/<slug>), diveday_ref (30d, /s/), diveday_via (30d, /s/)"
+    },
+    {
+      "what": "e2e specs on the diver's thread",
+      "value": "waivers 1,223 lines, booking 680, recap 478, self-check-in 442, gift 207, arrival-arc 174, shelf 166, seat-claim 146, find-my-booking 67"
+    },
+    {
+      "what": "Thread state machine",
+      "value": "src/lib/thread-steps.ts 345 lines (6 step ids, 3 states, isDiveDay / theBoatIsHome / isAfterTheDive); test 422 lines"
+    },
+    {
+      "what": "Glossary coverage",
+      "value": "\"After-state\" is a term (glossary.md:1604); \"Thread\" and \"Shelf\" are not — 7 and 2 passing mentions"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "Booking and Stripe land on one page; the confirmation branch and its three duplicate server actions are deleted, and the embed's `confirm` purpose is read-only",
+      "where": "ADR 20260820-one-page-after-booking; src/app/s/[shopSlug]/trips/[id]/actions.ts, src/app/s/[shopSlug]/trips/[id]/ready/route.ts"
+    },
+    {
+      "what": "The recap fold is shipped: `/recap/[token]` is a thin route rendering the thread's `AfterState`, with the after-state opening on roll-call evidence or the four-hour floor rather than the clock alone",
+      "where": "src/app/recap/[token]/page.tsx (278 lines), src/app/ready/[token]/_components/AfterState.tsx, src/lib/thread-steps.ts `isAfterTheDive`; only docs/product/features/roadmap.md:614 still says \"still open\""
+    },
+    {
+      "what": "One measure and one shell for every page a booked diver walks, pinned by a test that walks the six pages and their six loading skeletons and refuses a seventh adopter",
+      "where": "src/components/thread/ThreadShell.tsx, src/components/thread/ThreadShell.test.tsx"
+    },
+    {
+      "what": "The thread's spine is framework-free, codes-only, and its figure can always fill",
+      "where": "src/lib/thread-steps.ts, src/lib/thread-steps.test.ts, src/i18n/thread-labels.ts"
+    },
+    {
+      "what": "One bearer-token primitive and one telemetry redaction list checked against the filesystem, so a new `[token]` route cannot ship unredacted",
+      "where": "src/lib/bearer-tokens.ts; src/lib/capability-urls.ts + observability.test.ts"
+    },
+    {
+      "what": "Closed reader types with never-lists asserted by test on the two surfaces a stranger could hold",
+      "where": "src/db/shelf.ts (no medical, no other diver, no money); src/lib/booking-handoff.ts `NEVER_HANDED_OFF`"
+    },
+    {
+      "what": "Every token's shape, lifetime and revocation is written down in one table",
+      "where": "docs/engineering/capability-telemetry-runbook.md rows 71-88"
+    },
+    {
+      "what": "The next dive names a checkable reason and exports no score",
+      "where": "src/lib/next-dive.ts, src/i18n/next-dive-labels.ts"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L12-1",
+      "title": "One person-anchored thread: booking, dive day, afterglow and shelf are states",
+      "kind": "concept",
+      "reading": "ADR 20260827-the-divers-thread opens with \"a diver's relationship with a shop is one thread\", yet the object is keyed to a booking: `booking_capabilities.readiness` dies trip-end + 30 days (src/lib/booking-capabilities.ts:23) and a second object, `/shelf/[token]` on `person_shelf_tokens` (src/db/schema.ts:9281, a year, revocable), was built on 2026-09-10 to outlive it. Both wear `ThreadShell`; the shelf's top rows (`ShelfDeparture`, `ShelfSameBoat`, `ShelfDive` in src/db/shelf.ts) are the thread's top card, its next-dive card and its after-state, and each dive row mints a fresh signed recap token on render (src/db/shelf.ts:322). Two doors mint each other's credential on a tap — `openShelfFromThreadAction` (src/app/actions/shelf-door.ts:75-104) and `openThreadAction` (src/app/shelf/[token]/actions.ts:220-245) — and the runbook (row 86) records that a shelf token already \"mints booking handoffs\" and, through `openThreadAction`, a readiness capability for any live seat, so the shelf's \"strictly less than the thread\" boundary is a rendering boundary, not an authority one. Sizes and the emergency contact have two writers apiece (`saveShelfSizesAction`/`saveFitFromReady`, `saveShelfEmergencyContactAction`/`saveEmergencyContactFromReady`), `RememberBooker` and `RememberShelf` remember the same phone twice, and three modules exist to email a diver their own link (find-my-booking.ts 184 lines, readiness-link-rescue.ts 223, shelf-link-send.ts 87) under two kinds (`readiness_link`, `shelf_link`). Because a hashed token cannot be read back, 18 sites mint `purpose: \"readiness\"` to build a link, including on page render (src/app/waivers/[token]/page.tsx:479-486). `booking_capabilities` has no retention window (#1726) while `person_shelf_tokens: 90` already exists in src/lib/retention.ts.",
+      "idea": "One capability per (person, shop), in `person_shelf_tokens`'s shape — stored hash, a year, revoked by \"Forget this phone\" and by erasure, 20 live rows — is the thread's token, and the URL is the diver's file at the shop rendering by what time it is: a live booking renders the spine (`buildThreadSteps`), the dive day renders the dock call and arrival card, the boat home renders `AfterState`, and no booking renders the shelf's reasons-to-come-back over the file. `/ready/[token]` and `/shelf/[token]` become one route with one `loading.tsx`; the `readiness` purpose, its 18 mint sites, the two doors, the two remember-this-phone components, the duplicate writers, `recap-links.ts` and the shelf's per-row recap minting all delete, and the three send-me-my-link modules collapse to one sender under one kind. Every email, QR, calendar entry and staff \"Copy link\" carries that one link, and a diver who books again next season opens the same URL they already hold. Authority is unchanged — the shelf token already transitively holds everything the thread does — and the count improves: one table to revoke, one row per phone, one retention window, one runbook row where there were three. `claim`, `confirm` and `arrival` stay booking-scoped, because each names one seat's transfer, one embed frame or one morning's counter and each dies with it. The grammar afterwards: a diver holds one link to one shop, and the page, not the inbox, says which act comes next.",
+      "dissolves": "`/shelf` as a route, `booking_capabilities.readiness` as a purpose, `recap-links.ts` and its signed URL family, the two thread↔shelf doors, and two of the three link-rescue senders.",
+      "scope": "src/app/ready/[token]/** and src/app/shelf/[token]/** (merge), src/app/recap/[token]/** (delete), src/app/actions/shelf-door.ts, src/components/RememberBooker.tsx, src/db/person-shelf-tokens.ts, src/db/booking-capabilities.ts, src/db/shelf.ts, src/db/ready.ts, src/db/recap.ts, src/db/reminders.ts, src/db/notifications.ts, src/db/find-my-booking.ts, src/db/readiness-link-rescue.ts, src/db/shelf-link-send.ts, src/lib/recap-links.ts, src/lib/shelf-links.ts, src/lib/capability-urls.ts, src/lib/notifications/kinds.ts; schema: `booking_capability_purpose` enum, `person_shelf_tokens` rename, one migration; bundles `ready.*`, `shelf.*`, `recap.*`, `notifications.*` in en-US and es-ES; e2e recap/shelf/find-my-booking/booking/arrival-arc; runbook rows 72, 77, 86; ADR (supersedes parts of 20260723-booking-capabilities and 20260723-post-trip-recap); glossary terms Thread and Shelf; roadmap.md:614.",
+      "firstSlice": "Teach `/ready/[token]` to verify a `person_shelf_tokens` token as well as a readiness one (picking the booking by the shelf's `ShelfDeparture` rule), and switch the mint sites that only build a link — reminders, the confirmation, the claim redirect, the waiver's completion, the calendar route — to issue the person token; no page moves, so every e2e net stays green while the readiness purpose empties.",
+      "effort": "L",
+      "reviews": [
+        "security",
+        "domain",
+        "design",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260723-booking-capabilities — its booking-scoped purposes are superseded for the diver's own link only; ADR 20260908-one-hand lever Z / H-71 m — completed rather than contradicted, the promotion \"from one trip to the diver\" finishes by retiring the trip-scoped link; ADR 20260827-the-divers-thread — extended with a fourth state, between dives; ADR 20260723-post-trip-recap — its readiness/recap purpose separation was for two pages that slice 7d already made one surface; ADR 20260820-one-page-after-booking — kept, booking still lands on the thread; #1726 — retention for booking_capabilities shrinks to three purposes; N-35 diver's passport — cross-shop and untouched, this stays per shop; roadmap \"One your-trip link\" row — closed, including its stale \"still open\" half.",
+      "confidence": "high"
+    },
+    {
+      "id": "L12-2",
+      "title": "The waiver is the thread's Sign step, not a second link",
+      "kind": "concept",
+      "reading": "`/waivers/[token]` is 3,895 lines in 14 files with its own token module (src/lib/waiver-tokens.ts:55-63 duplicates bearer-tokens.ts's two functions), its own `token_hash`, `token_sealed` and `expires_at` on `waiver_records` (src/db/schema.ts:5987), its own rescue (`emailFreshWaiverLink`), its own delivery enum `waiver_delivery_channel` (email/text/link, schema.ts:5950), two staff send controls (WaiverSendControl.tsx, WaiverDeliveryActions.tsx) and a 1,223-line e2e. The thread's Sign step is a door out: `signWaiverFromReady` (src/app/ready/[token]/actions.ts:124-133) mints a waiver token and redirects, and the waiver page mints a readiness capability to come back — on completion (page.tsx:907-914) and on every render of its signed state (479-486), the per-reload mint ADR 20260820-one-page-after-booking called wrong for the embed. ADR 20260820-waiver-links-are-reused-not-reissued and its sealed copy under `SECRET_ENCRYPTION_KEY` exist because a waiver link supersedes on reissue so \"text it, and here's the link\" killed the first; `booking_capabilities` never superseded (20 live rows per purpose), so the thread's token has no such problem. `waiver_records.booking_id` is nullable since ADR 20260811-person-scoped-paper-waivers (\"a digital token may be booking-scoped or person-scoped\"), so a person-anchored thread covers the no-seat link. src/lib/thread-steps.ts:43-50 already puts `sign` first and `ThreadSpine` renders the current step open with its form inline; `STATE_FROM_CHECKLIST` already maps medical review to `with_shop`.",
+      "idea": "The release, the eleven medical questions and the typed signature render as the Sign step's open form on the thread — the same Release · Medical · Sign rail and full text ADR 20260827 decision 5 requires, inside the spine — and the link a staffer emails, texts or copies is the thread link. `waiver_records` keeps every evidence column (status, template snapshot, answers, signature method, draft, guardian section, immutable completed row) and loses `token_hash`, `token_sealed` and `expires_at`; `waiver_delivery_channel` becomes how the thread link was handed over; `waiver_request` folds into the thread's message; the counter's shop-device signing (H-70 b) opens the diver's thread on the tablet with the same provenance columns. Nothing in H-01/H-03 moves — the words, the full presentation, the typed-name standard and the completed record are untouched — and the diver never learns that paperwork has a different link from their trip. What disappears is the second credential, the sealing machinery, and two mints to cross one step.",
+      "dissolves": "The `/waivers/[token]` route and its token, the sealed-token mechanism of ADR 20260820, the `waiver_request` kind and the waiver's own rescue.",
+      "scope": "src/app/waivers/[token]/** (14 files), src/app/ready/[token]/page.tsx, actions.ts and _components/ThreadSpine.tsx, src/lib/waiver-tokens.ts, src/db/waiver-issue.ts (548 lines), src/db/waivers.ts, src/db/waiver-guardian-copy.ts, schema `waiver_records` columns and `waiver_delivery_channel`, src/app/shop/[shopSlug]/_components/today/WaiverSendControl.tsx, src/app/shop/[shopSlug]/divers/[personId]/_components/WaiverDeliveryActions.tsx, src/lib/notifications/kinds.ts, e2e/waivers.spec.ts, bundles `waiver.*` and `ready.*` in both locales, runbook row 71, ADR 20260820 (superseded), glossary \"Waiver / release\".",
+      "firstSlice": "For a booked diver, render the waiver form under the open Sign step (the existing `WaiverPacing` and fields moved beneath `ThreadSpine`) posting to the waiver actions with the thread's own token; delete `signWaiverFromReady` and the waiver page's two readiness mints; `/waivers/[token]` keeps serving person-scoped no-seat links until L12-1 lands.",
+      "effort": "L",
+      "reviews": [
+        "security",
+        "domain",
+        "design",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260820-waiver-links-are-reused-not-reissued — dissolved, its problem is supersession, which the thread token lacks; ADR 20260827-the-divers-thread decision 5 — pacing kept, page retired; ADR 20260821-the-ready-page-asks-once — the emergency contact stays asked once, on the Sign step; ADR 20260811-person-scoped-paper-waivers — aligned, the paper path is untouched; H-01/H-03 — untouched and still Ready; H-70 b — same act, the thread link on the shop's device; ADR 20260907-guardian-co-signature / H-73 — the guardian section stays inside the step and `guardian_release_copy` is unchanged; #1855 — its two sentences now live on this step.",
+      "confidence": "medium"
+    },
+    {
+      "id": "L12-3",
+      "title": "The booking page knows the phone, not a ten-minute handoff",
+      "kind": "system",
+      "reading": "The `handoff` purpose (src/db/schema.ts:6401-6404), src/lib/booking-handoff.ts (135 lines), src/db/booking-handoff.ts, the `booking_handoff` email kind with `HANDOFF_OFFER_COOLDOWN_MS`, the `?handoff=` redaction entry (src/lib/capability-urls.ts:127) and `mintHandoff` (src/app/ready/[token]/_lib/after-state-data.ts:45-46) exist so the public booking page can recognise a diver for ten minutes; the page reads facts \"through a handoff and nothing else\" (src/app/s/[shopSlug]/trips/[id]/page.tsx:343-349). It is minted from three places — the after-state's next-dive card, the shelf's same-boat door (src/app/shelf/[token]/actions.ts:260-269) and the H-68 b cold-email link — and runbook row 86 calls the shelf token \"a renewable source of ten-minute booking credentials\". The storefront already recognises the phone: `readShelfWelcome` (src/app/s/[shopSlug]/_lib/shelf-welcome.ts, 40 lines) reads the HttpOnly `diveday_shelf` cookie, re-checks the tenant and greets by name with a \"Yours\" group, and that cookie's path `/s/<slug>` (src/lib/shelf-links.ts:66-68) is sent to `/s/<slug>/trips/[id]` on the very next tap, where nothing reads it. ADR 20260906-before-you-ask rejected \"continuity by device\" on 2026-09-06; H-71 m adopted it for the diver on 2026-09-10 (ADR 20260908 lever Z), so the handoff's stated reason no longer holds.",
+      "idea": "The booking page calls the same `readShelfWelcome` the storefront does and folds `foldKnownDiverFacts` from the person the cookie names, under the same `NEVER_HANDED_OFF` list; the `handoff` purpose, both handoff modules, the `booking_handoff` kind, the `?handoff=` param and its redaction entry, and `mintHandoff` are deleted. A forwarded recap or shelf URL then greets nobody on the booking page — only the phone that opened the file is known — which is stricter than a URL-borne credential, and \"Not Yara? Start with a blank form\" and \"Forget this phone\" become one control. H-68 b's one-email offer survives as the file link itself, since opening it sets the cookie, so the owner's decision stands with one mechanism fewer. The grammar afterwards: a diver's phone knows the shop, and every `/s/<slug>` page — storefront, trip, course — reads one cookie through one reader.",
+      "dissolves": "The `handoff` capability purpose and everything that mints, reads, redacts or emails it.",
+      "scope": "src/app/s/[shopSlug]/trips/[id]/page.tsx and its KnownDiverPanel, src/app/s/[shopSlug]/_lib/shelf-welcome.ts, src/lib/booking-handoff.ts (+test), src/db/booking-handoff.ts (+test), src/app/ready/[token]/_lib/after-state-data.ts, src/app/shelf/[token]/actions.ts (`openSameBoatAction`), src/lib/capability-urls.ts, src/lib/notifications/kinds.ts (`booking_handoff`), schema enum value and migration, src/app/api/test/seed-booking-handoff, e2e booking spec's handoff cases, runbook row 75, ADR 20260906 amendment, `booking.knownDiver.*` keys unchanged.",
+      "firstSlice": "The trip page reads the shelf cookie beside the handoff (cookie first, handoff as fallback) and renders the same panel; the three mint sites then stop minting and the purpose is dropped.",
+      "effort": "S",
+      "reviews": [
+        "security",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260906-before-you-ask decision 3 — rule kept (fill what is known, show its source, leave the last tap to a person), mechanism replaced, and its \"continuity by device\" rejection is overtaken by H-71 m; H-68 b — decision stands, the link becomes the file link; ADR 20260908 lever Z — the same-boat door simplifies to a plain link; runbook row 75 retires.",
+      "confidence": "high"
+    },
+    {
+      "id": "L12-4",
+      "title": "Every diver message is one shape: the state, one sentence, the link",
+      "kind": "system",
+      "reading": "src/lib/notifications/kinds.ts is 1,092 lines declaring 28 kinds with 32 render cases; 17 of them address a diver about their own thread (booking_confirmation, waiver_request, guardian_release_copy, booking_handoff, readiness_link, shelf_link, waitlist_invite, trip_invitation, gift_pass, last_minute_deal, checkout_recovery, trip_reminder_7d, trip_reminder_24h, trip_recap, trip_blowout, trip_minimum_not_met, trip_conditions_hold). They carry six link families — `readinessUrl`, the waiver URL, `?handoff=`, the shelf link, the claim link, `recapUrl` — so one relationship teaches a diver six URLs. The 24h reminder re-renders the thread's Day-of step in email (`outstanding` codes, `forecast`, `bring`, `whoToText`, `firstTimerNote`, kinds.ts:388-408) and the recap email carries `sites` and `flySafe` (423-455) that `AfterState` renders again; `notifications.*` is 172 keys in diver.json, doubled in es-ES. docs/product/features/roadmap.md:189 still holds \"the second booking-time email\" as an owner call, and `issueWaiverRequest` has 2 non-test callers, one of them booking time.",
+      "idea": "One thread message with a state where the kind is now — `booked`, `sign`, `week_out`, `tonight`, `home`, `cancelled`, `seat_freed`, `gift` — whose subject is the state in the shop's voice, whose body is one sentence, the one link (L12-1's) and the shop's line, and whose reply-keyword line stays a channel fact. The thread renders the content — Day-of already holds the forecast, packing, who-to-text and the first-timer note; the after-state holds fly-safe — so the email stops being a second surface that can drift from it. The 7-day and 24-hour cadences, the recap floor, the blow-out and minimum-not-met sweeps keep their due rules and their per-(booking, kind) dedup rows, `notification_kind` keeping one value per state for exactly that, but all render through one template and one bundle namespace. The second booking-time email answers itself: booking sends one message whose state is `booked` and whose link opens on the Sign step.",
+      "dissolves": "Seventeen diver templates and six link families into one template and one link, and the open owner call on the second booking-time email.",
+      "scope": "src/lib/notifications/kinds.ts, render.ts, email.ts, sms.ts, src/db/notifications.ts (1,296 lines), src/db/reminders.ts (588), src/db/recap.ts, the blow-out and minimum-seats senders, `notification_kind` enum, `notifications.*` in both locales, e2e reminder and recap assertions, amendments to ADR 20260721-scheduled-reminder-cadence and 20260723-post-trip-recap, roadmap.md:189.",
+      "firstSlice": "Give the 7d/24h reminders and the recap one renderer whose body is the state sentence and the link, deleting the night-before brief fields from the email because the thread's Day-of step already renders them — three kinds, one template, dedup rows untouched.",
+      "effort": "M",
+      "reviews": [
+        "design",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260721-scheduled-reminder-cadence — due rules kept, content narrowed; ADR 20260723-post-trip-recap — kept, the recap email already \"carries no dive record at all\"; ADR 20260909-reply-keywords and 20260731-per-person-notification-locale — unchanged; roadmap \"second booking-time email\" — resolved by shape rather than by a yes/no; #1826 — a send that gives up tells nobody, orthogonal; N-16 seat transfer — would be one more state, not one more template.",
+      "confidence": "medium"
+    }
+  ]
+}

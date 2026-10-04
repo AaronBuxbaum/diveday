@@ -1,0 +1,183 @@
+{
+  "lensId": "L21",
+  "lens": "The component system",
+  "reading": "`src/components/ui/` holds 27 modules (23 `.tsx`, 4 `.ts`) exporting 43 components, and four of them are the spine: `ui/button` has 213 non-test importers, `ui/card` 130, `ui/form` 116, `ui/ledger` 93 and `ui/typography` 93, with 78 of the 99 `page.tsx` files and 167 of the 211 `_components/*.tsx` files importing something from the folder. The folder is not the primitive set, though: seven of its modules have two or fewer importers (`ui/tone` 1, `ui/Switch` 1, `ui/Modal` 1, `ui/FactSource`, `ui/ForgivingInput`, `ui/list-item-actions`, `ui/week-pager` 2 each) while the six most-imported primitives live one folder up (`ShopPageHeader` 139, `SubmitButton` 112, `StaffDestinationIcon` 39, `EmptyState` 35, `FlashParams` 33, `StaffNoticeBanner` 21), and `ShopPageHeader.tsx` is a 438-line file carrying six exports including the app's page-banner primitive `ShopNotice` (31 importers) and `ShopStat`. The 93 top-level `src/components/*.tsx` split three ways: those primitives, 34 components whose every importer sits under one route root (`OfflineManifestView` at 122 `className=` for `/offline-manifest`; `PartyClaimPanel`, `TripArrivalCard`, `RememberBooker`, `StarRatingInput` for `/ready`; `BoardingBar`, `PushOptIn`, `RollCallMark`, `OfflineManifestManager` for `shop/trips`), and 51 of the 93 with no test beside them. The overlay is the one grammar with no primitive: five files hand-assemble `fixed inset-0` + `role=\"dialog\"` + `aria-modal` (`ui/Modal.tsx`, `WaterLocker.tsx`, `StaffTabBar.tsx`, `search/CommandPalette.tsx`, and `trips/[id]/manifest/_components/PersonSheet.tsx` under `src/app`), the four hooks `useFocusTrap`/`useExitAnimation`/`useMenuDismissal`/`useDragSheet` are used 4/8/3/1 times, `LanguagePicker.tsx:74-82` and `ScheduleBuilder.tsx:1835-2153` re-copy the dismissal by hand, and `stacking-layers.test.ts:84` exempts every `fixed` layer from the one z-index guard. Feedback has 14 notice-shaped components (`ShopNotice`, `StaffNoticeBanner`, divers' `NoticeBanner`, `TripNoticeBanner`, `ActionResultNotice`, `FormStatus`, `Toast`, `UndoToast`, `EarnedMoment`, `InfoHint`, `LanguageFallbackNotice`, `DemoBanner`, `OfflineShellVersionBanner`, `EmbedBookedNotice`) and eight tone unions in the component layer (`ToneName`, `BadgeTone`, `StatusMarkVariant`, `LedgerRowKindTone`, `GroupLabelTone`, `NoticeTone` in `src/lib/staff-notices.ts`, and the inline unions on `ShopNotice` and `ShopStat`), with `role=\"status\"` in 35 files and `role=\"alert\"` in 25. Loading has 94 `loading.tsx` files typing 446 skeleton bars in 292 distinct class spellings, four hand-kept skeleton twins (`ShopPageHeaderSkeleton`, `EntryShellSkeleton`, `ShopChromeSkeleton`, `SheetLoading`), and two ADRs that disagree: `20260804-instant-navigation:190` declined a `<Skeleton>` primitive and `20260908-one-hand`'s kit table names `src/components/ui/skeleton.tsx`. Rows and disclosures are the known seams — 43 exported `*Row*` symbols, 12 app-local `*Row*.tsx` files, 54 files hand-rolling `divide-y` outside `ui/`, 115 `<details` and 86 `<summary` across 50 files against `ui/disclosure.tsx`'s 7 importers — all named by one-hand slices 20b and 20d and none landed (H-71 and H-77 both \"Ready\"). Where a guard holds, adoption is near-total (`card.test.tsx` and `button.test.ts` scan the tree, `scripts/tokens-baseline.json` is at zero, `check:type-ramp` closed 14 heading spellings), which is one-hand's own steelman — \"the work is guards and deletion, not new components\" — and the four ideas below are the guards and deletions that ADR did not reach: the overlay, the primitive boundary, the tone-and-outcome vocabulary, and the pending face.",
+  "measurements": [
+    {
+      "what": "Component files (non-test .tsx) in src/components; of which top-level; ui/ modules; exported components in ui/",
+      "value": "136; 93; 27 (23 tsx + 4 ts); 43"
+    },
+    {
+      "what": "Route-local _components: directories / files / exported components",
+      "value": "41 / 211 / 260"
+    },
+    {
+      "what": "className= occurrences: src/components vs src/app (non-test)",
+      "value": "1,124 vs 6,251"
+    },
+    {
+      "what": "ui/ importers (non-test files): button / card / form / typography / ledger / badge / DisclosureCaret / … / tone / Switch / Modal",
+      "value": "213 / 130 / 116 / 93 / 93 / 40 / 38 / … / 1 / 1 / 1"
+    },
+    {
+      "what": "Primitives outside ui/ by importers: ShopPageHeader / SubmitButton / StaffDestinationIcon / EmptyState / FlashParams / StaffNoticeBanner / Copyable / StoredPhoto / Pager / UndoToast / AutoOpenDetails",
+      "value": "139 / 112 / 39 / 35 / 33 / 21 / 16 / 15 / 15 / 11 / 11"
+    },
+    {
+      "what": "page.tsx files: total / importing ui/ / className buckets 0, 1-5, 6-20, 21-50, 51+",
+      "value": "99 / 78 / 2, 22, 40, 25, 10"
+    },
+    {
+      "what": "_components files importing ui/",
+      "value": "167 of 211"
+    },
+    {
+      "what": "Hand-assembled full-viewport dialogs (fixed inset-0 + role=dialog); hook users useFocusTrap/useExitAnimation/useMenuDismissal/useDragSheet; files with z-50 / z-40; files with aria-haspopup or aria-expanded",
+      "value": "5; 4/8/3/1; 9 / 4; 12"
+    },
+    {
+      "what": "Notice-shaped components; tone unions in the component layer; files with role=status / role=alert",
+      "value": "14; 8; 35 / 25"
+    },
+    {
+      "what": "loading.tsx files; hand-typed skeleton bars; distinct bar spellings; skeleton twin components; loading.tsx importing nothing from src/components",
+      "value": "94; 446; 292; 4; 8"
+    },
+    {
+      "what": "Exported *Row* symbols; app-local *Row*.tsx files; files with divide-y outside ui/; <details / <summary occurrences (files); ui/disclosure importers",
+      "value": "43; 12; 54; 115 / 86 (50); 7"
+    },
+    {
+      "what": "Badge call sites; of which tone=neutral (clear-the-deck deletes Badge)",
+      "value": "89; 17"
+    },
+    {
+      "what": "Untested: ui/ modules; top-level components",
+      "value": "9 of 27; 51 of 93"
+    },
+    {
+      "what": "ui/ modules importing @/lib, @/i18n or @/db",
+      "value": "4 (form.tsx, ForgivingInput.tsx, FactSource.tsx, forgiving-copy.ts)"
+    },
+    {
+      "what": "Top-level components imported from exactly one route root; of which outside src/components",
+      "value": "34; 23"
+    },
+    {
+      "what": "scripts/tokens-baseline.json size / entries",
+      "value": "302 bytes / 0"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "Adoption is near-total wherever a tree-scanning guard exists: button.test.ts refuses a text-colour through className, card.test.tsx refuses rounded-2xl and shadow-sm panels anywhere in src/, and the result is 213 and 130 importers",
+      "where": "src/components/ui/button.test.ts, src/components/ui/card.test.tsx"
+    },
+    {
+      "what": "Semantic tokens at zero non-token colours, ratcheted; heading ramp closed to named constants after 14 call-site spellings",
+      "where": "scripts/tokens-baseline.json, scripts/check-tokens.mjs, scripts/check-type-ramp.mjs, src/components/ui/typography.ts"
+    },
+    {
+      "what": "SectionCard has named slots, deliberately no radius prop, a derived aria-labelledby, and a written list of what is not a section card; EmptyState took 46 anatomies to named slots with no children",
+      "where": "src/components/ui/card.tsx, src/components/EmptyState.tsx"
+    },
+    {
+      "what": "LedgerRow: a door draws its own chevron, tone lives in the ink never a fill, `stacked` adds only max-sm classes, and GroupLabel/LedgerGroup/RowKind/InsetGroup are one vocabulary with 93 importers",
+      "where": "src/components/ui/ledger.tsx"
+    },
+    {
+      "what": "Six consolidations already made and documented in their doc comments: SegmentedControl (4 hand-rolled → 1), FilterChips (3 → 1), WeekPager (2 → 1), ActionResultNotice (2 → 1), EarnedMoment (3 → 1), StaffNoticeBanner (hand-copied mb-6 wrappers → 1)",
+      "where": "src/components/ui/SegmentedControl.tsx, ui/FilterChips.tsx, ui/week-pager.tsx, _components/today/ActionResultNotice.tsx, EarnedMoment.tsx, StaffNoticeBanner.tsx"
+    },
+    {
+      "what": "Shared behaviour contracts: useMenuDismissal is the one dismissal for three staff menus, useExitAnimation the one exit timer for eight overlays (#832), useDragSheet shares PullToRefresh's and BuddyDragGroups' gesture contract",
+      "where": "src/components/useMenuDismissal.ts, useExitAnimation.ts, useDragSheet.ts"
+    },
+    {
+      "what": "The boat's row tones are pinned with `satisfies` against the domain's RollCallRecordedTone so the live manifest and the offline one cannot disagree about a colour",
+      "where": "src/components/row-tones.ts"
+    },
+    {
+      "what": "Guards on the layer beyond tokens: stacking-layers holds the header above in-page popovers, check-tinted-ink keeps coloured ink off translucent fills, check-loading-skeletons holds a loading.tsx's existence and outer width, check-architecture bans components → app/features",
+      "where": "src/components/stacking-layers.test.ts, scripts/check-tinted-ink.mjs, scripts/check-loading-skeletons.mjs, scripts/check-architecture.mjs"
+    },
+    {
+      "what": "The one-hand kit already names width, eyebrow, title, section heading, group count, row, add, state, good news, meter, link, skeleton and disclosure with a guard each (slices 20a–20e); hold — the pick is H-71's, and none of it has landed",
+      "where": "docs/architecture/decisions/20260908-one-hand.md decision 1, docs/product/features/roadmap.md §20"
+    },
+    {
+      "what": "Settled: tone glyphs are emoji; EarnedMoment is the one coral vocabulary; the settings rows' chevron direction distinguishes navigate from expand",
+      "where": "docs/design/settled-questions.md"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L21-1",
+      "title": "Everything that floats is one Layer with four faces",
+      "kind": "shape",
+      "reading": "Five files draw a full-viewport overlay by hand — `fixed inset-0` with `role=\"dialog\"` and `aria-modal` in `src/components/ui/Modal.tsx`, `src/components/WaterLocker.tsx`, `src/components/StaffTabBar.tsx` (the More sheet), `src/components/search/CommandPalette.tsx` and `src/app/shop/[shopSlug]/trips/[id]/manifest/_components/PersonSheet.tsx` — and each wires its own portal, scrim, Escape listener, focus trap and exit timer from the four hooks (`useFocusTrap` 4 users, `useExitAnimation` 8, `useMenuDismissal` 3, `useDragSheet` 1). `Modal.tsx` has exactly one importer (`gear/[id]/_components/PullForServiceButton.tsx`) and its own comment names the hooks, not itself, as the primitive (\"reuses the entrance/exit timing and focus-trap primitives already used by CommandPalette and WaterLocker rather than inventing a third\"). The menus repeat the pattern one layer down: `useMenuDismissal` calls itself \"the one dismissal contract every disclosed staff menu shares\", yet `LanguagePicker.tsx:74-82` re-copies the pointerdown/Escape listeners under a comment that it \"follows the identity menu exactly\", `ScheduleBuilder.tsx:1835-2153` keeps its own `MENU_CLOSE_MS`/`closingMenu`/pointerdown machinery, and 12 files carry `aria-haspopup`/`aria-expanded`. `PersonSheet` is 241 lines under `src/app`, roughly 60 of them sheet chrome, so a primitive-shaped thing sits in route-local code that `src/components` may not import. `stacking-layers.test.ts:84` skips every `fixed` layer (\"a different question\"), so nine files write `z-50` and four `z-40` with no guard between the palette, the toasts, `InfoHint`'s portal and the dock. ADR 20260908-one-hand counts \"5 dialog implementations\" in its context but its twelve-row kit table has no overlay row, and lever I (\"a register opens as a sheet over the page\") stays on the canvas with nothing to land on.",
+      "idea": "One `src/components/ui/layer.tsx` owns everything an overlay has in common — the `document.body` portal, the scrim, the one `fixed inset-0 z-50` spelling, focus trap, Escape and outside-pointerdown dismissal with return-focus, the entrance/exit pair from `motionMs`, and the drag handle — and exposes four faces that differ only in anchor and scrim: `Dialog` (centred), `Sheet` (bottom-anchored, draggable), `Menu` (anchored to its trigger, no scrim, no trap) and `Lock` (full-bleed, no dismissal). The four hooks become module-private to `layer.tsx`; `Modal.tsx` is deleted; `PersonSheet` keeps its content and loses its chrome; the dock's More becomes a `Sheet`, the palette a `Dialog` around its listbox, `WaterLocker` a `Lock`, and `ShopIdentityMenu`, `ShopNavLinks`' More, `LanguagePicker`, `ManifestMoreMenu`, `InfoHint` and the schedule board's row menu become `Menu`. `stacking-layers.test.ts` drops its `fixed` exemption and instead refuses `fixed inset-0` and `role=\"dialog\"` anywhere outside `ui/layer.tsx`, which is the guard one-hand says the work consists of. The grammar afterwards is one sentence: anything that floats is a `Layer` face, chosen by where the thumb is (sheet from the dock, menu from its trigger, dialog from the middle), never by which file an author happened to copy. Lever I's register-as-a-sheet and the counter's `PersonSheet` then compose the same thing.",
+      "dissolves": "`ui/Modal.tsx`, the four public hooks, five hand-assembled overlays and two hand-copied dismissals stop existing as separate spellings; \"which one is on top\" stops being a per-file z-index decision.",
+      "scope": "src/components/ui/layer.tsx (new); src/components/ui/Modal.tsx (deleted); src/components/WaterLocker.tsx, StaffTabBar.tsx, search/CommandPalette.tsx, ShopIdentityMenu.tsx, ShopNavLinks.tsx, LanguagePicker.tsx, ui/InfoHint.tsx, useFocusTrap.ts, useExitAnimation.ts, useMenuDismissal.ts, useDragSheet.ts and their tests; src/app/shop/[shopSlug]/trips/[id]/manifest/_components/PersonSheet.tsx and ManifestMoreMenu.tsx; schedule/board/_components/ScheduleBuilder.tsx; gear/[id]/_components/PullForServiceButton.tsx; src/components/stacking-layers.test.ts; docs/design/forms-and-controls.md §Menus; e2e specs for the palette, the dock and the manifest; visual captures of the More sheet and the person sheet; one ADR. No bundles, no schema.",
+      "firstSlice": "Land `ui/layer.tsx` with the `Dialog` and `Menu` faces, delete `Modal.tsx` (one call site), move `LanguagePicker` and `ShopIdentityMenu` onto `Menu`, and switch `stacking-layers.test.ts` to refuse `fixed inset-0` outside `layer.tsx` with the four remaining files listed as a burn-down.",
+      "effort": "M",
+      "reviews": [
+        "design",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260908-one-hand (adds the overlay row its kit table lacks and gives lever I a primitive to land on); ADR 20260907-nothing-from-nowhere decision 4 (useDragSheet's gesture contract is kept verbatim inside `Sheet`); ADR 20260827-the-departure-is-two-working-surfaces decision 2 (PersonSheet's content and one-tap behaviour unchanged); issue #832's exit-animation contract (preserved as the Layer's one timer); no open issue proposes it.",
+      "confidence": "high"
+    },
+    {
+      "id": "L21-2",
+      "title": "ui/ is the primitive set by rule, and a test says so",
+      "kind": "governance",
+      "reading": "`src/components/ui/` has 27 modules but seven have two or fewer non-test importers (`tone` 1, `Switch` 1, `Modal` 1, `FactSource` 2, `ForgivingInput` 2, `list-item-actions` 2, `week-pager` 2) and nine have no test (`typography`, `tone`, `InfoHint`, `badge`, `forgiving-copy`, `Modal`, `week-pager`, `FieldErrorFocus`, `DisclosureCaret`). The six most-imported primitives live one folder up — `ShopPageHeader` 139 importers, `SubmitButton` 112, `StaffDestinationIcon` 39, `EmptyState` 35, `FlashParams` 33, `StaffNoticeBanner` 21 — with `Copyable` 16, `StoredPhoto` 15, `Pager` 15, `UndoToast` 11 and `AutoOpenDetails` 11 behind them. `ShopPageHeader.tsx` is 438 lines and six exports (the header, its skeleton, `EyebrowBackLink`, `ShopStat`, `ShopNotice`, `EYEBROW_CLASS`) serving 108 files under `src/app/shop` and 15 under `src/app/s` through `titleFace=\"brand\"` (4 uses), `brand`, `display` and `align` mode props. Four `ui/` modules import domain (`form.tsx` → `@/lib/money` and `@/lib/staff-notices`, `ForgivingInput.tsx` → `@/lib/forgiving-fields`, `FactSource.tsx` → `@/lib/fact-source`, `forgiving-copy.ts` → `@/i18n/staff-messages`), so nothing distinguishes a primitive from a feature widget by rule. Of the 93 top-level `src/components/*.tsx`, 34 are imported from exactly one route root and 23 from a single route family (`/ready` takes `PartyClaimPanel`, `TripArrivalCard`, `RememberBooker`, `StarRatingInput`; `shop/trips` takes `BoardingBar`, `PushOptIn`, `RollCallMark`, `OfflineManifestManager`; `/offline-manifest` takes the 122-`className` `OfflineManifestView`), which is `_components/` content in a shared folder. `.claude/rules/surfaces.md:73-76` names four `ui/` files as \"the wrappers\", `scripts/check-architecture.mjs:61` bans `src/components` → `src/app` and nothing finer, and ADR 20260911-clear-the-deck's \"27 primitives\" counts the folder, not the set.",
+      "idea": "The component tree becomes three tiers by rule rather than by folder habit: `ui/` is the primitive set (takes words as props; imports nothing from `@/lib` beyond `motion`, nor `@/i18n`, nor `@/db`; has a test beside it; is composed by three or more route roots or carries a written reason), `components/` is a composition shared by two or more route roots, and `_components/` is one route's own. A tree-scanning test in the style of `stacking-layers.test.ts` — `src/components/ui/primitives.test.ts` — fails on a `ui/` module that imports domain, on one with no test, and on a top-level component whose importers all sit under one route root; `check-architecture.mjs` gains the `ui/` row. In: `SubmitButton`, `EmptyState`, `Pager`, `Copyable`, `StoredPhoto`, `FlashParams`, `AutoOpenDetails`, `StaffDestinationIcon` (as `ui/icon`), and `ShopPageHeader.tsx` split into `ui/page-header.tsx`, `ui/stat.tsx` and L21-3's notice primitive, with the storefront's `titleFace=\"brand\"`/`brand` face becoming `PublicShopChrome`'s own `StorefrontHeader` so the staff header carries no mode flag. Out: the 23 one-route components move beside their route; `ui/Modal` goes with L21-1; `ui/tone` folds into `badge`/`notice`; `ui/FactSource`, `ui/ForgivingInput` and `forgiving-copy` — the ones that import domain — move to `components/` as compositions. Afterwards the primitive set is a named, countable N of about 24 modules that `docs/design/forms-and-controls.md` lists in full, and \"is this a primitive?\" is answered by the test rather than by which folder an agent chose.",
+      "dissolves": "The `ui/` folder as an accident of where a file was first written, and `ShopPageHeader.tsx` as a six-export grab-bag that is both the staff header and the storefront's.",
+      "scope": "src/components/** (git mv of about 35 files) and import paths in roughly 400 files; src/components/ui/primitives.test.ts (new); scripts/check-architecture.mjs and its test; .claude/rules/surfaces.md \"Wrappers\" row; AGENTS.md route-map row for design tokens/wrappers; docs/design/forms-and-controls.md; docs/agents/repo-checks.md; one ADR. No bundles, no schema, no visual change.",
+      "firstSlice": "Ship `primitives.test.ts` with today's violations as its ratchet baseline, move `SubmitButton` and `EmptyState` into `ui/`, and move the four `/ready` components into `src/app/ready/[token]/_components/`.",
+      "effort": "M",
+      "reviews": [
+        "ADR",
+        "design"
+      ],
+      "conflicts": "ADR 20260908-one-hand (\"the primitives are not the problem… the work is guards and deletion\" — this is the guard on the set itself); ADR 20260730-feature-module-contracts (check-architecture's roots table grows one row); ADR 20260911-clear-the-deck (its \"27 primitives\" becomes a real count); ADR 20260907-nothing-from-nowhere decision 5 (`FoldedPageTitle` keeps reading the header's title through the same slot); no open issue proposes it.",
+      "confidence": "medium"
+    },
+    {
+      "id": "L21-3",
+      "title": "Tone is five words and an outcome has one anatomy",
+      "kind": "system",
+      "reading": "Eight tone unions live in the component layer: `ToneName` (`ui/tone.ts`, 5 members), `BadgeTone` (5), `StatusMarkVariant`, `LedgerRowKindTone` (3), `GroupLabelTone`, `NoticeTone` (4, defined in `src/lib/staff-notices.ts:24` — a lib module owning a UI word), and the inline unions on `ShopNotice` (`ShopPageHeader.tsx:408`) and `ShopStat` (`\"default\" | \"primary\" | \"warning\" | \"success\"`). Fourteen components say what just happened: `ShopNotice` (31 importers, inside `ShopPageHeader.tsx`), `StaffNoticeBanner` (21, which is `ShopNotice` plus `mb-6`), divers' `NoticeBanner`, `TripNoticeBanner`, `ActionResultNotice`, `FormStatus`, `Toast` (1 importer), `UndoToast` (11), `EarnedMoment` (10), `InfoHint`, `LanguageFallbackNotice`, `DemoBanner`, `OfflineShellVersionBanner`, `EmbedBookedNotice`. `TripNoticeBanner.tsx` carries a 40-entry `NOTICE_KEYS` map whose own comment says it is the \"same shape as `divers/[personId]/_components/NoticeBanner.tsx`'s `NOTICE_KEYS`, plus that last field\", and issue #1845 records that a map keyed the wrong way renders no banner with no guard to see it. `role=\"status\"` appears in 35 files and `role=\"alert\"` in 25, with the tone→role rule (`noticeRole`) applied by hand at each. ADR 20260908-one-hand's slice 20d folds `ActionResultNotice` into `FormStatus` and routes sixteen loose `?notice=` renders through `StaffNoticeBanner` — the spelling — while the vocabulary underneath (eight words for tone, two registries for codes) is untouched by it and unlanded.",
+      "idea": "One `Tone` — `ToneName`'s five words — is the only tone union in `src/components`; `BadgeTone`, `NoticeTone`, `LedgerRowKindTone`, `GroupLabelTone`, `StatusMarkVariant`'s tone half and the two inline unions are deleted or become `Extract<Tone, …>`, and `NoticeTone`/`noticeRole` leave `src/lib` because the tone→role rule belongs to the primitive that renders the role. One outcome anatomy — mark, one sentence, an optional link or undo — in `src/components/ui/outcome.tsx`, with three placements as three thin exports over one body: `Notice` (the page banner a `?notice=` redirect lands in, replacing `ShopNotice`, `StaffNoticeBanner`, divers' `NoticeBanner` and `TripNoticeBanner`'s render half), `FormStatus` (the action row, absorbing `ActionResultNotice`), and `Toast` (ephemeral, where `UndoToast` is `Toast` with an action and the 1-importer `Toast.tsx` goes). The per-page `NOTICE_KEYS` maps become one typed registry in `src/lib/staff-notices.ts` keyed by code with `form`, `tone` and message key, so a mis-keyed code is a compile error (#1845) and `noticeForForm` reads one table instead of two copies. `EarnedMoment` stays as the coral vocabulary the settled-questions row defends; `InfoHint` becomes a `Menu` face of L21-1; `DemoBanner`, `OfflineShellVersionBanner`, `LanguageFallbackNotice` and `EmbedBookedNotice` render through `Notice` with `tone=\"neutral\"`. Afterwards the grammar is: a tone is one of five words wherever it appears, and an outcome is one shape in one of three places.",
+      "dissolves": "Seven of the eight tone unions and five banner spellings stop existing; a lib module stops owning a UI word.",
+      "scope": "src/components/ui/tone.ts, badge.tsx, StatusMark.tsx, ledger.tsx, form.tsx (`FormStatus`), outcome.tsx (new); src/components/ShopPageHeader.tsx (`ShopNotice`, `ShopStat` tone), StaffNoticeBanner.tsx, Toast.tsx, UndoToast.tsx, DemoBanner.tsx, OfflineShellVersionBanner.tsx, LanguageFallbackNotice.tsx; src/lib/staff-notices.ts; src/app/shop/[shopSlug]/divers/[personId]/_components/NoticeBanner.tsx and record-notices.ts; trips/[id]/_components/TripNoticeBanner.tsx; _components/today/ActionResultNotice.tsx; src/app/s/[shopSlug]/trips/[id]/_components/EmbedBookedNotice.tsx; docs/design/forms-and-controls.md \"Saying what happened\"; visual captures of pages with a banner; one ADR. Bundles untouched (keys move, words do not).",
+      "firstSlice": "Make `ToneName` the one union (mechanical type edits, seven unions deleted, `noticeRole` moved beside it) and move `ShopNotice` out of `ShopPageHeader.tsx` into `ui/outcome.tsx` as `Notice`, folding `StaffNoticeBanner`'s 21 call sites onto it.",
+      "effort": "M",
+      "reviews": [
+        "design",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260908-one-hand slice 20d (subsumed — its two notice folds are two of this idea's steps); issue #1845 (subsumed by the typed registry); docs/design/settled-questions.md rows on tone glyphs (`ui/tone.ts`) and on `EarnedMoment` (both kept); ADR 20260827-clearwater-surface-language decision 3 (tone in the ink, kept — `Notice` stays the only tinted panel).",
+      "confidence": "high"
+    },
+    {
+      "id": "L21-4",
+      "title": "The skeleton is every primitive's pending face, not a twin",
+      "kind": "system",
+      "reading": "94 `loading.tsx` files type 446 skeleton bars in 292 distinct `className` spellings; 49 import `sectionCardClass` for the shell, 57 import `ShopPageHeaderSkeleton`, and 8 import nothing from `src/components` at all. Four skeletons are hand-kept twins of a component — `ShopPageHeaderSkeleton` (`ShopPageHeader.tsx:207`), `EntryShellSkeleton`, `ShopChromeSkeleton` (`ShopChrome.tsx:274`) and `SheetLoading` — and issue #1857 is exactly a twin drifting from its original: the header skeleton's eyebrow bar no longer matches a linked eyebrow's height. `scripts/check-loading-skeletons.mjs` holds two things — a `loading.tsx` exists and its outer `max-w-*` matches the page's — and its own comment calls the width half \"deliberately narrow\"; nothing holds a row's height, a card's radius or a header's shape. Two ADRs disagree: `20260804-instant-navigation:190` declined \"a shared `<Skeleton>` primitive\" because it \"would either fork the idiom or rewrite twenty-one stable baselines\", and `20260908-one-hand`'s kit table names `src/components/ui/skeleton.tsx` as slice 20d, unlanded. Both answer \"what draws a bar\" and neither answers \"what keeps the bar the shape of the thing it stands in for\", which is the only property a skeleton has.",
+      "idea": "No skeleton primitive and no twin: every primitive with a resting shape renders its own pending face from the same class strings — `<SectionCard pending>`, `<LedgerRow pending>`, `<ShopPageHeader pending>`, `<Field pending>`, `<Table pending rows={6}>` — so a `loading.tsx` composes the page's own primitives with `pending` and never types a `bg-surface-sunken` bar. The `animate-pulse` wrapper and the bar are drawn once, inside the primitive, from its own radius, height and padding, so width, row height and header height cannot drift from the resting face (#1857 becomes unwritable). The four twins are deleted (`ShopPageHeaderSkeleton` becomes `ShopPageHeader pending`, and so on), and `check-loading-skeletons.mjs` gains one rule — no `bg-surface-sunken` or `animate-pulse` literal in a `loading.tsx` outside `ui/` — ratcheted down from today's 94. This is the deletion 20260804 wanted (no forked idiom, because the idiom becomes the primitive's own) and the one skeleton one-hand wanted, without a fifth kind of thing. The grammar afterwards: a page's loading state is the page with nothing in it, written in the same primitives.",
+      "dissolves": "292 skeleton spellings, four skeleton twins, and the proposed `ui/skeleton.tsx`.",
+      "scope": "src/components/ui/card.tsx, ledger.tsx, form.tsx, table.tsx; src/components/ShopPageHeader.tsx; src/components/account/EntryShell*.tsx; src/app/shop/[shopSlug]/_components/ShopChrome.tsx; src/app/shop/[shopSlug]/print/_components/SheetLoading.tsx; the 94 loading.tsx files; scripts/check-loading-skeletons.mjs and its test; .claude/rules/surfaces.md's loading paragraph; the instant-navigation skill; visual baselines only where a capture holds a loading state; one ADR superseding 20260804's declined alternative and one-hand's kit row. No bundles, no schema.",
+      "firstSlice": "Add `pending` to `SectionCard` and `ShopPageHeader`, delete `ShopPageHeaderSkeleton` across its 57 call sites, and turn the new `check-loading-skeletons` rule on in ratchet mode.",
+      "effort": "M",
+      "reviews": [
+        "design",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260804-instant-navigation (its declined `<Skeleton>` alternative's reason — forking the idiom — no longer applies when the face is derived rather than drawn); ADR 20260908-one-hand kit row \"Skeleton\" and slice 20d (replaced); issue #1857 (subsumed); `check-loading-skeletons`' existence and width rules (kept and extended).",
+      "confidence": "high"
+    }
+  ]
+}

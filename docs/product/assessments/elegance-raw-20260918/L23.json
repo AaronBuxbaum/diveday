@@ -1,0 +1,186 @@
+{
+  "lensId": "L23",
+  "lens": "Tests as the constitution",
+  "reading": "The constitutional layer is real and large: 50 guards registered in scripts/check-repo.mjs (lines 44–93, 12,943 lines of script) plus 35 unit tests under src/** that walk the tree with readdir (7,460 lines) and 75 that read source as text, against 839 unit test files, so roughly one test file in ten pins a rule rather than a behaviour. It has no name and no index: docs/engineering/testing.md's layer table (lines 5–12) names six layers and none is this one, its only rule-test write-up is the route ledger (lines 142–174), docs/agents/repo-checks.md writes up 27 guards and none of the 35 tests, and both scripts/agent-health.mjs and scripts/check-agents.mjs read scripts/ only. Four counts of one roster disagree — check-repo.mjs registers 50, its own comment at line 37 says \"all 43 checks\", repo-checks.md:3 says 48 and its roster at line 19 names 39, AGENTS.md says 50 (pinned by check-agents.mjs:287) — and .claude/rules/db.md:70 says \"four coverage guards\" where AGENTS.md:55 says \"three\" and a fifth, src/db/erasure-coverage.test.ts, exists. Naming is ad hoc: 2 *.never-list.test.ts, 7 *-coverage.test.ts, 1 capability-refusals.test.ts, and the rest (stacking-layers, eyebrow-way-up, chrome, illustration, motion-tokens, tap-highlight, disclosure-motion, _og/card) carry no mark that they are rules, while the *.postgres.test.ts glob (10 files, testing.md:281) shows the repo already knows a name can be the discovery. The mechanism is rewritten per rule: 28 guards and 15 tests define their own tree walker (43 in all), src/test/ holds 20 helpers and no walker, the 50 guards share only scripts/subprocess.mjs (4 importers), and the 12 ratcheted guards each re-implement --write/--absorb/--report at 25–33 lines with no shared module. Exemptions come in four grammars — 13 diveday:allow-<rule>: <why> markers (the required-reason doctrine of ADR 20260806 line 62), about 20 in-guard ALLOW/EXEMPT/KNOWN/GRANDFATHERED tables, 11 in-test tables (WAY_UP_EXEMPT, ABOVE_HEADER_BY_DESIGN, RESET_KEEPS, ERASURE_KEEPS…), and 12 JSON baselines in scripts/. Provenance is thin: 21 of the 35 walker tests and 33 of the 50 guards cite no ADR in their source, and ADR 20260806 line 62 cites a \"guardrail\" requirement in AGENTS.md that no longer contains the word (the rot #1738 is parked on). The test-form half is blind locally: vitest.config.ts:94–107 records that test:changed walks the import graph and had to force-rerun on drizzle/** because migrations are read off disk, yet the 35 walker tests read src/app and src/components off disk the same way (4 of 6 sampled have 0 local imports), so a staff page added without its slug gate or a z-30 popover fails only in CI's full unit run while every guard-form rule fails in pnpm check:repo at the desk. Probing 14 prose rules found 6 with no holder at all: space-y-10 page spacing (surfaces.md), \"never a finally that restores a setting\" (e2e.md:20, self-declared unenforced), \"every domain table carries shop_id\" (db.md:151; 121 tables, no schema sweep, #1714 parked on the write side), \"deleted_at is null in every live read\" (db.md:106; 33 deleted_at columns, scripts/check-live-trips.mjs holds it for trips alone), \"new runtime dependency → ADR\" (AGENTS.md; check-adrs.mjs reads id, status and sections only), and \"a second locale-inverting surface is a decision\" (i18n.md).",
+  "measurements": [
+    {
+      "what": "Guards registered in scripts/check-repo.mjs (lines 44–93) / check-*.mjs non-test files",
+      "value": "50 / 53 (3 orchestrators: check-all, check-repo, check-e2e-build)"
+    },
+    {
+      "what": "Lines across the 50 guards / across the 35 tree-walking unit tests",
+      "value": "12,943 / 7,460"
+    },
+    {
+      "what": "Registered guards with a check-*.test.mjs beside them / without",
+      "value": "39 / 11 (adrs, clock, critical-text, design-canvases, doc-links, env, infra-ascii, intl-cache, source-text, timezone, uuid-segments)"
+    },
+    {
+      "what": "Stated size of the guard roster, by source",
+      "value": "check-repo.mjs:37 says 43; docs/agents/repo-checks.md:3 says 48 and line 19 names 39; AGENTS.md says 50 (check-agents.mjs:287 pins it)"
+    },
+    {
+      "what": "Guards written up in docs/agents/repo-checks.md (line 9)",
+      "value": "27 of 50; 0 of the 35 src rule-tests"
+    },
+    {
+      "what": "Unit test files / tests that walk the tree with readdir / tests that read source as text",
+      "value": "839 / 35 / 75"
+    },
+    {
+      "what": "Rule-test name families",
+      "value": "never-list 2, -coverage 7, -refusals 1; the other 25 walkers unmarked (postgres 10, authz 12, composition 5 are the only other suffix families)"
+    },
+    {
+      "what": "Hand-written tree walkers: in guards / in tests / shared",
+      "value": "28 / 15 / 0 (src/test/ has 20 helpers, none a walker)"
+    },
+    {
+      "what": "Local modules the 50 guards share",
+      "value": "scripts/subprocess.mjs ×4; six others ×1 each"
+    },
+    {
+      "what": "Ratcheted guards / shared ratchet module / absorb-baseline lines per guard",
+      "value": "12 / 0 / 25–33 in nine of them"
+    },
+    {
+      "what": "Exemption grammars",
+      "value": "13 diveday:allow-* markers (7 in use at 29 sites in src), ~20 in-guard tables, 11 in-test tables, 12 JSON baselines"
+    },
+    {
+      "what": "Rule holders citing no ADR in source",
+      "value": "21 of 35 walker tests; 33 of 50 guards (69 ADRs name a .test.ts, 50 name a check script)"
+    },
+    {
+      "what": "Layers in docs/engineering/testing.md's table (lines 5–12)",
+      "value": "6, none of them the rule layer"
+    },
+    {
+      "what": ".claude/rules/*.md: lines / bold-bullet rules / guard mentions",
+      "value": "761 / 90 / 42"
+    },
+    {
+      "what": "Prose rules probed / found with no guard or test",
+      "value": "14 / 6"
+    },
+    {
+      "what": "src/db/schema.ts: lines / pgTable / deleted_at columns / shop_id mentions / archived_at",
+      "value": "9,613 (db.md:16 says 8,700) / 121 / 33 / 128 / 0"
+    },
+    {
+      "what": "Schema-asserting sweeps: AGENTS.md:55 / .claude/rules/db.md:70 / on disk",
+      "value": "\"three\" / \"four\" (export, diver-merge, delete-path-coverage, retention) / 5 (erasure-coverage.test.ts added, 1,032 lines)"
+    },
+    {
+      "what": "Sampled walker tests with zero local imports (invisible to test:changed, vitest.config.ts:94–107)",
+      "value": "4 of 6 (tenant-gate-coverage, eyebrow-way-up, stacking-layers, provider-coverage)"
+    },
+    {
+      "what": "Visible git history",
+      "value": "364 commits from 2026-09-08 (shallow); creation dates not usable as growth"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "A guard's why, incident and escape hatch are written once, beside the roster, and only for the 27 whose failure message does not say enough",
+      "where": "docs/agents/repo-checks.md lines 1–19 and the 27 sections below"
+    },
+    {
+      "what": "Every guard must be spawned by the table or it never runs, and AGENTS.md's count phrase is pinned",
+      "where": "scripts/check-agents.mjs:287–292; .claude/rules/scripts.md \"A guard is spawned by scripts/check-repo.mjs or it never runs\""
+    },
+    {
+      "what": "A check has three outcomes, and SKIPPED is a one-off for the single network guard, unreachable from any validation path",
+      "where": "scripts/check-repo.mjs:141–175; docs/agents/repo-checks.md \"follow-ups, and the third outcome\""
+    },
+    {
+      "what": "The exemption marker grammar requires a reason, refuses an empty one, and is unreachable by prose",
+      "where": "ADR 20260806-destructive-migration-guard line 58–72; scripts/check-trip-revision.mjs and check-redirect-in-try.mjs spell it the same way"
+    },
+    {
+      "what": "A never-list checks that the surfaces it names still exist, and a list a guard cannot find is a failure, not a pass",
+      "where": "src/components/ui/RollingFigure.never-list.test.ts:58–68; scripts/check-capability-runbook.mjs (repo-checks.md line 81)"
+    },
+    {
+      "what": "A naming glob is a discovery mechanism, so a new suite needs no wiring",
+      "where": "src/db/*.postgres.test.ts, docs/engineering/testing.md:281–283"
+    },
+    {
+      "what": "Guards get a test beside them and the report names the ones without",
+      "where": "39 of 50 have check-<name>.test.mjs; scripts/agent-health.mjs:94–118"
+    },
+    {
+      "what": "The route ledger is hand-maintained on purpose, ratcheted, and its exemption is a written reason that --write removes when outgrown",
+      "where": "scripts/route-coverage.json; docs/engineering/testing.md:142–174"
+    },
+    {
+      "what": "The lesson that files read off disk are invisible to test:changed is already written down, for migrations",
+      "where": "vitest.config.ts:94–107 (forceRerunTriggers on drizzle/**)"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L23-1",
+      "title": "The constitution is one named layer with one index and one door",
+      "kind": "governance",
+      "reading": "Rules are held in three homes with no shared name: 50 guards in scripts/check-*.mjs, 35 tree-walking tests scattered under src/** with three naming conventions (2 never-list, 7 -coverage, 1 -refusals) and 25 unmarked, and 90 bold-bullet rules across 761 lines of .claude/rules/*.md of which 42 name a guard. Four documents state four sizes for one roster (check-repo.mjs:37 says 43, repo-checks.md:3 says 48 and names 39, AGENTS.md says 50) and db.md:70 counts \"four\" schema sweeps where AGENTS.md:55 says \"three\" and five exist. docs/engineering/testing.md's six-layer table (lines 5–12) has no row for the layer, docs/agents/repo-checks.md covers 27 guards and none of the tests, and scripts/agent-health.mjs and scripts/check-agents.mjs read scripts/ only, so nothing can say how many rules exist, which sentence each holds, or which sentences have no holder. 21 of 35 walker tests and 33 of 50 guards cite no ADR in source, and ADR 20260806 line 62 cites an AGENTS.md \"guardrail\" doctrine that no longer exists. Probing 14 prose rules found 6 with no holder, and the docs themselves declare two of them unenforced (e2e.md:20, repo-checks.md:241).",
+      "idea": "Name the layer and give it one registry: scripts/rules-registry.mjs, one row per rule — id, the sentence it holds, its source (an ADR id, a principles.md section or a .claude/rules anchor), its holder (a scripts/check-<id>.mjs or a *.rule.test.ts) and its exemption form. Every rule-test takes the one suffix *.rule.test.ts, replacing never-list, -coverage, -refusals and the unmarked eight, so a glob is discovery the way *.postgres.test.ts already is. scripts/check-agents.mjs gains three assertions: every registered guard and every *.rule.test.ts on disk has a registry row, every holder path and every source resolves, and every bold-bullet rule in .claude/rules/*.md either names a rule id or is listed under a written \"held by reading\" reason. The roster in repo-checks.md, the count in AGENTS.md, the comment in check-repo.mjs and the schema-sweep list in db.md are derived from the registry or checked against it, and pnpm agent:health prints rules by source and the count with no holder. testing.md gets its seventh row — Rules | check:repo + Vitest | scripts/check-*.mjs, src/**/*.rule.test.ts | a written rule cannot regress silently — and the .claude/rules prose shrinks to the sentence plus its rule id, the incident moving to the holder's doc comment where 14 of the 35 tests already keep it. Adding a rule becomes one act: a holder in one of two shapes, one registry row, and the guard that refuses the row-less holder.",
+      "dissolves": "Four disagreeing roster counts, three rule-test naming conventions and the unmarked eight, and the question \"is this sentence enforced?\" as something re-derived by grep.",
+      "scope": "scripts/rules-registry.mjs (new), scripts/check-agents.mjs, scripts/agent-health.mjs, scripts/check-repo.mjs:37, 35 test renames under src/**, docs/engineering/testing.md, docs/agents/repo-checks.md lines 3 and 19, AGENTS.md rows for check:repo and test:changed, .claude/rules/scripts.md and db.md:70, .claude/skills/README.md; one ADR.",
+      "firstSlice": "Rename the 13 already-named rule-tests to *.rule.test.ts, write the registry with the 50 guard rows and 35 test rows, and land the check-agents assertion that every holder exists and every roster count is derived from it.",
+      "effort": "M",
+      "reviews": [
+        "ADR"
+      ],
+      "conflicts": "Subsumes #1738 (parked: verify ADR citations in check:adrs — the registry's source column is the citation and is checked), gives #1845 and the six holder-less rules a row instead of an issue, and touches #1818 (decisions recorded in code but not in docs). Extends check-agents.mjs's existing count pin rather than replacing it; keeps repo-checks.md's write-ups where they are.",
+      "confidence": "high"
+    },
+    {
+      "id": "L23-2",
+      "title": "Forty-three tree walkers and twelve ratchets are one module each",
+      "kind": "shape",
+      "reading": "28 guards and 15 rule-tests each define their own walk over the tree (43 functions named walk, tsxFilesUnder, sourceFilesUnder, pageRoutes, routeFiles, filesUnder…), 40 of the 50 guards call readdir themselves, and src/test/ holds 20 helpers of which none is a walker. The guards share exactly one local module, scripts/subprocess.mjs (4 importers), while scripts/logical-properties-lib.mjs and scripts/image-sizes-lib.mjs show a guard's logic can live in an importable library. The 12 ratcheted guards (copy, locale, logical-properties, architecture, tokens, domain-strings, voice, type-ramp, bundle-reach, context-budget, route-coverage, capability-runbook) each re-implement --write/--absorb/--report at 25–33 lines in nine of them, with 0 shared ratchet code. Each walker re-decides the same questions alone: src/lib/security-headers.test.ts:1–12 fixed route-group and _folder handling for its two walkers only, src/app/edge-refusal-coverage.test.ts:53–60 decides it again, and src/components/stacking-layers.test.ts:45 and src/i18n/provider-coverage.test.ts:55 strip comments two different ways. The exemption marker is parsed 13 different times across the guards, and the 11 in-test tables carry the same path-plus-reason shape under 11 names.",
+      "idea": "One scripts/source-tree.mjs, importable from a .mjs guard and a Vitest test alike, exports sourceFiles(root, {ext, skipTests}), pageRoutes() with the route-group and _folder rules written once, withoutComments(), and allowMarker(ruleId) that parses diveday:allow-<id>: <why> and refuses an empty reason per ADR 20260806's grammar. One scripts/ratchet.mjs exports the --write/--absorb/--report triple over a per-file baseline, so a new ratcheted guard is its pattern plus one call. Every guard and every *.rule.test.ts imports these; the in-test tables keep their shape but read the same <id>: <why> requirement, so the two grammars that survive are the inline marker and the keyed table, both with a reason, and the JSON baselines stay what they are — banked debt, not exemption. A walker fix (a new route group, a new file kind) lands once and reaches all 43 callers.",
+      "dissolves": "43 private walkers, 12 private ratchet implementations, 13 private marker parsers, and the drift where one walker knows about route groups and forty-two do not.",
+      "scope": "scripts/source-tree.mjs and scripts/ratchet.mjs (new, with tests beside them), the 40 readdir-calling guards, the 35 walker tests, scripts/check-copy.mjs and the 11 other ratchets, .claude/rules/scripts.md.",
+      "firstSlice": "Land scripts/source-tree.mjs with sourceFiles, pageRoutes and withoutComments plus its test, and convert the six src/app/*-coverage.test.ts walkers and the two route-walking guards (check-loading-skeletons.mjs, check-uuid-segments.mjs) to it.",
+      "effort": "M",
+      "reviews": [],
+      "conflicts": "None recorded; complements L23-1 and is the mechanism L23-3 runs. Leaves scripts/check-repo.mjs's spawn-per-guard shape and the 90s ceiling untouched.",
+      "confidence": "high"
+    },
+    {
+      "id": "L23-3",
+      "title": "A rule that reads files runs at the desk, not only in CI",
+      "kind": "system",
+      "reading": "vitest.config.ts:94–107 records that pnpm test:changed selects tests by walking the import graph, and that drizzle/** had to be added to forceRerunTriggers because migrations are read off disk and selected zero tests. The 35 walker tests read src/app and src/components off disk in exactly that way: 4 of 6 sampled (tenant-gate-coverage, eyebrow-way-up, stacking-layers, provider-coverage) have 0 local imports, and the other two import only the predicate, not the pages they sweep. AGENTS.md:55 calls test:changed \"the pre-push net that catches a coverage guard living in a file you never touched\", which is true of src/db/export.test.ts (it imports schema.ts) and false of every text-scanning rule. By contrast the 50 guards in scripts/check-repo.mjs run whole on every pnpm check:repo, so a page added without its loading.tsx fails at the desk (check-loading-skeletons) while a page added without its slug gate (tenant-gate-coverage.test.ts) or a panel at z-30 (stacking-layers.test.ts) fails on CI's four unit shards minutes later, and only when .github/workflows/ci.yml:207's code filter runs them. The choice between guard and test is therefore silently a choice about where a rule fails, and nothing in .claude/rules/scripts.md or testing.md says so.",
+      "idea": "The rule layer runs whole and always, in seconds, wherever check:repo runs: the *.rule.test.ts glob becomes its own Vitest project named rules, pnpm check:rules runs it, and scripts/check-repo.mjs spawns it as one more row with the same ok/FAILED/SKIPPED header. The two db-backed sweeps (delete-path-coverage, erasure-coverage) stay in the ordinary suite, reached by forceRerunTriggers on src/db/schema.ts, so the rules project needs no PGlite and fits the 90-second ceiling. After that the difference between a scripts/check-*.mjs and a *.rule.test.ts is only what a rule needs to import — a TypeScript predicate like publicRouteShape or isNeverForgivingFieldName makes it a test, pure text makes it a script — and never where it fails. AGENTS.md:55's caveat and the guard-versus-test question in a session's head both go away, and .claude/rules/scripts.md states the one rule for placing a rule.",
+      "dissolves": "The local blind spot over 33 text-scanning rules, and the unwritten reason to prefer a script over a test for a rule that could be either.",
+      "scope": "vitest.config.ts (projects), package.json (check:rules), scripts/check-repo.mjs (one row), AGENTS.md:55, docs/agents/verifying.md, .claude/rules/scripts.md, docs/engineering/testing.md; depends on the *.rule.test.ts rename in L23-1.",
+      "firstSlice": "Add a rules Vitest project over src/**/*.rule.test.ts (the 13 renamed files first), a check:rules script, and the check-repo.mjs row; measure its wall time on a cold run and write the number in repo-checks.md beside the 90s ceiling.",
+      "effort": "S",
+      "reviews": [
+        "ADR"
+      ],
+      "conflicts": "Touches ADR 20260827-stack-ci-skips-the-middle-layers only in that check:repo grows a row; must respect check-repo.mjs's CHECK_TIMEOUT_MS and the SKIPPED one-off doctrine (repo-checks.md \"the third outcome\"). Does not change what CI runs.",
+      "confidence": "high"
+    },
+    {
+      "id": "L23-4",
+      "title": "The two 'every table' laws get the sweep erasure-coverage already has",
+      "kind": "governance",
+      "reading": ".claude/rules/db.md:151 says every domain table carries shop_id and every query filters by the session's shop, and db.md:106 says every table a user can delete carries deleted_at with deleted_at is null in every active read; src/db/schema.ts holds 121 pgTable declarations, 33 deleted_at columns and 128 shop_id mentions. scripts/check-live-trips.mjs holds the second law for one table, trips, across its 91 read sites, and no guard or test reads the other 32. No test asserts the first law at all: the grep for a schema-wide shop_id sweep returns nothing, src/app/shop/tenant-gate-coverage.test.ts holds the page-level half (the URL slug), and #1714 (parked) records that nothing mechanical holds the write side. src/db/erasure-coverage.test.ts (1,032 lines) and src/db/delete-path-coverage.test.ts (379 lines) already show the shape that works here — walk the schema, compare against a KEEPS table with a written reason per row — and delete-path-coverage's doc comment names the failure mode exactly: per-table cases somebody remembered to write, not a sweep.",
+      "idea": "Two schema-driven rule-tests in the delete-path/erasure shape. tenant-columns.rule.test.ts walks every pgTable in schema.ts and requires shop_id, or a foreign key path to a table that has one, or a row in TENANT_FREE with a reason (users, account tokens, the catalog, webhook inboxes). live-reads.rule.test.ts generalises check-live-trips from trips to every table with deleted_at: each .from(table) read carries a live(table) helper (the liveTrip() shape made generic in src/db/trips-live.ts) or a diveday:allow-deleted-<table>: <why> marker, with the 32 currently unswept tables entering under a ratchet so the first run reports rather than blocks. Both are registry rows under L23-1 and run at the desk under L23-3. db.md's two 'every' sentences then point at their rule ids instead of standing on faith.",
+      "dissolves": "The 32 tables whose deleted_at is a promise held by reading, and the schema-wide tenant law that has no holder.",
+      "scope": "src/db/tenant-columns.rule.test.ts and src/db/live-reads.rule.test.ts (new), src/db/trips-live.ts (generic live(table)), scripts/check-live-trips.mjs (retired into the test or generalised), .claude/rules/db.md:106 and :151, ADR 20260820-every-delete-is-soft consequences.",
+      "firstSlice": "tenant-columns.rule.test.ts over the 121 tables with a TENANT_FREE table carrying one reason per row, reported not gating until the list is settled.",
+      "effort": "M",
+      "reviews": [
+        "security",
+        "domain"
+      ],
+      "conflicts": "Partners #1714 (parked: nothing mechanical holds the tenant-isolation line on writes) by holding the schema and read halves; extends ADR 20260820-every-delete-is-soft's consequence and the check-live-trips write-up in repo-checks.md; H-49 (no legacy) means any table that fails the sweep is dropped or given the column, never dual-read.",
+      "confidence": "medium"
+    }
+  ]
+}

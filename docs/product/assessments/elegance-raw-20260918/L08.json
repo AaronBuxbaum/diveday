@@ -1,0 +1,188 @@
+{
+  "lensId": "L08",
+  "lens": "Messages",
+  "reading": "Outbound mail is one registry of 28 kinds (`src/lib/notifications/kinds.ts`, 1,092 lines; `email.ts`, 1,553 lines, 29 body builders) behind one seam `notify` (`src/lib/notifications/index.ts:40`), but only 10 kinds are recorded per booking in `notification_deliveries`, 24 non-test files reach `sendNotification`/`sendAndRecordNotification`/`sendNotificationBatch`, and `recordNotificationDelivery` is called by hand at 8 more sites, twice from a route (`src/app/api/cron/minimum-seats/route.ts:102,135`). The fact \"what became of this message\" lives in six tables, `notification_deliveries`, `notification_delivery_attempts`, `notification_send_queue`, `staff_replies`, `waiver_deliveries` and `waiver_records.delivery_*`, each carrying its own copy of the outcome block (six `provider_message_id` columns in `src/db/schema.ts`), under five fate enums (`notification_delivery_status` 3 values, `notification_queue_status` 4, `notification_provider_status` 7, `blowout_message_status` 6, `trip_help_request_status` 4). `notification_delivery_attempts` has exactly one non-test reader, the prune at `src/db/retention.ts:183`, which under H-49 makes it a table nothing reads. The conversation a staffer sees (`personThread`, `src/db/inbound-messages.ts:279`) interleaves `inbound_messages` and `staff_replies` and omits every notification the shop sent: all 14 non-test readers of `notificationDeliveries` are `src/db` dedup, webhook, export and retention code, the only staff rendering is Today's failures-only `email_delivery` row (`src/db/today.ts:1750`), and the diver's `/ready` thread reads none of the three tables. What waits to be sent is stored in five places (`held_sends.run_at`, `notification_send_queue.next_attempt_at`, `bookings.recap_auto_send_at`, `checkouts.abandoned_recovery_sent_at`, `trip_blowout_divers.message_status`) and drained by six functions across four cron routes (`vercel.json:13-21`), the daily route named `reminders` draining retries, checkout recovery, media deletions, processor erasures and demo reaping (`src/app/api/cron/reminders/route.ts:3-8`). ADR 20260906-before-you-ask decided the hold as \"a `send_at` on the queued notification row, honoured by the existing delivery worker\"; what shipped is a second table (`held_sends`, `schema.ts:3171`) with an ids-only payload, because the queue stores a sealed rendered notification whose sealing cost issues #1297, #1298, #1340 and #1719, a `recovery_attempts` column and four erasure-handle columns (`schema.ts:4187-4278`). Text-channel bodies are composed in five `src/db` modules with 33 `diverTranslator` calls (`reminders.ts` 9, `recap.ts` 3, `waiver-issue.ts` 4, `reply-keywords.ts` 13, `staff-reply.ts` 4) while `render.ts` renders email only, and the same wire is spelled `sms` in `inbound_channel` (`schema.ts:4316`) and `text` in `waiver_delivery_channel` (5950) and `src/lib/held-sends.ts:37`. What divers tell the shop lands in three stores with two answered vocabularies (`inbound_messages.answered_at`; `trip_help_requests` requested/acknowledged/handled/withdrawn; `course_inquiries`), read on three staff surfaces (`/inbox`, `/requests`, Today's `unanswered_messages` and `help_request` rows), and `src/app/actions/inquiry.ts:153` still emails the shop its own `course_inquiry` row. Four conversation tables share one 400-day retention row \"for the same reason\" (`src/lib/retention.ts:181,189,292,313`), `src/db/anonymize.ts` names five messaging tables 30 times, and `src/db/diver-merge.ts` and `src/db/export.test.ts` each carry one line per table, so every table in this lens costs four obligations before it costs a feature.",
+  "measurements": [
+    {
+      "what": "Outbound notification kinds in src/lib/notifications/kinds.ts",
+      "value": "28 (1,092 lines); 29 email builders in email.ts (1,553 lines)"
+    },
+    {
+      "what": "Kinds recorded per booking (notification_kind enum, schema.ts:4018)",
+      "value": "10 of 28; sendAndRecordNotification records only when bookingId is present"
+    },
+    {
+      "what": "Modules in src/lib/notifications/",
+      "value": "22 modules + 19 test files, 10,026 lines"
+    },
+    {
+      "what": "Tables holding a message's fate",
+      "value": "6 (notification_deliveries, notification_delivery_attempts, notification_send_queue, staff_replies, waiver_deliveries, waiver_records.delivery_*); 6 provider_message_id columns"
+    },
+    {
+      "what": "Fate enums and values",
+      "value": "5 enums, 24 values (delivery 3, queue 4, provider 7, blowout 6, help-request 4)"
+    },
+    {
+      "what": "Non-test call sites of the send seams",
+      "value": "24 files; recordNotificationDelivery called directly at 8 sites, 2 in a cron route"
+    },
+    {
+      "what": "Non-test readers of notification_delivery_attempts",
+      "value": "1 (src/db/retention.ts:183)"
+    },
+    {
+      "what": "Non-test readers of notificationDeliveries",
+      "value": "14, all in src/db; 0 staff pages render the outbound trail"
+    },
+    {
+      "what": "Places storing when a send leaves",
+      "value": "5 columns; 6 drain functions; 4 cron routes"
+    },
+    {
+      "what": "diverTranslator calls composing copy inside src/db messaging modules",
+      "value": "33 across 5 files"
+    },
+    {
+      "what": "Channel vocabularies",
+      "value": "4 (inbound_channel, waiver_delivery_channel, CourtesyChannel, held-sends enum); sms 3 vs text 2 literal uses"
+    },
+    {
+      "what": "Inbound stores / doors / staff readers",
+      "value": "3 stores (inbound_messages, trip_help_requests, course_inquiries); 5 doors; 3 surfaces + 2 Today rows"
+    },
+    {
+      "what": "Tables in this lens's domain",
+      "value": "21 (incl. 3 token tables, whatsapp accounts, promo recipients, push_subscriptions, desk events + read marks)"
+    },
+    {
+      "what": "Retention rows at 400 days for conversation tables",
+      "value": "4; anonymize.ts mentions of messaging tables: 51"
+    },
+    {
+      "what": "Messaging ADRs by filename",
+      "value": "26; staff/inbox.json keys 54; e2e inbox 100 + reply-keywords 183 + blowout 191 lines"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "One outbound entry point with zod-parsed kinds and a provider that degrades to not_configured instead of throwing",
+      "where": "src/lib/notifications/index.ts:40 (notify), provider.ts (disabledNotificationProvider)"
+    },
+    {
+      "what": "The WhatsApp-or-SMS rule lives in one place: prefer the shop's own sender, fall back on any non-sent outcome, never both",
+      "where": "src/lib/notifications/courtesy.ts:106"
+    },
+    {
+      "what": "Quiet hours in the shop's civil time with the exempt kinds named rather than implied",
+      "where": "src/lib/send-window.ts:43-63"
+    },
+    {
+      "what": "A diver's own locale outranks the shop's at send time",
+      "where": "ADR 20260731-per-person-notification-locale; recipientLocale in kinds.ts:64"
+    },
+    {
+      "what": "Desk events kept apart from trip_change_events for a written disclosure reason, codes only, no prose, 30-day window",
+      "where": "src/db/schema.ts:3188-3264 (#1202), src/lib/retention.ts:268"
+    },
+    {
+      "what": "The welcome cue is derived at read, consent-gated, and expires an hour after the boat is home; nothing stored on a person",
+      "where": "src/lib/welcome-cue.ts:58-82"
+    },
+    {
+      "what": "A reply keyword's confirmation code is signed, never stored: no table, no prune, no row to leak",
+      "where": "ADR 20260909-reply-keywords decision 2; src/db/reply-keywords.ts"
+    },
+    {
+      "what": "Held-send payloads carry ids only so erasure needs no sweep and a backup holds no mail",
+      "where": "src/lib/held-sends.ts:13-16, schema.ts:3168"
+    },
+    {
+      "what": "Inbound attribution by a provider-vouched address inside the tenant, never a typed name",
+      "where": "ADR 20260907-two-way-inbox decision 2; src/db/inbound-messages.ts:84"
+    },
+    {
+      "what": "Push is one event (manifest changed), device credentials with a 30-day window, an endpoint allowlist",
+      "where": "src/lib/notifications/web-push.ts:118, src/db/push-subscriptions.ts:295, retention.ts:258"
+    },
+    {
+      "what": "Due is not the same as worth sending: the 7-day nudge is held when the diver has nothing left to do",
+      "where": "src/lib/reminders.ts:157 (reminderEarnsItsSend), src/db/reminders.ts:189-195"
+    },
+    {
+      "what": "Platform mail is three constants and one override, not a channel",
+      "where": "src/lib/platform-mail.ts"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L08-1",
+      "title": "Every message the shop sends or receives is one row",
+      "kind": "concept",
+      "reading": "Six tables hold what became of a message, each with its own outcome block: six `provider_message_id` columns in `src/db/schema.ts` (4101, 4143, 4281, 4373, 4459, 6364), three typed by `notification_delivery_status` and two carrying `notification_provider_status`. `staff_replies` is its own table only because `notification_deliveries` is keyed one-row-per-(booking, kind) (`schema.ts:4115`; ADR 20260907 decision 1), and `waiver_deliveries` exists only because that latest-state key lets a second channel erase the first (ADR 20260820). `notification_delivery_attempts`, added by ADR 20260720 so a retry would not erase a failure, has one non-test reader, the prune at `src/db/retention.ts:183`. `personThread` (`src/db/inbound-messages.ts:279`) shows a staffer `inbound_messages` and `staff_replies` and nothing the shop sent; all 14 non-test readers of `notificationDeliveries` are `src/db` dedup, webhook, export and retention code, so \"we sent Grace the 24h reminder on WhatsApp at 7:02\" renders nowhere, and `src/app/ready/[token]` reads none of the three tables. `trip_blowout_divers.message_status` (`schema.ts:9033`) is a sixth-value fate whose `queued` means \"the retry queue owns it now\". The four conversation tables share one 400-day retention row (`retention.ts:181,189,292,313`), `anonymize.ts` names five of them 30 times, and `diver-merge.ts` and `export.test.ts` carry a line per table.",
+      "idea": "One `messages` table: `shop_id`, `person_id` (null for a stranger), `booking_id` (null when not about a seat), `direction` (`out`/`in`), `channel`, `kind` (the 28 outbound kinds plus `reply`, `staff_reply`, `keyword_reply`), `body` for inbound rows and typed replies (outbound rows keep the subject and re-render), a self-referencing `in_reply_to_message_id`, `answered_at`, one outcome block (`status`, `provider_message_id`, `provider_status`, `provider_status_at`, `error_code`, `error`) and `deleted_at`. One row per send: the attempt trail is the rows, \"latest\" is a `distinct on (booking_id, kind)` read, and the (booking, kind) unique index becomes a partial index over the once-only kinds. The per-channel waiver problem dissolves because each channel's send is its own row, so `waiver_deliveries` and `waiver_records.delivery_*` go (ADR 20260820's own escape hatch); `staff_replies` and `inbound_messages` merge as `direction`; `trip_blowout_divers.message_status` becomes `message_id`. One thread reader serves the staff record, the inbox (`direction='in' and answered_at is null`), Today's failed-delivery row (`direction='out' and status='failed'`) and, for the first time, the diver's own thread (\"Sent you: confirmation, 7-day reminder, 24h reminder on WhatsApp\"). One retention row, one erasure sweep, one merge line, one export file, one delivery-status vocabulary.",
+      "dissolves": "`notification_delivery_attempts`, `staff_replies`, `waiver_deliveries`, the five `waiver_records.delivery_*` columns, `blowout_message_status`, and two of the three delivery enums; ADR 20260720's denormalized-latest row and ADR 20260907's \"a reply is its own table\" reason.",
+      "scope": "src/db/schema.ts (6 tables to 1), src/db/notifications.ts (1,296 lines), inbound-messages.ts, staff-reply.ts, reply-keywords.ts, waivers.ts + waiver-issue.ts, blowouts.ts (652), anonymize.ts, diver-merge.ts, export.ts, src/lib/retention.ts; src/app/api/webhooks/{ses,sms,whatsapp}; src/app/shop/[shopSlug]/inbox, divers/[personId]/_components/ConversationSection.tsx, src/db/today.ts:1750; src/app/ready/[token] thread; staff/inbox.json en-US + es-ES; e2e/inbox.spec.ts, reply-keywords.spec.ts, blowout.spec.ts; seed-inbox.ts, seed-front-desk.ts; a superseding ADR; glossary \"Notification delivery status\", \"Delivery receipt\".",
+      "firstSlice": "Drop `notification_delivery_attempts` and make `notification_deliveries` one row per send with a partial unique index over the once-only kinds, removing the (booking, kind) key that ADR 20260907 cites as the reason a reply cannot live there, while Today's `email_delivery` row and the reminder/recap dedup reads stay green.",
+      "effort": "L",
+      "reviews": [
+        "security",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260720-notification-attempt-history (its cheap-dashboard reason is served by a partial index; its trail becomes the rows); ADR 20260907-two-way-inbox decision 1 (the keying reason is removed, not argued with); ADR 20260820-waiver-delivery-is-per-channel (takes its own escape hatch); ADR 20260804-blowout-cascade (send-once resume keeps its claim on the snapshot row, the fate moves to the message row); #1826 (a failed send that tells nobody becomes a row on the object it is about); #1774 (a booking's trail draws from the same table); N-20/N-21 (built on, not re-proposed).",
+      "confidence": "high"
+    },
+    {
+      "id": "L08-2",
+      "title": "Everything that waits to be sent is one outbox row",
+      "kind": "system",
+      "reading": "Five columns store when a send leaves: `held_sends.run_at` (`schema.ts:3182`), `notification_send_queue.next_attempt_at` (4279), `bookings.recap_auto_send_at` (2227), `checkouts.abandoned_recovery_sent_at` (4889) and the pending/sending/queued walk of `trip_blowout_divers.message_status` (9033). Six drains (`sendDueReminders` reminders.ts:200, `sendDueRecaps` recap.ts:1181, `drainHeldSends` held-sends.ts:192, `drainNotificationRetries` notifications.ts:550, `sendDueCheckoutRecoveries` checkout-recovery.ts:121, `claimDuePushTargets` push-subscriptions.ts:221) run from four cron routes (`vercel.json:13-21`), and the daily route named `reminders` drains retries, checkout recovery, media deletions, processor erasures and demo reaping (`src/app/api/cron/reminders/route.ts:3-8`) while `trip-reminders` sends the reminders and sweeps the holds. ADR 20260906-before-you-ask's consequence reads \"A queued send gains a `send_at` and the delivery worker honours it\"; the shipped hold is a second table with an ids-only payload (`src/lib/held-sends.ts:13`) because the queue stores a sealed rendered notification. That sealed payload is the queue's whole complexity: `payload_sealed`, `recipient_email`, `subject_email`, `subject_phone` and `booking_id` as erasure handles, `recovery_attempts`, and a fortnight of `sealed_payload_unreadable` parking (`schema.ts:4171-4278`), written across issues #1297, #1298, #1340 and #1719. ADR 20260720 already made re-issue the retry path for a waiver (\"their one-time token is never stored\"), and `src/db/readiness-link-rescue.ts` and `find-my-booking.ts` mint fresh links on demand, so an ids-only intent rendered at drain is the precedent, not the exception.",
+      "idea": "One outbox (the `messages` rows with `status='queued'` and a `run_at` if L08-1 lands first, otherwise one `outbox` table): `kind`, an ids-only intent (the `held_sends` discipline extended to every kind), `run_at`, `status` (`queued`/`sending`/`sent`/`failed`/`undone`), `attempts`, `locked_until`, `actor_person_id`. Rendering happens at drain, so nothing sealed is stored, an erased person's intent renders nothing and settles `skipped`, and a retry of a token-bearing message re-mints through the reissue path that already exists. An eight-second hold is a row with `run_at = now + 8s` and Undo deletes it; a retry is the same row re-timed by the drain; a recap is a row written at booking with `run_at = ends_at + 4h`; a checkout recovery is a row written when the checkout expires; a blow-out cascade is N rows written in one transaction, which is the resume guarantee with no `sending` claim of its own. One drain, one cron, and one \"what is still going out\" reader for staff, which is the surface #1826 says is missing. Reminders stay computed from the trip (`dueReminder`) because a moved departure re-derives them for free; they call the same send seam and are the one timed send that needs no row.",
+      "dissolves": "`held_sends`, `notification_send_queue` with its five sealed and handle columns, `bookings.recap_auto_send_at`, `checkouts.abandoned_recovery_sent_at`, `blowout_message_status`, four of the six drains and the `reminders`/`trip-reminders` route split.",
+      "scope": "src/db/schema.ts; src/db/held-sends.ts (210), notifications.ts (queue half, 505-880), recap.ts, checkout-recovery.ts, blowouts.ts (652); src/lib/held-sends.ts, src/lib/secret-box.ts callers, src/lib/usage/alert-ledger.ts (its once-per-period claim); src/app/api/cron/{reminders,trip-reminders,recaps}, vercel.json; anonymize.ts (13 send-queue mentions), src/lib/retention.ts:70; the hold's visual capture; ADRs 20260906 (consequence made true) and 20260804-blowout-cascade; docs/engineering/ses-email-runbook.md.",
+      "firstSlice": "Move `held_sends` onto `notification_send_queue` as `status='queued'` rows with `run_at` and an ids-only `intent` column beside the sealed payload, drained by one function, which makes ADR 20260906's written consequence true and deletes `drainHeldSends`.",
+      "effort": "L",
+      "reviews": [
+        "security",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260906-before-you-ask (delivers its stated consequence rather than the shipped shape); ADR 20260804-blowout-cascade (its `queued` hand-off becomes the only state); issues #1297/#1298/#1340/#1719 (the sealed-payload lineage is deleted rather than maintained); #1826 (subsumed: one outbox has one failed-rows reader); ADR 20260721-scheduled-reminder-cadence (untouched, reminders stay computed).",
+      "confidence": "medium"
+    },
+    {
+      "id": "L08-3",
+      "title": "One send seam, one renderer per kind and channel, one channel word",
+      "kind": "shape",
+      "reading": "Three send seams exist: `notify` (email, `src/lib/notifications/index.ts:40`), `sendCourtesyMessage` (text, `courtesy.ts:106`) and the WhatsApp adapter's `sendText` called directly from `src/db/staff-reply.ts:185`; above them `sendNotification`, `sendNotificationBatch` and `sendAndRecordNotification` in `src/db/notifications.ts` are reached from 24 non-test files, with `recordNotificationDelivery` called by hand at 8 sites, twice from `src/app/api/cron/minimum-seats/route.ts:102,135`. `sendAndRecordNotification` records only when the input carries a `bookingId` (`notifications.ts:967`), so 18 of 28 kinds leave no row anywhere. Email bodies are 29 builders in `email.ts` (1,553 lines) behind `messageFor` in `render.ts`; text bodies are composed in `src/db` (`reminderSmsBody` at reminders.ts:125, `smsBody` at recap.ts:1367, 33 `diverTranslator` calls across five db modules), which is why the reply-keyword line travels as `body` and `whatsAppBody` (`courtesy.ts:58`): the channel is chosen below the call site. Four channel vocabularies coexist, `inbound_channel` (`schema.ts:4316`), `waiver_delivery_channel` (5950), `CourtesyChannel` (`courtesy.ts:24`) and `held-sends.ts:37`, with `sms` and `text` naming one wire. `kinds.ts` already branches 32 `case` arms per kind for locale, subject handles and idempotency, and `send-window.ts:60` names the quiet-hours-exempt kinds by hand.",
+      "idea": "One channel enum (`email`/`sms`/`whatsapp`/`link`) used by every table and type. One seam, `send(db, intent)`, that resolves the recipient's addresses and locale, picks the channel by one rule (the courtesy preference generalized: a kind declares which channels it may go on), renders through one registry `src/lib/notifications/templates/<kind>.ts` exporting `{ email?, text? }` per locale, sends, records the row (L08-1) and queues on a retryable failure (L08-2). The five `src/db` copy composers move into that registry, `messageFor` becomes `render(intent, channel, locale)`, the WhatsApp-then-SMS fallback becomes the seam's channel loop, and `sendText` disappears behind the WhatsApp adapter's ordinary `send`. A kind's declaration carries its channels, its quiet-hours exemption and its once-per-booking flag, so `QUIET_HOURS_EXEMPT_KINDS` and the `notification_kind` enum are derived rather than maintained, and `scripts/check-domain-strings.mjs` can refuse `diverTranslator` in `src/db` outright.",
+      "dissolves": "`sendCourtesyMessage`, `sendAndRecordNotification` and `recordNotificationDelivery` as call-site obligations, `waiver_delivery_channel`, `CourtesyChannel`, the `text` spelling, every `body`/`whatsAppBody` pair, and copy composition inside `src/db`.",
+      "scope": "src/lib/notifications/{index,render,email,courtesy,kinds,sms,whatsapp}.ts, src/lib/send-window.ts; src/db/notifications.ts, reminders.ts, recap.ts, waiver-issue.ts, reply-keywords.ts, staff-reply.ts, held-sends.ts; src/app/api/cron/minimum-seats/route.ts; src/i18n/reminder-labels.ts and diver.json in both locales (keys move, not change); scripts/check-domain-strings.mjs; docs/engineering/ses-email-runbook.md \"What every message carries\"; an ADR for the seam.",
+      "firstSlice": "Rename `text` to `sms` in `waiver_delivery_channel` and `held-sends.ts`, and move `reminderSmsBody`, recap's `smsBody` and the `whatsAppBody` variants into `src/lib/notifications/render.ts` beside `messageFor`, so one module renders every channel of a kind.",
+      "effort": "M",
+      "reviews": [
+        "ADR",
+        "security"
+      ],
+      "conflicts": "ADR 20260909-reply-keywords decision 11 (the `body`/`whatsAppBody` pair: its reason, channel chosen below the call site, is answered by the seam rendering per channel); ADRs 20260802-sns-sms-adapter and 20260802-whatsapp-cloud-api-per-shop (adapters unchanged); ADR 20260731-domain-layer-copy-leaks (this finishes it for messages); #1449 (two-way SMS lands as one channel flag on the seam).",
+      "confidence": "high"
+    },
+    {
+      "id": "L08-4",
+      "title": "What a diver tells the shop is one inbound stream",
+      "kind": "concept",
+      "reading": "Three inbound stores exist: `inbound_messages` with `answered_at` (`schema.ts:4351`), `trip_help_requests` with a four-state status (2570), and `course_inquiries` with name, email, phone, free text and a nullable `person_id`; they are fed by five doors, `/api/webhooks/email-inbound`, `/api/webhooks/whatsapp`, the `/ready` help-request form, `src/components/DateRequestForm.tsx`, and the staff Took-a-call page (`src/lib/took-a-call.ts`, `/shop/[shopSlug]/calls`, `calls.json` 27 keys). Staff read them on `/shop/[shopSlug]/inbox` (`staff/inbox.json` 54 keys), `/shop/[shopSlug]/requests` (`listDateRequestsForStaff`), and two Today rows (`unanswered_messages` at `src/lib/today.ts:94`, `help_request` at 79), plus a `trip_desk_events.help_request` line (`src/db/help-requests.ts:197`), so a help request is written to two staff streams and neither is the inbox. `src/app/actions/inquiry.ts:124,153` stores the date request and then emails the shop its own row as a `course_inquiry` kind, the shape ADR 20260907 rejected for replies (\"two inboxes for one message, and the app's one would always be the one nobody answered\"). The inbox's stranger row (ADR 20260907, 2026-09-10 amendment) and the requests board's stranger lead are one object with two gates and two delete stories. `notification_send_queue.subject_email`/`subject_phone` (`schema.ts:4234-4250`) exist for two kinds, one being `course_inquiry`, an erasure handle whose only purpose is that self-mail.",
+      "idea": "One inbound row (L08-1's `direction='in'`) with `kind` in {`reply`, `help_request`, `date_request`, `call`}, `answered_at` as the one state, `body` for what was written and a structured `facts` column for what a form captured (the help kind; course or interest and dates; a call's outcome). `/requests` folds into `/inbox` as a kind filter, freeing a More-menu row rather than spending one; Today's two rows become one `unanswered` row counted by kind; the help request's `acknowledged`/`handled` become `answered_at` and its `withdrawn` the diver's own soft delete; the `course_inquiry` self-mail is deleted because the row is the notification and Today's row is the badge. The lead half of these objects (dates, the course, the wait-list entry a call produces) stays on the \"Interest\" the 2026-08-08 concept simplification already names; this idea takes only the conversation half and leaves the lead where it is.",
+      "dissolves": "`trip_help_request_status`, `course_inquiry` as an outbound kind and its two subject-handle columns, `/requests` as a destination, and the `help_request` Today row and desk-event line as separate detectors.",
+      "scope": "src/db/schema.ts; src/db/help-requests.ts, course-inquiries.ts, inbound-messages.ts, today.ts (1378, 1931); src/lib/today.ts, src/lib/took-a-call.ts, src/lib/staff-destinations.ts; src/app/actions/inquiry.ts; src/app/shop/[shopSlug]/{inbox,requests,calls}; the /ready help form; staff/{inbox,requests,calls,today}.json in both locales; e2e/inbox.spec.ts and the date-request and help-request specs; ADRs 20260814 and 20260907 amended.",
+      "firstSlice": "Delete the `course_inquiry` self-mail in `src/app/actions/inquiry.ts` and count open date requests into Today's `unanswered_messages` row, so the app's own row is the one notification the shop gets.",
+      "effort": "M",
+      "reviews": [
+        "security",
+        "ADR",
+        "design"
+      ],
+      "conflicts": "roadmap \"one Interest\" (known; cited, this goes wider on the conversation half and leaves the lead concept there); ADR 20260814-a-date-request-is-a-course-inquiry (kept as the row's `facts`); ADR 20260907 decision 9 (worklist-opens-records stands; a stranger's date request is its stranger row); #1831 (moot as a board, persists as a create-door question); N-22 (built on: a call is an inbound row of kind `call`); #1449 (unchanged).",
+      "confidence": "medium"
+    }
+  ]
+}

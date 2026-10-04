@@ -1,0 +1,186 @@
+{
+  "lensId": "L27",
+  "lens": "The one idea of the product",
+  "reading": "DiveDay's own documents name the one idea as the dive day: docs/product/vision.md opens \"One place to run a dive shop\", docs/design/surfaces.md gives the home \"the work, in the order the day happens\" and the product page \"the whole dive day can run from one shared record\", and the diver's side is one link from booking to afterglow (ADR 20260827-the-divers-thread). Read against src/db/schema.ts (121 tables, 83 enums) and the 99 page routes, the product is four records and one moment: the shop (9 shop_* tables plus its catalog of boats, dive_sites, courses, gear_items, trip_lenses, season_events, waiver_templates, and 18 pages under settings/), the departure (trips plus 21 trip_* tables and 16 URL shapes under src/app that carry a trip id), the seat (bookings plus 8 booking_* tables, the thread at /ready with /waivers, /recap, /claim and /gift as four more doors onto the same booking row), the person (people, person_roles, three certification tables, divers/[personId], /shelf/[token]), and the day (day_closeouts keyed by a text shop_day, the home's spine, the board's seven columns, /board/[token], print/dock-sign). Derived and sound: all 15 *_events tables hang off one of the four; a course session is a trip row (trips.course_id, schema.ts:2076); staff and divers share one people spine (ADR 20260719-diver-person-spine); the nav derives from one registry of 21 destinations (src/lib/staff-destinations.ts) and the public paths from one module (src/lib/public-routes.ts). Orthogonal and legitimate: the account layer (4 account_* tables, user_accounts, 2 auth_*), the delivery plumbing (4 notification_*, 4 integration_*, stripe_webhook_events, held_sends), DiveDay's 12 marketing pages, and 74 src/db/seed-*.ts scenarios. What is not derived is where an object has no single reader: the seat's position is recomputed by 27 non-test files reading checked_in, 26 reading \"boarded\", 23 not_boarded, 28 hasSailed, 14 hasReturned and 4 isAfterTheDive, over four enums (booking_status 4 values, arrival_status 2, roll_call_status 3, trip_stage 5). The day has a table but no address — src/app/shop/[shopSlug]/page.tsx takes nine flash params and no date, the board takes ?week= — and six surfaces read the day's departures through six readers (src/db/today.ts 2,315 lines, src/db/closeout.ts 975, src/db/check-in.ts 1,129, src/db/departures-board.ts 295, src/lib/week-board.ts 136 plus src/lib/staffing-week.ts 598, print/dock-sign through src/db/boats), while 11 modules across src/lib and src/db are named for a day, today, a week or the close-out with \"day\" meaning three things among them (trip-days.ts, day-profile.ts, closeout.ts). The person's evidence is three tables for one card (certifications at schema.ts:6607, specialty_certifications at 6868, nitrox_certifications at 7919; 63/23/22 non-test files; three CSVs in src/db/export.ts) that src/lib/certification-cards.ts and ADR 20260827-people-not-lists decision 1 already treat as one kind of row. Accidental, the deletion and fold list: src/app/shop/[shopSlug]/trips/[id]/guests/page.tsx is a 510-line live roster with its own header, add-diver band and last-minute-deal panel and no redirect() call, linked from 7 non-test files, which ADR 20260827-the-departure-is-two-working-surfaces, docs/design/surfaces.md and docs/product/shipped.md:353 all describe as a compatibility redirect; activity_events and trip_desk_events are two staff-only departure trails with the same six leading columns (7 and 9 write sites, only src/db/check-in.ts writing both) kept apart by a 1,095-day versus 30-day window in src/lib/retention.ts; and the one noun is split — the en-US staff bundle says \"departure\" 194 times and \"trip\" 195, diver.json 42 to 128 the other way, docs/product/glossary.md has no \"Departure\" headword (its headword is \"Trip / charter\", line 836) while every route segment, all 21 trip_* tables and 23 trip*/trips-* modules say trip.",
+  "measurements": [
+    {
+      "what": "Tables / enums in src/db/schema.ts",
+      "value": "121 / 83"
+    },
+    {
+      "what": "Tables by object prefix",
+      "value": "trip_* 21, shop_* 9, booking_* 8, dive_* 6, waiver_* 4, account_* 4, notification_* 4, integration_* 4, staff_* 3, person_* 3, gear_* 3; 31 unprefixed singletons (people, trips, bookings, shops, boats, courses, orders, certifications, ...)"
+    },
+    {
+      "what": "Append-only *_events tables",
+      "value": "15"
+    },
+    {
+      "what": "URL shapes (page.tsx + route.ts) carrying one departure's id",
+      "value": "16 — 12 pages (7 under shop/trips/[id] incl. guests, s/trips/[id], s/boats/[tripId], schedule/blowout/[tripId], check-in/walk-in/[tripId], bookings/new/[tripId]) + 4 route.ts (s/trips/[id]/{ready,calendar,arrival-card}, api/trips/[id]/manifest-events)"
+    },
+    {
+      "what": "Bearer-token route families by object",
+      "value": "14: seat 5 (/ready /waivers /recap /claim /gift), person 1 (/shelf), shop devices 2 (/board /check-in), shop 1 (/confirm-contact), account 5 (/verify /reset-password /invite /calendar /unsubscribe)"
+    },
+    {
+      "what": "Non-test files reading the seat's raw stage words",
+      "value": "checked_in 27, \"boarded\" 26, not_boarded 23, hasSailed 28, hasReturned 14, isAfterTheDive 4"
+    },
+    {
+      "what": "Enums carrying a seat's position",
+      "value": "booking_status 4 values (booked, checked_in, cancelled, no_show), arrival_status 2, roll_call_status 3, trip_stage 5"
+    },
+    {
+      "what": "Readers of the day's departures",
+      "value": "src/db/today.ts 2,315 lines; src/db/closeout.ts 975; src/db/check-in.ts 1,129; src/db/departures-board.ts 295; src/lib/week-board.ts 136; src/lib/staffing-week.ts 598; print/dock-sign via src/db/boats"
+    },
+    {
+      "what": "Modules named day/today/week/closeout across src/lib + src/db",
+      "value": "11 (closeout.ts x2, today.ts x2, weekday-pattern.ts x2, first-day.ts, day-profile.ts, trip-days.ts, staffing-week.ts, week-board.ts)"
+    },
+    {
+      "what": "Date address on the home / the board",
+      "value": "none (9 flash searchParams) / ?week="
+    },
+    {
+      "what": "Certification tables; non-test files touching each; export/import touch points; CSVs",
+      "value": "3; 63 / 23 / 22; export.ts 25/10/9, import.ts 8/9/8; 3 CSVs"
+    },
+    {
+      "what": "The noun: departure vs trip",
+      "value": "en-US staff bundle 194 vs 195; diver.json 42 vs 128; glossary mentions 145 vs 134 with headword \"Trip / charter\" (line 836) and no \"Departure\" headword; route segments 0 vs 1; db trips-*.ts 12 + lib trip*.ts 11"
+    },
+    {
+      "what": "trips/[id]/guests route",
+      "value": "510 lines, renders TripGuestsBody, no redirect() call, linked from 7 non-test files, 2 e2e specs; called a compatibility redirect by ADR 20260827-the-departure-is-two-working-surfaces, docs/design/surfaces.md and docs/product/shipped.md:353"
+    },
+    {
+      "what": "Two staff-only departure trails",
+      "value": "activity_events (7 recordTripActivity sites, RETENTION_DAYS 1095) vs trip_desk_events (9 recordDeskEvent sites, RETENTION_DAYS 30); both id, shop_id, trip_id, booking_id, actor_person_id, subject_person_id"
+    },
+    {
+      "what": "Seed scenario modules / ADRs / staff message namespaces",
+      "value": "74 src/db/seed-*.ts / 313 / 40"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "The diver's thread is one link before, during and after: /recap/[token]/page.tsx (278 lines) renders AfterState imported from /ready/[token]/_components rather than a page of its own",
+      "where": "src/app/recap/[token]/page.tsx; ADR 20260827-the-divers-thread decision 4; ADR 20260820-one-page-after-booking"
+    },
+    {
+      "what": "The departure is two working surfaces and a disclosure — Overview folded into Trip, three tabs, the manifest an instrument",
+      "where": "ADR 20260827-the-departure-is-two-working-surfaces; src/app/shop/[shopSlug]/trips/[id]/_components/TripSubNav.tsx; docs/design/surfaces.md"
+    },
+    {
+      "what": "Close-out is a state of the home, not a destination; /close-out is a 308 and the registry refuses a second row on Today's URL",
+      "where": "H-62; src/app/shop/[shopSlug]/close-out/route.ts; src/lib/staff-destinations.ts lines 219-234"
+    },
+    {
+      "what": "One people spine for staff and divers, no second customer entity",
+      "where": "ADR 20260719-diver-person-spine; people + person_roles in src/db/schema.ts:548"
+    },
+    {
+      "what": "Every staff destination in one registry with three consumers; every public path in one module with the 308 table beside it",
+      "where": "src/lib/staff-destinations.ts; src/lib/public-routes.ts (LEGACY_PUBLIC_SHOP_REDIRECTS)"
+    },
+    {
+      "what": "The readiness surfaces share one time-window model instead of three page-side horizons — the precedent the day idea extends to the non-readiness readers",
+      "where": "src/lib/operational-window.ts"
+    },
+    {
+      "what": "A course session is a departure row and there is one place a departure is created",
+      "where": "trips.course_id (src/db/schema.ts:2076); ADR 20260806-one-trip-create-form"
+    },
+    {
+      "what": "Today and the close-out share one detector by rule",
+      "where": ".claude/rules/domain.md (\"no second detector\"); ADR 20260804-day-closeout"
+    },
+    {
+      "what": "The diver record answers one question with one primary, pinned by tests",
+      "where": "ADR 20260827-people-not-lists; divers/[personId]/_lib/record-primaries.test.ts"
+    },
+    {
+      "what": "Arrival and boarding are deliberately separate writes — the desk cannot say aboard, the offline worker compiles the arrival vocabulary alone",
+      "where": "src/lib/arrival.ts; ADR 20260907-the-counter-survives-offline"
+    },
+    {
+      "what": "The pre-dive half of the seat's journey is already one ordered spine (sign, certification, pay, gear, day-of) with one countable figure",
+      "where": "src/lib/thread-steps.ts THREAD_STEP_ORDER"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L27-1",
+      "title": "The seat is one ladder, read once, written where it is",
+      "kind": "concept",
+      "reading": "A seat's position — booked, cleared, here, aboard, back, home — is the fact every surface after booking is about, and no module answers it: 27 non-test files read checked_in, 26 read \"boarded\", 23 not_boarded, 28 call hasSailed, 14 hasReturned and 4 isAfterTheDive, each recomposing the answer from booking_status (4 values), arrival_status (2), roll_call_status (3) and trip_stage (5). src/lib/thread-steps.ts already orders the pre-dive half as a spine and src/lib/roster-rows.ts and TripRosterContent group the same half for staff, but from arrival onward the counter (src/db/check-in.ts), the manifest (roll_call_events), the close-out (src/lib/closeout.ts), the recap send and the shelf each read the raw enums. The schema comment at src/db/schema.ts:8339 says bookings.status stays \"the projection every existing reader looks at\" while booking_arrival_events is the history beneath it, so one rung lives in two places by design. Open issues #1694 (four readers of \"did this person dive\"), #1838 (a reclaimed seat forgets the diver had checked in), #1836 (a status word after the dive erases the dive day), #1814 (a crew no-show raises no gap) and #1702 (may the counter mark a blocked diver not here) are all questions about rung order that nothing owns. The roadmap's \"Check-in = boarding's first rung\" row (docs/product/features/roadmap.md:613) names two rungs of this ladder and is still open per H-62.",
+      "idea": "One framework-free, dependency-free module, src/lib/seat-ladder.ts (compiled into the offline worker like arrival.ts and roll-call.ts), defines the rungs in order and one function composes bookings.status, booking_arrival_events, roll_call_events, trip_stage_events, hasReturned and day_closeouts into the seat's current rung and the evidence for it. Every reader after booking — thread-steps' after-state, the roster's groups, the counter's count, the manifest's count, the close-out's leftovers, the recap cron, the shelf's \"last aboard\", reports' dived figures — asks the ladder and never an enum, and a check:repo guard refuses a new read of the raw stage words outside the module. Writes do not move: the desk still writes arrival, the rail still writes aboard, the crew still writes the stage, the evening still writes the close — the ladder unifies the read, which is what the counter-survives-offline ADR left open. bookings.status loses checked_in (the rung is read from the arrival log, as the schema comment already says it is) and keeps booked, cancelled and no_show as the seat's lifecycle rather than its position. The grammar afterwards: a seat has a lifecycle (three words) and a rung (six words), and a surface is a reading of one rung.",
+      "dissolves": "The four \"did this person dive\" readers, the recomposition of the seat's position in some sixty files, and the open Check-in-fold data question, which becomes two rungs of one ladder rather than a merge to decide.",
+      "scope": "src/lib/seat-ladder.ts (new) + test; src/lib/thread-steps.ts, roster-rows.ts, closeout.ts, today.ts; src/db/today.ts, check-in.ts, closeout.ts, recap.ts, shelf.ts, reports readers; bookings.status enum + one migration; src/app/api/cron/recaps; manifest, counter, roster and close-out components; e2e check-in, manifest, closeout and recap specs; glossary (\"Seat ladder\"); an ADR; scripts/check-repo guard.",
+      "firstSlice": "Land src/lib/seat-ladder.ts with the rung function and its tests, and move isAfterTheDive and the recap cron onto it — closing #1694 with no schema change.",
+      "effort": "L",
+      "reviews": [
+        "domain",
+        "security",
+        "ADR"
+      ],
+      "conflicts": "Subsumes the roadmap row \"Check-in = boarding's first rung\" and the open second half of H-62 (the Check-in fold's data question); answers #1694, #1838, #1836, #1814 and #1702 as one rung-order decision; honours ADR 20260907-the-counter-survives-offline (arrival still cannot write aboard — only the read is unified) and ADR 20260804-crew-roll-call-is-per-person; keeps ADR 20260827-the-divers-thread's amendment that nothing but recorded evidence opens the after-state — the ladder is that evidence.",
+      "confidence": "high"
+    },
+    {
+      "id": "L27-2",
+      "title": "The day is a record with an address; today is one instance",
+      "kind": "concept",
+      "reading": "The product's stated one idea is the dive day (docs/product/vision.md, the product page's \"whole dive day\" in docs/design/surfaces.md), and the day is already a first-class key in the schema — day_closeouts.shop_day is a text calendar date that the comment at src/db/schema.ts:9117 says is deliberately not derivable from closed_at — yet it has no address: src/app/shop/[shopSlug]/page.tsx takes nine flash params and no date, and the board takes ?week=. Six surfaces read the day's departures through six readers: src/db/today.ts (2,315 lines), src/db/closeout.ts (975), src/db/check-in.ts (1,129), src/db/departures-board.ts (295, its own join over eight tables), src/lib/week-board.ts (136) with src/lib/staffing-week.ts (598), and print/dock-sign through src/db/boats. src/lib/operational-window.ts records that the readiness surfaces once sliced the same evidence \"on three unrelated, page-side horizons\" and were unified — and the lobby board and dock sign, built after it, did not use it. A past day is unreadable: the only reader of a close-out is the home's getDayCloseout for today (page.tsx:408) and the log is per departure (trips/[id]/log), so \"how did Saturday go\" has no page. Eleven modules across src/lib and src/db carry day, today, week or closeout in their names, and \"day\" means the shop's calendar day in closeout.ts, a multi-day departure in trip-days.ts and a dive day's shape in day-profile.ts.",
+      "idea": "One reader, src/db/day.ts with src/lib/day.ts, answers \"the day\": its departures in clock order, each carrying its seats' rungs (L27-1), crew, stage word and stage time, plus the day's close state and leftovers; and one address, /shop/[shopSlug]/day/[date]. The home renders day(today) as the spine it already is; the board is seven days of the same reader; /board/[token] is one day on a screen; print/dock-sign is one day on paper; the counter is today's arrivals; staffing's day cell is the day's crew column; the close-out is the day's evening; yesterday is a reading, not a mystery. Today keeps ADR 20260720-today-work-queue's ranking — a work queue, not a dashboard — and other days render the same spine settled. departures-board.ts's own join, the counter's own window, tomorrow's special-case disclosure and the three meanings of \"day\" go. This holds under any H-77 pick, and gives concept 2 (\"the week\") the object it would be seven of.",
+      "dissolves": "src/db/departures-board.ts as a second reader, the tomorrow disclosure as a special case, a past day being unreadable, and \"day\" meaning three things across module names.",
+      "scope": "src/lib/day.ts and src/db/day.ts (new); src/db/today.ts, closeout.ts, check-in.ts, departures-board.ts; src/lib/week-board.ts, staffing-week.ts, operational-window.ts; src/app/shop/[shopSlug]/page.tsx, schedule/board, check-in, staffing, print/dock-sign, src/app/board/[token]; one new route with loading.tsx (no new tab — reached from the board's column and the home's tomorrow line); shopHome and schedule bundles (en-US, es-ES); visual captures for the home, board and lobby; glossary (\"Day\"); an ADR.",
+      "firstSlice": "One reader dayDepartures(shop, date) in src/db/day.ts that src/db/today.ts, departures-board.ts and the dock sign all call, with a test that the three agree on the seeded morning — no route yet.",
+      "effort": "L",
+      "reviews": [
+        "domain",
+        "design",
+        "ADR"
+      ],
+      "conflicts": "H-77 concept 2 \"The week\" is the nav-level cousin (this is the object beneath it and serves any of the six picks); ADR 20260720-today-work-queue stands (today stays the queue); ADR 20260804-day-closeout stands (closing stays a record, never a gate); H-62 stands; #1776 (a crew clash said on Today) and #1780 (one boat on two overlapping departures) are day-level facts this reader would own.",
+      "confidence": "medium"
+    },
+    {
+      "id": "L27-3",
+      "title": "A certification is one record with a kind, not three tables",
+      "kind": "shape",
+      "reading": "A diver's card lives in three tables — certifications (src/db/schema.ts:6607), specialty_certifications (6868) and nitrox_certifications (7919) — touched by 63, 23 and 22 non-test files, exported as three CSVs, mapped three ways in src/db/export.ts (25/10/9 touch points) and src/db/import.ts (8/9/8), listed three times in src/db/diver-merge.ts (lines 65, 66, 81), and served by their own src/db/nitrox.ts and seed-nitrox.ts. The recorded reason (schema.ts:6861 and 7912) is that the level enum feeds readiness.ts's rank map while a specialty is a yes/no gate — a distinction between two columns, not between three tables — and nitrox is itself a specialty card (glossary \"Nitrox / EANx\", line 1974) given a third table because a booking's nitrox request reads it. The UI already treats them as one: ADR 20260827-people-not-lists decision 1 made \"all three kinds as one group of card rows, one add flow\" (CertificationsGroup.tsx), and src/lib/certification-cards.ts speaks of \"Import provenance shared by level, specialty, and nitrox cards\". No ADR, shipped.md entry, roadmap row or open issue proposes the fold, and H-49 makes the migration a drop.",
+      "idea": "One certifications table with kind (level | specialty), a nullable level, a specialty enum that gains nitrox, and a check that level is present exactly when kind is level; readiness.ts keeps rank for level rows and yes/no for specialty rows, so the recorded distinction survives as a column rule. One capture-then-verify writer, one CSV, one import mapping, one merge entry, one erasure column list, one seed. The grammar afterwards: a person has cards; a card has a kind; a requirement asks a card a question its kind can answer.",
+      "dissolves": "specialty_certifications, nitrox_certifications, src/db/nitrox.ts, seed-nitrox.ts, two CSVs, and every three-way branch in export, import, merge and erasure.",
+      "scope": "src/db/schema.ts + one migration; src/db/certification-evidence.ts, nitrox.ts, export.ts, import.ts, diver-merge.ts, anonymize.ts, seed-nitrox.ts; src/lib/readiness.ts, trip-admission.ts, certification-cards.ts; divers/[personId]/_components/CertificationsGroup.tsx; the booking's nitrox-request reader; divers and bookings bundles (en-US, es-ES); e2e certification and import specs; glossary; ADRs 20260725-import-specialty-cards and 20260827-shop-issued-specialty-cards-are-attested amended.",
+      "firstSlice": "Fold nitrox_certifications into specialty_certifications as specialty = nitrox — the smaller move, since the nitrox request reads a yes/no card — updating export, import and merge so the CSV count drops to two.",
+      "effort": "M",
+      "reviews": [
+        "domain",
+        "security",
+        "ADR"
+      ],
+      "conflicts": "Names and narrows the schema comments at src/db/schema.ts:6861 and 7912 (the reason holds for columns, not tables); amends ADRs 20260718-specialty-site-cert-requirements, 20260725-import-specialty-cards and 20260827-shop-issued-specialty-cards-are-attested without reversing them; #1850, #1852 and #1853 concern staff_credentials, a different register, and are untouched.",
+      "confidence": "high"
+    },
+    {
+      "id": "L27-4",
+      "title": "One noun for the departure, decided once, all the way down",
+      "kind": "concept",
+      "reading": "The central object has two names and the split is even: the en-US staff bundle says \"departure\" 194 times and \"trip\" 195; diver.json says trip 128 times and departure 42; docs/product/glossary.md mentions departure 145 times and trip 134 but its headword is \"Trip / charter\" (line 836) with no \"Departure\" entry. Below the copy every layer says trip: the route segment (src/app/shop/[shopSlug]/trips, src/app/s/[shopSlug]/trips), all 21 trip_* tables, 12 src/db/trips-*.ts modules behind a trips.ts barrel, 11 src/lib/trip*.ts modules, the trips and tripSeries staff namespaces — while the ADR that designed the surface is titled 20260827-the-departure-is-two-working-surfaces and the one module that says departure is src/db/departures-board.ts. The roadmap row \"Departure as the one noun\" (docs/product/features/roadmap.md:617, 2026-08-08) is known and open, and its stated bound — \"copy-level only, no schema rename\" — was written a week before H-49 (2026-08-15) made a pre-pilot rename free of data cost. src/lib/public-routes.ts already carries LEGACY_PUBLIC_SHOP_REDIRECTS, the 308 table for exactly this kind of move.",
+      "idea": "The owner picks the word — the row's open call — and the pick lands first in the two layers a human reads (a glossary headword naming the code word beside it, and the 128 diver strings), then, on H-49, in the tree in one mechanical slice per layer: the route segments with 308s in LEGACY_PUBLIC_SHOP_REDIRECTS, the table names, the module names, the two bundle namespaces. A check:repo guard refuses the other word for the noun in either locale. The grammar afterwards: one word per object, the same in the URL, the schema, the glossary and on screen, so no reader translates.",
+      "dissolves": "The trip-to-departure translation every reader and every agent performs, the \"Trip / charter\" headword, and the two-word glossary.",
+      "scope": "docs/product/glossary.md; src/i18n/locales/{en-US,es-ES}/diver.json and staff/*.json; src/lib/public-routes.ts; src/app/shop/[shopSlug]/trips/** and src/app/s/[shopSlug]/trips/** (renamed, with 308s); 21 tables + one migration; src/db/trips-*.ts and src/lib/trip*.ts; e2e specs naming the path; docs/design/surfaces.md and docs/README.md route map entries; an ADR amending the roadmap row.",
+      "firstSlice": "Add the \"Departure\" headword to the glossary naming trips as its code word, and sweep diver.json's 128 \"trip\" strings in both locales — the row as written; the rename below is a second slice on the owner's yes.",
+      "effort": "L",
+      "reviews": [
+        "design",
+        "ADR"
+      ],
+      "conflicts": "Is the roadmap row \"Departure as the one noun\" taken below copy on the strength of H-49, which removed the row's stated cost reason; H-49 itself (the rename is exactly the pre-pilot freedom it grants); ADRs titled with departure (20260827-the-departure-is-two-working-surfaces) whose code says trip; the brief's cost note on renames (bundles, e2e, glossary) applies in full.",
+      "confidence": "medium"
+    }
+  ]
+}

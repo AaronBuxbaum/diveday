@@ -1,0 +1,188 @@
+{
+  "lensId": "L06",
+  "lens": "Money",
+  "reading": "The money model is 18 tables and 13 enums (57 members) in src/db/schema.ts, served by 12 src/db modules (6,635 lines), src/lib/payments/ plus six lib helpers (4,490 lines), 32 test files (14,096 lines) and at least 24 ADRs. Stripe is reached through two mechanisms — Checkout Sessions (booking_checkouts, tips) and Invoices (orders) — and each keeps its own status enum, its own settle/dead/refresh functions (3 + 4 + 3 across src/db/checkouts.ts, orders.ts, tips.ts, plus 2 record-customer writers) and its own erasure walk (src/db/processor-erasure.ts:5-6 names three tables). A booking's money fact is a mutable booking_payments row with a six-word status, shadowed by an append-only booking_payment_events trail written in the same transaction and lock (src/db/payments.ts:113-120) that no page reads (0 callers of listBookingPaymentEvents in src/app). The amounts are then re-stored per mechanism: booking_checkout_bookings' four cents columns (schema 5050-5056), booking_checkouts.settled_total_cents (4957), orders.amount_paid_cents/refunded_cents (4725-4741, read by 12 files), shop_promo_redemptions.amount_charged_cents \"copied verbatim\" (3683-3691), tips.amount_cents (5114). Every reader re-assembles them: src/db/reporting.ts (971 lines) makes 10 from() reads over six tables and matches tax and pass-through to the payment row \"by Stripe session\" (294-296, 324-326), src/db/export.ts writes 13 money CSVs and folds booking_payments into bookings.csv, and src/app/ready/[token]/page.tsx calls getBookingPayment four times plus getLatestCheckoutForBooking. Accounting integrations know only order.created|paid|refunded (src/features/integrations/registry.ts:3), emitted solely from src/db/orders.ts:343,1101,1111 — a diver who pays at booking or tips writes no QuickBooks/Xero row. Deposit is spelled six ways (depositCents 51, deposit_paid 48, isDeposit 37, the \"deposit\" line kind 10, is_deposit 2, deposit_cents 2) and its balance has no diver path (\"collected later (staff order or a full checkout)\", src/db/checkouts.ts:1038). The deal side repeats the pattern: two promo tables carrying pending/failed intent statuses (schema 3519-3523, 3603-3608), a code's state spelled three ways in src/lib/promo-codes.ts:63-124, and two derived tables re-storing a join and a send log the notification kind already dedupes (src/lib/notifications/kinds.ts:1065). What is done well is the discipline around this: one write funnel under a per-booking lock, write-ahead intents with deterministic idempotency keys (src/db/payment-operations.ts:110), Stripe as the arithmetic authority (schema 4737-4740), packages as entitlements (ADR 20260822), minor units with the currency's own exponent (src/lib/money.ts). A ledger-shaped model — one entry table with source and component, one Stripe-attempt table with purpose, one deal row — deletes six tables and five enums, retires the three parallel lifecycles, and makes reports, export and integrations one group-by over the same rows.",
+  "measurements": [
+    {
+      "what": "Money tables in src/db/schema.ts",
+      "value": "18 (trip_last_minute_promos, trip_last_minute_promo_recipients, shop_promo_codes, shop_promo_redemptions, dive_packages, dive_package_entitlements, booking_payments, booking_payment_events, shop_stripe_accounts, orders, order_line_items, stripe_webhook_events, booking_checkouts, booking_checkout_bookings, tips, payment_operation_intents, imported_payment_history, booking_gifts)"
+    },
+    {
+      "what": "Money enums / members",
+      "value": "13 / 57 (payment_status 6, payment_event_operation 8, order_status 6, order_line_item_kind 10, checkout_status 3, tip_status 3, payment_operation_kind 3, payment_operation_status 3, imported_payment_direction 3, shop_promo_status 4, trip_last_minute_promo_status 3, shop_promo_scope 3, dive_package_scope 2)"
+    },
+    {
+      "what": "src/db money modules",
+      "value": "12 files, 6,635 lines (orders.ts 1,548; checkouts.ts 1,204; refunds.ts 673)"
+    },
+    {
+      "what": "src/lib/payments + money/deposits/pass-through-fee/promo-codes/dive-packages/payment-source",
+      "value": "4,490 lines"
+    },
+    {
+      "what": "Money unit tests",
+      "value": "32 files, 14,096 lines; 4 e2e specs (1,102 lines)"
+    },
+    {
+      "what": "Money ADRs in docs/architecture/decisions/",
+      "value": "24 by filename"
+    },
+    {
+      "what": "Parallel Stripe-lifecycle functions across checkouts.ts / orders.ts / tips.ts",
+      "value": "12 (3 mark-paid, 4 mark-dead, 3 refresh-from-Stripe, 2 record-customer)"
+    },
+    {
+      "what": "Stripe webhook branches, src/app/api/webhooks/stripe/route.ts",
+      "value": "8 in 496 lines; the 2 paid branches try checkouts then fall back to tips"
+    },
+    {
+      "what": "Integration event types / emit sites",
+      "value": "3 (all order.*) / 3 (all in src/db/orders.ts); 0 in checkouts.ts or tips.ts"
+    },
+    {
+      "what": "from() reads in src/db/reporting.ts over money tables",
+      "value": "10 reads over 6 tables (bookingPayments, bookingCheckouts, bookingCheckoutBookings, orders, importedPaymentHistory, tips)"
+    },
+    {
+      "what": "Money CSVs in src/db/export.ts",
+      "value": "13 of 101, plus booking_payments folded into bookings.csv"
+    },
+    {
+      "what": "Non-test files reading booking_payments.status / orders.status / orders.amountPaidCents|refundedCents",
+      "value": "22 / 12 / 12"
+    },
+    {
+      "what": "Readers of listBookingPaymentEvents in src/app",
+      "value": "0"
+    },
+    {
+      "what": "Spellings of deposit in src (non-test)",
+      "value": "6: depositCents 51, deposit_paid 48, isDeposit 37, \"deposit\" line kind 10, is_deposit 2, deposit_cents 2"
+    },
+    {
+      "what": "Staff money bundle keys (en-US)",
+      "value": "orders.json 163, promos.json 86, orderLine.json 2"
+    },
+    {
+      "what": "Per-booking money reader calls on src/app/ready/[token]/page.tsx",
+      "value": "5 (getBookingPayment x4, getLatestCheckoutForBooking x1)"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "One write funnel for a booking's money, under a per-booking lock, with the append-only trail written in the same transaction",
+      "where": "src/db/payments.ts:22-40, 113-120; ADR 20260803-booking-payment-events"
+    },
+    {
+      "what": "Write-ahead intents committed before every Stripe call, with the intent id as the deterministic idempotency key and a stuck-operation queue over them",
+      "where": "src/db/payment-operations.ts:31-141; schema 5356-5424; ADR 20260723-payment-operation-intents"
+    },
+    {
+      "what": "Stripe is the arithmetic authority: settled_total_cents copied from amount_total, refunded_cents incremented by what Stripe reports, never what was asked",
+      "where": "schema 4737-4740, 4947-4957; ADR 20260806-stale-quote-and-refund-lock"
+    },
+    {
+      "what": "A package is entitlements consumed through the same payment gate, never a balance; a cancellation undoes a link",
+      "where": "src/db/bookings.ts:561-597; schema 3756-3826; ADR 20260822-a-package-is-entitlements-not-money"
+    },
+    {
+      "what": "Every amount is minor units with the currency's own exponent read from Intl, no literal 100; SHOP_CURRENCIES curated to Stripe-settleable codes",
+      "where": "src/lib/money.ts; ADR 20260731-shop-currency, 20260821-currency-is-what-catches-people"
+    },
+    {
+      "what": "One exported set of captured statuses after #699, so a new returnable state lands in one place",
+      "where": "src/lib/payment-source.ts:19-35"
+    },
+    {
+      "what": "A gift holds no balance and no claimed_at; the giver is a name on the pass and the pass goes out only when the money settles",
+      "where": "schema 9520-9565; src/app/api/webhooks/stripe/route.ts:290-298"
+    },
+    {
+      "what": "Shop-caused cancellations refund by themselves with their own trail operation, bypassing the diver's window",
+      "where": "src/db/refunds.ts:391, 646; ADR 20260813-shop-cancellation-refunds-itself"
+    },
+    {
+      "what": "Imported money is labelled evidence with conservative parsing, never a live order or readiness fact",
+      "where": "schema 7115-7174; ADR 20260816-imported-payment-history-is-evidence"
+    },
+    {
+      "what": "The Orders index is a day ledger whose subtotal shares the rows' exact scope; back-office money queues sit on it and render nothing when empty",
+      "where": "docs/product/shipped.md:525-548; docs/design/surfaces.md:218-229; src/app/shop/[shopSlug]/orders/page.tsx:207-210"
+    },
+    {
+      "what": "Tax is Stripe-owned, opt-in, snapshotted per session and per invoice",
+      "where": "schema 4943-4946, 4723; ADR 20260826-stripe-tax-is-opt-in-and-provider-owned"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L06-1",
+      "title": "A booking's money is entries; booking_payments is their fold",
+      "kind": "system",
+      "reading": "booking_payments is \"one current payment row per booking\" (src/db/schema.ts:3851) with a six-word payment_status, and booking_payment_events restates the same state append-only inside the same transaction and lock (src/db/payments.ts:113-120) — a trail src/app never reads (0 callers of listBookingPaymentEvents). ADR 20260803 kept the mutable row because \"the current row is read on hot paths\" (line 70) and called the trail \"not a replacement\" (line 107), yet the trail's own index (shop_id, booking_id, occurred_at) (line 57) already serves a newest-row read. The same money is re-stored per mechanism: booking_checkout_bookings.trip/gear/pass_through/tax_cents (schema 5050-5056), booking_checkouts.settled_total_cents/tax_cents (4946-4957), orders.amount_paid_cents/refunded_cents/tax_cents/pass_through_cents (4722-4741, read by 12 files), shop_promo_redemptions.amount_charged_cents \"copied verbatim\" (3683-3691), tips.amount_cents (5114). Every reader re-assembles them: src/db/reporting.ts (971 lines) makes 10 from() reads over six tables and matches tax and pass-through to the payment row \"by Stripe session\" (294-296, 324-326); src/db/export.ts writes 13 money CSVs and folds booking_payments into bookings.csv (525-537); src/app/ready/[token]/page.tsx calls getBookingPayment four times plus getLatestCheckoutForBooking; src/db/divers.ts:725-726 joins listOrdersForPerson with listPersonBookingPayments. Accounting integrations see only order.created | order.paid | order.refunded (src/features/integrations/registry.ts:3), emitted from src/db/orders.ts:343,1101,1111 and nowhere in checkouts.ts or tips.ts (0 matches), so a diver who pays at booking or tips writes no QuickBooks/Xero row — against ADR 20260815's own aim that \"a receiving accounting system sees … exactly as it happened\". provider is free text mapped to a four-code PaymentSourceCode by paymentSourceLine (src/lib/payment-source.ts:37-68), while imported money carries its own imported_payment_direction enum in a seventh table (schema 7109-7174). Issue #699 — four hand-written predicates forgetting partly_refunded (payment-source.ts:19-26) — is the cost of storing arithmetic facts as enum words.",
+      "idea": "booking_payment_events becomes money_entries, the one table of money facts: {shop, person, booking?, order?, attempt?, component, direction: in|out, source: stripe|counter|package|waived|import, amount, currency, ref, operation, occurred_at}, where component is the existing order_line_item_kind (10 kinds) plus tax and tip — no new vocabulary. A booking's payment state is a fold over its entries: no in → unpaid; a waived entry → waived; held = Σin − Σout; held ≥ quoted → paid; 0 < held < quoted → deposit_paid (no out) or partly_refunded (an out); held = 0 after an in → refunded — PAYMENT_CLEARED and capturedPaymentStatuses read the fold, not a column. booking_payments is dropped (a DISTINCT ON view over the existing index serves the 13 PAYMENT_CLEARED readers); the money columns on booking_checkout_bookings, booking_checkouts, orders, shop_promo_redemptions and tips go; imported_payment_history becomes entries with source = import, which the fold and readiness ignore by construction. Stripe stays the arithmetic authority: an entry is written only from Stripe's reported amount_total or refund amount, a staff counter mark, or a package consumption, through the one funnel that writes the trail today. The monthly report becomes one group by component, source over a month's entries (revenue, tax, pass-through, tips and unverified import are rows of that result), export writes one money_entries.csv in place of five, and the entry writer is where integration_events are enqueued — so checkout and tip money reach the books exactly as orders do. The roadmap's \"One Bill per booking\" surface then reads one list per booking instead of five readers.",
+      "dissolves": "The booking_payments table and the stored payment_status enum, six re-stored amount columns across five tables, imported_payment_history as a table and its direction enum, the free-text provider column, and five of the export's money CSVs.",
+      "scope": "src/db/schema.ts (booking_payments, booking_payment_events → money_entries, booking_checkout_bookings, booking_checkouts, orders, shop_promo_redemptions, tips, imported_payment_history); src/db/payments.ts, checkouts.ts, orders.ts, refunds.ts (listOwedShopCancellationRefunds), bookings.ts (package consume/release), reporting.ts, export.ts, today.ts, divers.ts, ready.ts, integration-events.ts, import (payment-history importer); src/lib/payment-source.ts, readiness.ts (PAYMENT_CLEARED), reporting.ts, retention.ts (RETENTION_DAYS.booking_payment_events); src/app/ready/[token]/page.tsx, shop/[shopSlug]/orders/**, reports/**, trips/[id]/**; staff/orders.json (163 keys) en-US + es-ES; e2e refunds.spec.ts, orders-demo.spec.ts; ADRs 20260803-booking-payment-events (amend), 20260816, 20260815; glossary \"Payment event\", \"Order\", \"Imported payment history\".",
+      "firstSlice": "Drop booking_payments: getBookingPayment, paymentsByBooking and listPersonBookingPayments (src/db/payments.ts) read the newest booking_payment_events row (it already restates status, amount, currency, provider, ref) through its existing index, setBookingPayment appends only, and ADR 20260803's \"not a replacement\" paragraph is amended — no surface, bundle or e2e change.",
+      "effort": "L",
+      "reviews": [
+        "domain",
+        "security",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260803-booking-payment-events chose \"a trail beside, not a replacement\" for hot-path reads — the trail's own index answers that, and its own escape hatch says dropping is one migration; ADR 20260816-imported-payment-history-is-evidence's rule (never a live order, never readiness) is kept by source = import sitting outside the fold — only the storage changes; ADR 20260815-pos-order-emission-completeness is widened from orders to every entry, which is its stated aim; ADR 20260822-a-package-is-entitlements-not-money is unchanged — consumption still writes through the one funnel as a source = package entry; ADR 20260813-shop-cancellation-refunds-itself's listOwedShopCancellationRefunds becomes a fold predicate (held > 0 on a cancelled trip); roadmap \"One Bill per booking\" — this is its storage half, the surface follows; HD-14's \"invest in the local trail\" option is completed and H-07 policy is untouched; N-18 (cash and tip reconciliation) reads source = counter entries; N-19 (pay your own share) is already per-booking entries; #1697 (fare already collected when a package holder is confirmed) becomes an entry question.",
+      "confidence": "high"
+    },
+    {
+      "id": "L06-2",
+      "title": "Three Stripe lifecycles are one attempt table",
+      "kind": "shape",
+      "reading": "booking_checkouts (src/db/schema.ts:4838-5027), tips (5088-5124) and orders (4704-4773) each carry a Stripe object id, a status enum, a hosted URL, a customer id and expiry/completion timestamps; tips' docblock says \"same shape (status/session/checkout URL lifecycle), separate concern\" (5079-5084) and its columns are a strict subset of booking_checkouts' plus booking_id. payment_operation_intents is a fourth \"one row per attempted Stripe side effect\" table (5370-5380) with kind: checkout_session | invoice | refund, a three-value status and exactly one of four FKs, of which checkout_id \"no caller sets this today\" (5402). The lifecycles are written three times: markCheckoutPaidBySessionId / markOrderPaidByInvoiceId / markTipPaidBySessionId (src/db/checkouts.ts:806, orders.ts:1140, tips.ts:359), four dead-marks (checkouts.ts:1107,1132; orders.ts:1169; tips.ts:391), three refreshes (checkouts.ts:1162, orders.ts:1513, tips.ts:420) and two record*StripeCustomer (checkouts.ts:769, tips.ts:326). src/app/api/webhooks/stripe/route.ts (496 lines, 8 branches) tries the checkout table and falls back to tips on both paid branches (278-303, 315-336), and checkout_status grew a shadow fourth state in async_payment_failed_at rather than a value (4967-4985). Erasure walks \"three tables [that] keep pointers at records that live at Stripe — orders, tips and booking_checkouts\" (src/db/processor-erasure.ts:5-6; anonymize.ts:504-544), and src/lib/payments/ keeps two provider seams for the two mechanisms (checkout.ts 341 lines, invoicing.ts 491 lines) with two refund calls (refundCheckoutSession, refundInvoice). Four enums carry the same lifecycle: checkout_status (3), tip_status (3), payment_operation_status (3) and the invoice half of order_status (6).",
+      "idea": "payment_operation_intents becomes the one stripe_attempts table: {kind: checkout_session | invoice | refund | promotion, purpose: fare | tip | order | deposit, status: started | open | settled | dead | failed, stripe_object_id, hosted_url, customer_id, email, asked_cents, settled_cents, currency, expires_at, resolved_at, booking?/trip?/order?} — written before the Stripe call exactly as intents are today, so the write-ahead and idempotency-key rules are kept, not re-invented. tips is deleted (a tip is an attempt with purpose = tip whose settlement writes a component = tip entry); booking_checkouts keeps only what is checkout-specific (deal snapshot, is_deposit, the party link as attempt_bookings); orders keeps line items and description and loses its five Stripe columns and its paid/refunded words. One markAttemptSettled(stripeObjectId, evidence), one markAttemptDead(reason) and one refreshAttemptFromStripe replace the twelve functions above; the webhook's paid branches dispatch on purpose, so ADR 20260726's rule that a tip \"must never cascade into the booking-paid logic\" becomes a column check tested once instead of a table boundary. Erasure walks one table, retention names one row, and listStuckPaymentOperations is status = started on the table it already reads. checkout_status, tip_status and payment_operation_status vanish; order_status shrinks to open | void | uncollectible, with paid and refunded read from L06-1's entries.",
+      "dissolves": "The tips table, the three parallel settle/dead/refresh function triplets and the two record-customer writers, two of four lifecycle enums, and the webhook's checkout-then-tip fallback.",
+      "scope": "src/db/schema.ts (payment_operation_intents → stripe_attempts, tips, booking_checkouts, orders); src/db/checkouts.ts (1,204 lines), tips.ts (452), orders.ts (1,548), payment-operations.ts, processor-erasure.ts, anonymize.ts, retention.ts, export.ts (tips.csv, booking_checkouts.csv); src/app/api/webhooks/stripe/route.ts; src/app/recap/[token] (tip flow); src/lib/payments/checkout.ts + invoicing.ts (one refund seam); staff/orders.json en-US + es-ES; e2e refunds.spec.ts and the tip visual capture; ADRs 20260723-payment-operation-intents, 20260726-post-trip-tipping, 20260803-async-payment-failed (supersede); glossary \"Tip\", \"Invoice\".",
+      "firstSlice": "Fold tips into booking_checkouts behind a purpose column (fare | tip): startTipCheckout becomes startBookingCheckout({purpose: \"tip\"}), the three tip lifecycle functions and the webhook's fallback are deleted, and markCheckoutPaidBySessionId settles the booking gate only when purpose = fare.",
+      "effort": "M",
+      "reviews": [
+        "security",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260726-post-trip-tipping separated tips so a tip webhook could never cascade into booking-paid — kept as a purpose check in the one settle function; ADR 20260723-payment-operation-intents becomes the attempt table with its \"written before the call\" and idempotency-key rules unchanged; ADR 20260803-async-payment-failed's shadow state becomes dead with a reason column, the thing that ADR avoided by not adding an enum value; ADR 20260719-stripe-connect-orders keeps Invoices as the staff mechanism — they become one kind of attempt; #1721 (erasure for non-payment providers) gets one money table to walk; N-15 (dispute evidence pack) and N-17 (rental damage hold) each hang off one attempt row rather than a fourth lifecycle.",
+      "confidence": "high"
+    },
+    {
+      "id": "L06-3",
+      "title": "A Deal is one row and its state is its window",
+      "kind": "concept",
+      "reading": "trip_last_minute_promos (src/db/schema.ts:3534-3562) and shop_promo_codes (3622-3659) both mint a Stripe Coupon + PromotionCode, both insert pending before the call and both carry failed (3519-3523, 3603-3608) — the write-ahead concern payment_operation_intents already owns, wearing product names. A shop code's state is spelled three ways: stored status (4 values), promoWindowState (live | not_started | expired) and promoLedgerGroup (live | scheduled | ended), and src/lib/promo-codes.ts:103-118 says the grouping is \"derived from the window and the cap, never from status\". shop_promo_redemptions.amount_charged_cents is \"copied verbatim from Stripe's own amount_total\" (3683-3691), i.e. booking_checkouts.settled_total_cents, and the redemption itself is booking_checkouts.promo_code_id (4897) — the table re-stores a join. trip_last_minute_promo_recipients (3568-3589) is a send log for a blast that already goes through the notification queue as kind last_minute_deal with dedupe key last-minute-deal/${code}/${to} (src/lib/notifications/kinds.ts:1065). booking_checkouts says \"this attempt had this deal\" in three columns — promo_code_id or trip_promo_id under a check constraint (5010-5018), promo_code, applied_discount_percent (4890-4936). The surface cost is 4 tables, 2 enums, src/db/shop-promos.ts (430 lines) + trip-promos.ts (441), promos.json (86 keys) and one route folder src/app/shop/[shopSlug]/promos.",
+      "idea": "One deals table: {shop, trip_id (null = shop-wide), covers: all | trips | courses, percent, code, starts_at, expires_at, max_redemptions, stripe_coupon_id, stripe_promotion_code_id, disabled_at, deleted_at}; the Stripe mint is a kind = promotion attempt (L06-2), so pending and failed leave the deal row. A deal's state is one derivation — promoLedgerGroup over window, cap and disabled_at — used by the shelf, the booking path and the row badge alike; both stored status enums go. shop_promo_redemptions is deleted: a redemption is a settled attempt carrying deal_id, and \"times redeemed\" is a count; trip_last_minute_promo_recipients is deleted: the notification row is the send log. The attempt carries deal_id and applied_percent in place of the checkout's three promo columns, and bookSpot resolves one table in the order it uses today (the trip's deal, then the shop's code). This is the storage half beneath the roadmap's \"One Deal\": that row merges two pages; this deletes two more tables, two enums and three columns by giving the intent, send-log and redemption concerns to the modules that already own them.",
+      "dissolves": "Two of the four promo tables, both promo status enums, and the three-column deal snapshot on booking_checkouts.",
+      "scope": "src/db/schema.ts (4 tables → 1); src/db/shop-promos.ts, trip-promos.ts, checkouts.ts (promo columns), bookings.ts (bookSpot resolution), export.ts (5 promo CSVs → 1); src/lib/promo-codes.ts, src/lib/payments/promotions.ts; src/app/shop/[shopSlug]/promos/**; staff/promos.json en-US + es-ES (86 keys); e2e promo-codes.spec.ts (408 lines) and the promoted-trip visual captures; ADRs 20260727-last-minute-fill-promos, 20260729-shop-promo-codes (supersede), 20260827-the-shops-shelves decision 1; glossary \"Last-minute deal\".",
+      "firstSlice": "Delete shop_promo_redemptions and trip_last_minute_promo_recipients: \"times redeemed\" counts completed booking_checkouts by promo_code_id / trip_promo_id, and the blast's recipients are read from the notification rows by kind and code — two tables and two export CSVs gone, no surface change.",
+      "effort": "M",
+      "reviews": [
+        "ADR",
+        "design"
+      ],
+      "conflicts": "roadmap \"One Deal, one Interest\" — the Deal half is an owner call per that row; this is the storage beneath it and its first slice stands even if the two pages stay; ADRs 20260727-last-minute-fill-promos and 20260729-shop-promo-codes keep \"Stripe owns enforcement\", and the latter's \"redemption history half of a real promotion model\" becomes a count over attempts; ADR 20260827-the-shops-shelves (decision 1): its one-derivation grouping becomes the only state; depends on L06-2 for the promotion attempt kind; the Interest half (wait list + last-minute list) is not this lens.",
+      "confidence": "high"
+    },
+    {
+      "id": "L06-4",
+      "title": "A deposit is arithmetic, not a state",
+      "kind": "concept",
+      "reading": "Deposit is spelled six ways in src (non-test): depositCents (51), deposit_paid (48), isDeposit (37), the \"deposit\" order line kind (10), is_deposit (2), deposit_cents (2). checkoutCharge (src/lib/deposits.ts:34-46) already computes balanceDueCents, and src/app/ready/[token]/page.tsx:237-284 re-derives the balance as fare minus settled to print it — but the cascade says the balance \"is collected later (staff order or a full checkout)\" (src/db/checkouts.ts:1038) and ADR 20260721-deposit-cancellation-policy says \"Balance collection is unchanged\", so no diver door exists. The report needs its own arm for \"every completed deposit checkout\" (src/db/reporting.ts:225-235) because the settled amount on the payment row is the deposit, not the fare. deposit_paid is 0 < held < quoted and partly_refunded is 0 < held < charged — two stored words for two inequalities, which is how #699 lost one of them (src/lib/payment-source.ts:19-26). The staff order form offers a deposit line kind (src/app/shop/[shopSlug]/orders/new/page.tsx:42), a fourth spelling that lets staff invoice a deposit through the invoice mechanism while a diver pays one through the checkout mechanism.",
+      "idea": "A deposit is an attempt for less than the quote; trips.deposit_cents stays as the shop's stated policy and every other spelling goes. Balance due is quoted − held from the L06-1 fold, printed where the ready page prints it today, and paid by a second attempt of the same kind — \"Pay the balance\" is startBookingCheckout for the difference, settling the same booking's entries. deposit_paid and is_deposit are deleted; readiness clears on held > 0 exactly as PAYMENT_CLEARED clears deposit_paid today; the deposit order line kind goes, since a staff invoice for part of a fare is an order for that amount against the booking. The report's deposit arm goes with it: fare entries sum, whatever the number of attempts. The percentage deposit H-07 deferred becomes a one-line policy read once a deposit is \"any attempt below the quote\".",
+      "dissolves": "Five of six deposit spellings, the report's deposit-checkout arm, and the staff-invoice-only path to a balance.",
+      "scope": "src/lib/deposits.ts, readiness.ts (PAYMENT_CLEARED), payment-source.ts; src/db/checkouts.ts (isDeposit), bookings.ts, reporting.ts (225-235), orders.ts + src/app/shop/[shopSlug]/orders/new (deposit line kind); src/app/ready/[token]/page.tsx (balance door), src/app/s/[shopSlug]/trips/[id] (deposit copy); diver.json + staff/orders.json en-US + es-ES; e2e refunds.spec.ts; ADR 20260721-deposit-cancellation-policy (amend); glossary \"Deposit\".",
+      "firstSlice": "Add the diver's \"Pay the balance\" door on /ready/[token]: startBookingCheckout minted for balanceDueCents with isDeposit = false, settling the booking to paid through the existing cascade — no schema change, and it is the one thing a deposit-taking shop cannot do today without a staff invoice.",
+      "effort": "M",
+      "reviews": [
+        "domain",
+        "ADR"
+      ],
+      "conflicts": "H-07 (still open on deposit values and percentage deposits): mechanism only, values untouched, and the deferred percentage deposit becomes trivial; ADR 20260721-deposit-cancellation-policy's \"balance collection is unchanged\" is superseded; ADR 20260721-checkout-at-booking's \"one open session per booking, reused\" extends to the balance attempt; depends on L06-1 for deleting deposit_paid, the door ships first; roadmap \"One Bill per booking\" lists \"quoted, deposit, paid, owed\" — owed becomes arithmetic.",
+      "confidence": "high"
+    }
+  ]
+}

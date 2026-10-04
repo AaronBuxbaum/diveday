@@ -1,0 +1,178 @@
+{
+  "lensId": "L15",
+  "lens": "Navigation grammar and depth",
+  "reading": "The staff app has 60 `page.tsx` under `src/app/shop/[shopSlug]` at depths 0/1/2/3/5 = 1/16/31/11/1, so 43 of 60 pages sit below the one level the registry knows about, while `docs/design/principles.md` §10 calls it \"a two-level app\" that needs no trail. `src/lib/staff-destinations.ts` registers 21 destinations (4 primary, 10 daily, 4 setup, 3 palette-only), and below them three more things decide where a page is: `settings/settings-groups.ts` (43 rail rows: 22 in-page anchors + 21 routes, 3 of them outside `/settings`), `trips/[id]/_components/TripSubNav.tsx` (3 faces plus a `/guests` compat case), and 32 hand-written `eyebrowHref` props. Three resolvers answer \"where am I\" — `currentStaffNavDestinationId` (staff-destinations.ts:521), `currentSettingsRailRowId` (settings-groups.ts:461) and `TripSubNav`'s `usePathname` — and 10 pages (`bookings/new` ×2, `calls`, `print/**` ×6, `schedule/blowout/[tripId]`) light no nav row at all. 22 of the 60 pages carry a parent the URL does not imply, under 8 distinct rules: two settings children that are also top-level rows (`settings/team`, `settings/calendar`), five departure faces whose eyebrow goes up to the Board past the trip (`TripPageHeader.tsx:116`), four acts on a departure filed under foreign roots (`bookings/new/[tripId]`→board, `check-in/walk-in/[tripId]`→check-in, `schedule/blowout/[tripId]`→the trip, `calls`→check-in), one referrer-derived parent (`divers/new/page.tsx:125-145`, four branches on `?surface=`), five paper sheets whose way back is a `Link` to `settings/print` (`print/_components/SheetDocument.tsx:58`), the day packet at `/print` whose eyebrow is the literal \"DiveDay\" (`print/page.tsx:140`), the settings hub with no eyebrow, and the board at depth 2 exempted as depth 1. The 17 settings sub-pages spell one parent href three ways (9 `/shop/${shopSlug}/settings`, 6 `session.user.shopSlug`, 2 `shopPath`) and its word through 7 different keys, part of 25 `eyebrow` keys across 15 staff bundles (#1870 asks to collapse 6 of them). The guard `src/app/shop/eyebrow-way-up.test.ts` (153 lines) is a syntactic marker scan with 6 reasoned exemptions whose own comment says the defect \"only reads as a defect in aggregate\". Print is three roots — `/print` (the day packet, door on the day spine), `/print/*` (5 sheets registered at `/settings/print`), `/trips/[id]/print` (a packet whose header goes up to the Board) — with 2 shells, `src/lib/print-sheets.ts` (390 lines), `shop_print_runs` (schema.ts:9416) and 80 keys in `print.json`. Six Route Handlers (`blockers`, `close-out`, `trips/new`, `dive-sites/catalog`, `settings/backup`, `waivers/signatures`) and the 510-line `trips/[id]/guests/page.tsx` exist, by their own comments, \"to keep the links already out in the world working\", in a pre-pilot app whose staff URLs sit behind auth (H-49). What holds is the top level: one registry with derived consumers (ADR 20260813, 17 tests in `e2e/staff-nav.spec.ts`), one label per destination pinned in `staff-destinations.test.ts`, and ⌘K as the only keyboard route (ADR 20260811); the grammar frays exactly where the registry stops.",
+  "measurements": [
+    {
+      "what": "Staff pages (page.tsx under src/app/shop/[shopSlug])",
+      "value": "60; depth histogram 0:1, 1:16, 2:31, 3:11, 5:1 (43 below depth 1)"
+    },
+    {
+      "what": "Destinations in src/lib/staff-destinations.ts",
+      "value": "21: 4 primary, 10 daily, 4 setup, 3 palette-only (navGroup null); 1 alsoMatch claim (board over /trips)"
+    },
+    {
+      "what": "Layouts / loading.tsx in the staff app",
+      "value": "3 layouts (shop, settings, trips/[id]); 60 loading.tsx"
+    },
+    {
+      "what": "Way-up form per page",
+      "value": "32 eyebrowHref, 14 plain eyebrow (depth 1), 4 TripPageHeader, 2 bare EyebrowBackLink (log, ticket), 5 SheetDocument, 1 literal EYEBROW_CLASS 'DiveDay' (/print), 1 no eyebrow (settings hub)"
+    },
+    {
+      "what": "Pages whose parent is not the URL's parent",
+      "value": "22 of 60, under 8 distinct rules"
+    },
+    {
+      "what": "Pages under which no nav row lights",
+      "value": "10: bookings/new, bookings/new/[tripId], calls, print (6), schedule/blowout/[tripId]"
+    },
+    {
+      "what": "Registries deciding where a page is",
+      "value": "3: STAFF_DESTINATIONS (21), SETTINGS_RAIL_ROWS (43 = 22 section anchors + 21 routes, 3 outside /settings), TripSubNav TAB_ORDER (3)"
+    },
+    {
+      "what": "'Where am I' resolvers",
+      "value": "3: currentStaffNavDestinationId, currentSettingsRailRowId, TripSubNav usePathname"
+    },
+    {
+      "what": "Settings sub-pages spelling the parent href / word",
+      "value": "17 pages; href in 3 spellings (9/6/2); word via 7 distinct keys"
+    },
+    {
+      "what": "eyebrow message keys in en-US staff bundles",
+      "value": "25 across 15 files (settings.json 6, gear.json 3, print.json 2, shared.json 2, 12 others)"
+    },
+    {
+      "what": "Eyebrow guard",
+      "value": "src/app/shop/eyebrow-way-up.test.ts: 153 lines, 3 markers, 6 exemptions"
+    },
+    {
+      "what": "Print sub-app",
+      "value": "7 pages under 3 roots (/print, /print/*, /trips/[id]/print) + register at /settings/print; 2 shells; print-sheets.ts 390 lines; print-runs.ts 111 lines; shop_print_runs table; 80 keys in print.json"
+    },
+    {
+      "what": "Compatibility-only code in the staff app",
+      "value": "6 redirect Route Handlers + trips/[id]/guests/page.tsx (510 lines) with 1 live door (check-in/salvage-copy.ts:52)"
+    },
+    {
+      "what": "Acts on a departure filed outside /trips/[id]",
+      "value": "4 routes (bookings/new/[tripId], check-in/walk-in/[tripId], schedule/blowout/[tripId], divers/new?surface=&tripId=); seat-diver-surfaces.ts has 4 surfaces, 3 bound to a trip"
+    },
+    {
+      "what": "Navigation-shaped components across src",
+      "value": "15 files matching nav|rail|tabs (9 inside the staff app: ShopNav, ShopNavLinks, StaffTabBar, CommandPalette, SettingsRail, TripSubNav, TripSurfaceNav, ReportRangeTabs, JumpNav/EditorRail)"
+    },
+    {
+      "what": "Palette 'Go to' reach",
+      "value": "21 registry destinations + 3 commands; 0 of 17 settings sub-pages, 0 of 3 trip faces, 0 print pages"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "One registry for the top level, every nav consumer (header tabs, dock, More, palette) derived from it, with a phone-reachable door for every destination",
+      "where": "src/lib/staff-destinations.ts; ADR 20260813-more-is-the-shops-other-door; e2e/staff-nav.spec.ts (17 tests)"
+    },
+    {
+      "what": "One 'you are here' resolver for the nav, most-specific-claim-wins, palette-only rows never competing",
+      "where": "currentStaffNavDestinationId, src/lib/staff-destinations.ts:521"
+    },
+    {
+      "what": "One label key per destination, the eyebrow and the tab being the same string, pinned against the bundle",
+      "where": "STAFF_DESTINATION_LABEL_KEYS; src/lib/staff-destinations.test.ts 'has a label key for every destination, and no others'"
+    },
+    {
+      "what": "⌘K as the only keyboard route; the g-sequence system deleted rather than extended",
+      "where": "ADR 20260811-command-palette-is-the-only-keyboard-route"
+    },
+    {
+      "what": "No destination is a query on another destination's path",
+      "where": "src/lib/staff-destinations.test.ts:50"
+    },
+    {
+      "what": "The settings rail's selection model decided in one place (route beats scroll-spy), and its rows pinned against the hub's own render",
+      "where": "currentSettingsRailRowId, settings/settings-groups.ts:461; settings/_components/SettingsRail.test.tsx"
+    },
+    {
+      "what": "The jump row (anchors, no active state) told apart from the tab bar (one pill current), ending look-alike controls that meant different things",
+      "where": "src/components/JumpNav.tsx"
+    },
+    {
+      "what": "Object detail and new pages already follow the model grammar: up = the list, in the list's own word",
+      "where": "orders/[id], orders/new, gear/[id], dive-sites/[id], dive-sites/new, divers/[personId]/_components/DiverHeader.tsx, courses/[slug]/edit"
+    },
+    {
+      "what": "The way-up guard's exemptions carry a reason and self-expire when they stop being true",
+      "where": "src/app/shop/eyebrow-way-up.test.ts 'keeps no exemption that has stopped being true'"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L15-1",
+      "title": "The route tree is the registry; a page's parent is its URL's parent",
+      "kind": "surface",
+      "reading": "`src/lib/staff-destinations.ts` knows 21 places and stops; below it, `settings/settings-groups.ts` (21 route rows), `TripSubNav.tsx` (3 faces) and 32 hand-written `eyebrowHref` props each decide a page's place, through 3 resolvers. 22 of the 60 pages carry a parent the URL does not imply, under 8 rules, and 10 pages light no nav row. The 17 settings sub-pages spell one parent href 3 ways and its word through 7 keys, out of 25 `eyebrow` keys in 15 bundles. `src/app/shop/eyebrow-way-up.test.ts` scans sources for 3 marker strings and carries 6 exemptions because the header cannot know its own parent. `ShopPageHeader.tsx` takes `eyebrow` and `eyebrowHref` as free strings (lines 75-84); `ShopNav.tsx:58` already derives the chrome's folded title from the registry, so one consumer proves derivation works. One-hand's floor (ADR 20260908 table row 'Eyebrow', roadmap slice 20a, unshipped) says the header should take 'the destination group', which contradicts principle §10's 'never the nav group' — two unshipped docs disagree on what the eyebrow says.",
+      "idea": "The registry becomes a tree of every staff route (about 60 nodes; the 21 destinations are the nodes with a `navGroup`), each node a segment, a label key and a gate, and one resolver `staffRouteAt(pathname)` returns the node and its ancestors. `ShopPageHeader` and `TripPageHeader` lose `eyebrow` and `eyebrowHref`: at depth 1 the eyebrow is the node's own label, below it the parent's label as the link, with one node kind `face` (the three strip members, ADR 20260827-the-departure decision 1) whose way up is the departure's parent, as principle §10 chose. The lit tab is the nearest ancestor with a `navGroup` (`alsoMatch` deleted: `/trips` is a child of the board); the settings rail's 21 route rows are `children(settings)` beside its 22 anchors; `TAB_ORDER` is `children(trips/[id])`; the palette's 'Go to' is every node with `inPalette`, so the 17 settings pages and 3 faces become findable by their own words. Routes whose URL lies move so the tree is honest: `/calls` → `/check-in/calls`, `/settings/team` → `/team` and `/settings/calendar` → `/calendar-feed` (a place with its own row is nobody's child), the departure acts per L15-2, paper per L15-3. The guard is replaced by 'every `page.tsx` is a node', the same walk with zero exemptions, because a header that derives its parent cannot omit it. Afterwards the grammar is one sentence: a page's eyebrow is its parent's name and its link, the tab that lights is its nearest ancestor with a slot, and both are read off the URL.",
+      "dissolves": "Three registries and three resolvers become one tree and one resolver; 32 `eyebrowHref` props, 25 private eyebrow keys in two locales, the `eyebrow-way-up` guard and its 6 exemptions, and the `alsoMatch` mechanism stop existing.",
+      "scope": "src/lib/staff-destinations.ts (+test); src/components/ShopPageHeader.tsx, ShopNav.tsx, ShopNavLinks.tsx, StaffTabBar.tsx, search/CommandPalette.tsx; settings/settings-groups.ts + _components/SettingsRail.tsx; trips/[id]/_components/TripSubNav.tsx, TripSurfaceNav.tsx, TripPageHeader.tsx; 32 page.tsx files losing eyebrowHref and 14 losing eyebrow; 25 keys in en-US and es-ES staff bundles; src/app/shop/eyebrow-way-up.test.ts deleted; e2e/staff-nav.spec.ts, e2e/settings-findability.spec.ts; header visual baselines; docs/design/principles.md §10; ADR 20260813 amended; a new ADR.",
+      "firstSlice": "Add the tree and `staffRouteAt` to `src/lib/staff-destinations.ts` with all 60 pages as nodes (22 carrying an explicit `parent` override until their routes move, the three strip members as `face`), make both headers read it, and delete the 32 `eyebrowHref` props, the 25 eyebrow keys in both locales and `eyebrow-way-up.test.ts`, replaced by 'every page.tsx is a node'.",
+      "effort": "L",
+      "reviews": [
+        "design",
+        "ADR"
+      ],
+      "conflicts": "One-hand slice 20a / H-71 (Ready): goes further than 'the header takes the group' — no prop at all — and resolves the wording clash between the ADR's floor table and principle §10; principle §10's 'two forms, never a third' becomes zero forms (supersede); ADR 20260813 kept (navGroup stays on the 21, More unchanged); ADR 20260811 strengthened (⌘K reaches 60 pages); ADR 20260827-clearwater decision 6 kept (the rail stays, its rows derive); ADR 20260827-the-departure decision 1 kept as the `face` node kind; H-77 concept 1 'Three words' orthogonal (this fixes depth, not the number of roots); subsumes #1870, #1859, #1857 and the row-to-page half of #1854.",
+      "confidence": "high"
+    },
+    {
+      "id": "L15-2",
+      "title": "An act on a departure is a child of the departure",
+      "kind": "shape",
+      "reading": "Four routes take one departure's id outside `/trips/[id]`: `bookings/new/[tripId]`, `check-in/walk-in/[tripId]`, `schedule/blowout/[tripId]` and `divers/new?surface=&tripId=`; `src/app/actions/seat-diver-surfaces.ts` lists 4 seat surfaces, 3 of which bind their `gateScope` to a trip. Their way up is chosen by hand and differs each time (board, check-in, the trip), and `divers/new/page.tsx:125-145` derives its parent from the referrer in 4 branches with 4 `divers.page.backTo*` labels. All four are among the 10 pages under which no nav row lights, and `trips/[id]` itself lights the Board only through the one surviving `alsoMatch`. `.claude/rules/surfaces.md` already states the principle for one of them: 'the trip is a path segment, not a ?tripId=, so a refusal can land back on it'. The departure's story is 8 pages across 4 roots (`trips/[id]/**` ×7 counting `guests`, plus `schedule/blowout`).",
+      "idea": "Every act whose subject is one departure lives under it: `/trips/[id]/book`, `/trips/[id]/walk-in`, `/trips/[id]/blow-out`, `/trips/[id]/new-diver`, and the global doors `/bookings/new` and `/check-in/walk-in` become pickers that end on a trip child. The URL carries the subject, so `?surface=` and `?tripId=` leave the new-diver page and its 4-branch back link becomes the URL's parent; `seat-diver-surfaces.ts` keeps its 4 rows and reads 'trip or diver' off the path instead of a parameter. The way up is the tree's (L15-1), the lit tab is Board by ancestry with no `alsoMatch`, and a refusal from any act lands on the departure it was about. Afterwards a departure is one root with its faces and its acts beneath it, and 'which page is about this boat' is answered by the address.",
+      "dissolves": "`?surface=`/`?tripId=` on `divers/new` and its referrer-derived parent; three departure acts under foreign roots; four of the ten pages that light no tab.",
+      "scope": "src/app/shop/[shopSlug]/bookings/new/[tripId], check-in/walk-in/[tripId], schedule/blowout/[tripId], divers/new (moved or split); src/app/actions/seat-diver.ts + seat-diver-surfaces.ts landing URLs; check-in/salvage-copy.ts; 4 divers.page.backTo* keys deleted in both locales; e2e/schedule-trip.spec.ts and the walk-in, booking and blow-out specs; visual baselines for the four pages; .claude/rules/surfaces.md (the bookings/new row); ADR 20260806-one-trip-create-form unchanged.",
+      "firstSlice": "Move `schedule/blowout/[tripId]` to `trips/[id]/blow-out` — one page, one action, one e2e spec — and drop its hand-written `eyebrowHref`, so the first act on a departure has the URL's parent.",
+      "effort": "M",
+      "reviews": [
+        "domain",
+        "design"
+      ],
+      "conflicts": "Roadmap 'Departure as the one noun' (known, vocabulary) — this is the departure's address, not its name; ADR 20260806-one-trip-create-form kept (creation stays on the board); surfaces.md's 'the trip is a path segment' rule kept and generalised; #1790/#1789 (counter identity attestation) touch the walk-in page and should land before or with its move.",
+      "confidence": "high"
+    },
+    {
+      "id": "L15-3",
+      "title": "Paper has one root, or none",
+      "kind": "surface",
+      "reading": "Print has three roots: `/print` is the day packet (`print/page.tsx:41`, door on the day spine, eyebrow the literal 'DiveDay' at line 140, no up-link, no lit tab); `/print/{boat-card,dock-sign,pass,site-briefings,window-sticker}` are 5 sheets whose register is `/settings/print` (lever X of ADR 20260908-one-hand) and whose way back is a `Link` to `settings/print` in `SheetDocument.tsx:58`; `/trips/[id]/print` is a packet wearing `TripPageHeader` with `boardHref` (`TripPacket.tsx:98-101`), so a printed trip goes up to the Board past the trip. Two shells (`SheetDocument`; `TripPacket` + `TripPageHeader` + `AutoPrint`), `src/lib/print-sheets.ts` (390 lines), `src/db/print-runs.ts` (111 lines) with `shop_print_runs` (schema.ts:9416), `print/actions.ts` (66 lines) and 80 keys in `print.json`. The register is not one of the 21 destinations, so it is reachable only from the settings rail and hub, though printing is the day's work by the registry's own daily/setup test (staff-destinations.ts:281-287). Five of the eyebrow guard's 6 exemptions are these sheets. H-77(c) (Ready) recommends 'the print register to every page prints' in one clause and no deletion list.",
+      "idea": "The current state — three roots, a register under Settings, a packet that skips its trip — is the one wrong answer; two honest shapes remain and the owner's H-77(c) picks between them. Shape A, one root: `/print` is the register, moved out of settings because printing is daily work, and every paper is its child (`/print/day`, `/print/trip/[id]`, `/print/boat/[boatId]`, `/print/pass/[bookingId]`, `/print/dock-sign`, `/print/sites`, `/print/window`), one shell for all seven, the way up derived (L15-1), a `daily` nav row, zero exemptions. Shape B, no root — H-77(c) made concrete: each paper is the `@media print` face of the page that already shows the fact (the boat card is `settings/boats` printed, the pass is the booking's row on the trip, the dock sign and day packet are Today printed, the briefings are the site page, the window sticker is the storefront card), and the 7 pages, both shells, `AutoPrint`, `print-sheets.ts`, `print/actions.ts` and `shop_print_runs` are deleted, so 'last printed' stops being a fact DiveDay records. Recommend B if H-77(c) lands as recommended, A otherwise; under either, paper is a child of what it prints and the grammar gains nothing.",
+      "dissolves": "Three print roots, the register under Settings, the trip packet's Board-skipping up-link and five guard exemptions; under B the print pages, two shells and the print-runs table as well.",
+      "scope": "src/app/shop/[shopSlug]/print/** (7 pages + _components), settings/print/page.tsx, trips/[id]/print/**, trips/[id]/_components/AutoPrint.tsx; src/lib/print-sheets.ts; src/db/print-runs.ts + shop_print_runs in src/db/schema.ts (B: dropped); print.json 80 keys in both locales; settings-groups.ts print row; _components/today/DaySpine.tsx door; e2e/visual.spec.ts print captures; ADR 20260908-one-hand lever X; H-77(c).",
+      "firstSlice": "A: move `settings/print` to `/print`, make the day packet `/print/day`, and point `SheetDocument`'s back link at the parent so the five exemptions leave the guard. B: delete `print/window-sticker` and `print/dock-sign` — the two with no subject id — in favour of `@media print` blocks on the storefront card and Today.",
+      "effort": "M",
+      "reviews": [
+        "design",
+        "ADR"
+      ],
+      "conflicts": "H-77(c) (Ready): B is its concrete deletion list, A the shape if it is declined; ADR 20260908-one-hand lever X and its PR #1631 (the print register): B reverses, A relocates; N-54 the paper day is kept under both; ADR 20260804-og-svg-rasterizer untouched (no ImageResponse here).",
+      "confidence": "medium"
+    },
+    {
+      "id": "L15-4",
+      "title": "H-49 applies to URLs: delete the compatibility routes",
+      "kind": "shape",
+      "reading": "Six Route Handlers under `src/app/shop/[shopSlug]/` — `blockers`, `close-out`, `trips/new`, `dive-sites/catalog`, `settings/backup`, `waivers/signatures` — exist, by each file's own comment, 'only to keep the links already out in the world working — a bookmark, an old chat message'. `trips/[id]/guests/page.tsx` is a 510-line page kept as 'a compatibility route for old links' (`layout.tsx:25-26`) rendering the roster that `trips/[id]` already is; `TripSubNav.tsx:60-68` special-cases it, `trip-admission-gate.ts:44` documents it, and `check-in/salvage-copy.ts:52` is its one live door. `src/proxy.ts:165` carries a paragraph on `/blockers`' relative `Location`, and `src/app/shop/redirect-slug-coverage.test.ts` guards the handlers. Every one of these URLs is behind staff auth, so no printed QR code or public link ever pointed at it, and AGENTS.md's hard rule says pre-pilot has no legacy (H-49) — stated for data and never applied to routes.",
+      "idea": "Extend the sentence: a staff route that is not a node in the tree is deleted, not redirected. Delete the six handlers, the `guests` page and its three mentions, point the salvage copy at the trip, and drop the proxy paragraph and the guard's rows for them; the four ADRs that record a 308 get one line saying the handler is gone. The grammar afterwards has no 'compatibility route' concept at all, and the tree of L15-1 has exactly 53 nodes to start from instead of 60 plus 6 ghosts.",
+      "dissolves": "The compatibility-route concept in the staff app: 6 redirect handlers, 1 duplicate 510-line page, and the proxy and guard code that tolerate them.",
+      "scope": "src/app/shop/[shopSlug]/{blockers,close-out,trips/new,dive-sites/catalog,settings/backup,waivers/signatures}/route.ts; trips/[id]/guests/page.tsx; trips/[id]/_components/TripSubNav.tsx:60-68, TripRosterContent.tsx:51, layout.tsx:25; src/lib/trip-admission-gate.ts:44; check-in/salvage-copy.ts:52; src/proxy.ts:165; src/app/shop/redirect-slug-coverage.test.ts; one line each in ADRs 20260806-one-trip-create-form, 20260806-one-data-out-surface, 20260827-clearwater (decision 4), 20260827-people-not-lists (decision 4); .claude/rules/surfaces.md and db.md (H-49 sentence extended to routes).",
+      "firstSlice": "Delete the six `route.ts` handlers and their rows in `redirect-slug-coverage.test.ts`, and add the sentence to `.claude/rules/db.md`'s H-49 paragraph; the `guests` page follows once `salvage-copy.ts:52` points at the trip.",
+      "effort": "S",
+      "reviews": [
+        "ADR"
+      ],
+      "conflicts": "H-49 (extended, not contradicted); ADRs 20260806-one-trip-create-form, 20260806-one-data-out-surface, 20260827-clearwater decision 4 and 20260827-people-not-lists decision 4 each record a 308 (amend); ADR 20260803-public-shop-namespace's public 308s are out of scope (printed QR codes, a real external reader).",
+      "confidence": "high"
+    }
+  ]
+}

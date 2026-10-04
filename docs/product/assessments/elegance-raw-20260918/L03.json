@@ -1,0 +1,173 @@
+{
+  "lensId": "L03",
+  "lens": "The gate — how many \"may this person do this\" evaluators exist, whether they share one vocabulary of reasons, and whether they could be one evaluator at different strictness",
+  "reading": "The 17 entry-point modules sort into three families that the code itself names: two seat gates that refuse (src/lib/trip-admission.ts, 462 lines, and src/lib/readiness.ts, 814 lines), five advisories that \"inform, never gate\" (depth-ceiling.ts, dive-recency.ts, course-ratios.ts, divemaster-ratio.ts, minimum-seats.ts, plus pre-departure-check.ts), and the actor gates (authz.ts with 18 can* predicates over 8 roles, security-step-up.ts with 3 purposes at 9 call sites, rate-limit.ts with 40 keyed limits at 55 call sites); course-preview-gate.ts and booking-capabilities.ts are capability tokens, not evaluators. The two seat gates ask the same three evidence questions (level ladder, specialty card, nitrox card) over the same combineCertRequirements fold in two separate bodies (readiness.ts:585-716 versus trip-admission.ts:316-361), and the rule that admission may never refuse what readiness clears is held by a brute-force product test at trip-admission.test.ts:765 rather than by construction. ADR 20260820-attested-at-booking-verified-at-boarding already states the difference as strictness in one sentence (\"before a trip a stated card is believed; before the boat it must be sighted\"), while ADR 20260803 rejected reusing calculateReadiness on grounds that apply to its output, not its predicates. Readiness has one production caller (src/db/readiness.ts:1602) and one reason vocabulary of 22 ReadinessBlockerCodes, but that vocabulary is re-tabled 13 times in 8 files (8 exhaustive Records plus 5 code Sets), and admission answers in a different shape entirely (a 4-field TripAdmissionRefusal with its own codec and an HMAC wrapper in trip-admission-gate.ts, 140 lines, plus 4 shared.tripAdmission.* keys per locale). Four more seat gates live inline in src/db/bookings.ts:690-819 as course_prerequisite, course_min_age, course_ratio_full and course_unstaffed, restoreBooking re-copies two of them with its own 6-word outcome union at bookings.ts:1194, and analytics.ts:89-98 duplicates the 9 BookingRefusal reasons verbatim. The five advisories each invent a verdict shape, spelling \"nothing to say\" three ways (status:\"unknown\" at depth-ceiling.ts:210, kind:\"none\" at minimum-seats.ts:51, code:\"none\" at course-ratios.ts:204 and divemaster-ratio.ts:85), which is why the phrase \"informs, never gates\" is written 69 times across 52 non-test src files — the shape cannot say it, so every module must. Readiness becomes a refusal downstream at 4 sites (src/db/check-in.ts:711 and :931, src/db/manifests.ts:1414, manifest/actions.ts:505), two of which drop the blockers and answer a bare not_ready. The actor gates are typed as booleans but their refusals are not: ShopSurfaceOptions.refusal.notice is a bare string (session.ts:108), 123 distinct codes are emitted through noticeUrl, 313 notice rows sit in 9 per-page maps under src/app/shop, seat-diver-surfaces.ts spells each of 8 booking refusals three times (diver-full, walkin-full, trip-full), and scripts/check-notice-codes.mjs guards only kebab spelling, so issue #1845's \"no banner at all\" remains possible. Across src, 149 distinct ok:false reason literals in 51 files and 87 status/kind/code union arms in src/lib type definitions measure how many refusal grammars the product speaks.",
+  "measurements": [
+    {
+      "what": "Seat-gate evaluators that refuse (lib) and their sizes",
+      "value": "2: src/lib/trip-admission.ts 462 lines (4 callers: db/bookings.ts x2, lib/blowout.ts, db/next-dive.ts); src/lib/readiness.ts 814 lines (1 production caller, src/db/readiness.ts:1602)"
+    },
+    {
+      "what": "Seat gates written inline in the booking transaction rather than src/lib",
+      "value": "4 in src/db/bookings.ts:690-819 (course_unstaffed, course_prerequisite, course_min_age, course_ratio_full) + a partial re-copy in restoreBooking (bookings.ts:1242) with its own 6-word RestoreBookingOutcome"
+    },
+    {
+      "what": "Distinct reason vocabularies for refusing a seat",
+      "value": "5: ReadinessBlockerCode (22), TripAdmissionRefusal (4-field record, no code), BookingRefusal.reason (9), RestoreBookingOutcome (6), not_ready at 4 downstream sites (blockers carried at 2 of them)"
+    },
+    {
+      "what": "Per-code tables keyed by ReadinessBlockerCode",
+      "value": "13 in 8 files: 8 exhaustive Records (BLOCKER_CATEGORY, ABOARD_KIND, BLOCKER_STATE, BLOCKER_ACTIONS, READINESS_BLOCKER_KEYS, BLOCKER_ACTION_LABEL_KEYS, BLOCKER_GROUP_LABEL_KEYS, CHECKLIST_DETAIL_KEYS) + 5 Sets (WAIVER_CODES, CERT_ENTRY_CODES, SPECIALTY_ENTRY_CODES, NITROX_ENTRY_CODES, UNGROUPABLE_BLOCKER_CODES)"
+    },
+    {
+      "what": "Files that render readiness words / reference blocker codes",
+      "value": "41 non-test files import src/i18n/readiness-labels.ts; 17 files reference ReadinessBlocker(Code); 12 files carry trip_prerequisite / tripAdmissionRefusalText / admissionAdvisory"
+    },
+    {
+      "what": "Advisory (informs-never-gates) evaluators and their verdict spellings",
+      "value": "6 modules, 3 spellings of 'nothing to say': status:\"unknown\" (depth-ceiling.ts:210), kind:\"none\" (minimum-seats.ts:51), code:\"none\" (course-ratios.ts:204, divemaster-ratio.ts:85, crew-languages.ts); dive-recency.ts returns a boolean"
+    },
+    {
+      "what": "Occurrences of the sentence 'informs, never gates' / 'never a gate' / 'not a gate'",
+      "value": "69 across 52 non-test src files; 39 across 27 docs files"
+    },
+    {
+      "what": "Actor-gate predicates and their callers",
+      "value": "18 can* in src/lib/authz.ts over 8 roles; 16 canPerson* live wrappers in src/db/authz.ts; requireShopSurface in 64 files; 4 StaffDestinationGate ids; hasRequiredStepUp 9 call sites over 3 purposes; checkRateLimit 55 call sites in 31 files over 40 RATE_LIMITS keys"
+    },
+    {
+      "what": "The actor gate's refusal vocabulary",
+      "value": "refusal.notice is an untyped string (src/lib/session.ts:108); 123 distinct codes emitted via noticeUrl(); 313 notice→message rows in 9 map files under src/app/shop; seat-diver-surfaces.ts spells 8 refusals ×3 surfaces; check-notice-codes.mjs guards spelling only"
+    },
+    {
+      "what": "Refusal grammars across src",
+      "value": "149 distinct `ok: false, reason: \"…\"` literals across 51 non-test files; 87 distinct `| { status|kind|code: \"…\" }` union arms in src/lib type definitions; 30 distinct `{ code: \"…\" }` literals in src/lib"
+    },
+    {
+      "what": "Admission-never-stricter-than-readiness invariant",
+      "value": "pinned by a brute-force product test (trip-admission.test.ts:765, requirement × evidence × claim) importing calculateReadiness; not by construction"
+    },
+    {
+      "what": "Duplicated vocabularies",
+      "value": "BookingRefusal's 9 reasons restated verbatim in src/lib/analytics.ts:89-98; admission's codec (encode/decodeTripAdmissionRefusal) + HMAC wrapper src/lib/trip-admission-gate.ts (140 lines) exist only because the refusal is not a blocker code"
+    },
+    {
+      "what": "Test weight of the two seat gates",
+      "value": "readiness.test.ts 1,112 lines; trip-admission.test.ts 853 lines; 33 e2e specs mention prerequisite/Blocked/readiness"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "Readiness has exactly one production caller and one status vocabulary (ready | blocked) whose words come from one file; no surface spells a status inline",
+      "where": "src/db/readiness.ts:1602; src/i18n/readiness-labels.ts (41 importers); .claude/rules/surfaces.md 'Readiness words'"
+    },
+    {
+      "what": "The blocker→destination rule was already deduplicated from two copies to one, and the counter and Today queue cannot drift about a diver",
+      "where": "src/lib/today.ts:854 blockerDestination; src/lib/blockers.ts header comment"
+    },
+    {
+      "what": "Admission is called from exactly one booking path so five doors cannot drift, and the never-stricter-than-readiness invariant is tested exhaustively",
+      "where": "src/db/bookings.ts:497/527 via createBookingRecord; src/lib/trip-admission.test.ts:765"
+    },
+    {
+      "what": "Both the counter and the rail re-read live readiness at the moment of the write, so an offline queue buys no way around it",
+      "where": "src/db/check-in.ts:706-718; src/db/manifests.ts:1408-1415"
+    },
+    {
+      "what": "The staff-page preamble is one function whose every refusal throws, with a repo guard against wrapping it in try, and the gate is passed as a predicate rather than a pre-computed boolean",
+      "where": "src/lib/session.ts:164 requireShopSurface (64 callers); scripts/check-redirect-in-try.mjs"
+    },
+    {
+      "what": "Actor gates are pure predicates re-checked against live roles in both the page and the action layer, and gated destinations vanish rather than explain",
+      "where": "src/lib/authz.ts (18 predicates), src/db/authz.ts canPerson wrapper, src/lib/staff-destinations.ts passesGate; ADRs 20260724-role-authorization, 20260724-role-gated-surfaces-hide-not-explain"
+    },
+    {
+      "what": "'Informs, never gates' is a deliberate, owner-recorded stance for every safety-adjacent advisory, with the one open question (the pre-departure checklist) parked as a human decision",
+      "where": "docs/product/human-decisions.md H-51; ADRs 20260820-shop-divemaster-ratio, 20260824-pre-departure-safety-check, 20260730-site-depth-and-diver-age-surfaces"
+    },
+    {
+      "what": "Each ratio is 'the one computation' consumed by its three surfaces, so the trip page, staffing list and Today cannot disagree",
+      "where": "src/lib/course-ratios.ts:214 courseCrewGap; src/lib/divemaster-ratio.ts:110 divemasterRatioGap"
+    },
+    {
+      "what": "Rate limiting is one table of 40 named limits behind one checkRateLimit with one result shape",
+      "where": "src/lib/rate-limit.ts:374 RATE_LIMITS, :320 checkRateLimit"
+    },
+    {
+      "what": "Strictness is already the documented mental model for the two seat gates",
+      "where": "ADR 20260820-attested-at-booking-verified-at-boarding title; docs/product/glossary.md 'Trip admission' (line 255)"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L03-1",
+      "title": "Admission and readiness are one evidence ladder read at two strictnesses",
+      "kind": "concept",
+      "reading": "src/lib/readiness.ts:585-716 and src/lib/trip-admission.ts:316-361 each ask the same three questions (level rung, specialty card, nitrox card) over the same combineCertRequirements fold, and differ only in which card states count: readiness clears on verified (and reviewedAt for an import, readiness.ts:647), admission clears on any row or a typed claim (trip-admission.ts:325-347). ADR 20260820-attested-at-booking-verified-at-boarding states the difference as exactly that in its title, and the glossary's Trip admission entry (line 255) says admission is 'deliberately weaker than readiness'. The invariant 'admission never refuses what readiness would clear' is enforced by a brute-force product test at trip-admission.test.ts:765 rather than by the shape of the code. Because admission answers in its own 4-field TripAdmissionRefusal rather than a blocker code, it needs its own codec (encodeTripAdmissionRefusal, trip-admission.ts:410-460), its own HMAC wrapper (src/lib/trip-admission-gate.ts, 140 lines), its own renderer (tripAdmissionRefusalText, readiness-labels.ts:466), 4 shared.tripAdmission.* keys per locale, and a second field on the success result (BookingAdmissionAdvisory, bookings.ts:219). ADR 20260803 rejected 'reuse calculateReadiness and filter to certification blockers' because readiness demands waiver and payment inputs and would refuse fixable things; that reason is about reusing the function's output and does not touch sharing its predicates.",
+      "idea": "One evidence ladder in src/lib/readiness.ts: for each demanded thing (level, each specialty, nitrox) a single function returns the diver's standing as one of the existing blocker codes or clear (certification_insufficient with requiredLevel and heldLevel, certification_pending, certification_self_declared, certification_missing, specialty_import_unconfirmed, specialty_pending, specialty_missing, nitrox_*). calculateReadiness is that ladder with the threshold 'verified'; decideTripAdmission is the same ladder with the threshold 'any row or claim', so a refusal at the sale is a ReadinessBlocker[] (typically one certification_insufficient carrying heldLevel, or specialty_missing / nitrox_missing) and the advisory is the same list on a sold seat. Monotonic thresholds make 'admission never stricter than readiness' true by construction, and the 765-line product test becomes one assertion on the ladder order. The refusal then rides the existing readinessBlockerText path and the existing ?gate= channel carries blocker codes, so the admission codec, its HMAC wrapper's payload half, tripAdmissionRefusalText and the shared.tripAdmission.* keys are deleted. The grammar afterwards: every answer about a diver and a departure is a ReadinessBlocker, and a gate is a threshold on the ladder, never a second body.",
+      "dissolves": "TripAdmissionRefusal as a second shape, BookingAdmissionAdvisory as a second field, tripAdmissionRefusalText, encode/decodeTripAdmissionRefusal, and the brute-force parity test; the glossary's 'deliberately weaker' becomes a threshold constant rather than a paragraph.",
+      "scope": "src/lib/readiness.ts, src/lib/trip-admission.ts, src/lib/trip-admission-gate.ts, src/db/bookings.ts (advisable, BookingRefusal trip_prerequisite arm), src/db/seat-claims.ts, src/db/next-dive.ts, src/lib/blowout.ts, src/i18n/readiness-labels.ts, staff/shared.json and diver.json in en-US and es-ES, the 12 render files carrying trip_prerequisite/admissionAdvisory (TripNoticeBanner.tsx, record-notices.ts, bookings/new/[tripId]/page.tsx, check-in/walk-in/[tripId]/page.tsx, s/[shopSlug]/trips/[id]/actions.ts, seat-diver-surfaces.ts), src/lib/analytics.ts, glossary 'Trip admission' and 'Admission advisory', ADR 20260803 amendment, .claude/rules/domain.md line 15-19.",
+      "firstSlice": "Extract the three ladders (certificationBlocker, specialtyBlocker, nitroxBlocker) into an exported standing() that takes a threshold, make calculateReadiness call it at 'verified' with no behaviour change, and add the one ordering test; readiness.test.ts must pass untouched.",
+      "effort": "M",
+      "reviews": [
+        "domain",
+        "security",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260803-trip-admission-at-booking (its rejected alternative reused the readiness *function*; this shares the predicates and keeps the two questions); ADR 20260820-attested-at-booking-verified-at-boarding (implements its own sentence); H-27, H-29, H-30 (policy unchanged: thresholds encode 'believe at booking, sight at boarding' and the public refusal stays); H-13 (identityUnconfirmed stays a pre-ladder short-circuit in both); #1866 (the storefront's above-level line would render the same blocker code); #1855 and #1869 (blocker copy edits land in one bundle path afterwards).",
+      "confidence": "high"
+    },
+    {
+      "id": "L03-2",
+      "title": "An advisory is a finding at strictness zero, tabled not architected",
+      "kind": "system",
+      "reading": "Six modules answer 'what should the crew know about this diver or departure' without gating: checkDepthCeiling (depth-ceiling.ts:237), diveRecencyIsNotable (dive-recency.ts:63), courseCrewGap (course-ratios.ts:214), divemasterRatioGap (divemaster-ratio.ts:110), minimumSeatsState (minimum-seats.ts:84) and the pre-departure check (pre-departure-check.ts). Each invents a verdict shape, and 'nothing to say' is spelled status:\"unknown\", kind:\"none\" and code:\"none\" across them, so each ships its own renderer (RosterSection.tsx, the trip page, StaffingWeek.tsx, the manifest SummaryPanel). The sentence 'informs, never gates' appears 69 times in 52 non-test src files because no type carries it. readiness.ts already holds two per-code reclassification tables for one vocabulary (BLOCKER_CATEGORY at :220 for checklists, ABOARD_KIND at :302 for the rail), which is precisely the mechanism an advisory needs: the same code read with a different severity for a different surface. H-51 asks whether the pre-departure checklist should gate and records that a yes would add a gate 'above recordPreDepartureCheck' — a new module, on today's shape.",
+      "idea": "One finding type in src/lib: { code, params }, where code is the union of today's 22 blocker codes and the advisory codes (depth_exceeds_ceiling, recency_notable, course_over_ratio, course_no_instructor, divemaster_under_target, minimum_seats_short, minimum_seats_due, pre_departure_unchecked), and one exhaustive FINDING_SEVERITY: Record<code, \"blocks\" | \"informs\">. calculateReadiness returns every finding; status is 'blocked' when any finding is tabled blocks, and the roster, manifest, Today and the diver checklist render the informs ones through the same readinessBlockerText, BLOCKER_CATEGORY and ABOARD_KIND tables (each gaining rows, not siblings). 'Informs, never gates' then lives in one table row per code instead of 69 comments, and H-51 becomes a one-row decision the owner can flip with an ADR line rather than a new gate module. Together with L03-1 the product has one evaluator at three strictnesses — sale, dock, and informational — and one grammar for what it says. The pre-departure and minimum-seats findings are about the departure rather than a diver, so the finding carries a subject discriminator (booking | departure) and the departure-level ones surface on the trip's own row.",
+      "dissolves": "Five bespoke advisory shapes and their five renderers; the sentence 'informs, never gates' as prose; a future 'gate above recordPreDepartureCheck' as a separate module.",
+      "scope": "src/lib/readiness.ts (finding union, severity table), src/lib/depth-ceiling.ts, dive-recency.ts, course-ratios.ts, divemaster-ratio.ts, minimum-seats.ts, pre-departure-check.ts, src/db/readiness.ts (the fan-in gains the ratio, depth and minimum inputs it already reads elsewhere), src/i18n/readiness-labels.ts and today-labels.ts and readiness-summary-labels.ts (rows added), staff/shared.json and staff/today.json and diver.json in both locales, RosterSection.tsx, SummaryPanel.tsx, StaffingWeek.tsx, TripDayPlan.tsx, DiverRollCall.tsx, OfflineManifestView.tsx (offline snapshot carries findings), glossary 'Aboard blocker kind', docs/design/surfaces.md, one ADR.",
+      "firstSlice": "Add FINDING_SEVERITY over the existing 22 codes (all blocks) and derive ReadinessResult.status from it instead of blockers.length, with a test that pins the informs set empty; then fold checkDepthCeiling in as the first informs code, deleting DepthCeilingCheck and its renderer branch in RosterSection.tsx.",
+      "effort": "L",
+      "reviews": [
+        "domain",
+        "design",
+        "ADR"
+      ],
+      "conflicts": "H-51 (not decided here; made a one-row change); H-08 (depth stays informs — the row says so); ADRs 20260820-shop-divemaster-ratio and 20260824-pre-departure-safety-check (their 'binds nothing' stance is preserved as a table value and their 'ordinary ink not warning block' rendering rule becomes the severity's tone); roadmap 'Participants who are not divers' (a participant type becomes a different threshold over the same findings, which its 'different gates' line asks for); roadmap 'check-in as boarding's first rung' (both rungs read one findings list); #1702 and #1838 (counter behaviour on a blocked diver reads the same table); N-40 (adaptive readiness would be rows, not a module); #1853/#1850 (ratio credits change one computation's inputs, not its verdict shape).",
+      "confidence": "medium"
+    },
+    {
+      "id": "L03-3",
+      "title": "A staff refusal is a typed code with one map, not a per-page string",
+      "kind": "system",
+      "reading": "The actor gates decide with typed booleans (18 can* in src/lib/authz.ts, 16 canPerson* in src/db/authz.ts) but refuse with an untyped string: ShopSurfaceOptions.refusal.notice is `string` at src/lib/session.ts:108, and noticeUrl emits 123 distinct codes that 9 per-page Record maps under src/app/shop (313 rows) must each spell identically. scripts/check-notice-codes.mjs guards only /^[a-z0-9-]+$/ and its own header says a code with no matching map key 'renders no banner at all'; open issue #1845 reports exactly that. src/app/actions/seat-diver-surfaces.ts:121-225 spells each of the 8 BookingRefusal reasons three times (diver-full, walkin-full, trip-full) because the map is per destination rather than per reason. The step-up gate refuses with 'step-up-required' plus a purpose (security-step-up.ts:29) and rate limiting with 'rate_limited' (rate-limit.ts:713), two more spellings of a refusal outside any union. The result is that a refusal's *reason* and its *landing* are entangled in one string, so a reason cannot be typed and a landing cannot be chosen independently.",
+      "idea": "One StaffRefusalCode union in src/lib/staff-notices.ts, derived from the unions that already exist (BookingRefusal.reason, RestoreBookingOutcome, the authz refusal, step-up-required, rate_limited, not_ready), and one message record keyed by it in staff/shared.json; noticeUrl(path, code) takes the union, requireShopSurface's refusal.notice is typed to it, and a code with no words is a compile error rather than a blank banner. A destination keeps only what is genuinely its own (a success notice, a form anchor); the refusal maps in the 9 files collapse to the one record, and seat-diver-surfaces.ts keeps a per-surface *landing* while the reason is spelled once. The grammar afterwards matches readiness's: a refusal is a code, words come from one bundle, and the surface decides where to stand, never what to say.",
+      "dissolves": "The diver-/walkin-/trip- triple spelling, the 9 per-page refusal maps, the kebab-spelling guard (the type makes it redundant), and issue #1845's failure mode.",
+      "scope": "src/lib/staff-notices.ts, src/lib/session.ts, src/lib/security-step-up.ts, src/app/actions/seat-diver-surfaces.ts and seat-diver.ts, the 9 notice map files under src/app/shop (TripNoticeBanner.tsx, record-notices.ts, shopHome notices, orders, settings), staff/shared.json in en-US and es-ES, scripts/check-notice-codes.mjs and its test, .claude/rules/domain.md 'Staff notices' row, ADR 20260724-role-authorization consequences.",
+      "firstSlice": "Type refusal.notice in ShopSurfaceOptions as a union built from the codes the 64 requireShopSurface callers already pass, move their words into one shared.refusal.* record, and make session.test.ts fail on an unmapped code.",
+      "effort": "M",
+      "reviews": [
+        "security",
+        "design"
+      ],
+      "conflicts": "#1845 (subsumed); #1859 (unrelated eyebrow copy); ADR 20260724-role-gated-surfaces-hide-not-explain (unchanged: full-page owner surfaces still redirect to Today, now with a typed code); .claude/rules/surfaces.md 'Where a form says what happened' (noticeForForm keeps routing by code); the notice-code guard rule in domain.md (retired by the type).",
+      "confidence": "medium"
+    },
+    {
+      "id": "L03-4",
+      "title": "The booking transaction hosts four gates that belong in the evaluator",
+      "kind": "shape",
+      "reading": "src/db/bookings.ts:690-819 decides course_unstaffed, course_prerequisite, course_min_age, trip_full and course_ratio_full inline inside createBookingRecord, while the fifth seat gate (trip_prerequisite) is a pure function in src/lib/trip-admission.ts called at :868. .claude/rules/domain.md line 14 and AGENTS.md's Layout rule put domain logic in src/lib and keep src/db to reads and writes, and ADR 20260803 chose src/lib for the trip gate for that reason. restoreBooking (bookings.ts:1242) re-implements capacity and the course ratio with its own 6-word RestoreBookingOutcome, documented as 'deliberately not copied' for two of the conditions — a strictness choice expressed by omission in a second body. BookingRefusal's 9 reasons are restated verbatim in src/lib/analytics.ts:89-98. The glossary distinguishes 'course admission fails closed' from 'trip admission fails open' (line 280), which is a threshold difference, not a reason for two homes.",
+      "idea": "One decideAdmission in src/lib/trip-admission.ts takes what the transaction reads (trip status, capacity and booked count, course rule and crew counts, evidence, date of birth, the ladder from L03-1) and a strictness ('sale' | 'restore' | 'advise') and returns the refusal or advisory as blocker codes; createBookingRecord becomes read, decide, write, and restoreBooking is the same call at 'restore' (capacity and ratio only, by the strictness table rather than by a paragraph). BookingRefusal.reason is then the finding code, analytics reads the same union instead of copying it, and RestoreBookingOutcome's six words are the same codes. The grammar afterwards: src/db owns the transaction and the row lock, src/lib owns every 'may this seat be sold', and a new gate is a row and a threshold, never a new branch in a 1,400-line transaction.",
+      "dissolves": "The inline course gates in createBookingRecord, restoreBooking's second implementation of capacity and ratio, RestoreBookingOutcome as a separate union, and the copied reason list in analytics.ts.",
+      "scope": "src/db/bookings.ts (createBookingRecord, restoreBooking, BookingRefusal), src/lib/trip-admission.ts, src/lib/course-ratios.ts (courseSeatCapacity already pure), src/lib/analytics.ts, src/db/bookings.test.ts (its transaction tests stay; the decision tests move to src/lib), src/app/actions/seat-diver-surfaces.ts, glossary 'Course admission' entry, ADR 20260803 and 20260724-course-admission-standards amendments.",
+      "firstSlice": "Move course_prerequisite and course_min_age out of createBookingRecord into a pure decideCourseAdmission in src/lib with their existing bookings.test.ts cases ported, leaving the transaction to read and call.",
+      "effort": "M",
+      "reviews": [
+        "domain",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260803 (extends 'the rule lives in one pure function' to the course gates it left inline); ADR 20260724-course-admission-standards and 20260802-dsd-instructor-manual-ratio (the ratio stays a booking-time refusal and a crew-change advisory; only its home moves); H-08 and H-22 (fail-open on absent date of birth and the public form's non-disclosure are strictness rows, unchanged); #1676 (an e2e for approving crew onto an over-ratio session would test one decision path); depends on L03-1 for the ladder but stands alone without it.",
+      "confidence": "high"
+    }
+  ]
+}

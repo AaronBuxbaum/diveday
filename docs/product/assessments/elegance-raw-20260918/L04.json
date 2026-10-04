@@ -1,0 +1,194 @@
+{
+  "lensId": "L04",
+  "lens": "Capabilities and tokens",
+  "reading": "Fourteen `src/app/*/[token]` route families verify against nine `token_hash` tables in `src/db/schema.ts` (waiver_records, booking_capabilities, calendar_feeds, display_tokens, person_shelf_tokens, account_tokens, two unsubscribe tables, shop_contact_email_confirmation_tokens) plus two stateless HMAC modules, `src/lib/recap-links.ts` (103 lines) and `src/lib/gift-links.ts` (110), which share a byte-identical 43-character signature guard. The 32-byte/SHA-256 primitive is written three times (`src/lib/bearer-tokens.ts`, `waiver-tokens.ts`, `account-tokens.ts`), minted by 12 `issue*`/`sign*` functions from 39 files and checked by 11 `verify*`/`check*`/`resolve*` functions across 10 modules, with 6 further \"dead but ours\" resolvers in two vocabularies (`kind: dead|unknown` in `src/db/seat-claims.ts` and `recap.ts`, `state: unavailable|expired` in `waivers.ts:764`). Lifecycle is spelled five ways — `expires_at` on 7 of 9 tables, `revoked_at` on 4, `used_at`+`superseded_at` on 2, nothing on the 2 unsubscribe tables — and \"what does asking twice do\" has five answers (waiver reuses via `token_sealed`; booking mints another capped by `MAX_LIVE_CAPABILITIES_PER_PURPOSE` 20; shelf mints another to count phones, capped at 20; calendar rotates under a unique live index; account and contact-email supersede). The two 20-link caps and their oldest-first retire (14 references, 11 lines) exist only because a stored digest cannot be read back — `src/db/booking-capabilities.ts:17-19` says \"Minting is unavoidably per-request\" — and ADR 20260820's `token_sealed` under `SECRET_ENCRYPTION_KEY` works around the same fact for one table. The 13 page routes each carry a `layout.tsx` (379 lines in all, pairwise different by one docblock line and a function name), an `error.tsx` (292 lines) and a `loading.tsx`, and 13 `unavailable*` copy pairs per locale (26 keys in en-US `diver.json`, 26 in es-ES) say \"this link isn't available\" thirteen ways. The genuinely one-shaped parts are `ExpiredLinkCard` with `EntryShell`'s two-tier dead-link law, `redactCapabilityUrl`'s list asserted against the filesystem (`src/app/observability.test.ts`), `src/app/capability-refusals.test.ts`, and the 220-line `scripts/check-capability-runbook.mjs` that keeps the 508-line runbook's 20-row table complete. ADR 20260827-the-divers-thread decision 4 folded `/recap` into `/ready`'s after-state and kept `src/app/recap/[token]/page.tsx` (278 lines), `recap-links.ts` and the mint at `src/db/recap.ts:1357` \"so existing recap links keep working\" — under H-49 there are none. Of the 14 families, six (`ready`, `waivers`, `recap`, `shelf`, `claim`, `gift`) already share `ThreadShell` and are one diver's relationship with one shop; the other eight are five other audiences — an account holder (3), a shop's mailbox (1), a staffer's calendar client (1), a lobby device (2) and an opt-out (1).",
+  "measurements": [
+    {
+      "what": "`[token]` route directories under src/app",
+      "value": "14 (13 page routes + `calendar/[token]/route.ts`)"
+    },
+    {
+      "what": "Tables carrying `token_hash` in src/db/schema.ts",
+      "value": "9 (lines 3452, 3481, 3510, 5735, 6034, 6432, 6482, 6566, 9292), plus better-auth's `auth_verifications`"
+    },
+    {
+      "what": "Named credential kinds",
+      "value": "12 enum purposes across 4 enums + 5 single-purpose tables + 2 stateless bearer (recap, gift) + 2 signed sentences (?gate, ?preview) = 21"
+    },
+    {
+      "what": "Lifecycle column vocabularies across the 9 tables",
+      "value": "expires_at on 7, revoked_at on 4, used_at+superseded_at on 2, superseded_at only on 1, none on 2"
+    },
+    {
+      "what": "Copies of the randomBytes(32)+SHA-256 primitive",
+      "value": "3 (src/lib/bearer-tokens.ts, waiver-tokens.ts, account-tokens.ts)"
+    },
+    {
+      "what": "Stateless HMAC modules with the identical BASE64URL_SIGNATURE block",
+      "value": "2 (recap-links.ts 103 lines, gift-links.ts 110 lines)"
+    },
+    {
+      "what": "Mint functions / verify functions / files containing a mint call",
+      "value": "12 / 11 / 39 (8 of the 39 are src/app/api/test/seed-* routes)"
+    },
+    {
+      "what": "Distinct 'dead but ours' resolvers",
+      "value": "6, in 2 vocabularies (kind: dead|unknown vs state: unavailable|expired)"
+    },
+    {
+      "what": "`unavailable*` copy pairs per locale",
+      "value": "13 (26 keys in en-US diver.json, 26 in es-ES)"
+    },
+    {
+      "what": "Per-route layout.tsx / error.tsx / loading.tsx under */[token]/",
+      "value": "13 / 13 / 13; layouts 379 lines, errors 292 lines; verify vs reset-password layout diff = 2 lines"
+    },
+    {
+      "what": "Answers to 'what does re-issuing do'",
+      "value": "5 (reuse sealed; mint another capped 20; mint another to count phones capped 20; rotate; supersede)"
+    },
+    {
+      "what": "MAX_LIVE_* cap machinery",
+      "value": "14 references, 11 oldest/retire lines, present only because a hash cannot be read back"
+    },
+    {
+      "what": "Retention rows covering token tables",
+      "value": "3 of 9 (account_tokens, person_shelf_tokens, shop_contact_email_confirmation_tokens); booking_capabilities none (#1726)"
+    },
+    {
+      "what": "Separate erasure sweeps over token tables in src/db/anonymize.ts",
+      "value": "8 (lines 702, 843, 848, 920, 936, 945, 965, 1072)"
+    },
+    {
+      "what": "capability-urls.ts / runbook / runbook guard",
+      "value": "189 lines (14 prefixes + 4 params) / 508 lines with a 20-row table / 220 lines"
+    },
+    {
+      "what": "Files sharing the `capabilityAction` rate bucket",
+      "value": "8"
+    },
+    {
+      "what": "e2e specs touching a token route",
+      "value": "29"
+    },
+    {
+      "what": "Route families on ThreadShell (the diver tier) / on EntryShell only",
+      "value": "6 (claim, gift, ready, recap, shelf, waivers) / 8"
+    },
+    {
+      "what": "Recap route kept after ADR 20260827 folded it into /ready",
+      "value": "src/app/recap/[token]/page.tsx 278 lines, recap-links.ts 103 lines, mint at src/db/recap.ts:1357"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "One bearer primitive with its reasoning written down — why plain SHA-256, why not a KDF, why not a keyed digest, and that lifetime is the caller's",
+      "where": "src/lib/bearer-tokens.ts:1-58"
+    },
+    {
+      "what": "The purpose lives inside the verify predicate, so forgetting it is a type error rather than a widened credential",
+      "where": "src/db/booking-capabilities.ts:158-185, src/db/display-tokens.ts:134-159"
+    },
+    {
+      "what": "The two-tier dead-link law (account tier names no shop, booking tier names the shop) held by one card and one test in both locales",
+      "where": "src/components/ExpiredLinkCard.tsx, src/components/account/EntryShell.test.tsx, docs/product/shipped.md:1293-1302"
+    },
+    {
+      "what": "The redaction list is asserted against the `[token]` directories on disk, and every door is proven to refuse in place (never notFound(), catches its own errors)",
+      "where": "src/app/observability.test.ts:47-60, src/app/capability-refusals.test.ts:67-95"
+    },
+    {
+      "what": "The runbook's revocation table is kept complete mechanically across three lists",
+      "where": "scripts/check-capability-runbook.mjs (220 lines), docs/engineering/capability-telemetry-runbook.md:90-103"
+    },
+    {
+      "what": "One multi-purpose capability table already exists (5 purposes) with an ADR that refused a table per purpose",
+      "where": "booking_capabilities in src/db/schema.ts:6397-6448, ADR 20260804-seat-claim-links 'Alternatives considered'"
+    },
+    {
+      "what": "A render never mints: the confirm→readiness exchange is a route reached by a tap",
+      "where": "src/app/s/[shopSlug]/trips/[id]/ready/route.ts, ADR 20260820-one-page-after-booking"
+    },
+    {
+      "what": "One rate bucket for every capability action",
+      "where": "capabilityAction in src/lib/rate-limit.ts, shared by 8 files"
+    },
+    {
+      "what": "Recap already renders the thread's after-state through the same component, so the surface is one even where the credential is two",
+      "where": "src/app/recap/[token]/page.tsx:5-6,217 (AfterState, buildAfterStateProps)"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L04-1",
+      "title": "Nine token tables are one capabilities table",
+      "kind": "shape",
+      "reading": "Nine tables in `src/db/schema.ts` carry `token_hash` (lines 3452, 3481, 3510, 5735, 6034, 6432, 6482, 6566, 9292), each with its own issue/verify/revoke module: `src/db/booking-capabilities.ts` (456 lines), `display-tokens.ts` (297), `person-shelf-tokens.ts` (265), `account-tokens.ts` (163), `shop-contact-email.ts`, `courtesy-email.ts`, `last-minute-list.ts`, `waiver-issue.ts` (548) and `src/features/calendar-sync/feed-store.ts`. ADR 20260804-seat-claim-links rejected \"a new claim-token table\" because it \"duplicates booking_capabilities' hashing, expiry, revocation, and cap machinery for no isolation gain\", and the four tables added after it (display_tokens, person_shelf_tokens, shop_contact_email_confirmation_tokens, and the shelf's twin of the 20-cap) each did exactly that. The only axis that differs is the subject — a booking, a person at a shop, a waiver record, a user account, a shop, a staffer's scope, a last-minute entry — and `trip_invitations_source_reference_check` (schema.ts:3385-3391) already shows one table holding typed nullable subjects under a check constraint. Lifecycle is spelled five ways across the nine (expires_at 7, revoked_at 4, used_at+superseded_at 2, none 2), retention covers 3 of 9 (`src/lib/retention.ts:205-234`; `booking_capabilities` has no window, #1726), and `src/db/anonymize.ts` sweeps them at 8 separate sites (lines 702, 843, 848, 920, 936, 945, 965, 1072). The runbook's 20-row table (`docs/engineering/capability-telemetry-runbook.md:69-88`) restates each family's lifetime and revocation in prose, and the 220-line guard checks only that each purpose is mentioned somewhere. Eight `src/app/api/test/seed-*` routes exist to seed one token kind each.",
+      "idea": "One `capabilities` table: `purpose` (one enum of every kind now spread over four enums and five single-purpose tables), `shop_id`, typed nullable subject columns (`booking_id`, `person_id`, `waiver_record_id`, `user_account_id`, `list_entry_id`) under a per-purpose check constraint, `expires_at`, `revoked_at`, `revoked_reason` (`used | superseded | revoked | erased`), `issued_at`, `last_used_at`. One policy record per purpose in `src/lib/capabilities.ts` — lifetime rule, single-use or not, supersede-on-issue or not, the dead page's disclosure tier, and the audience — so the runbook's table is generated from it and the guard compares rows to policy instead of hunting for mentions. One `issueCapability`, one `verifyCapability({ purpose })` whose predicate carries the purpose (the `verifyDisplayToken` discipline, for every kind), one `revokeCapabilities({ subject, purpose? })`, one retention row (`capabilities: 90` past expiry), one erasure sweep by subject. Purpose-specific facts stay on the thing the capability opens and point at it — a `display_screens` row keeps `label`, `show_names`, `last_shown_at`; `calendar_feeds` keeps `scope` — and the credential columns leave those rows. The two stateless bearer shapes fold in as purposes too: `gift` and the forwardable postcard become read-only rows that `claimSeatRecord`'s revoke-all does not touch, which is what `gift-links.ts` exists to guarantee by another route — leaving `?gate=` and `?preview=`, signed sentences rather than credentials, as the only HMACs. One `seed-capability` test route replaces eight.",
+      "dissolves": "Eight of nine token tables, ten issue/verify/revoke modules, three copies of the primitive, `recap-links.ts` and `gift-links.ts` with `RECAP_LINK_SECRET`/`GIFT_LINK_SECRET`, seven of eight seed routes, and the hand-written half of the runbook.",
+      "scope": "src/db/schema.ts (9 tables → 1 plus subject rows), src/db/booking-capabilities.ts, display-tokens.ts, person-shelf-tokens.ts, account-tokens.ts, shop-contact-email.ts, courtesy-email.ts, last-minute-list.ts, waiver-issue.ts, src/features/calendar-sync/feed-store.ts, src/lib/capabilities.ts (new), src/lib/bearer-tokens.ts, waiver-tokens.ts, account-tokens.ts, recap-links.ts, gift-links.ts, src/lib/retention.ts, src/db/retention.ts, src/db/anonymize.ts, the four schema coverage guards (export/diver-merge/delete-path/retention tests), the 14 route families' verify calls, config/env-registry.mjs, docs/engineering/capability-telemetry-runbook.md, scripts/check-capability-runbook.mjs, 8 src/app/api/test/seed-* routes and the e2e specs that call them, glossary 'capability', one ADR superseding 20260723 and amending 20260804/20260730/20260725",
+      "firstSlice": "Add `capabilities` and `src/lib/capabilities.ts` with the policy table, then move `display_tokens` and `person_shelf_tokens` (the two newest, one purpose each) onto it, deleting both tables, both db modules and their two seed routes, so `/board`, `/check-in` and `/shelf` verify through the one path.",
+      "effort": "L",
+      "reviews": [
+        "security",
+        "ADR",
+        "domain"
+      ],
+      "conflicts": "ADR 20260723-booking-capabilities (extended: its 'one table, purpose-bound' becomes the rule for every kind); ADR 20260804-seat-claim-links (its no-new-table argument applied to the four tables added after it); ADR 20260730-calendar-feed-subscriptions and 20260820-waiver-links-are-reused-not-reissued (their lifetimes become policy rows, behaviour unchanged); ADR 20260725-account-lifecycle-emails (account_tokens folded); #1726 (subsumed by one retention row); #1778 and #1774 (a staff 'links' panel and its trail event become one generic revoke); H-49 (the migration is drop-and-create, no backfill)",
+      "confidence": "high"
+    },
+    {
+      "id": "L04-2",
+      "title": "A capability's token is derived from its row, never stored",
+      "kind": "system",
+      "reading": "Every stored kind keeps a SHA-256 digest and nothing readable (`src/lib/bearer-tokens.ts:47-51`), so no render, email or \"Copy link\" can hand back a link that already exists — `src/db/booking-capabilities.ts:17-19` says \"Minting is unavoidably per-request… a page render that needs a link has no choice but to issue one\". Four mechanisms exist only to live with that fact: `MAX_LIVE_CAPABILITIES_PER_PURPOSE` and `MAX_LIVE_SHELF_TOKENS` (20 each, 14 references, 11 oldest-first lines), `waiver_records.token_sealed` under `SECRET_ENCRYPTION_KEY` (ADR 20260820, schema.ts:6036-6061), the confirm→readiness exchange route (`src/app/s/[shopSlug]/trips/[id]/ready/route.ts`, added because a reload minted rows past the cap), and the two rescues (`src/db/readiness-link-rescue.ts`, 223 lines, and `emailFreshWaiverLink`) with their `current_link_live` guards. \"What does asking twice do\" therefore has five answers across the nine tables (reuse, mint-another-capped, mint-another-to-count-phones, rotate, supersede), and 39 files contain a mint call. ADR 20260820 considered deriving the token from the record id — \"genuinely attractive… rejected on ordering, not on merit: the token must exist before the row it is derived from does… Worth revisiting if a second surface ever needs the same trick\" — and the shelf (`src/db/person-shelf-tokens.ts:60-68`, one row per send) is that second surface. The ordering objection assumes a `token_hash not null unique` column; with no hash column the id is generated before insert and there is nothing left to order. `bearer-tokens.ts:53-58` rejects a keyed digest because rotation \"would make every stored row unreadable\", which a `key_version` column answers the way `recap-links.ts` and `gift-links.ts` already accept a dedicated secret.",
+      "idea": "A capability's URL segment is `id.HMAC(key_v, id)`: the row's uuid plus a 43-character signature under an HKDF-derived key named by the row's `key_version`; the table stores no secret at all. Verify is parse → timing-safe check → load the row by id → check purpose, expiry, revocation and subject status — today's predicate minus the hash lookup — and a dump yields ids and nothing a browser can present. Issuing becomes idempotent: one live row per (subject, purpose) under a partial unique index (the `calendar_feeds_live_person_scope_idx` shape at schema.ts:6512-6514), and every email, reminder, \"Copy link\" and \"Send the link\" recomputes the same URL from the same row. Retiring a leaked link is one act with one meaning — revoke the row, mint a new id — so supersede, rotate and cap collapse into revoke. A key rotation signs new rows under the new version while old rows verify under theirs until they expire or are revoked, so nothing goes dark at once. `token_sealed` and the waiver's `SECRET_ENCRYPTION_KEY` dependency go, because a reusable link no longer needs a readable copy, and `opens`/`last_used_at` on the one row answers the shelf's \"how many phones\" as \"how often, and when\".",
+      "dissolves": "`token_hash` on every table, `token_sealed`, both 20-link caps and their oldest-first retire, the confirm→readiness exchange route, the two rescues' live-link guards, and four of the five answers to 'what does asking twice do'.",
+      "scope": "src/lib/bearer-tokens.ts (becomes the derive/verify pair with key versions), every token_hash reader (10 modules), src/db/schema.ts (drop 9 hash columns and token_sealed, add key_version and the live partial indexes), src/db/waivers.ts and waiver-issue.ts (secret-box caller removed), config/env-registry.mjs (one link-key entry replaces RECAP/GIFT secrets and the waiver's use of SECRET_ENCRYPTION_KEY), src/app/s/[shopSlug]/trips/[id]/ready/route.ts (deleted), src/db/readiness-link-rescue.ts, src/lib/kiosk-check-in.ts CAPABILITY_TOKEN_SHAPE, bearer-tokens.test.ts and booking-capabilities.test.ts, the runbook's 'Rotating or revoking' section, ADRs 20260723 and 20260820 superseded in part",
+      "firstSlice": "Replace `createBearerToken`/`hashBearerToken` with `capabilityToken(id, keyVersion)` / `capabilityFromToken(token)` and move `booking_capabilities` onto it, deleting `MAX_LIVE_CAPABILITIES_PER_PURPOSE` and the exchange route, so `bookSpot`, the reminders and `/shelf`'s 'open this trip' all hand out the booking's one readiness URL.",
+      "effort": "M",
+      "reviews": [
+        "security",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260820-waiver-links-are-reused-not-reissued (its alternative 3 adopted; its ordering objection shown gone; token_sealed removed); ADR 20260723-booking-capabilities (hashed-only storage and 'no supersession on reissue' replaced by one live row per subject+purpose); src/lib/bearer-tokens.ts's key-rotation argument (answered by key_version); ADR 20260820-one-page-after-booking's exchange route (deleted with its reason); H-16 (a second one-time cutover of the same shape, no dual-read under H-49); composes with L04-1 but does not require it",
+      "confidence": "medium"
+    },
+    {
+      "id": "L04-3",
+      "title": "The diver holds one link, and the shelf is it",
+      "kind": "concept",
+      "reading": "One diver at one shop is handed up to seven credentials: `/shelf` (a year, `person_shelf_tokens`), `/ready` (trip+30 days, `booking_capabilities.readiness`), `/waivers` (7 days, `waiver_records`), `/recap` (180 days, stateless), `?handoff=` (10 minutes), the arrival QR (`arrival`, departure-bounded) and the embed's `confirm` — with `/claim` as a party member's door in and `/gift` as the giver's view. `src/app/shelf/[token]/actions.ts:238-244` opens a trip by minting a fresh readiness capability and redirecting to `/ready/<new token>`, and `src/app/ready/[token]/actions.ts:124-132` signs a waiver by minting a fresh waiver link and redirecting to `/waivers/<new token>` — each tap on the diver's own file mints a new credential to reach another page about the same person. ADR 20260827-the-divers-thread decision 4 made `/recap` \"stop being a page of its own\", yet `src/app/recap/[token]/page.tsx` (278 lines), `src/lib/recap-links.ts` (103) and the mint at `src/db/recap.ts:1357` remain \"so existing recap links keep working\" — under H-49 there are no existing links. ADR 20260820-waiver-links-are-reused exists because the link a shop re-sends is the waiver's, seven-day and hash-only, and `src/app/actions/shelf-door.ts:1-20` then explains why `/ready` may mint a shelf token and `/recap` may not — three link tiers over one person, each with its own reuse rule. The roadmap's \"One 'your trip' link per diver\" row (`docs/product/features/roadmap.md:614`) still anchors the one link at `/ready` and still lists the recap fold as open, while ADR 20260908-one-hand lever Z (\"the capability link is promoted from one trip to the diver at the shop\", H-71 m) moved the anchor to the person and shipped as `/shelf`, and the row was never updated. Six of the fourteen families already share `ThreadShell` (`claim`, `gift`, `ready`, `recap`, `shelf`, `waivers`); the other eight are an account holder (`verify`, `reset-password`, `invite`), a shop's mailbox (`confirm-contact`), a staffer's calendar client (`calendar`), a device (`board`, `check-in`) and an opt-out (`unsubscribe`).",
+      "idea": "The diver's link is the shelf, minted once per person-at-shop at first booking or at the counter and carried by the confirmation email, every reminder, \"Text waiver\" and \"Copy link\"; a trip is a state under it — `/shelf/<token>/trips/<id>` renders what `/ready` renders, after-state included — and the waiver step is that trip's first row, so `/ready/[token]` and `/waivers/[token]` stop being credentials and become paths. `?handoff=` stays a ten-minute credential derived from the shelf on the tap, and the arrival QR stays its own departure-bounded purpose because it leaves on paper (issue #1600). The forwardable postcard keeps a weaker credential — read-only, no cancel, no file — but as a purpose on the same booking rather than a second signing scheme; recap emails carry it, and `/recap`'s route, `recap-links.ts` and `RECAP_LINK_SECRET` are deleted, closing the ADR's \"existing links\" clause under H-49. Genuinely different audiences keep their own doors: `claim` (a not-yet-known person becoming one, who on success receives their own shelf link), `gift` (a third party reading four facts), the three account tokens, `confirm-contact`, `calendar`, `board`/`check-in`, and `unsubscribe` (which must outlive everything and open nothing). The waiver's medical privacy tier moves from the link to the draft — a saved questionnaire is restored only within seven days of `started_at` — so the year-long link never shows a medical answer, which is the shelf's own rule (`src/db/shelf.ts:37-41`) held on the one page that collects one. \"Ask your dive shop for a fresh link\" becomes one sentence because there is one link to ask for, and the two rescues (`readiness-link-rescue.ts`, `emailFreshWaiverLink`) become \"send my link\" to the address on file.",
+      "dissolves": "The readiness and waiver links as credentials, `/recap/[token]` with `recap-links.ts`, `shelf-door.ts`'s three-tier explanation, ADR 20260820's reuse mechanism, and two of the three diver-facing 'ask for a fresh link' rescues.",
+      "scope": "src/app/shelf/[token]/** (gains trips/[id] and the waiver step), src/app/ready/[token]/** (the 2,442-line page becomes the trip state under the shelf), src/app/waivers/[token]/**, src/app/recap/[token]/** (deleted), src/app/actions/shelf-door.ts, src/db/notifications.ts:1011-1036, reminders.ts:386-394, recap.ts:1357, waiver-issue.ts, bookings.ts' landing redirect, src/lib/capability-urls.ts, diver.json en-US and es-ES (ready.*, waiver.*, recap.*, shelf.* keys), 29 e2e specs and their visual captures, docs/design/surfaces.md 'The thread' and 'The shelf', glossary, the runbook table, an ADR superseding 20260723-post-trip-recap and 20260820-waiver-links-are-reused in part and amending 20260827 decision 4 and 20260908 Z",
+      "firstSlice": "The booking confirmation email and the reminders carry the diver's shelf link anchored at the trip (`/shelf/<token>/trips/<id>`, rendering the existing thread), `/shelf`'s 'open this trip' stops minting and links, and `/recap/[token]` plus `recap-links.ts` are deleted with recap emails carrying a read-only postcard purpose.",
+      "effort": "L",
+      "reviews": [
+        "domain",
+        "security",
+        "design",
+        "ADR"
+      ],
+      "conflicts": "roadmap 'One your trip link per diver' (cited and gone wider: its anchor moved from /ready to the person when Z shipped, and its open recap half was closed by ADR 20260827 decision 4 — the row is stale); ADR 20260827-the-divers-thread decision 4 ('existing recap links keep working' is an H-49 deletion); ADR 20260908-one-hand lever Z and H-71 (m) (the promotion it named, finished); ADR 20260820-waiver-links-are-reused-not-reissued (superseded: reuse is the one link's nature); ADR 20260723-post-trip-recap (stateless recap replaced by a read-only purpose); ADR 20260906-before-you-ask decision 3 (handoff unchanged); ADR 20260804-seat-claim-links (claim stays and hands the claimant their shelf link); ADR 20260821-the-ready-page-asks-once (its rows unchanged, re-homed); settled 'the diver's trip page and the staff trip page stay separate' (untouched)",
+      "confidence": "medium"
+    },
+    {
+      "id": "L04-4",
+      "title": "Fourteen doors are one route group with one refusal",
+      "kind": "surface",
+      "reading": "Thirteen `src/app/*/[token]/layout.tsx` files (379 lines) exist \"for one reason\" — the error-boundary copy bridge of ADR 20260803 — and differ pairwise by one docblock line and the function name (`diff verify/[token]/layout.tsx reset-password/[token]/layout.tsx` is 2 lines); thirteen `error.tsx` (292 lines) and thirteen `loading.tsx` sit beside them. `src/app` has no route group at all, and a `(doors)` group would give all fourteen one layout and one boundary without moving a URL. Thirteen `unavailable*` copy pairs per locale (26 keys in `src/i18n/locales/en-US/diver.json`, 26 in es-ES) say \"This link isn't available\" thirteen ways — \"This readiness link\", \"This waiver link\", \"This recap link\", \"This screen link\", \"This tablet isn't set up\", \"This link has run out\". The dead-link law has two tiers (account: name no shop; booking: name the shop — `shipped.md:1293-1300`, `EntryShell.test.tsx`), but the \"dead but ours\" question is answered by six resolvers in two vocabularies: `getClaimPageState`/`getRecapPageState` (`kind: dead | unknown`), `TokenWaiverState` (`state: unavailable | expired`, `src/db/waivers.ts:764`), `staleBookingCapabilityForToken` (`{ shopId }`), `shelfTokenStanding`, `wasAccountTokenConsumed`/`wasShopContactEmailConfirmed`. `ExpiredLinkCard` (100 lines) is already one shape for the card, used by 5 pages, `EntryDone` by the rest, and 13 renders wear `glyph=\"expired\"`. `src/app/capability-refusals.test.ts` and `observability.test.ts` already scan the filesystem for `[token]` directories, so the scan would read one group.",
+      "idea": "Every door lives under `src/app/(doors)/<family>/[token]/`, with one `layout.tsx` (the copy bridge), one `error.tsx` and one `loading.tsx` shape; URLs are unchanged. Verify returns one standing — `live(context) | dead(shop | null) | unknown` — with the tier decided by the purpose's policy (L04-1) rather than by six resolvers, so a page branches on `standing.kind` and nothing else. One `DeadLink` page renders the two tiers from two copy pairs (`door.unavailable.*`, `door.unavailableWithShop.*`), the family named by an eyebrow from the same bundle the live page uses; eleven pairs are deleted from both locales. `CAPABILITY_ROUTE_PREFIXES` becomes the group's directory listing — generated at build like the env registry, or asserted as today — and the paragraph-per-prefix commentary in `capability-urls.ts` moves to the policy table. The grammar afterwards: a door is a purpose, a token and a standing; the family says only which page opens when the standing is live.",
+      "dissolves": "Twelve layouts, twelve error boundaries, eleven copy pairs per locale, five of six standing resolvers, and the per-family reasoning each door re-derives about what a dead link may say.",
+      "scope": "14 route directories moved under src/app/(doors)/ (36 per-route files deleted), src/components/ExpiredLinkCard.tsx and account/EntryShell.tsx (one door), diver.json en-US and es-ES, src/db/seat-claims.ts:150-200, recap.ts:290-358, waivers.ts:760-800, booking-capabilities.ts:226-320, person-shelf-tokens.ts:206-250, src/app/capability-refusals.test.ts, observability.test.ts, src/lib/capability-urls.ts, e2e/account-lifecycle.spec.ts and the dead-door visual captures, docs/design/surfaces.md, ADR 20260803-error-boundary-copy-bridge (amended: one bridge) and 20260827-first-light decision 3 (kept as the one page's parameter)",
+      "firstSlice": "Move the fourteen `[token]` routes under `src/app/(doors)/` with one `layout.tsx` and one `error.tsx`, delete the 26 per-route copies, and point the two filesystem tests at the group — no URL, copy or behaviour changes.",
+      "effort": "M",
+      "reviews": [
+        "design",
+        "security"
+      ],
+      "conflicts": "ADR 20260803-error-boundary-copy-bridge (its reason satisfied once, at the group); ADR 20260827-first-light decision 3 (the two-tier dead-link law kept as one page's parameter); ADR 20260804-instant-navigation (the group layout stays synchronous, as each copy is today); composes with L04-1's policy table for the tier and with L04-3, which removes three of the fourteen doors",
+      "confidence": "high"
+    }
+  ]
+}

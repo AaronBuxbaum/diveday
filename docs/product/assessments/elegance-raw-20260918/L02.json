@@ -1,0 +1,169 @@
+{
+  "lensId": "L02",
+  "lens": "Lifecycles and state words",
+  "reading": "Of the 83 pgEnums in src/db/schema.ts, 27 are *_status/*_stage and they sit on 42 columns; the honest finding is that the repo has two lifecycle grammars done well and one done twice. Done well: the four crew/desk sighting ledgers (roll_call_events, roll_call_crew_events, pre_departure_check_events, booking_arrival_events at schema.ts:8028/8158/8278/8359) share one append-only, newest-wins, cleared-as-undo shape with constants in src/lib/roll-call.ts and src/lib/arrival.ts, and trip_stage_events is derived by src/db/trip-stages.ts with no projection column at all. Done twice: bookings.status (schema.ts:2555) carries the seat's word and the arrival's word in one slot, 8 `.set({ status })` writers in 4 files overwrite it and only the 3 in src/db/check-in.ts append the trail, and three open issues from the same six days (#1838, #1694, #1836) are that slot disagreeing with the trail. The eleven side-effect ledgers (payment intents, media deletions, erasure obligations, integration deliveries, the send queue, backups, two promo tables, blow-out messages, checkouts, tips) spell one four-state lifecycle with 7 words for \"done\" and 6 column names for \"when it resolved\", and only 4 have a stuck reader (orders/page.tsx:207-210, settings/SettingsPage.tsx:20-21) — src/db/notifications.ts:87-94 says of the send queue \"a row that gives up here is invisible on every staff screen\". A state word is rendered nowhere in particular: \"Boarded\" is the value of 7 keys in 5 bundle files, \"Checked in\" of 4 keys in 4 files, 5 components branch inline on the codes, and none of the 35 src/i18n/*-labels.ts modules covers presence while readiness has 525 lines of one (src/i18n/readiness-labels.ts). Waivers keep a stored status that is a function of two sibling columns (src/db/waivers.ts:1222), nine dated facts on the row (schema.ts:6063-6234), two six-word derivations sharing four words (src/lib/waivers.ts:221 and :336), and three stores of link delivery (notification_deliveries, waiver_deliveries, five waiver_records.delivery_* columns). The departure's lifecycle is spread over status, cancelled_at, conditions_hold (17 readers), deleted_at, trip_blowouts (4), trip_stage_events and day_closeouts (6), with 40 hasSailed/hasReturned call sites and 168 status-scheduled/cancelled comparisons in src/db — but each store carries a written reason for its orthogonality (schema.ts:2143-2166, glossary \"Conditions hold\") and setTripStatus (src/db/trips-record.ts:718) is the one seam, so it is spread, not disagreeing. The known roadmap row \"Check-in = boarding's first rung\" (docs/product/features/roadmap.md:613) is half-dead: its mechanism was refused by ADR 20260907-the-counter-survives-offline decisions 4-5, while its problem moved from \"check-in vs boarded\" to \"slot vs trail\".",
+  "measurements": [
+    {
+      "what": "pgEnum definitions in src/db/schema.ts / of which *_status or *_stage / status-or-stage columns across tables",
+      "value": "83 / 27 / 42"
+    },
+    {
+      "what": "Writers of bookings.status via .set({ status }) (non-test) / of those that append a booking_arrival_events row in the same transaction",
+      "value": "8 in 4 files (check-in.ts x3, bookings.ts x3, no-show.ts:176, manifests.ts:1230) / 3 (all in src/db/check-in.ts)"
+    },
+    {
+      "what": "Places arrival is stored",
+      "value": "3: booking_arrival_events (trail), bookings.status = checked_in (projection), offline snapshot divers[].checkedIn (src/lib/offline-manifests.ts:328) — plus trip_desk_events.kind = arrival as a 30-day catch-up strip"
+    },
+    {
+      "what": "Non-test occurrences of \"checked_in\" / files / files reading bookings.status at all / test+spec files naming checked_in",
+      "value": "26 / 15 / 74 / 19"
+    },
+    {
+      "what": "SEAT_HELD_STATUSES = [booked, checked_in]: defined / re-spelled by hand / imported",
+      "value": "1 (src/lib/no-show.ts:39) / 4 files (first-booking.ts, kiosk-check-in.ts, reporting.ts, season-scale.ts) / 5 files"
+    },
+    {
+      "what": "Append-only ledger tables (*Events/*Attempts/*Intents/*Obligations/*Deliveries/*Deletions/*Skips)",
+      "value": "24"
+    },
+    {
+      "what": "Side-effect attempt ledgers / their status enums / words for not-yet / in-flight / done / failed",
+      "value": "11 tables / 11 enums / 4 (pending, started, queued, owed) / 3 (processing, sending, started) / 7 (succeeded, sent, delivered, completed, discharged, paid, active) / 2 (failed, expired)"
+    },
+    {
+      "what": "Attempt-ledger column spellings: resolved-time / error / attempt counter",
+      "value": "6 (resolved_at x2, discharged_at, delivered_at, finished_at, completed_at x2) / 3 (error_message, last_error x4, error_code x2) / 3 (attempts x3, attempt_count, recovery_attempts)"
+    },
+    {
+      "what": "Bespoke stuck/owed readers / staff surfaces showing them / ledgers with no reader at all",
+      "value": "4 (listStuckPaymentOperations, listPendingMediaDeletions, listOwedProcessorErasures, listOwedShopCancellationRefunds) / 2 (orders/page.tsx, settings/SettingsPage.tsx) / 2 (notification_send_queue, integration_deliveries at attemptCount < 8)"
+    },
+    {
+      "what": "Bundle keys whose English value is exactly \"Boarded\" / \"Checked in\" / strings carrying \"Not here\"",
+      "value": "7 keys in 5 files / 4 keys in 4 files / 4 strings"
+    },
+    {
+      "what": "Components branching inline on presence codes / src/i18n label modules / label modules naming a presence code / lines in readiness-labels.ts",
+      "value": "5 / 35 / 0 / 525"
+    },
+    {
+      "what": "waiver_records: stored status words / lifecycle timestamps / derived state unions x words / stores of link delivery",
+      "value": "3 / 9 / 2 x 6 (sharing 4) / 3"
+    },
+    {
+      "what": "certification_status (pending|verified) tables / provenance timestamps beside it on certifications and nitrox_certifications / spoken words not stored as values",
+      "value": "4 / 4 (reviewed_at, imported_at, self_declared_at, issued_by_shop_at) / claimed, sighted, confirm-to-clear (glossary:77,94; #1869)"
+    },
+    {
+      "what": "Departure lifecycle: hasSailed/hasReturned call sites / status = scheduled|cancelled comparisons in src/db / readers of conditionsHold / of tripBlowouts / of dayCloseouts",
+      "value": "40 / 168 / 17 / 4 / 6"
+    },
+    {
+      "what": "status: \"<word>\" literals in src/db (non-test, non-seed) / files — most are return-shape codes, not writes",
+      "value": "257 / 40"
+    }
+  ],
+  "alreadyDone": [
+    {
+      "what": "The four sighting ledgers share one grammar: append-only, one row per tap, cleared as the undo, source live/offline, client_event_id, occurred_at + seq tiebreak, RETRACTION_SUPERSEDED constants spelled once, one staleness bound hoisted to src/lib/offline-events.ts (ADR 20260907 decision 3). A fifth ledger, trip_stage_events, joins it with re-tap instead of cleared.",
+      "where": "src/db/schema.ts:8028, 8158, 8278, 8359, 3098; src/lib/roll-call.ts, src/lib/arrival.ts, src/lib/pre-departure-check.ts"
+    },
+    {
+      "what": "The stage ledger has one writer, three readers and no projection column on trips; liveStageOf derives the word with a stated shelf life and a stage is never inferred from a clock. This is the model L02-1 asks bookings to follow.",
+      "where": "src/db/trip-stages.ts:10-17, src/lib/trip-stages.ts:55-70, ADR 20260904-reef-all-the-way-down decision 2"
+    },
+    {
+      "what": "booking_payment_events records every payment transition with status and previous_status from one writer — the one true one-event-per-transition ledger in the schema.",
+      "where": "src/db/schema.ts:3945-3972; ADR 20260803-booking-payment-events"
+    },
+    {
+      "what": "Readiness has exactly one vocabulary (Blocked / Ready) and one label module, which is the rendering standard the presence words lack.",
+      "where": "src/i18n/readiness-labels.ts (525 lines); docs/product/glossary.md:613"
+    },
+    {
+      "what": "Trip cancellation goes through one seam that stamps and clears cancelled_at with the status word, so the word and the time cannot disagree; the blow-out cascade and the minimum-seat sweep both call it.",
+      "where": "src/db/trips-record.ts:718-735; 3 callers"
+    },
+    {
+      "what": "no_show has one writer behind one gate, and ADR 20260911 removed the close-of-day sweep that would have let the seat word overwrite a sighting; the counter's counting predicates are pure and tested against the blocked-after-check-in case.",
+      "where": "src/db/no-show.ts:176, src/lib/no-show.ts:91, src/lib/check-in.test.ts:29-31, ADR 20260911-the-confirm-tap-is-the-release"
+    },
+    {
+      "what": "Roll call is deliberately tri-state (not a toggle) because not_boarded is a recorded statement distinct from unrecorded, and the two meanings of not_boarded by checkpoint are handled by one predicate, standingResultMeansSailed.",
+      "where": "docs/design/settled-questions.md:41; src/lib/roll-call.ts:83-95, :176"
+    }
+  ],
+  "ideas": [
+    {
+      "id": "L02-1",
+      "title": "A booking's status is two lifecycles; arrival is its trail",
+      "kind": "concept",
+      "reading": "booking_status (src/db/schema.ts:2555) holds four words on two axes: booked/cancelled/no_show say whether the seat is held, checked_in says the diver arrived — SEAT_HELD_STATUSES = [booked, checked_in] (src/lib/no-show.ts:39) exists to fold the second axis back out, and 4 more files (first-booking.ts, kiosk-check-in.ts, reporting.ts, season-scale.ts) re-spell that pair by hand. Since ADR 20260907-the-counter-survives-offline, arrival has its own append-only trail booking_arrival_events (schema.ts:8359) with the same columns and newest-wins rules as roll_call_events, but decision 1 kept bookings.status as \"the projection every existing reader looks at\", so arrival lives in three places: the trail, the slot, and the offline snapshot's divers[].checkedIn (src/lib/offline-manifests.ts:328). Eight .set({ status }) writers touch the slot (src/db/check-in.ts x3, bookings.ts x3, no-show.ts:176, manifests.ts:1230) and only check-in.ts's three append a trail row; the other five overwrite checked_in without saying so. That is the disagreement behind three issues filed in six days: #1838 (reclaimReleasedSeat restores booked while undoBookingNoShow restores checked_in from standingArrivalStatus), #1694 (four \"did this person dive\" readers, two of which fall back to the trail through src/db/arrival-provenance.ts, 161 lines written to re-derive what the slot forgets), and the booking half of #1836. The counter-example is in the same repo: trip_stage_events (schema.ts:3098) has no projection column on trips, liveStageOf (src/lib/trip-stages.ts:55) derives the word, and no issue about a disagreeing stage exists. The roadmap row \"Check-in = boarding's first rung\" (docs/product/features/roadmap.md:613) proposes merging arrival into the departure checkpoint, which ADR 20260907 decisions 4-5 now refuse (\"a second control on the roll-call row\" is a listed rejected alternative) — the row's problem is real and its mechanism is dead. Removing checked_in reaches 26 non-test occurrences in 15 files, 74 files that read bookings.status at all, and 19 test/spec files.",
+      "idea": "booking_status becomes the seat's word only — booked | cancelled | no_show — and seatIsHeld becomes status === \"booked\", deleting the four hand-spelled pairs. Arrival is derived from booking_arrival_events exactly as boarding is from roll_call_events and the stage from trip_stage_events: standingArrivalStatus moves to a dependency-free src/lib/presence.ts beside roll-call.ts, the counter, roster, Today and kiosk readers take an `arrived` field joined from the trail in the one-query-per-departure shape onTheWaterByRollCall already uses, and the offline snapshot's checkedIn is filled from the trail. A no-show, a cancel, a reclaim or a restore then touches the seat word and leaves the sighting standing — #1838 has nothing to restore and #1694's \"sweep erases a sighting\" cannot happen. The one evidence rule that remains — a standing roll-call result meaning sailed outranks a later desk word (#1836) — is written once in presence.ts and every \"did they dive\" reader calls it. ADR 20260907's consequence \"keeping bookings.status and the trail written in one transaction\" is retired by a superseding ADR that keeps its decisions 2-5 intact. The grammar afterwards: every crew or desk sighting is an append-only tap ledger with no projection, and a mutable status column says only what the shop decided (held, released, cancelled).",
+      "dissolves": "The checked_in enum value, SEAT_HELD_STATUSES and its four copies, the projection half of src/db/arrival-provenance.ts, and the roadmap's \"Check-in = boarding's first rung\" row (superseded, not merged).",
+      "scope": "src/db/schema.ts (booking_status) + one destructive migration with the H-49 line; src/db/check-in.ts, no-show.ts, manifests.ts (reclaimReleasedSeat), bookings.ts, kiosk-check-in.ts, arrival-provenance.ts, reporting.ts, season-scale.ts, first-booking.ts, executed-dives.ts, divers.ts, recap.ts, shelf.ts, today.ts; src/lib/check-in.ts, no-show.ts, manifests.ts, offline-manifests.ts, new src/lib/presence.ts; CounterQueueRow.tsx, RosterSection.tsx, OfflineManifestView.tsx, trips/[id]/manifest/page.tsx, trips/[id]/log/page.tsx; staff/checkIn.json en-US + es-ES; 19 test/spec files; glossary \"Seat held\", \"Check-in\", \"Arrival event\"; roadmap.md:613; a new ADR superseding decision 1 of 20260907; the export bundle's bookings.csv status column.",
+      "firstSlice": "Add src/lib/presence.ts with the one derived `arrived` reader and make the five bookings.status writers outside check-in.ts stop touching arrival (closing #1838 and #1694's recap/shelf half with tests), enum value still present; the second PR drops checked_in and the four copies.",
+      "effort": "M",
+      "reviews": [
+        "domain",
+        "security",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260907-the-counter-survives-offline decision 1 — supersedes its \"bookings.status stays the projection\" clause on the evidence of three disagreement issues in six days and H-49's ban on dual-reads, keeps decisions 2-5 (offline queue cannot say aboard) untouched; roadmap \"Check-in = boarding's first rung\" — retires the row, its mechanism already refused by that ADR; H-62 — answers the Check-in fold's open \"arrived-vs-aboard data question\"; #1838 and #1694 subsumed; #1836's booking half subsumed, its setTripStatus half untouched; ADR 20260911-the-confirm-tap-is-the-release — no_show stays the seat word, unchanged; N-53 — offline counter behaviour unchanged; settled-questions.md:41 — roll call tri-state untouched.",
+      "confidence": "high"
+    },
+    {
+      "id": "L02-2",
+      "title": "Eleven unfinished-work ledgers speak one attempt grammar",
+      "kind": "system",
+      "reading": "Eleven tables record an external side-effect attempt — payment_operation_intents (schema.ts:5382), media_deletion_attempts (8884), processor_erasure_obligations (8962), integration_deliveries (5272), notification_send_queue (4262), shop_backup_deliveries (4627), trip_last_minute_promos (3534), shop_promo_codes (3603), trip_blowouts.message_status (9095), booking_checkouts (4836), tips (5086) — each with its own pgEnum, 11 of the 27 status enums. They spell the same four states with four words for not-yet (pending, started, queued, owed), three for in-flight (processing, sending, started), seven for done (succeeded, sent, delivered, completed, discharged, paid, active) and two for failed (failed, expired). The resolved-time column has six spellings (resolved_at x2, discharged_at, delivered_at, finished_at, completed_at x2), the error column three (error_message, last_error x4, error_code x2), the counter three (attempts x3, attempt_count, recovery_attempts). Each was copied on purpose and by hand: media_deletion_attempts says \"Mirrors paymentOperationIntents (CR-005)\" (schema.ts:8888) and trip_last_minute_promos \"mirroring startBookingCheckout's insert-before-external-call shape\" (3541). \"Is this stuck?\" is answered by four bespoke readers (listStuckPaymentOperations, listPendingMediaDeletions, listOwedProcessorErasures, listOwedShopCancellationRefunds) on two surfaces (orders/page.tsx:207-210, settings/SettingsPage.tsx:20-21), and by nobody for the send queue or the integration outbox: src/db/notifications.ts:87-94 says \"there is no such surface... a row that gives up here is invisible on every staff screen\" (#1719, still open as #1826), and integration_deliveries gives up at attemptCount < 8 (src/db/integration-events.ts:250) with no reader. ADR 20260723-payment-operation-intents argues for insert-before-call and a human-visible stuck queue; nothing in it or its two mirrors argues for a vocabulary per table.",
+      "idea": "One attempt_status enum (pending | in_flight | done | failed) and one column trio (attempts, last_error, resolved_at) on every ledger that records a side effect; the domain word survives only where it is a kind, not a state (an erasure row is owed because it is a processor_erasure with status pending). One src/lib/attempts.ts holds the staleness rule per kind (stuckAfterMs — the five-minute payment window, the send queue's three daily passes, the outbox's eight) and one src/db/unfinished.ts reader lists every row in_flight past its window or failed with attempts exhausted, tagged by kind and shop; the four bespoke readers become four kind filters over it. Each queue stays on the surface its object owns (the route map's rule — Orders, Settings' Data & integrations, never Reports), and the two ledgers with no surface today get one for free because the reader already sees them. Seeds and /api/test/seed-trouble-states write the one enum. The grammar afterwards: a ledger row is pending until a worker claims it, in_flight while a call is out, and done or failed with a reason — the same sentence on eleven tables, and a twelfth ledger inherits it instead of inventing an eighth word for done.",
+      "dissolves": "Ten of the eleven attempt-status enums, six spellings of \"when it resolved\", three of \"what went wrong\", four hand-written stuck readers, and the silent give-up in the send queue and the integration outbox.",
+      "scope": "src/db/schema.ts (11 tables) + one migration; src/db/payment-operations.ts, media-deletions.ts, processor-erasure.ts, integration-events.ts, notifications.ts, backup delivery writer, trip-promos.ts, shop-promos.ts, blowouts.ts, checkouts.ts, tips.ts, refunds.ts; new src/lib/attempts.ts and src/db/unfinished.ts; orders/page.tsx, settings/SettingsPage.tsx, the integrations settings page, Today's urgency:now row; seed-front-desk.ts and /api/test/seed-trouble-states; staff bundle queue words en-US + es-ES; ADRs 20260723-payment-operation-intents, 20260723-media-validation-and-deletion, 20260720-notification-attempt-history, 20260804-blowout-cascade amended by one new ADR; glossary.",
+      "firstSlice": "Add src/lib/attempts.ts and src/db/unfinished.ts reading the existing eleven enums through a per-kind mapping, and put the send queue's parked rows on Settings' Data & integrations (closing #1826) — no schema change; the enum collapse is the second slice, one ledger family per PR on a stack.",
+      "effort": "L",
+      "reviews": [
+        "security",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260723-payment-operation-intents — extended, not reversed: the claim column, idempotency keys and the human-not-guess stance stay, started renames to in_flight; ADR 20260720-notification-attempt-history and 20260804-blowout-cascade — their words change, their send-once rules do not; #1826 and #1719 subsumed (the parked-failure surface); #1865 touched (a provider error is worded in one place); route map \"back-office queues live with the object, never on Reports\" — kept; roadmap \"One Bill per booking\" — adjacent (checkouts and tips keep their money meaning, only their attempt words change).",
+      "confidence": "medium"
+    },
+    {
+      "id": "L02-3",
+      "title": "Presence has one word list, rendered from one derived state",
+      "kind": "surface",
+      "reading": "\"Boarded\" is the value of 7 different keys in 5 bundle files (staff/manifest.json:20 and :146, checkIn.json:15, shared.json:347, :371 and :462, diver.json:2466); \"Checked in\" of 4 keys in 4 files (trips.json:401, manifest.json:96, checkIn.json:25, shared.json:397); \"Not here\" appears in 4 strings (manifest.json:98, checkIn.json:41-42, shared.json:363). Five components branch inline on the codes (=== \"boarded\", \"checked_in\", \"no_show\"): CounterQueueRow.tsx, RosterSection.tsx, OfflineManifestView.tsx, trips/[id]/manifest/page.tsx, trips/[id]/log/page.tsx. src/i18n has 35 *-labels.ts modules — readiness-labels.ts alone is 525 lines — and a grep for a label module naming boarded, checked_in or arrived returns 0 files. The codes live in three modules with three shapes: RollCallState awaiting|boarded|not_boarded (src/lib/roll-call.ts:25), ArrivalStatus arrived|cleared (src/lib/arrival.ts:25), and the booking words checked_in|no_show (schema.ts:2555) — plus two qualifiers that change the sentence but are not states, self-reported (src/db/arrival-provenance.ts:59) and missingAfterDive (src/db/manifests.ts:1225). ADR 20260907 decision 5 argues that each row must \"say the act in words\" so the wrong list cannot be tapped — an argument for one careful word per state, which seven keys for \"Boarded\" do not give.",
+      "idea": "One derived Presence type in src/lib/presence.ts (dependency-free like roll-call.ts, so the service worker shares it): expected | self_reported | arrived | boarded | not_boarded | missing_after_dive | released — the union of the desk's and the rail's answers about one person on one departure, parameterised by checkpoint. One src/i18n/presence-labels.ts maps each state to exactly one key per locale (the word, the pill, the aria phrase), and the five components, Today's departure rows, the offline view and the diver's \"Aboard · {when}\" line render through it. The rail and the desk keep separate controls — ADR 20260907's structural refusal stands, because presence is read through this type and never written through it; what merges is the reading. Afterwards a state word is spelled once in English and once in Spanish, a new surface that draws a boat cannot invent an eighth \"Boarded\", and pnpm check:copy's baseline falls by the deleted keys.",
+      "dissolves": "Seven keys for one word, five inline code-to-word branches, and the three-module split of the presence vocabulary on the read side.",
+      "scope": "src/lib/presence.ts (new, shared with L02-1), src/i18n/presence-labels.ts (new); staff/manifest.json, checkIn.json, shared.json, trips.json, diver.json in en-US and es-ES; the five components plus today rows and the diver's trip line; e2e/visual.spec.ts captures of counter, manifest and roster; glossary \"Check-in\", \"Boarding\", \"No-show\" cross-links; docs/design/surfaces.md's counter entry.",
+      "firstSlice": "Add presence-labels.ts and route the manifest's and the counter's pills through it, deleting the duplicate keys those two surfaces owned; the remaining surfaces follow in the same stack.",
+      "effort": "S",
+      "reviews": [
+        "design",
+        "domain"
+      ],
+      "conflicts": "Composes with L02-1 (shares presence.ts) but does not require it; ADR 20260907 decision 5 — kept, controls stay separate; ADR 20260828-a-missing-diver-gets-a-sentence — the note stays beside the word, not inside it; #1840 (offline roll-call control) and #1690 (withholding an unconfirmed identity on the manifest) touch the same rows and should land on this type; H-71 (b) \"every page title becomes the tab's word\" is the same instinct one level up.",
+      "confidence": "high"
+    },
+    {
+      "id": "L02-4",
+      "title": "A waiver's standing is derived once; its stored status is history",
+      "kind": "concept",
+      "reading": "waiver_records.status (schema.ts:6026) is three words, and its only non-paper writer sets it as a function of a sibling column: medicalReviewRequired ? \"medical_review\" : \"completed\" (src/db/waivers.ts:1222), while pending is the default, i.e. completed_at is null. Beside it sit nine lifecycle timestamps on the same row (started_at, consented_at, signed_at, completed_at, superseded_at, medical_cleared_at, medical_clearance_declined_at, guardian_consented_at, guardian_signed_at at schema.ts:6063-6234) and expires_at. Two derivations turn the row into a word: WaiverState (6 values, src/lib/waivers.ts:336) for one record and ShopWaiverStatus (6 states, :221) for a person — they share four words and each has two the other lacks (not_sent/awaiting_signature vs none/guardian_missing), so a minor's solo signature is complete in one vocabulary and guardian_missing in the other. waiverState's own comment concedes the split: \"The record keeps saying medical_review because that is what happened to it\" (waivers.ts:349-351) — the stored word is history, the derived word is standing. Link delivery is stored three ways: notification_deliveries per booking and purpose (schema.ts:4089), waiver_deliveries per channel (6352, ADR 20260820-waiver-delivery-is-per-channel), and five waiver_records.delivery_* columns (6028-6032) written only by the independent-waiver branch (src/db/notifications.ts:865-880 and :1165). That ADR rejected collapsing the columns \"on blast radius rather than principle\" and wrote the escape hatch (\"collapse it into waiver_deliveries and drop the columns\") five days after H-49 (2026-08-15) said blast radius on pre-pilot data is not a reason.",
+      "idea": "Drop waiver_records.status and read the row's standing from its timestamps through one derivation, waiverStanding(record, { signer, templateVersion, now }), that replaces both WaiverState and ShopWaiverStatus with one word list: none | sent | awaiting_signature | signed | expired | superseded | medical_review | medical_not_cleared | guardian_missing. The booking-scoped and person-scoped readers (effectiveWaiverForBooking, shopWaiverStatus) become two selectors over the same standing rather than two vocabularies, and readiness, the diver record, the counter, close-out, the recap and the export all ask it. Delivery moves into waiver_deliveries alone — the independent-waiver branch writes a row where it now writes five columns, and the webhook's fallback keys on that table — taking the ADR's own escape hatch under H-49. Afterwards a waiver is a signed evidence row whose every state is a dated fact, \"what does this waiver say now\" has one answer everywhere it is asked, and no column can disagree with the timestamp that implies it.",
+      "dissolves": "The waiver_record_status enum, one of the two derived unions, and the five record-level delivery columns.",
+      "scope": "src/db/schema.ts (waiver_records) + one destructive migration with the H-49 line; src/lib/waivers.ts, src/lib/readiness.ts, src/lib/guardian.ts; src/db/waivers.ts, notifications.ts (independent branch and the :1165 webhook update), anonymize.ts:692, export.ts (waiver_records.csv shape) and export.test.ts; src/i18n/waiver-labels.ts and the waiver words in diver.json and staff bundles en-US + es-ES; ADR 20260820-waiver-delivery-is-per-channel superseded on the columns; glossary waiver entries; e2e waiver specs.",
+      "firstSlice": "Replace waiverState and ShopWaiverStatus with one waiverStanding behind the existing callers with tests pinned (no schema change); the column drops and the delivery-row move are the second PR.",
+      "effort": "M",
+      "reviews": [
+        "security",
+        "domain",
+        "ADR"
+      ],
+      "conflicts": "ADR 20260820-waiver-delivery-is-per-channel — takes its stated escape hatch, keeps the per-channel table; ADR 20260907-guardian-co-signature — guardian_missing stays a state; H-02 — retention of waiver evidence unchanged, the timestamps are the evidence; H-49 — the reason the blast-radius argument no longer holds; #1855 (identity-unconfirmed blocker copy) adjacent, not subsumed.",
+      "confidence": "medium"
+    }
+  ]
+}
