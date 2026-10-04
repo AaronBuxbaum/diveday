@@ -248,6 +248,42 @@ describe("decideTripAdmission — absence of evidence is never a refusal (H-08's
   });
 });
 
+describe("decideTripAdmission — a course that gets them there first", () => {
+  it("sells an Advanced seat to an Open Water diver booked on an Advanced course that ends first", () => {
+    expect(
+      decideTripAdmission({
+        requirement: advancedTrip,
+        siteRequirement: null,
+        evidence: evidence({
+          certifications: [certification({ level: "open_water" })],
+          levelsInTraining: ["advanced_open_water"],
+        }),
+      }),
+    ).toEqual({ admitted: true });
+  });
+
+  it("still refuses when the course stops short, and names the card on file rather than the course", () => {
+    expect(
+      decideTripAdmission({
+        requirement: requirement({ minimumCertificationLevel: "rescue" }),
+        siteRequirement: null,
+        evidence: evidence({
+          certifications: [certification({ level: "open_water" })],
+          levelsInTraining: ["advanced_open_water"],
+        }),
+      }),
+    ).toEqual({
+      admitted: false,
+      refusal: {
+        requiredLevel: "rescue",
+        missingSpecialties: [],
+        nitroxRequired: false,
+        heldLevel: "open_water",
+      },
+    });
+  });
+});
+
 describe("decideTripAdmission — the ladder", () => {
   it("admits a carded diver who reaches the required level", () => {
     expect(

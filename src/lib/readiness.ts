@@ -189,6 +189,12 @@ export type ReadinessBlockerCode =
   | "certification_pending"
   | "certification_self_declared"
   | "certification_insufficient"
+  /**
+   * No card at the trip's level yet, but the diver is booked on a course that
+   * certifies them to it and finishes before this trip. Still a blocker: the
+   * diver boards on the card the instructor issues, never on the enrollment.
+   */
+  | "certification_in_training"
   | "specialty_missing"
   | "specialty_pending"
   | "specialty_import_unconfirmed"
@@ -207,6 +213,8 @@ export type ReadinessBlockerCode =
  */
 export type ReadinessBlockerParams = {
   requiredLevel?: CertificationLevel;
+  /** The highest verified rung on file, beside a `certification_insufficient`. */
+  heldLevel?: CertificationLevel;
   specialty?: DiveSpecialty;
   age?: number;
   minimumAge?: number;
@@ -237,6 +245,7 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
   certification_pending: "certification",
   certification_self_declared: "certification",
   certification_insufficient: "certification",
+  certification_in_training: "certification",
   specialty_missing: "certification",
   specialty_pending: "certification",
   specialty_import_unconfirmed: "certification",
@@ -320,6 +329,7 @@ const ABOARD_KIND: Record<ReadinessBlockerCode, AboardBlockerKind> = {
   certification_pending: "certification",
   certification_self_declared: "certification",
   certification_insufficient: "certification",
+  certification_in_training: "certification",
   specialty_missing: "certification",
   specialty_pending: "certification",
   specialty_import_unconfirmed: "certification",
@@ -395,12 +405,30 @@ export type ReadinessResult = {
   blockers: ReadinessBlocker[];
 };
 
+/**
+ * **A card a booked course will issue.** The level the course certifies and
+ * when its session ends. A course that already ended without a card being
+ * issued is no longer "in training": the diver either did not finish, or the
+ * instructor still has a tap to make, and both deserve the serious line.
+ */
+export type CertificationInTraining = {
+  level: CertificationLevel;
+  finishesAt: Date;
+};
+
 export type ReadinessInput = {
   requirement: TripRequirement | null;
   /** The primary dive site's inherent gate, composed with the trip's own. */
   siteRequirement?: SiteCertRequirement | null;
   waiver: WaiverRecord | null;
   certifications: readonly Certification[];
+  /**
+   * Courses this diver is booked on that certify a level and finish before
+   * this trip starts (`src/db/certifications-in-training.ts` does the
+   * filtering by trip). Never evidence: they turn a "not certified" blocker
+   * into the softer `certification_in_training`, and nothing here clears.
+   */
+  certificationsInTraining?: readonly CertificationInTraining[];
   specialtyCertifications?: readonly SpecialtyCertification[];
   nitroxCertifications?: readonly NitroxCertification[];
   /** The booking's current payment state; absent is treated as unpaid. */
@@ -585,6 +613,8 @@ export function hasVerifiedCertificationAtLeast(
 function certificationBlocker(
   certifications: readonly Certification[],
   minimumLevel: CertificationLevel,
+  inTraining: readonly CertificationInTraining[],
+  now: Date,
 ): ReadinessBlocker | null {
   const verified = certifications.filter(validVerifiedCertification);
   if (hasVerifiedCertificationAtLeast(certifications, minimumLevel)) {
@@ -619,8 +649,29 @@ function certificationBlocker(
   ) {
     return { code: "certification_pending" };
   }
+  // **Booked on the course that gets them there.** Below a card on file at
+  // the level (that card is the stronger path) and above every "not
+  // certified" answer: a fun dive booked for the morning after an Open Water
+  // course is a plan, not a problem, and reading it as one buries the divers
+  // who really are booked above their card. Only a course still ahead counts;
+  // see `CertificationInTraining`.
+  if (
+    inTraining.some(
+      (course) =>
+        course.finishesAt.getTime() > now.getTime() &&
+        levelRank[course.level] >= levelRank[minimumLevel],
+    )
+  ) {
+    return { code: "certification_in_training", params: { requiredLevel: minimumLevel } };
+  }
   if (verified.length > 0) {
-    return { code: "certification_insufficient", params: { requiredLevel: minimumLevel } };
+    const heldLevel = verified
+      .map((certification) => certification.level)
+      .reduce((best, level) => (levelRank[level] > levelRank[best] ? level : best));
+    return {
+      code: "certification_insufficient",
+      params: { requiredLevel: minimumLevel, heldLevel },
+    };
   }
   // Below every state backed by something the shop holds, and above plain
   // `missing` only because it can say more: the diver told us a level and gave
@@ -790,6 +841,8 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
     const certification = certificationBlocker(
       input.certifications,
       effective.minimumCertificationLevel,
+      input.certificationsInTraining ?? [],
+      now,
     );
     if (certification) blockers.push(certification);
   }

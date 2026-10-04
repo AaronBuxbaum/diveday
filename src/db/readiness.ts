@@ -16,6 +16,11 @@ import {
 } from "@/lib/readiness";
 import { effectiveWaiverForBooking, overriddenReferralAt } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
+import {
+  type CourseSeatInTraining,
+  inTrainingBefore,
+  listCourseSeatsInTraining,
+} from "./certifications-in-training";
 import { type AppDb, type DbExecutor, isUniqueConstraintViolation, queryAll } from "./client";
 import { paymentsByBooking } from "./payments";
 import type { Certification, CertificationAgency, DiveSpecialty } from "./schema";
@@ -1502,9 +1507,9 @@ export async function listTripsReadiness(
   const paymentByBooking = await paymentsByBooking(db, shopId, bookingIds);
   const personIds = waiverRows.map((row) => row.person.id);
 
-  const [certificationRows, specialtyRows, nitroxRows, signedWaiversByPerson] =
+  const [certificationRows, specialtyRows, nitroxRows, signedWaiversByPerson, courseSeatRows] =
     personIds.length === 0
-      ? [[], [], [], new Map<string, never[]>()]
+      ? [[], [], [], new Map<string, never[]>(), []]
       : await queryAll(db, [
           () =>
             db
@@ -1540,6 +1545,7 @@ export async function listTripsReadiness(
                 ),
               ),
           () => listSignedWaiversByPerson(db, shopId, personIds),
+          () => listCourseSeatsInTraining(db, shopId, personIds),
         ]);
 
   const currentTemplateGeneration = currentTemplate?.materialGeneration ?? null;
@@ -1555,6 +1561,12 @@ export async function listTripsReadiness(
     const current = specialtiesByPerson.get(specialty.personId) ?? [];
     current.push(specialty);
     specialtiesByPerson.set(specialty.personId, current);
+  }
+  const courseSeatsByPerson = new Map<string, CourseSeatInTraining[]>();
+  for (const seat of courseSeatRows) {
+    const current = courseSeatsByPerson.get(seat.personId) ?? [];
+    current.push(seat);
+    courseSeatsByPerson.set(seat.personId, current);
   }
   const nitroxByPerson = new Map<string, typeof nitroxRows>();
   for (const card of nitroxRows) {
@@ -1604,6 +1616,18 @@ export async function listTripsReadiness(
         siteRequirement,
         waiver: effectiveWaiver,
         certifications: certificationsByPerson.get(row.person.id) ?? [],
+        // Measured against this departure: only a course that finishes before
+        // it sails can be the card this diver boards on.
+        certificationsInTraining: courseRow
+          ? inTrainingBefore(
+              courseSeatsByPerson.get(row.person.id) ?? [],
+              {
+                id: tripId,
+                startsAt: courseRow.startsAt,
+              },
+              now,
+            )
+          : [],
         specialtyCertifications: specialtiesByPerson.get(row.person.id) ?? [],
         nitroxCertifications: nitroxByPerson.get(row.person.id) ?? [],
         paymentStatus: paymentByBooking.get(row.booking.id)?.status ?? null,

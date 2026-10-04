@@ -1,8 +1,14 @@
 import type { StaffMessageKey } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
-import { BLOCKER_CATEGORY, type ReadinessBlocker, type ReadinessResult } from "@/lib/readiness";
+import {
+  BLOCKER_CATEGORY,
+  type ReadinessBlocker,
+  type ReadinessBlockerCode,
+  type ReadinessResult,
+} from "@/lib/readiness";
 import { hasSailed } from "@/lib/trips";
 import {
+  type CardAwaitingKind,
   cardsNeedingLookCount,
   type DiverProfile,
   firstOpenOrderId,
@@ -50,7 +56,13 @@ import {
 export type DiverStatusKind = "certification" | "waiver" | "payment" | "contact";
 
 /** Where the row's one fix takes the reader. Resolved to a control by the surface. */
-export type DiverStatusTarget = "verify" | "send_waiver" | "collect" | "edit_contact";
+export type DiverStatusTarget =
+  | "verify"
+  | "add_card"
+  | "open_booking"
+  | "send_waiver"
+  | "collect"
+  | "edit_contact";
 
 export type DiverStatusRow = {
   kind: DiverStatusKind;
@@ -74,12 +86,22 @@ export type DiverStatusRow = {
    */
   action?: { labelKey: StaffMessageKey; target: DiverStatusTarget };
   /** The departure this row is bound to, for the quiet "on Thu, Aug 27" line. */
-  tripContext?: { tripId: string; startsAt: Date };
+  tripContext?: { tripId: string; bookingId: string; startsAt: Date };
   /** The order a `collect` fix opens, when one has been raised. */
   orderId?: string;
+  /**
+   * Which card a `verify` fix is about, when the row is about one kind. The
+   * ledger lands on the first card of that kind waiting for a look
+   * (`cardAwaitingAnchor`); without it, on the first card waiting at all.
+   */
+  verifies?: CardAwaitingKind;
 };
 
 type BookingEntry = DiverProfile["bookings"][number];
+
+function contextOf(entry: BookingEntry): NonNullable<DiverStatusRow["tripContext"]> {
+  return { tripId: entry.trip.id, bookingId: entry.booking.id, startsAt: entry.trip.startsAt };
+}
 
 /** Is this seat still ahead of the diver? */
 export function bookingIsAhead(entry: BookingEntry, now: Date): boolean {
@@ -112,6 +134,68 @@ function missingEmergencyContact(diver: DiverProfile): boolean {
   return !diver.person.emergencyContactName?.trim() || !diver.person.emergencyContactPhone?.trim();
 }
 
+/**
+ * **The fix beside a certification blocker, by what is actually wrong.**
+ *
+ * Every one of these used to offer "Verify it", which lands on the first card
+ * waiting for a look. That is the right door for a card on file that nobody
+ * has checked, and the wrong one for everything else: an Open Water diver
+ * booked on an Advanced trip was sent to verify their unrelated Deep card, as
+ * though a tap there could make them Advanced.
+ *
+ * - Something on file to check: **Verify it**, as before.
+ * - Nothing on file at all: **Add a card**, onto the capture form.
+ * - A verified card below the trip's level: **Open the booking**. No card on
+ *   this page fixes it; the seat has to change, or the diver has to show a
+ *   higher card, and the booking on its trip is where that conversation
+ *   starts.
+ * - Booked on the course that gets them there: no fix. The card is the
+ *   instructor's to issue when the course ends.
+ */
+const CERTIFICATION_FIX: Record<
+  ReadinessBlockerCode,
+  { labelKey: StaffMessageKey; target: DiverStatusTarget } | null
+> = (() => {
+  const verify = { labelKey: "divers.status.acts.verify", target: "verify" } as const;
+  const addCard = { labelKey: "divers.status.acts.addCard", target: "add_card" } as const;
+  return {
+    certification_pending: verify,
+    certification_self_declared: verify,
+    specialty_pending: verify,
+    specialty_import_unconfirmed: verify,
+    nitrox_pending: verify,
+    nitrox_self_declared: verify,
+    certification_missing: addCard,
+    specialty_missing: addCard,
+    nitrox_missing: addCard,
+    certification_insufficient: {
+      labelKey: "divers.status.acts.openBooking",
+      target: "open_booking",
+    },
+    certification_in_training: null,
+    // Not certification blockers; listed so a new code is a type error here.
+    requirements_not_configured: null,
+    identity_unconfirmed: null,
+    waiver_not_sent: null,
+    waiver_pending: null,
+    waiver_expired: null,
+    medical_review: null,
+    medical_not_cleared: null,
+    guardian_signature_missing: null,
+    under_minimum_age: null,
+    payment_due: null,
+    payment_refunded: null,
+    readiness_unavailable: null,
+  };
+})();
+
+/** The kind of card a certification blocker is about, for the `verify` landing. */
+function blockerCardKind(blocker: ReadinessBlocker): CardAwaitingKind | undefined {
+  if (blocker.code.startsWith("certification_")) return "level";
+  if (blocker.code.startsWith("nitrox_")) return "nitrox";
+  return blocker.params?.specialty;
+}
+
 /** The first blocker in a family, or nothing. One row per kind — a ledger, not a log. */
 function firstBlockerIn(
   readiness: ReadinessResult | null,
@@ -136,14 +220,24 @@ function firstBlockerIn(
 export function buildDiverStatus(
   diver: DiverProfile,
   readiness: ReadinessResult | null,
-  options: { now?: Date; collectHasSomewhereToGo?: boolean } = {},
+  options: {
+    now?: Date;
+    collectHasSomewhereToGo?: boolean;
+    /**
+     * The departure the certification row is measured against, when it is not
+     * the next one: a diver cleared for Sunday's reef and not for Friday's
+     * wreck has a card problem today, and the next boat alone would hide it.
+     * Picked by `diverStatusRows`; absent means the next departure.
+     */
+    certification?: { entry: BookingEntry; readiness: ReadinessResult | null };
+  } = {},
 ): DiverStatusRow[] {
   const now = options.now ?? nowDate();
   // Defaults to yes, which is what every surface but the record can honestly
   // say: see the `collect` rows below for the one that cannot.
   const collectHasSomewhereToGo = options.collectHasSomewhereToGo ?? true;
   const next = nextBookingAhead(diver, now);
-  const tripContext = next ? { tripId: next.trip.id, startsAt: next.trip.startsAt } : undefined;
+  const tripContext = next ? contextOf(next) : undefined;
   const rows: DiverStatusRow[] = [];
 
   // --- Waiver.
@@ -200,15 +294,24 @@ export function buildDiverStatus(
   }
 
   // --- Certifications.
-  const certBlocker = firstBlockerIn(readiness, "certification");
+  const certSource = options.certification;
+  const certBlocker = firstBlockerIn(
+    certSource ? certSource.readiness : readiness,
+    "certification",
+  );
   const awaiting = cardsNeedingLookCount(diver);
   if (certBlocker) {
     rows.push({
       kind: "certification",
-      tone: "danger",
+      // Still a blocker, but a planned one: the course finishes first.
+      tone: certBlocker.code === "certification_in_training" ? "warning" : "danger",
       sentence: { blocker: certBlocker },
-      action: { labelKey: "divers.status.acts.verify", target: "verify" },
-      tripContext,
+      action: CERTIFICATION_FIX[certBlocker.code] ?? undefined,
+      tripContext: certSource ? contextOf(certSource.entry) : tripContext,
+      verifies:
+        CERTIFICATION_FIX[certBlocker.code]?.target === "verify"
+          ? blockerCardKind(certBlocker)
+          : undefined,
     });
   } else if (awaiting > 0) {
     rows.push({

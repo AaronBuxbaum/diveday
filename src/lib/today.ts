@@ -764,6 +764,7 @@ export const BLOCKER_ACTIONS: Record<
   certification_pending: { kind: "certification", target: "diver" },
   certification_self_declared: { kind: "certification", target: "diver" },
   certification_insufficient: { kind: "certification", target: "diver" },
+  certification_in_training: { kind: "certification", target: "diver" },
   specialty_missing: { kind: "certification", target: "diver" },
   specialty_pending: { kind: "certification", target: "diver" },
   // An imported specialty card is one tap from clearing its gate, so this reads

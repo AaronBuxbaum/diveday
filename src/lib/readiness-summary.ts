@@ -125,6 +125,9 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   // this very page is the whole fix, and it is offered for this code.
   certification_self_declared: "action",
   certification_insufficient: "action",
+  // "waiting": the diver's part is finishing the course they are booked on,
+  // and the card is the instructor's to issue.
+  certification_in_training: "waiting",
   specialty_missing: "action",
   specialty_pending: "waiting",
   // "waiting", not "action": the card is on file and came across in the shop's

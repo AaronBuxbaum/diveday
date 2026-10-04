@@ -389,6 +389,8 @@
     "onDeparture": "On {when}.",
     "acts": {
       "verify": "Verify it",
+      "addCard": "Add certification",
+      "openBooking": "Open the booking",
       "sendWaiver": "Send the waiver",
       "collect": "Collect",
       "editContact": "Add one"

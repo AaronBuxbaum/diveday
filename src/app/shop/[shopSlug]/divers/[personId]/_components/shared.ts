@@ -1,6 +1,6 @@
 import type { BadgeTone } from "@/components/ui/badge";
 import type { getDiverProfile } from "@/db/divers";
-import type { CertificationAgency, PaymentStatus } from "@/db/schema";
+import type { CertificationAgency, DiveSpecialty, PaymentStatus } from "@/db/schema";
 import type { getShopById } from "@/db/shops";
 import type { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import { ORDER_STATUS_KEYS, ORDER_STATUS_TONES } from "@/i18n/order-labels";
@@ -160,6 +160,18 @@ export function firstOpenOrderId(diver: DiverProfile): string | undefined {
  * card is not counted — it cleared readiness on arrival, so its confirm is a
  * nudge on the card itself, not an open job.
  */
+/** A kind of card a ledger row can be about: the level ladder, one specialty, or nitrox. */
+export type CardAwaitingKind = "level" | "nitrox" | DiveSpecialty;
+
+/**
+ * The fragment on the first card of this kind waiting for somebody. Written
+ * by the certifications group, read by the status ledger's "Verify it", so
+ * the two cannot spell it differently.
+ */
+export function cardAwaitingAnchor(kind: CardAwaitingKind): string {
+  return `card-awaiting-${kind}`;
+}
+
 export function cardsNeedingLookCount(diver: DiverProfile): number {
   return (
     diver.certifications.filter((card) => card.status === "pending").length +

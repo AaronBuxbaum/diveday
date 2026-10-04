@@ -150,7 +150,11 @@ describe("an open item", () => {
         tone: "danger",
         sentence: { blocker: { code: "waiver_not_sent" } },
         action: { labelKey: "divers.status.acts.sendWaiver", target: "send_waiver" },
-        tripContext: { tripId: "trip-1", startsAt: new Date("2026-08-27T11:00:00.000Z") },
+        tripContext: {
+          tripId: "trip-1",
+          bookingId: "booking-1",
+          startsAt: new Date("2026-08-27T11:00:00.000Z"),
+        },
       },
       { kind: "contact", tone: "warning", sentence: { key: "divers.status.noEmergencyContact" } },
     ]);
@@ -198,10 +202,79 @@ describe("an open item", () => {
         tone: "danger",
         sentence: { blocker: { code: "waiver_not_sent" } },
         action: { labelKey: "divers.status.acts.sendWaiver", target: "send_waiver" },
-        tripContext: { tripId: "trip-1", startsAt: new Date("2026-08-27T11:00:00.000Z") },
+        tripContext: {
+          tripId: "trip-1",
+          bookingId: "booking-1",
+          startsAt: new Date("2026-08-27T11:00:00.000Z"),
+        },
       },
     ]);
     // 11:00 UTC is 6:00 in America/Cancun — the shop's zone, never the host's.
     expect(screen.getByText("On Thu, Aug 27 · 6:00 AM.")).toBeInTheDocument();
+  });
+});
+
+describe("a level the diver does not hold", () => {
+  it("says so with the card they do hold, and opens the seat rather than a card", () => {
+    renderLedger([
+      {
+        kind: "certification",
+        tone: "danger",
+        sentence: {
+          blocker: {
+            code: "certification_insufficient",
+            params: { requiredLevel: "advanced_open_water", heldLevel: "open_water" },
+          },
+        },
+        action: { labelKey: "divers.status.acts.openBooking", target: "open_booking" },
+        tripContext: {
+          tripId: "trip-9",
+          bookingId: "booking-9",
+          startsAt: new Date("2026-10-09T17:00:00.000Z"),
+        },
+      },
+    ]);
+    expect(
+      screen.getByText(
+        "Not certified for this trip. It needs Advanced Open Water or higher, and the highest certified card on file is Open Water.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open the booking" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/trips/trip-9#booking-booking-9",
+    );
+  });
+
+  it("lands an empty record's fix on the capture form", () => {
+    renderLedger([
+      {
+        kind: "certification",
+        tone: "danger",
+        sentence: { blocker: { code: "certification_missing" } },
+        action: { labelKey: "divers.status.acts.addCard", target: "add_card" },
+      },
+    ]);
+    expect(screen.getByRole("link", { name: "Add certification" })).toHaveAttribute(
+      "href",
+      "#card-add",
+    );
+  });
+});
+
+describe("a card blocker about one kind of card", () => {
+  it("lands on the first card of that kind, not the first unchecked card", () => {
+    renderLedger([
+      {
+        kind: "certification",
+        tone: "danger",
+        sentence: { blocker: { code: "certification_pending" } },
+        action: { labelKey: "divers.status.acts.verify", target: "verify" },
+        verifies: "level",
+      },
+    ]);
+    expect(screen.getByRole("link", { name: "Verify it" })).toHaveAttribute(
+      "href",
+      "#card-awaiting-level",
+    );
   });
 });

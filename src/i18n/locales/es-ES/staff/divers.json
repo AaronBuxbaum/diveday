@@ -389,6 +389,8 @@
     "onDeparture": "En {when}.",
     "acts": {
       "verify": "Verificar",
+      "addCard": "Añadir certificación",
+      "openBooking": "Abrir la reserva",
       "sendWaiver": "Enviar la exención",
       "collect": "Cobrar",
       "editContact": "Agregar uno"

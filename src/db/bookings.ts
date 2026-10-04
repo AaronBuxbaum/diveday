@@ -9,7 +9,7 @@ import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { personNamesMatch } from "@/lib/person-name";
 import type { ReEntryAsk } from "@/lib/re-entry";
-import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
+import { type CertificationLevel, hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import { partnerReferralSlug } from "@/lib/referrals";
 import {
   decideTripAdmission,
@@ -21,6 +21,7 @@ import {
 import { hasSailed } from "@/lib/trips";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
+import { inTrainingBefore, listCourseSeatsInTraining } from "./certifications-in-training";
 import { type AppDb, type DbExecutor, queryAll } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { consumeEntitlementsForBooking, releaseEntitlementsForBooking } from "./dive-packages";
@@ -471,7 +472,10 @@ export async function tripAdmissionFor(
   // refusal, and every booking in the product would otherwise pay for them.
   const evidence: TripAdmissionEvidence =
     person && !identityUnconfirmed && demandsSomething
-      ? await readCertificationEvidence(tx, shopId, person.id)
+      ? {
+          ...(await readCertificationEvidence(tx, shopId, person.id)),
+          levelsInTraining: await levelsInTrainingBefore(tx, shopId, person.id, tripId),
+        }
       : NO_EVIDENCE;
   // A declaration about a person whose identity did not match is not about
   // *them* (H-13) — the same reason their cards are not read here.
@@ -483,6 +487,29 @@ export async function tripAdmissionFor(
     identityUnconfirmed,
     declared: stated,
   });
+}
+
+/**
+ * The levels this diver's booked courses certify them at by the time this
+ * trip sails (`src/db/certifications-in-training.ts`). Admission sells the
+ * seat on them; readiness still waits for the card.
+ */
+async function levelsInTrainingBefore(
+  tx: DbExecutor,
+  shopId: string,
+  personId: string,
+  tripId: string,
+): Promise<CertificationLevel[]> {
+  const [[trip], seats] = await queryAll(tx, [
+    () =>
+      tx
+        .select({ id: trips.id, startsAt: trips.startsAt })
+        .from(trips)
+        .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+        .limit(1),
+    () => listCourseSeatsInTraining(tx, shopId, [personId]),
+  ]);
+  return trip ? inTrainingBefore(seats, trip, nowDate()).map((course) => course.level) : [];
 }
 
 /** What a diver this shop knows nothing about has on file — and what an unread evidence lookup stands in for. */

@@ -112,6 +112,19 @@ new domain concept, define it here in the same PR.
   unique index (keyed on `identifier`) cannot catch. Scoped to `certifications` only — the level
   ladder — not the **specialty** or **nitrox** tables, which stay one-tap-away from this treatment on
   purpose (see their own entries on why even an *imported* row waits for a staff confirm there).
+- **In training** — a diver with no card at a trip's level yet, holding a seat on a course session
+  that certifies that level (or higher), ends before the trip starts, and has not ended yet. Which
+  courses certify a rung is agency fact, kept by template in `src/db/course-templates.ts`
+  (`courseTemplateCertifiedLevel`), and matches the importer: SSI Advanced Adventurer and SDI
+  Advanced Adventure Diver are the Advanced rung; specialties, refreshers and tasters certify none.
+  It is **never evidence**. At a charter's sale it counts toward the trip's level, so a fun dive the
+  morning after an Open Water course can be sold. It does **not** satisfy a course's own
+  prerequisite: Advanced still asks for a certified Open Water card (H-08's course baseline). At
+  boarding it is still a blocker (`certification_in_training`), worded as a plan rather than a
+  problem, and only the card the instructor certifies clears it (**Shop-issued certification**).
+  Both gates share one window (`inTrainingBefore`): once the course session has ended without a
+  card, the diver is read as uncertified again, because a diver who did not finish and an
+  instructor who has not tapped both need somebody to act.
 - **Self-declared certification** — a level (or a nitrox tick) a **diver typed about themselves** on
   one of the three public forms that ask: the shop-wide last-minute-deal list, a full trip's wait
   list, or — since 2026-08-20 — the trip booking form itself. It lands on the person as a `pending`
@@ -255,7 +268,8 @@ new domain concept, define it here in the same PR.
   “could this diver **ever** be cleared for this trip?” It is **deliberately weaker than readiness
   and is never the boarding authority.** Readiness asks “is this diver cleared *right now*?”;
   admission refuses only a **settled impossibility** — the rung of the ladder they stand on, or a
-  specialty/nitrox card they hold none of, in any state. Everything a person can still fix before
+  specialty/nitrox card they hold none of, in any state. A course that certifies the rung and
+  finishes before the trip counts as standing on it (**In training**). Everything a person can still fix before
   the boat leaves (an unsigned waiver, a card captured but not yet verified, a payment
   outstanding) is *not* a reason to refuse the sale. **Absence of evidence never
   refuses**: a diver this shop has never carded books as before, the same trade-off H-08 settled

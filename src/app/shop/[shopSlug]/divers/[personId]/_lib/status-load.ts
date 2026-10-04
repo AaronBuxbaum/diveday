@@ -2,8 +2,9 @@ import type { AppDb } from "@/db/client";
 import { getDiverProfile } from "@/db/divers";
 import { getBookingReadiness } from "@/db/readiness";
 import { nowDate } from "@/lib/clock";
+import { BLOCKER_CATEGORY, type ReadinessResult } from "@/lib/readiness";
 import type { DiverProfile } from "../_components/shared";
-import { buildDiverStatus, type DiverStatusRow, nextBookingAhead } from "./status";
+import { bookingIsAhead, buildDiverStatus, type DiverStatusRow, nextBookingAhead } from "./status";
 
 /**
  * The database half of the status ledger: read the readiness of the departure
@@ -22,8 +23,47 @@ export async function diverStatusRows(
   options: { collectHasSomewhereToGo?: boolean } = {},
 ): Promise<DiverStatusRow[]> {
   const next = nextBookingAhead(diver, now);
-  const readiness = next ? await getBookingReadiness(db, shopId, next.booking.id) : null;
-  return buildDiverStatus(diver, readiness, { now, ...options });
+  if (!next) return buildDiverStatus(diver, null, { now, ...options });
+  const ahead = diver.bookings
+    .filter((entry) => bookingIsAhead(entry, now))
+    .sort((a, b) => a.trip.startsAt.getTime() - b.trip.startsAt.getTime());
+  const measured = await Promise.all(
+    ahead.map(async (entry) => ({
+      entry,
+      readiness: await getBookingReadiness(db, shopId, entry.booking.id),
+    })),
+  );
+  const readiness = measured.find(({ entry }) => entry === next)?.readiness ?? null;
+  return buildDiverStatus(diver, readiness, {
+    now,
+    ...options,
+    certification: certificationDeparture(measured),
+  });
+}
+
+/**
+ * **Which departure the certification row speaks for.** The next one that
+ * holds this diver back on a card, so a Friday wreck they are not certified
+ * for is not hidden behind a Sunday reef they are. A trip they are not yet
+ * certified for outranks one they are training toward: the first needs
+ * somebody to act, the second only needs the course to run. Undefined when
+ * no departure ahead has a card problem, and the next boat decides the row.
+ */
+function certificationDeparture(
+  measured: readonly {
+    entry: DiverProfile["bookings"][number];
+    readiness: ReadinessResult | null;
+  }[],
+) {
+  const withCardProblem = measured.filter(({ readiness }) =>
+    readiness?.blockers.some((blocker) => BLOCKER_CATEGORY[blocker.code] === "certification"),
+  );
+  return (
+    withCardProblem.find(
+      ({ readiness }) =>
+        !readiness?.blockers.some((blocker) => blocker.code === "certification_in_training"),
+    ) ?? withCardProblem[0]
+  );
 }
 
 /**

@@ -178,7 +178,8 @@ describe("certification agencies (DOM-L1)", () => {
     ).toContainEqual(
       expect.objectContaining({
         code: "certification_insufficient",
-        params: { requiredLevel: "divemaster" },
+        // The GUE card is named as what they do hold, not counted as Divemaster.
+        params: { requiredLevel: "divemaster", heldLevel: "open_water" },
       }),
     );
   });

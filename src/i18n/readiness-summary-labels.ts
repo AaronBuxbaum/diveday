@@ -34,6 +34,7 @@ export const CHECKLIST_DETAIL_KEYS: Record<ChecklistDetailCode, DiverMessageKey>
   certification_pending: "ready.checklistDetail.certificationPending",
   certification_self_declared: "ready.checklistDetail.certificationSelfDeclared",
   certification_insufficient: "ready.checklistDetail.certificationInsufficient",
+  certification_in_training: "ready.checklistDetail.certificationInTraining",
   specialty_missing: "ready.checklistDetail.specialtyMissing",
   specialty_pending: "ready.checklistDetail.specialtyPending",
   specialty_import_unconfirmed: "ready.checklistDetail.specialtyImportUnconfirmed",

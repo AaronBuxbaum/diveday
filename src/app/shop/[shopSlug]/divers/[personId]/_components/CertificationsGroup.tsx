@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { CertificationCardRow } from "@/components/person/rows";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -30,7 +31,13 @@ import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { MarkCertifiedControl } from "./MarkCertifiedControl";
 import { markCertifiedCopy } from "./mark-certified-copy";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
-import { AGENCY_KEYS, type DiverProfile, type Shop } from "./shared";
+import {
+  AGENCY_KEYS,
+  type CardAwaitingKind,
+  cardAwaitingAnchor,
+  type DiverProfile,
+  type Shop,
+} from "./shared";
 
 /**
  * **Every card this diver holds, as one group** (ADR 20260827-people-not-lists,
@@ -63,6 +70,9 @@ import { AGENCY_KEYS, type DiverProfile, type Shop } from "./shared";
 /** The anchor the status ledger's "Verify it" lands on — see `STATUS_TARGET_ANCHORS`. */
 const AWAITING_ANCHOR = "card-awaiting";
 
+/** The anchor the ledger's "Add certification" lands on: the capture form's own disclosure. */
+const ADD_ANCHOR = "card-add";
+
 /**
  * The one card row every kind renders through, so the three tables cannot
  * drift into three shapes. `state` is `certificationCardRowState`'s — computed
@@ -77,6 +87,7 @@ function CardRow({
   imported,
   actions,
   anchor,
+  rowAnchor,
 }: {
   t: StaffTranslator;
   title: ReactNode;
@@ -86,6 +97,8 @@ function CardRow({
   actions: ReactNode;
   /** Set on the first card that is waiting for somebody, for the ledger's fix. */
   anchor?: boolean;
+  /** Set on the first card of its kind waiting for somebody — see `cardAwaitingAnchor`. */
+  rowAnchor?: string;
 }) {
   return (
     <CertificationCardRow
@@ -102,6 +115,7 @@ function CardRow({
       // controls under it. Marking a card verified is what moves the anchor, so
       // that took the success toast and its Undo down with it.
       actionsId={anchor ? AWAITING_ANCHOR : undefined}
+      rowId={rowAnchor}
     />
   );
 }
@@ -264,6 +278,14 @@ export function CertificationsGroup({
     anchored = true;
     return true;
   };
+  // And the first of each *kind*, for a ledger row that is about one kind: a
+  // blocker on the Advanced card must not land on a pending Deep card.
+  const claimedKinds = new Set<CardAwaitingKind>();
+  const claimKindAnchor = (awaiting: boolean, kind: CardAwaitingKind) => {
+    if (!awaiting || claimedKinds.has(kind)) return undefined;
+    claimedKinds.add(kind);
+    return cardAwaitingAnchor(kind);
+  };
 
   /**
    * **Quiet ink, not a bordered button.** A filled `danger` control stood on
@@ -303,6 +325,7 @@ export function CertificationsGroup({
         key={`level:${card.id}`}
         t={t}
         anchor={claimAnchor(awaiting)}
+        rowAnchor={claimKindAnchor(awaiting, "level")}
         state={certificationCardRowState("level", card)}
         imported={isImportedCard(card) ? { source: card.importedFromLabel } : undefined}
         title={
@@ -381,6 +404,7 @@ export function CertificationsGroup({
         key={`specialty:${card.id}`}
         t={t}
         anchor={claimAnchor(awaiting)}
+        rowAnchor={claimKindAnchor(awaiting, card.specialty)}
         state={certificationCardRowState("specialty", card)}
         imported={isImportedCard(card) ? { source: card.importedFromLabel } : undefined}
         title={
@@ -428,6 +452,7 @@ export function CertificationsGroup({
         key={`nitrox:${card.id}`}
         t={t}
         anchor={claimAnchor(awaiting)}
+        rowAnchor={claimKindAnchor(awaiting, "nitrox")}
         state={certificationCardRowState("nitrox", card)}
         imported={isImportedCard(card) ? { source: card.importedFromLabel } : undefined}
         title={
@@ -558,7 +583,10 @@ export function CertificationsGroup({
             before it starts reading is exactly what stops being true. Every
             non-row block in this group is one for the same reason. */}
         <li className="px-5 py-3 sm:px-6">
-          <details className="group">
+          {/* The status ledger's "Add certification" lands here
+              (`STATUS_TARGET_ANCHORS.add_card`), and opens it: a fix that
+              scrolled to a shut door would leave the form one more tap away. */}
+          <AutoOpenDetails id={ADD_ANCHOR} openOnHash={ADD_ANCHOR} className="group scroll-mt-8">
             <summary
               className={buttonClass({
                 variant: "link",
@@ -625,7 +653,7 @@ export function CertificationsGroup({
                 </SubmitButton>
               </FieldActions>
             </FieldGrid>
-          </details>
+          </AutoOpenDetails>
           <DiverFormStatus status={groupStatus} className="mt-3" />
         </li>
       </InsetGroup>

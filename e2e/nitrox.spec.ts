@@ -34,7 +34,10 @@ test.describe("staff", () => {
     await page.getByRole("link", { name: /June Park/ }).click();
     // The cards group is a closed door at every width (slice A).
     await openDiverFileGroup(page, "Certification records");
-    await page.getByText("Add certification", { exact: true }).click();
+    await page
+      .getByTestId("diver-file-group-certifications")
+      .getByText("Add certification", { exact: true })
+      .click();
     // One capture form for every card kind now (ADR 20260827-people-not-lists);
     // the card itself is the question, and nitrox is its own option because it
     // is its own table and its own gas gate.

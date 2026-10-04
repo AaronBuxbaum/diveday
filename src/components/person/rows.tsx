@@ -80,6 +80,7 @@ export function CertificationCardRow({
   imported,
   actions,
   actionsId,
+  rowId,
   as: Tag = "li",
 }: {
   t: StaffTranslator;
@@ -106,6 +107,12 @@ export function CertificationCardRow({
    * unconditionally now and only the attributes move.
    */
   actionsId?: string;
+  /**
+   * The row's own fragment target, for a link about *this kind* of card — the
+   * ledger's "Verify it" beside a pending Advanced card lands on the level
+   * card, never on whichever unchecked card happens to render first.
+   */
+  rowId?: string;
   as?: "li" | "div";
 }) {
   const badge = CERTIFICATION_ROW_STATE_BADGE[state];
@@ -115,7 +122,7 @@ export function CertificationCardRow({
       : t("divers.certifications.importedLabel")
     : null;
   return (
-    <Tag className={FILE_ROW_CLASS}>
+    <Tag id={rowId} className={FILE_ROW_CLASS}>
       <div className="min-w-0">
         <p className="flex flex-wrap items-center gap-2">
           <span className="font-medium">{title}</span>

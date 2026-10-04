@@ -407,6 +407,7 @@ const READINESS_BLOCKER_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
   certification_pending: "shared.readiness.blockers.certificationPending",
   certification_self_declared: "shared.readiness.blockers.certificationSelfDeclared",
   certification_insufficient: "shared.readiness.blockers.certificationInsufficient",
+  certification_in_training: "shared.readiness.blockers.certificationInTraining",
   specialty_missing: "shared.readiness.blockers.specialtyMissing",
   specialty_pending: "shared.readiness.blockers.specialtyPending",
   specialty_import_unconfirmed: "shared.readiness.blockers.specialtyImportUnconfirmed",
@@ -428,6 +429,14 @@ const READINESS_BLOCKER_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
 export function readinessBlockerText(t: StaffTranslator, blocker: ReadinessBlocker): string {
   const key = READINESS_BLOCKER_KEYS[blocker.code];
   const params = blocker.params;
+  // Naming the card the diver does hold is what makes "not certified" a fact a
+  // staffer can check against the plastic, rather than a verdict to take on trust.
+  if (blocker.code === "certification_insufficient" && params?.requiredLevel && params.heldLevel) {
+    return t("shared.readiness.blockers.certificationInsufficientHeld", {
+      level: t(CERTIFICATION_LEVEL_KEYS[params.requiredLevel]),
+      held: t(CERTIFICATION_LEVEL_KEYS[params.heldLevel]),
+    });
+  }
   if (params?.requiredLevel) {
     return t(key, { level: t(CERTIFICATION_LEVEL_KEYS[params.requiredLevel]) });
   }
