@@ -142,7 +142,11 @@ export function TripPageHeader({
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
             {headerAside}
             {actions ? (
-              <div className="flex flex-wrap items-center gap-x-1 gap-y-2">{actions}</div>
+              // Doors ("Add diver", the manifest's •••), never facts: off the
+              // paper, as `ShopPageHeader`'s are.
+              <div className="flex flex-wrap items-center gap-x-1 gap-y-2 print:hidden">
+                {actions}
+              </div>
             ) : null}
           </div>
         ) : null}
@@ -241,7 +245,7 @@ export function TripAddDiverLink({
       // class string and had drifted to `font-semibold` and a `sm:`
       // re-statement of its own radius. The glyph and the width-forked label
       // are the children.
-      className={buttonClass({ variant: "link", className: "gap-1.5" })}
+      className={buttonClass({ variant: "link", className: "gap-1.5 print:hidden" })}
     >
       <DiveDayIcon name="addBooking" className="size-4" />
       <span className="sm:hidden">{compactLabel}</span>

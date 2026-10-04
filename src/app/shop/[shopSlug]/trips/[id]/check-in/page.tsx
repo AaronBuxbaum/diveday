@@ -556,7 +556,7 @@ export default async function TripCheckInPage({
               // **The walk-in door stands at the foot of the queue, always** —
               // a ledger row rather than a button: it is the last line of the
               // list, not a second primary competing with the taps above it.
-              <div className={rows.length > 0 ? undefined : "mt-6"}>
+              <div className={rows.length > 0 ? "print:hidden" : "mt-6 print:hidden"}>
                 <LedgerRow
                   as="div"
                   size="lg"

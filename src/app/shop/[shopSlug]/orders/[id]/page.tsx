@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FlashParams } from "@/components/FlashParams";
+import { PrintButton } from "@/components/PrintButton";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -302,6 +303,8 @@ export default async function OrderDetailPage({
         eyebrowHref={shopPath(shopSlug, "orders")}
         title={order.person.fullName}
         description={order.order.description || t("orders.detail.fallbackDescription")}
+        // A diver who paid at the counter and asks for something on paper.
+        actions={<PrintButton label={t("print.sheet.door")} quiet />}
         meta={
           // When it was raised, and by whom. Both were missing entirely: the
           // orders index shows a date column, and losing it on the way into the
@@ -420,7 +423,7 @@ export default async function OrderDetailPage({
         ) : null}
 
         {order.order.hostedInvoiceUrl ? (
-          <p className="mt-4 text-sm">
+          <p className="mt-4 text-sm print:hidden">
             <a
               href={order.order.hostedInvoiceUrl}
               target="_blank"
@@ -433,7 +436,9 @@ export default async function OrderDetailPage({
           </p>
         ) : null}
 
-        <div className="mt-6 flex flex-wrap items-center gap-3">
+        {/* Off the paper: a printed order is the diver's copy of what they
+            paid, and Refresh, Void and Refund are the shop's taps. */}
+        <div className="mt-6 flex flex-wrap items-center gap-3 print:hidden">
           {order.order.status === "open" ? (
             demo ? (
               <>
@@ -535,7 +540,7 @@ export default async function OrderDetailPage({
             `?notice=` is attacker-craftable, and this is a money screen — a
             hostile link must not be able to paint its own words into a
             success-green message (same rule as orders/new's fallback). */}
-        <FormStatus tone={banner?.tone ?? "neutral"} className="mt-2">
+        <FormStatus tone={banner?.tone ?? "neutral"} className="mt-2 print:hidden">
           {notice && notice !== "not-authorized"
             ? banner
               ? t(banner.key)

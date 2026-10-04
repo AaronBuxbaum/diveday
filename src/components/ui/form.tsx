@@ -177,7 +177,10 @@ export function SearchField({
   className?: string;
 } & Omit<ComponentPropsWithRef<"input">, "id" | "type" | "className" | "children" | "size">) {
   return (
-    <div className={`relative ${className}`.trim()}>
+    // An empty search box prints as an empty rectangle with a magnifier in
+    // it, so it stays off the paper; one holding a query keeps it, because
+    // the list beneath is that query's answer.
+    <div className={`relative print:has-[:placeholder-shown]:hidden ${className}`.trim()}>
       <label className="sr-only" htmlFor={id}>
         {label}
       </label>

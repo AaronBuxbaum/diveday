@@ -130,7 +130,7 @@ export function Pager({
           className={buttonClass({
             variant: "secondary",
             size: "sm",
-            className: "col-start-1 row-start-2 justify-self-start sm:row-start-1",
+            className: "col-start-1 row-start-2 justify-self-start sm:row-start-1 print:hidden",
           })}
         >
           {words.previous}
@@ -147,7 +147,8 @@ export function Pager({
           className={buttonClass({
             variant: "secondary",
             size: "sm",
-            className: "col-start-2 row-start-2 justify-self-end sm:col-start-3 sm:row-start-1",
+            className:
+              "col-start-2 row-start-2 justify-self-end sm:col-start-3 sm:row-start-1 print:hidden",
           })}
         >
           {words.next}

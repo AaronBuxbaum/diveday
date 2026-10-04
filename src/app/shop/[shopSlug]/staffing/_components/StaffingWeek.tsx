@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { PrintButton } from "@/components/PrintButton";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -68,6 +69,8 @@ export type StaffingWeekWords = {
   next: string;
   thisWeek: string;
   today: string;
+  /** The door that prints the week: the rota a shop pins up by the dock. */
+  print: string;
   /** The header of the person column — visually empty, never nameless. */
   person: string;
   /** The gap row's own label. */
@@ -526,7 +529,12 @@ function GapChip({
             <Link
               href={tripHref(shopSlug, gap.tripId)}
               aria-label={fill(words.assignAria, { trip: gap.title })}
-              className={buttonClass({ variant: "link", size: "sm", flush: true })}
+              className={buttonClass({
+                variant: "link",
+                size: "sm",
+                flush: true,
+                className: "print:hidden",
+              })}
             >
               {words.assign}
               <DiveDayIcon name="chevron-right" className="size-3.5" />
@@ -656,13 +664,16 @@ export function StaffingWeek({
 
   return (
     <section aria-label={words.ariaLabel}>
-      <WeekPager
-        rangeLabel={links.rangeLabel}
-        previousHref={links.previousHref}
-        nextHref={links.nextHref}
-        thisWeekHref={links.thisWeekHref}
-        words={words}
-      />
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <WeekPager
+          rangeLabel={links.rangeLabel}
+          previousHref={links.previousHref}
+          nextHref={links.nextHref}
+          thisWeekHref={links.thisWeekHref}
+          words={words}
+        />
+        <PrintButton label={words.print} quiet />
+      </div>
 
       {/* ---- The grid, from `lg` up. Its rules are its rows' (`WEEK_GRID`),
           so the last row there closes it, gap row or not. */}
@@ -882,7 +893,11 @@ export function StaffingWeek({
                         <Link
                           href={tripHref(shopSlug, gap.tripId)}
                           aria-label={fill(words.assignAria, { trip: gap.title })}
-                          className={buttonClass({ variant: "link", size: "sm" })}
+                          className={buttonClass({
+                            variant: "link",
+                            size: "sm",
+                            className: "print:hidden",
+                          })}
                         >
                           {words.assign}
                         </Link>

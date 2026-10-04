@@ -38,7 +38,7 @@ export function PrivateNoteForm({
   className?: string;
 }) {
   return (
-    <form key={resetKey} action={action} className={`grid gap-3 ${className}`}>
+    <form key={resetKey} action={action} className={`grid gap-3 print:hidden ${className}`}>
       {Object.entries(hiddenFields ?? {}).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}

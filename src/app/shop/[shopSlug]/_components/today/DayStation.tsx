@@ -192,7 +192,7 @@ export function DayStation({
         {canOpenLog ? (
           <Link
             href={`/shop/${shopSlug}/trips/${station.tripId}/log`}
-            className={`${tapTargetLinkClass} ms-auto font-medium text-primary hover:underline`}
+            className={`${tapTargetLinkClass} ms-auto font-medium text-primary hover:underline print:hidden`}
           >
             {t("incidentExport.openLink")}
           </Link>

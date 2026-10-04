@@ -367,7 +367,9 @@ export function TripRosterContent({
 
       {afterRoster}
 
-      <div>
+      {/* Promote and Activity are a shop's taps and its audit trail, not the
+          roster a staffer prints to carry. */}
+      <div className="print:hidden">
         {showPromote ? (
           <AutoOpenDetails
             openOnHash="last-minute-deal"

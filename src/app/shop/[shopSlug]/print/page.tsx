@@ -9,7 +9,7 @@ import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
-import { formatDateWithYear } from "@/lib/format";
+import { formatDateTimeTz, formatDateWithYear } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { settleWithLimit } from "@/lib/settle-with-limit";
 import { AutoPrint } from "../trips/[id]/_components/AutoPrint";
@@ -153,6 +153,11 @@ export default async function ShopDayPrintPage({
               // is missing from the stack.
               count: sheets.length,
               date: formatDateWithYear(now, locale, shop.timezone),
+            })}
+          </p>
+          <p className="mt-1 text-muted">
+            {t("print.sheet.printed", {
+              date: formatDateTimeTz(now, locale, shop.timezone),
             })}
           </p>
         </header>

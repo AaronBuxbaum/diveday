@@ -11,7 +11,10 @@ import {
 describe("the paper", () => {
   it("gives the pass a fixed pagination and a printable box", () => {
     const rule = printSheetPageRule(PAPER_PASS_PAPER);
-    expect(rule).toContain(`size:${PAPER_PASS_PAPER}`);
+    // In millimetres, never the named size: Chromium drops `size: A6` as an
+    // unknown keyword, and the card then printed in the corner of a Letter page.
+    expect(rule).toContain("size:105mm 148mm");
+    expect(rule).not.toMatch(/size:\s*A6/);
     // A margin, never none: every printer has an unprintable border, and the
     // band runs to the edge of the sheet by design.
     expect(rule).toMatch(/margin:\d+mm/);

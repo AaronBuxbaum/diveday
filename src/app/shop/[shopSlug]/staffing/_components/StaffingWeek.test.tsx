@@ -33,6 +33,7 @@ const WORDS: StaffingWeekWords = {
   next: "Next week",
   thisWeek: "This week",
   today: "Today",
+  print: "Print",
   person: "Person",
   needsCrew: "Needs crew",
   assign: "Assign",

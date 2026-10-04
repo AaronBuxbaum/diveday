@@ -122,7 +122,10 @@ export function BlockedDiverRow({
         copy={waiverCopy}
       />
     ) : (
-      <Link href={fix.href} className={buttonClass({ variant: "secondary", size: "sm" })}>
+      <Link
+        href={fix.href}
+        className={buttonClass({ variant: "secondary", size: "sm", className: "print:hidden" })}
+      >
         {fix.label}
       </Link>
     )

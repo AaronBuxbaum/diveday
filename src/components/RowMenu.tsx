@@ -99,7 +99,9 @@ export function RowMenu({
     <div
       ref={rootRef}
       data-row-menu-open={open ? "" : undefined}
-      className={`relative ${open ? "z-20" : ""}`.trim()}
+      // `print:hidden`: every act in the list is a tap, and the "⋯" alone
+      // printed as a stray mark at the end of each row.
+      className={`relative print:hidden ${open ? "z-20" : ""}`.trim()}
     >
       <button
         ref={triggerRef}
