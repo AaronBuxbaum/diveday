@@ -742,8 +742,10 @@ export function WeekBoard({
           <p data-week-seat-tally="" className="text-sm text-muted tabular-nums">
             {week.seatTally}
           </p>
-          {/* The week a shop pins by the dock: beside the range it prints. */}
-          <PrintButton label={week.words.print} quiet />
+          {/* The week a shop pins by the dock: beside the range it prints.
+              Desk-sized only: on a phone it would push the tally onto a
+              line of its own, and nobody prints the schedule from one. */}
+          <PrintButton label={week.words.print} quiet className="max-sm:hidden" />
         </div>
       </div>
 
