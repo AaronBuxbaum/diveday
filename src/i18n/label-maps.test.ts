@@ -351,6 +351,7 @@ const MEDIA_DELETION_KINDS = everyCodeOf<MediaDeletionKind>({
  */
 const BLOCKER_PARAMS: Partial<Record<ReadinessBlockerCode, ReadinessBlockerParams>> = {
   certification_insufficient: { requiredLevel: "advanced_open_water" },
+  certification_in_training: { requiredLevel: "advanced_open_water" },
   specialty_missing: { specialty: "wreck" },
   specialty_pending: { specialty: "wreck" },
   specialty_import_unconfirmed: { specialty: "wreck" },
