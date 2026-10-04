@@ -1,3 +1,4 @@
+import { simulatorEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
 import { upsertTripRequirements } from "./readiness";
 import { diveSites, shops } from "./schema";
@@ -42,7 +43,7 @@ export async function seedListedShops(db: DbExecutor): Promise<void> {
         tagline: "Two tanks on the outer reef, every morning.",
         timezone: DEMO_SHOP_TIMEZONE,
         unitsConfirmedAt: at(-30, 9),
-        contactEmail: "desk@reefline.invalid",
+        contactEmail: simulatorEmail("reefline.desk"),
         addressStreet: "88 Marina Way",
         latitude: 25.09,
         longitude: -80.44,
@@ -55,7 +56,7 @@ export async function seedListedShops(db: DbExecutor): Promise<void> {
         tagline: "Wrecks and drift dives, small groups.",
         timezone: DEMO_SHOP_TIMEZONE,
         unitsConfirmedAt: at(-30, 9),
-        contactEmail: "hello@keyscurrent.invalid",
+        contactEmail: simulatorEmail("keyscurrent.desk"),
         addressStreet: "12 Dock Road",
         latitude: 25.08,
         longitude: -80.45,

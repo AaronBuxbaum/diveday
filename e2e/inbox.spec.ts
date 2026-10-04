@@ -37,7 +37,7 @@ test("a staffer reads the inbox, opens the record, and answers the diver", async
   await expect(page.getByRole("heading", { name: /Waiting on you/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Done" })).toBeVisible();
   // A stranger's row has no record to open, so it shows the address instead.
-  await expect(page.getByText("marta.keller@example.net")).toBeVisible();
+  await expect(page.getByText("success+marta.keller@simulator.amazonses.com")).toBeVisible();
 
   // The row is the door to the diver it belongs to, and it lands on the very
   // message it was opened from rather than the top of the record.
@@ -59,7 +59,10 @@ test("a staffer reads the inbox, opens the record, and answers the diver", async
   // a staffer should be able to see that before they send rather than after
   // (issue #1515). Exact, so the label carrying the address is what is asserted
   // rather than a substring that would also match the old channel-only text.
-  const composer = page.getByLabel("Reply by email to priya.sharma@example.com", { exact: true });
+  const composer = page.getByLabel(
+    "Reply by email to success+priya.sharma@simulator.amazonses.com",
+    { exact: true },
+  );
   await expect(composer).toBeVisible();
   await composer.fill("Yes, you’re on the 1pm boat now. See you at the dock.");
   await page.getByRole("button", { name: "Send", exact: true }).click();
@@ -91,19 +94,21 @@ test("a staffer deletes the message from a sender nobody on the roster holds", a
   page.on("dialog", (dialog) => dialog.accept());
 
   await page.goto("/shop/blue-mantis/inbox");
-  await expect(page.getByText("marta.keller@example.net")).toBeVisible();
+  await expect(page.getByText("success+marta.keller@simulator.amazonses.com")).toBeVisible();
 
   // Delete lives behind the row's "⋯" with the row's other acts.
   await page.getByRole("button", { name: "More for the message from Unknown sender" }).click();
   await page
-    .getByRole("button", { name: "Delete the message from marta.keller@example.net" })
+    .getByRole("button", {
+      name: "Delete the message from success+marta.keller@simulator.amazonses.com",
+    })
     .click();
 
   // The action's own `?notice=` redirect is the wait: the click returns when
   // the request is sent, not when the write has landed.
   await page.waitForURL(/notice=deleted/);
   await expect(page.getByText("Message deleted.")).toBeVisible();
-  await expect(page.getByText("marta.keller@example.net")).toHaveCount(0);
+  await expect(page.getByText("success+marta.keller@simulator.amazonses.com")).toHaveCount(0);
 });
 
 /**

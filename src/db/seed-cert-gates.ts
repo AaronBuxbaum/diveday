@@ -1,3 +1,4 @@
+import { simulatorEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
 import {
   bookings,
@@ -108,7 +109,7 @@ export async function seedCertGates(
     .values({
       shopId,
       fullName: "Odile Marchand",
-      email: "odile.marchand@example.com",
+      email: simulatorEmail("odile.marchand"),
       phone: "+33155550313",
       emergencyContactName: "Luc Marchand (husband)",
       emergencyContactPhone: "+33-1-555-0314",

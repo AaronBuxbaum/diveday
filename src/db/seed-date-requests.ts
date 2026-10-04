@@ -1,3 +1,4 @@
+import { simulatorEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
 import { courseInquiries } from "./schema";
 import { at, dateAt } from "./seed-clock";
@@ -34,7 +35,7 @@ export async function seedDateRequests(db: DbExecutor, shopId: string): Promise<
       interest: "A two-tank on the wrecks",
       personId: null,
       name: "Tomás Ferreira",
-      email: "tomas.ferreira@example.com",
+      email: simulatorEmail("tomas.ferreira"),
       phone: null,
       experienceLevel: "certified" as const,
       timing: "Any Saturday, ideally the first one you can do",
@@ -53,7 +54,7 @@ export async function seedDateRequests(db: DbExecutor, shopId: string): Promise<
       interest: "A shallow reef morning",
       personId: null,
       name: "Hannah Okafor",
-      email: "hannah.okafor@example.com",
+      email: simulatorEmail("hannah.okafor"),
       phone: "+1-305-555-0433",
       experienceLevel: "lapsed" as const,
       timing: null,
@@ -92,7 +93,7 @@ export async function seedDateRequests(db: DbExecutor, shopId: string): Promise<
       interest: "Whatever is best in October",
       personId: null,
       name: "Rae Lindqvist",
-      email: "rae.lindqvist@example.com",
+      email: simulatorEmail("rae.lindqvist"),
       phone: null,
       experienceLevel: "never" as const,
       timing: "Some week in October — we have not booked flights yet",

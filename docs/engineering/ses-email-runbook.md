@@ -54,11 +54,11 @@ double-send in a way a provider with one wouldn't. The queue-level dedup on
 `notification_send_queue.idempotency_key` is the real safety net; this is a narrower, accepted gap
 (see the ADR's Consequences).
 
-Reserved test recipients (`example.com`, `demo.com`, and similar) are rejected before a request is
-made — DiveDay records the issue without spending a send. The demo seed intentionally uses reserved
-`.example` addresses, so it is not a real-inbox test fixture; use an SES mailbox simulator address
-(`success@simulator.amazonses.com`, `bounce@simulator.amazonses.com`,
-`complaint@simulator.amazonses.com`) or a real diver address when testing delivery.
+Reserved test recipients (`example.com`, `demo.com`, `.invalid`, and similar) are rejected before a request is made — DiveDay records the issue without spending a send.
+
+The demo seed's divers, guardians and shop desks use SES mailbox simulator addresses with a `+label` per person, written by `simulatorEmail()` in `src/lib/simulator-email.ts` (`success+priya.sharma@simulator.amazonses.com`). The label keeps each address unique, which `people_shop_email_unique` needs, and SES treats a labelled address the same as the bare one. Mail the demo sends its own divers (reminders, recaps, inbox replies) now really goes out and is accepted, and it never touches the account's bounce or complaint rates. It does count as sends: the simulator is left out of reputation metrics, not out of the daily quota, so every seeded or minted demo shop's crons spend from the same allowance as real mail. `src/db/seed.test.ts` fails if a seeded diver or shop desk lands on any other domain. Staff demo sign-ins stay under `demo.invalid`, because that namespace is half of the demo sign-in bypass (`src/lib/demo-identity.ts`) and must never be an address anyone can receive at.
+
+To test the failure paths by hand, use `bounce@simulator.amazonses.com` or `complaint@simulator.amazonses.com` (a `+label` works on these too), or a real inbox when you need to read the message.
 
 ### Which region
 
