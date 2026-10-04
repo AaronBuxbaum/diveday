@@ -894,6 +894,7 @@
     "language": "Language",
     "languageAuto": "Follow the visitor’s browser",
     "preview": "Preview",
+    "openPreview": "Open the preview",
     "platform": "Where it goes",
     "snippet": "Put it on your site",
     "partnerName": "Partner",
