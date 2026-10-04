@@ -85,11 +85,13 @@ test.describe("the paper day", () => {
     // **Each departure starts a fresh sheet.** The break is CSS
     // (`globals.css`'s `.print-bundle-page:first-of-type { break-before: auto }`)
     // and a full-page screenshot structurally cannot see a page boundary, so
-    // this reads the computed value instead: exactly the document's first
-    // section is exempt, and every section after it — including the first of
-    // every later departure — breaks. A per-departure wrapper element made all
-    // of them first children and printed each boat's dive plan on the back of
-    // the previous boat's packing list.
+    // this reads the computed value instead. Each departure is three sections
+    // — plan, manifest, packing list — and only two breaks: the manifest runs
+    // on under its own plan (`print-bundle-continues`), and the document's
+    // first plan is exempt. Every later plan and every packing list breaks. A
+    // per-departure wrapper element made all of them first children and
+    // printed each boat's dive plan on the back of the previous boat's packing
+    // list.
     await popup.emulateMedia({ media: "print" });
     const breaks = await popup.evaluate(() =>
       [...document.querySelectorAll(".print-bundle-page")].map(
@@ -97,8 +99,9 @@ test.describe("the paper day", () => {
       ),
     );
     expect(breaks.length).toBe(departures * 3);
-    expect(breaks[0]).toBe("auto");
-    expect(breaks.slice(1)).toEqual(breaks.slice(1).map(() => "page"));
+    expect(breaks).toEqual(
+      breaks.map((_, index) => (index === 0 || index % 3 === 1 ? "auto" : "page")),
+    );
     await popup.emulateMedia({ media: "screen" });
 
     // **No element id is emitted twice.** The manifest and prep pages carry
