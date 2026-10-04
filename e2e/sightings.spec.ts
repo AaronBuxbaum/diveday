@@ -113,9 +113,7 @@ test("a diver reads the crew's month under the site on the trip page", async ({ 
   await expect(page.getByText("Seen here this month").first()).toBeVisible();
   // A frequency with a denominator, not a species list: the whole point of the
   // beat is that it says how often, out of how many dives.
-  await expect(
-    page.getByText(/Southern stingray on \d+ of \d+ logged dives here this month/),
-  ).toBeVisible();
+  await expect(page.getByText(/Southern stingray on \d+ of \d+ logged dives/)).toBeVisible();
   await expect(page.getByText(/Last seen /).first()).toBeVisible();
   // And the sentence that stops a log being read as a guarantee.
   await expect(

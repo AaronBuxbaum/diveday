@@ -344,14 +344,16 @@ test("back one page is the page you came from, not the top", async ({ page }) =>
   const secondName = await page.locator("main ul li a").first().getAttribute("aria-label");
 
   await pager.getByRole("link", { name: "Next" }).click();
-  await page.waitForURL(/[?&]page=3/);
+  // `domcontentloaded` for the reason the forward walk above spells out
+  // (issue #1624): the shell's background polls hold `load` open.
+  await page.waitForURL(/[?&]page=3/, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 3 of");
 
   await page
     .getByRole("navigation", { name: "Pages" })
     .getByRole("link", { name: "Previous" })
     .click();
-  await page.waitForURL(/[?&]page=2/);
+  await page.waitForURL(/[?&]page=2/, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("navigation", { name: "Pages" })).toContainText("Page 2 of");
   expect(await page.locator("main ul li a").first().getAttribute("aria-label")).toBe(secondName);
 });
