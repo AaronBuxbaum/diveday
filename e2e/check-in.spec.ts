@@ -450,7 +450,9 @@ test("the counter shows a diver's email only when another diver shares their nam
   // Looking up by email still finds the diver's boat — that path is a staffer
   // typing on Today, never a display, and it must not have been narrowed with
   // the display.
-  await page.goto(`/shop/blue-mantis?q=${encodeURIComponent("priya.sharma@example.com")}`);
+  await page.goto(
+    `/shop/blue-mantis?q=${encodeURIComponent("success+priya.sharma@simulator.amazonses.com")}`,
+  );
   await expect(page.getByRole("link", { name: /check-in for Priya Sharma$/ })).toHaveCount(1);
 });
 

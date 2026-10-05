@@ -133,7 +133,31 @@ describe("the settled station's post-trip recap note", () => {
       screen.getAllByText("This recap was sent at 4:00 PM. The note and photos are now locked.")[0],
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Upload photo" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Add a photo")).not.toBeInTheDocument();
+  });
+
+  it("adds a crew photo with one control, drawn as the gallery's next cell", () => {
+    render(
+      <RecapNoteEditor
+        action={vi.fn()}
+        shoutout={null}
+        saved={false}
+        t={t}
+        crewPhotos={[{ id: "crew-1", imageUrl: "https://img.example/crew.jpg" }]}
+        uploadCrewPhotoAction={vi.fn()}
+        deleteCrewPhotoAction={vi.fn()}
+      />,
+    );
+    const picker = screen.getByLabelText("Add a photo");
+    expect(picker).toHaveAttribute("type", "file");
+    // No second step: picking the photo is what sends it.
+    expect(screen.queryByRole("button", { name: /upload/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Choose a photo" })).not.toBeInTheDocument();
+    // The tile sits in the same list as the photo it will join.
+    const gallery = screen
+      .getByRole("img", { name: "Crew photo from this departure" })
+      .closest("ul");
+    expect(gallery).toContainElement(picker);
   });
 });
 

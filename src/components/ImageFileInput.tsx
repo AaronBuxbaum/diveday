@@ -4,7 +4,7 @@ import { type ChangeEvent, useId, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { ALLOWED_IMAGE_CONTENT_TYPES, MAX_IMAGE_BYTES } from "@/lib/storage/limits";
 
-const ACCEPT = ALLOWED_IMAGE_CONTENT_TYPES.join(",");
+export const IMAGE_ACCEPT = ALLOWED_IMAGE_CONTENT_TYPES.join(",");
 
 /**
  * Every word this input can show, resolved by the caller — a Client
@@ -30,10 +30,10 @@ export type ImageFileInputCopy = {
   chooseAnother: string;
 };
 
-function describeProblem(
+export function describeImageProblem(
   files: File[],
   maxFiles: number | undefined,
-  copy: ImageFileInputCopy,
+  copy: Pick<ImageFileInputCopy, "tooMany" | "wrongTypeSuffix" | "tooBigSuffix">,
 ): string | null {
   if (maxFiles && files.length > maxFiles && copy.tooMany) return copy.tooMany;
   const badType = files.find(
@@ -107,7 +107,7 @@ export function ImageFileInput({
       setPicked(null);
       return;
     }
-    const problem = describeProblem(files, maxFiles, copy);
+    const problem = describeImageProblem(files, maxFiles, copy);
     if (problem) {
       event.target.value = "";
       setError(problem);
@@ -148,7 +148,7 @@ export function ImageFileInput({
             name={name}
             multiple={multiple}
             required={required}
-            accept={ACCEPT}
+            accept={IMAGE_ACCEPT}
             onChange={handleChange}
             aria-describedby={error ? errorId : undefined}
             className="sr-only"
