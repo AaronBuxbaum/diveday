@@ -2645,7 +2645,7 @@
       "setUpSubject": "Quiero abrir mi centro en DiveDay",
       "demoNote": "La demo abre un centro de muestra en funcionamiento con un clic. Sin registro y sin tarjeta.",
       "midCtaTitle": "Míralo en la demo en vivo",
-      "checkItLabel": "Compruébalo: "
+      "checkItLabel": "Verifícalo: "
     },
     "features": {
       "welcome": {
@@ -2805,7 +2805,7 @@
         "item3": "Páginas iniciales de PADI, SSI o SDI, copiadas y hechas tuyas",
         "item4": "Una foto de portada y hasta ocho más en cada página de curso",
         "item5": "Las plazas de una sesión de Open Water de PADI, limitadas por sus instructores y asistentes, y las de cualquier bautismo, solo por sus instructores",
-        "item6": "La edad mínima de un curso, confirmada por quien reserva en línea y verificada al embarcar con la fecha de nacimiento de la ficha del buceador",
+        "item6": "La edad mínima de un curso, confirmada por quien reserva en línea y comparada al embarcar con la fecha de nacimiento de la ficha del buceador",
         "item7": "Una solicitud de fecha desde el horario o una página de curso, leída en el mostrador agrupada por día"
       },
       "payments": {
@@ -3744,7 +3744,7 @@
       },
       "waivers": {
         "name": "Exenciones y formularios médicos",
-        "summary": "Exenciones y el cuestionario médico de buceo firmados desde casa, sellados y verificados antes de que nadie embarque.",
+        "summary": "Exenciones y el cuestionario médico de buceo firmados desde casa, sellados y revisados antes de que nadie embarque.",
         "metaTitle": "Exenciones de buceo y formularios médicos en línea",
         "metaDescription": "Los buceadores firman tu exención y responden el cuestionario médico de buceo de 2026 desde casa. Una respuesta que remite al buceador a un médico lo retiene hasta que el personal registre la autorización del médico.",
         "title": "Las exenciones y los formularios médicos vuelven firmados antes de que llegue el buceador.",
@@ -3788,7 +3788,7 @@
         "step3Title": "Mostrador y muelle leen la misma respuesta",
         "step3Body": "Cada buceador figura como Listo o Bloqueado dondequiera que aparezca, y en el muelle el pase de lista no marca a bordo a nadie hasta que esté listo.",
         "limit1": "DiveDay no se conecta con PADI, SSI ni ninguna otra agencia. El personal verifica la tarjeta y la marca.",
-        "limit2": "No juzga la destreza de un buceador ni cómo está ese día. Verifica las tarjetas, los formularios y el pago que pide la salida.",
+        "limit2": "No juzga la destreza de un buceador ni cómo está ese día. Revisa las tarjetas, los formularios y el pago que pide la salida.",
         "faq1Q": "¿Puedo traer las tarjetas de mis buceadores desde mi sistema actual?",
         "faq1A": "Sí. El importador trae los registros de certificación desde la exportación de tu sistema anterior. Las tarjetas de nivel cuentan tal como estaban allí, marcadas como importadas, y una tarjeta de nitrox o de especialidad espera hasta que alguien del personal la confirme.",
         "faq2Q": "¿Y un buceador a mitad de curso?",
