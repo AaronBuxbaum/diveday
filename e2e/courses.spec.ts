@@ -707,7 +707,7 @@ test("a diver with no workable date reaches the shop, and is offered flexible ti
   // The flexible option accepts an exact or loose answer; the date field
   // beside it is a first choice, never a hold.
   await page.getByLabel("Flexible timing").fill("the week of 12 August");
-  // "Where you are up to", the alternative date and "Anything else" moved
+  // "Your diving experience", the alternative date and "Anything else" moved
   // behind one "More details" disclosure on 2026-09-17 — three answers a diver
   // almost never has, against a composer that met them with ten boxes. Closed,
   // they still submit; a spec that fills one opens it first.
@@ -715,7 +715,7 @@ test("a diver with no workable date reaches the shop, and is offered flexible ti
   // The option's value is now the code ("never"), not its rendered label —
   // src/lib/course-inquiry.ts returns codes, and the diver bundle supplies
   // the sentence.
-  await page.getByLabel("Where you are up to").selectOption("never");
+  await page.getByLabel("Your diving experience").selectOption("never");
   await page.getByLabel("Anything else").fill("We are ashore only on the Tuesday.");
 
   // Send is the whole choice. "Open in your email app" and "Copy message"
@@ -753,7 +753,7 @@ test("a blank inquiry is rejected, not defaulted — a way to reply is required"
   // Experience is useful context, but a lead with no address and no number is
   // still a question nobody can answer.
   await openMoreDetails(page);
-  await page.getByLabel("Where you are up to").selectOption("never");
+  await page.getByLabel("Your diving experience").selectOption("never");
   await inquiry.getByRole("button", { name: "Send", exact: true }).click();
   await expect(
     inquiry.getByText("Leave an email or a phone number so we can reply."),
@@ -780,7 +780,7 @@ test("a diver's inquiry is recorded server-side and the shop's details stay reac
   await expect(page.getByLabel("How many divers")).toHaveValue("1");
   await page.getByLabel("Flexible timing").fill("any weekend this autumn");
   await openMoreDetails(page);
-  await page.getByLabel("Where you are up to").selectOption("certified");
+  await page.getByLabel("Your diving experience").selectOption("certified");
 
   await inquiry.getByRole("button", { name: "Send", exact: true }).click();
 
