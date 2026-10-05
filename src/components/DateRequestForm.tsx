@@ -45,7 +45,7 @@ import {
  * (docs/design/forms-and-controls.md, "Required fields"). So: the asterisk on
  * the one thing a request cannot be sent without, no "(optional)" anywhere,
  * and the three answers a diver almost never fills in — an alternative date,
- * where they are up to, anything else — behind a "More details" disclosure
+ * their diving experience, anything else — behind a "More details" disclosure
  * (principle 8, "collapse the rare path"). Every one of them still submits
  * from inside the closed disclosure: a `<details>` hides its content, it does
  * not take it out of the form, so nothing about what the shop receives
@@ -374,7 +374,7 @@ export function DateRequestForm({
         </FieldGrid>
 
         {/* **The rare path, collapsed** (principle 8). Three answers a diver
-            almost never has: a second day, where they are up to, and whatever
+            almost never has: a second day, their diving experience, and whatever
             the boxes above have no room for. They are real fields inside the
             form — closed, they still submit — so the shop loses nothing and
             the diver meets four asks instead of seven. */}

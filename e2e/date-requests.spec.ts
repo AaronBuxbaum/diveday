@@ -4,7 +4,7 @@ import { signInAsOwner } from "./helpers";
 
 /**
  * **The three rarely-answered asks sit behind "More details"** (2026-09-17):
- * an alternative date, where the diver is up to, and anything else. Closed at
+ * an alternative date, their diving experience, and anything else. Closed at
  * rest and still part of the form — a `<details>` hides its content without
  * taking it out of the submission — so a spec that fills one opens it first.
  *
@@ -55,13 +55,13 @@ test("a diver asks for a date from the schedule page and staff read it grouped b
   // The request is about *something*: with no course in the URL, the form asks,
   // and refuses to send until it is answered.
   await page.getByLabel("Your email").fill("wreck.fan.e2e@example.com");
-  await page.getByLabel("Where you are up to").selectOption("certified");
+  await page.getByLabel("Your diving experience").selectOption("certified");
   await page.getByRole("button", { name: "Send", exact: true }).click();
   await expect(page.getByText("Tell us what you’d like to dive before sending.")).toBeVisible();
 
   await page.getByLabel("What would you like to dive?").fill("Two dives on the Duane");
-  await page.getByLabel("Preferred date").fill(PREFERRED);
-  await page.getByLabel("Alternative date").fill(ALTERNATE);
+  await page.getByLabel("First-choice date").fill(PREFERRED);
+  await page.getByLabel("Second-choice date").fill(ALTERNATE);
   await page.getByRole("button", { name: "Send", exact: true }).click();
   await expect(page.getByText("Sent", { exact: true })).toBeVisible();
 
@@ -72,9 +72,9 @@ test("a diver asks for a date from the schedule page and staff read it grouped b
   await openMoreDetails(page);
   await page.getByLabel("What would you like to dive?").fill("A shallow reef morning");
   await page.getByLabel("Your email").fill("reef.fan.e2e@example.com");
-  await page.getByLabel("Where you are up to").selectOption("lapsed");
-  await page.getByLabel("Preferred date").fill(ALTERNATE);
-  await page.getByLabel("Alternative date").fill(PREFERRED);
+  await page.getByLabel("Your diving experience").selectOption("lapsed");
+  await page.getByLabel("First-choice date").fill(ALTERNATE);
+  await page.getByLabel("Second-choice date").fill(PREFERRED);
   await page.getByRole("button", { name: "Send", exact: true }).click();
   await expect(page.getByText("Sent", { exact: true })).toBeVisible();
 
@@ -124,7 +124,7 @@ test("a request with no date at all sits in its own group at the foot", async ({
   await openMoreDetails(page);
   await page.getByLabel("What would you like to dive?").fill("Whatever runs in October");
   await page.getByLabel("Your phone").fill("+1 305 555 0777");
-  await page.getByLabel("Where you are up to").selectOption("never");
+  await page.getByLabel("Your diving experience").selectOption("never");
   await page.getByLabel("Flexible timing").fill("Some week in October, flights not booked");
   await page.getByRole("button", { name: "Send", exact: true }).click();
   await expect(page.getByText("Sent", { exact: true })).toBeVisible();
@@ -144,8 +144,8 @@ test("a course page's request names the course, and reaches the same list", asyn
   await page.goto("/s/blue-mantis/courses/open-water-diver");
   await openMoreDetails(page);
   await page.getByLabel("Your email").fill("course.date.e2e@example.com");
-  await page.getByLabel("Where you are up to").selectOption("never");
-  await page.getByLabel("Preferred date").fill(PREFERRED);
+  await page.getByLabel("Your diving experience").selectOption("never");
+  await page.getByLabel("First-choice date").fill(PREFERRED);
   await page.getByRole("button", { name: "Send", exact: true }).click();
   await expect(page.getByText("Sent", { exact: true })).toBeVisible();
 
@@ -172,8 +172,8 @@ test("the builder opened from a day's requests reads as finished sentences", asy
   await page.getByLabel("What would you like to dive?").fill("A drift along the wall");
   await page.getByLabel("Your name").fill("Nadia Okonkwo");
   await page.getByLabel("Your email").fill("drift.fan.e2e@example.com");
-  await page.getByLabel("Where you are up to").selectOption("certified");
-  await page.getByLabel("Preferred date").fill(PREFERRED);
+  await page.getByLabel("Your diving experience").selectOption("certified");
+  await page.getByLabel("First-choice date").fill(PREFERRED);
   await page.getByRole("button", { name: "Send", exact: true }).click();
   await expect(page.getByText("Sent", { exact: true })).toBeVisible();
 
