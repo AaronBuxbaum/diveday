@@ -81,7 +81,8 @@ carries the green turtle; the two horizons are two tideline panels side by side.
   its time, title, site, hull, crew, price and head count, with its own blockers and chores as
   ledger rows beneath it; a diver's open day-of help request is one neutral row on that departure;
   work bound to no boat pools under "At the desk"; once every boat is settled the day's takings read
-  above the closing block, for a reader who may read money; tomorrow is a collapsed disclosure and
+  beneath the stations, for a reader who may read money (there is no act of closing the day,
+  removed 2026-10-05); tomorrow is a collapsed disclosure and
   the rest of the week one link to the board. A departure's facts are said once, at its station,
   instead of once per card.
 

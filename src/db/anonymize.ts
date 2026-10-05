@@ -86,7 +86,6 @@ import {
   calendarFeeds,
   certifications,
   courseInquiries,
-  dayCloseouts,
   formDrafts,
   gearReservations,
   importedPaymentHistory,
@@ -1413,59 +1412,6 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
           isNotNull(tips.checkoutUrl),
         ),
       );
-  }
-
-  // --- the day's close-out ------------------------------------------------
-  // `outstanding` is the snapshot of what was still open when a day was closed,
-  // and its leftovers carry a **copied** `subject` and `detail` rather than an
-  // id — `src/lib/closeout.ts` says so, and eight producers in `src/db/today.ts`
-  // put the diver's own name in that subject. The snapshot's own docblock calls
-  // the text "trail text, like `activity_events`'s own", which is exactly
-  // right and is why leaving it standing was wrong: that column is redacted by
-  // this same name match a few statements down, and this one was not. The table
-  // carries no retention arm, so the name was permanent and legible from the
-  // close-out trail (issue #1607).
-  //
-  // The **element is replaced, never removed**, like the buddy sweep above: how
-  // many things were left open when the shop closed is a fact about the day.
-  const closeoutNameMatch = buddyMemberNameMatch(ctx.fullName);
-  if (closeoutNameMatch) {
-    const closed = await tx
-      .update(dayCloseouts)
-      .set({
-        outstanding: sql`jsonb_set(
-          ${dayCloseouts.outstanding},
-          '{leftovers}',
-          (
-            select coalesce(jsonb_agg(
-              case
-                when (item->>'subject') ~* ${closeoutNameMatch}
-                  or (item->>'detail') ~* ${closeoutNameMatch}
-                then item || jsonb_build_object(
-                  'subject', to_jsonb(${REDACTED_TEXT}::text),
-                  'detail', to_jsonb(${REDACTED_TEXT}::text)
-                )
-                else item
-              end
-              order by ord
-            ), '[]'::jsonb)
-            from jsonb_array_elements(${dayCloseouts.outstanding}->'leftovers')
-              with ordinality as t(item, ord)
-          )
-        )`,
-      })
-      .where(
-        and(
-          eq(dayCloseouts.shopId, shopId),
-          sql`exists (
-            select 1 from jsonb_array_elements(${dayCloseouts.outstanding}->'leftovers') as t(item)
-            where (t.item->>'subject') ~* ${closeoutNameMatch}
-               or (t.item->>'detail') ~* ${closeoutNameMatch}
-          )`,
-        ),
-      )
-      .returning({ id: dayCloseouts.id });
-    logFuzzyMatch(ctx, "day_closeout_leftover_name", closed.length);
   }
 
   // --- gear register -------------------------------------------------------

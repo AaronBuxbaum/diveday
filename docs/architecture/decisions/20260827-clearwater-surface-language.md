@@ -129,6 +129,11 @@ phone dock drops to four destinations plus More), and `day_closeouts`, the close
 departure-log door are unchanged underneath. This is the concept-model table's "home becomes the
 shop's day" row, first half, delivered by design; the Check-in fold remains a separate, open call.
 
+**Amended 2026-10-05:** the closing block is gone. The owner asked what "Close the day" was for; the
+recorded close was read by nothing (ADR 20260804-day-closeout, withdrawn) and the leftovers group
+repeated the Needs-you rows standing above it, so both were removed and their tables dropped. The
+evening is now the settled stations and the day's takings, and the `/close-out` redirect is gone.
+
 The queue's ranking rules, row kinds, and the two good-news moments (principles.md §3) are
 unchanged — this reshapes where the work renders, not what counts as work.
 

@@ -1,6 +1,5 @@
 {
   "notice": {
-    "closed": "Día cerrado. El registro está abajo. Hasta mañana.",
     "recapSent": "Se enviaron los resúmenes que aún estaban pendientes.",
     "recapAttention": "Algunos resúmenes requieren atención. Abre la salida a la que pertenecen.",
     "recapNotReady": "Los resúmenes no se pueden enviar hasta cuatro horas después del final de la salida.",
@@ -31,16 +30,6 @@
       "crewUncounted": "{count, plural, one {# tripulante no tiene resultado tras la inmersión {dive}.} other {# tripulantes no tienen resultado tras la inmersión {dive}.}} El recuento nunca se cerró.",
       "departureUncounted": "{count, plural, one {El recuento en muelle nunca se terminó y # buceador quedó sin resultado en la salida.} other {El recuento en muelle nunca se terminó y # buceadores quedaron sin resultado en la salida.}}",
       "noRollCall": "No se registró pase de lista en esta salida."
-    }
-  },
-  "admin": {
-    "status": {
-      "complete": "Completo",
-      "pending": "En curso",
-      "attention": "Requiere atención"
-    },
-    "postDiveReports": {
-      "label": "Informes posteriores a la inmersión"
     }
   },
   "recap": {
@@ -80,31 +69,9 @@
     "removeCancel": "Conservar foto",
     "removing": "Eliminando foto…"
   },
-  "leftovers": {
-    "groupLabel": "Sigue abierto — pasa a mañana",
-    "dismiss": "Descartar",
-    "savedCarried": "{subject} pasará a mañana.",
-    "savedDismissed": "{subject} descartado.",
-    "saving": "Guardando…",
-    "undo": "Deshacer",
-    "undoing": "Deshaciendo…"
-  },
   "takings": {
     "heading": "Lo que hizo hoy",
     "tips": "Y {amount} en propinas.",
     "imported": "{count, plural, one {Incluye # registro importado que Stripe no ha confirmado.} other {Incluye # registros importados que Stripe no ha confirmado.}}"
-  },
-  "close": {
-    "heading": "Cerrar el día",
-    "button": "Cerrar el día",
-    "buttonAgain": "Cerrar el día otra vez"
-  },
-  "record": {
-    "closedBy": "Cerrado por {name} a las {time}.",
-    "closeCount": "{count, plural, other {Cerrado # veces hoy, y cada cierre es su propio registro.}}",
-    "outstandingHeading": "Registrado como pendiente",
-    "nothingOutstanding": "No quedó nada pendiente.",
-    "carried": "Llevado a mañana",
-    "dismissed": "Descartado"
   }
 }

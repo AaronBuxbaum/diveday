@@ -111,8 +111,6 @@ export const EXPORT_FILE_NOTES = {
     "Each unit's care history, oldest first: manufacturer services, tank hydrostatic tests and visual inspections, O2-clean renewals, and dated condition notes, each with the deadline staff set for that clock. The newest event of a kind is that clock's current state. This is the shop's own maintenance record — proof of care for a unit, not a work order.",
   "gear_reservations.csv":
     "Which unit was assigned to a booking or directly to a counter-rental holder, and for what dates, with the handover and return stamps. A reservation is fulfillment, never money: the rental charge lives in order_line_items.csv and booking_checkout_bookings.csv. A row with an empty returned_at is a unit still out.",
-  "closeout_leftover_decisions.csv":
-    "Append-only carry/dismiss choices for close-out leftovers, with the staff actor and timestamp. The final close-out snapshot remains an in-product operational record; this file preserves the per-row choices that produced it.",
   "pre_departure_checklist_items.csv":
     "The shop's own pre-departure safety line, in the shop's own reading order (sort_order) — DiveDay authors none of it. A deleted item is here too, carrying its deleted_at stamp; its history in pre_departure_check_events.csv stays readable regardless.",
   "pre_departure_check_events.csv":

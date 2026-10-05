@@ -1778,10 +1778,9 @@ export type FitAdjustedReturn = {
  * the ones where the size genuinely differs from what is on file, so the
  * evening can ask once whether to keep it.
  *
- * **Bounded to the shop's own day**, because the question expires with it: the
- * leftovers trail is keyed by `shop_day`, so a dismissal recorded tonight
- * cannot carry to tomorrow, and a row that reappeared every evening until
- * somebody answered would be the nag this whole surface is against. The
+ * **Bounded to the shop's own day**, because the question expires with it: a
+ * row that reappeared every evening until somebody answered would be the nag
+ * this whole surface is against. The
  * `fit_adjusted` outcome stays on the reservation for anyone who wants it
  * later.
  *

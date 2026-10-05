@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { EARNED_MOMENT_SURFACE, EarnedMoment, EarnedMomentLine } from "./EarnedMoment";
+import { EarnedMoment, EarnedMomentLine } from "./EarnedMoment";
 import { sectionCardClass } from "./ui/card";
 
 afterEach(cleanup);
@@ -78,19 +78,6 @@ describe("EarnedMoment", () => {
     render(<EarnedMoment eyebrow="Reef Divers" title="You're booked" />);
     expect(screen.getByText("Reef Divers")).toHaveClass("mb-1");
     expect(screen.getByRole("heading").className).not.toMatch(/(^|\s)mt-/);
-  });
-});
-
-/**
- * The panel shape, for the one surface with a heading of its own
- * (close-out) rather than a single line — a class string rather than a third
- * component, so the vocabulary still lives in one place.
- */
-describe("EARNED_MOMENT_SURFACE", () => {
-  it("carries the same rationed accent vocabulary as the line and the whole-page moment", () => {
-    expect(EARNED_MOMENT_SURFACE).toContain("rise-in");
-    expect(EARNED_MOMENT_SURFACE).toContain("border-accent/40");
-    expect(EARNED_MOMENT_SURFACE).toContain("bg-accent/10");
   });
 });
 

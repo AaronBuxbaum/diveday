@@ -80,11 +80,6 @@
     "sitesCount": "{count, plural, one {# sitio} other {# sitios}}",
     "siteTimes": "{count, plural, one {# vez} other {# veces}}",
     "sitesRest": "{count, plural, one {# sitio más} other {# sitios más}} · {dives, plural, one {# inmersión entre todos} other {# inmersiones entre todos}}",
-    "entriesLabel": "Los cierres del año",
-    "entriesCount": "{count, plural, one {# día} other {# días}}",
-    "entry": "{divers, plural, one {# buceador} other {# buceadores}} en {boats, plural, one {# salida} other {# salidas}}",
-    "entryClosedBy": "Cerrado por {name}",
-    "entriesRest": "{count, plural, one {# día más} other {# días más}}",
     "empty": "Todavía no ha zarpado ninguna salida este año."
   },
   "buddySeats": "{count, plural, one {# plaza llegó} other {# plazas llegaron}} desde el enlace de un buceador"

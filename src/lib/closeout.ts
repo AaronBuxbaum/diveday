@@ -5,45 +5,37 @@ import { type OpenSeatsDebrief, openSeatsDebrief } from "./open-seats";
 import type { PlanChangeReason } from "./plan-change";
 import type { MonthlyReport } from "./reporting";
 import { rollCallCheckpoints } from "./roll-call";
-import type { RollCallGapReason, TodayAction, TodayActionKind } from "./today";
-import { sortActions } from "./today";
+import type { RollCallGapReason } from "./today";
 import { liveStageOf, type TripStageReading } from "./trip-stages";
-import { shopDayBounds, toDateInputValue, utcToWallTime } from "./zoned";
+import { toDateInputValue, utcToWallTime } from "./zoned";
 
 /**
  * **The day's closing state — the evening half of the shop home's spine.**
  *
  * Today owns the morning ("can the boats sail, who needs me before they do?");
- * this module answers the closing questions: did every boat come home counted,
- * what work from today is still open and what does the shop choose to do about
- * it, and what is waiting tomorrow morning.
+ * this module answers the closing question: did every boat come home counted?
  *
  * It had a page of its own until 2026-08-28. It does not any more (H-62; ADR
  * 20260827-clearwater-surface-language, decision 4): the evening is a *state*
- * the home's spine settles into station by station, and `/close-out` is a 308
- * to the home. Everything below survived that fold unchanged, because none of
- * it was ever about a route — {@link assembleEveningClose} is the join that
- * turns these facts into stations.
+ * the home's spine settles into station by station —
+ * {@link assembleEveningClose} is the join that turns these facts into
+ * stations.
  *
  * It is an *assembly*, never a second detector. Every fact here is composed
  * from the outputs the source-of-truth modules already produce — the roll-call
- * gaps `src/db/today.ts`'s `listRollCallGaps` chases, and the `TodayAction`
- * queue `getTodayWork` builds. Re-deriving either rule here is the failure
- * mode this docblock exists to forbid: an evening that counts a head count
- * differently than the queue that chases it would let the two disagree about
- * whether a person is accounted for.
+ * gaps `src/db/today.ts`'s `listRollCallGaps` chases. Re-deriving that rule
+ * here is the failure mode this docblock exists to forbid: an evening that
+ * counts a head count differently than the queue that chases it would let the
+ * two disagree about whether a person is accounted for.
  *
- * Closing the day is a **ritual, not a gate**. The recorded act (see
- * `buildCloseoutSnapshot`) remembers who closed the day and what was still
- * outstanding, and nothing anywhere may condition on it — not tomorrow's
- * queue, not bookings, nothing. Nothing stands in front of the act either: the
- * acknowledgement checkbox that used to is gone, because H-57 already has the
- * shop deciding each leftover as it meets it, and re-asking at the close is a
- * confirm on a reversible act.
+ * There is no act of closing the day any more (2026-10-05). The evening is a
+ * reading of what already happened — every boat home, who counted it, what the
+ * day took in — and nothing to press. A "Close the day" button used to record
+ * who closed it and what was still open; nothing ever read that record, and
+ * the leftovers it listed were the Needs-you rows standing directly above it.
  *
- * This is the framework-free half: `src/db/closeout.ts` gathers the facts and
- * owns the append-only trail. Words come from `src/i18n/closeout-labels.ts`;
- * this file returns codes.
+ * This is the framework-free half: `src/db/closeout.ts` gathers the facts.
+ * Words come from `src/i18n/closeout-labels.ts`; this file returns codes.
  */
 
 /**
@@ -101,13 +93,6 @@ export const CLOSEOUT_STATUS_TONES: Record<
  * kinds 1–4), as opposed to the dock-count reasons, which are paperwork. The
  * split decides which departures read as `unreconciled` — the loudest state a
  * station can settle into — and which read as `count_open`.
- *
- * It used to decide a second thing: which departures had to be *acknowledged
- * by name* before the day could close. That gate is gone (ADR
- * 20260827-clearwater-surface-language's rejected alternative, and H-57 before
- * it): leftovers are dismissed per row as they are decided, so a checkbox at
- * the close re-asked a question already answered — a confirm on a reversible
- * act, which principle 7 refuses.
  */
 const AFTER_DIVE_GAP_REASONS: ReadonlySet<RollCallGapReason> = new Set([
   "missing_diver",
@@ -372,62 +357,12 @@ export type CloseoutDeparture = {
   }[];
 };
 
-/** Administrative work attached to the returned boats, expressed as counts. */
-export type CloseoutAdminTaskStatus = "complete" | "pending" | "attention";
-
-export type CloseoutAdminTask = {
-  id: "post_dive_reports";
-  status: CloseoutAdminTaskStatus;
-  total: number;
-  completed: number;
-  pending: number;
-  failed: number;
-};
-
-/** Keep the task tone derived from its counts, so the page cannot call a partial run complete. */
-export function closeoutAdminTaskStatus(input: {
-  total: number;
-  completed: number;
-  pending: number;
-  failed: number;
-}): CloseoutAdminTaskStatus {
-  if (input.failed > 0) return "attention";
-  if (input.pending > 0) return "pending";
-  return input.completed === input.total ? "complete" : "pending";
-}
-
 export type DayCloseoutState = {
-  /** The shop-local date being closed, as "YYYY-MM-DD". */
+  /** The shop-local date, as "YYYY-MM-DD". */
   shopDay: string;
   /** Today's departures, loudest first. */
   departures: CloseoutDeparture[];
-  /** Administrative work for the departures that have already returned. */
-  adminTasks: CloseoutAdminTask[];
-  /**
-   * Today's unresolved queue rows — everything `getTodayWork` still raises
-   * that is dated today (or undated), minus the roll-call kinds: a head count
-   * is never "carried" or "dismissed", it is chased (glossary), and today's
-   * counts already stand in the departures list above.
-   */
-  leftovers: TodayAction[];
-  /** The latest explicit choice for each leftover, carried from the append-only trail. */
-  leftoverDecisions: Readonly<Record<string, LeftoverDecision>>;
 };
-
-const ROLL_CALL_KINDS: ReadonlySet<TodayActionKind> = new Set([
-  "roll_call_missing_diver",
-  "roll_call_missing_crew",
-  "roll_call_unfinished",
-  "roll_call_crew_unfinished",
-  "roll_call_departure_open",
-  "roll_call_not_started",
-]);
-
-// A units confirmation is standing shop setup, not work left by today's
-// boats. Keeping it out of the closing ledger leaves its single owner — the
-// Today desk group — and avoids offering a dismiss action for a fact that
-// still needs to be confirmed.
-const STANDING_SETUP_KINDS: ReadonlySet<TodayActionKind> = new Set(["units_unconfirmed"]);
 
 /**
  * How one departure reads tonight, in strict precedence: an open head count
@@ -490,19 +425,15 @@ function departureStatus(
  * Assemble the day's closing state from what the source-of-truth modules
  * already found. `trips` is today's departures in the shop's own calendar day
  * (the db half queries by `shopDayBounds`); `gaps` may cover the whole shop
- * (they are filtered per trip here); `actions` is the Today queue verbatim.
+ * (they are filtered per trip here).
  */
 export function assembleDayCloseout(input: {
   trips: readonly CloseoutTripInput[];
   gaps: readonly CloseoutRollCallGap[];
-  actions: readonly TodayAction[];
-  adminTasks?: readonly CloseoutAdminTask[];
-  leftoverDecisions?: Readonly<Record<string, LeftoverDecision>>;
   timeZone: string;
   now?: Date;
 }): DayCloseoutState {
   const now = input.now ?? nowDate();
-  const today = shopDayBounds(now, input.timeZone);
   const shopDay = shopDayOf(now, input.timeZone);
 
   const worstGapByTrip = new Map<string, CloseoutRollCallGap>();
@@ -554,222 +485,19 @@ export function assembleDayCloseout(input: {
         a.title.localeCompare(b.title),
     );
 
-  // **Today's own open rows, and nothing else.** Tomorrow used to be counted
-  // here too, for a parting-glance card that no longer exists: the spine's own
-  // Tomorrow disclosure is what the evening ends on now (ADR
-  // 20260827-clearwater-surface-language, decision 4), and it is built from
-  // the queue rather than from a second tally of it.
-  const carriable = input.actions.filter(
-    (action) => !ROLL_CALL_KINDS.has(action.kind) && !STANDING_SETUP_KINDS.has(action.kind),
-  );
-  const leftovers = sortActions(
-    carriable.filter((action) => action.dueAt === null || action.dueAt < today.to),
-  );
-
   return {
     shopDay,
     departures,
-    adminTasks: [...(input.adminTasks ?? [])],
-    leftovers,
-    leftoverDecisions: Object.fromEntries(
-      leftovers.flatMap((action) => {
-        const decision = input.leftoverDecisions?.[action.id];
-        return decision === "carry" || decision === "dismiss" ? [[action.id, decision]] : [];
-      }),
-    ),
   };
 }
 
 /**
- * The shop-local date of `now` as "YYYY-MM-DD" — the day a close row names.
+ * The shop-local date of `now` as "YYYY-MM-DD" — the day the evening is about.
  * The same reading `src/db/today.ts`'s `shopDay` makes, through the same
  * DST-safe wall-clock conversion (`src/lib/zoned.ts`).
  */
 export function shopDayOf(now: Date, timeZone: string): string {
   return toDateInputValue(utcToWallTime(now, timeZone));
-}
-
-/** What the closer chose to do with one leftover. Carrying is the default —
- * the item stays visible; dismissing only *records* the choice. Neither one
- * filters tomorrow's queue, which keeps re-deriving from the source of truth. */
-export type LeftoverDecision = "carry" | "dismiss";
-
-export type CloseoutSnapshotDeparture = {
-  tripId: string;
-  title: string;
-  status: Exclude<CloseoutDepartureStatus, "all_home">;
-  gapReason: RollCallGapReason | null;
-  uncounted: number;
-};
-
-export type CloseoutSnapshotLeftover = {
-  id: string;
-  kind: TodayActionKind;
-  subject: string;
-  detail: string;
-  decision: LeftoverDecision;
-};
-
-export type CloseoutSnapshotAdminTask = Pick<
-  CloseoutAdminTask,
-  "id" | "status" | "total" | "completed" | "pending" | "failed"
->;
-
-/**
- * What the recorded act remembers: the not-yet-settled departures and every
- * leftover with the choice made about it. Subjects and details are stored as
- * the record of what was on screen when the day closed — trail text, like
- * the `activity_events` trail, not localized UI copy.
- */
-export type CloseoutSnapshot = {
-  departures: CloseoutSnapshotDeparture[];
-  leftovers: CloseoutSnapshotLeftover[];
-  /** Administrative work still open when the close was recorded. */
-  adminTasks: CloseoutSnapshotAdminTask[];
-};
-
-/**
- * Build the snapshot the close act records, from the state as recomputed at
- * close time — never from anything the form claimed. Unknown decision ids are
- * ignored; a leftover with no stated decision is carried, because carrying is
- * the choice that loses nothing.
- */
-export function buildCloseoutSnapshot(
-  state: Pick<DayCloseoutState, "departures" | "leftovers"> &
-    Partial<Pick<DayCloseoutState, "adminTasks" | "leftoverDecisions">>,
-  decisions: Readonly<Record<string, LeftoverDecision>> = {},
-): CloseoutSnapshot {
-  const effectiveDecisions = { ...(state.leftoverDecisions ?? {}), ...decisions };
-  return {
-    departures: state.departures
-      .filter(
-        (
-          departure,
-        ): departure is CloseoutDeparture & { status: CloseoutSnapshotDeparture["status"] } =>
-          departure.status !== "all_home",
-      )
-      .map((departure) => ({
-        tripId: departure.tripId,
-        title: departure.title,
-        status: departure.status,
-        gapReason: departure.gapReason,
-        uncounted: departure.uncounted,
-      })),
-    leftovers: state.leftovers.map((action) => ({
-      id: action.id,
-      kind: action.kind,
-      subject: action.subject,
-      detail: action.detail,
-      decision:
-        Object.hasOwn(effectiveDecisions, action.id) && effectiveDecisions[action.id] === "dismiss"
-          ? "dismiss"
-          : "carry",
-    })),
-    adminTasks: (state.adminTasks ?? []).map((task) => ({
-      id: task.id,
-      status: task.status,
-      total: task.total,
-      completed: task.completed,
-      pending: task.pending,
-      failed: task.failed,
-    })),
-  };
-}
-
-const DEPARTURE_STATUSES = new Set<string>(Object.keys(CLOSEOUT_STATUS_RANK));
-const GAP_REASONS = new Set<string>(Object.keys(GAP_REASON_RANK));
-
-/**
- * Read a snapshot back off a stored jsonb value. Defensive by design — the
- * column is written only by `buildCloseoutSnapshot`, but a trail that renders
- * for years must not crash the page over one malformed historical row.
- * Malformed entries are dropped, never guessed at.
- */
-export function parseCloseoutSnapshot(value: unknown): CloseoutSnapshot {
-  const empty: CloseoutSnapshot = { departures: [], leftovers: [], adminTasks: [] };
-  if (typeof value !== "object" || value === null) return empty;
-  const raw = value as { departures?: unknown; leftovers?: unknown; adminTasks?: unknown };
-  const departures = Array.isArray(raw.departures)
-    ? raw.departures.flatMap((entry): CloseoutSnapshotDeparture[] => {
-        if (typeof entry !== "object" || entry === null) return [];
-        const row = entry as Record<string, unknown>;
-        if (
-          typeof row.tripId !== "string" ||
-          typeof row.title !== "string" ||
-          typeof row.status !== "string" ||
-          !DEPARTURE_STATUSES.has(row.status) ||
-          row.status === "all_home"
-        ) {
-          return [];
-        }
-        return [
-          {
-            tripId: row.tripId,
-            title: row.title,
-            status: row.status as CloseoutSnapshotDeparture["status"],
-            gapReason:
-              typeof row.gapReason === "string" && GAP_REASONS.has(row.gapReason)
-                ? (row.gapReason as RollCallGapReason)
-                : null,
-            uncounted: typeof row.uncounted === "number" ? row.uncounted : 0,
-          },
-        ];
-      })
-    : [];
-  const leftovers = Array.isArray(raw.leftovers)
-    ? raw.leftovers.flatMap((entry): CloseoutSnapshotLeftover[] => {
-        if (typeof entry !== "object" || entry === null) return [];
-        const row = entry as Record<string, unknown>;
-        if (
-          typeof row.id !== "string" ||
-          typeof row.kind !== "string" ||
-          typeof row.subject !== "string" ||
-          typeof row.detail !== "string"
-        ) {
-          return [];
-        }
-        return [
-          {
-            id: row.id,
-            kind: row.kind as TodayActionKind,
-            subject: row.subject,
-            detail: row.detail,
-            decision: row.decision === "dismiss" ? "dismiss" : "carry",
-          },
-        ];
-      })
-    : [];
-  const adminTasks = Array.isArray(raw.adminTasks)
-    ? raw.adminTasks.flatMap((entry): CloseoutSnapshotAdminTask[] => {
-        if (typeof entry !== "object" || entry === null) return [];
-        const row = entry as Record<string, unknown>;
-        if (
-          row.id !== "post_dive_reports" ||
-          (row.status !== "complete" && row.status !== "pending" && row.status !== "attention") ||
-          !Number.isInteger(row.total) ||
-          !Number.isInteger(row.completed) ||
-          !Number.isInteger(row.pending) ||
-          !Number.isInteger(row.failed) ||
-          (row.total as number) < 0 ||
-          (row.completed as number) < 0 ||
-          (row.pending as number) < 0 ||
-          (row.failed as number) < 0
-        ) {
-          return [];
-        }
-        return [
-          {
-            id: "post_dive_reports",
-            status: row.status as CloseoutAdminTaskStatus,
-            total: row.total as number,
-            completed: row.completed as number,
-            pending: row.pending as number,
-            failed: row.failed as number,
-          },
-        ];
-      })
-    : [];
-  return { departures, leftovers, adminTasks };
 }
 
 /**
@@ -879,10 +607,9 @@ export type EveningClose = {
   /** Every departure of the shop day, clock order — settled or still out. */
   stations: StationClose[];
   /**
-   * Whether the closing block may render at all: at least one departure, and
-   * every one of them settled. **The pin.** While one boat is out there is no
-   * leftovers group, no closing act, and nothing on the page suggesting the
-   * day is over.
+   * Whether the day has ended: at least one departure, and every one of them
+   * settled. **The pin.** While one boat is out there are no takings and
+   * nothing on the page suggesting the day is over.
    */
   closing: boolean;
   /**

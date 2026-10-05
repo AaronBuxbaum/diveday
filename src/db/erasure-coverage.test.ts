@@ -309,7 +309,6 @@ const ERASURE_KEEPS: Record<string, string> = {
     "an owner's ruling on whether a template change was material — a decision about the shop’s text, not about any signer",
 
   // --- the staffer who acted is the only person on the row -----------------
-  closeout_leftover_decisions: "what a staff member decided to do with a leftover at close-out",
   crew_assignment_requests: "a crew member asking for a departure, and the answer",
   crew_availability_blocks: "a crew member’s own unavailable dates and their note about them",
   staff_shifts: "a staff member’s own hours and the note attached to them",

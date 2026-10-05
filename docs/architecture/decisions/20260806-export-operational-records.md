@@ -55,8 +55,8 @@ README's "Not included" list and the export settings page — rather than only i
   complete.
 - **`day_closeouts`.** A narrower argument: a close-out is an attestation over a day whose every
   underlying fact — the roll call, the blockers, the departures — is already in the bundle. The row
-  adds a signature over records the destination has and nothing it lacks. Revisit if the attestation
-  ever becomes evidence in its own right.
+  adds a signature over records the destination has and nothing it lacks. (The table was dropped on
+  2026-10-05 with the "Close the day" act; see ADR 20260804-day-closeout.)
 
 The retry queues, per-attempt logs, rate-limit state, push credentials, blowout cascade state, and
 DiveDay's own reconciliation ledgers (payment-operation intents, the Stripe webhook ledger,

@@ -12,8 +12,8 @@ import { YearStrip } from "./YearStrip";
 /**
  * **The shop's year** (ADR 20260908-one-hand, decision 6, lever T): the log
  * read from far enough away. The sentence the year says, the strip of days,
- * four figures, the sites in the order the shop dived them, and the days it
- * closed out — above the month page, which keeps its own shape and its own
+ * four figures, and the sites in the order the shop dived them — above the
+ * month page, which keeps its own shape and its own
  * money and is reached by the same segmented control that reached this.
  *
  * **No money here, on any of it.** The printed card this data draws leaves
@@ -26,9 +26,6 @@ import { YearStrip } from "./YearStrip";
  * counting; the remainder row keeps the total honest rather than truncating it.
  */
 const SITES_SHOWN = 5;
-
-/** How many close-outs the page lists before the rest become one line. */
-const ENTRIES_SHOWN = 12;
 
 export function YearReport({
   year,
@@ -118,8 +115,6 @@ export function YearReport({
   const shownSites = year.sites.slice(0, SITES_SHOWN);
   const restSites = year.sites.slice(SITES_SHOWN);
   const restDives = restSites.reduce((total, site) => total + site.times, 0);
-  const shownEntries = year.entries.slice(0, ENTRIES_SHOWN);
-  const restEntries = year.entries.length - shownEntries.length;
 
   return (
     <>
@@ -134,7 +129,7 @@ export function YearReport({
       </p>
 
       {/* **One rhythm between the sections, and the stack owns it.** The strip
-          used to take `mt-8`, the figures nothing, and the sites and entries
+          used to take `mt-8`, the figures nothing, and the sites
           `mt-10`, so the pixel probe measured 0 then 40px between them and the
           strip's legend sat about 4px above the figures' top hairline. One
           `space-y-10` here, and no `mt-*` on anything inside it
@@ -179,40 +174,6 @@ export function YearReport({
             {restSites.length > 0 ? (
               <p className="mt-3 text-end text-sm text-muted tabular-nums">
                 {t("reports.year.sitesRest", { count: restSites.length, dives: restDives })}
-              </p>
-            ) : null}
-          </section>
-        ) : null}
-
-        {shownEntries.length > 0 ? (
-          <section aria-labelledby="year-entries">
-            <GroupLabel
-              as="h2"
-              id="year-entries"
-              meta={t("reports.year.entriesCount", { count: year.entries.length })}
-            >
-              {t("reports.year.entriesLabel")}
-            </GroupLabel>
-            <ul>
-              {shownEntries.map((entry) => (
-                <LedgerRow key={entry.day} stacked>
-                  <span className="flex flex-wrap items-baseline gap-x-3">
-                    <span className="font-medium tabular-nums">
-                      {formatCalendarDate(entry.day, locale)}
-                    </span>
-                    <span className="text-muted">
-                      {t("reports.year.entry", { divers: entry.divers, boats: entry.boats })}
-                    </span>
-                    <span className="text-sm text-muted">
-                      {t("reports.year.entryClosedBy", { name: entry.actor })}
-                    </span>
-                  </span>
-                </LedgerRow>
-              ))}
-            </ul>
-            {restEntries > 0 ? (
-              <p className="mt-3 text-end text-sm text-muted tabular-nums">
-                {t("reports.year.entriesRest", { count: restEntries })}
               </p>
             ) : null}
           </section>

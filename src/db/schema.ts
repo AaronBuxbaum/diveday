@@ -19,7 +19,6 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { CERTIFICATION_AGENCIES } from "@/lib/certification-options";
-import type { CloseoutSnapshot } from "@/lib/closeout";
 import type { CourseTemplateSnapshot } from "@/lib/course-template-sync";
 import type { CourseFaq, CourseGalleryPhoto, CourseScheduleDay } from "@/lib/courses";
 import type { DiveSiteLandmark } from "@/lib/dive-site-landmarks";
@@ -8684,97 +8683,6 @@ export const tripBlowoutDivers = pgTable(
     // booking alone is the natural key — the send loop's resume guarantee.
     uniqueIndex("trip_blowout_divers_booking_unique").on(table.bookingId),
     index("trip_blowout_divers_blowout_idx").on(table.blowoutId),
-  ],
-);
-
-/**
- * The end-of-day close-out trail (ADR 20260804-day-closeout): one row per time
- * somebody closed the shop's day. Append-only, like `activity_events` — the
- * record *is* the ritual, so a row is never updated or deleted by product
- * code, and "re-opening" a day is simply working again and closing again,
- * which appends another row. Nothing anywhere may condition on a day being
- * closed: this table is a memory, not a lock.
- *
- * `shop_day` is the shop-local calendar date being closed ("YYYY-MM-DD",
- * `shopDayOf` in src/lib/closeout.ts), stored as text exactly like the other
- * date-only facts in this schema, and *not* derivable from `closed_at` — a
- * shop can close Monday's day five minutes after its own midnight.
- *
- * `outstanding` is the `CloseoutSnapshot` (src/lib/closeout.ts) recomputed
- * server-side at the moment of closing: the departures not yet settled and
- * every leftover with the carry/dismiss choice made about it. Snapshot text
- * (trip titles, row subjects) is trail text like the names an `activity_events`
- * row carries,
- * not localized UI copy. Growth is bounded by the ritual itself — a row per
- * close, normally one per shop per day — so it carries no retention arm;
- * adding one is HD-11's call (src/lib/retention.ts).
- */
-export const dayCloseouts = pgTable(
-  "day_closeouts",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    shopDay: text("shop_day").notNull(),
-    actorPersonId: uuid("actor_person_id")
-      .notNull()
-      .references(() => people.id),
-    closedAt: timestamp("closed_at", { withTimezone: true }).notNull().defaultNow(),
-    outstanding: jsonb("outstanding").$type<CloseoutSnapshot>().notNull(),
-    /**
-     * Write order, for reading a trail whose timestamps tie — same reasoning
-     * as `activity_events.seq`: the e2e clock is frozen, so `closed_at` alone
-     * cannot say which close of a day came last.
-     */
-    seq: bigserial("seq", { mode: "number" }).notNull(),
-  },
-  (table) => [
-    // The surface's one read: this shop's closes of one day, latest first.
-    index("day_closeouts_shop_day_idx").on(table.shopId, table.shopDay),
-    check("day_closeouts_shop_day_format", sql`${table.shopDay} ~ '^\\d{4}-\\d{2}-\\d{2}$'`),
-  ],
-);
-
-/**
- * The per-leftover choices made while reviewing a close-out. This is a
- * separate append-only trail rather than mutable state on `day_closeouts`:
- * tapping Dismiss/Carry is immediately durable, and Undo is simply another
- * row recording the inverse choice. The close snapshot still captures the
- * effective choices at close time, while this table answers who changed one
- * and when without rewriting history.
- */
-export const closeoutLeftoverDecisions = pgTable(
-  "closeout_leftover_decisions",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    shopId: uuid("shop_id")
-      .notNull()
-      .references(() => shops.id),
-    shopDay: text("shop_day").notNull(),
-    actionId: text("action_id").notNull(),
-    decision: text("decision").$type<"carry" | "dismiss">().notNull(),
-    actorPersonId: uuid("actor_person_id")
-      .notNull()
-      .references(() => people.id),
-    decidedAt: timestamp("decided_at", { withTimezone: true }).notNull().defaultNow(),
-    /** Global write order keeps the latest choice deterministic under a frozen clock. */
-    seq: bigserial("seq", { mode: "number" }).notNull(),
-  },
-  (table) => [
-    index("closeout_leftover_decisions_shop_day_idx").on(table.shopId, table.shopDay),
-    index("closeout_leftover_decisions_action_idx").on(
-      table.shopId,
-      table.shopDay,
-      table.actionId,
-      table.seq,
-    ),
-    check(
-      "closeout_leftover_decisions_shop_day_format",
-      sql`${table.shopDay} ~ '^\\d{4}-\\d{2}-\\d{2}$'`,
-    ),
-    check("closeout_leftover_decisions_value", sql`${table.decision} in ('carry', 'dismiss')`),
-    check("closeout_leftover_decisions_action_id_nonempty", sql`length(${table.actionId}) > 0`),
   ],
 );
 

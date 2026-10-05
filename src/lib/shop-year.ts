@@ -41,15 +41,6 @@ export type ShopYearBoat = { name: string; days: number };
  */
 export type ShopYearSite = { siteId: string; name: string; times: number; live: boolean };
 
-/** One close-out the shop wrote, newest first on the page. */
-export type ShopYearEntry = {
-  day: CalendarDate;
-  /** Who closed the day. */
-  actor: string;
-  divers: number;
-  boats: number;
-};
-
 /** Everything the read hands the summary. */
 export type ShopYearInput = {
   year: number;
@@ -67,7 +58,6 @@ export type ShopYearInput = {
   days: ShopYearDay[];
   boats: ShopYearBoat[];
   sites: ShopYearSite[];
-  entries: ShopYearEntry[];
 };
 
 /**
@@ -116,32 +106,9 @@ export type ShopYearSummary = {
   quietestMonth: { month: number; divers: number; boats: number } | null;
   /** Fifty-odd weeks of seven days, column by column. */
   strip: ShopYearCell[];
-  entries: ShopYearEntry[];
   /** False when nothing sailed: the page says so rather than drawing zeroes. */
   hasActivity: boolean;
 };
-
-/**
- * **What the card is allowed to know** (security review, finding 2).
- *
- * The card leaves the shop — printed, mailed, and on DiveDay's homepage for a
- * shop that said yes — so it renders from a narrower thing than the page does.
- * `entries` is the difference: a close-out carries the name of the staff member
- * who wrote it, which belongs on the shop's own year page and nowhere a
- * stranger reads. Dropping it from the *type* means no future edit to the card
- * can print it by reaching one field further, and {@link shopYearCard} drops it
- * from the value as well, so it is not in the render input at runtime either.
- *
- * Everything that remains is a count, a date, or a name the shop publishes
- * anyway — its own, its boats', its sites'.
- */
-export type ShopYearCard = Omit<ShopYearSummary, "entries">;
-
-/** The year with the close-outs taken off, for the card's two routes. */
-export function shopYearCard(year: ShopYearSummary): ShopYearCard {
-  const { entries: _entries, ...card } = year;
-  return card;
-}
 
 function fillFor(day: ShopYearDay): ShopYearFill {
   if (day.boats === 0) return 0;
@@ -250,7 +217,6 @@ export function summarizeShopYear(input: ShopYearInput): ShopYearSummary {
     busiestDay,
     quietestMonth,
     strip: buildStrip(input, byDay),
-    entries: input.entries,
     hasActivity: boatsOut > 0,
   };
 }

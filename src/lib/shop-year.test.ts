@@ -17,7 +17,6 @@ const EMPTY: ShopYearInput = {
   days: [],
   boats: [],
   sites: [],
-  entries: [],
 };
 
 function year(input: Partial<ShopYearInput>) {

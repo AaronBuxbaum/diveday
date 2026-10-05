@@ -11,7 +11,6 @@ import { sendHoldCopy } from "@/components/send-hold-copy";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerGroup, LedgerRow, type LedgerRowKindTone } from "@/components/ui/ledger";
 import { StatusMark } from "@/components/ui/StatusMark";
-import type { DayCloseoutRecord } from "@/db/closeout";
 import type { FirstBooking } from "@/db/first-booking";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { ACTION_KIND_KEYS, seasonalBriefingText } from "@/i18n/today-labels";
@@ -30,11 +29,11 @@ import {
   type TodayAction,
   todaysBoatsAreClear,
 } from "@/lib/today";
-import { ClosingBlock } from "./ClosingBlock";
 import { ClosingStation } from "./ClosingStation";
 import { DayStation } from "./DayStation";
 import { DayTakings } from "./DayTakings";
 import { PaymentActionControl, type PaymentActionCopy } from "./PaymentActionControl";
+import { RentalFitKeepControl } from "./RentalFitKeepControl";
 import {
   ResendConfirmationControl,
   type ResendConfirmationCopy,
@@ -64,9 +63,9 @@ import { WaiverSendControl } from "./WaiverSendControl";
  * **The evening is a state, not a mode** (slice 6d, H-62). There is still no
  * phase control and no second view: the stations settle one at a time as their
  * head counts close, a settled one renders {@link ClosingStation} in its own
- * place in clock order, and the {@link ClosingBlock} appears beneath the spine
- * once every departure of the shop day has settled. `/close-out` is a 308 to
- * this page; nothing about `day_closeouts` or the close act changed underneath.
+ * place in clock order, and the day's takings appear beneath the spine once
+ * every departure of the shop day has settled. There is nothing to press to
+ * end the day: it is over when the boats are home.
  *
  * **Day zero is a state of this spine, never a wizard** (ADR
  * 20260827-first-light, decision 6; slice 10d). A shop that has never had a
@@ -257,7 +256,8 @@ function StationRow({
       action.resend ||
       action.invite ||
       action.payment?.orderId ||
-      action.helpRequest,
+      action.helpRequest ||
+      action.rentalFit,
   );
   // The person, then the sentence, in one line (`SpineRow`). Each half keeps
   // its own element so a reader (and a test) can find either by its own words.
@@ -339,6 +339,15 @@ function StationRow({
         {action.actionLabel}
       </SubmitButton>
     </form>
+  ) : action.rentalFit ? (
+    // **The one row whose fix is the tap itself** (issue #1174, D14): the size
+    // is already known, so pointing at the diver's record to retype it would
+    // be the surface asking a question it can answer.
+    <RentalFitKeepControl
+      reservationId={action.rentalFit.reservationId}
+      label={t("today.gear.fitConfirmKeep")}
+      pendingLabel={t("today.gear.fitConfirmSaving")}
+    />
   ) : // **Nothing at all: the row's own tap is its only door** (ADR
   // 20260911-clear-the-deck, the floor's first row). This branch used to
   // render the destination as a word — "Open crew", "Open prep list", "Open
@@ -464,10 +473,6 @@ export type EveningReading = {
    * `closing` condition this component already holds.
    */
   takings: DayTakingsReading | null;
-  /** Today's still-open rows, already stripped of the ones the shop dismissed. */
-  leftovers: readonly TodayAction[];
-  latest: DayCloseoutRecord | null;
-  closeCount: number;
   /**
    * No earlier day of this shop holds a sailed departure, so tonight is the
    * first boat that ever came home. The once-ever wording the coral table
@@ -615,39 +620,29 @@ export function DaySpine({
     .map((close) => ({ kind: "closing", at: close.startsAt.getTime(), close }));
   const entries = [...liveEntries, ...closingEntries].sort((a, b) => a.at - b.at);
 
-  // The one coral element, resolved once (see this file's docblock). A
-  // recorded close is a panel inside the closing block, so every line stands
-  // down for it; the evening's own moment outranks the morning's; and between
+  // The one coral element, resolved once (see this file's docblock). The
+  // evening's own moment outranks the morning's; and between
   // the morning's two, the shop's first booking ever outranks a day whose
   // boats happen to be clear, because one of them happens once and the other
   // happens on a good Tuesday.
-  const closedPanel = evening?.latest != null;
-  const allHomeLine = !closedPanel && evening?.close.allHome === true;
-  const firstBookingMark = !closedPanel && !allHomeLine && firstBooking != null;
+  const allHomeLine = evening?.close.allHome === true;
+  const firstBookingMark = !allHomeLine && firstBooking != null;
   // The season's fact outranks the *daily* all-clear and nothing above it
   // (Budget rule 3). It is not a compliment, so it does not wait for a day
   // with no blockers on it — the Home board draws it over a morning with a
   // boarding blocker, which is the day a shop most deserves to be told it is
   // on its four hundredth diver.
-  const factOfScaleLine = !closedPanel && !allHomeLine && !firstBookingMark && factOfScale != null;
+  const factOfScaleLine = !allHomeLine && !firstBookingMark && factOfScale != null;
   const boatsClearLine =
-    !closedPanel &&
-    !allHomeLine &&
-    !firstBookingMark &&
-    !factOfScaleLine &&
-    todaysBoatsAreClear(spine);
+    !allHomeLine && !firstBookingMark && !factOfScaleLine && todaysBoatsAreClear(spine);
   const closing = evening?.close.closing === true;
-  const closingLeftoverIds = new Set(
-    closing && evening ? evening.leftovers.map((leftover) => leftover.id) : [],
-  );
-  const deskActions = spine.desk.filter((action) => !closingLeftoverIds.has(action.id));
   // **One "Needs you" list** (ADR 20261001-logbook, decision 4): every job on
   // today's boats and at the desk, ranked together — danger first, then by
   // when it is due — rather than filed under each boat. A row names its own
   // boat, so nothing is lost by lifting it out of the card.
   const needsYou = sortStationRows([
     ...spine.stations.flatMap((station) => station.rows),
-    ...deskActions,
+    ...spine.desk,
   ]);
 
   return (
@@ -883,32 +878,10 @@ export function DaySpine({
         />
       ) : null}
 
-      {/* **What today made, above the act that ends the day.** A reading, not
-          a third thing inside the closing block — `ClosingBlock` still shows
-          exactly two things, so its charter and ADR
-          20260827-clearwater-surface-language decision 4 stand unamended
-          (Aaron's call, 2026-09-20, on issue #1930). Same condition as the
-          block itself: while one boat is out there is no day to have made
-          anything yet. */}
+      {/* **What today made** (issue #1930). While one boat is out there is no
+          day to have made anything yet. */}
       {closing && evening?.takings ? (
         <DayTakings takings={evening.takings} currency={currency} locale={locale} t={t} />
-      ) : null}
-
-      {/* **The closing block, and where it sits.** Beneath the day's own work
-          — the stations and the desk — and *above* the horizons, because the
-          spine's Tomorrow disclosure is the tomorrow band the evening ends on
-          (the Evening artboard's last row). Rendering a second one inside the
-          block would be the repetition this language exists to remove. It
-          appears only when every departure of the shop day has settled. */}
-      {closing && evening ? (
-        <ClosingBlock
-          leftovers={evening.leftovers}
-          latest={evening.latest}
-          closeCount={evening.closeCount}
-          locale={locale}
-          timeZone={timeZone}
-          t={t}
-        />
       ) : null}
 
       {/* The two horizons, collapsed. Tomorrow expands in place through the

@@ -402,17 +402,11 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
       return { note: notes.join("; "), screenshots: shots };
     }
 
-    case "day-closed": {
+    case "evening": {
       await advanceClock(at(id));
       await staff.goto(shopPath());
-      const close = staff.getByRole("button", { name: /^Close the day( again)?$/ }).first();
-      await expect(close).toBeVisible();
-      const shots = [await snap(staff, index, id, "evening")];
-      await close.click();
-      await expect(staff.getByText("Day closed. The record is below")).toBeVisible();
-      await expect(staff.getByText(/Closed by .+ at/)).toBeVisible();
-      shots.push(await snap(staff, index, id));
-      return { screenshots: shots };
+      await expect(staff.getByText(/^All boats are home/)).toBeVisible();
+      return { screenshots: [await snap(staff, index, id)] };
     }
 
     case "recap-sent": {
@@ -609,8 +603,7 @@ async function snap(page: Page, index: number, id: string, suffix = ""): Promise
   const name = screenshotName(index, id, suffix);
   await page.mouse.move(0, 0);
   // Put the window back at the top first. A state that clicked its way down the
-  // page leaves it scrolled — a roll-call row scrolled into centre, the "Close
-  // the day" button at the foot — and a `fullPage` shot of a scrolled page
+  // page leaves it scrolled — a roll-call row scrolled into centre — and a `fullPage` shot of a scrolled page
   // renders every `position: sticky` element at the offset it is stuck at
   // rather than at rest. The staff header then lands in the middle of the
   // transcript's screenshot, lying across the content it was taken to show

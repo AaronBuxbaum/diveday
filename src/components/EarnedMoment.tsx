@@ -35,19 +35,6 @@ import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
  * to a colourblind scan, which is a different job with its own long argument.)
  */
 /**
- * The accent surface itself, for the rare moment that is a panel with its own
- * heading rather than a line or a whole-page block — the close-out's record of
- * a day that closed with nothing outstanding is the only one.
- *
- * Exported as a class string rather than forced into one of the two components
- * because that panel has a heading, a `closedBy` line and an
- * `aria-labelledby` of its own; bending a component to accept all three would
- * buy nothing the constant does not. What matters is that the *vocabulary*
- * lives here, so a fourth surface cannot invent a fourth coral.
- */
-export const EARNED_MOMENT_SURFACE = "rise-in rounded-panel border border-accent/40 bg-accent/10";
-
-/**
  * One earned line inside a working surface. `role="status"` because these all
  * appear in response to something the user just did — the last diver boarding,
  * the last set of fins coming back — on a page that does not reload.
