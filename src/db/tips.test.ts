@@ -4,7 +4,7 @@ import { seededShopContext } from "@/test/db";
 import { fakeCheckout, recordingCheckout } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import { bookings, tips } from "./schema";
-import { setShopCurrency } from "./shops";
+import { setShopCurrency, setShopFeature } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import {
   getLatestTipForBooking,
@@ -69,6 +69,16 @@ describe("startTipCheckout", () => {
 
     const wrongShopId = "00000000-0000-0000-0000-000000000000";
     expect(await getLatestTipForBooking(db, wrongShopId, bookingId)).toBeNull(); // tenant isolation holds
+  });
+
+  it("refuses while the shop has tips switched off", async () => {
+    const { db, shop, bookingId } = await tipContext();
+    await setShopFeature(db, shop.id, "tips", false);
+    expect(await startTipCheckout(db, tipInput(bookingId), fakeCheckout())).toEqual({
+      ok: false,
+      reason: "tips_off",
+    });
+    expect(await getLatestTipForBooking(db, shop.id, bookingId)).toBeNull();
   });
 
   it("refuses an amount outside the bounds", async () => {

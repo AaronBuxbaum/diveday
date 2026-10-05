@@ -73,6 +73,7 @@ function props(overrides: Partial<AfterStateProps> = {}): AfterStateProps {
     canTip: false,
     tip: null,
     tipPresets: [10, 20, 40],
+    canReview: true,
     ownReview: null,
     ownPulse: null,
     params: {},
@@ -549,6 +550,19 @@ describe("the coral budget", () => {
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
       "thread.afterGreeting(Yara)",
     );
+  });
+});
+
+describe("a shop that switched reviews off", () => {
+  it("asks for no rating", () => {
+    render(<AfterState {...props({ canReview: false })} />);
+    expect(screen.queryByText("reviews.askHeading")).toBeNull();
+    expect(screen.queryByText("reviews.submit")).toBeNull();
+  });
+
+  it("asks for one when it is on", () => {
+    render(<AfterState {...props()} />);
+    expect(screen.getByText("reviews.askHeading")).toBeInTheDocument();
   });
 });
 

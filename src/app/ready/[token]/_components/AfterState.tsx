@@ -200,6 +200,12 @@ export type AfterStateProps = {
   tip: RecapPageData["tip"];
   /** Tip presets in major units, scaled by the same table as the tip bounds. */
   tipPresets: number[];
+  /**
+   * Whether the shop asks for a star rating at all (`shops.reviews_enabled`).
+   * Off, the page has no review card, and the private note to the shop stands
+   * on its own.
+   */
+  canReview: boolean;
   /** The diver's own review, when they have left one. */
   ownReview: { rating: number; comment: string | null } | null;
   /**
@@ -327,6 +333,7 @@ export function AfterState({
   canTip,
   tip,
   tipPresets,
+  canReview,
   ownReview,
   ownPulse,
   params,
@@ -470,47 +477,49 @@ export function AfterState({
 
       {/* ——— The one ask. It is the page's single primary in every variant: a
           sparse keepsake never promotes a door to fill the space above it. */}
-      <SectionCard padding="lg" className="mt-10 print:hidden" title={t("reviews.askHeading")}>
-        {reviewNotice ? (
-          <FormStatus tone={reviewNotice.tone}>{t(reviewNotice.key)}</FormStatus>
-        ) : null}
-        {ownReview ? (
-          <p className="mt-3 text-sm text-muted">
-            {t("reviews.yourRating", { rating: ownReview.rating })}
-          </p>
-        ) : null}
-        <form action={actions.submitReview} className="mt-4 flex flex-col gap-3">
-          <StarRatingInput
-            legend={t("reviews.ratingLegend")}
-            optionLabels={Object.fromEntries(
-              REVIEW_RATINGS.map((rating) => [rating, t("reviews.ratingOption", { rating })]),
-            )}
-            defaultValue={ownReview?.rating}
-          />
-          <label htmlFor="review-comment" className="text-sm font-medium">
-            {t("reviews.commentLabel")}
-          </label>
-          <textarea
-            id="review-comment"
-            name="comment"
-            rows={3}
-            maxLength={MAX_REVIEW_COMMENT_LENGTH}
-            defaultValue={ownReview?.comment ?? ""}
-            placeholder={t("reviews.commentPlaceholder")}
-            className={textareaClassFor(3)}
-          />
-          <div>
-            <SubmitButton
-              pendingLabel={t("reviews.submitting")}
-              className={buttonClass({
-                variant: externalReviewUrl ? "secondary" : "primary",
-              })}
-            >
-              {t("reviews.submit")}
-            </SubmitButton>
-          </div>
-        </form>
-      </SectionCard>
+      {canReview ? (
+        <SectionCard padding="lg" className="mt-10 print:hidden" title={t("reviews.askHeading")}>
+          {reviewNotice ? (
+            <FormStatus tone={reviewNotice.tone}>{t(reviewNotice.key)}</FormStatus>
+          ) : null}
+          {ownReview ? (
+            <p className="mt-3 text-sm text-muted">
+              {t("reviews.yourRating", { rating: ownReview.rating })}
+            </p>
+          ) : null}
+          <form action={actions.submitReview} className="mt-4 flex flex-col gap-3">
+            <StarRatingInput
+              legend={t("reviews.ratingLegend")}
+              optionLabels={Object.fromEntries(
+                REVIEW_RATINGS.map((rating) => [rating, t("reviews.ratingOption", { rating })]),
+              )}
+              defaultValue={ownReview?.rating}
+            />
+            <label htmlFor="review-comment" className="text-sm font-medium">
+              {t("reviews.commentLabel")}
+            </label>
+            <textarea
+              id="review-comment"
+              name="comment"
+              rows={3}
+              maxLength={MAX_REVIEW_COMMENT_LENGTH}
+              defaultValue={ownReview?.comment ?? ""}
+              placeholder={t("reviews.commentPlaceholder")}
+              className={textareaClassFor(3)}
+            />
+            <div>
+              <SubmitButton
+                pendingLabel={t("reviews.submitting")}
+                className={buttonClass({
+                  variant: externalReviewUrl ? "secondary" : "primary",
+                })}
+              >
+                {t("reviews.submit")}
+              </SubmitButton>
+            </div>
+          </form>
+        </SectionCard>
+      ) : null}
 
       {/* ——— The quiet doors: hairline rows on the page background, each one a
           tap away from the form it already had. Same grammar as the prep

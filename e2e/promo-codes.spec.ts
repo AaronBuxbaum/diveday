@@ -337,20 +337,21 @@ test.describe("as owner", () => {
    * The one behaviour a promo box must not have: telling a stranger which
    * codes a shop owns. `isPromoRedeemable` is deliberately boolean and
    * `bookSpot` maps every failure onto one message
-   * (`booking.fieldErrors.promoInvalid`), so a switched-off real code and a
-   * code that never existed are byte-identical to the diver. Asserting the two
-   * separately would let them drift apart; this asserts they are the same
-   * string, which is the actual contract.
+   * (`booking.fieldErrors.promoInvalid`), so a real code that can no longer be
+   * spent and a code that never existed are byte-identical to the diver.
+   * Asserting the two separately would let them drift apart; this asserts they
+   * are the same string, which is the actual contract.
+   *
+   * REEF10 stays live so the box is on the form at all (`tripMayTakeACode`);
+   * the spent real code is OPENWATER25, seeded already expired.
    */
-  test("a switched-off code and a code that never existed are refused identically", async ({
+  test("a spent code and a code that never existed are refused identically", async ({
     page,
     request,
   }) => {
     test.setTimeout(60_000);
     await request.post("/api/test/seed-stripe-account");
-    // Switch the shop's one live code off first, as the owner — after this it
-    // is a real code of this shop that simply can't be spent.
-    await setSeededCodeLive(page, false);
+    await setSeededCodeLive(page, true);
     await pricedTripAsVisitor(page, `Promo Refusal Check ${e2eNow().getTime()}`);
     const promoField = page.getByLabel("Promo code");
     await expect(promoField).toBeVisible();
@@ -362,22 +363,40 @@ test.describe("as owner", () => {
     const bookButton = page.getByRole("button", { name: /^Book and pay/ });
     const refusal = page.getByText("That code isn’t active.");
 
-    await promoField.fill("REEF10");
+    await promoField.fill("OPENWATER25");
     await bookButton.click();
     await expect(refusal).toBeVisible();
     // Refused *before* the party is booked, so the diver is still on the form
     // with everything they typed — never a seat taken on a code that failed.
     await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toHaveCount(0);
     await expect(page.getByLabel("Name", { exact: true })).toHaveValue("Refused Diver");
-    const switchedOffMessage = await refusal.textContent();
+    const spentMessage = await refusal.textContent();
 
     // A code this shop has never had. Same message, word for word — the form
     // is not an oracle for enumerating a shop's codes.
     await promoField.fill("NOSUCHCODE99");
     await bookButton.click();
     await expect(refusal).toBeVisible();
-    expect(await refusal.textContent()).toBe(switchedOffMessage);
+    expect(await refusal.textContent()).toBe(spentMessage);
     await expect(page.getByRole("heading", { name: /You’re on the boat/ })).toHaveCount(0);
+  });
+
+  /**
+   * A shop with no code a diver could hold shows no box. With REEF10 switched
+   * off, the seeded shop has none live, and an empty box on every paid booking
+   * would only send divers hunting for a discount that does not exist (ADR
+   * 20261005-optional-shop-features).
+   */
+  test("a payable trip shows no promo box while the shop has no live code", async ({
+    page,
+    request,
+  }) => {
+    test.setTimeout(60_000);
+    await request.post("/api/test/seed-stripe-account");
+    await setSeededCodeLive(page, false);
+    await pricedTripAsVisitor(page, `Promo None Live ${e2eNow().getTime()}`);
+    await expect(page.getByRole("button", { name: /^Book and pay/ })).toBeVisible();
+    await expect(page.getByLabel("Promo code")).toHaveCount(0);
   });
 
   /**

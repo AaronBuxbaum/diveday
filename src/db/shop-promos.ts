@@ -1,4 +1,4 @@
-import { and, count, desc, eq, sql } from "drizzle-orm";
+import { and, count, desc, eq, gt, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { nowDate, nowMs } from "@/lib/clock";
 import {
   type PromotionProvider,
@@ -13,7 +13,12 @@ import {
 } from "@/lib/promo-codes";
 import type { AppDb, DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
-import { type ShopPromoCode, shopPromoCodes, shopPromoRedemptions } from "./schema";
+import {
+  type ShopPromoCode,
+  shopPromoCodes,
+  shopPromoRedemptions,
+  tripLastMinutePromos,
+} from "./schema";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 
 /**
@@ -427,4 +432,49 @@ export async function recordShopPromoRedemption(
       amountChargedCents: input.amountChargedCents,
     })
     .onConflictDoNothing({ target: shopPromoRedemptions.checkoutId });
+}
+
+/**
+ * **Whether a diver booking this departure could be holding a code at all** —
+ * a live shop-wide code, or a last-minute deal sent for this very trip.
+ *
+ * The booking form's code box shows only when this is true. A box on every
+ * paid booking, for a shop that has never made a code, sent divers looking for
+ * a discount that does not exist (ADR 20261005-optional-shop-features).
+ *
+ * Deliberately looser than redemption: scope and a start date still in the
+ * future are not checked, so the box errs toward showing. `getRedeemableShopPromo`
+ * and `getActiveTripPromoByCode` remain what decides whether a typed code applies.
+ */
+export async function tripMayTakeACode(
+  db: DbExecutor,
+  input: { shopId: string; tripId: string; now?: Date },
+): Promise<boolean> {
+  const now = input.now ?? nowDate();
+  const [shopCode] = await db
+    .select({ id: shopPromoCodes.id })
+    .from(shopPromoCodes)
+    .where(
+      and(
+        eq(shopPromoCodes.shopId, input.shopId),
+        eq(shopPromoCodes.status, "active"),
+        isNotNull(shopPromoCodes.stripePromotionCodeId),
+        or(isNull(shopPromoCodes.expiresAt), gt(shopPromoCodes.expiresAt, now)),
+      ),
+    )
+    .limit(1);
+  if (shopCode) return true;
+  const [tripCode] = await db
+    .select({ id: tripLastMinutePromos.id })
+    .from(tripLastMinutePromos)
+    .where(
+      and(
+        eq(tripLastMinutePromos.shopId, input.shopId),
+        eq(tripLastMinutePromos.tripId, input.tripId),
+        eq(tripLastMinutePromos.status, "sent"),
+        gt(tripLastMinutePromos.expiresAt, now),
+      ),
+    )
+    .limit(1);
+  return Boolean(tripCode);
 }

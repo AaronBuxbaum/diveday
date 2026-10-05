@@ -166,7 +166,7 @@ export default async function CoursePage({
           durationText: course.durationText,
         },
         publicAppUrl(),
-        await getShopReviewAggregate(db, shop.id),
+        shop.reviewsEnabled ? await getShopReviewAggregate(db, shop.id) : null,
       )
     : null;
 

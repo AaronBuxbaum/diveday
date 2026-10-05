@@ -350,6 +350,33 @@
     "backup": {
       "heading": "Respaldos"
     },
+    "features": {
+      "on": "Activado",
+      "off": "Desactivado",
+      "save": "Guardar",
+      "saving": "Guardando…",
+      "saved": "Guardado.",
+      "reviews": {
+        "heading": "Reseñas de buceadores",
+        "label": "Pedir a los buceadores que valoren su día",
+        "description": "Valoraciones con estrellas en el resumen de la salida, visibles en tus páginas públicas una vez publicadas. Tu enlace de reseñas funciona en cualquier caso."
+      },
+      "dateRequests": {
+        "heading": "Solicitudes de fecha",
+        "label": "Permitir que los buceadores pidan un día",
+        "description": "Un formulario en tus páginas públicas para un día que no está en el calendario. Las solicitudes llegan a Mensajes."
+      },
+      "lastMinuteList": {
+        "heading": "Lista de última hora",
+        "label": "Permitir que los buceadores se apunten a una lista de última hora",
+        "description": "Los buceadores dejan su correo y puedes ofrecerles plazas libres en una salida cercana."
+      },
+      "tips": {
+        "heading": "Propinas",
+        "label": "Ofrecer una propina en el resumen de la salida",
+        "description": "Los buceadores pueden dar propina a la tripulación con tarjeta después de bucear."
+      }
+    },
     "crewSchedule": {
       "heading": "Turnos de la tripulación",
       "on": "Activado",

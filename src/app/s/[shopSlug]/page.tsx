@@ -328,7 +328,11 @@ export default async function SchedulePage({
         publicOnly: true,
         lensId: activeLens?.id,
       }),
-      isEmbed ? EMPTY_REVIEW_AGGREGATE : getShopReviewAggregate(db, shop.id),
+      // A shop that switched reviews off shows no stars anywhere, not an
+      // empty rating (ADR 20261005-optional-shop-features).
+      isEmbed || !shop.reviewsEnabled
+        ? EMPTY_REVIEW_AGGREGATE
+        : getShopReviewAggregate(db, shop.id),
       isEmbed ? [] : listActiveCourses(db, shop.id),
       // The fleet, for the storefront's boats section (Harbor). Not in the
       // widget: an embed is the list-first window and names no hulls.
@@ -1037,7 +1041,7 @@ export default async function SchedulePage({
           Its own provider, matching the course page's exactly: this form is
           the only Client Component in it, and `inquiry` is the only namespace
           it reads. */}
-      {quiet.quiet ? (
+      {quiet.quiet && shop.dateRequestsEnabled ? (
         <DiverIntlProvider locale={locale} timeZone={tz} namespaces={["inquiry"]}>
           <DateRequestForm
             submitRequest={submitInquiryAction.bind(null, shopSlug, null)}
@@ -1153,7 +1157,7 @@ export default async function SchedulePage({
           that has never run a departure offers neither the deal list nor the
           find-my-link door, and on a quiet board the date request has moved
           above — which between them can empty the list under the heading. */}
-      {!isEmbed && (everHadDeparture || !quiet.quiet) ? (
+      {!isEmbed && (everHadDeparture || (!quiet.quiet && shop.dateRequestsEnabled)) ? (
         <section aria-labelledby="more-ways-heading" className={SECTION_GAP}>
           <h2 id="more-ways-heading" className={`font-brand-display ${SECTION_TITLE_CLASS}`}>
             {t("schedule.moreWaysHeading")}
@@ -1188,7 +1192,9 @@ export default async function SchedulePage({
               {/* Not while the off-season card is up: the same composer is
                   already open above, and two of them would render the same
                   `#request-a-date` id twice (N-45). */}
-              {quiet.quiet ? null : (
+              {/* And not for a shop that switched date requests off (ADR
+                  20261005-optional-shop-features). */}
+              {quiet.quiet || !shop.dateRequestsEnabled ? null : (
                 <DateRequestForm
                   submitRequest={submitInquiryAction.bind(null, shopSlug, null)}
                   askInterest
@@ -1205,7 +1211,10 @@ export default async function SchedulePage({
                   — on a shop with no boats it collects addresses it will never
                   mail, about trips that do not exist (issue #710).
                   `everHadDeparture`, not `hasUpcoming`: see above. */}
-              {everHadDeparture ? <LastMinuteListForm shopSlug={shopSlug} /> : null}
+              {/* Nor for a shop that switched the list off. */}
+              {everHadDeparture && shop.lastMinuteListEnabled ? (
+                <LastMinuteListForm shopSlug={shopSlug} />
+              ) : null}
               {/* Same gate, same reason: a shop that has never had a departure
                   cannot have a real booking to recover (issue #723). */}
               {everHadDeparture ? <FindMyBookingForm shopSlug={shopSlug} /> : null}
@@ -1282,7 +1291,9 @@ async function ScheduleReviewsSection({
   tz: string;
   t: DiverTranslator;
 }) {
-  const reviews = await listPublishedShopReviews(db, shop.id);
+  // Off, no review is listed and none rides in the structured data; the
+  // schedule's own events still do.
+  const reviews = shop.reviewsEnabled ? await listPublishedShopReviews(db, shop.id) : [];
   const structuredData = scheduleJsonLd(
     shop,
     upcoming.map((trip) => ({

@@ -28,6 +28,7 @@ import {
   setShopDivingOptions,
   setShopDockDayRhythm,
   setShopEmergencyReference,
+  setShopFeature,
   setShopPackingList,
   setShopPassThroughFee,
   setShopProfile,
@@ -85,6 +86,7 @@ import {
 } from "@/lib/rentals";
 import { parseSeasonStart } from "@/lib/season";
 import { requireStaffSession } from "@/lib/session";
+import { parseShopFeature } from "@/lib/shop-features";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { storeShopHeroImage, storeShopLogoImage } from "@/lib/storage";
 import { timeZoneAnchor } from "@/lib/timezones";
@@ -1129,6 +1131,32 @@ export async function saveCrewScheduleAction(formData: FormData) {
     settings,
     noticeUrl(settings, "crew-schedule-saved", { saved: "crewSchedule" }),
   );
+}
+
+/**
+ * Turns one optional feature on or off (ADR 20261005-optional-shop-features).
+ * Every feature row on the hub posts here with its own `feature` field, so the
+ * row that changed comes back open with the notice inside it.
+ */
+export async function saveShopFeatureAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+
+  const feature = parseShopFeature(formData.get("feature"));
+  // Only a hand-built post names no feature; it gets the hub back unchanged.
+  if (!feature) {
+    revalidateAndRedirect(settings, settings);
+    return;
+  }
+  await setShopFeature(
+    await getDb(),
+    session.user.shopId,
+    feature,
+    formData.get("enabled") === "on",
+  );
+
+  revalidateAndRedirect(settings, noticeUrl(settings, "feature-saved", { saved: feature }));
 }
 
 /**

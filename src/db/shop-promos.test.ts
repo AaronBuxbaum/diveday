@@ -4,7 +4,7 @@ import { seededShopContext } from "@/test/db";
 import { fakeCheckout, fakePromotions } from "@/test/fakes";
 import { createBookingParty } from "./bookings";
 import { markCheckoutPaidBySessionId, startBookingCheckout } from "./checkouts";
-import { shopPromoCodes, shopPromoRedemptions } from "./schema";
+import { shopPromoCodes, shopPromoRedemptions, tripLastMinutePromos } from "./schema";
 import {
   createShopPromoCode,
   deleteShopPromoCode,
@@ -13,6 +13,7 @@ import {
   listShopPromoCodes,
   retryShopPromoCode,
   setShopPromoEnabled,
+  tripMayTakeACode,
 } from "./shop-promos";
 import {
   disconnectShopStripeAccount,
@@ -775,5 +776,37 @@ describe("listShopPromoCodes group ordering (in-memory PGlite)", () => {
     const ordered = promos.filter((promo) => mine.has(promo.code));
     expect(ordered.map((promo) => promo.code)).toEqual(["OPEN", "CAPPED"]);
     expect(ordered.at(-1)?.timesRedeemed).toBe(1);
+  });
+});
+
+describe("tripMayTakeACode", () => {
+  it("is true while the shop has a live code, and false once it has none", async () => {
+    const { db, shop } = await promoContext();
+    const [trip] = await upcomingTripsWithCounts(db, shop.id);
+    if (!trip) throw new Error("demo trip missing");
+    // The seed's REEF10 is live; its OPENWATER25 already expired.
+    expect(await tripMayTakeACode(db, { shopId: shop.id, tripId: trip.id })).toBe(true);
+
+    const reef10 = await promoNamed(db, shop.id, "REEF10");
+    await setShopPromoEnabled(db, shop.id, reef10.id, false);
+    expect(await tripMayTakeACode(db, { shopId: shop.id, tripId: trip.id })).toBe(false);
+  });
+
+  it("is true for the one departure a last-minute deal was sent for, and no other", async () => {
+    const { db, shop } = await promoContext();
+    const reef10 = await promoNamed(db, shop.id, "REEF10");
+    await setShopPromoEnabled(db, shop.id, reef10.id, false);
+    const [dealTrip, otherTrip] = await upcomingTripsWithCounts(db, shop.id);
+    if (!dealTrip || !otherTrip) throw new Error("demo trips missing");
+    await db.insert(tripLastMinutePromos).values({
+      shopId: shop.id,
+      tripId: dealTrip.id,
+      status: "sent",
+      discountPercent: 20,
+      code: "LASTCALL20",
+      expiresAt: new Date(dealTrip.startsAt),
+    });
+    expect(await tripMayTakeACode(db, { shopId: shop.id, tripId: dealTrip.id })).toBe(true);
+    expect(await tripMayTakeACode(db, { shopId: shop.id, tripId: otherTrip.id })).toBe(false);
   });
 });

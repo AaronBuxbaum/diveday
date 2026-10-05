@@ -96,6 +96,10 @@ export async function submitInquiryAction(
   const db = await getDb();
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) return { error: t("inquiry.errors.unavailable") };
+  // A request for a day with no course named is the shopfront's "ask for a
+  // day", which a shop can switch off (ADR 20261005-optional-shop-features).
+  // A course page's own inquiry is not: that is how a course converts.
+  if (!courseSlug && !shop.dateRequestsEnabled) return { error: t("inquiry.errors.unavailable") };
 
   const course = courseSlug ? await getCourseBySlug(db, shop.id, courseSlug) : null;
   // A hidden course isn't offered anymore, from a diver's point of view —

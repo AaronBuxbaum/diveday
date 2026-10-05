@@ -60,7 +60,8 @@ export default async function PublicReviewsPage({
   const { page } = await searchParams;
   const db = await getDb();
   const shop = await shopBySlugCached(shopSlug);
-  if (!shop) notFound();
+  // Off, the archive is not there at all (ADR 20261005-optional-shop-features).
+  if (!shop?.reviewsEnabled) notFound();
 
   const { locale, t } = await requestTranslator(shop.defaultLocale);
   const [aggregate, reviewPage, distribution] = await Promise.all([

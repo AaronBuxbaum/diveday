@@ -75,7 +75,9 @@ export async function joinLastMinuteListAction(
 
   const dbi = await getDb();
   const shop = await getShopBySlug(dbi, shopSlug);
-  if (!shop) return { error: t("lastMinute.errors.shopUnavailable") };
+  // A shop that switched the list off takes no new names, whatever an open
+  // tab still shows (ADR 20261005-optional-shop-features).
+  if (!shop?.lastMinuteListEnabled) return { error: t("lastMinute.errors.shopUnavailable") };
 
   await joinLastMinuteList(dbi, {
     shopId: shop.id,

@@ -79,6 +79,7 @@ import { ONBOARDING_EMAIL, SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { publicShopRegisterPath } from "@/lib/public-routes";
 import { RENTABLE_ITEMS, SHOP_CATALOG_ITEMS, toRentableKinds } from "@/lib/rentals";
 import { requireShopSurface } from "@/lib/session";
+import { type ShopFeature, shopOffers } from "@/lib/shop-features";
 import { noticeFromParam, noticeRole, shopPath } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import {
@@ -112,6 +113,7 @@ import {
   saveReviewUrlAction,
   saveSearchListingAction,
   saveSeasonStartAction,
+  saveShopFeatureAction,
   saveTaxAction,
   saveTimezoneAction,
   saveUnitsAction,
@@ -198,6 +200,7 @@ function noticeMessages(
     "diving-options-invalid": { tone: "danger", text: t("boats.divingOptionsInvalid") },
     "diving-options-none": { tone: "danger", text: t("boats.divingOptionsNone") },
     "crew-schedule-saved": { tone: "success", text: t("settings.main.crewSchedule.saved") },
+    "feature-saved": { tone: "success", text: t("settings.main.features.saved") },
     "crew-schedule-ratio-invalid": {
       tone: "danger",
       text: t("boats.divingOptionsRatioInvalid"),
@@ -650,6 +653,45 @@ export default async function SettingsPage({
     />
   ) : (
     t("settings.main.crewSchedule.off")
+  );
+  // **One shape for every optional feature** (ADR
+  // 20261005-optional-shop-features): the row states On or Off, and opening it
+  // shows one switch and what the switch covers. Each sits in the group its
+  // feature belongs to rather than in a "Features" list of its own, so a shop
+  // finds the tip switch where it finds its other money settings.
+  const featureRow = (feature: ShopFeature) => (
+    <SettingsRow
+      heading={t(`settings.main.features.${feature}.heading`)}
+      value={
+        shopOffers(shop, feature) ? t("settings.main.features.on") : t("settings.main.features.off")
+      }
+      sectionId={feature}
+      activeSection={activeSection}
+    >
+      <SectionNotice banner={banner} section={feature} active={activeSection} />
+      <FieldGrid as="form" action={saveShopFeatureAction} columns={1} className="mt-4">
+        <input type="hidden" name="feature" value={feature} />
+        <ChoiceRow
+          name="enabled"
+          type="checkbox"
+          defaultChecked={shopOffers(shop, feature)}
+          className="text-sm"
+        >
+          <span className="block font-medium">{t(`settings.main.features.${feature}.label`)}</span>
+          <span className="block text-xs text-muted">
+            {t(`settings.main.features.${feature}.description`)}
+          </span>
+        </ChoiceRow>
+        <FieldActions>
+          <SubmitButton
+            pendingLabel={t("settings.main.features.saving")}
+            className={buttonClass({ variant: "secondary" })}
+          >
+            {t("settings.main.features.save")}
+          </SubmitButton>
+        </FieldActions>
+      </FieldGrid>
+    </SettingsRow>
   );
   // A count, not the numbers themselves: this row is read on the hub and the
   // numbers belong on the boat, not on a settings list somebody is scrolling.
@@ -1619,6 +1661,8 @@ export default async function SettingsPage({
                   </form>
                 </SettingsRow>
 
+                {featureRow("tips")}
+
                 {/* The one row that opens itself: an unconnected or half-onboarded
                   Stripe account is the difference between taking bookings online
                   and not, so the moment it needs a person it surfaces — and once
@@ -1745,6 +1789,8 @@ export default async function SettingsPage({
 
         <SettingsGroup group={MESSAGES_GROUP} label={t(MESSAGES_GROUP.labelKey)}>
           <InsetGroup>
+            {featureRow("reviews")}
+
             {/* One of the few rows another surface links straight to: the Reviews
               page's empty state names this box, so it opens itself on the
               `#review-link` fragment rather than dropping a shop at a closed
@@ -2003,6 +2049,10 @@ export default async function SettingsPage({
                 </FieldActions>
               </FieldGrid>
             </SettingsRow>
+
+            {featureRow("dateRequests")}
+
+            {featureRow("lastMinuteList")}
 
             <SettingsDoorRow
               href={`/shop/${shopSlug}/settings/embed`}

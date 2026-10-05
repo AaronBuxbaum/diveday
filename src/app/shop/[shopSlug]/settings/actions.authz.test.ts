@@ -48,6 +48,7 @@ const {
   retryProcessorErasureAction,
   saveAddressAction,
   saveCrewScheduleAction,
+  saveShopFeatureAction,
   saveDockDayRhythmAction,
   savePackingAction,
   saveTaxAction,
@@ -192,6 +193,56 @@ describe("saving the shop's Stripe Tax setting", () => {
       `/shop/${shop.slug}/settings?notice=tax-saved&saved=tax`,
     );
     expect((await getShopById(db, shop.id))?.taxEnabled).toBe(false);
+  });
+});
+
+describe("saving an optional feature switch", () => {
+  function featureForm(feature: string, enabled: boolean) {
+    const form = new FormData();
+    form.set("feature", feature);
+    if (enabled) form.set("enabled", "on");
+    return form;
+  }
+
+  it("refuses a captain's change", async () => {
+    const { db, shop, captain } = await context();
+    signIn(shop, captain);
+
+    const to = await redirectedTo(() => saveShopFeatureAction(featureForm("tips", false)));
+
+    expect(to).toBe(`/shop/${shop.slug}/settings?notice=not-authorized`);
+    expect((await getShopById(db, shop.id))?.tipsEnabled).toBe(true);
+  });
+
+  it("lets an owner turn each one off and back on, touching no other", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+
+    expect(await redirectedTo(() => saveShopFeatureAction(featureForm("reviews", false)))).toBe(
+      `/shop/${shop.slug}/settings?notice=feature-saved&saved=reviews`,
+    );
+    expect(await getShopById(db, shop.id)).toMatchObject({
+      reviewsEnabled: false,
+      dateRequestsEnabled: true,
+      lastMinuteListEnabled: true,
+      tipsEnabled: true,
+    });
+
+    await redirectedTo(() => saveShopFeatureAction(featureForm("reviews", true)));
+    expect((await getShopById(db, shop.id))?.reviewsEnabled).toBe(true);
+  });
+
+  it("ignores a feature it does not know, including the crew schedule's own column", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    const before = await getShopById(db, shop.id);
+
+    const to = await redirectedTo(() =>
+      saveShopFeatureAction(featureForm("crewScheduleEnabled", false)),
+    );
+
+    expect(to).toBe(`/shop/${shop.slug}/settings`);
+    expect(await getShopById(db, shop.id)).toEqual(before);
   });
 });
 

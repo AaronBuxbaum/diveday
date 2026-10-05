@@ -8,6 +8,7 @@ import type { EmergencyReference } from "@/lib/emergency-reference";
 import type { ShopCurrency } from "@/lib/money";
 import type { RentalPricing } from "@/lib/rentals";
 import type { SeasonStart } from "@/lib/season";
+import { SHOP_FEATURE_COLUMNS, type ShopFeature } from "@/lib/shop-features";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { type AppDb, getDb } from "./client";
 import { courses, divePackages, orders, shops, trips } from "./schema";
@@ -551,6 +552,25 @@ export async function setShopCrewSchedule(
   options: { crewScheduleEnabled: boolean; diversPerDivemaster: number },
 ) {
   const [shop] = await db.update(shops).set(options).where(eq(shops.id, shopId)).returning();
+  return shop ?? null;
+}
+
+/**
+ * Turns one optional feature on or off (`src/lib/shop-features.ts`). Nothing
+ * the feature wrote is touched, so turning it back on finds everything where
+ * it was.
+ */
+export async function setShopFeature(
+  db: AppDb,
+  shopId: string,
+  feature: ShopFeature,
+  enabled: boolean,
+) {
+  const [shop] = await db
+    .update(shops)
+    .set({ [SHOP_FEATURE_COLUMNS[feature]]: enabled })
+    .where(eq(shops.id, shopId))
+    .returning();
   return shop ?? null;
 }
 

@@ -36,7 +36,12 @@ export type StartTipOutcome =
   | { ok: true; checkoutUrl: string }
   | {
       ok: false;
-      reason: "not_connected" | "invalid_amount" | "invalid_booking" | "checkout_unavailable";
+      reason:
+        | "not_connected"
+        | "invalid_amount"
+        | "invalid_booking"
+        | "checkout_unavailable"
+        | "tips_off";
     };
 
 /**
@@ -157,9 +162,15 @@ export async function startTipCheckout(
   checkout: CheckoutProvider = checkoutProviderFromEnvironment(),
 ): Promise<StartTipOutcome> {
   const [row] = await db
-    .select({ shopId: bookings.shopId, email: people.email, status: bookings.status })
+    .select({
+      shopId: bookings.shopId,
+      email: people.email,
+      status: bookings.status,
+      tipsEnabled: shops.tipsEnabled,
+    })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
+    .innerJoin(shops, eq(shops.id, bookings.shopId))
     .where(eq(bookings.id, input.bookingId))
     .limit(1);
   // A no-show never dived — no tip is owed for a crew that didn't take them
@@ -169,6 +180,9 @@ export async function startTipCheckout(
   if (!row?.email || row.status === "cancelled" || row.status === "no_show") {
     return { ok: false, reason: "invalid_booking" };
   }
+  // A shop that switched tips off takes none, whatever an old recap page
+  // still offers (ADR 20261005-optional-shop-features).
+  if (!row.tipsEnabled) return { ok: false, reason: "tips_off" };
   const customerEmail = row.email;
 
   const account = await getShopStripeAccount(db, row.shopId);

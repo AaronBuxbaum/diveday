@@ -754,6 +754,10 @@ new domain concept, define it here in the same PR.
   editor either way, because who is aboard is manifest data (the crew roll call, the souls-on-board
   count) and a course session's agency ratio gates enrolment from it (`src/lib/crew-schedule.ts`,
   ADR 20261005-crew-schedule-is-a-setting).
+- **Optional feature** — a feature a shop can switch off in Settings: diver reviews, date
+  requests, the last-minute list and tips (`src/lib/shop-features.ts`, one `shops.*_enabled`
+  column each, all on for a new shop). Off hides the feature on every surface that offers it and
+  deletes nothing (ADR 20261005-optional-shop-features).
 - **Working shift** — a dated availability window for a staff member. It is not a crew assignment:
   the shift says who is available, while the trip assignment says who is actually on that
   manifest. Overlapping shifts for one person are rejected.

@@ -20,6 +20,7 @@ vi.mock("@/db/shops", () => ({
     defaultLocale: "en-US",
     timezone: "America/Cancun",
     searchListingOptOutAt: null,
+    reviewsEnabled: true,
   })),
 }));
 vi.mock("@/db/reviews", () => ({
@@ -32,6 +33,7 @@ vi.mock("@/i18n/request", () => ({
 }));
 
 const { listPublishedShopReviewsPage } = await import("@/db/reviews");
+const { shopBySlugCached } = await import("@/db/shops");
 const { default: PublicReviewsPage } = await import("./page");
 
 afterEach(cleanup);
@@ -89,5 +91,20 @@ describe("the public reviews archive's pager", () => {
       }),
     );
     expect(screen.queryByRole("navigation", { name: "Review pages" })).toBeNull();
+  });
+});
+
+describe("a shop that switched reviews off", () => {
+  it("has no archive at all", async () => {
+    vi.mocked(shopBySlugCached).mockResolvedValueOnce({
+      id: "shop-1",
+      slug: "blue-mantis",
+      name: "Blue Mantis Divers",
+      defaultLocale: "en-US",
+      timezone: "America/Cancun",
+      searchListingOptOutAt: null,
+      reviewsEnabled: false,
+    } as never);
+    await expect(renderPage(1, 1)).rejects.toThrow(/NEXT_HTTP_ERROR_FALLBACK;404/);
   });
 });

@@ -71,6 +71,10 @@ export const SECTION_IDS = [
   "rentalPricing",
   "tax",
   "passThrough",
+  "tips",
+  "reviews",
+  "dateRequests",
+  "lastMinuteList",
   "stripe",
   "trial",
 ] as const;
@@ -92,6 +96,8 @@ const SECTION_FRAGMENTS: Partial<Record<SectionId, string>> = {
   dockCall: "dock-call",
   rentalPricing: "rental-pricing",
   passThrough: "pass-through",
+  dateRequests: "date-requests",
+  lastMinuteList: "last-minute-list",
   counterCard: "counter-card",
 };
 
@@ -291,12 +297,25 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     gate: "payments",
   },
   {
+    id: "tips",
+    labelKey: "settings.main.features.tips.heading",
+    group: "money",
+    target: { kind: "section", id: "tips" },
+    gate: "payments",
+  },
+  {
     id: "stripe",
     labelKey: "settings.main.stripe.rowHeading",
     group: "money",
     target: { kind: "section", id: "stripe" },
     gate: "payments",
     badgeSource: "payments",
+  },
+  {
+    id: "reviews",
+    labelKey: "settings.main.features.reviews.heading",
+    group: "messages",
+    target: { kind: "section", id: "reviews" },
   },
   {
     id: "reviewLink",
@@ -322,6 +341,18 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     labelKey: "settings.main.searchListing.heading",
     group: "website",
     target: { kind: "section", id: "searchListing" },
+  },
+  {
+    id: "dateRequests",
+    labelKey: "settings.main.features.dateRequests.heading",
+    group: "website",
+    target: { kind: "section", id: "dateRequests" },
+  },
+  {
+    id: "lastMinuteList",
+    labelKey: "settings.main.features.lastMinuteList.heading",
+    group: "website",
+    target: { kind: "section", id: "lastMinuteList" },
   },
   {
     id: "embed",
