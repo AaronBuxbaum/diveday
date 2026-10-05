@@ -798,7 +798,9 @@ describe("today's work queue (in-memory PGlite)", () => {
 
     const after = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     const nitroxAction = after.actions.find((action) => action.id === `nitrox:${reef.id}`);
-    expect(nitroxAction?.detail).toContain("with no verified card");
+    // One diver is a row about that person, by name, never "1 diver wants…".
+    expect(nitroxAction?.subject).toBe("Priya Sharma");
+    expect(nitroxAction?.detail).toBe("Wants nitrox, no verified card.");
   });
 
   it("nudges staff about missing emergency contacts on a near boat, and clears once filled", async () => {
