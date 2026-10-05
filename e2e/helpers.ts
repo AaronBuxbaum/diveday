@@ -850,8 +850,19 @@ export async function openManifestPerson(row: Locator): Promise<void> {
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
 }
 
-/** Open the Guests page activity log when a spec needs to inspect its audit trail. */
+/**
+ * Open a departure's activity log, which lives on its Details tab
+ * (`?view=details`) beside "Promote this trip", not under the roster. Call it
+ * from any tab of the departure; it leaves the page on Details, so a spec that
+ * goes on to work the roster returns with `openTripTab(page, "Trip")`.
+ */
 export async function openTripActivity(page: Page): Promise<void> {
+  await page.waitForURL(TRIP_SURFACE_URL);
+  const root = new URL(page.url()).pathname.match(/^(.*\/trips\/[^/?#]+)/)?.[1];
+  if (!root)
+    throw new Error(`openTripActivity called from ${page.url()}, which is not a departure`);
+  await page.goto(`${root}?view=details`);
+  await page.waitForURL(/\?view=details/);
   await openIfClosed(
     page
       .locator("details")
