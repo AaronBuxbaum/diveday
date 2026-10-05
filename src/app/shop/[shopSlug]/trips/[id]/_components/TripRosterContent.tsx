@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { ActivityLog } from "@/components/ActivityLog";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
+import { ScrollToHash } from "@/components/ScrollToHash";
 import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
@@ -384,6 +385,9 @@ export function TripPromoteAndActivity({
           />
         </div>
       </details>
+      {/* Today, Promotions and a held send link here at `#last-minute-deal`;
+          the roster's own ScrollToHash is not on this tab. */}
+      <ScrollToHash />
     </div>
   );
 }
