@@ -3858,7 +3858,7 @@
         "name": "Manifiesto del barco y pase de lista",
         "summary": "Un pase de lista por nombre, buceadores y tripulantes, antes de zarpar y después de cada inmersión, en un teléfono que funciona fuera de cobertura.",
         "metaTitle": "Manifiesto de barco y pase de lista para centros de buceo",
-        "metaDescription": "La tripulación pasa lista por nombre a cada buceador y tripulante antes de zarpar y después de cada inmersión, en un teléfono que guarda el manifiesto sin señal. Los toques hechos fuera de cobertura se sincronizan al reconectarse.",
+        "metaDescription": "La tripulación pasa lista por nombre a cada buceador y tripulante antes de zarpar y después de cada inmersión, en un teléfono que guarda el manifiesto sin señal. Un toque hecho fuera de cobertura se envía en cuanto el teléfono recupera la señal.",
         "title": "Pasa lista por nombre a cada buceador después de cada inmersión, con o sin señal.",
         "lede": "Cualquier teléfono de la tripulación que abre DiveDay con señal guarda los manifiestos de los dos días siguientes, y un pase de lista hecho sin cobertura se suma al registro en vivo cuando el teléfono se reconecta.",
         "screenLabel": "El pase de lista del capitán, guardado en un teléfono sin señal: la hora en que se guardó, los buceadores y los embarcados, y un botón Marcar embarcado en cada nombre.",

@@ -3858,7 +3858,7 @@
         "name": "Boat manifest and roll call",
         "summary": "Every diver and crew member called by name, before the boat leaves and after every dive, on a phone that works out of signal range.",
         "metaTitle": "Dive boat manifest and roll call",
-        "metaDescription": "The crew calls every diver and crew member by name before departure and after every dive, on a phone that keeps the manifest with no signal. Taps made out of range sync when it reconnects.",
+        "metaDescription": "The crew calls every diver and crew member by name before departure and after every dive, on a phone that keeps the manifest with no signal. A tap made out of range is sent once the phone has signal again.",
         "title": "Call every diver back aboard by name after every dive, with or without a signal.",
         "lede": "Any crew phone that opens DiveDay with signal saves the next two days’ manifests, and roll calls taken out of range join the live record when the phone reconnects.",
         "screenLabel": "The captain’s roll call, saved to a phone with no signal: the saved time, divers and boarded counts, and a Mark boarded button on each name.",
