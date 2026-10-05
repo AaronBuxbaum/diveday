@@ -1002,7 +1002,13 @@ export const certificationStatus = pgEnum("certification_status", ["pending", "v
  * Nitrox is deliberately absent: nitrox_certifications gates the per-booking
  * mix request, not a site.
  */
-export const diveSpecialty = pgEnum("dive_specialty", ["deep", "wreck", "night", "drysuit"]);
+export const diveSpecialty = pgEnum("dive_specialty", [
+  "deep",
+  "wreck",
+  "night",
+  "drysuit",
+  "cavern",
+]);
 
 /**
  * Course definitions are the reusable instruction catalog. A course session

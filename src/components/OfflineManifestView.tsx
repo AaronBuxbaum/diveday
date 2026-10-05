@@ -2634,12 +2634,9 @@ export function OfflineManifestView() {
 
           **The grid stays here, and only here** (decision 20260812, closing
           FU-20260810-offline-manifest-checklist-grammar). The live manifest
-          replaced its face grid with name chips because those chips live under
-          a *sticky* checkpoint panel: they follow the reader down a
-          nine-diver roster, so a jump target is always one thumb away. This
-          page has no sticky panel — its stats row scrolls away with everything
-          else — so the same chips would be in view exactly when nobody needs
-          them and gone by the time they do.
+          dropped its face grid, and then the name chips that replaced it,
+          because the roll-call rows directly below already name everyone
+          (Aaron, 2026-10-05).
 
           The grid is also a scanning surface rather than a jump list, and this
           is the copy read underway, at the rail, looking up from the water for

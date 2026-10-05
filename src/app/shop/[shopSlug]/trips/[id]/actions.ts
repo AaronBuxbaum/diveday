@@ -187,7 +187,7 @@ const conditionsSchema = z.object({
   surfaceConditions: z.string().trim().max(300),
 });
 
-const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit"]);
+const specialtySchema = z.enum(diveSpecialty.enumValues);
 const paymentStatusSchema = z.enum(["unpaid", "deposit_paid", "paid", "waived", "refunded"]);
 
 /**

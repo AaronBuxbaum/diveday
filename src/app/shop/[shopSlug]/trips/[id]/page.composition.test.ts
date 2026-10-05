@@ -28,7 +28,7 @@ describe("the departure's tabs", () => {
   });
 
   it("shows Details or Divers, never both, and packs nothing here", () => {
-    expect(SOURCE).toMatch(/\{showDetails \? \(\s*<TripAboutSection/);
+    expect(SOURCE).toMatch(/\{showDetails \? \(\s*<>\s*<TripAboutSection/);
     expect(SOURCE).not.toContain('PREP_SECTION_ID}"');
     expect(SOURCE).not.toContain("<TripPrepSection");
   });

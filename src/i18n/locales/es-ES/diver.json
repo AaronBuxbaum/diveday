@@ -244,7 +244,8 @@
       "deep": "Profundidad",
       "wreck": "Naufragios",
       "night": "Nocturno",
-      "drysuit": "Traje seco"
+      "drysuit": "Traje seco",
+      "cavern": "Cavernas"
     },
     "requirementLevel": "{level} o superior",
     "requirementSpecialty": "certificación de {specialty}",

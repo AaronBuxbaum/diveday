@@ -115,8 +115,6 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
     .toBeLessThan(100);
   await openPrivateNotes(page);
   await expect(page.getByText("Needs a small wetsuit staged.")).toBeVisible();
-  await openTripActivity(page);
-  await expect(page.getByText(/added a private note about Walk-in Wanda/)).toBeVisible();
 
   // Deleting a note is a purely reversible edit (docs/design/principles.md
   // §7): no confirm dialog — the delete lands immediately and a toast offers
@@ -125,7 +123,6 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   await expect(page.getByRole("status").filter({ hasText: "Private note deleted." })).toBeVisible();
   await expect(page.getByText("Add a private note").first()).toBeVisible();
   await expect(page.getByText("Needs a small wetsuit staged.")).toHaveCount(0);
-  await expect(page.getByText(/deleted a private note about Walk-in Wanda/)).toBeVisible();
 
   // Undo recreates a fresh note carrying the same text, staff-attributed.
   await page.getByRole("button", { name: "Undo" }).click();
@@ -137,6 +134,12 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   // about the trip filling up.
   await page.getByRole("button", { name: "Delete" }).click();
   await expect(page.getByText("Add a private note").first()).toBeVisible();
+
+  // The trip's activity trail, on its Details tab, carries the note's life.
+  await openTripActivity(page);
+  await expect(page.getByText(/added a private note about Walk-in Wanda/).first()).toBeVisible();
+  await expect(page.getByText(/deleted a private note about Walk-in Wanda/).first()).toBeVisible();
+  await openTripTab(page, "Trip");
 
   // Trip is now full — the same section switches to wait-listing.
   await expect(page.getByRole("link", { name: "Add to wait list" })).toBeVisible();

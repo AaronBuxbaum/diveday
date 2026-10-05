@@ -864,14 +864,15 @@ describe("the roster's row geometry", () => {
    * which was sized for the 44px summary's own air. The body keeps 8px, so
    * the button clears the rule by the form's own 12px step.
    */
-  it("leaves the notes form its own room above the row's rule", () => {
+  it("keeps the notes in their own band of the seat's panel, ruled off from the facts", () => {
     const { container } = renderRoster(fixtures);
 
     const row = container.querySelector(`#booking-${blocked.booking.id}`);
     const notes = within(row as HTMLElement)
       .getByText("Add a private note")
       .closest("details");
-    expect(notes?.lastElementChild).toHaveClass("mt-2", "pb-2");
+    expect(notes?.lastElementChild).toHaveClass("mt-2");
+    expect(notes?.parentElement).toHaveClass("border-t", "border-border");
   });
 
   /**

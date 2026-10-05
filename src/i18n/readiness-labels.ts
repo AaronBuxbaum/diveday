@@ -250,6 +250,7 @@ export const SPECIALTY_KEYS: Record<DiveSpecialty, StaffMessageKey> = {
   wreck: "shared.readiness.specialties.wreck",
   night: "shared.readiness.specialties.night",
   drysuit: "shared.readiness.specialties.drysuit",
+  cavern: "shared.readiness.specialties.cavern",
 };
 
 /**
@@ -308,6 +309,7 @@ export const DIVER_SPECIALTY_KEYS: Record<DiveSpecialty, DiverMessageKey> = {
   wreck: "trip.specialties.wreck",
   night: "trip.specialties.night",
   drysuit: "trip.specialties.drysuit",
+  cavern: "trip.specialties.cavern",
 };
 
 /**

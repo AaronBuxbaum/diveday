@@ -140,7 +140,7 @@ export async function releaseHeldSendAction(id: string): Promise<ReleasedSend> {
   revalidatePath(tripPath);
   revalidatePath(shopPath(shop.slug));
   if (outcome.kind === "last_minute_deal") {
-    const anchor = `${tripPath}#last-minute-deal`;
+    const anchor = `${tripPath}?view=details#last-minute-deal`;
     const redirectTo = outcome.outcome.ok
       ? noticeUrl(anchor, "last-minute-sent", { count: outcome.outcome.recipientCount })
       : noticeUrl(anchor, LAST_MINUTE_NOTICE[outcome.outcome.reason]);

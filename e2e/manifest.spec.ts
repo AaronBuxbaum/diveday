@@ -625,57 +625,6 @@ test("visiting any shop page auto-saves the near-term board without opening a ma
   await context.setOffline(false);
 });
 
-test("the summary panel names who is still to call, one jump chip each", async ({ page }) => {
-  await page.goto("/shop/blue-mantis/schedule/board");
-  await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
-  await openTripTab(page, "Manifest");
-
-  // "Who's left?" is a mid-roll-call question: before anyone is recorded the
-  // chips would restate the whole roster above the roster itself, so they
-  // hold off until the first result lands.
-  const chips = page.getByRole("list", { name: "People still to call" });
-  await expect(chips).toHaveCount(0);
-  const boardTom = manifestRow(page, "Tom Okafor").getByRole("button", { name: "Mark boarded" });
-  await boardTom.evaluate((button) => button.scrollIntoView({ block: "center" }));
-  await boardTom.click();
-  await expect(page.getByRole("button", { name: "Boarded — tap again to undo" })).toBeVisible();
-
-  // At the dock these are people still to board — ordinary, expected, and
-  // deliberately not called "missing": a recorded not-back-aboard diver is
-  // the missing one, and they get a loud row rather than a chip (glossary;
-  // DD/D review). The names sit with the count that summarizes them, right
-  // under the checkpoint panel — and the one recorded diver's name is gone
-  // from them.
-  await expect(chips).toBeVisible();
-  await expect(chips.getByRole("link", { name: /Tom Okafor/ })).toHaveCount(0);
-  await expect(page.getByText(/[Mm]issing divers/)).toHaveCount(0);
-  // Priya is blocked at departure, and her chip says the same word her own
-  // row does rather than contradicting it.
-  const priyaChip = chips.getByRole("link", { name: /Priya/ });
-  await expect(priyaChip.getByText("Blocked")).toBeVisible();
-
-  // Crew are the other half of the head count (DOM-H1) and the half most
-  // reliably in the water, so an uncalled crew member is named here too —
-  // marked "(crew)" in the same words the buddy panel uses — rather than
-  // reaching this panel only as the muted "N crew members still to call".
-  const keikoChip = chips.getByRole("link", { name: /Keiko Tanaka \(crew\)/ });
-  await expect(keikoChip).toBeVisible();
-
-  // Tapping a chip jumps to that diver's own row.
-  await priyaChip.click();
-  await expect(page).toHaveURL(/#diver-row-/);
-  await expect(manifestRow(page, "Priya Sharma")).toBeInViewport();
-
-  // And a crew chip jumps to that crew member's own row, which is otherwise
-  // below the entire diver roster — the anchor is the whole reason the chip
-  // is worth more than the count it replaces.
-  await keikoChip.click();
-  await expect(page).toHaveURL(/#crew-row-/);
-  await expect(
-    page.locator("li[id^='crew-row-']").filter({ hasText: "Keiko Tanaka" }),
-  ).toBeInViewport();
-});
-
 test("a checkpoint with every diver counted stays open until the crew are called too", async ({
   page,
 }) => {

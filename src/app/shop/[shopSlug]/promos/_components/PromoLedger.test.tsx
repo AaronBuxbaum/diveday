@@ -180,7 +180,7 @@ describe("the trip deals ledger", () => {
     code: "LASTCALL20",
     discount: "20% off",
     tripTitle: "Two-Tank Reef — Molasses & French",
-    href: "/shop/blue-mantis/trips/trip-1#last-minute-deal",
+    href: "/shop/blue-mantis/trips/trip-1?view=details#last-minute-deal",
     facts: ["Expires Fri, Aug 28, 6:00 PM", "Sent to 9 divers"],
   };
 

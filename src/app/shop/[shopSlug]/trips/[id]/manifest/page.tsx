@@ -546,13 +546,6 @@ export default async function TripManifestPage({
   // with three back puts the alert on three rows, and the line says "N teams
   // are split" (`splitBuddyTeamIds`, src/lib/manifests.ts).
   const separatedTeams = isDeparture ? 0 : splitBuddyTeamIds(manifest, "separated_after_dive").size;
-  // Nobody has said anything about these divers at this checkpoint — the
-  // summary panel's jump chips. Derived once, beside the counts they explain,
-  // so the number and the names can never disagree.
-  const uncalledDivers = manifest.divers.filter((diver) => !diver.rollCall);
-  // The crew half of the same question. Crew reached the panel only as a count
-  // before this — see `uncalledCrew` on `SummaryPanel`.
-  const uncalledCrew = manifest.crew.filter((member) => !member.rollCall);
   // The other half of the same question, and the graver one: who has a stated
   // "did not come back" against their name. Read through `rollCallRowState`,
   // the one predicate the rows, the completeness verdict and the work queue
@@ -750,8 +743,8 @@ export default async function TripManifestPage({
       ) : null}
       {/* **The count leads** (ADR 20260827-the-departure-is-two-working-surfaces,
           decision 2: the count is "always on screen"). This is the page's only
-          count surface — the checkpoint's progress, the numbers behind it, who
-          is still to call by name, and every line that says a person is
+          count surface — the checkpoint's progress, the numbers behind it, and
+          every line that says a person is
           unaccounted for. It used to sit fourth, under an emergency band and a
           five-item checklist, so on a 390px phone the first thing a captain saw
           at the rail was a list of phone numbers for a call that has never been
@@ -764,15 +757,6 @@ export default async function TripManifestPage({
         completeness={completeness}
         summary={manifest.summary}
         separatedTeams={separatedTeams}
-        uncalled={uncalledDivers.map((diver) => ({
-          bookingId: diver.bookingId,
-          fullName: diver.fullName,
-          blocked: diver.readiness.status === "blocked",
-        }))}
-        uncalledCrew={uncalledCrew.map((member) => ({
-          id: member.id,
-          fullName: member.fullName,
-        }))}
         notBackAboardDivers={missingDivers.map((diver) => ({
           bookingId: diver.bookingId,
           fullName: diver.fullName,

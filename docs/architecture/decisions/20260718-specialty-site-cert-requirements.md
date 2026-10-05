@@ -126,3 +126,21 @@ booking page, and the second clause is the half that catches a newly-minted AOW)
 advisory only, the shape dive recency already has; and the **OR gate** ("AOW *or* Open Water with
 Deep"), which the Known constraints above already name and which the field confirms is the single
 most common real gate sentence in that market.
+
+## Amendment, 2026-10-05: Cavern joins the enum (owner decision)
+
+The owner added `cavern` to `dive_specialty`, so a shop can refuse a departure for cavern-certified
+divers to anyone without the card. This reverses the 2026-08-22 conclusion for cavern only.
+
+Still in force from that amendment:
+
+- The train-for / describe rule decides every other candidate.
+- Cave stays out: it is tiered, and a boolean cannot say which tier.
+- A guided Open Water cavern tour must not tick Cavern. Both pickers (the site editor and the trip's
+  requirements) now say so in one sentence under the boxes.
+- The card is a fraction of what makes a cavern dive safe (lights, guideline, gas thirds, the
+  spring's flow, the guide's rating and ratio), so "Ready" means the card was seen and nothing more.
+- The importer maps only a cell that names cavern, and never infers it from a cave rating (Intro,
+  Apprentice, Full, GUE Cave 1): which cave card covers a cavern gate is an agency-equivalence call
+  for the staffer holding the card.
+- A required crew credential and a per-departure ratio remain the better answer for guided tours.

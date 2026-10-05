@@ -122,8 +122,8 @@ export { ROLL_CALL_ROW_TONE, rollCallRuleClass };
 /**
  * The scroll margin every roll-call row wears, diver and crew alike.
  *
- * Both lists are jump targets — the summary panel's chips link to any uncalled
- * person — and both sit under the same sticky count panel, so the margin that
+ * Both lists are jump targets — the summary panel's chips link to anyone not
+ * back aboard — and both sit under the same sticky count panel, so the margin that
  * keeps a name clear of it is one fact, not two. It lived in `DiverRollCall`
  * alone until crew rows became jump targets too (FU-20260810); duplicating the
  * two magic numbers would mean a future change to the panel's height silently

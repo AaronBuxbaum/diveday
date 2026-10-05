@@ -771,23 +771,34 @@ export function RosterSection({
       <CompactDisclosureRow
         className="mt-1"
         bodyClassName="mt-0"
-        label={t("trips.roster.emergencyContactEdit")}
+        label={
+          hasEmergencyContact
+            ? t("trips.roster.emergencyContactEdit")
+            : t("trips.roster.emergencyContactAddFull")
+        }
+        // A refused save comes back to the form, not to its closed label.
+        holdOpen={holdOpen && !hasEmergencyContact}
       >
         {contactForm}
       </CompactDisclosureRow>
     );
-    // A contact on file is a fact about the seat, so this renders only in the
-    // reference panel; a *missing* one is a reason line under the name, with
-    // the same edit form among the row's work.
+    // One fact, on file or not, with its form under it: a missing contact is
+    // also a reason line under the name, so the fact says only "Not on file".
     const emergencyContactBlock = (
       <div>
         <GroupLabel as="p">{t("trips.roster.emergencyContactHeading")}</GroupLabel>
-        <p className="mt-1 text-sm text-muted">
-          {t("trips.roster.emergencyContactOnFile", {
-            name: person.emergencyContactName ?? "",
-            phone: person.emergencyContactPhone ?? "",
-          })}
-        </p>
+        {hasEmergencyContact ? (
+          <p className="mt-1 text-sm text-muted">
+            {t("trips.roster.emergencyContactOnFile", {
+              name: person.emergencyContactName ?? "",
+              phone: person.emergencyContactPhone ?? "",
+            })}
+          </p>
+        ) : (
+          <p className="mt-1 text-sm font-medium text-warning-strong">
+            {t("trips.roster.emergencyContactMissing")}
+          </p>
+        )}
         {emergencyContactForm}
       </div>
     );
@@ -1239,95 +1250,23 @@ export function RosterSection({
             />
           </div>
         ) : null}
-
-        {/* Task 144 — a *missing* contact is work: its sentence is one of the
-            row's reason lines, and its form waits here (`keepOpenBookingId`
-            reopens the row a just-saved contact settled).
-
-            Withheld on an unconfirmed row (`showsPersonDetail`) in both
-            directions: the form is prefilled from the matched person and
-            writes back to their record, so offering it would disclose their
-            contact and let a guess edit a real diver's next-of-kin. */}
-        {hasEmergencyContact || !showsPersonDetail ? null : (
-          <CompactDisclosureRow
-            className="mt-3"
-            bodyClassName="mt-0"
-            label={t("trips.roster.emergencyContactAddFull")}
-            // A refused save comes back to the form, not to its closed label.
-            holdOpen={holdOpen}
-          >
-            {contactForm}
-          </CompactDisclosureRow>
-        )}
-
-        {/* One disclosure, at the top level of the row — writing a note about
-            a diver is desk work a staffer starts from here. The last thing in
-            the row: its body keeps `pb-2` so, with the `li`'s `py-1`, the
-            form's button clears the row's rule by the form's own 12px step
-            (K-352: 4px, the `py-1` sized for the closed summary's own air). */}
-        <CompactDisclosureRow
-          className="mt-3"
-          bodyClassName="mt-2 pb-2"
-          label={
-            // A zero count is the absence of information formatted as
-            // information (principle 9) — with no notes the disclosure is
-            // simply the door to writing the first one.
-            notes.length === 0
-              ? t("trips.roster.addFirstNoteSummary")
-              : t("trips.roster.privateStaffNotes", { count: notes.length })
-          }
-        >
-          <div className="grid gap-3">
-            {notes.map((entry) => {
-              const { note, authorName } = entry;
-              return (
-                <div
-                  key={note.id}
-                  className={`flex items-start justify-between gap-2 ${INSET_NOTE_BOX} bg-surface-sunken`}
-                >
-                  <div className="min-w-0">
-                    <p className="break-words whitespace-pre-wrap">{note.body}</p>
-                    <p className="mt-1 text-xs text-muted">
-                      {authorName} · {formatDateTimeTz(note.createdAt, locale, shopTimezone)}
-                    </p>
-                  </div>
-                  {entry.deletable === false ? null : (
-                    <form action={deleteNoteAction} className="shrink-0">
-                      <input type="hidden" name="noteId" value={note.id} />
-                      {/* No confirm dialog: the delete lands and a toast
-                          offers a one-tap undo — a purely reversible edit,
-                          not a real send (principle 7). */}
-                      <SubmitButton
-                        pendingLabel={t("trips.roster.deletingEllipsis")}
-                        className={buttonClass({
-                          variant: "danger-ghost",
-                          size: "sm",
-                          busy: true,
-                        })}
-                      >
-                        {t("trips.roster.delete")}
-                      </SubmitButton>
-                    </form>
-                  )}
-                </div>
-              );
-            })}
-            {/* Keyed on the note count so a landed note empties the box. */}
-            <PrivateNoteForm
-              action={addNoteAction}
-              hiddenFields={{ bookingId: booking.id }}
-              resetKey={notes.length}
-              rows={2}
-              copy={{
-                label: t("trips.roster.addNoteLabel"),
-                add: t("trips.roster.addPrivateNote"),
-                adding: t("trips.roster.adding"),
-              }}
-            />
-          </div>
-        </CompactDisclosureRow>
       </>
     );
+
+    // Whether the panel's first band has anything in it — every condition
+    // `outstanding` draws on, so an empty band never leaves its rule behind.
+    const certificationBlocked = blockerTexts.some(
+      ({ blocker }) => BLOCKER_CATEGORY[blocker.code] === "certification",
+    );
+    const hasWork =
+      deskPrivateLines.length > 0 ||
+      Boolean(arrival && booking.reEntryAsk) ||
+      Boolean(arrival && flaggedPrompts.length > 0) ||
+      certificationBlocked ||
+      Boolean(certifyDiverAction) ||
+      Boolean(saveCourseNextStepAction) ||
+      waiverControl.action !== null ||
+      requiresPayment;
 
     /**
      * **Reference**: what is merely true about this seat, one tap away.
@@ -1338,23 +1277,31 @@ export function RosterSection({
             state, and the email — with an adult's age beside it — is
             reference the moment it is needed, not a second line on every
             row. */}
-        {showsPersonDetail ? (
-          <p className="mt-3 text-sm text-muted">
-            <span>{person.email ?? t("trips.roster.noEmailOnFile")}</span>
-            {age !== null ? (
-              <span className="tabular-nums">
-                {" · "}
-                {t("trips.roster.ageYears", { age })}
-              </span>
-            ) : null}
-          </p>
-        ) : (
+        {showsPersonDetail ? null : (
           // Said, not silently blank: a panel with no contact and no sizes
           // reads as a diver who has none, which is a wrong fact rather than
           // an absent one. The confirm control is in the work above.
-          <p className="mt-3 text-sm text-muted">{t("trips.roster.identityWithheldDetails")}</p>
+          <p className="mb-4 text-sm text-muted">{t("trips.roster.identityWithheldDetails")}</p>
         )}
-        <div className="mt-3 grid gap-5 sm:grid-cols-2">
+        <div className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
+          {/* Who this is, first: the roster is scanned by name and state, and
+              the email, with an adult's age, is the fact a desk reads back. */}
+          {showsPersonDetail ? (
+            <div>
+              <GroupLabel as="p">{t("trips.roster.diverColumnHeading")}</GroupLabel>
+              <p className="mt-1 text-sm text-muted">
+                <span className="[overflow-wrap:anywhere]">
+                  {person.email ?? t("trips.roster.noEmailOnFile")}
+                </span>
+                {age !== null ? (
+                  <span className="tabular-nums">
+                    {" · "}
+                    {t("trips.roster.ageYears", { age })}
+                  </span>
+                ) : null}
+              </p>
+            </div>
+          ) : null}
           {/* The signed waiver's own evidence — when, and by which route —
               and nothing else. Every state that is *not* signed already says
               so under the name (principle 9). */}
@@ -1408,7 +1355,7 @@ export function RosterSection({
           {/* A contact already on file: a fact about the seat, which is what
               this panel is for. Only this state appears here — a missing one
               is a reason line under the name (principle 9). */}
-          {hasEmergencyContact && showsPersonDetail ? emergencyContactBlock : null}
+          {showsPersonDetail ? emergencyContactBlock : null}
 
           {/* The full per-diver list, only when the reason lines compressed
               part of it into a count. */}
@@ -1478,10 +1425,75 @@ export function RosterSection({
           </div>
         </div>
 
+        {/* Notes, under the facts and over the seat's own actions: writing
+            one is desk work a staffer starts from here. */}
+        <div className="mt-5 border-t border-border pt-3">
+          <CompactDisclosureRow
+            bodyClassName="mt-2"
+            label={
+              // A zero count is the absence of information formatted as
+              // information (principle 9) — with no notes the disclosure is
+              // simply the door to writing the first one.
+              notes.length === 0
+                ? t("trips.roster.addFirstNoteSummary")
+                : t("trips.roster.privateStaffNotes", { count: notes.length })
+            }
+          >
+            <div className="grid gap-3">
+              {notes.map((entry) => {
+                const { note, authorName } = entry;
+                return (
+                  <div
+                    key={note.id}
+                    className={`flex items-start justify-between gap-2 ${INSET_NOTE_BOX} bg-surface-sunken`}
+                  >
+                    <div className="min-w-0">
+                      <p className="break-words whitespace-pre-wrap">{note.body}</p>
+                      <p className="mt-1 text-xs text-muted">
+                        {authorName} · {formatDateTimeTz(note.createdAt, locale, shopTimezone)}
+                      </p>
+                    </div>
+                    {entry.deletable === false ? null : (
+                      <form action={deleteNoteAction} className="shrink-0">
+                        <input type="hidden" name="noteId" value={note.id} />
+                        {/* No confirm dialog: the delete lands and a toast
+                            offers a one-tap undo — a purely reversible edit,
+                            not a real send (principle 7). */}
+                        <SubmitButton
+                          pendingLabel={t("trips.roster.deletingEllipsis")}
+                          className={buttonClass({
+                            variant: "danger-ghost",
+                            size: "sm",
+                            busy: true,
+                          })}
+                        >
+                          {t("trips.roster.delete")}
+                        </SubmitButton>
+                      </form>
+                    )}
+                  </div>
+                );
+              })}
+              {/* Keyed on the note count so a landed note empties the box. */}
+              <PrivateNoteForm
+                action={addNoteAction}
+                hiddenFields={{ bookingId: booking.id }}
+                resetKey={notes.length}
+                rows={2}
+                copy={{
+                  label: t("trips.roster.addNoteLabel"),
+                  add: t("trips.roster.addPrivateNote"),
+                  adding: t("trips.roster.adding"),
+                }}
+              />
+            </div>
+          </CompactDisclosureRow>
+        </div>
+
         {/* Whichever control comes first is `flush`, so its word sits on the
             text column every other line in this panel sits on; the 16px gap
             is the room the first one's padding used to give the second. */}
-        <div className="mt-4 border-t border-border pt-4">
+        <div className="mt-3 border-t border-border pt-4">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             {/* One orders door per row, and only when the shop can take money
                 at all (principle 9 — Settings and the Orders index own the
@@ -1610,8 +1622,18 @@ export function RosterSection({
         {arrivalBelow}
         <AutoOpenDetails openOnHash={`booking-${booking.id}`} open={holdOpen} className="group">
           {markSummary}
-          <div className="pb-1.5">
-            {outstanding}
+          {/* **One panel per seat** (owner, 2026-10-05: "confusing and ugly").
+              It used to be a loose stack — fixes, then facts, each fact with
+              its own fold, a note fold, a rule and a lone Remove — read
+              straight off the row's white. Now it is one sunken card: what
+              the seat still needs, then what is true about it, then notes,
+              then the seat's own actions, each a band of its own. */}
+          <div className="mb-3 rounded-lg border border-border bg-surface-sunken/50 p-4 sm:p-5">
+            {hasWork ? (
+              <div className="mb-4 border-b border-border pb-4 [&>*:first-child]:mt-0">
+                {outstanding}
+              </div>
+            ) : null}
             {reference}
           </div>
         </AutoOpenDetails>

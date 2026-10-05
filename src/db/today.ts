@@ -1724,7 +1724,7 @@ export async function getTodayWork(
         aboutDeparture: true,
         detail: lastMinuteFillDetailText(t, openSeats),
         actionLabel: openLastMinuteDealActionText(t),
-        href: `${tripHref}#last-minute-deal`,
+        href: `${tripHref}?view=details#last-minute-deal`,
         dueAt: trip.startsAt,
       });
     }

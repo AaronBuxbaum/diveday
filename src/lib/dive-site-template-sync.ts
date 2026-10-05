@@ -1,4 +1,5 @@
 import { isMarineLifeSlug, type MarineLifeSlug } from "@/db/marine-life-catalog";
+import type { DiveSpecialty } from "@/db/schema";
 import { type DiveSiteDifficulty, parseDiveSiteDifficulty } from "./dive-site-difficulty";
 import { type DiveSiteLandmark, parseDiveSiteLandmarks } from "./dive-site-landmarks";
 import type { CertificationLevel } from "./readiness";
@@ -49,7 +50,7 @@ export type DiveSiteTemplateSnapshot = {
   fieldGuideTipsHeading: string | null;
   landmarks: DiveSiteLandmark[];
   minimumCertificationLevel: CertificationLevel | null;
-  requiredSpecialties: Array<"deep" | "wreck" | "night" | "drysuit">;
+  requiredSpecialties: DiveSpecialty[];
   requiresNitrox: boolean;
   creatures: MarineLifeSlug[];
 };
@@ -81,7 +82,7 @@ export type DiveSiteTemplateSource = {
   fieldGuideTipsHeading?: string;
   landmarks?: unknown;
   minimumCertificationLevel?: CertificationLevel;
-  requiredSpecialties?: Array<"deep" | "wreck" | "night" | "drysuit">;
+  requiredSpecialties?: DiveSpecialty[];
   requiresNitrox?: boolean;
   creatureSlugs?: string[];
 };
@@ -106,7 +107,7 @@ export type DiveSiteTemplateSiteRecord = {
   fieldGuideTipsHeading: string | null;
   landmarks: unknown;
   minimumCertificationLevel: CertificationLevel | null;
-  requiredSpecialties: Array<"deep" | "wreck" | "night" | "drysuit">;
+  requiredSpecialties: DiveSpecialty[];
   requiresNitrox: boolean;
   creatures: readonly MarineLifeSlug[];
 };

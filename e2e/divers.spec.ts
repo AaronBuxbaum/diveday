@@ -191,7 +191,9 @@ test("staff record and correct a diver's emergency contact from the roster and t
   await expect(page.getByRole("status")).toContainText("Diver added to the trip");
 
   const card = rosterRow(page, diverName);
-  await expect(card.getByText("Not on file").filter({ visible: true })).toBeVisible();
+  await expect(
+    card.getByText("Emergency contact · Not on file").filter({ visible: true }),
+  ).toBeVisible();
 
   // Failure path: a name with no phone is not a reachable contact — the
   // save must say so, not silently claim success or a generic error.
@@ -203,7 +205,9 @@ test("staff record and correct a diver's emergency contact from the roster and t
     page.getByRole("status").filter({ hasText: /name and a phone number/ }),
   ).toBeVisible();
   // Still reads as missing — a half-entered contact is not "on file".
-  await expect(card.getByText("Not on file").filter({ visible: true })).toBeVisible();
+  await expect(
+    card.getByText("Emergency contact · Not on file").filter({ visible: true }),
+  ).toBeVisible();
 
   // Complete it. The refusal held the row and its form open.
   await card.getByLabel("Contact name").fill("Robin Diver");

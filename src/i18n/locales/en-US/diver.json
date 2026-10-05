@@ -244,7 +244,8 @@
       "deep": "Deep",
       "wreck": "Wreck",
       "night": "Night",
-      "drysuit": "Drysuit"
+      "drysuit": "Drysuit",
+      "cavern": "Cavern"
     },
     "requirementLevel": "{level} or higher",
     "requirementSpecialty": "a {specialty} certification",

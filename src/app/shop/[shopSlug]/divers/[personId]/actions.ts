@@ -47,7 +47,7 @@ import {
   unreviewSpecialtyCertification,
 } from "@/db/readiness";
 import { getRentalFit, saveRentalFit, setNeedsStaffFit } from "@/db/rental-fit";
-import { certificationAgency, certificationLevel, people } from "@/db/schema";
+import { certificationAgency, certificationLevel, diveSpecialty, people } from "@/db/schema";
 import { clearNoCertificationDeclaration } from "@/db/self-declared-cards";
 import { sendStaffReply } from "@/db/staff-reply";
 import {
@@ -86,7 +86,7 @@ const levelSchema = z.enum(certificationLevel.enumValues);
  * `createSpecialtyCertification`. The picker spells that card `card=nitrox`,
  * and this closed enum is what makes anything else a refusal.
  */
-const specialtyOnlySchema = z.enum(["deep", "wreck", "night", "drysuit"]);
+const specialtyOnlySchema = z.enum(diveSpecialty.enumValues);
 const personSchema = z.object({
   // Shared diver person-field bounds (src/lib/person-fields.ts); blank-able
   // email is this form's own call — clearing a wrong address to "" is valid.
