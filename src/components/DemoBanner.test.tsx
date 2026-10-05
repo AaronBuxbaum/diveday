@@ -116,9 +116,27 @@ describe("DemoBanner", () => {
       const switchRole = async () => {
         throw redirectSentinel;
       };
-      renderSwitcher(switchRole);
-      await waitFor(() => expect(screen.queryByText(/Capitán/)).toBeNull());
-      expect(screen.queryByRole("alert")).toBeNull();
+      // The rethrown sentinel leaves the transition and React reports it on
+      // `window` (in the app, Next's router takes it from there). Wait for it
+      // here and claim it: left alone it lands after the test has ended and
+      // fails the run as an unhandled error, depending on timing.
+      let onError: (event: ErrorEvent) => void = () => {};
+      const rethrown = new Promise<unknown>((resolve) => {
+        onError = (event) => {
+          if (event.error !== redirectSentinel) return;
+          event.preventDefault();
+          resolve(event.error);
+        };
+        window.addEventListener("error", onError);
+      });
+      try {
+        renderSwitcher(switchRole);
+        await waitFor(() => expect(screen.queryByText(/Capitán/)).toBeNull());
+        await expect(rethrown).resolves.toBe(redirectSentinel);
+        expect(screen.queryByRole("alert")).toBeNull();
+      } finally {
+        window.removeEventListener("error", onError);
+      }
     });
 
     it("says the switch failed when the request itself fails", async () => {
