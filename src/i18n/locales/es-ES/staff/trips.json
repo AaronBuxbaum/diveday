@@ -491,7 +491,9 @@
     "waiverSent": "Exención enviada",
     "waiverSigned": "Exención firmada",
     "noteCount": "{count, plural, one {# nota} other {# notas}}",
-    "emergencyContactAddFull": "Añadir contacto de emergencia"
+    "emergencyContactAddFull": "Añadir contacto de emergencia",
+    "reasonWaiverNotSigned": "Exención sin firmar todavía",
+    "reasonUnpaid": "Sin pagar todavía"
   },
   "offlineManifestManager": {
     "checkingDevice": "Verificando este dispositivo…",

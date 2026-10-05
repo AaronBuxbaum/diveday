@@ -726,8 +726,8 @@ export function RosterSection({
       </CompactDisclosureRow>
     );
     // A contact on file is a fact about the seat, so this renders only in the
-    // reference panel; a *missing* one is work and renders in the open half
-    // as a warning line with the same edit form.
+    // reference panel; a *missing* one is a reason line under the name, with
+    // the same edit form among the row's work.
     const emergencyContactBlock = (
       <div>
         <GroupLabel as="p">{t("trips.roster.emergencyContactHeading")}</GroupLabel>
@@ -869,6 +869,26 @@ export function RosterSection({
       ...(recencyText !== null
         ? [{ key: "recency", text: recencyText, tone: "warning" as const }]
         : []),
+      // A seat whose readiness is clear can still be filed under "Still to
+      // clear" by its paperwork or its money, and a row in that group with no
+      // stated reason trains a crew to stop reading the group (dive-domain
+      // review 2026-10-05). A waiver blocker already says the first; this is
+      // for the seat no blocker speaks for.
+      ...(waiverControl.action !== null && blockerTexts.length === 0
+        ? [
+            {
+              key: "waiver",
+              text: t("trips.roster.reasonWaiverNotSigned"),
+              tone: "warning" as const,
+            },
+          ]
+        : []),
+      ...(requiresPayment &&
+      paymentStatus !== "paid" &&
+      paymentStatus !== "waived" &&
+      paymentStatus !== "partly_refunded"
+        ? [{ key: "payment", text: t("trips.roster.reasonUnpaid"), tone: "warning" as const }]
+        : []),
       // Withheld on an unconfirmed row in both directions: the contact is the
       // matched person's own record (`showsPersonDetail`).
       ...(!hasEmergencyContact && showsPersonDetail
@@ -900,12 +920,12 @@ export function RosterSection({
         </ul>
       );
     /**
-     * **Work**: everything this seat still owes, always in the open — one
-     * item per line, each beside its own fix (the ADR's "open work expands
-     * inline"). Membership is decided by the kind of thing, never by its
-     * current value, so a control can never leave from under the finger that
-     * used it: payment, the contact form and the notes stay put in both
-     * states.
+     * **Work**: the fix for everything this seat still owes, behind the row's
+     * own mark — the sentences themselves are the reason lines under the name
+     * (owner, 2026-10-05). Membership is decided by the kind of thing, never
+     * by its current value, so a control can never leave from under the
+     * finger that used it: payment, the contact form and the notes stay put in
+     * both states, and a form that just answered holds its row open.
      */
     const outstanding = (
       <>
@@ -1243,13 +1263,13 @@ export function RosterSection({
         ) : (
           // Said, not silently blank: a panel with no contact and no sizes
           // reads as a diver who has none, which is a wrong fact rather than
-          // an absent one. The confirm control is in the open half above.
+          // an absent one. The confirm control is in the work above.
           <p className="mt-3 text-sm text-muted">{t("trips.roster.identityWithheldDetails")}</p>
         )}
         <div className="mt-3 grid gap-5 sm:grid-cols-2">
           {/* The signed waiver's own evidence — when, and by which route —
               and nothing else. Every state that is *not* signed already says
-              so in the open half (principle 9). */}
+              so under the name (principle 9). */}
           {showsPersonDetail && currentWaiver?.completedAt && waiverStatus === "complete" ? (
             <div>
               <GroupLabel as="p">{t("trips.roster.waiverColumnHeading")}</GroupLabel>
@@ -1299,11 +1319,11 @@ export function RosterSection({
 
           {/* A contact already on file: a fact about the seat, which is what
               this panel is for. Only this state appears here — a missing one
-              is work and stays in the open above (principle 9). */}
+              is a reason line under the name (principle 9). */}
           {hasEmergencyContact && showsPersonDetail ? emergencyContactBlock : null}
 
-          {/* The full per-diver list, only when the open half compressed part
-              of it into a count. */}
+          {/* The full per-diver list, only when the reason lines compressed
+              part of it into a count. */}
           {depthShared && depthText !== null ? (
             <div>
               <GroupLabel as="p">{t("trips.roster.depthChip")}</GroupLabel>

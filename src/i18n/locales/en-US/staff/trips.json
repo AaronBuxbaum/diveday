@@ -491,7 +491,9 @@
     "waiverSent": "Waiver sent",
     "waiverSigned": "Waiver signed",
     "noteCount": "{count, plural, one {# note} other {# notes}}",
-    "emergencyContactAddFull": "Add emergency contact"
+    "emergencyContactAddFull": "Add emergency contact",
+    "reasonWaiverNotSigned": "Waiver not signed yet",
+    "reasonUnpaid": "Not paid yet"
   },
   "offlineManifestManager": {
     "checkingDevice": "Checking this device…",

@@ -733,12 +733,11 @@ export async function openSettingsRow(page: Page, heading: string) {
 /**
  * Open a Trip roster card's "Details" disclosure.
  *
- * The roster keeps **work** in the open — blockers, the waiver control, the
- * payment selector, the emergency contact, the private notes — and files what
- * the card can only *tell* you behind one tap: the signed-waiver date, rental
- * fit, the orders link, and "Remove booking". Removing a seat is the one
- * administrative act several specs reach for as a teardown, hence this helper
- * rather than the same three lines in four files.
+ * Every seat is one line (owner, 2026-10-05): its blockers and advisories
+ * are sentences under the name, and everything the row can *do* — the waiver
+ * control, the payment selector, the emergency contact form, the private
+ * notes, "Remove booking" — waits behind the row's one disclosure with the
+ * reference facts.
  *
  * The disclosure is uncontrolled — its `open` is native DOM state React does
  * not touch — so this checks before clicking rather than toggling blindly,

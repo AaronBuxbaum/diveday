@@ -91,6 +91,7 @@ function renderRoster({
   compact = false,
   addDiverGroup,
   paymentsConnected = false,
+  requiresPayment = false,
 }: {
   roster: RosterEntry[];
   readiness: ReadinessByBooking;
@@ -99,6 +100,7 @@ function renderRoster({
   compact?: boolean;
   addDiverGroup?: ReactNode;
   paymentsConnected?: boolean;
+  requiresPayment?: boolean;
 }) {
   return render(
     <RosterSection
@@ -113,7 +115,7 @@ function renderRoster({
       waiverByBooking={waivers}
       rentalFitByBooking={rentalFit ?? (new Map() as RentalFitByBooking)}
       nitroxByBooking={new Map() as NitroxByBooking}
-      requiresPayment={false}
+      requiresPayment={requiresPayment}
       paymentsConnected={paymentsConnected}
       cancellationDeadline={null}
       markWaiverInPersonAction={noRefusal}
@@ -418,6 +420,30 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     expect(
       screen.getByRole("button", { name: "Confirm this is Marisol Vega", hidden: true }),
     ).toBeInTheDocument();
+  });
+
+  it("keeps the flagged medical answer outside the row's fold", () => {
+    renderRoster({
+      roster: [matched],
+      readiness: confirmed,
+      waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+      rentalFit,
+    });
+
+    const prompt = screen.getByText(flaggedPrompt);
+    expect(prompt).toBeVisible();
+    expect(prompt.closest("details")).toBeNull();
+  });
+
+  it("keeps the identity sentence outside the row's fold", () => {
+    renderRoster({
+      roster: [matched],
+      readiness: unconfirmed,
+      waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+      rentalFit,
+    });
+
+    expect(screen.getByText(/Identity unconfirmed/).closest("details")).toBeNull();
   });
 
   it("renders the same facts as soon as the row is confirmed", () => {
@@ -841,5 +867,53 @@ describe("the roster's place on the departure page", () => {
     const roster = container.querySelector("#roster");
     expect(roster).not.toBeNull();
     expect(roster?.className).not.toMatch(/(^|\s)mt-/);
+  });
+});
+
+/**
+ * **Every seat is one line, and the line says why** (owner, 2026-10-05;
+ * dive-domain review the same day). The fixes fold behind the row; the facts a
+ * crew must read before boarding never do, and a row filed under "Still to
+ * clear" always says what keeps it there.
+ */
+describe("the one-line row", () => {
+  it("says each blocker under the name, outside the fold", () => {
+    renderRoster({
+      roster: [entry("g", "Gus Lin", { dateOfBirth: "2013-01-01" })],
+      readiness: new Map([
+        [
+          "g",
+          readinessRow("blocked", [
+            { code: "guardian_signature_missing", params: undefined },
+            { code: "certification_missing", params: undefined },
+          ]),
+        ],
+      ]) as ReadinessByBooking,
+      waivers: new Map([["g", signedWaiver]]) as WaiverByBooking,
+    });
+
+    const cert = screen.getByText("No certification is on file for this trip.");
+    expect(cert).toBeVisible();
+    expect(cert.closest("details")).toBeNull();
+    const row = cert.closest('li[id^="booking-"]') as HTMLElement;
+    const lines = within(row).getAllByRole("listitem");
+    // The guardian sentence and the cert sentence, both in the open.
+    expect(lines).toHaveLength(2);
+    for (const line of lines) expect(line.closest("details")).toBeNull();
+  });
+
+  it("names the unsent waiver and the unpaid seat when no blocker does", () => {
+    renderRoster({
+      roster: [entry("w", "Wen Ito")],
+      readiness: new Map([
+        ["w", { ...readinessRow("ready"), paymentStatus: "unpaid" }],
+      ]) as ReadinessByBooking,
+      waivers: new Map() as WaiverByBooking,
+      requiresPayment: true,
+    });
+
+    expect(screen.getByRole("heading", { name: "Still to clear · 1" })).toBeVisible();
+    expect(screen.getByText("Waiver not signed yet")).toBeVisible();
+    expect(screen.getByText("Not paid yet")).toBeVisible();
   });
 });
