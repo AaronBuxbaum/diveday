@@ -42,7 +42,6 @@ import { type FormNotice, noticeForForm, noticeFromParam, shopPath } from "@/lib
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { tripPhaseOf } from "@/lib/trip-phase";
 import { uuidParam } from "@/lib/uuid";
-import { confirmIdentityFromCheckIn, splitIdentityFromCheckIn } from "./_arrivals/actions";
 import { buildArrivalDesk } from "./_arrivals/arrival-desk";
 import { CheckInQueueRefresh } from "./_arrivals/CheckInQueueRefresh";
 import { DESK_NOTICES } from "./_arrivals/notices";
@@ -462,7 +461,7 @@ export default async function ManageTripPage({
       });
   // The count leads the desk and says "1 diver can't board yet" itself, so the
   // pulse's door to the same rows stands down while it is on screen.
-  const shownPulseFacts = desk?.instrument
+  const shownPulseFacts = desk?.arrival.instrument
     ? pulseFacts.filter((fact) => !fact.href.endsWith("#roster"))
     : pulseFacts;
 
@@ -577,18 +576,11 @@ export default async function ManageTripPage({
     markWaiverInPersonAction: markWaiverInPersonAction.bind(null, shopSlug, tripId),
     markPaymentAction: markPaymentAction.bind(null, shopSlug, tripId),
     removeBookingAction: removeBookingAction.bind(null, shopSlug, tripId),
-    // At the desk the person is standing there, which is different evidence,
-    // and the trail says which door the attestation came through
-    // (`IdentityConfirmDoor`).
-    confirmDiverIdentityAction: (desk
-      ? confirmIdentityFromCheckIn
-      : confirmDiverIdentityAction
-    ).bind(null, shopSlug, tripId),
-    splitDiverIdentityAction: (desk ? splitIdentityFromCheckIn : splitDiverIdentityAction).bind(
-      null,
-      shopSlug,
-      tripId,
-    ),
+    // One door on this tab, desk or not: the arrivals window opens 36 hours
+    // ahead, so a confirm made inside it is no evidence the diver was standing
+    // at the counter (dive-domain review 2026-10-05).
+    confirmDiverIdentityAction: confirmDiverIdentityAction.bind(null, shopSlug, tripId),
+    splitDiverIdentityAction: splitDiverIdentityAction.bind(null, shopSlug, tripId),
     certifyDiverAction: trip.course
       ? certifyDiverFromRosterAction.bind(null, shopSlug, tripId)
       : undefined,
@@ -1075,8 +1067,6 @@ export default async function ManageTripPage({
                 ))}
               </div>
             ) : null}
-
-            {desk?.instrument}
 
             <TripRosterContent
               arrival={desk?.arrival}

@@ -25,9 +25,7 @@ import { noShowSalvageCopy } from "./salvage-copy";
 
 /** What the Divers tab adds while a departure's arrivals are open. */
 export type ArrivalDesk = {
-  /** "7 of 10 here", its remainders and its meter — absent on an empty boat. */
-  instrument: ReactNode;
-  /** The taps and groups the roster draws (`RosterSection`'s `arrival`). */
+  /** The count, the taps and the groups the roster draws (`RosterSection`'s `arrival`). */
   arrival: RosterArrival;
   /** The walk-in door, while the boat can still seat one. */
   walkIn: ReactNode;
@@ -52,9 +50,9 @@ export function deskIsOpen(trip: { status: string; startsAt: Date }, now: Date):
  * seat's next step, the paper pass, and the walk-in door.
  *
  * Every fix for a blocked diver — the waiver, the paper release, the identity
- * confirm, payment — is the roster row's own, so this draws nothing on a
- * blocked row. Readiness is the gate, and a tap beside the reasons would be an
- * act the server refuses.
+ * confirm, payment — is the roster row's own, so a blocked row gets no
+ * check-in tap: readiness is the gate. It still gets "Not here?" and, once
+ * arrived, its undo.
  *
  * Returns `null` outside the arrivals window (`deskIsOpen`).
  */
@@ -145,20 +143,25 @@ export async function buildArrivalDesk({
       }
       continue;
     }
-    if (!ready) continue;
     if (row.bookingStatus === "checked_in") {
+      // **Undo on every arrived row, blocked or not** (dive-domain review
+      // 2026-10-05): a diver who went blocked after arriving still has to be
+      // walked back, and taking a state away can never add risk.
       controls.set(
         row.bookingId,
         <span className="flex items-center gap-3">
-          {/* **The paper pass, on the arrived row and nowhere else** (ADR
-              20260908-one-hand, decision 6, lever X): for the diver at the
-              desk with no phone, the moment just after their name is ticked. */}
-          <Link
-            href={paperPassPath(shopSlug, row.bookingId)}
-            className={buttonClass({ variant: "link", size: "sm", flush: true })}
-          >
-            {t("print.counter.passDoor")}
-          </Link>
+          {/* **The paper pass, on the arrived and cleared row and nowhere
+              else** (ADR 20260908-one-hand, decision 6, lever X): for the
+              diver at the desk with no phone, the moment just after their name
+              is ticked. Never a pass for a seat readiness refuses. */}
+          {ready ? (
+            <Link
+              href={paperPassPath(shopSlug, row.bookingId)}
+              className={buttonClass({ variant: "link", size: "sm", flush: true })}
+            >
+              {t("print.counter.passDoor")}
+            </Link>
+          ) : null}
           <ArrivalTap
             action={undo}
             bookingId={row.bookingId}
@@ -172,20 +175,29 @@ export async function buildArrivalDesk({
       );
       continue;
     }
-    controls.set(
-      row.bookingId,
-      <ArrivalTap
-        action={checkIn}
-        bookingId={row.bookingId}
-        checkedIn={false}
-        label={t("checkIn.checkInButton")}
-        pendingLabel={t("checkIn.checkingIn")}
-        ariaLabel={t("checkIn.checkInAriaLabel", { name: row.personName })}
-        sendFailedLabel={t("checkIn.sendFailed")}
-      />,
-    );
+    // Readiness is the gate: a tap beside the reasons would be an act the
+    // server refuses.
+    if (ready) {
+      controls.set(
+        row.bookingId,
+        <ArrivalTap
+          action={checkIn}
+          bookingId={row.bookingId}
+          checkedIn={false}
+          label={t("checkIn.checkInButton")}
+          pendingLabel={t("checkIn.checkingIn")}
+          ariaLabel={t("checkIn.checkInAriaLabel", { name: row.personName })}
+          sendFailedLabel={t("checkIn.sendFailed")}
+        />,
+      );
+    }
     const claim = noShowClaimFor(row);
     if (claim) {
+      // **"Not here?" on a blocked row too** (dive-domain review 2026-10-05):
+      // the diver who never signed is the commonest no-show, and a door that
+      // opened only once the release was on file would invite somebody to
+      // record a release for a person who is not there just to free the seat.
+      //
       // **Two scripts, because the tap is two different claims**: while the
       // boat is still there it is about a seat; once it has gone, the same tap
       // says this person did not dive.
@@ -220,9 +232,11 @@ export async function buildArrivalDesk({
     }
   }
 
-  // **Three groups, and every seat is in exactly one of them** — the figure,
-  // the remainder words and the meter all read off one tally
-  // (`src/lib/check-in.ts`), so nobody has to subtract to check.
+  // **The figure and its remainders** read off one tally
+  // (`src/lib/check-in.ts`), so nobody has to subtract to check. "Here" is
+  // arrival — checked in and cleared to board. Whether the desk is *finished*
+  // is the roster's question (a contact number, a balance), so the roster
+  // says whether the cleared line may show.
   const { here, expected, cantBoard, toCome, notHere } = counterTally(rows);
   const remainder =
     [
@@ -233,34 +247,27 @@ export async function buildArrivalDesk({
       .filter(Boolean)
       .join(" · ") || null;
   const instrument =
-    rows.length > 0 ? (
-      <CounterInstrument
-        here={here}
-        expected={expected}
-        cantBoard={cantBoard}
-        cleared={counterIsClear(rows)}
-        remainder={remainder}
-        clearedLabel={t("checkIn.clearedTitle")}
-        figure={t.rich("checkIn.instrument.hereOf", {
-          here,
-          expected,
-          figure: (chunks) => (
-            <span className={`${FIGURE_HERO_CLASS} text-foreground`}>{chunks}</span>
-          ),
-        })}
-      />
-    ) : null;
+    rows.length > 0
+      ? (deskWorkOpen: boolean) => (
+          <CounterInstrument
+            here={here}
+            expected={expected}
+            cantBoard={cantBoard}
+            cleared={counterIsClear(rows) && !deskWorkOpen}
+            remainder={remainder}
+            clearedLabel={t("checkIn.clearedTitle")}
+            figure={t.rich("checkIn.instrument.hereOf", {
+              here,
+              expected,
+              figure: (chunks) => (
+                <span className={`${FIGURE_HERO_CLASS} text-foreground`}>{chunks}</span>
+              ),
+            })}
+          />
+        )
+      : undefined;
 
-  const settled = rows.filter(
-    (row) => row.bookingStatus === "checked_in" && row.readiness.status === "ready",
-  );
-  const settledBoarded = settled.filter((row) => row.boarded).length;
-  const hereMeta =
-    settledBoarded === 0
-      ? undefined
-      : settledBoarded === settled.length
-        ? t("checkIn.settledAllBoarded")
-        : t("checkIn.settledSomeBoarded", { count: settledBoarded });
+  const boarded = new Set(rows.filter((row) => row.boarded).map((row) => row.bookingId));
 
   // A walk-in can only be seated on a boat that has not left: the seat action
   // refuses one that is underway, so the door is not drawn there.
@@ -292,5 +299,5 @@ export async function buildArrivalDesk({
     </div>
   );
 
-  return { instrument, arrival: { controls, below, hereMeta }, walkIn };
+  return { arrival: { instrument, controls, below, boarded }, walkIn };
 }

@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { confirmBookingIdentity, splitBookingIdentity } from "@/db/bookings";
 import { checkInBooking, undoCheckInBooking } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { markBookingNoShow, undoBookingNoShow } from "@/db/no-show";
@@ -178,87 +177,4 @@ export async function undoNoShowAction(
     return;
   }
   revalidateAndRedirect(back, noticeUrl(back, `no_show_${outcome.reason}`));
-}
-
-/**
- * **The counter confirms a held seat is who the record says** (H-13, issue
- * #1696) — the second door onto the roster's attestation, never a second
- * attestation.
- *
- * A seat the counter's own name-match prompt created is attached to an existing
- * diver on a guess, and `identity_unconfirmed` refuses it at the rail until a
- * staffer vouches for the person in front of them. Until now the only control
- * that cleared it was on the trip roster, so the counter met the flag as a
- * `not_ready` refusal from `checkInBooking` and had to leave the queue, open
- * the trip, expand a confirm and walk back — with a diver at the desk and a
- * queue behind them.
- *
- * `confirmBookingIdentity` is called, not copied: one write, one trail line,
- * one set of package settlements, whichever door reached it — the same rule
- * seating follows (`src/db/seat-diver.ts`).
- *
- * **Success answers in place, like every other tap on this surface.** The row
- * loses its confirm control and its identity blocker under the finger that did
- * it.
- *
- * The refusal does navigate, because it has no row state to land on: the seat
- * was not held when the tap arrived — a double tap, or a row another staffer
- * cleared while this one was reading it — so on the next render the row has no
- * identity blocker and no confirm control, and a `useActionState` answer would
- * have nowhere to land. (For a booking this shop does not hold, the row is not
- * on the page at all.)
- */
-export async function confirmIdentityFromCheckIn(
-  shopSlug: string,
-  tripId: string,
-  formData: FormData,
-): Promise<void> {
-  const session = await requireStaffSession();
-  const bookingId = String(formData.get("bookingId") ?? "");
-  const back = counterQueuePath(shopSlug, tripId);
-  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
-
-  const confirmed = await confirmBookingIdentity(await getDb(), {
-    shopId: session.user.shopId,
-    bookingId,
-    actorPersonId: session.user.personId,
-    // The trail says which door this came through, because the evidence here is
-    // different in kind: the person is at the desk (`IdentityConfirmDoor`).
-    door: "counter",
-  });
-  if (confirmed) {
-    revalidatePath(back);
-    return;
-  }
-  revalidateAndRedirect(back, noticeUrl(back, "identity-not-held"));
-}
-
-/**
- * **The counter answers "different person"** (H-13; Aaron, 2026-10-05): the
- * held seat becomes a new diver of its own, named by the staffer, and leaves
- * the record it was guessed onto. The same write the roster's door makes
- * (`splitBookingIdentity`), answering in place like the confirm beside it; a
- * seat that was no longer held navigates with the same notice.
- */
-export async function splitIdentityFromCheckIn(
-  shopSlug: string,
-  tripId: string,
-  formData: FormData,
-): Promise<void> {
-  const session = await requireStaffSession();
-  const bookingId = String(formData.get("bookingId") ?? "");
-  const back = counterQueuePath(shopSlug, tripId);
-  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
-
-  const split = await splitBookingIdentity(await getDb(), {
-    shopId: session.user.shopId,
-    bookingId,
-    actorPersonId: session.user.personId,
-    fullName: String(formData.get("fullName") ?? ""),
-  });
-  if (split.ok) {
-    revalidatePath(back);
-    return;
-  }
-  revalidateAndRedirect(back, noticeUrl(back, "identity-not-held"));
 }

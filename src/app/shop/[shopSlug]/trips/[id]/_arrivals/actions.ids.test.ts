@@ -39,13 +39,9 @@ vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const {
-  checkInAction,
-  confirmIdentityFromCheckIn,
-  markNoShowAction,
-  undoCheckInAction,
-  undoNoShowAction,
-} = await import("./actions");
+const { checkInAction, markNoShowAction, undoCheckInAction, undoNoShowAction } = await import(
+  "./actions"
+);
 
 const SHOP_SLUG = "reef-life";
 const SHOP_ID = "11111111-1111-4111-8111-111111111111";
@@ -75,7 +71,6 @@ describe("a malformed booking id at the counter", () => {
     ["undoing a check-in", undoCheckInAction],
     ["marking a diver not here", markNoShowAction],
     ["undoing that mark", undoNoShowAction],
-    ["confirming a held seat's identity", confirmIdentityFromCheckIn],
   ])("settles %s back on the departure's counter instead of erroring", async (_label, action) => {
     signIn();
 

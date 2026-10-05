@@ -10,8 +10,8 @@ import type { NoticeCodeOf } from "@/lib/staff-notices";
  * Derived from the domain unions rather than listed, so **a refusal added to
  * either union with no words below is a compile error**. The reverse — an entry
  * left behind after a reason is deleted — is not caught, because the map also
- * carries codes from vocabularies the desk only borrows (`SEAT_SURFACES
- * ["walk-in"]`, the identity confirm). A guard claimed to be stronger than it
+ * carries codes from a vocabulary the desk only borrows (`SEAT_SURFACES
+ * ["walk-in"]`). A guard claimed to be stronger than it
  * is gets trusted where it does not hold.
  *
  * `ArrivalOfflineRefusal` is excluded: those answer a device reconciling a
@@ -67,9 +67,6 @@ export const DESK_NOTICES: DeskNoticeMap = {
     tone: "warning",
     key: "checkIn.notice.walkinAddedIdentityUnconfirmed",
   },
-  // The identity confirm's one refusal (issue #1696): a double tap, or a seat
-  // another staffer cleared while this one was reading it.
-  "identity-not-held": { tone: "neutral", key: "checkIn.notice.identityNotHeld" },
   // The two roll-call refusals say different sentences because the desk's next
   // act differs: the crew boarded this diver, or recorded them not back aboard.
   "no-show-already-boarded": { tone: "danger", key: "checkIn.notice.noShowAlreadyBoarded" },

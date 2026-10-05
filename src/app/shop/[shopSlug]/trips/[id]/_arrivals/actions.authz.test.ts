@@ -51,14 +51,9 @@ vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const {
-  checkInAction,
-  confirmIdentityFromCheckIn,
-  markNoShowAction,
-  splitIdentityFromCheckIn,
-  undoCheckInAction,
-  undoNoShowAction,
-} = await import("./actions");
+const { checkInAction, markNoShowAction, undoCheckInAction, undoNoShowAction } = await import(
+  "./actions"
+);
 
 const SHOP_SLUG = "reef-life";
 const FOCUS_TRIP_ID = "33333333-3333-4333-8333-333333333333";
@@ -77,8 +72,6 @@ describe("who may run each action at the counter", () => {
     "undoCheckInAction",
     "markNoShowAction",
     "undoNoShowAction",
-    "confirmIdentityFromCheckIn",
-    "splitIdentityFromCheckIn",
   ];
 
   /** Every exported action's source, sliced from its `export` to its closing brace. */
@@ -162,9 +155,6 @@ describe("a refused session at the counter", () => {
     undoCheckInAction: (form) => undoCheckInAction(SHOP_SLUG, FOCUS_TRIP_ID, form),
     markNoShowAction: (form) => markNoShowAction(SHOP_SLUG, FOCUS_TRIP_ID, form),
     undoNoShowAction: (form) => undoNoShowAction(SHOP_SLUG, FOCUS_TRIP_ID, form),
-    confirmIdentityFromCheckIn: (form) =>
-      confirmIdentityFromCheckIn(SHOP_SLUG, FOCUS_TRIP_ID, form),
-    splitIdentityFromCheckIn: (form) => splitIdentityFromCheckIn(SHOP_SLUG, FOCUS_TRIP_ID, form),
   };
 
   function bookingForm(): FormData {

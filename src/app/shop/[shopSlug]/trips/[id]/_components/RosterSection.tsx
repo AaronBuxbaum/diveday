@@ -89,14 +89,19 @@ const PAYMENT_STATUSES_RECORDING_ONLY: readonly PaymentStatus[] = [
 
 /**
  * What the desk adds to the roster once arrivals open, already drawn by the
- * page (`buildArrivalDesk`): each seat's tap at the end of its name line, what
- * stands under the row (the "Not here?" door, a released seat's next step, a
- * paper pass), and the checked-in group's boarding fact.
+ * page (`buildArrivalDesk`): the count above the list, each seat's tap at the
+ * end of its name line, what stands under the row (the "Not here?" door, a
+ * released seat's next step), and which seats the crew has boarded.
+ *
+ * The count is drawn here rather than by the page because whether the desk is
+ * *finished* is this list's question: "Everyone's checked in" must never show
+ * over a row still in "Still to clear" (dive-domain review 2026-10-05).
  */
 export type RosterArrival = {
+  instrument?: (deskWorkOpen: boolean) => ReactNode;
   controls: ReadonlyMap<string, ReactNode>;
   below: ReadonlyMap<string, ReactNode>;
-  hereMeta?: string;
+  boarded: ReadonlySet<string>;
 };
 
 type RosterPrivateNote = Awaited<ReturnType<typeof listBookingNotes>>[number] & {
@@ -406,13 +411,13 @@ export function RosterSection({
     .map(([sentence, count]) => ({ sentence, count }));
 
   /**
-   * Which group a seat files under. The predicate is the old collapsed-row
-   * rule unchanged: a seat is settled when nothing on it still needs a
-   * staffer — readiness clear, waiver signed with no medical hold, identity
-   * confirmed, an emergency contact on file, no buddy request to read, no
-   * advisory particular to this diver, and the money recorded.
+   * **What the desk still owes this seat**: readiness clear, waiver signed
+   * with no medical hold, identity confirmed, an emergency contact on file
+   * (name and number), and the money recorded. A checked-in seat files under
+   * "Checked in" only once these are done, because the moment the diver is in
+   * front of a staffer is the one moment to get a number or a payment.
    */
-  const isSettled = ({ booking, person }: RosterEntry): boolean => {
+  const deskTasksClear = ({ booking, person }: RosterEntry): boolean => {
     const readiness = readinessByBooking.get(booking.id)?.readiness;
     const paymentStatus = readinessByBooking.get(booking.id)?.paymentStatus;
     const currentWaiver = waiverByBooking.get(booking.id)?.waiver ?? null;
@@ -426,9 +431,6 @@ export function RosterSection({
     const hasEmergencyContact = Boolean(
       person.emergencyContactName && person.emergencyContactPhone,
     );
-    const depth = readinessByBooking.get(booking.id)?.depthAdvisory;
-    const depthText = depth?.status === "exceeds" ? depthWarningText(t, depth) : null;
-    const depthShared = depthText !== null && sharedAdvisoryTexts.has(depthText);
     // `partly_refunded` settles the row: a seat that paid in full and had part
     // handed back owes nothing (CodeRabbit review on PR #949).
     const paymentSettled =
@@ -442,6 +444,24 @@ export function RosterSection({
       status !== "medical_review" &&
       !identityUnconfirmed &&
       hasEmergencyContact &&
+      paymentSettled
+    );
+  };
+  /**
+   * The desk tasks above, plus what the crew reads before the dive: an
+   * unanswered re-entry ask, a depth advisory particular to this diver, a long
+   * gap since their last dive. Those are talked through with the diver at the
+   * desk, so once they have checked in they no longer hold the row in "Still
+   * to clear" — a band that never empties trains a crew to stop reading it
+   * (dive-domain review 2026-10-05). Before arrival they still do.
+   */
+  const isSettled = (entry: RosterEntry): boolean => {
+    const { booking } = entry;
+    const depth = readinessByBooking.get(booking.id)?.depthAdvisory;
+    const depthText = depth?.status === "exceeds" ? depthWarningText(t, depth) : null;
+    const depthShared = depthText !== null && sharedAdvisoryTexts.has(depthText);
+    return (
+      deskTasksClear(entry) &&
       // A diver who asked for something the crew has not answered is still to
       // clear — the same rule the free-text preference note carried before D12
       // replaced it (ADR 20260904-reef-all-the-way-down, D18).
@@ -450,8 +470,7 @@ export function RosterSection({
       // Currency informs, never gates (ADR 20260821-currency-is-what-catches-
       // people) — but a warning filed under "Ready" is a warning nobody reads
       // (dive-domain review 2026-08-21).
-      !diveRecencyIsNotable(booking.lastDivedBand) &&
-      paymentSettled
+      !diveRecencyIsNotable(booking.lastDivedBand)
     );
   };
 
@@ -462,18 +481,27 @@ export function RosterSection({
 
   // With the desk open, two more groups: the seats it is finished with. A
   // released seat is never "Ready" and never work, and a checked-in seat that
-  // has gone blocked since stays in "Still to clear" wearing its reasons — the
-  // counter's most dangerous silence was folding that row away
-  // (`isSettledAtCounter`).
+  // has gone blocked since, or still owes the desk something, stays in "Still
+  // to clear" wearing its reasons — the counter's most dangerous silence was
+  // folding that row away.
   const notHere = arrival ? roster.filter(({ booking }) => booking.status === "no_show") : [];
   const working = arrival ? roster.filter(({ booking }) => booking.status !== "no_show") : roster;
-  const stillToClear = working.filter((entry) => !isSettled(entry));
-  const here = arrival
-    ? working.filter((entry) => isSettled(entry) && entry.booking.status === "checked_in")
-    : [];
-  const ready = working.filter(
-    (entry) => isSettled(entry) && !(arrival && entry.booking.status === "checked_in"),
+  const arrived = (entry: RosterEntry) => Boolean(arrival) && entry.booking.status === "checked_in";
+  const here = working.filter((entry) => arrived(entry) && deskTasksClear(entry));
+  const stillToClear = working.filter((entry) =>
+    arrived(entry) ? !deskTasksClear(entry) : !isSettled(entry),
   );
+  const ready = working.filter((entry) => !arrived(entry) && isSettled(entry));
+  // The desk is finished only when nobody who has arrived still owes it
+  // something; the count's cleared line waits on this.
+  const deskWorkOpen = working.some((entry) => arrived(entry) && !deskTasksClear(entry));
+  const hereBoarded = here.filter(({ booking }) => arrival?.boarded.has(booking.id)).length;
+  const hereMeta =
+    hereBoarded === 0
+      ? undefined
+      : hereBoarded === here.length
+        ? t("checkIn.settledAllBoarded")
+        : t("checkIn.settledSomeBoarded", { count: hereBoarded });
   // The queue's own rule, stated once (src/lib/roster-filters.ts): an absent
   // readiness row is not a blocked diver.
   //
@@ -766,6 +794,13 @@ export function RosterSection({
      * folds away: it must be read before the diver boards, so it stands under
      * the name on every visit while everything else waits behind the row.
      */
+    // **With the desk open, the screen faces the queue** (issue #716;
+    // dive-domain review 2026-10-05). The hold's status word and instruction
+    // stay in the open, because they are what a crew must read before the
+    // diver boards; *which* questions were answered yes — health data about
+    // the person at the desk — waits behind the row's mark, with the money
+    // owed, a long gap since the last dive, and a returning diver's own ask.
+    const openPrompts = arrival ? [] : flaggedPrompts;
     const medicalHold = (
       <>
         {/* What this diver asked for when they said they were easing back, in
@@ -775,7 +810,7 @@ export function RosterSection({
             What this seat *came for* is deliberately not here; the crew reads
             that as the departure's count on the team builder, never as a row
             per person (#1183's boundary). */}
-        {booking.reEntryAsk ? (
+        {booking.reEntryAsk && !arrival ? (
           <p className={`mt-3 ${INSET_NOTE_CLASS}`}>{t(STAFF_RE_ENTRY_KEYS[booking.reEntryAsk])}</p>
         ) : null}
         {/* Safety-critical and never disclosed: a flagged medical answer is
@@ -801,9 +836,9 @@ export function RosterSection({
                   : "trips.roster.followUpBeforeBoarding",
               )}
             </p>
-            {flaggedPrompts.length > 0 ? (
+            {openPrompts.length > 0 ? (
               <ul className="mt-1 flex list-disc flex-col gap-1 pl-4">
-                {flaggedPrompts.map((prompt) => (
+                {openPrompts.map((prompt) => (
                   <li key={prompt}>{prompt}</li>
                 ))}
               </ul>
@@ -948,10 +983,14 @@ export function RosterSection({
         }
       />
     ) : null;
+    const privateAtDesk = (key: string) =>
+      Boolean(arrival) && (key === "payment" || key === "recency");
+    const openReasonLines = reasonLines.filter(({ key }) => !privateAtDesk(key));
+    const deskPrivateLines = reasonLines.filter(({ key }) => privateAtDesk(key));
     const reasonList =
-      reasonLines.length === 0 ? null : (
+      openReasonLines.length === 0 ? null : (
         <ul className="-mt-1 grid gap-1 pb-2 text-sm">
-          {reasonLines.map(({ key, text, tone }) => (
+          {openReasonLines.map(({ key, text, tone }) => (
             <li
               key={key}
               className={`flex items-baseline gap-2 ${
@@ -974,6 +1013,29 @@ export function RosterSection({
      */
     const outstanding = (
       <>
+        {deskPrivateLines.length > 0 ? (
+          <ul className="mt-2 grid gap-1 text-sm">
+            {deskPrivateLines.map(({ key, text }) => (
+              <li key={key} className="flex items-baseline gap-2 text-warning-strong">
+                <StatusMarkColumn variant="warning" />
+                <span>{text}</span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {arrival && booking.reEntryAsk ? (
+          <p className={`mt-3 ${INSET_NOTE_CLASS}`}>{t(STAFF_RE_ENTRY_KEYS[booking.reEntryAsk])}</p>
+        ) : null}
+        {arrival && flaggedPrompts.length > 0 ? (
+          <div className="mt-3 text-sm">
+            <GroupLabel as="p">{waiverControl.label}</GroupLabel>
+            <ul className="mt-1 flex list-disc flex-col gap-1 pl-4">
+              {flaggedPrompts.map((prompt) => (
+                <li key={prompt}>{prompt}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         {blockerTexts.length > 0 ? (
           <>
             {/* Every named problem carries its handle. The waiver, payment,
@@ -1563,6 +1625,7 @@ export function RosterSection({
       // (K-262); a roster rendered outside that stack keeps its own step.
       className={`${compact ? "" : "mt-10"} scroll-mt-24`}
     >
+      {arrival?.instrument ? <div className="mb-10">{arrival.instrument(deskWorkOpen)}</div> : null}
       {showSummaryHeading ? (
         <div>
           <h2 className={SECTION_TITLE_CLASS}>
@@ -1652,9 +1715,7 @@ export function RosterSection({
                 {/* Boarding is the group's fact, said once (principle 9): five
                     receipts each wearing "Boarded" is one word printed five
                     times. Nothing at all before anybody boards. */}
-                {arrival?.hereMeta ? (
-                  <span className="text-xs text-muted">{arrival.hereMeta}</span>
-                ) : null}
+                {hereMeta ? <span className="text-xs text-muted">{hereMeta}</span> : null}
               </RosterGroupBand>
               <ul className="divide-y divide-border">
                 {here.map((entry) => renderRow(entry, true))}
