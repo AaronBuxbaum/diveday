@@ -81,7 +81,11 @@ import { RENTABLE_ITEMS, SHOP_CATALOG_ITEMS, toRentableKinds } from "@/lib/renta
 import { requireShopSurface } from "@/lib/session";
 import { type ShopFeature, shopOffers } from "@/lib/shop-features";
 import { noticeFromParam, noticeRole, shopPath } from "@/lib/staff-notices";
-import { MAX_IMAGE_MB } from "@/lib/storage/limits";
+import {
+  MAX_IMAGE_MB,
+  MAX_NEW_SHOPFRONT_PHOTOS_PER_SAVE,
+  MAX_SHOPFRONT_PHOTOS,
+} from "@/lib/storage/limits";
 import {
   type CuratedTimeZone,
   type CuratedTimezoneGroupKey,
@@ -114,6 +118,7 @@ import {
   saveSearchListingAction,
   saveSeasonStartAction,
   saveShopFeatureAction,
+  saveShopPhotosAction,
   saveTaxAction,
   saveTimezoneAction,
   saveUnitsAction,
@@ -164,6 +169,14 @@ function noticeMessages(
     "contact-invalid": { tone: "danger", text: t("settings.main.notice.contactInvalid") },
     "profile-saved": { tone: "success", text: t("settings.main.notice.profileSaved") },
     "profile-invalid": { tone: "danger", text: t("settings.main.notice.profileInvalid") },
+    "shop-photos-saved": { tone: "success", text: t("settings.main.notice.shopPhotosSaved") },
+    "shop-photos-invalid": {
+      tone: "danger",
+      text: t("settings.main.notice.shopPhotosInvalid", {
+        maxMb: MAX_IMAGE_MB,
+        max: MAX_SHOPFRONT_PHOTOS,
+      }),
+    },
     "address-saved": { tone: "success", text: t("settings.main.notice.addressSaved") },
     "address-removed": { tone: "success", text: t("settings.main.notice.addressRemoved") },
     "address-invalid": { tone: "danger", text: t("settings.main.notice.addressInvalid") },
@@ -2010,6 +2023,70 @@ export default async function SettingsPage({
                     className={buttonClass({ variant: "secondary" })}
                   >
                     {t("settings.main.profile.submit")}
+                  </SubmitButton>
+                </FieldActions>
+              </FieldGrid>
+            </SettingsRow>
+
+            {/* The storefront's photo strip, its own form: the profile above
+                already posts a logo and a cover, and these beside them would
+                outgrow one save's body (`saveShopPhotosAction`). */}
+            <SettingsRow
+              heading={t("settings.main.shopPhotos.heading")}
+              value={
+                shop.shopfrontPhotoUrls.length > 0
+                  ? t("settings.main.shopPhotos.value", {
+                      count: shop.shopfrontPhotoUrls.length,
+                    })
+                  : t("settings.main.shopPhotos.valueNone")
+              }
+              description={t("settings.main.shopPhotos.description")}
+              sectionId="shopPhotos"
+              activeSection={activeSection}
+            >
+              <SectionNotice banner={banner} section="shopPhotos" active={activeSection} />
+              <FieldGrid as="form" action={saveShopPhotosAction} columns={1} className="mt-4">
+                <Field
+                  label={t("settings.main.shopPhotos.label")}
+                  hint={t("settings.main.shopPhotos.hint", {
+                    max: MAX_SHOPFRONT_PHOTOS,
+                    perSave: MAX_NEW_SHOPFRONT_PHOTOS_PER_SAVE,
+                  })}
+                  htmlFor="settings-shop-photo-files"
+                >
+                  {shop.shopfrontPhotoUrls.length > 0 ? (
+                    <div className={`mb-3 ${removablePhotoGridClass}`}>
+                      {shop.shopfrontPhotoUrls.map((url) => (
+                        <RemovablePhoto
+                          key={url}
+                          url={url}
+                          name="removeShopPhotoUrls"
+                          value={url}
+                          label={t("settings.main.shopPhotos.remove")}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+                  <ImageFileInput
+                    id="settings-shop-photo-files"
+                    name="shopPhotoFiles"
+                    multiple
+                    maxFiles={MAX_NEW_SHOPFRONT_PHOTOS_PER_SAVE}
+                    copy={{
+                      ...imageInputCopy,
+                      choose: t("settings.main.shopPhotos.add"),
+                      tooMany: t("settings.main.shopPhotos.tooMany", {
+                        count: MAX_NEW_SHOPFRONT_PHOTOS_PER_SAVE,
+                      }),
+                    }}
+                  />
+                </Field>
+                <FieldActions>
+                  <SubmitButton
+                    pendingLabel={t("settings.main.shopPhotos.submitting")}
+                    className={buttonClass({ variant: "secondary" })}
+                  >
+                    {t("settings.main.shopPhotos.submit")}
                   </SubmitButton>
                 </FieldActions>
               </FieldGrid>

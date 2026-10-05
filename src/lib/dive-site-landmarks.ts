@@ -17,6 +17,7 @@
  */
 
 import { safeJson } from "./safe-json";
+import { isManagedStorageUrl } from "./storage/blob-host";
 
 /**
  * The categorical "type" of a named landmark — a code, not a rendered word.
@@ -45,7 +46,35 @@ export type DiveSiteLandmark = {
   kind: DiveSiteLandmarkKind;
   /** The shop's own sentence about it. Empty means the briefing says nothing extra. */
   note: string;
+  /**
+   * The shop's photo of it, uploaded on the site form. Absent, not empty, when
+   * there is none, so a landmark without one keeps the shape it always had.
+   */
+  photoUrl?: string;
 };
+
+/**
+ * A photo URL a public page may render: one our own storage produced, or a
+ * root-relative path (a bundled demo photo, or what a local deployment
+ * stores). The same rule the site CSV import holds image columns to
+ * (`managedImageUrl` in `dive-site-import.ts`), and for the same reason — a
+ * public briefing must never fetch from a host a staffer typed. `//host/x` is
+ * protocol-relative, not root-relative, and is exactly the shape refused.
+ */
+export function landmarkPhotoUrl(value: unknown): string | undefined {
+  if (typeof value !== "string" || value.length > 2_048) return undefined;
+  if (value.startsWith("/") && !value.startsWith("//")) return value;
+  return isManagedStorageUrl(value) ? value : undefined;
+}
+
+/**
+ * The file input for the landmark at `index` of the posted `landmarks` list.
+ * `LandmarkEditor` renames each input as rows come and go, so the index always
+ * names a row of the JSON it posts beside them.
+ */
+export function landmarkPhotoField(index: number): string {
+  return `landmarkPhotoFile-${index}`;
+}
 
 /** The most landmarks one site may carry — a briefing, not a gazetteer. */
 export const MAX_SITE_LANDMARKS = 8;
@@ -84,14 +113,21 @@ export function parseDiveSiteLandmarks(raw: unknown): DiveSiteLandmark[] {
       continue;
     }
     if (typeof entry !== "object" || entry === null) continue;
-    const { name, kind, note } = entry as { name?: unknown; kind?: unknown; note?: unknown };
+    const { name, kind, note, photoUrl } = entry as {
+      name?: unknown;
+      kind?: unknown;
+      note?: unknown;
+      photoUrl?: unknown;
+    };
     if (typeof name !== "string") continue;
     const trimmed = name.trim().slice(0, MAX_LANDMARK_NAME);
     if (!trimmed) continue;
+    const photo = landmarkPhotoUrl(photoUrl);
     landmarks.push({
       name: trimmed,
       kind: isKind(kind) ? kind : "pointOfInterest",
       note: typeof note === "string" ? note.trim().slice(0, MAX_LANDMARK_NOTE) : "",
+      ...(photo ? { photoUrl: photo } : {}),
     });
   }
   return landmarks;

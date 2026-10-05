@@ -254,7 +254,14 @@ function shapedLandmarks(raw: string | null): {
   if (raw === null) return { landmarks: null, kept: true };
   const parsed = jsonArray(raw);
   if (parsed === null) return { landmarks: null, kept: false };
-  const landmarks = parseDiveSiteLandmarks(parsed);
+  // A landmark photo from a file is dropped unless it is root-relative. Our
+  // storage URLs are public and carry no shop, so a stored URL in a CSV could
+  // name another shop's object, and the editor's next save that took it off
+  // would queue that object for deletion. The editor's own post can only keep
+  // a photo the site already held; a file has no such history to check.
+  const landmarks = parseDiveSiteLandmarks(parsed).map(({ photoUrl, ...landmark }) =>
+    photoUrl?.startsWith("/") ? { ...landmark, photoUrl } : landmark,
+  );
   return { landmarks, kept: landmarks.length === parsed.length };
 }
 

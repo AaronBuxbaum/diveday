@@ -41,3 +41,12 @@ export const MAX_IMAGE_MB = Math.round(MAX_IMAGE_BYTES / (1024 * 1024));
  * `src/lib/courses.ts`) is unrelated: this bounds one upload, not the gallery.
  */
 export const MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION = 2;
+
+/**
+ * The storefront's photo strip (`shops.shopfront_photo_urls`): eight in all,
+ * and three new ones per save, which keeps one save's body inside the Server
+ * Action limit for the same reason `MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION`
+ * exists — three photos at the 5 MB cap is 15 MB of a 16 MB body.
+ */
+export const MAX_SHOPFRONT_PHOTOS = 8;
+export const MAX_NEW_SHOPFRONT_PHOTOS_PER_SAVE = 3;

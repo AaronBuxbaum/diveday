@@ -2061,21 +2061,6 @@ new domain concept, define it here in the same PR.
   weekend's day-one close and day-two open are two days rather than one long rest. The arithmetic is
   the dock-day timeline's own (`betweenDivesMinutes`), so the figure a diver reads before booking is
   the figure their thread reads after.
-- **Stated card** — a certification level a reader picks for themselves on a public page, held in
-  their own browser and nowhere else: no `people` row, no account, nothing that travels with a
-  booking. The departure page uses one to answer "does this day go deeper than what I hold?"
-  (`statedLevelDepthLimit`), and it is a claim about a **card** rather than about a person — no
-  junior age band, no Deep specialty, because neither has been said. The junior half of that is
-  wrong-side-permissive and was **raised and deliberately accepted** (issue #1482, owner's call
-  2026-09-10): a child picking "Open Water" reads the adult 18 m, and the answer is left alone
-  because every sentence it renders claims the card in so many words — the clean day ("nothing on
-  this day goes past the 18 m your card covers") as much as the over-limit one, since the clean day
-  is the branch the gap happens on — because asking an anonymous stranger for a child's date of
-  birth costs more than the gap it closes, and because the roster's boarding-time depth advisory
-  still applies the band in full from a real date of birth (`diverDepthLimit`). The Deep half needs
-  no decision — a specialty holder reading their base rung understates what they may do. It
-  **informs and gates nothing** (H-08), and it is not a **self-declared card**, which is an answer
-  given *to the shop* on a form and stored.
 - **Material generation** — a shop's explicit assertion that a new waiver version changes the
   bargain, and therefore that standing signatures no longer cover it
   (`waiver_materiality_decisions`, ADR

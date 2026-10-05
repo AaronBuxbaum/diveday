@@ -327,7 +327,7 @@ export default async function EditDiveSitePage({
         fitTone: parsed.fields.fitTone,
         fitNote: parsed.fields.fitNote,
         fieldGuideTipsHeading: parsed.fields.fieldGuideTipsHeading,
-        landmarks: parsed.landmarks,
+        landmarks: photos.photos.landmarks,
         creatures: parsed.creatures,
         routePoints: parsed.route.points,
         routeLabel: parsed.route.label,
