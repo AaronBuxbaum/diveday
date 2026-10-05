@@ -8,7 +8,6 @@ import { FIGURE_INLINE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typogr
 import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatTime } from "@/lib/format";
-import type { AboardBlockerKind } from "@/lib/readiness";
 import type { DayStation as DayStationData } from "@/lib/today";
 import type { TripPhase } from "@/lib/trip-phase";
 import { STAGE_WORD_KEYS } from "@/lib/trip-stages";
@@ -25,10 +24,12 @@ import { STAGE_WORD_KEYS } from "@/lib/trip-stages";
  * the day is one ranked "Needs you" list under the departures, each row naming
  * its boat by time.
  *
- * Two safety sentences stay on the card, because neither is a job anybody taps
- * here and both describe a checkpoint: a blocked diver who is **already aboard**
- * (issue #791) and a full boat whose **crew** roll call is still open (issue
- * #789). The log door stays too: the 2026-08-12 amendment to ADR
+ * One safety sentence stays on the card, because it is not a job anybody taps
+ * here and describes a checkpoint: a full boat whose **crew** roll call is
+ * still open (issue #789). A blocked diver who is **already aboard** (issue
+ * #791) used to be a second one; it is a `blocked_aboard` row in Needs you
+ * now, because that diver already had a row there with the fix on it, and the
+ * card's sentence told the same person a second way. The log door stays too: the 2026-08-12 amendment to ADR
  * 20260804-incident-export-owner-gate offers it on every live departure.
  *
  * A Server Component, so it takes the translator rather than a copy object.
@@ -43,14 +44,6 @@ function lastWordApart(title: string): [head: string, last: string] {
   const match = title.match(/^([\s\S]*\s)?(\S+)\s*$/);
   if (!match?.[2]) return ["", title];
   return [match[1] ?? "", match[2]];
-}
-
-/** What one aboard group is blocked on, in words. */
-function aboardReasonKey(kind: AboardBlockerKind) {
-  if (kind === "medical") return "shopHome.spine.aboardReasonMedical" as const;
-  if (kind === "unknown") return "shopHome.spine.aboardReasonUnknown" as const;
-  if (kind === "certification") return "shopHome.spine.aboardReasonCertification" as const;
-  return "shopHome.spine.aboardReasonPayment" as const;
 }
 
 export const PHASE_TONE: Record<TripPhase, BadgeTone> = {
@@ -224,19 +217,6 @@ export function DayStation({
         ) : null}
       </p>
 
-      {station.blockedAboardGroups.map((group) => (
-        <p key={group.kind} className="mt-3 text-sm">
-          {group.names.length === 1 && group.names[0]
-            ? t("shopHome.spine.aboardNamed", {
-                name: group.names[0],
-                reason: t(aboardReasonKey(group.kind)),
-              })
-            : t("shopHome.spine.aboardCount", {
-                count: group.names.length,
-                reason: t(aboardReasonKey(group.kind)),
-              })}
-        </p>
-      ))}
       {crewRollCallOpen ? (
         <p className="mt-3 text-sm font-medium text-warning">
           {t("shopHome.spine.crewRollCallOpen")}

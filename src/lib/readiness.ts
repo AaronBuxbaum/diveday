@@ -302,9 +302,7 @@ export const BLOCKER_CATEGORY: Record<ReadinessBlockerCode, BlockerCategory> = {
  * a pool session has neither.
  *
  * Precedence is worst-first, because a line has room for one reason: a diver
- * held on medical review *and* missing a card is a medical hold. That ordering
- * is right **within one diver** and wrong across a group — see
- * `groupAboardBlockers`.
+ * held on medical review *and* missing a card is a medical hold.
  */
 export type AboardBlockerKind = "medical" | "unknown" | "certification" | "payment";
 
@@ -357,39 +355,6 @@ const ABOARD_KIND_ORDER: readonly AboardBlockerKind[] = [
 export function aboardBlockerKind(blockers: readonly ReadinessBlocker[]): AboardBlockerKind | null {
   const kinds = new Set(blockers.map((blocker) => ABOARD_KIND[blocker.code]));
   return ABOARD_KIND_ORDER.find((kind) => kinds.has(kind)) ?? null;
-}
-
-/**
- * **One entry per kind present, worst first — never one reason over a whole
- * count.**
- *
- * The first cut of this returned a single kind for the group, and the card
- * rendered it against the group's total: one medical hold beside four
- * certification gaps produced "5 divers are aboard — a medical hold", which is
- * false about four of the five, in the direction that inflates. Run the other
- * way — one medical hold beside four unsigned waivers — and the four vanish
- * from the line entirely, so a crew clears the one diver they were told about
- * and sails with four who have made no medical declaration.
- *
- * Worst-first is right *within* a diver and wrong *across* them, because the
- * count is a census and the reason is not. Almost always this returns one
- * entry; at worst four, and four true lines beat one false one on a boat.
- */
-export function groupAboardBlockers<T>(
-  divers: readonly { blockers: readonly ReadinessBlocker[]; value: T }[],
-): { kind: AboardBlockerKind; members: T[] }[] {
-  const byKind = new Map<AboardBlockerKind, T[]>();
-  for (const diver of divers) {
-    const kind = aboardBlockerKind(diver.blockers);
-    if (kind === null) continue;
-    const members = byKind.get(kind);
-    if (members) members.push(diver.value);
-    else byKind.set(kind, [diver.value]);
-  }
-  return ABOARD_KIND_ORDER.flatMap((kind) => {
-    const members = byKind.get(kind);
-    return members ? [{ kind, members }] : [];
-  });
 }
 
 /**

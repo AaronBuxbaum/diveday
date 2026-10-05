@@ -1,10 +1,9 @@
-import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
   blockerActionLabelText,
-  blockerDetailGroupText,
-  blockerDetailWithRemainingText,
-  diverGroupSubjectText,
+  blockerRowText,
+  emailDeliveryDetailText,
+  emailResendActionText,
   nameListText,
   openTripActionText,
   owedRefundDetailText,
@@ -17,7 +16,7 @@ import { formatMoneyCents } from "@/lib/format";
 import type { Role } from "./authz";
 import type { DiveIntentCount } from "./dive-intent";
 import type { CrewIncompleteReason } from "./manifests";
-import type { AboardBlockerKind, ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
+import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 import type { SeasonStart } from "./season";
 import type { TripPhase } from "./trip-phase";
 import type { TripStageReading } from "./trip-stages";
@@ -45,9 +44,8 @@ import { utcToWallTime } from "./zoned";
  * call sites (`src/db/today.ts`) also fill with a plain string, so it stays
  * `string` rather than forking into a second, code-carrying shape. Those two
  * take a `StaffTranslator`, defaulted to English, and resolve through the same
- * `src/i18n/today-labels.ts` helpers (and `src/i18n/readiness-labels.ts`'s
- * `readinessBlockerText` for the blocker's own sentence) rather than calling
- * `t()` inline.
+ * `src/i18n/today-labels.ts` helpers (`blockerRowText` for the blocker's own
+ * words) rather than calling `t()` inline.
  */
 
 /** How soon the work has to be done, derived from the departure it belongs to. */
@@ -68,6 +66,7 @@ export type TodayActionKind =
   | "roll_call_crew_unfinished"
   | "roll_call_departure_open"
   | "roll_call_not_started"
+  | "blocked_aboard"
   | "medical_review"
   | "medical_not_cleared"
   | "identity"
@@ -125,6 +124,13 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   roll_call_unfinished: 2,
   /** The same, for a crew member who boarded and has no result after a dive. */
   roll_call_crew_unfinished: 3,
+  // **A blocked diver who is already on the boat** (issue #791). The gate is
+  // behind them, not in front: whatever the blocker is, it is now a question
+  // about somebody aboard, so it outranks every boarding-time blocker below.
+  // It was a sentence on the departure card until 2026-10-05, beside a Needs
+  // you row that told the same diver's blocker as if they were still ashore.
+  // Its own step under the crew count, never a tie a sort could reverse.
+  blocked_aboard: 3.5,
   medical_review: 4,
   // Tied with the hold it settles, deliberately. This table ranks by how long a
   // fix takes to land, and both answers put the same diver off the same boat —
@@ -331,6 +337,22 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
     "divemaster",
     "captain",
   ],
+  // The boat roles too: whoever is at the rail is who can act on a diver
+  // already aboard. **Wider than `medical_review`'s audience, on purpose**: an
+  // aboard row whose headline is a medical hold reaches the divemaster and the
+  // captain, because the departure card's line it replaced named the diver and
+  // "a medical hold" to every Today viewer, and the roster already shows any
+  // staff member which prompts flagged (`authz.ts`). Signed off by
+  // `dive-domain-expert` and `security-reviewer` on 2026-10-05; pinned in
+  // `today.test.ts`.
+  blocked_aboard: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+  ],
   uncrewed_departure: [
     "owner",
     "manager",
@@ -493,6 +515,7 @@ export const ACTION_KIND_META = {
   // teaches crews to stop reading the red rows.
   roll_call_departure_open: { tone: "warning" },
   roll_call_not_started: { tone: "warning" },
+  blocked_aboard: { tone: "danger" },
   medical_review: { tone: "danger" },
   medical_not_cleared: { tone: "danger" },
   readiness_unavailable: { tone: "danger" },
@@ -657,11 +680,11 @@ export type TodayAction = {
    */
   waiver?: { bookingIds: string[] };
   /**
-   * Present when the tap re-sends a failed booking confirmation in place. `href`
-   * stays the row's real destination (pre-hydration tap, middle-click,
-   * open-in-new-tab), the trip.
+   * Present when the tap re-sends failed booking confirmations in place — one,
+   * or every one a batched row stands for. `href` stays the row's real
+   * destination (pre-hydration tap, middle-click, open-in-new-tab), the trip.
    */
-  resend?: { bookingId: string };
+  resend?: { bookingIds: string[] };
   /**
    * Present on a freed-seat row: the front-of-line wait-list entry plus the
    * context the one-tap invite needs for its composer fallback, so staff can
@@ -806,6 +829,58 @@ export function primaryBlocker(blockers: readonly ReadinessBlocker[]): Readiness
 }
 
 /**
+ * **The headline for a diver who is already aboard, worst first by what it
+ * means in the water** — not by how long the fix takes, which is the ashore
+ * order above. Once the diver is on the boat an unsigned waiver is a missing
+ * medical declaration, so it outranks a card that does not reach the site:
+ * a crew told only "Not certified" plans a shallower dive for somebody who has
+ * never answered a medical question (`dive-domain-expert`, 2026-10-05). The
+ * same order the departure card's aboard line used (`aboardBlockerKind`,
+ * `src/lib/readiness.ts`), with payment last.
+ */
+const ABOARD_HEADLINE_RANK: Partial<Record<TodayActionKind, number>> = {
+  medical_review: 0,
+  medical_not_cleared: 0,
+  readiness_unavailable: 1,
+  identity: 2,
+  requirements: 3,
+  waiver: 4,
+  certification: 5,
+  payment: 6,
+};
+
+export function aboardPrimaryBlocker(
+  blockers: readonly ReadinessBlocker[],
+): ReadinessBlocker | null {
+  const rank = (blocker: ReadinessBlocker) =>
+    ABOARD_HEADLINE_RANK[BLOCKER_ACTIONS[blocker.code].kind] ?? Number.MAX_SAFE_INTEGER;
+  let best: ReadinessBlocker | null = null;
+  for (const blocker of blockers) if (!best || rank(blocker) < rank(best)) best = blocker;
+  return best;
+}
+
+/**
+ * Which blocker a diver's row leads with, and whether it is an `Aboard` row.
+ * **Money owed never makes one**: it is the one blocker that changes nothing
+ * in the water, and a danger-toned row beside the missing-diver rows saying
+ * "Payment due." is how the red rows become wallpaper (DOM-H3). That diver
+ * keeps an ordinary payment row.
+ */
+function headlineFor(diver: {
+  blockers: readonly ReadinessBlocker[];
+  aboard?: boolean;
+}): { blocker: ReadinessBlocker; aboard: boolean } | null {
+  const blocker = diver.aboard
+    ? aboardPrimaryBlocker(diver.blockers)
+    : primaryBlocker(diver.blockers);
+  if (!blocker) return null;
+  return {
+    blocker,
+    aboard: Boolean(diver.aboard) && BLOCKER_ACTIONS[blocker.code].kind !== "payment",
+  };
+}
+
+/**
  * Where a staffer goes to clear a diver's *worst* blocker, and what the link
  * says when they get there.
  *
@@ -874,12 +949,20 @@ export type DiverBlockerInput = {
   tripTitle: string;
   startsAt: Date;
   blockers: readonly ReadinessBlocker[];
+  /**
+   * Their departure result is `boarded`: the diver is on the boat with the
+   * blocker still open. The row keeps its fix and takes the `blocked_aboard`
+   * kind, which is what says so — the departure card used to carry that as a
+   * sentence of its own, beside this row telling the same blocker as if the
+   * diver were still on the dock.
+   */
+  aboard?: boolean;
 };
 
 /**
  * One action per blocked diver, pointed at the surface that clears the
- * headline blocker. Extra blockers ride along in the detail line so staff know
- * whether one tap finishes the person or only starts them.
+ * headline blocker, in a few words (`blockerRowText`). The full sentence and
+ * every other blocker the diver owes are one tap away on the record.
  *
  * `t` defaults to English so every existing call site (tests, and any caller
  * that hasn't threaded a request-locale translator through yet) keeps working
@@ -891,8 +974,10 @@ export function diverBlockerAction(
   now: Date,
   t: StaffTranslator = staffTranslator("en-US"),
 ): TodayAction | null {
+  const headline = headlineFor(input);
+  if (!headline) return null;
   const destination = blockerDestination(
-    input.blockers,
+    [headline.blocker],
     {
       shopSlug,
       tripId: input.tripId,
@@ -904,16 +989,14 @@ export function diverBlockerAction(
   );
   if (!destination) return null;
   const { blocker, kind, sendsWaiver } = destination;
-  const remaining = input.blockers.length - 1;
-  const blockerText = readinessBlockerText(t, blocker);
   return {
     id: `blocker:${input.bookingId}:${blocker.code}`,
-    kind,
+    kind: headline.aboard ? "blocked_aboard" : kind,
     urgency: urgencyFor(input.startsAt, now),
     subject: input.fullName,
     context: input.tripTitle,
     departure: { tripId: input.tripId, label: input.tripTitle },
-    detail: remaining > 0 ? blockerDetailWithRemainingText(t, blockerText, remaining) : blockerText,
+    detail: blockerRowText(t, blocker, 1),
     actionLabel: destination.label,
     href: destination.href,
     ...(sendsWaiver ? { waiver: { bookingIds: [input.bookingId] } } : {}),
@@ -936,18 +1019,24 @@ export function collapseDiverActions(
   now: Date,
   t: StaffTranslator = staffTranslator("en-US"),
 ): TodayAction[] {
-  const byTripAndCode = new Map<string, { blocker: ReadinessBlocker; rows: DiverBlockerInput[] }>();
+  const byTripAndCode = new Map<
+    string,
+    { blocker: ReadinessBlocker; aboard: boolean; rows: DiverBlockerInput[] }
+  >();
   for (const diver of divers) {
-    const blocker = primaryBlocker(diver.blockers);
-    if (!blocker) continue;
-    const key = `${diver.tripId}:${blocker.code}`;
+    const headline = headlineFor(diver);
+    if (!headline) continue;
+    const { blocker } = headline;
+    // Aboard and ashore never share a row: the one is a question about
+    // somebody on the boat, the other about somebody who can still be stopped.
+    const key = `${diver.tripId}:${headline.aboard ? "aboard:" : ""}${blocker.code}`;
     const bucket = byTripAndCode.get(key);
     if (bucket) bucket.rows.push(diver);
-    else byTripAndCode.set(key, { blocker, rows: [diver] });
+    else byTripAndCode.set(key, { blocker, aboard: headline.aboard, rows: [diver] });
   }
 
   const actions: TodayAction[] = [];
-  for (const [key, { blocker, rows }] of byTripAndCode) {
+  for (const [key, { blocker, aboard, rows }] of byTripAndCode) {
     const first = rows[0];
     if (!first) continue;
     if (rows.length === 1) {
@@ -956,16 +1045,18 @@ export function collapseDiverActions(
       continue;
     }
     const { kind } = BLOCKER_ACTIONS[blocker.code];
-    const names = rows.map((row) => row.fullName).sort((a, b) => a.localeCompare(b));
     const waiver = isWaiverCode(blocker.code);
     actions.push({
       id: `blockers:${key}`,
-      kind,
+      kind: aboard ? "blocked_aboard" : kind,
       urgency: urgencyFor(first.startsAt, now),
-      subject: diverGroupSubjectText(t, rows.length),
+      // The whole fact is the subject — "9 divers not certified for this
+      // trip." — so the row carries no detail; the names are on the roster
+      // the row opens.
+      subject: blockerRowText(t, blocker, rows.length),
       context: first.tripTitle,
       departure: { tripId: first.tripId, label: first.tripTitle },
-      detail: blockerDetailGroupText(t, readinessBlockerText(t, blocker), nameListText(t, names)),
+      detail: "",
       // A batch waiver send keeps the verb ("Send waivers"); any other grouped
       // fix only opens the roster, the one screen that shows all of them.
       actionLabel: waiver
@@ -975,6 +1066,78 @@ export function collapseDiverActions(
       href: `/shop/${shopSlug}/trips/${first.tripId}`,
       ...(waiver ? { waiver: { bookingIds: rows.map((row) => row.bookingId) } } : {}),
       dueAt: first.startsAt,
+    });
+  }
+  return actions;
+}
+
+/** One email that never reached a diver, with the departure it was about. */
+export type EmailDeliveryIssueInput = {
+  deliveryId: string;
+  bookingId: string;
+  fullName: string;
+  isWaiver: boolean;
+  status: "sent" | "failed" | "not_configured";
+  trip: { id: string; startsAt: Date; label: string };
+};
+
+/**
+ * **Emails that failed for several people are one row** (Aaron, 2026-10-05).
+ * Batched by what was sent and why it did not arrive — a waiver link and a
+ * confirmation resend through different paths, and an unconfigured sender is
+ * a different fix from a bounce — across the whole window, so one bad morning
+ * of mail is one job, not a screen of identical rows.
+ *
+ * A lone email keeps its diver's name as the subject. A batch says the count
+ * as its whole sentence, resends every one of them in one tap, and names its
+ * boat only when it has a single one.
+ */
+export function collapseEmailDeliveries(
+  issues: readonly EmailDeliveryIssueInput[],
+  shopSlug: string,
+  now: Date,
+  t: StaffTranslator = staffTranslator("en-US"),
+): TodayAction[] {
+  const batches = new Map<string, EmailDeliveryIssueInput[]>();
+  for (const issue of issues) {
+    const key = `${issue.isWaiver ? "waiver" : "confirmation"}:${issue.status}`;
+    const batch = batches.get(key);
+    if (batch) batch.push(issue);
+    else batches.set(key, [issue]);
+  }
+
+  const actions: TodayAction[] = [];
+  for (const [key, batch] of batches) {
+    const sorted = [...batch].sort((a, b) => a.trip.startsAt.getTime() - b.trip.startsAt.getTime());
+    const first = sorted[0];
+    if (!first) continue;
+    const { isWaiver, status } = first;
+    const bookingIds = sorted.map((issue) => issue.bookingId);
+    const tripIds = new Set(sorted.map((issue) => issue.trip.id));
+    const departure =
+      tripIds.size === 1 ? { tripId: first.trip.id, label: first.trip.label } : undefined;
+    const grouped = sorted.length > 1;
+    actions.push({
+      id: grouped ? `emails:${key}` : `email:${first.deliveryId}`,
+      kind: "email_delivery",
+      urgency: urgencyFor(first.trip.startsAt, now),
+      subject: grouped
+        ? emailDeliveryDetailText(t, isWaiver, status, sorted.length)
+        : first.fullName,
+      context: departure?.label ?? null,
+      ...(departure ? { departure } : {}),
+      detail: grouped ? "" : emailDeliveryDetailText(t, isWaiver, status, 1),
+      // One tap resends in place. A waiver reuses the WP-1 issue-and-deliver
+      // path (a fresh link, since the token is never stored); a confirmation
+      // retries from the stored booking. `href` stays the row's real
+      // destination — the roster row, or the trip, or for a batch over several
+      // boats the earliest one's roster.
+      actionLabel: emailResendActionText(t, isWaiver, grouped),
+      ...(isWaiver ? { waiver: { bookingIds } } : { resend: { bookingIds } }),
+      href: grouped
+        ? `/shop/${shopSlug}/trips/${first.trip.id}`
+        : `/shop/${shopSlug}/trips/${first.trip.id}#booking-${first.bookingId}`,
+      dueAt: first.trip.startsAt,
     });
   }
   return actions;
@@ -1201,11 +1364,10 @@ export type SpineDeparture = {
   blocked: number;
   crew: readonly { fullName: string }[];
   /**
-   * The two safety facts the departure card carried and the station keeps.
-   * They are not queue rows: neither has a fix a staffer taps here, and both
-   * describe a checkpoint rather than a job (issues #789 and #791).
+   * The crew half of the departure checkpoint — the one safety fact the card
+   * still carries itself (issue #789). A blocked diver already aboard (issue
+   * #791) is a `blocked_aboard` row in Needs you, where their fix is.
    */
-  blockedAboardGroups: readonly { kind: AboardBlockerKind; names: readonly string[] }[];
   crewAccountedFor: boolean;
   crewReason: CrewIncompleteReason | null;
   /**

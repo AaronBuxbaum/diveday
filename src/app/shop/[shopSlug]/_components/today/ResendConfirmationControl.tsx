@@ -10,6 +10,8 @@ import { buttonClass } from "@/components/ui/button";
 export type ResendConfirmationCopy = {
   resending: string;
   confirmationResent: string;
+  /** The same, for a batched row that resent several. */
+  confirmationsResent: string;
   errors: {
     invalid: string;
     noEmail: string;
@@ -26,12 +28,13 @@ export type ResendConfirmationCopy = {
  */
 export function ResendConfirmationControl({
   shopSlug,
-  bookingId,
+  bookingIds,
   label,
   copy,
 }: {
   shopSlug: string;
-  bookingId: string;
+  /** One booking, or every one a batched row stands for. */
+  bookingIds: readonly string[];
   label: string;
   copy: ResendConfirmationCopy;
 }) {
@@ -49,7 +52,9 @@ export function ResendConfirmationControl({
   return (
     <div className="sm:text-right">
       <form action={formAction} className="flex sm:inline-flex">
-        <input type="hidden" name="bookingId" value={bookingId} />
+        {bookingIds.map((id) => (
+          <input key={id} type="hidden" name="bookingId" value={id} />
+        ))}
         <SubmitButton
           pendingLabel={copy.resending}
           className={buttonClass({
@@ -63,7 +68,7 @@ export function ResendConfirmationControl({
       </form>
       <ActionResultNotice
         status={state.status}
-        sentMessage={copy.confirmationResent}
+        sentMessage={bookingIds.length > 1 ? copy.confirmationsResent : copy.confirmationResent}
         errorMessage={state.status === "error" ? errorCopy[state.reason] : undefined}
       />
     </div>

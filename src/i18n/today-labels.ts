@@ -2,13 +2,14 @@ import type { MediaDeletionKind, PaymentOperationKind } from "@/db/schema";
 import { DSD_RATIO } from "@/lib/course-ratios";
 import type { DepthUnit } from "@/lib/depth-units";
 import { firstNameOf } from "@/lib/person-name";
-import type { ReadinessBlockerCode } from "@/lib/readiness";
+import type { ReadinessBlocker, ReadinessBlockerCode } from "@/lib/readiness";
 import type {
   RollCallGapReason,
   TodayActionKind,
   TodayGreetingBand,
   TodaySeason,
 } from "@/lib/today";
+import { SPECIALTY_KEYS } from "./readiness-labels";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
 /** Every `TodayActionKind` chip, to its label key. Tone stays in `src/lib/today.ts` (not copy). */
@@ -35,6 +36,7 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   help_request: "today.actionKind.helpRequest",
   payment: "today.actionKind.payment",
   email_delivery: "today.actionKind.emailDelivery",
+  blocked_aboard: "today.actionKind.blockedAboard",
   waitlist_seat: "today.actionKind.waitlistSeat",
   last_minute_fill: "today.actionKind.lastMinuteFill",
   emergency_contact: "today.actionKind.emergencyContact",
@@ -149,22 +151,51 @@ export function pointingLabelText(
     : t("today.pointingLabel.trip");
 }
 
-/**
- * A blocked diver's headline blocker plus how many more they have to clear.
- * `detail` is already-translated sentence text (`readinessBlockerText`), so
- * this only supplies the trailing count clause.
- */
-export function blockerDetailWithRemainingText(
-  t: StaffTranslator,
-  detail: string,
-  remaining: number,
-): string {
-  return t("today.blockerDetail.withRemaining", { detail, remaining });
-}
+/** A Today row's short blocker sentence, keyed by code (`today.blockerRow.*`). */
+const BLOCKER_ROW_KEYS: Record<ReadinessBlockerCode, StaffMessageKey> = {
+  requirements_not_configured: "today.blockerRow.requirementsNotConfigured",
+  identity_unconfirmed: "today.blockerRow.identityUnconfirmed",
+  waiver_not_sent: "today.blockerRow.waiverNotSent",
+  waiver_pending: "today.blockerRow.waiverPending",
+  waiver_expired: "today.blockerRow.waiverExpired",
+  medical_review: "today.blockerRow.medicalReview",
+  medical_not_cleared: "today.blockerRow.medicalNotCleared",
+  guardian_signature_missing: "today.blockerRow.guardianSignatureMissing",
+  certification_missing: "today.blockerRow.certificationMissing",
+  certification_pending: "today.blockerRow.certificationPending",
+  certification_self_declared: "today.blockerRow.certificationSelfDeclared",
+  certification_insufficient: "today.blockerRow.certificationInsufficient",
+  certification_in_training: "today.blockerRow.certificationInTraining",
+  specialty_missing: "today.blockerRow.specialtyMissing",
+  specialty_pending: "today.blockerRow.specialtyPending",
+  specialty_import_unconfirmed: "today.blockerRow.specialtyImportUnconfirmed",
+  nitrox_missing: "today.blockerRow.nitroxMissing",
+  nitrox_pending: "today.blockerRow.nitroxPending",
+  nitrox_self_declared: "today.blockerRow.nitroxSelfDeclared",
+  under_minimum_age: "today.blockerRow.underMinimumAge",
+  payment_due: "today.blockerRow.paymentDue",
+  payment_refunded: "today.blockerRow.paymentRefunded",
+  readiness_unavailable: "today.blockerRow.readinessUnavailable",
+};
 
-/** A collapsed row's headline blocker plus the names it stands for. */
-export function blockerDetailGroupText(t: StaffTranslator, detail: string, names: string): string {
-  return t("today.blockerDetail.group", { detail, names });
+/**
+ * **A Today row says what is wrong in a few words, and the record says the
+ * rest.** "Not certified for this trip." for one diver, "9 divers not
+ * certified for this trip." for a boat of them — never the levels, the names,
+ * or the count of other blockers (Aaron, 2026-10-05). The full sentence
+ * (`readinessBlockerText`) is one tap away on the roster and the diver
+ * record, which is where it is read.
+ */
+export function blockerRowText(
+  t: StaffTranslator,
+  blocker: ReadinessBlocker,
+  count: number,
+): string {
+  const specialty = blocker.params?.specialty;
+  return t(BLOCKER_ROW_KEYS[blocker.code], {
+    count,
+    specialty: specialty ? t(SPECIALTY_KEYS[specialty]) : "",
+  });
 }
 
 /**
@@ -191,11 +222,6 @@ export function nameListText(t: StaffTranslator, names: readonly string[], shown
     leading: names.slice(0, shown).join(", "),
     rest: names.length - shown,
   });
-}
-
-/** A collapsed multi-diver row's subject — "6 divers", pluralised by the bundle. */
-export function diverGroupSubjectText(t: StaffTranslator, count: number): string {
-  return t("today.subject.diverGroup", { count });
 }
 
 /** The remaining `src/db/today.ts` action rows, resolved through the same bundle-only rule. */
@@ -401,9 +427,10 @@ export function waitlistSeatDetailText(t: StaffTranslator, seats: number, waitin
 }
 
 /**
- * The two email-delivery detail sentences, kept as four whole ICU messages
- * (waiver × confirmation, for each status) rather than one sentence stitched
- * from a fragment — task 34's de-fragmentation rule applies here too.
+ * The email-delivery row's sentence, for one diver or for a batch: whole ICU
+ * messages per email kind and status, never a sentence stitched from a
+ * fragment. A batch is every failed email of one kind and one status in the
+ * window, so "3 confirmation emails didn’t send." is one row, not three.
  */
 export function emailDeliveryDetailText(
   t: StaffTranslator,
@@ -412,18 +439,15 @@ export function emailDeliveryDetailText(
   // provider-status branch can technically surface other delivery statuses,
   // and the original code's fallback branch treated all of them as "failed".
   status: "sent" | "failed" | "not_configured",
-  attempts: number,
+  count: number,
 ): string {
   if (status === "not_configured") {
     return t(
-      isWaiver
-        ? "today.detail.emailNotConfigured.waiver"
-        : "today.detail.emailNotConfigured.confirmation",
+      isWaiver ? "today.email.notConfigured.waiver" : "today.email.notConfigured.confirmation",
+      { count },
     );
   }
-  return t(isWaiver ? "today.detail.emailFailed.waiver" : "today.detail.emailFailed.confirmation", {
-    attempts,
-  });
+  return t(isWaiver ? "today.email.failed.waiver" : "today.email.failed.confirmation", { count });
 }
 
 /**
@@ -698,7 +722,14 @@ export function inviteFromWaitlistActionText(t: StaffTranslator): string {
   return t("today.actionLabel.inviteFromWaitlist");
 }
 
-export function emailResendActionText(t: StaffTranslator, isWaiver: boolean): string {
+export function emailResendActionText(
+  t: StaffTranslator,
+  isWaiver: boolean,
+  grouped = false,
+): string {
+  if (grouped) {
+    return t(isWaiver ? "today.email.resendWaivers" : "today.email.resendConfirmations");
+  }
   return t(
     isWaiver ? "today.actionLabel.resendWaiverLink" : "today.actionLabel.resendConfirmation",
   );

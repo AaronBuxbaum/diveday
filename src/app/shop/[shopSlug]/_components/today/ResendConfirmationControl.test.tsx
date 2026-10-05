@@ -16,6 +16,7 @@ afterEach(cleanup);
 const copy = {
   resending: "Resending…",
   confirmationResent: "Confirmation resent",
+  confirmationsResent: "Confirmations resent",
   errors: {
     invalid: "invalid",
     noEmail: "no email",
@@ -36,7 +37,7 @@ describe("ResendConfirmationControl", () => {
     render(
       <ResendConfirmationControl
         shopSlug="blue-mantis"
-        bookingId="booking-1"
+        bookingIds={["booking-1"]}
         label="Resend confirmation"
         copy={copy}
       />,

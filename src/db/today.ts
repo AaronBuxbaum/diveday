@@ -3,8 +3,6 @@ import { gearServiceKindLabel } from "@/i18n/gear-labels";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
   crewBelowTargetDetailText,
-  emailDeliveryDetailText,
-  emailResendActionText,
   failedPhotoDeletionDetailText,
   gearDueBackDetailText,
   gearNeverPickedUpDetailText,
@@ -84,10 +82,10 @@ import {
 } from "@/lib/marine-forecast";
 import { operationalWindow, shopDayWindow } from "@/lib/operational-window";
 import { publicTripPath } from "@/lib/public-routes";
-import { type AboardBlockerKind, groupAboardBlockers } from "@/lib/readiness";
 import { rentalFitCompleteness } from "@/lib/rentals";
 import {
   collapseDiverActions,
+  collapseEmailDeliveries,
   collapseOwedRefunds,
   filterActionsForRoles,
   ROLL_CALL_GAP_KINDS,
@@ -226,17 +224,6 @@ export type DepartureSummary = {
    */
   blockedAboard: number;
   blockedAshore: number;
-  /**
-   * The aboard group split by what each diver is blocked *on*, worst kind
-   * first — **one entry per kind present, never one reason over the whole
-   * count.** See `groupAboardBlockers` for why a single kind for the group
-   * states a falsehood about most of it, and `aboardBlockerKind` for why this
-   * is not `BLOCKER_CATEGORY`.
-   *
-   * Empty when nobody blocked is aboard. `blockedAboard` above stays the total
-   * across these: the counts line is a census, and this is not.
-   */
-  blockedAboardGroups: { kind: AboardBlockerKind; names: string[] }[];
   courseTitle: string | null;
   /**
    * The three facts the day spine's station line says about a departure — site
@@ -1407,6 +1394,7 @@ export async function getTodayWork(
         tripTitle: `${trip.title} · ${when}`,
         startsAt: trip.startsAt,
         blockers: row.readiness.blockers,
+        aboard: departureRollCall.get(trip.id)?.get(row.booking.id) === "boarded",
       }));
     actions.push(...collapseDiverActions(blockedDivers, shopSlug, now, t));
 
@@ -1752,32 +1740,25 @@ export async function getTodayWork(
     }
   }
 
-  for (const issue of deliveryIssues) {
-    const isWaiver = issue.delivery.kind !== "booking_confirmation";
-    const roster = `/shop/${shopSlug}/trips/${issue.trip.id}#booking-${issue.booking.id}`;
-    actions.push({
-      id: `email:${issue.delivery.id}`,
-      kind: "email_delivery",
-      urgency: urgencyFor(issue.trip.startsAt, now),
-      subject: issue.person.fullName,
-      context: `${issue.trip.title} · ${at(issue.trip.startsAt, timeZone, locale)}`,
-      departure: {
-        tripId: issue.trip.id,
-        label: `${issue.trip.title} · ${at(issue.trip.startsAt, timeZone, locale)}`,
-      },
-      detail: emailDeliveryDetailText(t, isWaiver, issue.delivery.status, issue.attempts),
-      // One tap resends in place. A waiver reuses the WP-1 issue-and-deliver path
-      // (a fresh link, since the token is never stored); a confirmation retries
-      // from the stored booking. `href` stays the row's real destination, the
-      // roster row — for a pre-hydration tap, a middle-click, or a new tab.
-      actionLabel: emailResendActionText(t, isWaiver),
-      ...(isWaiver
-        ? { waiver: { bookingIds: [issue.booking.id] } }
-        : { resend: { bookingId: issue.booking.id } }),
-      href: roster,
-      dueAt: issue.trip.startsAt,
-    });
-  }
+  actions.push(
+    ...collapseEmailDeliveries(
+      deliveryIssues.map((issue) => ({
+        deliveryId: issue.delivery.id,
+        bookingId: issue.booking.id,
+        fullName: issue.person.fullName,
+        isWaiver: issue.delivery.kind !== "booking_confirmation",
+        status: issue.delivery.status,
+        trip: {
+          id: issue.trip.id,
+          startsAt: issue.trip.startsAt,
+          label: `${issue.trip.title} · ${at(issue.trip.startsAt, timeZone, locale)}`,
+        },
+      })),
+      shopSlug,
+      now,
+      t,
+    ),
+  );
 
   // A payment row only gets the inline "copy link"/"resend invoice" control
   // once we know the booking was actually invoiced through Stripe: a diver
@@ -2202,12 +2183,6 @@ export async function getTodayWork(
       blocked: blockedRows.length,
       boarded: aboardCount,
       blockedAboard: aboardBlocked.length,
-      blockedAboardGroups: groupAboardBlockers(
-        aboardBlocked.map((row) => ({
-          blockers: row.readiness.blockers,
-          value: row.person.fullName,
-        })),
-      ).map((group) => ({ kind: group.kind, names: group.members })),
       blockedAshore: ashoreBlocked.length,
       blockedAshoreNames: ashoreBlocked.map((row) => row.person.fullName),
       courseTitle: trip.course?.title ?? null,

@@ -5,6 +5,7 @@ import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { createDiveSite } from "@/db/dive-sites";
 import { recordRollCall } from "@/db/manifests";
 import { queueMediaDeletion, STALE_PENDING_AFTER_MS } from "@/db/media-deletions";
+import { recordNotificationDelivery } from "@/db/notifications";
 import { STALE_AFTER_MS } from "@/db/payment-operations";
 import { recordProcessorErasureObligations } from "@/db/processor-erasure";
 import { getShopReviewAggregate, setReviewPublished } from "@/db/reviews";
@@ -302,6 +303,12 @@ export async function POST(request: Request) {
   // for it.
   if (new URL(request.url).searchParams.get("blockedAboard") === "1") {
     await boardADiverThenBlockThem(db, shop.id, now);
+  }
+
+  // Opt-in: three confirmations that bounced are a row on Today, and every
+  // other Today capture would have paid for it.
+  if (new URL(request.url).searchParams.get("failedEmails") === "1") {
+    await bounceThreeConfirmations(db, shop.id, now);
   }
 
   // Opt-in for the same reason: it boards a whole boat, which moves every
@@ -1052,6 +1059,53 @@ async function boardADiverThenBlockThem(
         ),
       );
     return;
+  }
+}
+
+/**
+ * Three booking confirmations on the next departure that never arrived, so
+ * Today's one batched email row has something to batch (Aaron, 2026-10-05:
+ * "when emails fail to send to multiple people, it should be batched into a
+ * single row"). Chosen by the diver's name, for the same reason
+ * `boardADiverThenBlockThem` is: seeded names do not move between runs.
+ */
+async function bounceThreeConfirmations(
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+  now: Date,
+): Promise<void> {
+  const [next] = await db
+    .select({ id: trips.id })
+    .from(trips)
+    .innerJoin(bookings, eq(bookings.tripId, trips.id))
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        isNull(trips.deletedAt),
+        gte(trips.startsAt, now),
+        eq(bookings.status, "booked"),
+      ),
+    )
+    .orderBy(trips.startsAt)
+    .limit(1);
+  if (!next) return;
+  const roster = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
+    .where(
+      and(eq(bookings.shopId, shopId), eq(bookings.tripId, next.id), eq(bookings.status, "booked")),
+    )
+    .orderBy(people.fullName)
+    .limit(3);
+  for (const booking of roster) {
+    await recordNotificationDelivery(db, {
+      shopId,
+      bookingId: booking.id,
+      kind: "booking_confirmation",
+      delivery: { status: "failed", detail: "mailbox does not exist" },
+    });
   }
 }
 

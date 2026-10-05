@@ -136,7 +136,7 @@ describe("today's work queue (in-memory PGlite)", () => {
     const waiverRow = (work: Awaited<ReturnType<typeof getTodayWork>>) =>
       work.actions.find((action) => action.id === `blocker:${entry.booking.id}:waiver_not_sent`);
     expect(waiverRow(before)?.subject).toBe(entry.person.fullName);
-    expect(waiverRow(before)?.detail).toBe("Waiver has not been sent.");
+    expect(waiverRow(before)?.detail).toBe("Waiver not sent.");
 
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: entry.booking.id });
     if (!issued.ok) throw new Error("expected a waiver link");
@@ -614,7 +614,7 @@ describe("today's work queue (in-memory PGlite)", () => {
     const withConfirm = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     const confirmRow = withConfirm.actions.find((action) => action.kind === "email_delivery");
     expect(confirmRow?.actionLabel).toBe("Resend confirmation");
-    expect(confirmRow?.resend).toEqual({ bookingId: entry.booking.id });
+    expect(confirmRow?.resend).toEqual({ bookingIds: [entry.booking.id] });
 
     // ...while a failed waiver link reissues through the shared WP-1 send path.
     await recordNotificationDelivery(db, {
@@ -676,7 +676,7 @@ describe("today's work queue (in-memory PGlite)", () => {
     const row = work.actions.find((action) => action.id === `waitlist:${reef.id}`);
     expect(row?.kind).toBe("waitlist_seat");
     // Depth is counted, but the invite targets the earliest joiner specifically.
-    expect(row?.detail).toContain("2 people are on the wait list");
+    expect(row?.detail).toContain("2 on the wait list");
     expect(row?.invite).toBeDefined();
     expect(row?.invite?.entryId).toBe(frontEntry.id);
     expect(row?.invite?.personName).toBe("Marina Reyes");
@@ -798,7 +798,7 @@ describe("today's work queue (in-memory PGlite)", () => {
 
     const after = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     const nitroxAction = after.actions.find((action) => action.id === `nitrox:${reef.id}`);
-    expect(nitroxAction?.detail).toContain("without verified certification");
+    expect(nitroxAction?.detail).toContain("with no verified card");
   });
 
   it("nudges staff about missing emergency contacts on a near boat, and clears once filled", async () => {
@@ -990,7 +990,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
 
     const row = work.actions.find((action) => action.id === `uncrewed:${reef.id}`);
     expect(row?.kind).toBe("uncrewed_departure");
-    expect(row?.detail).toBe(`${reef.booked} divers booked, no divemaster or instructor assigned.`);
+    expect(row?.detail).toBe(`${reef.booked} divers booked, no divemaster or instructor.`);
     // The boundary this ticket must not blur: instructor_missing is an
     // agency training ratio and only ever fires for a course session. This
     // trip carries no course.
@@ -1014,9 +1014,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
     expect(work.actions.some((action) => action.id === `uncrewed:${reef.id}`)).toBe(false);
     const row = work.actions.find((action) => action.id === `crew-target:${reef.id}`);
     expect(row?.kind).toBe("crew_below_target");
-    expect(row?.detail).toBe(
-      `${reef.booked} divers booked with 1 supervisor rostered, short of your 6:1 target.`,
-    );
+    expect(row?.detail).toBe(`${reef.booked} divers, 1 supervisor. Your target is 6:1.`);
   });
 
   it("clears both rows once the departure meets its own target", async () => {
@@ -1754,12 +1752,13 @@ describe("unclosed roll call (DOM-H3)", () => {
       expect(row).toBeDefined();
       expect(row?.urgency).toBe("soon");
       // The residue clause, which only the stale copy carries — the fresh
-      // missing-diver row ends "Find them, then close the count." Pinned on
+      // missing-diver row ends at "after dive 1." Pinned on
       // this phrase rather than the whole sentence: the wording has been
       // trimmed once and may be again, and what must survive is that an aged
       // row still says the count never closed and names the manifest as where
       // to reconstruct it.
-      expect(row?.detail).toContain("Too old to settle on the dock");
+      expect(row?.detail).toContain("still marked not back aboard");
+      expect(row?.detail).toContain("from the manifest");
       // Still the same kind: what happened did not become less serious, only
       // less settleable on the dock.
       expect(row?.kind).toBe("roll_call_missing_diver");
@@ -1992,7 +1991,7 @@ describe("unclosed roll call (DOM-H3)", () => {
       expect(row?.urgency).toBe("soon");
       // Same residue clause as the diver half above, and same reason for
       // matching on it rather than the sentence.
-      expect(row?.detail).toContain("Too old to settle on the dock");
+      expect(row?.detail).toContain("from the manifest");
       expect(row?.kind).toBe("roll_call_missing_crew");
     });
 
@@ -2312,7 +2311,7 @@ describe("unclosed roll call (DOM-H3)", () => {
       const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
       const row = rollCallRow(work, trip.id, "after_dive_uncounted");
       expect(row?.urgency).toBe("imminent");
-      expect(row?.detail).toContain("still out");
+      expect(row?.detail).toContain("Boat is out");
       expect(row?.detail).toContain("1 of 3 divers");
     });
 
@@ -2395,7 +2394,7 @@ describe("unclosed roll call (DOM-H3)", () => {
       expect(row?.detail).toContain("2 of 4 divers");
       // Its own words, never the after-dive ones: nobody here was ever
       // unaccounted for after a dive.
-      expect(row?.detail).toContain("dock count");
+      expect(row?.detail).toMatch(/dock count/i);
       expect(row?.detail).not.toContain("not back aboard");
       expect(row?.href).toBe(`/shop/${shop.slug}/trips/${trip.id}/manifest?checkpoint=departure`);
     });
@@ -2437,7 +2436,7 @@ describe("unclosed roll call (DOM-H3)", () => {
       expect(rows.map((row) => row.kind)).toEqual(["roll_call_not_started"]);
       const [row] = rows;
       expect(row?.urgency).toBe("now");
-      expect(row?.detail).toContain("No roll call was run");
+      expect(row?.detail).toContain("No roll call recorded");
       expect(row?.detail).not.toContain("not back aboard");
       expect(row?.href).toBe(`/shop/${shop.slug}/trips/${trip.id}/manifest?checkpoint=departure`);
     });
