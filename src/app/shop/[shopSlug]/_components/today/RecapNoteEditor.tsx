@@ -4,12 +4,15 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { FormStatus, textareaClassFor } from "@/components/ui/form";
+import { Field, FormStatus, textareaClassFor } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { GroupLabel, ledgerKindColumnClass } from "@/components/ui/ledger";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import { RecapSendControl } from "./RecapSendControl";
+
+/** Thumbnails, not panels: a recap's photos are checked at a glance, not studied. */
+const RECAP_GALLERY_CLASS = "mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-6";
 
 /**
  * The crew's post-trip note, written where the crew is standing when they still
@@ -154,58 +157,30 @@ export function RecapNoteEditor({
         </span>
         <DisclosureCaret className="ms-auto text-muted group-open/recap:rotate-90" />
       </summary>
-      {/* Only for a recap that already went out: nothing below restates it in
-          that case. A recap still waiting to send drops this paragraph
-          entirely — "Recap sending" right underneath says the identical
-          thing, with the live countdown and the controls to act on it. */}
+      {/* Only for a recap that already went out: the summary hides when open,
+          and nothing below says it went. A recap still waiting to send has
+          its own line in the footer instead, with the live countdown. */}
       {recapLocked ? <p className="mt-2 max-w-2xl text-sm text-muted">{statusSummary}</p> : null}
 
-      {!recapLocked &&
-      recapSendAction &&
-      toggleRecapAutoSendPauseAction &&
-      tripId &&
-      recapNowMs !== undefined ? (
-        <div className="mt-4 border-t border-border pt-4">
-          <GroupLabel as="h4">{t("closeout.recap.heading")}</GroupLabel>
-          <RecapSendControl
-            sendAction={recapSendAction}
-            togglePauseAction={toggleRecapAutoSendPauseAction}
-            tripId={tripId}
-            autoSendAt={recapAutoSendAt ? recapAutoSendAt.toISOString() : null}
-            autoSendAtLabel={recapAutoSendAtLabel}
-            paused={recapAutoSendPaused}
-            failed={recapFailed}
-            nowMs={recapNowMs}
-            copy={{
-              waiting: t.raw("closeout.recap.waiting"),
-              due: t("closeout.recap.due"),
-              paused: t("closeout.recap.paused"),
-              failed: t("closeout.recap.failed"),
-              noScheduledReturn: t("closeout.recap.noScheduledReturn"),
-              send: t("closeout.recap.send"),
-              sending: t("closeout.recap.sending"),
-              pause: t("closeout.recap.pause"),
-              pausing: t("closeout.recap.pausing"),
-              unpause: t("closeout.recap.unpause"),
-              unpausing: t("closeout.recap.unpausing"),
-              lessThanMinute: t("closeout.recap.lessThanMinute"),
-            }}
+      {/* **Compose, then send** (2026-10-05). The open recap reads top to
+          bottom in the order a crew makes it: the note, the photos, and last
+          the line that says when it goes out with the two controls that
+          change that. It used to open on "Recap sending" and its buttons,
+          above an unlabelled textarea, so the first thing under the word
+          "Recap" was a choice about a message nobody had written yet. */}
+      <form action={action} className="mt-3">
+        <Field label={t("trips.recapNote.heading")}>
+          <textarea
+            name="recapShoutout"
+            rows={3}
+            maxLength={400}
+            defaultValue={shoutout ?? ""}
+            disabled={recapLocked}
+            placeholder={t("trips.recapNote.placeholder")}
+            className={textareaClassFor(3)}
           />
-        </div>
-      ) : null}
-
-      <form action={action} className="mt-2 flex flex-col gap-3">
-        <textarea
-          name="recapShoutout"
-          rows={3}
-          maxLength={400}
-          defaultValue={shoutout ?? ""}
-          disabled={recapLocked}
-          placeholder={t("trips.recapNote.placeholder")}
-          aria-label={t("trips.recapNote.heading")}
-          className={textareaClassFor(3)}
-        />
-        <div className="flex flex-wrap items-center gap-3">
+        </Field>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
           {!recapLocked ? (
             <SubmitButton
               pendingLabel={t("trips.recapNote.saving")}
@@ -220,14 +195,80 @@ export function RecapNoteEditor({
         </div>
       </form>
 
+      {/* The crew's photos, then the divers' own. Tiles are a gallery's
+          thumbnails, six to a row on a desk, so an empty gallery is one small
+          dashed tile rather than a 220px box. A count only once there is
+          something to count. */}
+      {uploadCrewPhotoAction && deleteCrewPhotoAction && (crewPhotos.length > 0 || !recapLocked) ? (
+        <section className="mt-6">
+          <GroupLabel as="h4" meta={crewPhotos.length > 0 ? crewPhotos.length : undefined}>
+            {t("closeout.crewPhotos.heading")}
+          </GroupLabel>
+          <p className="mt-1 text-sm text-muted">{t("closeout.crewPhotos.description")}</p>
+          {/* The add control is the grid's next cell, so an empty gallery is one
+              dashed tile and a full one ends where the next photo will land. */}
+          <ul className={RECAP_GALLERY_CLASS}>
+            {crewPhotos.map((photo) => (
+              <li
+                key={photo.id}
+                className={sectionCardClass({ padding: "none", className: "overflow-hidden" })}
+              >
+                <div className="relative aspect-square w-full">
+                  <Image
+                    src={photo.imageUrl}
+                    alt={t("closeout.crewPhotos.photoAlt")}
+                    fill
+                    sizes="200px"
+                    className="object-cover"
+                  />
+                </div>
+                {!recapLocked ? (
+                  <form action={deleteCrewPhotoAction} className="flex justify-end px-1 py-1">
+                    <input type="hidden" name="photoId" value={photo.id} />
+                    <InlineConfirm
+                      triggerLabel={t("closeout.crewPhotos.remove")}
+                      triggerClassName={buttonClass({ variant: "danger-ghost", size: "sm" })}
+                      confirmClassName={buttonClass({
+                        variant: "danger-ghost",
+                        size: "sm",
+                        busy: true,
+                      })}
+                      message={t("closeout.crewPhotos.confirmRemove")}
+                      confirmLabel={t("closeout.crewPhotos.removeConfirmButton")}
+                      cancelLabel={t("closeout.crewPhotos.removeCancel")}
+                      pendingLabel={t("closeout.crewPhotos.removing")}
+                    />
+                  </form>
+                ) : null}
+              </li>
+            ))}
+            {!recapLocked ? (
+              <li>
+                <form action={uploadCrewPhotoAction}>
+                  <ImageUploadTile
+                    id={crewPhotoInputId}
+                    name="crewPhoto"
+                    copy={{
+                      add: t("closeout.crewPhotos.add"),
+                      adding: t("closeout.crewPhotos.adding"),
+                      wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
+                      tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
+                    }}
+                  />
+                </form>
+              </li>
+            ) : null}
+          </ul>
+        </section>
+      ) : null}
+
       {photos.length > 0 ? (
-        <div className="mt-4 border-t border-border pt-4">
-          <GroupLabel as="h4">
-            {t("trips.recapPhotos.heading")}{" "}
-            <span className="font-normal tabular-nums">{photos.length}</span>
+        <section className="mt-6">
+          <GroupLabel as="h4" meta={photos.length}>
+            {t("trips.recapPhotos.heading")}
           </GroupLabel>
           <p className="mt-1 text-sm text-muted">{t("trips.recapPhotos.description")}</p>
-          <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+          <ul className={RECAP_GALLERY_CLASS}>
             {photos.map((photo) => (
               <li
                 key={photo.id}
@@ -241,11 +282,11 @@ export function RecapNoteEditor({
                       t("trips.recapPhotos.photoFromAlt", { diverName: photo.diverName })
                     }
                     fill
-                    sizes="288px"
+                    sizes="200px"
                     className="object-cover"
                   />
                 </div>
-                <div className="flex items-center justify-between gap-2 px-2 py-1.5">
+                <div className="flex items-center justify-between gap-1 px-2 py-1">
                   <div className="min-w-0">
                     <p className="truncate text-xs font-medium">{photo.diverName}</p>
                     {photo.caption ? (
@@ -278,78 +319,41 @@ export function RecapNoteEditor({
               </li>
             ))}
           </ul>
-        </div>
+        </section>
       ) : null}
 
-      {uploadCrewPhotoAction && deleteCrewPhotoAction ? (
-        <div className="mt-4 border-t border-border pt-4">
-          <GroupLabel as="h4">
-            {t("closeout.crewPhotos.heading")}{" "}
-            <span className="font-normal tabular-nums">{crewPhotos.length}</span>
-          </GroupLabel>
-          <p className="mt-1 text-sm text-muted">{t("closeout.crewPhotos.description")}</p>
-
-          {/* The add control is the grid's next cell, so an empty gallery is one
-              dashed tile and a full one ends where the next photo will land. */}
-          {crewPhotos.length > 0 || !recapLocked ? (
-            <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-              {crewPhotos.map((photo) => (
-                <li
-                  key={photo.id}
-                  className={sectionCardClass({ padding: "none", className: "overflow-hidden" })}
-                >
-                  <div className="relative aspect-square w-full">
-                    <Image
-                      src={photo.imageUrl}
-                      alt={t("closeout.crewPhotos.photoAlt")}
-                      fill
-                      sizes="288px"
-                      className="object-cover"
-                    />
-                  </div>
-                  <div className="flex justify-end px-2 py-1.5">
-                    {!recapLocked ? (
-                      <form action={deleteCrewPhotoAction}>
-                        <input type="hidden" name="photoId" value={photo.id} />
-                        <InlineConfirm
-                          triggerLabel={t("closeout.crewPhotos.remove")}
-                          triggerClassName={buttonClass({
-                            variant: "danger-ghost",
-                            size: "sm",
-                          })}
-                          confirmClassName={buttonClass({
-                            variant: "danger-ghost",
-                            size: "sm",
-                            busy: true,
-                          })}
-                          message={t("closeout.crewPhotos.confirmRemove")}
-                          confirmLabel={t("closeout.crewPhotos.removeConfirmButton")}
-                          cancelLabel={t("closeout.crewPhotos.removeCancel")}
-                          pendingLabel={t("closeout.crewPhotos.removing")}
-                        />
-                      </form>
-                    ) : null}
-                  </div>
-                </li>
-              ))}
-              {!recapLocked ? (
-                <li>
-                  <form action={uploadCrewPhotoAction}>
-                    <ImageUploadTile
-                      id={crewPhotoInputId}
-                      name="crewPhoto"
-                      copy={{
-                        add: t("closeout.crewPhotos.add"),
-                        adding: t("closeout.crewPhotos.adding"),
-                        wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
-                        tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
-                      }}
-                    />
-                  </form>
-                </li>
-              ) : null}
-            </ul>
-          ) : null}
+      {/* Last, the send line: when it goes and the two controls that change
+          that, under one hairline like a form's own actions. */}
+      {!recapLocked &&
+      recapSendAction &&
+      toggleRecapAutoSendPauseAction &&
+      tripId &&
+      recapNowMs !== undefined ? (
+        <div className="mt-6 border-t border-border pt-2">
+          <RecapSendControl
+            sendAction={recapSendAction}
+            togglePauseAction={toggleRecapAutoSendPauseAction}
+            tripId={tripId}
+            autoSendAt={recapAutoSendAt ? recapAutoSendAt.toISOString() : null}
+            autoSendAtLabel={recapAutoSendAtLabel}
+            paused={recapAutoSendPaused}
+            failed={recapFailed}
+            nowMs={recapNowMs}
+            copy={{
+              waiting: t.raw("closeout.recap.waiting"),
+              due: t("closeout.recap.due"),
+              paused: t("closeout.recap.paused"),
+              failed: t("closeout.recap.failed"),
+              noScheduledReturn: t("closeout.recap.noScheduledReturn"),
+              send: t("closeout.recap.send"),
+              sending: t("closeout.recap.sending"),
+              pause: t("closeout.recap.pause"),
+              pausing: t("closeout.recap.pausing"),
+              unpause: t("closeout.recap.unpause"),
+              unpausing: t("closeout.recap.unpausing"),
+              lessThanMinute: t("closeout.recap.lessThanMinute"),
+            }}
+          />
         </div>
       ) : null}
     </details>

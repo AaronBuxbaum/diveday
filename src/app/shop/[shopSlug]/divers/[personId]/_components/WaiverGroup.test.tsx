@@ -140,7 +140,7 @@ describe("the waiver group", () => {
     const door = screen.getByTestId("diver-file-group-waiver").querySelector("summary");
     expect(screen.getByText("Not signed")).toHaveClass("text-danger");
     expect(door).toHaveTextContent("Can’t board Fri, Oct 9 · 6:30 AM.");
-    expect(door).not.toHaveTextContent("Waiver has not been sent.");
+    expect(door).not.toHaveTextContent("Waiver not signed. Not sent yet.");
   });
 
   it("says only Not signed when nothing has been sent", () => {

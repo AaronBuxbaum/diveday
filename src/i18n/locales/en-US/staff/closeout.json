@@ -34,9 +34,8 @@
   },
   "recap": {
     "summaryHeading": "Recap",
-    "heading": "Recap sending",
     "waiting": "Automatic recap sending begins in {remaining}.",
-    "due": "Recaps will be sent within 1h.",
+    "due": "Goes out within the hour.",
     "paused": "Automatic recap sending is paused.",
     "failed": "Automatic recap sending failed.",
     "noScheduledReturn": "No scheduled return time. Recaps will not be sent automatically.",
@@ -59,7 +58,7 @@
   },
   "crewPhotos": {
     "heading": "Crew photos",
-    "description": "Photos here are shared with every diver in this departure’s recap.",
+    "description": "Every diver on this departure gets these in their recap.",
     "photoAlt": "Crew photo from this departure",
     "add": "Add a photo",
     "adding": "Uploading photo…",

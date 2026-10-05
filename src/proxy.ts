@@ -831,6 +831,9 @@ export async function proxy(req: NextRequest, _ctx: unknown): Promise<Response |
     // #1263's own failure reached through a different door. `||` rather than
     // `??` so an all-whitespace value collapses to null instead of "".
     rumRegion: process.env.NEXT_PUBLIC_RUM_REGION?.trim() || null,
+    // The Cognito and STS hosts come from this one's `<region>:` prefix, not
+    // from the region above: that is the rule aws-rum-web follows.
+    rumIdentityPoolId: process.env.NEXT_PUBLIC_RUM_IDENTITY_POOL_ID?.trim() || null,
     // Read here rather than wildcarded in the policy: a regional bucket host is
     // `<bucket>.s3.<region>.amazonaws.com`, and a CSP source may wildcard only
     // its leftmost label (issue #1263).

@@ -256,7 +256,7 @@
     "assignFailed": "No se ha guardado. Verifica tu conexión o inténtalo de nuevo."
   },
   "recapNote": {
-    "heading": "Nota de resumen post-salida",
+    "heading": "Nota para los buceadores",
     "description": "Un breve saludo de la tripulación, que aparece en el resumen de cada buceador. Déjalo en blanco para no enviar ninguno.",
     "placeholder": "Visibilidad increíble hoy. Gracias por bucear con nosotros. ¡Vuelve el próximo mes para el pecio!",
     "saving": "Guardando…",
@@ -292,7 +292,7 @@
   },
   "recapPhotos": {
     "heading": "Fotos de buceadores",
-    "description": "Compartidas por los buceadores en sus propias páginas de resumen. Descarga las que quieras para el centro, o elimina alguna que no debería estar publicada.",
+    "description": "Compartidas por los buceadores desde sus propias páginas de resumen.",
     "photoFromAlt": "Foto de {diverName}",
     "removing": "…",
     "confirmRemove": "¿Eliminar esta foto del resumen del buceador?",

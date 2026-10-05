@@ -63,7 +63,7 @@ test("counter check-in finds a diver's boat, confirms live readiness, and keeps 
   // **The reason is on the row**, and a blocked row offers no check-in:
   // readiness is the gate, and a tap beside the reasons would be an act the
   // server refuses.
-  await expect(row.getByText("Waiver has not been sent.")).toBeVisible();
+  await expect(row.getByText("Waiver not signed. Not sent yet.")).toBeVisible();
   await expect(row.getByRole("button", { name: "Check in Priya Sharma" })).toHaveCount(0);
 
   // A lookup that finds nobody says so, naming what was typed.
@@ -82,7 +82,7 @@ test("a diver blocked five ways shows every reason and no check-in", async ({ pa
 
   const row = deskRow(page, "Tomás Ferreira");
   await expect(row).toHaveCount(1);
-  await expect(row.getByText("Waiver has not been sent.")).toBeVisible();
+  await expect(row.getByText("Waiver not signed. Not sent yet.")).toBeVisible();
   await expect(row.getByText("Payment is outstanding for this trip.")).toBeVisible();
   await expect(row.getByRole("button", { name: "Check in Tomás Ferreira" })).toHaveCount(0);
 });
