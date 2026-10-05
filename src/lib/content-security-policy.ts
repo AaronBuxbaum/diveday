@@ -235,26 +235,44 @@ const STRIPE_FORM_HOSTS = ["https://checkout.stripe.com", "https://connect.strip
 
 /**
  * CloudWatch RUM's data plane and the Cognito identity pool it exchanges a
- * guest role through (`src/app/rum-client.tsx`). Both are per-region, and a CSP
- * host source may only wildcard the *leftmost* label — `dataplane.rum.*.…` is
- * not a legal source — so the region is substituted from the same public
- * variable the client reads. No RUM configured, no hosts: a deployment without
- * telemetry gets a tighter policy rather than a vaguer one.
+ * guest role through (`src/app/rum-client.tsx`). All three are per-region, and
+ * a CSP host source may only wildcard the *leftmost* label —
+ * `dataplane.rum.*.…` is not a legal source — so each region is substituted
+ * from the public variable the SDK itself reads for that host. No RUM
+ * configured, no hosts: a deployment without telemetry gets a tighter policy
+ * rather than a vaguer one.
+ *
+ * The two halves read **different** variables because aws-rum-web does. The
+ * data plane follows the region argument (`NEXT_PUBLIC_RUM_REGION`); Cognito
+ * and STS are addressed at `identityPoolId.split(":")[0]` and nothing else
+ * (`@aws-rum/web-core`'s `BasicAuthentication`). Both halves came from the
+ * region variable until 2026-10-05, when a production page reported
+ * `connect-src` against `cognito-identity.us-east-1` — the one host the SDK
+ * picked by a rule this policy did not follow.
  */
-function rumConnectHosts(region: string | null | undefined): string[] {
+function rumConnectHosts(
+  region: string | null | undefined,
+  identityPoolId: string | null | undefined,
+): string[] {
   // Anything but a plain AWS region label is a misconfiguration, and a value
   // interpolated into a header must never be able to introduce a second source
   // or a second directive.
-  if (!region || !AWS_REGION.test(region)) return [];
-  return [
-    `https://dataplane.rum.${region}.amazonaws.com`,
-    // The guest-credential exchange. `rum-client.tsx` passes *both* an identity
-    // pool and a guest role, which selects aws-rum-web's `BasicAuthentication`
-    // — Cognito `GetId` followed by STS `AssumeRoleWithWebIdentity` — rather
-    // than the enhanced flow that would stop at Cognito. Two hosts, not one.
-    `https://cognito-identity.${region}.amazonaws.com`,
-    `https://sts.${region}.amazonaws.com`,
-  ];
+  const dataPlane =
+    region && AWS_REGION.test(region) ? [`https://dataplane.rum.${region}.amazonaws.com`] : [];
+  const poolRegion = identityPoolId?.split(":")[0];
+  const credentials =
+    poolRegion && AWS_REGION.test(poolRegion)
+      ? [
+          // The guest-credential exchange. `rum-client.tsx` passes *both* an
+          // identity pool and a guest role, which selects aws-rum-web's
+          // `BasicAuthentication` — Cognito `GetId` followed by STS
+          // `AssumeRoleWithWebIdentity` — rather than the enhanced flow that
+          // would stop at Cognito. Two hosts, not one.
+          `https://cognito-identity.${poolRegion}.amazonaws.com`,
+          `https://sts.${poolRegion}.amazonaws.com`,
+        ]
+      : [];
+  return [...dataPlane, ...credentials];
 }
 
 export type CspOptions = {
@@ -266,6 +284,12 @@ export type CspOptions = {
   denyFraming: boolean;
   /** `NEXT_PUBLIC_RUM_REGION`, or null when RUM is not configured. */
   rumRegion?: string | null;
+  /**
+   * `NEXT_PUBLIC_RUM_IDENTITY_POOL_ID`, or null when RUM is not configured.
+   * Its `<region>:` prefix decides the Cognito and STS hosts, because that is
+   * where the SDK sends them. See {@link rumConnectHosts}.
+   */
+  rumIdentityPoolId?: string | null;
   /**
    * `MEDIA_AWS_REGION`, or null when no media bucket is configured. Decides the
    * regional bucket host in {@link mediaRegionalImageHosts}; a wildcard cannot
@@ -372,7 +396,7 @@ export function reportOnlyPolicy(options: CspOptions): string {
         "'self'",
         VERCEL_INSIGHTS_HOST,
         ...SENTRY_INGEST_HOSTS,
-        ...rumConnectHosts(options.rumRegion),
+        ...rumConnectHosts(options.rumRegion, options.rumIdentityPoolId),
         ...(options.metaSignup ? META_SIGNUP_CONNECT_HOSTS : []),
       ],
     ],
