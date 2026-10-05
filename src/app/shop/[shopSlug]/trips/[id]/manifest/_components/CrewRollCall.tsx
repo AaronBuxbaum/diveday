@@ -238,9 +238,9 @@ export function CrewRollCall({
                 <li
                   key={member.id}
                   // A jump target, exactly as every diver row is: the count
-                  // panel's chips name uncalled *crew* too, and this row sits
-                  // below the whole diver roster — so on a phone the chip is
-                  // often several screens from the person it names.
+                  // panel's not-back-aboard chips name crew too, and this row
+                  // sits below the whole diver roster — so on a phone the chip
+                  // is often several screens from the person it names.
                   id={scopedId(idPrefix, crewRowId(member.id))}
                   // `break-inside-avoid` for the same reason a diver's row
                   // carries it: this sheet is printed and goes ashore, and a

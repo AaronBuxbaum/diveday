@@ -1595,7 +1595,7 @@ describe("OfflineManifestView — ported boat affordances (task 72)", () => {
   /**
    * The checkpoint rule the live page applies three times — the roll-call row's
    * untouched fill, its capsule (`blockedAtDock`) and the summary panel's
-   * still-to-call chip (`blocked: diver.blocked && isDeparture`) — and which
+   * blocked sentence (`isDeparture && summary.blocked`) — and which
    * this page states of itself and then broke in one place. After a dive every
    * face in the grid is somebody who went in the water, so the saved paperwork
    * word beside it is stale by definition, and its red competed with the one

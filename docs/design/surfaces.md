@@ -187,8 +187,8 @@ The design's whole argument is that this surface is worked *on a boat*, one-hand
 content is tiered by when it is needed at the rail.
 
 - **One idea:** the head count. Names, one big tap each, and how many are still to call.
-- **The question it arrives with:** "who is not aboard yet?" — answered by the count and the
-  still-to-call chips above the list, before any scrolling.
+- **The question it arrives with:** "who is not aboard yet?" — answered by the count above the
+  list and the rows themselves; the names are never printed twice (Aaron, 2026-10-05).
 - **Controls that dissolved:** the two-button cluster per row (one circle whose fill *is* the state),
   the per-row pair of disclosures (one person panel), the checklist card and the device housekeeping
   card (one line each). The emergency band is the one piece still standing — it moved below the roll

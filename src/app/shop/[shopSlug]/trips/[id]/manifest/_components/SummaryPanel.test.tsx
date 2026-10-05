@@ -70,8 +70,6 @@ function renderPanel(overrides: Partial<Parameters<typeof SummaryPanel>[0]> = {}
       completeness={completeness()}
       summary={summary()}
       separatedTeams={0}
-      uncalled={[]}
-      uncalledCrew={[]}
       notBackAboardDivers={[{ bookingId: "b-3", fullName: "Priya Sharma" }]}
       notBackAboardCrew={[]}
       t={t}
@@ -103,8 +101,7 @@ describe("the missing are named, not just counted", () => {
   });
 
   it("names both halves in one list, divers first", () => {
-    // One list, for the same reason the still-to-call chips merge the halves:
-    // at the rail the question is "who is still in the water?", and the answer
+    // One list: at the rail the question is "who is still in the water?", and the answer
     // must not be split by whether the person holds a booking.
     renderPanel({
       completeness: completeness({ crewReason: "crew_not_back_aboard" }),
@@ -128,9 +125,8 @@ describe("the missing are named, not just counted", () => {
   });
 
   it("names the missing before the first result of the checkpoint lands", () => {
-    // The still-to-call chips hold off until roll call has started, so they do
-    // not restate the whole roster. This list must not inherit that gate: the
-    // one row it names is a person in the water.
+    // The count row holds off until roll call has started. This list must not
+    // inherit that gate: the one row it names is a person in the water.
     renderPanel({ summary: summary({ boarded: 0, awaiting: 2 }) });
     expect(screen.getByRole("list", { name: "Who is not back aboard" })).toBeTruthy();
   });
@@ -331,11 +327,10 @@ describe("the panel's chips and the roll call's rows are one jump", () => {
           completeness={completeness()}
           summary={summary()}
           separatedTeams={0}
-          // Both chip lists, because both built the target by hand: the
-          // still-to-call list and the not-back-aboard list.
-          uncalled={[{ bookingId: "b-2", fullName: "Diego Marín", blocked: false }]}
-          uncalledCrew={[]}
-          notBackAboardDivers={[{ bookingId: "b-3", fullName: "Priya Sharma" }]}
+          notBackAboardDivers={[
+            { bookingId: "b-2", fullName: "Diego Marín" },
+            { bookingId: "b-3", fullName: "Priya Sharma" },
+          ]}
           notBackAboardCrew={[]}
           t={t}
         />
@@ -409,8 +404,6 @@ describe("the panel's chips and the roll call's rows are one jump", () => {
             completeness={completeness()}
             summary={summary()}
             separatedTeams={0}
-            uncalled={[]}
-            uncalledCrew={[]}
             notBackAboardDivers={[{ bookingId: "b-3", fullName: "Priya Sharma" }]}
             notBackAboardCrew={[]}
             t={t}
@@ -456,12 +449,52 @@ describe("the panel's chips and the roll call's rows are one jump", () => {
   });
 });
 
+describe("uncalled crew while divers are still open", () => {
+  it("names the crew count even though the diver gap ranks first", () => {
+    renderPanel({
+      isDeparture: true,
+      checkpoint: "departure",
+      completeness: completeness({
+        reason: "divers_awaiting",
+        crewReason: "crew_awaiting",
+        crewCounts: { crewAssigned: 2, crewAwaiting: 1, crewNotBackAboard: 0, crewAshore: 0 },
+      }),
+      summary: summary({
+        totalDivers: 3,
+        boarded: 1,
+        notBoarded: 0,
+        notBackAboard: 0,
+        awaiting: 2,
+      }),
+      notBackAboardDivers: [],
+    });
+    expect(screen.getByText(/1 crew member still to call/)).toBeInTheDocument();
+  });
+
+  it("stays quiet about crew when every crew member has a result", () => {
+    renderPanel({
+      isDeparture: true,
+      checkpoint: "departure",
+      completeness: completeness({ reason: "divers_awaiting", crewReason: null }),
+      summary: summary({
+        totalDivers: 3,
+        boarded: 1,
+        notBoarded: 0,
+        notBackAboard: 0,
+        awaiting: 2,
+      }),
+      notBackAboardDivers: [],
+    });
+    expect(screen.queryByText(/still to call/)).toBeNull();
+  });
+});
+
 /**
  * **The prose under the pinned card starts on the card's content edge, and an
  * empty status line adds nothing** (K-554, K-558).
  *
  * The card is `border p-4`, so its chips start 17px in; the prose block under
- * it was `px-4`, and its chips started a pixel left of the card's. And the
+ * it was `px-4`, and its lines started a pixel left of the card's. And the
  * live status line stays mounted (it must exist before its words arrive), but
  * with divers still to call it has nothing to say, and the lines after it
  * still spaced themselves off it: 4px of margin above "1 diver is blocked."
@@ -482,17 +515,13 @@ describe("the prose under the pinned card", () => {
         notBackAboard: 0,
         awaiting: 2,
       }),
-      uncalled: [
-        { bookingId: "b-2", fullName: "Diego Marín", blocked: false },
-        { bookingId: "b-3", fullName: "Priya Sharma", blocked: true },
-      ],
       notBackAboardDivers: [],
     });
   }
 
   it("insets its content by the card's border as well as its padding", () => {
     renderAwaiting();
-    const prose = screen.getByRole("list", { name: "People still to call" }).parentElement;
+    const prose = document.querySelector('[aria-live="polite"]')?.parentElement;
     expect(prose).toHaveClass("border-x", "border-transparent", "px-4");
   });
 
@@ -501,9 +530,6 @@ describe("the prose under the pinned card", () => {
     const live = document.querySelector('[aria-live="polite"]');
     expect(live?.tagName).toBe("P");
     expect(live).toBeEmptyDOMElement();
-    const list = screen.getByRole("list", { name: "People still to call" });
-    expect(list.previousElementSibling).toBe(live);
-    expect(list).toHaveClass("[p:empty+&]:mt-0");
     const blocked = screen.getByText("1 diver is blocked.");
     expect(blocked).toHaveClass("[p:empty+&]:mt-0");
   });
