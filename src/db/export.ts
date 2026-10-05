@@ -2522,6 +2522,11 @@ export async function loadShopExportBundleInput(
             // than by omission (ADR 20260802-diver-data-erasure).
             "anonymized_at",
             "anonymized_by_person_id",
+            // Version 3: the release followed its seat to a new diver record
+            // (issue #2080). Inside the seal with `person_id`.
+            "moved_from_person_id",
+            "moved_at",
+            "moved_by_person_id",
             "created_at",
           ],
           rows: waiverRows.map((row) => [
@@ -2569,6 +2574,9 @@ export async function loadShopExportBundleInput(
             row.importSourceMedicalDocumentUrl,
             row.anonymizedAt,
             row.anonymizedByPersonId,
+            row.movedFromPersonId,
+            row.movedAt,
+            row.movedByPersonId,
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["waiver_records.csv"],

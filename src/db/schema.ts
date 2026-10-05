@@ -6136,6 +6136,21 @@ export const waiverRecords = pgTable(
     anonymizedAt: timestamp("anonymized_at", { withTimezone: true }),
     /** The shop owner who ordered the erasure — see `people.anonymized_by_person_id`. */
     anonymizedByPersonId: uuid("anonymized_by_person_id").references(() => people.id),
+    /**
+     * Set when the release followed its seat to a new diver record: staff
+     * answered "Different person" on a held booking (`splitBookingIdentity`,
+     * issue #2080), and every release on that seat was refiled under the
+     * seat's own diver. `moved_from_person_id` is the record it was filed
+     * under before, `moved_by_person_id` the staffer who split it.
+     *
+     * Inside the seal (integrity **version 3**, `src/lib/waiver-integrity.ts`):
+     * `person_id` is sealed, so a refiled release can only verify if the move
+     * itself is part of what the seal says. Null on every record that never
+     * moved.
+     */
+    movedFromPersonId: uuid("moved_from_person_id").references(() => people.id),
+    movedAt: timestamp("moved_at", { withTimezone: true }),
+    movedByPersonId: uuid("moved_by_person_id").references(() => people.id),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

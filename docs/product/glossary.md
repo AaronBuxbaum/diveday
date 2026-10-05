@@ -2210,7 +2210,13 @@ new domain concept, define it here in the same PR.
   the booking **revoked**, because nobody knows which of the two people signed it, so the seat asks
   for its own release and is blocked until it has one. A seat with an **unanswered medical
   referral** is refused until the referral is answered, since superseding it would lift the hold.
-  Signed releases stay filed under the matched diver for now (issue #2080). Open to every live
+  Every release on the seat is also **refiled** under the new record (issue #2080): one signed
+  through the shared link was usually the booker's, and its name and medical answers do not belong
+  in the matched diver's record, export or erasure. A release whose seal verified is re-sealed as
+  integrity **version 3**, which covers who moved it, when and from which record
+  (`waiver_records.moved_*`); one that was unsealed or already failing its seal moves as it was.
+  The seat's **order stays with the person it billed** (the invoice went to the shared address's
+  Stripe customer) and still settles the seat through `booking_id`. Open to every live
   staff role for the same reason as confirming; a wrong split is undone by merging the two records
   (owner or manager). Trail lines on the departure (`identity_split`) and on the matched diver's
   record (`identity_split_off`).

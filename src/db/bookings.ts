@@ -19,6 +19,12 @@ import {
   type TripAdmissionRefusal,
 } from "@/lib/trip-admission";
 import { hasSailed } from "@/lib/trips";
+import {
+  computeWaiverIntegrityHash,
+  verifyWaiverIntegrity,
+  WAIVER_INTEGRITY_VERSION_MOVED,
+  WAIVER_INTEGRITY_VERSION_SIGNED,
+} from "@/lib/waiver-integrity";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
 import { inTrainingBefore, listCourseSeatsInTraining } from "./certifications-in-training";
@@ -1803,6 +1809,54 @@ export async function confirmBookingIdentity(
   return true;
 }
 
+/**
+ * Refiles every release on a split seat under the seat's own diver
+ * (`splitBookingIdentity`). The seal is checked *before* the move, so only a
+ * release that verified as signed is re-sealed over its new owner.
+ */
+async function refileSeatReleases(
+  tx: DbExecutor,
+  input: { shopId: string; bookingId: string; personId: string; actorPersonId: string; now: Date },
+) {
+  const records = await tx
+    .select()
+    .from(waiverRecords)
+    .where(
+      and(
+        eq(waiverRecords.shopId, input.shopId),
+        eq(waiverRecords.bookingId, input.bookingId),
+        isNull(waiverRecords.anonymizedAt),
+      ),
+    );
+  for (const record of records) {
+    const resealable =
+      record.integrityVersion === WAIVER_INTEGRITY_VERSION_SIGNED &&
+      verifyWaiverIntegrity(record) === "valid";
+    const moved = {
+      ...record,
+      personId: input.personId,
+      movedFromPersonId: record.personId,
+      movedAt: input.now,
+      movedByPersonId: input.actorPersonId,
+    };
+    await tx
+      .update(waiverRecords)
+      .set({
+        personId: moved.personId,
+        movedFromPersonId: moved.movedFromPersonId,
+        movedAt: moved.movedAt,
+        movedByPersonId: moved.movedByPersonId,
+        ...(resealable
+          ? {
+              integrityHash: computeWaiverIntegrityHash(moved, WAIVER_INTEGRITY_VERSION_MOVED),
+              integrityVersion: WAIVER_INTEGRITY_VERSION_MOVED,
+            }
+          : {}),
+      })
+      .where(and(eq(waiverRecords.id, record.id), eq(waiverRecords.shopId, input.shopId)));
+  }
+}
+
 /** What a split refused, as a code (`splitBookingIdentity`). */
 export type SplitBookingIdentityResult =
   | { ok: true; personId: string; tripId: string }
@@ -1826,13 +1880,25 @@ export const SPLIT_NAME_MAX = 200;
  * any duplicate.
  *
  * What moves is what was about this seat rather than about the matched person:
- * the booking itself, the gear held for it, and the staff notes written on it.
- * Every release and link on the seat is superseded, because nobody knows which
- * of the two people signed it, so the seat asks for its own. Signed releases
- * stay on the matched record: the seal covers who a release is filed under,
- * and moving one would read as tampering (issue #2080 asks who should own
- * them). A seat with an unanswered medical referral is refused (`medical_hold`)
- * until the referral is answered, since superseding it would lift the hold.
+ * the booking itself, the gear held for it, the staff notes written on it, and
+ * every release on it (issue #2080). A release signed through the shared link
+ * was usually the booker's, and its name and medical answers do not belong in
+ * the matched diver's record, export or erasure. The seal covers who a release
+ * is filed under, so a release whose version 1 seal verifies is re-sealed as
+ * version 3, which records who moved it, when and from where; an unsealed one
+ * moves unsealed, and one that already fails its seal moves still failing it,
+ * so a move never launders an earlier edit. Erased releases stay put: nothing
+ * personal is left on them.
+ *
+ * Every release and link on the seat is also superseded, because nobody knows
+ * which of the two people signed it, so the seat asks for its own. A seat with
+ * an unanswered medical referral is refused (`medical_hold`) until the
+ * referral is answered, since superseding it would lift the hold.
+ *
+ * The seat's order stays with the person it billed. An order is an invoice to
+ * a Stripe customer by email, and the shared address belongs to the matched
+ * record; the order still settles this seat through `booking_id`, which moved
+ * with the booking.
  *
  * Every bearer link minted over this booking is revoked, and queued sends for
  * it dropped: they were addressed to the matched diver, and a readiness link
@@ -1917,6 +1983,13 @@ export async function splitBookingIdentity(
           isNull(waiverRecords.supersededAt),
         ),
       );
+    await refileSeatReleases(tx, {
+      shopId: input.shopId,
+      bookingId: input.bookingId,
+      personId: person.id,
+      actorPersonId: input.actorPersonId,
+      now,
+    });
 
     await revokeBookingCapabilities(tx, { shopId: input.shopId, bookingId: input.bookingId, now });
     await tx

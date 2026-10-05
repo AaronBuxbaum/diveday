@@ -4,6 +4,7 @@ import {
   isWaiverIntegrityVersion,
   verifyWaiverIntegrity,
   WAIVER_INTEGRITY_VERSION_ERASED,
+  WAIVER_INTEGRITY_VERSION_MOVED,
   WAIVER_INTEGRITY_VERSION_SIGNED,
 } from "./waiver-integrity";
 
@@ -60,6 +61,9 @@ const record = {
   importSourceMedicalDocumentUrl: null,
   anonymizedAt: null,
   anonymizedByPersonId: null,
+  movedFromPersonId: null,
+  movedAt: null,
+  movedByPersonId: null,
   createdAt: new Date("2026-07-29T00:00:00.000Z"),
 };
 
@@ -168,12 +172,12 @@ describe("waiver integrity across erasure (ADR 20260802-diver-data-erasure)", ()
 
   it("refuses to call a record valid when it declares a version this build cannot check", () => {
     vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
-    expect(isWaiverIntegrityVersion(3)).toBe(false);
+    expect(isWaiverIntegrityVersion(4)).toBe(false);
     expect(
       verifyWaiverIntegrity({
         ...record,
         integrityHash: computeWaiverIntegrityHash(record),
-        integrityVersion: 3,
+        integrityVersion: 4,
       }),
     ).toBe("invalid");
     vi.unstubAllEnvs();
@@ -233,6 +237,57 @@ describe("waiver integrity over a guardian's co-signature (ADR 20260907-guardian
     ]) {
       expect(verifyWaiverIntegrity(tampered)).toBe("invalid");
     }
+    vi.unstubAllEnvs();
+  });
+});
+
+describe("waiver integrity over a release refiled with its seat (issue #2080)", () => {
+  /** The same signed row after `splitBookingIdentity` moves it to the seat's own diver. */
+  const moved = {
+    ...record,
+    personId: "00000000-0000-4000-8000-0000000000aa",
+    movedFromPersonId: record.personId,
+    movedAt: new Date("2026-10-05T17:00:00.000Z"),
+    movedByPersonId: "00000000-0000-4000-8000-0000000000bb",
+  };
+
+  it("reads a refiled record as invalid under its original v1 seal", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    expect(
+      verifyWaiverIntegrity({
+        ...moved,
+        integrityHash: computeWaiverIntegrityHash(record, WAIVER_INTEGRITY_VERSION_SIGNED),
+        integrityVersion: WAIVER_INTEGRITY_VERSION_SIGNED,
+      }),
+    ).toBe("invalid");
+    vi.unstubAllEnvs();
+  });
+
+  it("verifies a refiled record re-sealed under v3, and catches edits to the move itself", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    const resealed = {
+      ...moved,
+      integrityHash: computeWaiverIntegrityHash(moved, WAIVER_INTEGRITY_VERSION_MOVED),
+      integrityVersion: WAIVER_INTEGRITY_VERSION_MOVED,
+    };
+    expect(verifyWaiverIntegrity(resealed)).toBe("valid");
+    for (const tampered of [
+      { ...resealed, signedName: "Somebody Else" },
+      { ...resealed, personId: record.personId },
+      { ...resealed, movedFromPersonId: null },
+      { ...resealed, movedAt: new Date("2020-01-01T00:00:00.000Z") },
+      { ...resealed, movedByPersonId: null },
+    ]) {
+      expect(verifyWaiverIntegrity(tampered)).toBe("invalid");
+    }
+    vi.unstubAllEnvs();
+  });
+
+  it("keeps a v3 digest apart from a v1 digest over a row that never moved", () => {
+    vi.stubEnv("WAIVER_INTEGRITY_SECRET", "test-secret");
+    expect(computeWaiverIntegrityHash(record, WAIVER_INTEGRITY_VERSION_MOVED)).not.toBe(
+      computeWaiverIntegrityHash(record, WAIVER_INTEGRITY_VERSION_SIGNED),
+    );
     vi.unstubAllEnvs();
   });
 });
