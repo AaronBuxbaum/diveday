@@ -53,8 +53,8 @@ and listed the rest in a closed index on `/product`.
   (`marketing.featureChrome.demoNote`, filled with the page's `demoPlace`), because on four pages
   the drawing is the diver's phone and the door lands on the staff side; it is still the one note
   per page the rule below asks for, with the demo's cost in its second sentence.
-- **The inventory is filed by page.** `productCapabilityIndex` is fifteen groups: one per feature
-  page in the registry's order, plus three only the hub lists (divers, the shop, records). A
+- **The inventory is filed by page.** `productCapabilityIndex` holds one group per feature page,
+  in the registry's order, plus the groups only the hub lists (divers, the shop, records). A
   shipped workflow joins the group of the page a buyer would look for it on, and a feature page's
   checklist is its group, whole.
 - **What did not change:** the claims policy, the two doors and their order, the demo note once per
