@@ -28,7 +28,7 @@ describe("the settled station's post-trip recap note", () => {
     );
     // Twice: once as the summary's quiet line, once as the textarea's value.
     expect(screen.getAllByText("Eagle ray on the second dive!")).not.toHaveLength(0);
-    expect(screen.getByRole("textbox", { name: "Post-trip recap note" })).toHaveValue(
+    expect(screen.getByRole("textbox", { name: "Note to divers" })).toHaveValue(
       "Eagle ray on the second dive!",
     );
   });
@@ -36,7 +36,7 @@ describe("the settled station's post-trip recap note", () => {
   it("says so plainly when there is no note, rather than showing an empty line", () => {
     render(<RecapNoteEditor action={vi.fn()} shoutout={null} saved={false} t={t} />);
     expect(screen.getByText("No note yet. Recaps go out without one.")).toBeInTheDocument();
-    expect(screen.getByRole("textbox", { name: "Post-trip recap note" })).toHaveValue("");
+    expect(screen.getByRole("textbox", { name: "Note to divers" })).toHaveValue("");
   });
 
   it("stays closed until it is opened — the departures list is a reconciliation, not a form", () => {
@@ -81,9 +81,9 @@ describe("the settled station's post-trip recap note", () => {
 
   it("says the recap is waiting to send exactly once, open or closed", () => {
     // The station always passes `recapStatusSummary` — the same
-    // status text the summary row and "Recap sending"'s own line would
+    // status text the summary row and the send line would
     // otherwise both say. Closed, only the summary row's line is visible;
-    // open, "Recap sending" (with the live countdown and Send/Pause) is the
+    // open, the send line at the foot (with the live countdown and Send/Pause) is the
     // one place saying it — the plain paragraph in between is gone.
     render(
       <RecapNoteEditor
@@ -128,7 +128,7 @@ describe("the settled station's post-trip recap note", () => {
         deleteCrewPhotoAction={vi.fn()}
       />,
     );
-    expect(screen.getByRole("textbox", { name: "Post-trip recap note" })).toBeDisabled();
+    expect(screen.getByRole("textbox", { name: "Note to divers" })).toBeDisabled();
     expect(
       screen.getAllByText("This recap was sent at 4:00 PM. The note and photos are now locked.")[0],
     ).toBeInTheDocument();

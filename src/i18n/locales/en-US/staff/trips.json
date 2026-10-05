@@ -256,7 +256,7 @@
     "assignFailed": "That didn’t save. Recheck your connection or try again."
   },
   "recapNote": {
-    "heading": "Post-trip recap note",
+    "heading": "Note to divers",
     "description": "A short shout-out from the crew, shown on every diver’s recap. Leave it blank to send none.",
     "placeholder": "Killer vis today. Thanks for diving with us. Come back for the wreck next month!",
     "saving": "Saving…",
@@ -292,7 +292,7 @@
   },
   "recapPhotos": {
     "heading": "Diver photos",
-    "description": "Shared by divers on their own recap pages. Grab any for the shop, or remove one that shouldn’t be up.",
+    "description": "Shared by divers from their own recap pages.",
     "photoFromAlt": "Photo from {diverName}",
     "removing": "…",
     "confirmRemove": "Remove this photo from the diver’s recap?",

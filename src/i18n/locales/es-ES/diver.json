@@ -2352,7 +2352,7 @@
     "needsYou": "Pendiente",
     "kindWaiver": "Exención",
     "kindCertifications": "Certificaciones",
-    "waiverNotSent": "La exención aún no se ha enviado.",
+    "waiverNotSent": "Exención sin firmar. Aún no se ha enviado.",
     "certPending": "La certificación espera verificación del personal.",
     "sendWaiver": "Enviar exención",
     "tripLine": "Arrecife de dos tanques · 7:30",

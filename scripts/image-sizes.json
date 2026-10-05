@@ -69,8 +69,8 @@
   "src/app/ready/[token]/_components/AfterState.tsx :: (min-width: 640px) 33vw, 50vw": {
     "exempt": "Not yet measured. Reaching it needs a recap bearer token for a departure carrying published photos, which the measuring pass did not mint. Same string as the course gallery next door, which turned out over-declared past its container's max-width, so this one is worth measuring rather than assuming."
   },
-  "src/app/shop/[shopSlug]/_components/today/RecapNoteEditor.tsx :: 288px": {
-    "exempt": "Not yet measured. A fixed px on a `w-full` cell inside a responsive grid, so the derived path cannot read it off a class and the registered path needs the evening close-out state seeded through /api/test/seed-evening."
+  "src/app/shop/[shopSlug]/_components/today/RecapNoteEditor.tsx :: 200px": {
+    "exempt": "Not yet measured. A fixed px on a `w-full` thumbnail cell in a three-to-six column grid (about 100-150px wide), so the derived path cannot read it off a class and the registered path needs the evening close-out state seeded through /api/test/seed-evening."
   },
   "src/app/shop/[shopSlug]/dive-sites/page.tsx :: (min-width: 640px) 180px, 50vw": {
     "measured": "2026-09-04, /shop/blue-mantis/dive-sites?view=catalog&template=molasses-reef — the published site catalog's preview pane, which is the only place this grid renders. Its <main> is max-w-3xl, so above 640px the four columns and their three gap-x-3 gaps leave a cell that never grows again; below it the grid is two columns of a viewport-width main. PR #1347 derived the 171 from that arithmetic and shipped the fix before this guard existed; this is the same number read off the element in a browser.",
