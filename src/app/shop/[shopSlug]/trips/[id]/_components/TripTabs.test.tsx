@@ -2,7 +2,7 @@
 
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { TripTabs, type TripTabsCopy, tripTabHref } from "./TripTabs";
+import { TripStageBadge, TripTabs, type TripTabsCopy, tripTabHref } from "./TripTabs";
 
 const copy: TripTabsCopy = {
   tabsLabel: "Departure",
@@ -15,7 +15,7 @@ describe("TripTabs", () => {
   afterEach(cleanup);
 
   it("draws five tabs in order and marks the open one as the page", () => {
-    render(<TripTabs shopSlug="s" tripId="t" current="gear" phase="prep" copy={copy} />);
+    render(<TripTabs shopSlug="s" tripId="t" current="gear" copy={copy} />);
     const nav = screen.getByRole("navigation", { name: "Departure" });
     const links = within(nav).getAllByRole("link");
     expect(links.map((link) => link.textContent)).toEqual([
@@ -29,17 +29,25 @@ describe("TripTabs", () => {
     expect(within(nav).getByRole("link", { name: "Divers" })).not.toHaveAttribute("aria-current");
   });
 
-  it("marks the departure's stage as the current step", () => {
-    render(<TripTabs shopSlug="s" tripId="t" current="divers" phase="aboard" copy={copy} />);
-    const stepper = screen.getByRole("list", { name: "Stage" });
-    expect(within(stepper).getByText("Aboard")).toHaveAttribute("aria-current", "step");
-    expect(within(stepper).getByText("Prep")).not.toHaveAttribute("aria-current");
+  it("draws no stage stepper above the tabs", () => {
+    render(<TripTabs shopSlug="s" tripId="t" current="divers" copy={copy} />);
+    expect(screen.queryByRole("list", { name: "Stage" })).toBeNull();
+    expect(screen.queryByText("Aboard")).toBeNull();
+  });
+});
+
+describe("TripStageBadge", () => {
+  afterEach(cleanup);
+
+  it("says the stage in one word, named as the stage for a screen reader", () => {
+    render(<TripStageBadge phase="aboard" copy={copy} />);
+    expect(screen.getByText("Aboard")).toBeInTheDocument();
+    expect(screen.getByText(/Stage:/)).toHaveClass("sr-only");
   });
 
-  it("draws no stepper for a cancelled departure, and keeps the tabs", () => {
-    render(<TripTabs shopSlug="s" tripId="t" current="divers" phase={null} copy={copy} />);
-    expect(screen.queryByRole("list", { name: "Stage" })).toBeNull();
-    expect(screen.getByRole("navigation", { name: "Departure" })).toBeInTheDocument();
+  it("draws nothing for a cancelled departure", () => {
+    const { container } = render(<TripStageBadge phase={null} copy={copy} />);
+    expect(container).toBeEmptyDOMElement();
   });
 });
 

@@ -93,13 +93,11 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   await expect(
     rosterRow(page, "Walk-in Wanda").getByRole("link", { name: "Walk-in Wanda" }),
   ).toBeVisible();
-  // The line under the hour owns the capacity read on the Trip surface
-  // (ADR 20260919-one-idea, decision I · Tide), so a full boat is stated in
-  // words there. Scoped to the masthead, the one sentence this reads.
-  const voyage = page
+  // The header's capacity pill states a full boat, the same pill on every tab.
+  const header = page
     .locator("header")
     .filter({ has: page.getByRole("heading", { level: 1, name: title }) });
-  await expect(voyage.getByText(/1 of 1 seat taken/)).toBeVisible();
+  await expect(header.getByText("Full", { exact: true })).toBeVisible();
 
   const privateNotes = await openPrivateNotes(page);
   await privateNotes.scrollIntoViewIfNeeded();

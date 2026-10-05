@@ -568,8 +568,5 @@
     "checkedLabel": "Checked — press to clear",
     "uncheckedLabel": "Not checked — press to mark checked",
     "summary": "Before you leave the dock: {checked} of {total} checked"
-  },
-  "voyage": {
-    "seats": "{booked} of {capacity, plural, one {# seat} other {# seats}} taken"
   }
 }

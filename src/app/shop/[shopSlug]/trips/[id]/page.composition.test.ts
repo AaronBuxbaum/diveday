@@ -17,7 +17,7 @@ describe("the departure's tabs", () => {
    */
   it("draws the tabs right under the masthead, on every departure", () => {
     const body = SOURCE.slice(SOURCE.indexOf("export default async function"));
-    const masthead = body.indexOf("<VoyageHeader");
+    const masthead = body.indexOf("<TripPageHeader");
     const tabs = body.indexOf("<TripTabs");
     expect(tabs).toBeGreaterThan(masthead);
     // Never behind `cancelled`: the Boat tab is a blown-out departure's way to
@@ -69,7 +69,7 @@ describe("the departure's section rhythm", () => {
 
   it("holds the masthead and every block under it in one space-y-10", () => {
     expect(
-      /<div className="space-y-10">\s*(\{\/\*[\s\S]*?\*\/\}\s*)?<VoyageHeader\b/.test(body),
+      /<div className="space-y-10">\s*(\{\/\*[\s\S]*?\*\/\}\s*)?<TripPageHeader\b/.test(body),
     ).toBe(true);
     const roster = readFileSync(join(COMPONENTS, "TripRosterContent.tsx"), "utf8");
     expect(roster).toContain('<div data-trip-guests-ready className="contents space-y-10">');
@@ -85,8 +85,7 @@ describe("the departure's section rhythm", () => {
     ];
     for (const block of blocks) expect(block).not.toMatch(/(^|[\s"`])mt-(4|5|6|8|10)\b/);
 
-    const voyage = readFileSync(join(COMPONENTS, "VoyageHeader.tsx"), "utf8");
-    expect(voyage).not.toMatch(/\bmb-5\b/);
+    expect(body).toMatch(/<TripPageHeader\s+className=""/);
     const seats = readFileSync(join(COMPONENTS, "MinimumSeatsBand.tsx"), "utf8");
     expect(seats).not.toMatch(/(^|[\s"`])mt-6\b/);
 

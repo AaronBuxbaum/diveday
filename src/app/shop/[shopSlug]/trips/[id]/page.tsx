@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
 import { FlashParams } from "@/components/FlashParams";
-import { EyebrowBackLink } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
@@ -56,11 +55,10 @@ import {
 } from "./_components/SeriesSection";
 import { TripAboutSection } from "./_components/TripAboutSection";
 import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBanner";
-import { TripAddDiverLink, TripCapacityBadge } from "./_components/TripPageHeader";
+import { TripAddDiverLink, TripCapacityBadge, TripPageHeader } from "./_components/TripPageHeader";
 import { TripRosterContent } from "./_components/TripRosterContent";
-import { TripTabs } from "./_components/TripTabs";
+import { TripStageBadge, TripTabs } from "./_components/TripTabs";
 import { tripTabsCopy } from "./_components/trip-tabs-copy";
-import { type VoyageFact, VoyageHeader } from "./_components/VoyageHeader";
 import {
   addInternalNoteAction,
   addToWaitlistAction,
@@ -110,6 +108,10 @@ export const metadata: Metadata = {
  * the grouped roster of the people coming, and Details (`?view=details`), the
  * departure's definition laid flat. Check-in, Boat and Gear are their own
  * routes beside this one.
+ *
+ * ADR 20260919-one-idea's hour masthead and drawn hull are retired here (owner,
+ * 2026-10-05): every tab wears one `TripPageHeader`, and the roster is the
+ * only reading of who is aboard.
  */
 export default async function ManageTripPage({
   params,
@@ -486,29 +488,7 @@ export default async function ManageTripPage({
   const boatAndCrew = [boatName, ...assignedCrew].filter((part): part is string => Boolean(part));
   const boatCrewSummary = boatAndCrew.join(" · ") || t("trips.about.noBoat");
 
-  /**
-   * The boat, its crew, how full it is, which day it is and what a seat costs —
-   * each its own fact, because `VoyageHeader` sets the line so it breaks only
-   * between two of them ("9 of 12 seats" / "taken" and "Tue," / "Jul 21" were
-   * the breaks inside one string joined with " · "; pixel-craft class 8).
-   *
-   * **The price is here because nothing else on this page says it.** Retiring
-   * the capacity ring from the header was deliberate (the count is in words
-   * beside it), but the price rode the same component, and the only other place
-   * it appears on this page is as an editable field behind About's disclosure.
-   * A staffer quoting a walk-in should not have to open an editor to read it.
-   */
-  const voyageFacts: VoyageFact[] = [
-    boatName ?? (assignedCrew.length > 0 ? null : t("trips.about.noBoat")),
-    ...assignedCrew.map((name) => ({ text: name, desktop: true as const })),
-    t("trips.voyage.seats", { booked: trip.booked, capacity: trip.capacity }),
-    formatShortDate(trip.startsAt, locale, shop.timezone),
-    ...(trip.priceCents === null
-      ? []
-      : [
-          `${formatMoneyCents(trip.priceCents, toShopCurrency(shop.currency), locale)} ${t("trips.about.perSeat")}`,
-        ]),
-  ].filter((fact): fact is VoyageFact => fact !== null);
+  const tabsCopy = tripTabsCopy(t);
   const repeatsSummary = series
     ? recurrenceSummaryText(
         t,
@@ -599,30 +579,36 @@ export default async function ManageTripPage({
           own blocks are `display: contents`, in this flow, on the same stack
           (`TripRosterContent`). */}
       <div className="space-y-10">
-        {/* **The departure is an hour** (ADR 20260919-one-idea, decision I ·
-            Tide, slice 23c). The hour the boat leaves is the page's one name.
-            The capacity ring retires here: "9 of 12" is in the line under the
-            title, in words, and a ring saying it again beside it was the same
-            fact twice. */}
-        <VoyageHeader
-          back={
-            <EyebrowBackLink href={shopPath(shopSlug, "schedule", "board")}>
-              {t(STAFF_DESTINATION_LABEL_KEYS.board)}
-            </EyebrowBackLink>
-          }
-          hour={formatTime(trip.startsAt, locale, shop.timezone)}
-          title={trip.title}
-          facts={voyageFacts}
+        {/* **One header on all five tabs** (owner, 2026-10-05): the
+            departure's name, its stage and seats, and when it sails. Divers
+            and Details wore a header of their own — the hour as a giant
+            name, the crew and boat in a line under it — so every tab change
+            redrew the top of the page. */}
+        <TripPageHeader
+          className=""
+          boardHref={shopPath(shopSlug, "schedule", "board")}
+          backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
+          trip={trip}
+          locale={locale}
+          timeZone={shop.timezone}
           badge={
-            cancelled ? (
+            <>
+              <TripStageBadge phase={phase} copy={tabsCopy} />
               <TripCapacityBadge
                 trip={trip}
                 cancelledLabel={t("trips.detail.cancelledBadge")}
                 t={t}
               />
-            ) : undefined
+            </>
           }
-          action={
+          // **The price is here because nothing else on Divers says it**: a
+          // staffer quoting a walk-in should not have to open Details.
+          price={
+            trip.priceCents === null
+              ? undefined
+              : `${formatMoneyCents(trip.priceCents, toShopCurrency(shop.currency), locale)} ${t("trips.about.perSeat")}`
+          }
+          actions={
             cancelled ? undefined : (
               <TripAddDiverLink
                 // The roster's own band, on the Divers tab: from Details the
@@ -643,8 +629,7 @@ export default async function ManageTripPage({
           shopSlug={shopSlug}
           tripId={tripId}
           current={showDetails ? "details" : "divers"}
-          phase={phase}
-          copy={tripTabsCopy(t)}
+          copy={tabsCopy}
         />
 
         <TripNoticeBanner notice={rootPageNotice} locale={locale} />

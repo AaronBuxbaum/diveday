@@ -1,16 +1,21 @@
 import Link from "next/link";
 import { SECTION_TAB_LIST_CLASS, sectionTabClass } from "@/components/SectionTabs";
-import { TRIP_PHASES, type TripPhase } from "@/lib/trip-phase";
+import { Badge } from "@/components/ui/badge";
+import type { TripPhase } from "@/lib/trip-phase";
 
 /**
- * **A departure's five tabs, under the stage it is in** — ADR 20261001-logbook,
- * decision 3.
+ * **A departure's five tabs** — ADR 20261001-logbook, decision 3.
  *
- * The stepper says where the departure is in its day (Prep, Check-in, Aboard,
- * Back; `tripPhaseOf`), and the tabs are the five kinds of work on it: who is
- * coming, the counter, the roll call, the gear, and the plan. The stepper is
- * orientation only. Every tab is open in every phase, because a crew fixing a
- * size at the dock is doing Gear work during Check-in.
+ * The tabs are the five kinds of work on a departure: who is coming, the
+ * counter, the roll call, the gear, and the plan. Every tab is open in every
+ * stage, because a crew fixing a size at the dock is doing Gear work during
+ * Check-in.
+ *
+ * The stage itself (Prep, Check-in, Aboard, Back; `tripPhaseOf`) is one pill
+ * in the header, `TripStageBadge`, the same pill Today's departure card wears.
+ * It was a four-step stepper above these tabs, and two of its words were tab
+ * names, so the page said "Check-in" twice in two rows that meant different
+ * things (owner, 2026-10-05: simplify the trip page).
  *
  * A staff component takes its words as props; `staffTranslator` is
  * server-side only. `print:hidden` because the packet and the manifest both
@@ -44,53 +49,30 @@ export function tripTabHref(shopSlug: string, tripId: string, tab: TripTab): str
   }
 }
 
+/** Where the departure is in its day, as one word in the header's meta line. */
+export function TripStageBadge({ phase, copy }: { phase: TripPhase | null; copy: TripTabsCopy }) {
+  if (phase === null) return null;
+  return (
+    <Badge tone="neutral" toneMark={false}>
+      <span className="sr-only">{copy.phaseLabel}: </span>
+      {copy.phases[phase]}
+    </Badge>
+  );
+}
+
 export function TripTabs({
   shopSlug,
   tripId,
   current,
-  phase,
   copy,
 }: {
   shopSlug: string;
   tripId: string;
   current: TripTab;
-  /** Null for a cancelled departure, which draws no stepper. */
-  phase: TripPhase | null;
   copy: TripTabsCopy;
 }) {
-  const reached = phase === null ? -1 : TRIP_PHASES.indexOf(phase);
   return (
-    <div className="space-y-4 print:hidden">
-      {phase === null ? null : (
-        <ol
-          aria-label={copy.phaseLabel}
-          className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm"
-        >
-          {TRIP_PHASES.map((step, index) => {
-            const isCurrent = index === reached;
-            const done = index < reached;
-            return (
-              <li key={step} className="flex items-center gap-2">
-                {index > 0 ? (
-                  <span aria-hidden className="h-px w-4 bg-border-strong sm:w-8" />
-                ) : null}
-                <span
-                  aria-current={isCurrent ? "step" : undefined}
-                  className={
-                    isCurrent
-                      ? "rounded-full bg-primary px-3 py-1 font-semibold text-primary-foreground"
-                      : done
-                        ? "px-1 py-1 text-foreground"
-                        : "px-1 py-1 text-muted"
-                  }
-                >
-                  {copy.phases[step]}
-                </span>
-              </li>
-            );
-          })}
-        </ol>
-      )}
+    <div className="print:hidden">
       {/* **Never a sideways drag** (`e2e/trips.spec.ts`): the five fit a 390px
           phone in Spanish, the longer locale, by splitting the row with
           tighter padding below `sm` rather than by scrolling. Every tab is the

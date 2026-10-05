@@ -17,7 +17,7 @@ import { shopPath } from "@/lib/staff-notices";
 import { tripPhaseOf } from "@/lib/trip-phase";
 import { uuidParam } from "@/lib/uuid";
 import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
-import { TripTabs } from "../_components/TripTabs";
+import { TripStageBadge, TripTabs } from "../_components/TripTabs";
 import { tripTabsCopy } from "../_components/trip-tabs-copy";
 import { PrepBody } from "./_components/PrepBody";
 
@@ -111,16 +111,17 @@ export default async function TripPrepPage({
         locale={locale}
         timeZone={shop.timezone}
         badge={
-          <TripCapacityBadge trip={trip} cancelledLabel={t("trips.detail.cancelledBadge")} t={t} />
+          <>
+            <TripStageBadge phase={phase} copy={tripTabsCopy(t)} />
+            <TripCapacityBadge
+              trip={trip}
+              cancelledLabel={t("trips.detail.cancelledBadge")}
+              t={t}
+            />
+          </>
         }
       />
-      <TripTabs
-        shopSlug={shopSlug}
-        tripId={tripId}
-        current="gear"
-        phase={phase}
-        copy={tripTabsCopy(t)}
-      />
+      <TripTabs shopSlug={shopSlug} tripId={tripId} current="gear" copy={tripTabsCopy(t)} />
       {/* The anchor every "fix the packing list" link lands on, prefixed like
           every other id here when the paper day composes this page per departure. */}
       <div id={scopedId(idPrefix, PREP_SECTION_ID)} className="mt-10 scroll-mt-6">
