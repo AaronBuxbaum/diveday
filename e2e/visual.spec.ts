@@ -3736,7 +3736,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page
           .getByRole("listitem")
           .filter({ hasText: "Aboard" })
-          .filter({ hasText: "Waiver not sent." })
+          .filter({ hasText: "Waiver not signed, not sent yet." })
           .first()
           .waitFor();
         await capture(page, "today-blocked-aboard", scheme);

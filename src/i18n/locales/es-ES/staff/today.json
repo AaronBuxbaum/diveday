@@ -280,8 +280,8 @@
   "blockerRow": {
     "requirementsNotConfigured": "{count, plural, one {Requisitos de la salida sin configurar.} other {Requisitos de la salida sin configurar para # buceadores.}}",
     "identityUnconfirmed": "{count, plural, one {Coincidencia de ficha sin confirmar.} other {# coincidencias de ficha sin confirmar.}}",
-    "waiverNotSent": "{count, plural, one {Exención sin enviar.} other {# exenciones sin enviar.}}",
-    "waiverPending": "{count, plural, one {Exención aún sin firmar.} other {# exenciones aún sin firmar.}}",
+    "waiverNotSent": "{count, plural, one {Exención sin firmar, aún sin enviar.} other {# exenciones sin firmar, aún sin enviar.}}",
+    "waiverPending": "{count, plural, one {Exención sin firmar, enlace enviado.} other {# exenciones sin firmar, enlaces enviados.}}",
     "waiverExpired": "{count, plural, one {El enlace de la exención caducó.} other {# enlaces de exención caducados.}}",
     "medicalReview": "{count, plural, one {Una respuesta médica necesita el visto bueno de un médico.} other {# respuestas médicas necesitan el visto bueno de un médico.}}",
     "medicalNotCleared": "{count, plural, one {Un médico no lo autorizó a bucear.} other {# buceadores sin autorización médica para bucear.}}",

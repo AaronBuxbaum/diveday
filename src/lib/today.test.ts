@@ -163,7 +163,7 @@ describe("diverBlockerAction", () => {
     );
     const aboard = diverBlockerAction({ ...input, blockers, aboard: true }, "blue-reef", NOW);
     expect(aboard?.kind).toBe("blocked_aboard");
-    expect(aboard?.detail).toBe("Waiver not signed yet.");
+    expect(aboard?.detail).toBe("Waiver not signed, link sent.");
   });
 
   it("never makes an Aboard row out of money owed", () => {
@@ -193,7 +193,7 @@ describe("diverBlockerAction", () => {
   it("takes the aboard kind once the diver is on the boat, keeping the fix", () => {
     const result = diverBlockerAction({ ...input, aboard: true }, "blue-reef", NOW);
     expect(result?.kind).toBe("blocked_aboard");
-    expect(result?.detail).toBe("Waiver not sent.");
+    expect(result?.detail).toBe("Waiver not signed, not sent yet.");
     expect(result?.waiver).toEqual({ bookingIds: ["b1"] });
   });
 
@@ -247,7 +247,7 @@ describe("collapseDiverActions", () => {
     );
 
     expect(result).toHaveLength(1);
-    expect(result[0]?.subject).toBe("3 waivers not sent.");
+    expect(result[0]?.subject).toBe("3 waivers not signed, not sent yet.");
     expect(result[0]?.actionLabel).toBe("Send waivers");
     // A batch send carries every diver's booking, so one tap sends all three.
     expect(result[0]?.waiver).toEqual({
@@ -309,8 +309,10 @@ describe("collapseDiverActions", () => {
     expect(result).toHaveLength(2);
     const aboard = result.find((entry) => entry.kind === "blocked_aboard");
     expect(aboard?.subject).toBe("Cara");
-    expect(aboard?.detail).toBe("Waiver not sent.");
-    expect(result.find((entry) => entry.kind === "waiver")?.subject).toBe("2 waivers not sent.");
+    expect(aboard?.detail).toBe("Waiver not signed, not sent yet.");
+    expect(result.find((entry) => entry.kind === "waiver")?.subject).toBe(
+      "2 waivers not signed, not sent yet.",
+    );
   });
 
   it("keeps a lone diver named, and pointed at their own record", () => {
@@ -339,7 +341,9 @@ describe("collapseDiverActions", () => {
     );
 
     expect(result).toHaveLength(3);
-    expect(result.filter((entry) => entry.subject === "2 waivers not sent.")).toHaveLength(2);
+    expect(
+      result.filter((entry) => entry.subject === "2 waivers not signed, not sent yet."),
+    ).toHaveLength(2);
     expect(result.filter((entry) => entry.subject === "Cara")).toHaveLength(1);
   });
 

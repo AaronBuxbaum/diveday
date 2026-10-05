@@ -136,7 +136,7 @@ describe("today's work queue (in-memory PGlite)", () => {
     const waiverRow = (work: Awaited<ReturnType<typeof getTodayWork>>) =>
       work.actions.find((action) => action.id === `blocker:${entry.booking.id}:waiver_not_sent`);
     expect(waiverRow(before)?.subject).toBe(entry.person.fullName);
-    expect(waiverRow(before)?.detail).toBe("Waiver not sent.");
+    expect(waiverRow(before)?.detail).toBe("Waiver not signed, not sent yet.");
 
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: entry.booking.id });
     if (!issued.ok) throw new Error("expected a waiver link");
