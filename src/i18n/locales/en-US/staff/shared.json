@@ -197,8 +197,8 @@
     "blockers": {
       "requirementsNotConfigured": "Trip requirements have not been configured yet.",
       "identityUnconfirmed": "Might be someone else. Confirm who this is before boarding.",
-      "waiverNotSent": "Waiver has not been sent.",
-      "waiverPending": "Waiver is waiting for the diver’s signature.",
+      "waiverNotSent": "Waiver not signed. Not sent yet.",
+      "waiverPending": "Waiver not signed. Link sent.",
       "waiverExpired": "Waiver link expired; issue a fresh link.",
       "medicalReview": "A medical answer needs staff follow-up.",
       "medicalNotCleared": "A physician did not clear this diver to dive.",

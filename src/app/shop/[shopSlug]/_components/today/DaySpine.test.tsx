@@ -387,13 +387,13 @@ describe("the station is a panel (16a)", () => {
         action({
           id: "r1",
           subject: "Priya Sharma",
-          detail: "Waiver has not been sent.",
+          detail: "Waiver not signed. Not sent yet.",
           departure: boat("t1"),
         }),
       ],
     });
     const subject = screen.getByText("Priya Sharma");
-    const detail = screen.getByText("Waiver has not been sent.");
+    const detail = screen.getByText("Waiver not signed. Not sent yet.");
     // One `<p>` holds both halves; nothing stacks the sentence under the name.
     expect(subject.parentElement).toBe(detail.parentElement);
     expect(subject.parentElement?.tagName).toBe("P");
@@ -1021,7 +1021,7 @@ describe("a row that performs keeps its place", () => {
               action({
                 ...missing,
                 id: "blocker:booking-1:waiver_pending",
-                detail: "Waiver is waiting for the diver’s signature.",
+                detail: "Waiver not signed. Link sent.",
                 actionLabel: "Nudge waiver",
               }),
             ],
@@ -1738,7 +1738,7 @@ describe("a row that is only a door", () => {
           id: "blocker:b1:waiver_not_sent",
           kind: "waiver",
           subject: "Priya Sharma",
-          detail: "Waiver not sent.",
+          detail: "Waiver not signed, not sent yet.",
           actionLabel: "Send waiver",
           href: "/shop/blue-mantis/trips/t1",
           waiver: { bookingIds: ["b1"] },

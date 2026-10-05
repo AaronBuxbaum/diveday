@@ -10,7 +10,7 @@ afterEach(() => {
 
 const copy = {
   waiting: "Automatic recap sending begins in {remaining}.",
-  due: "Recaps will be sent within 1h.",
+  due: "Goes out within the hour.",
   paused: "Automatic recap sending is paused.",
   failed: "Automatic recap sending failed.",
   noScheduledReturn: "No scheduled return time. Recaps will not be sent automatically.",
@@ -89,7 +89,7 @@ describe("RecapSendControl", () => {
         copy={copy}
       />,
     );
-    expect(screen.getByText("Recaps will be sent within 1h.")).toBeInTheDocument();
+    expect(screen.getByText("Goes out within the hour.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Pause automatic sending" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send recap now" })).toBeEnabled();
   });

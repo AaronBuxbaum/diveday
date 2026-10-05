@@ -2353,7 +2353,7 @@
     "needsYou": "Needs you",
     "kindWaiver": "Waiver",
     "kindCertifications": "Certifications",
-    "waiverNotSent": "Waiver has not been sent.",
+    "waiverNotSent": "Waiver not signed. Not sent yet.",
     "certPending": "Certification is waiting for staff verification.",
     "sendWaiver": "Send waiver",
     "tripLine": "Two-Tank Reef · 7:30 AM",

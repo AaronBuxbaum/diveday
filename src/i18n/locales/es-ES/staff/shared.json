@@ -197,8 +197,8 @@
     "blockers": {
       "requirementsNotConfigured": "Aún no se han configurado los requisitos de la salida.",
       "identityUnconfirmed": "Puede ser otra persona. Confirma quién es antes de embarcar.",
-      "waiverNotSent": "La exención aún no se ha enviado.",
-      "waiverPending": "La exención espera la firma del buceador.",
+      "waiverNotSent": "Exención sin firmar. Aún no se ha enviado.",
+      "waiverPending": "Exención sin firmar. Enlace enviado.",
       "waiverExpired": "El enlace de la exención caducó; emite uno nuevo.",
       "medicalReview": "Una respuesta médica necesita seguimiento del personal.",
       "medicalNotCleared": "Un médico no autorizó a esta persona a bucear.",
