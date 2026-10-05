@@ -18,6 +18,7 @@ import {
   missingContactDetailText,
   missingContactNamedDetailText,
   missingFitDetailText,
+  missingFitNamedDetailText,
   openCrewActionText,
   openDataSettingsActionText,
   openDiverActionText,
@@ -45,6 +46,7 @@ import {
   uncrewedCourseDetailText,
   uncrewedDepartureDetailText,
   ungatedNitroxDetailText,
+  ungatedNitroxNamedDetailText,
   unitsUnconfirmedDetailText,
   unitsUnconfirmedSubjectText,
   waitlistSeatDetailText,
@@ -829,12 +831,15 @@ async function missingFitByTrip(
   bookingIdsByTrip: Map<string, string[]>,
 ) {
   const bookingIds = [...bookingIdsByTrip.values()].flat();
-  const missing = new Map<string, number>();
+  // Divers, not a bare count: one diver's row leads with their name, like
+  // every other single-diver row on Today, and the caller counts from it.
+  const missing = new Map<string, { fullName: string }[]>();
   if (bookingIds.length === 0) return missing;
   const [rows, [shop]] = await Promise.all([
     db
-      .select({ bookingId: bookings.id, fit: rentalFitProfiles })
+      .select({ bookingId: bookings.id, fullName: people.fullName, fit: rentalFitProfiles })
       .from(bookings)
+      .innerJoin(people, eq(people.id, bookings.personId))
       .leftJoin(
         rentalFitProfiles,
         and(
@@ -845,14 +850,16 @@ async function missingFitByTrip(
       .where(and(eq(bookings.shopId, shopId), inArray(bookings.id, bookingIds))),
     db.select({ rentalItems: shops.rentalItems }).from(shops).where(eq(shops.id, shopId)).limit(1),
   ]);
-  const withoutFit = new Set(
+  const withoutFit = new Map(
     rows
       .filter((row) => rentalFitCompleteness(row.fit, shop?.rentalItems).state !== "complete")
-      .map((row) => row.bookingId),
+      .map((row) => [row.bookingId, row.fullName]),
   );
   for (const [tripId, ids] of bookingIdsByTrip) {
-    const count = ids.filter((id) => withoutFit.has(id)).length;
-    if (count > 0) missing.set(tripId, count);
+    const divers = ids
+      .filter((id) => withoutFit.has(id))
+      .map((id) => ({ fullName: withoutFit.get(id) ?? "" }));
+    if (divers.length > 0) missing.set(tripId, divers);
   }
   return missing;
 }
@@ -871,11 +878,16 @@ async function ungatedNitroxByTrip(
   bookingIdsByTrip: Map<string, string[]>,
 ) {
   const bookingIds = [...bookingIdsByTrip.values()].flat();
-  const ungated = new Map<string, number>();
+  const ungated = new Map<string, { fullName: string }[]>();
   if (bookingIds.length === 0) return ungated;
   const rows = await db
-    .select({ bookingId: bookings.id, cardId: nitroxCertifications.id })
+    .select({
+      bookingId: bookings.id,
+      fullName: people.fullName,
+      cardId: nitroxCertifications.id,
+    })
     .from(bookings)
+    .innerJoin(people, eq(people.id, bookings.personId))
     .leftJoin(
       nitroxCertifications,
       and(
@@ -893,10 +905,14 @@ async function ungatedNitroxByTrip(
         inArray(bookings.id, bookingIds),
       ),
     );
-  const blocked = new Set(rows.filter((row) => !row.cardId).map((row) => row.bookingId));
+  const blocked = new Map(
+    rows.filter((row) => !row.cardId).map((row) => [row.bookingId, row.fullName]),
+  );
   for (const [tripId, ids] of bookingIdsByTrip) {
-    const count = ids.filter((id) => blocked.has(id)).length;
-    if (count > 0) ungated.set(tripId, count);
+    const divers = ids
+      .filter((id) => blocked.has(id))
+      .map((id) => ({ fullName: blocked.get(id) ?? "" }));
+    if (divers.length > 0) ungated.set(tripId, divers);
   }
   return ungated;
 }
@@ -1429,34 +1445,38 @@ export async function getTodayWork(
       });
     }
 
-    const withoutFit = missingFit.get(trip.id) ?? 0;
-    if (withoutFit > 0) {
+    // One diver is a row about that person, named; several stay one row about
+    // the boat — the same rule as the emergency-contact row below.
+    const withoutFit = missingFit.get(trip.id) ?? [];
+    if (withoutFit.length > 0) {
+      const lone = withoutFit.length === 1 ? withoutFit[0] : undefined;
       actions.push({
         id: `prep:${trip.id}`,
         kind: "dive_prep",
         urgency: urgencyFor(trip.startsAt, now),
-        subject: trip.title,
+        subject: lone ? lone.fullName : trip.title,
         context: when,
         departure,
-        aboutDeparture: true,
-        detail: missingFitDetailText(t, withoutFit),
+        ...(lone ? {} : { aboutDeparture: true }),
+        detail: lone ? missingFitNamedDetailText(t) : missingFitDetailText(t, withoutFit.length),
         actionLabel: openPrepListActionText(t),
         href: `${tripHref}/prep#${PREP_SECTION_ID}`,
         dueAt: trip.startsAt,
       });
     }
 
-    const ungatedCount = ungatedNitrox.get(trip.id) ?? 0;
-    if (ungatedCount > 0) {
+    const ungated = ungatedNitrox.get(trip.id) ?? [];
+    if (ungated.length > 0) {
+      const lone = ungated.length === 1 ? ungated[0] : undefined;
       actions.push({
         id: `nitrox:${trip.id}`,
         kind: "nitrox_gate",
         urgency: urgencyFor(trip.startsAt, now),
-        subject: trip.title,
+        subject: lone ? lone.fullName : trip.title,
         context: when,
         departure,
-        aboutDeparture: true,
-        detail: ungatedNitroxDetailText(t, ungatedCount),
+        ...(lone ? {} : { aboutDeparture: true }),
+        detail: lone ? ungatedNitroxNamedDetailText(t) : ungatedNitroxDetailText(t, ungated.length),
         actionLabel: openPrepListActionText(t),
         href: `${tripHref}/prep#${PREP_SECTION_ID}`,
         dueAt: trip.startsAt,

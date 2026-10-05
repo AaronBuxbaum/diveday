@@ -234,6 +234,14 @@ export function ungatedNitroxDetailText(t: StaffTranslator, count: number): stri
   return t("today.detail.ungatedNitrox", { count });
 }
 
+export function missingFitNamedDetailText(t: StaffTranslator): string {
+  return t("today.detail.missingFitNamed");
+}
+
+export function ungatedNitroxNamedDetailText(t: StaffTranslator): string {
+  return t("today.detail.ungatedNitroxNamed");
+}
+
 export function highWindAlertDetailText(
   t: StaffTranslator,
   speed: number,
