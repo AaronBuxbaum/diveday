@@ -37,11 +37,11 @@ function dateValue(value: Date | null): string | null {
  * - **2** — an *erased* release (ADR 20260802-diver-data-erasure): the same
  *   record after the signer's name, medical answers, and source documents were
  *   destroyed, re-sealed over only the fields that survive.
- * - **3** — a signed release *refiled* under another diver record: the seat it
- *   was signed for was split off a held booking (`splitBookingIdentity`,
- *   issue #2080). Version 1's field set plus who moved it, when, and from
- *   which record, so the new `person_id` verifies as the shop's act rather
- *   than reading as tampering.
+ * - **3** — a signed release *refiled* under another diver record: its diver
+ *   was merged into the record the shop kept (`refileWaiverRecords`, issue
+ *   #2080). Version 1's field set plus who moved it, when, and from which
+ *   record, so the new `person_id` verifies as the shop's act rather than
+ *   reading as tampering.
  *
  * A record verifies against the version it declares in `integrity_version`,
  * never against a guess. A version this build does not know reads as `invalid`
@@ -176,7 +176,7 @@ function erasedMetadata(record: WaiverRecord): IntegrityValue {
 /**
  * The refiled field set: everything version 1 seals, plus the move. Only ever
  * written over a record whose version 1 seal verified at the moment it moved
- * (`splitBookingIdentity`), so re-sealing can never launder an edit made
+ * (`refileWaiverRecords`), so re-sealing can never launder an edit made
  * before the move. The `version: 3` key separates it from a v1 digest the
  * same way `version: 2` does for erasure.
  *

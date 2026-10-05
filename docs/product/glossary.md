@@ -2207,18 +2207,18 @@ new domain concept, define it here in the same PR.
   held for it, and the staff notes written on it. It **carries nothing** of the matched diver's:
   no cards, sizes, date of birth, contact or email (the shared address stays with the record that
   owns it). Every release and link on the seat is **superseded** and every bearer link minted over
-  the booking **revoked**, because nobody knows which of the two people signed it, so the seat asks
+  the booking **revoked**, because any signature on it names the matched diver, so the seat asks
   for its own release and is blocked until it has one. A seat with an **unanswered medical
   referral** is refused until the referral is answered, since superseding it would lift the hold.
-  Every release on the seat is also **refiled** under the new record (issue #2080): one signed
-  through the shared link was usually the booker's, and its name and medical answers do not belong
-  in the matched diver's record, export or erasure. A release whose seal verified is re-sealed as
-  integrity **version 3**, which covers who moved it, when and from which record
-  (`waiver_records.moved_*`); one that was unsealed or already failing its seal moves as it was.
-  The seat's **order stays with the person it billed** (the invoice went to the shared address's
-  Stripe customer) and still settles the seat through `booking_id`. Open to every live
+  A **signed release stays with the matched diver** (issue #2080): a signature is refused unless
+  the typed name matches the record's diver, so every signed release on a held seat names the
+  matched person and is their paper. The seat's **unsigned links** follow it, with any half-typed
+  answers cleared, and record the move in `waiver_records.moved_*`. The seat's **order stays with
+  the person it billed** (the invoice went to the shared address's Stripe customer) and still
+  settles the seat through `booking_id`. Open to every live
   staff role for the same reason as confirming; a wrong split is undone by merging the two records
-  (owner or manager). Trail lines on the departure (`identity_split`) and on the matched diver's
+  (owner or manager), which re-seals each verified release it moves as integrity **version 3**
+  (who moved it, when, from which record) so it does not read as tampered. Trail lines on the departure (`identity_split`) and on the matched diver's
   record (`identity_split_off`).
 - **Remove vs. erase (a diver)** — two different operations, deliberately not the same button.
   **Removing** a diver is the reversible archive action every entity has

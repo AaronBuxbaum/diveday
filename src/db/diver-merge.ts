@@ -5,6 +5,7 @@ import { bookings, people, personRoles } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import { MIN_PHONE_SEARCH_DIGITS, phoneDigits } from "@/lib/person-fields";
 import { normalizePersonName } from "@/lib/person-name";
+import { refileWaiverRecords } from "./waiver-refile";
 
 /** Why a second active diver record was shown on the survivor-choice panel. */
 export type DiverMergeCandidateReason = "same_phone" | "same_name";
@@ -560,6 +561,15 @@ export async function mergeDiverRecords(input: {
         }
       }
 
+      // Releases first, through the one path that keeps their seals honest:
+      // the blanket repoint below would make every sealed release read as
+      // tampered, `person_id` being inside the seal. It finds none left.
+      await refileWaiverRecords(tx, {
+        shopId: input.shopId,
+        fromPersonId: source.id,
+        toPersonId: survivor.id,
+        actorPersonId: input.actorPersonId,
+      });
       for (const tableName of DIVER_HISTORY_TABLES) {
         await tx.execute(
           sql`update ${sql.raw(quotedTable(tableName))} set "person_id" = ${survivor.id} where "shop_id" = ${input.shopId} and "person_id" = ${source.id}`,

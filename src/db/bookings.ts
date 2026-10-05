@@ -19,12 +19,6 @@ import {
   type TripAdmissionRefusal,
 } from "@/lib/trip-admission";
 import { hasSailed } from "@/lib/trips";
-import {
-  computeWaiverIntegrityHash,
-  verifyWaiverIntegrity,
-  WAIVER_INTEGRITY_VERSION_MOVED,
-  WAIVER_INTEGRITY_VERSION_SIGNED,
-} from "@/lib/waiver-integrity";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
 import { inTrainingBefore, listCourseSeatsInTraining } from "./certifications-in-training";
@@ -1809,54 +1803,6 @@ export async function confirmBookingIdentity(
   return true;
 }
 
-/**
- * Refiles every release on a split seat under the seat's own diver
- * (`splitBookingIdentity`). The seal is checked *before* the move, so only a
- * release that verified as signed is re-sealed over its new owner.
- */
-async function refileSeatReleases(
-  tx: DbExecutor,
-  input: { shopId: string; bookingId: string; personId: string; actorPersonId: string; now: Date },
-) {
-  const records = await tx
-    .select()
-    .from(waiverRecords)
-    .where(
-      and(
-        eq(waiverRecords.shopId, input.shopId),
-        eq(waiverRecords.bookingId, input.bookingId),
-        isNull(waiverRecords.anonymizedAt),
-      ),
-    );
-  for (const record of records) {
-    const resealable =
-      record.integrityVersion === WAIVER_INTEGRITY_VERSION_SIGNED &&
-      verifyWaiverIntegrity(record) === "valid";
-    const moved = {
-      ...record,
-      personId: input.personId,
-      movedFromPersonId: record.personId,
-      movedAt: input.now,
-      movedByPersonId: input.actorPersonId,
-    };
-    await tx
-      .update(waiverRecords)
-      .set({
-        personId: moved.personId,
-        movedFromPersonId: moved.movedFromPersonId,
-        movedAt: moved.movedAt,
-        movedByPersonId: moved.movedByPersonId,
-        ...(resealable
-          ? {
-              integrityHash: computeWaiverIntegrityHash(moved, WAIVER_INTEGRITY_VERSION_MOVED),
-              integrityVersion: WAIVER_INTEGRITY_VERSION_MOVED,
-            }
-          : {}),
-      })
-      .where(and(eq(waiverRecords.id, record.id), eq(waiverRecords.shopId, input.shopId)));
-  }
-}
-
 /** What a split refused, as a code (`splitBookingIdentity`). */
 export type SplitBookingIdentityResult =
   | { ok: true; personId: string; tripId: string }
@@ -1881,19 +1827,19 @@ export const SPLIT_NAME_MAX = 200;
  *
  * What moves is what was about this seat rather than about the matched person:
  * the booking itself, the gear held for it, the staff notes written on it, and
- * every release on it (issue #2080). A release signed through the shared link
- * was usually the booker's, and its name and medical answers do not belong in
- * the matched diver's record, export or erasure. The seal covers who a release
- * is filed under, so a release whose version 1 seal verifies is re-sealed as
- * version 3, which records who moved it, when and from where; an unsealed one
- * moves unsealed, and one that already fails its seal moves still failing it,
- * so a move never launders an earlier edit. Erased releases stay put: nothing
- * personal is left on them.
+ * the seat's unsigned release links, with any half-filled answers on them
+ * cleared, since nobody knows who typed them (issue #2080).
  *
- * Every release and link on the seat is also superseded, because nobody knows
- * which of the two people signed it, so the seat asks for its own. A seat with
- * an unanswered medical referral is refused (`medical_hold`) until the
- * referral is answered, since superseding it would lift the hold.
+ * **A signed release stays where it is filed.** `completeWaiver` refuses a
+ * signature unless the typed name matches the record's diver, and on a held
+ * seat that diver is the matched person, so every signed release on the seat
+ * names them. It is their paper, in their record, export and erasure; moving
+ * it would file another person's medical answers under the new diver (dive
+ * domain review, 2026-10-05). It is superseded all the same: it names someone
+ * other than the seat's diver, so the seat asks for its own. A seat with an
+ * unanswered medical referral is refused (`medical_hold`) until the referral
+ * is answered, since superseding it would lift the hold; the seat's releases
+ * are locked first, so a questionnaire submitted mid-split cannot slip one in.
  *
  * The seat's order stays with the person it billed. An order is an invoice to
  * a Stripe customer by email, and the shared address belongs to the matched
@@ -1941,20 +1887,25 @@ export async function splitBookingIdentity(
     // person at the counter would face a fresh questionnaire they have
     // already learned the answer to (issue #1282). The referral is answered
     // first; then the seat can go.
-    const [referral] = await tx
-      .select({ id: waiverRecords.id })
+    // Every live release on the seat, locked: a questionnaire that parks a
+    // referral commits before this read or waits until the split is done.
+    const live = await tx
+      .select({
+        status: waiverRecords.status,
+        medicalClearedAt: waiverRecords.medicalClearedAt,
+      })
       .from(waiverRecords)
       .where(
         and(
           eq(waiverRecords.shopId, input.shopId),
           eq(waiverRecords.bookingId, input.bookingId),
-          eq(waiverRecords.status, "medical_review"),
           isNull(waiverRecords.supersededAt),
-          isNull(waiverRecords.medicalClearedAt),
         ),
       )
-      .limit(1);
-    if (referral) return { refused: "medical_hold" as const };
+      .for("update");
+    if (live.some((row) => row.status === "medical_review" && !row.medicalClearedAt)) {
+      return { refused: "medical_hold" as const };
+    }
     const [person] = await tx
       .insert(people)
       .values({ shopId: input.shopId, fullName, email: null })
@@ -1983,13 +1934,30 @@ export async function splitBookingIdentity(
           isNull(waiverRecords.supersededAt),
         ),
       );
-    await refileSeatReleases(tx, {
-      shopId: input.shopId,
-      bookingId: input.bookingId,
-      personId: person.id,
-      actorPersonId: input.actorPersonId,
-      now,
-    });
+    // Unsigned links follow the seat; nothing on them is sealed. Only what is
+    // filed under the matched diver: a placeholder's (`claimSeat`) stays put.
+    await tx
+      .update(waiverRecords)
+      .set({
+        personId: person.id,
+        draftSignerName: null,
+        draftMedicalAnswers: null,
+        draftAcknowledged: false,
+        draftGuardian: null,
+        movedFromPersonId: booking.personId,
+        movedAt: now,
+        movedByPersonId: input.actorPersonId,
+      })
+      .where(
+        and(
+          eq(waiverRecords.shopId, input.shopId),
+          eq(waiverRecords.bookingId, input.bookingId),
+          eq(waiverRecords.personId, booking.personId),
+          isNull(waiverRecords.signedAt),
+          isNull(waiverRecords.integrityHash),
+          isNull(waiverRecords.anonymizedAt),
+        ),
+      );
 
     await revokeBookingCapabilities(tx, { shopId: input.shopId, bookingId: input.bookingId, now });
     await tx
