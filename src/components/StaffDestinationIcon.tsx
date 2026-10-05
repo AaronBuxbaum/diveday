@@ -23,6 +23,7 @@ export type DiveDaySharedIconName =
   | "door-chevron"
   | "more"
   | "close"
+  | "plus"
   | "warning"
   | "boat"
   | "badge"
@@ -132,6 +133,13 @@ const SHARED_ICON_PATHS: Record<Exclude<DiveDaySharedIconName, "caret">, ReactNo
     <>
       <path d="M6 6l12 12" />
       <path d="M18 6 6 18" />
+    </>
+  ),
+  // An add control's cross, the close glyph turned square to the box.
+  plus: (
+    <>
+      <path d="M12 5v14" />
+      <path d="M5 12h14" />
     </>
   ),
   "waiver-action-email": (

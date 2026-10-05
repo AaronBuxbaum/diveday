@@ -33,7 +33,7 @@ import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 
 const NEW_ORDER = "/shop/blue-mantis/orders/new";
 // `${fullName} — ${email}`, both deterministic in the seed (src/db/seed.ts).
-const CUSTOMER = "Priya Sharma — priya.sharma@example.com";
+const CUSTOMER = "Priya Sharma — success+priya.sharma@simulator.amazonses.com";
 
 test("the order form is not reachable signed out", async ({ page }) => {
   await page.goto(NEW_ORDER);

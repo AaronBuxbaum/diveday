@@ -1255,6 +1255,9 @@ export async function listNotificationDeliveryIssues(
     .where(
       and(
         eq(notificationDeliveries.shopId, shopId),
+        // Belt and braces: the batched resend feeds these ids straight into
+        // a send, so the booking is pinned to the shop as well as the row.
+        eq(bookings.shopId, shopId),
         or(
           inArray(notificationDeliveries.status, ["failed", "not_configured"]),
           inArray(notificationDeliveries.providerStatus, ACTIONABLE_PROVIDER_STATUSES),

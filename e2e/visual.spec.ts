@@ -3756,15 +3756,15 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **A station once a blocked diver is on the boat.**
+       * **Today once a blocked diver is on the boat.**
        *
-       * The station's aboard line says what the blocker *is* — a medical hold, a
-       * certification this dive asks for, an unsigned waiver, money owed — and
-       * one line per kind, because a count is a census and a reason is not
-       * (issue #791). Nothing had ever photographed it: the seeded shop starts
-       * with nobody boarded, so every capture of this surface saw the *ashore*
-       * sentence, and the one a crew reads at the rail with the gate already
-       * behind somebody was never looked at.
+       * The diver's Needs you row takes the danger-toned "Aboard" kind and
+       * keeps the blocker and its fix (issue #791). It was a sentence on the
+       * departure card until 2026-10-05, beside a row that told the same diver's
+       * blocker as if they were still on the dock. Nothing had ever photographed
+       * it: the seeded shop starts with nobody boarded, so every capture of
+       * this surface saw the *ashore* row, and the one a crew reads at the rail
+       * with the gate already behind somebody was never looked at.
        *
        * Priya Sharma is the seeded blocked diver (waiver not sent), so boarding
        * her is the shortest honest route into the state. The reset restores the
@@ -3780,10 +3780,29 @@ for (const scheme of ["light", "dark"] as const) {
         // becomes blocked, because readiness is evaluated live.
         await request.post("/api/test/seed-trouble-states?blockedAboard=1");
         await page.goto("/shop/blue-mantis");
-        // The destination's own words, not a timing guess: this sentence is
-        // what the capture exists for.
-        await page.getByText(/is aboard with/).waitFor();
+        // The destination's own words, not a timing guess: this row is what
+        // the capture exists for.
+        await page
+          .getByRole("listitem")
+          .filter({ hasText: "Aboard" })
+          .filter({ hasText: "Waiver not sent." })
+          .first()
+          .waitFor();
         await capture(page, "today-blocked-aboard", scheme);
+      });
+
+      /**
+       * **Failed emails to several people are one row** (Aaron, 2026-10-05).
+       * Three bounced confirmations on the next boat read "3 confirmation
+       * emails didn’t send." with one Resend confirmations button, never
+       * three identical rows. The seed sends only successes, so the bounce
+       * comes through the trouble-states route.
+       */
+      test(`failed emails batch into one row (${scheme})`, async ({ page, request }) => {
+        await request.post("/api/test/seed-trouble-states?failedEmails=1");
+        await page.goto("/shop/blue-mantis");
+        await page.getByRole("button", { name: "Resend confirmations" }).waitFor();
+        await capture(page, "today-failed-emails", scheme);
       });
 
       /**

@@ -138,7 +138,7 @@ type RowControls = {
  */
 function rowKey(action: TodayAction): string {
   if (action.waiver) return `waiver:${action.waiver.bookingIds.join(",")}`;
-  if (action.resend) return `resend:${action.resend.bookingId}`;
+  if (action.resend) return `resend:${action.resend.bookingIds.join(",")}`;
   if (action.invite) return `invite:${action.invite.entryId}`;
   if (action.payment?.orderId) return `payment:${action.payment.orderId}`;
   if (action.helpRequest) return `help-request:${action.helpRequest.requestId}`;
@@ -299,7 +299,7 @@ function StationRow({
   ) : action.resend ? (
     <ResendConfirmationControl
       shopSlug={controls.shopSlug}
-      bookingId={action.resend.bookingId}
+      bookingIds={action.resend.bookingIds}
       label={action.actionLabel}
       copy={controls.resendCopy}
     />
@@ -552,6 +552,7 @@ export function DaySpine({
     resendCopy: {
       resending: t("today.resendConfirmation.resending"),
       confirmationResent: t("today.resendConfirmation.confirmationResent"),
+      confirmationsResent: t("today.resendConfirmation.confirmationsResent"),
       errors: {
         invalid: t("today.resendConfirmation.errors.invalid"),
         noEmail: t("today.resendConfirmation.errors.noEmail"),

@@ -89,6 +89,7 @@ import { THREAD_STEP_STATE_KEYS, THREAD_STEP_TITLE_KEYS } from "./thread-labels"
 import {
   ACTION_KIND_KEYS,
   blockerActionLabelText,
+  blockerRowText,
   GREETING_KEYS,
   mediaDeletionKindText,
   seasonalBriefingText,
@@ -722,6 +723,18 @@ const CASES: readonly LabelMapCase[] = [
     // divers — one resolver, one boolean apart, so both maps need a row.
     rows: codeRows(keysOf(BLOCKER_CATEGORY), (locale, code) =>
       blockerActionLabelText(staffTranslator(locale), code, true),
+    ),
+  },
+  {
+    module: "today-labels.ts",
+    map: "BLOCKER_ROW_KEYS",
+    // A Today row's few words per blocker, for one diver and for a batch.
+    rows: codeRows(keysOf(BLOCKER_CATEGORY), (locale, code) =>
+      [1, 9]
+        .map((count) =>
+          blockerRowText(staffTranslator(locale), { code, params: { specialty: "deep" } }, count),
+        )
+        .join(" | "),
     ),
   },
   {

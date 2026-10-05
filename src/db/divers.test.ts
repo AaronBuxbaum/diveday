@@ -573,7 +573,9 @@ describe("roster search and pagination", () => {
     expect(byName.divers.map((row) => row.fullName)).toEqual(["Priya Sharma"]);
     expect(byName.total).toBe(1);
 
-    const byEmail = await listDiverSummaries(db, shop.id, { query: "priya.sharma@example" });
+    const byEmail = await listDiverSummaries(db, shop.id, {
+      query: "success+priya.sharma@simulator",
+    });
     expect(byEmail.divers).toHaveLength(1);
 
     const nobody = await listDiverSummaries(db, shop.id, { query: "zzz-no-such-diver" });

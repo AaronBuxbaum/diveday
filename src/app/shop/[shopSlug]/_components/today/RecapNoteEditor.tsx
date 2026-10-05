@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { ImageFileInput } from "@/components/ImageFileInput";
+import { ImageUploadTile } from "@/components/ImageUploadTile";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
@@ -289,7 +289,9 @@ export function RecapNoteEditor({
           </GroupLabel>
           <p className="mt-1 text-sm text-muted">{t("closeout.crewPhotos.description")}</p>
 
-          {crewPhotos.length > 0 ? (
+          {/* The add control is the grid's next cell, so an empty gallery is one
+              dashed tile and a full one ends where the next photo will land. */}
+          {crewPhotos.length > 0 || !recapLocked ? (
             <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
               {crewPhotos.map((photo) => (
                 <li
@@ -330,34 +332,23 @@ export function RecapNoteEditor({
                   </div>
                 </li>
               ))}
+              {!recapLocked ? (
+                <li>
+                  <form action={uploadCrewPhotoAction}>
+                    <ImageUploadTile
+                      id={crewPhotoInputId}
+                      name="crewPhoto"
+                      copy={{
+                        add: t("closeout.crewPhotos.add"),
+                        adding: t("closeout.crewPhotos.adding"),
+                        wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
+                        tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
+                      }}
+                    />
+                  </form>
+                </li>
+              ) : null}
             </ul>
-          ) : null}
-
-          {!recapLocked ? (
-            <form action={uploadCrewPhotoAction} className="mt-3 flex flex-col gap-3">
-              <label htmlFor={crewPhotoInputId} className="text-sm font-medium">
-                {t("closeout.crewPhotos.add")}
-              </label>
-              <ImageFileInput
-                id={crewPhotoInputId}
-                name="crewPhoto"
-                required
-                copy={{
-                  choose: t("shared.imageInput.choose"),
-                  chooseAnother: t("shared.imageInput.chooseAnother"),
-                  wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
-                  tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
-                }}
-              />
-              <div>
-                <SubmitButton
-                  pendingLabel={t("closeout.crewPhotos.adding")}
-                  className={buttonClass({ variant: "secondary", size: "sm" })}
-                >
-                  {t("closeout.crewPhotos.upload")}
-                </SubmitButton>
-              </div>
-            </form>
           ) : null}
         </div>
       ) : null}

@@ -590,7 +590,7 @@ test("a section's outcome renders inside that section, not in a banner at the to
   const detailsForm = page
     .locator("form")
     .filter({ has: page.getByRole("button", { name: "Save details" }) });
-  await detailsForm.getByLabel("Email").fill("tom.okafor@example.com");
+  await detailsForm.getByLabel("Email").fill("success+tom.okafor@simulator.amazonses.com");
   await detailsForm.getByRole("button", { name: "Save details" }).click();
 
   // On the control (`Field`'s `error` wires `aria-invalid`/`aria-describedby`),

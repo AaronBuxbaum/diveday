@@ -72,7 +72,6 @@ function departure(overrides: Partial<SpineDeparture> = {}): SpineDeparture {
     boarded: 0,
     blocked: 0,
     crew: [{ fullName: "Keiko Tanaka" }],
-    blockedAboardGroups: [],
     crewAccountedFor: true,
     crewReason: null,
     ...overrides,
@@ -407,41 +406,16 @@ describe("the station is a panel (16a)", () => {
 });
 
 /**
- * The two safety sentences the departure card carried and the station keeps —
- * neither is a job anyone taps here, and both describe a checkpoint (issues
- * #789, #791). Every case below is as much about the sentence *not* rendering.
+ * The one safety sentence the departure card keeps — not a job anyone taps
+ * here, and it describes a checkpoint (issue #789). A blocked diver already
+ * aboard (issue #791) is a `blocked_aboard` row in Needs you, not a sentence
+ * here. Every case below is as much about the sentence *not* rendering.
  */
 describe("a station's safety notes", () => {
-  it("names a lone blocked diver who is already aboard, and why", () => {
-    renderSpine({
-      departures: [
-        departure({
-          booked: 4,
-          boarded: 4,
-          blocked: 1,
-          blockedAboardGroups: [{ kind: "medical", names: ["Grace Mensah"] }],
-        }),
-      ],
-    });
-    expect(screen.getByText(/Grace Mensah is aboard with/)).toBeInTheDocument();
-  });
-
-  it("renders one line per kind, never one reason spread over a whole count", () => {
-    renderSpine({
-      departures: [
-        departure({
-          booked: 5,
-          boarded: 5,
-          blocked: 5,
-          blockedAboardGroups: [
-            { kind: "medical", names: ["Grace Mensah"] },
-            { kind: "certification", names: ["Tomás Ferreira", "Ines Costa", "June Park", "Omar"] },
-          ],
-        }),
-      ],
-    });
-    expect(screen.getByText(/Grace Mensah is aboard with/)).toBeInTheDocument();
-    expect(screen.getByText(/4 divers are aboard with/)).toBeInTheDocument();
+  it("says nothing on the card about a blocked diver who is already aboard", () => {
+    renderSpine({ departures: [departure({ booked: 4, boarded: 4, blocked: 1 })] });
+    expect(screen.queryByText(/is aboard with/)).toBeNull();
+    expect(screen.queryByText(/are aboard with/)).toBeNull();
   });
 
   it("says the crew roll call is open on a full boat nobody has counted the crew on", () => {
