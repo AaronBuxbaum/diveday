@@ -1169,7 +1169,7 @@ export default async function SettingsPage({
 
             {/* A reference library the daily surfaces consume — the board's add
               panel reads the dive-site list. It left the header nav with the
-              cut to five tabs; an owner's path to it is this page (and the
+              cut to a five-section nav; an owner's path to it is this page (and the
               palette). */}
             <SettingsDoorRow
               href={`/shop/${shopSlug}/dive-sites`}

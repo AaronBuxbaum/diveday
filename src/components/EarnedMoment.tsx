@@ -46,7 +46,7 @@ import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
  * anything (ADR 20260827-clearwater-surface-language, decision 11 — every
  * moment is earned and transient). The caller owns that judgement because only
  * it can tell a first paint from a transition; see
- * `check-in/_components/CounterClearedLine.tsx` for the guard.
+ * `trips/[id]/_arrivals/CounterClearedLine.tsx` for the guard.
  */
 export function EarnedMomentLine({
   children,

@@ -66,7 +66,7 @@ export function orientationTourText(
 
 /**
  * Where the role's "Try:" prompt points. Captain and crew point at the next
- * boat's tab built for their actual shift (its Boat tab, its Check-in tab);
+ * boat's tab built for their actual shift (its Boat tab, its Divers tab);
  * every other role points at a nav page since they have no single "the one
  * boat" today.
  *
@@ -105,8 +105,8 @@ export function orientationTourHref(
       // manifest" page without one.
       return nextTripId ? shopPath(shopSlug, "trips", nextTripId, "manifest") : hrefFor("board");
     case "crew":
-      // The counter is a departure's Check-in tab, so with no boat today there
-      // is no counter to open, and the day is the honest answer.
-      return nextTripId ? shopPath(shopSlug, "trips", nextTripId, "check-in") : hrefFor("today");
+      // The counter is a departure's Divers tab once arrivals open, so with no
+      // boat today there is no counter to open, and the day is the honest answer.
+      return nextTripId ? shopPath(shopSlug, "trips", nextTripId) : hrefFor("today");
   }
 }

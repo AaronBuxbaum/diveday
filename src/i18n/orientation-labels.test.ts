@@ -41,10 +41,8 @@ describe("orientationTourHref", () => {
     );
   });
 
-  /** The counter is a departure's Check-in tab: crew go to the next boat's. */
+  /** The counter is a departure's Divers tab: crew go to the next boat's. */
   it("sends crew to the next boat's counter when there is one", () => {
-    expect(orientationTourHref("blue-mantis", "crew", "t1")).toBe(
-      "/shop/blue-mantis/trips/t1/check-in",
-    );
+    expect(orientationTourHref("blue-mantis", "crew", "t1")).toBe("/shop/blue-mantis/trips/t1");
   });
 });

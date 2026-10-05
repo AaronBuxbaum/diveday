@@ -657,14 +657,14 @@ new domain concept, define it here in the same PR.
 - **Arrivals window** — the counter's narrower lens on the operational horizon: departures from six
   hours ago through the next thirty-six. The backwards reach is the one deliberate asymmetry (a
   diver still walks up to the desk for a boat that already sailed); forwards it never outruns the
-  horizon. It decides when a departure's Check-in tab is open and what the **arrival lookup**
+  horizon. It decides when a departure's Divers tab carries the arrival desk and what the **arrival lookup**
   searches.
 - **Arrival lookup** — Today's search for "which boat is this diver on?" (`?q=`): a name, phone,
   email or booking ID matched across every departure in the **arrivals window**, each match a row
-  that opens that boat's Check-in tab at the diver's own row. The tab itself has no search.
+  that opens that boat's Divers tab at the diver's own row. The tab itself has no search.
 - **Check-in** — a recorded arrival state for a booked diver. It confirms the live readiness
   result and changes the booking to `checked_in`; it is not boarding, which remains a separate
-  departure-time manifest decision. A staffer's tap at the counter (the departure's Check-in tab) writes it. Readiness is confirmed **wherever the tap is applied**, which
+  departure-time manifest decision. A staffer's tap at the counter (the departure's Divers tab, inside the arrivals window) writes it. Readiness is confirmed **wherever the tap is applied**, which
   since the counter went offline-capable is at the desk for a live tap and at reconciliation —
   minutes or hours later, against readiness as it stands *then* — for a queued one.
 - **Arrival event** — one append-only row in `booking_arrival_events` recording a single tap at the
@@ -1330,7 +1330,7 @@ new domain concept, define it here in the same PR.
   points (Today's departure card, the command palette's "Boarding" jump) open the manifest on that
   checkpoint. Crew, emergency contacts, after-dive roll call, print, and the offline snapshot are all
   on the same page.
-- **Trip phase** — which kind of work a departure is in, for staff only: Prep, Check-in, Aboard or Back, drawn as the stepper above the departure's five tabs (ADR [20261001-logbook](../architecture/decisions/20261001-logbook.md), decision 3; `src/lib/trip-phase.ts`). Not a **trip stage**: a stage is a word the crew said and DiveDay publishes, so it is never inferred; a phase is orientation on the crew's own screen, so it falls back to the clock when nobody has tapped. The crew's tap still wins: any stage but `home` reads Aboard until the return day ends, and `home` reads Back. It reads the raw tap rather than `liveStageOf`, because a late boat is exactly when the stepper must not say Back. A cancelled departure has no phase.
+- **Trip phase** — which kind of work a departure is in, for staff only: Prep, Check-in, Aboard or Back, drawn as the stage pill above the departure's four tabs (ADR [20261001-logbook](../architecture/decisions/20261001-logbook.md), decision 3; `src/lib/trip-phase.ts`). Not a **trip stage**: a stage is a word the crew said and DiveDay publishes, so it is never inferred; a phase is orientation on the crew's own screen, so it falls back to the clock when nobody has tapped. The crew's tap still wins: any stage but `home` reads Aboard until the return day ends, and `home` reads Back. It reads the raw tap rather than `liveStageOf`, because a late boat is exactly when the stepper must not say Back. A cancelled departure has no phase.
 - **Trip stage** — where a departure is, in the crew's own word: one of five (`boarding`,
   `underway`, `surface`, `heading_in`, `home`) tapped on the **manifest** and then repeated, with
   the time it was tapped, everywhere DiveDay draws that boat — the shop home's station chip, the

@@ -1,6 +1,6 @@
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { SalvageOffer } from "@/lib/no-show";
-import type { NoShowSalvageCopy } from "./_components/NoShowScript";
+import type { NoShowSalvageCopy } from "./NoShowScript";
 
 /**
  * **The salvage panel's words, once a staffer has written a diver off.**
@@ -21,8 +21,7 @@ import type { NoShowSalvageCopy } from "./_components/NoShowScript";
  * own walk-in link makes), rather than to another trip's staff page where
  * nothing about this diver is on screen.
  *
- * Extracted from the page for the reason `blocker-disclosure.ts` was: a rule
- * about what the counter says is worth a test that does not need a database.
+ * Extracted from the page because a rule about what the counter says is worth a test that does not need a database.
  */
 export function noShowSalvageCopy(input: {
   t: StaffTranslator;

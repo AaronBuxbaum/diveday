@@ -87,6 +87,18 @@ const PAYMENT_STATUSES_RECORDING_ONLY: readonly PaymentStatus[] = [
   "paid",
 ];
 
+/**
+ * What the desk adds to the roster once arrivals open, already drawn by the
+ * page (`buildArrivalDesk`): each seat's tap at the end of its name line, what
+ * stands under the row (the "Not here?" door, a released seat's next step, a
+ * paper pass), and the checked-in group's boarding fact.
+ */
+export type RosterArrival = {
+  controls: ReadonlyMap<string, ReactNode>;
+  below: ReadonlyMap<string, ReactNode>;
+  hereMeta?: string;
+};
+
 type RosterPrivateNote = Awaited<ReturnType<typeof listBookingNotes>>[number] & {
   /** Diver-record notes are visible here but remain editable on their canonical page. */
   deletable?: boolean;
@@ -226,6 +238,7 @@ export function RosterSection({
   waitingGroup,
   invitedGroup,
   addDiverGroup,
+  arrival,
   compact = false,
   showSummaryHeading = true,
 }: {
@@ -323,6 +336,16 @@ export function RosterSection({
   invitedGroup?: ReactNode;
   /** The one terminal action group in the guests ledger, supplied by the page. */
   addDiverGroup?: ReactNode;
+  /**
+   * **The desk, once arrivals open** (`_arrivals/arrival-desk.tsx`). The
+   * Divers tab and the old Check-in tab were one list drawn twice, with the
+   * same blockers and the same fixes on both (owner, 2026-10-05), so arrival is
+   * now a state of this list rather than a tab of its own: a cleared seat's row
+   * ends in its check-in tap, an arrived seat sinks into "Checked in", and a
+   * released one into "Not here". Absent outside the arrivals window, and the
+   * roster is exactly what it was.
+   */
+  arrival?: RosterArrival;
   /** The Trip surface already leads with its masthead capacity read. */
   compact?: boolean;
   /** Keep the old standalone Guests heading for the compatibility route. */
@@ -437,8 +460,20 @@ export function RosterSection({
   // here is now — never the departure's date (ADR 20260907-guardian-co-signature).
   const signedToday = signingDate(nowDate(), shopTimezone);
 
-  const stillToClear = roster.filter((entry) => !isSettled(entry));
-  const ready = roster.filter((entry) => isSettled(entry));
+  // With the desk open, two more groups: the seats it is finished with. A
+  // released seat is never "Ready" and never work, and a checked-in seat that
+  // has gone blocked since stays in "Still to clear" wearing its reasons — the
+  // counter's most dangerous silence was folding that row away
+  // (`isSettledAtCounter`).
+  const notHere = arrival ? roster.filter(({ booking }) => booking.status === "no_show") : [];
+  const working = arrival ? roster.filter(({ booking }) => booking.status !== "no_show") : roster;
+  const stillToClear = working.filter((entry) => !isSettled(entry));
+  const here = arrival
+    ? working.filter((entry) => isSettled(entry) && entry.booking.status === "checked_in")
+    : [];
+  const ready = working.filter(
+    (entry) => isSettled(entry) && !(arrival && entry.booking.status === "checked_in"),
+  );
   // The queue's own rule, stated once (src/lib/roster-filters.ts): an absent
   // readiness row is not a blocked diver.
   //
@@ -558,6 +593,8 @@ export function RosterSection({
     // row, and a staffer sent back to a collapsed list has been told what
     // happened and not where to act on it.
     const namesakeRefused = namesakeRefusedBookingId === booking.id;
+    const arrivalControl = arrival?.controls.get(booking.id);
+    const arrivalBelow = arrival?.below.get(booking.id);
     const holdOpen = keepOpenBookingId === booking.id || namesakeRefused;
 
     const headerLeft = (
@@ -644,7 +681,9 @@ export function RosterSection({
       ) : null,
       // Arrived at the counter — display only, the same capsule the manifest
       // shows. It reads existing booking state and gates nothing.
-      booking.status === "checked_in" ? (
+      // Not where the row's own tap already says it: with the desk open, an
+      // arrived diver's row ends in "Checked in", the control that undoes it.
+      booking.status === "checked_in" && !arrivalControl ? (
         <Badge key="checked-in" tone="neutral">
           {t("trips.roster.checkedInPill")}
         </Badge>
@@ -1432,14 +1471,20 @@ export function RosterSection({
     // `top-1` is the `li`'s own top padding (`py-1`), so this 44px box and the
     // header line's 44px name link share one band and the mark centres on the
     // name and the pills (K-157: a stale `top-2.5` sat it 6px low).
+    const badgeCluster =
+      headerBadges.length > 0 ? (
+        <div className="ms-auto flex flex-wrap items-center justify-end gap-2 max-sm:ms-0 max-sm:justify-start">
+          {headerBadges}
+        </div>
+      ) : null;
     const markSummary = (
       <summary
         aria-label={t("trips.roster.detailsSummaryLabel", { name: person.fullName })}
         className={`absolute top-1 end-2 flex size-11 cursor-pointer list-none items-center justify-center rounded-lg transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken sm:end-3 ${
-          settledRow ? "text-success" : "text-muted hover:text-foreground"
+          settledRow && !arrivalControl ? "text-success" : "text-muted hover:text-foreground"
         }`}
       >
-        {settledRow ? (
+        {settledRow && !arrivalControl ? (
           <ReadyMark />
         ) : (
           <DisclosureCaret
@@ -1458,18 +1503,30 @@ export function RosterSection({
         className="relative scroll-mt-24 px-4 py-1 sm:px-5"
       >
         <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pe-11">
-          {headerLeft}
           {/* From `sm`, the line's end (`ms-auto`, `justify-end`). On a
               phone, where this wraps under the name, the row's
               `justify-between` still sends an unwrapped cluster to the end,
               and a wrapped one starts on the name's column like the name's
               own wrap (K-278: it right-aligned to the mark's edge, on no
               shared edge). */}
-          {headerBadges.length > 0 ? (
-            <div className="ms-auto flex flex-wrap items-center justify-end gap-2 max-sm:ms-0 max-sm:justify-start">
-              {headerBadges}
-            </div>
-          ) : null}
+          {arrivalControl ? (
+            <>
+              {/* **The desk's tap keeps the name's line at every width**: the
+                  name, its chips and its capsules wrap inside their own
+                  column, so "Check in" stands at the same edge, on the first
+                  line, of every row a finger runs down. */}
+              <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                {headerLeft}
+                {badgeCluster}
+              </div>
+              <div className="shrink-0 self-start">{arrivalControl}</div>
+            </>
+          ) : (
+            <>
+              {headerLeft}
+              {badgeCluster}
+            </>
+          )}
         </div>
         {/* **Every seat is one line** (owner, 2026-10-05). The group band says
             the state, the name line says who, the reason lines say what is in
@@ -1485,6 +1542,7 @@ export function RosterSection({
         {reasonList}
         {identityCheck}
         {medicalHold}
+        {arrivalBelow}
         <AutoOpenDetails openOnHash={`booking-${booking.id}`} open={holdOpen} className="group">
           {markSummary}
           <div className="pb-1.5">
@@ -1585,6 +1643,29 @@ export function RosterSection({
               <RosterGroupBand label={`${t("trips.roster.groupReady")} · ${ready.length}`} />
               <ul className="divide-y divide-border">
                 {ready.map((entry) => renderRow(entry, true))}
+              </ul>
+            </>
+          ) : null}
+          {here.length > 0 ? (
+            <>
+              <RosterGroupBand label={`${t("trips.roster.groupCheckedIn")} · ${here.length}`}>
+                {/* Boarding is the group's fact, said once (principle 9): five
+                    receipts each wearing "Boarded" is one word printed five
+                    times. Nothing at all before anybody boards. */}
+                {arrival?.hereMeta ? (
+                  <span className="text-xs text-muted">{arrival.hereMeta}</span>
+                ) : null}
+              </RosterGroupBand>
+              <ul className="divide-y divide-border">
+                {here.map((entry) => renderRow(entry, true))}
+              </ul>
+            </>
+          ) : null}
+          {notHere.length > 0 ? (
+            <>
+              <RosterGroupBand label={`${t("trips.roster.groupNotHere")} · ${notHere.length}`} />
+              <ul className="divide-y divide-border">
+                {notHere.map((entry) => renderRow(entry, false))}
               </ul>
             </>
           ) : null}

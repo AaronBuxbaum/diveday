@@ -1,7 +1,6 @@
 // @vitest-environment node
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
-import { PAPER_WAIVER_IDLE } from "@/lib/paper-waiver-form";
 import { staffSession } from "@/test/staff-session";
 
 /**
@@ -33,8 +32,7 @@ import { staffSession } from "@/test/staff-session";
  *    merely unrecorded.
  *
  * There is no role list to check here. The counter's actions are the day's work
- * — arrivals, a seat given back, a release signed on paper, an identity
- * attested — and `src/lib/authz.ts` is explicit that those stay open to every
+ * — arrivals, a seat given back, an identity attested — and `src/lib/authz.ts` is explicit that those stay open to every
  * live staff role; `requireStaffSession` re-reads the account on every call, so
  * "live" is a fact and not a 30-day-old claim (issue #701).
  */
@@ -57,7 +55,6 @@ const {
   checkInAction,
   confirmIdentityFromCheckIn,
   markNoShowAction,
-  markWaiverInPersonFromCheckIn,
   splitIdentityFromCheckIn,
   undoCheckInAction,
   undoNoShowAction,
@@ -80,7 +77,6 @@ describe("who may run each action at the counter", () => {
     "undoCheckInAction",
     "markNoShowAction",
     "undoNoShowAction",
-    "markWaiverInPersonFromCheckIn",
     "confirmIdentityFromCheckIn",
     "splitIdentityFromCheckIn",
   ];
@@ -158,18 +154,14 @@ describe("who may run each action at the counter", () => {
  */
 describe("a refused session at the counter", () => {
   /**
-   * One invoker per exported action, because their signatures differ: the
-   * paper-waiver door is a `useActionState` reducer and the identity door
-   * carries the queue's search (issue #1803). Checked for exhaustiveness against the source
-   * in the roster above, so a seventh action cannot arrive without one.
+   * One invoker per exported action, because their signatures may differ. Checked for exhaustiveness against the source
+   * in the roster above, so a new action cannot arrive without one.
    */
   const INVOKE: Record<string, (form: FormData) => Promise<unknown>> = {
     checkInAction: (form) => checkInAction(SHOP_SLUG, FOCUS_TRIP_ID, form),
     undoCheckInAction: (form) => undoCheckInAction(SHOP_SLUG, FOCUS_TRIP_ID, form),
     markNoShowAction: (form) => markNoShowAction(SHOP_SLUG, FOCUS_TRIP_ID, form),
     undoNoShowAction: (form) => undoNoShowAction(SHOP_SLUG, FOCUS_TRIP_ID, form),
-    markWaiverInPersonFromCheckIn: (form) =>
-      markWaiverInPersonFromCheckIn(SHOP_SLUG, FOCUS_TRIP_ID, PAPER_WAIVER_IDLE, form),
     confirmIdentityFromCheckIn: (form) =>
       confirmIdentityFromCheckIn(SHOP_SLUG, FOCUS_TRIP_ID, form),
     splitIdentityFromCheckIn: (form) => splitIdentityFromCheckIn(SHOP_SLUG, FOCUS_TRIP_ID, form),
@@ -178,9 +170,6 @@ describe("a refused session at the counter", () => {
   function bookingForm(): FormData {
     const form = new FormData();
     form.set("bookingId", BOOKING_ID);
-    // The paper-waiver door needs its attestation; the gate must refuse before
-    // anything on the form is read at all.
-    form.set("medicalAttested", "on");
     return form;
   }
 

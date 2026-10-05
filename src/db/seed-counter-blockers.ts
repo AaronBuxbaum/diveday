@@ -16,8 +16,8 @@ import {
 import { at, nextCreatedAt } from "./seed-clock";
 
 /**
- * One diver blocked for **five** reasons at once — the case the check-in
- * counter's reason list (`src/components/today/BlockedDiverRow.tsx`) exists to
+ * One diver blocked for **five** reasons at once — the case the Divers
+ * tab's reason list (`trips/[id]/_components/RosterSection.tsx`) exists to
  * render in full, and which no other fixture produces: every seeded charter
  * states the shop's default Open Water gate, so the deepest stack reachable at
  * the counter was a waiver plus a card.

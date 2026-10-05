@@ -16,16 +16,12 @@ describe("hasSailed", () => {
 });
 
 describe("counterQueuePath", () => {
-  it("is the departure's own Check-in tab", () => {
-    expect(counterQueuePath("blue-mantis", "trip-7")).toBe(
-      "/shop/blue-mantis/trips/trip-7/check-in",
-    );
+  it("is the departure's own Divers tab", () => {
+    expect(counterQueuePath("blue-mantis", "trip-7")).toBe("/shop/blue-mantis/trips/trip-7");
   });
 
   it("escapes both halves — each reaches an action as a caller's argument", () => {
-    expect(counterQueuePath("../../admin", "a b&c")).toBe(
-      "/shop/..%2F..%2Fadmin/trips/a%20b%26c/check-in",
-    );
+    expect(counterQueuePath("../../admin", "a b&c")).toBe("/shop/..%2F..%2Fadmin/trips/a%20b%26c");
   });
 });
 

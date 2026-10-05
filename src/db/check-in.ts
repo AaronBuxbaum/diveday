@@ -150,7 +150,7 @@ export async function hasArrivals(db: AppDb, shopId: string, now: Date = nowDate
  * (`src/db/person-search.ts`), so Today's arrival lookup finds a diver by
  * name, email or phone exactly as the diver search does (issue #1765).
  *
- * `tripId` narrows the read to one departure: the trip page's Check-in tab.
+ * `tripId` narrows the read to one departure: the trip page's Divers tab, once arrivals open.
  */
 export async function listCheckInQueue(
   db: AppDb,

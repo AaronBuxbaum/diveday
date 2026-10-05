@@ -130,7 +130,7 @@ export default async function NewDiverPage({
         }
       : surface === "walk-in" && tripId
         ? {
-            href: shopPath(shopSlug, "trips", tripId, "check-in", "walk-in"),
+            href: shopPath(shopSlug, "trips", tripId, "walk-in"),
             label: t("divers.page.backToWalkIn"),
           }
         : surface === "new-booking" && tripId

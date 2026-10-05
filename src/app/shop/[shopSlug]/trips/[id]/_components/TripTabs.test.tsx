@@ -6,7 +6,7 @@ import { TripStageBadge, TripTabs, type TripTabsCopy, tripTabHref } from "./Trip
 
 const copy: TripTabsCopy = {
   tabsLabel: "Departure",
-  tabs: { divers: "Divers", checkin: "Check-in", boat: "Boat", gear: "Gear", details: "Details" },
+  tabs: { divers: "Divers", boat: "Boat", gear: "Gear", details: "Details" },
   phaseLabel: "Stage",
   phases: { prep: "Prep", checkin: "Check-in", aboard: "Aboard", back: "Back" },
 };
@@ -14,17 +14,13 @@ const copy: TripTabsCopy = {
 describe("TripTabs", () => {
   afterEach(cleanup);
 
-  it("draws five tabs in order and marks the open one as the page", () => {
+  it("draws four tabs in order and marks the open one as the page", () => {
     render(<TripTabs shopSlug="s" tripId="t" current="gear" copy={copy} />);
     const nav = screen.getByRole("navigation", { name: "Departure" });
     const links = within(nav).getAllByRole("link");
-    expect(links.map((link) => link.textContent)).toEqual([
-      "Divers",
-      "Check-in",
-      "Boat",
-      "Gear",
-      "Details",
-    ]);
+    // No Check-in tab: arrival is a state of the Divers roster (owner,
+    // 2026-10-05), so the desk's list is the one list.
+    expect(links.map((link) => link.textContent)).toEqual(["Divers", "Boat", "Gear", "Details"]);
     expect(within(nav).getByRole("link", { name: "Gear" })).toHaveAttribute("aria-current", "page");
     expect(within(nav).getByRole("link", { name: "Divers" })).not.toHaveAttribute("aria-current");
   });
@@ -54,7 +50,6 @@ describe("TripStageBadge", () => {
 describe("tripTabHref", () => {
   it("points each tab at the surface that does that work", () => {
     expect(tripTabHref("s", "t", "divers")).toBe("/shop/s/trips/t");
-    expect(tripTabHref("s", "t", "checkin")).toBe("/shop/s/trips/t/check-in");
     expect(tripTabHref("s", "t", "boat")).toBe("/shop/s/trips/t/manifest");
     expect(tripTabHref("s", "t", "gear")).toBe("/shop/s/trips/t/prep");
     expect(tripTabHref("s", "t", "details")).toBe("/shop/s/trips/t?view=details");

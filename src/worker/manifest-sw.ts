@@ -48,14 +48,15 @@ const OFFLINE_SHELL = "/offline-manifest";
 // offline error, without this worker reaching beyond the manifest.
 const LIVE_MANIFEST_PATTERN = /^\/shop\/[^/]+\/trips\/([^/]+)\/manifest(?:\/.*)?$/;
 // The counter, and only the counter — the second authenticated page this shell
-// backs up (ADR 20260907-the-counter-survives-offline). A staffer who reloads
-// a departure's Check-in tab with no signal lands on the saved copy of that
-// departure rather than the browser's offline error; the departure is the
-// path segment, so the redirect carries it across as `?trip=`.
-// The tab itself and nothing under it: the walk-in flow beneath this path
-// seats a diver, which needs a server, so redirecting it to a roster it cannot
-// act on would be a worse answer than the browser's own.
-const COUNTER_PATTERN = /^\/shop\/[^/]+\/trips\/([^/]+)\/check-in\/?$/;
+// backs up (ADR 20260907-the-counter-survives-offline). The counter is a
+// departure's Divers tab, whose roster carries the desk's taps once arrivals
+// open (owner, 2026-10-05), so a staffer who reloads it with no signal lands on
+// the saved copy of that departure rather than the browser's offline error;
+// the departure is the path segment, so the redirect carries it across as
+// `?trip=`. The tab itself and nothing under it: the walk-in flow beneath this
+// path seats a diver, which needs a server, and `trips/new` is not a departure
+// (hence the id's own shape rather than any segment).
+const COUNTER_PATTERN = /^\/shop\/[^/]+\/trips\/([0-9a-f]{8}-[0-9a-f-]{27})\/?$/i;
 
 /**
  * Chunks the bundler's runtime loads *lazily*, which the shell HTML therefore

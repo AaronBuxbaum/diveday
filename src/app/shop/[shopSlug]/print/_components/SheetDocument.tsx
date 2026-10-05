@@ -22,7 +22,7 @@ import { AutoPrint } from "../../trips/[id]/_components/AutoPrint";
  *   print redefines the colour tokens (`globals.css`'s paper-sheet block says
  *   why).
  * - **The way back and the way out**, both `print:hidden`: the counter this
- *   was opened from (the departure's Check-in tab), and a second Print for a staffer who dismissed the dialog.
+ *   was opened from (the departure's Divers tab), and a second Print for a staffer who dismissed the dialog.
  *
  * `AutoPrint` opens the dialog on arrival, the same as the trip and day
  * packets: the door that reached this page said Print, so the page does not

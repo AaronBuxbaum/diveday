@@ -110,9 +110,8 @@ export function PaperWaiverControl({
   /**
    * A page-level `?notice=` already said the names matched, before this form
    * was submitted at all — the surface's own reading of its URL, and the one
-   * way the tick appears without a refusal of its own (`check-in/page.tsx` and
-   * the trip page still route those codes, and the counter's refused-form
-   * capture in `e2e/visual.spec.ts` is taken that way). The page renders its
+   * way the tick appears without a refusal of its own (the trip page still
+   * routes those codes). The page renders its
    * own words for it; this only decides whether the way through is drawn.
    *
    * Ignored where `offersNamesake` is off, so no URL reaches the tick on the

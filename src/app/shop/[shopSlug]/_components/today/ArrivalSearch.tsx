@@ -7,8 +7,8 @@ import { QueryForm } from "@/components/ui/QueryForm";
 /**
  * **Today's arrival lookup**: "which boat is this diver on?", for the staffer
  * at the desk with somebody in front of them and no idea which departure they
- * booked. Each departure's own counter is its Check-in tab; this is the one
- * question none of those tabs can answer alone.
+ * booked. Each departure's own counter is its Divers tab once arrivals open;
+ * this is the one question none of those tabs can answer alone.
  */
 export function ArrivalSearch({
   query,

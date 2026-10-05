@@ -150,10 +150,10 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     refusalNotice: TRIP_REFUSAL_NOTICE,
   },
   /**
-   * The counter walk-in, from a departure's Check-in tab. A seated diver
-   * settles on that tab's queue, where they are the next row to work; a
-   * *refused* one lands back on the walk-in form for the same boat, so the
-   * staffer can try someone else.
+   * The counter walk-in, from a departure's Divers tab while arrivals are
+   * open. A seated diver settles on that tab's roster, where they are the next
+   * row to work; a *refused* one lands back on the walk-in form for the same
+   * boat, so the staffer can try someone else.
    *
    * It used to speak a deliberately blunt three-code vocabulary
    * (`refusals: "coarse"`) that collapsed all eight gates into "can't add this
@@ -169,9 +169,9 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     refusals: "specific",
     email: "optional",
     seatedPath: ({ shopSlug, tripId }) =>
-      tripId ? shopPath(shopSlug, "trips", tripId, "check-in") : shopPath(shopSlug),
+      tripId ? shopPath(shopSlug, "trips", tripId) : shopPath(shopSlug),
     refusedPath: ({ shopSlug, tripId }) =>
-      tripId ? shopPath(shopSlug, "trips", tripId, "check-in", "walk-in") : shopPath(shopSlug),
+      tripId ? shopPath(shopSlug, "trips", tripId, "walk-in") : shopPath(shopSlug),
     // The departure is a path segment on that landing route, which is what lets
     // the signature bind to something its reader can re-derive without trusting
     // the query — and what lets a refusal add only its own `?notice=` to a

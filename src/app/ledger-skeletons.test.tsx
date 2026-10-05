@@ -27,7 +27,6 @@ import ReportsLoading from "./shop/[shopSlug]/reports/loading";
 import RequestsLoading from "./shop/[shopSlug]/requests/loading";
 import StaffReviewsLoading from "./shop/[shopSlug]/reviews/loading";
 import StaffingLoading from "./shop/[shopSlug]/staffing/loading";
-import CheckInLoading from "./shop/[shopSlug]/trips/[id]/check-in/loading";
 import { SignatureLog } from "./shop/[shopSlug]/waivers/_components/SignatureLog";
 import WaiversLoading from "./shop/[shopSlug]/waivers/loading";
 
@@ -56,7 +55,6 @@ const SKELETONS: [name: string, loadedBy: string, Skeleton: ComponentType][] = [
   ["dive sites", "SiteLibraryLedger", DiveSitesLoading],
   ["reports", "DepartureLedger", ReportsLoading],
   ["promos", "PromoLedger", PromosLoading],
-  ["check-in", "CounterQueueRow", CheckInLoading],
   ["requests", "RequestLedgerRow", RequestsLoading],
   ["waivers", "SignatureLog", WaiversLoading],
   ["staffing", "StaffCredentials", StaffingLoading],

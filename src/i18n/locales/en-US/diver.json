@@ -2566,7 +2566,7 @@
       },
       "diveDay": {
         "title": "The dive day",
-        "item1": "One page per departure, in five tabs: Divers, Check-in, Boat, Gear and Details",
+        "item1": "One page per departure, in four tabs: Divers, Boat, Gear and Details",
         "item2": "Multi-day departures with one roster, one waiver, one crew",
         "item3": "One to four dives per departure, each with its own site briefing",
         "item4": "A head count before departure and after every dive, crew included, with an append-only history",

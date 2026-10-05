@@ -1,6 +1,6 @@
 /**
  * Framework-free helpers for the counter check-in queue
- * (`src/app/shop/[shopSlug]/trips/[id]/check-in/page.tsx` + `src/db/check-in.ts`).
+ * (`src/app/shop/[shopSlug]/trips/[id]/_arrivals/arrival-desk.tsx` + `src/db/check-in.ts`).
  *
  * The predicates below cut a departure's seats into the counter's three
  * disjoint groups — settled, blocked, still to come — and every figure, meter
@@ -61,7 +61,7 @@ export function isNoShowAtCounter(seat: CounterSeat): boolean {
  * **The counter has nothing left to do with this seat** — it settled, or it
  * was released.
  *
- * The split `CounterQueue` draws its two groups on. The working list is the
+ * The split the arrival desk's groups follow. The working list is the
  * people a staffer can still act on, and a released seat is not one of them:
  * leaving it up there is a name in a queue of names that needs no tap, which
  * is exactly the noise the settled group exists to take away.
