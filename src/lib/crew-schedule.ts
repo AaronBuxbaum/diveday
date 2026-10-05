@@ -3,11 +3,11 @@
  * ADR 20261005-crew-schedule-is-a-setting).
  *
  * On, the shop gets the Crew view of Schedule (shifts, days away, crew asking
- * for a departure), the crew line on the week, the crew editor on every
- * departure, and the nudges measured against its own divemaster target. Off,
- * all of that is gone — and one thing is not: a **course session** still names
- * its instructor, because the agency training ratio refuses seats from that
- * count (`src/lib/course-ratios.ts`) whether or not the shop keeps a roster.
+ * for a departure), the crew line on the week, and the nudges measured against
+ * its own divemaster target. Off, all of that is gone. Who is aboard is not
+ * planning, so every departure keeps its crew editor either way: the crew roll
+ * call and the souls-on-board count read it, and a course session's agency
+ * ratio refuses seats from it (`src/lib/course-ratios.ts`).
  */
 export type CrewScheduleShop = {
   crewScheduleEnabled: boolean;
@@ -20,16 +20,4 @@ export type CrewScheduleShop = {
  */
 export function shopCrewTarget(shop: CrewScheduleShop): number | null {
   return shop.crewScheduleEnabled ? shop.diversPerDivemaster : null;
-}
-
-/**
- * Whether one departure's page offers its crew editor. Always for a course
- * session, which cannot take an enrolment without a named instructor; for
- * anything else, only when the shop plans its crew here.
- */
-export function departureShowsCrew(
-  shop: Pick<CrewScheduleShop, "crewScheduleEnabled">,
-  trip: { course: unknown },
-): boolean {
-  return shop.crewScheduleEnabled || trip.course != null;
 }

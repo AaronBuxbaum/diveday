@@ -357,7 +357,7 @@
       "label": "Plan crew in DiveDay",
       "description": "Shifts, days away, and who works each departure. Course sessions name their instructor either way.",
       "save": "Save crew schedule",
-      "saving": "Saving...",
+      "saving": "Saving…",
       "saved": "Crew schedule saved."
     },
     "team": {

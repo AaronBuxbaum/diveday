@@ -28,12 +28,18 @@ teaching shop unable to enrol anyone.
 - `src/lib/crew-schedule.ts` is the one place the rule lives. `shopCrewTarget(shop)` hands every
   reader of the target `null` when the switch is off, and `divemasterRatioGap` reads `null` as
   "never short" — so Today, the trip page and the planner cannot disagree.
-  `departureShowsCrew(shop, trip)` decides whether a departure's page offers its crew editor.
 - **Off** removes: the Crew tab (and `/staffing`, which redirects to the week), the palette's
-  "Crew schedule" row, the week's crew line, the fun-dive crew editor (the Details row shows the
-  boat alone), the divemaster-target and crew-language nudges, the shift badges and the
-  "Manage shifts" door, and the planner's divemaster suggestion.
-- **Off keeps**: a course session's crew editor and every agency-ratio signal
+  "Crew schedule" row, the week's crew line, the divemaster-target and crew-language nudges
+  (Today's `uncrewed_departure` and `crew_below_target` included), the shift badges and the
+  "Manage shifts" door, and the planner's divemaster suggestion. A fun dive with nobody named still
+  meets the crew roll call's open checkpoint on its manifest, which is where a boat that sails
+  without its crew is caught; Today stops repeating it for a shop that said it keeps no roster.
+- **Off keeps the crew editor on every departure.** Who is aboard is manifest data, not planning:
+  the crew roll call holds its checkpoint open on an empty crew list and links to that editor, and
+  the printed souls-on-board count is check-ins plus named staff, so a shop that could not name its
+  captain would read a wrong number over the radio. Off only stops an empty fun-dive crew list from
+  opening the editor by itself.
+- **Off keeps** every agency-ratio signal
   (`instructor_missing`, the trip pulse's "Needs an instructor" and "Over student ratio"). With the
   target gone a course with nobody aboard reads as `instructor_missing` rather than
   `uncrewed_course`. Existing assignments stay on the manifest and roll call — the switch hides
@@ -48,8 +54,10 @@ teaching shop unable to enrol anyone.
   on for every teaching shop, and the seed's own fixtures would decide what a new shop sees.
 - **Default on** — what every shop had before. Rejected: the shops that do not plan crew are the
   ones the noise hurts, and a new shop cannot tell an empty roster from a broken one.
-- **Hide the course-session crew editor too** — the cleanest switch, and a teaching shop could not
-  take an enrolment. Not a trade a setting about rosters gets to make.
+- **Hide the crew editor too** (on fun dives, or everywhere) — the cleanest switch, and the first
+  draft of this decision hid it on fun dives. A dive-domain review refused it: the crew roll call
+  could never close and the souls-on-board count would leave out every staff member. A teaching
+  shop also could not take an enrolment. Not a trade a setting about rosters gets to make.
 
 ## Consequences
 
