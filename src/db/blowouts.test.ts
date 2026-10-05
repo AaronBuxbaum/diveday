@@ -299,14 +299,14 @@ describe("callTripBlowout — what the message says", () => {
     });
     if (!trip) throw new Error("test trip could not be created");
     // Diego Alvarez is the seed's verified Open Water diver (seed-cert-gates):
-    // booking him by his seeded email reuses his person row and his cards.
+    // booking him by his seeded (simulator) email reuses his person row and his cards.
     const party = await createBookingParty(db, [
       {
         actor: "staff",
         shopId: shop.id,
         tripId: trip.id,
         fullName: "Diego Alvarez",
-        email: "diego.alvarez@example.com",
+        email: "success+diego.alvarez@simulator.amazonses.com",
       },
     ]);
     if (!party.ok) throw new Error(`Diego could not be booked: ${party.reason}`);
@@ -331,7 +331,7 @@ describe("callTripBlowout — what the message says", () => {
     });
     expect(outcome).toMatchObject({ ok: true, sent: 1 });
     const [send] = blowoutSends(email.sent);
-    expect(send.to).toBe("diego.alvarez@example.com");
+    expect(send.to).toBe("success+diego.alvarez@simulator.amazonses.com");
     expect(send.alternatives.length).toBeGreaterThan(0);
     for (const alternative of send.alternatives) {
       expect(alternative.title).not.toBe(gated[0].title);

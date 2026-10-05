@@ -35,7 +35,7 @@ describe("seeded requests", () => {
     expect(page.rows.find((row) => row.name === "Marisol Vega")).toMatchObject({
       courseTitle: "Open Water Diver",
       personId: null,
-      email: "marisol.vega@example.com",
+      email: "success+marisol.vega@simulator.amazonses.com",
     });
     expect(page.rows.find((row) => row.name === null)).toMatchObject({
       courseTitle: "Nitrox Diver",

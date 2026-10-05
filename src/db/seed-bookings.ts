@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
+import { simulatorEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
 import {
   bookingPayments,
@@ -318,7 +319,7 @@ export async function seedBookings(
     return {
       guardianName: guardian.name,
       guardianRelationship: guardian.relationship,
-      guardianEmail: `${guardian.name.toLowerCase().replace(/[^a-z]+/g, ".")}@example.com`,
+      guardianEmail: simulatorEmail(guardian.name),
       guardianSignatureMethod: "in_person_attested" as const,
       guardianConsentedAt: signedAt,
       guardianSignedAt: signedAt,

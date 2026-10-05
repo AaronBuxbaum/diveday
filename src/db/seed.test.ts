@@ -1,5 +1,8 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { STAFF_ROLES } from "@/lib/authz";
+import { reservedTestRecipientDelivery } from "@/lib/notifications/provider";
+import { isSimulatorEmail } from "@/lib/simulator-email";
 import { seededShopContext, unseededTestDb } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { issueBookingCapability } from "./booking-capabilities";
@@ -592,5 +595,38 @@ describe("seedIfEmpty (CR-010)", () => {
     // The retry itself then succeeds cleanly.
     await seedIfEmpty(db);
     await expect(db.select({ id: shops.id }).from(shops)).resolves.not.toHaveLength(0);
+  });
+});
+
+describe("seeded addresses", () => {
+  it("send every seeded diver and shop desk to the SES mailbox simulator, never to a domain the provider refuses", async () => {
+    const { db, shop } = await seededShopContext();
+    await resetDemoSchedule(db, shop.id, { history: true });
+
+    const staffIds = new Set(
+      (
+        await db
+          .select({ personId: personRoles.personId })
+          .from(personRoles)
+          .innerJoin(people, eq(people.id, personRoles.personId))
+          .where(and(eq(people.shopId, shop.id), inArray(personRoles.role, [...STAFF_ROLES])))
+      ).map((row) => row.personId),
+    );
+    const divers = (await db.select().from(people).where(eq(people.shopId, shop.id))).filter(
+      (person) => person.email && !staffIds.has(person.id),
+    );
+    expect(staffIds.size).toBeGreaterThan(0);
+    expect(divers.length).toBeGreaterThan(20);
+    const shopDesks = (await db.select({ email: shops.contactEmail }).from(shops))
+      .map((row) => row.email)
+      .filter((email): email is string => Boolean(email));
+
+    for (const email of [...divers.map((person) => person.email as string), ...shopDesks]) {
+      expect(isSimulatorEmail(email), email).toBe(true);
+      expect(reservedTestRecipientDelivery(email), email).toBeNull();
+    }
+    // Unique per diver, which is what the `+label` is for.
+    const addresses = divers.map((person) => person.email);
+    expect(new Set(addresses).size).toBe(addresses.length);
   });
 });

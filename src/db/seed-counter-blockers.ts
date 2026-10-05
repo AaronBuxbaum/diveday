@@ -1,3 +1,4 @@
+import { simulatorEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
 import {
   bookings,
@@ -37,7 +38,7 @@ import { at, nextCreatedAt } from "./seed-clock";
  */
 const DEMO_COUNTER_BLOCKED_DIVER = "Tomás Ferreira";
 const DEMO_COUNTER_BLOCKED_TRIP = "Deep Wreck Charter — the Duane on EANx";
-const DEMO_COUNTER_BLOCKED_EMAIL = "tomas.ferreira@example.com";
+const DEMO_COUNTER_BLOCKED_EMAIL = simulatorEmail("tomas.ferreira");
 
 export async function seedCounterBlockers(
   db: DbExecutor,

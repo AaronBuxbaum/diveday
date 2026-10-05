@@ -205,7 +205,9 @@ test.describe("H-14 role permissions", () => {
       // `e2e/inbox.spec.ts`).
       await page.getByRole("link", { name: "Open the record for Priya Sharma" }).click();
       await expect(
-        page.getByLabel("Reply by email to priya.sharma@example.com", { exact: true }),
+        page.getByLabel("Reply by email to success+priya.sharma@simulator.amazonses.com", {
+          exact: true,
+        }),
       ).toBeVisible();
     });
 
