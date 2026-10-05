@@ -1,3 +1,4 @@
+import type { Locator, Page } from "@playwright/test";
 import { expect, makeActivitySafe, signedInAsOwner, test } from "./fixtures";
 import {
   counterPath,
@@ -6,8 +7,8 @@ import {
   e2eNow,
   HELD_SEND_TIMEOUT_MS,
   openCounterFor,
-  openIfClosed,
   openPaperWaiverForm,
+  openRosterDetails,
   openTripFromBoard,
   publicTripUrl,
   seededTripId,
@@ -18,12 +19,28 @@ test.describe.configure({ timeout: 45_000 });
 signedInAsOwner();
 
 /**
- * The counter's own URL, allowing the `#booking-<id>` an arrival-lookup match
- * lands on — the hash scrolls to that diver's row and changes nothing else.
+ * The counter's own URL — a departure's Divers tab — allowing the
+ * `#booking-<id>` an arrival-lookup match lands on: the hash scrolls to that
+ * diver's row and changes nothing else.
  */
 function onCounter(path: string): RegExp {
   return new RegExp(`${path}(#booking-[0-9a-f-]+)?$`);
 }
+
+/**
+ * One diver's seat on the Divers tab. Scoped to the roster's booking rows and
+ * matched on the name's own link, so a name repeated in a reason line, the
+ * packing list or a salvage sentence never makes it two rows.
+ */
+function deskRow(page: Page, name: string): Locator {
+  return page
+    .locator('#roster li[id^="booking-"]')
+    .filter({ visible: true })
+    .filter({ has: page.getByRole("link", { name, exact: true }) });
+}
+
+/** "Checked in · n" — the group a settled arrival sinks into. */
+const CHECKED_IN_BAND = /^Checked in · \d+$/;
 
 /** A seeded boat still ahead of the frozen clock and inside the counter's window. */
 const OPEN_BOAT = "Two-Tank Reef — Molasses & French";
@@ -32,31 +49,22 @@ test("counter check-in finds a diver's boat, confirms live readiness, and keeps 
   page,
 }) => {
   // Today's arrival lookup finds the boat; its match opens that departure's
-  // Check-in tab, the counter for that one boat.
+  // Divers tab, which is the counter for that one boat while arrivals are open.
   const tripId = await openCounterFor(page, "blue-mantis", "Priya Sharma");
   await expect(page).toHaveURL(onCounter(counterPath("blue-mantis", tripId)));
-  await expect(page.getByRole("region", { name: "Check-in queue" })).toBeVisible();
+  // The desk is open: the count leads the roster.
+  await expect(page.getByText(/^\d+ of \d+ here$/)).toBeVisible();
 
-  const card = page
-    .locator("article")
-    .filter({ hasText: "Priya Sharma" })
-    .filter({ visible: true });
-  await expect(card).toHaveCount(1);
+  const row = deskRow(page, "Priya Sharma");
+  await expect(row).toHaveCount(1);
   // One readiness vocabulary and one tone per state
-  // (src/i18n/readiness-labels.ts): the counter used to call this diver "Needs
-  // attention" in warning while the manifest called the same person "Blocked"
-  // in danger. The danger-tone Badge prepends a decorative aria-hidden glyph
-  // (Badge.tsx toneGlyph), so the element's own text is "Blocked".
-  await expect(card.getByText("Blocked")).toBeVisible();
-  // **The one reason is on the row, full stop.** A disclosure hiding a
-  // single reason made the row a staffer must act on the least informative
-  // thing in the queue (issue #759). Priya has exactly one, so there is
-  // nothing to open. The counter used to keep money, medical answers and age
-  // behind a tap here (issue #716); #890 settled it — this is a staff
-  // surface like any other, so nothing on a blocked row is withheld any more.
-  await expect(card.getByText("Waiver has not been sent.")).toBeVisible();
-  await expect(card.getByText(/Why: \d+ reasons?/)).toHaveCount(0);
-  await expect(card.getByRole("button", { name: "Check in Priya Sharma" })).toHaveCount(0);
+  // (src/i18n/readiness-labels.ts): the word is "Blocked" on every surface.
+  await expect(row.getByText("Blocked", { exact: true })).toBeVisible();
+  // **The reason is on the row**, and a blocked row offers no check-in:
+  // readiness is the gate, and a tap beside the reasons would be an act the
+  // server refuses.
+  await expect(row.getByText("Waiver has not been sent.")).toBeVisible();
+  await expect(row.getByRole("button", { name: "Check in Priya Sharma" })).toHaveCount(0);
 
   // A lookup that finds nobody says so, naming what was typed.
   await page.goto("/shop/blue-mantis?q=not-a-real-diver");
@@ -64,78 +72,58 @@ test("counter check-in finds a diver's boat, confirms live readiness, and keeps 
 });
 
 /**
- * **The other half of the disclosure.** A diver with a stack of reasons keeps
- * it collapsed — five of them open on three rows is the scannability it
- * exists for, spent — but the closed state names the worst reason (the
- * readiness engine's own order) rather than counting alone. Nothing is
- * special-cased out of that order any more, money included: #890 removed the
- * check-in counter's old privacy filter, so the summary would name
- * "Payment is outstanding for this trip." here too if it were this diver's
- * worst reason (it isn't — the waiver is).
+ * **A stack of reasons, every one said.** The old counter folded a diver's
+ * reasons behind "And 4 more reasons"; the roster row the desk now works from
+ * lists each blocker on its own line under the name, money included (#890: a
+ * staff surface withholds nothing from staff), and still offers no tap.
  */
-test("a diver blocked five ways names the worst reason and counts the rest", async ({ page }) => {
+test("a diver blocked five ways shows every reason and no check-in", async ({ page }) => {
   await openCounterFor(page, "blue-mantis", "Tomás Ferreira");
 
-  const card = page.locator("article").filter({ hasText: "Ferreira" }).filter({ visible: true });
-  await expect(card).toHaveCount(1);
-  const summary = card.getByText("Waiver has not been sent. And 4 more reasons.");
-  await expect(summary).toBeVisible();
-  await expect(card.getByText("Payment is outstanding for this trip.")).toBeHidden();
-
-  await summary.click();
-  await expect(card.getByText("Payment is outstanding for this trip.")).toBeVisible();
+  const row = deskRow(page, "Tomás Ferreira");
+  await expect(row).toHaveCount(1);
+  await expect(row.getByText("Waiver has not been sent.")).toBeVisible();
+  await expect(row.getByText("Payment is outstanding for this trip.")).toBeVisible();
+  await expect(row.getByRole("button", { name: "Check in Tomás Ferreira" })).toHaveCount(0);
 });
 
 /**
- * The queue's one-tap grammar: the whole row is the control (the same
- * roll-call pattern the manifest speaks), and a settled row tapped again
- * undoes the check-in — re-tap, never a confirm dialog (design principle 7).
+ * The desk's one-tap grammar on the roster row: a cleared seat ends in "Check
+ * in", and the same control in its other state undoes it — re-tap, never a
+ * confirm dialog (design principle 7).
  *
- * The row now **sinks** on the tap: it leaves the working queue for its
- * departure's collapsed settled group (ADR 20260827-clearwater-surface-language,
- * decision 9). Every assertion below is on the final DOM — the settled group's
- * own heading and the undo control inside it — and never on the 150ms
- * fade-out that carries the row there. An e2e that waited on motion is exactly
- * what `pnpm check:e2e-hygiene` refuses.
+ * The row **sinks** on the tap into its own "Checked in" group. Every
+ * assertion below is on the final DOM — the group's band and the undo control
+ * on the row — never on motion, which `pnpm check:e2e-hygiene` refuses.
  */
-test("a ready diver checks in with one tap, sinks into the settled group, and a re-tap undoes it", async ({
+test("a ready diver checks in with one tap, sinks into the checked-in group, and a re-tap undoes it", async ({
   page,
 }) => {
   await openCounterFor(page, "blue-mantis", "Diego Alvarez");
 
-  const row = page
-    .locator("article")
-    .filter({ hasText: "Diego Alvarez" })
-    .filter({ visible: true });
+  const row = deskRow(page, "Diego Alvarez");
   await row.getByRole("button", { name: "Check in Diego Alvarez" }).click();
 
-  // The settled group IS the confirmation — no success banner restates it from
-  // the top of the page (design principle 9), and no sentence teaching the
-  // re-tap either: the control's accessible name already says "Undo". Other
-  // divers on the same boat may already be in it, so the count is not pinned.
-  const settledHeading = page.getByRole("heading", { name: /^Checked in — \d+$/ });
-  await expect(settledHeading).toBeVisible({ timeout: 15_000 });
+  // The group IS the confirmation — no success banner restates it from the top
+  // of the page (design principle 9). Other divers on the same boat may already
+  // be in it, so the count is not pinned.
+  const checkedIn = page.getByRole("heading", { name: CHECKED_IN_BAND });
+  await expect(checkedIn).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole("button", { name: "Check in Diego Alvarez" })).toHaveCount(0);
 
-  // A boat still ahead keeps its receipts folded; open them to reach the row.
-  await openIfClosed(page.locator("details").filter({ has: settledHeading }));
-  // **The row itself says nothing about its state, and that is the point.**
-  // The group header above it already says "Checked in — n"; the drawn mark
-  // and its two words on every row under it were that statement repeated per
-  // receipt (principle 9). What still names the act is the tap's accessible
-  // name, which is also what a screen reader reads.
-  const undo = page.getByRole("button", { name: "Undo check-in for Diego Alvarez" });
+  // The arrived row ends in the control that undoes it, wearing the state's
+  // word, with the paper pass beside it for the diver with no phone.
+  const undo = row.getByRole("button", { name: "Undo check-in for Diego Alvarez" });
   await expect(undo).toBeVisible();
-  await expect(undo).toContainText("Diego Alvarez");
-  await expect(undo).not.toContainText("Checked in");
-  // Still no sentence teaching the re-tap, which was true before the mark went
-  // and has to stay true now that the row's end is quiet.
-  await expect(undo).not.toContainText("undo");
+  await expect(undo).toHaveText("Checked in");
+  await expect(undo).toHaveAttribute("data-arrival-tap", "undo");
+  await expect(row.getByRole("link", { name: "Print a pass" })).toBeVisible();
 
   await undo.click();
   await expect(page.getByRole("button", { name: "Check in Diego Alvarez" })).toBeVisible({
     timeout: 15_000,
   });
+  await expect(row.getByRole("link", { name: "Print a pass" })).toHaveCount(0);
 });
 
 /**
@@ -144,9 +132,10 @@ test("a ready diver checks in with one tap, sinks into the settled group, and a 
  * than inherited — `TABLET_SURFACES` in `visual.spec.ts` governs the captures,
  * not this spec.
  *
- * What it pins is the instrument itself: one departure with the count
- * leading, queue rows at the counter's 56px floor, the walk-in door at the
- * foot, and — on a boat that has already sailed — the settled receipts open.
+ * What it pins is the instrument itself: the count leading the roster, taps at
+ * the dock test's 44px floor, the walk-in door under "Add a diver", and — on a
+ * boat that has already sailed — the receipts and the divers who still cannot
+ * board, apart.
  */
 test("the counter reads as an instrument at the tablet on the desk", async ({ page }) => {
   await page.setViewportSize({ width: 820, height: 1180 });
@@ -155,46 +144,45 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
 
   await page.goto(counterPath("blue-mantis", openId));
   await expect(page.getByRole("heading", { name: OPEN_BOAT, level: 1 })).toBeVisible();
-  const queue = page.getByRole("region", { name: "Check-in queue" });
-  await expect(queue).toBeVisible();
 
   // The count leads, before any list.
   await expect(page.getByText(/^\d+ of \d+ here$/)).toBeVisible();
 
-  // A queue row clears the counter's own 56px floor.
-  const firstTap = queue.getByRole("button", { name: /^(Check in|Undo check-in for) / }).first();
+  // A tap clears the dock test's 44px floor.
+  const firstTap = page
+    .locator("#roster")
+    .getByRole("button", { name: /^(Check in|Undo check-in for) / })
+    .first();
   await expect(firstTap).toBeVisible();
-  expect((await firstTap.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(56);
+  expect((await firstTap.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
 
-  // The walk-in door stands at the foot of the queue.
-  await expect(queue.getByRole("link", { name: "Add a walk-in" })).toBeVisible();
+  // The walk-in door stands under "Add a diver".
+  await expect(page.getByRole("link", { name: "Add a walk-in" })).toBeVisible();
 
   // A boat that has already sailed is read rather than worked: its receipts
-  // are the point, so the settled group arrives open.
+  // stand in their own group.
   await page.goto(counterPath("blue-mantis", sailedId));
-  const settledHeading = page.getByRole("heading", { name: /^Checked in — \d+$/ });
-  await expect(settledHeading).toBeVisible();
-  await expect(page.locator("details").filter({ has: settledHeading })).toHaveJSProperty(
-    "open",
-    true,
-  );
+  await expect(page.getByRole("heading", { name: CHECKED_IN_BAND })).toBeVisible();
   // Nobody can be seated on a boat that has left, so its door is not drawn.
   await expect(page.getByRole("link", { name: "Add a walk-in" })).toHaveCount(0);
 
-  // **And it is not all-clear, because three of the eight aboard are blocked.**
+  // **And it is not all-clear, because some of the divers aboard are blocked.**
   // Every diver on this boat is `checked_in`, which used to be the whole
   // condition for the coral line — so the instrument painted the earned moment
-  // over divers readiness will not clear, on the one surface whose job is to
-  // catch that ashore. The line now needs "nobody blocked" as well, the count
-  // says how many cannot board, and those rows stay out in the working list
-  // with their reasons instead of sinking into the receipts (ADR
-  // 20260827-clearwater-surface-language, decision 9).
+  // over divers readiness will not clear. The line needs "nobody blocked" as
+  // well, the count says how many cannot board, and those rows stay in "Still
+  // to clear" wearing their reasons instead of sinking into the receipts.
   await expect(page.getByRole("status").filter({ hasText: "Everyone’s checked in" })).toHaveCount(
     0,
   );
   await expect(page.getByText(/can’t board yet/)).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Still to clear" })).toBeVisible();
   await expect(
-    page.locator("article").filter({ hasText: "Blocked" }).filter({ visible: true }).first(),
+    page
+      .locator('#roster li[id^="booking-"]')
+      .filter({ visible: true })
+      .filter({ hasText: "Blocked" })
+      .first(),
   ).toBeVisible();
 });
 
@@ -226,16 +214,14 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   // No email was collected, so no waiver could be mailed — and the notice says
   // so rather than implying one is on its way. This is the *ordinary* counter
   // outcome, not an edge case: the diver is seated and the link is still owed.
-  // The bare counter URL, asserted rather than a `?notice=` this page erases:
-  // `toHaveURL` retries, so this waits for `FlashParams` to strip the code and
-  // proves it actually did — a looser pattern would pass either way.
+  // The bare Divers-tab URL, asserted rather than a `?notice=` this page
+  // erases: `toHaveURL` retries, so this waits for `FlashParams` to strip the
+  // code and proves it actually did — a looser pattern would pass either way.
   await expect(page).toHaveURL(counter);
   await expect(
     page.getByText("Added to this boat’s list, but their waiver wasn’t emailed."),
   ).toBeVisible();
-  await expect(
-    page.locator("article").filter({ hasText: "Walk-in Test Diver" }).filter({ visible: true }),
-  ).toHaveCount(1);
+  await expect(deskRow(page, "Walk-in Test Diver")).toHaveCount(1);
 });
 
 /**
@@ -244,16 +230,14 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
  *
  * The walk-in name prompt is where a held seat comes from: a staffer types a
  * name, the prompt offers the diver already on file, and a tap attaches the
- * booking to that person's record on something short of proof. Until this
- * landed, the only control that cleared the flag was on the trip roster — so
- * the counter tapped check in, met `checkInBooking`'s `not_ready` refusal,
- * followed its link to the trip, expanded a confirm there and walked back, with
- * a diver at the desk and a queue behind them.
+ * booking to that person's record on something short of proof. The held row
+ * is the roster's own, so its identity confirm is the roster's — and with the
+ * desk open, confirming it releases the check-in tap on the same row.
  *
  * The whole loop in one pass, because the loop is the feature: the guess, the
  * held row, the attestation on that row, and the boarding it releases.
  */
-test("a walk-in seated off the name prompt is confirmed and checked in without leaving the queue", async ({
+test("a walk-in seated off the name prompt is confirmed and checked in without leaving the roster", async ({
   page,
 }) => {
   const tripId = await seededTripId(page, "blue-mantis", OPEN_BOAT);
@@ -272,44 +256,43 @@ test("a walk-in seated off the name prompt is confirmed and checked in without l
   await expect(page.getByRole("heading", { name: /Is this the same Zoe Bennet\?/ })).toBeVisible();
   await page.getByRole("button", { name: "Zoe Bennett", exact: true }).click();
 
-  // The seating says the seat is held, in the counter's own words, rather than
-  // letting "Added" imply the diver can board.
+  // The seating says the seat is held, rather than letting "Added" imply the
+  // diver can board.
   await expect(
     page.getByText("the seat is held until you confirm it’s the same person", { exact: false }),
   ).toBeVisible();
-  // Back on this boat's counter, with the notice's code already stripped — so
-  // the render the row is acted on below is the settled one, not one a
+  // Back on this boat's Divers tab, with the notice's code already stripped —
+  // so the render the row is acted on below is the settled one, not one a
   // navigation is about to replace (and with it the confirm's client state).
   await expect(page).toHaveURL(counter);
 
-  const card = page.locator("article").filter({ hasText: "Zoe Bennett" }).filter({ visible: true });
-  await expect(card.getByText("Blocked")).toBeVisible();
+  const row = deskRow(page, "Zoe Bennett");
+  await expect(row.getByText("Blocked", { exact: true })).toBeVisible();
   // Held: the two answers stand on the row, "Same person" and "Different person".
-  await expect(card.getByRole("button", { name: "Same person as Zoe Bennett" })).toBeVisible();
+  await expect(row.getByRole("button", { name: "Same person as Zoe Bennett" })).toBeVisible();
   // The gate the whole change is about: a held row offers no check-in.
-  await expect(card.getByRole("button", { name: "Check in Zoe Bennett" })).toHaveCount(0);
+  await expect(row.getByRole("button", { name: "Check in Zoe Bennett" })).toHaveCount(0);
 
   // **Two taps, not one.** The attestation releases another person's
   // certifications and release onto this seat and has no undo, so the trigger
   // arms and a second, deliberate tap posts it.
-  await card.getByRole("button", { name: "Same person as Zoe Bennett" }).click();
-  await expect(card.getByText("Is the person at the counter Zoe Bennett?")).toBeVisible();
-  await card.getByRole("button", { name: "Yes, this is them" }).click();
+  await row.getByRole("button", { name: "Same person as Zoe Bennett" }).click();
+  await expect(
+    row.getByText("Confirm this booking is Zoe Bennett?", { exact: false }),
+  ).toBeVisible();
+  await row.getByRole("button", { name: "Yes, this is them" }).click();
 
-  // It lands in place — still this boat's counter — and the row it landed on
-  // now offers the boarding the flag was refusing.
-  await expect(card.getByRole("button", { name: "Check in Zoe Bennett" })).toBeVisible();
+  // It lands in place — still this boat's Divers tab — and the row it landed
+  // on now offers the boarding the flag was refusing.
+  await expect(row.getByRole("button", { name: "Check in Zoe Bennett" })).toBeVisible();
   await expect(page).toHaveURL(counter);
-  await expect(card.getByRole("button", { name: /^Same person as / })).toHaveCount(0);
+  await expect(row.getByRole("button", { name: /^Same person as / })).toHaveCount(0);
 
   // And `checkInBooking` re-reads readiness for itself, so this tap is the
   // proof the flag is gone from the row rather than only from the render.
-  await card.getByRole("button", { name: "Check in Zoe Bennett" }).click();
-  await expect(page.getByRole("button", { name: "Check in Zoe Bennett" })).toHaveCount(0);
-  // A boat still ahead keeps its receipts folded; open them to reach her row.
-  const settledHeading = page.getByRole("heading", { name: /^Checked in — \d+$/ });
-  await openIfClosed(page.locator("details").filter({ has: settledHeading }));
+  await row.getByRole("button", { name: "Check in Zoe Bennett" }).click();
   await expect(page.getByRole("button", { name: "Undo check-in for Zoe Bennett" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Check in Zoe Bennett" })).toHaveCount(0);
 });
 
 test("the walk-in form explains an invalid submission", async ({ page }) => {
@@ -334,7 +317,7 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
 
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, title);
-  const tripId = page.url().match(/\/trips\/([^/?]+)/)?.[1];
+  const tripId = page.url().match(/\/trips\/([^/?#]+)/)?.[1];
   if (!tripId) throw new Error("could not read the trip id from the URL");
 
   await page.getByRole("link", { name: "Add diver" }).click();
@@ -358,36 +341,34 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   // A refusal lands back on the walk-in form with the boat still chosen — the
   // staffer's next move is another diver or another boat, not a trip page.
   await expect(page).toHaveURL(
-    new RegExp(`/shop/blue-mantis/trips/${tripId}/check-in/walk-in\\?notice=walkin-full$`),
+    new RegExp(`/shop/blue-mantis/trips/${tripId}/walk-in\\?notice=walkin-full$`),
   );
   // Regression: this refusal rendered with no role at all, so screen readers
   // heard nothing. Danger notices announce as alerts (noticeRole); filtered
   // because Next's route announcer is also role="alert".
   await expect(page.getByRole("alert").filter({ hasText: "That boat is full" })).toBeVisible();
   await expect(
-    page.getByText("That boat is full. Try the wait list on the Divers tab instead."),
+    page.getByText("That boat is full. Add them to the wait list instead."),
   ).toBeVisible();
 });
 
 /**
- * The counter's paper-waiver escape hatch. A diver standing at the desk with a
- * signed release in hand used to leave the staffer no way forward from here —
- * the only "mark signed on paper" control lived on the trip's roster, so
- * clearing the blocker meant leaving the queue and hunting for the departure.
+ * **A paper release at the desk.** A diver standing at the counter with a
+ * signed release in hand is cleared by the roster row's own "Mark signed on
+ * paper" control — the same one the Divers tab always had — and with the desk
+ * open the same row then offers the check-in, without leaving the list.
  */
-test("the counter records a paper waiver and the diver becomes checkable in place", async ({
+test("a paper waiver recorded on the roster row makes the diver checkable in place", async ({
   page,
 }) => {
   const tripId = await openCounterFor(page, "blue-mantis", "Priya Sharma");
   const counter = counterPath("blue-mantis", tripId);
 
-  const card = page
-    .locator("article")
-    .filter({ hasText: "Priya Sharma" })
-    .filter({ visible: true });
-  await expect(card.getByText("Blocked")).toBeVisible();
+  const row = deskRow(page, "Priya Sharma");
+  await expect(row.getByText("Blocked", { exact: true })).toBeVisible();
 
-  await openPaperWaiverForm(card);
+  await openRosterDetails(row);
+  await openPaperWaiverForm(row);
   // The medical attestation is the control, not a buried confirm. The
   // browser's own `required` already blocks an unchecked submit; strip it to
   // prove the *server* refuses too, rather than trusting client convenience
@@ -397,56 +378,41 @@ test("the counter records a paper waiver and the diver becomes checkable in plac
       el.removeAttribute("required");
     }
   });
-  await card.getByRole("button", { name: "Record paper signature" }).click();
-  // Under the button that was pressed, on the row it is about: the refusal
-  // answers in the form's own action state now rather than redirecting with a
-  // `?notice=` (issue #1674), so the words are the contract and there is no
-  // query param left to read.
+  await row.getByRole("button", { name: "Record paper signature" }).click();
+  // Under the button that was pressed, on the row it is about (issue #1674).
   await expect(
-    card.getByText("Confirm you reviewed the medical questionnaire", { exact: false }),
+    row.getByText("Confirm you reviewed the medical questionnaire", { exact: false }),
   ).toBeVisible();
 
-  // **Neither outcome navigates.** The refusal used to, landing on the bare
-  // queue — so the row was rebuilt, and the form the staffer had filled in
-  // closed behind a "Mark signed on paper" button with everything they typed
-  // gone (the step that timed out on CI). Now the form is still open, still on
-  // this row: the staffer's next act is the single box the refusal named.
+  // **Neither outcome navigates.** The form is still open, still on this row:
+  // the staffer's next act is the single box the refusal named.
   await expect(page).toHaveURL(onCounter(counter));
-  await card
+  await row
     .getByLabel("I have this diver’s signed release on file", { exact: false })
     .filter({ visible: true })
     .check();
-  await card.getByRole("button", { name: "Record paper signature" }).click();
+  await row.getByRole("button", { name: "Record paper signature" }).click();
 
-  // Success lands **in place** too: no banner, no navigation, so the next act
-  // is one tap on the same row. Same immutable record a self-service signature
-  // produces, so the blocker is genuinely gone rather than merely hidden.
-  await expect(card.getByRole("button", { name: "Check in Priya Sharma" })).toBeVisible();
+  // The same immutable record a self-service signature produces, so the
+  // blocker is genuinely gone rather than merely hidden: the row's next act is
+  // one tap.
+  await expect(row.getByRole("button", { name: "Check in Priya Sharma" })).toBeVisible();
   await expect(page).toHaveURL(onCounter(counter));
-  await expect(page.getByText("Paper waiver recorded")).toHaveCount(0);
 });
 
 /**
- * **The counter faces a queue.** A departure's Check-in tab is the counter —
- * the screen on the front desk that divers line up at — and it
- * printed every diver's personal email under their name: a boat's worth of
- * addresses on a screen angled at a lobby, so whoever is second in
- * the queue can read the address of whoever is first (issue #716).
- *
- * The email is a *disambiguator*: it earns its place only where two visible
- * divers share a name, which is what the code that added it always said it was
- * for.
+ * **The counter faces a queue.** The desk is the screen angled at a lobby, and
+ * the old counter printed every diver's personal email under their name, so
+ * whoever is second in the queue could read the address of whoever is first
+ * (issue #716). The roster the desk now works from keeps contact details in
+ * each row's folded panel, never on the name line.
  */
-test("the counter shows a diver's email only when another diver shares their name", async ({
-  page,
-}) => {
+test("the desk shows no diver's email on the roster's face", async ({ page }) => {
   await openCounterFor(page, "blue-mantis", "Priya Sharma");
-  await expect(page.getByRole("region", { name: "Check-in queue" })).toBeVisible();
+  await expect(page.getByText(/^\d+ of \d+ here$/)).toBeVisible();
 
-  // No two seeded divers share a name, so the whole queue renders without a
-  // single address. Asserted on the queue region rather than the page.
-  const queue = page.getByRole("region", { name: "Check-in queue" });
-  await expect(queue.getByText(/@example\.com/)).toHaveCount(0);
+  // Visible text only (the fixture's `getByText`), on the roster's own rows.
+  await expect(page.locator("#roster").getByText(/@example\.com/)).toHaveCount(0);
 
   // Looking up by email still finds the diver's boat — that path is a staffer
   // typing on Today, never a display, and it must not have been narrowed with
@@ -458,13 +424,13 @@ test("the counter shows a diver's email only when another diver shares their nam
 });
 
 /**
- * **A dropped signal must not take the queue with it.**
+ * **A dropped signal must not take the list with it.**
  *
  * Offline, one tap on "Check in" used to be replaced by the whole segment's
- * error boundary: the queue and the scroll position, all gone — in front of a
+ * error boundary: the list and the scroll position, all gone — in front of a
  * diver standing at the desk (issue #819). DiveDay's headline capability is
- * that the head count works with no signal, and it does, on the *boat*; the
- * counter is one nav tab away and a marina's wifi is exactly as bad at the desk.
+ * that the head count works with no signal, and it does, on the *boat*; a
+ * marina's wifi is exactly as bad at the desk.
  *
  * This is the one case in the suite that needs a deliberate `setOffline`, which
  * is why it never turned up by accident: on any working connection the failed
@@ -474,25 +440,26 @@ test("a dropped signal at the counter fails on the row, not on the page", async 
   page,
   context,
 }) => {
-  // A diver who is *checkable*, so the row this taps exists — and waited for
-  // by the counter's own render, never a timer: going offline mid-navigation
-  // leaves no rows to tap at all.
+  // A diver who is *checkable*, so the tap this presses exists — and waited
+  // for by the desk's own hydration flag, never a timer: a tap that lands
+  // before React owns the form is a plain navigation, and offline that is the
+  // browser's error page rather than the row's answer.
   await openCounterFor(page, "blue-mantis", "Lena Fischer");
-  const queue = page.getByRole("region", { name: "Check-in queue" });
-  await expect(queue).toBeVisible();
-  const row = queue.getByRole("button", { name: "Check in Lena Fischer" });
-  await expect(row).toBeVisible();
+  await expect(page.locator("[data-check-in-queue]")).toHaveAttribute("data-hydrated", "true");
+  const row = deskRow(page, "Lena Fischer");
+  const tap = row.getByRole("button", { name: "Check in Lena Fischer" });
+  await expect(tap).toBeVisible();
 
   await context.setOffline(true);
-  await row.click();
+  await tap.click();
 
   // The row says the tap did not send — and never that the check-in did or did
   // not happen, which the client cannot know.
   await expect(page.getByRole("alert").filter({ hasText: "That didn’t send" })).toBeVisible();
 
-  // And the page is still the page: the queue and the row.
-  await expect(queue).toBeVisible();
+  // And the page is still the page: the roster and the row.
   await expect(row).toBeVisible();
+  await expect(tap).toBeVisible();
   await expect(page.getByText("This screen ran into a problem")).toHaveCount(0);
 
   // The connection is stated before the next tap, not only after it.
@@ -522,11 +489,11 @@ test("a dropped signal at the counter fails on the row, not on the page", async 
  * that claim, which is why it is here rather than an assertion about a number
  * on a page.
  *
- * **The offer rides the shipped invite.** The counter's panel points at the
+ * **The offer rides the shipped invite.** The released row points at the
  * departure's own wait list, where `WaitlistInvite` sends through the held-send
  * path with its eight-second undo and its composer fallback — no second sender
- * anywhere in this tree. Sending one is also what moves the counter's own
- * offer on, since `noShowSalvage` counts only the entries nobody has chased.
+ * anywhere in this tree. Sending one is also what moves the desk's own offer
+ * on, since `noShowSalvage` counts only the entries nobody has chased.
  */
 test("the counter releases a no-show's seat, offers it to the wait list, and the boat sells it again", async ({
   page,
@@ -561,6 +528,8 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   const tripId = await seededTripId(page, "blue-mantis", title);
   const counter = counterPath("blue-mantis", tripId);
   const walkIn = `${counter}/walk-in`;
+  // Seating a walk-in lands back on the Divers tab with its notice.
+  const seated = new RegExp(`/trips/${tripId}\\?notice=walkin-added`);
 
   // Odile Marchand is seeded carded and deliberately booked on nothing
   // (`src/db/seed-cert-gates.ts`), so she clears this trip's Open Water
@@ -570,7 +539,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   await findDiver.fill("Odile Marchand");
   await findDiver.press("Enter");
   await page.getByRole("button", { name: "Add Odile Marchand to this boat" }).click();
-  await page.waitForURL(/\/check-in(\?|$)/);
+  await page.waitForURL(seated);
 
   // The diver who wants the seat Odile is about to give up. A signed-out
   // context, because the wait list is a diver-facing form and a staff session
@@ -608,15 +577,13 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   ).toBe(true);
 
   // Back at the desk. Odile has no release on file yet, so she arrives blocked
-  // — and the door is on the row a staffer can act on, not on a blocked one.
-  // The counter's own paper-waiver control clears it in place, which is the
-  // ordinary counter path for a diver standing there with a signed form.
+  // — and the door is on a row a staffer can act on, not on a blocked one. The
+  // roster row's own paper-waiver control clears it in place, which is the
+  // ordinary desk path for a diver standing there with a signed form.
   await page.goto(counter);
-  const odile = page
-    .locator("article")
-    .filter({ hasText: "Odile Marchand" })
-    .filter({ visible: true });
+  const odile = deskRow(page, "Odile Marchand");
   await expect(odile).toHaveCount(1);
+  await openRosterDetails(odile);
   await openPaperWaiverForm(odile);
   await odile
     .getByLabel("I have this diver’s signed release on file", { exact: false })
@@ -625,7 +592,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   await odile.getByRole("button", { name: "Record paper signature" }).click();
   await expect(odile.getByRole("button", { name: "Check in Odile Marchand" })).toBeVisible();
 
-  // **The door, and one tap inside it.** Closed it is three words under the
+  // **The door, and one tap inside it.** Closed it is two words under the
   // check-in tap; open it says what the tap does before it does it.
   await odile.getByText("Not here?").click();
   await expect(
@@ -634,14 +601,10 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   await odile.getByRole("button", { name: "Mark Odile Marchand as not here" }).click();
 
   // The row stays on the page in its own group — never folded, because it is
-  // the one row left with work attached to it — wearing the plain word and an
-  // Undo for the diver who walks up as the lines come off.
-  await expect(page.getByRole("heading", { name: "Not here — 1" })).toBeVisible();
-  const released = page
-    .locator("article")
-    .filter({ hasText: "Odile Marchand" })
-    .filter({ visible: true });
-  await expect(released.getByText("Not here", { exact: true })).toBeVisible();
+  // the one row left with work attached to it — with a way back for the diver
+  // who walks up as the lines come off.
+  await expect(page.getByRole("heading", { name: "Not here · 1" })).toBeVisible();
+  const released = deskRow(page, "Odile Marchand");
   await expect(
     released.getByRole("button", { name: "Put Odile Marchand back on this boat’s list" }),
   ).toBeVisible();
@@ -667,7 +630,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   // The send holds eight seconds with Undo where the button stood, then runs.
   // The fleet configures no email provider, so the server reports what it
   // could not do and the control falls back to its composer — but the outreach
-  // is recorded either way, and *that* is the fact the counter reads next. The
+  // is recorded either way, and *that* is the fact the desk reads next. The
   // row says it in both halves: the button becomes a re-send, and the line
   // under it dates the invite.
   await expect(page.getByRole("status").filter({ hasText: /Sending/ })).toBeVisible();
@@ -676,8 +639,8 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   });
   await expect(page.getByText("Invited just now")).toBeVisible();
 
-  // **The counter stops counting a diver somebody has already chased.** Nora
-  // is still on the list; she is no longer an offer, because sending two staff
+  // **The desk stops counting a diver somebody has already chased.** Nora is
+  // still on the list; she is no longer an offer, because sending two staff
   // after the same diver is the whole failure `noShowSalvage`'s filter avoids.
   await page.goto(counter);
   await expect(page.getByText("1 diver is waiting for this seat")).toHaveCount(0);
@@ -695,15 +658,12 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   await findSecond.fill("Diego Alvarez");
   await findSecond.press("Enter");
   await page.getByRole("button", { name: "Add Diego Alvarez to this boat" }).click();
-  await page.waitForURL(/\/check-in(\?|$)/);
+  await page.waitForURL(seated);
 
-  await page.goto(counter);
-  await expect(
-    page.locator("article").filter({ hasText: "Diego Alvarez" }).filter({ visible: true }),
-  ).toHaveCount(1);
+  await expect(deskRow(page, "Diego Alvarez")).toHaveCount(1);
   // Odile's row is still here, and still hers: a released seat sold on is not
   // a deleted booking, and the crew reading this boat gets both facts.
-  await expect(page.getByRole("heading", { name: "Not here — 1" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Not here · 1" })).toBeVisible();
 });
 
 /**
@@ -735,12 +695,11 @@ test("a phone number read off a diver's record finds their seat at the counter",
   await search.fill(printed);
   await search.press("Enter");
 
-  // Matched to the departure she holds a seat on — the match is a row on that
-  // boat's counter, which is where its link goes.
+  // Matched to the departure she holds a seat on — the match is her row on
+  // that boat's Divers tab, which is where its link goes.
   const match = page.getByRole("link", { name: /check-in for Priya Sharma$/ }).first();
   await expect(match).toBeVisible();
   await match.click();
-  await page.waitForURL(/\/trips\/[0-9a-f-]{36}\/check-in(#.*)?$/);
-  const queue = page.getByRole("region", { name: "Check-in queue" });
-  await expect(queue.getByText("Priya Sharma").first()).toBeVisible();
+  await page.waitForURL(/\/trips\/[0-9a-f-]{36}#booking-[0-9a-f-]+$/);
+  await expect(deskRow(page, "Priya Sharma")).toBeVisible();
 });

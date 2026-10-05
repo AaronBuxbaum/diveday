@@ -126,11 +126,9 @@ export async function releaseHeldSendAction(id: string): Promise<ReleasedSend> {
     const path =
       payload.surface === "today"
         ? shopPath(shop.slug)
-        : payload.surface === "check_in" && payload.tripId
-          ? shopPath(shop.slug, "trips", payload.tripId, "check-in")
-          : payload.surface === "roster" && payload.tripId
-            ? shopPath(shop.slug, "trips", payload.tripId)
-            : shopPath(shop.slug, "divers", ...(payload.personId ? [payload.personId] : []));
+        : payload.surface === "roster" && payload.tripId
+          ? shopPath(shop.slug, "trips", payload.tripId)
+          : shopPath(shop.slug, "divers", ...(payload.personId ? [payload.personId] : []));
     revalidatePath(path);
     if (outcome.kind === "waiver_send" && outcome.sent.length > 0) {
       await trackEvent({ name: "staff_recovery", kind: "waiver_sent", surface: payload.surface });

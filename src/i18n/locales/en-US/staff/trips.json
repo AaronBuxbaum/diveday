@@ -7,7 +7,6 @@
   "tabs": {
     "label": "Departure",
     "divers": "Divers",
-    "checkin": "Check-in",
     "boat": "Boat",
     "gear": "Gear",
     "details": "Details"
@@ -431,6 +430,8 @@
     "notClearedBeforeBoarding": "The hold stands. This diver does not board.",
     "groupInvited": "Invited",
     "groupReady": "Ready",
+    "groupCheckedIn": "Checked in",
+    "groupNotHere": "Not here",
     "groupStillToClear": "Still to clear",
     "groupWaiting": "Waiting for a seat",
     "heading": "Divers",

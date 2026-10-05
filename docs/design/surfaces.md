@@ -270,7 +270,9 @@ night (`BrandPreview`), and the contrast note reports whichever scheme moved the
 - **Composition:** a grouped ledger because orders share their date, and a shared fact belongs to
   the group (principle 9 applied to a table).
 
-### The counter — `/shop/[shopSlug]/trips/[id]/check-in`
+### The counter — the Divers tab, `/shop/[shopSlug]/trips/[id]`, inside the arrivals window
+
+**Moved again 2026-10-05** ([ADR 20261001-logbook](../architecture/decisions/20261001-logbook.md), decision 3, second amendment): the Check-in tab listed the same divers as the Divers tab with the same blockers and fixes, so it is gone and arrival is a state of the roster. Inside the arrivals window the Divers tab draws the count above the roster, a Check in tap on each ready row (Checked in, with the paper pass, once tapped), "Not here?" under a ready row once the boat is due, and two more groups, Checked in and Not here. A blocked row carries no tap; its fixes are the roster row's own. The walk-in form is `trips/[id]/walk-in`, reached from the foot of Add a diver. Everything below describes the counter's grammar, which the roster now wears.
 
 **Moved 2026-10-03** ([ADR 20261001-logbook](../architecture/decisions/20261001-logbook.md), decision 3): the counter is each departure's own Check-in tab rather than a page of its own. The departure chips and the search left with the page: the boat is the tab's, and "which boat is this diver on?" is answered by the arrival lookup on Today, whose matches open the boat's tab. The walk-in form is the tab's foot (`check-in/walk-in`, no boat picker), and the tab's header carries Print, which opens the trip packet. The "Remove first" line below is history.
 

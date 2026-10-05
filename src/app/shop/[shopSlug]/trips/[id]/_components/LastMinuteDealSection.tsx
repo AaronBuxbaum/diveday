@@ -154,30 +154,26 @@ export function LastMinuteDealSection({
                 requirement first — see `reviewLastMinuteRecipients`. */}
             <ul className="mt-2 divide-y divide-border rounded-lg border border-border bg-surface-sunken">
               {review.shown.map(({ recipient }) => (
-                // A grid, so a certification too long for the line hangs
-                // under the name it describes rather than under the box: the
-                // label lends the row its box and its name (`contents`), and
-                // the certification takes the name's column on a phone and a
-                // third, end-aligned one from `sm`. The box sits centred on
-                // the name's first line, as `ChoiceRow`'s does.
+                // The label is the row's 44px tap target (the a11y floor), the
+                // box and the name inside it; the certification hangs under
+                // the name on a phone, indented past the box, and takes an
+                // end-aligned column from `sm`.
                 <li
                   key={recipient.personId}
-                  className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-2 gap-y-1 px-3 py-2 text-sm sm:grid-cols-[auto_minmax(0,1fr)_auto]"
+                  className="grid grid-cols-1 items-center gap-x-2 px-3 text-sm sm:grid-cols-[minmax(0,1fr)_auto]"
                 >
-                  <label className="contents cursor-pointer select-none">
-                    <span className="flex h-lh items-center">
-                      <input
-                        type="checkbox"
-                        name="recipientPersonIds"
-                        value={recipient.personId}
-                        defaultChecked
-                        className={choiceClass}
-                      />
-                    </span>
+                  <label className="flex min-h-11 cursor-pointer select-none items-center gap-2">
+                    <input
+                      type="checkbox"
+                      name="recipientPersonIds"
+                      value={recipient.personId}
+                      defaultChecked
+                      className={choiceClass}
+                    />
                     <span className="font-medium">{recipient.fullName}</span>
                   </label>
                   <span
-                    className={`col-start-2 sm:col-start-auto sm:text-end ${
+                    className={`-mt-2 pb-2 ps-6 sm:mt-0 sm:pb-0 sm:ps-0 sm:text-end ${
                       certificationSummaryUnchecked(recipient.certification)
                         ? "text-warning"
                         : "text-muted"

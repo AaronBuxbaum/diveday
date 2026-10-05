@@ -318,23 +318,21 @@ describe("LastMinuteDealSection recipient review", () => {
    * checkbox (x 46), 22px left of the name it describes (x 68), and flipped
    * from right-aligned to left-aligned. The row is a grid now: the box, then
    * the name, and the certification in the name's column on a phone and in a
-   * third, end-aligned one from `sm`.
+   * third, end-aligned one from `sm`. The label is a real box rather than
+   * `contents`, because it is the row's 44px tap target (a11y.spec.ts's tap
+   * floor), so on a phone the certification is indented past the box instead.
    */
   it("hangs a recipient's certification under the name, never under the checkbox", () => {
     const { container } = renderSection([recipient("Hana Kobayashi", "advanced_open_water")], null);
     const row = container.querySelector("li");
-    expect(row).toHaveClass(
-      "grid",
-      "grid-cols-[auto_minmax(0,1fr)]",
-      "sm:grid-cols-[auto_minmax(0,1fr)_auto]",
-    );
-    // The label lends the grid its two parts, the box and the name, and stays
-    // what names the box.
-    expect(row?.querySelector("label")).toHaveClass("contents");
+    expect(row).toHaveClass("grid", "grid-cols-1", "sm:grid-cols-[minmax(0,1fr)_auto]");
+    // The label holds the box and the name, stays what names the box, and is
+    // tall enough to tap.
+    expect(row?.querySelector("label")).toHaveClass("min-h-11");
     expect(screen.getByRole("checkbox", { name: "Hana Kobayashi" })).toBeChecked();
     const certification = row?.querySelector(":scope > span");
     expect(certification).toHaveTextContent("Advanced Open Water");
-    expect(certification).toHaveClass("col-start-2", "sm:col-start-auto", "sm:text-end");
+    expect(certification).toHaveClass("ps-6", "sm:ps-0", "sm:text-end");
   });
 
   it("caps the drawn list, counts the rest, and never hides someone below the bar", () => {

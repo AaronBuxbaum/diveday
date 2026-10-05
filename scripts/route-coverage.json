@@ -538,25 +538,37 @@
       "check-in.spec.ts",
       "courses.spec.ts",
       "crew-clash.spec.ts",
+      "day-spine.spec.ts",
       "depth-and-age-surfaces.spec.ts",
       "divemaster-ratio.spec.ts",
       "divers.spec.ts",
       "gear-fit-and-age.spec.ts",
+      "guardian-co-signature.spec.ts",
       "import.spec.ts",
       "last-minute-fill.spec.ts",
+      "manifest.spec.ts",
       "minimum-seats.spec.ts",
       "nitrox.spec.ts",
       "promo-codes.spec.ts",
       "recap.spec.ts",
       "refunds.spec.ts",
+      "shop-on-paper.spec.ts",
+      "tenant-isolation.spec.ts",
       "tide-window.spec.ts",
       "trip-admission.spec.ts",
       "trip-series.spec.ts",
-      "trips.spec.ts"
+      "trips.spec.ts",
+      "waivers.spec.ts"
     ],
     "visual": [
       "trip-cancelled",
       "trip-crew-clash",
+      "trip-desk",
+      "trip-desk-checked",
+      "trip-desk-identity-held",
+      "trip-desk-no-show",
+      "trip-desk-no-show-sailed",
+      "trip-desk-waiver-refused",
       "trip-manage",
       "trip-manage-course-requirements",
       "trip-minimum-seats",
@@ -660,21 +672,14 @@
     "visual": ["expired-link-unknown", "waiver-active", "waiver-guardian"],
     "a11y": ["a11y.spec.ts"]
   },
-  "/shop/[shopSlug]/trips/[id]/check-in": {
-    "e2e": ["check-in.spec.ts", "tenant-isolation.spec.ts", "trip-admission.spec.ts"],
-    "visual": [
-      "check-in",
-      "check-in-checked",
-      "check-in-identity-held",
-      "check-in-no-show",
-      "check-in-no-show-sailed",
-      "check-in-waiver-refused"
+  "/shop/[shopSlug]/trips/[id]/walk-in": {
+    "e2e": [
+      "a11y.spec.ts",
+      "check-in.spec.ts",
+      "tenant-isolation.spec.ts",
+      "trip-admission.spec.ts"
     ],
-    "a11y": ["a11y.spec.ts"]
-  },
-  "/shop/[shopSlug]/trips/[id]/check-in/walk-in": {
-    "e2e": ["check-in.spec.ts", "trip-admission.spec.ts"],
-    "visual": ["check-in-walk-in", "check-in-walk-in-notice", "check-in-walk-in-diver"],
+    "visual": ["trip-walk-in", "trip-walk-in-diver", "trip-walk-in-notice"],
     "a11y": ["a11y.spec.ts"]
   },
   "/shop/[shopSlug]/print/counter-card": {

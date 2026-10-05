@@ -26,7 +26,7 @@ export const SEND_HOLD_TOLERANCE_MS = 750;
 export const HELD_SEND_KINDS = ["waiver_send", "last_minute_deal", "waitlist_invite"] as const;
 export type HeldSendKind = (typeof HELD_SEND_KINDS)[number];
 
-export const WAIVER_SEND_SURFACES = ["today", "check_in", "roster", "diver"] as const;
+export const WAIVER_SEND_SURFACES = ["today", "roster", "diver"] as const;
 
 const waiverSendPayload = z
   .object({

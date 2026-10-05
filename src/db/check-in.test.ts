@@ -194,7 +194,7 @@ describe("counter check-in", () => {
     expect([...seatsPerDiverPerBoat.values()].filter((seats) => seats > 1)).toEqual([]);
   });
 
-  it("narrows the queue to one departure for that departure's Check-in tab", async () => {
+  it("narrows the queue to one departure for that departure's Divers tab", async () => {
     const { db, shop, reef } = await context();
     const whole = await listCheckInQueue(db, shop.id);
     const tab = await listCheckInQueue(db, shop.id, { tripId: reef.id });

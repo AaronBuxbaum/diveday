@@ -76,7 +76,7 @@ same reason: arriving happens once, before the boat leaves, not once per dive. I
 list from the roll call rather than a second control on those rows — a row answering both questions
 is the first step toward a queue answering the second. A diver readiness refuses gets no control
 and shows what is in the way, which is the live counter's own grammar. The service worker gains one
-navigation fallback, `/shop/*/check-in` to the shell carrying `?trip=`, mirroring the live-manifest
+navigation fallback, `/shop/*/check-in` to the shell (since 2026-10-05 the trip's own root, `/shop/*/trips/<id>`, where the desk now lives; ADR 20261001-logbook decision 3) carrying `?trip=`, mirroring the live-manifest
 one and scoped to the counter alone: the walk-in flow beneath that path seats a diver and needs a
 server, so a roster it cannot act on would be a worse answer than the browser's own.
 

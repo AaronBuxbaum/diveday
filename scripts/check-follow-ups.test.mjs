@@ -351,7 +351,7 @@ describe("a glob in Touches", () => {
    */
   it("resolves a Next dynamic-route path, whose brackets are not a character class", async () => {
     expect(
-      await touchedPathExists(root, "src/app/shop/[shopSlug]/trips/[id]/check-in/actions.ts"),
+      await touchedPathExists(root, "src/app/shop/[shopSlug]/trips/[id]/_arrivals/actions.ts"),
     ).toBe(true);
     expect(
       await touchedPathExists(

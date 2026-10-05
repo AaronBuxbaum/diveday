@@ -72,13 +72,13 @@ describe("every seat surface escapes what it puts in a path segment", () => {
     expect(SEAT_SURFACES["new-booking"].refusedPath({ ...landing, tripId: "" })).toBe(
       "/shop/blue-mantis/bookings/new",
     );
-    // A walk-in is a door on one departure's Check-in tab: seated lands on
-    // that tab's queue, refused lands back on the same boat's walk-in form.
+    // A walk-in is a door on one departure's Divers tab: seated lands on
+    // that tab's roster, refused lands back on the same boat's walk-in form.
     expect(SEAT_SURFACES["walk-in"].seatedPath(landing)).toBe(
-      "/shop/blue-mantis/trips/11111111-1111-4111-8111-111111111111/check-in",
+      "/shop/blue-mantis/trips/11111111-1111-4111-8111-111111111111",
     );
     expect(SEAT_SURFACES["walk-in"].refusedPath(landing)).toBe(
-      "/shop/blue-mantis/trips/11111111-1111-4111-8111-111111111111/check-in/walk-in",
+      "/shop/blue-mantis/trips/11111111-1111-4111-8111-111111111111/walk-in",
     );
   });
 });

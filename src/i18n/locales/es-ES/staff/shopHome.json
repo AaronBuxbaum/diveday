@@ -69,8 +69,8 @@
       },
       "crew": {
         "title": "Registrando a los buceadores a su llegada",
-        "desc": "Check-in muestra quién ha llegado, a quién le falta papeleo y qué hacer al respecto.",
-        "tryThis": "Abre la pestaña Check-in del próximo barco para registrar a los buceadores a su llegada."
+        "desc": "La pestaña Buceadores muestra quién ha llegado, a quién le falta papeleo y qué hacer al respecto.",
+        "tryThis": "Abre la pestaña Buceadores del próximo barco para registrar a los buceadores a su llegada."
       }
     }
   },

@@ -12,7 +12,7 @@ vi.mock("@/app/actions/seat-diver", () => ({
   seatNewDiverAction: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/shop/blue-mantis/check-in/walk-in/trip-1",
+  usePathname: () => "/shop/blue-mantis/trips/trip-1/walk-in",
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
 }));
 

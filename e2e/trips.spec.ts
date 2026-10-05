@@ -217,8 +217,12 @@ test.describe("trip pulse", () => {
     // who hold the boat up (ADR 20260827-the-departure-is-two-working-
     // surfaces, slice 5d — the `?rf=` filter retired with the chips).
     await expect(page.getByRole("link", { name: /missing rental sizes/ })).toBeVisible();
-    await page.getByRole("link", { name: /can’t board yet/ }).click();
-    await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+#roster/);
+    // This boat is inside its arrivals window, so the desk's count leads the
+    // roster and says "can't board yet" itself; the pulse's door to the same
+    // rows stands down while it is on screen (one fact, once).
+    await expect(page.getByText(/^\d+ of \d+ here$/)).toBeVisible();
+    await expect(page.getByText(/can’t board yet/)).toBeVisible();
+    await expect(page.getByRole("link", { name: /can’t board yet/ })).toHaveCount(0);
     // The group band owns the state word; its count is every unsettled diver
     // (blockers, advisories, birthdays), not just the one blocked seat.
     await expect(page.getByRole("heading", { name: /^Still to clear ·/ })).toBeVisible();

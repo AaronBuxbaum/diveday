@@ -124,8 +124,7 @@ test("a second shop's owner reaches none of Blue Mantis's staff surfaces", async
     ...STAFF_PATHS,
     `/trips/${tripId}`,
     `/trips/${tripId}/manifest`,
-    `/trips/${tripId}/check-in`,
-    `/trips/${tripId}/check-in/walk-in`,
+    `/trips/${tripId}/walk-in`,
   ]) {
     const path = `/shop/blue-mantis${suffix}`;
     await page.goto(path);
@@ -205,13 +204,12 @@ test("a mistyped id in a staff path segment is a 404, never a 500", async ({ pag
     "/shop/blue-mantis/orders/nope",
     "/shop/blue-mantis/trips/nope",
     "/shop/blue-mantis/trips/nope/manifest",
-    "/shop/blue-mantis/trips/nope/check-in",
     "/shop/blue-mantis/trips/nope/prep",
     "/shop/blue-mantis/trips/nope/log",
     "/shop/blue-mantis/divers/nope",
     "/shop/blue-mantis/dive-sites/nope",
     "/shop/blue-mantis/bookings/new/nope",
-    "/shop/blue-mantis/trips/nope/check-in/walk-in",
+    "/shop/blue-mantis/trips/nope/walk-in",
     "/shop/blue-mantis/schedule/blowout/nope",
   ]) {
     const response = await page.goto(path);

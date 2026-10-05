@@ -23,8 +23,7 @@ type RowActionResult = { ok: true } | { ok: false } | null;
  * try again.
  *
  * **This is the mechanism, and it holds no opinion about the control.** It was
- * born inside `CheckInActionForm`, married to that surface's one-tap
- * `QueueRowButton`, which is why every other mutation on the counter row shipped
+ * born inside the old counter's one-tap check-in form, which is why every other mutation on the counter row shipped
  * as a bare `<form action={…}>` and kept the hole #819 closed for the tap alone
  * (issue #1788). The two worst were on a blocked row: the identity confirm,
  * which is the row's *only* control because a blocked row is offered no
@@ -58,7 +57,7 @@ export function RowActionForm({
   sendFailedLabel: string;
   /**
    * Called inside the action, before the await, for a caller holding optimistic
-   * state of its own. `CheckInActionForm` flips the row's trailing badge here;
+   * state of its own. `ArrivalTap` flips the row's tap here;
    * a two-step confirm has nothing to flip and passes nothing.
    */
   onSubmitting?: () => void;

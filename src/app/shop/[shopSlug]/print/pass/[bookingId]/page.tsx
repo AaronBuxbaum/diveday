@@ -68,10 +68,10 @@ export default async function PaperPassPage({
 
   return (
     <SheetDocument
-      backHref={shopPath(shopSlug, "trips", booking.tripId, "check-in")}
+      backHref={shopPath(shopSlug, "trips", booking.tripId)}
       paper={PAPER_PASS_PAPER}
       brandDisplayFont={shop.brandDisplayFont}
-      backLabel={t("trips.tabs.checkin")}
+      backLabel={t("trips.tabs.divers")}
       printLabel={t("print.sheet.door")}
     >
       <PaperSheet

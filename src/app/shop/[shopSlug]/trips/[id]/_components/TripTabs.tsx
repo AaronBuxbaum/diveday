@@ -4,12 +4,16 @@ import { Badge } from "@/components/ui/badge";
 import type { TripPhase } from "@/lib/trip-phase";
 
 /**
- * **A departure's five tabs** — ADR 20261001-logbook, decision 3.
+ * **A departure's four tabs** — ADR 20261001-logbook, decision 3.
  *
- * The tabs are the five kinds of work on a departure: who is coming, the
- * counter, the roll call, the gear, and the plan. Every tab is open in every
- * stage, because a crew fixing a size at the dock is doing Gear work during
- * Check-in.
+ * The tabs are the four kinds of work on a departure: who is coming, the roll
+ * call, the gear, and the plan. Every tab is open in every stage, because a
+ * crew fixing a size at the dock is doing Gear work during check-in.
+ *
+ * There was a fifth, Check-in, the counter. It listed the same people as
+ * Divers with the same blockers and the same fixes, so the desk is a state of
+ * the Divers roster now: once arrivals open, each cleared row gains its tap
+ * (owner, 2026-10-05: one place per thing).
  *
  * The stage itself (Prep, Check-in, Aboard, Back; `tripPhaseOf`) is one pill
  * in the header, `TripStageBadge`, the same pill Today's departure card wears.
@@ -21,7 +25,7 @@ import type { TripPhase } from "@/lib/trip-phase";
  * server-side only. `print:hidden` because the packet and the manifest both
  * print, and paper has no navigation.
  */
-export const TRIP_TABS = ["divers", "checkin", "boat", "gear", "details"] as const;
+export const TRIP_TABS = ["divers", "boat", "gear", "details"] as const;
 
 export type TripTab = (typeof TRIP_TABS)[number];
 
@@ -38,8 +42,6 @@ export function tripTabHref(shopSlug: string, tripId: string, tab: TripTab): str
   switch (tab) {
     case "divers":
       return root;
-    case "checkin":
-      return `${root}/check-in`;
     case "boat":
       return `${root}/manifest`;
     case "gear":
@@ -73,7 +75,7 @@ export function TripTabs({
 }) {
   return (
     <div className="print:hidden">
-      {/* **Never a sideways drag** (`e2e/trips.spec.ts`): the five fit a 390px
+      {/* **Never a sideways drag** (`e2e/trips.spec.ts`): the four fit a 390px
           phone in Spanish, the longer locale, by splitting the row with
           tighter padding below `sm` rather than by scrolling. Every tab is the
           same width — the section tabs' grid. */}

@@ -163,8 +163,9 @@ const VIEWPORTS = [
  *
  * `VIEWPORTS` above is the standard responsive pair, and it is the right
  * default for a marketing page, a booking page and a diver's `/ready`. It is
- * the wrong device for the surfaces a dive shop works from: a departure's Check-in
- * tab is the counter, and a counter device is an iPad on a stand; the
+ * the wrong device for the surfaces a dive shop works from: a departure's Divers
+ * tab is the counter while its arrivals are open, and a counter device is an
+ * iPad on a stand; the
  * manifest is read at the rail, often through a dry case.
  *
  * 768-1024px is also where Tailwind's `sm:`/`md:` breakpoints change a
@@ -196,8 +197,8 @@ const TABLET_VIEWPORT = { width: 820, height: 1180 } as const;
  *
  * Why each one:
  *
- * - `check-in` — a departure's Check-in tab, the counter. The front desk is
- *   a tablet on a stand and nothing else.
+ * - `trip-desk` — a departure's Divers tab with its arrivals open, the
+ *   counter. The front desk is a tablet on a stand and nothing else.
  * - `manifest` — worked at the rail in a dry case.
  * - `schedule-builder` — a dense two-column board a shop keeps open on
  *   whatever is on the desk.
@@ -210,7 +211,7 @@ const TABLET_VIEWPORT = { width: 820, height: 1180 } as const;
  * nothing, which is why `tabletSurfacesAreReal` below refuses it.
  */
 const TABLET_SURFACES: ReadonlySet<string> = new Set([
-  "check-in",
+  "trip-desk",
   "manifest",
   "schedule-builder",
   "prep",
@@ -3670,7 +3671,7 @@ for (const scheme of ["light", "dark"] as const) {
 
       // **Which boat is this diver on?** Today's arrival lookup with a match:
       // the desk's first question, answered as one row per booking that opens
-      // that boat's Check-in tab.
+      // that boat's Divers tab at the diver's own row.
       test(`the arrival lookup renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/shop/blue-mantis?q=Priya%20Sharma");
         await page
@@ -3799,21 +3800,25 @@ for (const scheme of ["light", "dark"] as const) {
       // in the `today` capture above, and `day-spine.spec.ts` holds the
       // redirect to a single hop.
 
-      // The counter itself: one departure's Check-in tab, reached the way the
-      // desk reaches it — Today's arrival lookup, then the diver's own row.
-      // Priya Sharma is seeded blocked on a boat inside the arrivals window,
-      // so the frame holds the instrument, a working queue with a blocked row
-      // in it, the walk-in door at its foot and the Print button in the header.
-      test(`counter check-in renders true to the design (${scheme})`, async ({ page }) => {
+      // The counter itself: one departure's Divers tab with its arrivals open,
+      // reached the way the desk reaches it — Today's arrival lookup, then the
+      // diver's own row. Priya Sharma is seeded blocked on a boat inside the
+      // arrivals window, so the frame holds the instrument above the roster, a
+      // blocked row with its reasons and no tap, cleared rows ending in their
+      // check-in taps, and the walk-in door under "Add a diver".
+      test(`the desk on a departure's Divers tab renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
         await openCounterFor(page, "blue-mantis", "Priya Sharma");
-        await page.getByRole("region", { name: "Check-in queue" }).waitFor();
-        await capture(page, "check-in", scheme);
+        await page.getByText(/^\d+ of \d+ here$/).waitFor();
+        await page.getByRole("link", { name: "Add a walk-in" }).waitFor();
+        await capture(page, "trip-desk", scheme);
       });
 
-      // The counter's settled state, which is now a whole reading of the
-      // surface rather than one row's styling: a departure that has already
-      // sailed says so beside its hours, and arrives with its receipts open
-      // under the count. Reading the seeded state keeps this capture
+      // The desk's settled state, which is a whole reading of the surface
+      // rather than one row's styling: a departure that has already sailed
+      // says so beside its hours, and its arrivals stand in their own "Checked
+      // in" group under the count. Reading the seeded state keeps this capture
       // independent of the mutable check-in action while the functional spec
       // covers the toggle itself.
       //
@@ -3824,21 +3829,19 @@ for (const scheme of ["light", "dark"] as const) {
       // capture showed the instrument painting all-clear over three divers
       // readiness will not clear. What it holds now is the honest reading: a
       // red band on the meter, "3 divers can't board yet", and those three
-      // still out in the working list with their badges and their reasons. The
+      // still in "Still to clear" with their badges and their reasons. The
       // coral moment itself is pinned by `CounterInstrument.test.tsx`, which
       // can put a genuinely clear boat in front of it.
-      test(`counter check-in's settled boat renders true to the design (${scheme})`, async ({
-        page,
-      }) => {
+      test(`the desk's settled boat renders true to the design (${scheme})`, async ({ page }) => {
         const tripId = await seededTripId(page, "blue-mantis", SAILED_TRIP);
         await page.goto(counterPath("blue-mantis", tripId));
         await page.getByRole("heading", { level: 1, name: SAILED_TRIP }).waitFor();
-        await page.getByRole("heading", { name: /^Checked in — \d+$/ }).waitFor();
-        await capture(page, "check-in-checked", scheme);
+        await page.getByRole("heading", { name: /^Checked in · \d+$/ }).waitFor();
+        await capture(page, "trip-desk-checked", scheme);
       });
 
       /**
-       * **The counter's refused paper release** — the class
+       * **The desk's refused paper release** — the class
        * `.claude/rules/surfaces.md` names outright: a panel that renders only
        * when something has gone wrong, warning-toned and dense, on the one
        * screen a diver is standing in front of. It shipped with no baseline
@@ -3846,29 +3849,22 @@ for (const scheme of ["light", "dark"] as const) {
        * nothing behind for the next change to fail against.
        *
        * **What the seed has to make, and why the demo has not got it.** The
-       * paper control is offered to a row whose *worst* blocker is a waiver,
-       * and it draws the guardian name and relationship fields only for a
-       * diver the co-signature rule asks it of. The demo has a blocked adult
+       * paper control draws the guardian name and relationship fields only for
+       * a diver the co-signature rule asks it of. The demo has a blocked adult
        * (Priya Sharma) and a co-signed minor (Lena Fischer) and nobody who is
        * both — so shot against the adult this would photograph a namesake
        * refusal above a form with no name field in it, which is the wrong
        * subject rendered silently. `?blockedMinor=1` supersedes Lena's release
        * and hands back the seat it made.
        *
-       * **The URL is the subject, not the action.** `?notice=` is untrusted
-       * input on this page, so this proves the *rendering* and cannot regress
-       * if `markWaiverInPersonFromCheckIn` stops sending `bid` —
-       * `CounterQueueRow.test.tsx` holds that half. It is also how every other
-       * notice on this surface is photographed (`check-in-walk-in-notice`).
-       *
-       * **The departure is the path**, and every assertion below is scoped to
-       * the row. The notice falls back to a page banner for a row that is not
-       * rendered or has settled (`waiverNoticeOnRow`, `check-in/page.tsx`), so
-       * an unscoped `getByText` would pass just as happily on a capture of the
-       * banner — the one way this test could photograph the wrong thing and
-       * still be green.
+       * **The refusal is the form's own answer**, made the way a staffer
+       * makes it: the roster row's paper control answers in its
+       * `useActionState` rather than redirecting (issue #1674), so the words
+       * land under the button on the row, with what was typed still in the
+       * boxes and the namesake tick the refusal draws (issue #1573). Every
+       * assertion below is scoped to that row.
        */
-      test(`the counter's refused paper release renders true to the design (${scheme})`, async ({
+      test(`the desk's refused paper release renders true to the design (${scheme})`, async ({
         page,
         request,
       }) => {
@@ -3880,48 +3876,45 @@ for (const scheme of ["light", "dark"] as const) {
         if (!blockedMinor)
           throw new Error("seed-trouble-states found no seat for the demo's minor");
 
-        await page.goto(
-          `${counterPath("blue-mantis", blockedMinor.tripId)}` +
-            `?notice=waiver-guardian-name&bid=${blockedMinor.bookingId}`,
-        );
-        const refusal = page.getByText("The co-signer’s name is the diver’s own", { exact: false });
-        // Said once, on the row it names: the page banner and the row are
-        // mutually exclusive by construction, and a count of one is what tells
-        // a working capture from one that fell back.
-        await expect(refusal).toHaveCount(1);
-        const row = page.locator("article").filter({ hasText: "Lena Fischer" });
+        await page.goto(counterPath("blue-mantis", blockedMinor.tripId));
+        const row = page.locator(`#booking-${blockedMinor.bookingId}`);
+        await openRosterDetails(row);
+        await openPaperWaiverForm(row);
+        await row
+          .getByLabel("I have this diver’s signed release on file", { exact: false })
+          .filter({ visible: true })
+          .check();
+        await row.getByLabel("Parent or guardian who signed").fill("Lena Fischer");
+        await row.getByLabel("Relationship").selectOption("parent");
+        await row.getByRole("button", { name: "Record paper signature" }).click();
         await expect(row.getByText("The co-signer’s name is the diver’s own")).toBeVisible();
-        // Re-opened, and carrying the field the message is about — the half
+        // Still open, and carrying the field the message is about — the half
         // that needs the diver to be a minor.
         await expect(row.getByLabel("Parent or guardian who signed")).toBeVisible();
         // ...and the way through the refusal names, which only this refusal
-        // draws (issue #1573). It is why this capture moved: the form grew one
-        // line under the two guardian fields.
+        // draws (issue #1573).
         await expect(
           row.getByLabel("This co-signer and this diver have the same name", { exact: false }),
         ).toBeVisible();
-        await capture(page, "check-in-waiver-refused", scheme);
+        await capture(page, "trip-desk-waiver-refused", scheme);
       });
 
       /**
        * **A held seat's identity confirm, armed** (H-13, issue #1696).
        *
-       * The counter's second blocking attestation, and the one shape nothing in
-       * this file photographs: `InlineConfirm`'s message mode replaces the
+       * The desk's second blocking attestation, and the one shape nothing else
+       * in this file photographs: `InlineConfirm`'s message mode replaces the
        * trigger with a bordered `role="alert"` block carrying a sentence and
-       * two buttons, *inside* a blocked queue row that already holds a badge, a
-       * reason and a pointing link. The unarmed half is a secondary button
-       * under those reasons — structurally the row
-       * `check-in-waiver-refused` above already frames — so the armed state is
-       * the one worth a baseline.
+       * two buttons, *inside* a blocked roster row that already holds a badge
+       * and a reason. The unarmed half is `trip-guests-identity`, so the armed
+       * state is the one worth a baseline here.
        *
        * Seeded through `/api/test/seed-trouble-states?identityHeld=1` rather
        * than into blue-mantis: the flag moves readiness, which the nav badges,
        * the close-out and every blocked count read (`.claude/rules/e2e.md`).
        * The route seats the diver through `seatDiver` with `fromNameMatch`, so
-       * this is the row the counter's own name prompt makes.
-       *
-       * The counter opened is the departure the route seated onto.
+       * this is the row the walk-in door's own name prompt makes, on the
+       * departure the route seated onto.
        */
       test(`a held seat's identity confirm renders true to the design (${scheme})`, async ({
         page,
@@ -3936,21 +3929,21 @@ for (const scheme of ["light", "dark"] as const) {
 
         await page.goto(counterPath("blue-mantis", identityHeld.tripId));
         const row = page
-          .locator("article")
-          .filter({ hasText: identityHeld.diver })
-          .filter({ visible: true });
+          .locator('#roster li[id^="booking-"]')
+          .filter({ visible: true })
+          .filter({ has: page.getByRole("link", { name: identityHeld.diver, exact: true }) });
         await row.getByRole("button", { name: `Same person as ${identityHeld.diver}` }).click();
         // Armed, and waited on by the block the tap reveals rather than by the
         // trigger it replaces: the consequence sentence is the frame's subject.
         await expect(
-          row.getByText(`Is the person at the counter ${identityHeld.diver}?`),
+          row.getByText(`Confirm this booking is ${identityHeld.diver}?`, { exact: false }),
         ).toBeVisible();
-        await capture(page, "check-in-identity-held", scheme);
+        await capture(page, "trip-desk-identity-held", scheme);
       });
 
       /**
-       * **"Not here?", open** (issue #1209) — the counter's script for the
-       * diver who never turned up.
+       * **"Not here?", open** (issue #1209) — the desk's script for the diver
+       * who never turned up, under their row on the Divers tab.
        *
        * The one state of this surface no seeded day can hold. The door opens
        * when the boat leaves without the diver (`noShowGate`) and shuts when
@@ -3972,7 +3965,7 @@ for (const scheme of ["light", "dark"] as const) {
        *
        * What both frames are for is the restraint: the door sits *under* a
        * check-in tap that stays the only large target on the row, and behind it
-       * one sentence and one button. The counter is used with wet hands on a
+       * one sentence and one button. The desk is used with wet hands on a
        * shared desk tablet, so a second control that grew to look like a peer
        * of that tap is exactly the regression these baselines catch.
        */
@@ -4005,7 +3998,7 @@ for (const scheme of ["light", "dark"] as const) {
         await findDiver.fill("Odile Marchand");
         await findDiver.press("Enter");
         await page.getByRole("button", { name: "Add Odile Marchand to this boat" }).click();
-        await page.waitForURL(/\/check-in(\?|$)/);
+        await page.waitForURL(new RegExp(`/trips/${tripId}\\?notice=walkin-added`));
 
         // **The boat goes without her**, ten minutes ago: past the departure,
         // inside the hour a late boat is allowed, which is the seat half of
@@ -4019,10 +4012,13 @@ for (const scheme of ["light", "dark"] as const) {
         await depart(10);
 
         await page.goto(counterPath("blue-mantis", tripId));
-        const row = page
-          .locator("article")
-          .filter({ hasText: "Odile Marchand" })
-          .filter({ visible: true });
+        const deskRow = () =>
+          page
+            .locator('#roster li[id^="booking-"]')
+            .filter({ visible: true })
+            .filter({ has: page.getByRole("link", { name: "Odile Marchand", exact: true }) });
+        const row = deskRow();
+        await openRosterDetails(row);
         await openPaperWaiverForm(row);
         await row
           .getByLabel("I have this diver’s signed release on file", { exact: false })
@@ -4030,7 +4026,7 @@ for (const scheme of ["light", "dark"] as const) {
           .check();
         await row.getByRole("button", { name: "Record paper signature" }).click();
         // Cleared in place, which is what puts the door on the row: it is
-        // offered under the check-in tap and nowhere else.
+        // offered under a ready row's check-in tap and nowhere else.
         await expect(row.getByRole("button", { name: "Check in Odile Marchand" })).toBeVisible();
 
         const door = row.locator("details").filter({ hasText: "Not here?" });
@@ -4038,7 +4034,7 @@ for (const scheme of ["light", "dark"] as const) {
         // The body animates in, so `open` flipping is not the frame it is laid
         // out in — waited on the arrival's end state, never a duration.
         await disclosureSettled(door);
-        await capture(page, "check-in-no-show", scheme);
+        await capture(page, "trip-desk-no-show", scheme);
 
         // **The same row once the boat is really gone.** Ninety minutes past
         // its departure the seat is worth nothing and the tap has stopped
@@ -4047,10 +4043,7 @@ for (const scheme of ["light", "dark"] as const) {
         // comparison this second frame is for.
         await depart(90);
         await page.goto(counterPath("blue-mantis", tripId));
-        const sailedRow = page
-          .locator("article")
-          .filter({ hasText: "Odile Marchand" })
-          .filter({ visible: true });
+        const sailedRow = deskRow();
         const sailedDoor = sailedRow.locator("details").filter({ hasText: "Did not dive?" });
         // Hydrated before the tap, not after: this frame opens the door
         // straight off a page load, and a summary tapped while the page is
@@ -4063,7 +4056,7 @@ for (const scheme of ["light", "dark"] as const) {
         );
         await sailedDoor.locator("> summary").click();
         await disclosureSettled(sailedDoor);
-        await capture(page, "check-in-no-show-sailed", scheme);
+        await capture(page, "trip-desk-no-show-sailed", scheme);
       });
 
       // **The home's evening reading** (ADR
@@ -4191,9 +4184,9 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "staffing-week-crew-clash", scheme);
       });
 
-      // The walk-in door at the foot of a boat's Check-in tab, both halves:
-      // search for a returning diver or hand-enter one — no required email at
-      // the counter. The boat is the tab's own, so there is no picker. Two
+      // The walk-in door under "Add a diver" on a boat's Divers tab, both
+      // halves: search for a returning diver or hand-enter one — no required
+      // email at the desk. The boat is the path's own, so there is no picker. Two
       // captures and two tests, for the same reason the Add-booking door below
       // has two: the walk-in form and the diver form never share a screen, so
       // one shot would leave half the surface with no baseline at all.
@@ -4205,7 +4198,7 @@ for (const scheme of ["light", "dark"] as const) {
 
       test(`the walk-in counter renders true to the design (${scheme})`, async ({ page }) => {
         await openWalkIn(page);
-        await capture(page, "check-in-walk-in", scheme);
+        await capture(page, "trip-walk-in", scheme);
       });
 
       /**
@@ -4229,7 +4222,7 @@ for (const scheme of ["light", "dark"] as const) {
         await expect(
           page.getByRole("alert").filter({ hasText: "Enter a name before adding a walk-in." }),
         ).toBeVisible();
-        await capture(page, "check-in-walk-in-notice", scheme);
+        await capture(page, "trip-walk-in-notice", scheme);
       });
 
       test(`the walk-in diver step renders true to the design (${scheme})`, async ({ page }) => {
@@ -4237,7 +4230,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("link", { name: "Add diver", exact: true }).click();
         await page.waitForURL(/\/divers\/new/);
         await page.getByRole("heading", { name: "Add a diver", level: 1 }).waitFor();
-        await capture(page, "check-in-walk-in-diver", scheme);
+        await capture(page, "trip-walk-in-diver", scheme);
       });
 
       // The global Add-booking door, both halves: the departure picker — one
@@ -5356,8 +5349,8 @@ for (const scheme of ["light", "dark"] as const) {
        * is every seeded departure: the counter's door only opens once a boat
        * has left without the diver, so the state that needs photographing
        * cannot be reached without making a departure whose time has just
-       * passed. The flow is the counter's own — seat the diver, clear their
-       * release, tap the door —
+       * passed. The flow is the desk's own — seat the diver, clear their
+       * release, tap the door on the Divers tab —
        * and then walks to the rail, which is where the pixels under test are.
        *
        * What the frame is for is the restraint. A released seat is the absence
@@ -5401,7 +5394,7 @@ for (const scheme of ["light", "dark"] as const) {
           await findDiver.fill(name);
           await findDiver.press("Enter");
           await page.getByRole("button", { name: `Add ${name} to this boat` }).click();
-          await page.waitForURL(/\/check-in(\?|$)/);
+          await page.waitForURL(new RegExp(`/trips/${tripId}\\?notice=walkin-added`));
         };
         await seat("Odile Marchand");
         await seat("Hana Kobayashi");
@@ -5410,9 +5403,13 @@ for (const scheme of ["light", "dark"] as const) {
         // blocker that would compete with the one chip under test.
         await page.goto(counterPath("blue-mantis", tripId));
         const counterRow = (name: string) =>
-          page.locator("article").filter({ hasText: name }).filter({ visible: true });
+          page
+            .locator('#roster li[id^="booking-"]')
+            .filter({ visible: true })
+            .filter({ has: page.getByRole("link", { name, exact: true }) });
         for (const name of ["Odile Marchand", "Hana Kobayashi"]) {
           const row = counterRow(name);
+          await openRosterDetails(row);
           await openPaperWaiverForm(row);
           await row
             .getByLabel("I have this diver’s signed release on file", { exact: false })
@@ -5425,7 +5422,7 @@ for (const scheme of ["light", "dark"] as const) {
         const odile = counterRow("Odile Marchand");
         await odile.getByText("Not here?").click();
         await odile.getByRole("button", { name: "Mark Odile Marchand as not here" }).click();
-        await expect(page.getByRole("heading", { name: "Not here — 1" })).toBeVisible();
+        await expect(page.getByRole("heading", { name: "Not here · 1" })).toBeVisible();
 
         await page.goto(`/shop/blue-mantis/trips/${tripId}/manifest`);
         await page.getByRole("heading", { level: 1, name: new RegExp(title) }).waitFor();

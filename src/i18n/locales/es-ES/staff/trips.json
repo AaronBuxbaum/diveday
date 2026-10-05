@@ -7,7 +7,6 @@
   "tabs": {
     "label": "Salida",
     "divers": "Buceadores",
-    "checkin": "Registro",
     "boat": "Barco",
     "gear": "Equipo",
     "details": "Detalles"
@@ -431,6 +430,8 @@
     "notClearedBeforeBoarding": "La retención sigue en pie. Esta persona no embarca.",
     "groupInvited": "Invitados",
     "groupReady": "Listos",
+    "groupCheckedIn": "Registrados",
+    "groupNotHere": "No vinieron",
     "groupStillToClear": "Pendientes de resolver",
     "groupWaiting": "En espera de plaza",
     "heading": "Buceadores",

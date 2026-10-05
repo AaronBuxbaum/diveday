@@ -19,7 +19,7 @@ import { isFull, spotsRemaining } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { AddDiverSection } from "./AddDiverSection";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
-import { RosterSection } from "./RosterSection";
+import { type RosterArrival, RosterSection } from "./RosterSection";
 import { TripInvitationGroup } from "./TripInvitationSection";
 import { TripNoticeBanner } from "./TripNoticeBanner";
 import { WaitlistGroup } from "./WaitlistSection";
@@ -73,6 +73,8 @@ export function TripRosterContent({
   mayWriteOffPayment,
   compact = false,
   afterRoster = null,
+  arrival,
+  walkIn = null,
   actions,
 }: {
   guests: TripGuests;
@@ -104,6 +106,15 @@ export function TripRosterContent({
    * quiet tail-matter and not the crew's next job.
    */
   afterRoster?: ReactNode;
+  /** The desk's taps and groups, once arrivals open — see `RosterSection`. */
+  arrival?: RosterArrival;
+  /**
+   * The walk-in door, under the add-diver search while the boat can still take
+   * one: a name-only seat for the person standing at the desk, which the
+   * search's new-diver form (it asks for an address to send the waiver to) is
+   * not.
+   */
+  walkIn?: ReactNode;
   actions: TripRosterActions;
 }) {
   const t = staffTranslator(locale);
@@ -250,27 +261,31 @@ export function TripRosterContent({
             />
           ) : null
         }
+        arrival={arrival}
         addDiverGroup={
           cancelled ? null : (
-            <AddDiverSection
-              shopSlug={shopSlug}
-              full={isFull(trip)}
-              query={diverQuery}
-              candidates={diverCandidates}
-              tripId={trip.id}
-              addBookingAction={actions.addBookingAction}
-              addToWaitlistAction={actions.addToWaitlistAction}
-              addExistingDiverAction={actions.addExistingDiverAction}
-              inviteAction={actions.createDirectTripInvitationAction}
-              status={noticeForForm(tripNotice, "add-diver")}
-              locale={locale}
-              timeZone={timezone}
-              confirmName={confirmName}
-              confirmEmail={confirmEmail}
-              confirmPhone={confirmPhone}
-              confirmMatches={confirmMatches}
-              shopRentalItems={shopRentalItems}
-            />
+            <>
+              <AddDiverSection
+                shopSlug={shopSlug}
+                full={isFull(trip)}
+                query={diverQuery}
+                candidates={diverCandidates}
+                tripId={trip.id}
+                addBookingAction={actions.addBookingAction}
+                addToWaitlistAction={actions.addToWaitlistAction}
+                addExistingDiverAction={actions.addExistingDiverAction}
+                inviteAction={actions.createDirectTripInvitationAction}
+                status={noticeForForm(tripNotice, "add-diver")}
+                locale={locale}
+                timeZone={timezone}
+                confirmName={confirmName}
+                confirmEmail={confirmEmail}
+                confirmPhone={confirmPhone}
+                confirmMatches={confirmMatches}
+                shopRentalItems={shopRentalItems}
+              />
+              {walkIn}
+            </>
           )
         }
         compact={compact}

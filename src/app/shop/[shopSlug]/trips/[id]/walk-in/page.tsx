@@ -16,7 +16,7 @@ import { noticeFromParam, noticeRole, shopPath } from "@/lib/staff-notices";
 import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
 import { hasSailed } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
-import { SeatDiverPanel } from "../../../../_components/SeatDiverPanel";
+import { SeatDiverPanel } from "../../../_components/SeatDiverPanel";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -71,7 +71,7 @@ const NOTICE_KEYS: Record<string, { tone: "danger" | "neutral"; key: StaffMessag
  * and the email rule they differ on is read there from `SEAT_SURFACES["walk-in"]`
  * rather than hand-copied into a `required` attribute.
  *
- * A seated diver lands on this departure's Check-in tab — the next thing to
+ * A seated diver lands on this departure's Divers tab — the next row to
  * work. A *refused* one lands right back here, which is what the departure
  * being a path segment buys.
  */
@@ -104,9 +104,9 @@ export default async function WalkInDiverPage({
 
   const trip = await getTripWithBooked(db, shop.id, tripId);
   if (trip?.status !== "scheduled") notFound();
-  const counter = shopPath(shopSlug, "trips", trip.id, "check-in");
+  const counter = shopPath(shopSlug, "trips", trip.id);
   // The door is drawn only while the counter is open for this boat and it has
-  // not sailed; a typed URL outside that lands on the tab, which says why.
+  // not sailed; a typed URL outside that lands on the departure's Divers tab.
   const now = nowDate();
   const arrivals = arrivalsWindow(now);
   if (
@@ -126,9 +126,9 @@ export default async function WalkInDiverPage({
 
   return (
     <div className="max-w-2xl">
-      {/* The way up is the boat's own counter, which is where this door is. */}
+      {/* The way up is the boat's own Divers tab, which is where this door is. */}
       <ShopPageHeader
-        eyebrow={t("trips.tabs.checkin")}
+        eyebrow={t("trips.tabs.divers")}
         eyebrowHref={counter}
         title={t("checkIn.walkIn.title")}
       />

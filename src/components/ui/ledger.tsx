@@ -573,7 +573,7 @@ const KIND_LINE_FIX_ROOM = {
  * counter's one-tap button — takes the room back with `-mx-2` and keeps it as
  * its own `px-2`, so its fill spans rule to rule like a door's; beside a
  * `trailing` act it takes back only the start side, and the row's `gap-3` is
- * the room at its end (`CheckInActionForm`'s `ROW_ROOM`). A call site
+ * the room at its end. A call site
  * never sets the row's horizontal margin or padding; `ledger.test.tsx` sweeps
  * for it.
  *

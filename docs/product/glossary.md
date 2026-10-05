@@ -657,14 +657,14 @@ new domain concept, define it here in the same PR.
 - **Arrivals window** — the counter's narrower lens on the operational horizon: departures from six
   hours ago through the next thirty-six. The backwards reach is the one deliberate asymmetry (a
   diver still walks up to the desk for a boat that already sailed); forwards it never outruns the
-  horizon. It decides when a departure's Check-in tab is open and what the **arrival lookup**
+  horizon. It decides when a departure's Divers tab carries the arrival desk and what the **arrival lookup**
   searches.
 - **Arrival lookup** — Today's search for "which boat is this diver on?" (`?q=`): a name, phone,
   email or booking ID matched across every departure in the **arrivals window**, each match a row
-  that opens that boat's Check-in tab at the diver's own row. The tab itself has no search.
+  that opens that boat's Divers tab at the diver's own row. The tab itself has no search.
 - **Check-in** — a recorded arrival state for a booked diver. It confirms the live readiness
   result and changes the booking to `checked_in`; it is not boarding, which remains a separate
-  departure-time manifest decision. A staffer's tap at the counter (the departure's Check-in tab) writes it. Readiness is confirmed **wherever the tap is applied**, which
+  departure-time manifest decision. A staffer's tap at the counter (the departure's Divers tab, inside the arrivals window) writes it. Readiness is confirmed **wherever the tap is applied**, which
   since the counter went offline-capable is at the desk for a live tap and at reconciliation —
   minutes or hours later, against readiness as it stands *then* — for a queued one.
 - **Arrival event** — one append-only row in `booking_arrival_events` recording a single tap at the
@@ -678,7 +678,7 @@ new domain concept, define it here in the same PR.
   ([ADR 20260907-the-counter-survives-offline](../architecture/decisions/20260907-the-counter-survives-offline.md)).
 - **No-show** — one staffer's recorded statement that a booked diver did not come. The status is
   `bookings.status = "no_show"`, written only by `markBookingNoShow` (`src/db/no-show.ts`), behind
-  the counter's "Not here?" disclosure and its confirm tap. **It is not the three things it is most easily mistaken
+  the Divers tab's "Not here?" disclosure (inside the arrivals window, on any row the gate allows, blocked or not) and its confirm tap. **It is not the three things it is most easily mistaken
   for.** Not a **cancellation**: a diver who told the shop they were not coming gave the seat up
   themselves, and the mark is refused on that booking (`not_booked`), because the difference between
   a courtesy and an accusation is the whole point of keeping them apart. Not a charge or a refund:
@@ -1330,7 +1330,7 @@ new domain concept, define it here in the same PR.
   points (Today's departure card, the command palette's "Boarding" jump) open the manifest on that
   checkpoint. Crew, emergency contacts, after-dive roll call, print, and the offline snapshot are all
   on the same page.
-- **Trip phase** — which kind of work a departure is in, for staff only: Prep, Check-in, Aboard or Back, drawn as the stepper above the departure's five tabs (ADR [20261001-logbook](../architecture/decisions/20261001-logbook.md), decision 3; `src/lib/trip-phase.ts`). Not a **trip stage**: a stage is a word the crew said and DiveDay publishes, so it is never inferred; a phase is orientation on the crew's own screen, so it falls back to the clock when nobody has tapped. The crew's tap still wins: any stage but `home` reads Aboard until the return day ends, and `home` reads Back. It reads the raw tap rather than `liveStageOf`, because a late boat is exactly when the stepper must not say Back. A cancelled departure has no phase.
+- **Trip phase** — which kind of work a departure is in, for staff only: Prep, Check-in, Aboard or Back, drawn as the stage pill above the departure's four tabs (ADR [20261001-logbook](../architecture/decisions/20261001-logbook.md), decision 3; `src/lib/trip-phase.ts`). Not a **trip stage**: a stage is a word the crew said and DiveDay publishes, so it is never inferred; a phase is orientation on the crew's own screen, so it falls back to the clock when nobody has tapped. The crew's tap still wins: any stage but `home` reads Aboard until the return day ends, and `home` reads Back. It reads the raw tap rather than `liveStageOf`, because a late boat is exactly when the stepper must not say Back. A cancelled departure has no phase.
 - **Trip stage** — where a departure is, in the crew's own word: one of five (`boarding`,
   `underway`, `surface`, `heading_in`, `home`) tapped on the **manifest** and then repeated, with
   the time it was tapped, everywhere DiveDay draws that boat — the shop home's station chip, the
@@ -2170,7 +2170,7 @@ new domain concept, define it here in the same PR.
   `bookings.identity_unconfirmed_at`. That raises a fail-closed `identity_unconfirmed` readiness
   blocker — so a shared inbox (a spouse, or a minor booked under a parent's email; see **Junior
   certification**) can't board on the matched diver's evidence — until staff **Confirm identity**
-  (below), on the trip roster or on the check-in queue's own row. **The same blocker has a second
+  (below), on the trip roster. **The same blocker has a second
   raiser (#1556):** a staffer who types a name at the
   counter is shown the divers it half-matches (`similarity() > 0.4`, `findSimilarDivers`) with the
   day each of them last dived, and tapping one seats that diver `identity_unconfirmed` too. The
@@ -2189,10 +2189,11 @@ new domain concept, define it here in the same PR.
   **spends** the prepaid dives that cover it: `settleConfirmedPackageCoverage` settles the fare
   against the diver's package in the same transaction, which is money leaving a balance rather
   than a permission being granted. **There is no undo.** `confirmBookingIdentity`
-  (`src/db/bookings.ts`) is the only writer, reached by two doors — the trip roster's guest row
-  and the check-in queue's own row (issue #1696) — and each writes its own trail line, on the
-  departure and on the *matched person's* record, naming the staffer and which door it was
-  (`identity_confirmed` / `identity_confirmed_at_counter`). **Open to every live staff role on
+  (`src/db/bookings.ts`) is the only writer, reached from the trip roster's guest row, which is also the desk
+  inside the arrivals window, and writes a trail line on the departure and on the *matched
+  person's* record naming the staffer (`identity_confirmed`). The counter's own door
+  (`identity_confirmed_at_counter`, issue #1696) went with the Check-in tab on 2026-10-05: a window
+  that opens 36 hours ahead is no evidence the person was at the desk. **Open to every live staff role on
   purpose**: the flag is raised at the counter, and a staffer who cannot clear one they just
   raised strands a walk-in until a manager walks past — what carries the weight is the trail, not
   the role list (`src/lib/authz.ts`). **When the answer is no**, staff use the other answer on the

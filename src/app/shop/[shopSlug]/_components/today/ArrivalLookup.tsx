@@ -6,14 +6,14 @@ import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-label
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatWeekdayTime } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
-import { counterRowId } from "../../trips/[id]/check-in/focus";
+import { counterRowId } from "../../trips/[id]/_arrivals/focus";
 import { ArrivalSearch } from "./ArrivalSearch";
 
 /**
  * **Which boat is this diver on?** — Today's arrival lookup.
  *
- * The counter is each departure's own Check-in tab (ADR 20261001-logbook,
- * decision 3), which answers "who is still to come on *this* boat". The one
+ * The counter is each departure's own Divers tab once arrivals open (ADR
+ * 20261001-logbook, decision 3, as amended 2026-10-05), which answers "who is still to come on *this* boat". The one
  * question it cannot answer is the desk's first one when a diver walks up with
  * a name and no idea which departure they booked, so that lookup lives here,
  * over the day: type a name, email, phone or scanned booking id, and each
@@ -57,7 +57,7 @@ export function ArrivalLookup({
               {rows.map((row) => (
                 <LedgerRow
                   key={row.bookingId}
-                  href={`${shopPath(shopSlug, "trips", row.tripId, "check-in")}#${counterRowId(row.bookingId)}`}
+                  href={`${shopPath(shopSlug, "trips", row.tripId)}#${counterRowId(row.bookingId)}`}
                   linkLabel={t("shopHome.arrivals.open", {
                     name: row.personName,
                     trip: row.tripTitle,

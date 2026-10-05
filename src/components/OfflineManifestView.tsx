@@ -1073,8 +1073,9 @@ export function OfflineManifestView() {
    * **The counter's seats, in the order a staffer works them**, and empty once
    * the boat has gone.
    *
-   * What the counter is finished with sinks to the bottom, which is
-   * `CounterQueue`'s own composition and the same shared predicates
+   * What the counter is finished with sinks to the bottom, which is the
+   * live desk's composition (the Divers tab's Checked in group) and the same
+   * shared predicates
    * (`isSettledAtCounter` and `counterIsDone`, `src/lib/check-in.ts`) —
    * "settled" is checked in *and still cleared*, so a diver who came through
    * the door and has gone blocked since stays up in the working list wearing
@@ -1606,7 +1607,7 @@ export function OfflineManifestView() {
                 ) : null;
                 // **No tap on a seat the desk cannot take one on**, which is
                 // the live counter's own grammar: such a row shows what is in
-                // the way instead of a control (`CounterQueueRow`). Offering
+                // the way instead of a control (the Divers tab's desk). Offering
                 // one here would offer a tap the server refuses the moment it
                 // lands. Two seats qualify, for two different reasons, and
                 // each says which in a badge rather than in a sentence.
@@ -1683,8 +1684,8 @@ export function OfflineManifestView() {
                       className={buttonClass({
                         variant: arrived ? "primary" : "secondary",
                         size: "boat",
-                        // Settled rows sink and dim, exactly as the live
-                        // counter's do (`CounterQueue`'s `opacity-70` group).
+                        // Settled rows sink and dim: the dock copy has no
+                        // roster groups to file them under.
                         className: `w-full justify-between gap-3 text-start${settled ? " opacity-70" : ""}`,
                       })}
                     >

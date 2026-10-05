@@ -2566,7 +2566,7 @@
       },
       "diveDay": {
         "title": "El día de buceo",
-        "item1": "Una página por salida, en cinco pestañas: Buceadores, Registro, Barco, Equipo y Detalles",
+        "item1": "Una página por salida, en cuatro pestañas: Buceadores, Barco, Equipo y Detalles",
         "item2": "Salidas de varios días con un solo listado, una exención y una tripulación",
         "item3": "De una a cuatro inmersiones por salida, cada una con su propio briefing de sitio",
         "item4": "Un recuento antes de zarpar y después de cada inmersión, tripulación incluida, con historial de solo añadir",

@@ -1,6 +1,5 @@
 // @vitest-environment node
 import { describe, expect, it, vi } from "vitest";
-import { PAPER_WAIVER_IDLE } from "@/lib/paper-waiver-form";
 import { noticeUrl } from "@/lib/staff-notices";
 import { redirectedTo, staffSession } from "@/test/staff-session";
 import { counterQueuePath } from "./focus";
@@ -40,14 +39,9 @@ vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const {
-  checkInAction,
-  confirmIdentityFromCheckIn,
-  markNoShowAction,
-  markWaiverInPersonFromCheckIn,
-  undoCheckInAction,
-  undoNoShowAction,
-} = await import("./actions");
+const { checkInAction, markNoShowAction, undoCheckInAction, undoNoShowAction } = await import(
+  "./actions"
+);
 
 const SHOP_SLUG = "reef-life";
 const SHOP_ID = "11111111-1111-4111-8111-111111111111";
@@ -68,9 +62,6 @@ function signIn() {
 function bookingForm(bookingId: string): FormData {
   const data = new FormData();
   data.set("bookingId", bookingId);
-  // The paper-waiver door needs its own attestation; a malformed id must be
-  // refused before that is ever read.
-  data.set("medicalAttested", "on");
   return data;
 }
 
@@ -80,34 +71,12 @@ describe("a malformed booking id at the counter", () => {
     ["undoing a check-in", undoCheckInAction],
     ["marking a diver not here", markNoShowAction],
     ["undoing that mark", undoNoShowAction],
-    ["confirming a held seat's identity", confirmIdentityFromCheckIn],
   ])("settles %s back on the departure's counter instead of erroring", async (_label, action) => {
     signIn();
 
     const to = await redirectedTo(() => action(SHOP_SLUG, FOCUS_TRIP_ID, bookingForm(NOT_A_UUID)));
 
     expect(to).toBe(noticeUrl(counterQueuePath(SHOP_SLUG, FOCUS_TRIP_ID), "invalid"));
-    expect(getDb).not.toHaveBeenCalled();
-  });
-
-  /**
-   * **The paper-waiver door is the one that does not navigate** (issue #1674).
-   * It answers into the form's own `useActionState` so a refusal can hand the
-   * typed values back, so there is no focused-departure path to land on — the
-   * form never left the page. The guard itself is the same one: a truncated id
-   * is refused before the database is reached.
-   */
-  it("refuses a paper waiver in the form rather than navigating", async () => {
-    signIn();
-
-    const state = await markWaiverInPersonFromCheckIn(
-      SHOP_SLUG,
-      FOCUS_TRIP_ID,
-      PAPER_WAIVER_IDLE,
-      bookingForm(NOT_A_UUID),
-    );
-
-    expect(state).toMatchObject({ status: "refused", refusal: "error" });
     expect(getDb).not.toHaveBeenCalled();
   });
 

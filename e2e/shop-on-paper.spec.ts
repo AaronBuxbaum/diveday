@@ -25,34 +25,35 @@ test.describe("the shop on paper", () => {
   }) => {
     // A boat inside the counter's window, found the way the desk finds one.
     await openCounterFor(page, privateShop.slug, "Diego Alvarez");
-    // The counter's own hydration signal: a tap that lands before the row's
+    // The desk's own hydration signal: a tap that lands before the row's
     // handler is attached is lost, and on a loaded CI shard that left the
-    // settled group never appearing.
+    // checked-in group never appearing.
     await expect(page.locator("[data-check-in-queue]")).toHaveAttribute("data-hydrated", "true");
 
-    // Check one diver in, so the settled group has a row with a pass door.
+    // Check one diver in, so an arrived row carries a pass door.
     const checkIn = page.getByRole("button", { name: /^Check in / }).first();
     await expect(checkIn).toBeVisible();
-    const diverName = (await checkIn.innerText()).split("\n")[0]?.trim() ?? "";
+    const diverName = ((await checkIn.getAttribute("aria-label")) ?? "")
+      .replace(/^Check in /, "")
+      .trim();
+    expect(diverName).toMatch(/\S/);
     await checkIn.click();
-    // The settled group's own count is the destination's answer that the write
-    // landed — never a timeout. It is a folded `<details>`, so open it by its
-    // summary rather than by a click on the text inside.
-    const settled = page
-      .locator("details")
-      .filter({ hasText: /Checked in/ })
-      .first();
-    await expect(settled).toBeVisible();
-    await settled.locator("> summary").click();
+    // The row's own undo is the destination's answer that the write landed —
+    // never a timeout — and the pass door stands beside it on that row.
+    const row = page
+      .locator('#roster li[id^="booking-"]')
+      .filter({ visible: true })
+      .filter({ has: page.getByRole("button", { name: `Undo check-in for ${diverName}` }) });
+    await expect(row).toHaveCount(1);
 
-    await page.getByRole("link", { name: "Print a pass" }).first().click();
+    await row.getByRole("link", { name: "Print a pass" }).click();
     await page.waitForURL(new RegExp(`/shop/${privateShop.slug}/print/pass/`));
     // Scoped to the sheet, not the page: the staff chrome around it carries a
     // nav badge, and what this asserts is what comes out of the printer.
     const sheet = page.locator(".paper-sheet");
     await expect(sheet.getByText("Show this at the counter, or say your name.")).toBeVisible();
     // The diver's name, and nothing about their readiness or their waiver.
-    if (diverName) await expect(sheet.getByText(diverName).first()).toBeVisible();
+    await expect(sheet.getByText(diverName).first()).toBeVisible();
     await expect(sheet.getByText("Blocked")).toHaveCount(0);
   });
 });

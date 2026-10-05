@@ -117,10 +117,11 @@ test("a diver blocked on the spine is the same diver waiting at the counter", as
   await page.goto("/shop/blue-mantis");
   await expect(page.getByText("Priya Sharma").first()).toBeVisible();
 
-  // The counter is each departure's own Check-in tab now, and the way to it
-  // from Today is the arrival lookup — the desk types the name it was given.
+  // The counter is each departure's own Divers tab once its arrivals open, and
+  // the way to it from Today is the arrival lookup — the desk types the name it
+  // was given.
   await openCounterFor(page, "blue-mantis", "Priya Sharma");
-  await expect(page.getByRole("region", { name: "Check-in queue" })).toBeVisible();
+  await expect(page.getByText(/^\d+ of \d+ here$/)).toBeVisible();
   await expect(page.getByText("Priya Sharma").first()).toBeVisible();
 
   // The counter explains neither its own lens nor the shared horizon — the

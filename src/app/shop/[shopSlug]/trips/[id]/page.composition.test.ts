@@ -11,8 +11,8 @@ const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
 
 describe("the departure's tabs", () => {
   /**
-   * ADR 20261001-logbook, decision 3: the departure is five tabs under a stage
-   * stepper. This page is two of them, Divers and Details, chosen by `?view=`
+   * ADR 20261001-logbook, decision 3, as amended 2026-10-05: the departure is
+   * four tabs under a stage stepper. This page is two of them, Divers and Details, chosen by `?view=`
    * or by an About form's own notice, so a save on Details lands back on it.
    */
   it("draws the tabs right under the masthead, on every departure", () => {
@@ -81,7 +81,10 @@ describe("the departure's section rhythm", () => {
         body.indexOf("{cancelled && (canConfigure"),
         body.indexOf("<FormStatus", body.indexOf("{cancelled && (canConfigure")),
       ),
-      body.slice(body.indexOf("{pulseFacts.length > 0 ? ("), body.indexOf("{pulseFacts.map")),
+      body.slice(
+        body.indexOf("{shownPulseFacts.length > 0 ? ("),
+        body.indexOf("{shownPulseFacts.map"),
+      ),
     ];
     for (const block of blocks) expect(block).not.toMatch(/(^|[\s"`])mt-(4|5|6|8|10)\b/);
 
@@ -105,10 +108,10 @@ describe("the departure's section rhythm", () => {
     // as `gap-y-1` did. Not `-my-3` on the row: the stack's end margin is
     // `:where()`, so the row's own would replace it and pull the roster up.
     const pulse = body.slice(
-      body.indexOf("{pulseFacts.length > 0 ? ("),
+      body.indexOf("{shownPulseFacts.length > 0 ? ("),
       body.indexOf("<TripRosterContent"),
     );
-    const row = pulse.match(/<div className="([^"]*)">\s*\{pulseFacts\.map/)?.[1] ?? "";
+    const row = pulse.match(/<div className="([^"]*)">\s*\{shownPulseFacts\.map/)?.[1] ?? "";
     expect(row.split(/\s+/)).toEqual(expect.arrayContaining(["flex", "flex-wrap", "gap-y-7"]));
     expect(row).not.toMatch(/(^|\s)-?m[ty]?-/);
     const link = pulse.match(/className=\{`([^`]*)`\}/)?.[1] ?? "";

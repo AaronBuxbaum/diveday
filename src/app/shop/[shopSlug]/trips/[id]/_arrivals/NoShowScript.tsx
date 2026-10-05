@@ -2,7 +2,7 @@ import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { RowActionForm } from "../RowActionForm";
+import { RowActionForm } from "./RowActionForm";
 
 /**
  * **"Not here?" — the counter's script for the diver who never turned up**
@@ -13,7 +13,7 @@ import { RowActionForm } from "../RowActionForm";
  * what the shop can do with the seat once they have closed it.
  *
  * Every string is a prop. This is a Server Component that holds no words at
- * all, the same shape `CheckInActionForm` and `PrintRecordButton` take on this
+ * all, the same shape `ArrivalTap` and `PrintRecordButton` take on this
  * surface — the counter's copy is resolved once by the page, in the locale the
  * staffer's own device asked for (ADR 20260730-staff-copy-localization).
  *
@@ -61,11 +61,11 @@ export function NoShowScript({
 }) {
   return (
     // Native `<details>`, the one disclosure spelling this surface already
-    // speaks (`BlockedDiverRow`'s reasons, `LedgerGroup folded`): keyboard and
+    // speaks (`LedgerGroup folded`): keyboard and
     // screen-reader behaviour for free, and no client component for a thing
     // that is a triangle.
-    // No horizontal padding of its own: the row already keeps its room
-    // (`LedgerRow`), so the caret sits on the column the name above it
+    // No horizontal padding of its own: the roster row already keeps its room,
+    // so the caret sits on the column the name above it
     // starts on, and the summary's hover chip bleeds 8px past it.
     <details className="group/no-show pb-3">
       <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-2 text-sm font-medium text-muted transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">

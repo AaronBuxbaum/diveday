@@ -7,7 +7,6 @@ export function tripTabsCopy(t: StaffTranslator): TripTabsCopy {
     tabsLabel: t("trips.tabs.label"),
     tabs: {
       divers: t("trips.tabs.divers"),
-      checkin: t("trips.tabs.checkin"),
       boat: t("trips.tabs.boat"),
       gear: t("trips.tabs.gear"),
       details: t("trips.tabs.details"),

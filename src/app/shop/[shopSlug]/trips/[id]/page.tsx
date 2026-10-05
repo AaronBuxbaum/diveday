@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
+import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { FlashParams } from "@/components/FlashParams";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -37,10 +38,13 @@ import { publicTripPath } from "@/lib/public-routes";
 import { recurrenceSummary } from "@/lib/recurrence";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
-import { noticeForForm, shopPath } from "@/lib/staff-notices";
+import { type FormNotice, noticeForForm, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { tripPhaseOf } from "@/lib/trip-phase";
 import { uuidParam } from "@/lib/uuid";
+import { buildArrivalDesk } from "./_arrivals/arrival-desk";
+import { CheckInQueueRefresh } from "./_arrivals/CheckInQueueRefresh";
+import { DESK_NOTICES } from "./_arrivals/notices";
 import { ConditionsSection } from "./_components/ConditionsSection";
 import { CopyLinkButton } from "./_components/CopyLinkButton";
 import { CrewSection } from "./_components/CrewSection";
@@ -105,10 +109,15 @@ export const metadata: Metadata = {
 };
 
 /**
- * Two of a departure's five tabs (ADR 20261001-logbook, decision 3): Divers,
+ * Two of a departure's four tabs (ADR 20261001-logbook, decision 3): Divers,
  * the grouped roster of the people coming, and Details (`?view=details`), the
- * departure's definition laid flat. Check-in, Boat and Gear are their own
- * routes beside this one.
+ * departure's definition laid flat. Boat and Gear are their own routes beside
+ * this one.
+ *
+ * **Divers is also the desk** (owner, 2026-10-05). Check-in was a fifth tab
+ * listing the same people with the same blockers and the same fixes; once a
+ * departure's arrivals open, this roster gains the count and each cleared row
+ * its check-in tap (`_arrivals/arrival-desk.tsx`), and there is one list.
  *
  * ADR 20260919-one-idea's hour masthead and drawn hull are retired here (owner,
  * 2026-10-05): every tab wears one `TripPageHeader`, and the roster is the
@@ -248,7 +257,15 @@ export default async function ManageTripPage({
   // One resolution, handed to the section it belongs to. Whatever no rendered
   // section claims — a page-level permission refusal, or a section this
   // staffer's role means we never rendered — falls through to the banner.
-  const tripNotice = resolveTripNotice({ notice, count, form, gate, tripId, locale });
+  // The desk's own refusals and walk-in outcomes (`_arrivals/notices.ts`) are
+  // page-level: they have no form on the roster to sit beside, and a code the
+  // roster's own vocabulary also speaks is the roster's.
+  const deskNoticeDefinition = noticeFromParam(notice, DESK_NOTICES);
+  const tripNotice: FormNotice | undefined =
+    resolveTripNotice({ notice, count, form, gate, tripId, locale }) ??
+    (deskNoticeDefinition
+      ? { form: "page", tone: deskNoticeDefinition.tone, text: t(deskNoticeDefinition.key) }
+      : undefined);
   const lifecycleStatus = noticeForForm(tripNotice, "lifecycle");
   // One notice per About row, resolved once: a refusal that lands inside a
   // closed row is a form the staffer cannot see failed.
@@ -418,14 +435,35 @@ export default async function ManageTripPage({
   // forms redirect to the departure with their `form`, which is enough to
   // know which tab the answer belongs to, so no action needs to know the tab.
   const showDetails = view === "details" || Boolean(tripNotice && aboutForms.has(tripNotice.form));
+  const now = nowDate();
   const phase = tripPhaseOf({
     startsAt: trip.startsAt,
     endsAt: trip.endsAt,
-    now: nowDate(),
+    now,
     timeZone: shop.timezone,
     stage: stageReading,
     cancelled,
   });
+  // The desk, on the Divers tab of a departure whose arrivals are open; null
+  // otherwise, and the roster is exactly what it is the rest of the week.
+  const desk = showDetails
+    ? null
+    : await buildArrivalDesk({
+        db,
+        shopId: shop.id,
+        shopSlug,
+        tripId,
+        trip,
+        now,
+        locale,
+        timeZone: shop.timezone,
+        t,
+      });
+  // The count leads the desk and says "1 diver can't board yet" itself, so the
+  // pulse's door to the same rows stands down while it is on screen.
+  const shownPulseFacts = desk?.arrival.instrument
+    ? pulseFacts.filter((fact) => !fact.href.endsWith("#roster"))
+    : pulseFacts;
 
   const siteNames = diveSites.sites.map((site) => site.name);
   const planSummary = siteNames.length > 0 ? siteNames.join(" + ") : t("trips.about.noneSet");
@@ -538,6 +576,9 @@ export default async function ManageTripPage({
     markWaiverInPersonAction: markWaiverInPersonAction.bind(null, shopSlug, tripId),
     markPaymentAction: markPaymentAction.bind(null, shopSlug, tripId),
     removeBookingAction: removeBookingAction.bind(null, shopSlug, tripId),
+    // One door on this tab, desk or not: the arrivals window opens 36 hours
+    // ahead, so a confirm made inside it is no evidence the diver was standing
+    // at the counter (dive-domain review 2026-10-05).
     confirmDiverIdentityAction: confirmDiverIdentityAction.bind(null, shopSlug, tripId),
     splitDiverIdentityAction: splitDiverIdentityAction.bind(null, shopSlug, tripId),
     certifyDiverAction: trip.course
@@ -583,7 +624,7 @@ export default async function ManageTripPage({
           own blocks are `display: contents`, in this flow, on the same stack
           (`TripRosterContent`). */}
       <div className="space-y-10">
-        {/* **One header on all five tabs** (owner, 2026-10-05): the
+        {/* **One header on all four tabs** (owner, 2026-10-05): the
             departure's name, its stage and seats, and when it sails. Divers
             and Details wore a header of their own — the hour as a giant
             name, the crew and boat in a line under it — so every tab change
@@ -607,6 +648,24 @@ export default async function ManageTripPage({
           }
           // **The price is here because nothing else on Divers says it**: a
           // staffer quoting a walk-in should not have to open Details.
+          // **Say it before the tap, not after.** The desk is live-only — the
+          // boat has an encrypted device copy and this does not — so a dropped
+          // signal means the list is stale and the next tap will not send
+          // (issue #819).
+          extraMeta={
+            desk ? (
+              <ConnectivityStatus
+                offlineLabel={t("checkIn.offlineLabel")}
+                onlyWhenOffline
+                className="mt-2"
+                copy={{
+                  online: t("shared.connectivity.online"),
+                  onlineTitle: t("shared.connectivity.onlineTitle"),
+                  offlineTitle: t("shared.connectivity.offlineTitle"),
+                }}
+              />
+            ) : undefined
+          }
           price={
             trip.priceCents === null
               ? undefined
@@ -968,7 +1027,14 @@ export default async function ManageTripPage({
             }
           />
         ) : (
-          <>
+          <DeskRefresh
+            open={Boolean(desk)}
+            copy={{
+              pulling: t("checkIn.pullToRefresh.pulling"),
+              release: t("checkIn.pullToRefresh.release"),
+              refreshing: t("checkIn.pullToRefresh.refreshing"),
+            }}
+          >
             {pulseNeeded ? (
               <MinimumSeatsBand
                 trip={trip}
@@ -986,9 +1052,9 @@ export default async function ManageTripPage({
             `gap-y-7` keeps a wrapped line's box 4px clear of the one above.
             Not on the row: the stack's end margin is `:where()`, and the
             row's own `-my-3` would replace it and pull the roster up. */}
-            {pulseFacts.length > 0 ? (
+            {shownPulseFacts.length > 0 ? (
               <div className="flex flex-wrap gap-x-4 gap-y-7">
-                {pulseFacts.map((fact) => (
+                {shownPulseFacts.map((fact) => (
                   <Link
                     key={fact.href}
                     href={fact.href}
@@ -1003,6 +1069,8 @@ export default async function ManageTripPage({
             ) : null}
 
             <TripRosterContent
+              arrival={desk?.arrival}
+              walkIn={desk?.walkIn}
               guests={guests}
               shopSlug={shopSlug}
               shopName={shop.name}
@@ -1037,9 +1105,31 @@ export default async function ManageTripPage({
               compact
               actions={rosterActions}
             />
-          </>
+          </DeskRefresh>
         )}
       </div>
     </>
+  );
+}
+
+/**
+ * Pull-to-refresh while the desk is open — a phone at the counter re-reads the
+ * list with the same gesture the boat's roll call uses. The rest of the week
+ * the roster is an ordinary page, and its stack lies in the page's flow.
+ */
+function DeskRefresh({
+  open,
+  copy,
+  children,
+}: {
+  open: boolean;
+  copy: { pulling: string; release: string; refreshing: string };
+  children: React.ReactNode;
+}) {
+  if (!open) return <>{children}</>;
+  return (
+    <CheckInQueueRefresh copy={copy}>
+      <div className="space-y-10">{children}</div>
+    </CheckInQueueRefresh>
   );
 }

@@ -5,7 +5,6 @@ import {
   manifestRow,
   offlineCopySaved,
   openBoatCheck,
-  openIfClosed,
   openManifestPerson,
   openOnThisPhone,
   openTripFromBoard,
@@ -416,8 +415,11 @@ test("the offline fallback never reaches beyond the manifest route", async ({ pa
 
   // Move to a *different* trip surface — the worker's live-manifest pattern
   // is scoped to the manifest route alone and must not swallow this one too.
-  await openTripTab(page, "Trip");
-  await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
+  // Gear, not Divers: the Divers tab is the counter once arrivals open, and
+  // the worker backs that one up on purpose (ADR
+  // 20260907-the-counter-survives-offline; the next test).
+  await openTripTab(page, "Prep");
+  await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+\/prep$/);
 
   await context.setOffline(true);
   let reloadError: Error | undefined;
@@ -1218,19 +1220,17 @@ test("a counter check-in made offline queues, then syncs and lands on the live c
   await context.setOffline(false);
   await expect(page.getByRole("status").filter({ hasText: "Everything’s sent" })).toBeVisible();
 
-  // The live counter is this departure's Check-in tab. A boat still ahead
-  // keeps its receipts folded, so open them to reach Diego's row.
+  // The live counter is this departure's Divers tab, where the arrived row
+  // has sunk into its "Checked in" group and ends in the tap that undoes it.
   await page.goto(counterPath("blue-mantis", tripId));
-  const queue = page.getByRole("region", { name: "Check-in queue" });
-  const settledHeading = page.getByRole("heading", { name: /^Checked in — \d+$/ });
-  await expect(settledHeading).toBeVisible();
-  await openIfClosed(queue.locator("details").filter({ has: settledHeading }));
+  const roster = page.locator("#roster");
+  await expect(roster.getByRole("heading", { name: /^Checked in · \d+$/ })).toBeVisible();
   await expect(
-    queue.getByRole("button", { name: "Undo check-in for Diego Alvarez" }),
+    roster.getByRole("button", { name: "Undo check-in for Diego Alvarez" }),
   ).toBeVisible();
-  // And still nobody aboard — the queue closed the arrival queue and nothing
-  // else.
-  await expect(queue.getByText("Boarded")).toHaveCount(0);
+  // And still nobody aboard — the desk closed the arrival and nothing else:
+  // the group says "boarded" only once somebody has.
+  await expect(roster.getByText(/boarded$/)).toHaveCount(0);
 });
 
 /**
@@ -1251,7 +1251,7 @@ test("a failed reload of the counter lands on this device's saved copy", async (
   await waitForShellPrimed(page);
 
   await page.goto(counterPath("blue-mantis", tripId));
-  await expect(page.getByRole("region", { name: "Check-in queue" })).toBeVisible();
+  await expect(page.getByText(/^\d+ of \d+ here$/)).toBeVisible();
 
   await context.setOffline(true);
   await page.reload();

@@ -164,8 +164,7 @@ export function DiverList({
   const router = useRouter();
   const pathname = usePathname();
   const [typed, setTyped] = useState(query);
-  // **The roster opens ready to be typed into**, the way check-in does
-  // (`check-in/CheckInSearch.tsx`): a staffer arrives here holding a name, and
+  // **The roster opens ready to be typed into**: a staffer arrives here holding a name, and
   // searching is the first thing they do. Focused through a ref rather than the
   // `autoFocus` attribute because biome's `noAutofocus` rule forbids that JSX
   // prop outright — every focus-on-mount in this repo goes the same way.
