@@ -291,6 +291,14 @@ const DEMO_SHOP_BRAND: Partial<typeof shops.$inferInsert> = {
   brandHeroImageAlt: "Elkhorn coral on Molasses Reef, sunlight from above",
   establishedYear: 1998,
   brandBadges: ["padi_5_star", "blue_star", "tripadvisor"],
+  // The photo strip under the cover: four of the bundled reef frames, so the
+  // storefront captures draw the strip at the width a real shop's would.
+  shopfrontPhotoUrls: [
+    "Blue Tangs Molasses Reef 1999.jpg",
+    "French Angelfish Pickles Reef 20230713.jpg",
+    "FGBNMS - nurse shark (27551309652).jpg",
+    "Yellowtail Snappers Molasses Reef 1999.jpg",
+  ].map((file) => `/dive-sites/${encodeURIComponent(file)}`),
 };
 
 /**

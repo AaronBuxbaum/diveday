@@ -162,6 +162,8 @@
       },
       "noteLabel": "What to say about it",
       "notePlaceholder": "The easiest above-water reference, and a good way to stay oriented.",
+      "photoLabel": "Photo",
+      "removePhoto": "Remove photo",
       "add": "Add a landmark",
       "remove": "Remove",
       "removeAriaLabel": "Remove the landmark {name}",

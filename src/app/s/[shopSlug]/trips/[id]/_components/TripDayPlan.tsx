@@ -491,6 +491,21 @@ export function TripMoments({ briefings, locale }: { briefings: SiteBriefing[]; 
 }
 
 /**
+ * **The day's cover photo**: the first photo the shop uploaded for the first
+ * of the day's sites that has one. A departure has no photo of its own, and it
+ * needs none — the shop already photographs the places it goes, on the site
+ * form, and a departure page with no picture on it was selling a reef in
+ * words alone. Null when no site on the day has a photo.
+ */
+export function dayCoverPhoto(briefings: readonly SiteBriefing[]): string | null {
+  for (const { diveSite } of briefings) {
+    const first = diveSite?.imageUrls?.[0];
+    if (first) return first;
+  }
+  return null;
+}
+
+/**
  * The routes the shop drew, for the sites this day dives.
  *
  * ADR 20260809-shop-drawn-dive-routes rests on one sentence — a route reaches
@@ -676,9 +691,29 @@ export function TripSiteNotes({
                   {/* More air than the passages get: the label is followed by
                       another `font-medium` line — a landmark's own name — and
                       without the gap the two read as one run-on sentence. */}
-                  <ul className="mt-2 space-y-3">
+                  {/* A landmark the shop photographed is shown, not only
+                      named: the picture is what a diver will look for on the
+                      bottom. With any photo the list becomes a two-up grid
+                      on a wider screen, one column on a phone; without one
+                      it stays the run of lines it was. The name under the
+                      photo is the content, so the photo is `alt=""`. */}
+                  <ul
+                    className={
+                      landmarks.some((landmark) => landmark.photoUrl)
+                        ? "mt-2 grid gap-x-4 gap-y-5 sm:grid-cols-2"
+                        : "mt-2 space-y-3"
+                    }
+                  >
                     {landmarks.map((landmark) => (
-                      <li key={landmark.name} className="text-sm">
+                      <li key={landmark.name} className="min-w-0 text-sm">
+                        {landmark.photoUrl ? (
+                          <StoredPhoto
+                            src={landmark.photoUrl}
+                            alt=""
+                            className="mb-2 aspect-[3/2] w-full rounded-inset"
+                            sizes="(min-width: 896px) 26rem, (min-width: 640px) 46vw, 92vw"
+                          />
+                        ) : null}
                         <span className="font-medium">{landmark.name}</span>
                         <span className="text-muted"> · {t(landmarkKindKey[landmark.kind])}</span>
                         {landmark.note ? (

@@ -62,6 +62,7 @@
   "schedule": {
     "eyebrow": "Trips",
     "title": "Schedule",
+    "shopPhotos": "Photos from the shop",
     "timesInZone": "All times below are local to {shop} ({zone}).",
     "timesInZoneFooter": "Times are local to {shop} ({zone}).",
     "embedSeeFullSchedule": "See the full schedule",

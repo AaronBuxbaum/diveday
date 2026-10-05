@@ -591,6 +591,7 @@ export async function setShopProfile(
     brandHeroImageAlt?: string | null;
     establishedYear?: number | null;
     brandBadges?: BrandBadgeCode[];
+    shopfrontPhotoUrls?: string[];
   },
 ) {
   const clean = (value: string | null | undefined) => value?.trim() || null;
@@ -614,6 +615,9 @@ export async function setShopProfile(
         ? { establishedYear: profile.establishedYear }
         : {}),
       ...(profile.brandBadges !== undefined ? { brandBadges: profile.brandBadges } : {}),
+      ...(profile.shopfrontPhotoUrls !== undefined
+        ? { shopfrontPhotoUrls: profile.shopfrontPhotoUrls }
+        : {}),
     })
     .where(eq(shops.id, shopId))
     .returning();

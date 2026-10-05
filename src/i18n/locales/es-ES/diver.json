@@ -62,6 +62,7 @@
   "schedule": {
     "eyebrow": "Salidas",
     "title": "Calendario",
+    "shopPhotos": "Fotos del centro",
     "timesInZone": "Todos los horarios de abajo están en la hora local de {shop} ({zone}).",
     "timesInZoneFooter": "Las horas son locales de {shop} ({zone}).",
     "embedSeeFullSchedule": "Ver el calendario completo",

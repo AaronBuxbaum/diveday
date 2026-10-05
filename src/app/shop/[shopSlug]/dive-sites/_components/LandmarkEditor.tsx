@@ -1,17 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import {
   RepeatingItemCard,
   repeatingItemAddClass,
   repeatingItemRemoveClass,
 } from "@/components/editor/RepeatingItemCard";
+import { ImageFileInput, type ImageFileInputCopy } from "@/components/ImageFileInput";
+import { StoredPhoto } from "@/components/StoredPhoto";
+import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field, textareaClassFor } from "@/components/ui/form";
 import {
   DIVE_SITE_LANDMARK_KINDS,
   type DiveSiteLandmark,
   type DiveSiteLandmarkKind,
+  landmarkPhotoField,
   MAX_SITE_LANDMARKS,
 } from "@/lib/dive-site-landmarks";
 
@@ -23,6 +27,9 @@ export type LandmarkEditorCopy = {
   kindLabels: Record<DiveSiteLandmarkKind, string>;
   noteLabel: string;
   notePlaceholder: string;
+  photoLabel: string;
+  removePhoto: string;
+  imageInput: ImageFileInputCopy;
   add: string;
   remove: string;
   /**
@@ -62,12 +69,24 @@ export function LandmarkEditor({
   copy: LandmarkEditorCopy;
 }) {
   const [landmarks, setLandmarks] = useState<DiveSiteLandmark[]>(initialLandmarks);
+  // **A key per row that survives a removal above it.** Each row now holds a
+  // file input, and a picked file lives in that input's DOM node, nowhere
+  // else. Keyed by index, removing row 1 would hand row 2's node — and its
+  // file — to what was row 3. The keys travel with the rows; the inputs'
+  // *names* follow the index, which is what the server reads them by.
+  const nextKey = useRef(initialLandmarks.length);
+  const [keys, setKeys] = useState<number[]>(() => initialLandmarks.map((_, index) => index));
+  const idPrefix = useId();
   const full = landmarks.length >= MAX_SITE_LANDMARKS;
 
   const update = (index: number, patch: Partial<DiveSiteLandmark>) =>
     setLandmarks((current) =>
       current.map((landmark, at) => (at === index ? { ...landmark, ...patch } : landmark)),
     );
+  const removeRow = (index: number) => {
+    setLandmarks((current) => current.filter((_, at) => at !== index));
+    setKeys((current) => current.filter((_, at) => at !== index));
+  };
 
   return (
     // No box and no legend of its own: the editor is the body of the form's
@@ -87,16 +106,12 @@ export function LandmarkEditor({
           {landmarks.map((landmark, index) => (
             <RepeatingItemCard
               as="li"
-              // Landmarks have no identity beyond their position in the list,
-              // and two can share a name while one is being retyped — the index
-              // is the only stable key here.
-              // biome-ignore lint/suspicious/noArrayIndexKey: see above
-              key={index}
+              key={keys[index]}
               remove={
                 <button
                   type="button"
                   aria-label={copy.removeAriaLabel.replace("{name}", landmark.name)}
-                  onClick={() => setLandmarks((current) => current.filter((_, at) => at !== index))}
+                  onClick={() => removeRow(index)}
                   className={repeatingItemRemoveClass}
                 >
                   {copy.remove}
@@ -142,6 +157,41 @@ export function LandmarkEditor({
                   className={textareaClassFor(2)}
                 />
               </Field>
+              {/* The photo divers see beside the note. A stored one shows as
+                  itself with a way to take it off; otherwise the picker, whose
+                  file posts under this row's index. */}
+              <Field
+                label={copy.photoLabel}
+                className="mt-4"
+                // A stored photo and its button label themselves; the caption
+                // names the pair rather than wrapping the button.
+                group={Boolean(landmark.photoUrl)}
+                htmlFor={landmark.photoUrl ? undefined : `${idPrefix}-photo-${keys[index]}`}
+              >
+                {landmark.photoUrl ? (
+                  <div className="flex flex-wrap items-end gap-3">
+                    <StoredPhoto
+                      src={landmark.photoUrl}
+                      alt=""
+                      className="h-24 w-36 rounded-inset border border-border"
+                      sizes="144px"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => update(index, { photoUrl: undefined })}
+                      className={buttonClass({ variant: "secondary", size: "sm" })}
+                    >
+                      {copy.removePhoto}
+                    </button>
+                  </div>
+                ) : (
+                  <ImageFileInput
+                    id={`${idPrefix}-photo-${keys[index]}`}
+                    name={landmarkPhotoField(index)}
+                    copy={copy.imageInput}
+                  />
+                )}
+              </Field>
             </RepeatingItemCard>
           ))}
         </ul>
@@ -151,9 +201,13 @@ export function LandmarkEditor({
         <button
           type="button"
           disabled={full}
-          onClick={() =>
-            setLandmarks((current) => [...current, { name: "", kind: "pointOfInterest", note: "" }])
-          }
+          onClick={() => {
+            setLandmarks((current) => [
+              ...current,
+              { name: "", kind: "pointOfInterest", note: "" },
+            ]);
+            setKeys((current) => [...current, nextKey.current++]);
+          }}
           className={repeatingItemAddClass}
         >
           {copy.add}

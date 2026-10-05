@@ -1,4 +1,10 @@
+import {
+  type DiveSiteLandmark,
+  landmarkPhotoField,
+  parseDiveSiteLandmarks,
+} from "@/lib/dive-site-landmarks";
 import { MAX_SITE_IMAGES } from "@/lib/dive-sites";
+import { safeJson } from "@/lib/safe-json";
 import { storeDiveSiteImage } from "./index";
 
 /**
@@ -26,12 +32,15 @@ const FIELDS = {
   removeMapImage: "removeSatelliteImage",
   removeRouteImage: "removeRouteImage",
   removeGallery: "removeSiteImageUrls",
+  landmarks: "landmarks",
 } as const;
 
 export type DiveSitePhotos = {
   satelliteImageUrl?: string;
   routeImageUrl?: string;
   imageUrls: string[];
+  /** The posted landmarks, each carrying its uploaded or kept photo. */
+  landmarks: DiveSiteLandmark[];
 };
 
 export type DiveSitePhotoResult =
@@ -43,7 +52,15 @@ export type ExistingDiveSitePhotos = {
   satelliteImageUrl: string | null;
   routeImageUrl: string | null;
   imageUrls: string[];
+  /** As stored; only the photos on it matter here. */
+  landmarks: unknown;
 };
+
+function landmarkPhotoUrls(landmarks: unknown): string[] {
+  return parseDiveSiteLandmarks(landmarks).flatMap((landmark) =>
+    landmark.photoUrl ? [landmark.photoUrl] : [],
+  );
+}
 
 type UploadOne = { ok: true; url?: string } | { ok: false; reason: "not_configured" | "rejected" };
 
@@ -88,13 +105,21 @@ export async function uploadDiveSitePhotos(
     return { ok: false, reason: "rejected" };
   }
 
-  const [mapImage, routeImage, ...gallery] = await Promise.all([
+  // The landmark list as posted, before `parseDiveSiteLandmarks` drops a
+  // nameless row, because the file inputs are named by *posted* index.
+  const postedLandmarks = safeJson(String(formData.get(FIELDS.landmarks) ?? "[]"));
+  const rawLandmarks: unknown[] = Array.isArray(postedLandmarks) ? postedLandmarks : [];
+
+  const [mapImage, routeImage, ...rest] = await Promise.all([
     uploadOne(formData.get(FIELDS.mapImage)),
     uploadOne(formData.get(FIELDS.routeImage)),
     ...newGalleryFiles.map((file) => uploadOne(file)),
+    ...rawLandmarks.map((_, index) => uploadOne(formData.get(landmarkPhotoField(index)))),
   ]);
+  const gallery = rest.slice(0, newGalleryFiles.length);
+  const landmarkUploads = rest.slice(newGalleryFiles.length);
 
-  const results = [mapImage, routeImage, ...gallery];
+  const results = [mapImage, routeImage, ...rest];
   const failure = results.find((result): result is Extract<UploadOne, { ok: false }> => !result.ok);
   if (failure) {
     // One unconfigured deployment explains every failure in the batch, so it
@@ -109,9 +134,30 @@ export async function uploadDiveSitePhotos(
     stored: string | null | undefined,
   ) => uploaded ?? (formData.get(removeField) === "true" ? undefined : (stored ?? undefined));
 
+  // A kept photo has to be one this site already held. The posted JSON is the
+  // browser's word, and without this a hand-made post could point a landmark
+  // at any object in our storage — and a later save that dropped it would
+  // queue that object for deletion.
+  const heldLandmarkPhotos = new Set(landmarkPhotoUrls(existing?.landmarks));
+  const landmarks = parseDiveSiteLandmarks(
+    rawLandmarks.map((entry, index) => {
+      if (typeof entry !== "object" || entry === null) return entry;
+      const uploaded = landmarkUploads[index];
+      const posted = (entry as { photoUrl?: unknown }).photoUrl;
+      const photoUrl =
+        uploaded?.ok && uploaded.url
+          ? uploaded.url
+          : typeof posted === "string" && heldLandmarkPhotos.has(posted)
+            ? posted
+            : undefined;
+      return { ...entry, photoUrl };
+    }),
+  );
+
   return {
     ok: true,
     photos: {
+      landmarks,
       satelliteImageUrl: keepOrDrop(
         mapImage.ok ? mapImage.url : undefined,
         FIELDS.removeMapImage,
@@ -132,7 +178,7 @@ export async function uploadDiveSitePhotos(
 
 /**
  * Blob objects this save orphaned — a replaced map or route still, a gallery
- * photo the staffer removed. The caller queues each through
+ * or landmark photo the staffer removed. The caller queues each through
  * `queueAndAttemptMediaDeletion` once the row is durably saved, never before:
  * the local change must not be blocked on storage (CR-012).
  */
@@ -141,11 +187,19 @@ export function supersededDiveSitePhotos(
   after: DiveSitePhotos,
 ): string[] {
   const stillReferenced = new Set(
-    [after.satelliteImageUrl, after.routeImageUrl, ...after.imageUrls].filter(
-      (url): url is string => Boolean(url),
-    ),
+    [
+      after.satelliteImageUrl,
+      after.routeImageUrl,
+      ...after.imageUrls,
+      ...landmarkPhotoUrls(after.landmarks),
+    ].filter((url): url is string => Boolean(url)),
   );
-  return [before.satelliteImageUrl, before.routeImageUrl, ...before.imageUrls]
+  return [
+    before.satelliteImageUrl,
+    before.routeImageUrl,
+    ...before.imageUrls,
+    ...landmarkPhotoUrls(before.landmarks),
+  ]
     .filter((url): url is string => Boolean(url))
     .filter((url) => !stillReferenced.has(url));
 }

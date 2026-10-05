@@ -370,6 +370,13 @@ export const shops = pgTable(
     brandHeroImageUrl: text("brand_hero_image_url"),
     /** Real alt text, staff-authored, for the hero photograph. */
     brandHeroImageAlt: text("brand_hero_image_alt"),
+    /**
+     * The storefront's photo strip, under the cover: the boats, the crew, the
+     * reef, in the order the shop uploaded them. First-party storage URLs only
+     * (`storeShopHeroImage`, the cover's own prefix), capped at
+     * `MAX_SHOPFRONT_PHOTOS`. Decorative on the page, so no alt text column.
+     */
+    shopfrontPhotoUrls: jsonb("shopfront_photo_urls").$type<string[]>().notNull().default([]),
     /** The year the shop opened, for "Since 1998" on the badge wall. */
     establishedYear: integer("established_year"),
     /**

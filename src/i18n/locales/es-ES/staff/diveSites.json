@@ -162,6 +162,8 @@
       },
       "noteLabel": "Qué decir al respecto",
       "notePlaceholder": "La referencia más fácil sobre el agua, y una buena forma de mantenerte orientado.",
+      "photoLabel": "Foto",
+      "removePhoto": "Quitar la foto",
       "add": "Agregar una referencia",
       "remove": "Quitar",
       "removeAriaLabel": "Quitar la referencia {name}",

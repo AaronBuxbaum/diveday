@@ -57,6 +57,7 @@ export const SECTION_IDS = [
   "season",
   "contact",
   "profile",
+  "shopPhotos",
   "address",
   "reviewLink",
   "searchListing",
@@ -335,6 +336,12 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     labelKey: "settings.main.profile.heading",
     group: "website",
     target: { kind: "section", id: "profile" },
+  },
+  {
+    id: "shopPhotos",
+    labelKey: "settings.main.shopPhotos.heading",
+    group: "website",
+    target: { kind: "section", id: "shopPhotos" },
   },
   {
     id: "searchListing",

@@ -45,6 +45,10 @@ function positionOf(marker: string): number {
 const ABOVE_THE_FORM = [
   "<TripHeader",
   "<TripActions",
+  // The day's cover photo, inside the hero rather than a section of its own:
+  // the owner asked for media-heavier public pages (2026-10-05), and one
+  // picture of the place is that without a new beat to scroll past.
+  "<StoredPhoto",
   "<TripDayPlan",
   "<TripPitch",
   "<ConditionsLine",
@@ -119,7 +123,7 @@ describe("the trip page's order", () => {
   it("bounds what runs above the form, and bounds its own list", () => {
     // The count is the bound. Adding a section means editing this literal and
     // this number, which is the deliberate act the ADR asks for.
-    expect(ABOVE_THE_FORM).toHaveLength(7);
+    expect(ABOVE_THE_FORM).toHaveLength(8);
     const positions = ABOVE_THE_FORM.map(positionOf);
     for (const at of positions) expect(at).toBeGreaterThan(-1);
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
