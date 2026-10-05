@@ -514,10 +514,8 @@ test.describe("as owner", () => {
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, tripB);
-    // The seat's own row, not the reason line under it that also names her.
-    const row = rosterRow(page, "Nora Quinn")
-      .and(page.locator('li[id^="booking-"]'))
-      .filter({ visible: true });
+    // `.first()`: the reason line is itself a list item naming Nora, inside her row.
+    const row = rosterRow(page, "Nora Quinn").filter({ visible: true }).first();
     // The row says who booked, on whose email, and offers both answers.
     await expect(row).toContainText("Booked as Ben Quinn with Nora Quinn’s email.");
 
@@ -526,7 +524,12 @@ test.describe("as owner", () => {
     await row.getByRole("button", { name: "Same person as Nora Quinn" }).click();
     await row.getByRole("button", { name: "Yes, this is them" }).click();
     await expect(page.getByRole("status")).toContainText("Identity confirmed");
-    await expect(row.getByRole("button", { name: /^Same person as / })).toHaveCount(0);
+    await expect(
+      rosterRow(page, "Nora Quinn")
+        .filter({ visible: true })
+        .first()
+        .getByRole("button", { name: /^Same person as / }),
+    ).toHaveCount(0);
 
     // And the tap is on the record. Clearing this flag hands the seat Nora's
     // live signed release, her cards and any prepaid dives, and every staff
@@ -535,8 +538,7 @@ test.describe("as owner", () => {
     // made the call (the RFH-07 security pass).
     //
     // **Naming the door is the assertion, not decoration.** There are two —
-    // this roster row, and the same row once its departure's arrivals open and
-    // it is the desk's (issue #1696) — and the
+    // this roster row and the check-in queue's own row (issue #1696) — and the
     // trail carries a different code for each, because "somebody cleared it"
     // and "somebody at the counter cleared it with the diver in front of them"
     // are different facts to read back a week later. A regex that matched both

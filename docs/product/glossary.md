@@ -2196,12 +2196,25 @@ new domain concept, define it here in the same PR.
   that opens 36 hours ahead is no evidence the person was at the desk. **Open to every live staff role on
   purpose**: the flag is raised at the counter, and a staffer who cannot clear one they just
   raised strands a walk-in until a manager walks past — what carries the weight is the trail, not
-  the role list (`src/lib/authz.ts`). **When the answer is no**, the resolution is not a different
-  tap: staff book that person under their own email, which creates their own record, and leave
-  this seat held or remove it. Nothing else may be attested onto a held seat in the meantime —
+  the role list (`src/lib/authz.ts`). **When the answer is no**, staff use the other answer on the
+  same row, **Split off a held seat** below. Nothing else may be attested onto a held seat in the meantime —
   recording a paper release on one is refused at the writer (`recordInPersonWaiver`), because a
   staff-attested signature with a medical tick would land on the very record the flag says the
   shop is unsure of. See H-13 in [human-decisions.md](human-decisions.md).
+- **Split off a held seat** ("Different person") — the other answer to a held seat: this booking is
+  *not* the diver it was attached to. `splitBookingIdentity` (`src/db/bookings.ts`) creates a new
+  diver record, named by the staffer and prefilled with the name the seat was booked under
+  (`bookings.identity_booked_as`), and moves onto it what was about the seat: the booking, the gear
+  held for it, and the staff notes written on it. It **carries nothing** of the matched diver's:
+  no cards, sizes, date of birth, contact or email (the shared address stays with the record that
+  owns it). Every release and link on the seat is **superseded** and every bearer link minted over
+  the booking **revoked**, because nobody knows which of the two people signed it, so the seat asks
+  for its own release and is blocked until it has one. A seat with an **unanswered medical
+  referral** is refused until the referral is answered, since superseding it would lift the hold.
+  Signed releases stay filed under the matched diver for now (issue #2080). Open to every live
+  staff role for the same reason as confirming; a wrong split is undone by merging the two records
+  (owner or manager). Trail lines on the departure (`identity_split`) and on the matched diver's
+  record (`identity_split_off`).
 - **Remove vs. erase (a diver)** — two different operations, deliberately not the same button.
   **Removing** a diver is the reversible archive action every entity has
   ([20260719-crud-archive-semantics](../architecture/decisions/20260719-crud-archive-semantics.md)):
