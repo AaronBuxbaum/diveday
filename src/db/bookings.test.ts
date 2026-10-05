@@ -33,6 +33,7 @@ import {
   tripDives,
   tripRequirements,
   trips,
+  waiverRecords,
 } from "./schema";
 import * as selfDeclaredCardsModule from "./self-declared-cards";
 import {
@@ -44,6 +45,7 @@ import {
   setTripStatus,
   upcomingTripsWithCounts,
 } from "./trips";
+import { issueWaiverRequest } from "./waivers";
 
 async function seededContext() {
   const { db, shop } = await seededShopContext();
@@ -1342,6 +1344,114 @@ describe("createBooking identity safeguard (H-13)", () => {
       });
       // A refusal writes no orphan person.
       expect(await db.select({ id: people.id }).from(people)).toHaveLength(before.length);
+    });
+
+    // The split seat boards on nothing of the matched diver's (dive-domain
+    // review 2026-10-05): it is blocked, and on its own missing release.
+    it("leaves the split seat blocked on its own release", async () => {
+      const { db, shop, open } = await seededContext();
+      const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+      const staffer = await counterStaffer(db, shop.id);
+      const result = await splitBookingIdentity(db, {
+        shopId: shop.id,
+        bookingId: shared.bookingId,
+        actorPersonId: staffer.id,
+        fullName: "Ben Quinn",
+      });
+      expect(result.ok).toBe(true);
+      const readiness = await readinessModule.getBookingReadiness(db, shop.id, shared.bookingId);
+      expect(readiness?.status).toBe("blocked");
+      expect(readiness?.blockers.some((b) => b.code.startsWith("waiver_"))).toBe(true);
+    });
+
+    it("kills every link minted over the seat: bearer tokens and its release", async () => {
+      const { db, shop, open } = await seededContext();
+      const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+      const staffer = await counterStaffer(db, shop.id);
+      const ready = await bookingCapabilitiesModule.issueBookingCapability(db, {
+        shopId: shop.id,
+        bookingId: shared.bookingId,
+        purpose: "readiness",
+      });
+      if (!ready) throw new Error("readiness capability setup failed");
+      const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: shared.bookingId });
+      expect(issued.ok).toBe(true);
+
+      const result = await splitBookingIdentity(db, {
+        shopId: shop.id,
+        bookingId: shared.bookingId,
+        actorPersonId: staffer.id,
+        fullName: "Ben Quinn",
+      });
+      expect(result.ok).toBe(true);
+      // The link went to the matched diver's inbox, and the seat is no longer theirs.
+      expect(
+        await bookingCapabilitiesModule.verifyBookingCapability(db, {
+          token: ready.token,
+          purpose: "readiness",
+        }),
+      ).toBeNull();
+      const releases = await db
+        .select({
+          supersededAt: waiverRecords.supersededAt,
+          tokenSealed: waiverRecords.tokenSealed,
+        })
+        .from(waiverRecords)
+        .where(eq(waiverRecords.bookingId, shared.bookingId));
+      expect(releases.length).toBeGreaterThan(0);
+      for (const release of releases) {
+        expect(release.supersededAt).not.toBeNull();
+        expect(release.tokenSealed).toBeNull();
+      }
+    });
+
+    it("refuses a seat with an unanswered medical referral, which a split would lift", async () => {
+      const { db, shop, open } = await seededContext();
+      const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+      const staffer = await counterStaffer(db, shop.id);
+      await issueWaiverRequest(db, { shopId: shop.id, bookingId: shared.bookingId });
+      const [release] = await db
+        .select({ id: waiverRecords.id })
+        .from(waiverRecords)
+        .where(eq(waiverRecords.bookingId, shared.bookingId))
+        .limit(1);
+      if (!release) throw new Error("expected the seat to carry a release");
+      await db
+        .update(waiverRecords)
+        .set({ status: "medical_review" })
+        .where(eq(waiverRecords.id, release.id));
+
+      expect(
+        await splitBookingIdentity(db, {
+          shopId: shop.id,
+          bookingId: shared.bookingId,
+          actorPersonId: staffer.id,
+          fullName: "Ben Quinn",
+        }),
+      ).toEqual({ ok: false, reason: "medical_hold" });
+      const [still] = await db
+        .select({ supersededAt: waiverRecords.supersededAt })
+        .from(waiverRecords)
+        .where(eq(waiverRecords.id, release.id));
+      expect(still?.supersededAt).toBeNull();
+    });
+
+    it("refuses a cancelled seat: there is nobody to give a record to", async () => {
+      const { db, shop, open } = await seededContext();
+      const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+      const staffer = await counterStaffer(db, shop.id);
+      await db
+        .update(bookings)
+        .set({ status: "cancelled" })
+        .where(eq(bookings.id, shared.bookingId));
+      expect(
+        await splitBookingIdentity(db, {
+          shopId: shop.id,
+          bookingId: shared.bookingId,
+          actorPersonId: staffer.id,
+          fullName: "Ben Quinn",
+        }),
+      ).toEqual({ ok: false, reason: "not_held" });
     });
   });
 

@@ -1180,7 +1180,15 @@ export async function splitDiverIdentityAction(
   });
   revalidateAndRedirect(
     back,
-    noticeUrl(back, split.ok ? "identity-split" : "invalid", { bid: bookingId }),
+    noticeUrl(
+      back,
+      split.ok
+        ? "identity-split"
+        : split.reason === "medical_hold"
+          ? "identity-medical-hold"
+          : "invalid",
+      { bid: bookingId },
+    ),
   );
 }
 

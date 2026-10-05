@@ -21,6 +21,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { blockerFixFor } from "@/lib/blockers";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { guardianSignatureRequired } from "@/lib/guardian";
+import { heldSeatBlockers } from "@/lib/identity-match";
 import type { NoShowClaim } from "@/lib/no-show";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { paperPassPath } from "@/lib/print-sheets";
@@ -701,13 +702,16 @@ export function CounterQueueRow({
         surface="check_in"
         tripId={row.tripId}
         waiverCopy={waiverSendCopy(t)}
-        blockers={row.readiness.blockers}
+        // A held seat says only its identity question and its payment: the
+        // rest is measured against the matched person (`heldSeatBlockers`).
+        blockers={heldSeatBlockers(row.readiness.blockers)}
         // Nothing to point at when the hold *is* the blocker: the attestation
         // below is the whole fix, and a second secondary button walks the
         // staffer away from it (`identityHoldsTheRow`).
         fix={identityHoldsTheRow ? null : fix}
         collapseReasons={
-          counterBlockerDisclosure(t, row.readiness.blockers, blockerText) ?? undefined
+          counterBlockerDisclosure(t, heldSeatBlockers(row.readiness.blockers), blockerText) ??
+          undefined
         }
         blockerText={blockerText}
         t={t}

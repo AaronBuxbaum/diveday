@@ -231,6 +231,9 @@ const noticeCopy: NoticeMap = {
   // reading it — and the row it is about looks exactly as it did, so there is
   // nothing on the page that says it.
   "identity-not-held": { tone: "neutral", key: "checkIn.notice.identityNotHeld" },
+  // "Different person" on a seat whose referral is unanswered: splitting would
+  // lift the hold (`splitBookingIdentity`).
+  "identity-medical-hold": { tone: "warning", key: "checkIn.notice.identityMedicalHold" },
   "no-show-already-marked": { tone: "neutral", key: "checkIn.notice.noShowAlreadyMarked" },
   "no-show-not-booked": { tone: "neutral", key: "checkIn.notice.noShowNotBooked" },
   // Both taps answer this one: nobody fails to show for a boat that never left,

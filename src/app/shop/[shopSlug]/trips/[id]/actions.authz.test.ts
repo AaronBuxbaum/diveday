@@ -515,6 +515,12 @@ describe("who may run each action on the trip page", () => {
     // on the departure and on the matched diver's record — `src/lib/authz.ts`'s
     // own standard for the most sensitive read in the product.
     "confirmDiverIdentityAction",
+    // The other answer to the same flag, open for the same reason: the staffer
+    // who raised it answers it. It hands over less than confirming does (the
+    // seat moves off the matched record and starts empty), a wrong split is
+    // undone by an owner or manager's merge, and `splitBookingIdentity` writes
+    // its trail on the departure and on the matched diver's record.
+    "splitDiverIdentityAction",
     "markWaiverInPersonAction",
     "saveRosterEmergencyContactAction",
     // **Who is running the boat is the crew's own answer.** H-14's record

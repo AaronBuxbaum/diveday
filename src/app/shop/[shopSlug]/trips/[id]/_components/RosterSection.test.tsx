@@ -405,6 +405,29 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     ["u", readinessRow("blocked", [{ code: "medical_review", params: undefined }])],
   ]) as ReadinessByBooking;
 
+  // The matched person's own blockers are facts about them, not the person at
+  // the counter (dive-domain review 2026-10-05): a held row says only its
+  // identity question and its payment.
+  it("says none of the matched person's own blockers under a held seat", () => {
+    renderRoster({
+      roster: [matched],
+      readiness: new Map([
+        [
+          "u",
+          readinessRow("blocked", [
+            { code: "identity_unconfirmed", params: undefined },
+            { code: "medical_review", params: undefined },
+            { code: "payment_due", params: undefined },
+          ]),
+        ],
+      ]) as ReadinessByBooking,
+      waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+      rentalFit,
+    });
+    expect(screen.queryByText("A medical answer needs staff follow-up.")).toBeNull();
+    expect(screen.getAllByText("Payment is outstanding for this trip.").length).toBeGreaterThan(0);
+  });
+
   it("prints none of the matched person's medical answers, age, contact or sizes", () => {
     renderRoster({
       roster: [matched],

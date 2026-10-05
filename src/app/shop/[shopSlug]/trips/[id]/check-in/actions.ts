@@ -322,5 +322,11 @@ export async function splitIdentityFromCheckIn(
     revalidatePath(back);
     return;
   }
-  revalidateAndRedirect(back, noticeUrl(back, "identity-not-held"));
+  revalidateAndRedirect(
+    back,
+    noticeUrl(
+      back,
+      split.reason === "medical_hold" ? "identity-medical-hold" : "identity-not-held",
+    ),
+  );
 }

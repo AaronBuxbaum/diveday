@@ -279,8 +279,10 @@ function blockerCoded(
 /**
  * **The open items on a diver's record, worst first.**
  *
- * At most one row per kind: the ledger answers "what is open", and a diver
- * with three pending cards has one job, not three. Danger rows (a departure
+ * Mostly one row per kind: the ledger answers "what is open", and a diver
+ * with three pending cards has one job, not three. Contact is the exception:
+ * an age under a departure's minimum and a missing emergency contact are two
+ * jobs, and `splitDiverStatus` lets the danger one speak for the file row. Danger rows (a departure
  * this diver is on will not let them board) sort above warnings (real work,
  * nobody waiting on a boat).
  *

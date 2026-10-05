@@ -44,6 +44,7 @@ import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import { checkDrysuitCard } from "@/lib/drysuit-card";
 import { formatDateTimeTz } from "@/lib/format";
 import { guardianSignatureOf, guardianSignatureRequired, signingDate } from "@/lib/guardian";
+import { heldSeatBlockers } from "@/lib/identity-match";
 import { flaggedMedicalPrompts } from "@/lib/medical";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { paymentSourceLine } from "@/lib/payment-source";
@@ -525,10 +526,12 @@ export function RosterSection({
     const notes = notesByBooking.get(booking.id) ?? [];
     // This row's blockers, each in its own sentence. The held-identity one
     // names both people the guess was between (`identityReasonText`), so the
-    // two answers under the reason lines need no words of their own.
+    // two answers under the reason lines need no words of their own. A held
+    // seat says nothing measured against the matched person
+    // (`heldSeatBlockers`), the same rule as its particulars above.
     const blockerTexts =
       readiness && readiness.status !== "ready"
-        ? readiness.blockers.map((blocker) => ({
+        ? heldSeatBlockers(readiness.blockers).map((blocker) => ({
             blocker,
             text:
               blocker.code === "identity_unconfirmed"
