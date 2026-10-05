@@ -194,6 +194,7 @@ export function FeatureDirectory({
                 >
                   <span className="flex items-center justify-between gap-3">
                     <span
+                      id={lines ? pageNameId(page.key) : undefined}
                       className={`${SECTION_TITLE_CLASS} transition-colors group-hover:text-primary`}
                     >
                       {t(`marketing.featurePages.${page.key}.name`)}
@@ -237,12 +238,17 @@ export function FeatureDirectory({
   );
 }
 
+/** The id of a hub row's page name, which that row's checklist is named by. */
+const pageNameId = (key: CapabilityGroupId) => `feature-${key}-name`;
+
 /**
  * One group of the full list as a native disclosure: closed at rest, counting
  * its lines, every line one tap or one Enter away and still in the page for
- * find-in-page. Under a feature page's row it is only the count, because the
- * row's link above it already names the page; `titled` is a row of its own,
- * for a group no page owns, and names the group.
+ * find-in-page. Under a feature page's row it shows only the count, because the
+ * row's link above it already names the page; a screen reader still hears the
+ * page's name first (`aria-labelledby`), since a list of controls read out of
+ * context would otherwise be twelve counts. `titled` is a row of its own, for
+ * a group no page owns, and names the group.
  */
 function CapabilityLines({
   locale,
@@ -255,9 +261,10 @@ function CapabilityLines({
 }) {
   const t = diverTranslator(locale);
   const group = capabilityGroup(id);
+  const countId = `capabilities-${id}-count`;
   const count = (
     <span className="flex shrink-0 items-center gap-2 text-sm text-muted">
-      <span className="tabular-nums">
+      <span id={countId} className="tabular-nums">
         {t("marketing.product.boxGroupCount", { count: group.items.length })}
       </span>
       <DisclosureCaret direction="down" className="group-open:rotate-180" />
@@ -266,6 +273,7 @@ function CapabilityLines({
   return (
     <details className="group">
       <summary
+        aria-labelledby={titled ? undefined : `${pageNameId(id)} ${countId}`}
         className={`flex cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden ${
           titled ? "min-h-14 justify-between gap-4 py-4" : "min-h-11"
         }`}

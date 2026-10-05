@@ -188,6 +188,24 @@ describe("FeatureDirectory", () => {
     expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(0);
   });
 
+  // On the hub each row's checklist shows only its count, under the link that
+  // names the page. Read as a list of controls, out of that context, twelve
+  // counts would name nothing, so each is named by its page first.
+  it("names each page's checklist on the hub by its page, then its count", () => {
+    const { container } = render(<FeatureDirectory locale="en-US" lines />);
+    const summaries = [...container.querySelectorAll("li > a + details > summary")];
+    expect(summaries).toHaveLength(FEATURE_PAGES.length);
+    const names = summaries.map((summary) =>
+      (summary.getAttribute("aria-labelledby") ?? "")
+        .split(" ")
+        .map((id) => container.querySelector(`[id="${id}"]`)?.textContent)
+        .join(" "),
+    );
+    expect(names[0]).toMatch(/^Online booking \d+ workflows$/);
+    for (const name of names) expect(name).toMatch(/^\S.* \d+ workflows?$/);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
   it("renders in Spanish", () => {
     render(<FeatureDirectory locale="es-ES" />);
     expect(screen.getByRole("heading", { name: "El día de la salida" })).toBeInTheDocument();
