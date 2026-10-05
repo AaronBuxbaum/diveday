@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * A `<details>` that opens itself when the page lands on an anchor inside it.
@@ -27,7 +27,10 @@ export function AutoOpenDetails({
    * anchor inside `children`, or this element itself when `id` names it. */
   openOnHash: string | string[];
   /** Server-decided initial state (e.g. "this section just saved") — the hash
-   * check can only ever open, never close, so the two compose. */
+   * check can only ever open, never close, so the two compose. Like the hash,
+   * it only ever opens: a later render where it reads false (the `?notice=`
+   * that held a roster row open has been cleared from the URL) leaves the
+   * disclosure as the reader has it, rather than snapping it shut under them. */
   open?: boolean;
   /** The `<details>`'s own fragment target, when the anchor *is* this element
    * — a deep link then scopes to the whole disclosure, and the hash check
@@ -46,6 +49,13 @@ export function AutoOpenDetails({
   children: ReactNode;
 }) {
   const ref = useRef<HTMLDetailsElement>(null);
+  // The attribute React renders is the first one it saw, so it never has a
+  // reason to patch `open` away; a later `true` opens it imperatively below.
+  const [initialOpen] = useState(open);
+
+  useEffect(() => {
+    if (open && ref.current) ref.current.open = true;
+  }, [open]);
 
   useEffect(() => {
     const hashes = Array.isArray(openOnHash) ? openOnHash : [openOnHash];
@@ -69,7 +79,7 @@ export function AutoOpenDetails({
       ref={ref}
       id={id}
       name={name}
-      open={open}
+      open={initialOpen}
       className={className}
       onToggle={onToggle ? (event) => onToggle(event.currentTarget.open) : undefined}
     >

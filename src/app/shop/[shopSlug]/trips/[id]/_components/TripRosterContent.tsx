@@ -13,7 +13,6 @@ import { activityLine } from "@/i18n/activity-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { cancellationDeadline } from "@/lib/deposits";
 import { formatShortDate } from "@/lib/format";
-import { crewNotDrawn } from "@/lib/hull";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { type FormNotice, noticeForForm, shopPath } from "@/lib/staff-notices";
 import { isFull, spotsRemaining } from "@/lib/trips";
@@ -21,7 +20,6 @@ import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { AddDiverSection } from "./AddDiverSection";
 import { LastMinuteDealSection } from "./LastMinuteDealSection";
 import { RosterSection } from "./RosterSection";
-import { readinessOf, seatHoldersOf, TripHull } from "./TripHull";
 import { TripInvitationGroup } from "./TripInvitationSection";
 import { TripNoticeBanner } from "./TripNoticeBanner";
 import { WaitlistGroup } from "./WaitlistSection";
@@ -72,7 +70,6 @@ export function TripRosterContent({
   namesakeRefusedBookingId,
   mayDiscount,
   mayWriteOffPayment,
-  hull,
   compact = false,
   afterRoster = null,
   actions,
@@ -97,21 +94,6 @@ export function TripRosterContent({
   namesakeRefusedBookingId?: string;
   mayDiscount: boolean;
   mayWriteOffPayment: boolean;
-  /**
-   * The boat this departure sails on, for the hull above the rows. Null where
-   * it has none — a shore dive and a pool session have a roster and no boat,
-   * and an invented hull would be a picture of something that is not there.
-   */
-  hull: {
-    name: string;
-    color: string | null;
-    /**
-     * The guides assigned to this departure, already named. Two fit in the
-     * wheelhouse; the rest are the crew panel's, which is where a crew reads
-     * them in full.
-     */
-    crew: readonly string[];
-  } | null;
   /** The canonical Trip surface already owns the masthead capacity read. */
   compact?: boolean;
   /**
@@ -157,38 +139,6 @@ export function TripRosterContent({
   // deciding whether money controls should exist.
   const showPromote = lastMinute.showPromote && mayDiscount;
 
-  /**
-   * **The hull's sentence counts the rows the hull draws.**
-   *
-   * It used to take `trip.booked` while the seats were drawn from every
-   * non-cancelled booking — two different sets, so a departure with one no-show
-   * showed six filled seats over the words "5 of 6 seats taken" (dive-domain
-   * review 20260919). Both read `seatHoldersOf` now.
-   *
-   * The blocked count is the one fact the picture carries that the masthead
-   * does not, which is why the sentence names it: for a reader who cannot see
-   * the boat, "two who cannot board" *is* the picture.
-   */
-  const hullSeatHolders = hull ? seatHoldersOf(roster) : [];
-  /*
-   * **Counted off the same three-way answer the seats are drawn from**
-   * (`readinessOf`, ADR 20260919-one-idea §3b.5) rather than off
-   * `rosterRowIsBlocked` directly. Asked through the fail-open predicate, a
-   * booking nobody had read counted as neither blocked nor doubtful, so the
-   * sentence said "6 of 6 seats taken" flat — and a reader who cannot see the
-   * boat was told nothing at all about the one diver nobody had looked at.
-   * Design principle 6: colour never carries a state alone, and a dash pattern
-   * is colour's quieter cousin.
-   */
-  const hullReadiness = hullSeatHolders.map((entry) =>
-    readinessOf(readinessByBooking, entry.booking.id),
-  );
-  const hullSeatCounts = {
-    booked: hullSeatHolders.length,
-    blocked: hullReadiness.filter((readiness) => readiness === "blocked").length,
-    unread: hullReadiness.filter((readiness) => readiness === "unread").length,
-  };
-
   return (
     // `contents`, so these blocks lie in the page's flow; `space-y-10` is the
     // page's stack carried through it, since the page's own reaches only its
@@ -232,46 +182,6 @@ export function TripRosterContent({
             {t("trips.guests.scheduleAnotherDeparture")}
           </Link>
         </section>
-      ) : null}
-
-      {/* **The departure drawn as its boat** (ADR 20260919-one-idea, decision
-          I · Tide, slice 23c). Above the rows rather than instead of them: a
-          crew sees the shape of the morning — how full, how many cannot board,
-          how much room is left — and then reads every one of those facts in
-          words underneath. Take the picture away and the page says exactly
-          what it said before.
-
-          Only where the departure has a boat. A shore dive and a pool session
-          have a roster and no hull, and an invented one would be a picture of
-          something that is not there.
-
-          **And only where it is sailing.** A blow-out cancels the departure and
-          leaves every booking active (the glossary's *Blow-out*), so a
-          cancelled trip's seats are all still held and the hull drew a full,
-          happy boat at the top of a page whose words said the day was off — and
-          the picture is read first. There is no honest hull for a departure
-          that is not going, so there is none (dive-domain review 20260919). */}
-      {hull && !cancelled ? (
-        <div>
-          <TripHull
-            roster={roster}
-            readinessByBooking={readinessByBooking}
-            capacity={trip.capacity}
-            color={hull.color}
-            crew={hull.crew}
-            label={t("trips.hullLabel", {
-              boat: hull.name,
-              booked: hullSeatCounts.booked,
-              capacity: trip.capacity,
-              blocked: hullSeatCounts.blocked,
-              unread: hullSeatCounts.unread,
-              // The wheelhouse holds two. A departure with more guides than
-              // that draws a boat with people missing from it, and the one
-              // sentence the picture carries is where that gets said.
-              crewNotDrawn: crewNotDrawn(hull.crew.length),
-            })}
-          />
-        </div>
       ) : null}
 
       <RosterSection

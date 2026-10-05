@@ -57,11 +57,11 @@ stay in `AGENTS.md`.
   departures and the builder) and Crew (`staffing/`, the same week by who is working it), both
   titled "Schedule" under `schedule/_components/ScheduleViews.tsx`, which carries `?week=` across.
   A third reading of the week is a third view there, never a page of its own.
-- **A departure is five tabs under a stage stepper** (ADR 20261001-logbook, decision 3):
+- **A departure is five tabs under one header** (ADR 20261001-logbook, decision 3):
   Divers (`trips/[id]/page.tsx`, the roster), Check-in (`check-in/`, the counter, its walk-in form at `check-in/walk-in`),
   Boat (`manifest/`), Gear (`prep/`, the packing list) and Details (`trips/[id]?view=details`,
-  the About panel). One component draws them, `_components/TripTabs.tsx`, and the stepper's
-  phase (Prep, Check-in, Aboard, Back) comes from `src/lib/trip-phase.ts`, where the crew's tap
+  the About panel). One component draws them, `_components/TripTabs.tsx`; every tab wears `TripPageHeader`, whose
+  stage pill's phase (Prep, Check-in, Aboard, Back) comes from `src/lib/trip-phase.ts`, where the crew's tap
   on the manifest beats the clock. Add to a tab, never a sixth surface. A gear form redirects to
   `prep#{PREP_SECTION_ID}`; an About form redirects to the departure with its `form`, which opens
   Details. **A cancelled departure keeps its Boat tab and packs nothing**: the roll call is a

@@ -654,13 +654,11 @@ export function RosterSection({
           {readinessStatusText(t, readiness.status)}
         </Badge>
       ) : null,
-      // A note nobody knows exists was never written: the settled one-line
-      // row still says there are notes to read (dive-domain review,
-      // 2026-08-21). An unsettled row's open half already shows the notes
-      // disclosure itself.
-      settledRow && !holdOpen && notes.length > 0 ? (
+      // A note nobody knows exists was never written: the one-line row still
+      // says there are notes to read (dive-domain review, 2026-08-21).
+      !holdOpen && notes.length > 0 ? (
         <span key="notes" className="text-sm text-muted">
-          {t("trips.roster.privateStaffNotes", { count: notes.length })}
+          {t("trips.roster.noteCount", { count: notes.length })}
         </span>
       ) : null,
       // Arrived at the counter — display only, the same capsule the manifest
@@ -728,8 +726,8 @@ export function RosterSection({
       </CompactDisclosureRow>
     );
     // A contact on file is a fact about the seat, so this renders only in the
-    // reference panel; a *missing* one is work and renders in the open half
-    // as a warning line with the same edit form.
+    // reference panel; a *missing* one is a reason line under the name, with
+    // the same edit form among the row's work.
     const emergencyContactBlock = (
       <div>
         <GroupLabel as="p">{t("trips.roster.emergencyContactHeading")}</GroupLabel>
@@ -744,14 +742,11 @@ export function RosterSection({
     );
 
     /**
-     * **Work**: everything this seat still owes, always in the open — one
-     * item per line, each beside its own fix (the ADR's "open work expands
-     * inline"). Membership is decided by the kind of thing, never by its
-     * current value, so a control can never leave from under the finger that
-     * used it: payment, the contact form and the notes stay put in both
-     * states.
+     * **The flagged medical answer**, the one piece of a row's work that never
+     * folds away: it must be read before the diver boards, so it stands under
+     * the name on every visit while everything else waits behind the row.
      */
-    const outstanding = (
+    const medicalHold = (
       <>
         {/* What this diver asked for when they said they were easing back, in
             the open. A fact beside a name in a muted tone — no warning
@@ -763,31 +758,179 @@ export function RosterSection({
         {booking.reEntryAsk ? (
           <p className={`mt-3 ${INSET_NOTE_CLASS}`}>{t(STAFF_RE_ENTRY_KEYS[booking.reEntryAsk])}</p>
         ) : null}
+        {/* Safety-critical and never disclosed: a flagged medical answer is
+            the one thing on this row that must be read before the diver
+            boards. It carries the **status word** as well as the instruction
+            (caught by waivers.spec.ts). */}
+        {waiverStatus === "medical_review" || waiverStatus === "medical_not_cleared" ? (
+          <div
+            className={`mt-3 rounded-lg px-3 py-2 text-sm ${
+              waiverStatus === "medical_not_cleared"
+                ? "bg-danger-tint text-danger-strong"
+                : "bg-warning-tint text-warning-strong"
+            }`}
+          >
+            <p className="font-semibold">{waiverControl.label}</p>
+            <p className="mt-0.5 font-medium">
+              {/* The hold reads "follow up before boarding" because somebody
+                  still can. A refusal has nobody left to follow up with, and
+                  saying so is the whole of issue #1283 at the rail. */}
+              {t(
+                waiverStatus === "medical_not_cleared"
+                  ? "trips.roster.notClearedBeforeBoarding"
+                  : "trips.roster.followUpBeforeBoarding",
+              )}
+            </p>
+            {flaggedPrompts.length > 0 ? (
+              <ul className="mt-1 flex list-disc flex-col gap-1 pl-4">
+                {flaggedPrompts.map((prompt) => (
+                  <li key={prompt}>{prompt}</li>
+                ))}
+              </ul>
+            ) : waiverStatus === "medical_review" ? (
+              // Only while the answer is still outstanding. This sentence ends
+              // "confirm physician clearance before boarding", which under a
+              // recorded refusal contradicts the line directly above it and
+              // tells a crew member to go looking for a clearance that has
+              // already been refused (caught by looking at the row).
+              <p className="mt-1">{t("trips.roster.medicalFollowUpDescription")}</p>
+            ) : null}
+            <div className="flex flex-wrap items-center gap-x-4">
+              {currentWaiver ? (
+                <Link
+                  // The whole waiver surface is one page now (ADR
+                  // 20260827-people-not-lists): `?record=` pins the row first
+                  // inside its own day group, and the fragment is what opens it
+                  // and scrolls past the release editor.
+                  href={`/shop/${shopSlug}/waivers?record=${currentWaiver.id}#waiver-record-${currentWaiver.id}`}
+                  className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline"
+                >
+                  {t("trips.roster.viewSignedRecord")}
+                </Link>
+              ) : null}
+              {/* The way out, which this panel did not have. A diver hands the
+                  doctor's letter to whoever is at the rail, and until #1252
+                  every dock surface pointed them at a page where the hold
+                  could be read and not resolved. The act itself lives on the
+                  diver's record, because a clearance is a fact about the
+                  person rather than about Saturday's boat.
 
+                  Not drawn once the answer has arrived: the record has nowhere
+                  for a second one to go, and offering the door anyway sends a
+                  staffer to a form that is no longer there. */}
+              {waiverStatus === "medical_review" ? (
+                <Link
+                  href={`/shop/${shopSlug}/divers/${person.id}#waiver`}
+                  className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline"
+                >
+                  {t("trips.roster.recordPhysicianClearance")}
+                </Link>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+      </>
+    );
+    /**
+     * **The row's lines of why** (owner, 2026-10-05: the Divers tab read as a
+     * wall of open panels). Every sentence a seat with work left has to say —
+     * what stops them boarding, then what is worth a word before they do —
+     * stands under the name as one plain line each, with no tinted box; the
+     * fixes for them wait behind the row's own control. Danger for a blocker,
+     * warning for an advisory. Membership is by kind, never by value, so the
+     * panel below never repeats a sentence said here.
+     */
+    const recencyText = diveRecencyIsNotable(booking.lastDivedBand)
+      ? diveRecencyText(t, booking.lastDivedBand)
+      : null;
+    const reasonLines: { key: string; text: string; tone: "danger" | "warning" }[] = [
+      ...uniqueBlockers.map(({ text }) => ({ key: text, text, tone: "danger" as const })),
+      ...(sharedBlockerCount > 0
+        ? [
+            {
+              key: "shared",
+              text: t("trips.roster.sharedOnCard", { count: sharedBlockerCount }),
+              tone: "danger" as const,
+            },
+          ]
+        : []),
+      ...(depthText !== null && !depthShared
+        ? [{ key: "depth", text: depthText, tone: "warning" as const }]
+        : []),
+      ...(drysuitCard.status !== "ok"
+        ? [
+            {
+              key: "drysuit",
+              text: drysuitCardWarningText(t, drysuitCard),
+              tone: "warning" as const,
+            },
+          ]
+        : []),
+      ...(recencyText !== null
+        ? [{ key: "recency", text: recencyText, tone: "warning" as const }]
+        : []),
+      // A seat whose readiness is clear can still be filed under "Still to
+      // clear" by its paperwork or its money, and a row in that group with no
+      // stated reason trains a crew to stop reading the group (dive-domain
+      // review 2026-10-05). A waiver blocker already says the first; this is
+      // for the seat no blocker speaks for.
+      ...(waiverControl.action !== null && blockerTexts.length === 0
+        ? [
+            {
+              key: "waiver",
+              text: t("trips.roster.reasonWaiverNotSigned"),
+              tone: "warning" as const,
+            },
+          ]
+        : []),
+      ...(requiresPayment &&
+      paymentStatus !== "paid" &&
+      paymentStatus !== "waived" &&
+      paymentStatus !== "partly_refunded"
+        ? [{ key: "payment", text: t("trips.roster.reasonUnpaid"), tone: "warning" as const }]
+        : []),
+      // Withheld on an unconfirmed row in both directions: the contact is the
+      // matched person's own record (`showsPersonDetail`).
+      ...(!hasEmergencyContact && showsPersonDetail
+        ? [
+            {
+              key: "contact",
+              text: `${t("trips.roster.emergencyContactHeading")} · ${t("trips.roster.emergencyContactMissing")}`,
+              tone: "warning" as const,
+            },
+          ]
+        : []),
+    ];
+    // Each line's mark is its first column, one line of the words tall, so it
+    // centres on their first line whatever wraps below it (K-494).
+    const reasonList =
+      reasonLines.length === 0 ? null : (
+        <ul className="-mt-1 grid gap-1 pb-2 text-sm">
+          {reasonLines.map(({ key, text, tone }) => (
+            <li
+              key={key}
+              className={`flex items-baseline gap-2 ${
+                tone === "danger" ? "text-danger" : "text-warning-strong"
+              }`}
+            >
+              <StatusMarkColumn variant={tone} />
+              <span>{text}</span>
+            </li>
+          ))}
+        </ul>
+      );
+    /**
+     * **Work**: the fix for everything this seat still owes, behind the row's
+     * own mark — the sentences themselves are the reason lines under the name
+     * (owner, 2026-10-05). Membership is decided by the kind of thing, never
+     * by its current value, so a control can never leave from under the
+     * finger that used it: payment, the contact form and the notes stay put in
+     * both states, and a form that just answered holds its row open.
+     */
+    const outstanding = (
+      <>
         {blockerTexts.length > 0 ? (
           <>
-            {/* Each line's mark is its first column, one line of the words
-                tall, so it centres on their first line whatever wraps below
-                it (K-494: a bare mark sat 2.5px above the line). */}
-            {/* diveday:allow-tinted-ink: a 5% wash, not the status tint — `text-danger` on `danger/5` measures 5.66:1 over `--background` in the app palette (issue #874) */}
-            <ul className="mt-3 grid gap-2 rounded-lg bg-danger/5 px-3 py-2 text-sm text-danger">
-              {uniqueBlockers.map(({ text }) => (
-                <li key={text} className="flex items-baseline gap-2">
-                  <StatusMarkColumn variant="danger" />
-                  <span>{text}</span>
-                </li>
-              ))}
-              {/* The row must never read as "fix the one thing listed and
-                  they're clear" when the group above holds more of this
-                  diver's blockers — the count keeps the row honest, and the
-                  reference panel has their full list. */}
-              {sharedBlockerCount > 0 ? (
-                <li className="flex items-baseline gap-2">
-                  <StatusMarkColumn variant="danger" />
-                  <span>{t("trips.roster.sharedOnCard", { count: sharedBlockerCount })}</span>
-                </li>
-              ) : null}
-            </ul>
             {/* Every named problem carries its handle. The waiver, payment,
                 and identity blockers already do — their controls are on this
                 row — but a certification-family blocker's fix lives on the
@@ -809,42 +952,6 @@ export function RosterSection({
               </Link>
             ) : null}
           </>
-        ) : null}
-
-        {/* Warning tone, not danger, and deliberately outside the blocker
-            list above: this diver can board. It says the site goes deeper
-            than their training, which the instructor may already be planning
-            around (H-08). An advisory the group already states for much of
-            the boat shrinks to the capsule in this row's header instead. */}
-        {depthText !== null && !depthShared ? (
-          <p className="mt-3 flex items-baseline gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
-            <StatusMarkColumn variant="warning" />
-            <span>{depthText}</span>
-          </p>
-        ) : null}
-
-        {/* The one rental that changes how a diver ascends, going out to
-            someone with no drysuit card behind it. Warning tone and outside
-            the blocker list for the same reason the depth line is: the shop
-            may be running the orientation itself, so this is a conversation
-            before the first dive and never a refusal (src/lib/drysuit-card.ts). */}
-        {drysuitCard.status !== "ok" ? (
-          <p className="mt-3 flex items-baseline gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
-            <StatusMarkColumn variant="warning" />
-            <span>{drysuitCardWarningText(t, drysuitCard)}</span>
-          </p>
-        ) : null}
-
-        {/* **Currency, which no card can express** (ADR
-            20260821-currency-is-what-catches-people). Warning tone and
-            outside the blocker list for the same reason the depth line above
-            is: this diver boards. It is a refresher conversation and a buddy
-            pairing, not a refusal. */}
-        {diveRecencyIsNotable(booking.lastDivedBand) ? (
-          <p className="mt-3 flex items-baseline gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong">
-            <StatusMarkColumn variant="warning" />
-            <span>{diveRecencyText(t, booking.lastDivedBand)}</span>
-          </p>
         ) : null}
 
         {/* This seat attached itself to an existing diver on something short
@@ -1021,78 +1128,6 @@ export function RosterSection({
           </div>
         ) : null}
 
-        {/* Safety-critical and never disclosed: a flagged medical answer is
-            the one thing on this row that must be read before the diver
-            boards. It carries the **status word** as well as the instruction
-            (caught by waivers.spec.ts). */}
-        {waiverStatus === "medical_review" || waiverStatus === "medical_not_cleared" ? (
-          <div
-            className={`mt-3 rounded-lg px-3 py-2 text-sm ${
-              waiverStatus === "medical_not_cleared"
-                ? "bg-danger-tint text-danger-strong"
-                : "bg-warning-tint text-warning-strong"
-            }`}
-          >
-            <p className="font-semibold">{waiverControl.label}</p>
-            <p className="mt-0.5 font-medium">
-              {/* The hold reads "follow up before boarding" because somebody
-                  still can. A refusal has nobody left to follow up with, and
-                  saying so is the whole of issue #1283 at the rail. */}
-              {t(
-                waiverStatus === "medical_not_cleared"
-                  ? "trips.roster.notClearedBeforeBoarding"
-                  : "trips.roster.followUpBeforeBoarding",
-              )}
-            </p>
-            {flaggedPrompts.length > 0 ? (
-              <ul className="mt-1 flex list-disc flex-col gap-1 pl-4">
-                {flaggedPrompts.map((prompt) => (
-                  <li key={prompt}>{prompt}</li>
-                ))}
-              </ul>
-            ) : waiverStatus === "medical_review" ? (
-              // Only while the answer is still outstanding. This sentence ends
-              // "confirm physician clearance before boarding", which under a
-              // recorded refusal contradicts the line directly above it and
-              // tells a crew member to go looking for a clearance that has
-              // already been refused (caught by looking at the row).
-              <p className="mt-1">{t("trips.roster.medicalFollowUpDescription")}</p>
-            ) : null}
-            <div className="flex flex-wrap items-center gap-x-4">
-              {currentWaiver ? (
-                <Link
-                  // The whole waiver surface is one page now (ADR
-                  // 20260827-people-not-lists): `?record=` pins the row first
-                  // inside its own day group, and the fragment is what opens it
-                  // and scrolls past the release editor.
-                  href={`/shop/${shopSlug}/waivers?record=${currentWaiver.id}#waiver-record-${currentWaiver.id}`}
-                  className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline"
-                >
-                  {t("trips.roster.viewSignedRecord")}
-                </Link>
-              ) : null}
-              {/* The way out, which this panel did not have. A diver hands the
-                  doctor's letter to whoever is at the rail, and until #1252
-                  every dock surface pointed them at a page where the hold
-                  could be read and not resolved. The act itself lives on the
-                  diver's record, because a clearance is a fact about the
-                  person rather than about Saturday's boat.
-
-                  Not drawn once the answer has arrived: the record has nowhere
-                  for a second one to go, and offering the door anyway sends a
-                  staffer to a form that is no longer there. */}
-              {waiverStatus === "medical_review" ? (
-                <Link
-                  href={`/shop/${shopSlug}/divers/${person.id}#waiver`}
-                  className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline"
-                >
-                  {t("trips.roster.recordPhysicianClearance")}
-                </Link>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
-
         {/* Whenever this departure takes money — never relocated by what the
             status happens to be, so the control a staffer just used to mark a
             seat Paid cannot vanish into a collapsed panel at the instant it
@@ -1119,35 +1154,24 @@ export function RosterSection({
           </div>
         ) : null}
 
-        {/* Task 144 — a *missing* contact is work and stays in the open, as
-            one line in the same warning grammar as its siblings above with
-            its fix riding the line's end: the whole line is the disclosure
-            that opens the form (`keepOpenBookingId` reopens the row a
-            just-saved contact settled). It hovers a step deeper than its
-            tint: it hovered to the tint it rests on, 0px changed (K-501),
-            and the palette has no opaque warning fill deeper than the tint.
+        {/* Task 144 — a *missing* contact is work: its sentence is one of the
+            row's reason lines, and its form waits here (`keepOpenBookingId`
+            reopens the row a just-saved contact settled).
 
             Withheld on an unconfirmed row (`showsPersonDetail`) in both
             directions: the form is prefilled from the matched person and
             writes back to their record, so offering it would disclose their
             contact and let a guess edit a real diver's next-of-kin. */}
         {hasEmergencyContact || !showsPersonDetail ? null : (
-          <details className="group/missing-contact mt-3">
-            {/* diveday:allow-tinted-ink: the hover step only, and the roster sits on a card: `text-warning-strong` on `warning/15` over `--surface` measures 4.83:1 light and 5.51:1 dark */}
-            <summary className="flex min-h-11 cursor-pointer list-none flex-wrap items-center gap-2 rounded-lg bg-warning-tint px-3 py-2 text-sm text-warning-strong transition-colors hover:bg-warning/15 [&::-webkit-details-marker]:hidden">
-              <StatusMark variant="warning" />
-              <span>
-                {t("trips.roster.emergencyContactHeading")} ·{" "}
-                {t("trips.roster.emergencyContactMissing")}
-              </span>
-              <span className="ms-auto font-semibold">{t("trips.roster.emergencyContactAdd")}</span>
-              <DisclosureCaret
-                direction="down"
-                className="size-4 group-open/missing-contact:rotate-180"
-              />
-            </summary>
+          <CompactDisclosureRow
+            className="mt-3"
+            bodyClassName="mt-0"
+            label={t("trips.roster.emergencyContactAddFull")}
+            // A refused save comes back to the form, not to its closed label.
+            holdOpen={holdOpen}
+          >
             {contactForm}
-          </details>
+          </CompactDisclosureRow>
         )}
 
         {/* One disclosure, at the top level of the row — writing a note about
@@ -1241,13 +1265,13 @@ export function RosterSection({
         ) : (
           // Said, not silently blank: a panel with no contact and no sizes
           // reads as a diver who has none, which is a wrong fact rather than
-          // an absent one. The confirm control is in the open half above.
+          // an absent one. The confirm control is in the work above.
           <p className="mt-3 text-sm text-muted">{t("trips.roster.identityWithheldDetails")}</p>
         )}
         <div className="mt-3 grid gap-5 sm:grid-cols-2">
           {/* The signed waiver's own evidence — when, and by which route —
               and nothing else. Every state that is *not* signed already says
-              so in the open half (principle 9). */}
+              so under the name (principle 9). */}
           {showsPersonDetail && currentWaiver?.completedAt && waiverStatus === "complete" ? (
             <div>
               <GroupLabel as="p">{t("trips.roster.waiverColumnHeading")}</GroupLabel>
@@ -1297,11 +1321,11 @@ export function RosterSection({
 
           {/* A contact already on file: a fact about the seat, which is what
               this panel is for. Only this state appears here — a missing one
-              is work and stays in the open above (principle 9). */}
+              is a reason line under the name (principle 9). */}
           {hasEmergencyContact && showsPersonDetail ? emergencyContactBlock : null}
 
-          {/* The full per-diver list, only when the open half compressed part
-              of it into a count. */}
+          {/* The full per-diver list, only when the reason lines compressed
+              part of it into a count. */}
           {depthShared && depthText !== null ? (
             <div>
               <GroupLabel as="p">{t("trips.roster.depthChip")}</GroupLabel>
@@ -1476,31 +1500,25 @@ export function RosterSection({
             </div>
           ) : null}
         </div>
-        {/* A cleared seat is one line in the Ready group (principle 9): the
-            group band says the state, the drawn mark confirms it, and
-            everything the row can still tell or do — payment corrections,
-            notes, the reference facts — waits behind the mark. A row with
-            open work keeps that work in the open. Deep links (Today, the
-            manifest's "Resolve blockers") land mid-page at one diver;
-            AutoOpenDetails opens on the hash, so the collapse can never
-            swallow what a link promised. */}
-        {settledRow && !holdOpen ? (
-          <AutoOpenDetails openOnHash={`booking-${booking.id}`} className="group">
-            {markSummary}
-            <div className="pb-1.5">
-              {outstanding}
-              {reference}
-            </div>
-          </AutoOpenDetails>
-        ) : (
-          <>
+        {/* **Every seat is one line** (owner, 2026-10-05). The group band says
+            the state, the name line says who, the reason lines say what is in
+            the way, and everything the row can do — the waiver, payment, the
+            contact, notes, the reference facts — waits behind the row's mark.
+            Only a flagged medical answer and a returning diver's own ask stand
+            in the open beside them. Deep links
+            (Today, the manifest's "Resolve blockers") land mid-page at one
+            diver; AutoOpenDetails opens on the hash, so the fold can never
+            swallow what a link promised, and `holdOpen` keeps open the row a
+            form on it just answered. */}
+        {reasonList}
+        {medicalHold}
+        <AutoOpenDetails openOnHash={`booking-${booking.id}`} open={holdOpen} className="group">
+          {markSummary}
+          <div className="pb-1.5">
             {outstanding}
-            <AutoOpenDetails openOnHash={`booking-${booking.id}`} open={holdOpen} className="group">
-              {markSummary}
-              <div className="pb-1.5">{reference}</div>
-            </AutoOpenDetails>
-          </>
-        )}
+            {reference}
+          </div>
+        </AutoOpenDetails>
       </li>
     );
   };

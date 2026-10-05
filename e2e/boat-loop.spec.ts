@@ -24,8 +24,8 @@ test("the departure's tabs reach its gear and its manifest", async ({ page }) =>
   await page.locator("ol li h3 a").first().click();
   await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
 
-  // **Five tabs under the hour** (ADR 20261001-logbook, decision 3), the
-  // Divers tab open, with the stage the departure is in above them.
+  // **Five tabs under one header** (ADR 20261001-logbook, decision 3), the
+  // Divers tab open, with the stage the departure is in as a pill in the header.
   const tabs = page.getByRole("navigation", { name: "Departure" });
   await expect(tabs.getByRole("link")).toHaveText([
     "Divers",
@@ -35,7 +35,9 @@ test("the departure's tabs reach its gear and its manifest", async ({ page }) =>
     "Details",
   ]);
   await expect(tabs.getByRole("link", { name: "Divers" })).toHaveAttribute("aria-current", "page");
-  await expect(page.getByRole("list", { name: "Stage" })).toBeVisible();
+  await expect(
+    page.locator("header").getByText(/^Stage: (Prep|Check-in|Aboard|Back)$/),
+  ).toBeVisible();
 
   // **The packing list is the Gear tab**, not the bottom of the roster.
   await expect(page.getByRole("heading", { name: "Rental kit", exact: true })).toHaveCount(0);

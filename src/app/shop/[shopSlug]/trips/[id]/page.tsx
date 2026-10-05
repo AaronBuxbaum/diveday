@@ -3,7 +3,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
 import { FlashParams } from "@/components/FlashParams";
-import { EyebrowBackLink } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
@@ -56,11 +55,10 @@ import {
 } from "./_components/SeriesSection";
 import { TripAboutSection } from "./_components/TripAboutSection";
 import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBanner";
-import { TripAddDiverLink, TripCapacityBadge } from "./_components/TripPageHeader";
+import { TripAddDiverLink, TripCapacityBadge, TripPageHeader } from "./_components/TripPageHeader";
 import { TripRosterContent } from "./_components/TripRosterContent";
-import { TripTabs } from "./_components/TripTabs";
+import { TripStageBadge, TripTabs } from "./_components/TripTabs";
 import { tripTabsCopy } from "./_components/trip-tabs-copy";
-import { type VoyageFact, VoyageHeader } from "./_components/VoyageHeader";
 import {
   addInternalNoteAction,
   addToWaitlistAction,
@@ -101,27 +99,19 @@ import {
 // 20260804-instant-navigation.
 export const instant = true;
 
-/**
- * Every fragment that has to open the About panel: each row's own anchor, plus
- * `#crew`, which is the crew *region* inside its row — the schedule board's
- * "Set a price for …" link and the pulse's crew facts both land here, and a
- * client-side transition runs no native reveal (`AutoOpenDetails`).
- */
-const ABOUT_ROW_HASHES = ["details", "conditions", "requirements", "about-crew", "crew", "series"];
-
 export const metadata: Metadata = {
   title: "Manage trip — DiveDay",
 };
 
 /**
- * Trip is the departure's working home: a compact About panel for its
- * definition followed by the grouped roster for the people coming. Manifest
- * remains who is aboard and Prep remains what is loaded. This is slice 5e from
- * ADR 20260827-the-departure-is-two-working-surfaces.
+ * Two of a departure's five tabs (ADR 20261001-logbook, decision 3): Divers,
+ * the grouped roster of the people coming, and Details (`?view=details`), the
+ * departure's definition laid flat. Check-in, Boat and Gear are their own
+ * routes beside this one.
  *
- * The composition is masthead → three surface tabs → compact About → one
- * grouped roster ledger. The complete existing editors stay behind About's
- * disclosure, so moving the roster does not discard setup or lifecycle work.
+ * ADR 20260919-one-idea's hour masthead and drawn hull are retired here (owner,
+ * 2026-10-05): every tab wears one `TripPageHeader`, and the roster is the
+ * only reading of who is aboard.
  */
 export default async function ManageTripPage({
   params,
@@ -491,38 +481,14 @@ export default async function ManageTripPage({
   const assignedCrew = staff
     .filter((entry) => crewIds.includes(entry.person.id))
     .map((entry) => entry.person.fullName);
-  // The fleet's row for this departure's boat: its name for the about line,
-  // and its colour for the hull above the roster (ADR 20260919-one-idea,
-  // decision I · Tide). A shore dive or a pool session finds nothing here and
-  // gets no hull, which is correct — it has a roster and no boat.
+  // The fleet's row for this departure's boat, for its name on the about line.
+  // A shore dive or a pool session finds nothing here.
   const boat = shopBoats.find((row) => row.id === trip.boatId);
   const boatName = boat?.name;
   const boatAndCrew = [boatName, ...assignedCrew].filter((part): part is string => Boolean(part));
   const boatCrewSummary = boatAndCrew.join(" · ") || t("trips.about.noBoat");
 
-  /**
-   * The boat, its crew, how full it is, which day it is and what a seat costs —
-   * each its own fact, because `VoyageHeader` sets the line so it breaks only
-   * between two of them ("9 of 12 seats" / "taken" and "Tue," / "Jul 21" were
-   * the breaks inside one string joined with " · "; pixel-craft class 8).
-   *
-   * **The price is here because nothing else on this page says it.** Retiring
-   * the capacity ring from the header was deliberate (the count is in words
-   * beside it), but the price rode the same component, and the only other place
-   * it appears on this page is as an editable field behind About's disclosure.
-   * A staffer quoting a walk-in should not have to open an editor to read it.
-   */
-  const voyageFacts: VoyageFact[] = [
-    boatName ?? (assignedCrew.length > 0 ? null : t("trips.about.noBoat")),
-    ...assignedCrew.map((name) => ({ text: name, desktop: true as const })),
-    t("trips.voyage.seats", { booked: trip.booked, capacity: trip.capacity }),
-    formatShortDate(trip.startsAt, locale, shop.timezone),
-    ...(trip.priceCents === null
-      ? []
-      : [
-          `${formatMoneyCents(trip.priceCents, toShopCurrency(shop.currency), locale)} ${t("trips.about.perSeat")}`,
-        ]),
-  ].filter((fact): fact is VoyageFact => fact !== null);
+  const tabsCopy = tripTabsCopy(t);
   const repeatsSummary = series
     ? recurrenceSummaryText(
         t,
@@ -546,9 +512,6 @@ export default async function ManageTripPage({
         })
       : t("tripSeries.panel.summaryAllDone", { summary: repeatsSummary })
     : repeatsSummary;
-  const aboutSummary = [planSummary, boatCrewSummary, series ? repeatsSummary : null]
-    .filter(Boolean)
-    .join(" · ");
   // The clash is a fact about two boats that will both sail, so a called-off
   // departure drops it with the rest of the live-trip nudges — `crewClashes`
   // answers nothing for one anyway, and this keeps the two from ever
@@ -564,29 +527,6 @@ export default async function ManageTripPage({
     liveClashes.length > 0 ||
     (!cancelled &&
       (crewGap.code !== "none" || underTargetNote !== null || languageGapNote !== null));
-  // **The weight lands where somebody sees it** (issue #1695, dive-domain-expert
-  // review 2026-09-12). `CrewSection`'s per-person sentence is two layers deep:
-  // inside the Crew panel, inside an About disclosure that is closed on every
-  // ordinary visit — and nothing inside a closed `<details>` is in the
-  // accessibility tree, so the line announced to nobody and was read by nobody.
-  // The one line a staffer *does* read at rest is this summary strip, which
-  // carries `boatCrewSummary` and carried no mark at all.
-  //
-  // So the strip takes one word in the warning ink and the naming sentences
-  // stay inside, which is the relationship `MinimumSeatsBand` already has to
-  // the Details panel that sets the minimum. It **leads** the strip rather than
-  // trailing it because the strip is a single `truncate`d line: appended, the
-  // mark is the first thing a narrow screen throws away.
-  const aboutSummaryText = aboutSummary || t("trips.about.noneSet");
-  const aboutSummaryNode =
-    liveClashes.length > 0 ? (
-      <>
-        <span className="font-semibold text-warning-strong">{t("trips.about.crewClash")}</span>
-        {` · ${aboutSummaryText}`}
-      </>
-    ) : (
-      aboutSummaryText
-    );
   const rosterActions = {
     addBookingAction: seatNewDiverAction.bind(null, "trip-guests", shopSlug),
     addExistingDiverAction: seatExistingDiverAction.bind(null, "trip-guests", shopSlug),
@@ -639,30 +579,36 @@ export default async function ManageTripPage({
           own blocks are `display: contents`, in this flow, on the same stack
           (`TripRosterContent`). */}
       <div className="space-y-10">
-        {/* **The departure is an hour** (ADR 20260919-one-idea, decision I ·
-            Tide, slice 23c). The hour the boat leaves is the page's one name.
-            The capacity ring retires here: "9 of 12" is in the line under the
-            title, in words, and a ring saying it again beside it was the same
-            fact twice. */}
-        <VoyageHeader
-          back={
-            <EyebrowBackLink href={shopPath(shopSlug, "schedule", "board")}>
-              {t(STAFF_DESTINATION_LABEL_KEYS.board)}
-            </EyebrowBackLink>
-          }
-          hour={formatTime(trip.startsAt, locale, shop.timezone)}
-          title={trip.title}
-          facts={voyageFacts}
+        {/* **One header on all five tabs** (owner, 2026-10-05): the
+            departure's name, its stage and seats, and when it sails. Divers
+            and Details wore a header of their own — the hour as a giant
+            name, the crew and boat in a line under it — so every tab change
+            redrew the top of the page. */}
+        <TripPageHeader
+          className=""
+          boardHref={shopPath(shopSlug, "schedule", "board")}
+          backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
+          trip={trip}
+          locale={locale}
+          timeZone={shop.timezone}
           badge={
-            cancelled ? (
+            <>
+              <TripStageBadge phase={phase} copy={tabsCopy} />
               <TripCapacityBadge
                 trip={trip}
                 cancelledLabel={t("trips.detail.cancelledBadge")}
                 t={t}
               />
-            ) : undefined
+            </>
           }
-          action={
+          // **The price is here because nothing else on Divers says it**: a
+          // staffer quoting a walk-in should not have to open Details.
+          price={
+            trip.priceCents === null
+              ? undefined
+              : `${formatMoneyCents(trip.priceCents, toShopCurrency(shop.currency), locale)} ${t("trips.about.perSeat")}`
+          }
+          actions={
             cancelled ? undefined : (
               <TripAddDiverLink
                 // The roster's own band, on the Divers tab: from Details the
@@ -683,8 +629,7 @@ export default async function ManageTripPage({
           shopSlug={shopSlug}
           tripId={tripId}
           current={showDetails ? "details" : "divers"}
-          phase={phase}
-          copy={tripTabsCopy(t)}
+          copy={tabsCopy}
         />
 
         <TripNoticeBanner notice={rootPageNotice} locale={locale} />
@@ -722,13 +667,6 @@ export default async function ManageTripPage({
 
         {showDetails ? (
           <TripAboutSection
-            heading={t("trips.about.heading")}
-            detailsLabel={t("trips.about.details")}
-            closeLabel={t("trips.about.close")}
-            summary={aboutSummaryNode}
-            conditionsSummary={conditionsSummary}
-            open
-            openOnHash={ABOUT_ROW_HASHES}
             rows={[
               {
                 id: "details",
@@ -869,9 +807,6 @@ export default async function ManageTripPage({
                     // and the shift-coverage badges are all about a boat that will
                     // leave.
                     onShiftIds={cancelled ? null : onShiftIds}
-                    // Marked on the About summary strip as well
-                    // (`aboutSummaryNode` above), because this row is inside a
-                    // disclosure that is closed on an ordinary visit.
                     clashes={liveClashes}
                     crewGapCode={cancelled ? "none" : crewGap.code}
                     updateCrewAction={updateTripCrewAction.bind(null, shopSlug)}
@@ -1062,7 +997,6 @@ export default async function ManageTripPage({
 
             <TripRosterContent
               guests={guests}
-              hull={boat ? { name: boat.name, color: boat.hullColor, crew: assignedCrew } : null}
               shopSlug={shopSlug}
               shopName={shop.name}
               locale={locale}
@@ -1082,13 +1016,11 @@ export default async function ManageTripPage({
                   ? bid
                   : undefined
               }
-              keepOpenBookingId={
-                notice === "contact-saved" ||
-                notice === "contact-incomplete" ||
-                notice === "payment"
-                  ? bid
-                  : undefined
-              }
+              // Every row folds its fixes now, so whatever a save inside a row
+              // reports, the row it names stays open on the way back: the
+              // staffer lands where they were working, not on a closed list.
+              // A removed seat has no row to hold.
+              keepOpenBookingId={notice?.startsWith("booking-removed") ? undefined : bid}
               // The one paper-release refusal with a way through (issue #1573),
               // scoped to the seat the action named so a roster of minors does not
               // all sprout the staffer's confirmation.

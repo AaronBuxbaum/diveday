@@ -211,6 +211,7 @@ export function CompactDisclosureRow({
   label,
   value,
   open,
+  holdOpen,
   onToggle,
   className = "",
   bodyClassName = "mt-3",
@@ -220,6 +221,13 @@ export function CompactDisclosureRow({
   label: ReactNode;
   value?: ReactNode;
   open?: boolean;
+  /**
+   * Opens the row and never shuts it — for a server-decided "this form just
+   * answered" whose `?notice=` is gone from the URL by the next render (a
+   * plain `open` turning false would snap the form shut under the reader).
+   * Takes the place of `open`; not combined with `onToggle`.
+   */
+  holdOpen?: boolean;
   /**
    * Told whether the row is now open, for the rare body that should not do its
    * work until somebody asks for it — `CounterQrCard`'s QR encoder is the one
@@ -231,13 +239,9 @@ export function CompactDisclosureRow({
   bodyClassName?: string;
   children: ReactNode;
 }) {
-  return (
-    <details
-      id={id}
-      open={open}
-      onToggle={onToggle ? (event) => onToggle(event.currentTarget.open) : undefined}
-      className={`group/compact-row ${className}`.trim()}
-    >
+  const rowClass = `group/compact-row ${className}`.trim();
+  const body = (
+    <>
       <summary className="-mx-2 grid min-h-11 cursor-pointer list-none grid-cols-[auto_minmax(0,1fr)] content-center items-start gap-x-2 gap-y-1 rounded-lg px-2 py-2 text-sm select-none transition-brand [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-primary sm:flex sm:items-center sm:justify-between sm:gap-3">
         <span className="contents sm:flex sm:min-w-0 sm:items-center sm:gap-2">
           <SummaryCaret className="text-muted group-open/compact-row:rotate-90" />
@@ -250,6 +254,23 @@ export function CompactDisclosureRow({
         ) : null}
       </summary>
       <div className={bodyClassName}>{children}</div>
+    </>
+  );
+  if (holdOpen !== undefined) {
+    return (
+      <AutoOpenDetails openOnHash={[]} id={id} open={holdOpen} className={rowClass}>
+        {body}
+      </AutoOpenDetails>
+    );
+  }
+  return (
+    <details
+      id={id}
+      open={open}
+      onToggle={onToggle ? (event) => onToggle(event.currentTarget.open) : undefined}
+      className={rowClass}
+    >
+      {body}
     </details>
   );
 }

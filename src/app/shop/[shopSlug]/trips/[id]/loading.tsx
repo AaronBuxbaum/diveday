@@ -1,32 +1,23 @@
 import { sectionCardClass } from "@/components/ui/card";
-import { VoyageHeaderSkeleton } from "./_components/VoyageHeader";
+import { TripPageHeaderSkeleton } from "./_components/TripPageHeader";
 
 /**
  * Body-shaped skeleton for the departure (design principle 1). Navigation into
- * one should keep its geometry while the reads settle: the header, the About
- * row, and the roster.
+ * one should keep its geometry while the reads settle: the header and the
+ * roster.
  *
- * **The header is the header's own lines** (`VoyageHeaderSkeleton`, exported
- * beside it so the two cannot drift; pixel-craft class 11). No heading bar
+ * **The header is the header's own lines** (`TripPageHeaderSkeleton`, the
+ * same header every tab of the departure wears, exported beside it so the two
+ * cannot drift; pixel-craft class 11). No heading bar
  * over the roster: the compact roster has none.
  *
- * **No bar under the header.** That block stood for the three-surface tab
- * strip, which is gone (ADR 20260919-one-idea, slice 23c) — the departure is
- * one page. Nor a shape for the packing list under the roster: that has its
- * own `<Suspense>` inside the page, so this frame is replaced before it
- * arrives.
- *
  * **The page's one gap.** Its blocks sit in one `space-y-10`, the header
- * included (K-262), so these do too: the header carries no margin of its own,
- * and the roster stands a section under About.
+ * included (K-262), so these do too.
  */
 export default function TripSurfaceLoading() {
   return (
     <div className="animate-pulse space-y-10">
-      <VoyageHeaderSkeleton />
-
-      <div className={sectionCardClass({ padding: "none", className: "h-16" })} />
-
+      <TripPageHeaderSkeleton className="" />
       <div>
         <div className={sectionCardClass({ padding: "none", className: "h-80" })} />
         <div className="mt-6 h-11 w-44 rounded bg-surface-sunken" />

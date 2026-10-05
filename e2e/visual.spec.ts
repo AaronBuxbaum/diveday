@@ -22,6 +22,7 @@ import {
   offlineCopySaved,
   openCounterFor,
   openDiverFileGroup,
+  openFirstRosterRowWith,
   openManifestPerson,
   openOnThisPhone,
   openPaperWaiverForm,
@@ -2919,10 +2920,8 @@ for (const scheme of ["light", "dark"] as const) {
         await staffPage.waitForURL(/\/shop\/blue-mantis\/trips\//);
         await staffPage.waitForURL(/\/trips\/[a-f0-9-]+$/);
         const diverSection = staffPage.locator("#roster");
-        await diverSection
-          .getByRole("button", { name: "Send waiver", exact: true })
-          .first()
-          .click();
+        const unsent = await openFirstRosterRowWith(staffPage, "Send waiver");
+        await unsent.getByRole("button", { name: "Send waiver", exact: true }).click();
         const resultNotice = diverSection.getByRole("status");
         await resultNotice.waitFor();
         const waiverHref = await waiverLinkFromResult(staffPage, resultNotice);

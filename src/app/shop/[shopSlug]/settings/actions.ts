@@ -1132,16 +1132,6 @@ function parseDiversPerDivemaster(raw: FormDataEntryValue | null): number | "inv
 }
 
 /** The storefront's one line about a hull: trimmed, bounded, and null when empty. */
-/**
- * The colour a shop paints a hull, through the one validator every submitted
- * colour in this app goes through. Blank is a boat nobody has painted, which is
- * a perfectly good boat — only six hex digits that are not six hex digits are a
- * refusal.
- */
-function boatHullColor(formData: FormData): { value: string | null; valid: boolean } {
-  return parseBrandColor(formData.get("hullColor"));
-}
-
 function boatDescription(formData: FormData): string | null {
   const text = String(formData.get("description") ?? "")
     .trim()
@@ -1180,14 +1170,13 @@ export async function updateBoatAction(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const capacity = Number(formData.get("capacity") ?? 0);
   const description = boatDescription(formData);
-  const hullColor = boatHullColor(formData);
 
-  if (!boatId || !name || Number.isNaN(capacity) || capacity <= 0 || !hullColor.valid) {
+  if (!boatId || !name || Number.isNaN(capacity) || capacity <= 0) {
     redirect(noticeUrl(page, "boat-invalid"));
   }
 
   const db = await getDb();
-  await updateBoat(db, session.user.shopId, boatId, name, capacity, description, hullColor.value);
+  await updateBoat(db, session.user.shopId, boatId, name, capacity, description);
 
   revalidateAndRedirect(page, noticeUrl(page, "boat-updated"));
 }

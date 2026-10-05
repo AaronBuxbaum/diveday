@@ -519,6 +519,7 @@ test.describe("as owner", () => {
 
     // Confirming identity clears the blocker — two-tap InlineConfirm, not a
     // native dialog: the first tap only arms it.
+    await openRosterDetails(row);
     await row.getByRole("button", { name: /^Confirm this is/ }).click();
     await row.getByRole("button", { name: "Yes, this is them" }).click();
     await expect(page.getByRole("status")).toContainText("Identity confirmed");

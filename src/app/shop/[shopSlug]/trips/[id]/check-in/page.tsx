@@ -44,7 +44,7 @@ import { tripPhaseOf } from "@/lib/trip-phase";
 import { hasSailed } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { TripCapacityBadge, TripPageHeader } from "../_components/TripPageHeader";
-import { TripTabs } from "../_components/TripTabs";
+import { TripStageBadge, TripTabs } from "../_components/TripTabs";
 import { tripTabsCopy } from "../_components/trip-tabs-copy";
 import { CounterInstrument } from "./_components/CounterInstrument";
 import { CounterQueue } from "./_components/CounterQueue";
@@ -448,7 +448,14 @@ export default async function TripCheckInPage({
         locale={locale}
         timeZone={shop.timezone}
         badge={
-          <TripCapacityBadge trip={trip} cancelledLabel={t("trips.detail.cancelledBadge")} t={t} />
+          <>
+            <TripStageBadge phase={phase} copy={tripTabsCopy(t)} />
+            <TripCapacityBadge
+              trip={trip}
+              cancelledLabel={t("trips.detail.cancelledBadge")}
+              t={t}
+            />
+          </>
         }
         // **Say it before the tap, not after.** The counter is live-only —
         // the boat has an encrypted device copy and this does not — so a
@@ -467,13 +474,7 @@ export default async function TripCheckInPage({
           />
         }
       />
-      <TripTabs
-        shopSlug={shopSlug}
-        tripId={tripId}
-        current="checkin"
-        phase={phase}
-        copy={tripTabsCopy(t)}
-      />
+      <TripTabs shopSlug={shopSlug} tripId={tripId} current="checkin" copy={tripTabsCopy(t)} />
 
       {copy && !waiverNoticeOnRow ? (
         // Suppressed only once the message has actually landed on a row, never

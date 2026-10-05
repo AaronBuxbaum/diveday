@@ -6,22 +6,14 @@ import { TripAboutSection } from "./TripAboutSection";
 afterEach(cleanup);
 
 /**
- * Slice 5e's contract (ADR 20260827-the-departure-is-two-working-surfaces):
- * Overview's configuration is one compact About disclosure at rest, and its
- * label/value rows and their editors remain available on intent.
- *
- * Amended by the 2026-09-17 design review: a row *is* its own disclosure, so
- * the editors are no longer a second set of headed sections below the rows
- * restating them, and the rare and destructive acts are one closed list at the
- * foot rather than five standing buttons with captions.
+ * The Details tab's contract: the departure's rows are the whole tab, laid
+ * flat and never folded behind a card-level disclosure (owner, 2026-10-05).
+ * A row *is* its own disclosure, so the editors are not a second set of
+ * headed sections below the rows restating them, and the rare and destructive
+ * acts are one closed list at the foot (design review 2026-09-17).
  */
 describe("Trip About panel", () => {
   const props = {
-    heading: "About this departure",
-    detailsLabel: "Details",
-    closeLabel: "Close",
-    summary: "Molasses Reef · Mantis II · Keiko",
-    conditionsSummary: "Wind 10 kt SE · viz 60 ft",
     rows: [
       {
         id: "details",
@@ -34,25 +26,21 @@ describe("Trip About panel", () => {
     ],
   };
 
-  it("keeps configuration compact and hidden at rest", () => {
+  it("lays every row out flat, with no disclosure around the panel", () => {
     const { container } = render(<TripAboutSection {...props} />);
 
     const about = container.querySelector("#about");
-    expect(about).not.toHaveAttribute("open");
-    expect(screen.getByText(props.summary)).toBeVisible();
-    const conditionLines = screen.getAllByText(props.conditionsSummary);
-    // The strip's quieter second line, and the Conditions row's own value.
-    expect(conditionLines).toHaveLength(2);
-    // The desktop canvas keeps a second, quieter conditions line, while the
-    // phone canvas keeps About to one line so the roster arrives sooner.
-    expect(conditionLines[0]).toHaveClass("hidden", "sm:block");
+    expect(about?.tagName).toBe("SECTION");
+    expect(about?.closest("details")).toBeNull();
+    expect(screen.getByText("Molasses Reef + Winch Hole")).toBeVisible();
+    expect(screen.getByText("Wind 10 kt SE · viz 60 ft")).toBeVisible();
+    // A row's editor still waits behind its own row.
     expect(screen.getByText("Details editor")).not.toBeVisible();
   });
 
   it("opens a row's editor beneath the row it belongs to, and nowhere else", () => {
-    const { container } = render(<TripAboutSection {...props} open />);
+    const { container } = render(<TripAboutSection {...props} />);
 
-    expect(screen.getByText("About this departure")).toBeVisible();
     expect(screen.getByText("Molasses Reef + Winch Hole")).toBeVisible();
     // The row's own control is its summary — no separate "Edit" link, and no
     // headed duplicate of the row below it.
@@ -72,7 +60,7 @@ describe("Trip About panel", () => {
     // hanging past square rules: the rules move out by 8px, the summary spans
     // them, and the room the words keep is the grid's — the same room a fact
     // row's grid keeps, so both kinds of row share one left edge.
-    const { container } = render(<TripAboutSection {...props} open />);
+    const { container } = render(<TripAboutSection {...props} />);
     const editable = container.querySelector("details#details");
     const fact = container.querySelector("#conditions");
     const rules = editable?.parentElement;
@@ -98,7 +86,7 @@ describe("Trip About panel", () => {
     // the box's top: "Edit details ▾" 12px under the value it edits, and the
     // label 3px off the value. The 44px box stays (the whole summary is the
     // target); the three share the first baseline.
-    const { container } = render(<TripAboutSection {...props} open />);
+    const { container } = render(<TripAboutSection {...props} />);
     const summaryGrid = container.querySelector("details#details > summary")?.firstElementChild;
     const fact = container.querySelector("#conditions");
 
@@ -115,7 +103,7 @@ describe("Trip About panel", () => {
     // Three focus classes here compiled and did nothing: the global ring rule
     // beat them. The app's inset ring is one utility, not a width and offset
     // spelled at the call site.
-    const { container } = render(<TripAboutSection {...props} open />);
+    const { container } = render(<TripAboutSection {...props} />);
     const summary = container.querySelector("details#details > summary");
     expect(summary).toHaveClass("focus-visible:focus-ring-inset");
     expect(summary?.className).not.toMatch(/focus-visible:outline-/);
@@ -125,7 +113,6 @@ describe("Trip About panel", () => {
     const { container } = render(
       <TripAboutSection
         {...props}
-        open
         rows={[{ ...props.rows[0], editorOpen: true }, props.rows[1]]}
       />,
     );
@@ -138,7 +125,6 @@ describe("Trip About panel", () => {
     render(
       <TripAboutSection
         {...props}
-        open
         actions={<button type="button">View public page</button>}
         moreLabel="More for this departure"
         more={<button type="button">Cancel this departure</button>}
@@ -150,34 +136,15 @@ describe("Trip About panel", () => {
     expect(screen.getByRole("button", { name: "Cancel this departure" })).not.toBeVisible();
   });
 
-  /**
-   * The card is `overflow-hidden`, and its own summary fills it edge to edge,
-   * so the outset ring was cut on all four sides: that one summary draws its
-   * ring inset, at the card's radius. The 'more' summary sits inside the
-   * body's `px-4`, clear of the clip once the 5px ring is drawn, so it keeps
-   * the global ring. A row's summary is a ledger row: its fill runs rule to
-   * rule and its words sit 8px in, so it rings inside itself as a ledger row
-   * does (the test above). Before the ledger geometry the label and caret sat
-   * on the summary's own edges, where an inset ring landed on them (review,
-   * 2026-09-25); they no longer do.
-   */
-  it("rings the card's own summary inset at the card's radius, and gives the 'more' summary no ring utility, so it keeps the global ring", () => {
+  it("gives the 'more' summary no ring utility, so it keeps the global ring", () => {
     const { container } = render(
       <TripAboutSection
         {...props}
-        open
         moreLabel="More for this departure"
         more={<button type="button">Cancel this departure</button>}
       />,
     );
 
-    const card = container.querySelector("details");
-    expect(card).toHaveClass("overflow-hidden");
-    expect(card?.querySelector(":scope > summary")).toHaveClass(
-      "focus-visible:focus-ring-inset",
-      "rounded-panel",
-      "group-open/about:rounded-b-none",
-    );
     const more = container.querySelector("details#about-more > summary");
     expect(more).not.toBeNull();
     expect(more?.className).not.toMatch(/focus-ring|outline/);

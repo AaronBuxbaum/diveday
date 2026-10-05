@@ -49,9 +49,8 @@ const TRIP_META_GAP = "mt-1.5 sm:mt-2.5";
 const TRIP_META_TYPE = "text-[13px] sm:text-[15px]";
 
 /**
- * The header a departure's sub-pages wear — `/check-in`, `/manifest`, `/prep`
- * and the printed packet. The departure itself wears `VoyageHeader`, its hour
- * as its name.
+ * The header every tab of a departure wears — Divers, Details, Check-in, Boat
+ * and Gear — and the printed packet.
  *
  * Each is one reading of one departure, so the identity of the departure — its
  * name, how full it is, when it sails — renders here once and identically
@@ -188,6 +187,7 @@ export function TripPageHeaderSkeleton({
   titleWidth = "w-64 max-w-full",
   titleLines = 1,
   badge = true,
+  className = "mb-8",
 }: {
   /** Tailwind width classes for the title bars. */
   titleWidth?: string;
@@ -195,9 +195,11 @@ export function TripPageHeaderSkeleton({
   titleLines?: SkeletonLines;
   /** The header leads its date row with the capacity pill (every page but the manifest). */
   badge?: boolean;
+  /** As on the header: the Divers tab stacks it in the page's `space-y-10`. */
+  className?: string;
 }) {
   return (
-    <div className="mb-8">
+    <div className={className}>
       <div className="h-4 w-16 rounded bg-surface-sunken" />
       <div className={TRIP_TITLE_GAP}>
         <SkeletonLineBars

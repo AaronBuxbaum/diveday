@@ -91,6 +91,7 @@ function renderRoster({
   compact = false,
   addDiverGroup,
   paymentsConnected = false,
+  requiresPayment = false,
 }: {
   roster: RosterEntry[];
   readiness: ReadinessByBooking;
@@ -99,6 +100,7 @@ function renderRoster({
   compact?: boolean;
   addDiverGroup?: ReactNode;
   paymentsConnected?: boolean;
+  requiresPayment?: boolean;
 }) {
   return render(
     <RosterSection
@@ -113,7 +115,7 @@ function renderRoster({
       waiverByBooking={waivers}
       rentalFitByBooking={rentalFit ?? (new Map() as RentalFitByBooking)}
       nitroxByBooking={new Map() as NitroxByBooking}
-      requiresPayment={false}
+      requiresPayment={requiresPayment}
       paymentsConnected={paymentsConnected}
       cancellationDeadline={null}
       markWaiverInPersonAction={noRefusal}
@@ -173,16 +175,20 @@ describe("the guests ledger (slice 5d)", () => {
     expect(container.textContent).not.toMatch(/[\u{1F30A}\u{1F382}\u{2705}\u{26A0}\u{274C}]/u);
   });
 
-  it("keeps a blocked seat's sentence and its fix in the open, ahead of the cleared rows", () => {
-    renderRoster(fixtures);
+  it("keeps a blocked seat's sentence in the open, ahead of the cleared rows", () => {
+    const { container } = renderRoster(fixtures);
 
-    // The blocker sentence renders without any tap...
+    // The blocker sentence renders without any tap, under the name...
     expect(screen.getByText("No certification is on file for this trip.")).toBeVisible();
-    // ...with its one fix beside it, pointing at the record that clears it.
-    expect(screen.getByRole("link", { name: /Review certifications/ })).toHaveAttribute(
-      "href",
-      `/shop/blue-mantis/divers/${blocked.person.id}#cards`,
+    // ...and said once: the row's panel holds the fix, not the sentence again.
+    expect(screen.getAllByText("No certification is on file for this trip.")).toHaveLength(1);
+    expect(container.querySelector(`#booking-${blocked.booking.id} details`)).not.toHaveAttribute(
+      "open",
     );
+    // Its one fix waits behind the row, pointing at the record that clears it.
+    expect(
+      screen.getByRole("link", { name: /Review certifications/, hidden: true }),
+    ).toHaveAttribute("href", `/shop/blue-mantis/divers/${blocked.person.id}#cards`);
 
     // And the groups order the page's answer: open work above cleared seats.
     const headings = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
@@ -409,7 +415,35 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
 
     expect(screen.getByText(/Identity unconfirmed/)).toBeVisible();
     expect(screen.getByRole("link", { name: "Marisol Vega" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Confirm this is Marisol Vega" })).toBeVisible();
+    // The fix waits behind the row's own control, like every other one
+    // (owner, 2026-10-05); jsdom reports the closed panel as hidden.
+    expect(
+      screen.getByRole("button", { name: "Confirm this is Marisol Vega", hidden: true }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps the flagged medical answer outside the row's fold", () => {
+    renderRoster({
+      roster: [matched],
+      readiness: confirmed,
+      waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+      rentalFit,
+    });
+
+    const prompt = screen.getByText(flaggedPrompt);
+    expect(prompt).toBeVisible();
+    expect(prompt.closest("details")).toBeNull();
+  });
+
+  it("keeps the identity sentence outside the row's fold", () => {
+    renderRoster({
+      roster: [matched],
+      readiness: unconfirmed,
+      waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+      rentalFit,
+    });
+
+    expect(screen.getByText(/Identity unconfirmed/).closest("details")).toBeNull();
   });
 
   it("renders the same facts as soon as the row is confirmed", () => {
@@ -528,29 +562,22 @@ describe("a drysuit going out with no drysuit card", () => {
 });
 
 /**
- * **A missing emergency contact's line hovers** (K-501). The whole line is the
- * disclosure that opens the form, and it declared `hover:bg-warning-tint` on a
- * `bg-warning-tint` rest: the state atlas measured `#fdefdf` both ways, 0px
- * changed, so the pointer never said the line would open.
+ * **A missing emergency contact is said once, under the name** (owner,
+ * 2026-10-05). The sentence is one of the row's reason lines; the form waits
+ * behind the row under its own "Add emergency contact".
  */
 describe("the missing emergency contact line", () => {
-  it("hovers a step past its resting fill", () => {
-    const { container } = renderRoster({
+  it("states the gap under the name and keeps the form behind the row", () => {
+    renderRoster({
       ...fixtures,
       roster: [entry("e", "Noor Haddad", { emergencyContactName: "", emergencyContactPhone: "" })],
       readiness: new Map([["e", readinessRow("ready")]]) as ReadinessByBooking,
       waivers: new Map([["e", signedWaiver]]) as WaiverByBooking,
     });
 
-    const summary = container.querySelector('[class~="group/missing-contact"] > summary');
-    expect(summary).not.toBeNull();
-    const tokens = [...(summary?.classList ?? [])];
-    const rest = tokens.filter((token) => token.startsWith("bg-"));
-    const hover = tokens.filter((token) => token.startsWith("hover:bg-"));
-    expect(rest).toEqual(["bg-warning-tint"]);
-    expect(hover).toHaveLength(1);
-    expect(hover[0]).not.toBe("hover:bg-warning-tint");
-    expect(hover[0]).not.toMatch(/^hover:bg-warning-tint\//);
+    expect(screen.getByText("Emergency contact · Not on file")).toBeVisible();
+    expect(screen.getAllByText("Emergency contact · Not on file")).toHaveLength(1);
+    expect(screen.getByText("Add emergency contact")).not.toBeVisible();
   });
 });
 
@@ -647,7 +674,7 @@ describe("the roster's row geometry", () => {
     const blocker = screen.getByText("No certification is on file for this trip.");
     expectMarkOnFirstLine(blocker.closest("li"));
     const warning = screen.getByText(/^Last dived/);
-    expectMarkOnFirstLine(warning.closest("p"));
+    expectMarkOnFirstLine(warning.closest("li"));
   });
 
   /**
@@ -840,5 +867,53 @@ describe("the roster's place on the departure page", () => {
     const roster = container.querySelector("#roster");
     expect(roster).not.toBeNull();
     expect(roster?.className).not.toMatch(/(^|\s)mt-/);
+  });
+});
+
+/**
+ * **Every seat is one line, and the line says why** (owner, 2026-10-05;
+ * dive-domain review the same day). The fixes fold behind the row; the facts a
+ * crew must read before boarding never do, and a row filed under "Still to
+ * clear" always says what keeps it there.
+ */
+describe("the one-line row", () => {
+  it("says each blocker under the name, outside the fold", () => {
+    renderRoster({
+      roster: [entry("g", "Gus Lin", { dateOfBirth: "2013-01-01" })],
+      readiness: new Map([
+        [
+          "g",
+          readinessRow("blocked", [
+            { code: "guardian_signature_missing", params: undefined },
+            { code: "certification_missing", params: undefined },
+          ]),
+        ],
+      ]) as ReadinessByBooking,
+      waivers: new Map([["g", signedWaiver]]) as WaiverByBooking,
+    });
+
+    const cert = screen.getByText("No certification is on file for this trip.");
+    expect(cert).toBeVisible();
+    expect(cert.closest("details")).toBeNull();
+    const row = cert.closest('li[id^="booking-"]') as HTMLElement;
+    const lines = within(row).getAllByRole("listitem");
+    // The guardian sentence and the cert sentence, both in the open.
+    expect(lines).toHaveLength(2);
+    for (const line of lines) expect(line.closest("details")).toBeNull();
+  });
+
+  it("names the unsent waiver and the unpaid seat when no blocker does", () => {
+    renderRoster({
+      roster: [entry("w", "Wen Ito")],
+      readiness: new Map([
+        ["w", { ...readinessRow("ready"), paymentStatus: "unpaid" }],
+      ]) as ReadinessByBooking,
+      waivers: new Map() as WaiverByBooking,
+      requiresPayment: true,
+    });
+
+    expect(screen.getByRole("heading", { name: "Still to clear · 1" })).toBeVisible();
+    expect(screen.getByText("Waiver not signed yet")).toBeVisible();
+    expect(screen.getByText("Not paid yet")).toBeVisible();
   });
 });

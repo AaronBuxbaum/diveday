@@ -697,16 +697,10 @@ export default async function TripManifestPage({
           </ManifestMoreMenu>
         }
       />
-      {/* No stepper here: the crew's own stage strip below is this tab's
+      {/* No stage pill here: the crew's own stage strip below is this tab's
           reading of where the boat is, and a second one above it would be the
           same fact twice. */}
-      <TripTabs
-        shopSlug={shopSlug}
-        tripId={tripId}
-        current="boat"
-        phase={null}
-        copy={tripTabsCopy(t)}
-      />
+      <TripTabs shopSlug={shopSlug} tripId={tripId} current="boat" copy={tripTabsCopy(t)} />
       {/* Souls on board, on paper only. The printed manifest is the document
           that goes ashore with the dock or into a coastguard's hands, and the
           first question either asks is how many people the boat left with —

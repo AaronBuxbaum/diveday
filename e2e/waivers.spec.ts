@@ -3,6 +3,7 @@ import {
   HELD_SEND_TIMEOUT_MS,
   openCounterFor,
   openDiverFileGroup,
+  openFirstRosterRowWith,
   openTripFromBoard,
   openTripTab,
   sendWaiverForFirstDiver,
@@ -122,7 +123,8 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // control. e2e has no email provider configured, so the shared
   // WaiverSendControl always falls to its private link affordance here rather
   // than "Waiver sent to …".
-  await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
+  const firstUnsent = await openFirstRosterRowWith(page, "Send waiver");
+  await firstUnsent.getByRole("button", { name: "Send waiver", exact: true }).click();
   const resultNotice = diverSection.getByRole("status");
   // The send holds eight seconds with Undo first (ADR 20260906-before-you-ask,
   // decision 2); the outcome is allowed the hold plus the send.

@@ -6,6 +6,7 @@ import {
   e2eNow,
   manifestRow,
   openDiverFileGroup,
+  openIfClosed,
   openManifestPerson,
   openRosterDetails,
   openTripFromBoard,
@@ -181,7 +182,8 @@ test("staff record and correct a diver's emergency contact from the roster and t
 
   // Failure path: a name with no phone is not a reachable contact — the
   // save must say so, not silently claim success or a generic error.
-  await card.getByText("Emergency contact · Not on file").filter({ visible: true }).click();
+  await openRosterDetails(card);
+  await openIfClosed(card.locator("details").filter({ hasText: "Add emergency contact" }).last());
   await card.getByLabel("Contact name").fill("Robin Diver");
   await card.getByRole("button", { name: "Save contact" }).click();
   await expect(
@@ -190,8 +192,7 @@ test("staff record and correct a diver's emergency contact from the roster and t
   // Still reads as missing — a half-entered contact is not "on file".
   await expect(card.getByText("Not on file").filter({ visible: true })).toBeVisible();
 
-  // Complete it.
-  await card.getByText("Emergency contact · Not on file").filter({ visible: true }).click();
+  // Complete it. The refusal held the row and its form open.
   await card.getByLabel("Contact name").fill("Robin Diver");
   await card.getByLabel("Contact phone").fill("+1 305 555 0166");
   await card.getByRole("button", { name: "Save contact" }).click();
@@ -249,12 +250,14 @@ test("a Guests card shows an emergency contact only when it is missing", async (
   // Nadia Petrov is seeded with no contact (src/db/seed.ts `customerDefs`), so
   // her card states it where a staffer will act on it.
   const missing = page.locator("#roster li").filter({ hasText: "Nadia Petrov" });
-  // One warning line, its fix riding the end (slice 5d): the sentence and
-  // the "Add" word share the clickable summary that opens the form.
+  // One warning line under her name, and the form behind her row.
   await expect(
     missing.getByText("Emergency contact · Not on file").filter({ visible: true }),
   ).toBeVisible();
-  await expect(missing.getByText("Add", { exact: true }).filter({ visible: true })).toBeVisible();
+  await openRosterDetails(missing);
+  await expect(
+    missing.getByText("Add emergency contact", { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
 
   // Tom Okafor has one on file. It must not be on the face of the card — but
   // it must still be *on* the card, one tap away, not dropped.

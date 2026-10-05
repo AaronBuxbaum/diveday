@@ -208,13 +208,9 @@ test.describe("trip pulse", () => {
     if (!href) throw new Error("no trip card found for the seeded reef trip");
     await page.goto(href);
 
-    // **How the boat stands, said once, in words** (ADR 20260919-one-idea,
-    // decision I · Tide, slice 23c). The count rides the one line under the
-    // departure's hour, beside the boat and its crew — the drawn capacity ring
-    // that used to carry it retired with the masthead, because a ring and a
-    // sentence saying "9 of 12" a centimetre apart is the same fact twice.
-    await expect(page.getByText(/9 of 12 seats taken/)).toBeVisible();
-    await expect(page.getByText("3 spots left")).toHaveCount(0);
+    // **How the boat stands, said once**: the header's capacity pill, the same
+    // pill every tab of the departure wears.
+    await expect(page.locator("header").getByText("3 spots left")).toBeVisible();
 
     // Each fact is a door to its fix: the blocked one lands on the Trip
     // ledger, whose "Still to clear" group leads the roster with the divers

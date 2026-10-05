@@ -88,6 +88,9 @@ test.describe("refunds", () => {
     await page.goto("/shop/blue-mantis/schedule/board");
     await page.locator("li").filter({ hasText: title }).getByRole("link").click();
     const noraRow = page.locator("li").filter({ hasText: "Nora Quinn" }).filter({ visible: true });
+    // The payment control is one of the row's fixes, behind its fold; the
+    // save holds the row open on the way back.
+    await openRosterDetails(noraRow);
     await noraRow.getByRole("combobox").selectOption("paid");
     await noraRow.getByRole("button", { name: "Update" }).click();
     await expect(page.getByRole("status")).toContainText("Payment status updated");
