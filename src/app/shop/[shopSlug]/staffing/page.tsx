@@ -20,14 +20,12 @@ import {
 import { ledgerRowBoxClass } from "@/components/ui/ledger";
 import { canPersonManageStaffAccounts } from "@/db/authz";
 import { listCrewAssignmentRequests, listCrewAvailabilityBlocks } from "@/db/crew-requests";
-import type { staffCredentials } from "@/db/schema";
-import { listStaffCredentials } from "@/db/staff-credentials";
 import { getStaffingView } from "@/db/staffing";
 import { listStaff } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { staffRoleLabels } from "@/i18n/staff-role-labels";
-import { calendarDateInTimezone, formatCalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
+import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { CREW_PUBLIC_NAME_MAX, defaultCrewPublicName } from "@/lib/crew-public-name";
 import { formatCalendarDateRange } from "@/lib/format";
@@ -37,23 +35,15 @@ import { staffWeek } from "@/lib/staffing-week";
 import { resolveWeekStart, shiftWeek, WEEK_PARAM, weekStartOf } from "@/lib/week-board";
 import { parseWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { ScheduleViews } from "../schedule/_components/ScheduleViews";
-import {
-  type CredentialRow,
-  type RenewalState,
-  StaffCredentials,
-} from "./_components/StaffCredentials";
 import { type GapWords, StaffingWeek, weekTailRowClass } from "./_components/StaffingWeek";
 import {
   createShiftAction,
   decideCrewRequestAction,
   deleteAwayAction,
   deleteShiftAction,
-  deleteStaffCredentialAction,
   requestCrewAction,
-  reviewStaffCredentialAction,
   saveAwayAction,
   saveCrewPublicConsentAction,
-  saveStaffCredentialAction,
 } from "./actions";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -82,10 +72,6 @@ const notices: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
   "crew-consent-withdrawn": { tone: "success", key: "staffing.notice.crewConsentWithdrawn" },
   invalid: { tone: "danger", key: "staffing.notice.invalid" },
   "not-authorized": { tone: "danger", key: "staffing.notice.notAuthorized" },
-  "credential-saved": { tone: "success", key: "staffing.notice.credentialSaved" },
-  "credential-reviewed": { tone: "success", key: "staffing.notice.credentialReviewed" },
-  "credential-deleted": { tone: "success", key: "staffing.notice.credentialDeleted" },
-  "credential-invalid": { tone: "danger", key: "staffing.notice.credentialInvalid" },
 
   // The crew's own acts and the owner's answer (issue #1235). The refusal
   // codes are the domain layer's own, in its casing — `noticeUrl` normalises
@@ -128,22 +114,6 @@ const notices: Record<string, { tone: "success" | "danger" | "warning"; key: Sta
  * the door at all.
  */
 const ADD_SHIFT_NOTICES = new Set(["shift-saved", "overlap", "staff-not-found", "invalid"]);
-
-const CREDENTIAL_KIND_KEYS: Record<
-  (typeof staffCredentials.kind.enumValues)[number],
-  StaffMessageKey
-> = {
-  instructor_rating: "staffing.credentials.kinds.instructor_rating",
-  divemaster_rating: "staffing.credentials.kinds.divemaster_rating",
-  liability_insurance: "staffing.credentials.kinds.liability_insurance",
-  first_aid_cpr: "staffing.credentials.kinds.first_aid_cpr",
-  oxygen_provider: "staffing.credentials.kinds.oxygen_provider",
-  captains_licence: "staffing.credentials.kinds.captains_licence",
-  other: "staffing.credentials.kinds.other",
-};
-
-/** How far ahead a renewal counts as due soon. H-59: a word, never a gate. */
-const RENEWAL_WINDOW_DAYS = 30;
 
 export default async function StaffingPage({
   params,
@@ -200,7 +170,7 @@ export default async function StaffingPage({
   const fromWall = parseWallTime(weekStart, "00:00");
   const toWall = parseWallTime(shiftCalendarDate(weekStart, 7), "00:00");
   if (!fromWall || !toWall) redirect(shopPath(shopSlug, "staffing"));
-  const [view, staff, credentials, blocks] = await Promise.all([
+  const [view, staff, blocks] = await Promise.all([
     getStaffingView(
       db,
       shop.id,
@@ -211,7 +181,6 @@ export default async function StaffingPage({
       { diversPerDivemaster: shop.diversPerDivemaster },
     ),
     listStaff(db, shop.id),
-    listStaffCredentials(db, shop.id),
     // The whole week's blackouts, whoever's: a person's own draw as quiet
     // chips in their row, and everybody's are needed to warn on an assignment.
     listCrewAvailabilityBlocks(db, shop.id, { from: weekStart, to: weekEnd }),
@@ -319,52 +288,6 @@ export default async function StaffingPage({
   const saveAway = saveAwayAction.bind(null, weekStart);
   const saveCrewConsent = saveCrewPublicConsentAction.bind(null, weekStart);
   const deleteAway = deleteAwayAction.bind(null, weekStart);
-  const saveCredential = saveStaffCredentialAction.bind(null, weekStart);
-  const reviewCredential = reviewStaffCredentialAction.bind(null, weekStart);
-  const deleteCredential = deleteStaffCredentialAction.bind(null, weekStart);
-  const dueSoonThrough = shiftCalendarDate(today, RENEWAL_WINDOW_DAYS);
-  const credentialRows: CredentialRow[] = credentials.map(({ credential, person }) => {
-    const renewal: RenewalState = !credential.renewsAt
-      ? "not-recorded"
-      : credential.renewsAt < today
-        ? "overdue"
-        : credential.renewsAt <= dueSoonThrough
-          ? "due-soon"
-          : "current";
-    return {
-      id: credential.id,
-      title: `${person.fullName} · ${credential.name}`,
-      detail: [
-        credential.status === "verified"
-          ? t("staffing.credentials.verified")
-          : t("staffing.credentials.pending"),
-        t(CREDENTIAL_KIND_KEYS[credential.kind]),
-        credential.issuingBody,
-      ]
-        .filter(Boolean)
-        .join(" · "),
-      // The word is what carries the state; the ink only seconds it. A
-      // credential whose renewal is comfortably ahead says the date and
-      // nothing more, and one with no renewal recorded says nothing at all.
-      renewalWord:
-        renewal === "overdue"
-          ? t("staffing.credentials.overdue")
-          : renewal === "due-soon"
-            ? t("staffing.credentials.dueSoon")
-            : credential.renewsAt
-              ? t("staffing.credentials.renews", {
-                  date: formatCalendarDate(credential.renewsAt, locale),
-                })
-              : null,
-      renewal,
-      reviewed: credential.status === "verified",
-      reviewLabel:
-        credential.status === "verified"
-          ? t("staffing.credentials.markPending")
-          : t("staffing.credentials.markVerified"),
-    };
-  });
-
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       {/* `week` is a reading of the page and stays in the URL; the rest is
@@ -666,84 +589,6 @@ export default async function StaffingPage({
               </FieldActions>
             </form>
           </CompactDisclosureRow>
-
-          {/* Owner/manager work, as it was before this slice — the
-              recomposition moved the furniture, not who may see it. The group
-              always carries its door, so a shop that has recorded nothing gets
-              a way in rather than the bare "nothing recorded yet" line that
-              used to stand in for a group with no members. */}
-          {canManage ? (
-            <StaffCredentials
-              label={t("staffing.credentials.heading")}
-              rows={credentialRows}
-              words={{
-                saving: t("staffing.credentials.saving"),
-                remove: t("staffing.credentials.remove"),
-                removing: t("staffing.credentials.removing"),
-              }}
-              reviewAction={reviewCredential}
-              deleteAction={deleteCredential}
-              door={
-                <AddDoor
-                  id="add-credential"
-                  as="li"
-                  // With nothing on file the door *is* the group, so it names
-                  // the group and its state rather than standing anonymously
-                  // under a heading with no members (`StaffCredentials`).
-                  label={
-                    credentialRows.length === 0
-                      ? t("staffing.credentials.emptyDoor")
-                      : t("staffing.credentials.add")
-                  }
-                >
-                  <FieldGrid as="form" action={saveCredential} columns={2}>
-                    <Field label={t("staffing.credentials.person")}>
-                      <select name="personId" required className={controlClass}>
-                        <option value="">{t("staffing.credentials.choosePerson")}</option>
-                        {staff.map(({ person }) => (
-                          <option key={person.id} value={person.id}>
-                            {person.fullName}
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field label={t("staffing.credentials.kind")}>
-                      <select name="kind" required className={controlClass}>
-                        {Object.entries(CREDENTIAL_KIND_KEYS).map(([kind, key]) => (
-                          <option key={kind} value={kind}>
-                            {t(key)}
-                          </option>
-                        ))}
-                      </select>
-                    </Field>
-                    <Field label={t("staffing.credentials.name")}>
-                      <input name="name" required maxLength={160} className={controlClass} />
-                    </Field>
-                    <Field label={t("staffing.credentials.issuer")}>
-                      <input name="issuingBody" maxLength={160} className={controlClass} />
-                    </Field>
-                    <Field label={t("staffing.credentials.identifier")}>
-                      <input name="identifier" maxLength={120} className={controlClass} />
-                    </Field>
-                    <Field label={t("staffing.credentials.issuedAt")}>
-                      <DateField name="issuedAt" />
-                    </Field>
-                    <Field label={t("staffing.credentials.renewsAt")}>
-                      <DateField name="renewsAt" />
-                    </Field>
-                    <FieldActions>
-                      <SubmitButton
-                        pendingLabel={t("staffing.credentials.saving")}
-                        className={buttonClass()}
-                      >
-                        {t("staffing.credentials.add")}
-                      </SubmitButton>
-                    </FieldActions>
-                  </FieldGrid>
-                </AddDoor>
-              }
-            />
-          ) : null}
         </>
       )}
     </main>

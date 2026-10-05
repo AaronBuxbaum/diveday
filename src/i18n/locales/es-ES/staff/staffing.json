@@ -14,7 +14,7 @@
   },
   "away": {
     "from": "Desde",
-    "heading": "Avisa al centro de que no estarás",
+    "heading": "Añadir días de ausencia",
     "note": "Nota",
     "notePlaceholder": "Algo que el centro deba saber",
     "person": "Quién",
@@ -45,7 +45,6 @@
     "removing": "Quitando…",
     "saving": "Guardando…",
     "add": "Añadir una credencial",
-    "emptyDoor": "Credenciales · ninguna registrada · Añadir una",
     "kinds": {
       "instructor_rating": "Titulación de instructor",
       "divemaster_rating": "Titulación de divemaster",

@@ -173,7 +173,7 @@ function ShiftFace({
 }) {
   return (
     <span className={`flex flex-col ${isPast ? "text-muted" : ""}`}>
-      <span className="font-semibold tabular-nums">
+      <span className="font-medium tabular-nums">
         {formatTimeRange(shift.startsAt, shift.endsAt, locale, timeZone)}
       </span>
       {shift.note ? <span className="font-medium text-muted">{shift.note}</span> : null}
@@ -191,7 +191,7 @@ function ShiftFace({
 const CHIP_BOX = "flex w-full flex-col rounded-lg border px-2 py-1.5 text-start text-xs";
 
 const CHIP_KIND = {
-  shift: "gap-px border-transparent bg-surface-sunken",
+  shift: "gap-px border-transparent",
   crew: "gap-px border-primary/25 bg-primary-tint text-primary",
   away: "gap-px border-dashed border-border bg-surface-sunken text-muted",
   gap: "gap-1 border-transparent bg-surface-sunken",
@@ -352,7 +352,7 @@ function CrewChip({
       <span className="font-semibold tabular-nums">
         {formatTimeRange(trip.startsAt, trip.endsAt, locale, timeZone)}
       </span>
-      <span className="font-medium">{trip.title}</span>
+      <span className="line-clamp-2 font-medium">{trip.title}</span>
       {/* **One person, two hulls, these same hours** (issue #1695) — a state
           `setTripCrew` refuses to write and which three writes that move the
           boat manufacture anyway (a move, the departure's own Details form,
@@ -598,8 +598,8 @@ export const WEEK_GRID = {
 } as const;
 
 /**
- * **A row hung under the week**: the page's doors ("Add a shift", "Tell the
- * shop you're away") and its skeleton's stand-ins for them. The week closes
+ * **A row hung under the week**: the page's doors ("Add a shift", "Add days
+ * away") and its skeleton's stand-ins for them. The week closes
  * itself (the grid's last row, the day list's last ledger row), so a row under
  * it draws only its own closing rule, with a ledger row's room so the rule
  * ends where the week's do. The doors drew a ledger row's box: its top rule
@@ -705,6 +705,35 @@ export function StaffingWeek({
           ))}
         </div>
 
+        {/* The gap row renders only when a departure is short-handed. A row of
+            seven empty cells beside "Needs crew" would be the page saying
+            nothing at the volume of something. */}
+        {week.hasGaps ? (
+          <div className={WEEK_GRID.row}>
+            <div className={WEEK_GRID.person}>
+              <p className="text-sm font-semibold text-muted">{words.needsCrew}</p>
+            </div>
+            {week.gapDays.map((cell) => (
+              <div key={cell.date} className={WEEK_GRID.day}>
+                {cell.gaps.map((gap) => (
+                  <GapChip
+                    key={gap.tripId}
+                    gap={gap}
+                    shopSlug={shopSlug}
+                    locale={locale}
+                    timeZone={timeZone}
+                    gapWords={gapWords}
+                    words={words}
+                    canManage={canManage}
+                    canDecide={canDecide}
+                    requestAction={requestAction}
+                    decideRequestAction={decideRequestAction}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        ) : null}
         {week.people.map((person) => (
           <div key={person.personId} className={WEEK_GRID.row}>
             <div className={WEEK_GRID.person}>
@@ -749,36 +778,6 @@ export function StaffingWeek({
             })}
           </div>
         ))}
-
-        {/* The gap row renders only when a departure is short-handed. A row of
-            seven empty cells under "Needs crew" would be the page saying
-            nothing at the volume of something. */}
-        {week.hasGaps ? (
-          <div className={WEEK_GRID.row}>
-            <div className={WEEK_GRID.person}>
-              <p className="text-sm font-semibold text-muted">{words.needsCrew}</p>
-            </div>
-            {week.gapDays.map((cell) => (
-              <div key={cell.date} className={WEEK_GRID.day}>
-                {cell.gaps.map((gap) => (
-                  <GapChip
-                    key={gap.tripId}
-                    gap={gap}
-                    shopSlug={shopSlug}
-                    locale={locale}
-                    timeZone={timeZone}
-                    gapWords={gapWords}
-                    words={words}
-                    canManage={canManage}
-                    canDecide={canDecide}
-                    requestAction={requestAction}
-                    decideRequestAction={decideRequestAction}
-                  />
-                ))}
-              </div>
-            ))}
-          </div>
-        ) : null}
       </div>
 
       {/* ---- The same week as a day list, below `lg`. Days with nothing in
@@ -799,87 +798,6 @@ export function StaffingWeek({
                 {day.isToday ? ` · ${words.today}` : ""}
               </GroupLabel>
               <ul className="mt-2">
-                {rows.map(({ person, cell }) => (
-                  <LedgerRow key={person.personId} stacked>
-                    <p className="text-sm font-semibold">{person.name}</p>
-                    {/* **One pitch: every entry is a 44px line, and they abut**
-                        (K-213). A crewed departure is a door, and it was one
-                        line of text 4px from the next — 358×20, a thumb aimed
-                        at one landing on its neighbour. A manager's shift was
-                        already 44px beside its Remove; the rest now match it,
-                        so the day reads at one rhythm whoever is reading. */}
-                    <div className="mt-1 flex flex-col">
-                      {cell?.shifts.map((shift) => (
-                        <div
-                          key={shift.id}
-                          className="flex min-h-11 items-center justify-between gap-2 text-sm"
-                        >
-                          <ShiftFace
-                            shift={shift}
-                            locale={locale}
-                            timeZone={timeZone}
-                            isPast={day.isPast}
-                          />
-                          {canManage ? (
-                            <form action={deleteShiftAction}>
-                              <input type="hidden" name="shiftId" value={shift.id} />
-                              <SubmitButton
-                                pendingLabel={words.removing}
-                                className={buttonClass({ variant: "ghost", size: "sm" })}
-                              >
-                                {words.remove}
-                              </SubmitButton>
-                            </form>
-                          ) : null}
-                        </div>
-                      ))}
-                      {cell?.crewing.map((trip) => (
-                        <Link
-                          key={trip.tripId}
-                          href={tripHref(shopSlug, trip.tripId)}
-                          className="flex min-h-11 flex-col justify-center text-sm font-medium text-primary hover:underline"
-                        >
-                          <span>
-                            <span className="sr-only">{words.crewing}: </span>
-                            <span className="tabular-nums">
-                              {formatTimeRange(trip.startsAt, trip.endsAt, locale, timeZone)}
-                            </span>{" "}
-                            {trip.title}
-                            {/* Whole: the space after the dot broke, and left
-                                "Away" alone on a line under it (K-489). */}
-                            {trip.awayBlocks.length > 0 ? (
-                              <span className="ms-1 font-semibold whitespace-nowrap text-warning-strong">
-                                · {words.away}
-                              </span>
-                            ) : null}
-                          </span>
-                          {/* **The louder warning, on the width a counter runs
-                              on** (dive-domain-expert review, 2026-09-12). This
-                              list is the whole week below `lg` — a phone and
-                              the portrait tablet on the desk — and it carried
-                              the blackout's `· Away` marker while saying
-                              nothing at all about a clash, which is the
-                              ranking the grid above argues for exactly
-                              inverted. Same words as the chip, one line per
-                              clashing departure, and inside the link so the
-                              sentence joins its accessible name rather than
-                              needing a live region of its own. */}
-                          {trip.clashes.map((clash) => (
-                            <WarningLine key={clash.tripId} size="sm">
-                              {fill(words.crewClash, { departure: clash.title })}
-                            </WarningLine>
-                          ))}
-                        </Link>
-                      ))}
-                      {cell?.away.map((block) => (
-                        <p key={block.id} className="flex min-h-11 items-center text-sm text-muted">
-                          {words.away}
-                          {block.note ? ` · ${block.note}` : ""}
-                        </p>
-                      ))}
-                    </div>
-                  </LedgerRow>
-                ))}
                 {gaps.map((gap) => (
                   <LedgerRow
                     key={gap.tripId}
@@ -978,6 +896,87 @@ export function StaffingWeek({
                     {gap.viewerAskWontClose ? (
                       <p className="mt-1 text-sm text-warning-strong">{words.askWontClose}</p>
                     ) : null}
+                  </LedgerRow>
+                ))}
+                {rows.map(({ person, cell }) => (
+                  <LedgerRow key={person.personId} stacked>
+                    <p className="text-sm font-semibold">{person.name}</p>
+                    {/* **One pitch: every entry is a 44px line, and they abut**
+                        (K-213). A crewed departure is a door, and it was one
+                        line of text 4px from the next — 358×20, a thumb aimed
+                        at one landing on its neighbour. A manager's shift was
+                        already 44px beside its Remove; the rest now match it,
+                        so the day reads at one rhythm whoever is reading. */}
+                    <div className="mt-1 flex flex-col">
+                      {cell?.shifts.map((shift) => (
+                        <div
+                          key={shift.id}
+                          className="flex min-h-11 items-center justify-between gap-2 text-sm"
+                        >
+                          <ShiftFace
+                            shift={shift}
+                            locale={locale}
+                            timeZone={timeZone}
+                            isPast={day.isPast}
+                          />
+                          {canManage ? (
+                            <form action={deleteShiftAction}>
+                              <input type="hidden" name="shiftId" value={shift.id} />
+                              <SubmitButton
+                                pendingLabel={words.removing}
+                                className={buttonClass({ variant: "ghost", size: "sm" })}
+                              >
+                                {words.remove}
+                              </SubmitButton>
+                            </form>
+                          ) : null}
+                        </div>
+                      ))}
+                      {cell?.crewing.map((trip) => (
+                        <Link
+                          key={trip.tripId}
+                          href={tripHref(shopSlug, trip.tripId)}
+                          className="flex min-h-11 flex-col justify-center text-sm font-medium text-primary hover:underline"
+                        >
+                          <span>
+                            <span className="sr-only">{words.crewing}: </span>
+                            <span className="tabular-nums">
+                              {formatTimeRange(trip.startsAt, trip.endsAt, locale, timeZone)}
+                            </span>{" "}
+                            {trip.title}
+                            {/* Whole: the space after the dot broke, and left
+                                "Away" alone on a line under it (K-489). */}
+                            {trip.awayBlocks.length > 0 ? (
+                              <span className="ms-1 font-semibold whitespace-nowrap text-warning-strong">
+                                · {words.away}
+                              </span>
+                            ) : null}
+                          </span>
+                          {/* **The louder warning, on the width a counter runs
+                              on** (dive-domain-expert review, 2026-09-12). This
+                              list is the whole week below `lg` — a phone and
+                              the portrait tablet on the desk — and it carried
+                              the blackout's `· Away` marker while saying
+                              nothing at all about a clash, which is the
+                              ranking the grid above argues for exactly
+                              inverted. Same words as the chip, one line per
+                              clashing departure, and inside the link so the
+                              sentence joins its accessible name rather than
+                              needing a live region of its own. */}
+                          {trip.clashes.map((clash) => (
+                            <WarningLine key={clash.tripId} size="sm">
+                              {fill(words.crewClash, { departure: clash.title })}
+                            </WarningLine>
+                          ))}
+                        </Link>
+                      ))}
+                      {cell?.away.map((block) => (
+                        <p key={block.id} className="flex min-h-11 items-center text-sm text-muted">
+                          {words.away}
+                          {block.note ? ` · ${block.note}` : ""}
+                        </p>
+                      ))}
+                    </div>
                   </LedgerRow>
                 ))}
               </ul>

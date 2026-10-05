@@ -2127,7 +2127,7 @@ export async function getTodayWork(
         overdue,
       }),
       actionLabel: openStaffingActionText(t),
-      href: `/shop/${shopSlug}/staffing#credentials`,
+      href: `/shop/${shopSlug}/settings/team#credentials`,
       dueAt,
     });
   }

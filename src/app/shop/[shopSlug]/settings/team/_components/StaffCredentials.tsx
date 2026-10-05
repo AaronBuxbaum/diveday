@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { GroupLabel, LedgerRow } from "@/components/ui/ledger";
+import { LedgerRow } from "@/components/ui/ledger";
+import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 
 /**
  * **A staff credential is a fact, never a badge and never a gate** — ADR
@@ -67,34 +68,21 @@ export function StaffCredentials({
   reviewAction: (formData: FormData) => void;
   deleteAction: (formData: FormData) => void;
   /**
-   * "+ Add a credential" — the group's own tail row, and its only door. On an
-   * empty register it is the whole group, so the page labels it with the
-   * group's name there (see below).
+   * "Add a credential" — the list's own tail row, and its only door.
    */
   door: ReactNode;
 }) {
-  /**
-   * **Never a heading over an orphan link.** A shop that has recorded nothing
-   * rendered a small-caps "CREDENTIALS" section heading whose entire contents
-   * was one "Add a credential" door — a group label announcing a group with no
-   * members, which is the empty-column problem in a typeface. The door carries
-   * the group's own name in that state instead (`credentials.emptyDoor`), and
-   * the section keeps its accessible name so a screen reader's landmark walk
-   * loses nothing.
-   */
-  if (rows.length === 0) {
-    return (
-      <section className="mt-10" aria-label={label}>
-        <ul>{door}</ul>
-      </section>
-    );
-  }
+  // A section of the Team page beside "Current team", and titled at the same
+  // rung. It moved here from the Crew view of Schedule, which a shop can switch
+  // off (ADR 20261005-crew-schedule-is-a-setting): a rating's renewal is a fact
+  // about the person, not about the week. `#credentials` is what Today's
+  // renewal row links to. With nothing on file the door is the whole list.
   return (
-    <section className="mt-10" aria-labelledby="credentials-heading">
-      <GroupLabel as="h2" id="credentials-heading">
+    <section id="credentials" className="scroll-mt-24" aria-labelledby="credentials-heading">
+      <h2 id="credentials-heading" className={LEAD_TITLE_CLASS}>
         {label}
-      </GroupLabel>
-      <ul className="mt-2">
+      </h2>
+      <ul className="mt-4">
         {rows.map((row) => (
           <LedgerRow key={row.id} stacked>
             <div className="flex flex-wrap items-baseline gap-x-3">

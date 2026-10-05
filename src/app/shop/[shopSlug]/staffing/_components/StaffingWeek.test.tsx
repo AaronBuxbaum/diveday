@@ -528,7 +528,8 @@ describe("StaffingWeek geometry", () => {
     const { container } = renderWeek({ gaps: [GAP] });
     const rows = [...branches(container).grid.children];
     expect(rows).toHaveLength(3);
-    expect(within(rows[2] as HTMLElement).getByText("Needs crew")).toBeVisible();
+    // The gap row leads the people: a boat short of crew is the week's news.
+    expect(within(rows[1] as HTMLElement).getByText("Needs crew")).toBeVisible();
     for (const row of rows) {
       expect(row.firstElementChild).toHaveClass("pe-2");
       expect(row.firstElementChild).not.toHaveClass("px-2");
@@ -874,7 +875,7 @@ describe("StaffingWeek geometry", () => {
    * K-195: the page's doors drew a ledger row's box under a week that had
    * already closed itself, so the rule above "Add a shift" was two 1px rules
    * stacked, and with the consent row after them `last:border-b` never fired
-   * under "Tell the shop you're away". Both renderings of the week close
+   * under "Add days away". Both renderings of the week close
    * themselves; a row hung under them draws its closing rule alone, with a
    * ledger row's room so the rule ends where the week's do.
    *
