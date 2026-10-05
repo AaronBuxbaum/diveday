@@ -16,9 +16,9 @@ import {
   openTripTab,
   STAFF_DAY_HEADING,
   seededTripId,
+  sendWaiverForFirstDiver,
   signOut,
   threadStatus,
-  waiverLinkFromResult,
 } from "./helpers";
 import { ONBOARD_FORM_PATH } from "./servers";
 
@@ -137,9 +137,7 @@ test.describe("automated accessibility scans (specialist optimization audit §3)
       .filter({ hasText: "Two-Tank Reef — Molasses & French" })
       .getByRole("link", { name: "Two-Tank Reef — Molasses & French", exact: true })
       .click();
-    const diverSection = page.locator("#roster");
-    await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
-    const waiverHref = await waiverLinkFromResult(page, diverSection.getByRole("status"));
+    const waiverHref = await sendWaiverForFirstDiver(page);
 
     await page.goto(waiverHref);
     await expect(page.getByRole("heading", { name: "A quick step before the dock" })).toBeVisible();

@@ -676,7 +676,8 @@ then the day's own domain and components (23i), then the home, the departure and
 - **23c** — the departure: the hour page with the strip (I), the hull with its seats (II), the voyage
   on the chart (III); the four trip tabs one page; the roll call's one tap untouched beneath. Deck's
   hull needs `boats.hull_color` (the **schema-change** skill). The sky and the strip were removed
-  by ADR 20261001-logbook; the hour stays the page's name.
+  by ADR 20261001-logbook; the hour stays the page's name. The hull and `boats.hull_color` were
+  removed at the owner's request on 2026-10-05 (the trip page cleanup).
 - **23d** — the storefront's front page on the idea, in Harbor's face and the shop's colour: the day
   and the week (I), the boat you are about to book (II), where we go (III). A shop with no cover
   photograph shows its name on the page's surface; the sky that filled the band was removed by ADR

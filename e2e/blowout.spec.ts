@@ -90,23 +90,10 @@ test.describe("weather blow-out cascade", () => {
     await expect(page.getByText("Cancelled").filter({ visible: true }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
     /**
-     * **And the boat is not drawn** (ADR 20260919-one-idea, decision I · Tide;
-     * dive-domain review 20260919). A blow-out cancels the departure and leaves
-     * every booking *active*, so the hull above the roster kept drawing a full,
-     * happy boat at the top of a page whose words say the day is off — and the
-     * picture is read before the words. There is no honest hull for a departure
-     * that is not going. The same hull is asserted present on this trip's
-     * uncancelled twin in `trip-hull.spec.ts`, which is what proves this
-     * absence is the cancellation and not a name that stopped matching.
-     */
-    await expect(page.getByRole("img", { name: /drawn as its seats/ })).toHaveCount(0);
-
-    /**
      * **But the roll call is still one tap away** (dive-domain review
      * 20260920). The tab strip is gone (ADR 20260919-one-idea, slice 23c), so
-     * this chip is the departure's only door to the manifest — and the hull
-     * above it is *not* the precedent. A hull is a picture of a plan; a roll
-     * call is a record of people. The cancellation that bites is the one that
+     * this chip is the departure's only door to the manifest. A roll call is a
+     * record of people. The cancellation that bites is the one that
      * lands after check-in has started, with six divers already tapped aboard
      * and a crew that now needs to put them back ashore and close the count.
      */

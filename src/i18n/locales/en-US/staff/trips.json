@@ -20,11 +20,9 @@
     "back": "Back"
   },
   "about": {
-    "heading": "About this departure",
     "add": "Add",
     "addDiverJump": "Jump to add a diver",
     "details": "Details",
-    "close": "Close",
     "viewPublic": "View public page",
     "printPacket": "Print packet",
     "plan": "The plan",
@@ -37,7 +35,6 @@
     "noRequirements": "No admission requirements set",
     "noBoat": "Boat not assigned",
     "noCrew": "No crew assigned",
-    "crewClash": "Crew clash",
     "oneTime": "One-time departure",
     "perSeat": "per seat",
     "cancel": "Cancel this departure",
@@ -424,7 +421,6 @@
     "depthWarningNoCard": "Reaches {site} {unit} with no certification on file to measure against; {limit} {unit} is the entry-level limit. This is not a block: check what they hold, or confirm the guide keeps them within limits.",
     "detailsSummaryLabel": "Details for {name}",
     "editPickup": "Edit pickup",
-    "emergencyContactAdd": "Add",
     "emergencyContactEdit": "Edit emergency contact",
     "emergencyContactHeading": "Emergency contact",
     "emergencyContactMissing": "Not on file",
@@ -493,7 +489,9 @@
     "waiverResendHint": "Resend",
     "waiverSend": "Send waiver",
     "waiverSent": "Waiver sent",
-    "waiverSigned": "Waiver signed"
+    "waiverSigned": "Waiver signed",
+    "noteCount": "{count, plural, one {# note} other {# notes}}",
+    "emergencyContactAddFull": "Add emergency contact"
   },
   "offlineManifestManager": {
     "checkingDevice": "Checking this device…",
@@ -569,7 +567,6 @@
     "uncheckedLabel": "Not checked — press to mark checked",
     "summary": "Before you leave the dock: {checked} of {total} checked"
   },
-  "hullLabel": "{boat}, drawn as its seats: {booked} of {capacity, plural, one {# seat} other {# seats}} taken{blocked, plural, =0 {} one {, # who cannot board} other {, # who cannot board}}{unread, plural, =0 {} one {, # whose readiness nobody has read} other {, # whose readiness nobody has read}}{crewNotDrawn, plural, =0 {} one {, and # guide the picture does not draw} other {, and # guides the picture does not draw}}. Seats fill in booking order and are never assigned.",
   "voyage": {
     "seats": "{booked} of {capacity, plural, one {# seat} other {# seats}} taken"
   }

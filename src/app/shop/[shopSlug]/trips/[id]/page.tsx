@@ -101,27 +101,15 @@ import {
 // 20260804-instant-navigation.
 export const instant = true;
 
-/**
- * Every fragment that has to open the About panel: each row's own anchor, plus
- * `#crew`, which is the crew *region* inside its row — the schedule board's
- * "Set a price for …" link and the pulse's crew facts both land here, and a
- * client-side transition runs no native reveal (`AutoOpenDetails`).
- */
-const ABOUT_ROW_HASHES = ["details", "conditions", "requirements", "about-crew", "crew", "series"];
-
 export const metadata: Metadata = {
   title: "Manage trip — DiveDay",
 };
 
 /**
- * Trip is the departure's working home: a compact About panel for its
- * definition followed by the grouped roster for the people coming. Manifest
- * remains who is aboard and Prep remains what is loaded. This is slice 5e from
- * ADR 20260827-the-departure-is-two-working-surfaces.
- *
- * The composition is masthead → three surface tabs → compact About → one
- * grouped roster ledger. The complete existing editors stay behind About's
- * disclosure, so moving the roster does not discard setup or lifecycle work.
+ * Two of a departure's five tabs (ADR 20261001-logbook, decision 3): Divers,
+ * the grouped roster of the people coming, and Details (`?view=details`), the
+ * departure's definition laid flat. Check-in, Boat and Gear are their own
+ * routes beside this one.
  */
 export default async function ManageTripPage({
   params,
@@ -491,10 +479,8 @@ export default async function ManageTripPage({
   const assignedCrew = staff
     .filter((entry) => crewIds.includes(entry.person.id))
     .map((entry) => entry.person.fullName);
-  // The fleet's row for this departure's boat: its name for the about line,
-  // and its colour for the hull above the roster (ADR 20260919-one-idea,
-  // decision I · Tide). A shore dive or a pool session finds nothing here and
-  // gets no hull, which is correct — it has a roster and no boat.
+  // The fleet's row for this departure's boat, for its name on the about line.
+  // A shore dive or a pool session finds nothing here.
   const boat = shopBoats.find((row) => row.id === trip.boatId);
   const boatName = boat?.name;
   const boatAndCrew = [boatName, ...assignedCrew].filter((part): part is string => Boolean(part));
@@ -546,9 +532,6 @@ export default async function ManageTripPage({
         })
       : t("tripSeries.panel.summaryAllDone", { summary: repeatsSummary })
     : repeatsSummary;
-  const aboutSummary = [planSummary, boatCrewSummary, series ? repeatsSummary : null]
-    .filter(Boolean)
-    .join(" · ");
   // The clash is a fact about two boats that will both sail, so a called-off
   // departure drops it with the rest of the live-trip nudges — `crewClashes`
   // answers nothing for one anyway, and this keeps the two from ever
@@ -564,29 +547,6 @@ export default async function ManageTripPage({
     liveClashes.length > 0 ||
     (!cancelled &&
       (crewGap.code !== "none" || underTargetNote !== null || languageGapNote !== null));
-  // **The weight lands where somebody sees it** (issue #1695, dive-domain-expert
-  // review 2026-09-12). `CrewSection`'s per-person sentence is two layers deep:
-  // inside the Crew panel, inside an About disclosure that is closed on every
-  // ordinary visit — and nothing inside a closed `<details>` is in the
-  // accessibility tree, so the line announced to nobody and was read by nobody.
-  // The one line a staffer *does* read at rest is this summary strip, which
-  // carries `boatCrewSummary` and carried no mark at all.
-  //
-  // So the strip takes one word in the warning ink and the naming sentences
-  // stay inside, which is the relationship `MinimumSeatsBand` already has to
-  // the Details panel that sets the minimum. It **leads** the strip rather than
-  // trailing it because the strip is a single `truncate`d line: appended, the
-  // mark is the first thing a narrow screen throws away.
-  const aboutSummaryText = aboutSummary || t("trips.about.noneSet");
-  const aboutSummaryNode =
-    liveClashes.length > 0 ? (
-      <>
-        <span className="font-semibold text-warning-strong">{t("trips.about.crewClash")}</span>
-        {` · ${aboutSummaryText}`}
-      </>
-    ) : (
-      aboutSummaryText
-    );
   const rosterActions = {
     addBookingAction: seatNewDiverAction.bind(null, "trip-guests", shopSlug),
     addExistingDiverAction: seatExistingDiverAction.bind(null, "trip-guests", shopSlug),
@@ -722,13 +682,6 @@ export default async function ManageTripPage({
 
         {showDetails ? (
           <TripAboutSection
-            heading={t("trips.about.heading")}
-            detailsLabel={t("trips.about.details")}
-            closeLabel={t("trips.about.close")}
-            summary={aboutSummaryNode}
-            conditionsSummary={conditionsSummary}
-            open
-            openOnHash={ABOUT_ROW_HASHES}
             rows={[
               {
                 id: "details",
@@ -869,9 +822,6 @@ export default async function ManageTripPage({
                     // and the shift-coverage badges are all about a boat that will
                     // leave.
                     onShiftIds={cancelled ? null : onShiftIds}
-                    // Marked on the About summary strip as well
-                    // (`aboutSummaryNode` above), because this row is inside a
-                    // disclosure that is closed on an ordinary visit.
                     clashes={liveClashes}
                     crewGapCode={cancelled ? "none" : crewGap.code}
                     updateCrewAction={updateTripCrewAction.bind(null, shopSlug)}
@@ -1062,7 +1012,6 @@ export default async function ManageTripPage({
 
             <TripRosterContent
               guests={guests}
-              hull={boat ? { name: boat.name, color: boat.hullColor, crew: assignedCrew } : null}
               shopSlug={shopSlug}
               shopName={shop.name}
               locale={locale}

@@ -7,6 +7,8 @@ import {
   e2eNow,
   findTripOnBoard,
   HELD_SEND_TIMEOUT_MS,
+  openIfClosed,
+  openRosterRow,
   openTripActivity,
   openTripFromBoard,
   rosterRow,
@@ -21,8 +23,11 @@ signedInAsOwner();
  * against. Check before toggling instead of guessing.
  */
 async function openPrivateNotes(page: Page) {
+  // Every seat is one line, its notes behind the row's own mark (owner,
+  // 2026-10-05): open the row first. The spec seats exactly one diver.
+  await openIfClosed(page.locator('#roster li[id^="booking-"] > details').first());
   const details = page
-    .locator("details")
+    .locator('#roster li[id^="booking-"] > details details')
     .filter({ hasText: /Private staff notes|Add a private note/ })
     .filter({ visible: true });
   const isOpen = await details.evaluate((el) => (el as HTMLDetailsElement).open);
@@ -88,12 +93,9 @@ test("staff adds a walk-in diver, then wait-lists one once the trip is full", as
   await expect(
     rosterRow(page, "Walk-in Wanda").getByRole("link", { name: "Walk-in Wanda" }),
   ).toBeVisible();
-  // The line under the hour owns the capacity read on the Trip surface now
+  // The line under the hour owns the capacity read on the Trip surface
   // (ADR 20260919-one-idea, decision I · Tide), so a full boat is stated in
-  // words there rather than in a ring's accessible label. Scoped to the
-  // masthead because the hull below draws the same count into its own
-  // `<title>`: this trip has no boat so no hull renders, but a spec that reads
-  // one sentence should say which one it means.
+  // words there. Scoped to the masthead, the one sentence this reads.
   const voyage = page
     .locator("header")
     .filter({ has: page.getByRole("heading", { level: 1, name: title }) });
@@ -276,6 +278,7 @@ test("a diver seated off the name prompt is blocked until staff confirm it is th
   await expect(roster.getByText(/Identity unconfirmed/).first()).toBeVisible();
 
   // One tap at the roster, the same one the shared-inbox path has always cost.
+  await openRosterRow(page, "Marisol Vega");
   await page.getByRole("button", { name: "Confirm this is Marisol Vega" }).click();
   await page.getByRole("button", { name: "Yes, this is them" }).click();
   await expect(page.getByRole("status")).toContainText("Identity confirmed.");

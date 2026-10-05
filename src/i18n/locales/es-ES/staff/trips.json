@@ -20,11 +20,9 @@
     "back": "De vuelta"
   },
   "about": {
-    "heading": "Sobre esta salida",
     "add": "Añadir",
     "addDiverJump": "Ir a añadir un buceador",
     "details": "Detalles",
-    "close": "Cerrar",
     "viewPublic": "Ver página pública",
     "printPacket": "Imprimir paquete",
     "plan": "El plan",
@@ -37,7 +35,6 @@
     "noRequirements": "No hay requisitos de admisión configurados",
     "noBoat": "Barco sin asignar",
     "noCrew": "Tripulación sin asignar",
-    "crewClash": "Tripulante en dos salidas",
     "oneTime": "Salida única",
     "perSeat": "por plaza",
     "cancel": "Cancelar esta salida",
@@ -424,7 +421,6 @@
     "depthWarningNoCard": "Llega a {site} {unit} y no hay certificación registrada con la que compararlo; {limit} {unit} es el límite de iniciación. No es un bloqueo: verifica qué titulación consta en su ficha o confirma que el guía respete esos límites.",
     "detailsSummaryLabel": "Detalles de {name}",
     "editPickup": "Editar recogida",
-    "emergencyContactAdd": "Agregar",
     "emergencyContactEdit": "Editar contacto de emergencia",
     "emergencyContactHeading": "Contacto de emergencia",
     "emergencyContactMissing": "Sin registrar",
@@ -493,7 +489,9 @@
     "waiverResendHint": "Reenviar",
     "waiverSend": "Enviar exención",
     "waiverSent": "Exención enviada",
-    "waiverSigned": "Exención firmada"
+    "waiverSigned": "Exención firmada",
+    "noteCount": "{count, plural, one {# nota} other {# notas}}",
+    "emergencyContactAddFull": "Añadir contacto de emergencia"
   },
   "offlineManifestManager": {
     "checkingDevice": "Verificando este dispositivo…",
@@ -569,7 +567,6 @@
     "uncheckedLabel": "Sin verificar — presiona para marcarlo",
     "summary": "Antes de salir del muelle: {checked} de {total, plural, one {# verificado} other {# verificados}}"
   },
-  "hullLabel": "{boat}, dibujado como sus plazas: {booked} de {capacity, plural, one {# plaza} other {# plazas}} ocupadas{blocked, plural, =0 {} one {, # que no puede embarcar} other {, # que no pueden embarcar}}{unread, plural, =0 {} one {, # cuya preparación nadie ha revisado} other {, # cuya preparación nadie ha revisado}}{crewNotDrawn, plural, =0 {} one {, y # guía que el dibujo no muestra} other {, y # guías que el dibujo no muestra}}. Las plazas se llenan por orden de reserva y nunca se asignan.",
   "voyage": {
     "seats": "{booked} de {capacity, plural, one {# plaza} other {# plazas}} ocupadas"
   }

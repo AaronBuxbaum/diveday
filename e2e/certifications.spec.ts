@@ -7,6 +7,7 @@ import {
   e2eNow,
   findTripOnBoard,
   openDiverFileGroup,
+  openRosterDetails,
   openThreadStep,
   openTripAbout,
   openTripTab,
@@ -163,6 +164,7 @@ test("an instructor certifies a diver from the course roster, and they can book 
   await expect(rosterRow(page, diverName).getByRole("link", { name: diverName })).toBeVisible();
 
   const row = rosterRow(page, diverName);
+  await openRosterDetails(row);
   await row.getByText("Certify", { exact: true }).click();
   await row.getByLabel("Level").selectOption({ label: "Open Water" });
   await row.getByRole("button", { name: "Confirm certification" }).click();
@@ -214,7 +216,8 @@ test("an instructor writes a student's next step on the course session's own ros
   await openTripTab(page, "Trip");
 
   // The disclosure is per student; the first one on this session's roster is
-  // the one this walks.
+  // the one this walks, behind that student's row.
+  await openRosterDetails(page.locator('#roster li[id^="booking-"]').first());
   const summary = page.getByText("Next step", { exact: true }).first();
   await summary.waitFor();
   await summary.click();

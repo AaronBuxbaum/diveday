@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { groupLabelClass } from "@/components/ui/ledger";
@@ -99,62 +98,39 @@ export type TripAboutRow = {
 };
 
 /**
- * The Trip surface's compact home for everything that used to be Overview.
+ * **The Details tab: the departure's definition, laid flat.** Slice 5e of
+ * ADR 20260827-the-departure-is-two-working-surfaces, moved onto its own tab by
+ * ADR 20261001-logbook.
  *
- * ADR 20260827-the-departure-is-two-working-surfaces, slice 5e, keeps the
- * departure's definition available without making it the first thing a crew
- * member has to work through. At rest this is one compact summary; on intent
- * it opens into five label/value beats. The roster remains below it as the
- * page's main working surface.
+ * This is the only thing on the tab, so it is never folded: a staffer who
+ * opened Details came for these rows (owner, 2026-10-05). It used to be a
+ * collapsible "About this departure" card left over from when it shared a page
+ * with the roster, and the tab opened it already open behind a "Close" control
+ * nobody had a reason to press.
  *
- * ## One grammar: the fact rows *are* the surface
- *
- * The panel used to say everything twice. Five rows stated the plan, the
- * conditions, who can book, the boat and crew, and the repeat — and then five
- * headed sections below them stated the same five subjects again, each with its
- * own heading, its own summary prose and its own "Edit …" disclosure, followed
- * by three full-width series buttons and two more destructive ones, every one
- * of them carrying a standing caption. About fifteen controls and eight
- * captions for five facts (design review 2026-09-17).
- *
- * Now a row *is* its own disclosure: the label and the settled value are the
+ * Each row *is* its own disclosure: the label and the settled value are the
  * summary, the editor opens in place beneath it, and there is no second copy of
- * anything. That is the grammar `SettingsRows` and `DisclosureRowList` already
- * use, arrived at here from the opposite direction.
+ * anything — the grammar `SettingsRows` and `DisclosureRowList` use.
  *
  * The rare and destructive acts — apply to every date, stop repeating, cancel
  * every upcoming date, the weather blow-out, cancelling this departure — sit in
  * one closed disclosure at the foot (`more`), as a single column of quiet
  * items with no standing captions: each one's consequence sentence lives in the
- * confirm or the page it opens, where somebody is about to act on it
- * (docs/design/principles.md §8, "collapse the rare path").
+ * confirm or the page it opens (docs/design/principles.md §8, "collapse the
+ * rare path").
  *
  * A row's `<summary>` carries no focusable descendants — an interactive element
  * nested in a `<summary>` fails axe's nested-interactive rule, which is why the
  * "Edit …" affordance is a `<span>` and the whole row is the control.
  */
 export function TripAboutSection({
-  heading,
-  detailsLabel,
-  closeLabel,
-  summary,
-  conditionsSummary,
   rows,
-  openOnHash = [],
   actions,
   more,
   moreLabel,
   moreOpen = false,
-  open = false,
 }: {
-  heading: string;
-  detailsLabel: string;
-  closeLabel: string;
-  summary: ReactNode;
-  conditionsSummary?: ReactNode;
   rows: TripAboutRow[];
-  /** Fragments that open the panel itself — every row anchor a deep link uses. */
-  openOnHash?: string[];
   /**
    * Quiet doors in one wrapping row, each `flush` so every word — the first,
    * and the first of a wrapped line — sits on the column. The row's `gap-x-8`
@@ -166,60 +142,13 @@ export function TripAboutSection({
   moreLabel?: string;
   /** One of the acts in `more` just ran and its outcome is inside. */
   moreOpen?: boolean;
-  open?: boolean;
 }) {
   return (
-    <AutoOpenDetails
+    <section
       id="about"
-      openOnHash={["about", ...openOnHash]}
-      open={open}
-      className={sectionCardClass({
-        padding: "none",
-        className: "group/about scroll-mt-24 overflow-hidden",
-      })}
+      className={sectionCardClass({ padding: "none", className: "scroll-mt-24 overflow-hidden" })}
     >
-      {/* The summary fills the card, whose `overflow-hidden` cut the outset
-          ring on all four sides, so the ring is drawn inside it — at the
-          card's own radius, or the clip shaves its square corners. The radius
-          is spelled, not `inherit`ed: a `<summary>` inherits through the
-          `<details>`' shadow slot, which carries none. */}
-      <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2.5 rounded-panel px-4 py-2 text-sm transition-colors [&::-webkit-details-marker]:hidden focus-visible:focus-ring-inset group-open/about:rounded-b-none sm:min-h-16 sm:gap-3 sm:px-5 sm:py-2.5">
-        <svg
-          aria-hidden="true"
-          className="size-4 shrink-0 text-muted sm:size-5"
-          viewBox="0 0 22 22"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="11" cy="11" r="8.2" />
-          <path d="m13.8 8.2-1.7 4-4 1.7 1.7-4z" />
-        </svg>
-        <span className="min-w-0 flex-1">
-          {/* One line at rest, cut to fit rather than wrapped: it previews the
-              rows the panel opens into, one tap away, and a wrapped preview
-              would push the roster under it down for facts the panel holds in
-              full. The pixel probe's `truncated` reports the cut (settled in
-              docs/design/settled-questions.md). */}
-          <span className="block truncate font-semibold leading-snug group-open/about:hidden">
-            {summary}
-          </span>
-          <span className="hidden font-semibold group-open/about:block">{heading}</span>
-          {conditionsSummary ? (
-            <span className="mt-0.5 hidden truncate text-xs text-muted group-open/about:hidden sm:block sm:group-open/about:hidden">
-              {conditionsSummary}
-            </span>
-          ) : null}
-        </span>
-        <span className="-mx-2 inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg px-2 font-semibold text-primary transition-colors hover:bg-surface-sunken">
-          <span className="group-open/about:hidden">{detailsLabel}</span>
-          <span className="hidden group-open/about:inline">{closeLabel}</span>
-          <DisclosureCaret direction="right" className="size-4 group-open/about:rotate-90" />
-        </span>
-      </summary>
-      <div className="border-t border-border px-4 pb-4 sm:px-5 sm:pb-5">
+      <div className="px-4 pb-4 sm:px-5 sm:pb-5">
         {actions ? <div className="flex flex-wrap gap-x-8 gap-y-2 py-3">{actions}</div> : null}
         <div className={ROWS_CLASS}>
           {rows.map((row) => (
@@ -237,6 +166,6 @@ export function TripAboutSection({
           </details>
         ) : null}
       </div>
-    </AutoOpenDetails>
+    </section>
   );
 }

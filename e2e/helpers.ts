@@ -322,12 +322,12 @@ const TRIP_ROOT_URL = /\/trips\/[^/?#]+(?:[?#]|$)/;
 const TRIP_SURFACE_URL = /\/trips\/[^/?#]+/;
 
 /**
- * Open the departure's Details tab and its About disclosure before using its
- * details. Details is its own tab (ADR 20261001-logbook), so a caller standing
- * on Divers is moved across by URL first.
+ * Open the departure's Details tab before using its rows. Details is its own
+ * tab (ADR 20261001-logbook), so a caller standing on Divers is moved across by
+ * URL first; the rows are laid flat there, never folded (owner, 2026-10-05).
  */
 export async function openTripAbout(page: Page): Promise<Locator> {
-  const about = page.locator("details#about");
+  const about = page.locator("section#about");
   // A caller often clicks its way here, and the click resolves before the URL
   // commits: wait for the departure's own tabs before reading the address.
   await page.waitForURL(TRIP_ROOT_URL);
@@ -339,10 +339,6 @@ export async function openTripAbout(page: Page): Promise<Locator> {
     await page.goto(url.toString());
   }
   await expect(about).toBeVisible();
-  if ((await about.getAttribute("open")) === null) {
-    await about.locator(":scope > summary").click();
-  }
-  await expect(about).toHaveAttribute("open", "");
   return about;
 }
 
@@ -473,8 +469,36 @@ export async function createTrip(
  */
 export async function sendWaiverForFirstDiver(page: Page): Promise<string> {
   const diverSection = page.locator("#roster").filter({ visible: true });
-  await diverSection.getByRole("button", { name: "Send waiver", exact: true }).first().click();
+  const row = await openFirstRosterRowWith(page, "Send waiver");
+  await row.getByRole("button", { name: "Send waiver", exact: true }).click();
   return waiverLinkFromResult(page, diverSection.getByRole("status"));
+}
+
+/**
+ * Open the first Divers-tab row that offers `control`, and return it. Every
+ * seat is one line now, its fixes behind the row's own mark (owner,
+ * 2026-10-05), so a spec that wants "the first diver with a Send waiver" has to
+ * find that row while the control is still folded away.
+ */
+export async function openFirstRosterRowWith(page: Page, control: string): Promise<Locator> {
+  const row = page
+    .locator('#roster li[id^="booking-"]')
+    // `page.locator`, not `getByRole`: the fixture keeps role queries to
+    // visible elements, and the control is folded away until the row opens.
+    .filter({ has: page.locator("button", { hasText: new RegExp(`^\\s*${control}\\s*$`) }) })
+    .first();
+  await openRosterDetails(row);
+  return row;
+}
+
+/** Open one diver's row on the Divers tab, where every fix for their seat waits. */
+export async function openRosterRow(page: Page, diverName: string): Promise<Locator> {
+  const row = page
+    .locator('#roster li[id^="booking-"]')
+    .filter({ visible: true })
+    .filter({ has: page.getByRole("link", { name: diverName, exact: true }) });
+  await openRosterDetails(row);
+  return row;
 }
 
 /**
@@ -721,7 +745,7 @@ export async function openSettingsRow(page: Page, heading: string) {
  * exactly like `openPrivateNotes` in add-diver.spec.ts.
  */
 export async function openRosterDetails(row: Locator): Promise<void> {
-  await openIfClosed(row.locator("details").filter({ hasText: "Remove booking" }).first());
+  await openIfClosed(row.locator(":scope > details"));
 }
 
 /**
@@ -735,9 +759,10 @@ export async function openRosterDetails(row: Locator): Promise<void> {
  * would close it and take the Delete button with it.
  */
 export async function openRosterNotes(row: Locator): Promise<void> {
+  await openRosterDetails(row);
   await openIfClosed(
     row
-      .locator("details")
+      .locator(":scope > details details")
       .filter({ hasText: /Private staff notes|Add a private note/ })
       .first(),
   );

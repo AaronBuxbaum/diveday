@@ -966,16 +966,12 @@ export async function loadShopExportBundleInput(
         },
         {
           file: "boats.csv",
-          // `hull_color` leaves with the shop on the same argument as the
-          // sentence beside it: the shop picked the colour and its own crew
-          // reads the boat by it (ADR 20260919-one-idea, decision I · Tide).
-          header: ["id", "name", "capacity", "description", "hull_color", "created_at"],
+          header: ["id", "name", "capacity", "description", "created_at"],
           rows: boatRows.map((row) => [
             row.id,
             row.name,
             row.capacity,
             row.description,
-            row.hullColor,
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["boats.csv"],
