@@ -2,7 +2,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
 import { TripDayPlan, TripLookFor, TripMoments, TripSiteNotes } from "./TripDayPlan";
@@ -134,11 +133,6 @@ describe("TripDayPlan's profile", () => {
     diveSite: { id: "site-2", name: "Spiegel Grove", depthRange: "18–40 m", maxDepthMeters: 40 },
   } as unknown as Partial<DiveBriefing>);
 
-  /** The entry-level ceiling exactly: a day nothing can be over. */
-  const shallow = briefing({
-    diveSite: { id: "site-1", name: "French Reef", depthRange: "to 12 m", maxDepthMeters: 12 },
-  } as unknown as Partial<DiveBriefing>);
-
   it("states the time in the water and the gap between two dives", () => {
     render(
       <TripDayPlan
@@ -157,27 +151,28 @@ describe("TripDayPlan's profile", () => {
 
   /**
    * **The run closes itself unless the next thing on the page is a rule**
-   * (pixel-craft class 6). On a bare day — no crew months, no ceiling picker,
-   * a pitch that opens on its door — the run's closing rule sat 32px over the
-   * door's own, two parallel hairlines with nothing between them, so the page
-   * may leave it open. Anything under the list inside this section (the
-   * picker, the months' caption) is not a rule, and the run closes over it.
+   * (pixel-craft class 6). On a bare day — no crew months, a pitch that opens
+   * on its door — the run's closing rule sat 32px over the door's own, two
+   * parallel hairlines with nothing between them, so the page may leave it
+   * open. Anything under the list inside this section (the months' caption)
+   * is not a rule, and the run closes over it.
    */
   const lines = () => [...screen.getByRole("list").children];
 
-  it("closes the day's run over the ceiling picker, whatever follows the section", () => {
+  it("asks the reader nothing about their card, even on a deep day", () => {
     render(
       <TripDayPlan
         briefings={[briefing(), wall]}
         shop={SHOP}
         locale={DEFAULT_DIVER_LOCALE}
         profile={profile}
-        nextOpensOnRule
       />,
     );
-    expect(screen.getByRole("combobox")).toBeInTheDocument();
-    expect(lines().length).toBeGreaterThan(2);
-    for (const line of lines()) expect(line).toHaveClass("border-t", "last:border-b");
+    // The depth-against-your-card picker was cut (Aaron, 2026-10-05): the
+    // depths stay on each dive's row, and the booking form asks the card.
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.queryByText(/your card/)).not.toBeInTheDocument();
+    expect(screen.getByText("18–40 m")).toBeInTheDocument();
   });
 
   it("leaves a bare run open when the page says a rule follows it", () => {
@@ -222,85 +217,6 @@ describe("TripDayPlan's profile", () => {
       />,
     );
     expect(screen.queryByText(/on the surface/)).not.toBeInTheDocument();
-  });
-
-  it("tells a reader whose card stops shallower, and stops nothing", async () => {
-    const user = userEvent.setup();
-    render(
-      <TripDayPlan
-        briefings={[briefing(), wall]}
-        shop={SHOP}
-        locale={DEFAULT_DIVER_LOCALE}
-        profile={profile}
-      />,
-    );
-    // Nothing until the reader says something: the page has no diver on file.
-    expect(screen.queryByText(/past the/)).not.toBeInTheDocument();
-    await user.selectOptions(screen.getByRole("combobox"), "open_water");
-    expect(
-      screen.getByText(
-        "Dive 2 is at a site that reaches 40 m, past the 18 m your card covers. You can still book: tell the crew and they will plan your dive to your limit.",
-      ),
-    ).toBeInTheDocument();
-    // A warning, never a gate (H-08): the answer is prose beside a select, and
-    // nothing on this beat is disabled by it.
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
-  });
-
-  it("answers a clean day too, so the control never looks broken", async () => {
-    const user = userEvent.setup();
-    render(
-      <TripDayPlan
-        briefings={[briefing(), wall]}
-        shop={SHOP}
-        locale={DEFAULT_DIVER_LOCALE}
-        profile={profile}
-      />,
-    );
-    await user.selectOptions(screen.getByRole("combobox"), "divemaster");
-    // And it names the card while it does. The junior gap this answer accepts
-    // (`statedLevelDepthLimit`) lands on exactly this branch — a ten-year-old
-    // picking Open Water is held to 12 m, not the card's 18 — so a clean-day
-    // sentence with no card in it would be the one place the mitigation was
-    // claimed and not made.
-    expect(
-      screen.getByText("Nothing on this day goes past the 40 m your card covers."),
-    ).toBeInTheDocument();
-  });
-
-  it("answers the reader who holds no card without crediting them one", async () => {
-    const user = userEvent.setup();
-    render(
-      <TripDayPlan
-        briefings={[shallow]}
-        shop={SHOP}
-        locale={DEFAULT_DIVER_LOCALE}
-        profile={profile}
-      />,
-    );
-    // French Reef bottoms at 12 m, which is exactly the entry-level ceiling, so
-    // this is the clean-day branch for someone with nothing to name.
-    await user.selectOptions(screen.getByRole("combobox"), "none_declared");
-    expect(
-      screen.getByText(
-        "A first dive without a card stays inside 12 m, and nothing on this day goes past it.",
-      ),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/your card covers/)).not.toBeInTheDocument();
-  });
-
-  it("offers no card to state when no site on the day has a depth", () => {
-    render(
-      <TripDayPlan
-        briefings={[briefing()]}
-        shop={SHOP}
-        locale={DEFAULT_DIVER_LOCALE}
-        profile={profile}
-      />,
-    );
-    // With nothing to compare against, the picker is a question the page cannot
-    // answer.
-    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   });
 });
 

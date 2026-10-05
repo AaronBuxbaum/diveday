@@ -285,7 +285,7 @@ export function TripFullSection({
             there is something for a staffer to pre-check the number against
             before that date. A broad interest signal has no date to check it
             for. */}
-        <DiveDeclarationFields showNitrox={false} offerStatedLevel />
+        <DiveDeclarationFields showNitrox={false} />
         <div>
           <SubmitButton pendingLabel={t("waitlistJoining")} className={buttonClass({ busy: true })}>
             {t("waitlistHeading")}

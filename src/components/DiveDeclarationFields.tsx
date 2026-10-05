@@ -2,8 +2,6 @@
 
 import { useTranslations } from "next-intl";
 import { useState } from "react";
-import { useStatedDiverLevel } from "@/components/stated-diver-level";
-import { buttonClass } from "@/components/ui/button";
 import { choiceClass, controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { InfoHint } from "@/components/ui/InfoHint";
 import {
@@ -11,7 +9,6 @@ import {
   DIVER_CERTIFICATION_LEVEL_KEYS,
 } from "@/i18n/readiness-labels";
 import { CARD_NUMBER_INPUT_PATTERN, MAX_CARD_NUMBER_LENGTH } from "@/lib/card-number";
-import type { CertificationLevel } from "@/lib/certification-levels";
 import { CERTIFICATION_AGENCIES, NO_CERTIFICATION_ANSWER } from "@/lib/certification-options";
 
 /**
@@ -62,10 +59,8 @@ import { CERTIFICATION_AGENCIES, NO_CERTIFICATION_ANSWER } from "@/lib/certifica
  */
 export function DiveDeclarationFields({
   showNitrox = true,
-  offerStatedLevel = false,
 }: {
   showNitrox?: boolean;
-  offerStatedLevel?: boolean;
 } = {}) {
   const t = useTranslations();
   // **What the diver picked, only so the form can stop contradicting itself.**
@@ -91,11 +86,7 @@ export function DiveDeclarationFields({
     // last-minute form's own spacer comment already records.
     <div className="flex flex-col gap-3">
       <FieldGrid columns={2}>
-        <DiveCertificationField
-          answer={answer}
-          onAnswerChange={setAnswer}
-          offerStatedLevel={offerStatedLevel}
-        />
+        <DiveCertificationField answer={answer} onAnswerChange={setAnswer} />
         <DiveCardFields shown={holdsACard} />
       </FieldGrid>
       {/* Nitrox stays on the trip-specific wait list, where a diver is naming
@@ -133,19 +124,10 @@ export function DiveCertificationField({
   onAnswerChange,
   name = "certificationLevel",
   belowRequirement,
-  offerStatedLevel = false,
 }: {
   answer?: string;
   onAnswerChange?: (value: string) => void;
   name?: string;
-  /**
-   * Offer back the level the reader already stated to the day-ceiling picker
-   * higher up the same page, instead of asking the question twice.
-   *
-   * Off by default, and load-bearing that it is: the last-minute list mounts
-   * this field bare on a page with no picker, and must render byte-identically.
-   */
-  offerStatedLevel?: boolean;
   /**
    * Shown under the select when this diver's own answer ranks below what the
    * departure asks for. **A warning, never a stop** — the seat is still theirs
@@ -156,17 +138,6 @@ export function DiveCertificationField({
   belowRequirement?: string | null;
 }) {
   const t = useTranslations();
-  // Unconditionally, because hooks cannot be conditional; the prop gates what
-  // is done with it, not whether it is read.
-  const stated = useStatedDiverLevel();
-  const offered = offerStatedLevel ? stated : "";
-  // Only on the controlled path (the wait list), and only while the select is
-  // still at "Rather not say". Conditioning on `answer === ""` is what makes
-  // the offer disappear the moment it is taken or the reader answers for
-  // themselves, and never come back — no dismiss control needed.
-  const offeredKey =
-    offered === "" ? undefined : DIVER_CERTIFICATION_LEVEL_KEYS[offered as CertificationLevel];
-  const offer = offeredKey && answer === "" ? { value: offered, key: offeredKey } : null;
   return (
     <Field
       label={t("common.certification.level")}
@@ -187,18 +158,6 @@ export function DiveCertificationField({
           <span role="status" aria-live="polite" className="text-sm text-warning-strong">
             {belowRequirement}
           </span>
-        ) : offer ? (
-          // A button the reader presses, never a pre-selected value: what a
-          // diver says their card is has to stay an explicit act of theirs
-          // (ADR 20260814-self-declared-cards). `type="button"` because this
-          // sits inside the wait-list form, which posts.
-          <button
-            type="button"
-            className={buttonClass({ variant: "secondary", size: "sm" })}
-            onClick={() => onAnswerChange?.(offer.value)}
-          >
-            {t("common.certification.useStatedLevel", { level: t(offer.key) })}
-          </button>
         ) : undefined
       }
       aside={

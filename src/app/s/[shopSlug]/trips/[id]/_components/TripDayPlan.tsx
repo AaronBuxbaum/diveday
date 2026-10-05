@@ -11,20 +11,15 @@ import {
 import { isMarineLifeSlug } from "@/db/marine-life-catalog";
 import { marineLifeCard } from "@/i18n/marine-life-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
-import { DIVER_CERT_LEVEL_KEYS } from "@/i18n/next-dive-labels";
 import { depthText } from "@/i18n/unit-labels";
-import { NO_CERTIFICATION_ANSWER } from "@/lib/certification-options";
-import { type DayProfileRow, dayProfileRows } from "@/lib/day-profile";
-import { checkDepthCeiling, statedLevelDepthLimit } from "@/lib/depth-ceiling";
+import { dayProfileRows } from "@/lib/day-profile";
 import type { DepthUnit } from "@/lib/depth-units";
-import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { type DiveSiteLandmarkKind, parseDiveSiteLandmarks } from "@/lib/dive-site-landmarks";
 import { type DiveMode, type DockDayRhythm, siteFit } from "@/lib/diver-planning";
 import { formatShortDate } from "@/lib/format";
 import { capturePhoto } from "@/lib/marine-life-tiles";
 import { publicDiveSitePath } from "@/lib/public-routes";
 import type { SiteSightings } from "@/lib/sightings";
-import { type DayCeilingOption, DayCeilingPicker } from "./DayCeilingPicker";
 import type { DiveBriefing, Shop, SiteBriefing } from "./types";
 
 /**
@@ -43,60 +38,6 @@ export type DayProfileFacts = {
   /** How many days the departure meets on (`trip_schedule_days`). */
   dayCount: number;
 };
-
-/**
- * The five rungs plus "no card yet", each carrying the answer for this day
- * already written out (`DayCeilingPicker`).
- *
- * The comparison is `checkDepthCeiling`'s, the same one the staff roster's
- * depth advisory runs — in the shop's own unit, after rounding, because 18.288
- * m > 18 m is an artefact of storing feet as metres rather than a fact about
- * diving. And it is the same *kind* of answer: a warning, never a gate (H-08).
- */
-function ceilingOptions(
-  t: DiverTranslator,
-  rows: readonly DayProfileRow[],
-  unit: DepthUnit,
-): DayCeilingOption[] {
-  const dives = rows.filter((row) => row.kind === "dive");
-  if (!dives.some((dive) => dive.siteMaxDepthMeters)) return [];
-  return [...DECLARABLE_CERTIFICATION_LEVELS, null].map((level) => {
-    const limit = statedLevelDepthLimit(level);
-    const limitText = depthText(t, limit.ceiling.meters, unit);
-    const deeper = dives.flatMap((dive) => {
-      const check = checkDepthCeiling(dive.siteMaxDepthMeters, limit, unit);
-      if (check.status !== "exceeds") return [];
-      const values = {
-        number: dive.number,
-        site: depthText(t, dive.siteMaxDepthMeters ?? 0, unit),
-        limit: limitText,
-      };
-      return [t(level ? "trip.dayProfile.over" : "trip.dayProfile.overNoCard", values)];
-    });
-    return {
-      value: level ?? NO_CERTIFICATION_ANSWER,
-      label: level ? t(DIVER_CERT_LEVEL_KEYS[level]) : t("common.certification.levelNone"),
-      // A clean day still answers. A control that appears to do nothing when
-      // the news is good teaches the reader it is broken.
-      //
-      // And the clean-day answer names the card, exactly as the over-limit one
-      // does: this is a claim about a *card*, and the accepted junior gap
-      // (`statedLevelDepthLimit`) happens here rather than on the over-limit
-      // branch — a ten-year-old picking "Open Water" is held to 12 m, so an
-      // unattributed "nothing on this day goes past 18 m" would be wrong about
-      // them by six metres with nothing in the sentence to say whose limit it
-      // was reading.
-      lines:
-        deeper.length > 0
-          ? deeper
-          : [
-              t(level ? "trip.dayProfile.within" : "trip.dayProfile.withinNoCard", {
-                limit: limitText,
-              }),
-            ],
-    };
-  });
-}
 
 /**
  * **"Seen here this month"** — the crew's own log, under the site it is about.
@@ -219,8 +160,8 @@ export function TripDayPlan({
    * Whether the block under this section opens on a rule of its own — the
    * public trip's pitch when it opens on its door (`pitchOpensOnDoor`). The
    * run then leaves its close to that rule, but only when the run is the last
-   * thing here: under it may come the crew months' caption and the ceiling
-   * picker, which are not rules, and the run closes over them.
+   * thing here: under it may come the crew months' caption, which is not a
+   * rule, and the run closes over it.
    */
   nextOpensOnRule?: boolean;
 }) {
@@ -251,7 +192,6 @@ export function TripDayPlan({
       row.kind === "surfaceInterval" ? [[row.afterDiveNumber, row.minutes]] : [],
     ),
   );
-  const options = profile ? ceilingOptions(t, rows, profile.depthUnit) : [];
   // One beat per *site*, not per tank: a two-tank day on one mooring would
   // otherwise print the same month twice, the way the route and the site prose
   // used to before they were deduplicated.
@@ -285,13 +225,13 @@ export function TripDayPlan({
     );
   }
   // **The run closes itself unless a rule follows it directly** (pixel-craft
-  // class 6). On a bare day — no months' caption, no picker, a pitch opening
+  // class 6). On a bare day — no months' caption, a pitch opening
   // on its door — the run's closing rule sat 32px over the door's own, two
   // parallel hairlines with nothing between them. Anywhere else the rule is
-  // the list's only close: over the caption or the picker, or over a pitch
+  // the list's only close: over the caption, or over a pitch
   // that opens on its fit word and faces, leaving it open left the last dive
   // unclosed above body text. Every line, hand-set or not, takes one box.
-  const runCloses = !(nextOpensOnRule && seenByDive.size === 0 && options.length === 0);
+  const runCloses = !(nextOpensOnRule && seenByDive.size === 0);
   const handSetBox = runCloses ? ledgerRowBoxClass : ledgerRowOpenBoxClass;
   return (
     <section>
@@ -301,9 +241,7 @@ export function TripDayPlan({
           const bottomTime = bottomTimes.get(dive.diveNumber) ?? null;
           const interval = intervals.get(dive.diveNumber) ?? null;
           // The shop's own range where it wrote one ("18–40 m"), and the site's
-          // maximum where it did not. Without the fallback a day could name a
-          // depth in the ceiling sentence below that appears nowhere in the
-          // list the sentence is about.
+          // maximum where it did not.
           // The crew's month for this site, once — decided above, in plan order.
           const seen = seenByDive.get(dive.id) ?? null;
           const depth =
@@ -397,15 +335,6 @@ export function TripDayPlan({
           that prints them bare reads as a promise about Saturday. */}
       {seenByDive.size > 0 ? (
         <p className="mt-3 text-sm leading-relaxed text-muted">{t("trip.seen.honest")}</p>
-      ) : null}
-      {/* Nothing is submitted and nothing is gated: the reader names a card,
-          and the day answers back (H-08). */}
-      {options.length > 0 ? (
-        <DayCeilingPicker
-          label={t("trip.dayProfile.pickerLabel")}
-          unsaidLabel={t("common.certification.levelUnsaid")}
-          options={options}
-        />
       ) : null}
     </section>
   );

@@ -144,11 +144,9 @@ departure page now states each dive's planned time in the water and the gap on t
 two of them — the shop's own rhythm and any per-site or per-leg override, derived by
 `src/lib/day-profile.ts` off the dock-day timeline's own arithmetic, so the figures a diver reads
 before booking match the ones their thread reads after. No clock: durations promise no schedule, and
-the beat stays time-neutral. Under it, a reader with no account can name the card they hold and read
-which of the day's sites goes deeper than that card covers (`statedLevelDepthLimit`,
-`checkDepthCeiling` in the shop's own unit). The answer is held in that browser and nowhere else —
-no `people` row, nothing that travels with the booking — and it **gates nothing**: the site's
-maximum is not the dive plan (H-08).
+the beat stays time-neutral. The "See these depths against your card" picker that once sat under it was
+cut on 2026-10-05 at the owner's request: the depths stay on each dive's row, and the booking form
+asks the card.
 
 ## A minor's release is signed twice (delivered 2026-09-07)
 
