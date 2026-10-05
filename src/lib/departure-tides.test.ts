@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { tideWindowsForDeparture } from "./departure-tides";
+import { oneWindowPerSite, tideWindowsForDeparture } from "./departure-tides";
 import { DEFAULT_DOCK_DAY_RHYTHM } from "./diver-planning";
 
 const NOAA_PAYLOAD = {
@@ -262,5 +262,24 @@ describe("tideWindowsForDeparture", () => {
     });
     expect(windows).toEqual([]);
     expect(fetcher).not.toHaveBeenCalled();
+  });
+});
+
+describe("oneWindowPerSite", () => {
+  it("keeps the first dive's reading when a departure dives one site twice", () => {
+    const windows = [
+      { diveNumber: 1, siteName: "Molasses Reef" },
+      { diveNumber: 2, siteName: "Molasses Reef" },
+      { diveNumber: 3, siteName: "French Reef" },
+    ];
+    expect(oneWindowPerSite(windows).map((entry) => entry.diveNumber)).toEqual([1, 3]);
+  });
+
+  it("keeps every reading when each dive is a different site", () => {
+    const windows = [
+      { diveNumber: 1, siteName: "Molasses Reef" },
+      { diveNumber: 2, siteName: "French Reef" },
+    ];
+    expect(oneWindowPerSite(windows)).toEqual(windows);
   });
 });

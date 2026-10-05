@@ -1196,6 +1196,12 @@ export function specialtiesNamed(raw: string | null | undefined): DiveSpecialty[
   if (/\bdry.?suit\b/.test(value)) found.push("drysuit");
   if (/\bwreck\b/.test(value)) found.push("wreck");
   if (/\bnight\b/.test(value)) found.push("night");
+  // Only a cell that names cavern. A cave rating (Intro, Apprentice, Full,
+  // GUE Cave 1) is never read as one: which cave card covers a cavern gate is
+  // an agency-equivalence call for the staffer holding the card, and leaving
+  // it unrecorded refuses at the dock rather than clearing by guess (ADR
+  // 20260718-specialty-site-cert-requirements, 2026-10-05 amendment).
+  if (/\bcavern\b/.test(value)) found.push("cavern");
   // **Known over-match, deliberately left alone.** PADI's **Deep Adventure
   // Dive** is one of the three adventure dives inside Advanced Open Water — not
   // the Deep *specialty*, which is four dives and a separate card — and it
@@ -1238,12 +1244,13 @@ export function specialtiesNamed(raw: string | null | undefined): DiveSpecialty[
  * Cave DPV exists, and a cave DPV card's cell nearly always carries "cave" too,
  * which this list still catches (`dive-domain-expert` review, issue #689).
  *
- * `cave` and `cavern` stay, and that judgement is the one that review upheld
- * rather than reversed — see ADR 20260718-specialty-site-cert-requirements'
- * 2026-08-22 amendment for why neither becomes a gateable specialty either.
+ * `cave` stays, and that judgement is the one that review upheld rather than
+ * reversed — see ADR 20260718-specialty-site-cert-requirements' 2026-08-22
+ * amendment. `cavern` left this list when it became a gateable specialty
+ * (2026-10-05 amendment): a Cavern card imports as one (`specialtiesNamed`).
  */
 const TECHNICAL_CERT =
-  /\btrimix\b|\bhelitrox\b|\brebreather\b|\bccr\b|\bscr\b|\bcave\b|\bcavern\b|\bmine\b|decompression|\bdeco\b|\btec\b|\btech\b|technical|extended range|mixed gas|gas blender|hypoxic|normoxic|advanced nitrox|\bsump\b/;
+  /\btrimix\b|\bhelitrox\b|\brebreather\b|\bccr\b|\bscr\b|\bcave\b|\bmine\b|decompression|\bdeco\b|\btec\b|\btech\b|technical|extended range|mixed gas|gas blender|hypoxic|normoxic|advanced nitrox|\bsump\b/;
 
 /**
  * Words naming a *discipline* rather than a rung. When one is present, "advanced"

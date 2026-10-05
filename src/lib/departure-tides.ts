@@ -156,3 +156,18 @@ export async function tideWindowsForDeparture(input: {
   });
   return results;
 }
+
+/**
+ * **One reading per site** (owner, 2026-10-05). A two-tank day on the same
+ * reef read as the same site's water twice, one line under the other, which
+ * looked like a mistake rather than two arrivals. The first dive's reading
+ * stands for the site: it is the one the boat leaves the dock planning for.
+ */
+export function oneWindowPerSite<T extends { siteName: string }>(windows: readonly T[]): T[] {
+  const seen = new Set<string>();
+  return windows.filter((entry) => {
+    if (seen.has(entry.siteName)) return false;
+    seen.add(entry.siteName);
+    return true;
+  });
+}

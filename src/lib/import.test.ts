@@ -527,14 +527,37 @@ describe("prepareContactImport — safety rules", () => {
     const [dpv] = prepareContactImport(scooter).rows;
     expect(dpv.issues.some((issue) => issue.code === "level_is_technical")).toBe(false);
 
-    // And the judgement this upheld rather than reversed: cave and cavern are
-    // overhead ratings DiveDay does not model, and they stay refused (ADR
+    // And the judgement this upheld rather than reversed: a cave rating is an
+    // overhead ticket DiveDay does not model, and it stays refused (ADR
     // 20260718-specialty-site-cert-requirements, 2026-08-22 amendment).
     const cave =
       "full_name,certification_level,certification_number\nCave Carla,NSS-CDS Full Cave,CV-2";
     const [caveRow] = prepareContactImport(cave).rows;
     expect(caveRow.issues.some((issue) => issue.code === "level_is_technical")).toBe(true);
     expect(caveRow.cert).toBeNull();
+  });
+
+  it("reads a Cavern card as the cavern specialty, never as a rung", () => {
+    // Out of the technical list since cavern became a gate (2026-10-05), so
+    // nothing but the specialty path may claim it.
+    const csv =
+      "full_name,certification_level,certification_number\nSpring Sue,NSS-CDS Cavern Diver,CV-1";
+    const [row] = prepareContactImport(csv).rows;
+    expect(row.cert).toBeNull();
+    expect(row.specialties).toEqual([expect.objectContaining({ specialty: "cavern" })]);
+  });
+
+  it.each([
+    "NSS-CDS Full Cave",
+    "GUE Cave 1",
+    "TDI Intro to Cave",
+    "Cave DPV",
+  ])("never infers a Cavern card from the cave rating %s", (level) => {
+    const csv = `full_name,certification_level,certification_number\nCave Carla,${level},CV-2`;
+    const [row] = prepareContactImport(csv).rows;
+    expect(row.cert).toBeNull();
+    expect(row.specialties).toEqual([]);
+    expect(row.issues.some((issue) => issue.code === "level_is_technical")).toBe(true);
   });
 
   it("keeps a real ladder rung out of the specialty path", () => {

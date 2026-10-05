@@ -5186,7 +5186,7 @@ for (const scheme of ["light", "dark"] as const) {
         // preview bar. Neither affects the surface being photographed.
         const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
         // The `#last-minute-deal` anchor is what auto-opens the disclosure.
-        await page.goto(`/shop/blue-mantis/trips/${tripId}#last-minute-deal`);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}?view=details#last-minute-deal`);
         await page.getByText("Open Water — unverified").waitFor();
         await waitForHashLanding(page);
         await capture(page, "trip-guests-deal-recipients", scheme);
@@ -5237,7 +5237,7 @@ for (const scheme of ["light", "dark"] as const) {
 
         // The save lands on Details; the deal panel and the wait list are on Divers.
         await openTripTab(page, "Trip");
-        await page.goto(`/shop/blue-mantis/trips/${tripId}#last-minute-deal`);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}?view=details#last-minute-deal`);
         await page.getByRole("heading", { name: "Nobody to send this to yet" }).waitFor();
         await waitForHashLanding(page);
         await capture(page, "trip-guests-deal-below-requirement", scheme);
@@ -5269,7 +5269,7 @@ for (const scheme of ["light", "dark"] as const) {
       test(`the deal panel carries the demo's own declarations (${scheme})`, async ({ page }) => {
         test.setTimeout(FLOW_TIMEOUT_MS);
         const tripId = await seededTripId(page, "blue-mantis", "Night Dive — City of Washington");
-        await page.goto(`/shop/blue-mantis/trips/${tripId}#last-minute-deal`);
+        await page.goto(`/shop/blue-mantis/trips/${tripId}?view=details#last-minute-deal`);
         await page.getByText(/Open Water — unverified/).waitFor();
         await waitForHashLanding(page);
         await capture(page, "trip-guests-deal-seeded", scheme);

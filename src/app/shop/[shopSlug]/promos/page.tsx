@@ -329,7 +329,7 @@ export default async function PromosPage({
     code: deal.code,
     discount: t("promos.discountOff", { percent: deal.discountPercent }),
     tripTitle: deal.tripTitle,
-    href: `/shop/${shopSlug}/trips/${deal.tripId}#last-minute-deal`,
+    href: `/shop/${shopSlug}/trips/${deal.tripId}?view=details#last-minute-deal`,
     facts: [
       t("promos.tripDeals.expiresAt", {
         date: formatDateTimeTz(deal.expiresAt, locale, timezone),

@@ -101,9 +101,7 @@ export function TripRosterContent({
   compact?: boolean;
   /**
    * What reads as the roster's consequence rather than its footnote — on the
-   * departure page, the packing list derived from these very seats. It goes
-   * *above* the promote and activity disclosures below, which are the page's
-   * quiet tail-matter and not the crew's next job.
+   * departure page, the packing list derived from these very seats.
    */
   afterRoster?: ReactNode;
   /** The desk's taps and groups, once arrivals open — see `RosterSection`. */
@@ -125,20 +123,17 @@ export function TripRosterContent({
     requirement,
     waitlist,
     invitations,
-    activity,
     confirmMatches,
     diverCandidates,
     notesByBooking,
     courseNextStepByBooking,
     paymentsConnected,
     demand,
-    lastMinute,
     certificationSummaries,
     byBooking,
     diverQuery,
     tripDateIso,
     dealRequirement,
-    courseTarget,
   } = guests;
   const {
     rentalFit: rentalFitByBooking,
@@ -146,10 +141,6 @@ export function TripRosterContent({
     readiness: readinessByBooking,
     waiver: waiverByBooking,
   } = byBooking;
-  // The value is supplied by the page after the session gate. Keeping the role
-  // check at the page boundary prevents a client-rendered roster from ever
-  // deciding whether money controls should exist.
-  const showPromote = lastMinute.showPromote && mayDiscount;
 
   return (
     // `contents`, so these blocks lie in the page's flow; `space-y-10` is the
@@ -293,70 +284,106 @@ export function TripRosterContent({
       />
 
       {afterRoster}
+    </div>
+  );
+}
 
-      {/* Promote and Activity are a shop's taps and its audit trail, not the
-          roster a staffer prints to carry. */}
-      <div className="print:hidden">
-        {showPromote ? (
-          <AutoOpenDetails
-            openOnHash="last-minute-deal"
-            className="group/promote scroll-mt-6 border-t border-border"
-          >
-            <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-2 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-foreground">
-              <span>{t("trips.guests.promoteHeading")}</span>
-              <span className="flex items-center gap-2">
-                {lastMinute.promos.length > 0
-                  ? t("trips.guests.promoteSentCount", { count: lastMinute.promos.length })
-                  : null}
-                <DisclosureCaret
-                  direction="down"
-                  className="size-4 group-open/promote:rotate-180"
-                />
-              </span>
-            </summary>
-            <div className="pb-5">
-              <LastMinuteDealSection
-                shopSlug={shopSlug}
-                locale={locale}
-                recipients={lastMinute.recipients.map(({ person }) => ({
-                  personId: person.id,
-                  fullName: person.fullName,
-                  certification: certificationSummaries.get(person.id) ?? null,
-                }))}
-                requirement={dealRequirement}
-                course={courseTarget}
-                openSeats={spotsRemaining({ capacity: trip.capacity, booked: trip.booked })}
-                hasWaitlist={waitlist.length > 0}
-                cancelled={cancelled}
-                promos={lastMinute.promos}
-                promoRecipients={lastMinute.promoRecipients}
-                timezone={timezone}
-                status={noticeForForm(tripNotice, "last-minute-deal")}
-                tripId={trip.id}
-              />
-            </div>
-          </AutoOpenDetails>
-        ) : null}
-
-        <details className="group/activity border-y border-border">
+/**
+ * **Promote and Activity, on Details** (owner, 2026-10-05). Both used to close
+ * the Divers tab, under the roster. Neither is about the people coming: one
+ * sells the departure's empty seats to people who are not on it, the other is
+ * the departure's audit trail. Details is the tab about the departure itself,
+ * beside its booking link and its public page.
+ */
+export function TripPromoteAndActivity({
+  guests,
+  shopSlug,
+  locale,
+  timezone,
+  tripNotice,
+  mayDiscount,
+}: {
+  guests: TripGuests;
+  shopSlug: string;
+  locale: string;
+  timezone: string;
+  tripNotice?: FormNotice;
+  mayDiscount: boolean;
+}) {
+  const t = staffTranslator(locale);
+  const {
+    trip,
+    cancelled,
+    waitlist,
+    activity,
+    lastMinute,
+    certificationSummaries,
+    dealRequirement,
+    courseTarget,
+  } = guests;
+  // The value is supplied by the page after the session gate. Keeping the role
+  // check at the page boundary prevents a client-rendered roster from ever
+  // deciding whether money controls should exist.
+  const showPromote = lastMinute.showPromote && mayDiscount;
+  return (
+    // A shop's taps and its audit trail, not the departure a staffer prints.
+    <div className="print:hidden">
+      {showPromote ? (
+        <AutoOpenDetails
+          openOnHash="last-minute-deal"
+          className="group/promote scroll-mt-6 border-t border-border"
+        >
           <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-2 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-foreground">
-            <span>{t("trips.guests.activityHeading")}</span>
-            <DisclosureCaret direction="down" className="size-4 group-open/activity:rotate-180" />
+            <span>{t("trips.guests.promoteHeading")}</span>
+            <span className="flex items-center gap-2">
+              {lastMinute.promos.length > 0
+                ? t("trips.guests.promoteSentCount", { count: lastMinute.promos.length })
+                : null}
+              <DisclosureCaret direction="down" className="size-4 group-open/promote:rotate-180" />
+            </span>
           </summary>
           <div className="pb-5">
-            <ActivityLog
-              events={activity.map((event) => ({
-                id: event.id,
-                message: activityLine(t, event),
-                occurredAt: event.occurredAt,
-              }))}
+            <LastMinuteDealSection
+              shopSlug={shopSlug}
               locale={locale}
-              timeZone={timezone}
-              emptyText={t("trips.guests.noActivity")}
+              recipients={lastMinute.recipients.map(({ person }) => ({
+                personId: person.id,
+                fullName: person.fullName,
+                certification: certificationSummaries.get(person.id) ?? null,
+              }))}
+              requirement={dealRequirement}
+              course={courseTarget}
+              openSeats={spotsRemaining({ capacity: trip.capacity, booked: trip.booked })}
+              hasWaitlist={waitlist.length > 0}
+              cancelled={cancelled}
+              promos={lastMinute.promos}
+              promoRecipients={lastMinute.promoRecipients}
+              timezone={timezone}
+              status={noticeForForm(tripNotice, "last-minute-deal")}
+              tripId={trip.id}
             />
           </div>
-        </details>
-      </div>
+        </AutoOpenDetails>
+      ) : null}
+
+      <details className="group/activity border-y border-border">
+        <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-2 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-foreground">
+          <span>{t("trips.guests.activityHeading")}</span>
+          <DisclosureCaret direction="down" className="size-4 group-open/activity:rotate-180" />
+        </summary>
+        <div className="pb-5">
+          <ActivityLog
+            events={activity.map((event) => ({
+              id: event.id,
+              message: activityLine(t, event),
+              occurredAt: event.occurredAt,
+            }))}
+            locale={locale}
+            timeZone={timezone}
+            emptyText={t("trips.guests.noActivity")}
+          />
+        </div>
+      </details>
     </div>
   );
 }

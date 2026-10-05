@@ -394,6 +394,7 @@ const SPECIALTY_CODES: Record<DiveSpecialty, true> = {
   wreck: true,
   night: true,
   drysuit: true,
+  cavern: true,
 };
 
 /** Field separator in the encoded value — unreserved in a URI, and in no code. */

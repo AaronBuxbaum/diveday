@@ -408,6 +408,7 @@ describe("SiteFields — the required specialties (K-212)", () => {
       "wreck",
       "night",
       "drysuit",
+      "cavern",
     ]);
     expect(group.querySelector('input[name="requiresNitrox"]')).not.toBeNull();
     const grid = specialtyBoxes(group)[0].closest("label")?.parentElement;

@@ -521,7 +521,7 @@ new domain concept, define it here in the same PR.
   answers parked the record in medical review, it says a physician has to sign off, because the
   adult reading it is the one who takes the child to that physician.
 - **Specialties** — standalone certs gating specific activities: **Deep** (beyond 18 m/60 ft for
-  OW divers), **Night**, **Wreck**, **Drysuit** gate a **site/activity** and live in
+  OW divers), **Night**, **Wreck**, **Drysuit**, **Cavern** gate a **site/activity** and live in
   `specialty_certifications`. **Nitrox/EANx** (enriched air) is modeled separately (its evidence
   lives in `nitrox_certifications`) because it gates a **per-booking mix request**; a site or trip may
   *also* require a nitrox card to **board** (a nitrox charter), enforced as its own requirement flag
@@ -2143,7 +2143,7 @@ new domain concept, define it here in the same PR.
 
   A booked seat is therefore never proof a diver can board, and a refused sale always means the
   dock would have refused too.
-- **Technical / overhead rating** — trimix, helitrox, rebreather (CCR/SCR), cave and cavern,
+- **Technical / overhead rating** — trimix, helitrox, rebreather (CCR/SCR), cave,
   decompression procedures, extended range, TDI's Tec and Advanced Nitrox tickets. DiveDay's ladder is
   the *recreational* one and models none of these, so the importer **declines** them by name rather
   than bending one onto the nearest-looking rung — "Advanced Nitrox" is a gas certification, not
@@ -2151,7 +2151,9 @@ new domain concept, define it here in the same PR.
   records it by hand. Distinguished from a recreational card that simply isn't a rung (Master Scuba
   Diver, Sidemount, Photography), which gets the ordinary "isn't a level we gate on" note.
 - **Level vs. specialty** — a **level** (OW→Instructor) is a rank; a **specialty** (Deep, Wreck,
-  Night, Drysuit) is a distinct yes/no gate. Levels live in `certifications`; specialties live in
+  Night, Drysuit, Cavern) is a distinct yes/no gate. Cavern is the one a guided tour must not tick:
+  the card is only one of the things a cavern dive needs, so "Ready" means the card was seen and
+  nothing more, and a Full Cave diver blocks on a Cavern gate until staff record a Cavern card. Levels live in `certifications`; specialties live in
   `specialty_certifications`, both captured pending and usable only once verified — except a card
   brought in by the importer, which lands `verified` but (for a specialty only) still holds its gate
   until a staff confirm (see **Imported certification**). A diver's agency number identifies the

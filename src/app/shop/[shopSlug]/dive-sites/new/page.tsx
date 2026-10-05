@@ -7,6 +7,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { createDiveSiteForForm, SITE_NAME_TAKEN } from "@/db/dive-sites";
+import { diveSpecialty } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
@@ -38,7 +39,7 @@ export const instant = true;
 
 export const metadata: Metadata = { title: "Create dive site — DiveDay" };
 
-const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit"]);
+const specialtySchema = z.enum(diveSpecialty.enumValues);
 
 // Not `instant = false` (a dev-time validation opt-out only, with zero
 // production effect — see ADR 20260801-cache-components-e2e-activity-migration's

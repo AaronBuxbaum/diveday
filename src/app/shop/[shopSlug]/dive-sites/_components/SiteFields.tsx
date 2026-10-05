@@ -40,8 +40,8 @@ import {
   siteFormSectionLabels,
 } from "./site-form-sections";
 
-/** The specialty boxes' grid: two across on a phone, four from `sm`. */
-const SPECIALTY_GRID = "grid grid-cols-2 gap-3 sm:grid-cols-4";
+/** The specialty boxes' grid: two across on a phone, three from `sm`. */
+const SPECIALTY_GRID = "grid grid-cols-2 gap-3 sm:grid-cols-3";
 
 /**
  * The subset of a stored dive site the form needs to prefill. `undefined`
@@ -819,6 +819,10 @@ export function SiteFields({
           ) : (
             <div className={SPECIALTY_GRID}>{specialtyBoxes}</div>
           )}
+          {/* The one box a shop answers wrongly by describing the dive: a
+              guided cavern tour sells to divers who hold no card (ADR
+              20260718-specialty-site-cert-requirements, 2026-10-05). */}
+          <p className="-mt-2 text-sm text-muted">{t("shared.readiness.cavernHint")}</p>
         </>
       ),
     },

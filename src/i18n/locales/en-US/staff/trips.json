@@ -443,6 +443,7 @@
     "neverMind": "Never mind",
     "nitroxApproved": "Nitrox requested: verified certification, billed per dive. The mix is still analyzed and signed for at the fill station.",
     "nitroxUnverified": "Nitrox requested, but no verified certification. Planned as air.",
+    "diverColumnHeading": "Diver",
     "noEmailOnFile": "no email on file",
     "noPickupScheduled": "No hotel pickup scheduled",
     "noteDeletedToast": "Private note deleted.",

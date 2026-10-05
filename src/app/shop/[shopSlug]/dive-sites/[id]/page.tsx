@@ -25,6 +25,7 @@ import {
   updateDiveSiteForForm,
 } from "@/db/dive-sites";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
+import { diveSpecialty } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { listTripDives } from "@/db/trips";
 import { diverTranslator } from "@/i18n/messages";
@@ -69,7 +70,7 @@ export const instant = true;
 
 export const metadata: Metadata = { title: "Edit dive site — DiveDay" };
 
-const specialtySchema = z.enum(["deep", "wreck", "night", "drysuit"]);
+const specialtySchema = z.enum(diveSpecialty.enumValues);
 
 /**
  * How many of the upcoming departures carry a tide line (ADR

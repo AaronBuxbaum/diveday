@@ -186,8 +186,10 @@
       "deep": "Deep",
       "wreck": "Wreck",
       "night": "Night",
-      "drysuit": "Drysuit"
+      "drysuit": "Drysuit",
+      "cavern": "Cavern"
     },
+    "cavernHint": "Tick Cavern only if every diver must hold the card. A guided cavern tour for Open Water divers needs none.",
     "status": {
       "ready": "Ready",
       "blocked": "Blocked"
