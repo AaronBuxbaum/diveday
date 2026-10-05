@@ -11,6 +11,7 @@ const base = { denyFraming: true } as const;
 /** Every optional host-adding switch on at once, so nothing escapes the sweep. */
 const everyOption = {
   rumRegion: "us-east-1",
+  rumIdentityPoolId: "us-east-1:00000000-0000-0000-0000-000000000000",
   mediaRegion: "us-east-1",
   mediaPublicUrlBase: "https://media.dive.day",
   metaSignup: true,
@@ -119,14 +120,50 @@ describe("the report-only half", () => {
 
   describe("CloudWatch RUM's per-region hosts", () => {
     it("names the data plane and both credential hops", () => {
-      const connect = directives(reportOnlyPolicy({ ...base, rumRegion: "eu-central-1" })).get(
-        "connect-src",
-      );
+      const connect = directives(
+        reportOnlyPolicy({
+          ...base,
+          rumRegion: "eu-central-1",
+          rumIdentityPoolId: "eu-central-1:00000000-0000-0000-0000-000000000000",
+        }),
+      ).get("connect-src");
       expect(connect).toContain("https://dataplane.rum.eu-central-1.amazonaws.com");
       // Passing both an identity pool and a guest role selects aws-rum-web's
       // Cognito-then-STS flow, so the STS host is live and easy to miss.
       expect(connect).toContain("https://cognito-identity.eu-central-1.amazonaws.com");
       expect(connect).toContain("https://sts.eu-central-1.amazonaws.com");
+    });
+
+    it("takes the credential hops' region from the identity pool, as the SDK does", () => {
+      // aws-rum-web never reads the region argument for its credential calls:
+      // Cognito and STS are both addressed at `identityPoolId.split(":")[0]`
+      // (@aws-rum/web-core's BasicAuthentication). Deriving them from
+      // NEXT_PUBLIC_RUM_REGION instead let a deployment whose two values
+      // disagree, or whose region did not survive validation, report
+      // `connect-src` against cognito-identity.us-east-1 on every page load.
+      const connect = directives(
+        reportOnlyPolicy({
+          ...base,
+          rumRegion: "us-east-2",
+          rumIdentityPoolId: "us-east-1:00000000-0000-0000-0000-000000000000",
+        }),
+      ).get("connect-src");
+      expect(connect).toContain("https://dataplane.rum.us-east-2.amazonaws.com");
+      expect(connect).toContain("https://cognito-identity.us-east-1.amazonaws.com");
+      expect(connect).toContain("https://sts.us-east-1.amazonaws.com");
+      expect(connect).not.toContain("https://cognito-identity.us-east-2.amazonaws.com");
+    });
+
+    it("keeps the credential hops when the region variable is unusable", () => {
+      const connect = directives(
+        reportOnlyPolicy({
+          ...base,
+          rumRegion: null,
+          rumIdentityPoolId: "us-east-1:00000000-0000-0000-0000-000000000000",
+        }),
+      ).get("connect-src");
+      expect(connect).toContain("https://cognito-identity.us-east-1.amazonaws.com");
+      expect(connect).toContain("https://sts.us-east-1.amazonaws.com");
     });
 
     it("names none of them when RUM is not configured", () => {
@@ -152,6 +189,14 @@ describe("the report-only half", () => {
       // directive nor a host, so the policy is identical to the unconfigured
       // one. Compared whole rather than probed for a substring, which is both
       // stricter and not a thing that reads as URL sanitization.
+      expect(injected).toEqual(reportOnlyPolicy(base));
+    });
+
+    it("refuses an identity pool whose prefix is not a region", () => {
+      const injected = reportOnlyPolicy({
+        ...base,
+        rumIdentityPoolId: "eu-west-1; script-src *:abc",
+      });
       expect(injected).toEqual(reportOnlyPolicy(base));
     });
   });
