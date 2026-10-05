@@ -15,13 +15,14 @@
  *
  * ## Two namespaces, one question
  *
- * `/s/**` is a shop's storefront and every segment in it is a row. The one
- * dynamic route outside it — `/switching/<incumbent>` — was left soft when that
- * namespace was fixed, and answered 200 with a not-found page for six more
- * weeks on a surface DiveDay wants indexed (issue #1734). It is judged here
- * too, against the *very same list its own page judges the segment against*:
- * `getMigrationGuide` is a closed list this repository holds, so it settles
- * with no query at all.
+ * `/s/**` is a shop's storefront and every segment in it is a row. The
+ * dynamic routes outside it — `/switching/<incumbent>`, and since 2026-10-05
+ * `/product/<feature>` — are DiveDay's own pages, and the first was left soft
+ * when the storefront was fixed: it answered 200 with a not-found page for six
+ * more weeks on a surface DiveDay wants indexed (issue #1734). Each is judged
+ * here, against the *very same list its own page judges the segment against*:
+ * `getMigrationGuide` and `getFeaturePage` are closed lists this repository
+ * holds, so both settle with no query at all.
  *
  * **A route this module does not recognise is passed through untouched**, which
  * is how the one above stayed soft while `/s/**` was hard. So the recognition
@@ -69,6 +70,7 @@
 
 import { parseDiveSiteSlug } from "./dive-site-slug";
 import { EMBEDDED_TRIP_SEGMENT, isEmbedWidget } from "./embed-routes";
+import { getFeaturePage } from "./feature-pages";
 import { getMigrationGuide } from "./migration-guides";
 import { PUBLIC_SHOP_PREFIX } from "./public-routes";
 import { uuidParam } from "./uuid";
@@ -129,12 +131,13 @@ export function publicRouteShape(pathname: string): PublicRouteShape | null {
 const SHOP_NAMESPACE = PUBLIC_SHOP_PREFIX.slice(1);
 
 /**
- * The one-segment route outside `/s/**`, judged against its own page's own
- * list.
+ * The one-segment routes outside `/s/**`, each judged against its own page's
+ * own list.
  *
- * The closed list settles here: `/switching/checkfront` is refused with no
- * query, and a slug that *is* on the list gets `null` — "no opinion", which is
- * how every live guide goes on being served.
+ * The closed list settles here: `/switching/checkfront` and `/product/kiosk`
+ * are refused with no query, and a slug that *is* on its list gets `null` —
+ * "no opinion", which is how every live guide and feature page goes on being
+ * served.
  *
  * The segment name is a literal because the closed list ships no path
  * constant to import; `src/app/edge-refusal-coverage.test.ts` derives these
@@ -154,6 +157,7 @@ function closedListShape(namespace: string, rest: string[]): PublicRouteShape | 
   // the next one cannot be forgotten here.
   if (STATIC_SIBLINGS.has(`${namespace}/${candidate}`)) return null;
   if (namespace === "switching") return getMigrationGuide(candidate) ? null : ABSENT;
+  if (namespace === "product") return getFeaturePage(candidate) ? null : ABSENT;
   return null;
 }
 

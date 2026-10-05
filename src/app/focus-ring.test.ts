@@ -403,8 +403,7 @@ function classStringsWith(source: string, anchor: string, needs: readonly string
  * asserts on the rendered element: `DisclosureRow` (disclosure.test.tsx),
  * `SettingsRow` and the settings rail (SettingsRail.test.tsx), `FilterChips`,
  * the storefront's course cards (CoursesShelf.test.tsx), the About card
- * (TripAboutSection.test.tsx), the product page's chapter strip
- * (ProductChapterNav.test.tsx), the command palette's field
+ * (TripAboutSection.test.tsx), the command palette's field
  * (CommandPalette.test.tsx), `RowLink` (table.test.tsx), the tip picker
  * (TipAmountPicker.test.tsx), the roll-call mark (DiverRollCall.test.tsx,
  * CrewRollCall.test.tsx),

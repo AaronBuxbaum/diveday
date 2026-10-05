@@ -5,25 +5,14 @@ import { Suspense } from "react";
 import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
-import { MarketingHeroMotion, MarketingSectionMotion } from "@/components/MarketingReveal";
-import {
-  DiverBookingFallback,
-  FrontDeskReadinessFallback,
-  NightBeforeBriefFallback,
-  RecapPageFallback,
-  ShopPrepListFallback,
-} from "@/components/MarketingScreenFallbacks";
-import { CaptainPhoneFrame, MarginNotes, MarketingMockup } from "@/components/MarketingSections";
+import { MarketingSectionMotion } from "@/components/MarketingReveal";
+import { FeatureDirectory } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
-import { SectionCard } from "@/components/ui/card";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { groupLabelClass } from "@/components/ui/ledger";
 import {
   BANNER_TITLE_CLASS,
   DISPLAY_TITLE_CLASS,
   LEAD_TITLE_CLASS,
   MARKETING_EYEBROW_CLASS,
-  SUB_TITLE_CLASS,
 } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
@@ -35,7 +24,6 @@ import {
   productCapabilityIndex,
   sharedLinkCard,
 } from "@/lib/marketing";
-import { ProductChapterNav } from "./_components/ProductChapterNav";
 
 // `instant = true`: navigating here paints immediately. The request-scoped
 // read this page makes (`requestLocale()`) sits behind this segment's
@@ -45,15 +33,15 @@ import { ProductChapterNav } from "./_components/ProductChapterNav";
 export const instant = true;
 
 export const metadata: Metadata = {
-  title: "Product — the day, screen by screen | DiveDay",
+  title: "Dive shop software features — DiveDay",
   description:
-    "Five screens from a dive shop’s day with a note on each: the schedule, Today, the gear list and the brief, the manifest that works with no signal, and the recap.",
+    "Every DiveDay feature for dive shops, each with its own page: online booking, waivers and medical forms, certification checks, check-in, the boat manifest, rental gear, courses and payments.",
   alternates: { canonical: "/product" },
   openGraph: {
     ...sharedLinkCard,
-    title: "DiveDay product — the day, screen by screen",
+    title: "DiveDay features, from the first booking to the roll call",
     description:
-      "Bookings, waivers, cert checks, trip prep and the boat manifest, one screen at a time.",
+      "Each feature has its own page, with the screen that does the job and the demo opened on it.",
     url: "/product",
   },
   // `summary_large_image`: the OG block above names the shared link card
@@ -63,9 +51,9 @@ export const metadata: Metadata = {
   // never unfurls with the root layout's generic site-level words.
   twitter: {
     card: "summary_large_image",
-    title: "DiveDay product — the day, screen by screen",
+    title: "DiveDay features, from the first booking to the roll call",
     description:
-      "Bookings, waivers, cert checks, trip prep and the boat manifest, one screen at a time.",
+      "Each feature has its own page, with the screen that does the job and the demo opened on it.",
   },
 };
 
@@ -76,11 +64,11 @@ export const metadata: Metadata = {
  * was `<ProductBody locale={DEFAULT_DIVER_LOCALE} />` — the whole page, a
  * second time, in English. That bought the instant paint, and it cost the
  * visitor everything they did before the negotiated-locale body resolved: a
- * replaced subtree carries no DOM state over, so a tap on the anchor strip
- * below scrolled to a heading in a subtree that was about to be thrown away,
- * and an `es-ES` reader landed somewhere else on the page (the Spanish
- * chapters above it are taller). It was invisible in every en-US screenshot
- * and assertion, because both renders were the same words
+ * replaced subtree carries no DOM state over, so a tap on the chapter strip
+ * the page had then scrolled to a heading in a subtree that was about to be
+ * thrown away, and an `es-ES` reader landed somewhere else on the page (the
+ * Spanish chapters above it were taller). It was invisible in every en-US
+ * screenshot and assertion, because both renders were the same words
  * (FU-20260812-marketing-suspense-swap-discards-interaction).
  *
  * The paint is still instant, and it is `loading.tsx` — this segment's
@@ -105,63 +93,14 @@ export default async function ProductPage() {
   );
 }
 
-/**
- * The five chapters of the day, in the order the day runs them. This list is
- * the only place the sequence exists: the anchor strip under the hero, each
- * chapter's marker, and the `#id` they jump between all derive from it, so it
- * cannot disagree with itself. Reordering it renumbers everything at once.
- */
-const CHAPTER_IDS = ["booking", "readiness", "night-before", "dock", "recap"] as const;
-type ChapterId = (typeof CHAPTER_IDS)[number];
-type ChapterMark = { id: ChapterId; label: string; number: string };
-
-/**
- * The shared grammar of the day-arc chapters: a quiet numbered time-of-day
- * marker in the slot the eyebrow used to hold. The number is muted and the
- * time label carries the accent, so five of these read as one sequence while
- * each chapter's composition below stays its own.
- */
-function ChapterMarker({ mark, centered = false }: { mark: ChapterMark; centered?: boolean }) {
-  const { number, label } = mark;
-  return (
-    <p
-      className={`flex items-baseline gap-3 text-sm font-semibold tracking-widest uppercase ${
-        centered ? "justify-center" : ""
-      }`}
-    >
-      <span className="text-muted tabular-nums">{number}</span>
-      <span className="text-primary">{label}</span>
-    </p>
-  );
-}
-
 /** Cached per negotiated locale (DIVER_LOCALES — two entries) — no session-scoped content. */
 async function ProductBody({ locale }: { locale: DiverLocale }) {
   "use cache";
   cacheLife("max");
   const t = diverTranslator(locale);
 
-  const chapterLabels: Record<ChapterId, string> = {
-    booking: t("marketing.product.bookingEyebrow"),
-    readiness: t("marketing.product.readinessEyebrow"),
-    "night-before": t("marketing.product.nightBeforeEyebrow"),
-    dock: t("marketing.product.dockEyebrow"),
-    recap: t("marketing.product.recapEyebrow"),
-  };
-  const chapters: ChapterMark[] = CHAPTER_IDS.map((id, index) => ({
-    id,
-    label: chapterLabels[id],
-    number: `0${index + 1}`,
-  }));
-  // Looked up by name below rather than numbered by hand: a literal "04" on
-  // the dock chapter would go on reading 04 after the list above it changed.
-  const chapter = Object.fromEntries(chapters.map((mark) => [mark.id, mark])) as Record<
-    ChapterId,
-    ChapterMark
-  >;
-
-  // Every line in the reference index below, counted once so the sentence
-  // introducing it and the list itself can never disagree.
+  // Every line in the full list below, counted once so the sentence closing
+  // it and the rows themselves can never disagree.
   const capabilityCount = productCapabilityIndex.reduce(
     (total, group) => total + group.items.length,
     0,
@@ -191,20 +130,26 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
   return (
     <main className="flex-1">
       <MarketingSectionMotion />
-      <section className="border-b border-border">
-        <div className="mx-auto max-w-4xl px-6 py-20 text-center lg:py-28">
+      {/* The hero, left-aligned on the directory's own column and open at
+          the bottom: no rule and no band boundary between the promise and the
+          list that keeps it, so the title, the lede and the three phases share
+          one left edge (design review, 2026-10-05). It was centred over a
+          left-aligned grid, with a rule and 213px of air between them, and
+          read as two bands. */}
+      <section>
+        <div className="mx-auto max-w-6xl px-6 pt-20 pb-12 lg:pt-28">
           <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.product.eyebrow")}</p>
-          <h1 className={`mt-5 ${DISPLAY_TITLE_CLASS} sm:text-6xl`}>
+          <h1 className={`mt-5 max-w-4xl ${DISPLAY_TITLE_CLASS} sm:text-6xl`}>
             {t("marketing.product.heroTitle")}
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted">
+          <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">
             {t("marketing.product.heroDescription")}
           </p>
           {/* The nav tap that lands here is the most evaluation-intent click
               on the site; without its own CTA the first offered action was
               the nav's trial link — the wrong ask while a buyer is still
               verifying claims. Same one-primary block as the home hero. */}
-          <FunnelCtas locale={locale} source="product" className="mt-8 justify-center" />
+          <FunnelCtas locale={locale} source="product" className="mt-8" />
           <p className="mt-3 text-sm font-medium text-muted">{t("marketing.common.demoNote")}</p>
           <p className="mt-2 text-sm text-muted">
             {t("marketing.home.heroPriceLine", {
@@ -215,380 +160,69 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
         </div>
       </section>
 
-      {/* The day at a glance: five time-of-day markers, each an anchor into
-          its chapter. Scoped in a relative container so that the sticky nav
-          naturally scrolls away once the reader moves past chapter 05 (recap). */}
-      <div className="relative">
-        <ProductChapterNav
-          ariaLabel={t("marketing.product.arcTitle")}
-          title={t("marketing.product.arcTitle")}
-          chapters={chapters}
-        />
+      {/* The directory: every feature page, under the part of a shop's year it
+          serves, and since review on 2026-10-05 the full list as well. It is
+          the page's one idea (docs/design/surfaces.md, "/product"): a shop
+          owner arrives asking whether DiveDay does their job, finds the job by
+          its name, and reaches its page in one tap, or opens the row to read
+          everything the page holds. The rows come off the registry
+          (`src/lib/feature-pages.ts`), so a page added there is listed here
+          and on the homepage without either page naming it. The phases are
+          this page's sections, so they are its `h2`s.
 
-        {/* Chapter 01 — days before: the booking takes itself. */}
-        <section id="booking" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-20 lg:py-24">
-          <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-            <div>
-              <ChapterMarker mark={chapter.booking} />
-              <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
-                {t("marketing.product.bookingTitle")}
-              </h2>
-              {/* The builder's notes beside the screen (the 2026-09-24 voice
-                  decision, docs/design/brand.md): each names one thing on the
-                  mockup and gives its reason or its limit. The fifth note is
-                  the shop's own storefront and the embeds, and the one place on this
-                  page the built-to-order website is offered (H-64) — beside
-                  the shipped claim it extends, not in the reference index,
-                  which promises only the demo. */}
-              <MarginNotes
-                className="mt-6"
-                notes={[
-                  t("marketing.product.bookingNote1"),
-                  t("marketing.product.bookingNote2"),
-                  t("marketing.product.bookingNote3"),
-                  t("marketing.product.bookingNote4"),
-                  t("marketing.product.bookingNote5"),
-                ]}
-              />
-            </div>
-            <MarketingMockup label={t("marketing.product.bookingMockupLabel")}>
-              <DiverBookingFallback locale={locale} />
-            </MarketingMockup>
-          </div>
-        </section>
+          **The reference index lives in the rows now.** It was a band of its
+          own, one closed disclosure per group set like a spec sheet
+          (2026-09-17), and once each group became a feature page's checklist
+          its first twelve rows repeated the directory's twelve names one band
+          down. Each row's disclosure is that page's "What's in it" list, word
+          for word, and the three groups no page owns close the directory.
+          `#full-list` is where the homepage's "full list" link lands, so it
+          never arrives on this hero instead. The closing sentence counts every
+          line off the registry, so the total can never drift from the rows.
 
-        {/* Chapter 02 — before departure: one readiness answer. Mirrors chapter
-            01's grid so the two read as a pair — the mockup swaps sides. */}
-        <section id="readiness" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-20 lg:py-24">
-          <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-            <MarketingMockup
-              label={t("marketing.product.readinessMockupLabel")}
-              className="order-2 lg:order-1"
-            >
-              <FrontDeskReadinessFallback locale={locale} />
-            </MarketingMockup>
-            <div className="order-1 lg:order-2">
-              <ChapterMarker mark={chapter.readiness} />
-              <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
-                {t("marketing.product.readinessTitle")}
-              </h2>
-              <MarginNotes
-                className="mt-6"
-                notes={[
-                  t("marketing.product.readinessNote1"),
-                  t("marketing.product.readinessNote2"),
-                  t("marketing.product.readinessNote3"),
-                ]}
-              />
-            </div>
-          </div>
-        </section>
+          The `product-index` demo door that closed the old band went with it:
+          on a page this short it stood 880px above the close's pair, the
+          pressure that retired `home-mid`. */}
+      <section id="full-list" className="mx-auto max-w-6xl scroll-mt-10 px-6 pb-20 lg:pb-24">
+        <FeatureDirectory locale={locale} headingLevel="h2" lines />
+        <p className="mt-12 max-w-2xl text-lg leading-8 text-muted">
+          {t("marketing.product.boxDescription", { count: capabilityCount })}
+        </p>
+      </section>
 
-        {/* Chapter 03 — the night before: showing both the crew's prep list
-            and the diver's brief alongside live mockups of each. */}
-        <section id="night-before" className="scroll-mt-24 border-y border-border bg-surface">
-          <div className="mx-auto max-w-6xl px-6 py-20 lg:py-24">
-            <div>
-              <ChapterMarker mark={chapter["night-before"]} />
-              <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
-                {t("marketing.product.prepTitle")}
-              </h2>
-            </div>
-            <div className="mt-12 grid gap-10 md:grid-cols-2 lg:gap-12 items-start">
-              <div className="space-y-6">
-                <div>
-                  <p className={groupLabelClass()}>{t("marketing.product.prepShopLabel")}</p>
-                  <h3 className={`mt-2 ${SUB_TITLE_CLASS}`}>
-                    {t("marketing.product.prepShopTitle")}
-                  </h3>
-                  <p className="mt-2 leading-7 text-muted">{t("marketing.product.prepShopBody")}</p>
-                </div>
-                <MarketingMockup label={t("marketing.product.prepShopMockupLabel")}>
-                  <ShopPrepListFallback locale={locale} />
-                </MarketingMockup>
-              </div>
-              <div className="space-y-6">
-                <div>
-                  <p className={groupLabelClass()}>{t("marketing.product.prepDiverLabel")}</p>
-                  <h3 className={`mt-2 ${SUB_TITLE_CLASS}`}>
-                    {t("marketing.product.nightBeforeTitle")}
-                  </h3>
-                  <p className="mt-2 leading-7 text-muted">
-                    {t("marketing.product.nightBeforeBody")}
-                  </p>
-                </div>
-                <MarketingMockup label={t("marketing.product.nightBeforeMockupLabel")}>
-                  <NightBeforeBriefFallback locale={locale} />
-                </MarketingMockup>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Chapter 04 — at the dock: the differentiator gets the phone. */}
-        <section id="dock" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-20 lg:py-24">
-          {/* The phone gets the narrower column, not the wider one: it is a
-              fixed 384px object, so a 1.1fr column left it floating in ~110px of
-              slack on either side and pushed the story it illustrates away from
-              it. */}
-          <div className="grid gap-10 lg:grid-cols-[0.85fr_1fr] lg:items-center">
-            <div className="order-2 lg:order-1">
-              <MarketingHeroMotion>
-                <CaptainPhoneFrame
-                  label={t("marketing.product.captainPhoneLabel")}
-                  locale={locale}
-                  className="mx-auto max-w-sm"
-                />
-              </MarketingHeroMotion>
-            </div>
-            <div className="order-1 lg:order-2">
-              <ChapterMarker mark={chapter.dock} />
-              <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
-                {t("marketing.product.dockTitle")}
-              </h2>
-              <MarginNotes
-                className="mt-6"
-                notes={[
-                  t("marketing.product.dockNote1"),
-                  t("marketing.product.dockNote2"),
-                  t("marketing.product.dockNote3"),
-                  t("marketing.product.dockNote4"),
-                ]}
-              />
-              {/* The offline answer in the captain's words, kept as its own
-                  callout under the notes: `src/lib/marketing.test.ts` pins
-                  this key as the one place the offline claim is made in full. */}
-              <p className="mt-6 rounded-inset border border-border bg-surface-sunken p-4 text-sm leading-6 text-muted">
-                {t("marketing.product.dockNote")}
-              </p>
-            </div>
-          </div>
-          {/* A door out mid-page: the dock story is the differentiator, and a
-              convinced reader shouldn't have to scroll the rest of the day to
-              act on it (conversion review — one CTA at the bottom of ten
-              sections). Tagged `product-mid` rather than `product`: folded into
-              the page's own tag it could never be shown to have earned its
-              place, and the hero/closing pair keeps the original tag so their
-              history holds. */}
-          <SectionCard
-            as="div"
-            padding="lg"
-            className="mt-14 flex flex-col items-center gap-4 text-center sm:flex-row sm:justify-between sm:text-left"
-          >
-            <h3 className={SUB_TITLE_CLASS}>{t("marketing.common.midCtaTitle")}</h3>
-            <FunnelCtas locale={locale} source="product-mid" />
-          </SectionCard>
-        </section>
-
-        {/* Chapter 05 — after the boat is back: the day's earned moment, so the
-            chapter narrows to a single centered thought instead of a grid. */}
-        <section id="recap" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-20 lg:py-24">
-          <div className="grid gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-center">
-            <div>
-              <ChapterMarker mark={chapter.recap} />
-              <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
-                {t("marketing.product.recapTitle")}
-              </h2>
-              <MarginNotes
-                className="mt-6"
-                notes={[
-                  t("marketing.product.recapNote1"),
-                  t("marketing.product.recapNote2"),
-                  t("marketing.product.recapNote3"),
-                  t("marketing.product.recapNote4"),
-                ]}
-              />
-            </div>
-            <MarketingMockup label={t("marketing.product.recapMockupLabel")}>
-              <RecapPageFallback locale={locale} />
-            </MarketingMockup>
-          </div>
-        </section>
-      </div>
-
-      {/* Money is not a chapter — it runs under every one of them, so it sits
-          just outside the numbered arc with the plain eyebrow grammar. */}
+      {/* The rule the spec sheet's band used to draw: the directory and this
+          band now sit on the same ground, and one rule at the boundary is
+          what tells them apart. */}
       <section className="border-t border-border">
         <div className="mx-auto max-w-6xl px-6 py-20 lg:py-24">
           <div className="max-w-2xl">
-            <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.product.paymentEyebrow")}</p>
+            <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.product.noEyebrow")}</p>
             <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
-              {t("marketing.product.paymentTitle")}
+              {t("marketing.product.noTitle")}
             </h2>
-            <p className="mt-5 text-lg leading-8 text-muted">
-              {t("marketing.product.paymentDescription")}
-            </p>
-          </div>
-          {/* Two facts, held to the same 4xl measure as the paragraph above
-              them: stretched across the full 6xl grid each line ran ~95
-              characters, which is a wall, not a fact. */}
-          <dl className="mt-12 grid max-w-4xl gap-x-12 gap-y-8 md:grid-cols-2">
-            <div className="border-t border-border pt-5">
-              <dt className="font-semibold leading-6">{t("marketing.product.yourAccountTitle")}</dt>
-              <dd className="mt-2 text-sm leading-6 text-muted">
-                {t("marketing.product.yourAccountBody")}
-              </dd>
-            </div>
-            <div className="border-t border-border pt-5">
-              <dt className="font-semibold leading-6">{t("marketing.product.pricedTitle")}</dt>
-              <dd className="mt-2 text-sm leading-6 text-muted">
-                {t("marketing.product.pricedBody")}
-              </dd>
-            </div>
-          </dl>
-          {/* "What is this going to cost me" is one of the three questions a
-              burned owner arrives with, and this band — the only one on the
-              page about money — raised it, answered the other party's half, and
-              parked our own half behind a click ("What DiveDay itself costs →")
-              until 2026-08-28. An unlabeled door on the one band about money is
-              what a burned buyer reads as a card wall
-              (docs/product/marketing-review-20260827.md, diagnosis 2), so the
-              figure now stands in the link's own words.
-
-              It costs the page no control: this door already existed, and the
-              number arrives inside it rather than beside it. That is the same
-              move the homepage hero made — state the fact, do not open a
-              second door to it (docs/product/marketing.md, "The budget binds
-              controls, not facts").
-
-              Interpolated, never spelled: `earlyAccessPrice` is the single
-              source H-12 requires, and `src/lib/marketing.test.ts` now counts
-              this key among the sentences that must carry `{price}` and
-              `{cadence}`. */}
-          <Link
-            href="/pricing"
-            className={buttonClass({ variant: "link", flush: true, className: "mt-8 text-left" })}
-          >
-            {t("marketing.product.pricingLink", {
-              price: earlyAccessPrice.price,
-              cadence: t(earlyAccessPrice.cadenceKey),
-            })}
-          </Link>
-        </div>
-      </section>
-
-      {/* The reference index: every shipped capability, set like a spec sheet
-          — one hairline row per group, each row a native disclosure holding
-          that group's terse lines in two columns. No cards and no check marks:
-          the borders that survive are the ones that separate.
-
-          **Closed at rest, since 2026-09-17.** Rendered flat it was ninety-odd
-          one-line claims stacked nine groups deep — 2,900px of the page's
-          9,600, landing after the argument (claim → price → proof → demo door,
-          docs/design/surfaces.md) had already finished. Nobody reads a wall;
-          what a buyer actually does here is look for their own job and count
-          the breadth, and nine named rows carrying their own counts say the
-          breadth in one screen where the wall said it in eight. Every line is
-          still one keystroke away, still in the accessibility tree, and still
-          in the page source for find-in-page (Chromium and Firefox open a
-          closed `<details>` to reveal a match).
-
-          The earlier objection to a disclosure here was a *different* shape:
-          one link reading "The full list" under a heading and two lines, which
-          left 350px of empty band. The group names are the list. It was also
-          once out of reach of the localized-body swap that snapped a
-          disclosure shut mid-click; that swap is gone (see `ProductPage`). */}
-      <section className="border-y border-border bg-surface">
-        <div className="mx-auto max-w-6xl px-6 py-20 lg:py-24">
-          <div className="max-w-2xl">
-            <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.product.boxEyebrow")}</p>
-            <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
-              {t("marketing.product.boxTitle")}
-            </h2>
-            {/* Counted off the registry rather than written down, so the
-                number can never drift from the list under it. */}
             <p className="mt-4 text-lg leading-8 text-muted">
-              {t("marketing.product.boxDescription", { count: capabilityCount })}
+              {t("marketing.product.noDescription")}
             </p>
           </div>
-          <div className="mt-14">
-            {productCapabilityIndex.map((group) => (
-              // The row's own count, off the same registry as the lede's total
-              // — it is what a closed row owes the reader, and the one thing
-              // that cannot drift from what opening the row shows.
-              <details key={group.title} className="group border-t border-border">
-                <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 py-4 sm:gap-6 [&::-webkit-details-marker]:hidden">
-                  {/* A heading inside a `<summary>` (implicit `button` role) is
-                      flattened by some screen readers' heading navigation — the
-                      trade `src/components/ui/disclosure.tsx` documents, taken
-                      here for the same reason: the whole row has to be the
-                      control, and the band still needs its groups in the
-                      outline. */}
-                  <h3 className="text-base font-semibold tracking-tight text-balance">
-                    {t(group.title)}
-                  </h3>
-                  <span className="flex shrink-0 items-center gap-3 text-sm text-muted">
-                    <span className="tabular-nums">
-                      {t("marketing.product.boxGroupCount", { count: group.items.length })}
-                    </span>
-                    <DisclosureCaret direction="down" className="group-open:rotate-180" />
-                  </span>
-                </summary>
-                <ul className="gap-x-12 pb-8 text-sm leading-6 text-muted sm:columns-2">
-                  {group.items.map((item) => (
-                    <li key={item} className="break-inside-avoid py-1">
-                      {t(item)}
-                    </li>
-                  ))}
-                </ul>
-              </details>
+          <dl className="mt-12 grid gap-x-12 gap-y-8 md:grid-cols-3">
+            {notCovered.map((item) => (
+              <div key={item.title} className="border-t border-border pt-5">
+                <dt className="font-semibold leading-6">{item.title}</dt>
+                <dd className="mt-2 text-sm leading-6 text-muted">{item.detail}</dd>
+              </div>
             ))}
-            {/* The dare gets a door. This band's lede makes the page's most
-                explicit promise — every one of these lines is something you
-                can go and do in the live demo right now — and then left it
-                unspent: the reader who took the dare had two more bands to
-                scroll before anything let them act
-                (docs/product/marketing-review-20260827.md, "the dare gets a
-                door"). Tagged `product-index`, registered beside
-                `product-mid`, so the inventory's own conversion can be read
-                apart from the dock story's and from the page total.
-
-                It carries no words of its own, deliberately. The lede above is
-                the caption — a heading here would be the sentence restating
-                its own section that copy-restraint deletes, and the two
-                candidates on this page are already taken ("Rather see it than
-                read about it?" heads the mid-page card two bands up; the
-                closing band names the roles). So the door reads as the list's footer,
-                the way the homepage records band's closing link does: a rule
-                that terminates the hairlines above it, then the pair, at the
-                same left margin as the group rows. No card either — this band
-                is a spec sheet, and a rounded box at the bottom of it would be
-                the one object in the section that isn't a hairline. */}
-            <div className="border-t border-border pt-8">
-              <FunnelCtas locale={locale} source="product-index" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-6 py-20 lg:py-24">
-        <div className="max-w-2xl">
-          <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.product.noEyebrow")}</p>
-          <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
-            {t("marketing.product.noTitle")}
-          </h2>
-          <p className="mt-4 text-lg leading-8 text-muted">
-            {t("marketing.product.noDescription")}
-          </p>
-        </div>
-        <dl className="mt-12 grid gap-x-12 gap-y-8 md:grid-cols-3">
-          {notCovered.map((item) => (
-            <div key={item.title} className="border-t border-border pt-5">
-              <dt className="font-semibold leading-6">{item.title}</dt>
-              <dd className="mt-2 text-sm leading-6 text-muted">{item.detail}</dd>
-            </div>
-          ))}
-        </dl>
-        {/* Safe-to-leave, said where the objection actually peaks. It is one
+          </dl>
+          {/* Safe-to-leave, said where the objection actually peaks. It is one
             third of the positioning spine and the named counter to "you're new
             and unproven" (docs/product/marketing.md), and until now `/product`
             only implied it — one line inside a reference list of ninety-odd. The
             terms come from the shared `fullShopExport` claim rather than a
             second wording of it, so this page and the pricing FAQ can never
             drift apart. */}
-        <p className="mt-12 max-w-3xl text-lg leading-8 text-muted">
-          {t("marketing.product.leavingNote", { terms: t(fullShopExport.termsKey) })}
-        </p>
+          <p className="mt-12 max-w-3xl text-lg leading-8 text-muted">
+            {t("marketing.product.leavingNote", { terms: t(fullShopExport.termsKey) })}
+          </p>
+        </div>
       </section>
 
       <section className="border-t border-border bg-surface">

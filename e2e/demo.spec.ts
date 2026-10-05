@@ -46,8 +46,9 @@ test("demo role switcher moves from owner to instructor and back", async ({ page
 // The homepage's pre-entry role picker is deliberately gone: it put five more
 // controls in the hero (nine total — decision overload for a first-time
 // buyer), duplicating the in-app role switcher one click away. Role-by-role
-// exploration is covered by the switcher test above; the diver preview lives
-// on the diver's row of the homepage's daily-moments section (see marketing.spec.ts).
+// exploration is covered by the switcher test above; the diver preview is the
+// online booking page's own demo door, which opens the demo as a diver on the
+// shop's public schedule (see marketing.spec.ts).
 
 test("an onboarded trial shop is a real shop, not demo mode", async ({ page }) => {
   // Unique per run: a trial shop is a real shop, so nothing ever clears it —

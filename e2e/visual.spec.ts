@@ -3,6 +3,7 @@ import type { Browser, Page } from "@playwright/test";
 import { AFTER_STATE_TEST_IDS } from "../src/app/ready/[token]/_components/AfterState";
 import { REVEAL_MARKER_ATTRIBUTE, REVEAL_READY_ATTRIBUTE } from "../src/components/MarketingReveal";
 import { DEMO_RECAP_BOOKING_ID } from "../src/db/seed";
+import { type FeaturePageSlug, featurePagePath } from "../src/lib/feature-pages";
 import { OFFLINE_MANIFEST_PENDING_GRACE_MS } from "../src/lib/offline-manifest-store";
 import {
   OFFLINE_MANIFEST_AGING_MS,
@@ -1313,8 +1314,8 @@ async function waitForEntranceAnimations(page: Page) {
  * Deliberately *not* `reducedMotion: "reduce"` on the context, which would
  * reach the same CSS through the app's own kill-switch: that also flips every
  * `matchMedia("(prefers-reduced-motion: reduce)")` branch in the tree —
- * `MarketingReveal`, `MissingDiversGrid`'s ring, `useExitAnimation`,
- * `ProductChapterNav` — and the suite would quietly stop photographing the app
+ * `MarketingReveal`, `MissingDiversGrid`'s ring, `useExitAnimation` — and the
+ * suite would quietly stop photographing the app
  * a standard-motion reader sees. Deliberately not `animation: none` either:
  * `.marketing-reveal-pending` holds `opacity: 0` in its base style and relies
  * on its animation's fill to become visible, so cancelling animations would
@@ -2173,9 +2174,10 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "landing", scheme);
       });
 
-      // The other two buyer-facing sales surfaces: the product narrative
-      // (readiness, dock, diver arc, honest-no scope) and the pricing page
-      // with its objection FAQ. Copy changes here are product changes.
+      // The other two buyer-facing sales surfaces: the features hub (every
+      // feature page by phase with its checklist folded under it, the groups
+      // no page owns, honest-no scope) and the pricing page with its
+      // objection FAQ. Copy changes here are product changes.
       test(`the product page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/product");
         await capture(page, "product", scheme);
@@ -3394,6 +3396,90 @@ for (const scheme of ["light", "dark"] as const) {
           .getByRole("heading", { name: "Rezdy sells the seats. DiveDay runs the boat." })
           .waitFor();
         await capture(page, "switching-rezdy", scheme);
+      });
+
+      // The twelve feature pages (`src/lib/feature-pages.ts`, H-93). One
+      // template draws them all, so what differs from page to page is the copy
+      // and the screen each one draws (`src/components/MarketingFeatureScreens.tsx`
+      // and the three older drawings it reuses). Every page is captured because
+      // every page draws a different screen, and the screen is the part a diff
+      // here should be read against. Spelled out one by one rather than looped,
+      // so each name is one `scripts/route-coverage.json` can find.
+      const openFeaturePage = async (page: Page, slug: FeaturePageSlug) => {
+        await page.goto(featurePagePath(slug));
+        // The route owns a loading.tsx, so the page's own <h1> is the readiness
+        // proof, as on the onboarding form: the skeleton draws none.
+        await page.getByRole("heading", { level: 1 }).waitFor();
+      };
+
+      test(`the online booking feature page renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openFeaturePage(page, "online-booking");
+        await capture(page, "feature-online-booking", scheme);
+      });
+
+      test(`the website feature page renders true to the design (${scheme})`, async ({ page }) => {
+        await openFeaturePage(page, "website");
+        await capture(page, "feature-website", scheme);
+      });
+
+      test(`the waivers feature page renders true to the design (${scheme})`, async ({ page }) => {
+        await openFeaturePage(page, "waivers");
+        await capture(page, "feature-waivers", scheme);
+      });
+
+      test(`the certifications feature page renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openFeaturePage(page, "certifications");
+        await capture(page, "feature-certifications", scheme);
+      });
+
+      test(`the messages feature page renders true to the design (${scheme})`, async ({ page }) => {
+        await openFeaturePage(page, "messages");
+        await capture(page, "feature-messages", scheme);
+      });
+
+      test(`the check-in feature page renders true to the design (${scheme})`, async ({ page }) => {
+        await openFeaturePage(page, "check-in");
+        await capture(page, "feature-check-in", scheme);
+      });
+
+      test(`the boat manifest feature page renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openFeaturePage(page, "boat-manifest");
+        await capture(page, "feature-boat-manifest", scheme);
+      });
+
+      test(`the dive sites feature page renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openFeaturePage(page, "dive-sites");
+        await capture(page, "feature-dive-sites", scheme);
+      });
+
+      test(`the rental gear feature page renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openFeaturePage(page, "rental-gear");
+        await capture(page, "feature-rental-gear", scheme);
+      });
+
+      test(`the schedule feature page renders true to the design (${scheme})`, async ({ page }) => {
+        await openFeaturePage(page, "schedule");
+        await capture(page, "feature-schedule", scheme);
+      });
+
+      test(`the courses feature page renders true to the design (${scheme})`, async ({ page }) => {
+        await openFeaturePage(page, "courses");
+        await capture(page, "feature-courses", scheme);
+      });
+
+      test(`the payments feature page renders true to the design (${scheme})`, async ({ page }) => {
+        await openFeaturePage(page, "payments");
+        await capture(page, "feature-payments", scheme);
       });
 
       /**

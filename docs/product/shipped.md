@@ -7,6 +7,32 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## A page for every feature (delivered 2026-10-05)
+
+H-93. Twelve feature pages under `/product/<feature>` (online booking, the shop's website, waivers
+and medical forms, certification checks, messages, check-in, the boat manifest and roll call, dive
+sites, rental gear, the schedule and crew, courses, payments), from one registry
+(`src/lib/feature-pages.ts`) and one template: a headline about what the shop gets beside the real
+screen and three builder's notes, how it works, everything it includes (that page's whole group of
+`productCapabilityIndex`, now filed by page, ending in what it does not do, with the price and the
+Data export button beside it), three questions shops ask (`FAQPage`), the close, and three related
+pages. Each page's "Try the live demo" opens the
+demo on its own screen (`src/lib/demo-landings.ts`), tagged `feature-<slug>` and
+`feature-<slug>-close`. The Spanish manifest is *el manifiesto* everywhere and the roster *el
+listado*; `check:shop-word` refuses *listado del barco* (#1957).
+
+The homepage now follows one booking in five steps (book, sign, the morning check, the roll call
+after the dive, the recap), each a screen, two builder's notes and a link to its feature page, and its
+title says what the shop gets ("Every diver booked, signed, checked and accounted for"). Under the
+steps, `FeatureDirectory` lists every feature page by the part of a shop's year it serves; the same
+directory is the body of `/product`, which became the hub: hero, the directory with each page's
+full checklist folded under its row, what DiveDay doesn't do, the close. The hub's six-chapter tour, its chapter strip and its payment band
+were deleted, as were the homepage's four breadth cards (`FeatureGroupsGrid`,
+`productFeatureGroups`); `home-diver-moment`, `home-desk-moment`, `home-dock-moment`,
+`product-mid` and `product-index` stay registered as retired tags. `/pricing`'s included list names the demo shop
+instead of a practice shop (#1959), its setup answer says a person sets the shop up from one email,
+and `/about`'s export check is done in the demo.
+
 ## No-show frees the seat (delivered 2026-09-11)
 
 Item 11 of the 2026-08-27 sweep (issue #1209). `bookings.status = 'no_show'` had existed since the

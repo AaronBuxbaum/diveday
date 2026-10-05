@@ -9,7 +9,6 @@ import {
   ImportPreviewFallback,
   NightBeforeBriefFallback,
   RecapPageFallback,
-  ShopPrepListFallback,
 } from "./MarketingScreenFallbacks";
 
 afterEach(cleanup);
@@ -22,7 +21,6 @@ const EVERY_MOCK = [
   ["DiverBookingFallback", DiverBookingFallback],
   ["RecapPageFallback", RecapPageFallback],
   ["NightBeforeBriefFallback", NightBeforeBriefFallback],
-  ["ShopPrepListFallback", ShopPrepListFallback],
 ] as const;
 
 /** A mock's two parts: its app bar and the body under it. */
@@ -41,6 +39,21 @@ function insetOf(element: Element) {
   expect(steps).toHaveLength(1);
   return steps[0];
 }
+
+/**
+ * The silence: an illustration names nothing on its own. A page frames it in
+ * `MarketingMockup`, whose `aria-label` the page resolves from its own bundle;
+ * a mock that grew its own `role="img"` or `aria-label` would give one picture
+ * a second name, and the English one baked into the component would never
+ * reach a Spanish reader.
+ */
+describe("the mocks' accessible names", () => {
+  it.each(EVERY_MOCK)("%s gives itself none", (_name, Mock) => {
+    const { container } = render(<Mock locale="en-US" />);
+    expect(container.querySelectorAll("[aria-label]")).toHaveLength(0);
+    expect(container.querySelectorAll('[role="img"]')).toHaveLength(0);
+  });
+});
 
 /**
  * The bar's label sat 16px in over bodies inset 20px, so the shop name and the
@@ -192,20 +205,45 @@ describe("MarketingScreenFallbacks", () => {
       expect(screen.getAllByText("Mark boarded")).toHaveLength(2);
       expect(screen.getAllByText("Mark not boarded")).toHaveLength(2);
     });
+
+    // The homepage's roll-call step draws the checkpoint the hero's phone does
+    // not: the same copy after the first dive, where the exception is "not back
+    // aboard" and never "not boarded", which after a dive would mark a diver
+    // still in the water as accounted for (DOM-H3).
+    it("draws the after-dive checkpoint with the after-dive verbs", () => {
+      render(<CaptainRollCallFallback locale="en-US" checkpoint="afterDive" />);
+      expect(screen.getByText("Saved 6:52 AM")).toBeInTheDocument();
+      expect(screen.getByText("After dive 1 roll call")).toBeInTheDocument();
+      expect(screen.getByText("After dive 1")).toBeInTheDocument();
+      expect(screen.getByText("Boarded", { selector: "button" })).toBeInTheDocument();
+      expect(screen.getAllByText("Mark boarded")).toHaveLength(1);
+      expect(screen.getAllByText("Mark not back aboard")).toHaveLength(2);
+      expect(screen.queryByText("Mark not boarded")).toBeNull();
+      expect(screen.queryByText("Before departure roll call")).toBeNull();
+    });
+
+    it("draws the after-dive checkpoint in Spanish", () => {
+      render(<CaptainRollCallFallback locale="es-ES" checkpoint="afterDive" />);
+      // The live roll call's heading form, "Pase de lista · …" (es-ES README).
+      expect(screen.getByText("Pase de lista · Después de la inmersión 1")).toBeInTheDocument();
+      expect(screen.getAllByText("Marcar sin regresar a bordo")).toHaveLength(2);
+      expect(screen.getByText("Embarcado", { selector: "button" })).toBeInTheDocument();
+    });
   });
 
-  describe("ShopPrepListFallback, the Gear tab", () => {
-    it("renders in English with the tab's own sections", () => {
-      render(<ShopPrepListFallback locale="en-US" />);
-      expect(screen.getByText("Tanks")).toBeInTheDocument();
-      expect(screen.getByText("Sizes still missing")).toBeInTheDocument();
-      expect(screen.getByText("Rental kit")).toBeInTheDocument();
+  describe("RecapPageFallback, the diver's after-trip page", () => {
+    it("draws the dive log entry, the crew's note and the one ask", () => {
+      render(<RecapPageFallback locale="en-US" />);
+      // The keepsake and the one ask, the two blocks the homepage's recap
+      // step quotes: the shop wrote something, and the diver is asked once.
+      expect(screen.getByText("Dive log entry")).toBeInTheDocument();
+      expect(screen.getByText("From your crew")).toBeInTheDocument();
+      expect(screen.getByText("How was your day?")).toBeInTheDocument();
     });
 
     it("renders in Spanish", () => {
-      render(<ShopPrepListFallback locale="es-ES" />);
-      expect(screen.getByText("Faltan tallas")).toBeInTheDocument();
-      expect(screen.getByText("Equipo de alquiler")).toBeInTheDocument();
+      render(<RecapPageFallback locale="es-ES" />);
+      expect(screen.getByText("De tu tripulación")).toBeInTheDocument();
     });
   });
 

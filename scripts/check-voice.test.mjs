@@ -478,7 +478,7 @@ describe("the four shapes (2026-09-24)", () => {
         [
           // Rendered on every page by design.
           { key: "marketing.common.demoNote", value: "The demo opens a working sample shop." },
-          { key: "marketing.features.a", value: "The demo opens a working sample shop." },
+          { key: "marketing.featureChrome.a", value: "The demo opens a working sample shop." },
           { key: "switching.common.b", value: "The demo opens a working sample shop." },
           { key: "marketing.guides.shared.c", value: "The demo opens a working sample shop." },
           // The name of a thing, on three pages.
@@ -528,6 +528,9 @@ describe("the four shapes (2026-09-24)", () => {
     expect(pageOf("switching.spreadsheet.title")).toBe("switching.spreadsheet");
     expect(pageOf("account.onboard.trialNote")).toBe("onboard");
     expect(pageOf("manifest.rollCall.title")).toBeNull();
+    expect(pageOf("marketing.featurePages.waivers.lede")).toBe("featurePage.waivers");
+    expect(pageOf("marketing.featurePages.rentalGear.faq1A")).toBe("featurePage.rentalGear");
+    expect(pageOf("marketing.featureChrome.stepsTitle")).toBeNull();
   });
 
   it("holds Spanish to the same shapes with its own stopwords", () => {

@@ -158,21 +158,24 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
       answer: t("marketing.pricing.faq.seeBefore.answer"),
     },
     {
-      // Counted against the real form: /onboard asks for six fields (shop
-      // name, link, timezone, then the owner's name, email and password) and
-      // its action inserts the shop row on submit. The spreadsheet is named as
-      // its own step because it is one — but the importer's preview belongs to
-      // the `switching` row below, not here: in the row-major two-column grid
-      // this row and that one are vertically adjacent in the left column, and
-      // both used to close on the same eight-word promise about seeing what
-      // will happen before anything is saved. This is the time question, so it
-      // ends on time.
+      // Counted against what setup is now: one email to the onboarding
+      // address, and a person creates the shop (its name, web address and
+      // timezone) and the owner's login, because every shop is set up by
+      // hand (ADR 20260925-shops-are-set-up-by-hand). Until 2026-10-05 this
+      // answer still counted the six fields of a sign-up form no visitor can
+      // reach. The spreadsheet is named as its own step because it is one —
+      // but the importer's preview belongs to the `switching` row below, not
+      // here: in the row-major two-column grid this row and that one are
+      // vertically adjacent in the left column, and both used to close on the
+      // same eight-word promise about seeing what will happen before anything
+      // is saved. This is the time question, so it ends on time.
       question: t("marketing.pricing.faq.setupTime.question"),
-      answer: t("marketing.pricing.faq.setupTime.answer"),
+      answer: t("marketing.pricing.faq.setupTime.answer", { email: ONBOARDING_EMAIL }),
     },
     // "Does the manifest work offline?" left this list on 2026-08-28: a
-    // product question wearing pricing clothes, and /product answers it at
-    // depth beside the screen it is about (`marketing.product.dockNote`).
+    // product question wearing pricing clothes, and the boat manifest page
+    // answers it at depth beside the screen it is about
+    // (`marketing.featurePages.boatManifest`).
     // Nothing on this page decides on it (docs/product/marketing-review-20260827.md).
     {
       question: t("marketing.pricing.faq.dataIfNotWorking.question"),

@@ -1,14 +1,14 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
-import {
-  CaptainRollCallFallback,
-  DiverBookingFallback,
-  FrontDeskReadinessFallback,
-  RecapPageFallback,
-} from "@/components/MarketingScreenFallbacks";
+import { CaptainRollCallFallback } from "@/components/MarketingScreenFallbacks";
+import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { groupLabelClass } from "@/components/ui/ledger";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
-import { productFeatureGroups } from "@/lib/marketing";
+import { FEATURE_PHASES, featurePagePath, featurePagesIn } from "@/lib/feature-pages";
+import { type CapabilityGroupId, capabilityGroup, hubOnlyCapabilityGroups } from "@/lib/marketing";
 
 /**
  * Shared marketing rendering used by the landing, product, and pricing pages so
@@ -24,12 +24,9 @@ import { productFeatureGroups } from "@/lib/marketing";
  * a `role="img"`, it clips its contents (`overflow-hidden`), and
  * `CaptainPhoneFrame` draws it as a `screen` — a corner concentric with a phone
  * bezel and no border — three things the canonical card has no prop for and
- * should not grow one for. `FeatureGroupsGrid`'s cards are `bg-background`
- * because they render on a `bg-surface` band on the homepage, and `SectionCard`
- * hard-codes `bg-surface`; passing a second background utility through
- * `className` would be resolved by stylesheet order rather than by intent.
- * Converting that one is a decision in `src/components/ui/card.tsx` about what
- * a card on a surface band is, not a call-site override here.
+ * should not grow one for. `FeatureDirectory` draws no panel at all: it is a
+ * table of contents, rows between hairlines, so it reads the same on the
+ * homepage's `bg-surface` band and on the hub's page background.
  */
 /**
  * The phone `CaptainPhoneFrame` draws: a 2.5rem corner, a 9px frame, and
@@ -85,7 +82,10 @@ export function MarketingMockup({
   );
 }
 
-/** The captain roll-call mockup inside a phone device frame (landing hero + product dock). */
+/**
+ * The captain roll-call mockup inside a phone device frame: the homepage and
+ * `/about` heroes, and the boat manifest feature page's screen.
+ */
 export function CaptainPhoneFrame({
   label,
   locale,
@@ -108,23 +108,6 @@ export function CaptainPhoneFrame({
 }
 
 /**
- * Only the illustration — never a `label`, which the caller must resolve
- * through a translator (see `marketing.home.moments.*.mockupLabel` and
- * `MarketingMockup`'s own `aria-label`).
- */
-export const marketingMockups = {
-  diverBooking: { render: (locale: DiverLocale) => <DiverBookingFallback locale={locale} /> },
-  frontDeskReadiness: {
-    render: (locale: DiverLocale) => <FrontDeskReadinessFallback locale={locale} />,
-  },
-  // The roll call as a flat still, for the homepage's dock screen; the hero
-  // shows the same screen inside `CaptainPhoneFrame`, and a second bezel on
-  // one page would read as two phones.
-  captainRollCall: { render: (locale: DiverLocale) => <CaptainRollCallFallback locale={locale} /> },
-  recap: { render: (locale: DiverLocale) => <RecapPageFallback locale={locale} /> },
-} as const;
-
-/**
  * The builder's notes beside a screen: the register the public pages speak
  * in since the 2026-09-24 voice decision (docs/design/brand.md, "The voice on
  * the public pages"). A numbered list, each item one note under twenty words
@@ -134,7 +117,8 @@ export const marketingMockups = {
  * like a body list's.
  *
  * Structure only: the notes arrive resolved from the bundle, because the same
- * list renders on `/` and on `/product` and neither may spell a note inline.
+ * list renders on `/`, on every feature page and on the switching and pricing
+ * pages, and none of them may spell a note inline.
  */
 export function MarginNotes({
   notes,
@@ -156,76 +140,158 @@ export function MarginNotes({
 }
 
 /**
- * The `productFeatureGroups` grid rendered on landing and pricing: four cards,
- * each an eyebrow, a heading and one summary paragraph.
+ * Every feature page, listed under the part of a shop's year it serves: what
+ * happens before a diver arrives, on the dive day, and across the season
+ * (`FEATURE_PHASES`). Each row is the page's name and its one-sentence summary,
+ * and the whole row is the link, so a reader scanning for "waivers" lands on
+ * the waivers page in one tap.
  *
- * **One density, deliberately.** This grid used to take `featuresPerGroup` and
- * branch between a checklist of `✓` bullets and a paragraph. `/product` was the
- * only caller that ever asked for the checklist, and when its middle density
- * was removed on 2026-08-13 the branch became unreachable — leaving 26
- * translated claims in two locales that no page could render. The checklist and
- * the prop are gone; the full inventory lives on `/product` as
- * `productCapabilityIndex`, which is the density a buyer came for.
+ * **The homepage and the hub render the same directory**, which is the point:
+ * the registry in `src/lib/feature-pages.ts` is the one list of pages, and a
+ * page added there appears on both without either page naming it. It replaced
+ * `FeatureGroupsGrid`'s four summary cards (2026-10-05), which described the
+ * product in four paragraphs and linked nowhere.
  *
- * The `columns` prop went the same way and for the same reason: pricing had
- * already dropped this grid, so the two-column branch had no caller either.
- * One caller, one width — if a second page wants a narrower grid, the prop
- * comes back then, with a page behind it.
+ * **On the hub the directory is also the full list** (`lines`). Each row
+ * carries a disclosure under the link, counted, holding that page's "What's in
+ * it" checklist (its group of `productCapabilityIndex`, word for word), and
+ * the three groups no single page owns (the diver record, running the shop,
+ * your records) follow the phases as rows of their own. Until review on
+ * 2026-10-05 the hub listed the same twelve names twice, the directory and
+ * then a spec sheet one band down; now there is one list, and every line is
+ * still on the page for find-in-page (Chromium and Firefox open a closed
+ * `<details>` to reveal a match). The homepage only routes, so it draws the
+ * rows without them.
  *
- * The groups arrive as message keys (src/lib/marketing.ts holds structure, not
- * words), so the caller passes the negotiated `locale` and the words resolve
- * here.
+ * `headingLevel` follows the page: the phases sit under the homepage's band
+ * heading (`h3`), and are the hub's own sections (`h2`).
  */
-export function FeatureGroupsGrid({ locale }: { locale: DiverLocale }) {
+export function FeatureDirectory({
+  locale,
+  headingLevel = "h3",
+  lines = false,
+}: {
+  locale: DiverLocale;
+  headingLevel?: "h2" | "h3";
+  lines?: boolean;
+}) {
   const t = diverTranslator(locale);
+  const Heading = headingLevel;
 
   return (
-    // **An ordered list, because the four groups are a sequence.** They are the
-    // phases of one shop's day in the order it happens — welcome a diver, get
-    // them ready, run the day, hand it off — and the old rendering as four equal
-    // boxes threw that away, leaving the band to *assert* breadth where it could
-    // have shown it. Numbering them is the whole visual idea: it costs no copy,
-    // adds the one thing four assertions could not say on their own, and reads
-    // as a track rather than a shelf (product owner, 2026-08-20 — keep the
-    // cards, make them more visual, and not with a photograph).
-    //
-    // `<ol>` rather than a div of articles so the sequence is real for a screen
-    // reader too, not just a drawn effect.
-    //
-    // Four columns wait for `xl`: at 1024 the ~226px cards wrapped their
-    // uppercase eyebrows onto two lines and knocked the four headings onto
-    // three different baselines — a comfortable 2×2 reads calmer there.
-    <ol className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {productFeatureGroups.map((group, index) => (
-        <li
-          key={group.eyebrow}
-          className="relative rounded-panel border border-border bg-background p-5 sm:p-6"
-        >
-          {/* The rule that turns four cards into one track. Only at `xl`, where
-              the four genuinely sit on one row — at `sm` the 2×2 would have it
-              pointing at nothing — and never off the last card, which would
-              trail into the margin. `gap-4` is 1rem, so `w-4` closes exactly
-              the gutter. */}
-          {index < productFeatureGroups.length - 1 ? (
-            <span
-              aria-hidden="true"
-              className="absolute top-10 left-full hidden h-px w-4 bg-border xl:block"
-            />
-          ) : null}
-          <span
-            aria-hidden="true"
-            className="flex size-8 items-center justify-center rounded-full bg-primary-tint text-sm font-semibold text-primary tabular-nums"
-          >
-            {index + 1}
-          </span>
-          <p className={`mt-4 ${groupLabelClass("primary")}`}>{t(group.eyebrow)}</p>
-          {/* Balanced, as the ramp leaves each heading that wraps to decide:
-              in the four-up grid's 246px column one title left "money" alone
-              on its last line. */}
-          <h3 className="mt-3 font-semibold leading-6 text-balance">{t(group.title)}</h3>
-          <p className="mt-3 text-sm leading-6 text-muted">{t(group.summary)}</p>
-        </li>
+    <div className="grid gap-x-10 gap-y-12 lg:grid-cols-3">
+      {FEATURE_PHASES.map((phase) => (
+        <div key={phase}>
+          <Heading className={groupLabelClass("primary")}>
+            {t(`marketing.featureChrome.phases.${phase}`)}
+          </Heading>
+          <ul className="mt-4 border-t border-border">
+            {featurePagesIn(phase).map((page) => (
+              <li key={page.slug} className="border-b border-border">
+                <Link
+                  href={featurePagePath(page.slug)}
+                  className={`group flex flex-col ${lines ? "pt-4" : "py-4"}`}
+                >
+                  <span className="flex items-center justify-between gap-3">
+                    <span
+                      id={lines ? pageNameId(page.key) : undefined}
+                      className={`${SECTION_TITLE_CLASS} transition-colors group-hover:text-primary`}
+                    >
+                      {t(`marketing.featurePages.${page.key}.name`)}
+                    </span>
+                    <DiveDayIcon
+                      name="arrow-right"
+                      className="size-4 shrink-0 text-muted transition-colors group-hover:text-primary"
+                    />
+                  </span>
+                  <span className="mt-1 text-sm leading-6 text-muted">
+                    {t(`marketing.featurePages.${page.key}.summary`)}
+                  </span>
+                </Link>
+                {/* Beside the link, never inside it: a control nested in a
+                    link is two targets in one, and the row's link is the
+                    page. */}
+                {lines ? <CapabilityLines locale={locale} id={page.key} /> : null}
+              </li>
+            ))}
+          </ul>
+        </div>
       ))}
-    </ol>
+      {lines ? (
+        <div className="lg:col-span-3">
+          <Heading className={groupLabelClass("primary")}>
+            {t("marketing.product.alsoInPlan")}
+          </Heading>
+          {/* One row per group, in the directory's three columns from `lg`.
+              Each row draws its own rules there, because the gutters between
+              columns carry none; below `lg` they stack under one top rule. */}
+          <ul className="mt-4 grid border-t border-border lg:grid-cols-3 lg:gap-x-10 lg:border-t-0">
+            {hubOnlyCapabilityGroups.map((id) => (
+              <li key={id} className="border-b border-border lg:border-t">
+                <CapabilityLines locale={locale} id={id} titled />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** The id of a hub row's page name, which that row's checklist is named by. */
+const pageNameId = (key: CapabilityGroupId) => `feature-${key}-name`;
+
+/**
+ * One group of the full list as a native disclosure: closed at rest, counting
+ * its lines, every line one tap or one Enter away and still in the page for
+ * find-in-page. Under a feature page's row it shows only the count, because the
+ * row's link above it already names the page; a screen reader still hears the
+ * page's name first (`aria-labelledby`), since a list of controls read out of
+ * context would otherwise be twelve counts. `titled` is a row of its own, for
+ * a group no page owns, and names the group.
+ */
+function CapabilityLines({
+  locale,
+  id,
+  titled = false,
+}: {
+  locale: DiverLocale;
+  id: CapabilityGroupId;
+  titled?: boolean;
+}) {
+  const t = diverTranslator(locale);
+  const group = capabilityGroup(id);
+  const countId = `capabilities-${id}-count`;
+  const count = (
+    <span className="flex shrink-0 items-center gap-2 text-sm text-muted">
+      <span id={countId} className="tabular-nums">
+        {t("marketing.product.boxGroupCount", { count: group.items.length })}
+      </span>
+      <DisclosureCaret direction="down" className="group-open:rotate-180" />
+    </span>
+  );
+  return (
+    <details className="group">
+      <summary
+        aria-labelledby={titled ? undefined : `${pageNameId(id)} ${countId}`}
+        className={`flex cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden ${
+          titled ? "min-h-14 justify-between gap-4 py-4" : "min-h-11"
+        }`}
+      >
+        {titled ? (
+          <>
+            <span className={`${SECTION_TITLE_CLASS} text-balance`}>{t(group.title)}</span>
+            {count}
+          </>
+        ) : (
+          count
+        )}
+      </summary>
+      <ul className="space-y-1.5 pb-5 text-sm leading-6 text-muted">
+        {group.items.map((item) => (
+          <li key={item}>{t(item)}</li>
+        ))}
+      </ul>
+    </details>
   );
 }

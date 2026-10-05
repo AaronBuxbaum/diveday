@@ -173,6 +173,21 @@ const RULES = [
     pattern: /\bcomprob(?!antes?\b)\w*/i,
     says: 'confirming a fact against evidence is "verificar"; looking something over is "revisar". "Comprobar/comprobación" reads as Spain',
   },
+  {
+    id: "manifest",
+    // README's manifiesto section — settled 2026-10-05 (issue #1957) by reading
+    // every string against its English key. The staff bundles said `manifiesto`
+    // for the manifest and `listado` for a departure's roster, two objects; the
+    // public pages said `listado` for the manifest, so an owner who read it on
+    // /product opened the demo to a screen titled *Manifiesto*.
+    //
+    // Narrow on purpose: the bare `listado` is the roster's right word ("Ver el
+    // listado") and `listados` an ordinary participle ("los buceadores
+    // listados arriba"), so only the noun phrase that can mean nothing but the
+    // manifest is refused.
+    pattern: /\blistados? del? barcos?\b/i,
+    says: 'the boat manifest is "el manifiesto" (masculine), as on every staff screen. "El listado" is a departure’s roster, which is a different list',
+  },
 ];
 
 /**

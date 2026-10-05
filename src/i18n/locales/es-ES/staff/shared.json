@@ -347,7 +347,7 @@
       "statsBoarded": "Embarcados",
       "statsAwaiting": "Pendientes",
       "rollCallCompleteHeading": "Pase de lista completo",
-      "checkpointRollCallHeading": "Pase de lista de {checkpoint}",
+      "checkpointRollCallHeading": "Pase de lista · {checkpoint}",
       "allAboard": "Todos tienen un resultado y todos están a bordo.",
       "someNotBoarded": "Todos tienen un resultado, con {count, plural, one {# marcado como no embarcado} other {# marcados como no embarcados}}. Confirma que están localizados antes de continuar.",
       "crewHeading": "Tripulación a bordo",

@@ -31,10 +31,12 @@ the same PR.
 
 | Change | File |
 | --- | --- |
-| Claim shared across pages | `src/lib/marketing.ts` → `productFeatureGroups` |
+| A shipped capability line | `src/lib/marketing.ts` → `productCapabilityIndex`, under the group of the feature page a shop would look for it on |
+| The list of feature pages on `/` and `/product` | `FeatureDirectory` in `src/components/MarketingSections.tsx`, which reads the registry `src/lib/feature-pages.ts`; never a page-by-page list |
 | Price / plan / included list | `src/lib/marketing.ts` → `earlyAccessPrice` — the ONLY place the number exists |
 | Page narrative copy | `src/app/page.tsx`, `src/app/product/page.tsx`, `src/app/pricing/page.tsx`, `src/app/onboard/page.tsx` |
-| Illustrated mockup copy | `src/components/MarketingScreenFallbacks.tsx` |
+| A feature page (`/product/<feature>`) | the registry `src/lib/feature-pages.ts`, the one template `src/app/product/_components/FeaturePageBody.tsx`, words in `marketing.featurePages.<page>`; its checklist is that page's group of `productCapabilityIndex` |
+| Illustrated mockup copy | `src/components/MarketingScreenFallbacks.tsx`; a feature page's screen in `src/components/MarketingFeatureScreens.tsx` |
 | Nav / footer | `src/components/MarketingNav.tsx`, `src/components/MarketingFooter.tsx` |
 
 Layout stays inside the design system: semantic tokens only, `buttonClass()` for button-shaped
@@ -53,10 +55,10 @@ written down.
 - Outcome in the buyer's world, not a category label. Test: could a rival paste this sentence
   truthfully onto their site? If yes, sharpen it.
 - Written in the page's register (`docs/design/brand.md`, "The two registers of the public
-  pages"): the builder's note everywhere (a screen, then notes under twenty words each naming one
-  visible thing and its reason or limit, never an evaluation, one link-weight `ScreenDoor` into
-  the demo as that role), and speech on `/about` (every heading the owner's question repeated
-  back without a mark). Reads as a person, not a model. No em-dash in prose, no "not a project, a
+  pages"): the selling register everywhere (a heading that says what the shop gets, the screen that
+  proves it with builder's notes under twenty words each naming one visible thing and its reason or
+  limit, never an evaluation, and a demo door that opens on that screen as that role), and speech
+  on `/about` (every heading the owner's question repeated back without a mark). Reads as a person, not a model. No em-dash in prose, no "not a project, a
   file" contrast, no "No X. No Y. No Z." run, no *actually*/*genuinely*/*plainly*, no "Here's how",
   no aphorism or rhetorical question as a heading, no closing flourish, no mirrored pair, no
   triplet for rhythm, no tag sentence, no phrase reused on a third page. The list, with

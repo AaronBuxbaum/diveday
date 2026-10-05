@@ -139,15 +139,40 @@ describe("enterDemoAction instrumentation", () => {
   it("defaults an untagged CTA to the owner view and an unknown source", async () => {
     // The primary CTA sends no picker option and no tag; clamping happens in
     // the action, not the caller, so an unregistered tag can never open its own
-    // bucket in the event stream (src/lib/funnel.ts).
+    // bucket in the event stream (src/lib/funnel.ts). A landing off the closed
+    // list is clamped the same way, back to Today (src/lib/demo-landings.ts).
     await useDb();
-    await enterDemo(demoForm({ source: "not-a-real-page" }));
+    const landing = await enterDemo(
+      demoForm({ source: "not-a-real-page", landing: "../../settings/team" }),
+    );
 
     expect(trackEvent).toHaveBeenCalledWith({
       name: "demo_entered",
       source: "unknown",
       role: "owner",
     });
+    expect(landing).toMatch(/^\/shop\/[^/]+$/);
+  });
+
+  it("lands the visitor on the page the door was about", async () => {
+    // A feature page's door names its own screen, so a reader who came to see
+    // the gear register opens the demo on it rather than hunting for it.
+    await useDb();
+    const landing = await enterDemo(demoForm({ role: "owner", landing: "gear", source: "nav" }));
+
+    expect(landing).toMatch(/^\/shop\/[^/]+\/gear$/);
+    expect(hoisted.signInDiveDayCredentials).toHaveBeenCalledTimes(1);
+  });
+
+  it("lands a role on Today when its gate refuses the page the form named", async () => {
+    // No door ships this pair; only an edited form asks for the release
+    // settings as the captain, and Today greets it instead of a refusal.
+    await useDb();
+    const landing = await enterDemo(
+      demoForm({ role: "captain", landing: "waivers", source: "nav" }),
+    );
+
+    expect(landing).toMatch(/^\/shop\/[^/]+$/);
   });
 
   it("alerts the founder once, and carries nothing about the visitor", async () => {

@@ -4,6 +4,8 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
+import type { DemoLanding } from "@/lib/demo-landings";
+import type { DemoRoleId } from "@/lib/demo-roles";
 import type { FunnelSource } from "@/lib/funnel";
 import { setUpMailto } from "@/lib/platform-mail";
 
@@ -30,6 +32,12 @@ import { setUpMailto } from "@/lib/platform-mail";
  * for the same reason: a new page cannot invent a third arrangement without
  * editing this file, where the decision is written down.
  *
+ * The one thing a page may say about the demo is *where it opens* (`demo`): a
+ * feature page about the gear register opens it on the gear register, as the
+ * role that page is about (`src/lib/feature-pages.ts`). That changes where
+ * the reader lands, never how the pair looks or what it says, and a page that
+ * passes nothing opens Today as the owner, as every door did before.
+ *
  * Both buttons are `w-full sm:w-auto`. Without it the primary (inside a form,
  * hugging its label) rendered *narrower* than a stretched secondary link on
  * phones, making the demoted action the biggest target on first paint; and a
@@ -48,10 +56,13 @@ import { setUpMailto } from "@/lib/platform-mail";
 export function FunnelCtas({
   locale,
   source,
+  demo,
   className,
 }: {
   locale: DiverLocale;
   source: FunnelSource;
+  /** Where the demo opens: as which role, on which staff page. Owner on Today when absent. */
+  demo?: { role: DemoRoleId; landing: DemoLanding | null };
   /** Placement only — margins, `justify-*`, `shrink-0`. Never colour or weight. */
   className?: string;
 }) {
@@ -61,6 +72,8 @@ export function FunnelCtas({
     <div className={`flex ${width} flex-col gap-3 sm:flex-row${className ? ` ${className}` : ""}`}>
       <form action={enterDemoAction} className="contents">
         <FunnelTag source={source} />
+        {demo ? <input type="hidden" name="role" value={demo.role} /> : null}
+        {demo?.landing ? <input type="hidden" name="landing" value={demo.landing} /> : null}
         <SubmitButton
           pendingLabel={t("marketing.common.gettingReady")}
           className={buttonClass({ busy: true, className: width })}

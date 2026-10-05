@@ -12,6 +12,7 @@ import { createDemoShop, resetDemoSchedule } from "@/db/seed";
 import { getShopById, getShopBySlug } from "@/db/shops";
 import { auth, getAuth } from "@/lib/auth";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
+import { demoLandingFrom, demoLandingPath } from "@/lib/demo-landings";
 import type { DemoRoleId } from "@/lib/demo-roles";
 import { eventSource } from "@/lib/funnel";
 import { publicSchedulePath } from "@/lib/public-routes";
@@ -90,11 +91,16 @@ async function findDemoRoleEmail(
  * CTA's long-standing behavior). Each visitor gets their own throwaway shop
  * rather than sharing the canonical fixture (ADR 20260724-per-visitor-demo-shops);
  * a 7-day reaper clears them. Forms may carry a hidden `source` field naming
- * the page the click came from.
+ * the page the click came from, and a hidden `landing` naming the staff page
+ * the door was about (`src/lib/demo-landings.ts`, a closed list) — a feature
+ * page about the gear register opens the demo on the gear register rather
+ * than on Today. A diver has no staff page to land on, so `landing` means
+ * nothing to that role.
  */
 export async function enterDemoAction(formData?: FormData) {
   const role = requestedDemoRole(formData);
   const source = eventSource(formData?.get("source"));
+  const landing = demoLandingFrom(formData?.get("landing"));
 
   // Each demo mints a whole seeded shop, so throttle per IP — the reaper bounds
   // total growth, this bounds the burst one visitor can drive.
@@ -155,7 +161,7 @@ export async function enterDemoAction(formData?: FormData) {
     if (error instanceof APIError) redirect("/sign-in?error=1");
     throw error; // unexpected errors propagate
   }
-  redirect(`/shop/${slug}`);
+  redirect(demoLandingPath(slug, role, landing));
 }
 
 export async function resetDemoAction() {

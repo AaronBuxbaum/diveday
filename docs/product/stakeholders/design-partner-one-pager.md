@@ -15,8 +15,9 @@ the [claims policy](../marketing.md) like any other buyer-facing material — se
 A calmer way to run a dive day: bookings, waivers, cert checks, rental-fit trip prep, and the boat
 manifest in one place, so the front desk, the boat, and the diver share one source of truth instead
 of a whiteboard, a clipboard, and three apps. Built for the shop that's tired of chasing paperwork
-the morning of a trip. (Feature claims below are drawn from `productFeatureGroups` in
-`src/lib/marketing.ts` — keep this list in sync with that file, not the other way around.)
+the morning of a trip. (Feature claims below are drawn from `productCapabilityIndex` in
+`src/lib/marketing.ts`, the inventory the feature pages render — keep this list in sync with that
+file, not the other way around.)
 
 - A live schedule divers book themselves — never past what the boat can hold.
 - Waivers signed from home, with medical flags raised long before the boat; C-cards verified once

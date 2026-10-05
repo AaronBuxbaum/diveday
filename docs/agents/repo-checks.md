@@ -226,9 +226,11 @@ carry at least as much weight as the refusals:
 - The **house phrase**: three consecutive words, at least two of them content words, on more than
   two distinct pages of one bundle. Pages are the second key segment (`marketing.home`,
   `switching.spreadsheet`); the shared namespaces rendered on several pages by design
-  (`marketing.common`, `features`, `price`, `export`, `capabilities`, `guides.shared`,
-  `switching.common`, `switching.concierge`) are never compared, the five competitor guides count
-  as one page because they mirror each other's structure on purpose, and a conjunction ends a
+  (`marketing.common`, `features`, `featureChrome`, `price`, `export`, `capabilities`,
+  `guides.shared`, `switching.common`, `switching.concierge`) are never compared, the five
+  competitor guides count as one page because they mirror each other's structure on purpose, the
+  twelve feature pages count as twelve (`marketing.featurePages.waivers` is the waivers page: they
+  share a template, whose words are `featureChrome`, and none of each other's), and a conjunction ends a
   phrase so "rental sizes and certification records" is two names rather than one. Number words
   are content ("from day one", "one ZIP"): the sixteen "one ZIP / button / number / price" were
   the phrase this rule was written for. `HOUSE_PHRASE_ALLOWLIST` holds the names of things

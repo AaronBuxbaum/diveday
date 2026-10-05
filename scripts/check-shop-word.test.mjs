@@ -209,6 +209,30 @@ describe("the words the es-ES README settled", () => {
     });
   });
 
+  describe("the manifest is el manifiesto", () => {
+    it("refuses the listado-del-barco phrase the public pages used", () => {
+      expect(rules({ k: "Listado del barco y pase de lista" })).toEqual(["manifest"]);
+      expect(rules({ k: "y el listado de barco sin conexión" })).toEqual(["manifest"]);
+      expect(rules({ k: "preparación de salidas y listados de barco" })).toEqual(["manifest"]);
+    });
+
+    it("accepts manifiesto", () => {
+      expect(rules({ k: "Manifiesto del barco y pase de lista" })).toEqual([]);
+      expect(rules({ k: "Abre el manifiesto" }, STAFF)).toEqual([]);
+    });
+
+    /**
+     * The near-misses are the reason the rule is a phrase and not a word:
+     * `listado` is the roster's own word all over the staff bundles, and
+     * `listados` an ordinary participle in staff/tripPrep.json.
+     */
+    it("leaves the roster's listado and the participle alone", () => {
+      expect(rules({ k: "Confírmalo en el listado de la salida" }, STAFF)).toEqual([]);
+      expect(rules({ k: "los buceadores listados arriba" }, STAFF)).toEqual([]);
+      expect(rules({ k: "De vuelta en el listado." }, STAFF)).toEqual([]);
+    });
+  });
+
   it("reports every rule a single string breaks, not only the first", () => {
     // A string can be wrong twice, and reporting one at a time turns a sweep
     // into as many rounds as the string has mistakes.

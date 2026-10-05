@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { eventSource, guideSource, scheduleAttributionHref, switchingHref } from "./funnel";
+import { FEATURE_PAGE_SLUGS } from "./feature-pages";
+import {
+  eventSource,
+  featureSource,
+  guideSource,
+  scheduleAttributionHref,
+  switchingHref,
+} from "./funnel";
 import { MIGRATION_GUIDE_SLUGS } from "./migration-guides";
 
 describe("eventSource", () => {
@@ -20,14 +27,13 @@ describe("eventSource", () => {
   it("keeps a page's mid-page door distinct from the page itself", () => {
     // The whole reason a mid-page CTA gets its own tag: folded into the page's
     // one bucket, a door added to answer "one CTA at the bottom of ten
-    // sections" can never be shown to have earned its place.
+    // sections" can never be shown to have earned its place. `product-mid`
+    // was retired with its card on 2026-10-05 and still reads as its own
+    // bucket, so the history it collected holds.
     expect(eventSource("product-mid")).toBe("product-mid");
     expect(eventSource("product")).toBe("product");
-    // `/product` now offers the same action from three positions. The index
-    // door is the page's own dare — "every one of these lines is something you
-    // can go and do in the live demo right now" — and a reader convinced by the
-    // inventory is a different moment from one convinced by the dock story
-    // above it, so it gets its own bucket rather than inflating either.
+    // The index door had its own bucket for the same reason, and kept it when
+    // the door came out with the index band on 2026-10-05.
     expect(eventSource("product-index")).toBe("product-index");
     // Same split on the pricing page: its hero door and the door that closes
     // the objection layer answer different moments in the same visit.
@@ -49,6 +55,23 @@ describe("eventSource", () => {
     expect(eventSource("switching-eve-close")).toBe("switching-eve-close");
     expect(eventSource("switching-spreadsheet-mid")).toBe("switching-spreadsheet-mid");
     expect(eventSource("switching-spreadsheet-close")).toBe("switching-spreadsheet-close");
+  });
+
+  it("keeps a tag for every feature page, its closing band apart", () => {
+    // Which feature a shop owner opened the demo from is the question the
+    // feature pages exist to answer, so each page is its own bucket, and its
+    // hero and closing doors are two moments, as on every other page.
+    for (const slug of FEATURE_PAGE_SLUGS) {
+      expect(eventSource(featureSource(slug))).toBe(`feature-${slug}`);
+      expect(eventSource(featureSource(slug, "close"))).toBe(`feature-${slug}-close`);
+    }
+    expect(featureSource("rental-gear", "close")).toBe("feature-rental-gear-close");
+  });
+
+  it("collapses a feature tag naming a page that does not exist", () => {
+    expect(eventSource("feature-kiosk")).toBe("unknown");
+    expect(eventSource("feature-waivers-mid")).toBe("unknown");
+    expect(eventSource("feature-")).toBe("unknown");
   });
 
   it("collapses anything outside the vocabulary to unknown", () => {

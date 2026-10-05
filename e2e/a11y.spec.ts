@@ -900,7 +900,7 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
   /**
    * **The rest of the marketing tree** (issue #1056).
    *
-   * Ten routes a buyer reads before they ever sign up, every one of them
+   * Twelve routes a buyer reads before they ever sign up, every one of them
    * photographed on every PR and none of them scanned when this was written. They are the cheapest
    * scans in the file — no sign-in, no fixture, no navigation — and the
    * likeliest place for a contrast mistake to survive, because marketing pages
@@ -912,8 +912,8 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
    * all — which is itself the a11y defect worth catching here.
    */
   test("the marketing and switching pages have no automated a11y violations", async ({ page }) => {
-    // 10 scans at ~3.5s each, plus the first cold render.
-    test.setTimeout(90_000);
+    // 12 scans at ~3.5s each, plus the first cold render.
+    test.setTimeout(105_000);
     // **Scanned with the app's own reduced-motion state**, which is not a way
     // of avoiding an awkward answer: the hero's roll-call rows enter with
     // `marketing-roll-call-settle`, a 360ms fade from `opacity: 0.72`, and a
@@ -942,6 +942,10 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
       { path: "/switching", heading: /\S/ },
       { path: "/switching/eve", heading: /\S/ },
       { path: "/switching/spreadsheet", heading: /\S/ },
+      // Two feature pages: one template, so two drawings rather than twelve
+      // copies of it — a phone screen and a staff panel.
+      { path: "/product/waivers", heading: /\S/ },
+      { path: "/product/rental-gear", heading: /\S/ },
       // The last signed-out account form. Its two siblings (`/sign-in`,
       // `/onboard`) are scanned above; this one is reached by somebody who is
       // already locked out, which is the worst moment to meet a form a screen

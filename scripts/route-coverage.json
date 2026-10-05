@@ -69,6 +69,24 @@
     "visual": ["product"],
     "a11y": ["a11y.spec.ts"]
   },
+  "/product/[feature]": {
+    "e2e": ["marketing.spec.ts", "seo.spec.ts"],
+    "visual": [
+      "feature-online-booking",
+      "feature-website",
+      "feature-waivers",
+      "feature-certifications",
+      "feature-messages",
+      "feature-check-in",
+      "feature-boat-manifest",
+      "feature-dive-sites",
+      "feature-rental-gear",
+      "feature-schedule",
+      "feature-courses",
+      "feature-payments"
+    ],
+    "a11y": ["a11y.spec.ts"]
+  },
   "/ready/[token]": {
     "e2e": [
       "a11y.spec.ts",

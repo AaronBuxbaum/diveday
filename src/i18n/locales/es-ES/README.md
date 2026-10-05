@@ -327,6 +327,38 @@ demonstrative and adjective reaching back to it moves with it — `la`/`una`/`es
 This covers what the app *calls* the document. The waiver **body** and the medical questionnaire
 are still English pending human sign-off — see "Deliberately left alone" below.
 
+## The manifest is **el manifiesto**; **el listado** is the roster
+
+Settled 2026-10-05 (issue #1957), by reading every string against its English key rather than by
+counting the Spanish. The two words were never one object spelled two ways. The staff bundles
+already said *el manifiesto* for the manifest (52 strings) and *el listado* for a departure's
+roster ("Ver el listado", "De vuelta en el listado"), and those are two things in this app: the
+Divers tab is who is booked, the Boat tab is the manifest the crew calls the roll from. The public
+pages were the ones saying *listado* for the manifest, so an owner who read *el listado* on
+`/product` opened the demo to a screen titled *Manifiesto*. The marketing copy moved to the
+product's word.
+
+| English | Spanish |
+| --- | --- |
+| the boat manifest | el manifiesto (del barco) |
+| the offline manifest | el manifiesto sin conexión |
+| the paper manifest | el manifiesto en papel |
+| a departure's roster | el listado (de la salida) |
+| roll call | el pase de lista |
+| head count | el recuento |
+
+*Manifiesto* is **masculine**: `el`/`un`/`este`/`del`, and `guardado`, `impreso`.
+
+**A shop's whole customer list is neither.** The switching guides say "roster" in English for the
+people an import brings across, every customer rather than one boat's divers, and the Spanish there
+is *la lista de buceadores*. That is a third object and keeps its own words.
+
+**Why the guard is narrow.** *Listado* did not lose: it is the roster's word, and *listados* is an
+ordinary participle as well ("los buceadores listados arriba", `staff/tripPrep.json`).
+`scripts/check-shop-word.mjs` refuses only the noun phrase that can mean nothing but the manifest,
+*listado del barco* / *listado de barco*. Any other *listado* standing in for the manifest is left
+to review, read against its English key.
+
 ## The field guide: `marineLife.*` is content, not chrome
 
 `diver.json`'s `marineLife` namespace is 148 species × three strings plus 18 category words, and it
