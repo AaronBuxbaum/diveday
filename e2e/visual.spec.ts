@@ -5073,7 +5073,13 @@ for (const scheme of ["light", "dark"] as const) {
       }) => {
         await request.post("/api/test/seed-trouble-states");
         await openDiverProfile(page, "Nadia", "Nadia Petrov");
-        await page.getByText("Not certified yet — unverified").waitFor();
+        // The door's fact: a booked diver's card gap opens the group, and the
+        // statement inside repeats the words.
+        await page
+          .getByTestId("diver-file-group-certifications")
+          .locator("summary")
+          .getByText("Not certified yet — unverified")
+          .waitFor();
         await capture(page, "diver-profile-not-certified", scheme);
       });
 
