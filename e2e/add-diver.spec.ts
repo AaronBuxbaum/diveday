@@ -487,7 +487,7 @@ test("a held seat that is someone else gets its own diver record", async ({ page
   await row.getByRole("button", { name: "Give them their own record" }).click();
 
   await expect(page.getByRole("status")).toContainText("They have their own diver record now.");
-  const hana = rosterRow(page, "Hana Park").filter({ visible: true });
+  const hana = rosterRow(page, "Hana Park").filter({ visible: true }).first();
   await expect(hana).toBeVisible();
   await expect(hana.getByRole("button", { name: /^Same person as / })).toHaveCount(0);
 });

@@ -514,7 +514,8 @@ test.describe("as owner", () => {
     await signInAsOwner(page);
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, tripB);
-    const row = rosterRow(page, "Nora Quinn").filter({ visible: true });
+    // `.first()`: the reason line is itself a list item naming Nora, inside her row.
+    const row = rosterRow(page, "Nora Quinn").filter({ visible: true }).first();
     // The row says who booked, on whose email, and offers both answers.
     await expect(row).toContainText("Booked as Ben Quinn with Nora Quinn’s email.");
 
@@ -526,6 +527,7 @@ test.describe("as owner", () => {
     await expect(
       rosterRow(page, "Nora Quinn")
         .filter({ visible: true })
+        .first()
         .getByRole("button", { name: /^Same person as / }),
     ).toHaveCount(0);
 
