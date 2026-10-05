@@ -3670,7 +3670,7 @@
         "screenLabel": "The waiver page on a diver’s phone: the release, the medical questions and the typed signature.",
         "note1": "The link stays open for seven days and saves each answer as the diver goes.",
         "note2": "The signature is typed, and the signed record is sealed so a later change to it can be detected.",
-        "note3": "A yes that refers the diver to a doctor holds them until a physician clears them, and the page says so as they answer.",
+        "note3": "A yes that needs a doctor tells the diver at once, and holds them until staff record the sign-off.",
         "step1Title": "Write your release once",
         "step1Body": "Put your release text in Settings. Each change becomes a new version, and every signed copy keeps the version it was signed against.",
         "step2Title": "The diver signs from home",
