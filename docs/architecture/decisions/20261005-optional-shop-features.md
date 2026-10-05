@@ -57,6 +57,10 @@ discount that does not exist.
   shop-wide code or a last-minute deal sent for that departure. It errs toward showing: scope and a
   future start date are not checked. Whether a typed code applies is still decided by
   `getRedeemableShopPromo` and `getActiveTripPromoByCode`.
+  The box therefore tells a visitor whether the shop has a live code, or sent a deal for this
+  departure, but never which code. A security review (2026-10-05) accepted that as a business
+  signal rather than an exposure: the codes stay unguessable, and a refused code still reads the
+  same whatever the reason.
 
 ## Alternatives considered
 
