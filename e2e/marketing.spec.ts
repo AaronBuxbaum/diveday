@@ -1501,8 +1501,7 @@ test.describe("with Accept-Language: es", () => {
   const bodyCopy = {
     "/": {
       english: "Every diver booked, signed, checked and accounted for.",
-      spanish:
-        "Cada buceador reservado, con su exención firmada, verificado y presente en el pase de lista.",
+      spanish: "Cada buceador reservado, firmado, verificado y localizado.",
     },
     "/product": {
       english: "From the first booking to the roll call after the last dive.",

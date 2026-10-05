@@ -2175,9 +2175,9 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       // The other two buyer-facing sales surfaces: the features hub (every
-      // feature page by phase, the capability index, honest-no scope) and the
-      // pricing page with its objection FAQ. Copy changes here are product
-      // changes.
+      // feature page by phase with its checklist folded under it, the groups
+      // no page owns, honest-no scope) and the pricing page with its
+      // objection FAQ. Copy changes here are product changes.
       test(`the product page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/product");
         await capture(page, "product", scheme);
