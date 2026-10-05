@@ -4,6 +4,7 @@ import {
   ACTION_KIND_META,
   assembleDaySpine,
   collapseDiverActions,
+  collapseEmailDeliveries,
   collapseOwedRefunds,
   diverBlockerAction,
   factOfScaleFor,
@@ -122,7 +123,9 @@ describe("diverBlockerAction", () => {
     expect(result?.waiver).toBeUndefined();
   });
 
-  it("collapses a diver's other blockers into the detail instead of extra rows", () => {
+  it("says the headline blocker in a few words, and nothing about the rest", () => {
+    // The record the row opens lists every blocker in full; the row names the
+    // one the tap fixes (Aaron, 2026-10-05: "reduce the amount of copy").
     const result = diverBlockerAction(
       {
         ...input,
@@ -131,20 +134,31 @@ describe("diverBlockerAction", () => {
       "blue-reef",
       NOW,
     );
-    expect(result?.detail).toBe(
-      "A medical answer needs staff follow-up. 2 other blockers to clear too.",
-    );
+    expect(result?.detail).toBe("Medical answer needs follow-up.");
   });
 
-  it("says 'blocker' in the singular when only one other remains", () => {
+  it("says a cert gap without the levels, which the record carries", () => {
     const result = diverBlockerAction(
-      { ...input, blockers: [blocker("medical_review"), blocker("payment_due")] },
+      {
+        ...input,
+        blockers: [
+          {
+            code: "certification_insufficient",
+            params: { requiredLevel: "advanced_open_water", heldLevel: "open_water" },
+          },
+        ],
+      },
       "blue-reef",
       NOW,
     );
-    expect(result?.detail).toBe(
-      "A medical answer needs staff follow-up. 1 other blocker to clear too.",
-    );
+    expect(result?.detail).toBe("Not certified for this trip.");
+  });
+
+  it("takes the aboard kind once the diver is on the boat, keeping the fix", () => {
+    const result = diverBlockerAction({ ...input, aboard: true }, "blue-reef", NOW);
+    expect(result?.kind).toBe("blocked_aboard");
+    expect(result?.detail).toBe("Waiver not sent.");
+    expect(result?.waiver).toEqual({ bookingIds: ["b1"] });
   });
 
   it("produces nothing for a diver with no blockers", () => {
@@ -197,13 +211,14 @@ describe("collapseDiverActions", () => {
     );
 
     expect(result).toHaveLength(1);
-    expect(result[0]?.subject).toBe("3 divers");
+    expect(result[0]?.subject).toBe("3 waivers not sent.");
     expect(result[0]?.actionLabel).toBe("Send waivers");
     // A batch send carries every diver's booking, so one tap sends all three.
     expect(result[0]?.waiver).toEqual({
       bookingIds: ["b-Ana Ruiz", "b-Ben Cole", "b-Cara Diaz"],
     });
-    expect(result[0]?.detail).toBe("Waiver has not been sent. Ana Ruiz, Ben Cole and Cara Diaz.");
+    // The subject is the whole fact; the names are on the roster it opens.
+    expect(result[0]?.detail).toBe("");
     // The roster is the only screen that shows all of them at once.
     expect(result[0]?.href).toBe("/shop/blue-reef/trips/t1");
   });
@@ -221,16 +236,45 @@ describe("collapseDiverActions", () => {
     expect(result[0]?.payment).toBeUndefined();
   });
 
-  it("abbreviates a long roster instead of listing everyone", () => {
+  it("says a boat of cert gaps as one short sentence (Aaron's example)", () => {
     const names = ["Ana", "Ben", "Cara", "Dev", "Eli", "Fay", "Gus", "Hal", "Ivy"];
     const result = collapseDiverActions(
-      names.map((name) => diver(name, "waiver_not_sent")),
+      names.map((name) => ({
+        ...diver(name, "certification_insufficient"),
+        blockers: [
+          {
+            code: "certification_insufficient" as const,
+            params: {
+              requiredLevel: "advanced_open_water" as const,
+              heldLevel: "open_water" as const,
+            },
+          },
+        ],
+      })),
       "blue-reef",
       NOW,
     );
 
-    expect(result[0]?.subject).toBe("9 divers");
-    expect(result[0]?.detail).toBe("Waiver has not been sent. Ana, Ben and 7 others.");
+    expect(result[0]?.subject).toBe("9 divers not certified for this trip.");
+    expect(result[0]?.detail).toBe("");
+  });
+
+  it("never folds a diver who is aboard into the ashore group", () => {
+    const result = collapseDiverActions(
+      [
+        diver("Ana", "waiver_not_sent"),
+        diver("Ben", "waiver_not_sent"),
+        { ...diver("Cara", "waiver_not_sent"), aboard: true },
+      ],
+      "blue-reef",
+      NOW,
+    );
+
+    expect(result).toHaveLength(2);
+    const aboard = result.find((entry) => entry.kind === "blocked_aboard");
+    expect(aboard?.subject).toBe("Cara");
+    expect(aboard?.detail).toBe("Waiver not sent.");
+    expect(result.find((entry) => entry.kind === "waiver")?.subject).toBe("2 waivers not sent.");
   });
 
   it("keeps a lone diver named, and pointed at their own record", () => {
@@ -259,7 +303,7 @@ describe("collapseDiverActions", () => {
     );
 
     expect(result).toHaveLength(3);
-    expect(result.filter((entry) => entry.subject === "2 divers")).toHaveLength(2);
+    expect(result.filter((entry) => entry.subject === "2 waivers not sent.")).toHaveLength(2);
     expect(result.filter((entry) => entry.subject === "Cara")).toHaveLength(1);
   });
 
@@ -555,7 +599,6 @@ function departure(overrides: Partial<SpineDeparture> = {}): SpineDeparture {
     boarded: 0,
     blocked: 0,
     crew: [{ fullName: "Keiko Tanaka" }],
-    blockedAboardGroups: [],
     crewAccountedFor: true,
     crewReason: null,
     ...overrides,
@@ -1064,7 +1107,7 @@ describe("collapseOwedRefunds", () => {
     // is owed exactly once.
     expect(row?.detail).toContain("$396.00");
     expect(row?.detail).toContain("Ana Ruiz, Ben Cole and Cara Diaz");
-    expect(row?.detail?.match(/You cancelled the departure/g)).toHaveLength(1);
+    expect(row?.detail?.match(/mark each seat refunded/g)).toHaveLength(1);
     expect(row?.href).toBe("/shop/blue-reef/trips/t1");
   });
 
@@ -1097,5 +1140,82 @@ describe("collapseOwedRefunds", () => {
       "en-US",
     );
     expect(mixed[0]?.detail).not.toContain("$");
+  });
+});
+
+describe("collapseEmailDeliveries", () => {
+  const issue = (
+    name: string,
+    overrides: Partial<Parameters<typeof collapseEmailDeliveries>[0][number]> = {},
+  ) => ({
+    deliveryId: `d-${name}`,
+    bookingId: `b-${name}`,
+    fullName: name,
+    isWaiver: false,
+    status: "failed" as const,
+    trip: { id: "t1", startsAt: hoursFromNow(3), label: "Reef Drift · 8:00 AM" },
+    ...overrides,
+  });
+
+  it("keeps one failed email named, with its own resend", () => {
+    const [row, ...rest] = collapseEmailDeliveries([issue("Ana Ruiz")], "blue-reef", NOW);
+    expect(rest).toHaveLength(0);
+    expect(row?.subject).toBe("Ana Ruiz");
+    expect(row?.detail).toBe("Confirmation email didn’t send.");
+    expect(row?.actionLabel).toBe("Resend confirmation");
+    expect(row?.resend).toEqual({ bookingIds: ["b-Ana Ruiz"] });
+    expect(row?.href).toBe("/shop/blue-reef/trips/t1#booking-b-Ana Ruiz");
+  });
+
+  it("batches failures for several people into one row that resends them all", () => {
+    const rows = collapseEmailDeliveries(
+      [issue("Ana"), issue("Ben"), issue("Cara")],
+      "blue-reef",
+      NOW,
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.subject).toBe("3 confirmation emails didn’t send.");
+    expect(rows[0]?.detail).toBe("");
+    expect(rows[0]?.actionLabel).toBe("Resend confirmations");
+    expect(rows[0]?.resend).toEqual({ bookingIds: ["b-Ana", "b-Ben", "b-Cara"] });
+    expect(rows[0]?.departure?.tripId).toBe("t1");
+  });
+
+  it("batches across boats, naming no single boat when there are several", () => {
+    const rows = collapseEmailDeliveries(
+      [
+        issue("Ana"),
+        issue("Ben", { trip: { id: "t2", startsAt: hoursFromNow(1), label: "Night Dive" } }),
+      ],
+      "blue-reef",
+      NOW,
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.departure).toBeUndefined();
+    // The earliest boat's roster is the fallback door.
+    expect(rows[0]?.href).toBe("/shop/blue-reef/trips/t2");
+    expect(rows[0]?.resend).toEqual({ bookingIds: ["b-Ben", "b-Ana"] });
+  });
+
+  it("keeps waiver links and confirmations, and bounces and an unset sender, apart", () => {
+    const rows = collapseEmailDeliveries(
+      [
+        issue("Ana"),
+        issue("Ben"),
+        issue("Cara", { isWaiver: true }),
+        issue("Dev", { isWaiver: true }),
+        issue("Eli", { status: "not_configured" }),
+      ],
+      "blue-reef",
+      NOW,
+    );
+    expect(rows.map((row) => row.subject)).toEqual([
+      "2 confirmation emails didn’t send.",
+      "2 waiver emails didn’t send.",
+      "Eli",
+    ]);
+    expect(rows[1]?.waiver).toEqual({ bookingIds: ["b-Cara", "b-Dev"] });
+    expect(rows[1]?.actionLabel).toBe("Resend waivers");
+    expect(rows[2]?.detail).toBe("Confirmation email never sent. Email isn’t set up.");
   });
 });

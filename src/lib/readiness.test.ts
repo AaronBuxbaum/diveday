@@ -16,7 +16,6 @@ import {
   certificationRank,
   combineCertRequirements,
   combineSiteRequirements,
-  groupAboardBlockers,
   hasVerifiedCertificationAtLeast,
   higherCertificationLevel,
   REQUIRABLE_CERTIFICATION_LEVELS,
@@ -1055,52 +1054,6 @@ describe("aboardBlockerKind", () => {
       (code) => aboardBlockerKind([{ code }]) === "payment",
     );
     expect(paymentCodes.sort()).toEqual(["payment_due", "payment_refunded"]);
-  });
-});
-
-/**
- * **One entry per kind, never one reason over a whole count.**
- *
- * The first cut returned a single kind for the group, and the card rendered it
- * against the group's total — "5 divers are aboard with a medical hold" when one
- * of the five was. Run the other way, four divers with no medical declaration
- * vanish behind the one the crew was told about.
- */
-describe("groupAboardBlockers", () => {
-  const diver = (name: string, ...codes: ReadinessBlockerCode[]) => ({
-    blockers: codes.map((code) => ({ code })),
-    value: name,
-  });
-
-  it("splits a mixed boat into one group per kind, worst first", () => {
-    expect(
-      groupAboardBlockers([
-        diver("Cert Gap", "certification_missing"),
-        diver("Owes Money", "payment_due"),
-        diver("Medical Hold", "medical_review"),
-        diver("No Waiver", "waiver_pending"),
-        diver("Cert Gap Two", "nitrox_missing"),
-      ]),
-    ).toEqual([
-      { kind: "medical", members: ["Medical Hold"] },
-      { kind: "unknown", members: ["No Waiver"] },
-      { kind: "certification", members: ["Cert Gap", "Cert Gap Two"] },
-      { kind: "payment", members: ["Owes Money"] },
-    ]);
-  });
-
-  it("keeps roster order inside a group, so a named line names the right diver", () => {
-    expect(
-      groupAboardBlockers([
-        diver("First", "certification_missing"),
-        diver("Second", "certification_pending"),
-      ])[0]?.members,
-    ).toEqual(["First", "Second"]);
-  });
-
-  it("drops a diver with nothing against them rather than inventing a group", () => {
-    expect(groupAboardBlockers([diver("Clear")])).toEqual([]);
-    expect(groupAboardBlockers([])).toEqual([]);
   });
 });
 

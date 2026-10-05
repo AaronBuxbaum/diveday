@@ -22,20 +22,37 @@ export async function resendConfirmationAction(
   formData: FormData,
 ): Promise<ResendState> {
   const session = await requireStaffSession();
-  const bookingId = String(formData.get("bookingId") ?? "");
-  if (!bookingId) return { status: "error", reason: "invalid" };
+  // One booking, or every one a batched Today row stands for. Each retry is
+  // scoped to the session's shop by `retryBookingConfirmation` itself.
+  const bookingIds = [
+    ...new Set(
+      formData
+        .getAll("bookingId")
+        .map((value) => String(value))
+        .filter(Boolean),
+    ),
+  ];
+  if (bookingIds.length === 0) return { status: "error", reason: "invalid" };
 
-  const delivery = await retryBookingConfirmation(await getDb(), session.user.shopId, bookingId);
+  const db = await getDb();
+  let failure: Exclude<ResendState, { status: "idle" } | { status: "sent" }> | null = null;
+  for (const bookingId of bookingIds) {
+    const delivery = await retryBookingConfirmation(db, session.user.shopId, bookingId);
+    if (delivery?.status === "sent") {
+      await trackEvent({ name: "staff_recovery", kind: "confirmation_resent", surface: "today" });
+      continue;
+    }
+    failure ??= {
+      status: "error",
+      reason: !delivery
+        ? "no_email"
+        : delivery.status === "not_configured"
+          ? "not_configured"
+          : "failed",
+    };
+  }
   // Refresh Today so a now-delivered confirmation drops off the queue.
   revalidatePath(`/shop/${shopSlug}`);
 
-  if (!delivery) return { status: "error", reason: "no_email" };
-  if (delivery.status === "sent") {
-    await trackEvent({ name: "staff_recovery", kind: "confirmation_resent", surface: "today" });
-    return { status: "sent" };
-  }
-  return {
-    status: "error",
-    reason: delivery.status === "not_configured" ? "not_configured" : "failed",
-  };
+  return failure ?? { status: "sent" };
 }
