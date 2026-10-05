@@ -175,10 +175,21 @@ test.describe("owner", () => {
     // A poll is the right tool for a value that settles toward the assertion.
     // It is the wrong one for a value that passes through it.
     await expect(page.locator("#roster")).toBeVisible();
-    expect(
-      await page.evaluate(() => window.scrollY),
-      "the departure opened partway down itself",
-    ).toBe(0);
+    // **The departure's own top is the top of `main`, not of the document.**
+    // Above `main` sit the staff bar and, in a demo shop, the demo banner,
+    // which is shop chrome rather than the departure. Next's router may scroll
+    // the new segment up to the bar (`scroll-padding-top`), which carries the
+    // banner out of view and lands at exactly the banner's height; that is
+    // the departure at its top. What it must never do is land below it, as it
+    // did at the board's own 157px.
+    const { scrollY, mainTop, bar } = await page.evaluate(() => ({
+      scrollY: window.scrollY,
+      mainTop: (document.querySelector("main")?.getBoundingClientRect().top ?? 0) + window.scrollY,
+      bar: document.querySelector("[data-chrome-bar]")?.getBoundingClientRect().height ?? 0,
+    }));
+    expect(scrollY, "the departure opened partway down itself").toBeLessThanOrEqual(
+      Math.max(0, Math.round(mainTop - bar)),
+    );
 
     // And the defect in its own language: axe failed this page because the
     // back-link was *half under the bar*, not because a number was wrong.
