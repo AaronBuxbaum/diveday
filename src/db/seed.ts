@@ -350,6 +350,10 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       // has not answered is photographed through
       // `/api/test/seed-trouble-states?unitsUnconfirmed=1`.
       unitsConfirmedAt: nowDate(),
+      // **Blue Mantis plans its crew in DiveDay** — the setting is off for a
+      // new shop (`shops.crew_schedule_enabled`), and the demo is where every
+      // crew surface is photographed and exercised.
+      crewScheduleEnabled: true,
       // A front-desk address, not a person's — this is printed on the public
       // course pages, where it backs the "Get in touch" composer.
       contactEmail: simulatorEmail("front.desk"),
@@ -623,6 +627,9 @@ async function insertDemoShop(db: DbExecutor, pinnedSlug?: string, brand = false
           // opposite of the case `shops.address_street`'s comment protects —
           // a *real* shop still fills its own address in and never has one
           // guessed on its behalf.
+          // On, like the canonical demo's: a minted shop is the same cast with
+          // the same roster, and the crew specs run against minted shops.
+          crewScheduleEnabled: true,
           addressStreet: "100 Ocean Drive",
           addressLocality: "Key Largo",
           addressRegion: "FL",

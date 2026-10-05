@@ -205,6 +205,7 @@ export function ShopNav({
               shopSlug={shopSlug}
               boatBoardingHref={boatBoardingHref}
               gates={navGates}
+              crewSchedule={navOffers.crew}
               locale={locale}
               languages={languages}
               setLocaleAction={setLocale}

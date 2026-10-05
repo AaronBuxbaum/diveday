@@ -997,6 +997,36 @@ describe("uncrewed and below-target departures (issue #732)", () => {
     expect(work.actions.some((action) => action.id === `instructor:${reef.id}`)).toBe(false);
   });
 
+  it("raises no crew row at all for a shop that keeps no crew schedule", async () => {
+    // `shopCrewTarget` (src/lib/crew-schedule.ts) hands the queue a null
+    // target when `shops.crew_schedule_enabled` is off: the same uncrewed reef
+    // trip as above, and nothing about its crew.
+    const { db, shop } = ctx;
+    const reef = await reefTrip(db, shop.id);
+
+    const work = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shop.timezone,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      false,
+      undefined,
+      null,
+    );
+
+    const crewRows = work.actions.filter(
+      (action) =>
+        action.id === `uncrewed:${reef.id}` ||
+        action.id === `crew-target:${reef.id}` ||
+        action.id === `instructor:${reef.id}`,
+    );
+    expect(crewRows).toEqual([]);
+  });
+
   it("raises the quieter crew_below_target once some crew is rostered, not uncrewed_departure", async () => {
     const { db, shop } = ctx;
     const reef = await reefTrip(db, shop.id);
@@ -1150,6 +1180,25 @@ describe("uncrewed and below-target departures (issue #732)", () => {
     // assertion happened to name. Other kinds (`dive_prep` and friends) fire
     // for the same departure and are not what that rule is about.
     expect(crewGapKindsFor(work, trip.id)).toEqual(["uncrewed_course"]);
+
+    // **The crew schedule switch never hides a course's instructor gap.** A
+    // shop that keeps no roster (a null target, `shopCrewTarget`) loses the
+    // divemaster half of the sentence and keeps the half the agency ratio
+    // refuses seats on.
+    const noRoster = await getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shop.timezone,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      false,
+      undefined,
+      null,
+    );
+    expect(crewGapKindsFor(noRoster, trip.id)).toEqual(["instructor_missing"]);
   });
 
   /**

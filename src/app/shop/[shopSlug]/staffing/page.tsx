@@ -161,6 +161,9 @@ export default async function StaffingPage({
   const { shopSlug } = await params;
   const query = await searchParams;
   const { session, db, shop } = await requireShopSurface(shopSlug);
+  // A shop that keeps no crew schedule has no Crew view: an old link or a
+  // bookmark lands on the week of departures it was one tab away from.
+  if (!shop.crewScheduleEnabled) redirect(shopPath(shopSlug, "schedule", "board"));
   // Negotiated from the request, falling back to the shop's default — a staff
   // member reads dates and copy in their own language, not the shop row's.
   const locale = await requestLocale(shop.defaultLocale);
@@ -373,6 +376,7 @@ export default async function StaffingPage({
       <ShopPageHeader title={t("schedule.boardTitle")} />
       <ScheduleViews
         shopSlug={shopSlug}
+        crewSchedule
         current="crew"
         week={weekStart}
         copy={{

@@ -110,11 +110,16 @@ export type DivemasterRatioGap =
 export function divemasterRatioGap(input: {
   divers: number;
   divemasterCount: number;
-  diversPerDivemaster: number;
+  /**
+   * The shop's target, or null when the shop does not plan its crew in
+   * DiveDay (`shopCrewTarget`, src/lib/crew-schedule.ts) — a shop that keeps
+   * no roster is never told its roster is short.
+   */
+  diversPerDivemaster: number | null;
   /** The shop has said this departure runs without an in-water guide. */
   selfGuided?: boolean;
 }): DivemasterRatioGap {
-  if (input.selfGuided) return { code: "none" };
+  if (input.selfGuided || input.diversPerDivemaster === null) return { code: "none" };
   const needed = divemastersNeeded(input.divers, input.diversPerDivemaster);
   const shortBy = needed - input.divemasterCount;
   if (shortBy <= 0) return { code: "none" };

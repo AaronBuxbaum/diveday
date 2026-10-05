@@ -22,16 +22,23 @@ export function scheduleViewHref(shopSlug: string, view: ScheduleView, week?: st
 
 export function ScheduleViews({
   shopSlug,
+  crewSchedule,
   current,
   week,
   copy,
 }: {
   shopSlug: string;
+  /**
+   * Whether the shop keeps a crew schedule (`shops.crew_schedule_enabled`).
+   * Off, there is one view, and one tab is no choice — the row is not drawn.
+   */
+  crewSchedule: boolean;
   current: ScheduleView;
   /** The week on screen, carried to the other view. */
   week?: string;
   copy: ScheduleViewsCopy;
 }) {
+  if (!crewSchedule) return null;
   return (
     <SectionTabs
       label={copy.label}

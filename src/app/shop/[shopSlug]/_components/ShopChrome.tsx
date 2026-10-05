@@ -196,7 +196,11 @@ const loadShopChrome = cache(async (shopSlug: string) => {
     navBlockersCount,
     boatBoardingHref,
     navGates,
-    navOffers: { courses: teaches, gear: gearCount > 0 },
+    navOffers: {
+      courses: teaches,
+      gear: gearCount > 0,
+      crew: shop?.crewScheduleEnabled ?? false,
+    },
   };
 });
 

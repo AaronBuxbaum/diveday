@@ -64,7 +64,8 @@ export type CrewSectionCopy = {
   clash: string;
   onShift: string;
   notOnShift: string;
-  manageShifts: string;
+  /** Null when the shop keeps no crew schedule, so there is no week to go to. */
+  manageShifts: string | null;
   /** The per-trip role picker: its `{name}` aria template, its "not specified" option, and each job. */
   roleAria: string;
   roleUnspecified: string;
@@ -504,17 +505,19 @@ export function CrewSection({
           `buttonClass` for the 44px floor the header slot used to give it,
           and `self-start` so the column does not stretch its centred box to
           the panel's width and float the words mid-panel. */}
-      <Link
-        href={`/shop/${shopSlug}/staffing`}
-        className={buttonClass({
-          variant: "link",
-          size: "sm",
-          flush: true,
-          className: "self-start",
-        })}
-      >
-        {copy.manageShifts}
-      </Link>
+      {copy.manageShifts === null ? null : (
+        <Link
+          href={`/shop/${shopSlug}/staffing`}
+          className={buttonClass({
+            variant: "link",
+            size: "sm",
+            flush: true,
+            className: "self-start",
+          })}
+        >
+          {copy.manageShifts}
+        </Link>
+      )}
     </section>
   );
 }

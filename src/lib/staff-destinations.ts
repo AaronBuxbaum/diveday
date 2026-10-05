@@ -107,7 +107,16 @@ export const STAFF_PHONE_TABS = [
  * or keeps no rental fleet would otherwise carry a nav row that opens onto an
  * empty page every day. Both stay in the search, so a shop can start.
  */
-export type StaffNavOffers = { courses: boolean; gear: boolean };
+export type StaffNavOffers = {
+  courses: boolean;
+  gear: boolean;
+  /**
+   * Whether the shop keeps a crew schedule (`shops.crew_schedule_enabled`).
+   * Unlike the two above it is a setting, not a presence: off, the Crew view
+   * is gone from the palette as well, because the page redirects.
+   */
+  crew: boolean;
+};
 
 export type StaffDestinationId =
   | "today"
@@ -415,8 +424,11 @@ export function staffNavSections(
 /** The "Go to" rows the command palette offers this viewer. */
 export function staffPaletteDestinations(
   gates: StaffDestinationGates,
+  offers: Pick<StaffNavOffers, "crew"> = { crew: true },
 ): readonly StaffDestination[] {
-  return visibleStaffDestinations(gates).filter((destination) => destination.inPalette);
+  return visibleStaffDestinations(gates).filter(
+    (destination) => destination.inPalette && (destination.id !== "staffing" || offers.crew),
+  );
 }
 
 /**

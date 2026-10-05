@@ -22,6 +22,7 @@ import {
   markShopUnitsConfirmed,
   setShopAddress,
   setShopContact,
+  setShopCrewSchedule,
   setShopCurrency,
   setShopDepthUnit,
   setShopDivingOptions,
@@ -1086,28 +1087,47 @@ export async function saveDivingOptionsAction(formData: FormData) {
     return;
   }
 
-  // Asked of every shop, boat or not: the target is about who is in the water,
-  // which is a question a beach and a hull answer the same way.
-  const diversPerDivemaster = parseDiversPerDivemaster(formData.get("diversPerDivemaster"));
-  if (diversPerDivemaster === "invalid") {
-    revalidateAndRedirect(
-      settings,
-      noticeUrl(settings, "diving-options-ratio-invalid", { form: "divingOptions" }),
-    );
-    return;
-  }
-
   const db = await getDb();
   await setShopDivingOptions(db, session.user.shopId, {
     hasBoatDiving,
     hasShoreDiving,
     hasPoolDiving,
-    diversPerDivemaster,
   });
 
   revalidateAndRedirect(
     settings,
     noticeUrl(settings, "diving-options-saved", { saved: "divingOptions" }),
+  );
+}
+
+/**
+ * Turns the crew schedule on or off, with the divemaster target its nudges
+ * read (`src/lib/crew-schedule.ts`). The target travels with the switch
+ * because it is only ever read while the switch is on.
+ */
+export async function saveCrewScheduleAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+
+  const crewScheduleEnabled = formData.get("crewScheduleEnabled") === "on";
+  const diversPerDivemaster = parseDiversPerDivemaster(formData.get("diversPerDivemaster"));
+  if (diversPerDivemaster === "invalid") {
+    revalidateAndRedirect(
+      settings,
+      noticeUrl(settings, "crew-schedule-ratio-invalid", { form: "crewSchedule" }),
+    );
+    return;
+  }
+
+  await setShopCrewSchedule(await getDb(), session.user.shopId, {
+    crewScheduleEnabled,
+    diversPerDivemaster,
+  });
+
+  revalidateAndRedirect(
+    settings,
+    noticeUrl(settings, "crew-schedule-saved", { saved: "crewSchedule" }),
   );
 }
 

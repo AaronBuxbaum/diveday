@@ -21,6 +21,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { staffTideStationText, staffTideWindowText } from "@/i18n/tide-labels";
 import { nowDate } from "@/lib/clock";
 import { DSD_RATIO } from "@/lib/course-ratios";
+import { departureShowsCrew } from "@/lib/crew-schedule";
 import { tideWindowsForDeparture } from "@/lib/departure-tides";
 import { depthInUnit } from "@/lib/depth-units";
 import { parseDockDayRhythm } from "@/lib/diver-planning";
@@ -485,6 +486,7 @@ export default async function ManageTripPage({
   // A shore dive or a pool session finds nothing here.
   const boat = shopBoats.find((row) => row.id === trip.boatId);
   const boatName = boat?.name;
+  const showCrew = departureShowsCrew(shop, trip);
   const boatAndCrew = [boatName, ...assignedCrew].filter((part): part is string => Boolean(part));
   const boatCrewSummary = boatAndCrew.join(" · ") || t("trips.about.noBoat");
 
@@ -522,11 +524,12 @@ export default async function ManageTripPage({
   // against the shop's own target, or a language nobody aboard speaks. A
   // settled crew collapses to the one line that names them (principles.md §9).
   const crewRowOpen =
-    Boolean(noticeForForm(tripNotice, "crew")) ||
-    crewIds.length === 0 ||
-    liveClashes.length > 0 ||
-    (!cancelled &&
-      (crewGap.code !== "none" || underTargetNote !== null || languageGapNote !== null));
+    showCrew &&
+    (Boolean(noticeForForm(tripNotice, "crew")) ||
+      crewIds.length === 0 ||
+      liveClashes.length > 0 ||
+      (!cancelled &&
+        (crewGap.code !== "none" || underTargetNote !== null || languageGapNote !== null)));
   const rosterActions = {
     addBookingAction: seatNewDiverAction.bind(null, "trip-guests", shopSlug),
     addExistingDiverAction: seatExistingDiverAction.bind(null, "trip-guests", shopSlug),
@@ -776,73 +779,85 @@ export default async function ManageTripPage({
                   />
                 ) : undefined,
               },
-              {
-                id: "about-crew",
-                label: t("trips.about.boatAndCrew"),
-                value: boatCrewSummary,
-                editLabel: t("trips.crew.edit"),
-                // **A row with open work stays open** (principles.md §9's
-                // "collapse the settled row", read the other way). A boat with
-                // nobody on it, a clash, a course with no instructor, a shortfall
-                // against the shop's own target or a language nobody aboard
-                // speaks are all things a staffer is here to fix — and the two
-                // safety-adjacent ones are also linked from the pulse above,
-                // which is what makes `#crew` land on something rather than on a
-                // closed row.
-                editorOpen: crewRowOpen,
-                /* Who's aboard is manifest accuracy (glossary) — open to all
+              // **Crew only where the shop keeps a roster** — and on every
+              // course session, which cannot enrol anyone without a named
+              // instructor (`departureShowsCrew`, src/lib/crew-schedule.ts).
+              // A shop that plans no crew still sees which boat this is.
+              ...(showCrew
+                ? [
+                    {
+                      id: "about-crew",
+                      label: t("trips.about.boatAndCrew"),
+                      value: boatCrewSummary,
+                      editLabel: t("trips.crew.edit"),
+                      // **A row with open work stays open** (principles.md §9's
+                      // "collapse the settled row", read the other way). A boat with
+                      // nobody on it, a clash, a course with no instructor, a shortfall
+                      // against the shop's own target or a language nobody aboard
+                      // speaks are all things a staffer is here to fix — and the two
+                      // safety-adjacent ones are also linked from the pulse above,
+                      // which is what makes `#crew` land on something rather than on a
+                      // closed row.
+                      editorOpen: crewRowOpen,
+                      /* Who's aboard is manifest accuracy (glossary) — open to all
                staff. Per-person assign/unassign (updateTripCrewAction), the
                same mutation the schedule board uses — not a whole-set replace
                — so two staff editing crew at once can no longer clobber each
                other (Lens 17 task 139). */
-                editor: (
-                  <CrewSection
-                    shopSlug={shopSlug}
-                    tripId={tripId}
-                    staff={staff}
-                    crewIds={crewIds}
-                    crewRoles={Object.fromEntries(tripRoleByPerson)}
-                    // A cancelled departure isn't sailing, so its crew panel drops
-                    // the live-trip nudges — the ratio gates, the shop's target,
-                    // and the shift-coverage badges are all about a boat that will
-                    // leave.
-                    onShiftIds={cancelled ? null : onShiftIds}
-                    clashes={liveClashes}
-                    crewGapCode={cancelled ? "none" : crewGap.code}
-                    updateCrewAction={updateTripCrewAction.bind(null, shopSlug)}
-                    copy={{
-                      heading: t("trips.crew.heading"),
-                      courseNeedsInstructor: t("trips.crew.courseNeedsInstructor"),
-                      overRatioWarning,
-                      underTargetNote: cancelled ? null : underTargetNote,
-                      languageGapNote: cancelled ? null : languageGapNote,
-                      noStaff: t("trips.crew.noCrew"),
-                      notAssignedYet: t("trips.crew.notAssignedYet"),
-                      assignLabel: t("trips.crew.assignLabel"),
-                      assignOption: t("trips.crew.assignOption"),
-                      unassignAria: t.raw("trips.crew.unassignAria"),
-                      assignFailed: t("trips.crew.assignFailed"),
-                      // `t.raw`: `{name}` is whoever the staffer just picked,
-                      // which only the component knows (src/i18n/fill.ts).
-                      assignClash: t.raw("trips.crew.assignClash"),
-                      // `t.raw`: `{departure}` is the other boat's own title,
-                      // which only the component has per row (src/i18n/fill.ts).
-                      clash: t.raw("trips.crew.clash"),
-                      roleAria: t.raw("trips.crew.roleAria"),
-                      roleUnspecified: t("trips.crew.roleUnspecified"),
-                      roleOptions: {
-                        instructor: t("trips.crew.roleInstructor"),
-                        divemaster: t("trips.crew.roleDivemaster"),
-                        captain: t("trips.crew.roleCaptain"),
-                        crew: t("trips.crew.roleCrew"),
-                      },
-                      onShift: t("trips.crew.onShift"),
-                      notOnShift: t("trips.crew.notOnShift"),
-                      manageShifts: t("trips.crew.manageShifts"),
-                    }}
-                  />
-                ),
-              },
+                      editor: (
+                        <CrewSection
+                          shopSlug={shopSlug}
+                          tripId={tripId}
+                          staff={staff}
+                          crewIds={crewIds}
+                          crewRoles={Object.fromEntries(tripRoleByPerson)}
+                          // A cancelled departure isn't sailing, so its crew panel drops
+                          // the live-trip nudges — the ratio gates, the shop's target,
+                          // and the shift-coverage badges are all about a boat that will
+                          // leave.
+                          onShiftIds={cancelled ? null : onShiftIds}
+                          clashes={liveClashes}
+                          crewGapCode={cancelled ? "none" : crewGap.code}
+                          updateCrewAction={updateTripCrewAction.bind(null, shopSlug)}
+                          copy={{
+                            heading: t("trips.crew.heading"),
+                            courseNeedsInstructor: t("trips.crew.courseNeedsInstructor"),
+                            overRatioWarning,
+                            underTargetNote: cancelled ? null : underTargetNote,
+                            languageGapNote: cancelled ? null : languageGapNote,
+                            noStaff: t("trips.crew.noCrew"),
+                            notAssignedYet: t("trips.crew.notAssignedYet"),
+                            assignLabel: t("trips.crew.assignLabel"),
+                            assignOption: t("trips.crew.assignOption"),
+                            unassignAria: t.raw("trips.crew.unassignAria"),
+                            assignFailed: t("trips.crew.assignFailed"),
+                            // `t.raw`: `{name}` is whoever the staffer just picked,
+                            // which only the component knows (src/i18n/fill.ts).
+                            assignClash: t.raw("trips.crew.assignClash"),
+                            // `t.raw`: `{departure}` is the other boat's own title,
+                            // which only the component has per row (src/i18n/fill.ts).
+                            clash: t.raw("trips.crew.clash"),
+                            roleAria: t.raw("trips.crew.roleAria"),
+                            roleUnspecified: t("trips.crew.roleUnspecified"),
+                            roleOptions: {
+                              instructor: t("trips.crew.roleInstructor"),
+                              divemaster: t("trips.crew.roleDivemaster"),
+                              captain: t("trips.crew.roleCaptain"),
+                              crew: t("trips.crew.roleCrew"),
+                            },
+                            onShift: t("trips.crew.onShift"),
+                            notOnShift: t("trips.crew.notOnShift"),
+                            manageShifts: shop.crewScheduleEnabled
+                              ? t("trips.crew.manageShifts")
+                              : null,
+                          }}
+                        />
+                      ),
+                    },
+                  ]
+                : boatName
+                  ? [{ id: "about-crew", label: t("trips.about.boat"), value: boatName }]
+                  : []),
               {
                 id: "series",
                 label: t("trips.about.repeats"),

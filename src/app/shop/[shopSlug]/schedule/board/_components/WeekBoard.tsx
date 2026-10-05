@@ -81,8 +81,11 @@ export type WeekEntry = WeekDeparture & {
    * row does not decide on its own whether to print it: `mostCommonCrew` votes
    * over the week and only the departures that differ from the habit say
    * anything. A pre-joined string could not be compared.
+   *
+   * Null when the shop keeps no crew schedule (`shops.crew_schedule_enabled`):
+   * the row prints no crew line at all, rather than "nobody yet" on every boat.
    */
-  crew: string[];
+  crew: string[] | null;
 };
 
 /** A multi-day course session as one bar across the columns it owns. */
@@ -711,7 +714,11 @@ export function WeekBoard({
   // about to draw (#1923; the rule is `src/lib/usual-crew.ts`). Boats only:
   // the vote is over departures that have a crew to assign, and a course bar
   // names its instructor in its own meta.
-  const usualCrew = mostCommonCrew(week.days.flatMap((day) => day.entries));
+  const usualCrew = mostCommonCrew(
+    week.days
+      .flatMap((day) => day.entries)
+      .flatMap((entry) => (entry.crew ? [{ crew: entry.crew }] : [])),
+  );
 
   return (
     // `data-week-board` is the copy-free hook a test asks "is the board
@@ -891,9 +898,10 @@ export function WeekBoard({
                         meta: entry.meta,
                         time: entry.time,
                         runs: null,
-                        crewLine: isUsualCrew(entry.crew, usualCrew)
-                          ? null
-                          : { names: entry.crew.join(", ") },
+                        crewLine:
+                          entry.crew === null || isUsualCrew(entry.crew, usualCrew)
+                            ? null
+                            : { names: entry.crew.join(", ") },
                       }),
                     )}
                   </ul>

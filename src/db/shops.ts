@@ -527,7 +527,7 @@ export async function setShopReviewUrl(db: AppDb, shopId: string, reviewUrl: str
   return shop ?? null;
 }
 
-/** Sets which kinds of diving the shop runs, and its target diver-to-divemaster ratio. */
+/** Sets which kinds of diving the shop runs. */
 export async function setShopDivingOptions(
   db: AppDb,
   shopId: string,
@@ -535,9 +535,20 @@ export async function setShopDivingOptions(
     hasBoatDiving: boolean;
     hasShoreDiving: boolean;
     hasPoolDiving: boolean;
-    /** The divers half of the shop's target ratio (`src/lib/divemaster-ratio.ts`). */
-    diversPerDivemaster?: number;
   },
+) {
+  const [shop] = await db.update(shops).set(options).where(eq(shops.id, shopId)).returning();
+  return shop ?? null;
+}
+
+/**
+ * Turns the shop's crew schedule on or off (`shops.crew_schedule_enabled`),
+ * with the divemaster target its nudges are measured against.
+ */
+export async function setShopCrewSchedule(
+  db: AppDb,
+  shopId: string,
+  options: { crewScheduleEnabled: boolean; diversPerDivemaster: number },
 ) {
   const [shop] = await db.update(shops).set(options).where(eq(shops.id, shopId)).returning();
   return shop ?? null;

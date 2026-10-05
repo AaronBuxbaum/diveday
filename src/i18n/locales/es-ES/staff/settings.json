@@ -350,6 +350,16 @@
     "backup": {
       "heading": "Respaldos"
     },
+    "crewSchedule": {
+      "heading": "Turnos de la tripulación",
+      "on": "Activado",
+      "off": "Desactivado",
+      "label": "Organizar la tripulación en DiveDay",
+      "description": "Turnos, días fuera y quién trabaja en cada salida. Las sesiones de curso nombran a su instructor en cualquier caso.",
+      "save": "Guardar turnos",
+      "saving": "Guardando...",
+      "saved": "Turnos de la tripulación guardados."
+    },
     "team": {
       "heading": "Equipo"
     },

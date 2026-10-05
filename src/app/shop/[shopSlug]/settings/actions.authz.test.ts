@@ -47,6 +47,7 @@ const {
   retryMediaDeletionAction,
   retryProcessorErasureAction,
   saveAddressAction,
+  saveCrewScheduleAction,
   saveDockDayRhythmAction,
   savePackingAction,
   saveTaxAction,
@@ -191,6 +192,58 @@ describe("saving the shop's Stripe Tax setting", () => {
       `/shop/${shop.slug}/settings?notice=tax-saved&saved=tax`,
     );
     expect((await getShopById(db, shop.id))?.taxEnabled).toBe(false);
+  });
+});
+
+describe("saving the crew schedule switch", () => {
+  it("refuses a captain's change", async () => {
+    const { db, shop, captain } = await context();
+    signIn(shop, captain);
+    const before = (await getShopById(db, shop.id))?.crewScheduleEnabled;
+
+    const to = await redirectedTo(() => saveCrewScheduleAction(new FormData()));
+
+    expect(to).toBe(`/shop/${shop.slug}/settings?notice=not-authorized`);
+    expect((await getShopById(db, shop.id))?.crewScheduleEnabled).toBe(before);
+  });
+
+  it("lets an owner turn it off and on, with its divemaster target", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    const saved = `/shop/${shop.slug}/settings?notice=crew-schedule-saved&saved=crewSchedule`;
+
+    const off = new FormData();
+    off.set("diversPerDivemaster", "4");
+    expect(await redirectedTo(() => saveCrewScheduleAction(off))).toBe(saved);
+    expect(await getShopById(db, shop.id)).toMatchObject({
+      crewScheduleEnabled: false,
+      diversPerDivemaster: 4,
+    });
+
+    const on = new FormData();
+    on.set("crewScheduleEnabled", "on");
+    on.set("diversPerDivemaster", "8");
+    expect(await redirectedTo(() => saveCrewScheduleAction(on))).toBe(saved);
+    expect(await getShopById(db, shop.id)).toMatchObject({
+      crewScheduleEnabled: true,
+      diversPerDivemaster: 8,
+    });
+  });
+
+  it("refuses a target outside 1 to 20 and leaves the switch alone", async () => {
+    const { db, shop, owner } = await context();
+    signIn(shop, owner);
+    const before = await getShopById(db, shop.id);
+    const form = new FormData();
+    form.set("diversPerDivemaster", "60");
+
+    expect(await redirectedTo(() => saveCrewScheduleAction(form))).toBe(
+      `/shop/${shop.slug}/settings?notice=crew-schedule-ratio-invalid&form=crewSchedule`,
+    );
+    expect(await getShopById(db, shop.id)).toMatchObject({
+      crewScheduleEnabled: before?.crewScheduleEnabled,
+      diversPerDivemaster: before?.diversPerDivemaster,
+    });
   });
 });
 

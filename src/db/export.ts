@@ -865,6 +865,7 @@ export async function loadShopExportBundleInput(
             // backup, and a shop restoring from one must come back planning and
             // crewing against its own number rather than the default.
             "divers_per_divemaster",
+            "crew_schedule_enabled",
             "contact_email",
             "contact_phone",
             "address_street",
@@ -929,6 +930,7 @@ export async function loadShopExportBundleInput(
               shop.hasShoreDiving,
               shop.hasPoolDiving,
               shop.diversPerDivemaster,
+              shop.crewScheduleEnabled,
               shop.contactEmail,
               shop.contactPhone,
               shop.addressStreet,

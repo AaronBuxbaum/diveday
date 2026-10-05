@@ -747,6 +747,13 @@ new domain concept, define it here in the same PR.
   departure**. The third is said plainly, because a surface that invents an offer here is worse than
   one that says nobody is waiting. No branch moves money; the money is one sentence and a link to
   that diver's orders.
+- **Crew schedule** — whether a shop plans its crew in DiveDay (`shops.crew_schedule_enabled`, Settings
+  → Team, **off for a new shop**). On, the shop has the Crew view of Schedule (working shifts, days
+  away, crew asking for a departure), the crew line on the week, the crew editor on every departure,
+  and the nudges measured against its **Target diver:divemaster ratio**. Off, all of that is gone
+  except a course session's crew editor and its agency-ratio signals, which gate enrolment and so
+  never sit behind a switch about rosters (`src/lib/crew-schedule.ts`, ADR
+  20261005-crew-schedule-is-a-setting).
 - **Working shift** — a dated availability window for a staff member. It is not a crew assignment:
   the shift says who is available, while the trip assignment says who is actually on that
   manifest. Overlapping shifts for one person are rejected.

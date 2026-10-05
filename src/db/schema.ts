@@ -158,6 +158,19 @@ export const shops = pgTable(
      */
     diversPerDivemaster: integer("divers_per_divemaster").notNull().default(6),
     /**
+     * **Whether the shop plans its crew in DiveDay** — the Crew view of
+     * Schedule (shifts, days away, crew asking for a departure), the crew line
+     * on the week, and every nudge measured against `divers_per_divemaster`.
+     * Off by default: a two-person shop where the owner skippers every boat
+     * has no roster to keep, and a page of empty rows and "No crew" warnings
+     * is noise it would have to learn to ignore (ADR 20261005-crew-schedule-is-a-setting).
+     *
+     * Off never loosens a safety cap. A course session still names its
+     * instructor on the trip page, because the agency training ratio refuses
+     * seats from that count (`src/lib/course-ratios.ts`) whatever this says.
+     */
+    crewScheduleEnabled: boolean("crew_schedule_enabled").notNull().default(false),
+    /**
      * Where a diver who is not booking yet should write. Published on public
      * pages, so it is the shop's front-desk address rather than an owner's
      * personal one — nullable because a shop that has not chosen one must not
