@@ -1,7 +1,7 @@
 import { isMarineLifeSlug, type MarineLifeSlug } from "@/db/marine-life-catalog";
+import type { DiveSpecialty } from "@/db/schema";
 import { type DiveSiteDifficulty, parseDiveSiteDifficulty } from "./dive-site-difficulty";
 import { type DiveSiteLandmark, parseDiveSiteLandmarks } from "./dive-site-landmarks";
-import type { DiveSpecialty } from "@/db/schema";
 import type { CertificationLevel } from "./readiness";
 
 /** Fields a published dive-site briefing can refresh. A shop's name, photos, and route stay local. */

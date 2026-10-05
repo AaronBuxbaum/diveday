@@ -547,18 +547,16 @@ describe("prepareContactImport — safety rules", () => {
     expect(row.specialties).toEqual([expect.objectContaining({ specialty: "cavern" })]);
   });
 
-  it.each([
-    "NSS-CDS Full Cave",
-    "GUE Cave 1",
-    "TDI Intro to Cave",
-    "Cave DPV",
-  ])("never infers a Cavern card from the cave rating %s", (level) => {
-    const csv = `full_name,certification_level,certification_number\nCave Carla,${level},CV-2`;
-    const [row] = prepareContactImport(csv).rows;
-    expect(row.cert).toBeNull();
-    expect(row.specialties).toEqual([]);
-    expect(row.issues.some((issue) => issue.code === "level_is_technical")).toBe(true);
-  });
+  it.each(["NSS-CDS Full Cave", "GUE Cave 1", "TDI Intro to Cave", "Cave DPV"])(
+    "never infers a Cavern card from the cave rating %s",
+    (level) => {
+      const csv = `full_name,certification_level,certification_number\nCave Carla,${level},CV-2`;
+      const [row] = prepareContactImport(csv).rows;
+      expect(row.cert).toBeNull();
+      expect(row.specialties).toEqual([]);
+      expect(row.issues.some((issue) => issue.code === "level_is_technical")).toBe(true);
+    },
+  );
 
   it("keeps a real ladder rung out of the specialty path", () => {
     const csv =
