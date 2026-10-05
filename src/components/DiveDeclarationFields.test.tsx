@@ -20,9 +20,7 @@ afterEach(cleanup);
  * they told the shop about an enriched-air card — the same broken promise as
  * asking a question and discarding the answer.
  */
-function renderFields(
-  props: { showNitrox?: boolean; locale?: "en-US" | "es-ES" } = {},
-) {
+function renderFields(props: { showNitrox?: boolean; locale?: "en-US" | "es-ES" } = {}) {
   const { locale = "en-US", ...fieldProps } = props;
   return render(
     // The same two namespaces the public forms mount it under: `common` for the

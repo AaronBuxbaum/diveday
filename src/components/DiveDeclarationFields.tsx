@@ -57,11 +57,7 @@ import { CERTIFICATION_AGENCIES, NO_CERTIFICATION_ANSWER } from "@/lib/certifica
  * namespaces (`course` is where the diver-facing level words live, shared with
  * the public course pages through `DIVER_CERTIFICATION_LEVEL_KEYS`).
  */
-export function DiveDeclarationFields({
-  showNitrox = true,
-}: {
-  showNitrox?: boolean;
-} = {}) {
+export function DiveDeclarationFields({ showNitrox = true }: { showNitrox?: boolean } = {}) {
   const t = useTranslations();
   // **What the diver picked, only so the form can stop contradicting itself.**
   // A joiner who says "I'm not certified yet" and also ticks "I'm certified for
