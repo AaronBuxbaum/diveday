@@ -1870,8 +1870,7 @@ export async function listFitAdjustedReturns(
  * predicates as `listFitAdjustedReturns` above, minus two:
  *
  * - **No day window.** That bound is about when the shop is *asked* — the
- *   leftovers trail is keyed by `shop_day` so the question expires with the
- *   evening — not about whether the desk's recorded outcome is true. A tap
+ *   question expires with the evening — not about whether the desk's recorded outcome is true. A tap
  *   that lands at 00:01, or a replayed id from last week, still writes a size
  *   a named staffer recorded at the counter for that diver, which is the whole
  *   of the claim.

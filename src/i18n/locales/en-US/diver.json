@@ -2510,7 +2510,7 @@
       "motion": {
         "eyebrow": "The season",
         "title": "The board, the crew and the money",
-        "summary": "Set the season’s departures once and put crew on them. Payment lands in your own Stripe account, and the close-out writes down what happened so tomorrow opens on it."
+        "summary": "Set the season’s departures once and put crew on them. Payment lands in your own Stripe account, and the evening shows every boat home and what the day made."
       }
     },
     "price": {
@@ -2585,7 +2585,7 @@
         "item12": "A counter check-in built for the morning rush",
         "item13": "A pre-departure checklist in the crew’s own words",
         "item14": "A weather blow-out in one tap: every diver messaged with rebooking options, card payments refunded",
-        "item15": "An end-of-day close-out, with the loose ends carried into tomorrow",
+        "item15": "An evening view: every boat home, its head count closed, and what the day made",
         "item16": "A departure log of the day’s recorded facts, with a code to check a printout against the record"
       },
       "gear": {
@@ -2596,7 +2596,7 @@
         "item4": "Check-out and return stamps, and a list of what’s due back today",
         "item5": "Service clocks (annual, hydro, visual, O2-clean) due by date or by dives",
         "item6": "A printable rental slip: what a diver has and when it’s due back",
-        "item7": "Overdue returns and due service under Needs you on Today, and in the close-out"
+        "item7": "Overdue returns and due service under Needs you on Today"
       },
       "money": {
         "title": "Money",

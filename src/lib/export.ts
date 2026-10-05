@@ -243,7 +243,7 @@ const NOT_INCLUDED = [
   "Offline manifest snapshots (device-side copies of the live records exported here).",
   "Notification retry queues, per-attempt logs, and provider rate-limit state — plumbing behind notification_deliveries.csv, which carries the outcome that actually happened.",
   "Stripe account linkage — the Stripe account itself already belongs to the shop, and an account id means nothing anywhere else.",
-  "The day close-out trail and the buddy-team pairing trail — in-product operational records of a ritual and of how teams were formed; the teams that stood are in buddy_pairs.csv.",
+  "The buddy-team pairing trail — an in-product record of how teams were formed; the teams that stood are in buddy_pairs.csv.",
   "Weather-cancellation cascade state (who had been messaged, who had been rebooked) — the cancellation itself is on the trip in trips.csv.",
   "Per-device push-notification credentials, which cannot be transferred between systems and are a credential besides.",
   "Internal reconciliation ledgers DiveDay keeps about its own work: payment-operation intents, the Stripe webhook-delivery ledger, media-deletion attempts, and the outstanding data-deletion requests an erasure still owes at Stripe. Each is a pointer into DiveDay's own infrastructure plus the state of work being done there — the last one is deliberate rather than incidental, because an obligation carried into a system that cannot discharge it would read as done.",
@@ -327,7 +327,7 @@ const DIVER_NOT_INCLUDED = [
   "Internal staff notes about this diver. They were never shown to a diver and never gated anything; the shop's own words about its own customer stay the shop's.",
   "The staff activity trail. Its rows carry the names of whoever the line is about, and one line routinely names a different diver — safely removing just that risk needs the same name-matching sweep the erasure path uses, and is a follow-up rather than reinvented here.",
   "Payment checkout attempts (as opposed to their outcome, which is in booking_payment_events.csv). One checkout can cover an entire party sharing a single Stripe session, so its email and totals may not be this diver's alone.",
-  "Everything the shop-wide export excludes for the same reasons stated there: notification retry queues and provider logs, Stripe account linkage, the day close-out and buddy-pairing trails, weather-cancellation cascade state, push-notification credentials, DiveDay's own internal reconciliation ledgers, login accounts and credentials, and the reading language DiveDay inferred for this diver rather than one they stated.",
+  "Everything the shop-wide export excludes for the same reasons stated there: notification retry queues and provider logs, Stripe account linkage, the buddy-pairing trail, weather-cancellation cascade state, push-notification credentials, DiveDay's own internal reconciliation ledgers, login accounts and credentials, and the reading language DiveDay inferred for this diver rather than one they stated.",
 ];
 
 /** Assemble one diver's record bundle: one CSV per table plus a README.txt. */

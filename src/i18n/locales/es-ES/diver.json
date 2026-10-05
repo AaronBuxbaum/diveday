@@ -2510,7 +2510,7 @@
       "motion": {
         "eyebrow": "La temporada",
         "title": "El tablero, la tripulación y el dinero",
-        "summary": "Arma las salidas de la temporada una vez y ponles tripulación. El cobro llega a tu propia cuenta de Stripe, y el cierre del día anota lo que pasó para que mañana abra sobre eso."
+        "summary": "Arma las salidas de la temporada una vez y ponles tripulación. El cobro llega a tu propia cuenta de Stripe, y por la tarde ves cada barco de vuelta y lo que dejó el día."
       }
     },
     "price": {
@@ -2585,7 +2585,7 @@
         "item12": "Un registro de llegada en el mostrador pensado para la hora punta",
         "item13": "Una lista de verificación previa a la salida, escrita con las palabras de la tripulación",
         "item14": "Una cancelación por mal tiempo en un toque: cada buceador recibe opciones para volver a reservar, con los pagos con tarjeta reembolsados",
-        "item15": "Un cierre del día, con los pendientes trasladados a mañana",
+        "item15": "Una vista de la tarde: cada barco de vuelta, su recuento cerrado y lo que dejó el día",
         "item16": "Una bitácora de salida con los hechos registrados del día, y un código para cotejar la impresión con el registro"
       },
       "gear": {
@@ -2596,7 +2596,7 @@
         "item4": "Entregas y devoluciones con sello de hora, y una lista de lo que vuelve hoy",
         "item5": "Plazos de mantenimiento (servicio, hidrostática, visual y limpieza de O2) por fecha o por inmersiones",
         "item6": "Un comprobante de alquiler imprimible: qué lleva el buceador y cuándo lo devuelve",
-        "item7": "Devoluciones atrasadas y mantenimiento pendiente en la lista Pendiente de Hoy y en el cierre del día"
+        "item7": "Devoluciones atrasadas y mantenimiento pendiente en la lista Pendiente de Hoy"
       },
       "money": {
         "title": "Dinero",
