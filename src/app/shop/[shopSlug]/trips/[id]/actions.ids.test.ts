@@ -36,6 +36,7 @@ const {
   addToWaitlistAction,
   certifyDiverFromRosterAction,
   confirmDiverIdentityAction,
+  splitDiverIdentityAction,
   removeBookingAction,
   saveCourseNextStepAction,
   undoRemoveBookingAction,
@@ -71,6 +72,7 @@ describe("a malformed id on the trip roster", () => {
     ["removing a diver", removeBookingAction],
     ["undoing a removal", undoRemoveBookingAction],
     ["confirming a diver's identity", confirmDiverIdentityAction],
+    ["splitting a seat off a diver's record", splitDiverIdentityAction],
     ["saving a course next step", saveCourseNextStepAction],
   ])("settles %s back on the departure instead of erroring", async (_label, action) => {
     signIn();

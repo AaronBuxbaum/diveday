@@ -397,6 +397,7 @@ export default async function DiverDetailPage({
             personId={personId}
             t={t}
             locale={locale}
+            timezone={shop.timezone}
             country={shop.addressCountry}
             status={detailsStatus}
             gap={gaps.file.contact}

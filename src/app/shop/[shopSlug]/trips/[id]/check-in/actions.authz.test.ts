@@ -58,6 +58,7 @@ const {
   confirmIdentityFromCheckIn,
   markNoShowAction,
   markWaiverInPersonFromCheckIn,
+  splitIdentityFromCheckIn,
   undoCheckInAction,
   undoNoShowAction,
 } = await import("./actions");
@@ -81,6 +82,7 @@ describe("who may run each action at the counter", () => {
     "undoNoShowAction",
     "markWaiverInPersonFromCheckIn",
     "confirmIdentityFromCheckIn",
+    "splitIdentityFromCheckIn",
   ];
 
   /** Every exported action's source, sliced from its `export` to its closing brace. */
@@ -170,6 +172,7 @@ describe("a refused session at the counter", () => {
       markWaiverInPersonFromCheckIn(SHOP_SLUG, FOCUS_TRIP_ID, PAPER_WAIVER_IDLE, form),
     confirmIdentityFromCheckIn: (form) =>
       confirmIdentityFromCheckIn(SHOP_SLUG, FOCUS_TRIP_ID, form),
+    splitIdentityFromCheckIn: (form) => splitIdentityFromCheckIn(SHOP_SLUG, FOCUS_TRIP_ID, form),
   };
 
   function bookingForm(): FormData {

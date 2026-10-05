@@ -194,7 +194,7 @@
     },
     "blockers": {
       "requirementsNotConfigured": "Aún no se han configurado los requisitos de la salida.",
-      "identityUnconfirmed": "Identidad sin confirmar: esta reserva se asoció al registro de un buceador existente por una coincidencia, de un correo compartido o de un nombre elegido de una lista. Confirma que es la misma persona antes de embarcar.",
+      "identityUnconfirmed": "Puede ser otra persona. Confirma quién es antes de embarcar.",
       "waiverNotSent": "La exención aún no se ha enviado.",
       "waiverPending": "La exención espera la firma del buceador.",
       "waiverExpired": "El enlace de la exención caducó; emite uno nuevo.",
@@ -520,5 +520,16 @@
   "formDraft": {
     "pickedUp": "Retomado del mostrador, {time}.",
     "startOver": "Empezar de nuevo"
+  },
+  "identityCheck": {
+    "reasonSharedEmail": "Reservó como {bookedAs} con el correo de {name}. Confirma quién es.",
+    "reasonPickedName": "Reservó como {bookedAs} y se asoció a {name} desde la lista de nombres. Confirma quién es.",
+    "reasonSameName": "Hay más de un buceador llamado {name}. Confirma que es la ficha correcta.",
+    "same": "Misma persona",
+    "sameAria": "Misma persona que {name}",
+    "different": "Otra persona",
+    "newNameLabel": "Nombre para su propia ficha",
+    "split": "Crear su propia ficha",
+    "splitting": "Creando…"
   }
 }

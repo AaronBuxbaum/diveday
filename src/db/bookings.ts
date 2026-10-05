@@ -37,11 +37,15 @@ import {
   bookings,
   certifications,
   courses,
+  gearReservations,
+  internalNotes,
+  notificationSendQueue,
   people,
   personRoles,
   shops,
   tripAssignments,
   trips,
+  waiverRecords,
 } from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { getShopCurrency } from "./stripe-accounts";
@@ -697,6 +701,9 @@ async function createBookingRecord(
   //    looking in (issue #1556) — and, on that path, the typed name disagrees
   //    with the one on file, or two divers answer to it.
   let identityUnconfirmed = false;
+  // What the staffer is shown beside the matched record while the flag stands,
+  // and what a split-off record is named (`splitBookingIdentity`).
+  let identityClaim: { bookedAs: string; matchedBy: "shared_email" | "picked_name" } | null = null;
   if ("personId" in req) {
     [person] = await tx
       .select()
@@ -710,6 +717,9 @@ async function createBookingRecord(
     identityUnconfirmed = req.fromNameMatch
       ? await nameMatchLeavesIdentityInDoubt(tx, req.shopId, person, req.fromNameMatch.typedName)
       : false;
+    if (identityUnconfirmed && req.fromNameMatch) {
+      identityClaim = { bookedAs: req.fromNameMatch.typedName.trim(), matchedBy: "picked_name" };
+    }
   } else {
     const email = req.email?.trim().toLowerCase() || null;
     if (email) {
@@ -724,6 +734,9 @@ async function createBookingRecord(
         // Reuse-by-email before the capacity gate: flag a name that doesn't match
         // the person already on file for this address.
         identityUnconfirmed = !personNamesMatch(person.fullName, req.fullName);
+        if (identityUnconfirmed) {
+          identityClaim = { bookedAs: req.fullName.trim(), matchedBy: "shared_email" };
+        }
       } else {
         pendingInsert = { fullName: req.fullName.trim(), email, phone: req.phone };
       }
@@ -861,6 +874,9 @@ async function createBookingRecord(
       });
       person = resolved.person;
       identityUnconfirmed = !resolved.nameMatches;
+      identityClaim = identityUnconfirmed
+        ? { bookedAs: pendingInsert.fullName, matchedBy: "shared_email" }
+        : null;
     } else {
       // No email means no `people_shop_email_unique` row to race for (that
       // index is partial — null emails never collide, schema.ts) — a plain
@@ -903,6 +919,8 @@ async function createBookingRecord(
         // Re-booking this seat re-evaluates identity: a matching name now clears
         // any stale flag, a mismatch (re)raises it.
         identityUnconfirmedAt: identityUnconfirmed ? nowDate() : null,
+        identityBookedAs: identityUnconfirmed ? (identityClaim?.bookedAs ?? null) : null,
+        identityMatchedBy: identityUnconfirmed ? (identityClaim?.matchedBy ?? null) : null,
         // A reactivated row starts a *new* booking and must not inherit party
         // membership from its earlier life: a stale `party_lead_booking_id`
         // would list this fresh, independent seat in the old organizer's claim
@@ -953,6 +971,8 @@ async function createBookingRecord(
       diveIntent: req.diveIntent ?? null,
       reEntryAsk: req.reEntryAsk ?? null,
       identityUnconfirmedAt: identityUnconfirmed ? nowDate() : null,
+      identityBookedAs: identityUnconfirmed ? (identityClaim?.bookedAs ?? null) : null,
+      identityMatchedBy: identityUnconfirmed ? (identityClaim?.matchedBy ?? null) : null,
       referralSource: partnerReferralSlug(req.referralSource),
       // **Stamped by the application clock, not the column's `defaultNow()`.**
       //
@@ -1707,9 +1727,7 @@ const IDENTITY_CONFIRMED_CODE = {
  * (H-13): clears `identity_unconfirmed_at`, which drops the readiness blocker.
  * Shop-scoped and idempotent — a no-op on an already-clear or unknown booking
  * returns false so the caller can distinguish "confirmed" from "nothing to do".
- * This never *creates* a separate diver; when it is genuinely a different human
- * behind a shared inbox, staff resolve that by booking them under their own
- * email, not by confirming here.
+ * The other answer, "not the same person", is {@link splitBookingIdentity}.
  *
  * **The actor is required because the trail is what makes this tap safe.**
  * What clearing the flag hands over is not small: the matched diver's current
@@ -1748,7 +1766,7 @@ export async function confirmBookingIdentity(
   const booking = await db.transaction(async (tx) => {
     const [row] = await tx
       .update(bookings)
-      .set({ identityUnconfirmedAt: null })
+      .set({ identityUnconfirmedAt: null, identityBookedAs: null, identityMatchedBy: null })
       .where(
         and(
           eq(bookings.id, input.bookingId),
@@ -1783,4 +1801,168 @@ export async function confirmBookingIdentity(
     code,
   });
   return true;
+}
+
+/** What a split refused, as a code (`splitBookingIdentity`). */
+export type SplitBookingIdentityResult =
+  | { ok: true; personId: string; tripId: string }
+  | { ok: false; reason: "not_held" | "name_required" | "medical_hold" };
+
+/** The longest name a split accepts. */
+export const SPLIT_NAME_MAX = 200;
+
+/**
+ * Staff answer "not the same person" to a booking flagged
+ * `identity_unconfirmed` (H-13): the seat leaves the matched diver's record
+ * and becomes a new diver of its own, named by the staffer (prefilled with
+ * the name it was booked under).
+ *
+ * **It hands over nothing**, which is why it needs no blocking confirm while
+ * the opposite answer does. The new record starts empty: no email (the shared
+ * address stays with the record that owns it, and `people_shop_email_unique`
+ * would refuse a second), no cards, no clean release. Readiness then blocks on
+ * what the new diver has not given yet, which is the honest state. A wrong
+ * split is undone by merging the two records (owner and manager), the same as
+ * any duplicate.
+ *
+ * What moves is what was about this seat rather than about the matched person:
+ * the booking itself, the gear held for it, and the staff notes written on it.
+ * Every release and link on the seat is superseded, because nobody knows which
+ * of the two people signed it, so the seat asks for its own. Signed releases
+ * stay on the matched record: the seal covers who a release is filed under,
+ * and moving one would read as tampering (issue #2080 asks who should own
+ * them). A seat with an unanswered medical referral is refused (`medical_hold`)
+ * until the referral is answered, since superseding it would lift the hold.
+ *
+ * Every bearer link minted over this booking is revoked, and queued sends for
+ * it dropped: they were addressed to the matched diver, and a readiness link
+ * scoped to the booking would otherwise let them edit the new diver's
+ * emergency contact (the same reasoning as `claimSeat`). Prepaid dives never
+ * moved in the first place, because an unconfirmed seat spends none
+ * (`settlePackageCoverage`). A cancelled seat is refused: there is nobody to
+ * give a record to.
+ *
+ * Two trail lines, for the same reason `confirmBookingIdentity` writes two:
+ * the departure's, and one on the matched person's record, which is where a
+ * shop looks when a booking it remembers is no longer there.
+ */
+export async function splitBookingIdentity(
+  db: AppDb,
+  input: { shopId: string; bookingId: string; actorPersonId: string; fullName: string },
+): Promise<SplitBookingIdentityResult> {
+  const fullName = input.fullName.trim().slice(0, SPLIT_NAME_MAX);
+  if (!fullName) return { ok: false, reason: "name_required" };
+  type Split =
+    | { refused: "not_held" | "medical_hold" }
+    | { refused: null; tripId: string; matchedPersonId: string; personId: string };
+  const split = await db.transaction(async (tx): Promise<Split> => {
+    const now = nowDate();
+    const [booking] = await tx
+      .select({ tripId: bookings.tripId, personId: bookings.personId })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          isNotNull(bookings.identityUnconfirmedAt),
+          ne(bookings.status, "cancelled"),
+        ),
+      )
+      .limit(1)
+      .for("update");
+    if (!booking) return { refused: "not_held" as const };
+    // Superseding a referral nobody has answered would lift the hold, and the
+    // person at the counter would face a fresh questionnaire they have
+    // already learned the answer to (issue #1282). The referral is answered
+    // first; then the seat can go.
+    const [referral] = await tx
+      .select({ id: waiverRecords.id })
+      .from(waiverRecords)
+      .where(
+        and(
+          eq(waiverRecords.shopId, input.shopId),
+          eq(waiverRecords.bookingId, input.bookingId),
+          eq(waiverRecords.status, "medical_review"),
+          isNull(waiverRecords.supersededAt),
+          isNull(waiverRecords.medicalClearedAt),
+        ),
+      )
+      .limit(1);
+    if (referral) return { refused: "medical_hold" as const };
+    const [person] = await tx
+      .insert(people)
+      .values({ shopId: input.shopId, fullName, email: null })
+      .returning({ id: people.id });
+    if (!person) throw new Error("splitBookingIdentity: person insert returned no row");
+    await tx.insert(personRoles).values({ personId: person.id, role: "diver" });
+    await tx
+      .update(bookings)
+      .set({
+        personId: person.id,
+        identityUnconfirmedAt: null,
+        identityBookedAs: null,
+        identityMatchedBy: null,
+      })
+      .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)));
+
+    // Any link or release on this seat may be the matched diver's: the seat
+    // asks for its own. The token goes too, so a link already sent is dead.
+    await tx
+      .update(waiverRecords)
+      .set({ supersededAt: now, tokenSealed: null })
+      .where(
+        and(
+          eq(waiverRecords.shopId, input.shopId),
+          eq(waiverRecords.bookingId, input.bookingId),
+          isNull(waiverRecords.supersededAt),
+        ),
+      );
+
+    await revokeBookingCapabilities(tx, { shopId: input.shopId, bookingId: input.bookingId, now });
+    await tx
+      .delete(notificationSendQueue)
+      .where(
+        and(
+          eq(notificationSendQueue.shopId, input.shopId),
+          eq(notificationSendQueue.bookingId, input.bookingId),
+          eq(notificationSendQueue.status, "queued"),
+        ),
+      );
+
+    await tx
+      .update(gearReservations)
+      .set({ personId: person.id })
+      .where(
+        and(
+          eq(gearReservations.shopId, input.shopId),
+          eq(gearReservations.bookingId, input.bookingId),
+        ),
+      );
+    await tx
+      .update(internalNotes)
+      .set({ personId: person.id })
+      .where(
+        and(eq(internalNotes.shopId, input.shopId), eq(internalNotes.bookingId, input.bookingId)),
+      );
+    return {
+      refused: null,
+      tripId: booking.tripId,
+      matchedPersonId: booking.personId,
+      personId: person.id,
+    };
+  });
+  if (split.refused) return { ok: false, reason: split.refused };
+  await recordTripActivity(db, {
+    shopId: input.shopId,
+    tripId: split.tripId,
+    actorPersonId: input.actorPersonId,
+    entry: { code: "identity_split", diver: fullName },
+  });
+  await recordDiverActivity(db, {
+    shopId: input.shopId,
+    personId: split.matchedPersonId,
+    actorPersonId: input.actorPersonId,
+    code: "identity_split_off",
+  });
+  return { ok: true, personId: split.personId, tripId: split.tripId };
 }

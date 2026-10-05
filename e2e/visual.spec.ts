@@ -3939,8 +3939,7 @@ for (const scheme of ["light", "dark"] as const) {
           .locator("article")
           .filter({ hasText: identityHeld.diver })
           .filter({ visible: true });
-        await expect(row.getByText("Identity unconfirmed", { exact: false })).toBeVisible();
-        await row.getByRole("button", { name: `Confirm this is ${identityHeld.diver}` }).click();
+        await row.getByRole("button", { name: `Same person as ${identityHeld.diver}` }).click();
         // Armed, and waited on by the block the tap reveals rather than by the
         // trigger it replaces: the consequence sentence is the frame's subject.
         await expect(
@@ -6620,7 +6619,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto("/shop/blue-mantis/schedule/board");
         await openTripFromBoard(page, "Night Dive — City of Washington");
         await openTripTab(page, "Trip");
-        await page.getByText("Identity unconfirmed").first().waitFor();
+        await page.getByText("Booked as Hana Park with June Park’s email.").first().waitFor();
         await capture(page, "trip-guests-identity", scheme);
       });
 
@@ -6650,10 +6649,10 @@ for (const scheme of ["light", "dark"] as const) {
         await openTripTab(page, "Trip");
         const row = page
           .locator("#roster li")
-          .filter({ hasText: "Identity unconfirmed" })
+          .filter({ hasText: "Booked as Hana Park" })
           .filter({ visible: true })
           .first();
-        await row.getByText("Identity unconfirmed").waitFor();
+        await row.getByText("Booked as Hana Park", { exact: false }).waitFor();
         await openRosterDetails(row);
         // The line that stands in for the withheld fields — waited on rather
         // than the panel, because the panel is open either way and it is this
@@ -6662,7 +6661,8 @@ for (const scheme of ["light", "dark"] as const) {
           row.getByText("Contact, medical and gear details stay hidden until you confirm"),
         ).toBeVisible();
         // And the control that clears it, in the frame beside them.
-        await expect(row.getByRole("button", { name: /^Confirm this is / })).toBeVisible();
+        await expect(row.getByRole("button", { name: "Same person as June Park" })).toBeVisible();
+        await expect(row.getByText("Different person")).toBeVisible();
         await capture(page, "trip-guests-identity-open", scheme);
       });
 

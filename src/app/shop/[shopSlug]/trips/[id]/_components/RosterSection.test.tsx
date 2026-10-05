@@ -40,6 +40,8 @@ function entry(
     emergencyContactPhone?: string;
     dateOfBirth?: string;
     reEntryAsk?: "deck_word" | "easy_first_dive" | "refresher_course";
+    identityBookedAs?: string;
+    identityMatchedBy?: "shared_email" | "picked_name";
   } = {},
 ): RosterEntry {
   return {
@@ -51,6 +53,8 @@ function entry(
       lastDivedBand: null,
       hotelPickupLocation: null,
       pickupTime: null,
+      identityBookedAs: over.identityBookedAs ?? null,
+      identityMatchedBy: over.identityMatchedBy ?? null,
     } as unknown as RosterEntry["booking"],
     person: {
       id: `p-${id}`,
@@ -80,6 +84,21 @@ function readinessRow(status: "ready" | "blocked", blockers: unknown[] = []) {
     paymentStatus: "paid",
     paymentProvider: null,
     depthAdvisory: null,
+  } as unknown as ReadinessByBooking extends Map<string, infer V> ? V : never;
+}
+
+/** A blocked seat whose site also runs deeper than its card, which a boat can share. */
+function deepRow() {
+  return {
+    ...readinessRow("blocked", [{ code: "certification_missing", params: undefined }]),
+    depthAdvisory: {
+      status: "exceeds",
+      limitDepth: 18,
+      siteDepth: 30,
+      unit: "meters",
+      basis: "certification",
+      level: "open_water",
+    },
   } as unknown as ReadinessByBooking extends Map<string, infer V> ? V : never;
 }
 
@@ -123,6 +142,7 @@ function renderRoster({
       mayWriteOffPayment={false}
       removeBookingAction={noop}
       confirmIdentityAction={noop}
+      splitIdentityAction={noop}
       notesByBooking={new Map()}
       addNoteAction={noop}
       deleteNoteAction={noop}
@@ -195,7 +215,13 @@ describe("the guests ledger (slice 5d)", () => {
     expect(headings.indexOf("Still to clear · 1")).toBeLessThan(headings.indexOf("Ready · 1"));
   });
 
-  it("keeps critical names readable and shared blockers on their group band", () => {
+  /**
+   * **A blocker is said on its own diver, however many share it** (Aaron,
+   * 2026-10-05). "1 blocker shared with other divers, listed above" named
+   * neither the problem nor the fix, and there is no batched action for a
+   * blocker that a shared line could stand for.
+   */
+  it("keeps critical names readable and says a shared blocker on every row it stops", () => {
     const secondBlocked = entry("c", "Mina Patel");
     const thirdBlocked = entry("d", "Owen Reed");
     const roster = [blocked, secondBlocked, thirdBlocked];
@@ -221,7 +247,9 @@ describe("the guests ledger (slice 5d)", () => {
     );
     const band = screen.getByRole("heading", { name: "Still to clear · 3" }).parentElement;
     expect(band).not.toBeNull();
-    expect(within(band as HTMLElement).getByText(/3 divers: No certification/)).toBeVisible();
+    expect(within(band as HTMLElement).queryByText(/3 divers:/)).toBeNull();
+    expect(screen.getAllByText(/No certification/)).toHaveLength(3);
+    expect(screen.queryByText(/shared with other divers/)).toBeNull();
     expect(container.querySelector("#roster > div.mt-5")).toBeNull();
   });
 
@@ -377,6 +405,29 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     ["u", readinessRow("blocked", [{ code: "medical_review", params: undefined }])],
   ]) as ReadinessByBooking;
 
+  // The matched person's own blockers are facts about them, not the person at
+  // the counter (dive-domain review 2026-10-05): a held row says only its
+  // identity question and its payment.
+  it("says none of the matched person's own blockers under a held seat", () => {
+    renderRoster({
+      roster: [matched],
+      readiness: new Map([
+        [
+          "u",
+          readinessRow("blocked", [
+            { code: "identity_unconfirmed", params: undefined },
+            { code: "medical_review", params: undefined },
+            { code: "payment_due", params: undefined },
+          ]),
+        ],
+      ]) as ReadinessByBooking,
+      waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+      rentalFit,
+    });
+    expect(screen.queryByText("A medical answer needs staff follow-up.")).toBeNull();
+    expect(screen.getAllByText("Payment is outstanding for this trip.").length).toBeGreaterThan(0);
+  });
+
   it("prints none of the matched person's medical answers, age, contact or sizes", () => {
     renderRoster({
       roster: [matched],
@@ -413,13 +464,36 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       rentalFit,
     });
 
-    expect(screen.getByText(/Identity unconfirmed/)).toBeVisible();
+    expect(screen.getByText(/Might be someone else/)).toBeVisible();
     expect(screen.getByRole("link", { name: "Marisol Vega" })).toBeVisible();
-    // The fix waits behind the row's own control, like every other one
-    // (owner, 2026-10-05); jsdom reports the closed panel as hidden.
+    // Both answers stand in the open, outside the row's fold (Aaron,
+    // 2026-10-05: the old row offered one answer, behind the mark).
+    const same = screen.getByRole("button", { name: "Same person as Marisol Vega" });
+    expect(same).toBeVisible();
+    expect(same.closest("details")).toBeNull();
+    expect(screen.getByText("Different person")).toBeVisible();
+  });
+
+  it("names both people when it knows the name the seat was booked under", () => {
+    renderRoster({
+      roster: [
+        entry("u", "Marisol Vega", {
+          identityBookedAs: "Lucia Vega",
+          identityMatchedBy: "shared_email",
+        }),
+      ],
+      readiness: unconfirmed,
+      waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+      rentalFit,
+    });
+
     expect(
-      screen.getByRole("button", { name: "Confirm this is Marisol Vega", hidden: true }),
-    ).toBeInTheDocument();
+      screen.getByText("Booked as Lucia Vega with Marisol Vega’s email. Confirm who this is."),
+    ).toBeVisible();
+    // "Different person" offers the booked-as name for the new record.
+    expect(
+      screen.getByRole("textbox", { name: "Name for their own record", hidden: true }),
+    ).toHaveValue("Lucia Vega");
   });
 
   it("keeps the flagged medical answer outside the row's fold", () => {
@@ -443,7 +517,7 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       rentalFit,
     });
 
-    expect(screen.getByText(/Identity unconfirmed/).closest("details")).toBeNull();
+    expect(screen.getByText(/Might be someone else/).closest("details")).toBeNull();
   });
 
   it("renders the same facts as soon as the row is confirmed", () => {
@@ -686,18 +760,15 @@ describe("the roster's row geometry", () => {
    */
   it("lines the band's title up with its first fact's words, not the fact's mark", () => {
     const roster = [blocked, entry("c", "Mina Patel"), entry("d", "Owen Reed")];
-    const blocker = [{ code: "certification_missing", params: undefined }];
     renderRoster({
       roster,
-      readiness: new Map(
-        roster.map((seat) => [seat.booking.id, readinessRow("blocked", blocker)]),
-      ) as ReadinessByBooking,
+      readiness: new Map(roster.map((seat) => [seat.booking.id, deepRow()])) as ReadinessByBooking,
       waivers: new Map(roster.map((seat) => [seat.booking.id, signedWaiver])) as WaiverByBooking,
     });
 
     const band = screen.getByRole("heading", { name: "Still to clear · 3" }).parentElement;
     expect(band).toHaveClass("items-baseline");
-    const fact = within(band as HTMLElement).getByText(/3 divers: No certification/);
+    const fact = within(band as HTMLElement).getByText(/3 divers: Reaches 30/);
     expectMarkOnFirstLine(fact.closest("p"));
     expect(fact.closest("p")).not.toHaveClass("items-start");
   });
@@ -710,19 +781,16 @@ describe("the roster's row geometry", () => {
    */
   it("starts every shared fact on one edge, so their marks form a column", () => {
     const roster = [blocked, entry("c", "Mina Patel"), entry("d", "Owen Reed")];
-    const blocker = [{ code: "certification_missing", params: undefined }];
     renderRoster({
       roster,
-      readiness: new Map(
-        roster.map((seat) => [seat.booking.id, readinessRow("blocked", blocker)]),
-      ) as ReadinessByBooking,
+      readiness: new Map(roster.map((seat) => [seat.booking.id, deepRow()])) as ReadinessByBooking,
       waivers: new Map(roster.map((seat) => [seat.booking.id, signedWaiver])) as WaiverByBooking,
     });
 
     const band = screen.getByRole("heading", { name: "Still to clear · 3" }).parentElement;
     expect(band).toHaveClass("justify-between");
     const facts = within(band as HTMLElement)
-      .getByText(/3 divers: No certification/)
+      .getByText(/3 divers: Reaches 30/)
       .closest("p")?.parentElement;
     expect(facts).toHaveClass("sm:items-start");
     expect(facts).not.toHaveClass("sm:items-end");

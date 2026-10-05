@@ -376,7 +376,8 @@
       "certification": "Certificación",
       "waiver": "Exención",
       "payment": "Pago",
-      "contact": "Contacto de emergencia"
+      "contact": "Contacto de emergencia",
+      "identity": "Identidad"
     },
     "cardsWaiting": "{count, plural, one {Un registro de certificación espera verificación.} other {# registros de certificación esperan verificación.}}",
     "waiverMissing": "No hay ninguna exención firmada archivada.",

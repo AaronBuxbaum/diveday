@@ -37,11 +37,13 @@ function renderGroup({
   emergencyPhone = null,
   open = false,
   status,
+  gap,
 }: {
   emergency?: string | null;
   emergencyPhone?: string | null;
   open?: boolean;
   status?: GroupStatus;
+  gap?: ComponentProps<typeof DiverDetailsGroup>["gap"];
 } = {}) {
   return render(
     <DiverDetailsGroup
@@ -50,9 +52,11 @@ function renderGroup({
       personId="person-1"
       t={t}
       locale="en-US"
+      timezone="America/New_York"
       country="US"
       open={open}
       status={status}
+      gap={gap}
     />,
   );
 }
@@ -99,5 +103,30 @@ describe("DiverDetailsGroup", () => {
     const { container, getByRole } = renderGroup({ open: true, status });
     expect(container.querySelector("details")).toHaveAttribute("open");
     expect(getByRole("alert")).toHaveTextContent(status.text);
+  });
+
+  // Issue #2073: a diver under a departure's minimum age showed nothing on
+  // their record. The contact summary cannot say it, so the gap does, with
+  // the boat it keeps them off, and the door opens on it.
+  it("says an age under a departure's minimum, and opens on it", () => {
+    const { container } = renderGroup({
+      emergency: "Ana Castellanos",
+      emergencyPhone: "+13055550199",
+      gap: {
+        kind: "contact",
+        tone: "danger",
+        sentence: { blocker: { code: "under_minimum_age", params: { age: 13, minimumAge: 15 } } },
+        action: { labelKey: "divers.status.acts.editContact", target: "edit_contact" },
+        tripContext: {
+          tripId: "trip-1",
+          bookingId: "booking-1",
+          startsAt: new Date("2026-10-10T12:00:00Z"),
+        },
+      },
+    });
+    const details = container.querySelector("details");
+    expect(details).toHaveAttribute("open");
+    expect(details).toHaveTextContent(/15/);
+    expect(details).toHaveTextContent(/Can’t board/);
   });
 });

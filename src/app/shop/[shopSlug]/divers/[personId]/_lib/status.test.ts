@@ -48,7 +48,15 @@ function booking(
   overrides: Record<string, unknown> = {},
 ): BookingEntry {
   return {
-    booking: { id, status: "confirmed", tripId: `trip-${id}`, ...overrides },
+    booking: {
+      id,
+      status: "confirmed",
+      tripId: `trip-${id}`,
+      identityUnconfirmedAt: null,
+      identityBookedAs: null,
+      identityMatchedBy: null,
+      ...overrides,
+    },
     trip: {
       id: `trip-${id}`,
       title: "Two-Tank Reef",
@@ -509,5 +517,127 @@ describe("splitting the status between the ledger and the file", () => {
     expect(ledger).toHaveLength(1);
     expect(ledger[0]).toMatchObject({ action: { target: "open_booking" } });
     expect(file.certification).toBeUndefined();
+  });
+});
+
+/**
+ * Issue #2073: the record showed a diver as clear while a departure would not
+ * take them, for three blockers it never looked at.
+ */
+describe("the blockers the record used to miss", () => {
+  const NEXT_WEEK = new Date("2026-09-02T11:00:00.000Z");
+
+  it("names an age under the departure's minimum and sends the fix to the date of birth", () => {
+    const rows = buildDiverStatus(
+      diver({ bookings: [booking("b1", TOMORROW)] }),
+      {
+        status: "blocked",
+        blockers: [{ code: "under_minimum_age", params: { age: 13, minimumAge: 15 } }],
+      },
+      { now: NOW },
+    );
+    expect(rows).toEqual([
+      expect.objectContaining({
+        kind: "contact",
+        tone: "danger",
+        sentence: { blocker: { code: "under_minimum_age", params: { age: 13, minimumAge: 15 } } },
+        action: { labelKey: "divers.status.acts.editContact", target: "edit_contact" },
+        tripContext: expect.objectContaining({ bookingId: "b1" }),
+      }),
+    ]);
+  });
+
+  it("lets the age, not a missing emergency contact, speak for the contact row", () => {
+    const rows = buildDiverStatus(
+      diver({
+        person: { emergencyContactName: null },
+        bookings: [booking("b1", TOMORROW)],
+      }),
+      {
+        status: "blocked",
+        blockers: [{ code: "under_minimum_age", params: { age: 13, minimumAge: 15 } }],
+      },
+      { now: NOW },
+    );
+    const { ledger, file } = splitDiverStatus(rows);
+    expect(ledger).toEqual([]);
+    expect(file.contact).toMatchObject({
+      tone: "danger",
+      sentence: { blocker: { code: "under_minimum_age" } },
+    });
+  });
+
+  it("names a seat held over who the diver is, with both names, on the boat it is on", () => {
+    const rows = buildDiverStatus(
+      diver({
+        bookings: [
+          booking("b1", TOMORROW),
+          booking("b2", NEXT_WEEK, {
+            identityUnconfirmedAt: LAST_MONTH,
+            identityBookedAs: "Ama Mensah",
+            identityMatchedBy: "shared_email",
+          }),
+        ],
+      }),
+      { status: "ready", blockers: [] },
+      { now: NOW },
+    );
+    expect(rows).toEqual([
+      expect.objectContaining({
+        kind: "identity",
+        tone: "danger",
+        sentence: {
+          key: "shared.identityCheck.reasonSharedEmail",
+          values: { bookedAs: "Ama Mensah", name: "Grace Mensah" },
+        },
+        action: { labelKey: "divers.status.acts.openBooking", target: "open_booking" },
+        tripContext: expect.objectContaining({ bookingId: "b2", startsAt: NEXT_WEEK }),
+      }),
+    ]);
+    // A question about one seat: it stays in the ledger, never a file row.
+    expect(splitDiverStatus(rows).ledger).toHaveLength(1);
+  });
+
+  it("falls back to the shared blocker sentence when the booked-as name was never kept", () => {
+    const rows = buildDiverStatus(
+      diver({ bookings: [booking("b1", TOMORROW, { identityUnconfirmedAt: LAST_MONTH })] }),
+      { status: "ready", blockers: [] },
+      { now: NOW },
+    );
+    expect(rows[0]).toMatchObject({
+      kind: "identity",
+      sentence: { blocker: { code: "identity_unconfirmed" } },
+    });
+  });
+
+  it("ignores a held seat on a departure that has already gone", () => {
+    const rows = buildDiverStatus(
+      diver({ bookings: [booking("b1", LAST_MONTH, { identityUnconfirmedAt: LAST_MONTH })] }),
+      null,
+      { now: NOW },
+    );
+    expect(rows).toEqual([]);
+  });
+
+  it("says a missing specialty alongside the level the departure needs", () => {
+    const rows = buildDiverStatus(
+      diver({ bookings: [booking("b1", TOMORROW)] }),
+      {
+        status: "blocked",
+        blockers: [
+          {
+            code: "certification_insufficient",
+            params: { requiredLevel: "advanced_open_water", heldLevel: "open_water" },
+          },
+          { code: "specialty_missing", params: { specialty: "deep" } },
+        ],
+      } as ReadinessResult,
+      { now: NOW },
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      sentence: { blocker: { code: "certification_insufficient" } },
+      alsoBlockers: [{ code: "specialty_missing" }],
+    });
   });
 });

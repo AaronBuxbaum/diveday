@@ -284,14 +284,15 @@ test("a walk-in seated off the name prompt is confirmed and checked in without l
 
   const card = page.locator("article").filter({ hasText: "Zoe Bennett" }).filter({ visible: true });
   await expect(card.getByText("Blocked")).toBeVisible();
-  await expect(card.getByText("Identity unconfirmed", { exact: false })).toBeVisible();
+  // Held: the two answers stand on the row, "Same person" and "Different person".
+  await expect(card.getByRole("button", { name: "Same person as Zoe Bennett" })).toBeVisible();
   // The gate the whole change is about: a held row offers no check-in.
   await expect(card.getByRole("button", { name: "Check in Zoe Bennett" })).toHaveCount(0);
 
   // **Two taps, not one.** The attestation releases another person's
   // certifications and release onto this seat and has no undo, so the trigger
   // arms and a second, deliberate tap posts it.
-  await card.getByRole("button", { name: "Confirm this is Zoe Bennett" }).click();
+  await card.getByRole("button", { name: "Same person as Zoe Bennett" }).click();
   await expect(card.getByText("Is the person at the counter Zoe Bennett?")).toBeVisible();
   await card.getByRole("button", { name: "Yes, this is them" }).click();
 
@@ -299,7 +300,7 @@ test("a walk-in seated off the name prompt is confirmed and checked in without l
   // now offers the boarding the flag was refusing.
   await expect(card.getByRole("button", { name: "Check in Zoe Bennett" })).toBeVisible();
   await expect(page).toHaveURL(counter);
-  await expect(card.getByRole("button", { name: /^Confirm this is / })).toHaveCount(0);
+  await expect(card.getByRole("button", { name: /^Same person as / })).toHaveCount(0);
 
   // And `checkInBooking` re-reads readiness for itself, so this tap is the
   // proof the flag is gone from the row rather than only from the render.

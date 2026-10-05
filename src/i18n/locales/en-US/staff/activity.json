@@ -13,6 +13,8 @@
     "booking_no_show_missing_after_dive": "{actor} recorded {diver} as not back aboard after a dive, so the released seat is theirs again",
     "identity_confirmed": "{actor} confirmed on the trip roster that this booking is {diver}",
     "identity_confirmed_at_counter": "{actor} confirmed at the counter that this booking is {diver}",
+    "identity_split": "{actor} gave {diver} their own diver record: not the same person as the match",
+    "identity_split_off": "{actor} moved a booking made under another name off {diver}’s record",
     "crew_assigned": "{actor} assigned {crew} to crew",
     "crew_removed": "{actor} removed {crew} from crew",
     "blowout_called": "{actor} called a weather blow-out",

@@ -376,7 +376,8 @@
       "certification": "Certification",
       "waiver": "Waiver",
       "payment": "Payment",
-      "contact": "Emergency contact"
+      "contact": "Emergency contact",
+      "identity": "Identity"
     },
     "cardsWaiting": "{count, plural, one {A certification record is waiting for verification.} other {# certification records are waiting for verification.}}",
     "waiverMissing": "No signed release on file.",

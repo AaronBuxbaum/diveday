@@ -123,6 +123,12 @@ const NOTICE_KEYS: Record<
   },
   "diver-waitlisted": { form: "add-diver", tone: "success", key: "trips.notices.diverWaitlisted" },
   "identity-confirmed": { form: "roster", tone: "success", key: "trips.notices.identityConfirmed" },
+  "identity-split": { form: "roster", tone: "success", key: "trips.notices.identitySplit" },
+  "identity-medical-hold": {
+    form: "roster",
+    tone: "warning",
+    key: "trips.notices.identityMedicalHold",
+  },
   certified: { form: "roster", tone: "success", key: "trips.notices.certified" },
   // Success, not a warning: the record landed. The tone is the same as its
   // level-card sibling and only the words differ, because what changed is what

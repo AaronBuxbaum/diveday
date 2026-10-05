@@ -1,7 +1,7 @@
-import { readinessBlockerText } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatShortDate, formatTime } from "@/lib/format";
 import type { DiverStatusRow } from "../_lib/status";
+import { statusRowText } from "./DiverStatusLedger";
 
 /** What a file row wears when the status has a gap for its kind. */
 export type FileGap = {
@@ -31,11 +31,7 @@ export function fileGap(
   }: { t: StaffTranslator; locale: string; timezone: string; factSaysIt: boolean },
 ): FileGap | undefined {
   if (!row) return undefined;
-  const sentence = factSaysIt
-    ? null
-    : "blocker" in row.sentence
-      ? readinessBlockerText(t, row.sentence.blocker)
-      : t(row.sentence.key, row.sentence.values);
+  const sentence = factSaysIt ? null : statusRowText(t, row);
   const departure = row.tripContext
     ? // A danger gap is a consequence, not a deadline: a physician's "no"
       // will not clear before Friday, and "Needed for" would suggest it might.

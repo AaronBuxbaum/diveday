@@ -56,6 +56,13 @@ type ActivityParamShapes = {
    * issue #1696).
    */
   identity_confirmed_at_counter: { actor: string; diver: string };
+  /**
+   * …or answered "not the same person": the seat became a new diver of its
+   * own, named `diver` (`splitBookingIdentity`). On the departure.
+   */
+  identity_split: { actor: string; diver: string };
+  /** The same split, on the record the seat left; `diver` is that record's name. */
+  identity_split_off: { actor: string; diver: string };
   /** A seat was taken off a departure. */
   booking_removed: { actor: string; diver: string };
   /** …and put back. */
@@ -189,6 +196,8 @@ export const ACTIVITY_CODES = [
   "booking_no_show_missing_after_dive",
   "identity_confirmed",
   "identity_confirmed_at_counter",
+  "identity_split",
+  "identity_split_off",
   "crew_assigned",
   "crew_removed",
   "blowout_called",

@@ -51,6 +51,7 @@ export function CounterQueue({
   markNoShowAction,
   undoNoShowAction,
   confirmIdentityAction,
+  splitIdentityAction,
   identityCopyFor,
   salvageFor,
   settledOpen,
@@ -100,6 +101,8 @@ export function CounterQueue({
    * drawn by a row whose readiness carries `identity_unconfirmed`.
    */
   confirmIdentityAction: (formData: FormData) => Promise<void>;
+  /** "Different person" on a held seat (`splitIdentityFromCheckIn`). */
+  splitIdentityAction: (formData: FormData) => Promise<void>;
   /**
    * Its words for one row — a function rather than a string, because the
    * trigger names the diver and the page is the layer holding the translator
@@ -176,6 +179,7 @@ export function CounterQueue({
               markNoShowAction={markNoShowAction}
               undoNoShowAction={undoNoShowAction}
               confirmIdentityAction={confirmIdentityAction}
+              splitIdentityAction={splitIdentityAction}
               identityCopy={identityCopyFor(row)}
               salvage={salvageFor(row)}
               t={t}
@@ -217,6 +221,7 @@ export function CounterQueue({
                 markNoShowAction={markNoShowAction}
                 undoNoShowAction={undoNoShowAction}
                 confirmIdentityAction={confirmIdentityAction}
+                splitIdentityAction={splitIdentityAction}
                 identityCopy={identityCopyFor(row)}
                 salvage={salvageFor(row)}
                 t={t}
@@ -267,6 +272,7 @@ export function CounterQueue({
                 markNoShowAction={markNoShowAction}
                 undoNoShowAction={undoNoShowAction}
                 confirmIdentityAction={confirmIdentityAction}
+                splitIdentityAction={splitIdentityAction}
                 identityCopy={identityCopyFor(row)}
                 salvage={salvageFor(row)}
                 t={t}

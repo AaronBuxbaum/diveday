@@ -24,11 +24,13 @@ import type { ReadinessBlocker } from "@/lib/readiness";
 export function counterBlockerDisclosure(
   t: StaffTranslator,
   blockers: readonly ReadinessBlocker[],
+  blockerText: (blocker: ReadinessBlocker) => string = (blocker) =>
+    readinessBlockerText(t, blocker),
 ): { summary: string } | null {
   if (blockers.length <= 1) return null;
   return {
     summary: t("checkIn.blockerReasonsWithFirst", {
-      reason: readinessBlockerText(t, blockers[0]),
+      reason: blockerText(blockers[0]),
       count: blockers.length - 1,
     }),
   };

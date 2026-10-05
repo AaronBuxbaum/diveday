@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { paperGuardianFrom, paperWaiverRefused } from "@/app/actions/paper-waiver-fields";
-import { confirmBookingIdentity } from "@/db/bookings";
+import { confirmBookingIdentity, splitBookingIdentity } from "@/db/bookings";
 import { checkInBooking, undoCheckInBooking } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { markBookingNoShow, undoBookingNoShow } from "@/db/no-show";
@@ -293,4 +293,40 @@ export async function confirmIdentityFromCheckIn(
     return;
   }
   revalidateAndRedirect(back, noticeUrl(back, "identity-not-held"));
+}
+
+/**
+ * **The counter answers "different person"** (H-13; Aaron, 2026-10-05): the
+ * held seat becomes a new diver of its own, named by the staffer, and leaves
+ * the record it was guessed onto. The same write the roster's door makes
+ * (`splitBookingIdentity`), answering in place like the confirm beside it; a
+ * seat that was no longer held navigates with the same notice.
+ */
+export async function splitIdentityFromCheckIn(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+): Promise<void> {
+  const session = await requireStaffSession();
+  const bookingId = String(formData.get("bookingId") ?? "");
+  const back = counterQueuePath(shopSlug, tripId);
+  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
+
+  const split = await splitBookingIdentity(await getDb(), {
+    shopId: session.user.shopId,
+    bookingId,
+    actorPersonId: session.user.personId,
+    fullName: String(formData.get("fullName") ?? ""),
+  });
+  if (split.ok) {
+    revalidatePath(back);
+    return;
+  }
+  revalidateAndRedirect(
+    back,
+    noticeUrl(
+      back,
+      split.reason === "medical_hold" ? "identity-medical-hold" : "identity-not-held",
+    ),
+  );
 }

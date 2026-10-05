@@ -84,6 +84,7 @@ import {
   saveRequirementsAction,
   saveRosterEmergencyContactAction,
   setSeriesRepeatAction,
+  splitDiverIdentityAction,
   undoRemoveBookingAction,
   updateBookingPickupAction,
   updateSeriesCadenceAction,
@@ -538,6 +539,7 @@ export default async function ManageTripPage({
     markPaymentAction: markPaymentAction.bind(null, shopSlug, tripId),
     removeBookingAction: removeBookingAction.bind(null, shopSlug, tripId),
     confirmDiverIdentityAction: confirmDiverIdentityAction.bind(null, shopSlug, tripId),
+    splitDiverIdentityAction: splitDiverIdentityAction.bind(null, shopSlug, tripId),
     certifyDiverAction: trip.course
       ? certifyDiverFromRosterAction.bind(null, shopSlug, tripId)
       : undefined,

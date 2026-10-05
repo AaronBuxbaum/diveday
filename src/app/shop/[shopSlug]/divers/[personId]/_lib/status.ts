@@ -1,3 +1,4 @@
+import { identityReasonMessage } from "@/i18n/identity-check-labels";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import {
@@ -53,7 +54,7 @@ import {
  */
 
 /** Which part of the record a row is about — and the word the row leads with. */
-export type DiverStatusKind = "certification" | "waiver" | "payment" | "contact";
+export type DiverStatusKind = "certification" | "waiver" | "payment" | "contact" | "identity";
 
 /** Where the row's one fix takes the reader. Resolved to a control by the surface. */
 export type DiverStatusTarget =
@@ -76,6 +77,13 @@ export type DiverStatusRow = {
     | { blocker: ReadinessBlocker }
     | { key: StaffMessageKey; values?: Record<string, string | number> };
   /**
+   * The rest of the same family's blockers on the measured departure, said
+   * after the sentence (issue #2073): a trip needing Deep *and* Advanced
+   * showed only the level, and the specialty surfaced once the level was
+   * fixed. The fix stays the first blocker's.
+   */
+  alsoBlockers?: ReadinessBlocker[];
+  /**
    * The one fix, beside the row.
    *
    * **Optional, deliberately.** A medical hold has no act the shop can take
@@ -97,8 +105,12 @@ export type DiverStatusRow = {
   verifies?: CardAwaitingKind;
 };
 
-/** The kinds the record's file has a row of its own for. Money has none. */
-export type DiverFileKind = Exclude<DiverStatusKind, "payment">;
+/**
+ * The kinds the record's file has a row of its own for. Money has none, and
+ * neither has a seat held over who the diver is: that is a question about one
+ * booking, answered on its departure.
+ */
+export type DiverFileKind = Exclude<DiverStatusKind, "payment" | "identity">;
 
 /**
  * **One gap, said once: in its own file row.**
@@ -117,7 +129,7 @@ export type DiverFileKind = Exclude<DiverStatusKind, "payment">;
 export function foldsIntoFile(
   row: DiverStatusRow,
 ): row is DiverStatusRow & { kind: DiverFileKind } {
-  if (row.kind === "payment") return false;
+  if (row.kind === "payment" || row.kind === "identity") return false;
   const target = row.action?.target;
   return target !== "open_booking" && target !== "collect";
 }
@@ -129,8 +141,11 @@ export function splitDiverStatus(rows: DiverStatusRow[]): {
 } {
   const ledger: DiverStatusRow[] = [];
   const file: Partial<Record<DiverFileKind, DiverStatusRow>> = {};
+  // One gap per file row, and the worst one: the rows arrive danger first, so
+  // a date of birth that keeps the diver off a boat is what the Contact
+  // details row says, ahead of a missing emergency contact.
   for (const row of rows) {
-    if (foldsIntoFile(row)) file[row.kind] = row;
+    if (foldsIntoFile(row)) file[row.kind] ??= row;
     else ledger.push(row);
   }
   return { ledger, file };
@@ -240,15 +255,34 @@ function firstBlockerIn(
   readiness: ReadinessResult | null,
   category: "waiver" | "certification" | "payment",
 ): ReadinessBlocker | null {
+  return blockersIn(readiness, category)[0] ?? null;
+}
+
+/** Every blocker in a family, in the readiness engine's own order. */
+function blockersIn(
+  readiness: ReadinessResult | null,
+  category: "waiver" | "certification" | "payment",
+): ReadinessBlocker[] {
+  if (readiness?.status !== "blocked") return [];
+  return readiness.blockers.filter((blocker) => BLOCKER_CATEGORY[blocker.code] === category);
+}
+
+/** One blocker by code, on the measured departure. */
+function blockerCoded(
+  readiness: ReadinessResult | null,
+  code: ReadinessBlockerCode,
+): ReadinessBlocker | null {
   if (readiness?.status !== "blocked") return null;
-  return readiness.blockers.find((blocker) => BLOCKER_CATEGORY[blocker.code] === category) ?? null;
+  return readiness.blockers.find((blocker) => blocker.code === code) ?? null;
 }
 
 /**
  * **The open items on a diver's record, worst first.**
  *
- * At most one row per kind: the ledger answers "what is open", and a diver
- * with three pending cards has one job, not three. Danger rows (a departure
+ * Mostly one row per kind: the ledger answers "what is open", and a diver
+ * with three pending cards has one job, not three. Contact is the exception:
+ * an age under a departure's minimum and a missing emergency contact are two
+ * jobs, and `splitDiverStatus` lets the danger one speak for the file row. Danger rows (a departure
  * this diver is on will not let them board) sort above warnings (real work,
  * nobody waiting on a boat).
  *
@@ -334,7 +368,7 @@ export function buildDiverStatus(
 
   // --- Certifications.
   const certSource = options.certification;
-  const certBlocker = firstBlockerIn(
+  const [certBlocker, ...moreCertBlockers] = blockersIn(
     certSource ? certSource.readiness : readiness,
     "certification",
   );
@@ -345,6 +379,7 @@ export function buildDiverStatus(
       // Still a blocker, but a planned one: the course finishes first.
       tone: certBlocker.code === "certification_in_training" ? "warning" : "danger",
       sentence: { blocker: certBlocker },
+      ...(moreCertBlockers.length > 0 ? { alsoBlockers: moreCertBlockers } : {}),
       action: CERTIFICATION_FIX[certBlocker.code] ?? undefined,
       tripContext: certSource ? contextOf(certSource.entry) : tripContext,
       verifies:
@@ -409,6 +444,39 @@ export function buildDiverStatus(
     });
   }
 
+  // --- A seat held over who this diver is (H-13; issue #2073). Read off the
+  // bookings themselves rather than the next departure's readiness, because
+  // the held seat can be any boat ahead and the readiness engine raises the
+  // blocker from this same flag. The answer is on that departure, so the fix
+  // opens the seat there; nothing on this record can clear it.
+  const held = diver.bookings
+    .filter((entry) => entry.booking.identityUnconfirmedAt !== null && bookingIsAhead(entry, now))
+    .sort((a, b) => a.trip.startsAt.getTime() - b.trip.startsAt.getTime())[0];
+  if (held) {
+    rows.push({
+      kind: "identity",
+      tone: "danger",
+      sentence: identitySentence(held, diver.person.fullName),
+      action: { labelKey: "divers.status.acts.openBooking", target: "open_booking" },
+      tripContext: contextOf(held),
+    });
+  }
+
+  // --- Too young for the measured departure (issue #2073). The fix is the
+  // date of birth, which lives on the Contact details row; a correct date that
+  // is still under the minimum is a conversation about the seat, and the row
+  // still says which boat it is.
+  const ageBlocker = blockerCoded(readiness, "under_minimum_age");
+  if (ageBlocker) {
+    rows.push({
+      kind: "contact",
+      tone: "danger",
+      sentence: { blocker: ageBlocker },
+      action: { labelKey: "divers.status.acts.editContact", target: "edit_contact" },
+      tripContext,
+    });
+  }
+
   // --- Who to call. Never a blocker (readiness does not gate on it), always
   // worth doing before a boat leaves with this diver on it.
   if (missingEmergencyContact(diver)) {
@@ -421,4 +489,17 @@ export function buildDiverStatus(
   }
 
   return rows.sort((a, b) => Number(b.tone === "danger") - Number(a.tone === "danger"));
+}
+
+/**
+ * A held seat's sentence names both people when the booking kept the name it
+ * was made under (`identityReasonMessage`); otherwise it is the readiness
+ * sentence every surface shares.
+ */
+function identitySentence(held: BookingEntry, recordName: string): DiverStatusRow["sentence"] {
+  const message = identityReasonMessage(
+    { bookedAs: held.booking.identityBookedAs, matchedBy: held.booking.identityMatchedBy },
+    recordName,
+  );
+  return message ?? { blocker: { code: "identity_unconfirmed" } };
 }

@@ -43,7 +43,6 @@
     "moneyDoor": "Open their orders"
   },
   "identity": {
-    "trigger": "Confirm this is {name}",
     "message": "Is the person at the counter {name}? Confirming hands that diver’s certifications and waiver to this seat, spends any prepaid dives that cover it, and cannot be undone.",
     "confirm": "Yes, this is them",
     "cancel": "Never mind",
@@ -91,7 +90,8 @@
     "walkinInvalid": "Enter a name before adding a walk-in.",
     "noShowAlreadyBoarded": "The crew boarded that diver, so they can’t be marked as not diving. Open the trip’s manifest.",
     "noShowAlreadyMissingAfterDive": "The crew recorded that diver as not back aboard after a dive. Call the boat and open the trip’s manifest.",
-    "identityNotHeld": "That seat is no longer held. It may already have been confirmed by somebody else.",
+    "identityNotHeld": "That seat is no longer held. Somebody else may have answered it already.",
+    "identityMedicalHold": "This seat has a physician referral nobody has answered. Answer it before giving them their own record.",
     "noShowAlreadyMarked": "That diver is already marked not here.",
     "noShowNotBooked": "That seat was given up, so there is nothing to mark.",
     "noShowTripCancelled": "That departure is cancelled, so its guest list can’t change.",

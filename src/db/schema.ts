@@ -2416,6 +2416,14 @@ export const staffCredentials = pgTable(
   ],
 );
 
+/**
+ * What a flagged booking was matched to its person by (H-13): a reused email
+ * under a different name, or a name a staffer picked off the counter's
+ * "is this the same diver?" prompt. Read only to tell the staffer why the seat
+ * is held; it gates nothing the flag itself does not.
+ */
+export const identityMatchKind = pgEnum("identity_match_kind", ["shared_email", "picked_name"]);
+
 export const bookingStatus = pgEnum("booking_status", [
   "booked",
   "checked_in",
@@ -2620,6 +2628,17 @@ export const bookings = pgTable(
      * matched-name booking.
      */
     identityUnconfirmedAt: timestamp("identity_unconfirmed_at", { withTimezone: true }),
+    /**
+     * The name this booking was made under when that differs from the matched
+     * person's, written with `identity_unconfirmed_at` and cleared with it.
+     * It is what lets a staffer see the question ("booked as Sam Rivera, on
+     * record as Alex Rivera") and, when the answer is "not the same person",
+     * what the split-off diver record is named (`splitBookingIdentity`).
+     * Null on every booking that was never flagged.
+     */
+    identityBookedAs: text("identity_booked_as"),
+    /** Why the flag was raised — see {@link identityMatchKind}. Set and cleared with it. */
+    identityMatchedBy: identityMatchKind("identity_matched_by"),
     /**
      * Set on every seat of a party booking *except* the organizer's own,
      * pointing at the organizer's booking on the same trip (docs ADR
