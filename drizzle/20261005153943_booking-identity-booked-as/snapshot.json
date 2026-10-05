@@ -1,9 +1,10 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "bb4b5a3b-92c6-4a5a-b0f3-eb52575eee0f",
+  "id": "3b79afe9-efbb-4812-8e66-e091ddfa4b6b",
   "prevIds": [
-    "01898c19-e880-4737-97b1-6714e1412d84"
+    "46911f72-7b0e-4863-918b-8c98afe2b3a8",
+    "80c5df18-cb5e-4bc8-b648-1280c107e12e"
   ],
   "ddl": [
     {
@@ -1035,12 +1036,6 @@
     },
     {
       "isRlsEnabled": false,
-      "name": "closeout_leftover_decisions",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
       "name": "course_inquiries",
       "entityType": "tables",
       "schema": "public"
@@ -1060,12 +1055,6 @@
     {
       "isRlsEnabled": false,
       "name": "crew_availability_blocks",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "day_closeouts",
       "entityType": "tables",
       "schema": "public"
     },
@@ -4552,110 +4541,6 @@
       "name": "id",
       "entityType": "columns",
       "schema": "public",
-      "table": "closeout_leftover_decisions"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "shop_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "closeout_leftover_decisions"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "shop_day",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "closeout_leftover_decisions"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "action_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "closeout_leftover_decisions"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "decision",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "closeout_leftover_decisions"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "actor_person_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "closeout_leftover_decisions"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "decided_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "closeout_leftover_decisions"
-    },
-    {
-      "type": "bigserial",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "seq",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "closeout_leftover_decisions"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "gen_random_uuid()",
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
       "table": "course_inquiries"
     },
     {
@@ -5502,97 +5387,6 @@
       "entityType": "columns",
       "schema": "public",
       "table": "crew_availability_blocks"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "gen_random_uuid()",
-      "generated": null,
-      "identity": null,
-      "name": "id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "day_closeouts"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "shop_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "day_closeouts"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "shop_day",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "day_closeouts"
-    },
-    {
-      "type": "uuid",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "actor_person_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "day_closeouts"
-    },
-    {
-      "type": "timestamp with time zone",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "closed_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "day_closeouts"
-    },
-    {
-      "type": "jsonb",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "outstanding",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "day_closeouts"
-    },
-    {
-      "type": "bigserial",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "seq",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "day_closeouts"
     },
     {
       "type": "uuid",
@@ -14448,6 +14242,19 @@
       "table": "shops"
     },
     {
+      "type": "jsonb",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": "'[]'",
+      "generated": null,
+      "identity": null,
+      "name": "shopfront_photo_urls",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "shops"
+    },
+    {
       "type": "integer",
       "typeSchema": null,
       "notNull": false,
@@ -20475,76 +20282,6 @@
           "opclass": null
         },
         {
-          "value": "shop_day",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "closeout_leftover_decisions_shop_day_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "closeout_leftover_decisions"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "shop_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "shop_day",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "action_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "seq",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "closeout_leftover_decisions_action_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "closeout_leftover_decisions"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "shop_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
           "value": "created_at",
           "isExpression": false,
           "asc": true,
@@ -20869,34 +20606,6 @@
       "entityType": "indexes",
       "schema": "public",
       "table": "crew_availability_blocks"
-    },
-    {
-      "nameExplicit": true,
-      "columns": [
-        {
-          "value": "shop_id",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        },
-        {
-          "value": "shop_day",
-          "isExpression": false,
-          "asc": true,
-          "nullsFirst": false,
-          "opclass": null
-        }
-      ],
-      "isUnique": false,
-      "where": null,
-      "with": "",
-      "method": "btree",
-      "concurrently": false,
-      "name": "day_closeouts_shop_day_idx",
-      "entityType": "indexes",
-      "schema": "public",
-      "table": "day_closeouts"
     },
     {
       "nameExplicit": true,
@@ -26980,40 +26689,6 @@
       ],
       "onUpdate": "NO ACTION",
       "onDelete": "NO ACTION",
-      "name": "closeout_leftover_decisions_shop_id_shops_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "closeout_leftover_decisions"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "actor_person_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "people",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "closeout_leftover_decisions_actor_person_id_people_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "closeout_leftover_decisions"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "shop_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "shops",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
       "name": "course_inquiries_shop_id_shops_id_fkey",
       "entityType": "fks",
       "schema": "public",
@@ -27188,40 +26863,6 @@
       "entityType": "fks",
       "schema": "public",
       "table": "crew_availability_blocks"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "shop_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "shops",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "day_closeouts_shop_id_shops_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "day_closeouts"
-    },
-    {
-      "nameExplicit": false,
-      "columns": [
-        "actor_person_id"
-      ],
-      "schemaTo": "public",
-      "tableTo": "people",
-      "columnsTo": [
-        "id"
-      ],
-      "onUpdate": "NO ACTION",
-      "onDelete": "NO ACTION",
-      "name": "day_closeouts_actor_person_id_people_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "day_closeouts"
     },
     {
       "nameExplicit": false,
@@ -31530,16 +31171,6 @@
         "id"
       ],
       "nameExplicit": false,
-      "name": "closeout_leftover_decisions_pkey",
-      "schema": "public",
-      "table": "closeout_leftover_decisions",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
       "name": "course_inquiries_pkey",
       "schema": "public",
       "table": "course_inquiries",
@@ -31573,16 +31204,6 @@
       "name": "crew_availability_blocks_pkey",
       "schema": "public",
       "table": "crew_availability_blocks",
-      "entityType": "pks"
-    },
-    {
-      "columns": [
-        "id"
-      ],
-      "nameExplicit": false,
-      "name": "day_closeouts_pkey",
-      "schema": "public",
-      "table": "day_closeouts",
       "entityType": "pks"
     },
     {
@@ -32721,27 +32342,6 @@
       "table": "certifications"
     },
     {
-      "value": "\"shop_day\" ~ '^\\d{4}-\\d{2}-\\d{2}$'",
-      "name": "closeout_leftover_decisions_shop_day_format",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "closeout_leftover_decisions"
-    },
-    {
-      "value": "\"decision\" in ('carry', 'dismiss')",
-      "name": "closeout_leftover_decisions_value",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "closeout_leftover_decisions"
-    },
-    {
-      "value": "length(\"action_id\") > 0",
-      "name": "closeout_leftover_decisions_action_id_nonempty",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "closeout_leftover_decisions"
-    },
-    {
       "value": "\"course_id\" is not null or length(btrim(coalesce(\"interest\", ''))) > 0",
       "name": "course_inquiries_subject_present",
       "entityType": "checks",
@@ -32761,13 +32361,6 @@
       "entityType": "checks",
       "schema": "public",
       "table": "crew_availability_blocks"
-    },
-    {
-      "value": "\"shop_day\" ~ '^\\d{4}-\\d{2}-\\d{2}$'",
-      "name": "day_closeouts_shop_day_format",
-      "entityType": "checks",
-      "schema": "public",
-      "table": "day_closeouts"
     },
     {
       "value": "(\"booking_id\" is null) = (\"consumed_at\" is null)",
