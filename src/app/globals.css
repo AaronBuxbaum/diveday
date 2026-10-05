@@ -515,13 +515,30 @@ body {
  * of air above every jump. Zeroing the token moves every reader at once, the
  * offline manifest's rejected-write notice (`fixed top-(--chrome-h)`) among
  * them, which is why that notice has no rule of its own here any more;
- * `chrome.test.ts` holds it beside the rule that hides the bar. */
+ * `chrome.test.ts` holds it beside the rule that hides the bar.
+ *
+ * **Only a roll call on screen counts.** Cache Components keeps a page left
+ * behind mounted under React's `<Activity>`, hidden by an inline
+ * `display: none` on its outermost element (the trip shell's `<main>` when
+ * the reader left the trip, the `.boat-mode` wrapper when they only left the
+ * tab). A bare `:has(… div.boat-mode)` still found that hidden manifest, so
+ * every page reached without a reload after the Boat tab had no tab bar, no
+ * header and a navy ground. Each selector below steps over both. */
 @media (max-width: 1023px) {
-  body:has(#shop-main-content > main > div.boat-mode) [data-staff-chrome="true"] {
+  body:has(
+      #shop-main-content
+        > main:not([style*="display: none"])
+        > div.boat-mode:not([style*="display: none"])
+    )
+    [data-staff-chrome="true"] {
     display: none;
   }
 
-  html:has(#shop-main-content > main > div.boat-mode) {
+  html:has(
+    #shop-main-content
+      > main:not([style*="display: none"])
+      > div.boat-mode:not([style*="display: none"])
+  ) {
     --chrome-h: 0px;
     --tabbar-h: 0px;
   }
@@ -537,7 +554,9 @@ body {
  * prints the manifest in ink.
  */
 @media screen {
-  #shop-main-content:has(> main > div.boat-mode) {
+  #shop-main-content:has(
+    > main:not([style*="display: none"]) > div.boat-mode:not([style*="display: none"])
+  ) {
     background-color: #0a141c;
   }
 }

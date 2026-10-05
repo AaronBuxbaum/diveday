@@ -364,6 +364,35 @@ test.describe("the phone", () => {
     await expect(page).toHaveURL(/\/orders$/);
     await expect(tabs.getByRole("button", { name: "More" })).toHaveClass(/text-primary/);
   });
+
+  /**
+   * **A page left behind is still in the document.** Cache Components keeps a
+   * visited route mounted under React's `<Activity>`, hidden with
+   * `display: none`, and the rule that hides the chrome on the live manifest
+   * found the roll call by a `:has()` that cannot see visibility. So after the
+   * Boat tab, every page reached without a reload had no tab bar and no header
+   * until a refresh threw the hidden manifest away.
+   */
+  test("comes back after the manifest, without a reload", async ({ page }) => {
+    await page.goto("/shop/blue-mantis");
+    const tabs = page.getByRole("navigation", { name: "Main", exact: true });
+    await expect(tabs).toBeVisible();
+
+    await page.locator("ol li h3 a").first().click();
+    const departure = page.getByRole("navigation", { name: "Departure" });
+    await departure.getByRole("link", { name: "Boat" }).click();
+    await expect(page).toHaveURL(/\/manifest/);
+    // The roll call owns the phone: no tab bar while it is open.
+    await expect(tabs).toBeHidden();
+
+    await departure.getByRole("link", { name: "Divers" }).click();
+    await expect(page).toHaveURL(/\/trips\/[a-f0-9-]+$/);
+    await expect(tabs).toBeVisible();
+
+    await tabs.getByRole("link", { name: "Schedule" }).click();
+    await expect(page).toHaveURL(/\/schedule\/board$/);
+    await expect(tabs).toBeVisible();
+  });
 });
 
 /**
