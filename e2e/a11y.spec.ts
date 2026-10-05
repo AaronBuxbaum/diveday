@@ -252,8 +252,9 @@ test.describe("automated accessibility scans of the static staff routes", () => 
     // 8 scans at ~3.5s each, plus the sign-in state, first cold render and
     // one board crawl for the counter's departure.
     test.setTimeout(120_000);
-    // The counter is a departure's own Check-in tab, so it needs a seeded boat
-    // still inside the arrivals window; its <h1> is the trip's title.
+    // The counter is a departure's own Divers tab once its arrivals open, so it
+    // needs a seeded boat still inside the arrivals window; its <h1> is the
+    // trip's title.
     const counterBoat = "Two-Tank Reef — Molasses & French";
     const counter = counterPath(
       "blue-mantis",
@@ -1054,7 +1055,7 @@ const TAP_TARGET_PAGES: readonly { name: string; path: (page: Page) => Promise<s
   { name: "/shop/blue-mantis/gear", path: async () => "/shop/blue-mantis/gear" },
   { name: "/shop/blue-mantis/orders", path: async () => "/shop/blue-mantis/orders" },
   {
-    name: "a departure's Check-in tab",
+    name: "a departure's Divers tab with the desk open",
     path: async (page) =>
       counterPath(
         "blue-mantis",

@@ -285,33 +285,28 @@ async function runState(id: string, index: number): Promise<Outcome | undefined>
 
     case "checked-in": {
       await advanceClock(at(id));
-      // The departure's own Check-in tab is the counter for this boat.
-      await staff.goto(`${shopPath()}/trips/${day.tripId}/check-in`);
-      await expect(staff.getByRole("region", { name: "Check-in queue" })).toBeVisible();
+      // The departure's own Divers tab is the counter for this boat once its
+      // arrivals open: the count leads, and a cleared row ends in its tap.
+      await staff.goto(`${shopPath()}/trips/${day.tripId}`);
+      await expect(staff.getByText(/^\d+ of \d+ here$/)).toBeVisible();
       const card = staff
-        .locator("article")
-        .filter({ hasText: DIVER_NAME })
-        .filter({ visible: true });
+        .locator('#roster li[id^="booking-"]')
+        .filter({ visible: true })
+        .filter({ has: staff.getByRole("link", { name: DIVER_NAME, exact: true }) });
       await expect(card).toHaveCount(1);
       const checkIn = card.getByRole("button", { name: `Check in ${DIVER_NAME}` });
       if ((await checkIn.count()) === 0) {
         throw new Error(
-          `the counter cannot check ${DIVER_NAME} in — the card reads: ${(await card.innerText()).replace(/\s+/g, " ")}`,
+          `the counter cannot check ${DIVER_NAME} in — the row reads: ${(await card.innerText()).replace(/\s+/g, " ")}`,
         );
       }
       const shots = [await snap(staff, index, id, "queue")];
       await checkIn.click();
-      const settled = staff.locator("details").filter({ hasText: /Checked in — \d+/ });
-      await expect(settled.getByRole("heading", { name: /Checked in — \d+/ })).toBeVisible({
-        timeout: 30_000,
-      });
-      // A boat still ahead keeps its receipts folded; open them to reach the row.
-      if (!(await settled.evaluate((node) => (node as HTMLDetailsElement).open))) {
-        await settled.locator("> summary").click();
-      }
+      // The row's own tap turns into its undo; it sinks into "Checked in" only
+      // when nothing else on the seat is outstanding, so the tap is the wait.
       await expect(
         staff.getByRole("button", { name: `Undo check-in for ${DIVER_NAME}` }),
-      ).toBeVisible();
+      ).toBeVisible({ timeout: 30_000 });
       shots.push(await snap(staff, index, id));
       return { screenshots: shots };
     }

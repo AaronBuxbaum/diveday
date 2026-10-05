@@ -679,7 +679,8 @@ export async function tripPathByTitle(
 /**
  * Open the counter for the boat a diver is on, the way the desk finds it:
  * Today's arrival lookup, then the match's own row, which lands on that
- * departure's Check-in tab. Returns the trip id read off the landing URL.
+ * departure's Divers tab — the roster carries the desk's taps once arrivals
+ * open. Returns the trip id read off the landing URL.
  */
 export async function openCounterFor(page: Page, shopSlug: string, diverName: string) {
   await page.goto(`/shop/${shopSlug}?q=${encodeURIComponent(diverName)}`);
@@ -687,17 +688,15 @@ export async function openCounterFor(page: Page, shopSlug: string, diverName: st
     .getByRole("link", { name: new RegExp(`check-in for ${escapeRegExp(diverName)}$`) })
     .first()
     .click();
-  await page.waitForURL(
-    new RegExp(`/shop/${shopSlug}/trips/[0-9a-f-]{36}/check-in(\\?[^#]*)?(#.*)?$`),
-  );
-  const tripId = new URL(page.url()).pathname.match(/\/trips\/([0-9a-f-]{36})\//)?.[1];
+  await page.waitForURL(new RegExp(`/shop/${shopSlug}/trips/[0-9a-f-]{36}(\\?[^#]*)?(#.*)?$`));
+  const tripId = new URL(page.url()).pathname.match(/\/trips\/([0-9a-f-]{36})$/)?.[1];
   if (!tripId) throw new Error(`no trip id in ${page.url()} after opening ${diverName}'s counter`);
   return tripId;
 }
 
-/** A departure's Check-in tab — the counter for that one boat. */
+/** The counter for one boat: the departure's Divers tab, the trip root. */
 export function counterPath(shopSlug: string, tripId: string): string {
-  return `/shop/${shopSlug}/trips/${tripId}/check-in`;
+  return `/shop/${shopSlug}/trips/${tripId}`;
 }
 
 function escapeRegExp(text: string): string {
@@ -744,7 +743,13 @@ export async function openSettingsRow(page: Page, heading: string) {
  * exactly like `openPrivateNotes` in add-diver.spec.ts.
  */
 export async function openRosterDetails(row: Locator): Promise<void> {
-  await openIfClosed(row.locator(":scope > details"));
+  // The row's own disclosure, named by its mark — not the desk's "Not here?"
+  // door, which is also a direct `<details>` of the row once arrivals open.
+  await openIfClosed(
+    row
+      .locator(":scope > details")
+      .filter({ has: row.page().locator('summary[aria-label^="Details for "]') }),
+  );
 }
 
 /**

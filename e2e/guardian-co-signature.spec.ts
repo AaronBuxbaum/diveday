@@ -5,6 +5,7 @@ import {
   daysFromNow,
   openDiverFileGroup,
   openPaperWaiverForm,
+  openRosterDetails,
   waiverLinkFromToast,
 } from "./helpers";
 
@@ -156,11 +157,15 @@ test("a namesake parent can co-sign on paper, on the staffer's own attestation",
   };
   if (!blockedMinor) throw new Error("seed-trouble-states found no seat for the demo's minor");
 
-  // Straight to her departure's Check-in tab, which puts her row on screen in
-  // one render and keeps it there.
+  // Straight to her departure's Divers tab — the counter while its arrivals
+  // are open — which puts her row on screen in one render and keeps it there.
+  // The paper form is the roster row's own, behind the row's disclosure.
   await page.goto(counterPath(SHOP, blockedMinor.tripId));
-  const row = page.locator("article").filter({ hasText: "Lena Fischer" }).filter({ visible: true });
-  await expect(row.getByText("Blocked")).toBeVisible();
+  const row = page
+    .locator('#roster li[id^="booking-"]')
+    .filter({ visible: true })
+    .filter({ has: page.getByRole("link", { name: "Lena Fischer", exact: true }) });
+  await expect(row.getByText("Blocked", { exact: true })).toBeVisible();
 
   const fillPaperForm = async () => {
     await row
@@ -171,6 +176,7 @@ test("a namesake parent can co-sign on paper, on the staffer's own attestation",
     await row.getByLabel("Relationship").selectOption("parent");
   };
 
+  await openRosterDetails(row);
   await openPaperWaiverForm(row);
   // **A minor's attestation names who answered the health questions** (issue
   // #1668). The adult sentence stops at "no answer needs physician sign-off",
@@ -188,10 +194,7 @@ test("a namesake parent can co-sign on paper, on the staffer's own attestation",
   // the staffer watched two people sign, so the shop is told what happened and
   // the release is not recorded.
   await row.getByRole("button", { name: "Record paper signature" }).click();
-  const refused = page.locator("article").filter({ hasText: "Lena Fischer" }).filter({
-    visible: true,
-  });
-  await expect(refused.getByText("The co-signer’s name is the diver’s own")).toBeVisible();
+  await expect(row.getByText("The co-signer’s name is the diver’s own")).toBeVisible();
 
   // **And nothing the staffer typed was thrown away** (issue #1674). The
   // refusal used to redirect with a `?notice=`, which remounted these boxes
@@ -200,35 +203,29 @@ test("a namesake parent can co-sign on paper, on the staffer's own attestation",
   // with a family waiting. This is the surface where it bit hardest, because
   // the tick below appears only on this second pass.
   await expect(
-    refused
+    row
       .getByLabel("I have this diver’s signed release on file", { exact: false })
       .filter({ visible: true }),
   ).toBeChecked();
-  await expect(refused.getByLabel("Parent or guardian who signed")).toHaveValue("Lena Fischer");
-  await expect(refused.getByLabel("Relationship")).toHaveValue("parent");
+  await expect(row.getByLabel("Parent or guardian who signed")).toHaveValue("Lena Fischer");
+  await expect(row.getByLabel("Relationship")).toHaveValue("parent");
 
   // And the way through, which only this refusal draws: the form comes back
   // open, carrying the staffer's own assertion about what they saw. One tick
   // and one tap — nothing is retyped, which is the whole of #1674, and the
   // recording below would be refused on the browser's own `required` if the
   // relationship had not survived.
-  const namesake = refused.getByLabel("This co-signer and this diver have the same name", {
+  const namesake = row.getByLabel("This co-signer and this diver have the same name", {
     exact: false,
   });
   await expect(namesake).toBeVisible();
   await namesake.check();
-  await refused.getByRole("button", { name: "Record paper signature" }).click();
+  await row.getByRole("button", { name: "Record paper signature" }).click();
 
   // The blocker is genuinely gone rather than hidden: the same immutable
-  // record a self-service signature produces, so the counter offers the act it
+  // record a self-service signature produces, so the desk offers the act it
   // was holding back.
-  await expect(
-    page
-      .locator("article")
-      .filter({ hasText: "Lena Fischer" })
-      .filter({ visible: true })
-      .getByRole("button", { name: "Check in Lena Fischer" }),
-  ).toBeVisible();
+  await expect(row.getByRole("button", { name: "Check in Lena Fischer" })).toBeVisible();
 });
 
 /**
