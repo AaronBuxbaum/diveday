@@ -52,6 +52,7 @@ import { daySpineSummaryText } from "@/i18n/today-labels";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
 import { assembleEveningClose, dayTakings } from "@/lib/closeout";
+import { shopCrewTarget } from "@/lib/crew-schedule";
 import { FORM_DRAFT_RESUME_SUFFIX } from "@/lib/form-drafts";
 import {
   formatDateTimeTz,
@@ -403,7 +404,7 @@ async function TodayBody({
     // chores — same gate as Reports (task 157), read live above.
     canReadShopMoney,
     evidence,
-    shop.diversPerDivemaster,
+    shopCrewTarget(shop),
     session.user.roles,
   );
   // Tomorrow, read the same bounded way rather than by widening today's
@@ -422,7 +423,7 @@ async function TodayBody({
     locale,
     false,
     evidence,
-    shop.diversPerDivemaster,
+    shopCrewTarget(shop),
     session.user.roles,
   );
   const { actions, withheldCount, nextDeparture, crewedTripIds, crewedSessions } = work;

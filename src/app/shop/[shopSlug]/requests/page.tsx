@@ -144,7 +144,12 @@ export default async function RequestsPage({
               })),
               departureShape,
             );
-            const lines = requestAdviceLines(advice, shop.diversPerDivemaster, t);
+            const lines = requestAdviceLines(
+              // No divemaster count for a shop that keeps no crew schedule.
+              shop.crewScheduleEnabled ? advice : { ...advice, suggestedDivemasters: 0 },
+              shop.diversPerDivemaster,
+              t,
+            );
             // **The advice is a shared fact between days, not only within one.**
             // A shop with one hull and one ratio advises the same hull and the
             // same crew on every day that fits it, so the sentence stood

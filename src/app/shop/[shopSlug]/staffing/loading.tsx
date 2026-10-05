@@ -7,9 +7,9 @@ const DAYS = [0, 1, 2, 3, 4, 5, 6];
 
 /**
  * Body-shaped skeleton for the staffing week (design principle 1): the week
- * pager, the day-header strip, five people rows of the grid, the gap row, the
- * page's two doors and its consent row, and the credentials ledger beneath —
- * in the order the page renders them, at the heights it renders them at.
+ * pager, the day-header strip, the gap row, five people rows of the grid, and
+ * the page's two doors and its consent row, in the order the page renders
+ * them, at the heights it renders them at.
  *
  * Hairlines rather than cards, because the page it stands in for is a ledger
  * now (ADR 20260827-the-shops-shelves, decision 3) and a skeleton made of
@@ -50,6 +50,7 @@ export default function StaffingLoading() {
               </div>
             ))}
           </div>
+          <div className={`h-12 ${WEEK_GRID.row}`} />
           {[0, 1, 2, 3, 4].map((row) => (
             <div key={row} className={WEEK_GRID.row}>
               <div className={WEEK_GRID.person}>
@@ -66,17 +67,22 @@ export default function StaffingLoading() {
                   {/* A shift lands in some cells and not others; a full grid of
                       bars would promise a week nobody works. */}
                   {(row + day) % 3 === 0 ? (
-                    // The chip's own box around its two 16px lines, a time
-                    // over a note: 46px with the chip's edge (K-498).
+                    // The shift's own box around its two 16px lines, a time
+                    // over a note: 46px with the box's edge (K-498). A shift
+                    // has no fill, so its lines are the bars.
                     <div className={WEEK_GRID.shiftChip}>
-                      <div className="h-8" />
+                      <div className="flex h-4 items-center">
+                        <div className="h-3 w-20 rounded bg-surface-sunken" />
+                      </div>
+                      <div className="flex h-4 items-center">
+                        <div className="h-3 w-14 rounded bg-surface-sunken" />
+                      </div>
                     </div>
                   ) : null}
                 </div>
               ))}
             </div>
           ))}
-          <div className={`h-12 ${WEEK_GRID.row}`} />
         </div>
 
         {/* The day list below `lg`: a day's label, then its people as
@@ -102,7 +108,7 @@ export default function StaffingLoading() {
           ))}
         </div>
 
-        {/* "Add a shift" and "Tell the shop you're away": 48px summaries,
+        {/* "Add a shift" and "Add days away": 48px summaries,
             each on its closing rule alone under the week, as the page draws
             them. */}
         {[0, 1].map((door) => (
@@ -116,15 +122,6 @@ export default function StaffingLoading() {
         {/* The consent row, a 44px disclosure. */}
         <div className="mt-10 flex h-11 items-center">
           <div className="h-4 w-44 rounded bg-surface-sunken" />
-        </div>
-
-        <div className="mt-10">
-          <div className="h-4 w-28 rounded bg-surface-sunken" />
-          <div className="mt-2">
-            {[0, 1, 2].map((row) => (
-              <div key={row} className={`h-12 ${ledgerRowBoxClass}`} />
-            ))}
-          </div>
         </div>
       </div>
     </main>

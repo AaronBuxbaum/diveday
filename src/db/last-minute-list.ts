@@ -120,7 +120,12 @@ export async function joinLastMinuteList(
 
 export type LastMinuteListRow = { entry: LastMinuteListEntry; person: Person };
 
-/** Every active (not unsubscribed) entry for a shop, oldest first. */
+/**
+ * Every active (not unsubscribed) entry for a shop, oldest first — none at
+ * all while the shop has the list switched off (`shops.last_minute_list_enabled`,
+ * ADR 20261005-optional-shop-features), so the trip page's deal sender and the
+ * send itself both find nobody to reach.
+ */
 export async function listLastMinuteList(
   db: DbExecutor,
   shopId: string,
@@ -129,8 +134,13 @@ export async function listLastMinuteList(
     .select({ entry: lastMinuteListEntries, person: people })
     .from(lastMinuteListEntries)
     .innerJoin(people, eq(people.id, lastMinuteListEntries.personId))
+    .innerJoin(shops, eq(shops.id, lastMinuteListEntries.shopId))
     .where(
-      and(eq(lastMinuteListEntries.shopId, shopId), isNull(lastMinuteListEntries.unsubscribedAt)),
+      and(
+        eq(lastMinuteListEntries.shopId, shopId),
+        eq(shops.lastMinuteListEnabled, true),
+        isNull(lastMinuteListEntries.unsubscribedAt),
+      ),
     )
     .orderBy(asc(lastMinuteListEntries.createdAt));
   return rows;
@@ -146,6 +156,7 @@ export async function listLastMinuteList(
  * behind it at all. A shop's opt-in list is a standing preference list, not a
  * transaction log, so this is a small read; the matching itself is pure
  * arithmetic over the rows, done once for every departure in the window.
+ * Empty while the shop has the list switched off, like the read above.
  */
 export async function listActiveLastMinuteWindows(
   db: DbExecutor,
@@ -157,8 +168,13 @@ export async function listActiveLastMinuteWindows(
       availableUntil: lastMinuteListEntries.availableUntil,
     })
     .from(lastMinuteListEntries)
+    .innerJoin(shops, eq(shops.id, lastMinuteListEntries.shopId))
     .where(
-      and(eq(lastMinuteListEntries.shopId, shopId), isNull(lastMinuteListEntries.unsubscribedAt)),
+      and(
+        eq(lastMinuteListEntries.shopId, shopId),
+        eq(shops.lastMinuteListEnabled, true),
+        isNull(lastMinuteListEntries.unsubscribedAt),
+      ),
     );
 }
 

@@ -2,6 +2,7 @@ import { nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
 import { crewLanguageGap } from "@/lib/crew-languages";
 import { countInWaterCrew } from "@/lib/crew-roles";
+import { shopCrewTarget } from "@/lib/crew-schedule";
 import { divemasterRatioGap, inWaterDivemasterCount } from "@/lib/divemaster-ratio";
 import { rentalFitCompleteness } from "@/lib/rentals";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
@@ -53,6 +54,8 @@ export type TripOverviewShop = {
   timezone: string;
   rentalItems: string[];
   diversPerDivemaster: number;
+  /** Whether the shop plans its crew here (`src/lib/crew-schedule.ts`). */
+  crewScheduleEnabled: boolean;
 };
 
 export type TripOverview = Awaited<ReturnType<typeof getTripOverview>>;
@@ -189,7 +192,7 @@ export async function getTripOverview(
   const ratioGap = divemasterRatioGap({
     divers: trip.booked,
     divemasterCount: inWaterDivemasterCount(inWaterCrew),
-    diversPerDivemaster: shop.diversPerDivemaster,
+    diversPerDivemaster: shopCrewTarget(shop),
     // A departure the shop has marked self-guided is never short of its own
     // target — the whole point of the mark (issue #973).
     selfGuided: trip.selfGuided,
@@ -199,10 +202,14 @@ export async function getTripOverview(
   // above), so a trip full of divers with no stated preference correctly
   // reports no gap rather than flagging every crew that never recorded
   // English.
-  const languageGap = crewLanguageGap({
-    crewSpokenLanguages: assignedCrew.map((entry) => entry.person.spokenLanguages),
-    diverLanguages,
-  });
+  // A shop that keeps no roster is not told nobody aboard speaks German: its
+  // crew list is not where it records who sails.
+  const languageGap = shop.crewScheduleEnabled
+    ? crewLanguageGap({
+        crewSpokenLanguages: assignedCrew.map((entry) => entry.person.spokenLanguages),
+        diverLanguages,
+      })
+    : ({ code: "none" } as const);
 
   // The other half of the shift <-> crew cross-link: whether each assigned crew
   // member actually has a working shift covering this sailing. `null` — the shop
@@ -215,7 +222,8 @@ export async function getTripOverview(
   // roster, and there are three of those rather than the one `moveTrip` this
   // comment used to name (`crewClashes`' own docblock, "Three doors, not one").
   const [shiftCoverage, clashes] = await Promise.all([
-    crewShiftCoverage(db, shop.id, trip, crewIds),
+    // No shifts exist to cover anybody while the crew schedule is off.
+    shop.crewScheduleEnabled ? crewShiftCoverage(db, shop.id, trip, crewIds) : null,
     crewClashes(db, shop.id, trip.id),
   ]);
 

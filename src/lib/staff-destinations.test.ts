@@ -33,8 +33,8 @@ const crew: StaffDestinationGates = {
   team: false,
   settings: false,
 };
-const everything: StaffNavOffers = { courses: true, gear: true };
-const nothing: StaffNavOffers = { courses: false, gear: false };
+const everything: StaffNavOffers = { courses: true, gear: true, crew: true };
+const nothing: StaffNavOffers = { courses: false, gear: false, crew: false };
 
 describe("the staff destination registry", () => {
   it("gives every destination a unique id and a unique URL", () => {
@@ -303,6 +303,15 @@ describe("what each consumer derives", () => {
   it("gives the daily crew Requests beside the Inbox", () => {
     expect(visibleStaffDestinations(crew).map((d) => d.id)).toContain("requests");
     expect(staffPaletteDestinations(crew).map((d) => d.id)).toContain("requests");
+  });
+
+  it("offers the Crew view only to a shop that keeps a crew schedule", () => {
+    // Off, `/staffing` redirects to the week, so a palette row would be a door
+    // onto a page that is not there.
+    expect(staffPaletteDestinations(owner, { crew: true }).map((d) => d.id)).toContain("staffing");
+    expect(staffPaletteDestinations(owner, { crew: false }).map((d) => d.id)).not.toContain(
+      "staffing",
+    );
   });
 
   it("puts Settings last in the whole registry, so no consumer can list it mid-menu", () => {

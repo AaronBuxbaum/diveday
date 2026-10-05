@@ -350,6 +350,43 @@
     "backup": {
       "heading": "Backups"
     },
+    "features": {
+      "on": "On",
+      "off": "Off",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Saved.",
+      "reviews": {
+        "heading": "Diver reviews",
+        "label": "Ask divers to rate their day",
+        "description": "Star ratings on the trip recap, shown on your public pages once published. Your review link works either way."
+      },
+      "dateRequests": {
+        "heading": "Date requests",
+        "label": "Let divers ask for a day",
+        "description": "A form on your public pages for a day that isn’t on the schedule. Requests land in Inbox."
+      },
+      "lastMinuteList": {
+        "heading": "Last-minute list",
+        "label": "Let divers join a last-minute list",
+        "description": "Divers leave an email, and you can offer them open seats on a departure that’s close."
+      },
+      "tips": {
+        "heading": "Tips",
+        "label": "Offer a tip on the trip recap",
+        "description": "Divers can tip the crew by card after the dive."
+      }
+    },
+    "crewSchedule": {
+      "heading": "Crew schedule",
+      "on": "On",
+      "off": "Off",
+      "label": "Plan crew in DiveDay",
+      "description": "Shifts, days away, and who works each departure. Course sessions name their instructor either way.",
+      "save": "Save crew schedule",
+      "saving": "Saving…",
+      "saved": "Crew schedule saved."
+    },
     "team": {
       "heading": "Team"
     },

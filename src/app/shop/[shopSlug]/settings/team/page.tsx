@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AutoOpenDetails } from "@/components/AutoOpenDetails";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
@@ -13,32 +14,45 @@ import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
 import {
   ChoicePill,
   controlClass,
+  DateField,
   Field,
   FieldActions,
   FieldGrid,
   FormStatus,
 } from "@/components/ui/form";
-import { InsetGroup } from "@/components/ui/ledger";
+import { InsetGroup, ledgerRowBoxClass } from "@/components/ui/ledger";
 import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonManageStaffAccounts } from "@/db/authz";
+import type { staffCredentials } from "@/db/schema";
 import { listShopStaff, type StaffMember } from "@/db/staff-accounts";
+import { listStaffCredentials } from "@/db/staff-credentials";
 import { languageNameIn } from "@/i18n/language-labels";
 import { requestLocale } from "@/i18n/request";
-import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { staffRoleLabelRecord } from "@/i18n/staff-role-labels";
 import { type Role, STAFF_ROLES } from "@/lib/authz";
+import { calendarDateInTimezone, formatCalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { formatDateWithYear } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { requireShopSurface } from "@/lib/session";
 import { COMMON_SPOKEN_LANGUAGES } from "@/lib/spoken-languages";
 import { type FormNotice, noticeForForm, noticeFromParam } from "@/lib/staff-notices";
 import { settingsPaneClass } from "../_components/settings-pane";
+import {
+  type CredentialRow,
+  type RenewalState,
+  StaffCredentials,
+} from "./_components/StaffCredentials";
 import { StaffRolesDisclosure } from "./_components/StaffRolesDisclosure";
 import {
+  deleteStaffCredentialAction,
   inviteStaffAction,
   removeStaffAction,
   resendInviteAction,
   restoreStaffAction,
+  reviewStaffCredentialAction,
+  saveStaffCredentialAction,
   saveStaffEmergencyContactAction,
   saveStaffLanguagesAction,
   saveStaffRolesAction,
@@ -93,7 +107,78 @@ function noticeMessages(t: StaffTranslator): Record<string, NoticeMessage> {
     "last-owner": { tone: "danger", text: t("settings.team.notice.lastOwner") },
     "not-found": { tone: "danger", text: t("settings.team.notice.notFound") },
     "not-authorized": { tone: "danger", text: t("settings.team.notice.notAuthorized") },
+    "credential-saved": { tone: "success", text: t("staffing.notice.credentialSaved") },
+    "credential-reviewed": { tone: "success", text: t("staffing.notice.credentialReviewed") },
+    "credential-deleted": { tone: "success", text: t("staffing.notice.credentialDeleted") },
+    "credential-invalid": { tone: "danger", text: t("staffing.notice.credentialInvalid") },
   };
+}
+
+const CREDENTIAL_KIND_KEYS: Record<
+  (typeof staffCredentials.kind.enumValues)[number],
+  StaffMessageKey
+> = {
+  instructor_rating: "staffing.credentials.kinds.instructor_rating",
+  divemaster_rating: "staffing.credentials.kinds.divemaster_rating",
+  liability_insurance: "staffing.credentials.kinds.liability_insurance",
+  first_aid_cpr: "staffing.credentials.kinds.first_aid_cpr",
+  oxygen_provider: "staffing.credentials.kinds.oxygen_provider",
+  captains_licence: "staffing.credentials.kinds.captains_licence",
+  other: "staffing.credentials.kinds.other",
+};
+
+/** How far ahead a renewal counts as due soon. H-59: a word, never a gate. */
+const RENEWAL_WINDOW_DAYS = 30;
+
+/** The ledger's rows, each renewal measured against the shop's own today. */
+function credentialRowsFor(
+  credentials: Awaited<ReturnType<typeof listStaffCredentials>>,
+  today: string,
+  locale: string,
+  t: StaffTranslator,
+): CredentialRow[] {
+  const dueSoonThrough = shiftCalendarDate(today, RENEWAL_WINDOW_DAYS);
+  return credentials.map(({ credential, person }) => {
+    const renewal: RenewalState = !credential.renewsAt
+      ? "not-recorded"
+      : credential.renewsAt < today
+        ? "overdue"
+        : credential.renewsAt <= dueSoonThrough
+          ? "due-soon"
+          : "current";
+    return {
+      id: credential.id,
+      title: `${person.fullName} · ${credential.name}`,
+      detail: [
+        credential.status === "verified"
+          ? t("staffing.credentials.verified")
+          : t("staffing.credentials.pending"),
+        t(CREDENTIAL_KIND_KEYS[credential.kind]),
+        credential.issuingBody,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      // The word is what carries the state; the ink only seconds it. A
+      // credential whose renewal is comfortably ahead says the date and
+      // nothing more, and one with no renewal recorded says nothing at all.
+      renewalWord:
+        renewal === "overdue"
+          ? t("staffing.credentials.overdue")
+          : renewal === "due-soon"
+            ? t("staffing.credentials.dueSoon")
+            : credential.renewsAt
+              ? t("staffing.credentials.renews", {
+                  date: formatCalendarDate(credential.renewsAt, locale),
+                })
+              : null,
+      renewal,
+      reviewed: credential.status === "verified",
+      reviewLabel:
+        credential.status === "verified"
+          ? t("staffing.credentials.markPending")
+          : t("staffing.credentials.markVerified"),
+    };
+  });
 }
 
 /**
@@ -563,7 +648,10 @@ export default async function TeamSettingsPage({
     refusal: { notice: "team-not-authorized" },
   });
 
-  const staff = await listShopStaff(db, shop.id);
+  const [staff, credentials] = await Promise.all([
+    listShopStaff(db, shop.id),
+    listStaffCredentials(db, shop.id),
+  ]);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   // One resolution, then `noticeForForm` hands each form its own: the invite
@@ -590,6 +678,10 @@ export default async function TeamSettingsPage({
   const inviteStatus = noticeForForm(pageNotice, TEAM_FORMS.invite);
   const pageBanner = noticeForForm(pageNotice, TEAM_FORMS.page);
   const undoRolesFor = parseRoles(priorRoles);
+  // Through the clock and the shop's zone: this decides which renewals read
+  // as due soon or expired.
+  const today = calendarDateInTimezone(nowDate(), shop.timezone);
+  const credentialRows = credentialRowsFor(credentials, today, locale, t);
 
   return (
     <main className={settingsPaneClass("5xl")}>
@@ -711,6 +803,85 @@ export default async function TeamSettingsPage({
             </InsetGroup>
           )}
         </section>
+
+        <StaffCredentials
+          label={t("staffing.credentials.heading")}
+          rows={credentialRows}
+          words={{
+            saving: t("staffing.credentials.saving"),
+            remove: t("staffing.credentials.remove"),
+            removing: t("staffing.credentials.removing"),
+          }}
+          reviewAction={reviewStaffCredentialAction}
+          deleteAction={deleteStaffCredentialAction}
+          door={
+            // A native disclosure on the list's tail row, so the form opens in
+            // place under the ledger it adds to.
+            <li className={`list-none ${ledgerRowBoxClass}`}>
+              <AutoOpenDetails
+                id="add-credential"
+                openOnHash="add-credential"
+                className="scroll-mt-8"
+              >
+                <summary
+                  className={buttonClass({
+                    variant: "link",
+                    flush: true,
+                    className: "list-none select-none [&::-webkit-details-marker]:hidden",
+                  })}
+                >
+                  {t("staffing.credentials.add")}
+                </summary>
+                <div className="pt-1 pb-6">
+                  <FieldGrid as="form" action={saveStaffCredentialAction} columns={2}>
+                    <Field label={t("staffing.credentials.person")}>
+                      <select name="personId" required className={controlClass}>
+                        <option value="">{t("staffing.credentials.choosePerson")}</option>
+                        {staff.map((member) => (
+                          <option key={member.personId} value={member.personId}>
+                            {member.fullName}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label={t("staffing.credentials.kind")}>
+                      <select name="kind" required className={controlClass}>
+                        {Object.entries(CREDENTIAL_KIND_KEYS).map(([kind, key]) => (
+                          <option key={kind} value={kind}>
+                            {t(key)}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field label={t("staffing.credentials.name")}>
+                      <input name="name" required maxLength={160} className={controlClass} />
+                    </Field>
+                    <Field label={t("staffing.credentials.issuer")}>
+                      <input name="issuingBody" maxLength={160} className={controlClass} />
+                    </Field>
+                    <Field label={t("staffing.credentials.identifier")}>
+                      <input name="identifier" maxLength={120} className={controlClass} />
+                    </Field>
+                    <Field label={t("staffing.credentials.issuedAt")}>
+                      <DateField name="issuedAt" />
+                    </Field>
+                    <Field label={t("staffing.credentials.renewsAt")}>
+                      <DateField name="renewsAt" />
+                    </Field>
+                    <FieldActions>
+                      <SubmitButton
+                        pendingLabel={t("staffing.credentials.saving")}
+                        className={buttonClass()}
+                      >
+                        {t("staffing.credentials.add")}
+                      </SubmitButton>
+                    </FieldActions>
+                  </FieldGrid>
+                </div>
+              </AutoOpenDetails>
+            </li>
+          }
+        />
       </div>
     </main>
   );

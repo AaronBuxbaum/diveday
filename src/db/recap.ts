@@ -111,6 +111,8 @@ export type RecapPageData = {
     contactPhone: string | null;
     /** Where a "leave us a review" link sends the diver, or null when the shop hasn't set one. */
     reviewUrl: string | null;
+    /** Whether the shop asks for DiveDay star ratings (`shops.reviews_enabled`). */
+    reviewsEnabled: boolean;
     /**
      * The shop's measurement settings, so the recap's conditions tiles read in
      * the units the shop actually works in (src/lib/depth-units.ts,
@@ -396,6 +398,8 @@ export async function getRecapPageData(
       contactEmail: shops.contactEmail,
       contactPhone: shops.contactPhone,
       reviewUrl: shops.reviewUrl,
+      reviewsEnabled: shops.reviewsEnabled,
+      tipsEnabled: shops.tipsEnabled,
       currency: shops.currency,
       depthUnit: shops.depthUnit,
       temperatureUnit: shops.temperatureUnit,
@@ -638,6 +642,7 @@ export async function getRecapPageData(
       contactEmail: row.contactEmail,
       contactPhone: row.contactPhone,
       reviewUrl: row.reviewUrl,
+      reviewsEnabled: row.reviewsEnabled,
       depthUnit: row.depthUnit,
       temperatureUnit: row.temperatureUnit,
       brandColor: row.brandColor,
@@ -684,7 +689,8 @@ export async function getRecapPageData(
     // instead) has nothing `startTipCheckout` can hand to Stripe as a
     // customer email; offering the form anyway would fail on every
     // submission (Codex finding).
-    canTip: Boolean(row.diverEmail) && canAcceptPayments(stripeAccount),
+    // And never for a shop that switched tips off (`shops.tips_enabled`).
+    canTip: row.tipsEnabled && Boolean(row.diverEmail) && canAcceptPayments(stripeAccount),
     currency: toShopCurrency(row.currency),
     tip: tip
       ? {

@@ -158,6 +158,40 @@ export const shops = pgTable(
      */
     diversPerDivemaster: integer("divers_per_divemaster").notNull().default(6),
     /**
+     * **Whether the shop plans its crew in DiveDay** — the Crew view of
+     * Schedule (shifts, days away, crew asking for a departure), the crew line
+     * on the week, and every nudge measured against `divers_per_divemaster`.
+     * Off by default: a two-person shop where the owner skippers every boat
+     * has no roster to keep, and a page of empty rows and "No crew" warnings
+     * is noise it would have to learn to ignore (ADR 20261005-crew-schedule-is-a-setting).
+     *
+     * Off never loosens a safety cap. A course session still names its
+     * instructor on the trip page, because the agency training ratio refuses
+     * seats from that count (`src/lib/course-ratios.ts`) whatever this says.
+     */
+    crewScheduleEnabled: boolean("crew_schedule_enabled").notNull().default(false),
+    /**
+     * **Optional features a shop can switch off** (ADR
+     * 20261005-optional-shop-features). Each defaults on, so a new shop sees
+     * what every shop saw before the switch existed; off hides the feature on
+     * every surface and deletes nothing. The rule for what each hides lives in
+     * `src/lib/shop-features.ts`.
+     *
+     * - `reviews_enabled`: DiveDay's own star ratings — the recap's rating
+     *   form, the public reviews page and every published star. The shop's
+     *   own `review_url` keeps working either way.
+     * - `date_requests_enabled`: "ask for a day" on the shopfront. A course
+     *   page's own inquiry is not one and stays.
+     * - `last_minute_list_enabled`: the shopfront's last-minute sign-up and the
+     *   trip page's deal sender.
+     * - `tips_enabled`: the tip on the recap. Tipping is a custom in some
+     *   waters and an awkward ask in others.
+     */
+    reviewsEnabled: boolean("reviews_enabled").notNull().default(true),
+    dateRequestsEnabled: boolean("date_requests_enabled").notNull().default(true),
+    lastMinuteListEnabled: boolean("last_minute_list_enabled").notNull().default(true),
+    tipsEnabled: boolean("tips_enabled").notNull().default(true),
+    /**
      * Where a diver who is not booking yet should write. Published on public
      * pages, so it is the shop's front-desk address rather than an owner's
      * personal one — nullable because a shop that has not chosen one must not

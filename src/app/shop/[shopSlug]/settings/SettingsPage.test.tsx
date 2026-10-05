@@ -470,13 +470,14 @@ describe("the hub's summary values", () => {
     expect(facts.filter(Boolean).at(-1)).toBe(PHONE);
   });
 
-  it("keeps each of our own facts whole on the units and diving-options rows", async () => {
-    for (const sectionId of ["units", "divingOptions"] as const) {
+  it("keeps each of our own facts whole on the units, diving-options and crew rows", async () => {
+    for (const sectionId of ["units", "divingOptions", "crewSchedule"] as const) {
       const facts = (await valueFacts(sectionId)).filter(Boolean);
       expect(facts.length, sectionId).toBeGreaterThan(1);
       for (const fact of facts) expect(typeof fact, `${sectionId}: ${fact}`).toBe("string");
     }
-    expect(await valueFacts("divingOptions")).toContain("6:1 divers per divemaster");
+    // The seeded demo plans its crew here, so its target rides on the row.
+    expect(await valueFacts("crewSchedule")).toEqual(["On", "6:1 divers per divemaster"]);
   });
 
   it("lets only the shop's own words wrap: the tagline and the fee's name", async () => {
@@ -558,11 +559,13 @@ describe("the diving options a shop runs", () => {
     expect(hrefsIn(element)).toContain(`/shop/${SHOP_SLUG}/settings/boats`);
   });
 
-  it("asks a boat shop for its divemaster target too", async () => {
-    // The "divers per departure" this replaced was only ever asked of a shop
-    // with no hull. The target is about who is in the water, which is a
-    // question a boat has as much as a beach does.
-    expect(inputNamesIn(await renderSettings("owner"))).toContain("diversPerDivemaster");
+  it("asks for the divemaster target beside the crew schedule switch", async () => {
+    // The target is only ever read while the shop plans its crew here
+    // (`shopCrewTarget`), so it lives with the switch rather than with the
+    // kinds of diving.
+    const names = inputNamesIn(await renderSettings("owner"));
+    expect(names).toContain("crewScheduleEnabled");
+    expect(names).toContain("diversPerDivemaster");
   });
 
   it("takes the boat list away when the shop says it runs no boats", async () => {
@@ -571,7 +574,6 @@ describe("the diving options a shop runs", () => {
         hasBoatDiving: false,
         hasShoreDiving: true,
         hasPoolDiving: true,
-        diversPerDivemaster: 6,
       });
     });
     const names = inputNamesIn(element);

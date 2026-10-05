@@ -246,11 +246,14 @@ export default async function ScheduleBoardPage({
   // batch above. One reading now, so one list: this used to union the stream's
   // cursor page with the week's ids, and the two never agreed about which
   // departures were on the board (#1923).
-  const crewByTrip = await tripCrewByTrip(
-    db,
-    shop.id,
-    Object.values(weekRows.days).flatMap((entries) => entries.map((entry) => entry.tripId)),
-  );
+  // A shop that keeps no crew schedule prints no crew line, so it reads none.
+  const crewByTrip = shop.crewScheduleEnabled
+    ? await tripCrewByTrip(
+        db,
+        shop.id,
+        Object.values(weekRows.days).flatMap((entries) => entries.map((entry) => entry.tripId)),
+      )
+    : new Map<string, Array<{ id: string; name: string }>>();
 
   // A course the catalogue sent us here to schedule. One list read, and only
   // on the rare navigation that names a course — scoped to the session's own
@@ -291,7 +294,8 @@ export default async function ScheduleBoardPage({
       ? {
           estimatedDivers: requestAdvice.estimatedDivers,
           suggestedCapacity: requestAdvice.suggestedCapacity,
-          suggestedDivemasters: requestAdvice.suggestedDivemasters,
+          // A shop with no crew schedule is not told how to crew the day.
+          suggestedDivemasters: shop.crewScheduleEnabled ? requestAdvice.suggestedDivemasters : 0,
           diversPerDivemaster: shop.diversPerDivemaster,
           suggestedBoatName: requestAdvice.suggestedBoat?.name ?? null,
           exceedsKnownBoats: requestAdvice.exceedsKnownBoats,
@@ -693,7 +697,10 @@ export default async function ScheduleBoardPage({
         // **Who is crewing it**, in the shop's own lead-first order. The row
         // decides nothing with this — `WeekBoard` votes on the week's habit and
         // prints only the departures that differ (`src/lib/usual-crew.ts`).
-        crew: (crewByTrip.get(entry.tripId) ?? []).map((member) => member.name),
+        // Null for a shop that keeps no crew schedule: no crew line at all.
+        crew: shop.crewScheduleEnabled
+          ? (crewByTrip.get(entry.tripId) ?? []).map((member) => member.name)
+          : null,
         // The two numbers the bar is a picture of. Beside `meta` rather than
         // parsed back out of it: "10 of 12" is a sentence in two languages and
         // `src/lib/week-seats.ts` must never have to read one.
@@ -930,6 +937,7 @@ export default async function ScheduleBoardPage({
 
       <ScheduleViews
         shopSlug={shopSlug}
+        crewSchedule={shop.crewScheduleEnabled}
         current="week"
         week={weekStartIso}
         copy={{

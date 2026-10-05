@@ -337,7 +337,9 @@ describe("the trip page's order", () => {
     expect(SOURCE).toContain(
       'isEmbed && bookingToken\n      ? await verifyBookingCapability(db, { token: bookingToken, purpose: "confirm" })',
     );
-    expect(SOURCE).toContain("const reviewAggregate = isEmbed ? null :");
+    expect(SOURCE).toContain(
+      "const reviewAggregate =\n    isEmbed || !shop.reviewsEnabled ? null :",
+    );
   });
 });
 

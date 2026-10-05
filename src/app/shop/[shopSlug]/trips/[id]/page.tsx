@@ -521,9 +521,11 @@ export default async function ManageTripPage({
   // assigned, a standing clash, a course without its instructor, a shortfall
   // against the shop's own target, or a language nobody aboard speaks. A
   // settled crew collapses to the one line that names them (principles.md §9).
+  // A shop that plans no crew here is not nagged with an open editor for an
+  // empty crew list; a course still is, through its own instructor gap.
   const crewRowOpen =
     Boolean(noticeForForm(tripNotice, "crew")) ||
-    crewIds.length === 0 ||
+    (shop.crewScheduleEnabled && crewIds.length === 0) ||
     liveClashes.length > 0 ||
     (!cancelled &&
       (crewGap.code !== "none" || underTargetNote !== null || languageGapNote !== null));
@@ -776,6 +778,9 @@ export default async function ManageTripPage({
                   />
                 ) : undefined,
               },
+              // **On every departure, whatever the crew schedule says**: who
+              // is aboard is manifest data (the crew roll call, the souls-on-
+              // board count), not planning (ADR 20261005-crew-schedule-is-a-setting).
               {
                 id: "about-crew",
                 label: t("trips.about.boatAndCrew"),
@@ -838,7 +843,7 @@ export default async function ManageTripPage({
                       },
                       onShift: t("trips.crew.onShift"),
                       notOnShift: t("trips.crew.notOnShift"),
-                      manageShifts: t("trips.crew.manageShifts"),
+                      manageShifts: shop.crewScheduleEnabled ? t("trips.crew.manageShifts") : null,
                     }}
                   />
                 ),

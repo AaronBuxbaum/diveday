@@ -22,11 +22,13 @@ import {
   markShopUnitsConfirmed,
   setShopAddress,
   setShopContact,
+  setShopCrewSchedule,
   setShopCurrency,
   setShopDepthUnit,
   setShopDivingOptions,
   setShopDockDayRhythm,
   setShopEmergencyReference,
+  setShopFeature,
   setShopPackingList,
   setShopPassThroughFee,
   setShopProfile,
@@ -84,6 +86,7 @@ import {
 } from "@/lib/rentals";
 import { parseSeasonStart } from "@/lib/season";
 import { requireStaffSession } from "@/lib/session";
+import { parseShopFeature } from "@/lib/shop-features";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { storeShopHeroImage, storeShopLogoImage } from "@/lib/storage";
 import { timeZoneAnchor } from "@/lib/timezones";
@@ -1086,29 +1089,74 @@ export async function saveDivingOptionsAction(formData: FormData) {
     return;
   }
 
-  // Asked of every shop, boat or not: the target is about who is in the water,
-  // which is a question a beach and a hull answer the same way.
-  const diversPerDivemaster = parseDiversPerDivemaster(formData.get("diversPerDivemaster"));
-  if (diversPerDivemaster === "invalid") {
-    revalidateAndRedirect(
-      settings,
-      noticeUrl(settings, "diving-options-ratio-invalid", { form: "divingOptions" }),
-    );
-    return;
-  }
-
   const db = await getDb();
   await setShopDivingOptions(db, session.user.shopId, {
     hasBoatDiving,
     hasShoreDiving,
     hasPoolDiving,
-    diversPerDivemaster,
   });
 
   revalidateAndRedirect(
     settings,
     noticeUrl(settings, "diving-options-saved", { saved: "divingOptions" }),
   );
+}
+
+/**
+ * Turns the crew schedule on or off, with the divemaster target its nudges
+ * read (`src/lib/crew-schedule.ts`). The target travels with the switch
+ * because it is only ever read while the switch is on.
+ */
+export async function saveCrewScheduleAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+
+  const crewScheduleEnabled = formData.get("crewScheduleEnabled") === "on";
+  const diversPerDivemaster = parseDiversPerDivemaster(formData.get("diversPerDivemaster"));
+  if (diversPerDivemaster === "invalid") {
+    revalidateAndRedirect(
+      settings,
+      noticeUrl(settings, "crew-schedule-ratio-invalid", { form: "crewSchedule" }),
+    );
+    return;
+  }
+
+  await setShopCrewSchedule(await getDb(), session.user.shopId, {
+    crewScheduleEnabled,
+    diversPerDivemaster,
+  });
+
+  revalidateAndRedirect(
+    settings,
+    noticeUrl(settings, "crew-schedule-saved", { saved: "crewSchedule" }),
+  );
+}
+
+/**
+ * Turns one optional feature on or off (ADR 20261005-optional-shop-features).
+ * Every feature row on the hub posts here with its own `feature` field, so the
+ * row that changed comes back open with the notice inside it.
+ */
+export async function saveShopFeatureAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+
+  const feature = parseShopFeature(formData.get("feature"));
+  // Only a hand-built post names no feature; it gets the hub back unchanged.
+  if (!feature) {
+    revalidateAndRedirect(settings, settings);
+    return;
+  }
+  await setShopFeature(
+    await getDb(),
+    session.user.shopId,
+    feature,
+    formData.get("enabled") === "on",
+  );
+
+  revalidateAndRedirect(settings, noticeUrl(settings, "feature-saved", { saved: feature }));
 }
 
 /**

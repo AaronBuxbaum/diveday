@@ -4,6 +4,7 @@ import { seededShopContext } from "@/test/db";
 import {
   issueLastMinuteListUnsubscribeToken,
   joinLastMinuteList,
+  listActiveLastMinuteWindows,
   listLastMinuteList,
   resolveLastMinuteListUnsubscribeToken,
   unsubscribeLastMinuteListEntry,
@@ -11,6 +12,7 @@ import {
 } from "./last-minute-list";
 import { lastMinuteListUnsubscribeTokens, shops } from "./schema";
 import { listCertificationSummaries } from "./self-declared-cards";
+import { setShopFeature } from "./shops";
 
 const visitor = { fullName: "Nora Quinn", email: "nora@example.com", phone: "+1-305-555-0199" };
 
@@ -24,6 +26,17 @@ describe("joinLastMinuteList (in-memory PGlite)", () => {
     expect(list[0]?.entry.id).toBe(outcome.entryId);
     expect(list[0]?.entry.availableFrom).toBeNull();
     expect(list[0]?.entry.availableUntil).toBeNull();
+  });
+
+  it("lists nobody while the shop has the list switched off, and everyone again once it is back on", async () => {
+    const { db, shop } = await seededShopContext();
+    await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
+    await setShopFeature(db, shop.id, "lastMinuteList", false);
+    expect(await listLastMinuteList(db, shop.id)).toEqual([]);
+    expect(await listActiveLastMinuteWindows(db, shop.id)).toEqual([]);
+    await setShopFeature(db, shop.id, "lastMinuteList", true);
+    expect(await listLastMinuteList(db, shop.id)).toHaveLength(1);
+    expect(await listActiveLastMinuteWindows(db, shop.id)).toHaveLength(1);
   });
 
   it("stores the stated date range", async () => {

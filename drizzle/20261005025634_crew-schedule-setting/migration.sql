@@ -1,0 +1,1 @@
+ALTER TABLE "shops" ADD COLUMN "crew_schedule_enabled" boolean DEFAULT false NOT NULL;

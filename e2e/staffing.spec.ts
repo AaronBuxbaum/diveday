@@ -250,7 +250,7 @@ test.describe("staffing, as the daily crew", () => {
     await page.goto(STAFFING);
     await page.getByRole("heading", { level: 1, name: "Schedule" }).waitFor();
 
-    await page.getByText("Tell the shop you’re away").click();
+    await page.getByText("Add days away").click();
     const away = page.locator("#add-away");
     await away.getByLabel("From").fill(daysFromNow(2));
     await away.getByLabel("To").fill(daysFromNow(3));

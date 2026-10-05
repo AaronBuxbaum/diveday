@@ -79,6 +79,7 @@ import { ONBOARDING_EMAIL, SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { publicShopRegisterPath } from "@/lib/public-routes";
 import { RENTABLE_ITEMS, SHOP_CATALOG_ITEMS, toRentableKinds } from "@/lib/rentals";
 import { requireShopSurface } from "@/lib/session";
+import { type ShopFeature, shopOffers } from "@/lib/shop-features";
 import { noticeFromParam, noticeRole, shopPath } from "@/lib/staff-notices";
 import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import {
@@ -100,6 +101,7 @@ import {
   retryMediaDeletionAction,
   retryProcessorErasureAction,
   saveContactAction,
+  saveCrewScheduleAction,
   saveDivingOptionsAction,
   saveDockDayRhythmAction,
   saveEmergencyReferenceAction,
@@ -111,6 +113,7 @@ import {
   saveReviewUrlAction,
   saveSearchListingAction,
   saveSeasonStartAction,
+  saveShopFeatureAction,
   saveTaxAction,
   saveTimezoneAction,
   saveUnitsAction,
@@ -196,7 +199,9 @@ function noticeMessages(
     "diving-options-saved": { tone: "success", text: t("boats.divingOptionsSaved") },
     "diving-options-invalid": { tone: "danger", text: t("boats.divingOptionsInvalid") },
     "diving-options-none": { tone: "danger", text: t("boats.divingOptionsNone") },
-    "diving-options-ratio-invalid": {
+    "crew-schedule-saved": { tone: "success", text: t("settings.main.crewSchedule.saved") },
+    "feature-saved": { tone: "success", text: t("settings.main.features.saved") },
+    "crew-schedule-ratio-invalid": {
       tone: "danger",
       text: t("boats.divingOptionsRatioInvalid"),
     },
@@ -633,12 +638,60 @@ export default async function SettingsPage({
         shop.hasBoatDiving ? t("boats.boatEnabled") : t("boats.boatDisabled"),
         shop.hasShoreDiving ? t("boats.shoreEnabled") : t("boats.shoreDisabled"),
         shop.hasPoolDiving ? t("boats.poolEnabled") : t("boats.poolDisabled"),
-        // The row's other setting, in the notation the rest of the product shows it
-        // in. A hub row states what it holds, and a target nobody can see without
-        // opening the row is a target nobody remembers they set.
+      ]}
+    />
+  );
+  // The target rides on the row while the switch is on: a hub row states what
+  // it holds, and a target nobody can see without opening the row is a target
+  // nobody remembers they set. Off, there is nothing it is measured against.
+  const crewScheduleValue = shop.crewScheduleEnabled ? (
+    <FactLine
+      facts={[
+        t("settings.main.crewSchedule.on"),
         t("boats.diversPerDivemasterValue", { ratio: shop.diversPerDivemaster }),
       ]}
     />
+  ) : (
+    t("settings.main.crewSchedule.off")
+  );
+  // **One shape for every optional feature** (ADR
+  // 20261005-optional-shop-features): the row states On or Off, and opening it
+  // shows one switch and what the switch covers. Each sits in the group its
+  // feature belongs to rather than in a "Features" list of its own, so a shop
+  // finds the tip switch where it finds its other money settings.
+  const featureRow = (feature: ShopFeature) => (
+    <SettingsRow
+      heading={t(`settings.main.features.${feature}.heading`)}
+      value={
+        shopOffers(shop, feature) ? t("settings.main.features.on") : t("settings.main.features.off")
+      }
+      sectionId={feature}
+      activeSection={activeSection}
+    >
+      <SectionNotice banner={banner} section={feature} active={activeSection} />
+      <FieldGrid as="form" action={saveShopFeatureAction} columns={1} className="mt-4">
+        <input type="hidden" name="feature" value={feature} />
+        <ChoiceRow
+          name="enabled"
+          type="checkbox"
+          defaultChecked={shopOffers(shop, feature)}
+          className="text-sm"
+        >
+          <span className="block font-medium">{t(`settings.main.features.${feature}.label`)}</span>
+          <span className="block text-xs text-muted">
+            {t(`settings.main.features.${feature}.description`)}
+          </span>
+        </ChoiceRow>
+        <FieldActions>
+          <SubmitButton
+            pendingLabel={t("settings.main.features.saving")}
+            className={buttonClass({ variant: "secondary" })}
+          >
+            {t("settings.main.features.save")}
+          </SubmitButton>
+        </FieldActions>
+      </FieldGrid>
+    </SettingsRow>
   );
   // A count, not the numbers themselves: this row is read on the hub and the
   // numbers belong on the boat, not on a settings list somebody is scrolling.
@@ -1031,6 +1084,58 @@ export default async function SettingsPage({
                   heading={t("settings.main.team.heading")}
                 />
               ) : null}
+              {/* **Off for a new shop** (ADR 20261005-crew-schedule-is-a-setting):
+                  a shop where the owner skippers every boat keeps no roster,
+                  and the Crew view, the crew line on the week and every "No
+                  crew" nudge would be noise to it. */}
+              <SettingsRow
+                heading={t("settings.main.crewSchedule.heading")}
+                value={crewScheduleValue}
+                sectionId="crewSchedule"
+                activeSection={activeSection}
+              >
+                <SectionNotice banner={banner} section="crewSchedule" active={activeSection} />
+                <FieldGrid as="form" action={saveCrewScheduleAction} columns={1} className="mt-4">
+                  <ChoiceRow
+                    name="crewScheduleEnabled"
+                    type="checkbox"
+                    defaultChecked={shop.crewScheduleEnabled}
+                    className="text-sm"
+                  >
+                    <span className="block font-medium">
+                      {t("settings.main.crewSchedule.label")}
+                    </span>
+                    <span className="block text-xs text-muted">
+                      {t("settings.main.crewSchedule.description")}
+                    </span>
+                  </ChoiceRow>
+                  {/* Beside the switch, because only a shop that plans its crew
+                    is ever measured against it (`shopCrewTarget`). */}
+                  <Field
+                    label={t("boats.diversPerDivemasterLabel")}
+                    hint={t("boats.diversPerDivemasterHint")}
+                    className="mt-2"
+                  >
+                    <input
+                      name="diversPerDivemaster"
+                      type="number"
+                      inputMode="numeric"
+                      min={MIN_DIVERS_PER_DIVEMASTER}
+                      max={MAX_DIVERS_PER_DIVEMASTER}
+                      defaultValue={shop.diversPerDivemaster}
+                      className={controlClass}
+                    />
+                  </Field>
+                  <FieldActions>
+                    <SubmitButton
+                      pendingLabel={t("settings.main.crewSchedule.saving")}
+                      className={buttonClass({ variant: "secondary" })}
+                    >
+                      {t("settings.main.crewSchedule.save")}
+                    </SubmitButton>
+                  </FieldActions>
+                </FieldGrid>
+              </SettingsRow>
             </InsetGroup>
           </SettingsGroup>
         ) : null}
@@ -1106,25 +1211,6 @@ export default async function SettingsPage({
                     {t("boats.poolDivingDescription")}
                   </span>
                 </ChoiceRow>
-                {/* Asked of every shop, unlike the "divers per departure" it
-                    replaced: a hull's seat count is a fact about the boat, and
-                    this is a statement about who is in the water — which a
-                    beach, a pool and a boat all need an answer to. */}
-                <Field
-                  label={t("boats.diversPerDivemasterLabel")}
-                  hint={t("boats.diversPerDivemasterHint")}
-                  className="mt-2"
-                >
-                  <input
-                    name="diversPerDivemaster"
-                    type="number"
-                    inputMode="numeric"
-                    min={MIN_DIVERS_PER_DIVEMASTER}
-                    max={MAX_DIVERS_PER_DIVEMASTER}
-                    defaultValue={shop.diversPerDivemaster}
-                    className={controlClass}
-                  />
-                </Field>
                 <FieldActions>
                   <SubmitButton
                     pendingLabel={t("boats.divingOptionsSubmitting")}
@@ -1575,6 +1661,8 @@ export default async function SettingsPage({
                   </form>
                 </SettingsRow>
 
+                {featureRow("tips")}
+
                 {/* The one row that opens itself: an unconnected or half-onboarded
                   Stripe account is the difference between taking bookings online
                   and not, so the moment it needs a person it surfaces — and once
@@ -1701,6 +1789,8 @@ export default async function SettingsPage({
 
         <SettingsGroup group={MESSAGES_GROUP} label={t(MESSAGES_GROUP.labelKey)}>
           <InsetGroup>
+            {featureRow("reviews")}
+
             {/* One of the few rows another surface links straight to: the Reviews
               page's empty state names this box, so it opens itself on the
               `#review-link` fragment rather than dropping a shop at a closed
@@ -1959,6 +2049,10 @@ export default async function SettingsPage({
                 </FieldActions>
               </FieldGrid>
             </SettingsRow>
+
+            {featureRow("dateRequests")}
+
+            {featureRow("lastMinuteList")}
 
             <SettingsDoorRow
               href={`/shop/${shopSlug}/settings/embed`}

@@ -46,7 +46,7 @@ import {
 
 export type SubmitReviewResult =
   | { ok: true; published: boolean; updated: boolean }
-  | { ok: false; reason: "not_found" | "did_not_dive" };
+  | { ok: false; reason: "not_found" | "did_not_dive" | "reviews_off" };
 
 /**
  * Record (or revise) one diver's review of their trip. The unique index on
@@ -74,11 +74,16 @@ export async function submitTripReview(
         tripId: bookings.tripId,
         personId: bookings.personId,
         status: bookings.status,
+        reviewsEnabled: shops.reviewsEnabled,
       })
       .from(bookings)
+      .innerJoin(shops, eq(shops.id, bookings.shopId))
       .where(eq(bookings.id, input.bookingId))
       .limit(1);
     if (!booking) return { ok: false, reason: "not_found" };
+    // A shop that switched reviews off takes none, whatever an old recap page
+    // or a replayed post still offers (ADR 20261005-optional-shop-features).
+    if (!booking.reviewsEnabled) return { ok: false, reason: "reviews_off" };
     // Same fail-closed treatment the rest of the recap surface gives these two:
     // neither was on the boat, so neither has a dive to rate.
     if (booking.status === "cancelled" || booking.status === "no_show") {
@@ -869,6 +874,10 @@ export type ReviewsAwaitingModeration = {
  * What is waiting on staff: the count Today's row words itself with, plus the
  * one review's id when the count is exactly 1. Both come off the same aggregate
  * so the deep link costs no second query.
+ *
+ * Nothing waits for a shop that switched reviews off (ADR
+ * 20261005-optional-shop-features): the queue it would open is gone with the
+ * Reviews tab, so Today never asks for it.
  */
 export async function readReviewsAwaitingModeration(
   db: DbExecutor,
@@ -884,7 +893,15 @@ export async function readReviewsAwaitingModeration(
       anyId: sql<string | null>`min(${tripReviews.id}::text)`,
     })
     .from(tripReviews)
-    .where(and(eq(tripReviews.shopId, shopId), eq(tripReviews.isPublished, false), not(hidden)));
+    .innerJoin(shops, eq(shops.id, tripReviews.shopId))
+    .where(
+      and(
+        eq(tripReviews.shopId, shopId),
+        eq(shops.reviewsEnabled, true),
+        eq(tripReviews.isPublished, false),
+        not(hidden),
+      ),
+    );
   const count = row?.count ?? 0;
   return { count, onlyId: count === 1 ? (row?.anyId ?? null) : null };
 }

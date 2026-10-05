@@ -8,6 +8,7 @@ import type { EmergencyReference } from "@/lib/emergency-reference";
 import type { ShopCurrency } from "@/lib/money";
 import type { RentalPricing } from "@/lib/rentals";
 import type { SeasonStart } from "@/lib/season";
+import { SHOP_FEATURE_COLUMNS, type ShopFeature } from "@/lib/shop-features";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { type AppDb, getDb } from "./client";
 import { courses, divePackages, orders, shops, trips } from "./schema";
@@ -527,7 +528,7 @@ export async function setShopReviewUrl(db: AppDb, shopId: string, reviewUrl: str
   return shop ?? null;
 }
 
-/** Sets which kinds of diving the shop runs, and its target diver-to-divemaster ratio. */
+/** Sets which kinds of diving the shop runs. */
 export async function setShopDivingOptions(
   db: AppDb,
   shopId: string,
@@ -535,11 +536,41 @@ export async function setShopDivingOptions(
     hasBoatDiving: boolean;
     hasShoreDiving: boolean;
     hasPoolDiving: boolean;
-    /** The divers half of the shop's target ratio (`src/lib/divemaster-ratio.ts`). */
-    diversPerDivemaster?: number;
   },
 ) {
   const [shop] = await db.update(shops).set(options).where(eq(shops.id, shopId)).returning();
+  return shop ?? null;
+}
+
+/**
+ * Turns the shop's crew schedule on or off (`shops.crew_schedule_enabled`),
+ * with the divemaster target its nudges are measured against.
+ */
+export async function setShopCrewSchedule(
+  db: AppDb,
+  shopId: string,
+  options: { crewScheduleEnabled: boolean; diversPerDivemaster: number },
+) {
+  const [shop] = await db.update(shops).set(options).where(eq(shops.id, shopId)).returning();
+  return shop ?? null;
+}
+
+/**
+ * Turns one optional feature on or off (`src/lib/shop-features.ts`). Nothing
+ * the feature wrote is touched, so turning it back on finds everything where
+ * it was.
+ */
+export async function setShopFeature(
+  db: AppDb,
+  shopId: string,
+  feature: ShopFeature,
+  enabled: boolean,
+) {
+  const [shop] = await db
+    .update(shops)
+    .set({ [SHOP_FEATURE_COLUMNS[feature]]: enabled })
+    .where(eq(shops.id, shopId))
+    .returning();
   return shop ?? null;
 }
 

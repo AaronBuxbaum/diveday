@@ -22,6 +22,7 @@ import {
   submitTripReview,
 } from "./reviews";
 import { bookings, people, reviewModerationEvents } from "./schema";
+import { setShopFeature } from "./shops";
 import { createTrip, upcomingTripsWithCounts } from "./trips";
 
 const OTHER_SHOP_ID = "00000000-0000-0000-0000-000000000000";
@@ -149,6 +150,23 @@ describe("submitTripReview", () => {
       ok: false,
       reason: "did_not_dive",
     });
+  });
+
+  it("refuses every review, and asks staff for none, while the shop has reviews switched off", async () => {
+    const { db, shop, bookingIds } = await reviewContext();
+    await submitTripReview(db, { bookingId: bookingIds[0], rating: 4, comment: "Lovely crew." });
+    expect((await readReviewsAwaitingModeration(db, shop.id)).count).toBe(1);
+
+    await setShopFeature(db, shop.id, "reviews", false);
+    expect(await submitTripReview(db, { bookingId: bookingIds[0], rating: 5 })).toEqual({
+      ok: false,
+      reason: "reviews_off",
+    });
+    expect((await readReviewsAwaitingModeration(db, shop.id)).count).toBe(0);
+
+    // Nothing was deleted: back on, the waiting review is waiting again.
+    await setShopFeature(db, shop.id, "reviews", true);
+    expect((await readReviewsAwaitingModeration(db, shop.id)).count).toBe(1);
   });
 
   it("refuses a booking that does not exist rather than inventing a shop for it", async () => {

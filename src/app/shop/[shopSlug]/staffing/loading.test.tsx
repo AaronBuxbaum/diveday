@@ -60,12 +60,14 @@ describe("the staffing skeleton", () => {
       expect(person.firstElementChild).toHaveClass(...WEEK_GRID.person.split(" "));
       for (const day of [...person.children].slice(1)) {
         expect(day).toHaveClass(...WEEK_GRID.day.split(" "));
-        // A chip bar is a shift chip's own box around its two 16px lines, so
-        // it follows the chip's padding and edge: 1 + 6 + 32 + 6 + 1 = 46px.
-        // A fixed height drifted 2px a row when K-498 added the edge.
+        // A shift stand-in is a shift's own box around its two 16px lines,
+        // so it follows the shift's padding and edge: 1 + 6 + 32 + 6 + 1 =
+        // 46px. A fixed height drifted 2px a row when K-498 added the edge.
         for (const bar of day.children) {
           expect(bar).toHaveClass(...WEEK_GRID.shiftChip.split(" "));
-          expect(bar.firstElementChild).toHaveClass("h-8");
+          const lines = [...bar.children];
+          expect(lines).toHaveLength(2);
+          for (const line of lines) expect(line).toHaveClass("h-4");
         }
       }
     }

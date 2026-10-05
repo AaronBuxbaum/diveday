@@ -510,3 +510,18 @@ describe("a departure's lead line (K-329, K-335, K-529)", () => {
     expect(square - 2 * overhang).toBe(px(token(first, /^min-h-(\d+)$/)));
   });
 });
+
+describe("the crew line and the crew schedule switch", () => {
+  it("warns 'nobody yet' on a boat with no crew while the shop plans crew", () => {
+    board(week({}, [entry({ dateIso: "2026-08-27", crew: [] })]));
+    expect(screen.getByText("nobody yet")).toBeTruthy();
+  });
+
+  it("prints no crew line at all for a shop that keeps no crew schedule", () => {
+    // `crew: null` is the page's word for `shops.crew_schedule_enabled` off: a
+    // warning on every boat for a roster the shop does not keep is noise.
+    board(week({}, [entry({ dateIso: "2026-08-27", crew: null })]));
+    expect(screen.queryByText("nobody yet")).toBeNull();
+    expect(screen.queryByText(new RegExp(COPY.crewLabel))).toBeNull();
+  });
+});

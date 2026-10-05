@@ -1101,7 +1101,7 @@ export async function getTodayWork(
    * shop row the rest of the way down its call chain for a queue it only
    * reads as leftovers.
    */
-  diversPerDivemaster = DEFAULT_DIVERS_PER_DIVEMASTER,
+  diversPerDivemaster: number | null = DEFAULT_DIVERS_PER_DIVEMASTER,
   /**
    * The viewer's roles, for filtering the action queue to the relevant audience
    * (issue #715). Multi-role viewers see the union; owners and managers see all.
@@ -1603,7 +1603,8 @@ export async function getTodayWork(
             t,
             ratioGap.divers,
             ratioGap.divemasterCount,
-            diversPerDivemaster,
+            // Never null here: a null target reports no gap at all.
+            diversPerDivemaster ?? DEFAULT_DIVERS_PER_DIVEMASTER,
           ),
           actionLabel: openCrewActionText(t),
           href: `${tripHref}?view=details#crew`,
@@ -2126,7 +2127,7 @@ export async function getTodayWork(
         overdue,
       }),
       actionLabel: openStaffingActionText(t),
-      href: `/shop/${shopSlug}/staffing#credentials`,
+      href: `/shop/${shopSlug}/settings/team#credentials`,
       dueAt,
     });
   }

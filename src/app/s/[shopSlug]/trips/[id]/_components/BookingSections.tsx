@@ -162,6 +162,7 @@ export function TripFullSection({
   contactPhone,
   alternatives = [],
   terms,
+  offerLastMinuteList = true,
 }: {
   shopSlug: string;
   trip: Trip;
@@ -178,6 +179,8 @@ export function TripFullSection({
    * vanished the moment it sold out.
    */
   terms?: React.ReactNode;
+  /** Whether the shop keeps a last-minute list to point a diver at. */
+  offerLastMinuteList?: boolean;
   /**
    * Up to two departures worth offering instead (issue #1166, D06), already
    * chosen by `similarDepartures` and dated in the shop's own zone. Empty
@@ -293,15 +296,19 @@ export function TripFullSection({
           <ErrorNotice message={errorMessage} />
         </div>
       </form>
-      <p className="mt-4 text-sm text-muted">
-        {t("wantAnyTripAlertsInstead")}{" "}
-        <Link
-          href={`${publicSchedulePath(shopSlug)}${tripRef.embed ? "?embed=1" : ""}#last-minute-list`}
-          className="font-medium text-primary hover:underline"
-        >
-          {t("joinLastMinuteDealAlerts")}
-        </Link>
-      </p>
+      {/* Only while the shop keeps the list (`shops.last_minute_list_enabled`):
+          off, the anchor would land on nothing. */}
+      {offerLastMinuteList ? (
+        <p className="mt-4 text-sm text-muted">
+          {t("wantAnyTripAlertsInstead")}{" "}
+          <Link
+            href={`${publicSchedulePath(shopSlug)}${tripRef.embed ? "?embed=1" : ""}#last-minute-list`}
+            className="font-medium text-primary hover:underline"
+          >
+            {t("joinLastMinuteDealAlerts")}
+          </Link>
+        </p>
+      ) : null}
     </section>
   );
 }
@@ -336,6 +343,7 @@ export function BookSpotSection({
   remaining,
   errorMessage,
   payAtBooking,
+  offerCodeField = false,
   perDiverPriceCents,
   currency,
   locale,
@@ -359,6 +367,12 @@ export function BookSpotSection({
   remaining: number;
   errorMessage?: string;
   payAtBooking: boolean;
+  /**
+   * Whether a code could apply to this booking at all (`tripMayTakeACode`).
+   * The code box shows only then: an empty box on every paid booking sends a
+   * diver hunting for a discount the shop never made.
+   */
+  offerCodeField?: boolean;
   perDiverPriceCents: number | null;
   /** The shop's currency — this is a list price, so it follows the shop, not a payment row. */
   currency: ShopCurrency;
@@ -550,7 +564,7 @@ export function BookSpotSection({
             where a party member and a walk-in the counter seated can answer it
             at all. Same argument as the certification question, which left
             this form for the same page on 2026-08-27. */}
-        {payAtBooking ? (
+        {payAtBooking && offerCodeField ? (
           <FieldGrid columns={1} className="max-w-64 border-t border-border pt-4">
             {/* A shop-wide code and a trip-scoped last-minute deal are typed
                   into the same box — the diver has no idea which kind they were

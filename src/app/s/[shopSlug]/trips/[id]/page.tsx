@@ -19,6 +19,7 @@ import { listDiveSiteBriefingExtras } from "@/db/dive-sites";
 import { bookingConfirmationAndWaiverEmailsSent } from "@/db/notifications";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { getShopReviewAggregate } from "@/db/reviews";
+import { tripMayTakeACode } from "@/db/shop-promos";
 import { shopBySlugCached } from "@/db/shops";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { listTripChangeEvents } from "@/db/trip-change-events";
@@ -364,6 +365,9 @@ export default async function TripDetailPage({
   const payAtBooking = Boolean(
     payablePerDiverCents && canAcceptPayments(stripeAccount) && publicAppUrl(),
   );
+  const offerCodeField = payAtBooking
+    ? await tripMayTakeACode(db, { shopId: shop.id, tripId: trip.id })
+    : false;
   // The money lines the form's one block states, resolved here so the deposit
   // and course-fee arithmetic (src/lib/deposits.ts, src/lib/courses.ts) never
   // ships to the browser — the same reason `TripTerms` is a server component.
@@ -540,7 +544,8 @@ export default async function TripDetailPage({
   // URLs would be the duplication the canonical exists to resolve (docs ADR
   // 20260729-booking-page-structured-data). The shop's rating rides along as
   // the organizer's `aggregateRating`.
-  const reviewAggregate = isEmbed ? null : await getShopReviewAggregate(db, shop.id);
+  const reviewAggregate =
+    isEmbed || !shop.reviewsEnabled ? null : await getShopReviewAggregate(db, shop.id);
   const structuredData = isEmbed
     ? null
     : tripPageJsonLd(
@@ -851,6 +856,7 @@ export default async function TripDetailPage({
                   contactEmail={shop.contactEmail}
                   contactPhone={shop.contactPhone}
                   alternatives={alternatives}
+                  offerLastMinuteList={shop.lastMinuteListEnabled}
                   terms={<TripTerms shop={shop} trip={trip} locale={locale} />}
                 />
               ) : (
@@ -860,6 +866,7 @@ export default async function TripDetailPage({
                   remaining={remaining}
                   errorMessage={errorMessage}
                   payAtBooking={payAtBooking}
+                  offerCodeField={offerCodeField}
                   perDiverPriceCents={perDiverPriceCents}
                   currency={shopCurrency}
                   locale={locale}

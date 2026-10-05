@@ -14,7 +14,7 @@
   },
   "away": {
     "from": "From",
-    "heading": "Tell the shop you’re away",
+    "heading": "Add days away",
     "note": "Note",
     "notePlaceholder": "Anything the shop should know",
     "person": "Who",
@@ -45,7 +45,6 @@
     "removing": "Removing…",
     "saving": "Saving…",
     "add": "Add a credential",
-    "emptyDoor": "Credentials · none on file · Add one",
     "kinds": {
       "instructor_rating": "Instructor rating",
       "divemaster_rating": "Divemaster rating",

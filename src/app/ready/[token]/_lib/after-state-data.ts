@@ -148,6 +148,7 @@ export async function buildAfterStateProps(input: {
     canTip: data.canTip,
     tip: data.tip,
     tipPresets: tipPresetsMajor(data.currency),
+    canReview: shop.reviewsEnabled,
     ownReview: ownReview ? { rating: ownReview.rating, comment: ownReview.comment } : null,
     ownPulse,
     params,

@@ -31,7 +31,7 @@ test("a shop's target ratio reaches the departure, and refuses nothing", async (
   const SHOP = privateShop.slug;
 
   await page.goto(`/shop/${SHOP}/settings`);
-  await openSettingsRow(page, "Diving options");
+  await openSettingsRow(page, "Crew schedule");
 
   // 1:1 — tighter than any crew a seeded departure carries, so "under target"
   // is a fact about the number rather than about how the demo happens to be
@@ -39,7 +39,7 @@ test("a shop's target ratio reaches the departure, and refuses nothing", async (
   // `seed-trips.ts` rosters the shop's divemaster as its *captain* on the first
   // charter, on purpose, and `inWaterCrewRole` counts a captain as nobody.
   await page.getByLabel("Divers per divemaster").fill("1");
-  await page.getByRole("button", { name: "Save diving options" }).click();
+  await page.getByRole("button", { name: "Save crew schedule" }).click();
   // The hub row states what it holds, so the saved target is readable without
   // opening the row again — and it is the settled signal that the save landed.
   await expect(page.getByText("1:1 divers per divemaster")).toBeVisible();
@@ -62,9 +62,9 @@ test("a shop's target ratio reaches the departure, and refuses nothing", async (
   // the number, not a constant that happens to read 9. Same nine divers, same
   // empty water, one loose target — one divemaster.
   await page.goto(`/shop/${SHOP}/settings`);
-  await openSettingsRow(page, "Diving options");
+  await openSettingsRow(page, "Crew schedule");
   await page.getByLabel("Divers per divemaster").fill("20");
-  await page.getByRole("button", { name: "Save diving options" }).click();
+  await page.getByRole("button", { name: "Save crew schedule" }).click();
   await expect(page.getByText("20:1 divers per divemaster")).toBeVisible();
 
   await page.goto(`/shop/${SHOP}/trips/${tripId}`);

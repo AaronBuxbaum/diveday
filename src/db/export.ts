@@ -865,6 +865,14 @@ export async function loadShopExportBundleInput(
             // backup, and a shop restoring from one must come back planning and
             // crewing against its own number rather than the default.
             "divers_per_divemaster",
+            "crew_schedule_enabled",
+            // Which optional features the shop switched off (ADR
+            // 20261005-optional-shop-features): a restore must not quietly
+            // turn reviews or tips back on for a shop that chose not to ask.
+            "reviews_enabled",
+            "date_requests_enabled",
+            "last_minute_list_enabled",
+            "tips_enabled",
             "contact_email",
             "contact_phone",
             "address_street",
@@ -929,6 +937,11 @@ export async function loadShopExportBundleInput(
               shop.hasShoreDiving,
               shop.hasPoolDiving,
               shop.diversPerDivemaster,
+              shop.crewScheduleEnabled,
+              shop.reviewsEnabled,
+              shop.dateRequestsEnabled,
+              shop.lastMinuteListEnabled,
+              shop.tipsEnabled,
               shop.contactEmail,
               shop.contactPhone,
               shop.addressStreet,
