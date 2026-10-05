@@ -205,6 +205,30 @@ describe("MarketingScreenFallbacks", () => {
       expect(screen.getAllByText("Mark boarded")).toHaveLength(2);
       expect(screen.getAllByText("Mark not boarded")).toHaveLength(2);
     });
+
+    // The homepage's roll-call step draws the checkpoint the hero's phone does
+    // not: the same copy after the first dive, where the exception is "not back
+    // aboard" and never "not boarded", which after a dive would mark a diver
+    // still in the water as accounted for (DOM-H3).
+    it("draws the after-dive checkpoint with the after-dive verbs", () => {
+      render(<CaptainRollCallFallback locale="en-US" checkpoint="afterDive" />);
+      expect(screen.getByText("Saved 6:52 AM")).toBeInTheDocument();
+      expect(screen.getByText("After dive 1 roll call")).toBeInTheDocument();
+      expect(screen.getByText("After dive 1")).toBeInTheDocument();
+      expect(screen.getByText("Boarded", { selector: "button" })).toBeInTheDocument();
+      expect(screen.getAllByText("Mark boarded")).toHaveLength(1);
+      expect(screen.getAllByText("Mark not back aboard")).toHaveLength(2);
+      expect(screen.queryByText("Mark not boarded")).toBeNull();
+      expect(screen.queryByText("Before departure roll call")).toBeNull();
+    });
+
+    it("draws the after-dive checkpoint in Spanish", () => {
+      render(<CaptainRollCallFallback locale="es-ES" checkpoint="afterDive" />);
+      // The live roll call's heading form, "Pase de lista · …" (es-ES README).
+      expect(screen.getByText("Pase de lista · Después de la inmersión 1")).toBeInTheDocument();
+      expect(screen.getAllByText("Marcar sin regresar a bordo")).toHaveLength(2);
+      expect(screen.getByText("Embarcado", { selector: "button" })).toBeInTheDocument();
+    });
   });
 
   describe("RecapPageFallback, the diver's after-trip page", () => {

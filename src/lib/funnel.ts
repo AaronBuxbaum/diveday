@@ -16,8 +16,8 @@ import { publicSchedulePath } from "./public-routes";
  * arrives off a request is clamped back to it by `eventSource`.
  *
  * A page that offers the same action from more than one place splits its tag by
- * position (`home-hero` / `home-closing`, `product` / `product-index`,
- * `pricing` / `pricing-close`, `about-rules` / `about-closing`)
+ * position (`home-hero` / `home-closing`, `pricing` / `pricing-close`,
+ * `about-rules` / `about-closing`)
  * — otherwise a mid-page door added to answer "one CTA at the bottom of ten
  * sections" folds into the page total and can never be shown to have earned its
  * place. The unsuffixed tag stays the page's original one so attribution
@@ -35,7 +35,7 @@ const FIXED_SOURCES = [
   // Retired 2026-10-05 — kept for history, not for reuse. The homepage's
   // annotated screens each ended in one door into the demo as the screen's
   // role (the 2026-09-24 voice decision), one tag per screen. The screens
-  // became the six steps of one booking (H-93), and each step now links to
+  // became the steps of one booking (H-93), and each step now links to
   // its feature page, whose own demo door opens on that screen and carries
   // that page's tag (`featureSource`).
   "home-diver-moment",
@@ -63,20 +63,17 @@ const FIXED_SOURCES = [
   // became the directory of the feature pages (H-93). Kept for history, not
   // for reuse.
   "product-mid",
-  // The door under `/product`'s capability index. Its band's lede — "every one
-  // of these lines is something you can go and do in the live demo right now" —
-  // makes the page's most explicit dare, and until 2026-08-28 the reader who
-  // took it had nothing to act on for another two bands
-  // (docs/product/marketing-review-20260827.md, "the dare gets a door"). It is
-  // a second *position* for the same action rather than a different one, so it
-  // suffixes `product`: a reader convinced by the inventory is a different
-  // moment from one convinced by the hero or the close, and folded together
-  // neither could be read on its own.
+  // Retired 2026-10-05 — kept for history, not for reuse. The door under
+  // `/product`'s capability index, added 2026-08-28 when the index band's lede
+  // dared the reader to go do any of its lines in the demo
+  // (docs/product/marketing-review-20260827.md, "the dare gets a door"). The
+  // index folded into the feature directory's rows in review on 2026-10-05,
+  // and on a page that short the door stood 880px above the close's pair, the
+  // pressure that retired `home-mid`.
   "product-index",
   // The in-page switching doors on `/product` and `/about` — one each, so they
   // take the page's name rather than a position suffix (the split above is for
   // one *action* offered from several places, which is
-  // `product`/`product-index` and
   // `home-records`/`home-records-arriving`). They are named apart from those
   // demo/trial tags because they are a different action: the reader is going to
   // read about moving, not to open the demo. Untagged until 2026-08-15, which

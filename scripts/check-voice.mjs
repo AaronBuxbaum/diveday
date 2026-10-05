@@ -507,6 +507,7 @@ export const HOUSE_PHRASE_ALLOWLIST = new Set([
   "sitio de buceo",
   "equipo de alquiler",
   "manifiesto de barco",
+  "manifiesto del barco",
   "la lista pendiente",
   "la pestaña equipo",
   "inicio de sesión",

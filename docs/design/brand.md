@@ -271,8 +271,9 @@ builder's notes stay, as the proof's captions, and `/about` keeps its spoken reg
   it. A feature page carries three.
 - **The demo opens on that screen.** A feature page's own "Try the live demo" carries the page's
   role and landing (`src/lib/feature-pages.ts`), so the visitor arrives on the screen they just
-  read about rather than on Today; an annotated screen on a page that argues several things keeps
-  its link-weight `ScreenDoor`, as below.
+  read about rather than on Today. A page that shows several screens on the way to its argument
+  (the homepage's five steps) links each to its feature page instead, whose door opens the demo on
+  that screen; the switching hub's annotated screen keeps its link-weight `ScreenDoor`, as below.
 
 **The builder's note** is the caption under a screen, wherever one is drawn: the product's own
 screen, with short notes from the person who built it pointing at specific things.
@@ -287,11 +288,12 @@ screen, with short notes from the person who built it pointing at specific thing
   count").
 - First person is allowed, and a fact only the builder would know is the kind of note worth
   writing ("I tried a spinner here and the captain read it as the phone thinking").
-- Every screen a visitor could open ends in **one door into the demo as that role** (`ScreenDoor`,
-  link-weight, tagged per screen in `src/lib/funnel.ts`), and the page's one primary stays the
-  shared pair. A screen that reaches its reader another way has no door and says so in its last
-  note: the recap arrives by email once the boat is back, so its last note is "No door here on
-  purpose", and `e2e/marketing.spec.ts` pins the band at three doors for four screens.
+- Every screen a visitor could open leads to **one door into the demo as that role**, and the
+  page's one primary stays the shared pair. On a feature page that door is the hero's; under a
+  screen on a page that argues something else it is the screen's own (`ScreenDoor`, link-weight,
+  tagged per screen in `src/lib/funnel.ts`), or, on the homepage, the feature page's name, one tap
+  from that page's door. The homepage's screens carried `ScreenDoor`s until 2026-10-05, when its
+  steps began to end in their feature pages (H-93).
 - A heading over a screen says what the shop gets from it, and the screen's name in the builder's
   words ("The manifest, on a phone with no signal.") is a fine way to say it when the name is the
   result. It never says what the reader should feel.

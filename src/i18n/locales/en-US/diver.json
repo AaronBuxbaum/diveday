@@ -2162,7 +2162,7 @@
         },
         "manifestHeadCount": {
           "title": "A manifest that calls the roll by name",
-          "body": "The captain marks divers aboard by name, dive by dive, on a phone, from a copy saved to it before the boat leaves, so the roll call keeps working with no signal at the ramp."
+          "body": "The crew marks each diver and crew member aboard by name, dive by dive, on a phone, from a copy saved to it before the boat leaves, so the roll call keeps working with no signal at the ramp."
         }
       },
       "columnsTitle": "The columns it reads",
@@ -2338,8 +2338,8 @@
     "needsYou": "Needs you",
     "kindWaiver": "Waiver",
     "kindCertifications": "Certifications",
-    "waiverNotSent": "Waiver not signed. Not sent yet.",
-    "certPending": "Certification is waiting for staff verification.",
+    "waiverNotSent": "Waiver not signed, not sent yet.",
+    "certPending": "Certification not verified yet.",
     "sendWaiver": "Send waiver",
     "tripLine": "Two-Tank Reef · 7:30 AM",
     "offlineManifest": "Offline manifest",
@@ -2508,7 +2508,13 @@
       "seats": "{booked} of {capacity}",
       "add": "Add",
       "rowActions": "Move, copy, or remove"
-    }
+    },
+    "checkpointBefore": "Before departure",
+    "checkpointDive1": "After dive 1",
+    "checkpointDive2": "After dive 2",
+    "afterDiveRollCallHeading": "After dive 1 roll call",
+    "boardedDone": "Boarded",
+    "markNotBackAboard": "Mark not back aboard"
   },
   "demo": {
     "shopLabel": "Demo shop",
@@ -2555,7 +2561,7 @@
     "home": {
       "eyebrow": "Dive shop software",
       "heroTitle": "Every diver booked, signed, checked and accounted for.",
-      "heroDescription": "Online booking, waivers and medical forms, certification checks, check-in and the boat manifest, in one app for your dive shop. A diver who isn’t ready is named at the desk hours before the dock, and every screen runs in the demo shop.",
+      "heroDescription": "Online booking, waivers and medical forms, certification checks, check-in and the boat manifest, in one app for your dive shop. A diver who isn’t ready is named at the desk days before the boat leaves.",
       "heroPriceLine": "One flat price of {price} {cadence}, and no cut of your bookings.",
       "phoneFrameLabel": "A captain marking divers boarded on DiveDay’s roll-call screen, from the copy saved to the phone.",
       "dockEyebrow": "At the dock",
@@ -2564,7 +2570,7 @@
       "steps": {
         "book": {
           "when": "Days before",
-          "title": "A diver books and pays from your schedule",
+          "title": "A diver books and pays without calling the shop",
           "note1": "Seats left are counted against the boat, live. A full boat says so and takes no more.",
           "note2": "No sign-in on this page. A diver books, pays, and gets a link to their trip by email.",
           "mockupLabel": "The Blue Mantis public schedule, two upcoming trips with the seats left on each."
@@ -2574,32 +2580,27 @@
           "title": "They sign the release and answer the medical form at home"
         },
         "check": {
-          "when": "The morning of",
+          "when": "Each morning, for the week ahead",
           "title": "Anyone who can’t board yet is named, with the reason",
-          "note1": "Each row under Needs you names one diver and what is missing.",
           "note2": "There is no “mark everyone ready” button. I left it out on purpose.",
           "mockupLabel": "Today in the demo shop: one departure with 7 of 9 divers ready, then two rows under Needs you."
         },
-        "checkIn": {
-          "when": "At the counter",
-          "title": "Check-in is one tap per diver"
-        },
         "aboard": {
           "when": "At the dock, and after every dive",
-          "title": "The captain calls the roll by name, signal or not",
-          "note1": "Buttons this big so a wet thumb lands on the right name.",
-          "note2": "“Saved” in the corner says when the copy reached this phone. Readiness on it is as of that save.",
-          "mockupLabel": "The captain’s saved roll call: three counts for the boat, then one row per diver with Mark boarded and Mark not boarded."
+          "title": "The crew calls the roll by name, signal or not",
+          "note1": "Each dive’s count, divers and crew by name, stays open until everyone who left the dock is counted aboard.",
+          "note2": "This copy refreshes whenever DiveDay is open with signal. Out of range, it shows only this phone’s taps.",
+          "mockupLabel": "The crew’s saved roll call after dive 1: 8 of 9 divers boarded and 1 awaiting, one name marked Boarded and the last still showing Mark boarded and Mark not back aboard."
         },
         "recap": {
-          "when": "That evening",
+          "when": "After the boat is back",
           "title": "Each diver gets the day’s recap, under your shop’s name",
           "note1": "The dive record at the top is the shop’s, written once: boat, crew, site, conditions.",
           "note2": "The crew’s note is a quote. It is whatever the crew typed, with no template behind it.",
           "mockupLabel": "A diver’s recap page with the day’s dive record, a note from the crew, and one review ask."
         }
       },
-      "featuresTitle": "Every feature is in the one plan.",
+      "featuresTitle": "What the whiteboard, the clipboard and the three apps did, in one plan.",
       "featuresLink": "The full list of what each feature includes →",
       "exportTitle": "How records arrive, and how they leave.",
       "arrivingLabel": "Coming in",
@@ -2619,7 +2620,8 @@
       "seeIncluded": "See what’s included →",
       "contactTitle": "Ask us first",
       "contactBody": "Write in with whatever would decide it for you. A real person reads it.",
-      "contactCta": "Email {email}"
+      "contactCta": "Email {email}",
+      "stepLink": "{name} →"
     },
     "common": {
       "gettingReady": "Getting your shop ready…",
@@ -3287,10 +3289,8 @@
     "product": {
       "eyebrow": "Features",
       "heroTitle": "From the first booking to the roll call after the last dive.",
-      "heroDescription": "Each feature has its own page, with the screen that does the job, everything in it, what it doesn’t do, and the demo opened on that screen.",
-      "boxEyebrow": "The full list",
-      "boxTitle": "Every shipped workflow, in one list.",
-      "boxDescription": "There is one plan, and all {count, plural, one {# line} other {# lines}} are in it. Each one runs in the live demo today.",
+      "heroDescription": "Booking, waivers, certification checks, the boat manifest, rental gear, courses and payments run in one app. Each job below has a page that shows its screen and opens the demo on it.",
+      "boxDescription": "There is one plan, with all {count, plural, one {# workflow} other {# workflows}} in it.",
       "boxGroupCount": "{count, plural, one {# workflow} other {# workflows}}",
       "noEyebrow": "Not in it",
       "noTitle": "What DiveDay doesn’t do.",
@@ -3312,7 +3312,8 @@
       },
       "closingTitle": "The demo shop has trips on the board and divers booked on them.",
       "closingDescription": "A switcher inside it moves you between the owner, the crew and a diver. Your own shop starts empty, and we set it up with you.",
-      "spreadsheetLink": "See how DiveDay reads your spreadsheet →"
+      "spreadsheetLink": "See how DiveDay reads your spreadsheet →",
+      "alsoInPlan": "Also in the plan"
     },
     "pricing": {
       "heroTitle": "What a shop pays, line by line.",
@@ -3399,8 +3400,8 @@
           "answer": "Yes. The live demo is a sample shop with trips already on the board, and a switcher inside it moves you between the owner, an instructor, a divemaster, the captain and a diver. Your own shop starts empty, and we set it up with you."
         },
         "setupTime": {
-          "question": "How long does setup take?",
-          "answer": "One email from you: write to {email} and we set up your shop’s name, web address and timezone, and your own login. Bringing a spreadsheet of divers across is its own step, and a person can do that import with you, free."
+          "question": "What do I have to do to get set up?",
+          "answer": "Write to {email} and we set up your shop’s name, web address and timezone, and your own login. Bringing a spreadsheet of divers across is its own step, and a person can do that import with you, free."
         },
         "dataIfNotWorking": {
           "question": "How do I access my shop’s records?",

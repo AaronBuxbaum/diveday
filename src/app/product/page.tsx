@@ -8,7 +8,6 @@ import { MarketingFooter, MarketingFooterFallback } from "@/components/Marketing
 import { MarketingSectionMotion } from "@/components/MarketingReveal";
 import { FeatureDirectory } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import {
   BANNER_TITLE_CLASS,
   DISPLAY_TITLE_CLASS,
@@ -100,8 +99,8 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
   cacheLife("max");
   const t = diverTranslator(locale);
 
-  // Every line in the reference index below, counted once so the sentence
-  // introducing it and the list itself can never disagree.
+  // Every line in the full list below, counted once so the sentence closing
+  // it and the rows themselves can never disagree.
   const capabilityCount = productCapabilityIndex.reduce(
     (total, group) => total + group.items.length,
     0,
@@ -131,20 +130,26 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
   return (
     <main className="flex-1">
       <MarketingSectionMotion />
-      <section className="border-b border-border">
-        <div className="mx-auto max-w-4xl px-6 py-20 text-center lg:py-28">
+      {/* The hero, left-aligned on the directory's own column and open at
+          the bottom: no rule and no band boundary between the promise and the
+          list that keeps it, so the title, the lede and the three phases share
+          one left edge (design review, 2026-10-05). It was centred over a
+          left-aligned grid, with a rule and 213px of air between them, and
+          read as two bands. */}
+      <section>
+        <div className="mx-auto max-w-6xl px-6 pt-20 pb-12 lg:pt-28">
           <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.product.eyebrow")}</p>
-          <h1 className={`mt-5 ${DISPLAY_TITLE_CLASS} sm:text-6xl`}>
+          <h1 className={`mt-5 max-w-4xl ${DISPLAY_TITLE_CLASS} sm:text-6xl`}>
             {t("marketing.product.heroTitle")}
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-muted">
+          <p className="mt-6 max-w-2xl text-lg leading-8 text-muted">
             {t("marketing.product.heroDescription")}
           </p>
           {/* The nav tap that lands here is the most evaluation-intent click
               on the site; without its own CTA the first offered action was
               the nav's trial link — the wrong ask while a buyer is still
               verifying claims. Same one-primary block as the home hero. */}
-          <FunnelCtas locale={locale} source="product" className="mt-8 justify-center" />
+          <FunnelCtas locale={locale} source="product" className="mt-8" />
           <p className="mt-3 text-sm font-medium text-muted">{t("marketing.common.demoNote")}</p>
           <p className="mt-2 text-sm text-muted">
             {t("marketing.home.heroPriceLine", {
@@ -156,142 +161,68 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
       </section>
 
       {/* The directory: every feature page, under the part of a shop's year it
-          serves. It is the page's one idea (docs/design/surfaces.md, "/product"):
-          a shop owner arrives asking whether DiveDay does their job, finds the
-          job by its name, and reaches its page in one tap. The rows come off the
-          registry (`src/lib/feature-pages.ts`), so a page added there is listed
-          here and on the homepage without either page naming it. The phases are
-          this page's sections, so they are its `h2`s. */}
-      <section className="mx-auto max-w-6xl px-6 py-20 lg:py-24">
-        <FeatureDirectory locale={locale} headingLevel="h2" />
+          serves, and since review on 2026-10-05 the full list as well. It is
+          the page's one idea (docs/design/surfaces.md, "/product"): a shop
+          owner arrives asking whether DiveDay does their job, finds the job by
+          its name, and reaches its page in one tap, or opens the row to read
+          everything the page holds. The rows come off the registry
+          (`src/lib/feature-pages.ts`), so a page added there is listed here
+          and on the homepage without either page naming it. The phases are
+          this page's sections, so they are its `h2`s.
+
+          **The reference index lives in the rows now.** It was a band of its
+          own, one closed disclosure per group set like a spec sheet
+          (2026-09-17), and once each group became a feature page's checklist
+          its first twelve rows repeated the directory's twelve names one band
+          down. Each row's disclosure is that page's "What's in it" list, word
+          for word, and the three groups no page owns close the directory.
+          `#full-list` is where the homepage's "full list" link lands, so it
+          never arrives on this hero instead. The closing sentence counts every
+          line off the registry, so the total can never drift from the rows.
+
+          The `product-index` demo door that closed the old band went with it:
+          on a page this short it stood 880px above the close's pair, the
+          pressure that retired `home-mid`. */}
+      <section id="full-list" className="mx-auto max-w-6xl scroll-mt-10 px-6 pb-20 lg:pb-24">
+        <FeatureDirectory locale={locale} headingLevel="h2" lines />
+        <p className="mt-12 max-w-2xl text-lg leading-8 text-muted">
+          {t("marketing.product.boxDescription", { count: capabilityCount })}
+        </p>
       </section>
 
-      {/* The reference index: every shipped capability, set like a spec sheet
-          — one hairline row per group, each row a native disclosure holding
-          that group's terse lines in two columns. No cards and no check marks:
-          the borders that survive are the ones that separate.
-
-          **Closed at rest, since 2026-09-17.** Rendered flat it was ninety-odd
-          one-line claims stacked nine groups deep — 2,900px of the page's
-          9,600, landing after the argument (claim → price → proof → demo door,
-          docs/design/surfaces.md) had already finished. Nobody reads a wall;
-          what a buyer actually does here is look for their own job and count
-          the breadth, and one named row per job, carrying its own count, says
-          the breadth in one screen where the wall said it in eight. Every line
-          is still one keystroke away, still in the accessibility tree, and
-          still in the page source for find-in-page (Chromium and Firefox open
-          a closed `<details>` to reveal a match).
-
-          **The rows are the feature pages' own groups since 2026-10-05**, in
-          the directory's order, then the three no single page owns (the diver
-          record, running the shop, the records). The row a reader opens here
-          is the "What's in it" checklist on that feature's page, word for
-          word, because both read one group of `productCapabilityIndex`.
-
-          The earlier objection to a disclosure here was a *different* shape:
-          one link reading "The full list" under a heading and two lines, which
-          left 350px of empty band. The group names are the list. It was also
-          once out of reach of the localized-body swap that snapped a
-          disclosure shut mid-click; that swap is gone (see `ProductPage`). */}
-      <section className="border-y border-border bg-surface">
+      {/* The rule the spec sheet's band used to draw: the directory and this
+          band now sit on the same ground, and one rule at the boundary is
+          what tells them apart. */}
+      <section className="border-t border-border">
         <div className="mx-auto max-w-6xl px-6 py-20 lg:py-24">
           <div className="max-w-2xl">
-            <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.product.boxEyebrow")}</p>
+            <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.product.noEyebrow")}</p>
             <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
-              {t("marketing.product.boxTitle")}
+              {t("marketing.product.noTitle")}
             </h2>
-            {/* Counted off the registry rather than written down, so the
-                number can never drift from the list under it. */}
             <p className="mt-4 text-lg leading-8 text-muted">
-              {t("marketing.product.boxDescription", { count: capabilityCount })}
+              {t("marketing.product.noDescription")}
             </p>
           </div>
-          <div className="mt-14">
-            {productCapabilityIndex.map((group) => (
-              // The row's own count, off the same registry as the lede's total
-              // — it is what a closed row owes the reader, and the one thing
-              // that cannot drift from what opening the row shows.
-              <details key={group.title} className="group border-t border-border">
-                <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 py-4 sm:gap-6 [&::-webkit-details-marker]:hidden">
-                  {/* A heading inside a `<summary>` (implicit `button` role) is
-                      flattened by some screen readers' heading navigation — the
-                      trade `src/components/ui/disclosure.tsx` documents, taken
-                      here for the same reason: the whole row has to be the
-                      control, and the band still needs its groups in the
-                      outline. */}
-                  <h3 className="text-base font-semibold tracking-tight text-balance">
-                    {t(group.title)}
-                  </h3>
-                  <span className="flex shrink-0 items-center gap-3 text-sm text-muted">
-                    <span className="tabular-nums">
-                      {t("marketing.product.boxGroupCount", { count: group.items.length })}
-                    </span>
-                    <DisclosureCaret direction="down" className="group-open:rotate-180" />
-                  </span>
-                </summary>
-                <ul className="gap-x-12 pb-8 text-sm leading-6 text-muted sm:columns-2">
-                  {group.items.map((item) => (
-                    <li key={item} className="break-inside-avoid py-1">
-                      {t(item)}
-                    </li>
-                  ))}
-                </ul>
-              </details>
+          <dl className="mt-12 grid gap-x-12 gap-y-8 md:grid-cols-3">
+            {notCovered.map((item) => (
+              <div key={item.title} className="border-t border-border pt-5">
+                <dt className="font-semibold leading-6">{item.title}</dt>
+                <dd className="mt-2 text-sm leading-6 text-muted">{item.detail}</dd>
+              </div>
             ))}
-            {/* The dare gets a door. This band's lede makes the page's most
-                explicit promise — every one of these lines is something you
-                can go and do in the live demo right now — and then left it
-                unspent: the reader who took the dare had two more bands to
-                scroll before anything let them act
-                (docs/product/marketing-review-20260827.md, "the dare gets a
-                door"). Tagged `product-index`, so the inventory's own
-                conversion can be read apart from the hero's and the close's.
-
-                It carries no words of its own, deliberately. The lede above is
-                the caption — a heading here would be the sentence restating
-                its own section that copy-restraint deletes, and the closing
-                band already says what the demo holds. So the door reads as the
-                list's footer,
-                the way the homepage records band's closing link does: a rule
-                that terminates the hairlines above it, then the pair, at the
-                same left margin as the group rows. No card either — this band
-                is a spec sheet, and a rounded box at the bottom of it would be
-                the one object in the section that isn't a hairline. */}
-            <div className="border-t border-border pt-8">
-              <FunnelCtas locale={locale} source="product-index" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-6 py-20 lg:py-24">
-        <div className="max-w-2xl">
-          <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.product.noEyebrow")}</p>
-          <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
-            {t("marketing.product.noTitle")}
-          </h2>
-          <p className="mt-4 text-lg leading-8 text-muted">
-            {t("marketing.product.noDescription")}
-          </p>
-        </div>
-        <dl className="mt-12 grid gap-x-12 gap-y-8 md:grid-cols-3">
-          {notCovered.map((item) => (
-            <div key={item.title} className="border-t border-border pt-5">
-              <dt className="font-semibold leading-6">{item.title}</dt>
-              <dd className="mt-2 text-sm leading-6 text-muted">{item.detail}</dd>
-            </div>
-          ))}
-        </dl>
-        {/* Safe-to-leave, said where the objection actually peaks. It is one
+          </dl>
+          {/* Safe-to-leave, said where the objection actually peaks. It is one
             third of the positioning spine and the named counter to "you're new
             and unproven" (docs/product/marketing.md), and until now `/product`
             only implied it — one line inside a reference list of ninety-odd. The
             terms come from the shared `fullShopExport` claim rather than a
             second wording of it, so this page and the pricing FAQ can never
             drift apart. */}
-        <p className="mt-12 max-w-3xl text-lg leading-8 text-muted">
-          {t("marketing.product.leavingNote", { terms: t(fullShopExport.termsKey) })}
-        </p>
+          <p className="mt-12 max-w-3xl text-lg leading-8 text-muted">
+            {t("marketing.product.leavingNote", { terms: t(fullShopExport.termsKey) })}
+          </p>
+        </div>
       </section>
 
       <section className="border-t border-border bg-surface">

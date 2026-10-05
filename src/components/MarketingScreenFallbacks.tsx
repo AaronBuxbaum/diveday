@@ -102,6 +102,22 @@ export function ChecklistRow({
 }
 
 /**
+ * The after-dive row's two controls, as the saved copy draws them
+ * (`OfflineManifestView`): "Boarded" in the success outline once recorded, and
+ * "Mark not back aboard" in danger ink with no box while nothing says the
+ * diver is missing, because it is the control that reports a person missing
+ * and the crew must find it at the rail without reading every word.
+ */
+const MOCK_BOARDED_DONE =
+  "inline-flex min-h-11 items-center justify-center gap-1 rounded-lg border border-success bg-success-tint text-xs font-semibold text-success";
+const MOCK_NOT_BACK_ABOARD =
+  "inline-flex min-h-11 items-center justify-center rounded-lg text-xs font-semibold text-danger";
+
+/** One checkpoint button in the saved copy's switcher, drawn small. */
+const MOCK_CHECKPOINT =
+  "inline-flex min-h-8 grow items-center justify-center rounded-lg px-2.5 text-xs font-semibold whitespace-nowrap";
+
+/**
  * **The captain's saved copy, drawn small** — `OfflineManifestView`, the roll
  * call a phone keeps once the boat is out of signal. It wears Boat mode
  * (`.boat-mode`), as the real page does, and carries what that page carries:
@@ -109,9 +125,26 @@ export function ChecklistRow({
  * the checkpoint's heading, and a row per diver with its "when saved" word
  * and the two verbs. The home and product notes quote these words, so a
  * change to the real page is a change here and to those notes.
+ *
+ * **Two checkpoints of one copy.** `departure` is the dock, where the hero's
+ * phone and the boat manifest page show it: nobody called yet, and each row
+ * offers Mark boarded and Mark not boarded. `afterDive` is the same copy,
+ * saved at the same 6:52 AM, after the first dive (the homepage's roll-call
+ * step, which would otherwise repeat the hero): the switcher on "After dive
+ * 1", eight of nine back aboard, one diver recorded "Boarded" and one still to
+ * call, each with the after-dive pair, Mark boarded and Mark not back aboard.
  */
-export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
+export function CaptainRollCallFallback({
+  locale,
+  checkpoint = "departure",
+}: {
+  locale: DiverLocale;
+  checkpoint?: "departure" | "afterDive";
+}) {
   const t = diverTranslator(locale);
+  const afterDive = checkpoint === "afterDive";
+  // i18n-exempt: sample diver names used only in marketing mockups
+  const divers = ["Priya Sharma", "Tom Okafor"];
   return (
     <div className="boat-mode bg-background text-foreground">
       <AppBar label={t("fallback.savedAt")} inset={PHONE_INSET_X} />
@@ -121,11 +154,33 @@ export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
           <h3 className={`mt-1 ${SECTION_TITLE_CLASS}`}>{t("fallback.tripName")}</h3>
           <p className="text-xs text-muted">{t("fallback.tripTime")}</p>
         </div>
+        {afterDive ? (
+          // The checkpoint switcher the real copy carries above its counts,
+          // on the first dive of a two-tank trip.
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              [t("fallback.checkpointBefore"), false],
+              [t("fallback.checkpointDive1"), true],
+              [t("fallback.checkpointDive2"), false],
+            ].map(([label, current]) => (
+              <span
+                key={String(label)}
+                className={`${MOCK_CHECKPOINT} ${
+                  current
+                    ? "bg-primary text-primary-foreground"
+                    : "border border-border bg-surface text-foreground"
+                }`}
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+        ) : null}
         <div className="grid grid-cols-3 gap-2">
           {[
             [t("fallback.diversLabel"), "9"],
-            [t("fallback.boardedLabel"), "4"],
-            [t("fallback.awaitingLabel"), "5"],
+            [t("fallback.boardedLabel"), afterDive ? "8" : "4"],
+            [t("fallback.awaitingLabel"), afterDive ? "1" : "5"],
           ].map(([label, value]) => (
             <div key={label} className="rounded-lg border border-border bg-surface p-2">
               <p className="text-[11px] font-semibold text-muted hyphens-auto wrap-break-word">
@@ -136,42 +191,55 @@ export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
           ))}
         </div>
         <div>
-          <h3 className="text-sm font-semibold">{t("fallback.rollCallHeading")}</h3>
+          <h3 className="text-sm font-semibold">
+            {afterDive ? t("fallback.afterDiveRollCallHeading") : t("fallback.rollCallHeading")}
+          </h3>
           <div className="mt-2 space-y-2">
-            {/* i18n-exempt: sample diver names used only in marketing mockups */}
-            {["Priya Sharma", "Tom Okafor"].map((name) => (
-              <div
-                key={name}
-                className="marketing-roll-call-row rounded-lg border border-border bg-surface p-3"
-              >
-                <p className="text-sm font-semibold">{name}</p>
-                <p className="mt-0.5 text-xs text-success">{t("fallback.readyWhenSaved")}</p>
-                {/* The primary takes the room the secondary leaves, and the
-                    pair stacks only where the two will not fit on one line:
-                    the Spanish pair needs 273px, and /about's phone and the
-                    boat manifest page at 390 give it 232 and 254. A grid
-                    with a fixed `1fr auto` overflowed there instead, and
-                    widened the page (design review, 2026-10-05). On one line
-                    `grow-[99]` hands nearly all the spare room to the
-                    primary; alone on a line, either button fills it. */}
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  <button
-                    type="button"
-                    disabled
-                    className={`${MOCK_PRIMARY_BUTTON} grow-[99] whitespace-nowrap`}
-                  >
-                    {t("fallback.markBoarded")}
-                  </button>
-                  <button
-                    type="button"
-                    disabled
-                    className={`${MOCK_SECONDARY_BUTTON} grow whitespace-nowrap px-2`}
-                  >
-                    {t("fallback.markNotBoarded")}
-                  </button>
+            {divers.map((name, index) => {
+              // After the dive the first diver is already back aboard; at the
+              // dock nobody has been called.
+              const boarded = afterDive && index === 0;
+              return (
+                <div
+                  key={name}
+                  className="marketing-roll-call-row rounded-lg border border-border bg-surface p-3"
+                >
+                  <p className="text-sm font-semibold">{name}</p>
+                  <p className="mt-0.5 text-xs text-success">{t("fallback.readyWhenSaved")}</p>
+                  {/* The primary takes the room the secondary leaves, and the
+                      pair stacks only where the two will not fit on one line:
+                      the Spanish pair needs 273px, and /about's phone and the
+                      boat manifest page at 390 give it 232 and 254. A grid
+                      with a fixed `1fr auto` overflowed there instead, and
+                      widened the page (design review, 2026-10-05). On one line
+                      `grow-[99]` hands nearly all the spare room to the
+                      primary; alone on a line, either button fills it. */}
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      disabled
+                      className={`${boarded ? MOCK_BOARDED_DONE : MOCK_PRIMARY_BUTTON} grow-[99] whitespace-nowrap`}
+                    >
+                      {boarded ? (
+                        <>
+                          <DiveDayIcon name="check" className="size-3.5" strokeWidth={2.2} />
+                          {t("fallback.boardedDone")}
+                        </>
+                      ) : (
+                        t("fallback.markBoarded")
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      disabled
+                      className={`${afterDive ? MOCK_NOT_BACK_ABOARD : MOCK_SECONDARY_BUTTON} grow whitespace-nowrap px-2`}
+                    >
+                      {afterDive ? t("fallback.markNotBackAboard") : t("fallback.markNotBoarded")}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -184,8 +252,12 @@ export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
  * decision 4): one departure card as `DayStation` draws it (the time, its
  * stage pill, the readiness bar and the words under it), then two rows of the
  * "Needs you" list, each naming one diver, the one thing missing and its boat.
- * The waiver row carries its own button, as the real row does. The homepage's
- * door under this screen opens Today in the demo, so this is what it lands on.
+ * The waiver row carries its own button, as the real row does.
+ *
+ * The waiver row is not Priya's: the homepage follows Priya from the release
+ * she signs one step earlier to the recap that thanks her, so her name on an
+ * unsigned waiver here would contradict the band's own title ("One booking…",
+ * conversion review, 2026-10-05).
  */
 export function FrontDeskReadinessFallback({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
@@ -193,7 +265,7 @@ export function FrontDeskReadinessFallback({ locale }: { locale: DiverLocale }) 
     {
       kind: t("fallback.kindWaiver"),
       // i18n-exempt: sample diver name used only in marketing mockups
-      name: "Priya Sharma",
+      name: "Hana Sato",
       detail: t("fallback.waiverNotSent"),
       action: t("fallback.sendWaiver"),
     },

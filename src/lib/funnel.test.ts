@@ -32,10 +32,8 @@ describe("eventSource", () => {
     // bucket, so the history it collected holds.
     expect(eventSource("product-mid")).toBe("product-mid");
     expect(eventSource("product")).toBe("product");
-    // The index door is the page's own dare — "every one of these lines is
-    // something you can go and do in the live demo right now" — and a reader
-    // convinced by the inventory is a different moment from one convinced by
-    // the hero, so it gets its own bucket rather than inflating either.
+    // The index door had its own bucket for the same reason, and kept it when
+    // the door came out with the index band on 2026-10-05.
     expect(eventSource("product-index")).toBe("product-index");
     // Same split on the pricing page: its hero door and the door that closes
     // the objection layer answer different moments in the same visit.

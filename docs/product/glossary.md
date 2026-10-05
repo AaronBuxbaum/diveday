@@ -600,10 +600,12 @@ new domain concept, define it here in the same PR.
 - **Needs you** — the one list of jobs on Today (ADR 20261001-logbook, decision 4): every row from
   Today's work queue, at a boat or at the desk, ranked together by tone and then by when it is due,
   each naming its own boat on a quiet line. It sits under the day's departures, which carry no rows
-  of their own. A status list, not a page: an empty one is not drawn. A row says what is wrong in a
-  few words ("9 divers not certified for this trip."), never the levels, names or other blockers —
-  the roster and the diver record carry the full sentence. Failed emails of one kind and one cause
-  are one row with one resend, however many people they missed.
+  of their own. A status list, not a page: an empty one is not drawn. A row about one diver is
+  titled with their name over what is wrong in a few words ("Waiver not signed, not sent yet."); a
+  row for several says it as one sentence ("9 divers not certified for this trip.") and names
+  nobody. Neither carries the levels or the other blockers — the roster and the diver record carry
+  the full sentence. Failed emails of one kind and one cause are one row with one resend, however
+  many people they missed.
 - **Not ready** — the **by-departure view** of Today's work queue (`?view=departures`), not a page
   of its own: the same blocked divers the urgency view ranks chronologically, grouped instead under
   the boat each one holds up, with a per-departure batch waiver send. It had its own route until

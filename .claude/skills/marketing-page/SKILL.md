@@ -36,7 +36,7 @@ the same PR.
 | Price / plan / included list | `src/lib/marketing.ts` → `earlyAccessPrice` — the ONLY place the number exists |
 | Page narrative copy | `src/app/page.tsx`, `src/app/product/page.tsx`, `src/app/pricing/page.tsx`, `src/app/onboard/page.tsx` |
 | A feature page (`/product/<feature>`) | the registry `src/lib/feature-pages.ts`, the one template `src/app/product/_components/FeaturePageBody.tsx`, words in `marketing.featurePages.<page>`; its checklist is that page's group of `productCapabilityIndex` |
-| Illustrated mockup copy | `src/components/MarketingScreenFallbacks.tsx` |
+| Illustrated mockup copy | `src/components/MarketingScreenFallbacks.tsx`; a feature page's screen in `src/components/MarketingFeatureScreens.tsx` |
 | Nav / footer | `src/components/MarketingNav.tsx`, `src/components/MarketingFooter.tsx` |
 
 Layout stays inside the design system: semantic tokens only, `buttonClass()` for button-shaped

@@ -57,28 +57,40 @@ and listed the rest in a closed index on `/product`.
   in the registry's order, plus the groups only the hub lists (divers, the shop, records). A
   shipped workflow joins the group of the page a buyer would look for it on, and a feature page's
   checklist is its group, whole.
+- **The homepage follows one booking** (`src/app/page.tsx`). The title says what the shop gets
+  ("Every diver booked, signed, checked and accounted for") and the lede says what DiveDay is: the
+  jobs it does, in one app, for a dive shop. Then five steps in the order a diver meets the shop:
+  book, sign the release and medical form, the morning check, the roll call after the dive, and the
+  recap. Each is a screen, two builder's notes and a link that names the feature page. Check-in at
+  the counter was a sixth step until review the same day: its screen read as the morning check's
+  twin, and its one claim was the only one on the page a rival makes. Its page is still in the
+  directory below.
+  A step ends in its feature page rather than in a door into the demo, because that page's own door
+  opens the demo on the same screen as the role that uses it. The page keeps its two demo doors,
+  hero and close.
+- **Every feature page is linked from `/` and from `/product` by one component**,
+  `FeatureDirectory` (`src/components/MarketingSections.tsx`): the pages filed under the part of a
+  shop's year they serve (`FEATURE_PHASES` in the registry: before the dive day, on the day, across
+  the season), each row the page's name and one-sentence summary, the whole row the link. The rows
+  come off the registry, so a page added there is listed on both without either page naming it.
+- **`/product` is the hub**: the hero, one list, what DiveDay doesn't do, and the close. The list
+  is the directory with the full inventory folded into it: under each feature page's row, a closed
+  disclosure counts and holds that page's checklist, and the three groups no page owns (the diver
+  record, running the shop, your records) close it under "Also in the plan". Its six-chapter tour,
+  the sticky chapter strip and the payment band were deleted the same day; each chapter's screen
+  and notes live on the feature page that owns them.
 - **What did not change:** the claims policy, the two doors and their order, the demo note once per
   page, the price stated where the question arises, and `/about`'s spoken register.
 
-## The homepage breadth band is four cards, numbered (decided 2026-08-20)
+## The homepage breadth band (decided 2026-08-20, replaced 2026-10-05)
 
-The four-card band under "Instead of a whiteboard, a clipboard, and three apps that don't talk to
-each other" stays four cards, and this is now settled rather than deferred (FU-20260813, closed).
-It had been held open twice waiting for funnel numbers that never arrived: the predecessor door
-`home-mid` retired without ever accumulating a single `demo_entered`/`trial_started` pair, and
-waiting on a measurement nobody is generating is not waiting, it is stalling.
-
-**Why the cards beat imagery.** Four screens say "DiveDay has four screens." Four assertions say
-"DiveDay covers the whole day," which is the one thing a buyer comparing feature pages is looking for
-at that moment. A photograph or a mockup costs exactly that, and breadth is the argument this band
-exists to make.
-
-**What changed instead.** The band is more visual without becoming a picture. The four groups are the
-phases of one shop's day in the order it happens — welcome a diver, get them ready, run the day, hand
-it off — so they are now an ordered list, each card carrying a numbered badge, with a rule linking
-them across the row at `xl`. The sequence was always in the copy; rendering it as four equal boxes
-threw it away. It costs no words, it adds the one thing four assertions could not say on their own,
-and it reads as a track rather than a shelf.
+From 2026-08-20 the homepage argued breadth with four numbered cards, one summary paragraph each,
+on the reasoning that four screens say "DiveDay has four screens" while four assertions say
+"DiveDay covers the whole day", which is what a buyer comparing products looks for at that point
+(FU-20260813, closed). The reasoning still holds and the directory above keeps it: it says the same
+thing with every feature page by name, and each name is a link to the page that proves it, where a
+card's paragraph linked nowhere. `FeatureGroupsGrid`, `productFeatureGroups` and the
+`marketing.features.*` keys were deleted with the cards (H-93).
 
 ## The positioning spine
 
@@ -150,7 +162,10 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
 
 - **Shipped-only.** Every claim describes a workflow that works in the demo today. No roadmap
   marketing, no "coming soon". If a claim can't be demonstrated in the live demo, it doesn't go on
-  a page.
+  a page. The pricing page's included list is held to it line by line: its training line
+  (`marketing.price.item4`) is **the demo shop**, DiveDay's one sample shop that "Try the live
+  demo" opens, and promises no practice copy of a shop's own (Aaron Buxbaum, 2026-10-05, #1959).
+  Until that date it said "a practice shop", which nothing in the code built.
 - **Authorized service offers** are the one exception to shipped-only: a commitment the shop makes
   to a customer, not a product feature, may be stated once the product owner has authorized it.
   Currently authorized (a Jane-style concierge, authorized 2026-07-24, extended H-20): **free,
@@ -358,13 +373,16 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   "operating system", "platform", or "solution". Name what DiveDay replaces: the whiteboard, the
   clipboard, the three apps and a spreadsheet.
 - **Show the screen before describing it, and never inventory the same thing twice.** The feature
-  claims exist at exactly two densities, and each has one page: `productFeatureGroups` is the
-  summary card — four groups, each an eyebrow, a heading and *one paragraph* (`summary`) — rendered
-  by `FeatureGroupsGrid` on `/`; the full inventory is `productCapabilityIndex`, rendered on
-  `/product` as a spec sheet: one hairline row per group, each a `<details>` naming the group and
-  counting its lines, opening onto those lines in two columns. Closed at rest since 2026-09-17 —
-  flat it ran 2,900px of a 9,600px page, arriving after the argument had finished, and a named
-  row per group with its count says the breadth in one screen where the wall said it in eight. **The inventory is the whole of [shipped.md](shipped.md), consolidated — never a
+  claims exist at exactly two densities, and each has one home: the summary is a feature page's one
+  sentence (`marketing.featurePages.<page>.summary`), which `FeatureDirectory` lists on `/` and on
+  `/product` with the page itself one tap away; the full inventory is `productCapabilityIndex`,
+  each feature page's checklist its own group, and all of it rendered on
+  `/product` inside the directory: a closed `<details>` under each page's row, counting that
+  page's lines, and one titled row for each group no page owns. Closed at rest since 2026-09-17,
+  when it was a band of its own: flat it ran 2,900px of a 9,600px page, arriving after the
+  argument had finished, and a counted row says the breadth where the wall said it in eight
+  screens. It moved into the directory on 2026-10-05, because once each group was a feature page's
+  checklist the band's first twelve rows repeated the directory's twelve names one band down. **The inventory is the whole of [shipped.md](shipped.md), consolidated — never a
   curated subset.** Until 2026-09-01 it held 49 chosen lines, one per idea per area, and under a
   heading that says "the whole list" a chosen list is a false one: a buyer with an incumbent's
   feature page open beside it counted reminders, buddy teams, the blow-out cascade, close-out,
@@ -388,9 +406,10 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   The middle density's *machinery* outlived it by a day and was removed on 2026-08-14: the grid's
   `featuresPerGroup` prop chose between a `✓` checklist and a paragraph, and with no caller left
   asking for the checklist, 26 of the 30 claims were translated in both locales and rendered on no
-  page at all. Each group now carries a `summary` written as a summary rather than the grid reading
-  the first line of a deleted list. If a checklist density is ever wanted again, it needs a page
-  behind it before it needs a prop.
+  page at all. Each group then carried a `summary` written as a summary rather than the grid reading
+  the first line of a deleted list, until the cards and their summaries were deleted on 2026-10-05
+  and the feature pages' own sentences took over that density (H-93). If a checklist density is
+  ever wanted again, it needs a page behind it before it needs a prop.
 
   Before adding a list to a page, check the other density: the answer is usually a mockup or a
   link, not a second copy.
@@ -418,11 +437,12 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   hidden `role`, at link weight, labelled for its screen ("Open the demo as the captain →"),
   because a builder's note that ends "as that role" cannot end on a button that says nothing about
   the role ([design/brand.md](../design/brand.md), "The two registers of the public pages"). One
-  per screen a visitor could open, tagged per screen in `src/lib/funnel.ts` (`home-desk-moment`,
-  `home-dock-moment`, `switching-hub-preview`), never primary weight, and never the page's demo
-  button: the spec counts "Try the live demo" by name, and a screen door is not one. The recap
-  screen has none on purpose (it reaches the diver by email, so there is no role to open it as)
-  and its last note says so; the spec pins three doors under four screens.
+  per screen a visitor could open, tagged per screen in `src/lib/funnel.ts`
+  (`switching-hub-preview`), never primary weight, and never the page's demo button: the spec
+  counts "Try the live demo" by name, and a screen door is not one. The homepage's screens carried
+  three until 2026-10-05 (`home-diver-moment`, `home-desk-moment`, `home-dock-moment`, retired and
+  kept registered for their history); its steps now end in the feature page's name instead, and
+  that page's hero door opens the demo on the same screen as the role that uses it (H-93).
 - **The demo's cost is stated once per page, at the first door.** `marketing.common.demoNote` ("no
   sign-up, no card") answers the only question the button raises, and the answer is worth nothing
   the second time: repeated under every demo button it stops reading as reassurance and starts
@@ -527,9 +547,9 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   The internal positioning pillars ("easy to try", "safe to leave") are argument structure, not
   user-facing labels. **A label a reader sees names a thing, not a strategy** — and after the
   2026-08-13 redesign the homepage names things in two idioms, deliberately: an uppercase eyebrow
-  for a whole thing (the hero's category line, the breadth band's four capability groups), and a
-  sentence-case marker with a hairline rule for a *part* of a section (a moment's place in the day,
-  a direction in the records diptych). The redesign deleted the standing section eyebrows that
+  for a whole thing (the hero's category line, the directory's three parts of a shop's year), and
+  a sentence-case marker with a hairline rule for a *part* of a section (a step's place in the
+  booking, a direction in the records diptych). The redesign deleted the standing section eyebrows that
   merely restated the heading beneath them ("Your records", "Try it", "The whole shop, one place");
   a heading that needs an eyebrow to be understood is a heading that needs rewriting.
 
@@ -631,7 +651,7 @@ first; an untagged link is a conversion we can't attribute. Read the pair per su
 demo entries and no trials is telling you something different from a page with neither.
 
 **A page that offers the same action from more than one place splits its tag by position** —
-`home-hero` / `home-closing`, `product` / `product-mid` / `product-index`, `pricing` /
+`home-hero` / `home-closing`, `pricing` /
 `pricing-close`, `about-rules` / `about-closing`, the
 switching guides' `switching-<slug>` / `switching-<slug>-mid` / `switching-<slug>-close` (with the
 spreadsheet guide using the same three-position shape), and the feature pages' `feature-<slug>` /
@@ -645,17 +665,15 @@ original one when a position is added beside it, so attribution history spans th
 can also be retired: the homepage's `home-mid` came out on 2026-08-13 when the page's three
 consecutive banded CTAs merged into one close (the 2026-08-13 homepage redesign), which moved the
 closing door a full band nearer; the tag stays registered in `funnel.ts` so any history it
-accumulated still reads.
-
-`product-index` (2026-08-28) is the newest of these and the clearest case for splitting: the band
-it sits under makes the site's most explicit dare — *every one of these lines is something you can
-go and do in the live demo right now* — and until that date the reader who took it had two more
-bands to scroll before anything let them act
-([marketing-review-20260827.md](marketing-review-20260827.md), "the dare gets a door"). A reader
-convinced by the inventory is a different moment from one convinced by the dock story that
-`product-mid` sits under, and folded together neither could be read on its own. The door carries no
-words of its own: the band's lede is its caption, and a heading there would restate the sentence
-directly above the list it closes.
+accumulated still reads. `product-mid` retired the same way on 2026-10-05, with the hub's tour and
+the dock chapter it stood under (H-93), and `product-index` the same day, with the inventory band
+it closed. That door (2026-08-28) answered the band's dare, *every one of these lines is something
+you can go and do in the live demo right now*, with a door under the list rather than two bands
+further down ([marketing-review-20260827.md](marketing-review-20260827.md), "the dare gets a
+door"). Once the inventory folded into the directory, the hub was short enough that the pair
+stood one screen above the close's own, and the dare itself had gone: the demo cannot take a
+payment, so "every line" was no longer true of it (#2094). `/product` keeps two doors, hero and
+close, under the page's own tag.
 
 `about-rules` (2026-08-28) is the same argument on the trust page, and the one where the door was
 furthest from the impulse. `/about`'s four operating rules each end in the demo action that proves
@@ -663,8 +681,8 @@ them — *save a manifest to your phone, turn the network off, and run roll call
 nearest thing a convinced reader could act on was a primary-weight `mailto:` two bands down, with
 the demo waiting past the founder story, the concessions and the export terms
 ([marketing-review-20260827.md](marketing-review-20260827.md), "help arrives after the homework").
-The pair now closes the band that makes the dare, wordless for the same reason `product-index` is:
-the four "Check it" lines above it are its caption. The demo note stands beneath the pair, because
+The pair now closes the band that makes the dare, wordless because the four "Check it" lines above
+it are its caption. The demo note stands beneath the pair, because
 this is now the page's first door and the terms belong at the first one (the once-per-page rule
 above). **The support mailto demoted to secondary in
 the same change** — it is a real offer and stays on the page, level with the pricing door beside it,
@@ -712,11 +730,26 @@ rendered through the shared wrappers in `src/components/MarketingSections.tsx`:
 
 | Component | Represents | Marketing use |
 | --- | --- | --- |
-| `DiverBookingFallback` | Public schedule | Diver booking moment |
-| `FrontDeskReadinessFallback` | Staff trip readiness | Desk / safety explanation |
-| `CaptainRollCallFallback` | Captain manifest roll call on a phone | Dock / captain moment, `/about` hero |
+| `DiverBookingFallback` | The shop's public schedule | The homepage's booking step |
+| `BookingCardFallback` | A departure's booking card on the public trip page | The online booking page |
+| `StorefrontFallback` | The shop's own booking page | The website page |
+| `WaiverSigningFallback` | Signing the waiver and medical form on a diver's phone | The waivers page, and the homepage's signing step |
+| `FrontDeskReadinessFallback` | Today's readiness for one departure | The certification checks page, and the homepage's morning step |
+| `NightBeforeBriefFallback` | The diver's trip page the night before | The messages page |
+| `ArrivalDeskFallback` | A departure's Divers tab at the counter | The check-in page |
+| `CaptainRollCallFallback` | Captain manifest roll call on a phone (`CaptainPhoneFrame`), at departure or, with `checkpoint="afterDive"`, after dive 1 | The homepage hero (departure) and its roll-call step (after the dive), the boat manifest page, the `/about` hero |
+| `SiteBriefingFallback` | A dive site's briefing as a diver reads it | The dive sites page |
+| `GearRegisterFallback` | The gear register | The rental gear page |
+| `ScheduleWeekFallback` | Schedule's week view | The schedule page |
+| `CoursePageFallback` | A course's public page | The courses page |
+| `OrdersLedgerFallback` | One day of orders | The payments page |
+| `RecapPageFallback` | The recap a diver opens after the dive | The homepage's recap step |
 | `ImportPreviewFallback` | The contacts importer's preview step | `/switching` hub, and the homepage records band |
 | `ExportBundleFallback` | Settings -> Data export | `/pricing`'s "if you leave" band |
+
+The nine feature-page screens live in `src/components/MarketingFeatureScreens.tsx`, the rest in
+`src/components/MarketingScreenFallbacks.tsx`; a feature page names its screen in the registry
+(`src/lib/feature-pages.ts`), and the homepage's steps name theirs in `STEPS` (`src/app/page.tsx`).
 
 **A mockup is a claim, so it mirrors a real screen element for element.**
 `ImportPreviewFallback` exists because "we show you exactly what comes across" was the switching
@@ -818,21 +851,18 @@ one), which the pre-2026-08-13 pair never was. That is the point of splitting th
 that re-opened this question could not be settled from the numbers, because the click-through it
 needed had never been counted. It can be next time.
 
-**The homepage's four-card breadth band is deliberately still four assertions.** It renders
-`FeatureGroupsGrid` — four cards, one summary paragraph each — under the whiteboard/clipboard
-statement, and it is
-now the only band on that page that asks a reader to take a claim on trust. It was reviewed on
-2026-08-12 and again in the 2026-08-13 redesign and left alone, with the reason stated rather than
-deferred: the band exists to give breadth in one glance and hand the reader to `/product`, and
-replacing it with imagery would cost that breadth. Revisit it when the page-level
-`demo_entered`/`trial_started` pairs (`home-hero` / `home-closing`) have numbers; if the page
-converts poorly at this midpoint, the change is a visual *beside* the four cards, not instead of
-them. (The mid-page demo door that used to sit under the cards retired in the same redesign — the
-merged close is one band away, and three banded CTAs in a row read as pressure, not confidence.)
+**The homepage's breadth band is the feature directory, and every claim in it is a link.** Until
+2026-10-05 it was `FeatureGroupsGrid`'s four cards, the one band on the page that asked a reader to
+take a claim on trust; now each row names a feature page and its one sentence, and the page behind
+it shows the screen (H-93, and "The homepage breadth band" near the top of this file). It still
+carries no demo door of its own: the close is one band away, and three banded CTAs in a row read as
+pressure, not confidence (the mid-page door retired in the 2026-08-13 redesign for that reason).
+Revisit the band when the page-level `demo_entered`/`trial_started` pairs (`home-hero` /
+`home-closing`) have numbers.
 
 **`SectionMarker` is deliberately page-local.** The homepage's kicker — a short sentence-case label
 with a hairline rule running out to the edge of its column — lives in `src/app/page.tsx` rather than
-beside `MarketingMockup` and `FeatureGroupsGrid` in `src/components/MarketingSections.tsx`, and that
+beside `MarketingMockup` and `FeatureDirectory` in `src/components/MarketingSections.tsx`, and that
 is a decision rather than an oversight. It was reviewed on 2026-08-14, after the product-page and
 switching-guide redesigns that made the shared file untouchable had both merged: the homepage is
 still its only caller, and no other marketing page has grown the idiom — the three remaining
@@ -840,7 +870,7 @@ still its only caller, and no other marketing page has grown the idiom — the t
 builder, none of them marketing. Promoting a one-caller atom is how a shared module fills up with
 things nobody else wanted. Move it the day a second marketing page wants the same kicker, keeping
 its `as?: "p" | "h3"` prop — the portability diptych's columns need the `h3` (the marker is their
-only label, so it carries them in the document outline) and the daily-moment rows need the `p`
+only label, so it carries them in the document outline) and the booking's step rows need the `p`
 (they already have an `h3` below).
 
 These mockups render identically in every checkout and in both light and dark modes, and they use
@@ -858,7 +888,7 @@ structure* live; none of them may contain an English sentence:
 
 | Content | Structure / keys | Words |
 | --- | --- | --- |
-| Feature claims shared across pages | `src/lib/marketing.ts` (`productFeatureGroups`, key registry) | `marketing.features.*` in the bundles |
+| Every feature page's name and one-sentence summary, listed on `/` and `/product` | `src/lib/feature-pages.ts` (the registry and `FEATURE_PHASES`), rendered by `FeatureDirectory` in `src/components/MarketingSections.tsx` | `marketing.featurePages.<page>.name` / `.summary`, and `marketing.featureChrome.phases.*` |
 | Price, plan name, included list | `src/lib/marketing.ts` (`earlyAccessPrice`) — the `$99` figure is the only literal, and the only place it exists | `marketing.price.*` in the bundles |
 | Export claim shared by home + pricing | `src/lib/marketing.ts` (`fullShopExport`) | `marketing.export.*` in the bundles |
 | Mid-season cutover claim shared by home + the guides | `src/lib/marketing.ts` (`midSeasonCutover`) | `marketing.guides.shared.cutover.*` in the bundles |
@@ -866,10 +896,9 @@ structure* live; none of them may contain an English sentence:
 | Capability index on `/product`, one group per feature page | `src/lib/marketing.ts` (`productCapabilityIndex`, `capabilityGroup()`) | `marketing.capabilities.*` in the bundles; a feature page's group is titled by its `name` |
 | The twelve feature pages | `src/lib/feature-pages.ts` (slugs, demo role and landing, related pages, screen); one template in `src/app/product/_components/FeaturePageBody.tsx` | `marketing.featurePages.<page>.*` for each page's words, `marketing.featureChrome.*` for the template's own |
 | Page-specific narrative copy | The page file (`src/app/{page,product/page,pricing/page}.tsx`) | `marketing.home/product/pricing.*` in the bundles |
-| The hero a visitor draws with their own shop, boat and departure | `src/app/_components/TryItHero.tsx` (words as props; `src/lib/try-it.ts` holds the colour, the handoff and the day-line arithmetic) | `marketing.home.tryIt.*` in the bundles |
 | Sign-up reassurance (no card, the exit, the founder line) | `src/app/onboard/page.tsx` | `account.onboard.*` in the bundles |
 | Who builds DiveDay, and what it concedes | `src/app/about/page.tsx` | `marketing.about.*` in the bundles |
-| Mockup copy | `src/components/MarketingScreenFallbacks.tsx` | `fallback.*` in the bundles |
+| Mockup copy | `src/components/MarketingScreenFallbacks.tsx`, and the feature pages' screens in `src/components/MarketingFeatureScreens.tsx` | `fallback.*` in the bundles |
 | Nav / footer | `src/components/MarketingNav.tsx` / `MarketingFooter.tsx` | `nav.*` in the bundles |
 | Switching-guide content (per incumbent) | `src/lib/migration-guides.ts` (key registry; slugs, URLs, source citations); pages in `src/app/switching/` | `marketing.guides.*` in the bundles |
 
@@ -955,7 +984,8 @@ at the dock, the blocker queue, the no-login diver arc.
 ## Maintenance loop
 
 - **A feature ships → the pages move in the same PR** when it changes what a buyer would be told:
-  update `productFeatureGroups`, the relevant page moment, and any mockup it depicts. The
+  add its line to `productCapabilityIndex` under the feature page a buyer would look for it on,
+  update that page (and the homepage step that shows it, if one does), and any mockup it depicts. The
   new-feature skill's definition of done includes this check.
 - **A claim is invalidated** (feature removed, behavior changed) → fix the page in the same PR
   that invalidates it. If code and copy disagree, one of them is the bug.

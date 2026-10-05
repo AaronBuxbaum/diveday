@@ -122,11 +122,18 @@ export const midSeasonCutover = {
 } as const satisfies { claimKey: DiverMessageKey };
 
 /**
- * A group of the index: one per feature page, keyed by the page's own key
- * (`src/lib/feature-pages.ts`), plus three that belong to no single page —
- * the diver record, running the shop, and the records a shop takes with it.
+ * The groups of the index that belong to no single feature page: the diver
+ * record, running the shop, and the records a shop takes with it. The hub
+ * lists them, in this order, after the directory's phases ("Also in the
+ * plan"), and its skeleton draws a row for each off this same list.
  */
-export type CapabilityGroupId = FeaturePageKey | "divers" | "shop" | "records";
+export const hubOnlyCapabilityGroups = ["divers", "shop", "records"] as const;
+
+/**
+ * A group of the index: one per feature page, keyed by the page's own key
+ * (`src/lib/feature-pages.ts`), plus the hub-only groups above.
+ */
+export type CapabilityGroupId = FeaturePageKey | (typeof hubOnlyCapabilityGroups)[number];
 
 export interface CapabilityAreaKeys {
   id: CapabilityGroupId;

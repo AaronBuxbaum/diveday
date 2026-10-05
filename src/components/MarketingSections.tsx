@@ -2,11 +2,13 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { CaptainRollCallFallback } from "@/components/MarketingScreenFallbacks";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { groupLabelClass } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { FEATURE_PHASES, featurePagePath, featurePagesIn } from "@/lib/feature-pages";
+import { type CapabilityGroupId, capabilityGroup, hubOnlyCapabilityGroups } from "@/lib/marketing";
 
 /**
  * Shared marketing rendering used by the landing, product, and pricing pages so
@@ -150,15 +152,28 @@ export function MarginNotes({
  * `FeatureGroupsGrid`'s four summary cards (2026-10-05), which described the
  * product in four paragraphs and linked nowhere.
  *
+ * **On the hub the directory is also the full list** (`lines`). Each row
+ * carries a disclosure under the link, counted, holding that page's "What's in
+ * it" checklist (its group of `productCapabilityIndex`, word for word), and
+ * the three groups no single page owns (the diver record, running the shop,
+ * your records) follow the phases as rows of their own. Until review on
+ * 2026-10-05 the hub listed the same twelve names twice, the directory and
+ * then a spec sheet one band down; now there is one list, and every line is
+ * still on the page for find-in-page (Chromium and Firefox open a closed
+ * `<details>` to reveal a match). The homepage only routes, so it draws the
+ * rows without them.
+ *
  * `headingLevel` follows the page: the phases sit under the homepage's band
  * heading (`h3`), and are the hub's own sections (`h2`).
  */
 export function FeatureDirectory({
   locale,
   headingLevel = "h3",
+  lines = false,
 }: {
   locale: DiverLocale;
   headingLevel?: "h2" | "h3";
+  lines?: boolean;
 }) {
   const t = diverTranslator(locale);
   const Heading = headingLevel;
@@ -173,7 +188,10 @@ export function FeatureDirectory({
           <ul className="mt-4 border-t border-border">
             {featurePagesIn(phase).map((page) => (
               <li key={page.slug} className="border-b border-border">
-                <Link href={featurePagePath(page.slug)} className="group flex flex-col py-4">
+                <Link
+                  href={featurePagePath(page.slug)}
+                  className={`group flex flex-col ${lines ? "pt-4" : "py-4"}`}
+                >
                   <span className="flex items-center justify-between gap-3">
                     <span
                       className={`${SECTION_TITLE_CLASS} transition-colors group-hover:text-primary`}
@@ -189,11 +207,83 @@ export function FeatureDirectory({
                     {t(`marketing.featurePages.${page.key}.summary`)}
                   </span>
                 </Link>
+                {/* Beside the link, never inside it: a control nested in a
+                    link is two targets in one, and the row's link is the
+                    page. */}
+                {lines ? <CapabilityLines locale={locale} id={page.key} /> : null}
               </li>
             ))}
           </ul>
         </div>
       ))}
+      {lines ? (
+        <div className="lg:col-span-3">
+          <Heading className={groupLabelClass("primary")}>
+            {t("marketing.product.alsoInPlan")}
+          </Heading>
+          {/* One row per group, in the directory's three columns from `lg`.
+              Each row draws its own rules there, because the gutters between
+              columns carry none; below `lg` they stack under one top rule. */}
+          <ul className="mt-4 grid border-t border-border lg:grid-cols-3 lg:gap-x-10 lg:border-t-0">
+            {hubOnlyCapabilityGroups.map((id) => (
+              <li key={id} className="border-b border-border lg:border-t">
+                <CapabilityLines locale={locale} id={id} titled />
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+/**
+ * One group of the full list as a native disclosure: closed at rest, counting
+ * its lines, every line one tap or one Enter away and still in the page for
+ * find-in-page. Under a feature page's row it is only the count, because the
+ * row's link above it already names the page; `titled` is a row of its own,
+ * for a group no page owns, and names the group.
+ */
+function CapabilityLines({
+  locale,
+  id,
+  titled = false,
+}: {
+  locale: DiverLocale;
+  id: CapabilityGroupId;
+  titled?: boolean;
+}) {
+  const t = diverTranslator(locale);
+  const group = capabilityGroup(id);
+  const count = (
+    <span className="flex shrink-0 items-center gap-2 text-sm text-muted">
+      <span className="tabular-nums">
+        {t("marketing.product.boxGroupCount", { count: group.items.length })}
+      </span>
+      <DisclosureCaret direction="down" className="group-open:rotate-180" />
+    </span>
+  );
+  return (
+    <details className="group">
+      <summary
+        className={`flex cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden ${
+          titled ? "min-h-14 justify-between gap-4 py-4" : "min-h-11"
+        }`}
+      >
+        {titled ? (
+          <>
+            <span className={`${SECTION_TITLE_CLASS} text-balance`}>{t(group.title)}</span>
+            {count}
+          </>
+        ) : (
+          count
+        )}
+      </summary>
+      <ul className="space-y-1.5 pb-5 text-sm leading-6 text-muted">
+        {group.items.map((item) => (
+          <li key={item}>{t(item)}</li>
+        ))}
+      </ul>
+    </details>
   );
 }

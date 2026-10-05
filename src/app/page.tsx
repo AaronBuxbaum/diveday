@@ -5,7 +5,7 @@ import { type ReactNode, Suspense } from "react";
 import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { HomeBodySkeleton } from "@/app/_components/HomeBodySkeleton";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
-import { ArrivalDeskFallback, WaiverSigningFallback } from "@/components/MarketingFeatureScreens";
+import { WaiverSigningFallback } from "@/components/MarketingFeatureScreens";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingHeroMotion, MarketingReveal } from "@/components/MarketingReveal";
 import {
@@ -175,26 +175,30 @@ function SectionMarker({ children, as: Tag = "p" }: { children: ReactNode; as?: 
  * the builder's notes beside it, and a link to the feature page that tells the
  * rest. The order is the order a diver meets the shop in, which is also the
  * order an owner's doubts arrive in: will they book, does the paperwork come
- * back, who catches the diver who isn't cleared, how long is the line at the
- * counter, does the roll call on the boat hold, and what does the diver take
- * home.
+ * back, who catches the diver who isn't cleared, does the roll call on the
+ * boat hold, and what does the diver take home.
+ *
+ * Five steps, not the six the rework first drew: check-in at the counter was
+ * cut in review, because its screen read as the readiness step's twin and its
+ * one claim was the band's only one any rival makes. The directory below still
+ * links its page.
  *
  * A step ends in its feature page rather than in a door into the demo, as the
  * rows here did until 2026-10-05: the feature page's own door opens the demo
  * on that very screen, as the role that uses it, which a door here could only
  * do by repeating it. The page keeps its two demo doors, hero and close.
  *
- * Two steps draw a feature page's own screen and read that page's notes and
- * label by key (the release on the diver's phone, the arrival desk), so the
- * homepage and the page can never describe one drawing two ways. The other
- * four keep the drawings and notes this page already carried, under
- * `marketing.home.steps`.
+ * A step that draws a feature page's own screen reads that page's notes and
+ * label by key (the release on the diver's phone), and the readiness step
+ * quotes the certifications page's line about its rows, so the homepage and a
+ * feature page can never describe one drawing two ways. The rest keep the
+ * drawings and notes this page carries under `marketing.home.steps`.
  *
  * `id` is the bundle namespace under `marketing.home.steps`, never a rendered
  * string.
  */
 const STEPS: readonly {
-  id: "book" | "sign" | "check" | "checkIn" | "aboard" | "recap";
+  id: "book" | "sign" | "check" | "aboard" | "recap";
   feature: FeaturePageSlug;
   notes: readonly [DiverMessageKey, DiverMessageKey];
   label: DiverMessageKey;
@@ -217,25 +221,20 @@ const STEPS: readonly {
   {
     id: "check",
     feature: "certifications",
-    notes: ["marketing.home.steps.check.note1", "marketing.home.steps.check.note2"],
+    notes: ["marketing.featurePages.certifications.note3", "marketing.home.steps.check.note2"],
     label: "marketing.home.steps.check.mockupLabel",
     screen: (locale) => <FrontDeskReadinessFallback locale={locale} />,
   },
   {
-    id: "checkIn",
-    feature: "check-in",
-    notes: ["marketing.featurePages.checkIn.note1", "marketing.featurePages.checkIn.note3"],
-    label: "marketing.featurePages.checkIn.screenLabel",
-    screen: (locale) => <ArrivalDeskFallback locale={locale} />,
-  },
-  {
-    // The roll call as a flat still: the hero already holds the same screen
-    // in the phone, and a second bezel on one page reads as two phones.
+    // The same saved copy as the hero's phone, at the checkpoint the hero
+    // does not show: after the first dive, as a flat still, because a second
+    // bezel on one page reads as two phones. The hero is the boat leaving;
+    // this is who came back.
     id: "aboard",
     feature: "boat-manifest",
     notes: ["marketing.home.steps.aboard.note1", "marketing.home.steps.aboard.note2"],
     label: "marketing.home.steps.aboard.mockupLabel",
-    screen: (locale) => <CaptainRollCallFallback locale={locale} />,
+    screen: (locale) => <CaptainRollCallFallback locale={locale} checkpoint="afterDive" />,
   },
   {
     // The recap goes out by itself a few hours after the boat is due back,
@@ -340,7 +339,10 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             </h2>
           </div>
 
-          <ol className="mt-14 space-y-16 lg:mt-20 lg:space-y-24">
+          {/* 96px between steps at every width, against 20px inside one below
+              `lg`, so a phone reads each step as one unit rather than a
+              drawing floating between two (design review, 2026-10-05). */}
+          <ol className="mt-14 space-y-24 lg:mt-20">
             {STEPS.map((step, index) => {
               const page = getFeaturePage(step.feature);
               if (!page) return null;
@@ -348,35 +350,50 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
                 // One list item per step, so a screen reader hears the
                 // booking as the sequence it is; the step's `<h3>` names it
                 // in the outline.
-                <li key={step.id} className="grid items-center gap-8 lg:grid-cols-11 lg:gap-14">
+                <li key={step.id} className="grid items-center gap-5 lg:grid-cols-11 lg:gap-14">
+                  {/* **Below `lg` the copy column dissolves** (`contents`), so
+                      its parts and the screen stack in reading order: what
+                      happens, the screen that does it, the notes on that
+                      screen, then where the rest of it is. The notes are the
+                      caption under a screen (docs/design/brand.md), and on a
+                      phone they used to come before the screen they caption,
+                      with the link reading as the drawing's title. From `lg`
+                      it is a column beside the screen again, every `order`
+                      reset, and the alternation is the column's own. */}
                   <div
-                    className={`flex flex-col lg:col-span-5 ${index % 2 === 1 ? "lg:order-last" : ""}`}
+                    className={`contents lg:col-span-5 lg:flex lg:flex-col ${index % 2 === 1 ? "lg:order-last" : ""}`}
                   >
-                    <SectionMarker>{t(`marketing.home.steps.${step.id}.when`)}</SectionMarker>
-                    <h3 className={`mt-3 ${LEAD_TITLE_CLASS} text-balance sm:text-3xl`}>
-                      {t(`marketing.home.steps.${step.id}.title`)}
-                    </h3>
+                    <div>
+                      <SectionMarker>{t(`marketing.home.steps.${step.id}.when`)}</SectionMarker>
+                      <h3 className={`mt-3 ${LEAD_TITLE_CLASS} text-balance sm:text-3xl`}>
+                        {t(`marketing.home.steps.${step.id}.title`)}
+                      </h3>
+                    </div>
                     <MarginNotes
                       notes={step.notes.map((key) => t(key))}
-                      className="mt-5 max-w-lg"
+                      className="order-2 max-w-lg lg:order-none lg:mt-5"
                     />
                     {/* The page's own name is the link's words: the reader
                         has just read what the step does, and the name says
-                        where the rest of it is. `self-start` keeps the link
-                        its own width in the flex column. */}
+                        where the rest of it is. Its arrow is the "→" glyph
+                        every other link on the page carries, not an icon.
+                        `self-start` keeps the link its own width in the `lg`
+                        flex column, `justify-self-start` in the phone's grid. */}
                     <Link
                       href={featurePagePath(page.slug)}
                       className={buttonClass({
                         variant: "link",
                         flush: true,
-                        className: "mt-4 gap-2 self-start text-left",
+                        className:
+                          "order-3 self-start justify-self-start text-start lg:order-none lg:mt-4",
                       })}
                     >
-                      {t(`marketing.featurePages.${page.key}.name`)}
-                      <DiveDayIcon name="arrow-right" className="size-4 shrink-0" />
+                      {t("marketing.home.stepLink", {
+                        name: t(`marketing.featurePages.${page.key}.name`),
+                      })}
                     </Link>
                   </div>
-                  <div className="lg:col-span-6">
+                  <div className="order-1 lg:order-none lg:col-span-6">
                     <MarketingMockup label={t(step.label)}>{step.screen(locale)}</MarketingMockup>
                   </div>
                 </li>
@@ -399,10 +416,14 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
             <div className="mt-12">
               <FeatureDirectory locale={locale} />
             </div>
-            <div className="mt-10 border-t border-border pt-6">
+            {/* No rule of its own: the directory's last row ends in one, and a
+                second 40px under it read as an empty row (K-294). The link
+                lands on the hub's list of what each page holds, not on its
+                hero above the same directory. */}
+            <div className="mt-8">
               <Link
-                href="/product"
-                className={buttonClass({ variant: "link", flush: true, className: "text-left" })}
+                href="/product#full-list"
+                className={buttonClass({ variant: "link", flush: true, className: "text-start" })}
               >
                 {t("marketing.home.featuresLink")}
               </Link>

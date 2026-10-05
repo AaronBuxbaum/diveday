@@ -33,8 +33,8 @@ test("the homepage hero offers one demo door, and states the price at it", async
   // marketing header's single CTA slot on every page (#934, "The two doors,
   // and which one leads") — it carries the demo everywhere, not just here.
   await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(3);
-  // Still three since the 2026-10-05 rework (H-93): the six steps under the
-  // hero each link to their feature page, whose own door opens the demo on
+  // Still three since the 2026-10-05 rework (H-93): the steps under the hero
+  // each link to their feature page, whose own door opens the demo on
   // that step's screen, so the band spends none of this page's door budget.
   // The old label is gone site-wide, not merely replaced here: one action
   // wearing two names is what the single-label rule exists to stop, and the
@@ -105,9 +105,10 @@ test("the homepage follows one booking to the boat and home, a feature page per 
   await page.goto("/");
 
   // Since 2026-10-05 (H-93) the band under the hero is one booking, followed
-  // from the shop's website to the boat and home again: six steps, each the
+  // from the shop's website to the boat and home again: five steps, each the
   // screen that does it, two of the builder's notes, and the feature page that
-  // tells the rest. It replaced four annotated screens whose headline
+  // tells the rest. (Check-in at the counter was a sixth until review cut it
+  // the same day: its screen read as the readiness step's twin.) It replaced four annotated screens whose headline
   // described the page rather than what a shop gets. The band is the second
   // section of the page; the hero is first.
   const stepsBand = page.getByRole("main").locator("section").nth(1);
@@ -117,19 +118,26 @@ test("the homepage follows one booking to the boat and home, a feature page per 
       name: "One booking, from your website to the boat and home again.",
     }),
   ).toBeVisible();
-  await expect(stepsBand.getByRole("heading", { level: 3 })).toHaveText([
-    "A diver books and pays from your schedule",
+  // Each step's own name, from the copy column that is every row's first
+  // child (the alternation is `order`, not DOM order). The screens beside them
+  // draw headings of their own ("Find your next dive"), which a screen reader
+  // never hears inside a `role="img"` but a heading query still finds.
+  await expect(stepsBand.locator("ol > li > div:first-child h3")).toHaveText([
+    "A diver books and pays without calling the shop",
     "They sign the release and answer the medical form at home",
     "Anyone who can’t board yet is named, with the reason",
-    "Check-in is one tap per diver",
-    "The captain calls the roll by name, signal or not",
+    "The crew calls the roll by name, signal or not",
     "Each diver gets the day’s recap, under your shop’s name",
   ]);
   // The screen is the claim in every step, so each one is shown rather than
   // described, and named for a screen reader by a label the *caller* resolves
   // from the bundle, never an English literal in the component.
-  await expect(stepsBand.getByRole("img")).toHaveCount(6);
+  await expect(stepsBand.getByRole("img")).toHaveCount(5);
   await expect(stepsBand.getByRole("img", { name: /recap page/i })).toBeVisible();
+  // The roll-call step draws the checkpoint the hero's phone does not: the
+  // same saved copy after the first dive, so the page shows the boat coming
+  // back as well as leaving (design review, 2026-10-05).
+  await expect(stepsBand.getByRole("img", { name: /roll call after dive 1/i })).toBeVisible();
 
   // Each step ends in its feature page, in the booking's order, and none of
   // them is a door into the demo: the page it links to opens the demo on that
@@ -139,16 +147,9 @@ test("the homepage follows one booking to the boat and home, a feature page per 
     .getByRole("link")
     .evaluateAll((links) => links.map((link) => link.getAttribute("href")));
   expect(stepPages).toEqual(
-    (
-      [
-        "online-booking",
-        "waivers",
-        "certifications",
-        "check-in",
-        "boat-manifest",
-        "messages",
-      ] as const
-    ).map((slug) => featurePagePath(slug)),
+    (["online-booking", "waivers", "certifications", "boat-manifest", "messages"] as const).map(
+      (slug) => featurePagePath(slug),
+    ),
   );
   await expect(stepsBand.locator("button:not([disabled])")).toHaveCount(0);
   await expect(stepsBand.locator('input[name="source"]')).toHaveCount(0);
@@ -163,7 +164,11 @@ test("the homepage lists every feature page, filed by when its job falls", async
   const directory = page
     .getByRole("main")
     .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Every feature is in the one plan." }) });
+    .filter({
+      has: page.getByRole("heading", {
+        name: "What the whiteboard, the clipboard and the three apps did, in one plan.",
+      }),
+    });
   await expect(directory.getByRole("heading", { level: 3 })).toHaveText([
     "Before the dive day",
     "On the day",
@@ -172,7 +177,12 @@ test("the homepage lists every feature page, filed by when its job falls", async
   const listed = await directory
     .getByRole("link")
     .evaluateAll((links) => links.map((link) => link.getAttribute("href")));
-  expect(listed).toEqual([...FEATURE_PAGE_SLUGS.map((slug) => featurePagePath(slug)), "/product"]);
+  // …and it ends on the hub's full list, landing on the rows that hold every
+  // page's lines rather than on the hub's hero above the same directory.
+  expect(listed).toEqual([
+    ...FEATURE_PAGE_SLUGS.map((slug) => featurePagePath(slug)),
+    "/product#full-list",
+  ]);
 
   await directory.getByRole("link", { name: /^Rental gear/ }).click();
   await expect(page).toHaveURL(/\/product\/rental-gear$/);
@@ -243,10 +253,9 @@ test("public marketing pages lead to the product and pricing details", async ({ 
     }),
   ).toBeVisible();
   // The full capability index, the thing a buyer comparing DiveDay against
-  // an incumbent's feature page goes looking for.
-  await expect(
-    page.getByRole("heading", { name: "Every shipped workflow, in one list." }),
-  ).toBeVisible();
+  // an incumbent's feature page goes looking for, lives in the directory's
+  // rows since 2026-10-05 and is counted under them.
+  await expect(page.getByText(/^There is one plan, with all \d+ workflows in it\.$/)).toBeVisible();
 
   // The hub is the directory of the feature pages (H-93), and the offline
   // claim lives on the one it is about, beside its screen, and nowhere else.
@@ -258,7 +267,15 @@ test("public marketing pages lead to the product and pricing details", async ({ 
     .getByRole("link", { name: /^Boat manifest and roll call/ })
     .click();
   await expect(page).toHaveURL(/\/product\/boat-manifest$/);
-  await expect(page.getByText(/saves the next two days’ manifests/)).toBeVisible();
+  // The hero's lede, beside the screen: the page's how-it-works steps say it
+  // again further down, where it is the first step rather than the claim.
+  await expect(
+    page
+      .getByRole("main")
+      .locator("section")
+      .first()
+      .getByText(/saves the next two days’ manifests/),
+  ).toBeVisible();
 
   // The click-through above has done its job — the Product link leads here.
   // The capability index is re-checked from a fresh `goto`, so it is asserted
@@ -285,13 +302,11 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // this file, which is the regression guard). The load-gated `goto` stays: it
   // is the navigation's own completion, never a guessed interval.
   await page.goto("/product");
-  await expect(
-    page.getByRole("heading", { name: "Every shipped workflow, in one list." }),
-  ).toBeVisible();
-  // One group per feature page since 2026-10-05 (H-93), titled with the
-  // page's own name, then the three groups only this index carries.
-  await expect(page.getByRole("heading", { name: "Online booking", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /^Your records/ })).toBeVisible();
+  // One group per feature page since 2026-10-05 (H-93), under that page's
+  // own row of the directory, then the three groups no page owns.
+  const fullList = page.locator("#full-list");
+  await expect(fullList.getByRole("heading", { name: "Also in the plan" })).toBeVisible();
+  await expect(fullList.locator("summary").filter({ hasText: /^Your records/ })).toBeVisible();
   // The product hero has the same decision budget as the homepage hero: the
   // live demo and trial are its two doors, while the price is a fact stated
   // under them rather than a third way out to /pricing.
@@ -304,21 +319,19 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(productHeroPrice).toContainText(earlyAccessPrice.price);
   await expect(productHeroPrice).toContainText("no cut of your bookings.");
   await expect(productHeroPrice.locator("a, button")).toHaveCount(0);
-  // The hero says what the page holds. It was five annotated screens of the
-  // day from 2026-09-24 until 2026-10-05, when each feature got its own page
-  // and this one became their directory (H-93).
-  await expect(page.getByText(/^Each feature has its own page/)).toBeVisible();
+  // The hero says what DiveDay runs, then what each row below holds. It was
+  // five annotated screens of the day from 2026-09-24 until 2026-10-05, when
+  // each feature got its own page and this one became their directory (H-93).
+  await expect(productHero.getByText(/^Booking, waivers, certification checks/)).toBeVisible();
   // The honest-no scope block and the demo CTA both land on the product page —
-  // four demo doors: the nav (every marketing page's single CTA), the hero
+  // three demo doors: the nav (every marketing page's single CTA), the hero
   // (the most evaluation-intent click on the site must offer proof above the
-  // fold), under the capability index, and the closing band. The index door
-  // landed on 2026-08-28: the band's lede dares the reader to go do any of
-  // these lines in the demo right now, and the page had no way to spend that
-  // intent for another two bands (docs/product/marketing-review-20260827.md,
-  // "the dare gets a door"). The mid-page door after the dock story left with
-  // the story.
+  // fold), and the closing band. A fourth stood under the capability index
+  // from 2026-08-28 (docs/product/marketing-review-20260827.md, "the dare gets
+  // a door") until the index folded into the directory's rows on 2026-10-05,
+  // and the mid-page door after the dock story left with the story.
   await expect(page.getByRole("heading", { name: "What DiveDay doesn’t do." })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(4);
+  await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(3);
 
   // Each door added beside the page's original pair carries its own funnel
   // tag. Folded into `product` neither could be shown to have earned its place
@@ -328,24 +341,20 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // route's hidden `input[name="source"]` stays reachable while Activity keeps
   // it in the DOM, and a raw `page.locator` would count it.
   await expect(productMain.locator('input[name="source"][value="product-mid"]')).toHaveCount(0);
-  await expect(productMain.locator('input[name="source"][value="product-index"]')).toHaveCount(1);
+  await expect(productMain.locator('input[name="source"][value="product-index"]')).toHaveCount(0);
   await expect(productMain.locator('input[name="source"][value="product"]')).toHaveCount(2);
-  // Every demo door has its set-up mail beside it (three), and there is no
+  // Every demo door has its set-up mail beside it (two), and there is no
   // self-serve trial link left to tag.
-  await expect(productMain.locator(`a[href="${SET_UP_HREF}"]`)).toHaveCount(3);
+  await expect(productMain.locator(`a[href="${SET_UP_HREF}"]`)).toHaveCount(2);
   await expect(productMain.locator('a[href^="/onboard"]')).toHaveCount(0);
-  // And the door stands where the dare is made, not somewhere the reader has
-  // to go looking for it: inside the band the capability list closes.
-  const indexBand = productMain
-    .locator("section")
-    .filter({ has: page.getByRole("heading", { name: "Every shipped workflow, in one list." }) });
-  await expect(indexBand.locator('input[name="source"][value="product-index"]')).toHaveCount(1);
 
   // The index is a reference, not the page's argument, so it is closed at rest
-  // (2026-09-17): one row per group naming the group and counting its lines,
-  // with the lines themselves one keystroke away. Flat it ran ~2,900px of a
-  // 9,600px page, arriving after the argument had already finished.
-  const indexGroups = indexBand.locator("details");
+  // (2026-09-17): a count under each feature page's row, and a row of its own
+  // for each group no page owns, with the lines themselves one keystroke away.
+  // Flat it ran ~2,900px of a 9,600px page, arriving after the argument had
+  // already finished; as a band of its own it repeated the directory's twelve
+  // names one band down, until review folded it into the rows (2026-10-05).
+  const indexGroups = fullList.locator("details");
   await expect(indexGroups).toHaveCount(productCapabilityIndex.length);
   const firstGroup = indexGroups.first();
   const firstLine = firstGroup.locator("li").first();
@@ -405,7 +414,9 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(
     page.getByRole("heading", { name: "Do I pay more as my crew grows?" }),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "How long does setup take?" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "What do I have to do to get set up?" }),
+  ).toBeVisible();
 
   // A flat price only means something next to the model it replaces, so the
   // page anchors against the per-booking fees the switching guides document —
@@ -474,9 +485,8 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // tagged apart from the hero's. Without it there was no second door below
   // the fold at all — the header carries the demo now, not the trial (#934)
   // — so a reader who scrolled the objection layer had nothing left to act
-  // on. Tagged like `product-index`, so the position can be shown to have
-  // earned its place rather than folding into the page's own bucket
-  // (src/lib/funnel.ts).
+  // on. Tagged for its position, so it can be shown to have earned its place
+  // rather than folding into the page's own bucket (src/lib/funnel.ts).
   await expect(page.getByRole("heading", { name: "That is the full price." })).toBeVisible();
   const pricingMain = page.getByRole("main");
   // Visible, not merely present: `toHaveCount` passes on a `display:none`
@@ -507,11 +517,12 @@ test("public marketing pages lead to the product and pricing details", async ({ 
  * across *every* screen of the page rather than at the door that was added
  * (docs/product/marketing.md, "One primary CTA per screen"; roadmap 12d).
  *
- * `/product` is where that budget is easiest to lose: it offers the demo from
- * three places inside `<main>`, and each of those doors was added by a
- * different review answering a different objection — which is exactly the
- * shape that produced the homepage hero's nine choices before they were cut
- * back. A fourth, after the dock story, left with the story on 2026-10-05.
+ * `/product` is where that budget is easiest to lose: each of its doors was
+ * added by a different review answering a different objection — which is
+ * exactly the shape that produced the homepage hero's nine choices before
+ * they were cut back. Two left on 2026-10-05: the one after the dock story,
+ * with the story, and the one under the capability index, when the index
+ * folded into the directory's rows. Two remain inside `<main>`.
  *
  * The primary is the demo submit: every enabled `<button>` on this page is one
  * (the hub draws no mockup since it became the feature pages' directory, and a
@@ -520,23 +531,22 @@ test("public marketing pages lead to the product and pricing details", async ({ 
  * "primary" — and a second primary anywhere would land in the same band as the
  * first and fail here.
  */
-test("/product holds one primary per screen across all three of its doors", async ({ page }) => {
+test("/product holds one primary per screen across both of its doors", async ({ page }) => {
   await page.goto("/product");
   const main = page.getByRole("main");
 
-  // Three doors inside the page body — hero, under the capability index, and
-  // the closing band. The nav's own demo door is outside `<main>` and is
-  // deliberately secondary weight so it never competes (docs/product/
-  // marketing.md, "The two doors, and which one leads").
-  await expect(main.locator("button:not([disabled])")).toHaveCount(3);
+  // Two doors inside the page body — the hero and the closing band. The nav's
+  // own demo door is outside `<main>` and is deliberately secondary weight so
+  // it never competes (docs/product/marketing.md, "The two doors, and which
+  // one leads").
+  await expect(main.locator("button:not([disabled])")).toHaveCount(2);
 
   // …and no band holds two of them. Every `<section>` is checked, so a door
   // that drifted into another band would read as two primaries in one screen
-  // and fail here: the hero, the directory, the index, what it doesn't do, and
-  // the close.
+  // and fail here: the hero, the directory, what it doesn't do, and the close.
   const sections = main.locator("section");
   const sectionCount = await sections.count();
-  expect(sectionCount).toBeGreaterThanOrEqual(5);
+  expect(sectionCount).toBeGreaterThanOrEqual(4);
   for (let index = 0; index < sectionCount; index += 1) {
     const band = sections.nth(index);
     const primaries = await band.locator("button:not([disabled])").count();
@@ -550,13 +560,13 @@ test("/product holds one primary per screen across all three of its doors", asyn
     }
   }
 
-  // The three doors are three *positions*, so which moment converted can be
-  // read apart from the page total (src/lib/funnel.ts); the hero and the close
-  // keep the page's original tag so their history holds.
+  // The hero and the close keep the page's original tag so their history
+  // holds (src/lib/funnel.ts); `product-index` stays registered for the
+  // history it collected, and no door carries it.
   const tags = await main
     .locator('input[name="source"]')
     .evaluateAll((nodes) => nodes.map((node) => (node as HTMLInputElement).value).sort());
-  expect(tags).toEqual(["product", "product", "product-index"]);
+  expect(tags).toEqual(["product", "product"]);
 });
 
 test("a visitor who wants a shop is sent to a person, not a sign-up form", async ({ page }) => {

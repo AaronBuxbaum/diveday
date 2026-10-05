@@ -10,7 +10,7 @@ import {
   getFeaturePage,
   relatedFeaturePages,
 } from "./feature-pages";
-import { capabilityGroup, productCapabilityIndex } from "./marketing";
+import { capabilityGroup, hubOnlyCapabilityGroups, productCapabilityIndex } from "./marketing";
 import { visibleStaffDestinations } from "./staff-destinations";
 
 describe("the feature page registry", () => {
@@ -87,5 +87,14 @@ describe("each feature page's copy and checklist", () => {
   it("lists every line of the index once", () => {
     const lines = productCapabilityIndex.flatMap(({ items }) => items);
     expect(new Set(lines).size).toBe(lines.length);
+  });
+
+  // The hub draws a group under each feature page's row and the hub-only
+  // groups after them, and nothing else: a group outside both would be in
+  // the index and on no page at all.
+  it("files every group of the index under a feature page or the hub's own rows", () => {
+    expect(productCapabilityIndex.map(({ id }) => id).sort()).toEqual(
+      [...FEATURE_PAGES.map(({ key }) => key), ...hubOnlyCapabilityGroups].sort(),
+    );
   });
 });

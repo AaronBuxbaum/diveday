@@ -364,7 +364,30 @@ drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion
 
 ### The product page — `/product`
 
-**Reviewed 2026-08-31** — conversion surface, governed by
+**The hub, 2026-10-05** (H-93) — conversion surface, governed by
+[marketing.md](../product/marketing.md)'s claims and control budget. Supersedes the tour described
+under it, which is kept as the record.
+
+- **One idea:** every job DiveDay does for a shop, by name, one tap from the page that shows it.
+- **The question it arrives with:** "does it do the thing I need, and where do I see it?" Answered
+  by the directory under the hero (`FeatureDirectory`, its three parts of a shop's year as the
+  page's `h2`s): every feature page, its one sentence, the whole row the link. The buyer who checks
+  line by line opens a row, which holds that page's whole checklist, counted; the groups no page
+  owns close the list, and what DiveDay does not do comes after it.
+- **Controls that dissolved:** the sticky chapter strip and the four chapter doors. The tour they
+  served is twelve feature pages now, each with its own door. The full list's door went in review
+  the same day, when the list folded into the directory: on a page this short it stood one screen
+  above the close's pair. The hub keeps the pair in its hero and the close.
+- **Remove first:** any screen on the hub itself. A drawing here would be a thirteenth, partial
+  feature page. Then a second list: the twelve names were listed twice, as the directory and as
+  the spec sheet's first twelve rows, until review folded one into the other.
+- **Composition:** hero (eyebrow, title, lede, pair, demo note, price line), left-aligned on the
+  list's column with no rule under it; the list (each phase's pages, every row with its checklist
+  closed under it, then "Also in the plan" and the sentence that counts every line); the honest no
+  and the export line; the close. It is short on purpose: 2,769px at 1280, from the tour's 7,093
+  and the first hub's 3,817.
+
+**Reviewed 2026-08-31** (the tour, superseded 2026-10-05) — conversion surface, governed by
 [marketing.md](../product/marketing.md)'s claims and control budget.
 
 - **One idea:** the whole dive day can run from one shared record, and a shop can try it before it
@@ -657,3 +680,23 @@ drawn on that canvas's `TryItWithYourBoats.dc.html`.
   stays at zero and the hero pair is still the page's one ask.
 - **Composition:** hero, four screens with notes, the breadth band as four groups, the records
   band, the terms-style close.
+
+**The page follows one booking, 2026-10-05** (H-93, [brand.md](brand.md) "The voice on the public
+pages", amended): the sale goes back in front of the notes.
+
+- **One idea:** one booking, from the shop's website to the boat and home again, with every job
+  DiveDay does along the way one tap from the page that shows it.
+- **The question it arrives with:** "what is this, and will it do my shop's day?" The title says
+  what the shop gets, the lede names the jobs and says it is one app for a dive shop, and the five
+  steps answer the doubts in the order they arrive: will divers book, does the paperwork come back,
+  who catches the diver who isn't cleared, does the roll call hold at sea, what does the diver take
+  home. A sixth, the counter, was cut in review: its screen read as the morning check's twin.
+- **Controls that dissolved:** the three per-screen `ScreenDoor`s. Each step ends in a link naming
+  its feature page, and that page's hero door opens the demo on the same screen as the role that
+  uses it; the page's demo doors are the hero's and the close's, nothing between.
+- **Remove first:** a third note on a step. Two notes are the step's proof; the rest is on its
+  page.
+- **Composition:** hero (the captain's phone beside the claim), five alternating step rows
+  (marker, title, two notes, the link to the feature page, the screen; on a phone the screen sits
+  between the title and the notes, so each note lands under what it points at), the directory of
+  every feature page in three columns on the surface band, the records diptych, the close.
