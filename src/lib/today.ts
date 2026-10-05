@@ -470,10 +470,8 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
  *
  * **No roles means no viewer, not an empty audience.** Every surface that
  * renders this queue passes `session.user.roles`, which `requireStaffSession`
- * guarantees is non-empty; the one caller that passes nothing is `closeDay`
- * (`src/db/closeout.ts`), recomputing the day's outstanding snapshot for the
- * record rather than for a screen. That snapshot is the shop's day, so
- * withholding from it would falsify a record, not tighten a gate.
+ * guarantees is non-empty. A caller that passes nothing is reading the shop's
+ * whole day rather than one person's screen, so nothing is withheld from it.
  */
 export function filterActionsForRoles(
   actions: readonly TodayAction[],
@@ -662,9 +660,7 @@ export type TodayAction = {
    * counting rows — "3 messages are waiting on an answer", "1 review is
    * waiting on you" — carried a second sentence that taught the feature to
    * somebody who had already found it, and the surfaces render no separator
-   * and no paragraph for an empty one. It is not optional, because a closed
-   * day's snapshot round-trips this field through JSON and its parser demands
-   * a string (`src/lib/closeout.ts`).
+   * and no paragraph for an empty one.
    */
   detail: string;
   /**

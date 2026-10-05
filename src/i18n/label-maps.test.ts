@@ -32,8 +32,6 @@ import {
   HELD_CARD_STATUS_KEYS,
 } from "./card-labels";
 import {
-  CLOSEOUT_ADMIN_STATUS_KEYS,
-  CLOSEOUT_DECISION_KEYS,
   CLOSEOUT_STATUS_KEYS,
   closeoutDepartureDetailText,
   planChangeText,
@@ -406,13 +404,6 @@ const CASES: readonly LabelMapCase[] = [
   },
   {
     module: "closeout-labels.ts",
-    map: "CLOSEOUT_ADMIN_STATUS_KEYS",
-    rows: codeRows(keysOf(CLOSEOUT_ADMIN_STATUS_KEYS), (locale, status) =>
-      staffTranslator(locale)(CLOSEOUT_ADMIN_STATUS_KEYS[status]),
-    ),
-  },
-  {
-    module: "closeout-labels.ts",
     map: "GAP_DETAIL_KEYS",
     // Private, and every one of its six sentences interpolates both a count
     // and a dive number — the case a bundle comparison cannot see at all.
@@ -431,13 +422,6 @@ const CASES: readonly LabelMapCase[] = [
       planChangeText(staffTranslator(locale), locale, [
         { diveNumber: 1, siteName: "Blue Hole", reasonCode },
       ]),
-    ),
-  },
-  {
-    module: "closeout-labels.ts",
-    map: "CLOSEOUT_DECISION_KEYS",
-    rows: codeRows(keysOf(CLOSEOUT_DECISION_KEYS), (locale, decision) =>
-      staffTranslator(locale)(CLOSEOUT_DECISION_KEYS[decision]),
     ),
   },
   {

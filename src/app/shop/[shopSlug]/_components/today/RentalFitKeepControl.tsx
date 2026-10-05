@@ -12,9 +12,7 @@ import { buttonClass } from "@/components/ui/button";
  * The desk confirmed a `fit_adjusted` return at the counter, so the fact is
  * already recorded; this only asks whether to keep it as the diver's fit. It
  * posts in place rather than navigating, the shape `WaiverSendControl` and
- * `ResendConfirmationControl` already set, and the row's own Dismiss stands
- * beside it — which is the other honest answer, and the one that costs
- * nothing.
+ * `ResendConfirmationControl` already set.
  *
  * The tap names the reservation and nothing else. The diver and the size are
  * not the client's to supply: the action re-proves both from the desk's own

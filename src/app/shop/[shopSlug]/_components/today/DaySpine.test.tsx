@@ -21,13 +21,11 @@ vi.mock("@/app/actions/held-sends", () => ({
   undoHeldSendAction: vi.fn(),
   releaseHeldSendAction: vi.fn(),
 }));
-// The closing block binds the evening's own acts, which live in the home's
-// sibling `actions.ts` — a `"use server"` module whose imports reach
-// better-auth and the database. Same reason as the three above.
+// The rental-fit row binds its keep action, which lives in the home's sibling
+// `actions.ts` — a `"use server"` module whose imports reach better-auth and
+// the database. Same reason as the three above.
 vi.mock("@/app/shop/[shopSlug]/actions", () => ({
-  closeDayAction: vi.fn(),
   keepRentalFitAction: vi.fn(),
-  setLeftoverDecisionAction: vi.fn(),
 }));
 
 import type { FirstBooking } from "@/db/first-booking";
@@ -129,9 +127,6 @@ function evening(
     headCountCloses: new Map(),
     recapEditors: new Map(),
     canOpenLog: true,
-    leftovers: [],
-    latest: null,
-    closeCount: 0,
     firstEver: false,
     ...overrides,
   };
@@ -1088,15 +1083,13 @@ describe("the words on the spine", () => {
  * 4, and H-62, which removed `/close-out` in the same change that shipped
  * this.
  *
- * Two of these are the slice's named pins: the closing block never renders
- * while a departure is still out, and no acknowledgement gate stands on the
- * closing act. The rest hold the coral budget's one-element rule and the log
- * door's owner gate.
+ * There is nothing to press to end the day: it is over when the boats are
+ * home. These hold how a station reads once it settles, the coral budget's
+ * one-element rule, and the log door's owner gate.
  */
 describe("the evening reading", () => {
-  it("never renders the closing block while a departure is still out", () => {
-    // **The pin.** One boat home, one due back in an hour. Nothing on this
-    // page may suggest the day is over — no leftovers group, no closing act.
+  it("says a station still out in words while another has come home", () => {
+    // One boat home, one due back in an hour.
     renderSpine({
       departures: [],
       evening: evening([
@@ -1112,27 +1105,12 @@ describe("the evening reading", () => {
       ]),
     });
 
-    expect(screen.queryByRole("button", { name: "Close the day" })).toBeNull();
-    expect(screen.queryByText("Still open — carries to tomorrow")).toBeNull();
     // The station itself is there, and says which state it is in — in words,
     // never in colour alone.
     expect(screen.getByText("Still out")).toBeInTheDocument();
   });
 
-  it("renders the closing block once every departure of the day has settled", () => {
-    renderSpine({
-      departures: [],
-      evening: evening([closed({ tripId: "t1" }), closed({ tripId: "t2", title: "Wreck Trip" })], {
-        leftovers: [action({ id: "leftover-1", subject: "Lena Fischer" })],
-      }),
-    });
-
-    expect(screen.getByRole("button", { name: "Close the day" })).toBeInTheDocument();
-    expect(screen.getByText("Still open — carries to tomorrow")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
-  });
-
-  it("gives a desk action one owner when close-out also carries it", () => {
+  it("keeps a desk action in Needs you once every departure has settled", () => {
     const units = action({
       id: "units:unconfirmed",
       kind: "units_unconfirmed",
@@ -1145,44 +1123,15 @@ describe("the evening reading", () => {
     renderSpine({
       departures: [],
       actions: [units],
-      evening: evening([closed({ tripId: "t1" })], { leftovers: [units] }),
+      evening: evening([closed({ tripId: "t1" })]),
     });
 
+    const needsYou = screen.getByText("Needs you").closest("div") as HTMLElement;
+    expect(
+      within(needsYou).getByText("Confirm the shop units", { exact: true }),
+    ).toBeInTheDocument();
     expect(screen.getAllByText("Confirm the shop units", { exact: true })).toHaveLength(1);
     expect(screen.queryByText("At the desk")).toBeNull();
-    expect(screen.getByText("Still open — carries to tomorrow")).toBeInTheDocument();
-  });
-
-  it("puts no acknowledgement control on the closing act, at any leftover count", () => {
-    // **The pin.** The surface this replaced made a staffer tick "I have seen
-    // the open head count" before it would record the act — a confirm on
-    // something reversible, re-asking a decision H-57 has the shop making per
-    // row. There is no checkbox here at any count, and none when the day's
-    // own head count is the thing still open.
-    for (const leftovers of [
-      [],
-      [action({ id: "l1" })],
-      [action({ id: "l1" }), action({ id: "l2" })],
-    ]) {
-      cleanup();
-      renderSpine({
-        departures: [],
-        evening: evening(
-          [
-            closed({
-              tripId: "t1",
-              status: "unreconciled",
-              gapReason: "missing_diver",
-              diveNumber: 1,
-              uncounted: 1,
-            }),
-          ],
-          { leftovers },
-        ),
-      });
-      expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
-      expect(screen.getByRole("button", { name: "Close the day" })).toBeInTheDocument();
-    }
   });
 
   it("keeps a settled station's diver-only sentence when the crew were never counted", () => {
@@ -1267,22 +1216,21 @@ describe("the evening reading", () => {
     expect(screen.queryByText("Unsold seats")).toBeNull();
   });
 
-  it("gives the rental-fit leftover a control that saves, with Dismiss still beside it", () => {
+  it("gives the rental-fit row a control that saves", () => {
     renderSpine({
       departures: [],
-      evening: evening([closed({ tripId: "t1" })], {
-        leftovers: [
-          action({
-            id: "rental-fit:r1",
-            kind: "rental_fit_confirm",
-            subject: "Hugo Marsh",
-            detail: "Hugo Marsh’s BCD went out as L. Keep that as the fit next time?",
-            actionLabel: "Open diver record",
-            href: "/shop/blue-mantis/divers/p1",
-            rentalFit: { reservationId: "r1" },
-          }),
-        ],
-      }),
+      actions: [
+        action({
+          id: "rental-fit:r1",
+          kind: "rental_fit_confirm",
+          subject: "Hugo Marsh",
+          detail: "Hugo Marsh’s BCD went out as L. Keep that as the fit next time?",
+          actionLabel: "Open diver record",
+          href: "/shop/blue-mantis/divers/p1",
+          rentalFit: { reservationId: "r1" },
+        }),
+      ],
+      evening: evening([closed({ tripId: "t1" })]),
     });
 
     // A submitting control, never a link: the size is already known, so
@@ -1290,7 +1238,6 @@ describe("the evening reading", () => {
     // a question it can answer.
     expect(screen.getByRole("button", { name: "Keep it" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Open diver record" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
   });
 
   /**
@@ -1484,32 +1431,6 @@ describe("the evening reading", () => {
       screen.getByText("Your first boat is home: 3 divers and 2 crew out, 5 back."),
     ).toBeInTheDocument();
     expect(screen.queryByText(/All boats are home/)).toBeNull();
-  });
-
-  it("never renders two coral elements: the recorded close takes the line's place", () => {
-    // The coral table allows a surface exactly one moment at a time, and the
-    // record of the close *is* the homecoming, kept. The line stands down for
-    // it rather than sitting above it.
-    renderSpine({
-      departures: [],
-      evening: evening([closed({ tripId: "t1", booked: 10 })], {
-        latest: {
-          id: "close-1",
-          shopDay: "2026-08-27",
-          closedAt: hoursFromNow(-1),
-          actorName: "Dana Reyes",
-          outstanding: { departures: [], leftovers: [], adminTasks: [] },
-        },
-        closeCount: 1,
-      }),
-    });
-
-    expect(screen.queryByText(/All boats are home/)).toBeNull();
-    expect(screen.getByText(/Closed by Dana Reyes at/)).toBeInTheDocument();
-    // The panel is coral, so it says its state in words too.
-    expect(screen.getByText("Nothing was outstanding.")).toBeInTheDocument();
-    // A record is not a lock: the act is still there, worded as a repeat.
-    expect(screen.getByRole("button", { name: "Close the day again" })).toBeInTheDocument();
   });
 
   it("holds a settled station's place in clock order among the boats still ahead", () => {
@@ -1832,12 +1753,6 @@ describe("a row that is only a door", () => {
 /**
  * **What today made** — the evening's one money reading (issue #1930; ADR
  * 20260919-one-idea, decision I · Tide: "money is what the day made").
- *
- * The thing these tests exist to hold is the placement Aaron decided in
- * session on 2026-09-20: a **sibling above** the closing block, never a third
- * element inside it. `ClosingBlock`'s charter is two things and nothing else,
- * and a slice that quietly added a third would overturn ADR
- * 20260827-clearwater-surface-language decision 4 by implication.
  */
 describe("what today made", () => {
   const takings = (over: Partial<DayTakingsReading> = {}): DayTakingsReading => ({
@@ -1847,7 +1762,7 @@ describe("what today made", () => {
     ...over,
   });
 
-  it("reads the day's takings above the act that closes the day", () => {
+  it("reads the day's takings once every departure has settled", () => {
     renderSpine({
       departures: [],
       evening: evening([closed({ tripId: "t1" })], { takings: takings() }),
@@ -1856,34 +1771,10 @@ describe("what today made", () => {
     const heading = screen.getByRole("heading", { name: "What today made" });
     expect(heading).toBeInTheDocument();
     expect(screen.getByText("$1,240")).toBeInTheDocument();
-    // **Above**, and the DOM order is the assertion: a node that precedes
-    // another answers `DOCUMENT_POSITION_FOLLOWING` about it.
-    const closeHeading = screen.getByRole("heading", { name: "Close the day" });
-    expect(heading.compareDocumentPosition(closeHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING,
-    );
-  });
-
-  it("leaves the closing block holding exactly the two things it promises", () => {
-    // The charter, asserted rather than trusted: the figure is outside the
-    // section the closing act lives in, so "two things and nothing else"
-    // still describes that component.
-    renderSpine({
-      departures: [],
-      evening: evening([closed({ tripId: "t1" })], {
-        takings: takings(),
-        leftovers: [action({ id: "leftover-1", subject: "Lena Fischer" })],
-      }),
-    });
-
-    const closingBlock = document.querySelector("#close-day");
-    expect(closingBlock).not.toBeNull();
-    expect(closingBlock?.textContent).not.toContain("$1,240");
-    expect(closingBlock?.textContent).not.toContain("What today made");
   });
 
   it("says nothing at all when the reader may not read it", () => {
-    // A captain closing out a Saturday. Absent, never "you may not see this":
+    // A captain at the end of a Saturday. Absent, never "you may not see this":
     // a withheld-figure notice tells the crew a number exists and is being
     // kept from them, which is worse than the silence it replaces. The page
     // resolves `canPersonViewShopReports` and hands down null.
@@ -1895,12 +1786,12 @@ describe("what today made", () => {
     expect(screen.queryByRole("heading", { name: "What today made" })).toBeNull();
     // Paired with a positive query, so this cannot pass on an evening that
     // never rendered at all.
-    expect(screen.getByRole("button", { name: "Close the day" })).toBeInTheDocument();
+    expect(screen.getByText("All home")).toBeInTheDocument();
   });
 
   it("holds the figure back while a boat is still out", () => {
-    // Same pin as the closing block's: "what today made" is past tense, and a
-    // day with a boat on the water has not made it yet.
+    // "What today made" is past tense, and a day with a boat on the water has
+    // not made it yet.
     renderSpine({
       departures: [],
       evening: evening(

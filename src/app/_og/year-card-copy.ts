@@ -1,6 +1,6 @@
 import type { DiverTranslator } from "@/i18n/messages";
 import { formatMonthDay, monthNames } from "@/lib/format";
-import type { ShopYearCard } from "@/lib/shop-year";
+import type { ShopYearSummary } from "@/lib/shop-year";
 import type { YearCardCopy } from "./year-card";
 
 /**
@@ -10,10 +10,6 @@ import type { YearCardCopy } from "./year-card";
  * **The diver bundle, not the staff one.** The card leaves the shop: it is read
  * by a landlord or a marina, neither of whom work there. Its words belong with the other copy DiveDay writes for people
  * who are not staff.
- *
- * It takes a `ShopYearCard` rather than the whole summary, so the close-outs —
- * and the staff name on each — are not reachable from here either (security
- * review, finding 2).
  *
  * Each fact has a fallback that always exists, because a real shop's year does
  * not always have all three: a shop that names no hull on its departures still
@@ -27,7 +23,7 @@ export function yearCardCopy({
   locale,
 }: {
   shopName: string;
-  year: ShopYearCard;
+  year: ShopYearSummary;
   t: DiverTranslator;
   locale: string;
 }): YearCardCopy {

@@ -21,7 +21,6 @@ import { YourSessions } from "@/app/shop/[shopSlug]/_components/today/YourSessio
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice } from "@/components/ShopPageHeader";
-import { UndoToast } from "@/components/UndoToast";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import { canPersonExportIncidentRecord } from "@/db/authz";
@@ -93,7 +92,6 @@ import {
   deleteRecapPhotoAction,
   saveRecapNoteAction,
   sendRecapAction,
-  setLeftoverDecisionAction,
   toggleRecapAutoSendPauseAction,
   updateHelpRequestAction,
   uploadCrewRecapPhotoAction,
@@ -212,38 +210,20 @@ export default async function ShopPage({
     reset?: string;
     email?: string;
     notice?: string;
-    closed?: string;
     noted?: string;
-    decision?: string;
-    decisionState?: string;
     /** Today's arrival lookup (`ArrivalLookup`). */
     q?: string;
   }>;
 }) {
   // The session and the two route-param promises don't depend on one
   // another — resolve them together instead of serially.
-  const [
-    session,
-    { shopSlug },
-    { created, series, reset, email, notice, closed, noted, decision, decisionState, q },
-  ] = await Promise.all([requireStaffSession(), params, searchParams]);
+  const [session, { shopSlug }, { created, series, reset, email, notice, noted, q }] =
+    await Promise.all([requireStaffSession(), params, searchParams]);
   const seriesCount = series ? Number.parseInt(series, 10) : 0;
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
-      <FlashParams
-        params={[
-          "created",
-          "series",
-          "reset",
-          "email",
-          "notice",
-          "closed",
-          "noted",
-          "decision",
-          "decisionState",
-        ]}
-      />
+      <FlashParams params={["created", "series", "reset", "email", "notice", "noted"]} />
       {/* The queue join is the one real wait on this page; a content-shaped
           fallback keeps a cold nav from reading as a blank hang (principle 1). */}
       <Suspense fallback={<TodaySkeleton />}>
@@ -255,10 +235,7 @@ export default async function ShopPage({
           reset={reset}
           email={email}
           notice={notice}
-          closed={closed}
           noted={noted}
-          decision={decision}
-          decisionState={decisionState}
           arrivalQuery={q?.trim() ?? ""}
         />
       </Suspense>
@@ -302,10 +279,7 @@ async function TodayBody({
   reset,
   email,
   notice,
-  closed,
   noted,
-  decision,
-  decisionState,
   arrivalQuery,
 }: {
   session: Awaited<ReturnType<typeof requireStaffSession>>;
@@ -315,13 +289,8 @@ async function TodayBody({
   reset?: string;
   email?: string;
   notice?: string;
-  /** The day was just closed — the one arrival banner the evening carries. */
-  closed?: string;
   /** A departure whose recap note was just saved; re-opens that station's editor. */
   noted?: string;
-  /** A leftover just decided, and which way — the Undo toast's whole input. */
-  decision?: string;
-  decisionState?: string;
   /** What the desk typed into the arrival lookup; `""` for none. */
   arrivalQuery: string;
 }) {
@@ -432,27 +401,10 @@ async function TodayBody({
     arrivalQuery ? listCheckInQueue(db, shop.id, { query: arrivalQuery, now }) : [],
     arrivalQuery ? true : hasArrivals(db, shop.id, now),
   ]);
-  // **The day's closing state** (H-62; ADR 20260827-clearwater-surface-language,
-  // decision 4). `/close-out` is a 308 to this page now, and its reader came
-  // here with it — unchanged, including the trail it appends to.
-  //
-  // It is handed the queue this render already built rather than reading its
-  // own: without that, one page would run `getTodayWork` twice and hold two
-  // answers about one boat. That also means the leftovers are filtered by the
-  // reader's own lens and role, which is exactly what the list has always
-  // claimed to be — "what the Today queue would still show *you*".
-  const closeout = await getDayCloseout(
-    db,
-    shop.id,
-    shopSlug,
-    shop.timezone,
-    now,
-    t,
-    locale,
-    canReadShopMoney,
-    actions,
-  );
-  const eveningClose = assembleEveningClose(closeout.state.departures, now);
+  // **The day's closing state** (ADR 20260827-clearwater-surface-language,
+  // decision 4): how each of today's boats settled, for the evening stations.
+  const closeout = await getDayCloseout(db, shop.id, shop.timezone, now);
+  const eveningClose = assembleEveningClose(closeout.departures, now);
   // **The shop's own calendar day**, as the two UTC instants that bracket it.
   // Four readers below want it — the first-boat-ever question, the day strip's
   // window and ticks, and the day's takings — and it is the host's day for
@@ -460,7 +412,7 @@ async function TodayBody({
   const dayBounds = shopDayBounds(now, shop.timezone);
   // The day's whole board, clock order — the strip's marks and the count under
   // the date both read it.
-  const dayDepartures = [...closeout.state.departures].sort(
+  const dayDepartures = [...closeout.departures].sort(
     (a, b) => a.startsAt.getTime() - b.startsAt.getTime(),
   );
   // Two bounded reads, and only when there is a day to close over: who made
@@ -675,7 +627,7 @@ async function TodayBody({
       : t("closeout.recap.aboutHours", { count: Math.max(1, Math.round(minutes / 60)) });
   };
   const recapEditors = new Map<string, React.ReactNode>();
-  for (const departure of closeout.state.departures) {
+  for (const departure of closeout.departures) {
     // Only a returned boat: a trip still out has no day to write about yet,
     // and one that never left has no recap coming.
     if (!departure.ended) continue;
@@ -723,27 +675,14 @@ async function TodayBody({
       />,
     );
   }
-  // Dismissing is immediate and per row (H-57), so a dismissed leftover leaves
-  // the group rather than sitting under a caption explaining that it was
-  // dismissed. Undo is the way back, and it is a toast, not a second state.
-  const openLeftovers = closeout.state.leftovers.filter(
-    (action) => closeout.state.leftoverDecisions[action.id] !== "dismiss",
-  );
   const evening: EveningReading = {
     close: eveningClose,
     takings: dayTakingsReading,
     headCountCloses,
     recapEditors,
     canOpenLog,
-    leftovers: openLeftovers,
-    latest: closeout.latest,
-    closeCount: closeout.closeCount,
     firstEver: firstBoatEver,
   };
-  const decidedLeftover =
-    decisionState === "carry" || decisionState === "dismiss"
-      ? closeout.state.leftovers.find((action) => action.id === decision)
-      : undefined;
   const eveningNotice = noticeFromParam(notice, EVENING_NOTICES);
   // The page's one idea is the work (ADR 20260720-today-work-queue), so
   // instructional content sizes itself against whether any exists: a station,
@@ -893,38 +832,11 @@ async function TodayBody({
         />
       ) : null}
 
-      {/* The land-then-undo toast for a leftover just decided (H-57): the
-          choice is already saved, and this is the few seconds to take it
-          back — never a confirm in front of a reversible act. */}
-      {decidedLeftover && decisionState ? (
-        <UndoToast
-          message={t(
-            decisionState === "dismiss"
-              ? "closeout.leftovers.savedDismissed"
-              : "closeout.leftovers.savedCarried",
-            { subject: decidedLeftover.subject },
-          )}
-          action={setLeftoverDecisionAction.bind(
-            null,
-            decidedLeftover.id,
-            decisionState === "dismiss" ? "carry" : "dismiss",
-          )}
-          fields={{}}
-          pendingLabel={t("closeout.leftovers.undoing")}
-          undoLabel={t("closeout.leftovers.undo")}
-        />
-      ) : null}
-
       {/* One notice surface. A visit rarely carries more than one of these;
           when it does, they read as one stack of arrivals rather than four
           competing banners. `mb-10` is the spine's own `gap-10`: the stack is
           one more block in that column, not closer to it (K-316). */}
-      {(created && !firstBookableMoment) ||
-      reset ||
-      email ||
-      authNoticeKey ||
-      closed ||
-      eveningNotice ? (
+      {(created && !firstBookableMoment) || reset || email || authNoticeKey || eveningNotice ? (
         <div className="mb-10 flex flex-col gap-2">
           {created && !firstBookableMoment ? (
             <ShopNotice>
@@ -947,11 +859,6 @@ async function TodayBody({
           {authNoticeKey ? (
             <ShopNotice tone="warning" role="status">
               {t(authNoticeKey)}
-            </ShopNotice>
-          ) : null}
-          {closed ? (
-            <ShopNotice tone="success" role="status">
-              {t("closeout.notice.closed")}
             </ShopNotice>
           ) : null}
           {eveningNotice ? (

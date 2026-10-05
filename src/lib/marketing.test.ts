@@ -354,7 +354,7 @@ describe("the fee anchor reports an unpublished rate as unpublished", () => {
  * proposed "the only things held back are credentials" for the pricing page —
  * true of what a shop would *carry somewhere else*, and not true of the export
  * bundle, which also withholds retry queues, provider linkage, DiveDay's own
- * reconciliation ledgers and the close-out and buddy-team trails (the
+ * reconciliation ledgers and the buddy-team trail (the
  * `EXCLUDED_TABLES` list pinned by src/db/export.test.ts, and the real Settings
  * screen's own "Not included, on purpose:" line, which names all of it).
  *

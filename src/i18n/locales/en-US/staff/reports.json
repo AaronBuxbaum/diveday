@@ -80,11 +80,6 @@
     "sitesCount": "{count, plural, one {# site} other {# sites}}",
     "siteTimes": "{count, plural, one {# time} other {# times}}",
     "sitesRest": "{count, plural, one {# more site} other {# more sites}} · {dives, plural, one {# dive between them} other {# dives between them}}",
-    "entriesLabel": "The year’s entries",
-    "entriesCount": "{count, plural, one {# day} other {# days}}",
-    "entry": "{divers, plural, one {# diver} other {# divers}} on {boats, plural, one {# boat} other {# boats}}",
-    "entryClosedBy": "Closed by {name}",
-    "entriesRest": "{count, plural, one {# more day} other {# more days}}",
     "empty": "No departures have sailed this year yet."
   },
   "buddySeats": "{count, plural, one {# seat} other {# seats}} arrived on a buddy’s link"

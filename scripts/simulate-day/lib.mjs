@@ -18,13 +18,13 @@ const HOUR_MS = 60 * MINUTE_MS;
 export const RECAP_FLOOR_MS = 4 * HOUR_MS;
 
 /**
- * How long after the last boat ties up the day is closed. The closing block
- * appears once every departure of the shop day is home with the standing
+ * How long after the last boat ties up the evening is photographed. The day
+ * reads as over once every departure of the shop day is home with the standing
  * one-hour late-arrival buffer; a second hour keeps the simulation clear of
  * that boundary rather than sitting on it (the same margin
  * `/api/test/seed-evening` takes, for the same reason).
  */
-export const CLOSE_OUT_AFTER_MS = 2 * HOUR_MS;
+export const EVENING_AFTER_MS = 2 * HOUR_MS;
 
 /**
  * Every state the day must reach, in the order it is reached. The ids are the
@@ -45,7 +45,7 @@ export const DAY_STATES = Object.freeze([
   { id: "roll-call-after-dives", label: "Roll call after every dive" },
   { id: "heading-in", label: "Heading in" },
   { id: "home", label: "Home" },
-  { id: "day-closed", label: "The day is closed out" },
+  { id: "evening", label: "Every boat is home" },
   { id: "recap-sent", label: "The recap pass sends the diver's recap" },
   { id: "recap-read", label: "The diver reads the recap" },
 ]);
@@ -92,7 +92,7 @@ export function dayTimeline({ dayStart, sailAt, endsAt, plannedDives }) {
     "roll-call-after-dives": afterDive,
     "heading-in": Math.max(afterDive[afterDive.length - 1] + 5 * MINUTE_MS, end - 30 * MINUTE_MS),
     home: end,
-    "day-closed": end + CLOSE_OUT_AFTER_MS,
+    evening: end + EVENING_AFTER_MS,
     "recap-sent": end + RECAP_FLOOR_MS + 5 * MINUTE_MS,
     "recap-read": end + RECAP_FLOOR_MS + 10 * MINUTE_MS,
   };

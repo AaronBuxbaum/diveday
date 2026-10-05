@@ -395,11 +395,11 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "crew_availability_blocks",
   "crew_assignment_requests",
   // Departures and what happened on one. Several of these are append-only —
-  // a departure's change history, a close-out's per-leftover choices, a
-  // review's publish/hide trail — and they are still outside retention's
-  // subject, because each is read as part of a record the shop still has. A
-  // window would leave that record with a hole rather than free anything, and
-  // the count follows the shop's own departures rather than the calendar.
+  // a departure's change history, a review's publish/hide trail — and they
+  // are still outside retention's subject, because each is read as part of a
+  // record the shop still has. A window would leave that record with a hole
+  // rather than free anything, and the count follows the shop's own
+  // departures rather than the calendar.
   "trips",
   "trip_dives",
   "trip_change_events",
@@ -421,12 +421,6 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "trip_reviews",
   "review_moderation_events",
   "recap_pulses",
-  // A row per close, normally one per shop per day, plus the choices made
-  // while reviewing it: growth is bounded by the ritual, which is the argument
-  // `day_closeouts`' own docblock makes. Adding a window anyway is HD-11's
-  // call, not an agent's.
-  "day_closeouts",
-  "closeout_leftover_decisions",
   // Waivers. H-02's question about these is whether signed evidence may be
   // erased at all — the opposite end of the same question from a window, and
   // never an argument for expiring one on a clock.

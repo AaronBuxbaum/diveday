@@ -22,7 +22,6 @@ import {
   bookingCheckouts,
   bookingPayments,
   bookings,
-  dayCloseouts,
   diveSites,
   importedPaymentHistory,
   type PaymentStatus,
@@ -1350,30 +1349,6 @@ describe("getShopYear", () => {
 
     expect(year.boatsOut).toBe(1);
     expect(year.divers).toBe(5);
-  });
-
-  it("lists the year's close-outs newest first, one row per day", async () => {
-    const db = await unseededTestDb();
-    const shopId = await yearShop(db, "year-closeouts");
-    await sailedTrip(db, shopId, "2026-07-04", 12, 12);
-    await sailedTrip(db, shopId, "2026-02-15", 10, 2);
-    const dana = await makePerson(db, shopId, "Dana Reyes");
-    const keiko = await makePerson(db, shopId, "Keiko Tan");
-    const sam = await makePerson(db, shopId, "Sam Ortiz");
-    const empty = { actions: [] } as never;
-    await db.insert(dayCloseouts).values([
-      { shopId, shopDay: "2026-02-15", actorPersonId: dana, outstanding: empty },
-      { shopId, shopDay: "2026-07-04", actorPersonId: keiko, outstanding: empty },
-      // The same day closed twice: the later close is the one that stands.
-      { shopId, shopDay: "2026-07-04", actorPersonId: sam, outstanding: empty },
-    ]);
-
-    const year = summarizeShopYear(await getShopYear(db, shopId, { timeZone: TZ, now: NOW }));
-
-    expect(year.entries).toEqual([
-      { day: "2026-07-04", actor: "Sam Ortiz", divers: 12, boats: 1 },
-      { day: "2026-02-15", actor: "Dana Reyes", divers: 2, boats: 1 },
-    ]);
   });
 
   it("never counts another shop's departures", async () => {

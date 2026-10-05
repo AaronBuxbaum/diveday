@@ -22,12 +22,10 @@ import {
   buddyTeamEvents,
   calendarFeeds,
   certifications,
-  closeoutLeftoverDecisions,
   courseInquiries,
   courses,
   crewAssignmentRequests,
   crewAvailabilityBlocks,
-  dayCloseouts,
   divePackageEntitlements,
   divePackages,
   diveSiteCreatures,
@@ -193,8 +191,6 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   await db.delete(preDepartureChecklistItems).where(eq(preDepartureChecklistItems.shopId, shopId));
   // The close-out trail references people and the shop, so it must clear
   // before both parents below (ADR 20260804-day-closeout).
-  await db.delete(closeoutLeftoverDecisions).where(eq(closeoutLeftoverDecisions.shopId, shopId));
-  await db.delete(dayCloseouts).where(eq(dayCloseouts.shopId, shopId));
   await db.delete(recapPhotos).where(eq(recapPhotos.shopId, shopId));
   await db.delete(tripRecapPhotos).where(eq(tripRecapPhotos.shopId, shopId));
   // Before the reviews it describes: the trail's review_id FK carries no

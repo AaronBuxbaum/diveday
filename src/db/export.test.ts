@@ -71,7 +71,6 @@ const EXPECTED_FILES = [
   "gear_items.csv",
   "gear_service_events.csv",
   "gear_reservations.csv",
-  "closeout_leftover_decisions.csv",
   "pre_departure_checklist_items.csv",
   "pre_departure_check_events.csv",
   "prior_visits.csv",
@@ -150,7 +149,6 @@ const EXPORTED_TABLES = [
   "gear_items",
   "gear_service_events",
   "gear_reservations",
-  "closeout_leftover_decisions",
   "pre_departure_checklist_items",
   "pre_departure_check_events",
   "prior_visits",
@@ -193,13 +191,6 @@ const EXCLUDED_TABLES = [
   // shop database and are intentionally not part of the current full-shop
   // export contract until that export has a matching assignment file.
   "prior_gear_assignments",
-  // The close-out ritual's append-only trail. The one in-product operational
-  // record that stayed out after DATA-A10's sweep, and on a narrower argument
-  // than the ones that moved: a close-out is an attestation *about* a day whose
-  // every underlying fact — the roll call, the blockers, the departures — is
-  // already in the bundle, so the row adds a signature over records the
-  // destination has, and nothing the destination lacks.
-  "day_closeouts",
   // The buddy-team pairing trail (ADR 20260804-buddy-teams). The *standing*
   // teams a shop would carry to another system are already exported as
   // buddy_pairs.csv; this is the history of how they got that way.
@@ -483,7 +474,6 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
   gear_items: ["shop_id"],
   gear_service_events: ["shop_id"],
   gear_reservations: ["shop_id"],
-  closeout_leftover_decisions: ["shop_id"],
   pre_departure_checklist_items: ["shop_id"],
   pre_departure_check_events: ["shop_id"],
   prior_visits: [

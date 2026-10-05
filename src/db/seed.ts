@@ -29,12 +29,10 @@ import {
   buddyTeamEvents,
   calendarFeeds,
   certifications,
-  closeoutLeftoverDecisions,
   courseInquiries,
   courses,
   crewAssignmentRequests,
   crewAvailabilityBlocks,
-  dayCloseouts,
   divePackageEntitlements,
   diveSiteCreatures,
   diveSiteMoments,
@@ -1188,12 +1186,6 @@ export async function resetDemoSchedule(
   // next test's board (`seedCrewAway` re-seeds the demo's own blackout).
   await db.delete(crewAssignmentRequests).where(eq(crewAssignmentRequests.shopId, shopId));
   await db.delete(crewAvailabilityBlocks).where(eq(crewAvailabilityBlocks.shopId, shopId));
-  // The close-out trail references people (its actor), so it clears before the
-  // people purge below — and clearing it at all is what keeps the close-out
-  // surface deterministic between specs: a day one test closed must read as
-  // open again for the next test's fixture (ADR 20260804-day-closeout).
-  await db.delete(closeoutLeftoverDecisions).where(eq(closeoutLeftoverDecisions.shopId, shopId));
-  await db.delete(dayCloseouts).where(eq(dayCloseouts.shopId, shopId));
   await db.delete(rentalFitProfiles).where(eq(rentalFitProfiles.shopId, shopId));
   // The gear register, children first: reservations reference gear_items and
   // bookings, service events reference gear_items and people (their recording

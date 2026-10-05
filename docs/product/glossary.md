@@ -627,25 +627,21 @@ new domain concept, define it here in the same PR.
   row would re-open that gap. The **refusal** counts too: the sentence a turned-down boarding tap
   shows (`shared.offlineManifest.single.record.notAllowed`) reads "wasn't ready to board when this
   copy was saved", never the present tense.
-- **Close-out** — the end-of-day ritual, and Today's evening mirror: one surface
-  (`/shop/<slug>/close-out`, ADR 20260804-day-closeout) where staff confirm the day actually
-  ended — every departure's end state read in strict precedence off the same roll-call evidence
-  Today chases, then the clock, and only then the crew's own **trip stage** (`departureStatus`,
-  `src/lib/closeout.ts`); today's unresolved queue rows each given an explicit **carry** or
-  **dismiss**; and tomorrow's first blockers as the parting glance. **A stage settles a station the
-  clock would leave open, and never reopens one the clock has closed** (issue #1480): inside the
-  late-arrival hour a live `home` reads `all_home`, because a crew member tapping Home at the rail
-  is the statement that buffer was standing in for rather than an inference from a time. Nothing
-  demotes — a stage that says `underway` over a departure the clock calls back is silence, not a
-  contradiction, and so is one the crew stopped maintaining. The asymmetry is affordable only
-  because the head count returns before any of it: the promotion is reached solely over a departure
-  whose divers are all already counted back aboard. Closing the day is a **recorded act, never a
-  gate**: an append-only `day_closeouts` row remembers who closed, when, and exactly what was
-  outstanding, and nothing anywhere conditions on it — a dismissed item resurfaces tomorrow if it
-  is still true, and re-opening is just working again and closing again. An open after-dive head
-  count or a boat still out makes the close *loud* (a by-name acknowledgement before the button)
-  but never impossible: the human is the authority on their own day, and the count stays chased
-  either way.
+- **Close-out** — the shop home's evening state (ADR 20260827-clearwater-surface-language,
+  decision 4): once every departure of the shop day has settled, each station reads its end state
+  in strict precedence off the same roll-call evidence Today chases, then the clock, and only then
+  the crew's own **trip stage** (`departureStatus`, `src/lib/closeout.ts`), and the day's takings
+  read beneath them. **A stage settles a station the clock would leave open, and never reopens one
+  the clock has closed** (issue #1480): inside the late-arrival hour a live `home` reads `all_home`,
+  because a crew member tapping Home at the rail is the statement that buffer was standing in for
+  rather than an inference from a time. Nothing demotes — a stage that says `underway` over a
+  departure the clock calls back is silence, not a contradiction, and so is one the crew stopped
+  maintaining. The asymmetry is affordable only because the head count returns before any of it:
+  the promotion is reached solely over a departure whose divers are all already counted back
+  aboard. There is **no act of closing the day**: a "Close the day" button that recorded who closed
+  it (`day_closeouts`) and a leftovers list with per-row Dismiss were removed on 2026-10-05,
+  because nothing read the record and the leftovers repeated Needs you (ADR 20260804-day-closeout,
+  withdrawn).
   The evening's **"All boats are home"** line is narrower than the close itself, and deliberately:
   it needs every departure of the shop day settled, every one of them reading `all_home`, **and**
   every *assigned* crew member accounted for at the closing checkpoint — the manifest's own

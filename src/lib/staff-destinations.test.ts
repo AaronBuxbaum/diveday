@@ -322,9 +322,8 @@ describe("what each consumer derives", () => {
   it("has no Close-out destination at all, and files Orders under Money", () => {
     // The evening is a state the shop home settles into, not a place to go
     // (H-62). An entry pointing at the bare home would be a second row landing
-    // on Today's own URL — the duplicate control principle 8 forbids — so the
-    // palette answers "close the day" with a command carrying an anchor
-    // instead, and this registry holds nothing for it.
+    // on Today's own URL — the duplicate control principle 8 forbids — so this
+    // registry holds nothing for it.
     expect(STAFF_DESTINATIONS.some((destination) => destination.suffix === "/close-out")).toBe(
       false,
     );
