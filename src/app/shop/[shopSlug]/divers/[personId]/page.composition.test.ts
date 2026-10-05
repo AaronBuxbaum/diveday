@@ -76,18 +76,17 @@ describe("the diver record file order", () => {
    * gear row's hairline. forms-and-controls.md's rule is `space-y-10` on the
    * wrapper, never `mt-*` on a section, and this holds both halves.
    */
-  it("stacks the story and the file on one space-y-10, with no section carrying its own margin", () => {
-    const stack = SOURCE.lastIndexOf("space-y-10", positionOf("<DiverStory"));
+  it("stacks the file and the story on one space-y-10, with no section carrying its own margin", () => {
+    const stack = SOURCE.lastIndexOf("space-y-10", positionOf("<WaiverGroup"));
     expect(stack).toBeGreaterThan(-1);
-    // The wrapper opens before the story and nothing closes it before the file
-    // ends: the only `</div>` between it and the last group is its own.
-    const between = SOURCE.slice(stack, positionOf("<ActivitySection"));
-    expect(between).not.toContain("</div>");
+    // The wrapper opens before the file and nothing but the file's own list
+    // closes before the story: the only `</div>` between it and the story is
+    // the file's.
+    const between = SOURCE.slice(stack, positionOf("<DiverStory"));
+    expect(between.match(/<\/div>/g) ?? []).toHaveLength(1);
 
     // The sections in the stack, read off the page, and each one's own root.
-    const sections = [...`${between}<ActivitySection`.matchAll(/<([A-Z]\w+)/g)].map(
-      ([, name]) => name,
-    );
+    const sections = [...`${between}<DiverStory`.matchAll(/<([A-Z]\w+)/g)].map(([, name]) => name);
     expect(sections).toContain("CertificationsGroup");
     const offenders = sections.filter((name) => {
       const source = readFileSync(join(COMPONENTS, `${name}.tsx`), "utf8");
@@ -97,6 +96,35 @@ describe("the diver record file order", () => {
       ].some((tag) => /\bclassName="[^"]*\bmt-/.test(tag));
     });
     expect(offenders).toEqual([]);
+  });
+
+  /**
+   * **The file leads, because a gap lives there** (`splitDiverStatus`). A
+   * release that keeps the diver off Friday's boat is said by the Waiver row,
+   * so the row has to be on screen under the masthead, not below a nine-visit
+   * story.
+   */
+  /**
+   * **The gates first, worst first.** With no ledger line above it, the first
+   * red under the masthead has to be the gap that matters most: a medical hold
+   * or an unsigned release, then a card, then who to call (dive-domain review,
+   * 2026-10-05).
+   */
+  it("orders the file's gates waiver, cards, contact", () => {
+    const waiver = positionOf("<WaiverGroup");
+    const cards = positionOf("<CertificationsGroup");
+    const contact = positionOf("<DiverDetailsGroup");
+    for (const marker of [waiver, cards, contact]) expect(marker).toBeGreaterThan(-1);
+    expect(waiver).toBeLessThan(cards);
+    expect(cards).toBeLessThan(contact);
+    expect(contact).toBeLessThan(positionOf("<ConversationSection"));
+  });
+
+  it("puts the file ahead of the story", () => {
+    const file = positionOf("<WaiverGroup");
+    const story = positionOf("<DiverStory");
+    for (const marker of [file, story]) expect(marker).toBeGreaterThan(-1);
+    expect(file).toBeLessThan(story);
   });
 
   /** A group that opens itself above `sm` is the retired branch coming back. */

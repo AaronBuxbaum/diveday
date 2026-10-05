@@ -100,23 +100,36 @@ test("the record leads with what is open, and offers exactly one primary act", a
 });
 
 /**
- * **S1 — fix a diver before the boat.** The status ledger names the open item
- * and carries the one fix beside it; taking that fix lands on the control in
- * the certifications group.
+ * **S1 — fix a diver before the boat, from the row that names the gap.**
+ *
+ * Each gap is said once, by the file row whose door fixes it
+ * (`splitDiverStatus`). The status ledger used to name the same three facts
+ * above the story and link down to these rows (Aaron, 2026-10-05). Amir is
+ * booked on a departure with no waiver, no card and no emergency contact.
  */
-test("the status ledger's fix lands on the control that clears it", async ({ page }) => {
-  await page.goto("/shop/blue-mantis/divers?filter=needs_attention");
-  await page.locator("main ul li a").first().click();
-  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+test("a diver's gaps are each said once, in the file row whose door fixes them", async ({
+  page,
+}) => {
+  await page.goto(`/shop/${SHOP}/divers?q=Amir`);
+  await page.getByRole("link", { name: /Amir Haddad/ }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Amir Haddad" })).toBeVisible();
 
-  const fix = page.getByRole("link", { name: "Verify it" });
-  await expect(fix).toBeVisible();
-  // `#card-awaiting` for "cards are waiting", or the first card of the kind a
-  // blocker is about (`#card-awaiting-level`, `-deep`, `-nitrox`).
-  await expect(fix).toHaveAttribute("href", /^#card-awaiting(-[a-z_]+)?$/);
-  const target = (await fix.getAttribute("href")) ?? "";
-  await fix.click();
-  await expect(page.locator(target)).toBeInViewport();
+  // Nothing above the file restates it.
+  await expect(page.getByRole("list", { name: "Open items" })).toHaveCount(0);
+  await expect(page.getByText(/No emergency contact/)).toHaveCount(1);
+
+  // The release keeps him off a departure, so its row says which one and is
+  // already open on the routes to a signature.
+  const waiver = page.getByTestId("diver-file-group-waiver");
+  await expect(waiver.locator("summary")).toContainText("Not signed");
+  await expect(waiver.locator("summary")).toContainText("Can’t board");
+  await expect(waiver.getByRole("button", { name: "Email waiver" })).toBeVisible();
+
+  // The contact gap is a warning, not a blocker: its door stays shut until
+  // tapped, and opens onto the fields that close it.
+  const contact = page.getByRole("region", { name: "Contact details" });
+  await contact.getByText("Contact details", { exact: true }).click();
+  await expect(contact.getByLabel("Emergency contact name")).toBeVisible();
 });
 
 test("a diver note is shared with the live boat manifest", async ({ page }) => {

@@ -521,7 +521,10 @@ primary-weight control lives on the page (`_lib/record-primaries.test.ts`).
 
 - **One idea:** this diver, ready or not — and the one fix if not.
 - **The question it arrives with:** "can they dive with us, and is anything in the way?" — answered
-  by the status ledger under the masthead, which renders *nothing* when they are clear.
+  by the file under the masthead, where each gap is said once by its own row (warning ink, or
+  danger with the departure it blocks), and by the status ledger for what no row can hold (money, a
+  seat to change), which renders *nothing* otherwise (ADR 20260827-people-not-lists, amendment
+  2026-10-05).
 - **Controls that dissolved:** the jump nav (the page got short), the stat tiles (each figure lives
   in its group), the twin certification sections (one group, one add flow), the three lists of the
   same bookings (one story), the refund button (money out is the Orders ledger's act) and the

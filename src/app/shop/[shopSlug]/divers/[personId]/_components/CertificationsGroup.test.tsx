@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen } from "@testing-library/react";
+import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { CertificationsGroup } from "./CertificationsGroup";
@@ -41,7 +42,10 @@ function diver(overrides: Partial<DiverProfile> = {}): DiverProfile {
   } as unknown as DiverProfile;
 }
 
-function renderGroup(profile: DiverProfile) {
+function renderGroup(
+  profile: DiverProfile,
+  gap?: ComponentProps<typeof CertificationsGroup>["gap"],
+) {
   return render(
     <CertificationsGroup
       diver={profile}
@@ -50,6 +54,7 @@ function renderGroup(profile: DiverProfile) {
       personId="person-1"
       locale="en-US"
       t={t}
+      gap={gap}
     />,
   );
 }
@@ -335,5 +340,51 @@ describe("the certification records door", () => {
     // The bordered `danger` variant's own marker, and the thing that made it
     // the loudest control in the group.
     expect(remove.className).not.toMatch(/border-danger/);
+  });
+});
+
+/**
+ * **A card gap is said by this row** (`splitDiverStatus`), with its departure.
+ * The status sentence rides along only when the cards cannot say it: a Nitrox
+ * card alone is still no level, and "Nitrox" in danger ink would read as a gas
+ * problem (dive-domain review, 2026-10-05).
+ */
+describe("a card gap on the certification records door", () => {
+  const missingLevel = {
+    kind: "certification" as const,
+    tone: "danger" as const,
+    sentence: { blocker: { code: "certification_missing" as const } },
+    action: { labelKey: "divers.status.acts.addCard" as const, target: "add_card" as const },
+    tripContext: {
+      tripId: "trip-1",
+      bookingId: "b1",
+      startsAt: new Date("2026-10-09T11:30:00.000Z"),
+    },
+  };
+
+  it("lets None on file speak for itself, in danger ink with the departure", () => {
+    renderGroup(diver(), missingLevel);
+    expect(screen.getByText("None on file")).toHaveClass("text-danger");
+    expect(door()).toHaveTextContent("Can’t board Fri, Oct 9 · 6:30 AM.");
+    expect(door()).not.toHaveTextContent("No certification is on file for this trip.");
+    expect(screen.getByTestId("diver-file-group-certifications")).toHaveAttribute("open");
+  });
+
+  it("says why when a Nitrox card is all the diver holds", () => {
+    renderGroup(
+      diver({
+        nitroxCertifications: [
+          {
+            id: "n1",
+            agency: "padi",
+            status: "verified",
+            identifier: "5678",
+            selfDeclaredAt: null,
+          },
+        ],
+      } as unknown as Partial<DiverProfile>),
+      missingLevel,
+    );
+    expect(door()).toHaveTextContent("No certification is on file for this trip.");
   });
 });

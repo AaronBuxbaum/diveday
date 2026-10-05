@@ -48,6 +48,7 @@ function renderCard(
   profile: DiverProfile,
   status?: ComponentProps<typeof WaiverGroup>["status"],
   canOpenClearance = false,
+  gap?: ComponentProps<typeof WaiverGroup>["gap"],
 ) {
   return render(
     <WaiverGroup
@@ -59,6 +60,7 @@ function renderCard(
       timezone="America/Cancun"
       canOpenClearance={canOpenClearance}
       status={status}
+      gap={gap}
     />,
   );
 }
@@ -115,6 +117,30 @@ describe("the waiver group", () => {
       /Good until Jul 21, 2027 · Co-signed by Jordan Guardian \(parent\)/,
     );
     expect(row.querySelector("details")).toBeNull();
+  });
+
+  /**
+   * **The gap is said here, once** (`splitDiverStatus`). The status ledger
+   * used to repeat "Waiver has not been sent" above this row; now the row
+   * wears the consequence itself: danger ink, and the departure it blocks.
+   * Its own "Not signed" already says what is wrong, so no second sentence.
+   */
+  it("wears a departure blocker in its own row: danger ink and the departure", () => {
+    renderCard(diver({ email: "priya@dive.day" }), undefined, false, {
+      kind: "waiver",
+      tone: "danger",
+      sentence: { blocker: { code: "waiver_not_sent" } },
+      action: { labelKey: "divers.status.acts.sendWaiver", target: "send_waiver" },
+      tripContext: {
+        tripId: "trip-1",
+        bookingId: "b1",
+        startsAt: new Date("2026-10-09T11:30:00.000Z"),
+      },
+    });
+    const door = screen.getByTestId("diver-file-group-waiver").querySelector("summary");
+    expect(screen.getByText("Not signed")).toHaveClass("text-danger");
+    expect(door).toHaveTextContent("Can’t board Fri, Oct 9 · 6:30 AM.");
+    expect(door).not.toHaveTextContent("Waiver has not been sent.");
   });
 
   it("says only Not signed when nothing has been sent", () => {
@@ -274,6 +300,10 @@ describe("the waiver group", () => {
     // inside carries the danger ink the closed summary cannot.
     expect(group.tagName).toBe("DETAILS");
     expect(group.querySelector(".text-danger, .text-danger-strong")).not.toBeNull();
+    // Danger and open on its own, with no departure to name: a physician's
+    // "no" keeps the diver off every boat, whatever the caller passed.
+    expect(group.querySelector("summary span.text-sm")?.className).toContain("text-danger");
+    expect(group).toHaveAttribute("open");
   });
 
   it("leaves a clean current release muted and shut", () => {

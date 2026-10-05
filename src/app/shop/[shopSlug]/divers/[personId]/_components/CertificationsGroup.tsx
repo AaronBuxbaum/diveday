@@ -17,6 +17,7 @@ import {
 } from "@/lib/certification-cards";
 import { formatShortDate } from "@/lib/format";
 import { isUnsightedSelfDeclaration } from "@/lib/readiness";
+import type { DiverStatusRow } from "../_lib/status";
 import {
   addCardAction,
   clearNoCertificationAction,
@@ -28,6 +29,7 @@ import {
 } from "../actions";
 import { CardSightingForm } from "./CardSightingForm";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
+import { fileGap } from "./file-gap";
 import { MarkCertifiedControl } from "./MarkCertifiedControl";
 import { markCertifiedCopy } from "./mark-certified-copy";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
@@ -221,6 +223,38 @@ function cardsOnFile(
   return { text: t("divers.file.certificationsNone"), tone: "muted" };
 }
 
+/**
+ * Whether the door's own fact already names the gap, so `fileGap` adds only
+ * its ink and departure. An unchecked card reads "— unverified" or "— confirm
+ * to clear", which is every waiting-for-a-look row; an empty file reads "None
+ * on file", which is the missing-card row. Anything else — a level below the
+ * trip's, a specialty the trip needs — is a fact the list of cards cannot
+ * carry, so the status sentence goes beneath it.
+ */
+function summarySaysGap(
+  gap: DiverStatusRow | undefined,
+  tone: "muted" | "warning",
+  diver: DiverProfile,
+): boolean {
+  if (!gap) return true;
+  if (!("blocker" in gap.sentence)) return tone === "warning";
+  const code = gap.sentence.blocker.code;
+  if (code === "certification_missing") {
+    // Only the empty state says it: a Nitrox card alone is still no level,
+    // and "Nitrox" in danger ink would read as a gas problem.
+    return (
+      diver.certifications.length === 0 &&
+      diver.specialtyCertifications.length === 0 &&
+      diver.nitroxCertifications.length === 0
+    );
+  }
+  const waitingForALook =
+    code.endsWith("_pending") ||
+    code.endsWith("_self_declared") ||
+    code === "specialty_import_unconfirmed";
+  return waitingForALook && tone === "warning";
+}
+
 export function CertificationsGroup({
   diver,
   shop,
@@ -229,6 +263,7 @@ export function CertificationsGroup({
   locale,
   t,
   status,
+  gap,
 }: {
   diver: DiverProfile;
   shop: Shop;
@@ -238,6 +273,8 @@ export function CertificationsGroup({
   t: StaffTranslator;
   /** This group's own outcome, rendered beside its controls — never page-top. */
   status?: DiverNotice;
+  /** The status row about this diver's cards, said by this row (`splitDiverStatus`). */
+  gap?: DiverStatusRow;
 }) {
   // A refused card *number* belongs on the box it names, not in the group's
   // action row — and emphatically not opening the add-a-card form, which is a
@@ -268,6 +305,12 @@ export function CertificationsGroup({
     diver.specialtyCertifications.length === 0;
 
   const onFile = cardsOnFile(diver, t, noCertificationDeclared);
+  const missing = fileGap(gap, {
+    t,
+    locale,
+    timezone: shop.timezone,
+    factSaysIt: summarySaysGap(gap, onFile.tone, diver),
+  });
 
   // The first row anybody has to act on takes the ledger's anchor. Counted the
   // way the roster's badge and the status ledger count it, in render order, so
@@ -498,14 +541,14 @@ export function CertificationsGroup({
       id="certifications"
       label={t("divers.certifications.heading")}
       // **The levels on file, not the queue state.** "None waiting" answered a
-      // question nobody asked of a closed door: whether anything is waiting is
-      // already the status ledger's job two sections above, with the fix beside
-      // it. What a staffer wants off this row is what this diver is certified
-      // to do. An unsighted claim wears the shared "— unverified" phrase, so
+      // question nobody asked of a closed door. What a staffer wants off this
+      // row is what this diver is certified to do; a gap the cards cannot
+      // name (a trip that needs Deep) is `detail`, beneath it. An unsighted claim wears the shared "— unverified" phrase, so
       // the door cannot read as though the shop has seen a card it has not.
       summary={onFile.text}
-      summaryTone={onFile.tone}
-      open={Boolean(status)}
+      summaryTone={missing?.tone ?? onFile.tone}
+      detail={missing?.detail}
+      open={Boolean(status) || Boolean(missing?.open)}
       stacked
     >
       <InsetGroup

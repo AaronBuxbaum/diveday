@@ -4832,14 +4832,15 @@ for (const scheme of ["light", "dark"] as const) {
 
       /**
        * **One diver's whole record**, in the composition ADR
-       * 20260827-people-not-lists gave it: masthead, status ledger, story, and
-       * the file as inset groups. Priya is the diver `seed-diver-trail.ts`
+       * 20260827-people-not-lists gave it, the file now ahead of the story:
+       * masthead, status ledger, the file as inset groups (each gap said by
+       * its own row), then the story. Priya is the diver `seed-diver-trail.ts`
        * gives a trail past one page to, so the folded Activity group is real
        * here.
        */
       test(`a diver's record renders true to the design (${scheme})`, async ({ page }) => {
         await openDiverProfile(page, "Priya", "Priya Sharma");
-        // The story is the second thing on the page and the widest — waiting
+        // The story is the last section on the page and the widest — waiting
         // on it rather than on the h1 keeps the shot off a half-assembled
         // record.
         await page.getByRole("region", { name: "The story" }).waitFor();

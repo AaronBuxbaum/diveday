@@ -7,6 +7,7 @@ import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import { controlClass, DateField, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { maxPlausibleBirthDate } from "@/lib/age";
+import type { DiverStatusRow } from "../_lib/status";
 import { savePersonAction } from "../actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
@@ -18,9 +19,13 @@ import type { DiverProfile } from "./shared";
  *
  * The editor was a second dropdown button beside Book a departure. It is a door
  * like the waiver and the gear now, and its summary is the one fact a crew
- * needs from it on the day: who to call. It keeps the `#edit-details` target
- * the status ledger's contact fix links to, and the disclosure opens itself
- * for that hash.
+ * needs from it on the day: who to call.
+ *
+ * **It is the one place a missing contact is named.** The status ledger used
+ * to say "No emergency contact on file" above this row and link down to it;
+ * now that gap is this row's own (`splitDiverStatus`), worded by its summary
+ * and inked by `gap`. `#edit-details` is kept for the deep links that still
+ * name it, and the disclosure opens itself for that hash.
  */
 export function DiverDetailsGroup({
   diver,
@@ -30,6 +35,7 @@ export function DiverDetailsGroup({
   locale,
   country,
   status,
+  gap,
   open = false,
 }: {
   diver: DiverProfile;
@@ -42,6 +48,8 @@ export function DiverDetailsGroup({
   country: string | null;
   /** A refused save, rendered on its field or in the action row. */
   status?: DiverNotice;
+  /** The status row about the emergency contact, when one is missing. */
+  gap?: DiverStatusRow;
   /**
    * Starts the group open. Set right after the roster's three-field "Add a
    * diver" form lands here, when the record holds a name and little else, and
@@ -51,16 +59,25 @@ export function DiverDetailsGroup({
 }) {
   const formStatus = status?.tone === "danger" ? status : undefined;
   const emergencyName = diver.person.emergencyContactName?.trim();
+  const emergencyPhone = diver.person.emergencyContactPhone?.trim();
+  // The summary says the gap in words, so the gap adds only its ink: a contact
+  // is never a departure blocker (readiness does not gate on it).
   return (
     <DiverFileGroupDisclosure
       id="edit-details"
       label={t("divers.details.label")}
       summary={
-        emergencyName
-          ? t("divers.details.summaryEmergency", { name: emergencyName })
-          : t("divers.details.summaryNoEmergency")
+        !emergencyName
+          ? emergencyPhone
+            ? t("divers.details.summaryEmergencyNoName", { phone: emergencyPhone })
+            : t("divers.details.summaryNoEmergency")
+          : // "On file" needs a name and a number (glossary — Emergency
+            // contact), so a name alone reads as the half it is.
+            emergencyPhone
+            ? t("divers.details.summaryEmergency", { name: emergencyName })
+            : t("divers.details.summaryEmergencyNoPhone", { name: emergencyName })
       }
-      summaryTone={emergencyName ? "muted" : "warning"}
+      summaryTone={gap?.tone ?? (emergencyName && emergencyPhone ? "muted" : "warning")}
       stacked
       open={open}
     >

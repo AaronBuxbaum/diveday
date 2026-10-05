@@ -414,7 +414,9 @@
     "rentsFromUs": "Renta con nosotros",
     "sizes": "Tallas",
     "noSizes": "Sin tallas archivadas",
-    "editSizes": "Editar"
+    "editSizes": "Editar",
+    "neededFor": "Hace falta para el {when}.",
+    "cantBoard": "No puede embarcar el {when}."
   },
   "waiver": {
     "referralUnresolved": "Firmada de nuevo tras una derivación médica: no consta autorización de un médico ({date}). Regístrala o pregunta.",
@@ -423,6 +425,8 @@
   "details": {
     "label": "Datos de contacto",
     "summaryEmergency": "Contacto de emergencia: {name}",
+    "summaryEmergencyNoPhone": "Contacto de emergencia: {name}, sin teléfono",
+    "summaryEmergencyNoName": "Contacto de emergencia: {phone}, sin nombre",
     "summaryNoEmergency": "Sin contacto de emergencia"
   }
 }

@@ -414,7 +414,9 @@
     "rentsFromUs": "Rents from us",
     "sizes": "Sizes",
     "noSizes": "No sizes on file",
-    "editSizes": "Edit"
+    "editSizes": "Edit",
+    "neededFor": "Needed for {when}.",
+    "cantBoard": "Can’t board {when}."
   },
   "waiver": {
     "referralUnresolved": "Re-signed after a referral, with no physician clearance on file ({date}). Record one, or ask.",
@@ -423,6 +425,8 @@
   "details": {
     "label": "Contact details",
     "summaryEmergency": "Emergency contact: {name}",
+    "summaryEmergencyNoPhone": "Emergency contact: {name}, no phone number",
+    "summaryEmergencyNoName": "Emergency contact: {phone}, no name",
     "summaryNoEmergency": "No emergency contact"
   }
 }
