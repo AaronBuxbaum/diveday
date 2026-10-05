@@ -1032,7 +1032,7 @@ export function RosterSection({
         {arrival && flaggedPrompts.length > 0 ? (
           <div className="mt-3 text-sm">
             <GroupLabel as="p">{waiverControl.label}</GroupLabel>
-            <ul className="mt-1 flex list-disc flex-col gap-1 pl-4">
+            <ul className="mt-1 flex list-disc flex-col gap-1 ps-4">
               {flaggedPrompts.map((prompt) => (
                 <li key={prompt}>{prompt}</li>
               ))}

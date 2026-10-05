@@ -173,7 +173,7 @@ export function LastMinuteDealSection({
                     <span className="font-medium">{recipient.fullName}</span>
                   </label>
                   <span
-                    className={`-mt-2 pb-2 pl-6 sm:mt-0 sm:pb-0 sm:pl-0 sm:text-end ${
+                    className={`-mt-2 pb-2 ps-6 sm:mt-0 sm:pb-0 sm:ps-0 sm:text-end ${
                       certificationSummaryUnchecked(recipient.certification)
                         ? "text-warning"
                         : "text-muted"

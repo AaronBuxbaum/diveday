@@ -332,7 +332,7 @@ describe("LastMinuteDealSection recipient review", () => {
     expect(screen.getByRole("checkbox", { name: "Hana Kobayashi" })).toBeChecked();
     const certification = row?.querySelector(":scope > span");
     expect(certification).toHaveTextContent("Advanced Open Water");
-    expect(certification).toHaveClass("pl-6", "sm:pl-0", "sm:text-end");
+    expect(certification).toHaveClass("ps-6", "sm:ps-0", "sm:text-end");
   });
 
   it("caps the drawn list, counts the rest, and never hides someone below the bar", () => {
