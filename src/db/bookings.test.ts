@@ -3,6 +3,11 @@ import { and, eq, isNotNull } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
 import type { CertificationLevel } from "@/lib/readiness";
+import {
+  computeWaiverIntegrityHash,
+  verifyWaiverIntegrity,
+  WAIVER_INTEGRITY_VERSION_SIGNED,
+} from "@/lib/waiver-integrity";
 import { seededShopContext } from "@/test/db";
 import * as bookingCapabilitiesModule from "./booking-capabilities";
 import {
@@ -1434,6 +1439,96 @@ describe("createBooking identity safeguard (H-13)", () => {
         .from(waiverRecords)
         .where(eq(waiverRecords.id, release.id));
       expect(still?.supersededAt).toBeNull();
+    });
+
+    // Issue #2080, after the dive-domain review: `completeWaiver` only accepts
+    // the record's diver's own name, so a signed release on a held seat names
+    // the matched diver and stays theirs; unsigned links follow the seat.
+    it("keeps a signed release with the matched diver it names", async () => {
+      const { db, shop, open } = await seededContext();
+      const { nora, shared } = await sharedInboxSeat(db, shop.id, open.id);
+      const staffer = await counterStaffer(db, shop.id);
+      await issueWaiverRequest(db, { shopId: shop.id, bookingId: shared.bookingId });
+      const [release] = await db
+        .select()
+        .from(waiverRecords)
+        .where(eq(waiverRecords.bookingId, shared.bookingId))
+        .limit(1);
+      if (!release) throw new Error("expected the seat to carry a release");
+      const signedAt = nowDate();
+      const signed = {
+        ...release,
+        status: "completed" as const,
+        signedName: "Nora Quinn",
+        signatureMethod: "typed",
+        consentedAt: signedAt,
+        signedAt,
+        completedAt: signedAt,
+      };
+      await db
+        .update(waiverRecords)
+        .set({
+          status: signed.status,
+          signedName: signed.signedName,
+          signatureMethod: signed.signatureMethod,
+          consentedAt: signedAt,
+          signedAt,
+          completedAt: signedAt,
+          integrityHash: computeWaiverIntegrityHash(signed),
+          integrityVersion: WAIVER_INTEGRITY_VERSION_SIGNED,
+        })
+        .where(eq(waiverRecords.id, release.id));
+
+      const result = await splitBookingIdentity(db, {
+        shopId: shop.id,
+        bookingId: shared.bookingId,
+        actorPersonId: staffer.id,
+        fullName: "Ben Quinn",
+      });
+      if (!result.ok) throw new Error(`split refused: ${result.reason}`);
+
+      const [kept] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, release.id));
+      if (!kept) throw new Error("release vanished");
+      expect(kept.personId).toBe(nora);
+      expect(kept.movedFromPersonId).toBeNull();
+      expect(verifyWaiverIntegrity(kept)).toBe("valid");
+      // It names somebody other than the seat's diver, so it covers nothing here.
+      expect(kept.supersededAt).not.toBeNull();
+      const readiness = await readinessModule.getBookingReadiness(db, shop.id, shared.bookingId);
+      expect(readiness?.blockers.some((b) => b.code.startsWith("waiver_"))).toBe(true);
+    });
+
+    it("takes an unsigned link with the seat and clears what somebody half-typed on it", async () => {
+      const { db, shop, open } = await seededContext();
+      const { nora, shared } = await sharedInboxSeat(db, shop.id, open.id);
+      const staffer = await counterStaffer(db, shop.id);
+      await issueWaiverRequest(db, { shopId: shop.id, bookingId: shared.bookingId });
+      await db
+        .update(waiverRecords)
+        .set({ draftSignerName: "Ben Q", draftAcknowledged: true })
+        .where(eq(waiverRecords.bookingId, shared.bookingId));
+
+      const result = await splitBookingIdentity(db, {
+        shopId: shop.id,
+        bookingId: shared.bookingId,
+        actorPersonId: staffer.id,
+        fullName: "Ben Quinn",
+      });
+      if (!result.ok) throw new Error(`split refused: ${result.reason}`);
+
+      const releases = await db
+        .select()
+        .from(waiverRecords)
+        .where(eq(waiverRecords.bookingId, shared.bookingId));
+      expect(releases.length).toBeGreaterThan(0);
+      for (const release of releases) {
+        expect(release.personId).toBe(result.personId);
+        expect(release.movedFromPersonId).toBe(nora);
+        expect(release.movedByPersonId).toBe(staffer.id);
+        expect(release.draftSignerName).toBeNull();
+        expect(release.draftAcknowledged).toBe(false);
+        expect(verifyWaiverIntegrity(release)).toBe("unsealed");
+      }
     });
 
     it("refuses a cancelled seat: there is nobody to give a record to", async () => {

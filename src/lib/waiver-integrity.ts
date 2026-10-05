@@ -37,6 +37,11 @@ function dateValue(value: Date | null): string | null {
  * - **2** — an *erased* release (ADR 20260802-diver-data-erasure): the same
  *   record after the signer's name, medical answers, and source documents were
  *   destroyed, re-sealed over only the fields that survive.
+ * - **3** — a signed release *refiled* under another diver record: its diver
+ *   was merged into the record the shop kept (`refileWaiverRecords`, issue
+ *   #2080). Version 1's field set plus who moved it, when, and from which
+ *   record, so the new `person_id` verifies as the shop's act rather than
+ *   reading as tampering.
  *
  * A record verifies against the version it declares in `integrity_version`,
  * never against a guess. A version this build does not know reads as `invalid`
@@ -45,13 +50,19 @@ function dateValue(value: Date | null): string | null {
  */
 export const WAIVER_INTEGRITY_VERSION_SIGNED = 1;
 export const WAIVER_INTEGRITY_VERSION_ERASED = 2;
+export const WAIVER_INTEGRITY_VERSION_MOVED = 3;
 
 export type WaiverIntegrityVersion =
   | typeof WAIVER_INTEGRITY_VERSION_SIGNED
-  | typeof WAIVER_INTEGRITY_VERSION_ERASED;
+  | typeof WAIVER_INTEGRITY_VERSION_ERASED
+  | typeof WAIVER_INTEGRITY_VERSION_MOVED;
 
 export function isWaiverIntegrityVersion(value: number | null): value is WaiverIntegrityVersion {
-  return value === WAIVER_INTEGRITY_VERSION_SIGNED || value === WAIVER_INTEGRITY_VERSION_ERASED;
+  return (
+    value === WAIVER_INTEGRITY_VERSION_SIGNED ||
+    value === WAIVER_INTEGRITY_VERSION_ERASED ||
+    value === WAIVER_INTEGRITY_VERSION_MOVED
+  );
 }
 
 /** The signed release fields whose meaning must not drift after completion. */
@@ -80,7 +91,7 @@ export function isWaiverIntegrityVersion(value: number | null): value is WaiverI
  * transaction, with the two fields that survive erasure added to
  * `erasedMetadata` as well (security review M4).
  */
-function signedMetadata(record: WaiverRecord): IntegrityValue {
+function signedMetadata(record: WaiverRecord): { [key: string]: IntegrityValue } {
   return {
     id: record.id,
     shopId: record.shopId,
@@ -162,13 +173,34 @@ function erasedMetadata(record: WaiverRecord): IntegrityValue {
   };
 }
 
+/**
+ * The refiled field set: everything version 1 seals, plus the move. Only ever
+ * written over a record whose version 1 seal verified at the moment it moved
+ * (`refileWaiverRecords`), so re-sealing can never launder an edit made
+ * before the move. The `version: 3` key separates it from a v1 digest the
+ * same way `version: 2` does for erasure.
+ *
+ * Erasing the diver it now belongs to re-seals it as version 2, which keeps
+ * the erasure skeleton and drops the move: the record is then evidence that
+ * somebody signed, not of whose record it sat on.
+ */
+function movedMetadata(record: WaiverRecord): IntegrityValue {
+  return {
+    ...signedMetadata(record),
+    version: WAIVER_INTEGRITY_VERSION_MOVED,
+    movedFromPersonId: record.movedFromPersonId,
+    movedAt: dateValue(record.movedAt),
+    movedByPersonId: record.movedByPersonId,
+  };
+}
+
 export function waiverIntegrityMetadata(
   record: WaiverRecord,
   version: WaiverIntegrityVersion = WAIVER_INTEGRITY_VERSION_SIGNED,
 ): IntegrityValue {
-  return version === WAIVER_INTEGRITY_VERSION_ERASED
-    ? erasedMetadata(record)
-    : signedMetadata(record);
+  if (version === WAIVER_INTEGRITY_VERSION_ERASED) return erasedMetadata(record);
+  if (version === WAIVER_INTEGRITY_VERSION_MOVED) return movedMetadata(record);
+  return signedMetadata(record);
 }
 
 function integritySecret(): string {

@@ -1,6 +1,12 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
+import {
+  computeWaiverIntegrityHash,
+  verifyWaiverIntegrity,
+  WAIVER_INTEGRITY_VERSION_MOVED,
+  WAIVER_INTEGRITY_VERSION_SIGNED,
+} from "@/lib/waiver-integrity";
 import { seededShopContext } from "@/test/db";
 import {
   DIVER_HISTORY_TABLES,
@@ -27,6 +33,8 @@ import {
   shops,
   tripDeskEvents,
   trips,
+  waiverRecords,
+  waiverTemplates,
 } from "./schema";
 
 async function mergeFixtures() {
@@ -613,5 +621,123 @@ describe("merging a one-row-per-person record", () => {
     expect(profiles).toHaveLength(1);
     expect(profiles[0]?.personId).toBe(survivor.id);
     expect(profiles[0]?.wetsuitSize).toBe("L");
+  });
+});
+
+describe("merging a diver's signed releases (issue #2080)", () => {
+  /** A release on the source, sealed the way `completeWaiver` seals it — or with a broken seal. */
+  async function sealedRelease(
+    db: Awaited<ReturnType<typeof mergeFixtures>>["db"],
+    shopId: string,
+    personId: string,
+    seal: "valid" | "broken",
+  ) {
+    const [template] = await db
+      .select()
+      .from(waiverTemplates)
+      .where(eq(waiverTemplates.shopId, shopId))
+      .limit(1);
+    if (!template) throw new Error("expected a seeded waiver template");
+    const signedAt = nowDate();
+    const [row] = await db
+      .insert(waiverRecords)
+      .values({
+        shopId,
+        personId,
+        templateId: template.id,
+        templateTitle: template.title,
+        templateVersion: template.version,
+        templateBody: template.body,
+        status: "completed",
+        signedName: "Maya Rivera",
+        signatureMethod: "typed",
+        tokenHash: `hash-${crypto.randomUUID()}`,
+        expiresAt: signedAt,
+        consentedAt: signedAt,
+        signedAt,
+        completedAt: signedAt,
+      })
+      .returning();
+    if (!row) throw new Error("release insert failed");
+    const integrityHash = computeWaiverIntegrityHash(
+      seal === "valid" ? row : { ...row, signedName: "Somebody Else" },
+    );
+    await db
+      .update(waiverRecords)
+      .set({ integrityHash, integrityVersion: WAIVER_INTEGRITY_VERSION_SIGNED })
+      .where(eq(waiverRecords.id, row.id));
+    return row.id;
+  }
+
+  it("re-seals a verified release over the survivor, so it never reads as tampered", async () => {
+    const { db, shop, owner, source, survivor } = await mergeFixtures();
+    const releaseId = await sealedRelease(db, shop.id, source.id, "valid");
+
+    const merged = await mergeDiverRecords({
+      db,
+      shopId: shop.id,
+      personId: source.id,
+      survivorId: survivor.id,
+      actorPersonId: owner.id,
+    });
+    expect(merged.ok).toBe(true);
+
+    const [moved] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, releaseId));
+    if (!moved) throw new Error("release vanished");
+    expect(moved.personId).toBe(survivor.id);
+    expect(moved.movedFromPersonId).toBe(source.id);
+    expect(moved.movedByPersonId).toBe(owner.id);
+    expect(moved.integrityVersion).toBe(WAIVER_INTEGRITY_VERSION_MOVED);
+    expect(verifyWaiverIntegrity(moved)).toBe("valid");
+  });
+
+  it("moves a release whose seal already failed without re-sealing it", async () => {
+    const { db, shop, owner, source, survivor } = await mergeFixtures();
+    const releaseId = await sealedRelease(db, shop.id, source.id, "broken");
+
+    await mergeDiverRecords({
+      db,
+      shopId: shop.id,
+      personId: source.id,
+      survivorId: survivor.id,
+      actorPersonId: owner.id,
+    });
+
+    const [moved] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, releaseId));
+    if (!moved) throw new Error("release vanished");
+    expect(moved.personId).toBe(survivor.id);
+    expect(moved.integrityVersion).toBe(WAIVER_INTEGRITY_VERSION_SIGNED);
+    expect(verifyWaiverIntegrity(moved)).toBe("invalid");
+  });
+
+  it("keeps a release valid across a second merge", async () => {
+    const { db, shop, owner, source, survivor } = await mergeFixtures();
+    const releaseId = await sealedRelease(db, shop.id, source.id, "valid");
+    await mergeDiverRecords({
+      db,
+      shopId: shop.id,
+      personId: source.id,
+      survivorId: survivor.id,
+      actorPersonId: owner.id,
+    });
+    const [third] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Maya Rivera" })
+      .returning();
+    if (!third) throw new Error("third record insert failed");
+    await db.insert(personRoles).values({ personId: third.id, role: "diver" });
+
+    const again = await mergeDiverRecords({
+      db,
+      shopId: shop.id,
+      personId: survivor.id,
+      survivorId: third.id,
+      actorPersonId: owner.id,
+    });
+    expect(again.ok).toBe(true);
+    const [moved] = await db.select().from(waiverRecords).where(eq(waiverRecords.id, releaseId));
+    expect(moved?.personId).toBe(third.id);
+    expect(moved?.movedFromPersonId).toBe(survivor.id);
+    expect(moved && verifyWaiverIntegrity(moved)).toBe("valid");
   });
 });
