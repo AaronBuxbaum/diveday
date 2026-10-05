@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { BlockedDiverRow } from "@/app/shop/[shopSlug]/_components/today/BlockedDiverRow";
+import { IdentityCheck, type IdentityCheckWords } from "@/components/IdentityCheck";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { paperWaiverCopy } from "@/components/paper-waiver-copy";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -11,7 +12,11 @@ import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { LedgerRow } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { CheckInQueueRow as QueueRow } from "@/db/check-in";
-import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
+import {
+  readinessBlockerText,
+  readinessStatusText,
+  readinessStatusTone,
+} from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { blockerFixFor } from "@/lib/blockers";
 import type { CalendarDate } from "@/lib/calendar-date";
@@ -19,6 +24,7 @@ import { guardianSignatureRequired } from "@/lib/guardian";
 import type { NoShowClaim } from "@/lib/no-show";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { paperPassPath } from "@/lib/print-sheets";
+import type { ReadinessBlocker } from "@/lib/readiness";
 import type { FormNotice } from "@/lib/staff-notices";
 import { primaryBlocker } from "@/lib/today";
 import { counterBlockerDisclosure } from "../blocker-disclosure";
@@ -87,13 +93,19 @@ export type CounterWaiverNotice = FormNotice & {
  * somebody reading a list.
  */
 export type CounterIdentityCopy = {
-  /** The unarmed trigger, naming the diver — one row's confirm must not read like the next row's. */
+  /** The unarmed trigger, "Same person". */
   trigger: string;
+  /** Its accessible name, naming the diver: one row's confirm must not read like the next row's. */
+  ariaLabel: string;
   /** What confirming releases, in one sentence. Shown only once armed. */
   message: string;
   confirm: string;
   cancel: string;
   confirming: string;
+  /** The held seat's reason line, naming both people when it can (`identityReasonText`). */
+  reason: string;
+  /** "Different person" and its form. */
+  check: IdentityCheckWords;
 };
 
 /** The row's leading identity block — name, exceptional badges, quiet meta. */
@@ -240,6 +252,7 @@ export function CounterQueueRow({
   markNoShowAction,
   undoNoShowAction,
   confirmIdentityAction,
+  splitIdentityAction,
   identityCopy,
   salvage,
   closed = true,
@@ -284,6 +297,8 @@ export function CounterQueueRow({
    * `confirmBookingIdentity`, two surfaces, as with seating.
    */
   confirmIdentityAction: (formData: FormData) => Promise<void>;
+  /** "Different person": the held seat becomes its own diver (`splitIdentityFromCheckIn`). */
+  splitIdentityAction: (formData: FormData) => Promise<void>;
   /** Its words, resolved by the page — see {@link CounterIdentityCopy}. */
   identityCopy: CounterIdentityCopy;
   /**
@@ -602,22 +617,41 @@ export function CounterQueueRow({
    * for the walk was a control, not a preview.
    */
   const identityControl = identityUnconfirmed ? (
-    <RowActionForm
-      action={confirmIdentityAction}
-      sendFailedLabel={t("checkIn.sendFailedButton")}
+    // **Both answers** (Aaron, 2026-10-05): "Same person" is the attestation
+    // above; "Different person" splits the seat into a diver of its own, so
+    // a stranger who shares an inbox is not sent away to the roster to be
+    // told the same thing again.
+    <IdentityCheck
+      bookingId={row.bookingId}
+      bookedAs={row.identityBookedAs}
+      words={identityCopy.check}
+      splitAction={splitIdentityAction}
       className="mt-3"
-    >
-      <input type="hidden" name="bookingId" value={row.bookingId} />
-      <InlineConfirm
-        triggerLabel={identityCopy.trigger}
-        message={identityCopy.message}
-        confirmLabel={identityCopy.confirm}
-        cancelLabel={identityCopy.cancel}
-        pendingLabel={identityCopy.confirming}
-        triggerClassName={buttonClass({ variant: "secondary", size: "sm" })}
-      />
-    </RowActionForm>
+      confirm={
+        <RowActionForm
+          action={confirmIdentityAction}
+          sendFailedLabel={t("checkIn.sendFailedButton")}
+        >
+          <input type="hidden" name="bookingId" value={row.bookingId} />
+          <InlineConfirm
+            triggerLabel={identityCopy.trigger}
+            ariaLabel={identityCopy.ariaLabel}
+            message={identityCopy.message}
+            confirmLabel={identityCopy.confirm}
+            cancelLabel={identityCopy.cancel}
+            pendingLabel={identityCopy.confirming}
+            triggerClassName={buttonClass({ variant: "secondary", size: "sm" })}
+          />
+        </RowActionForm>
+      }
+    />
   ) : null;
+  // The held seat's reason names both people; every other reason is the
+  // readiness sentence every surface shares.
+  const blockerText = (blocker: ReadinessBlocker) =>
+    blocker.code === "identity_unconfirmed"
+      ? identityCopy.reason
+      : readinessBlockerText(t, blocker);
   return (
     <LedgerRow as="article" id={counterRowId(row.bookingId)} size="lg" pad="lg" closed={closed}>
       <div className={STATE_LINE_CLASS}>
@@ -672,7 +706,10 @@ export function CounterQueueRow({
         // below is the whole fix, and a second secondary button walks the
         // staffer away from it (`identityHoldsTheRow`).
         fix={identityHoldsTheRow ? null : fix}
-        collapseReasons={counterBlockerDisclosure(t, row.readiness.blockers) ?? undefined}
+        collapseReasons={
+          counterBlockerDisclosure(t, row.readiness.blockers, blockerText) ?? undefined
+        }
+        blockerText={blockerText}
         t={t}
         extra={
           // **The message is not nested inside the control**, and that is the

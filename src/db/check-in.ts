@@ -2,6 +2,7 @@ import { and, asc, desc, eq, gte, inArray, lte, ne, or } from "drizzle-orm";
 import { ARRIVAL_RETRACTION_SUPERSEDED } from "@/lib/arrival";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import type { IdentityMatchKind } from "@/lib/identity-match";
 import { offlineEventOutOfBounds } from "@/lib/offline-events";
 import { arrivalsWindow } from "@/lib/operational-window";
 import { priorVisitStanding } from "@/lib/prior-visits";
@@ -40,6 +41,12 @@ export type CheckInQueueRow = {
    * never asked — the rule fails open, as H-08's minimum-age gate does.
    */
   dateOfBirth: string | null;
+  /**
+   * The name a held seat was booked under and why it was matched (H-13), so
+   * the counter can name both people. Null on every seat not held.
+   */
+  identityBookedAs: string | null;
+  identityMatchedBy: IdentityMatchKind | null;
   tripId: string;
   tripTitle: string;
   startsAt: Date;
@@ -163,6 +170,8 @@ export async function listCheckInQueue(
       personName: people.fullName,
       email: people.email,
       dateOfBirth: people.dateOfBirth,
+      identityBookedAs: bookings.identityBookedAs,
+      identityMatchedBy: bookings.identityMatchedBy,
       tripId: trips.id,
       tripTitle: trips.title,
       startsAt: trips.startsAt,

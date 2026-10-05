@@ -515,17 +515,19 @@ test.describe("as owner", () => {
     await page.goto("/shop/blue-mantis/schedule/board");
     await openTripFromBoard(page, tripB);
     const row = rosterRow(page, "Nora Quinn").filter({ visible: true });
-    await expect(row).toContainText("Identity unconfirmed");
+    // The row says who booked, on whose email, and offers both answers.
+    await expect(row).toContainText("Booked as Ben Quinn with Nora Quinn’s email.");
 
     // Confirming identity clears the blocker — two-tap InlineConfirm, not a
     // native dialog: the first tap only arms it.
-    await openRosterDetails(row);
-    await row.getByRole("button", { name: /^Confirm this is/ }).click();
+    await row.getByRole("button", { name: "Same person as Nora Quinn" }).click();
     await row.getByRole("button", { name: "Yes, this is them" }).click();
     await expect(page.getByRole("status")).toContainText("Identity confirmed");
-    await expect(rosterRow(page, "Nora Quinn").filter({ visible: true })).not.toContainText(
-      "Identity unconfirmed",
-    );
+    await expect(
+      rosterRow(page, "Nora Quinn")
+        .filter({ visible: true })
+        .getByRole("button", { name: /^Same person as / }),
+    ).toHaveCount(0);
 
     // And the tap is on the record. Clearing this flag hands the seat Nora's
     // live signed release, her cards and any prepaid dives, and every staff

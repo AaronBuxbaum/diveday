@@ -991,6 +991,9 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
         courseNextStepByPersonId: null,
         hotelPickupLocation: null,
         pickupTime: null,
+        // The name a held seat was booked under (H-13) is somebody's name, and
+        // after an erasure no one is left to ask whether it was them.
+        identityBookedAs: null,
       })
       .where(inArray(bookings.id, bookingIds));
 

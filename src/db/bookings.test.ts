@@ -12,6 +12,7 @@ import {
   createBookingParty,
   restoreBooking,
   selfCancelBooking,
+  splitBookingIdentity,
 } from "./bookings";
 import type { AppDb } from "./client";
 import { createDiver } from "./divers";
@@ -1213,6 +1214,137 @@ describe("createBooking identity safeguard (H-13)", () => {
     expect(await confirmBookingIdentity(db, confirm)).toBe(false);
   });
 
+  it("keeps the name a flagged booking was made under, and why, until the flag clears", async () => {
+    const { db, shop, open } = await seededContext();
+    const night = await nightTrip(db, shop.id);
+    const first = await bookVisitor(db, shop.id, open.id);
+    if (!first.ok) throw new Error("setup booking failed");
+    const shared = await createBooking(db, {
+      actor: "staff",
+      shopId: shop.id,
+      tripId: night.id,
+      fullName: "  Ben Quinn ",
+      email: "nora@example.com",
+    });
+    if (!shared.ok) throw new Error("shared-inbox booking failed");
+    const [held] = await db.select().from(bookings).where(eq(bookings.id, shared.bookingId));
+    expect(held?.identityBookedAs).toBe("Ben Quinn");
+    expect(held?.identityMatchedBy).toBe("shared_email");
+
+    const staffer = await counterStaffer(db, shop.id);
+    await confirmBookingIdentity(db, {
+      shopId: shop.id,
+      bookingId: shared.bookingId,
+      actorPersonId: staffer.id,
+      door: "roster",
+    });
+    const [cleared] = await db.select().from(bookings).where(eq(bookings.id, shared.bookingId));
+    expect(cleared?.identityBookedAs).toBeNull();
+    expect(cleared?.identityMatchedBy).toBeNull();
+  });
+
+  it("never stores a booked-as name on a booking that was not flagged", async () => {
+    const { db, shop, open } = await seededContext();
+    const first = await bookVisitor(db, shop.id, open.id);
+    if (!first.ok) throw new Error("setup booking failed");
+    const [row] = await db.select().from(bookings).where(eq(bookings.id, first.bookingId));
+    expect(row?.identityBookedAs).toBeNull();
+    expect(row?.identityMatchedBy).toBeNull();
+  });
+
+  describe("splitBookingIdentity (not the same person)", () => {
+    async function sharedInboxSeat(db: AppDb, shopId: string, openId: string) {
+      const night = await nightTrip(db, shopId);
+      const first = await bookVisitor(db, shopId, openId);
+      if (!first.ok) throw new Error("setup booking failed");
+      const shared = await createBooking(db, {
+        actor: "staff",
+        shopId,
+        tripId: night.id,
+        fullName: "Ben Quinn",
+        email: "nora@example.com",
+      });
+      if (!shared.ok) throw new Error("shared-inbox booking failed");
+      return { night, nora: first.personId, shared };
+    }
+
+    it("moves the seat onto a new diver with no email, clears the flag, and leaves the match alone", async () => {
+      const { db, shop, open } = await seededContext();
+      const { night, nora, shared } = await sharedInboxSeat(db, shop.id, open.id);
+      expect(shared.personId).toBe(nora);
+      const staffer = await counterStaffer(db, shop.id);
+
+      const result = await splitBookingIdentity(db, {
+        shopId: shop.id,
+        bookingId: shared.bookingId,
+        actorPersonId: staffer.id,
+        fullName: " Ben Quinn ",
+      });
+      if (!result.ok) throw new Error(`split refused: ${result.reason}`);
+      expect(result.personId).not.toBe(nora);
+      expect(result.tripId).toBe(night.id);
+
+      const [seat] = await db.select().from(bookings).where(eq(bookings.id, shared.bookingId));
+      expect(seat?.personId).toBe(result.personId);
+      expect(seat?.identityUnconfirmedAt).toBeNull();
+      expect(seat?.identityBookedAs).toBeNull();
+
+      const [created] = await db.select().from(people).where(eq(people.id, result.personId));
+      expect(created?.fullName).toBe("Ben Quinn");
+      expect(created?.email).toBeNull();
+      expect(created?.shopId).toBe(shop.id);
+      const roles = await db
+        .select()
+        .from(personRoles)
+        .where(eq(personRoles.personId, result.personId));
+      expect(roles.map((r) => r.role)).toEqual(["diver"]);
+
+      // Nora keeps her email and her own booking.
+      const [match] = await db.select().from(people).where(eq(people.id, nora));
+      expect(match?.email).toBe("nora@example.com");
+      const noraSeats = await db.select().from(bookings).where(eq(bookings.personId, nora));
+      expect(noraSeats.map((b) => b.id)).not.toContain(shared.bookingId);
+
+      // The split seat now blocks on what the new diver has not given, never on identity.
+      const readiness = await readinessModule.getBookingReadiness(db, shop.id, shared.bookingId);
+      expect(readiness?.blockers.map((b) => b.code)).not.toContain("identity_unconfirmed");
+
+      const trail = await listTripActivity(db, shop.id, night.id);
+      expect(trail.map((e) => e.code)).toContain("identity_split");
+      const noraTrail = await pagedDiverActivity(db, shop.id, nora, { page: 1 });
+      expect(noraTrail.rows.map((e) => e.code)).toContain("identity_split_off");
+    });
+
+    it("refuses a seat that is not held, a blank name, and another shop's booking", async () => {
+      const { db, shop, open } = await seededContext();
+      const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+      const staffer = await counterStaffer(db, shop.id);
+      const input = { shopId: shop.id, bookingId: shared.bookingId, actorPersonId: staffer.id };
+
+      expect(await splitBookingIdentity(db, { ...input, fullName: "   " })).toEqual({
+        ok: false,
+        reason: "name_required",
+      });
+      // Tenant scope: the same booking id under any other shop is not held.
+      expect(
+        await splitBookingIdentity(db, {
+          ...input,
+          shopId: crypto.randomUUID(),
+          fullName: "Ben Quinn",
+        }),
+      ).toEqual({ ok: false, reason: "not_held" });
+
+      await confirmBookingIdentity(db, { ...input, door: "roster" });
+      const before = await db.select({ id: people.id }).from(people);
+      expect(await splitBookingIdentity(db, { ...input, fullName: "Ben Quinn" })).toEqual({
+        ok: false,
+        reason: "not_held",
+      });
+      // A refusal writes no orphan person.
+      expect(await db.select({ id: people.id }).from(people)).toHaveLength(before.length);
+    });
+  });
+
   it("does not flag a returning diver a staffer went looking for and picked", async () => {
     // The case that keeps "enter once, reuse everywhere" free. A staffer who
     // searched the roster and tapped a name got the person they meant, and the
@@ -1259,6 +1391,9 @@ describe("createBooking identity safeguard (H-13)", () => {
     });
     if (!outcome.ok) throw new Error("name-match booking failed");
     expect(await identityFlag(db, outcome.bookingId)).not.toBeNull();
+    const [held] = await db.select().from(bookings).where(eq(bookings.id, outcome.bookingId));
+    expect(held?.identityBookedAs).toBe("Nadia Ruis");
+    expect(held?.identityMatchedBy).toBe("picked_name");
 
     const readiness = await readinessModule.getBookingReadiness(db, shop.id, outcome.bookingId);
     expect(readiness?.status).toBe("blocked");

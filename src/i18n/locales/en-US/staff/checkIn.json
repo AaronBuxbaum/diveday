@@ -43,7 +43,6 @@
     "moneyDoor": "Open their orders"
   },
   "identity": {
-    "trigger": "Confirm this is {name}",
     "message": "Is the person at the counter {name}? Confirming hands that diver’s certifications and waiver to this seat, spends any prepaid dives that cover it, and cannot be undone.",
     "confirm": "Yes, this is them",
     "cancel": "Never mind",

@@ -195,7 +195,7 @@
     },
     "blockers": {
       "requirementsNotConfigured": "Trip requirements have not been configured yet.",
-      "identityUnconfirmed": "Identity unconfirmed: this booking was attached to an existing diver’s record on a guess, from a shared email or a name picked off a list. Confirm it’s the same person before boarding.",
+      "identityUnconfirmed": "Might be someone else. Confirm who this is before boarding.",
       "waiverNotSent": "Waiver has not been sent.",
       "waiverPending": "Waiver is waiting for the diver’s signature.",
       "waiverExpired": "Waiver link expired; issue a fresh link.",
@@ -521,5 +521,16 @@
   "formDraft": {
     "pickedUp": "Picked up from the desk, {time}.",
     "startOver": "Start over"
+  },
+  "identityCheck": {
+    "reasonSharedEmail": "Booked as {bookedAs} with {name}’s email. Confirm who this is.",
+    "reasonPickedName": "Booked as {bookedAs}, then matched to {name} from the name list. Confirm who this is.",
+    "reasonSameName": "More than one diver is named {name}. Confirm this is the right record.",
+    "same": "Same person",
+    "sameAria": "Same person as {name}",
+    "different": "Different person",
+    "newNameLabel": "Name for their own record",
+    "split": "Give them their own record",
+    "splitting": "Creating…"
   }
 }

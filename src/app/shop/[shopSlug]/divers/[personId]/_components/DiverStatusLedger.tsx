@@ -36,7 +36,21 @@ const KIND_WORD: Record<DiverStatusKind, StaffMessageKey> = {
   waiver: "divers.status.kind.waiver",
   payment: "divers.status.kind.payment",
   contact: "divers.status.kind.contact",
+  identity: "divers.status.kind.identity",
 };
+
+/**
+ * A row's words: its sentence, then any more blockers of the same family on
+ * that departure (issue #2073), each a sentence of its own.
+ */
+export function statusRowText(t: StaffTranslator, row: DiverStatusRow): string {
+  const first =
+    "blocker" in row.sentence
+      ? readinessBlockerText(t, row.sentence.blocker)
+      : t(row.sentence.key, row.sentence.values);
+  const more = (row.alsoBlockers ?? []).map((blocker) => readinessBlockerText(t, blocker));
+  return [first, ...more].join(" ");
+}
 
 /**
  * Where each fix goes. Three of the four are in-page fragments onto the
@@ -151,10 +165,7 @@ export function DiverStatusLedger({
   return (
     <ul className="mt-8" aria-label={t("divers.status.ariaLabel")}>
       {rows.map((row) => {
-        const sentence =
-          "blocker" in row.sentence
-            ? readinessBlockerText(t, row.sentence.blocker)
-            : t(row.sentence.key, row.sentence.values);
+        const sentence = statusRowText(t, row);
         return (
           <LedgerRow
             key={`${row.kind}-${row.tone}`}

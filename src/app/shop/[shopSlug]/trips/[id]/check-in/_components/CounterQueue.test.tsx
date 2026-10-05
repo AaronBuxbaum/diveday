@@ -28,6 +28,8 @@ function row(name: string, overrides: Partial<CheckInQueueRow> = {}): CheckInQue
     personName: name,
     email: null,
     dateOfBirth: null,
+    identityBookedAs: null,
+    identityMatchedBy: null,
     tripId: "trip-1",
     tripTitle: "Two-Tank Reef — Molasses & French",
     startsAt: new Date("2026-08-27T11:00:00.000Z"),
@@ -67,12 +69,21 @@ function renderQueue(
       markNoShowAction={vi.fn().mockResolvedValue(undefined)}
       undoNoShowAction={vi.fn().mockResolvedValue(undefined)}
       confirmIdentityAction={confirmIdentityAction}
+      splitIdentityAction={vi.fn().mockResolvedValue(undefined)}
       identityCopyFor={(queued) => ({
-        trigger: `Confirm this is ${queued.personName}`,
+        trigger: "Same person",
+        ariaLabel: `Same person as ${queued.personName}`,
         message: `Is the person at the counter ${queued.personName}?`,
         confirm: "Yes, this is them",
         cancel: "Never mind",
         confirming: "Confirming…",
+        reason: "Might be someone else. Confirm who this is before boarding.",
+        check: {
+          different: "Different person",
+          newNameLabel: "Name for their own record",
+          split: "Give them their own record",
+          splitting: "Creating…",
+        },
       })}
       salvageFor={() => undefined}
       settledOpen={settledOpen}
@@ -190,7 +201,7 @@ describe("a send that does not go through", () => {
     );
 
     // Two taps, because the attestation is armed before it is sent.
-    fireEvent.click(screen.getByRole("button", { name: "Confirm this is Nadia Petrov" }));
+    fireEvent.click(screen.getByRole("button", { name: "Same person as Nadia Petrov" }));
     fireEvent.click(screen.getByRole("button", { name: "Yes, this is them" }));
 
     await waitFor(() => {

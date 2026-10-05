@@ -17,6 +17,7 @@ import { listCheckInQueue } from "@/db/check-in";
 import { type MarkNoShowOutcome, noShowSalvage, type UndoNoShowOutcome } from "@/db/no-show";
 import { latestTripStage } from "@/db/trip-stages";
 import { getTripWithBooked } from "@/db/trips";
+import { identityCheckWords, identityReasonText } from "@/i18n/identity-check-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
@@ -55,6 +56,7 @@ import {
   confirmIdentityFromCheckIn,
   markNoShowAction,
   markWaiverInPersonFromCheckIn,
+  splitIdentityFromCheckIn,
   undoCheckInAction,
   undoNoShowAction,
 } from "./actions";
@@ -350,6 +352,7 @@ export default async function TripCheckInPage({
   const markNoShow = markNoShowAction.bind(null, shopSlug, tripId);
   const undoNoShow = undoNoShowAction.bind(null, shopSlug, tripId);
   const confirmIdentity = confirmIdentityFromCheckIn.bind(null, shopSlug, tripId);
+  const splitIdentity = splitIdentityFromCheckIn.bind(null, shopSlug, tripId);
 
   /**
    * **The identity confirm's words, per row** (issue #1696). The trigger names
@@ -358,11 +361,19 @@ export default async function TripCheckInPage({
    * row.
    */
   const identityCopyFor = (row: CheckInQueueRow): CounterIdentityCopy => ({
-    trigger: t("checkIn.identity.trigger", { name: row.personName }),
+    trigger: t("shared.identityCheck.same"),
+    ariaLabel: t("shared.identityCheck.sameAria", { name: row.personName }),
     message: t("checkIn.identity.message", { name: row.personName }),
     confirm: t("checkIn.identity.confirm"),
     cancel: t("checkIn.identity.cancel"),
     confirming: t("checkIn.identity.confirming"),
+    reason: identityReasonText(
+      t,
+      { bookedAs: row.identityBookedAs, matchedBy: row.identityMatchedBy },
+      row.personName,
+      t("shared.readiness.blockers.identityUnconfirmed"),
+    ),
+    check: identityCheckWords(t, row.personName),
   });
 
   // **"Not here?" opens when the boat leaves without them**, and says something
@@ -542,6 +553,7 @@ export default async function TripCheckInPage({
                 markNoShowAction={markNoShow}
                 undoNoShowAction={undoNoShow}
                 confirmIdentityAction={confirmIdentity}
+                splitIdentityAction={splitIdentity}
                 identityCopyFor={identityCopyFor}
                 salvageFor={salvageFor}
                 // A boat that has sailed is one the counter is reading rather

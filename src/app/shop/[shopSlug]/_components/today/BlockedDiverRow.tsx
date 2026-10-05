@@ -72,6 +72,12 @@ type BlockedDiverRowProps = {
    * wait for that tap.
    */
   collapseReasons?: { summary: string };
+  /**
+   * A reason worded with what only the host knows — the counter's held seat
+   * names both people (`identityReasonText`). Defaults to the readiness
+   * sentence.
+   */
+  blockerText?: (blocker: ReadinessBlocker) => string;
 };
 
 export function BlockedDiverRow({
@@ -82,6 +88,7 @@ export function BlockedDiverRow({
   waiverCopy,
   extra,
   collapseReasons,
+  blockerText = (blocker) => readinessBlockerText(t, blocker),
   t,
 }: BlockedDiverRowProps) {
   const reasons = (
@@ -99,7 +106,7 @@ export function BlockedDiverRow({
           <span aria-hidden="true" className="text-danger">
             •
           </span>
-          <span>{readinessBlockerText(t, blocker)}</span>
+          <span>{blockerText(blocker)}</span>
         </li>
       ))}
     </ul>

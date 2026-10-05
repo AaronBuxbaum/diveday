@@ -347,6 +347,40 @@ describe("anonymizeDiver — the welcome consent (issue #1182)", () => {
       .where(eq(bookings.id, booking.id));
     expect(after?.lastDivedBand).toBeNull();
   });
+
+  // H-13: a held seat keeps the name it was booked under so staff can see who
+  // the guess was between. It is a person's name, so it goes with the erasure.
+  it("takes the name a held seat was booked under with them", async () => {
+    const { db, shop, owner } = await erasureFixtures();
+    const [booking] = await db
+      .select({ id: bookings.id, personId: bookings.personId })
+      .from(bookings)
+      .where(and(eq(bookings.shopId, shop.id), ne(bookings.status, "cancelled")))
+      .orderBy(bookings.id)
+      .limit(1);
+    if (!booking) throw new Error("expected a seeded booking");
+    await db
+      .update(bookings)
+      .set({
+        identityUnconfirmedAt: new Date("2026-07-20T12:00:00Z"),
+        identityBookedAs: "Hana Park",
+        identityMatchedBy: "shared_email",
+      })
+      .where(eq(bookings.id, booking.id));
+
+    const erased = await anonymizeDiver(db, {
+      shopId: shop.id,
+      personId: booking.personId,
+      actorPersonId: owner.id,
+    });
+    expect(erased.ok).toBe(true);
+
+    const [after] = await db
+      .select({ identityBookedAs: bookings.identityBookedAs })
+      .from(bookings)
+      .where(eq(bookings.id, booking.id));
+    expect(after?.identityBookedAs).toBeNull();
+  });
 });
 
 describe("anonymizeDiver — the integration outbox (issue #1016)", () => {

@@ -26,11 +26,19 @@ const t = staffTranslator("en-US");
 
 /** The page resolves these; the row only places them (issue #1696). */
 const IDENTITY_COPY = {
-  trigger: "Confirm this is Nadia Petrov",
+  trigger: "Same person",
+  ariaLabel: "Same person as Nadia Petrov",
   message: "Is the person at the counter Nadia Petrov?",
   confirm: "Yes, this is them",
   cancel: "Never mind",
   confirming: "Confirming…",
+  reason: "Booked as Nadia Petrova with Nadia Petrov’s email. Confirm who this is.",
+  check: {
+    different: "Different person",
+    newNameLabel: "Name for their own record",
+    split: "Give them their own record",
+    splitting: "Creating…",
+  },
 };
 
 function row(overrides: Partial<CheckInQueueRow> = {}): CheckInQueueRow {
@@ -40,6 +48,8 @@ function row(overrides: Partial<CheckInQueueRow> = {}): CheckInQueueRow {
     personName: "Nadia Petrov",
     email: "nadia@example.com",
     dateOfBirth: null,
+    identityBookedAs: null,
+    identityMatchedBy: null,
     tripId: "trip-1",
     tripTitle: "Two-Tank Reef — Molasses & French",
     startsAt: new Date("2026-08-27T11:00:00.000Z"),
@@ -76,6 +86,7 @@ function renderRow(
       markNoShowAction={vi.fn().mockResolvedValue(undefined)}
       undoNoShowAction={vi.fn().mockResolvedValue(undefined)}
       confirmIdentityAction={vi.fn().mockResolvedValue(undefined)}
+      splitIdentityAction={vi.fn().mockResolvedValue(undefined)}
       identityCopy={IDENTITY_COPY}
       salvage={noShow.salvage}
       t={t}
@@ -194,9 +205,7 @@ describe("a held seat's identity confirm", () => {
 
   it("offers the confirm on the row whose seat is held", () => {
     renderRow(held);
-    expect(
-      screen.getByRole("button", { name: "Confirm this is Nadia Petrov" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Same person as Nadia Petrov" })).toBeInTheDocument();
   });
 
   /**
@@ -207,7 +216,7 @@ describe("a held seat's identity confirm", () => {
    */
   it("arms before it submits, and says what confirming costs only once armed", () => {
     renderRow(held);
-    const trigger = screen.getByRole("button", { name: "Confirm this is Nadia Petrov" });
+    const trigger = screen.getByRole("button", { name: "Same person as Nadia Petrov" });
     expect(trigger).toHaveAttribute("type", "button");
     expect(screen.queryByText(/Is the person at the counter/)).not.toBeInTheDocument();
   });
@@ -215,12 +224,12 @@ describe("a held seat's identity confirm", () => {
   /** Every other blocked row is unchanged: one control, for one blocker. */
   it("is absent on a row blocked on anything else", () => {
     renderRow({ readiness: { status: "blocked", blockers: [{ code: "waiver_not_sent" }] } });
-    expect(screen.queryByRole("button", { name: /^Confirm this is / })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Same person as / })).not.toBeInTheDocument();
   });
 
   it("is absent on a ready row", () => {
     renderRow();
-    expect(screen.queryByRole("button", { name: /^Confirm this is / })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /^Same person as / })).not.toBeInTheDocument();
   });
 
   /**
@@ -236,11 +245,17 @@ describe("a held seat's identity confirm", () => {
   it("drops the pointing link, so the attestation is the only button", () => {
     renderRow(held);
     expect(screen.queryByRole("link", { name: "Open roster" })).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Confirm this is Nadia Petrov" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Same person as Nadia Petrov" })).toBeInTheDocument();
     // The reason itself is untouched: the row still says why it cannot board.
-    expect(screen.getByText(/identity/i)).toBeInTheDocument();
+    expect(screen.getByText(/Booked as Nadia Petrova/)).toBeInTheDocument();
+  });
+
+  it("offers the other answer too, with the booked-as name ready for the new record", () => {
+    renderRow({ ...held, identityBookedAs: "Nadia Petrova", identityMatchedBy: "shared_email" });
+    expect(screen.getByText("Different person")).toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", { name: "Name for their own record", hidden: true }),
+    ).toHaveValue("Nadia Petrova");
   });
 
   /**
@@ -256,9 +271,7 @@ describe("a held seat's identity confirm", () => {
       },
     });
     expect(screen.getByRole("link", { name: "Open Nadia’s record" })).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Confirm this is Nadia Petrov" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Same person as Nadia Petrov" })).toBeInTheDocument();
   });
 
   /**

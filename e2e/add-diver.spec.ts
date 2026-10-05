@@ -11,6 +11,7 @@ import {
   openRosterRow,
   openTripActivity,
   openTripFromBoard,
+  openTripTab,
   rosterRow,
 } from "./helpers";
 
@@ -273,14 +274,13 @@ test("a diver seated off the name prompt is blocked until staff confirm it is th
   // does not inherit her certifications or her waiver on a spelling.
   const roster = page.locator("#roster");
   await expect(roster.getByRole("link", { name: "Marisol Vega" }).first()).toBeVisible();
-  await expect(roster.getByText(/Identity unconfirmed/).first()).toBeVisible();
+  await expect(roster.getByRole("button", { name: "Same person as Marisol Vega" })).toBeVisible();
 
   // One tap at the roster, the same one the shared-inbox path has always cost.
-  await openRosterRow(page, "Marisol Vega");
-  await page.getByRole("button", { name: "Confirm this is Marisol Vega" }).click();
+  await page.getByRole("button", { name: "Same person as Marisol Vega" }).click();
   await page.getByRole("button", { name: "Yes, this is them" }).click();
   await expect(page.getByRole("status")).toContainText("Identity confirmed.");
-  await expect(page.getByText(/Identity unconfirmed/)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /^Same person as / })).toHaveCount(0);
 });
 
 /**
@@ -467,4 +467,27 @@ test("a refusal from the global door stays on the form, boat still chosen", asyn
   // Next's own route announcer is also `role="alert"`, so target the banner.
   await expect(page.getByRole("alert").filter({ hasText: "That trip is full" })).toBeVisible();
   await expect(page.getByText(title).first()).toBeVisible();
+});
+
+/**
+ * **The other answer to a held seat** (Aaron, 2026-10-05). The seed books
+ * Hana Park on the night dive with June Park's email, so the seat hangs on
+ * June's record. "Different person" gives the seat a record of its own, named
+ * the way it was booked, and the row stops asking.
+ */
+test("a held seat that is someone else gets its own diver record", async ({ page }) => {
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, "Night Dive — City of Washington");
+  await openTripTab(page, "Trip");
+  const row = rosterRow(page, "June Park").filter({ visible: true }).first();
+  await expect(row).toContainText("Booked as Hana Park with June Park’s email.");
+
+  await row.getByText("Different person").click();
+  await expect(row.getByLabel("Name for their own record")).toHaveValue("Hana Park");
+  await row.getByRole("button", { name: "Give them their own record" }).click();
+
+  await expect(page.getByRole("status")).toContainText("They have their own diver record now.");
+  const hana = rosterRow(page, "Hana Park").filter({ visible: true });
+  await expect(hana).toBeVisible();
+  await expect(hana.getByRole("button", { name: /^Same person as / })).toHaveCount(0);
 });

@@ -128,7 +128,13 @@ export async function seedBookings(
   if (nightIdentityBooking) {
     await db
       .update(bookings)
-      .set({ identityUnconfirmedAt: nightIdentityBooking.createdAt })
+      .set({
+        identityUnconfirmedAt: nightIdentityBooking.createdAt,
+        // The name typed on the booking form, which the staff check shows
+        // beside the record it was matched to.
+        identityBookedAs: "Hana Park",
+        identityMatchedBy: "shared_email",
+      })
       .where(eq(bookings.id, nightIdentityBooking.id));
   }
 

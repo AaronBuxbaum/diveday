@@ -10,6 +10,7 @@ import { maxPlausibleBirthDate } from "@/lib/age";
 import type { DiverStatusRow } from "../_lib/status";
 import { savePersonAction } from "../actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
+import { fileGap } from "./file-gap";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import type { DiverProfile } from "./shared";
 
@@ -33,6 +34,7 @@ export function DiverDetailsGroup({
   personId,
   t,
   locale,
+  timezone,
   country,
   status,
   gap,
@@ -44,11 +46,16 @@ export function DiverDetailsGroup({
   t: StaffTranslator;
   /** The reader's language, for the forgiving fields' readings. */
   locale: string;
+  /** The shop's zone, for the departure a gap names. */
+  timezone: string;
   /** The shop's ISO 3166-1 alpha-2 country, so a national phone number lands. */
   country: string | null;
   /** A refused save, rendered on its field or in the action row. */
   status?: DiverNotice;
-  /** The status row about the emergency contact, when one is missing. */
+  /**
+   * The status row this group answers: a date of birth under a departure's
+   * minimum age (issue #2073), or else a missing emergency contact.
+   */
   gap?: DiverStatusRow;
   /**
    * Starts the group open. Set right after the roster's three-field "Add a
@@ -60,8 +67,15 @@ export function DiverDetailsGroup({
   const formStatus = status?.tone === "danger" ? status : undefined;
   const emergencyName = diver.person.emergencyContactName?.trim();
   const emergencyPhone = diver.person.emergencyContactPhone?.trim();
-  // The summary says the gap in words, so the gap adds only its ink: a contact
-  // is never a departure blocker (readiness does not gate on it).
+  // A missing contact is said by the summary, so it adds only its ink (it is
+  // never a departure blocker). An age under the minimum is not something the
+  // summary can say, so it adds its sentence and the boat it keeps them off.
+  const missing = fileGap(gap, {
+    t,
+    locale,
+    timezone,
+    factSaysIt: !(gap && "blocker" in gap.sentence),
+  });
   return (
     <DiverFileGroupDisclosure
       id="edit-details"
@@ -77,9 +91,10 @@ export function DiverDetailsGroup({
             ? t("divers.details.summaryEmergency", { name: emergencyName })
             : t("divers.details.summaryEmergencyNoPhone", { name: emergencyName })
       }
-      summaryTone={gap?.tone ?? (emergencyName && emergencyPhone ? "muted" : "warning")}
+      summaryTone={missing?.tone ?? (emergencyName && emergencyPhone ? "muted" : "warning")}
+      detail={missing?.detail}
       stacked
-      open={open}
+      open={open || Boolean(missing?.open)}
     >
       <FieldGrid
         as="form"

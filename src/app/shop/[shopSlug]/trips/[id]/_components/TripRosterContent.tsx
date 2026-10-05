@@ -37,6 +37,7 @@ export type TripRosterActions = {
   markPaymentAction: FormAction;
   removeBookingAction: FormAction;
   confirmDiverIdentityAction: FormAction;
+  splitDiverIdentityAction: FormAction;
   certifyDiverAction?: FormAction;
   saveCourseNextStepAction?: FormAction;
   addInternalNoteAction: FormAction;
@@ -205,6 +206,7 @@ export function TripRosterContent({
         mayWriteOffPayment={mayWriteOffPayment}
         removeBookingAction={actions.removeBookingAction}
         confirmIdentityAction={actions.confirmDiverIdentityAction}
+        splitIdentityAction={actions.splitDiverIdentityAction}
         certifyDiverAction={actions.certifyDiverAction}
         saveCourseNextStepAction={actions.saveCourseNextStepAction}
         courseNextStepByBooking={courseNextStepByBooking}

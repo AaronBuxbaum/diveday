@@ -43,7 +43,6 @@
     "moneyDoor": "Abrir sus pedidos"
   },
   "identity": {
-    "trigger": "Confirmar que es {name}",
     "message": "¿La persona que está en el mostrador es {name}? Al confirmar, las certificaciones y la exención de ese buceador pasan a esta plaza, se gasta el paquete de inmersiones que la cubra, y no se puede deshacer.",
     "confirm": "Sí, es esta persona",
     "cancel": "Mejor no",

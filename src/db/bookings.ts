@@ -37,11 +37,14 @@ import {
   bookings,
   certifications,
   courses,
+  gearReservations,
+  internalNotes,
   people,
   personRoles,
   shops,
   tripAssignments,
   trips,
+  waiverRecords,
 } from "./schema";
 import { recordSelfDeclaredCards } from "./self-declared-cards";
 import { getShopCurrency } from "./stripe-accounts";
@@ -697,6 +700,9 @@ async function createBookingRecord(
   //    looking in (issue #1556) — and, on that path, the typed name disagrees
   //    with the one on file, or two divers answer to it.
   let identityUnconfirmed = false;
+  // What the staffer is shown beside the matched record while the flag stands,
+  // and what a split-off record is named (`splitBookingIdentity`).
+  let identityClaim: { bookedAs: string; matchedBy: "shared_email" | "picked_name" } | null = null;
   if ("personId" in req) {
     [person] = await tx
       .select()
@@ -710,6 +716,9 @@ async function createBookingRecord(
     identityUnconfirmed = req.fromNameMatch
       ? await nameMatchLeavesIdentityInDoubt(tx, req.shopId, person, req.fromNameMatch.typedName)
       : false;
+    if (identityUnconfirmed && req.fromNameMatch) {
+      identityClaim = { bookedAs: req.fromNameMatch.typedName.trim(), matchedBy: "picked_name" };
+    }
   } else {
     const email = req.email?.trim().toLowerCase() || null;
     if (email) {
@@ -724,6 +733,9 @@ async function createBookingRecord(
         // Reuse-by-email before the capacity gate: flag a name that doesn't match
         // the person already on file for this address.
         identityUnconfirmed = !personNamesMatch(person.fullName, req.fullName);
+        if (identityUnconfirmed) {
+          identityClaim = { bookedAs: req.fullName.trim(), matchedBy: "shared_email" };
+        }
       } else {
         pendingInsert = { fullName: req.fullName.trim(), email, phone: req.phone };
       }
@@ -861,6 +873,9 @@ async function createBookingRecord(
       });
       person = resolved.person;
       identityUnconfirmed = !resolved.nameMatches;
+      identityClaim = identityUnconfirmed
+        ? { bookedAs: pendingInsert.fullName, matchedBy: "shared_email" }
+        : null;
     } else {
       // No email means no `people_shop_email_unique` row to race for (that
       // index is partial — null emails never collide, schema.ts) — a plain
@@ -903,6 +918,8 @@ async function createBookingRecord(
         // Re-booking this seat re-evaluates identity: a matching name now clears
         // any stale flag, a mismatch (re)raises it.
         identityUnconfirmedAt: identityUnconfirmed ? nowDate() : null,
+        identityBookedAs: identityUnconfirmed ? (identityClaim?.bookedAs ?? null) : null,
+        identityMatchedBy: identityUnconfirmed ? (identityClaim?.matchedBy ?? null) : null,
         // A reactivated row starts a *new* booking and must not inherit party
         // membership from its earlier life: a stale `party_lead_booking_id`
         // would list this fresh, independent seat in the old organizer's claim
@@ -953,6 +970,8 @@ async function createBookingRecord(
       diveIntent: req.diveIntent ?? null,
       reEntryAsk: req.reEntryAsk ?? null,
       identityUnconfirmedAt: identityUnconfirmed ? nowDate() : null,
+      identityBookedAs: identityUnconfirmed ? (identityClaim?.bookedAs ?? null) : null,
+      identityMatchedBy: identityUnconfirmed ? (identityClaim?.matchedBy ?? null) : null,
       referralSource: partnerReferralSlug(req.referralSource),
       // **Stamped by the application clock, not the column's `defaultNow()`.**
       //
@@ -1748,7 +1767,7 @@ export async function confirmBookingIdentity(
   const booking = await db.transaction(async (tx) => {
     const [row] = await tx
       .update(bookings)
-      .set({ identityUnconfirmedAt: null })
+      .set({ identityUnconfirmedAt: null, identityBookedAs: null, identityMatchedBy: null })
       .where(
         and(
           eq(bookings.id, input.bookingId),
@@ -1783,4 +1802,112 @@ export async function confirmBookingIdentity(
     code,
   });
   return true;
+}
+
+/** What a split refused, as a code (`splitBookingIdentity`). */
+export type SplitBookingIdentityResult =
+  | { ok: true; personId: string; tripId: string }
+  | { ok: false; reason: "not_held" | "name_required" };
+
+/**
+ * Staff answer "not the same person" to a booking flagged
+ * `identity_unconfirmed` (H-13): the seat leaves the matched diver's record
+ * and becomes a new diver of its own, named by the staffer (prefilled with
+ * the name it was booked under).
+ *
+ * **It hands over nothing**, which is why it needs no blocking confirm while
+ * the opposite answer does. The new record starts empty: no email (the shared
+ * address stays with the record that owns it, and `people_shop_email_unique`
+ * would refuse a second), no cards, no signed release. Any release on this
+ * seat was the matched diver's, so it is superseded and the seat asks for its
+ * own; readiness then blocks on what the new diver has not given yet, which
+ * is the honest state. A wrong split is undone by merging the two records
+ * (owner and manager), the same as any duplicate.
+ *
+ * What *does* move is what was about this seat rather than about the matched
+ * person: the booking itself, the gear held for it, and the staff notes
+ * written on it. Prepaid dives never moved in the first place, because an
+ * unconfirmed seat spends none (`settlePackageCoverage`).
+ *
+ * Two trail lines, for the same reason `confirmBookingIdentity` writes two:
+ * the departure's, and one on the matched person's record, which is where a
+ * shop looks when a booking it remembers is no longer there.
+ */
+export async function splitBookingIdentity(
+  db: AppDb,
+  input: { shopId: string; bookingId: string; actorPersonId: string; fullName: string },
+): Promise<SplitBookingIdentityResult> {
+  const fullName = input.fullName.trim();
+  if (!fullName) return { ok: false, reason: "name_required" };
+  const split = await db.transaction(async (tx) => {
+    const [booking] = await tx
+      .select({ tripId: bookings.tripId, personId: bookings.personId })
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.id, input.bookingId),
+          eq(bookings.shopId, input.shopId),
+          isNotNull(bookings.identityUnconfirmedAt),
+        ),
+      )
+      .limit(1)
+      .for("update");
+    if (!booking) return null;
+    const [person] = await tx
+      .insert(people)
+      .values({ shopId: input.shopId, fullName, email: null })
+      .returning({ id: people.id });
+    if (!person) throw new Error("splitBookingIdentity: person insert returned no row");
+    await tx.insert(personRoles).values({ personId: person.id, role: "diver" });
+    await tx
+      .update(bookings)
+      .set({
+        personId: person.id,
+        identityUnconfirmedAt: null,
+        identityBookedAs: null,
+        identityMatchedBy: null,
+      })
+      .where(eq(bookings.id, input.bookingId));
+    await tx
+      .update(waiverRecords)
+      .set({ supersededAt: nowDate() })
+      .where(
+        and(
+          eq(waiverRecords.shopId, input.shopId),
+          eq(waiverRecords.bookingId, input.bookingId),
+          ne(waiverRecords.personId, person.id),
+          isNull(waiverRecords.supersededAt),
+        ),
+      );
+    await tx
+      .update(gearReservations)
+      .set({ personId: person.id })
+      .where(
+        and(
+          eq(gearReservations.shopId, input.shopId),
+          eq(gearReservations.bookingId, input.bookingId),
+        ),
+      );
+    await tx
+      .update(internalNotes)
+      .set({ personId: person.id })
+      .where(
+        and(eq(internalNotes.shopId, input.shopId), eq(internalNotes.bookingId, input.bookingId)),
+      );
+    return { tripId: booking.tripId, matchedPersonId: booking.personId, personId: person.id };
+  });
+  if (!split) return { ok: false, reason: "not_held" };
+  await recordTripActivity(db, {
+    shopId: input.shopId,
+    tripId: split.tripId,
+    actorPersonId: input.actorPersonId,
+    entry: { code: "identity_split", diver: fullName },
+  });
+  await recordDiverActivity(db, {
+    shopId: input.shopId,
+    personId: split.matchedPersonId,
+    actorPersonId: input.actorPersonId,
+    code: "identity_split_off",
+  });
+  return { ok: true, personId: split.personId, tripId: split.tripId };
 }

@@ -414,6 +414,8 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
       personId: person.id,
       claimedAt: now,
       identityUnconfirmedAt: unconfirmed ? now : null,
+      identityBookedAs: unconfirmed ? fullName : null,
+      identityMatchedBy: unconfirmed ? "shared_email" : null,
     })
     .where(eq(bookings.id, booking.id));
 

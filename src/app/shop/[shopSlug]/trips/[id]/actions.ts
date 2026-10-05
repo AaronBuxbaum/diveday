@@ -13,6 +13,7 @@ import {
   confirmBookingIdentity,
   restoreBooking,
   setBookingPickupDetails,
+  splitBookingIdentity,
 } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { recordCourseNextStep } from "@/db/course-next-step";
@@ -1153,6 +1154,33 @@ export async function confirmDiverIdentityAction(
   revalidateAndRedirect(
     back,
     noticeUrl(back, confirmed ? "identity-confirmed" : "invalid", { bid: bookingId }),
+  );
+}
+
+/**
+ * Staff answer "different person" to a held seat (H-13): the booking leaves
+ * the matched diver's record and becomes a new diver of its own. The other
+ * door onto the same question as {@link confirmDiverIdentityAction}; the write
+ * and its trail are `splitBookingIdentity`'s.
+ */
+export async function splitDiverIdentityAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const back = tripPath(shopSlug, tripId);
+  const s = (await requireShopSurface(shopSlug)).session;
+  const bookingId = String(formData.get("bookingId") ?? "");
+  if (!uuidParam(bookingId)) redirect(back);
+  const split = await splitBookingIdentity(await getDb(), {
+    shopId: s.user.shopId,
+    bookingId,
+    actorPersonId: s.user.personId,
+    fullName: String(formData.get("fullName") ?? ""),
+  });
+  revalidateAndRedirect(
+    back,
+    noticeUrl(back, split.ok ? "identity-split" : "invalid", { bid: bookingId }),
   );
 }
 

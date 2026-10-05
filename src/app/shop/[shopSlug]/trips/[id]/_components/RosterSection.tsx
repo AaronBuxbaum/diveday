@@ -3,6 +3,7 @@ import { Children, type ReactNode } from "react";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { WaiverSendControl } from "@/app/shop/[shopSlug]/_components/today/WaiverSendControl";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
+import { IdentityCheck } from "@/components/IdentityCheck";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { PrivateNoteForm } from "@/components/PrivateNoteForm";
 import { paperWaiverCopy } from "@/components/paper-waiver-copy";
@@ -23,6 +24,7 @@ import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
 import { STAFF_RE_ENTRY_KEYS } from "@/i18n/dive-intent-labels";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
+import { identityCheckWords, identityReasonText } from "@/i18n/identity-check-labels";
 import {
   CERTIFICATION_LEVEL_KEYS,
   diveRecencyText,
@@ -55,7 +57,7 @@ import {
 } from "./PaymentStatusControl";
 import { RosterAllClear } from "./RosterAllClear";
 import { RosterGroup, RosterGroupBand } from "./RosterGroupBand";
-import { SHARED_FACT_MIN, UNGROUPABLE_BLOCKER_CODES } from "./shared-facts";
+import { SHARED_FACT_MIN } from "./shared-facts";
 import type {
   NitroxByBooking,
   ReadinessByBooking,
@@ -205,6 +207,7 @@ export function RosterSection({
   mayWriteOffPayment,
   removeBookingAction,
   confirmIdentityAction,
+  splitIdentityAction,
   notesByBooking,
   addNoteAction,
   deleteNoteAction,
@@ -284,6 +287,8 @@ export function RosterSection({
   mayWriteOffPayment: boolean;
   removeBookingAction: (formData: FormData) => void;
   confirmIdentityAction: (formData: FormData) => void;
+  /** "Different person": the held seat becomes a new diver (`splitBookingIdentity`). */
+  splitIdentityAction: (formData: FormData) => void;
   notesByBooking: Map<string, RosterPrivateNote[]>;
   addNoteAction: (formData: FormData) => void;
   deleteNoteAction: (formData: FormData) => void;
@@ -353,44 +358,29 @@ export function RosterSection({
   };
   const refundEligible = cancellationDeadline !== null && cancellationDeadline > nowDate();
 
-  // A blocker or depth advisory whose sentence renders identically for much
-  // of the boat is one fact about the trip, not N facts about N divers
-  // (principle 9): it renders once, under the group band, and each affected
-  // row keeps a one-line count plus its full list in the reference panel.
-  const blockerSentenceCounts = new Map<string, number>();
+  // A depth advisory whose sentence renders identically for much of the boat
+  // is one fact about the dive plan, not N facts about N divers (principle 9):
+  // it renders once, under the group band, and each affected row wears a
+  // capsule. **Blockers never group this way** (Aaron, 2026-10-05): "1 blocker
+  // shared with other divers, listed above" told a staffer neither what was
+  // wrong nor what to do, and a blocker is fixed diver by diver, so there is
+  // no batched action a shared line could stand for. Each row says its own.
   const advisorySentenceCounts = new Map<string, number>();
   for (const { booking } of roster) {
     const row = readinessByBooking.get(booking.id);
-    if (row?.readiness && row.readiness.status !== "ready") {
-      for (const blocker of row.readiness.blockers) {
-        if (UNGROUPABLE_BLOCKER_CODES.has(blocker.code)) continue;
-        const text = readinessBlockerText(t, blocker);
-        blockerSentenceCounts.set(text, (blockerSentenceCounts.get(text) ?? 0) + 1);
-      }
-    }
     if (row?.depthAdvisory?.status === "exceeds") {
       const text = depthWarningText(t, row.depthAdvisory);
       advisorySentenceCounts.set(text, (advisorySentenceCounts.get(text) ?? 0) + 1);
     }
   }
-  const sharedBlockerTexts = new Set(
-    [...blockerSentenceCounts]
-      .filter(([, count]) => count >= SHARED_FACT_MIN)
-      .map(([sentence]) => sentence),
-  );
   const sharedAdvisoryTexts = new Set(
     [...advisorySentenceCounts]
       .filter(([, count]) => count >= SHARED_FACT_MIN)
       .map(([sentence]) => sentence),
   );
-  const sharedFacts = [
-    ...[...blockerSentenceCounts]
-      .filter(([sentence]) => sharedBlockerTexts.has(sentence))
-      .map(([sentence, count]) => ({ sentence, count, tone: "danger" as const })),
-    ...[...advisorySentenceCounts]
-      .filter(([sentence]) => sharedAdvisoryTexts.has(sentence))
-      .map(([sentence, count]) => ({ sentence, count, tone: "warning" as const })),
-  ];
+  const sharedFacts = [...advisorySentenceCounts]
+    .filter(([sentence]) => sharedAdvisoryTexts.has(sentence))
+    .map(([sentence, count]) => ({ sentence, count }));
 
   /**
    * Which group a seat files under. The predicate is the old collapsed-row
@@ -533,33 +523,24 @@ export function RosterSection({
     // (H-08). It sits apart from the blocker list for that reason.
     const depth = readinessByBooking.get(booking.id)?.depthAdvisory;
     const notes = notesByBooking.get(booking.id) ?? [];
-    // This row's blockers, split against the group's shared lines above: the
-    // sentences the group already states for much of the boat shrink to a
-    // one-line count here, and the ones particular to this diver keep their
-    // full sentence.
+    // This row's blockers, each in its own sentence. The held-identity one
+    // names both people the guess was between (`identityReasonText`), so the
+    // two answers under the reason lines need no words of their own.
     const blockerTexts =
       readiness && readiness.status !== "ready"
         ? readiness.blockers.map((blocker) => ({
             blocker,
-            text: readinessBlockerText(t, blocker),
+            text:
+              blocker.code === "identity_unconfirmed"
+                ? identityReasonText(
+                    t,
+                    { bookedAs: booking.identityBookedAs, matchedBy: booking.identityMatchedBy },
+                    person.fullName,
+                    readinessBlockerText(t, blocker),
+                  )
+                : readinessBlockerText(t, blocker),
           }))
         : [];
-    const uniqueBlockers = blockerTexts.filter(
-      ({ blocker, text }) =>
-        UNGROUPABLE_BLOCKER_CODES.has(blocker.code) || !sharedBlockerTexts.has(text),
-    );
-    // **The reference panel says only what the row does not** (design review
-    // 2026-09-17). It used to re-list `blockerTexts` whole, so an expanded row
-    // carried every sentence three times: once in the group band above, once
-    // in the row's own red alert, and once more here, word for word. What the
-    // row genuinely cannot show is the *shared* half — the alert compresses
-    // those to "1 blocker shared with other divers, listed above" — so that is
-    // what this panel spells out, and it renders nothing when there are none.
-    const sharedBlockers = blockerTexts.filter(
-      ({ blocker, text }) =>
-        !UNGROUPABLE_BLOCKER_CODES.has(blocker.code) && sharedBlockerTexts.has(text),
-    );
-    const sharedBlockerCount = sharedBlockers.length;
     const depthText = depth?.status === "exceeds" ? depthWarningText(t, depth) : null;
     const depthShared = depthText !== null && sharedAdvisoryTexts.has(depthText);
     // The suit goes out to a diver the shop has no drysuit card for. Behind
@@ -844,16 +825,7 @@ export function RosterSection({
       ? diveRecencyText(t, booking.lastDivedBand)
       : null;
     const reasonLines: { key: string; text: string; tone: "danger" | "warning" }[] = [
-      ...uniqueBlockers.map(({ text }) => ({ key: text, text, tone: "danger" as const })),
-      ...(sharedBlockerCount > 0
-        ? [
-            {
-              key: "shared",
-              text: t("trips.roster.sharedOnCard", { count: sharedBlockerCount }),
-              tone: "danger" as const,
-            },
-          ]
-        : []),
+      ...blockerTexts.map(({ text }) => ({ key: text, text, tone: "danger" as const })),
       ...(depthText !== null && !depthShared
         ? [{ key: "depth", text: depthText, tone: "warning" as const }]
         : []),
@@ -903,6 +875,40 @@ export function RosterSection({
     ];
     // Each line's mark is its first column, one line of the words tall, so it
     // centres on their first line whatever wraps below it (K-494).
+    /**
+     * **A held seat's two answers stand in the open, under its reason line**
+     * (Aaron, 2026-10-05). The seat attached itself to an existing diver on
+     * something short of proof — a reused email under a different name
+     * (H-13), or a name tapped off the counter's prompt (issue #1556) — and
+     * the reason line names both people. "Same person" is a blocking confirm,
+     * not an undo banner: it hands the matched diver's cards and waiver to
+     * this seat (docs/design/principles.md §7). "Different person" splits the
+     * seat into its own record. Like the medical hold, it is a decision about
+     * who may board, so it does not wait behind the row's mark.
+     */
+    const identityCheck = identityUnconfirmed ? (
+      <IdentityCheck
+        bookingId={booking.id}
+        bookedAs={booking.identityBookedAs}
+        words={identityCheckWords(t, person.fullName)}
+        splitAction={splitIdentityAction}
+        className="pb-3"
+        confirm={
+          <form action={confirmIdentityAction}>
+            <input type="hidden" name="bookingId" value={booking.id} />
+            <InlineConfirm
+              triggerLabel={t("shared.identityCheck.same")}
+              ariaLabel={t("shared.identityCheck.sameAria", { name: person.fullName })}
+              message={t("trips.roster.confirmIdentityMessage", { name: person.fullName })}
+              confirmLabel={t("trips.roster.identityConfirmButton")}
+              cancelLabel={t("trips.roster.neverMind")}
+              pendingLabel={t("trips.roster.confirming")}
+              triggerClassName={buttonClass({ variant: "secondary", size: "sm" })}
+            />
+          </form>
+        }
+      />
+    ) : null;
     const reasonList =
       reasonLines.length === 0 ? null : (
         <ul className="-mt-1 grid gap-1 pb-2 text-sm">
@@ -952,30 +958,6 @@ export function RosterSection({
               </Link>
             ) : null}
           </>
-        ) : null}
-
-        {/* This seat attached itself to an existing diver on something short
-            of proof: a reused email under a different name (H-13), or a name
-            tapped off the counter's "is this the same diver?" prompt (issue
-            #1556). Staff verify it really is the same person before it can
-            board on that person's certs/waiver — the one action that clears
-            the identity_unconfirmed blocker above. */}
-        {identityUnconfirmed ? (
-          <form action={confirmIdentityAction} className="mt-3">
-            <input type="hidden" name="bookingId" value={booking.id} />
-            {/* Blocking confirm, not an undo banner: this attestation clears
-                the identity_unconfirmed blocker on someone else's evidence
-                (H-13) — worth the staffer re-reading before it lands
-                (docs/design/principles.md §7). */}
-            <InlineConfirm
-              triggerLabel={t("trips.roster.confirmThisIs", { name: person.fullName })}
-              message={t("trips.roster.confirmIdentityMessage", { name: person.fullName })}
-              confirmLabel={t("trips.roster.identityConfirmButton")}
-              cancelLabel={t("trips.roster.neverMind")}
-              pendingLabel={t("trips.roster.confirming")}
-              triggerClassName={buttonClass({ variant: "secondary", size: "sm" })}
-            />
-          </form>
         ) : null}
 
         {/* The one path from "this shop taught and ran this course" to a card
@@ -1333,17 +1315,6 @@ export function RosterSection({
             </div>
           ) : null}
 
-          {sharedBlockers.length > 0 ? (
-            <div>
-              <GroupLabel as="p">{t("trips.roster.blockersReferenceHeading")}</GroupLabel>
-              <ul className="mt-1 grid gap-1 text-sm text-muted">
-                {sharedBlockers.map(({ text }) => (
-                  <li key={text}>{text}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
           {/* Hotel pickup / lodging details */}
           <div>
             <GroupLabel as="p">{t("trips.roster.hotelPickupHeading")}</GroupLabel>
@@ -1505,12 +1476,14 @@ export function RosterSection({
             the way, and everything the row can do — the waiver, payment, the
             contact, notes, the reference facts — waits behind the row's mark.
             Only a flagged medical answer and a returning diver's own ask stand
-            in the open beside them. Deep links
+            in the open beside them, with a held seat's identity answers.
+            Deep links
             (Today, the manifest's "Resolve blockers") land mid-page at one
             diver; AutoOpenDetails opens on the hash, so the fold can never
             swallow what a link promised, and `holdOpen` keeps open the row a
             form on it just answered. */}
         {reasonList}
+        {identityCheck}
         {medicalHold}
         <AutoOpenDetails openOnHash={`booking-${booking.id}`} open={holdOpen} className="group">
           {markSummary}
@@ -1590,14 +1563,12 @@ export function RosterSection({
                     they stepped left line by line). */}
                 {sharedFacts.length > 0 ? (
                   <div className="flex w-full min-w-0 flex-col gap-1 text-xs sm:w-auto sm:max-w-[68%] sm:items-start">
-                    {sharedFacts.map(({ sentence, count, tone }) => (
+                    {sharedFacts.map(({ sentence, count }) => (
                       <p
                         key={sentence}
-                        className={`flex min-w-0 items-baseline gap-1.5 ${
-                          tone === "danger" ? "text-danger" : "text-warning-strong"
-                        }`}
+                        className="flex min-w-0 items-baseline gap-1.5 text-warning-strong"
                       >
-                        <StatusMarkColumn variant={tone === "danger" ? "danger" : "warning"} />
+                        <StatusMarkColumn variant="warning" />
                         <span>{t("trips.roster.sharedFactLine", { count, sentence })}</span>
                       </p>
                     ))}
