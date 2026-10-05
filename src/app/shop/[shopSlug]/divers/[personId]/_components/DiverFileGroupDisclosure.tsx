@@ -41,6 +41,7 @@ export function DiverFileGroupDisclosure({
   label,
   summary,
   summaryTone = "muted",
+  detail,
   open = false,
   stacked = false,
   children,
@@ -60,7 +61,16 @@ export function DiverFileGroupDisclosure({
    * raw `text-warning` fails AA on `bg-surface-sunken` — the same call
    * `ledger.tsx` documents at length.
    */
-  summaryTone?: "muted" | "warning";
+  summaryTone?: "muted" | "warning" | "danger";
+  /**
+   * **The one line a gap needs beyond its fact**, under the row: the
+   * departure it blocks, and the reason when the fact alone cannot say it
+   * (a specialty the trip needs, beside the cards the diver does hold). It is
+   * the status ledger's row for this kind, said here instead of above the
+   * file (`splitDiverStatus`), so a gap is named once, in the row whose door
+   * fixes it.
+   */
+  detail?: string;
   open?: boolean;
   /** Put a long summary on its own, label-aligned line below `sm`. */
   stacked?: boolean;
@@ -172,7 +182,18 @@ export function DiverFileGroupDisclosure({
   // under the fact (the pixel probe's `text-spill`).
   const summaryLayoutClass = stacked ? "max-sm:flex-wrap max-sm:py-2" : "";
   const labelFloorClass = stacked ? "min-w-0 sm:min-w-max" : "min-w-0";
-  const toneClass = summaryTone === "warning" ? "font-medium text-warning-strong" : "text-muted";
+  const toneClass =
+    summaryTone === "danger"
+      ? "font-medium text-danger"
+      : summaryTone === "warning"
+        ? "font-medium text-warning-strong"
+        : "text-muted";
+  // Wraps under the label, on the column the label starts on (the caret's 12px
+  // plus the row's 12px gap), so it reads as the row's second line.
+  const detailLine = detail ? (
+    <span className="ms-6 basis-full text-sm text-muted">{detail}</span>
+  ) : null;
+  const rowWrapClass = detail ? "flex-wrap gap-y-1" : "";
   const summaryFactClass = stacked
     ? `min-w-0 max-w-full text-sm ${toneClass} tabular-nums max-sm:ms-6 max-sm:basis-full max-sm:whitespace-normal max-sm:break-words sm:text-end`
     : `shrink-0 text-sm ${toneClass} tabular-nums`;
@@ -184,7 +205,9 @@ export function DiverFileGroupDisclosure({
         className="-mx-2 border-b border-border px-2 first:border-t"
         data-testid={`diver-file-group-${id}`}
       >
-        <div className={`flex min-h-13 items-center gap-3 py-3 ${summaryLayoutClass}`.trim()}>
+        <div
+          className={`flex min-h-13 items-center gap-3 py-3 ${summaryLayoutClass} ${rowWrapClass}`.trim()}
+        >
           {/* The caret's width, kept, so the label stays on the column the
               doors' labels sit on. */}
           <span aria-hidden="true" className="size-3 shrink-0" />
@@ -192,6 +215,7 @@ export function DiverFileGroupDisclosure({
             {label}
           </h2>
           <span className={summaryFactClass}>{summary}</span>
+          {detailLine}
         </div>
       </section>
     );
@@ -222,13 +246,14 @@ export function DiverFileGroupDisclosure({
             4px short of it, against the status ledger's kind and fix above. */}
         <summary
           aria-controls={`${id}-content`}
-          className={`flex min-h-13 cursor-pointer items-center gap-3 py-3 ${summaryLayoutClass}`.trim()}
+          className={`flex min-h-13 cursor-pointer items-center gap-3 py-3 ${summaryLayoutClass} ${rowWrapClass}`.trim()}
         >
           <DisclosureCaret className="shrink-0 text-muted group-open/diver-file:rotate-90" />
           <h2 id={id} className={`${labelFloorClass} flex-1 scroll-mt-24 text-base font-medium`}>
             {label}
           </h2>
           <span className={summaryFactClass}>{summary}</span>
+          {detailLine}
         </summary>
         <div id={`${id}-content`} className="pb-6">
           {children}

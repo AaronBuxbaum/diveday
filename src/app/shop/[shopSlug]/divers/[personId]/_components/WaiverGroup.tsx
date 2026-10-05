@@ -12,8 +12,10 @@ import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date"
 import { nowDate } from "@/lib/clock";
 import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { smsRecipient } from "@/lib/notifications/sms";
+import type { DiverStatusRow } from "../_lib/status";
 import { markWaiverInPersonAction, recordMedicalClearanceAction } from "../actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
+import { fileGap } from "./file-gap";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import type { DiverProfile } from "./shared";
 import { WaiverDeliveryActions } from "./WaiverDeliveryActions";
@@ -152,6 +154,7 @@ export function WaiverGroup({
   timezone,
   canOpenClearance,
   status,
+  gap,
 }: {
   diver: DiverProfile;
   shopSlug: string;
@@ -168,6 +171,8 @@ export function WaiverGroup({
   canOpenClearance: boolean;
   /** This group's own outcome, rendered in the group rather than page-top. */
   status?: DiverNotice;
+  /** The status row about the release, said by this row (`splitDiverStatus`). */
+  gap?: DiverStatusRow;
 }) {
   // A delivery failure is a fact about the message we sent, not about the
   // standing — the diver has still simply not signed. `waiver-labels.ts`
@@ -217,8 +222,24 @@ export function WaiverGroup({
   // in danger ink, and the closed summary would leave it the grey of "Signed"
   // (dive-domain review, 2026-10-03).
   const notCleared = diver.waiver.state === "medical_not_cleared";
+  // Every state but a plain signature already says what is wrong in the
+  // summary's own words ("Not signed", "Held for a doctor"), so the gap adds
+  // only its ink and the departure. A release that reads "Signed" and still
+  // blocks a departure needs the status sentence to explain itself.
+  const missing = fileGap(gap, {
+    t,
+    locale,
+    timezone,
+    // A referral line on a current release does not say why a departure
+    // still refuses it, so only a non-current state speaks for itself.
+    factSaysIt: diver.waiver.state !== "current",
+  });
+  // The routes to a signature, wherever the release needs one: its own state
+  // says so, or the next departure does (a release that reads "Signed" here
+  // and is still not one that departure accepts).
+  const offersSend = needsAction || gap?.action?.target === "send_waiver";
   const hasWork = Boolean(
-    needsAction ||
+    offersSend ||
       overriddenReferralAt ||
       clearanceDocument ||
       heldForMedical ||
@@ -236,7 +257,17 @@ export function WaiverGroup({
       //
       // An unsigned release wears the same ink now that the door is its only
       // status line: the row inside that used to draw it is gone.
-      summaryTone={overriddenReferralAt || needsAction ? "warning" : "muted"}
+      summaryTone={
+        missing?.tone ??
+        // A hold and a physician's refusal keep the diver off any boat, with or
+        // without a departure to name, so they are danger on their own.
+        (heldForMedical || notCleared
+          ? "danger"
+          : overriddenReferralAt || needsAction
+            ? "warning"
+            : "muted")
+      }
+      detail={missing?.detail}
       // A hold is the one waiver state with work that only this group can take:
       // the physician's answer goes in here, and nowhere else in the product.
       // An unanswered referral is the other: the sentence naming it, and the
@@ -244,7 +275,14 @@ export function WaiverGroup({
       //
       // An unsigned release is the third: it keeps the diver off the boat, and
       // the ways to fix it are the whole of what is inside.
-      open={Boolean(status) || heldForMedical || Boolean(overriddenReferralAt) || needsAction}
+      open={
+        Boolean(status) ||
+        heldForMedical ||
+        notCleared ||
+        Boolean(overriddenReferralAt) ||
+        needsAction ||
+        Boolean(missing?.open)
+      }
       stacked
     >
       {/* Nothing to send, record or answer: the summary is the whole story,
@@ -281,7 +319,7 @@ export function WaiverGroup({
             body is the routes themselves, each named for what it does. The one
             sentence the door does not carry — a minor's solo signature, and
             whose is missing — stays as a line above them. */}
-          {needsAction ? (
+          {offersSend ? (
             // Focusable so the status ledger's "Send the waiver" (`#waiver-send`)
             // lands the cursor on the row of routes, as it landed on the
             // disclosure it replaces.

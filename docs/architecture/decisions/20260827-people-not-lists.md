@@ -133,3 +133,30 @@ existing double-tap on the single Publish.
   behavior contracts; only their rendering moves.
 - Copy shrinks again: the record's ten section headings become four; deletions land in every
   locale per the standing rule.
+
+## Amendment — 2026-10-05: a gap is said once, by its own file row
+
+Decision 1's ledger named every gap a second time. "Emergency contact · No emergency contact on
+file · Add one" sat above a Contact details row reading "No emergency contact", and "Add one" only
+scrolled down to that row and opened it. The waiver and certification rows did the same (Aaron,
+2026-10-05: "it refers to a line below").
+
+**A gap whose fix is a control inside a file row is said by that row and nowhere else**
+(`splitDiverStatus`, `src/app/shop/[shopSlug]/divers/[personId]/_lib/status.ts`). The row keeps
+its own short fact ("Not signed", "None on file", "No emergency contact") and takes the gap's ink:
+warning, or danger when the gap keeps the diver off a departure. A departure-bound gap names that
+departure on a second line, as a consequence when it is danger ("Can’t board Fri, Oct 9 · 6:30
+AM.") and as a deadline when it is a warning ("Needed for …"), and a danger gap opens its row on
+arrival. The status sentence
+goes on that line only when the fact cannot say it, such as a specialty the trip needs beside the
+cards the diver holds.
+
+The ledger keeps what no file row can hold: money, and a fix that leaves the page (the seat on its
+departure). It still renders nothing when there is nothing to hold, and the earned moment still
+reads the whole status.
+
+Because the gaps now live in the file, **the file comes before the story, gates first and worst
+first**: Waiver (where a medical hold lives), then Certifications, then Contact details, then the
+conversation and the rest. A blocked release is the first thing under the masthead rather than a
+row below a long history. The rest of decision 1
+stands.

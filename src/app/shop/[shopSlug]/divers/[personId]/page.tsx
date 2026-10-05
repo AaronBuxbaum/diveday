@@ -43,7 +43,7 @@ import { RestoreDiver } from "./_components/RestoreDiver";
 import { resolveDiverNotice } from "./_components/record-notices";
 import { WaiverGroup } from "./_components/WaiverGroup";
 import { canRaiseInvoiceFor } from "./_lib/invoice-door";
-import { bookingIsAhead } from "./_lib/status";
+import { bookingIsAhead, splitDiverStatus } from "./_lib/status";
 import { diverStatusRows } from "./_lib/status-load";
 import { restoreCardAction, restoreDiverNoteAction } from "./actions";
 
@@ -75,14 +75,19 @@ const BOOK_ACTIVITY_TRIP_SCAN_LIMIT = 50;
  * 1. **The masthead** — who this is, how to reach them, and the page's *one*
  *    primary control (Book a departure). `_lib/record-primaries.test.ts` fails
  *    the build if a second joins it.
- * 2. **The status ledger** — the open items, worst first, each with its one
- *    fix. It renders **nothing at all** when the diver is clear, which is the
- *    other pinned rule.
- * 3. **The story** — one chronological ledger of bookings, imported visits and
+ * 2. **The status ledger** — the open items the file below cannot hold
+ *    (money, a seat to change on its departure), worst first, each with its
+ *    one fix. A gap whose fix is in a file row's door — a missing contact, an
+ *    unsigned release, a card to add or verify — is said by that row instead
+ *    (`splitDiverStatus`), so nothing on the record is named twice. It renders
+ *    **nothing at all** when there is nothing to hold, which is the other
+ *    pinned rule.
+ * 3. **The file** — inset groups in the settings grammar: waiver,
+ *    certifications, contact details, conversation, gear and sizes, notes, and
+ *    the folded activity trail — the boarding gates first, worst first. A row with a gap wears it: its fact in warning ink, or danger when
+ *    the gap keeps the diver off a departure, with that departure beneath.
+ * 4. **The story** — one chronological ledger of bookings, imported visits and
  *    person-level orders, each row carrying its own money fact.
- * 4. **The file** — inset groups in the settings grammar: certifications,
- *    waiver, gear and sizes, notes, and the folded activity
- *    trail.
  * 5. **The quiet foot** — the things you do *to* a record: download it, merge a
  *    duplicate, delete it, and (on a deleted record, for an owner only) erase
  *    it.
@@ -246,6 +251,10 @@ export default async function DiverDetailPage({
     canRaiseInvoice: collectHasSomewhereToGo,
   });
   const detailsStatus = noticeForForm(diverNotice, "details");
+  // Each gap is said once: by its own file row when the fix is in that row's
+  // door, and in the ledger above the story only when it is not (money, or a
+  // seat to change on its departure).
+  const gaps = splitDiverStatus(status);
   const pageNotice = noticeForForm(diverNotice, "page");
   // A card deletion with its undo capability has one outcome: the toast. The
   // `card-deleted` notice remains a cards fallback for an old or malformed link
@@ -335,38 +344,71 @@ export default async function DiverDetailPage({
         <NoticeBanner notice={pageNotice} />
       )}
       <DiverStatusLedger
-        rows={status}
+        rows={gaps.ledger}
         t={t}
         locale={locale}
         timezone={shop.timezone}
         shopSlug={shopSlug}
       />
-      {/* **One rhythm, owned here.** The story and the file are the record's
+      {/* **One rhythm, owned here.** The file and the story are the record's
           two sections, and they stack on this wrapper's `space-y-10`
           (forms-and-controls.md, "Section rhythm"). A group that renders
           nothing (a diver who never wrote, an empty activity log) takes no
-          row in the file. */}
+          row in the file.
+
+          **The file comes first** because it is where a gap is said now
+          (`splitDiverStatus`): a release that keeps the diver off Friday's
+          boat is the first thing under the masthead, in its own row with its
+          own door, rather than a ledger line pointing at a row below a long
+          story. */}
       <div className="mt-10 space-y-10">
-        <DiverStory
-          diver={diver}
-          shop={shop}
-          shopSlug={shopSlug}
-          personId={personId}
-          locale={locale}
-          t={t}
-          paymentsConnected={paymentsConnected}
-          canManageOrders={canManageOrders}
-          offersInvoice
-          status={noticeForForm(diverNotice, "story")}
-          now={now}
-        />
         {/* **The file is one list.** Every group below is a row that shares
             its hairline with the next (`DiverFileGroupDisclosure`), so they
             stack flush rather than on the section rhythm above. */}
         <div>
-          {/* After the story and before the file: what happened, then what was
-            said about it, then the record's own paperwork. Renders nothing for a
-            diver who has never written. */}
+          {/* **The gates first, worst first.** Waiver (medical holds live
+              here), then cards, then who to call: the order a gap that keeps
+              a diver off the boat is ranked in (glossary — readiness), so the
+              first red under the masthead is the one that matters most. */}
+          <WaiverGroup
+            diver={diver}
+            shopSlug={shopSlug}
+            personId={personId}
+            locale={locale}
+            t={t}
+            timezone={shop.timezone}
+            canOpenClearance={canOpenClearance}
+            status={noticeForForm(diverNotice, "waiver")}
+            gap={gaps.file.waiver}
+          />
+          <CertificationsGroup
+            diver={diver}
+            shop={shop}
+            shopSlug={shopSlug}
+            personId={personId}
+            locale={locale}
+            t={t}
+            status={cardsStatus}
+            gap={gaps.file.certification}
+          />
+          <DiverDetailsGroup
+            diver={diver}
+            shopSlug={shopSlug}
+            personId={personId}
+            t={t}
+            locale={locale}
+            country={shop.addressCountry}
+            status={detailsStatus}
+            gap={gaps.file.contact}
+            // \`edit=1\` is only ever set by the roster's "Add a diver" form, which
+            // lands here with a name and little else. \`FlashParams\` strips it
+            // from the URL straight away, so a reload or a shared link is the
+            // ordinary collapsed page. A refused save keeps the group open so the
+            // staffer can correct the fields in place.
+            open={edit === "1" || detailsStatus?.tone === "danger"}
+          />
+          {/* What the diver said, after the paperwork that decides whether
+            they board. Renders nothing for a diver who has never written. */}
           <ConversationSection
             entries={thread}
             diverName={diver.person.fullName}
@@ -381,40 +423,6 @@ export default async function DiverDetailPage({
             removed={removed}
             t={t}
             status={noticeForForm(diverNotice, "reply")}
-          />
-          <DiverDetailsGroup
-            diver={diver}
-            shopSlug={shopSlug}
-            personId={personId}
-            t={t}
-            locale={locale}
-            country={shop.addressCountry}
-            status={detailsStatus}
-            // \`edit=1\` is only ever set by the roster's "Add a diver" form, which
-            // lands here with a name and little else. \`FlashParams\` strips it
-            // from the URL straight away, so a reload or a shared link is the
-            // ordinary collapsed page. A refused save keeps the group open so the
-            // staffer can correct the fields in place.
-            open={edit === "1" || detailsStatus?.tone === "danger"}
-          />
-          <CertificationsGroup
-            diver={diver}
-            shop={shop}
-            shopSlug={shopSlug}
-            personId={personId}
-            locale={locale}
-            t={t}
-            status={cardsStatus}
-          />
-          <WaiverGroup
-            diver={diver}
-            shopSlug={shopSlug}
-            personId={personId}
-            locale={locale}
-            t={t}
-            timezone={shop.timezone}
-            canOpenClearance={canOpenClearance}
-            status={noticeForForm(diverNotice, "waiver")}
           />
           <GearAndSizes
             diver={diver}
@@ -444,6 +452,19 @@ export default async function DiverDetailPage({
             t={t}
           />
         </div>
+        <DiverStory
+          diver={diver}
+          shop={shop}
+          shopSlug={shopSlug}
+          personId={personId}
+          locale={locale}
+          t={t}
+          paymentsConnected={paymentsConnected}
+          canManageOrders={canManageOrders}
+          offersInvoice
+          status={noticeForForm(diverNotice, "story")}
+          now={now}
+        />
       </div>
       {/* **The quiet foot** — the things you do *to* a record rather than with
           it. No rule of its own: the file's last hairline already closes the

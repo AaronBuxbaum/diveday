@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ReadinessResult } from "@/lib/readiness";
 import type { DiverProfile } from "../_components/shared";
-import { bookingIsAhead, buildDiverStatus, nextBookingAhead } from "./status";
+import { bookingIsAhead, buildDiverStatus, nextBookingAhead, splitDiverStatus } from "./status";
 
 const NOW = new Date("2026-08-26T18:00:00.000Z");
 const TOMORROW = new Date("2026-08-27T11:00:00.000Z");
@@ -466,5 +466,48 @@ describe('which card "Verify it" is about', () => {
       { now: NOW },
     );
     expect(deep[0]).toMatchObject({ action: { target: "verify" }, verifies: "deep" });
+  });
+});
+
+/**
+ * **One gap, said once** (Aaron, 2026-10-05: "No emergency contact on file"
+ * sat above a Contact details row reading "No emergency contact"). A row
+ * whose fix is in a file row's door belongs to that row; the ledger keeps
+ * money and a fix that leaves the page.
+ */
+describe("splitting the status between the ledger and the file", () => {
+  it("hands contact, waiver and a card to add to their file rows", () => {
+    const rows = buildDiverStatus(
+      diver({
+        person: { emergencyContactName: null },
+        waiver: { state: "none" } as DiverProfile["waiver"],
+        bookings: [booking("b1", TOMORROW)],
+      }),
+      {
+        status: "blocked",
+        blockers: [{ code: "waiver_not_sent" }, { code: "certification_missing" }],
+      } as ReadinessResult,
+      { now: NOW },
+    );
+    const { ledger, file } = splitDiverStatus(rows);
+    expect(ledger).toEqual([]);
+    expect(file.contact).toMatchObject({ kind: "contact", tone: "warning" });
+    expect(file.waiver).toMatchObject({ kind: "waiver", tone: "danger" });
+    expect(file.certification).toMatchObject({
+      kind: "certification",
+      action: { target: "add_card" },
+    });
+  });
+
+  it("keeps a seat to change on its departure in the ledger", () => {
+    const rows = buildDiverStatus(
+      diver({ bookings: [booking("b1", TOMORROW)] }),
+      blocked("certification_insufficient"),
+      { now: NOW },
+    );
+    const { ledger, file } = splitDiverStatus(rows);
+    expect(ledger).toHaveLength(1);
+    expect(ledger[0]).toMatchObject({ action: { target: "open_booking" } });
+    expect(file.certification).toBeUndefined();
   });
 });

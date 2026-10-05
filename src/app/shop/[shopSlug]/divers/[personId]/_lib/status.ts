@@ -97,6 +97,45 @@ export type DiverStatusRow = {
   verifies?: CardAwaitingKind;
 };
 
+/** The kinds the record's file has a row of its own for. Money has none. */
+export type DiverFileKind = Exclude<DiverStatusKind, "payment">;
+
+/**
+ * **One gap, said once: in its own file row.**
+ *
+ * The ledger used to sit above the file and name every gap a second time —
+ * "Emergency contact · No emergency contact on file · Add one" over a Contact
+ * details row reading "No emergency contact", whose door the "Add one" link
+ * only scrolled down to and opened. A row about a line below it is that line
+ * said twice (Aaron, 2026-10-05).
+ *
+ * So a row whose fix is a control inside the file belongs to the file row for
+ * its kind, which carries the tone, the departure and the door. The ledger
+ * keeps only what the file cannot hold: money, which has no file row, and a
+ * fix that leaves the page (the booking on its departure).
+ */
+export function foldsIntoFile(
+  row: DiverStatusRow,
+): row is DiverStatusRow & { kind: DiverFileKind } {
+  if (row.kind === "payment") return false;
+  const target = row.action?.target;
+  return target !== "open_booking" && target !== "collect";
+}
+
+/** The record's rows, split between the ledger and the file row each gap belongs to. */
+export function splitDiverStatus(rows: DiverStatusRow[]): {
+  ledger: DiverStatusRow[];
+  file: Partial<Record<DiverFileKind, DiverStatusRow>>;
+} {
+  const ledger: DiverStatusRow[] = [];
+  const file: Partial<Record<DiverFileKind, DiverStatusRow>> = {};
+  for (const row of rows) {
+    if (foldsIntoFile(row)) file[row.kind] = row;
+    else ledger.push(row);
+  }
+  return { ledger, file };
+}
+
 type BookingEntry = DiverProfile["bookings"][number];
 
 function contextOf(entry: BookingEntry): NonNullable<DiverStatusRow["tripContext"]> {
