@@ -377,7 +377,9 @@ test("booking a diver from their record issues their waiver, like every other do
 
   await page.goto(`/shop/blue-mantis/trips/${tripId}`);
   await expect(page.getByRole("link", { name: "Priya Sharma" }).first()).toBeVisible();
-  await expect(page.getByText("Waiver sent").first()).toBeVisible();
+  // The waiver control is one of the row's fixes, behind its fold.
+  const priya = await openRosterRow(page, "Priya Sharma");
+  await expect(priya.getByText("Waiver sent").first()).toBeVisible();
   // ...and the seating reaches the trip's activity trail, which this door also
   // used to skip.
   await openTripActivity(page);

@@ -1016,13 +1016,11 @@ export default async function ManageTripPage({
                   ? bid
                   : undefined
               }
-              keepOpenBookingId={
-                notice === "contact-saved" ||
-                notice === "contact-incomplete" ||
-                notice === "payment"
-                  ? bid
-                  : undefined
-              }
+              // Every row folds its fixes now, so whatever a save inside a row
+              // reports, the row it names stays open on the way back: the
+              // staffer lands where they were working, not on a closed list.
+              // A removed seat has no row to hold.
+              keepOpenBookingId={notice?.startsWith("booking-removed") ? undefined : bid}
               // The one paper-release refusal with a way through (issue #1573),
               // scoped to the seat the action named so a roster of minors does not
               // all sprout the staffer's confirmation.

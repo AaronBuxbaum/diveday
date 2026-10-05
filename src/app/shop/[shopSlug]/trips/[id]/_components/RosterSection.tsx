@@ -1167,6 +1167,8 @@ export function RosterSection({
             className="mt-3"
             bodyClassName="mt-0"
             label={t("trips.roster.emergencyContactAddFull")}
+            // A refused save comes back to the form, not to its closed label.
+            holdOpen={holdOpen}
           >
             {contactForm}
           </CompactDisclosureRow>
