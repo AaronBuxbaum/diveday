@@ -258,8 +258,12 @@ new domain concept, define it here in the same PR.
   unverified, self-declared or too shallow, a specialty absent, or a diver under the course's
   minimum age), and **payment** — the only one of the four that does not change what happens in
   the water today. Worst-first holds *within* one diver, so a diver on medical review who is also
-  missing a card is a medical hold; it never holds *across* a group, because a count is a census
-  and a reason is not — the departure card renders one line per kind present. Deliberately not the
+  missing a card is a medical hold. On Today this order picks the headline of the diver's
+  **Aboard** row (`blocked_aboard`): a danger-toned Needs you row with the blocker in a few words
+  and its fix, ranked just under the after-dive roll call rows. An aboard diver never shares a row
+  with ashore ones, and money owed alone never makes an Aboard row — that diver keeps an ordinary
+  payment row. The departure card keeps the blocked count; the row carries the name and the fix.
+  Deliberately not the
   blocker **category** (`waiver`/`certification`/`payment`/`setup`), which files a medical hold
   under *waiver*, correctly, since that is where the answer was collected. No line naming one of
   these names a role: DiveDay informs and never gates, the captain owns the vessel while the dive
@@ -596,7 +600,10 @@ new domain concept, define it here in the same PR.
 - **Needs you** — the one list of jobs on Today (ADR 20261001-logbook, decision 4): every row from
   Today's work queue, at a boat or at the desk, ranked together by tone and then by when it is due,
   each naming its own boat on a quiet line. It sits under the day's departures, which carry no rows
-  of their own. A status list, not a page: an empty one is not drawn.
+  of their own. A status list, not a page: an empty one is not drawn. A row says what is wrong in a
+  few words ("9 divers not certified for this trip."), never the levels, names or other blockers —
+  the roster and the diver record carry the full sentence. Failed emails of one kind and one cause
+  are one row with one resend, however many people they missed.
 - **Not ready** — the **by-departure view** of Today's work queue (`?view=departures`), not a page
   of its own: the same blocked divers the urgency view ranks chronologically, grouped instead under
   the boat each one holds up, with a per-departure batch waiver send. It had its own route until
@@ -1281,8 +1288,8 @@ new domain concept, define it here in the same PR.
 
   A departure-checkpoint result also changes what Today's departure card says about a **blocked**
   diver, and the split is worth knowing: blocked-and-**aboard** is the more serious of the two — the
-  gate is behind them, not in front — and leads the card; blocked-and-**ashore** keeps the "cannot
-  board yet" wording; a diver marked **not boarded** stays in the ashore group until an hour past
+  gate is behind them, not in front — and is an **Aboard** row at the top of Needs you (see
+  **Aboard blocker kind**); blocked-and-**ashore** keeps the ordinary blocker row; a diver marked **not boarded** stays in the ashore group until an hour past
   the scheduled departure, because until the lines are off "not boarded" still reads as *isn't
   aboard yet* to the deckhand tapping it, and the desk can still chase them. The card may go quiet
   about a blocker once the boat has gone; it never says everyone is clear while one stands.

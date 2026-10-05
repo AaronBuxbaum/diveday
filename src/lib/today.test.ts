@@ -134,7 +134,7 @@ describe("diverBlockerAction", () => {
       "blue-reef",
       NOW,
     );
-    expect(result?.detail).toBe("Medical answer needs follow-up.");
+    expect(result?.detail).toBe("Medical answer needs a doctor’s sign-off.");
   });
 
   it("says a cert gap without the levels, which the record carries", () => {
@@ -152,6 +152,42 @@ describe("diverBlockerAction", () => {
       NOW,
     );
     expect(result?.detail).toBe("Not certified for this trip.");
+  });
+
+  it("leads an aboard diver's row with the missing waiver, not the card", () => {
+    // Aboard, an unsigned waiver is a missing medical declaration; ashore the
+    // card ranks first because it takes longer to fix (dive-domain-expert).
+    const blockers = [blocker("certification_insufficient"), blocker("waiver_pending")];
+    expect(diverBlockerAction({ ...input, blockers }, "blue-reef", NOW)?.detail).toBe(
+      "Not certified for this trip.",
+    );
+    const aboard = diverBlockerAction({ ...input, blockers, aboard: true }, "blue-reef", NOW);
+    expect(aboard?.kind).toBe("blocked_aboard");
+    expect(aboard?.detail).toBe("Waiver not signed yet.");
+  });
+
+  it("never makes an Aboard row out of money owed", () => {
+    const result = diverBlockerAction(
+      { ...input, blockers: [blocker("payment_due")], aboard: true },
+      "blue-reef",
+      NOW,
+    );
+    expect(result?.kind).toBe("payment");
+  });
+
+  it("says a medical hold aboard as a doctor's call, to the boat roles too", () => {
+    // Deliberate: the departure card said "a medical hold" by name to every
+    // Today viewer before this row replaced it, and the person at the rail is
+    // who needs to know (dive-domain-expert and security-reviewer, 2026-10-05).
+    const result = diverBlockerAction(
+      { ...input, blockers: [blocker("medical_review")], aboard: true },
+      "blue-reef",
+      NOW,
+    );
+    expect(result?.detail).toBe("Medical answer needs a doctor’s sign-off.");
+    if (!result) throw new Error("expected a row");
+    expect(filterActionsForRoles([result], ["captain"]).visibleActions).toHaveLength(1);
+    expect(filterActionsForRoles([result], ["divemaster"]).visibleActions).toHaveLength(1);
   });
 
   it("takes the aboard kind once the diver is on the boat, keeping the fix", () => {

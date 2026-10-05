@@ -129,7 +129,8 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // about somebody aboard, so it outranks every boarding-time blocker below.
   // It was a sentence on the departure card until 2026-10-05, beside a Needs
   // you row that told the same diver's blocker as if they were still ashore.
-  blocked_aboard: 3,
+  // Its own step under the crew count, never a tie a sort could reverse.
+  blocked_aboard: 3.5,
   medical_review: 4,
   // Tied with the hold it settles, deliberately. This table ranks by how long a
   // fix takes to land, and both answers put the same diver off the same boat —
@@ -337,7 +338,13 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
     "captain",
   ],
   // The boat roles too: whoever is at the rail is who can act on a diver
-  // already aboard. The departure card's sentence reached every one of them.
+  // already aboard. **Wider than `medical_review`'s audience, on purpose**: an
+  // aboard row whose headline is a medical hold reaches the divemaster and the
+  // captain, because the departure card's line it replaced named the diver and
+  // "a medical hold" to every Today viewer, and the roster already shows any
+  // staff member which prompts flagged (`authz.ts`). Signed off by
+  // `dive-domain-expert` and `security-reviewer` on 2026-10-05; pinned in
+  // `today.test.ts`.
   blocked_aboard: [
     "owner",
     "manager",
@@ -822,6 +829,58 @@ export function primaryBlocker(blockers: readonly ReadinessBlocker[]): Readiness
 }
 
 /**
+ * **The headline for a diver who is already aboard, worst first by what it
+ * means in the water** — not by how long the fix takes, which is the ashore
+ * order above. Once the diver is on the boat an unsigned waiver is a missing
+ * medical declaration, so it outranks a card that does not reach the site:
+ * a crew told only "Not certified" plans a shallower dive for somebody who has
+ * never answered a medical question (`dive-domain-expert`, 2026-10-05). The
+ * same order the departure card's aboard line used (`aboardBlockerKind`,
+ * `src/lib/readiness.ts`), with payment last.
+ */
+const ABOARD_HEADLINE_RANK: Partial<Record<TodayActionKind, number>> = {
+  medical_review: 0,
+  medical_not_cleared: 0,
+  readiness_unavailable: 1,
+  identity: 2,
+  requirements: 3,
+  waiver: 4,
+  certification: 5,
+  payment: 6,
+};
+
+export function aboardPrimaryBlocker(
+  blockers: readonly ReadinessBlocker[],
+): ReadinessBlocker | null {
+  const rank = (blocker: ReadinessBlocker) =>
+    ABOARD_HEADLINE_RANK[BLOCKER_ACTIONS[blocker.code].kind] ?? Number.MAX_SAFE_INTEGER;
+  let best: ReadinessBlocker | null = null;
+  for (const blocker of blockers) if (!best || rank(blocker) < rank(best)) best = blocker;
+  return best;
+}
+
+/**
+ * Which blocker a diver's row leads with, and whether it is an `Aboard` row.
+ * **Money owed never makes one**: it is the one blocker that changes nothing
+ * in the water, and a danger-toned row beside the missing-diver rows saying
+ * "Payment due." is how the red rows become wallpaper (DOM-H3). That diver
+ * keeps an ordinary payment row.
+ */
+function headlineFor(diver: {
+  blockers: readonly ReadinessBlocker[];
+  aboard?: boolean;
+}): { blocker: ReadinessBlocker; aboard: boolean } | null {
+  const blocker = diver.aboard
+    ? aboardPrimaryBlocker(diver.blockers)
+    : primaryBlocker(diver.blockers);
+  if (!blocker) return null;
+  return {
+    blocker,
+    aboard: Boolean(diver.aboard) && BLOCKER_ACTIONS[blocker.code].kind !== "payment",
+  };
+}
+
+/**
  * Where a staffer goes to clear a diver's *worst* blocker, and what the link
  * says when they get there.
  *
@@ -915,8 +974,10 @@ export function diverBlockerAction(
   now: Date,
   t: StaffTranslator = staffTranslator("en-US"),
 ): TodayAction | null {
+  const headline = headlineFor(input);
+  if (!headline) return null;
   const destination = blockerDestination(
-    input.blockers,
+    [headline.blocker],
     {
       shopSlug,
       tripId: input.tripId,
@@ -930,7 +991,7 @@ export function diverBlockerAction(
   const { blocker, kind, sendsWaiver } = destination;
   return {
     id: `blocker:${input.bookingId}:${blocker.code}`,
-    kind: input.aboard ? "blocked_aboard" : kind,
+    kind: headline.aboard ? "blocked_aboard" : kind,
     urgency: urgencyFor(input.startsAt, now),
     subject: input.fullName,
     context: input.tripTitle,
@@ -958,20 +1019,24 @@ export function collapseDiverActions(
   now: Date,
   t: StaffTranslator = staffTranslator("en-US"),
 ): TodayAction[] {
-  const byTripAndCode = new Map<string, { blocker: ReadinessBlocker; rows: DiverBlockerInput[] }>();
+  const byTripAndCode = new Map<
+    string,
+    { blocker: ReadinessBlocker; aboard: boolean; rows: DiverBlockerInput[] }
+  >();
   for (const diver of divers) {
-    const blocker = primaryBlocker(diver.blockers);
-    if (!blocker) continue;
+    const headline = headlineFor(diver);
+    if (!headline) continue;
+    const { blocker } = headline;
     // Aboard and ashore never share a row: the one is a question about
     // somebody on the boat, the other about somebody who can still be stopped.
-    const key = `${diver.tripId}:${diver.aboard ? "aboard:" : ""}${blocker.code}`;
+    const key = `${diver.tripId}:${headline.aboard ? "aboard:" : ""}${blocker.code}`;
     const bucket = byTripAndCode.get(key);
     if (bucket) bucket.rows.push(diver);
-    else byTripAndCode.set(key, { blocker, rows: [diver] });
+    else byTripAndCode.set(key, { blocker, aboard: headline.aboard, rows: [diver] });
   }
 
   const actions: TodayAction[] = [];
-  for (const [key, { blocker, rows }] of byTripAndCode) {
+  for (const [key, { blocker, aboard, rows }] of byTripAndCode) {
     const first = rows[0];
     if (!first) continue;
     if (rows.length === 1) {
@@ -983,7 +1048,7 @@ export function collapseDiverActions(
     const waiver = isWaiverCode(blocker.code);
     actions.push({
       id: `blockers:${key}`,
-      kind: first.aboard ? "blocked_aboard" : kind,
+      kind: aboard ? "blocked_aboard" : kind,
       urgency: urgencyFor(first.startsAt, now),
       // The whole fact is the subject — "9 divers not certified for this
       // trip." — so the row carries no detail; the names are on the roster

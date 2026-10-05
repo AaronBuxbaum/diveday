@@ -3793,6 +3793,20 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **Failed emails to several people are one row** (Aaron, 2026-10-05).
+       * Three bounced confirmations on the next boat read "3 confirmation
+       * emails didn’t send." with one Resend confirmations button, never
+       * three identical rows. The seed sends only successes, so the bounce
+       * comes through the trouble-states route.
+       */
+      test(`failed emails batch into one row (${scheme})`, async ({ page, request }) => {
+        await request.post("/api/test/seed-trouble-states?failedEmails=1");
+        await page.goto("/shop/blue-mantis");
+        await page.getByRole("button", { name: "Resend confirmations" }).waitFor();
+        await capture(page, "today-failed-emails", scheme);
+      });
+
+      /**
        * **A full boat nobody has counted the crew on.**
        *
        * Every diver-shaped signal on this page says the day is going

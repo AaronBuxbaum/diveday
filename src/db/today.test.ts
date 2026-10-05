@@ -1757,7 +1757,7 @@ describe("unclosed roll call (DOM-H3)", () => {
       // trimmed once and may be again, and what must survive is that an aged
       // row still says the count never closed and names the manifest as where
       // to reconstruct it.
-      expect(row?.detail).toContain("never accounted for");
+      expect(row?.detail).toContain("still marked not back aboard");
       expect(row?.detail).toContain("from the manifest");
       // Still the same kind: what happened did not become less serious, only
       // less settleable on the dock.
