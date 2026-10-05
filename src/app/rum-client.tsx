@@ -44,13 +44,15 @@ type RumConfig = {
  * uses them, and none is a secret: the identity pool grants exactly
  * `rum:PutRumEvents` on one app monitor and nothing else (infra-stack.ts §13).
  * Unset — every local run, the e2e fleet, a fork — returns null and no SDK is
- * ever fetched.
+ * ever fetched. Trimmed exactly as `src/proxy.ts` trims them for the
+ * Content-Security-Policy, so the hosts the SDK calls and the hosts the policy
+ * admits are computed from the same strings.
  */
 function rumConfig(): RumConfig | null {
-  const applicationId = process.env.NEXT_PUBLIC_RUM_APP_MONITOR_ID;
-  const identityPoolId = process.env.NEXT_PUBLIC_RUM_IDENTITY_POOL_ID;
-  const guestRoleArn = process.env.NEXT_PUBLIC_RUM_GUEST_ROLE_ARN;
-  const region = process.env.NEXT_PUBLIC_RUM_REGION;
+  const applicationId = process.env.NEXT_PUBLIC_RUM_APP_MONITOR_ID?.trim();
+  const identityPoolId = process.env.NEXT_PUBLIC_RUM_IDENTITY_POOL_ID?.trim();
+  const guestRoleArn = process.env.NEXT_PUBLIC_RUM_GUEST_ROLE_ARN?.trim();
+  const region = process.env.NEXT_PUBLIC_RUM_REGION?.trim();
   if (!applicationId || !identityPoolId || !guestRoleArn || !region) return null;
   const rate = Number(process.env.NEXT_PUBLIC_RUM_SAMPLE_RATE ?? "1");
   return {
