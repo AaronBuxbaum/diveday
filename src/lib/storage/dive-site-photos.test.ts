@@ -236,6 +236,25 @@ describe("landmark photos", () => {
     ]);
   });
 
+  it("stores nothing for a row the parser will drop", async () => {
+    // A nameless row, and rows past the cap: each file would be an object
+    // nothing references, so none is stored.
+    const rows = [
+      { name: " ", kind: "pointOfInterest", note: "" },
+      ...Array.from({ length: 9 }, (_, i) => ({
+        name: `Row ${i}`,
+        kind: "pointOfInterest",
+        note: "",
+      })),
+    ];
+    const files = rows.map(
+      (_, i) => [`landmarkPhotoFile-${i}`, pick(`${i}.jpg`)] as [string, File],
+    );
+    const result = await uploadDiveSitePhotos(form([posted(rows), ...files]), stored);
+    expect(result.ok && result.photos.landmarks).toHaveLength(8);
+    expect(storeDiveSiteImage).toHaveBeenCalledTimes(8);
+  });
+
   it("keeps a photo the site already held", async () => {
     const result = await uploadDiveSitePhotos(form([posted([light])]), stored);
     expect(result.ok && result.photos.landmarks).toEqual([light]);

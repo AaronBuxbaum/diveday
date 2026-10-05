@@ -1,6 +1,7 @@
 import {
   type DiveSiteLandmark,
   landmarkPhotoField,
+  MAX_SITE_LANDMARKS,
   parseDiveSiteLandmarks,
 } from "@/lib/dive-site-landmarks";
 import { MAX_SITE_IMAGES } from "@/lib/dive-sites";
@@ -109,12 +110,30 @@ export async function uploadDiveSitePhotos(
   // nameless row, because the file inputs are named by *posted* index.
   const postedLandmarks = safeJson(String(formData.get(FIELDS.landmarks) ?? "[]"));
   const rawLandmarks: unknown[] = Array.isArray(postedLandmarks) ? postedLandmarks : [];
+  // A file is stored only for a row the parser will keep: a nameless row, or
+  // one past the cap, would store an object nothing ever references, so a
+  // hand-made post can't fill the bucket with orphans.
+  let keptRows = 0;
+  const uploadsLandmarkPhoto = rawLandmarks.map((entry) => {
+    const named =
+      typeof entry === "string"
+        ? entry.trim() !== ""
+        : typeof entry === "object" &&
+          entry !== null &&
+          typeof (entry as { name?: unknown }).name === "string" &&
+          (entry as { name: string }).name.trim() !== "";
+    if (!named || keptRows >= MAX_SITE_LANDMARKS) return false;
+    keptRows += 1;
+    return typeof entry === "object";
+  });
 
   const [mapImage, routeImage, ...rest] = await Promise.all([
     uploadOne(formData.get(FIELDS.mapImage)),
     uploadOne(formData.get(FIELDS.routeImage)),
     ...newGalleryFiles.map((file) => uploadOne(file)),
-    ...rawLandmarks.map((_, index) => uploadOne(formData.get(landmarkPhotoField(index)))),
+    ...rawLandmarks.map((_, index) =>
+      uploadOne(uploadsLandmarkPhoto[index] ? formData.get(landmarkPhotoField(index)) : null),
+    ),
   ]);
   const gallery = rest.slice(0, newGalleryFiles.length);
   const landmarkUploads = rest.slice(newGalleryFiles.length);

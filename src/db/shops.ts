@@ -575,6 +575,34 @@ export async function setShopFeature(
 }
 
 /**
+ * Replaces the storefront's photo strip, but only if it still reads `expected`.
+ *
+ * The save uploads between reading the strip and writing it, so two staffers
+ * saving at once could each write a list built from a stale read: one would
+ * put back a photo the other just deleted from storage, or drop the other's
+ * new photo with nothing left pointing at it. Comparing the stored list in the
+ * `where` makes the slower save lose cleanly. Returns false when it lost.
+ */
+export async function replaceShopfrontPhotos(
+  db: AppDb,
+  shopId: string,
+  expected: string[],
+  next: string[],
+): Promise<boolean> {
+  const updated = await db
+    .update(shops)
+    .set({ shopfrontPhotoUrls: next })
+    .where(
+      and(
+        eq(shops.id, shopId),
+        sql`${shops.shopfrontPhotoUrls} = ${JSON.stringify(expected)}::jsonb`,
+      ),
+    )
+    .returning({ id: shops.id });
+  return updated.length > 0;
+}
+
+/**
  * Sets the shop's tagline, about/description prose, and brand logo URL.
  */
 export async function setShopProfile(
@@ -591,7 +619,6 @@ export async function setShopProfile(
     brandHeroImageAlt?: string | null;
     establishedYear?: number | null;
     brandBadges?: BrandBadgeCode[];
-    shopfrontPhotoUrls?: string[];
   },
 ) {
   const clean = (value: string | null | undefined) => value?.trim() || null;
@@ -615,9 +642,6 @@ export async function setShopProfile(
         ? { establishedYear: profile.establishedYear }
         : {}),
       ...(profile.brandBadges !== undefined ? { brandBadges: profile.brandBadges } : {}),
-      ...(profile.shopfrontPhotoUrls !== undefined
-        ? { shopfrontPhotoUrls: profile.shopfrontPhotoUrls }
-        : {}),
     })
     .where(eq(shops.id, shopId))
     .returning();

@@ -20,6 +20,7 @@ import { issueShopContactEmailConfirmation } from "@/db/shop-contact-email";
 import {
   getShopById,
   markShopUnitsConfirmed,
+  replaceShopfrontPhotos,
   setShopAddress,
   setShopContact,
   setShopCrewSchedule,
@@ -790,9 +791,10 @@ export async function saveProfileAction(formData: FormData) {
  * Its own form rather than a field on the profile, because the profile already
  * posts a logo and a cover, and three more photos beside them would push one
  * save past the Server Action body limit (`MAX_NEW_SHOPFRONT_PHOTOS_PER_SAVE`).
- * Both caps are checked before a byte is stored, so a refusal leaves no object
- * behind; a photo taken off is queued for deletion only once the row is saved
- * (CR-012).
+ * Both caps are checked before a byte is stored. A refusal after storing (one
+ * file of three rejected, or another save landing first) queues what it stored
+ * for deletion, so it leaves no object behind; a photo taken off is queued for
+ * deletion only once the row is saved (CR-012).
  */
 export async function saveShopPhotosAction(formData: FormData) {
   const session = await requireStaffSession();
@@ -827,16 +829,29 @@ export async function saveShopPhotosAction(formData: FormData) {
     ),
   );
   const added = stored.flatMap((result) => (result.status === "stored" ? [result.url] : []));
-  if (added.length !== picked.length) refuse();
-
-  await setShopProfile(db, session.user.shopId, { shopfrontPhotoUrls: [...kept, ...added] });
-  for (const url of shop.shopfrontPhotoUrls.filter((url) => removed.has(url))) {
-    await queueAndAttemptMediaDeletion(db, {
-      shopId: session.user.shopId,
-      kind: "shop_hero",
-      url,
-    });
+  const forget = async (urls: string[]) => {
+    for (const url of urls) {
+      await queueAndAttemptMediaDeletion(db, {
+        shopId: session.user.shopId,
+        kind: "shop_hero",
+        url,
+      });
+    }
+  };
+  if (added.length !== picked.length) {
+    await forget(added);
+    refuse();
   }
+
+  const saved = await replaceShopfrontPhotos(db, session.user.shopId, shop.shopfrontPhotoUrls, [
+    ...kept,
+    ...added,
+  ]);
+  if (!saved) {
+    await forget(added);
+    refuse();
+  }
+  await forget(shop.shopfrontPhotoUrls.filter((url) => removed.has(url)));
 
   revalidatePath(`/s/${session.user.shopSlug}`);
   revalidatePath(settings);

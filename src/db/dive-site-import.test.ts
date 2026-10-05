@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { DIVE_SITE_IMPORT_COLUMNS, prepareDiveSiteImport } from "@/lib/dive-site-import";
 import { DIVE_SITE_LANDMARK_KINDS, type DiveSiteLandmark } from "@/lib/dive-site-landmarks";
@@ -266,6 +266,40 @@ describe("the dive-site importer", () => {
     expect(row?.issues).toEqual([]);
     expect(DIVE_SITE_LANDMARK_KINDS).toContain(landmark?.kind);
     expect(landmark?.note.length).toBeLessThan(1_000);
+  });
+
+  /**
+   * **A landmark photo from a file never names one of our stored objects.**
+   * Storage URLs are public and carry no shop, so a CSV could name another
+   * shop's photo; the editor's next save that took it off would queue that
+   * object for deletion. A bundled root-relative photo is harmless and kept.
+   */
+  it("drops a stored landmark photo from a file, and keeps a bundled one", () => {
+    vi.stubEnv("MEDIA_PUBLIC_URL_BASE", "https://media.example.com");
+    try {
+      const row = prepareDiveSiteImport(
+        buildCsv(
+          [...DIVE_SITE_IMPORT_COLUMNS],
+          [
+            DIVE_SITE_IMPORT_COLUMNS.map((column) =>
+              column === "name"
+                ? "Someone Else's Reef"
+                : column === "landmarks"
+                  ? JSON.stringify([
+                      { name: "Theirs", photoUrl: "https://media.example.com/shop-heroes/x.jpg" },
+                      { name: "Bundled", photoUrl: "/dive-sites/brain-coral.jpg" },
+                    ])
+                  : null,
+            ),
+          ],
+        ),
+      ).rows[0];
+      const landmarks = (row?.landmarks ?? []) as DiveSiteLandmark[];
+      expect(landmarks[0]).not.toHaveProperty("photoUrl");
+      expect(landmarks[1]?.photoUrl).toBe("/dive-sites/brain-coral.jpg");
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   /**
