@@ -703,6 +703,30 @@ input[data-empty]:not(:focus)::-webkit-datetime-edit {
   color: color-mix(in srgb, var(--muted) 78%, transparent);
 }
 
+/*
+ * **A date or time box is as wide and as tall as the text box above it, on
+ * an iPhone too.** iOS Safari draws a temporal input with its own native
+ * appearance: a minimum width from its widest possible value, which a grid
+ * cell's `min-width: auto` then honours, and its own inner padding on top of
+ * ours. The course editor's Day 1 start and end times ran past the card's
+ * right edge and stood taller than the title box over them (Aaron's phone,
+ * 2026-10-05). `appearance: none` hands the box to `controlClass`, and
+ * `min-width: 0` lets the column decide its width. Without the native
+ * appearance iOS centres the value and collapses an empty one to nothing, so
+ * the value starts where every other answer starts and keeps a line's height.
+ */
+input:is([type="date"], [type="time"], [type="month"], [type="datetime-local"]) {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+}
+
+input::-webkit-date-and-time-value {
+  min-height: 1lh;
+  margin: 0;
+  text-align: start;
+}
+
 summary {
   user-select: none;
 }

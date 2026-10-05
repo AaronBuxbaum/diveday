@@ -602,11 +602,10 @@ describe("filterActionsForRoles", () => {
     // **Not a fail-open default — the absence of a viewer.** The lens narrows a
     // screen to the person reading it, and the two callers that render one
     // (`src/app/shop/[shopSlug]/page.tsx`) always pass `session.user.roles`,
-    // which `requireStaffSession` guarantees is non-empty. The caller that
-    // passes nothing is `closeDay` (`src/db/closeout.ts`), which recomputes the
-    // day's outstanding snapshot for the *record*: that snapshot is the shop's
-    // day, and a close-out that dropped every owed refund because nobody was
-    // looking would be a falsified record rather than a tightened gate.
+    // which `requireStaffSession` guarantees is non-empty. A call with no
+    // viewer is a reading of the shop's whole day, and one that dropped every
+    // owed refund because nobody was looking would be a falsified reading
+    // rather than a tightened gate.
     const noRoles = filterActionsForRoles(sampleActions, undefined);
     expect(noRoles.visibleActions).toHaveLength(8);
     expect(noRoles.withheldCount).toBe(0);
@@ -882,9 +881,8 @@ describe("spineIsQuiet", () => {
   it("is not quiet on an evening whose only boat is already home", () => {
     // The spine's stations are forward-looking, so a departure that ended an
     // hour ago is not on them — and a page collapsing to "No boats today" over
-    // a settled station, its leftovers and an unclosed day is the same lie the
-    // desk-row clause below refuses (ADR 20260827-clearwater-surface-language,
-    // decision 4).
+    // a settled station is the same lie the desk-row clause below refuses (ADR
+    // 20260827-clearwater-surface-language, decision 4).
     expect(spineIsQuiet(empty(), false, 1)).toBe(false);
   });
 

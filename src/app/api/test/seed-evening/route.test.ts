@@ -163,8 +163,8 @@ describe("POST /api/test/seed-evening", () => {
     // writes — which would be indistinguishable from having tried and failed.
     expect(body.eventsWritten).toBeNull();
 
-    const closeout = await getDayCloseout(db, shop.id, shop.slug, shop.timezone);
-    const evening = assembleEveningClose(closeout.state.departures);
+    const closeout = await getDayCloseout(db, shop.id, shop.timezone);
+    const evening = assembleEveningClose(closeout.departures);
     // The day is over — that half has always worked — and the moment is not
     // claimed, because nobody has been counted back off any of these boats.
     expect(evening.closing).toBe(true);
@@ -181,8 +181,8 @@ describe("POST /api/test/seed-evening", () => {
     expect(body.moved).toBeGreaterThan(0);
     expect(body.eventsWritten).toBeGreaterThan(0);
 
-    const closeout = await getDayCloseout(db, shop.id, shop.slug, shop.timezone);
-    const evening = assembleEveningClose(closeout.state.departures);
+    const closeout = await getDayCloseout(db, shop.id, shop.timezone);
+    const evening = assembleEveningClose(closeout.departures);
     expect(evening.allHome).toBe(true);
     // `allHome` is only worth photographing if there were divers to bring
     // back: `out > 0` is part of the rule, and a day that sent nobody out
@@ -207,10 +207,8 @@ describe("POST /api/test/seed-evening", () => {
     const returns = await listFitAdjustedReturns(db, shop.id, shopDayBounds(now, shop.timezone));
     expect(returns).toHaveLength(1);
 
-    const closeout = await getDayCloseout(db, shop.id, shop.slug, shop.timezone, now);
-    const changed = closeout.state.departures.filter(
-      (departure) => departure.planChanges.length > 0,
-    );
+    const closeout = await getDayCloseout(db, shop.id, shop.timezone, now);
+    const changed = closeout.departures.filter((departure) => departure.planChanges.length > 0);
     expect(changed).toHaveLength(1);
     expect(changed[0]?.planChanges[0]?.siteName).toEqual(expect.any(String));
     // No reason is invented for it: a crew that moved the boat and said
@@ -226,8 +224,8 @@ describe("POST /api/test/seed-evening", () => {
     vi.mocked(getDb).mockResolvedValue(db);
 
     await POST(seedRequest("?heads=1"));
-    const closeout = await getDayCloseout(db, shop.id, shop.slug, shop.timezone);
-    expect(assembleEveningClose(closeout.state.departures).allHome).toBe(false);
+    const closeout = await getDayCloseout(db, shop.id, shop.timezone);
+    expect(assembleEveningClose(closeout.departures).allHome).toBe(false);
   });
 
   /**

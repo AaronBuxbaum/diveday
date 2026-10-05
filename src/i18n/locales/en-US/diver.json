@@ -37,7 +37,6 @@
       },
       "cardNumber": "Certification number",
       "levelUnsaid": "Rather not say",
-      "useStatedLevel": "Use {level}, as you said above",
       "levelNone": "I’m not certified yet",
       "levelInfoLabel": "Why we ask about certification",
       "levelDescription": "The shop matches this against what each trip asks for. Answer it even if your card isn’t to hand.",
@@ -63,6 +62,7 @@
   "schedule": {
     "eyebrow": "Trips",
     "title": "Schedule",
+    "shopPhotos": "Photos from the shop",
     "timesInZone": "All times below are local to {shop} ({zone}).",
     "timesInZoneFooter": "Times are local to {shop} ({zone}).",
     "embedSeeFullSchedule": "See the full schedule",
@@ -213,12 +213,7 @@
     },
     "dayProfile": {
       "bottomTime": "Usually {minutes, plural, one {# minute} other {# minutes}} in the water",
-      "surfaceInterval": "Usually {minutes, plural, one {# minute} other {# minutes}} on the surface",
-      "pickerLabel": "See these depths against your card",
-      "within": "Nothing on this day goes past the {limit} your card covers.",
-      "withinNoCard": "A first dive without a card stays inside {limit}, and nothing on this day goes past it.",
-      "over": "Dive {number} is at a site that reaches {site}, past the {limit} your card covers. You can still book: tell the crew and they will plan your dive to your limit.",
-      "overNoCard": "Dive {number} is at a site that reaches {site}. A first dive without a card stays inside {limit}. You can still book: ask the crew what this day needs."
+      "surfaceInterval": "Usually {minutes, plural, one {# minute} other {# minutes}} on the surface"
     },
     "automatedOutlook": "Automated marine outlook",
     "waterTemperature": "Water temperature",
@@ -1890,7 +1885,7 @@
     "dateOptionsHeading": "When would you like to dive?",
     "whenSuits": "Flexible timing",
     "moreDetails": "More details",
-    "whereYouAreUpTo": "Where you are up to",
+    "whereYouAreUpTo": "Your diving experience",
     "chooseOne": "Choose one",
     "anythingElse": "Anything else",
     "getInTouch": "Get in touch",
@@ -1912,8 +1907,8 @@
     "requestDateBody": "Tell us what you’d like to dive and when. Nothing is booked or held. We’ll see who else is asking for the same days and come back to you.",
     "whatToDive": "What would you like to dive?",
     "whatToDivePlaceholder": "Two dives on the wrecks",
-    "preferredDate": "Preferred date",
-    "alternateDate": "Alternative date",
+    "preferredDate": "First-choice date",
+    "alternateDate": "Second-choice date",
     "experience": {
       "never": "I have never dived before",
       "tried": "I have tried scuba once, but I am not certified",
@@ -2510,7 +2505,7 @@
       "motion": {
         "eyebrow": "The season",
         "title": "The board, the crew and the money",
-        "summary": "Set the season’s departures once and put crew on them. Payment lands in your own Stripe account, and the close-out writes down what happened so tomorrow opens on it."
+        "summary": "Set the season’s departures once and put crew on them. Payment lands in your own Stripe account, and the evening shows every boat home and what the day made."
       }
     },
     "price": {
@@ -2585,7 +2580,7 @@
         "item12": "A counter check-in built for the morning rush",
         "item13": "A pre-departure checklist in the crew’s own words",
         "item14": "A weather blow-out in one tap: every diver messaged with rebooking options, card payments refunded",
-        "item15": "An end-of-day close-out, with the loose ends carried into tomorrow",
+        "item15": "An evening view: every boat home, its head count closed, and what the day made",
         "item16": "A departure log of the day’s recorded facts, with a code to check a printout against the record"
       },
       "gear": {
@@ -2596,7 +2591,7 @@
         "item4": "Check-out and return stamps, and a list of what’s due back today",
         "item5": "Service clocks (annual, hydro, visual, O2-clean) due by date or by dives",
         "item6": "A printable rental slip: what a diver has and when it’s due back",
-        "item7": "Overdue returns and due service under Needs you on Today, and in the close-out"
+        "item7": "Overdue returns and due service under Needs you on Today"
       },
       "money": {
         "title": "Money",

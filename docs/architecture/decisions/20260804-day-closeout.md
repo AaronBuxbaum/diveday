@@ -1,6 +1,6 @@
 # 20260804-day-closeout — The end-of-day close-out is its own route and an append-only trail, never a gate
 
-- **Status:** Accepted
+- **Status:** Deprecated — withdrawn. Removed 2026-10-05 at the owner's request ("what's the value of close the day? Explain it or remove it"): the "Close the day" button, the recorded close and its panel, the leftovers list with its Dismiss, the Year report's list of closed days, the palette's "Close the day" row and the `/close-out` redirect are gone, and the `day_closeouts` and `closeout_leftover_decisions` tables are dropped by migration `drop-day-closeouts`. Nothing ever conditioned on the record (by this ADR's own rule), and the leftovers repeated the Needs-you rows above them. The evening reading it fed survives: settled stations, head counts, recaps and the day's takings. The record below is kept as history
 - **Date:** 2026-08-04
 
 ## Context

@@ -2020,10 +2020,9 @@ export async function getTodayWork(
     // date, and the queue's one-week-horizon invariant is measured in flat UTC
     // hours — a seventh local day can poke past it by a DST hour.
     listGearServiceDue(db, shopId, todayLocal, 6),
-    // Bounded to the shop's own day on purpose (issue #1174, D14): the
-    // leftovers trail is keyed by `shop_day`, so a dismissal cannot carry, and
-    // a question that came back every evening until somebody answered it would
-    // be a nag. Asked once, tonight, where the day's other leftovers are.
+    // Bounded to the shop's own day on purpose (issue #1174, D14): a question
+    // that came back every evening until somebody answered it would be a nag.
+    // Asked once, tonight.
     listFitAdjustedReturns(db, shopId, shopDayBounds(now, timeZone)),
   ]);
   // A calendar date's instant on the shop's own clock — midnight opening the

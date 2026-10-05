@@ -37,7 +37,6 @@ const COPY: CommandPaletteCopy = {
   destinationLabels: labels,
   destinationTitles: {},
   goToBoarding: "Boarding",
-  goToCloseDay: "Close the day",
   goToOfflineRollCall: "Offline roll call",
 };
 

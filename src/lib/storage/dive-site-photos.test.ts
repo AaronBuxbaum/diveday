@@ -26,6 +26,7 @@ const existing = {
   satelliteImageUrl: "https://store/map-old.jpg",
   routeImageUrl: null,
   imageUrls: ["https://store/a.jpg", "https://store/b.jpg"],
+  landmarks: [],
 };
 
 beforeEach(() => {
@@ -138,6 +139,7 @@ describe("uploadDiveSitePhotos", () => {
         satelliteImageUrl: undefined,
         routeImageUrl: undefined,
         imageUrls: ["https://store/new-1.jpg"],
+        landmarks: [],
       },
     });
   });
@@ -158,6 +160,7 @@ describe("supersededDiveSitePhotos", () => {
         satelliteImageUrl: "https://store/map-new.jpg",
         routeImageUrl: undefined,
         imageUrls: ["https://store/b.jpg"],
+        landmarks: [],
       }),
     ).toEqual(["https://store/map-old.jpg", "https://store/a.jpg"]);
   });
@@ -174,6 +177,7 @@ describe("supersededDiveSitePhotos", () => {
         satelliteImageUrl: "https://store/a.jpg",
         routeImageUrl: "https://store/map-old.jpg",
         imageUrls: ["https://store/b.jpg"],
+        landmarks: [],
       }),
     ).toEqual([]);
   });
@@ -185,5 +189,93 @@ function existing_asPhotos() {
     satelliteImageUrl: existing.satelliteImageUrl,
     routeImageUrl: undefined,
     imageUrls: existing.imageUrls,
+    landmarks: [],
   };
 }
+
+/**
+ * A landmark's photo rides the same save: a file input per row, named by the
+ * row's index in the posted list, and a kept photo carried in the JSON.
+ */
+describe("landmark photos", () => {
+  const light = {
+    name: "Molasses Reef Light",
+    kind: "navigationMark",
+    note: "",
+    photoUrl: "/store/light.jpg",
+  } as const;
+  const stored = { ...existing, landmarks: [light] };
+  const posted = (landmarks: unknown[]) =>
+    ["landmarks", JSON.stringify(landmarks)] as [string, string];
+
+  beforeEach(() => {
+    let n = 0;
+    // Root-relative, which `parseDiveSiteLandmarks` keeps without a storage
+    // origin configured in the test environment.
+    storeDiveSiteImage.mockImplementation(async () => ({
+      status: "stored",
+      url: `/store/landmark-${++n}.jpg`,
+    }));
+  });
+
+  it("uploads the file picked for a row onto that row", async () => {
+    const result = await uploadDiveSitePhotos(
+      form([
+        posted([
+          { name: "", kind: "pointOfInterest", note: "" },
+          { name: "Anchor", kind: "reefHistory", note: "" },
+        ]),
+        ["landmarkPhotoFile-1", pick("anchor.jpg")],
+      ]),
+      stored,
+    );
+    // The nameless first row is dropped, and the photo still lands on the
+    // row it was picked for.
+    expect(result.ok && result.photos.landmarks).toEqual([
+      { name: "Anchor", kind: "reefHistory", note: "", photoUrl: "/store/landmark-1.jpg" },
+    ]);
+  });
+
+  it("stores nothing for a row the parser will drop", async () => {
+    // A nameless row, and rows past the cap: each file would be an object
+    // nothing references, so none is stored.
+    const rows = [
+      { name: " ", kind: "pointOfInterest", note: "" },
+      ...Array.from({ length: 9 }, (_, i) => ({
+        name: `Row ${i}`,
+        kind: "pointOfInterest",
+        note: "",
+      })),
+    ];
+    const files = rows.map(
+      (_, i) => [`landmarkPhotoFile-${i}`, pick(`${i}.jpg`)] as [string, File],
+    );
+    const result = await uploadDiveSitePhotos(form([posted(rows), ...files]), stored);
+    expect(result.ok && result.photos.landmarks).toHaveLength(8);
+    expect(storeDiveSiteImage).toHaveBeenCalledTimes(8);
+  });
+
+  it("keeps a photo the site already held", async () => {
+    const result = await uploadDiveSitePhotos(form([posted([light])]), stored);
+    expect(result.ok && result.photos.landmarks).toEqual([light]);
+    expect(storeDiveSiteImage).not.toHaveBeenCalled();
+  });
+
+  it("refuses to keep a photo the site never held", async () => {
+    const result = await uploadDiveSitePhotos(
+      form([posted([{ ...light, photoUrl: "/store/someone-elses.jpg" }])]),
+      stored,
+    );
+    expect(result.ok && result.photos.landmarks[0]).not.toHaveProperty("photoUrl");
+  });
+
+  it("names a removed landmark photo as superseded", async () => {
+    const result = await uploadDiveSitePhotos(
+      form([posted([{ ...light, photoUrl: undefined }])]),
+      stored,
+    );
+    expect(result.ok && supersededDiveSitePhotos(stored, result.photos)).toEqual([
+      "/store/light.jpg",
+    ]);
+  });
+});

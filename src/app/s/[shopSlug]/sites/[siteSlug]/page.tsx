@@ -137,7 +137,7 @@ export default async function DiveSitePage({
     site.depthRange ??
     (site.maxDepthMeters ? depthText(t, site.maxDepthMeters, shop.depthUnit) : null);
   const facts = [site.locationName, depth].filter((fact) => fact !== null);
-  const cover = site.imageUrls[0] ?? null;
+  const [cover = null, ...gallery] = site.imageUrls;
 
   return (
     <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
@@ -182,6 +182,24 @@ export default async function DiveSitePage({
           sizes="(min-width: 896px) 56rem, 100vw"
           priority
         />
+      ) : null}
+      {/* **Every photo the shop uploaded, not only the first.** The form takes
+          six and this page drew one, so five reached no diver. The rest sit
+          under the cover as a grid of tiles: two across on a phone, three
+          from `sm`. Decorative for the same reason the cover is. */}
+      {gallery.length > 0 ? (
+        <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {gallery.map((url) => (
+            <li key={url}>
+              <StoredPhoto
+                src={url}
+                alt=""
+                className="aspect-[4/3] w-full rounded-inset"
+                sizes="(min-width: 896px) 17rem, (min-width: 640px) 30vw, 45vw"
+              />
+            </li>
+          ))}
+        </ul>
       ) : null}
       <TripRoutes briefings={briefings} locale={locale} />
       <TripSiteNotes briefings={briefings} locale={locale} />

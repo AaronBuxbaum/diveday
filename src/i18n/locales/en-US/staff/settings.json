@@ -20,6 +20,8 @@
       "contactInvalid": "Use a complete email address, or empty the box to take it off your public pages.",
       "profileSaved": "Shop profile and branding saved.",
       "profileInvalid": "Check your tagline, description, and logo file.",
+      "shopPhotosSaved": "Shop photos saved.",
+      "shopPhotosInvalid": "Those photos didn’t save. Use JPG, PNG, WebP, or HEIC under {maxMb}\u00a0MB, and keep to {max} in all.",
       "addressSaved": "Shop address saved.",
       "addressRemoved": "Shop address removed.",
       "addressInvalid": "That address couldn’t be saved. Search again and pick your shop from the list.",
@@ -170,6 +172,19 @@
       "label": "Review link",
       "hint": "(optional)",
       "submit": "Save review link",
+      "submitting": "Saving…"
+    },
+    "shopPhotos": {
+      "heading": "Shop photos",
+      "description": "A strip of photos under your cover on the shop page: the boats, the crew, the reef.",
+      "valueNone": "None yet",
+      "value": "{count, plural, one {# photo} other {# photos}}",
+      "label": "Photos",
+      "hint": "(up to {max}, {perSave} at a time)",
+      "tooMany": "{count, plural, one {Choose up to # photo at a time.} other {Choose up to # photos at a time.}}",
+      "add": "Add photos",
+      "remove": "Remove",
+      "submit": "Save photos",
       "submitting": "Saving…"
     },
     "searchListing": {
@@ -594,7 +609,7 @@
     "rowCount": "{count, plural, one {# row} other {# rows}}",
     "notIncluded": {
       "label": "Not included, on purpose:",
-      "text": "offline manifest copies, notification retry queues, Stripe account linkage, the close-out and buddy-team trails, weather-cancellation state, DiveDay’s own reconciliation ledgers, and unstored pasted image URLs. Staff notes, the activity trail, notification outcomes, checkout attempts, promo redemptions and course leads <mono>do</mono> export. Photos and safely stored imported receipts export as real files in <mono>photos/</mono>. Credentials, calendar links, and your WhatsApp account never export. See the README."
+      "text": "offline manifest copies, notification retry queues, Stripe account linkage, the buddy-team trail, weather-cancellation state, DiveDay’s own reconciliation ledgers, and unstored pasted image URLs. Staff notes, the activity trail, notification outcomes, checkout attempts, promo redemptions and course leads <mono>do</mono> export. Photos and safely stored imported receipts export as real files in <mono>photos/</mono>. Credentials, calendar links, and your WhatsApp account never export. See the README."
     }
   },
   "crewSheet": {

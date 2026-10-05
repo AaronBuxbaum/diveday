@@ -4,6 +4,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { MAX_SITE_CREATURES } from "@/lib/dive-site-field-guide";
 import { MAX_SITE_LANDMARKS } from "@/lib/dive-site-landmarks";
 import { capturePhoto } from "@/lib/marine-life-tiles";
+import { MAX_IMAGE_MB } from "@/lib/storage/limits";
 import type { FieldGuideCatalogEntry, FieldGuideEditorCopy } from "./FieldGuideEditor";
 import type { LandmarkEditorCopy } from "./LandmarkEditor";
 
@@ -40,6 +41,14 @@ export function landmarkEditorCopy(t: StaffTranslator): LandmarkEditorCopy {
     },
     noteLabel: t("diveSites.form.landmarks.noteLabel"),
     notePlaceholder: t("diveSites.form.landmarks.notePlaceholder"),
+    photoLabel: t("diveSites.form.landmarks.photoLabel"),
+    removePhoto: t("diveSites.form.landmarks.removePhoto"),
+    imageInput: {
+      choose: t("shared.imageInput.choose"),
+      chooseAnother: t("shared.imageInput.chooseAnother"),
+      wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
+      tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
+    },
     add: t("diveSites.form.landmarks.add"),
     remove: t("diveSites.form.landmarks.remove"),
     removeAriaLabel: t("diveSites.form.landmarks.removeAriaLabel", { name: NAME_TOKEN }),

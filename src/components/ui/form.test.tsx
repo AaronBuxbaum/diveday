@@ -219,11 +219,11 @@ describe("DateField", () => {
     // the label pointing at an id nothing carries. Every e2e spec that fills
     // a date does it `getByLabel`, and would find this out as a timeout.
     render(
-      <Field label="Preferred date">
+      <Field label="First-choice date">
         <DateField name="preferredDate" />
       </Field>,
     );
-    const box = screen.getByLabelText("Preferred date");
+    const box = screen.getByLabelText("First-choice date");
     expect(box).toHaveAttribute("type", "date");
     expect(box).toHaveAttribute("name", "preferredDate");
   });
@@ -342,8 +342,8 @@ describe("DateField", () => {
    * empty, and the stylesheet paints the mask in the placeholder's colour.
    */
   it("says it is empty until it holds a date, as the person types", () => {
-    render(<DateField name="preferredDate" aria-label="Preferred date" />);
-    const box = screen.getByLabelText("Preferred date");
+    render(<DateField name="preferredDate" aria-label="First-choice date" />);
+    const box = screen.getByLabelText("First-choice date");
     expect(box).toHaveAttribute("data-empty");
     fireEvent.input(box, { target: { value: "2026-10-01" } });
     expect(box).not.toHaveAttribute("data-empty");

@@ -132,7 +132,7 @@ async function NewDiveSiteBody({ params }: { params: Promise<{ shopSlug: string 
       fitTone: parsed.fields.fitTone,
       fitNote: parsed.fields.fitNote,
       fieldGuideTipsHeading: parsed.fields.fieldGuideTipsHeading,
-      landmarks: parsed.landmarks,
+      landmarks: photos.photos.landmarks,
       // The field guide is written on this same form now, so a brand-new site
       // can arrive with one — every species the staffer picked from the
       // catalog, in the order they put them.

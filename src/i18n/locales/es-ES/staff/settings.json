@@ -20,6 +20,8 @@
       "contactInvalid": "Usa una dirección de correo completa, o vacía el campo para quitarla de tus páginas públicas.",
       "profileSaved": "Perfil y marca del centro guardados.",
       "profileInvalid": "Comprueba el lema, la descripción y el archivo del logotipo.",
+      "shopPhotosSaved": "Fotos del centro guardadas.",
+      "shopPhotosInvalid": "Esas fotos no se guardaron. Usa JPG, PNG, WebP o HEIC de menos de {maxMb}\u00a0MB, y no pases de {max} en total.",
       "addressSaved": "Dirección del centro guardada.",
       "addressRemoved": "Dirección del centro quitada.",
       "addressInvalid": "No se pudo guardar esa dirección. Busca otra vez y elige tu centro en la lista.",
@@ -170,6 +172,19 @@
       "label": "Enlace de reseñas",
       "hint": "(opcional)",
       "submit": "Guardar enlace de reseñas",
+      "submitting": "Guardando…"
+    },
+    "shopPhotos": {
+      "heading": "Fotos del centro",
+      "description": "Una tira de fotos bajo la portada de la página del centro: los barcos, la tripulación, el arrecife.",
+      "valueNone": "Ninguna todavía",
+      "value": "{count, plural, one {# foto} other {# fotos}}",
+      "label": "Fotos",
+      "hint": "(hasta {max}, {perSave} a la vez)",
+      "tooMany": "{count, plural, one {Elige hasta # foto cada vez.} other {Elige hasta # fotos cada vez.}}",
+      "add": "Añadir fotos",
+      "remove": "Quitar",
+      "submit": "Guardar fotos",
       "submitting": "Guardando…"
     },
     "searchListing": {
@@ -594,7 +609,7 @@
     "rowCount": "{count, plural, one {# fila} other {# filas}}",
     "notIncluded": {
       "label": "No incluido, a propósito:",
-      "text": "copias de manifiesto sin conexión, colas de reintento de notificaciones, la vinculación con Stripe, los rastros de cierre del día y de equipos de buceo, el estado de cancelación por clima, los libros de conciliación de DiveDay y las URL de imágenes pegadas sin guardar. Las notas del personal, el historial de actividad, los resultados de notificaciones, los intentos de pago, los canjes de promociones y los interesados en cursos <mono>sí</mono> se exportan. Las fotos y los recibos importados guardados de forma segura se exportan como archivos reales en <mono>photos/</mono>. Las credenciales, los enlaces de calendario y tu cuenta de WhatsApp nunca se exportan; consulta el README."
+      "text": "copias de manifiesto sin conexión, colas de reintento de notificaciones, la vinculación con Stripe, el rastro de equipos de buceo, el estado de cancelación por clima, los libros de conciliación de DiveDay y las URL de imágenes pegadas sin guardar. Las notas del personal, el historial de actividad, los resultados de notificaciones, los intentos de pago, los canjes de promociones y los interesados en cursos <mono>sí</mono> se exportan. Las fotos y los recibos importados guardados de forma segura se exportan como archivos reales en <mono>photos/</mono>. Las credenciales, los enlaces de calendario y tu cuenta de WhatsApp nunca se exportan; consulta el README."
     }
   },
   "crewSheet": {

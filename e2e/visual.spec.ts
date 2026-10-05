@@ -2577,46 +2577,6 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **The day's profile, answered** (issue #1479, N-06).
-       *
-       * The two captures above photograph "The day" as a run of sites. This one
-       * is the state a reader reaches by *using* it: the shop's planned times
-       * in the water and on the surface, and — once a card is named — the
-       * sentence saying which of the day's sites goes deeper than that card
-       * covers. It is the one place a public page says something depth-shaped
-       * to a diver, and nothing else can photograph it, since the answer only
-       * exists after a selection nobody else's spec makes.
-       *
-       * The Duane is the departure that produces it: 37 m against an Open Water
-       * card's 18. Its id comes off the staff board on a disposable context,
-       * the same CR-019 pattern as the requirement note above, so `page` stays
-       * the anonymous visitor being photographed.
-       */
-      test(`the day's profile answers a stated card (${scheme})`, async ({
-        page,
-        browser,
-        workerBaseURL,
-        staffStorageState,
-      }) => {
-        test.setTimeout(FLOW_TIMEOUT_MS);
-        const tripId = await tripIdWithoutSigningIn(
-          browser,
-          workerBaseURL,
-          await staffStorageState("owner"),
-          DEEP_CHARTER,
-        );
-        await page.goto(`/s/blue-mantis/trips/${tripId}`);
-        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
-        await page
-          .getByLabel("See these depths against your card")
-          .selectOption({ label: "Open Water" });
-        // The sentence the selection produces — waiting on it means the shot
-        // can never be of the picker before it answered.
-        await page.getByText(/past the 18 m your card covers/).waitFor();
-        await capture(page, "day-profile-ceiling", scheme);
-      });
-
-      /**
        * **A dock day the departure's own legs lay out** (ADR
        * 20260815-per-leg-travel-minutes).
        *
@@ -3552,16 +3512,6 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Nothing upcoming on the board" }).waitFor();
         await capture(page, "schedule-builder-empty", scheme);
 
-        // **`close-out-quiet` and `close-out-closed` retired here**, with the
-        // route they photographed (H-62; ADR
-        // 20260827-clearwater-surface-language, decision 4). Neither state is
-        // reachable on a fresh shop any more: the evening is a state of the
-        // shop home, and a shop with no departures has no day to close — its
-        // home is the setup ledger `today-empty` above already frames. Both
-        // moments moved to `today-evening` / `today-evening-closed`, shot
-        // against the demo shop with `seed-evening`, which is the only place
-        // a settled day exists.
-
         // Same session, straight to Settings: the one place a trial shop's
         // owner sees the trial-status card (days left, upgrade-by-email CTA).
         await page.goto(`/shop/${unique}/settings`);
@@ -4116,36 +4066,25 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "check-in-no-show-sailed", scheme);
       });
 
-      // **The home's evening reading** (ADR 20260804-day-closeout, folded into
-      // the home by 20260827-clearwater-surface-language's decision 4). The
-      // ritual that ends every working day is a *state* the spine settles
-      // into, so the surface to photograph is the shop home once every station
-      // has settled: the closing stations with their marks and head counts,
-      // the leftovers group with a Dismiss per row, and the one closing act.
+      // **The home's evening reading** (ADR
+      // 20260827-clearwater-surface-language, decision 4). The surface to
+      // photograph is the shop home once every station has settled: the
+      // closing stations with their marks and head counts, and the day's
+      // takings beneath them.
       //
       // `seed-evening` moves the demo day's departures behind the frozen clock
       // rather than moving the clock, which is one process-wide value shared
-      // by the server, the seed and the browser (`e2e/servers.ts`). Two shots
-      // in one test because the second state only exists after the first one's
-      // write — the recorded close, which is coral when nothing was left open
-      // and flat when something was (issue 761).
+      // by the server, the seed and the browser (`e2e/servers.ts`).
       test(`the home's evening renders true to the design (${scheme})`, async ({
         page,
         request,
       }) => {
-        // A seed write, two full-page shots, and the close round trip.
+        // A seed write and a full-page shot.
         test.setTimeout(FLOW_TIMEOUT_MS);
         await request.post("/api/test/seed-evening");
         await page.goto("/shop/blue-mantis");
-        await page.getByText("Still open — carries to tomorrow").waitFor();
+        await page.getByRole("region", { name: "What today made" }).waitFor();
         await capture(page, "today-evening", scheme);
-
-        await page
-          .getByRole("button", { name: /^Close the day( again)?$/ })
-          .first()
-          .click();
-        await page.getByText(/Closed by Dana Reyes at/).waitFor();
-        await capture(page, "today-evening-closed", scheme);
       });
 
       // **The evening after the counting** — the same page one act further on,
@@ -6425,8 +6364,7 @@ for (const scheme of ["light", "dark"] as const) {
        * **The shop's year** (ADR 20260908-one-hand, decision 6, lever T) — the
        * other reading of the same route, reached by the one new control on
        * Reports. The sentence, the strip of fifty-odd weeks, the four figures,
-       * the sites by the times they were dived, and the days the shop closed
-       * out.
+       * and the sites by the times they were dived.
        *
        * Both viewports in one capture, which is the point of photographing it:
        * the strip is fifty-three columns wide at 390px and at 1280px, and the

@@ -1768,8 +1768,8 @@ describe("returning a whole rental set", () => {
         outcome: "fit_adjusted",
       });
 
-      // Yesterday's window sees nothing: the question expires with the day,
-      // because the leftovers trail that carries a dismissal is keyed by it.
+      // Yesterday's window sees nothing: the question expires with the shop's
+      // day, so a row nobody answered never comes back every evening.
       const yesterday = { from: new Date(nowMs() - 2 * DAY), to: new Date(nowMs() - DAY) };
       expect(await listFitAdjustedReturns(db, shop.id, yesterday)).toEqual([]);
 

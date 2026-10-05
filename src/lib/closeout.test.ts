@@ -4,17 +4,13 @@ import { describe, expect, it } from "vitest";
 import {
   assembleDayCloseout,
   assembleEveningClose,
-  buildCloseoutSnapshot,
   type CloseoutRollCallGap,
   type CloseoutTripInput,
-  closeoutAdminTaskStatus,
   dayTakings,
-  parseCloseoutSnapshot,
   seatSailed,
   shopDayOf,
 } from "./closeout";
 import { type CrewRollCallSubject, rollCallCompleteness } from "./manifests";
-import type { TodayAction } from "./today";
 import {
   liveStageOf,
   STAGE_STALE_AFTER_MS,
@@ -59,102 +55,29 @@ function stage(word: TripStage, recordedAt: Date): TripStageReading {
   return { stage: word, siteName: "Molasses Reef", recordedAt, recordedByName: "Marco Diaz" };
 }
 
-function action(overrides: Partial<TodayAction> & { id: string }): TodayAction {
-  return {
-    kind: "waiver",
-    urgency: "now",
-    subject: "Priya Patel",
-    context: "Two-Tank Reef · 7:30 AM",
-    detail: "Waiver has not been sent.",
-    actionLabel: "Send waiver",
-    href: "/shop/demo/trips/t1#booking-b1",
-    dueAt: new Date(now.getTime() + 2 * HOUR),
-    ...overrides,
-  };
-}
-
 describe("assembleDayCloseout", () => {
-  it("reads an all-clear day as exactly that: every boat home, nothing left over", () => {
+  it("reads an all-clear day as exactly that: every boat home", () => {
     const state = assembleDayCloseout({
       trips: [trip({ tripId: "t1" }), trip({ tripId: "t2", title: "Sunset Dive" })],
       gaps: [],
-      actions: [],
       timeZone: TZ,
       now,
     });
 
     expect(state.shopDay).toBe("2026-08-04");
     expect(state.departures.map((d) => d.status)).toEqual(["all_home", "all_home"]);
-    expect(state.leftovers).toEqual([]);
   });
 
   it("keeps a day with zero departures calm — no boats is not an error", () => {
-    const state = assembleDayCloseout({ trips: [], gaps: [], actions: [], timeZone: TZ, now });
+    const state = assembleDayCloseout({ trips: [], gaps: [], timeZone: TZ, now });
 
     expect(state.departures).toEqual([]);
-    expect(state.leftovers).toEqual([]);
-  });
-
-  it("keeps a quiet day open when work exists without a departure", () => {
-    const state = assembleDayCloseout({
-      trips: [],
-      gaps: [],
-      actions: [action({ id: "leftover", dueAt: null })],
-      timeZone: TZ,
-      now,
-    });
-
-    expect(state.leftovers).toHaveLength(1);
-  });
-
-  it("counts administrative follow-up as outstanding while keeping it separate from roll call", () => {
-    const state = assembleDayCloseout({
-      trips: [trip({ tripId: "t1" })],
-      gaps: [],
-      actions: [],
-      adminTasks: [
-        {
-          id: "post_dive_reports",
-          status: "pending",
-          total: 8,
-          completed: 6,
-          pending: 2,
-          failed: 0,
-        },
-      ],
-      timeZone: TZ,
-      now,
-    });
-
-    expect(state.adminTasks).toEqual([
-      {
-        id: "post_dive_reports",
-        status: "pending",
-        total: 8,
-        completed: 6,
-        pending: 2,
-        failed: 0,
-      },
-    ]);
-  });
-
-  it("derives administrative task tone from failed and pending counts", () => {
-    expect(closeoutAdminTaskStatus({ total: 8, completed: 8, pending: 0, failed: 0 })).toBe(
-      "complete",
-    );
-    expect(closeoutAdminTaskStatus({ total: 8, completed: 6, pending: 2, failed: 0 })).toBe(
-      "pending",
-    );
-    expect(closeoutAdminTaskStatus({ total: 8, completed: 6, pending: 0, failed: 2 })).toBe(
-      "attention",
-    );
   });
 
   it("makes an unreconciled after-dive count the loudest thing on the page", () => {
     const state = assembleDayCloseout({
       trips: [trip({ tripId: "t1" }), trip({ tripId: "t2", title: "Sunset Dive" })],
       gaps: [{ tripId: "t2", reason: "after_dive_uncounted", diveNumber: 2, uncounted: 3 }],
-      actions: [],
       timeZone: TZ,
       now,
     });
@@ -173,7 +96,6 @@ describe("assembleDayCloseout", () => {
         { tripId: "t1", reason: "departure_uncounted", diveNumber: 0, uncounted: 2 },
         { tripId: "t1", reason: "missing_diver", diveNumber: 1, uncounted: 1 },
       ],
-      actions: [],
       timeZone: TZ,
       now,
     });
@@ -186,7 +108,6 @@ describe("assembleDayCloseout", () => {
     const state = assembleDayCloseout({
       trips: [trip({ tripId: "t1" })],
       gaps: [{ tripId: "t1", reason: "no_roll_call", diveNumber: 0, uncounted: 8 }],
-      actions: [],
       timeZone: TZ,
       now,
     });
@@ -211,7 +132,6 @@ describe("assembleDayCloseout", () => {
         }),
       ],
       gaps: [],
-      actions: [],
       timeZone: TZ,
       now,
     });
@@ -243,9 +163,7 @@ describe("assembleDayCloseout", () => {
       input: CloseoutTripInput,
       gaps: readonly CloseoutRollCallGap[] = [],
       at: Date = now,
-    ) =>
-      assembleDayCloseout({ trips: [input], gaps, actions: [], timeZone: TZ, now: at })
-        .departures[0]?.status;
+    ) => assembleDayCloseout({ trips: [input], gaps, timeZone: TZ, now: at }).departures[0]?.status;
 
     it("settles a boat the clock would still call still out", () => {
       // The control first: without the tap this same departure is still out,
@@ -362,15 +280,13 @@ describe("assembleDayCloseout", () => {
 
       expect(
         assembleEveningClose(
-          assembleDayCloseout({ trips: [untapped], gaps: [], actions: [], timeZone: TZ, now })
-            .departures,
+          assembleDayCloseout({ trips: [untapped], gaps: [], timeZone: TZ, now }).departures,
           now,
         ).closing,
       ).toBe(false);
 
       const evening = assembleEveningClose(
-        assembleDayCloseout({ trips: [tapped], gaps: [], actions: [], timeZone: TZ, now })
-          .departures,
+        assembleDayCloseout({ trips: [tapped], gaps: [], timeZone: TZ, now }).departures,
         now,
       );
       expect(evening.stations[0]?.settled).toBe(true);
@@ -401,7 +317,6 @@ describe("assembleDayCloseout", () => {
         }),
       ],
       gaps: [],
-      actions: [],
       timeZone: TZ,
       now,
     });
@@ -418,138 +333,11 @@ describe("assembleDayCloseout", () => {
     const state = assembleDayCloseout({
       trips: [trip({ tripId: "t1" })],
       gaps: [{ tripId: "yesterday", reason: "missing_diver", diveNumber: 1, uncounted: 1 }],
-      actions: [],
       timeZone: TZ,
       now,
     });
 
     expect(state.departures.map((d) => d.status)).toEqual(["all_home"]);
-  });
-
-  it("keeps today's own open rows as leftovers, and nothing dated past today", () => {
-    const leftoverDated = action({ id: "a-today", dueAt: new Date(now.getTime() + HOUR) });
-    const leftoverUndated = action({
-      id: "a-undated",
-      kind: "stuck_payment_operation",
-      dueAt: null,
-    });
-    // 08:00 local tomorrow.
-    const tomorrowRow = action({ id: "a-tomorrow", dueAt: new Date("2026-08-05T12:00:00Z") });
-    // Two days out — neither list's business.
-    const laterRow = action({ id: "a-later", dueAt: new Date("2026-08-06T12:00:00Z") });
-    // A roll-call row never becomes a leftover: head counts are chased, not carried.
-    const rollCall = action({
-      id: "roll-call:t9:missing_diver:after_dive_1",
-      kind: "roll_call_missing_diver",
-      dueAt: new Date(now.getTime() - 2 * HOUR),
-    });
-
-    const state = assembleDayCloseout({
-      trips: [],
-      gaps: [],
-      actions: [laterRow, tomorrowRow, leftoverUndated, leftoverDated, rollCall],
-      timeZone: TZ,
-      now,
-    });
-
-    expect(state.leftovers.map((a) => a.id)).toEqual(["a-today", "a-undated"]);
-  });
-
-  it("leaves the standing units confirmation with Today instead of close-out", () => {
-    const state = assembleDayCloseout({
-      trips: [],
-      gaps: [],
-      actions: [
-        action({
-          id: "units:unconfirmed",
-          kind: "units_unconfirmed",
-          dueAt: null,
-          subject: "Check your currency and depth unit",
-        }),
-      ],
-      timeZone: TZ,
-      now,
-    });
-
-    expect(state.leftovers).toEqual([]);
-  });
-
-  it("leaves tomorrow entirely to the spine — no row dated tomorrow is a leftover", () => {
-    // The evening used to end on a parting glance that tallied tomorrow's
-    // queue by kind. That card went with the page (H-62): the home's own
-    // Tomorrow disclosure is what the evening closes on, built from the queue
-    // rather than from a second tally of it. What survives is the boundary —
-    // a row that belongs to tomorrow is not something today left over.
-    const rows = [
-      action({ id: "a-0", dueAt: new Date("2026-08-05T11:00:00Z") }),
-      action({ id: "a-1", dueAt: new Date("2026-08-05T12:00:00Z") }),
-      action({ id: "a-2", kind: "payment", dueAt: new Date("2026-08-05T13:00:00Z") }),
-    ];
-
-    const state = assembleDayCloseout({ trips: [], gaps: [], actions: rows, timeZone: TZ, now });
-
-    expect(state.leftovers).toEqual([]);
-  });
-});
-
-describe("buildCloseoutSnapshot", () => {
-  const state = assembleDayCloseout({
-    trips: [trip({ tripId: "clean" }), trip({ tripId: "gap", title: "Sunset Dive" })],
-    gaps: [{ tripId: "gap", reason: "missing_crew", diveNumber: 1, uncounted: 1 }],
-    actions: [action({ id: "a1" }), action({ id: "a2", subject: "Marco Diaz" })],
-    timeZone: TZ,
-    now,
-  });
-
-  it("records exactly what was outstanding: the unsettled departures and every leftover's decision", () => {
-    const snapshot = buildCloseoutSnapshot(state, { a2: "dismiss" });
-
-    // The clean boat is not "outstanding" — recording it would bury the one that is.
-    expect(snapshot.departures).toEqual([
-      {
-        tripId: "gap",
-        title: "Sunset Dive",
-        status: "unreconciled",
-        gapReason: "missing_crew",
-        uncounted: 1,
-      },
-    ]);
-    // Queue order (sortActions): Marco sorts before Priya on the name tiebreak.
-    expect(snapshot.leftovers.map((l) => [l.id, l.decision])).toEqual([
-      ["a2", "dismiss"],
-      ["a1", "carry"],
-    ]);
-    expect(snapshot.adminTasks).toEqual([]);
-  });
-
-  it("defaults an unstated decision to carry and ignores ids the day does not hold", () => {
-    const snapshot = buildCloseoutSnapshot(state, {
-      "not-a-real-row": "dismiss",
-      // Prototype-shaped keys must not resolve to anything.
-      constructor: "dismiss",
-    } as Record<string, "carry" | "dismiss">);
-
-    expect(snapshot.leftovers.every((l) => l.decision === "carry")).toBe(true);
-  });
-
-  it("round-trips through the defensive parser", () => {
-    const snapshot = buildCloseoutSnapshot(state, { a1: "dismiss" });
-    expect(parseCloseoutSnapshot(JSON.parse(JSON.stringify(snapshot)))).toEqual(snapshot);
-  });
-
-  it("drops malformed stored rows instead of crashing the trail", () => {
-    expect(parseCloseoutSnapshot(null)).toEqual({ departures: [], leftovers: [], adminTasks: [] });
-    expect(parseCloseoutSnapshot("nonsense")).toEqual({
-      departures: [],
-      leftovers: [],
-      adminTasks: [],
-    });
-    expect(
-      parseCloseoutSnapshot({
-        departures: [{ tripId: 7 }, { tripId: "x", title: "y", status: "all_home" }],
-        leftovers: [{ id: "only-id" }, 42],
-      }),
-    ).toEqual({ departures: [], leftovers: [], adminTasks: [] });
   });
 });
 
@@ -651,7 +439,6 @@ describe("assembleEveningClose", () => {
     assembleDayCloseout({
       trips: [trip(overrides)],
       gaps: [],
-      actions: [],
       timeZone: TZ,
       now,
     }).departures;
@@ -809,7 +596,6 @@ describe("assembleEveningClose", () => {
         }),
       ],
       gaps: [],
-      actions: [],
       timeZone: TZ,
       now,
     }).departures;
@@ -829,7 +615,7 @@ describe("assembleEveningClose", () => {
       endsAt: new Date(now.getTime() - 10 * 60 * 1000),
     });
     const before = assembleEveningClose(
-      assembleDayCloseout({ trips: [justIn], gaps: [], actions: [], timeZone: TZ, now }).departures,
+      assembleDayCloseout({ trips: [justIn], gaps: [], timeZone: TZ, now }).departures,
       now,
     );
     expect(before.closing).toBe(false);
@@ -839,7 +625,6 @@ describe("assembleEveningClose", () => {
       assembleDayCloseout({
         trips: [justIn],
         gaps: [],
-        actions: [],
         timeZone: TZ,
         now: later,
       }).departures,
@@ -862,7 +647,6 @@ describe("assembleEveningClose", () => {
     const departures = assembleDayCloseout({
       trips: [trip({ tripId: "t1", booked: 10 })],
       gaps: [{ tripId: "t1", reason: "missing_diver", diveNumber: 2, uncounted: 1 }],
-      actions: [],
       timeZone: TZ,
       now,
     }).departures;
@@ -879,7 +663,6 @@ describe("assembleEveningClose", () => {
     const departures = assembleDayCloseout({
       trips: [trip({ tripId: "t1", booked: 10 })],
       gaps: [{ tripId: "t1", reason: "no_roll_call", diveNumber: 0, uncounted: 10 }],
-      actions: [],
       timeZone: TZ,
       now,
     }).departures;
@@ -905,7 +688,6 @@ describe("assembleEveningClose", () => {
         }),
       ],
       gaps: [{ tripId: "afternoon", reason: "no_roll_call", diveNumber: 0, uncounted: 2 }],
-      actions: [],
       timeZone: TZ,
       now,
     }).departures;
@@ -949,7 +731,7 @@ describe("the glossary's close-out entry", () => {
   it("states the promotion and its one-way-ness", async () => {
     const text = await entry();
     expect(text).toContain("#1480");
-    expect(text).toMatch(/never reopens one the clock has closed/);
+    expect(text).toMatch(/never\s+reopens\s+one\s+the\s+clock\s+has\s+closed/);
     expect(text).toMatch(/Nothing\s+demotes/);
   });
 });

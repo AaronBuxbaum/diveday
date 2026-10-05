@@ -80,6 +80,7 @@ import { NextBoatCard } from "./_components/NextBoatCard";
 import { OffSeasonPanel } from "./_components/OffSeasonPanel";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
 import { ShopfrontHero } from "./_components/ShopfrontHero";
+import { ShopPhotoStrip } from "./_components/ShopPhotoStrip";
 import {
   WEEK_LEDGER_FOLLOWER_CLASS,
   WeekLedger,
@@ -781,6 +782,14 @@ export default async function SchedulePage({
           </div>
         </div>
       )}
+
+      {/* The shop's photo strip, between who the shop is and its boats. Not
+          in the frame, which stays the list-first window onto the schedule. */}
+      {!isEmbed && shop.shopfrontPhotoUrls.length > 0 ? (
+        <div className="mt-8">
+          <ShopPhotoStrip urls={shop.shopfrontPhotoUrls} label={t("schedule.shopPhotos")} />
+        </div>
+      ) : null}
 
       {/* **The board itself, and nothing where there is no board** (N-45).
           A shop with nothing public on the books renders no "Schedule"

@@ -235,7 +235,6 @@ export function ShopNav({
                 destinationLabels,
                 destinationTitles,
                 goToBoarding: t("shared.commandPalette.goToBoarding"),
-                goToCloseDay: t("shared.commandPalette.goToCloseDay"),
                 goToOfflineRollCall: t("shared.commandPalette.goToOfflineRollCall"),
                 hintMove: t("shared.commandPalette.hintMove"),
                 hintOpen: t("shared.commandPalette.hintOpen"),

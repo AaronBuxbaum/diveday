@@ -16,7 +16,6 @@ const YEAR = summarizeShopYear({
   days: [{ day: "2026-02-10", boats: 1, divers: 8, seats: 10 }],
   boats: [{ name: "Manta", days: 1 }],
   sites: [],
-  entries: [],
 });
 
 function renderStrip() {

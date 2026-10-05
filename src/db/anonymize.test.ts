@@ -17,7 +17,6 @@ import {
   bookingPaymentEvents,
   bookingPayments,
   bookings,
-  dayCloseouts,
   formDrafts,
   gearItems,
   gearReservations,
@@ -691,35 +690,7 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
       checkoutUrl: "https://checkout.stripe.com/c/pay/cs_test",
     });
 
-    // 7. The day's close-out, whose leftovers copy the diver's name rather than
-    // pointing at them.
-    await db.insert(dayCloseouts).values({
-      shopId: shop.id,
-      shopDay: "2026-03-01",
-      actorPersonId: owner.id,
-      outstanding: {
-        departures: [],
-        leftovers: [
-          {
-            id: "waiver:1",
-            kind: "waiver",
-            subject: "Kwame Mensah",
-            detail: "Waiver not signed — Kwame Mensah",
-            decision: "carry",
-          },
-          {
-            id: "waiver:2",
-            kind: "waiver",
-            subject: "Someone Else",
-            detail: "Waiver not signed — Someone Else",
-            decision: "carry",
-          },
-        ],
-        adminTasks: [],
-      },
-    });
-
-    // 8. The provider's own words for a bounce, on the release and per channel.
+    // 7. The provider's own words for a bounce, on the release and per channel.
     const [template] = await db
       .select({ id: waiverTemplates.id })
       .from(waiverTemplates)
@@ -832,16 +803,6 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
     const [tip] = await db.select().from(tips).where(eq(tips.bookingId, booking.id));
     expect(tip?.checkoutUrl).toBeNull();
     expect(tip?.amountCents).toBe(2000);
-
-    // The close-out's leftovers keep their count and lose the name. The
-    // bystander's row is untouched, which is what the word-boundary match buys.
-    const [closeout] = await db.select().from(dayCloseouts).where(eq(dayCloseouts.shopId, shop.id));
-    const leftovers = closeout?.outstanding.leftovers ?? [];
-    expect(leftovers).toHaveLength(2);
-    expect(leftovers[0]?.subject).toBe("[redacted]");
-    expect(leftovers[0]?.detail).toBe("[redacted]");
-    expect(leftovers[0]?.decision).toBe("carry");
-    expect(leftovers[1]?.subject).toBe("Someone Else");
 
     // The receipt document itself, retired through the same durable ledger
     // every other blob deletion uses rather than a second mechanism.

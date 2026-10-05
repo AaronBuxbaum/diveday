@@ -6,6 +6,7 @@ import { FlashParams } from "@/components/FlashParams";
 import { JsonLd } from "@/components/JsonLd";
 import { ShopContactLinks } from "@/components/ShopContactLinks";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
+import { StoredPhoto } from "@/components/StoredPhoto";
 import { TripChangeLedger } from "@/components/TripChangeLedger";
 import { buttonClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS, TONE_PANEL_LG_CLASS } from "@/components/ui/card";
@@ -79,7 +80,7 @@ import { EmbedBookedNotice } from "./_components/EmbedBookedNotice";
 import { StaffPreviewBar } from "./_components/StaffPreviewBar";
 import { TripActions } from "./_components/TripActions";
 import { TripAlternatives } from "./_components/TripAlternatives";
-import { TripDayPlan } from "./_components/TripDayPlan";
+import { dayCoverPhoto, TripDayPlan } from "./_components/TripDayPlan";
 import { TripHeader } from "./_components/TripHeader";
 import { pitchHasDoor, pitchOpensOnDoor, TripPitch } from "./_components/TripPitch";
 import { TripTerms } from "./_components/TripTerms";
@@ -350,6 +351,7 @@ export default async function TripDetailPage({
     ),
     moments: diveSite ? (briefingExtras.moments.get(diveSite.id) ?? []) : [],
   }));
+  const coverPhoto = dayCoverPhoto(diveBriefings);
   // The dock-day rhythm's inputs (per-site bottom times, per-leg travel) are
   // gone from this page with `PackingSection`: what to bring and when to be
   // there is preparation, and preparation belongs to the thread the diver
@@ -632,6 +634,19 @@ export default async function TripDetailPage({
             {isEmbed ? null : (
               <TripActions calendarUrl={publicTripCalendarPath(shopSlug, tripId)} />
             )}
+            {/* The place, before the words about it: the day's first site
+                photo (`dayCoverPhoto`). Decorative, as the site page's own
+                cover is — the title and "The day" name the place. Not inside
+                an embed, where the frame is a list-first window. */}
+            {coverPhoto && !isEmbed ? (
+              <StoredPhoto
+                src={coverPhoto}
+                alt=""
+                className="mt-6 aspect-[3/2] w-full rounded-panel"
+                sizes="(min-width: 640px) 33rem, 92vw"
+                priority
+              />
+            ) : null}
             {/* The one warning panel this page ever wears — the same radius,
                 border and tone as the conditions-changed panel below, on purpose.
                 Two amber boxes with different radii and border weights read as two

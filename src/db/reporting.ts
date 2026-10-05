@@ -3,7 +3,6 @@ import {
   asc,
   count,
   countDistinct,
-  desc,
   eq,
   exists,
   gt,
@@ -22,7 +21,7 @@ import { canViewShopReports, type Role } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { MonthlyReportInput, ReportTrip } from "@/lib/reporting";
-import type { ShopYearDay, ShopYearEntry, ShopYearInput } from "@/lib/shop-year";
+import type { ShopYearDay, ShopYearInput } from "@/lib/shop-year";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { wallTimeToUtc } from "@/lib/zoned";
 import { buddyReferredSeatsForWindow } from "./buddy-referrals";
@@ -34,7 +33,6 @@ import {
   bookingCheckouts,
   bookingPayments,
   bookings,
-  dayCloseouts,
   diveSites,
   importedPaymentHistory,
   orders,
@@ -824,7 +822,7 @@ export async function getShopYear(
   // Postgres refuses the query naming a column the GROUP BY plainly contains.
   const localDay = sql<string>`to_char(${trips.startsAt} at time zone ${timeZone}::text, 'YYYY-MM-DD')`;
 
-  const [dayRows, diverRows, boatRows, siteRows, firstSailed, closeoutRows] = await queryAll(db, [
+  const [dayRows, diverRows, boatRows, siteRows, firstSailed] = await queryAll(db, [
     () =>
       db
         .select({ day: localDay, boats: count(), seats: sum(trips.capacity) })
@@ -890,25 +888,6 @@ export async function getShopYear(
             liveTrip(),
           ),
         ),
-    // The days this shop closed out, newest first. One row per day: a day
-    // closed twice has two rows and the later one is the one that stands.
-    () =>
-      db
-        .select({
-          shopDay: dayCloseouts.shopDay,
-          actor: people.fullName,
-          seq: dayCloseouts.seq,
-        })
-        .from(dayCloseouts)
-        .innerJoin(people, eq(people.id, dayCloseouts.actorPersonId))
-        .where(
-          and(
-            eq(dayCloseouts.shopId, shopId),
-            gte(dayCloseouts.shopDay, yearStart),
-            lte(dayCloseouts.shopDay, lastDay),
-          ),
-        )
-        .orderBy(desc(dayCloseouts.shopDay), desc(dayCloseouts.seq)),
   ]);
 
   const diversByDay = new Map(diverRows.map((row) => [row.day, Number(row.divers)]));
@@ -920,7 +899,6 @@ export async function getShopYear(
       seats: Number(row.seats ?? 0),
     }))
     .sort((left, right) => (left.day < right.day ? -1 : left.day > right.day ? 1 : 0));
-  const byDay = new Map(days.map((day) => [day.day, day]));
 
   const firstSailedAt = firstSailed[0]?.startsAt ?? null;
   const firstSailedDay = firstSailedAt
@@ -929,21 +907,6 @@ export async function getShopYear(
   const openedThisYear =
     firstSailedDay !== null && firstSailedDay > yearStart && firstSailedDay <= lastDay;
   const firstDay = openedThisYear && firstSailedDay ? firstSailedDay : yearStart;
-
-  const seenDays = new Set<string>();
-  const entries: ShopYearEntry[] = [];
-  for (const row of closeoutRows) {
-    if (seenDays.has(row.shopDay)) continue;
-    seenDays.add(row.shopDay);
-    if (row.shopDay < firstDay) continue;
-    const day = byDay.get(row.shopDay);
-    entries.push({
-      day: row.shopDay,
-      actor: row.actor,
-      divers: day?.divers ?? 0,
-      boats: day?.boats ?? 0,
-    });
-  }
 
   return {
     year,
@@ -963,6 +926,5 @@ export async function getShopYear(
         live: row.deletedAt === null,
       }))
       .sort((left, right) => right.times - left.times || left.name.localeCompare(right.name)),
-    entries,
   };
 }

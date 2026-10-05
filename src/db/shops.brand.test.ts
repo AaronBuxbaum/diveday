@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { shops } from "./schema";
-import { setShopProfile } from "./shops";
+import { replaceShopfrontPhotos, setShopProfile } from "./shops";
 
 /**
  * The brand columns (Harbor, ADR 20260901-diveday-reimagined, decision 2) and
@@ -60,5 +60,21 @@ describe("a shop's brand", () => {
     await expect(
       db.update(shops).set({ establishedYear: 1850 }).where(eq(shops.id, shopId)),
     ).rejects.toMatchObject({ cause: expect.objectContaining({ code: "23514" }) });
+  });
+});
+
+/**
+ * The storefront strip's save uploads between reading the list and writing it,
+ * so the write only lands if the list is still what was read.
+ */
+describe("replacing a shop's photo strip", () => {
+  it("writes when the list is unchanged, and refuses a save built on a stale read", async () => {
+    const { db, shop } = await seededShopContext();
+    const before = shop.shopfrontPhotoUrls;
+    expect(await replaceShopfrontPhotos(db, shop.id, before, ["/a.jpg"])).toBe(true);
+    // A second save that read the list before the first one landed.
+    expect(await replaceShopfrontPhotos(db, shop.id, before, ["/b.jpg"])).toBe(false);
+    const [row] = await db.select().from(shops).where(eq(shops.id, shop.id));
+    expect(row?.shopfrontPhotoUrls).toEqual(["/a.jpg"]);
   });
 });

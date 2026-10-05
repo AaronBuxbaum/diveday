@@ -107,5 +107,41 @@
       "1280": 413,
       "1920": 627
     }
+  },
+  "src/app/s/[shopSlug]/sites/[siteSlug]/page.tsx :: (min-width: 896px) 17rem, (min-width: 640px) 30vw, 45vw": {
+    "measured": "2026-10-05, /s/blue-mantis/sites/molasses-reef. The site gallery under the cover: two tiles across on a phone, three from sm, in the max-w-4xl column.",
+    "rendered": {
+      "390": 173,
+      "768": 232,
+      "1280": 275,
+      "1920": 275
+    }
+  },
+  "src/app/s/[shopSlug]/trips/[id]/_components/TripDayPlan.tsx :: (min-width: 896px) 26rem, (min-width: 640px) 46vw, 92vw": {
+    "measured": "2026-10-05, /s/blue-mantis/sites/molasses-reef (the widest it renders). A photographed landmark, two-up from sm. Inside the trip page's briefing door it is narrower (256px at 768 and up), one candidate step below what this declares.",
+    "rendered": {
+      "390": 358,
+      "768": 352,
+      "1280": 416,
+      "1920": 416
+    }
+  },
+  "src/app/s/[shopSlug]/trips/[id]/page.tsx :: (min-width: 640px) 33rem, 92vw": {
+    "measured": "2026-10-05, /s/blue-mantis/trips/<Molasses departure>. The day's cover photo in the reading column (528px from sm, the lg left column too).",
+    "rendered": {
+      "390": 358,
+      "768": 528,
+      "1280": 528,
+      "1920": 528
+    }
+  },
+  "src/app/s/[shopSlug]/_components/ShopPhotoStrip.tsx :: (min-width: 1024px) 17rem, (min-width: 640px) 30vw, 72vw": {
+    "measured": "2026-10-05, /s/blue-mantis. The storefront photo strip: a swiped row on a phone, three across from sm, four from lg.",
+    "rendered": {
+      "390": 279,
+      "768": 229,
+      "1280": 264,
+      "1920": 264
+    }
   }
 }

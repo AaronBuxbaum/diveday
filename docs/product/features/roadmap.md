@@ -892,8 +892,9 @@ alongside them moved several of these prerequisites.
   line, released at gear return or captured with a reason. *Effort:* M. *Needs:* owner policy
   (H-07).
 - **N-18 Cash and tip reconciliation at close-out.** The evening block counts cash taken at the
-  counter and card tips for the day and records "matches" or "short by 20" as an act in
-  `day_closeouts`. *Build:* one closeout fact + one input. *Effort:* S.
+  counter and card tips for the day and records "matches" or "short by 20". Not built; the
+  `day_closeouts` record it would have extended was removed on 2026-10-05 with the "Close the day"
+  act, so this would be its own small record. *Build:* one table + one input. *Effort:* S.
 - **N-19 Pay your own share.** Each claimant on a party booking pays their own seat at claim time
   through Checkout; the organizer pays only their own. No credit ledger needed. *Build:*
   `seat-claims.ts` + `checkouts.ts`, a per-seat `bookingPayments` row. *Effort:* M. *Needs:* owner

@@ -20,6 +20,7 @@ import { issueShopContactEmailConfirmation } from "@/db/shop-contact-email";
 import {
   getShopById,
   markShopUnitsConfirmed,
+  replaceShopfrontPhotos,
   setShopAddress,
   setShopContact,
   setShopCrewSchedule,
@@ -89,6 +90,7 @@ import { requireStaffSession } from "@/lib/session";
 import { parseShopFeature } from "@/lib/shop-features";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { storeShopHeroImage, storeShopLogoImage } from "@/lib/storage";
+import { MAX_NEW_SHOPFRONT_PHOTOS_PER_SAVE, MAX_SHOPFRONT_PHOTOS } from "@/lib/storage/limits";
 import { timeZoneAnchor } from "@/lib/timezones";
 import { LENS_NAME_MAX } from "@/lib/trip-lenses";
 import { uuidParam } from "@/lib/uuid";
@@ -781,6 +783,82 @@ export async function saveProfileAction(formData: FormData) {
   revalidatePath(`/s/${session.user.shopSlug}`);
   revalidatePath(settings);
   revalidateAndRedirect(settings, noticeUrl(settings, "profile-saved", { saved: "profile" }));
+}
+
+/**
+ * The storefront's photo strip: keep what was not ticked, add what was picked.
+ *
+ * Its own form rather than a field on the profile, because the profile already
+ * posts a logo and a cover, and three more photos beside them would push one
+ * save past the Server Action body limit (`MAX_NEW_SHOPFRONT_PHOTOS_PER_SAVE`).
+ * Both caps are checked before a byte is stored. A refusal after storing (one
+ * file of three rejected, or another save landing first) queues what it stored
+ * for deletion, so it leaves no object behind; a photo taken off is queued for
+ * deletion only once the row is saved (CR-012).
+ */
+export async function saveShopPhotosAction(formData: FormData) {
+  const session = await requireStaffSession();
+  const settings = shopPath(session.user.shopSlug, "settings");
+  await settingsBlock(session);
+  const refuse: () => never = () =>
+    redirect(noticeUrl(settings, "shop-photos-invalid", { saved: "shopPhotos" }));
+
+  const db = await getDb();
+  const shop = await getShopById(db, session.user.shopId);
+  if (!shop) refuse();
+
+  const removed = new Set(formData.getAll("removeShopPhotoUrls").map(String));
+  const kept = shop.shopfrontPhotoUrls.filter((url) => !removed.has(url));
+  const picked = formData
+    .getAll("shopPhotoFiles")
+    .filter((file): file is File => file instanceof File && file.size > 0);
+  if (
+    picked.length > MAX_NEW_SHOPFRONT_PHOTOS_PER_SAVE ||
+    kept.length + picked.length > MAX_SHOPFRONT_PHOTOS
+  ) {
+    refuse();
+  }
+
+  const stored = await Promise.all(
+    picked.map(async (file) =>
+      storeShopHeroImage({
+        filename: file.name,
+        contentType: file.type,
+        bytes: await file.arrayBuffer(),
+      }),
+    ),
+  );
+  const added = stored.flatMap((result) => (result.status === "stored" ? [result.url] : []));
+  const forget = async (urls: string[]) => {
+    for (const url of urls) {
+      await queueAndAttemptMediaDeletion(db, {
+        shopId: session.user.shopId,
+        kind: "shop_hero",
+        url,
+      });
+    }
+  };
+  if (added.length !== picked.length) {
+    await forget(added);
+    refuse();
+  }
+
+  const saved = await replaceShopfrontPhotos(db, session.user.shopId, shop.shopfrontPhotoUrls, [
+    ...kept,
+    ...added,
+  ]);
+  if (!saved) {
+    await forget(added);
+    refuse();
+  }
+  await forget(shop.shopfrontPhotoUrls.filter((url) => removed.has(url)));
+
+  revalidatePath(`/s/${session.user.shopSlug}`);
+  revalidatePath(settings);
+  revalidateAndRedirect(
+    settings,
+    noticeUrl(settings, "shop-photos-saved", { saved: "shopPhotos" }),
+  );
 }
 
 /** Where the post-trip recap's "leave us a review" link sends a diver. */

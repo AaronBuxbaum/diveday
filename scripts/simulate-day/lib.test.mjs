@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { RECAP_AUTOMATIC_DELAY_MS } from "../../src/lib/recap-schedule";
 import { rollCallCheckpoints } from "../../src/lib/roll-call";
 import {
-  CLOSE_OUT_AFTER_MS,
   DAY_STATES,
   dayTimeline,
+  EVENING_AFTER_MS,
   RECAP_FLOOR_MS,
   renderTranscript,
   screenshotName,
@@ -37,7 +37,7 @@ describe("dayTimeline", () => {
     expect(byId.underway[0]).toEqual(sailAt);
     expect(byId.home[0]).toEqual(endsAt);
     expect(byId["checked-in"][0].getTime()).toBeLessThan(sailAt.getTime());
-    expect(byId["day-closed"][0].getTime()).toBe(endsAt.getTime() + CLOSE_OUT_AFTER_MS);
+    expect(byId["evening"][0].getTime()).toBe(endsAt.getTime() + EVENING_AFTER_MS);
     expect(byId["recap-sent"][0].getTime()).toBeGreaterThan(endsAt.getTime() + RECAP_FLOOR_MS);
   });
 

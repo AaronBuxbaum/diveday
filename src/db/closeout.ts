@@ -13,30 +13,15 @@ import {
   notInArray,
   sql,
 } from "drizzle-orm";
-import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { HOUR_MS, nowDate } from "@/lib/clock";
-import {
-  assembleDayCloseout,
-  buildCloseoutSnapshot,
-  type CloseoutAdminTask,
-  type CloseoutSnapshot,
-  closeoutAdminTaskStatus,
-  type DayCloseoutState,
-  type LeftoverDecision,
-  parseCloseoutSnapshot,
-  seatSailed,
-  shopDayOf,
-} from "@/lib/closeout";
+import { assembleDayCloseout, type DayCloseoutState, seatSailed } from "@/lib/closeout";
 import type { CrewRollCallSubject } from "@/lib/manifests";
 import { carryForwardNotBoarded, rollCallCheckpoints } from "@/lib/roll-call";
-import type { TodayAction } from "@/lib/today";
 import { shopDayBounds } from "@/lib/zoned";
 import type { AppDb } from "./client";
 import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
 import {
   bookings,
-  closeoutLeftoverDecisions,
-  dayCloseouts,
   diveSites,
   executedDives,
   notificationDeliveries,
@@ -49,109 +34,22 @@ import {
   tripRecapPhotos,
   trips,
 } from "./schema";
-import { getTodayWork, listRollCallGaps } from "./today";
+import { listRollCallGaps } from "./today";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { latestTripStagesByTrip } from "./trip-stages";
 import { liveTrip } from "./trips-live";
 
 /**
- * The db half of the day's closing state (ADR 20260804-day-closeout, folded
- * into the shop home by 20260827-clearwater-surface-language's decision 4).
- * `getDayCloseout` gathers the day's facts through the readers that already
- * own them — `listRollCallGaps` and `getTodayWork` (src/db/today.ts) — and
- * hands them to the pure assembly (src/lib/closeout.ts); `closeDay` appends
- * the recorded act. Nothing here detects anything of its own: an evening that
- * counted a head count differently from the queue that chases it would let the
- * two disagree about whether a person is accounted for.
+ * The db half of the day's closing state (the shop home's evening, ADR
+ * 20260827-clearwater-surface-language decision 4).
+ * `getDayCloseout` gathers the day's facts through the reader that already
+ * owns them — `listRollCallGaps` (src/db/today.ts) — and hands them to the
+ * pure assembly (src/lib/closeout.ts). Nothing here detects anything of its
+ * own: an evening that counted a head count differently from the queue that
+ * chases it would let the two disagree about whether a person is accounted for.
  *
- * Its one caller is the shop home. `/close-out` is a 308 (H-62), so this file
- * lost a page and kept every fact.
+ * Its one caller is the shop home.
  */
-
-/** One recorded close of a day, ready to render. */
-export type DayCloseoutRecord = {
-  id: string;
-  shopDay: string;
-  closedAt: Date;
-  actorName: string;
-  outstanding: CloseoutSnapshot;
-};
-
-export type DayCloseout = {
-  state: DayCloseoutState;
-  /** The most recent close of this day, or null while the day is still open. */
-  latest: DayCloseoutRecord | null;
-  /** How many times this day has been closed (re-closing appends, never edits). */
-  closeCount: number;
-};
-
-/**
- * Read the latest choice for each leftover in one shop-local day. The table is
- * append-only, so a descending sequence and first-seen map give deterministic
- * last-write-wins semantics even when the test/e2e clock is frozen.
- */
-export async function listLatestLeftoverDecisions(
-  db: AppDb,
-  shopId: string,
-  shopDay: string,
-): Promise<Readonly<Record<string, LeftoverDecision>>> {
-  const rows = await db
-    .select({
-      actionId: closeoutLeftoverDecisions.actionId,
-      decision: closeoutLeftoverDecisions.decision,
-    })
-    .from(closeoutLeftoverDecisions)
-    .where(
-      and(
-        eq(closeoutLeftoverDecisions.shopId, shopId),
-        eq(closeoutLeftoverDecisions.shopDay, shopDay),
-      ),
-    )
-    .orderBy(desc(closeoutLeftoverDecisions.seq));
-  const latest: Record<string, LeftoverDecision> = Object.create(null);
-  for (const row of rows) {
-    if (
-      !Object.hasOwn(latest, row.actionId) &&
-      (row.decision === "carry" || row.decision === "dismiss")
-    ) {
-      latest[row.actionId] = row.decision;
-    }
-  }
-  return latest;
-}
-
-/** Append one per-row close-out choice. There is deliberately no update/delete path. */
-export async function recordLeftoverDecision(
-  db: AppDb,
-  input: {
-    shopId: string;
-    shopDay: string;
-    actionId: string;
-    decision: LeftoverDecision;
-    actorPersonId: string;
-    decidedAt?: Date;
-  },
-): Promise<void> {
-  if (!input.actionId || input.actionId.length > 200)
-    throw new Error("invalid close-out action id");
-  if (input.decision !== "carry" && input.decision !== "dismiss") {
-    throw new Error("invalid close-out leftover decision");
-  }
-  const [actor] = await db
-    .select({ id: people.id })
-    .from(people)
-    .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId)))
-    .limit(1);
-  if (!actor) throw new Error("close-out actor is not a person of this shop");
-  await db.insert(closeoutLeftoverDecisions).values({
-    shopId: input.shopId,
-    shopDay: input.shopDay,
-    actionId: input.actionId,
-    decision: input.decision,
-    actorPersonId: input.actorPersonId,
-    decidedAt: input.decidedAt,
-  });
-}
 
 /**
  * One trip's assigned crew as the closing checkpoint sees them.
@@ -628,263 +526,20 @@ async function todaysTrips(db: AppDb, shopId: string, timeZone: string, now: Dat
 }
 
 /**
- * Post-dive reports are a task over existing notification state, not a second
- * delivery system. A missing `trip_recap` row is pending; a send or provider
- * failure needs attention; every successful send is complete. Only returned
- * trips in today's shop-local day participate in the ritual.
- */
-async function postDiveReportTask(
-  db: AppDb,
-  shopId: string,
-  tripsToday: Awaited<ReturnType<typeof todaysTrips>>,
-  now: Date,
-): Promise<CloseoutAdminTask | null> {
-  const endedTripIds = tripsToday.filter((trip) => trip.endsAt <= now).map((trip) => trip.tripId);
-  if (endedTripIds.length === 0) return null;
-
-  const rows = await db
-    .select({
-      deliveryStatus: notificationDeliveries.status,
-      providerStatus: notificationDeliveries.providerStatus,
-    })
-    .from(bookings)
-    .leftJoin(
-      notificationDeliveries,
-      and(
-        eq(notificationDeliveries.bookingId, bookings.id),
-        eq(notificationDeliveries.shopId, shopId),
-        eq(notificationDeliveries.kind, "trip_recap"),
-      ),
-    )
-    .where(
-      and(
-        eq(bookings.shopId, shopId),
-        inArray(bookings.tripId, endedTripIds),
-        ne(bookings.status, "cancelled"),
-        ne(bookings.status, "no_show"),
-      ),
-    );
-  if (rows.length === 0) return null;
-
-  const failedProviderStatuses = new Set(["bounced", "complained", "failed", "suppressed"]);
-  let completed = 0;
-  let failed = 0;
-  for (const row of rows) {
-    if (
-      row.deliveryStatus === "failed" ||
-      row.deliveryStatus === "not_configured" ||
-      (row.providerStatus !== null && failedProviderStatuses.has(row.providerStatus))
-    ) {
-      failed++;
-    } else if (row.deliveryStatus === "sent") {
-      completed++;
-    }
-  }
-  const pending = rows.length - completed - failed;
-  return {
-    id: "post_dive_reports",
-    total: rows.length,
-    completed,
-    pending,
-    failed,
-    status: closeoutAdminTaskStatus({
-      total: rows.length,
-      completed,
-      pending,
-      failed,
-    }),
-  };
-}
-
-async function assembleState(
-  db: AppDb,
-  shopId: string,
-  shopSlug: string,
-  timeZone: string,
-  now: Date,
-  t: StaffTranslator,
-  locale: string,
-  includeOpsAlerts: boolean,
-  /**
-   * The Today queue this render has **already** read.
-   *
-   * The shop home is now the only surface that reads a day's closing state
-   * (H-62 folded the close-out route away), and it has run `getTodayWork` for
-   * the spine before it gets here. Without this the same page would run the
-   * queue twice — about ten queries, the whole readiness pipeline, and two
-   * chances for one render to hold two answers about one boat. Omitted, the
-   * state reads its own (which is what `closeDay` does on purpose: the
-   * recorded act recomputes from the source of truth, never from what a page
-   * believed).
-   */
-  actions?: readonly TodayAction[],
-): Promise<DayCloseoutState> {
-  const shopDay = shopDayOf(now, timeZone);
-  const [tripsToday, gaps, queued, leftoverDecisions] = await Promise.all([
-    todaysTrips(db, shopId, timeZone, now),
-    listRollCallGaps(db, shopId, now),
-    actions ??
-      getTodayWork(
-        db,
-        shopId,
-        shopSlug,
-        timeZone,
-        now,
-        undefined,
-        t,
-        locale,
-        includeOpsAlerts,
-      ).then((work) => work.actions),
-    listLatestLeftoverDecisions(db, shopId, shopDay),
-  ]);
-  const adminTask = await postDiveReportTask(db, shopId, tripsToday, now);
-  return assembleDayCloseout({
-    trips: tripsToday,
-    gaps,
-    actions: queued,
-    adminTasks: adminTask ? [adminTask] : [],
-    leftoverDecisions,
-    timeZone,
-    now,
-  });
-}
-
-async function closesOfDay(db: AppDb, shopId: string, shopDay: string) {
-  return db
-    .select({
-      id: dayCloseouts.id,
-      shopDay: dayCloseouts.shopDay,
-      closedAt: dayCloseouts.closedAt,
-      outstanding: dayCloseouts.outstanding,
-      actorName: people.fullName,
-    })
-    .from(dayCloseouts)
-    .innerJoin(people, eq(people.id, dayCloseouts.actorPersonId))
-    .where(and(eq(dayCloseouts.shopId, shopId), eq(dayCloseouts.shopDay, shopDay)))
-    .orderBy(desc(dayCloseouts.seq));
-}
-
-function toRecord(row: Awaited<ReturnType<typeof closesOfDay>>[number]): DayCloseoutRecord {
-  return {
-    id: row.id,
-    shopDay: row.shopDay,
-    closedAt: row.closedAt,
-    actorName: row.actorName,
-    // Defensive parse: the column is ours, but a trail rendered for years must
-    // not crash the page over one malformed historical row.
-    outstanding: parseCloseoutSnapshot(row.outstanding),
-  };
-}
-
-/**
- * Everything the home's evening reading needs, in one pass.
- *
- * `includeOpsAlerts` mirrors the Today page's owner/manager gate: the
- * leftovers list is "what the Today queue would still show *you*", so it must
- * hold the same rows for the same viewer — which is free when the caller hands
- * its own `actions` in, and load-bearing when it does not.
+ * Everything the home's evening reading needs, in one pass: today's
+ * departures and the roll-call gaps that decide how each one settled.
  */
 export async function getDayCloseout(
   db: AppDb,
   shopId: string,
-  shopSlug: string,
   timeZone: string,
   now: Date = nowDate(),
-  t: StaffTranslator = staffTranslator("en-US"),
-  locale = "en-US",
-  includeOpsAlerts = false,
-  /** See `assembleState` — the Today queue this render already read. */
-  actions?: readonly TodayAction[],
-): Promise<DayCloseout> {
-  const state = await assembleState(
-    db,
-    shopId,
-    shopSlug,
-    timeZone,
-    now,
-    t,
-    locale,
-    includeOpsAlerts,
-    actions,
-  );
-  const closes = await closesOfDay(db, shopId, state.shopDay);
-  const latestRow = closes[0];
-  return {
-    state,
-    latest: latestRow ? toRecord(latestRow) : null,
-    closeCount: closes.length,
-  };
-}
-
-/**
- * Close the day: append the recorded act. The outstanding snapshot is
- * **recomputed here**, never taken from the form — closing with outstanding
- * items must record exactly what was outstanding according to the source of
- * truth at the moment of closing, whatever a stale tab believed. `decisions`
- * only says what the closer chose to do with each leftover; ids the day does
- * not actually hold are ignored (src/lib/closeout.ts).
- *
- * Never a refusal: the human is the authority on their own day. The surface
- * makes closing over an open head count deliberate; nothing makes it
- * impossible, and nothing downstream conditions on the row existing.
- */
-export async function closeDay(
-  db: AppDb,
-  input: {
-    shopId: string;
-    shopSlug: string;
-    timeZone: string;
-    actorPersonId: string;
-    decisions: Readonly<Record<string, LeftoverDecision>>;
-    now?: Date;
-    t?: StaffTranslator;
-    locale?: string;
-    includeOpsAlerts?: boolean;
-  },
-): Promise<DayCloseoutRecord> {
-  const now = input.now ?? nowDate();
-  const t = input.t ?? staffTranslator("en-US");
-  // Belt-and-braces tenant check: the session already ties actor to shop, but
-  // an attributed trail row must never name someone from another shop.
-  const [actor] = await db
-    .select({ fullName: people.fullName })
-    .from(people)
-    .where(and(eq(people.id, input.actorPersonId), eq(people.shopId, input.shopId)))
-    .limit(1);
-  if (!actor) throw new Error("close-out actor is not a person of this shop");
-  const state = await assembleState(
-    db,
-    input.shopId,
-    input.shopSlug,
-    input.timeZone,
-    now,
-    t,
-    input.locale ?? "en-US",
-    input.includeOpsAlerts ?? false,
-  );
-  const outstanding = buildCloseoutSnapshot(state, input.decisions);
-  const [row] = await db
-    .insert(dayCloseouts)
-    .values({
-      shopId: input.shopId,
-      shopDay: shopDayOf(now, input.timeZone),
-      actorPersonId: input.actorPersonId,
-      closedAt: now,
-      outstanding,
-    })
-    .returning({
-      id: dayCloseouts.id,
-      shopDay: dayCloseouts.shopDay,
-      closedAt: dayCloseouts.closedAt,
-    });
-  if (!row) throw new Error("day close-out insert returned no row");
-  return {
-    id: row.id,
-    shopDay: row.shopDay,
-    closedAt: row.closedAt,
-    actorName: actor.fullName,
-    outstanding,
-  };
+): Promise<DayCloseoutState> {
+  const [tripsToday, gaps] = await Promise.all([
+    todaysTrips(db, shopId, timeZone, now),
+    listRollCallGaps(db, shopId, now),
+  ]);
+  return assembleDayCloseout({ trips: tripsToday, gaps, timeZone, now });
 }
 
 /**

@@ -569,37 +569,21 @@ test.describe("automated accessibility scans of the staff detail surfaces", () =
     ]);
   });
 
-  test("the home's evening reading has no automated a11y violations, open and closed", async ({
-    page,
-    request,
-  }) => {
-    // 2 scans at ~3.5s each, plus the seed and the close-the-day round trip.
-    test.setTimeout(70_000);
-    // The ritual that ends every working day (ADR 20260804-day-closeout), which
-    // is a *state of the shop home* rather than a page of its own since H-62
+  test("the home's evening reading has no automated a11y violations", async ({ page, request }) => {
+    // 1 scan at ~3.5s, plus the seed.
+    test.setTimeout(40_000);
+    // The evening is a *state of the shop home* rather than a page of its own
     // (ADR 20260827-clearwater-surface-language, decision 4). The static route
     // table reaches the home in its morning reading; this is the DOM that only
     // exists once every station has settled — the settled stations with their
-    // marks, the leftovers group with a Dismiss on every row, and the one
-    // closing act. `seed-evening` moves the day's boats behind the frozen
-    // clock, which is process-wide and cannot be moved per test.
+    // marks and the day's takings. `seed-evening` moves the day's boats behind
+    // the frozen clock, which is process-wide and cannot be moved per test.
     await request.post("/api/test/seed-evening");
     await page.goto("/shop/blue-mantis", { waitUntil: "domcontentloaded" });
     await expect(
-      page.getByText("Still open — carries to tomorrow"),
-      "/shop/blue-mantis never rendered its closing block",
+      page.getByRole("region", { name: "What today made" }),
+      "/shop/blue-mantis never rendered its evening",
     ).toBeVisible();
-    await expectNoA11yViolations(page);
-
-    // And the state after the act. Closing appends a record and re-renders the
-    // page with a panel that did not exist a moment ago — who closed it, when,
-    // and what was outstanding — while nothing locks. A render that only exists
-    // after a write is the kind no route-level scan reaches.
-    await page
-      .getByRole("button", { name: /^Close the day( again)?$/ })
-      .first()
-      .click();
-    await expect(page.getByText(/Closed by Dana Reyes at/)).toBeVisible();
     await expectNoA11yViolations(page);
   });
 

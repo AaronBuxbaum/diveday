@@ -67,6 +67,20 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
             kind: "reefHistory" as const,
             note: "An old anchor among the coral. Let the crew point it out — it disappears into the reef remarkably well.",
           },
+          // The two the shop photographed: a landmark with a picture is the
+          // shape the briefing draws as a photo card.
+          {
+            name: "The big brain coral",
+            kind: "reefFormation" as const,
+            note: "A brain coral wider than a diver is tall, on the sand edge near the mooring. A good place to regroup.",
+            photoUrl: commonsImage("Brain coral 2 Molasses Reef 20080309.jpg"),
+          },
+          {
+            name: "Azure vase sponge",
+            kind: "reefFormation" as const,
+            note: "A bright blue vase sponge on the ridge. Look, don't touch: it bruises.",
+            photoUrl: commonsImage("Sponge 06 Molasses Reef 20230714.jpg"),
+          },
         ],
         fitTone: "welcoming" as const,
         fitNote:

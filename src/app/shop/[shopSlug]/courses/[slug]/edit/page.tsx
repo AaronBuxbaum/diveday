@@ -442,21 +442,37 @@ export default async function EditCoursePage({
                   </FieldGrid>
                 </EditorSection>
 
-                <EditorSection as="fieldset" id={photos.id} label={photos.label}>
-                  <FieldGrid columns={1} className="gap-y-5">
+                {/* **Every photo is one cell: the picture, its Remove tick, and its
+                    description under it.** The cover photo used to be a cell
+                    with its caption box three rows lower, past its own file
+                    picker, while each gallery photo carried its box inside its
+                    cell; the two read as different kinds of thing, and "Remove
+                    current photo" under one stood beside "Remove" under the
+                    rest. What a description is for is said once, in the
+                    section's line, not after every box (Aaron, 2026-10-05). */}
+                <EditorSection
+                  as="fieldset"
+                  id={photos.id}
+                  label={photos.label}
+                  description={t("courses.edit.photosDescription")}
+                >
+                  <FieldGrid columns={1} className="gap-y-6">
                     <Field
                       label={t("courses.edit.heroPhotoLabel")}
                       hint={t("courses.edit.heroPhotoHint")}
                       htmlFor="course-hero-photo"
                     >
-                      {/* One cell of the gallery's grid, so the hero is drawn
-                          the way every other stored photo here is taken off. */}
                       {course.heroImageUrl ? (
                         <div className={`mb-3 ${removablePhotoGridClass}`}>
-                          <RemovablePhoto
+                          <CoursePhotoCell
                             url={course.heroImageUrl}
-                            name="removeHero"
-                            label={t("courses.edit.removeCurrentPhoto")}
+                            removeName="removeHero"
+                            removeLabel={t("courses.edit.removeLabel")}
+                            altId="hero-alt"
+                            altName="heroImageAlt"
+                            alt={course.heroImageAlt ?? ""}
+                            altLabel={t("courses.edit.photoCaptionLabel")}
+                            altPlaceholder={t("courses.edit.photoCaptionPlaceholder")}
                           />
                         </div>
                       ) : null}
@@ -464,7 +480,11 @@ export default async function EditCoursePage({
                         id="course-hero-photo"
                         name="heroImageFile"
                         copy={{
-                          choose: t("shared.imageInput.choose"),
+                          choose: t(
+                            course.heroImageUrl
+                              ? "courses.edit.replaceHeroPhoto"
+                              : "shared.imageInput.choose",
+                          ),
                           chooseAnother: t("shared.imageInput.chooseAnother"),
                           wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
                           tooBigSuffix: t("shared.imageInput.tooBigSuffix", {
@@ -473,22 +493,6 @@ export default async function EditCoursePage({
                         }}
                       />
                     </Field>
-                    {course.heroImageUrl ? (
-                      <Field
-                        label={t("courses.edit.photoCaptionLabel")}
-                        hint={t("courses.edit.photoCaptionHint")}
-                        className="max-w-sm"
-                      >
-                        <input
-                          name="heroImageAlt"
-                          type="text"
-                          maxLength={200}
-                          defaultValue={course.heroImageAlt ?? ""}
-                          placeholder={t("courses.edit.photoCaptionPlaceholder", { n: 1 })}
-                          className={controlClass}
-                        />
-                      </Field>
-                    ) : null}
                     <Field
                       label={t("courses.edit.galleryPhotosLabel")}
                       hint={t("courses.edit.galleryPhotosHint", {
@@ -499,32 +503,20 @@ export default async function EditCoursePage({
                       {course.galleryPhotos.length > 0 ? (
                         <div className={`mb-3 ${removablePhotoGridClass}`}>
                           {course.galleryPhotos.map(({ url, alt }, index) => (
-                            <div key={url} className="flex flex-col gap-1.5">
-                              <RemovablePhoto
-                                url={url}
-                                name="removeGalleryUrls"
-                                value={url}
-                                label={t("courses.edit.removeLabel")}
-                              />
+                            <CoursePhotoCell
+                              key={url}
+                              url={url}
+                              removeName="removeGalleryUrls"
+                              removeValue={url}
+                              removeLabel={t("courses.edit.removeLabel")}
+                              altId={`gallery-alt-${index}`}
+                              altName="galleryAltValues"
+                              alt={alt}
+                              altLabel={t("courses.edit.photoCaptionLabel")}
+                              altPlaceholder={t("courses.edit.photoCaptionPlaceholder")}
+                            >
                               <input type="hidden" name="galleryAltUrls" value={url} />
-                              <Field
-                                label={t("courses.edit.photoCaptionLabel")}
-                                className="text-xs"
-                                htmlFor={`gallery-alt-${index}`}
-                              >
-                                <input
-                                  id={`gallery-alt-${index}`}
-                                  name="galleryAltValues"
-                                  type="text"
-                                  maxLength={200}
-                                  defaultValue={alt}
-                                  placeholder={t("courses.edit.photoCaptionPlaceholder", {
-                                    n: index + 2,
-                                  })}
-                                  className={controlClass}
-                                />
-                              </Field>
-                            </div>
+                            </CoursePhotoCell>
                           ))}
                         </div>
                       ) : null}
@@ -534,7 +526,7 @@ export default async function EditCoursePage({
                         multiple
                         maxFiles={MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION}
                         copy={{
-                          choose: t("shared.imageInput.choose"),
+                          choose: t("courses.edit.addGalleryPhotos"),
                           chooseAnother: t("shared.imageInput.chooseAnother"),
                           tooMany: t("shared.imageInput.tooMany", {
                             count: MAX_NEW_GALLERY_IMAGES_PER_SUBMISSION,
@@ -779,5 +771,52 @@ export default async function EditCoursePage({
         </div>
       </div>
     </main>
+  );
+}
+
+/**
+ * One stored photo in the editor: the picture with its Remove tick, and the
+ * box for its description straight under it. The cover photo and every
+ * gallery photo are drawn by this, so the two never drift apart again.
+ */
+function CoursePhotoCell({
+  url,
+  removeName,
+  removeValue,
+  removeLabel,
+  altId,
+  altName,
+  alt,
+  altLabel,
+  altPlaceholder,
+  children,
+}: {
+  url: string;
+  removeName: string;
+  removeValue?: string;
+  removeLabel: string;
+  altId: string;
+  altName: string;
+  alt: string;
+  altLabel: string;
+  altPlaceholder: string;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <RemovablePhoto url={url} name={removeName} value={removeValue} label={removeLabel} />
+      {children}
+      <Field label={altLabel} className="text-xs" htmlFor={altId}>
+        <input
+          id={altId}
+          name={altName}
+          type="text"
+          maxLength={200}
+          defaultValue={alt}
+          placeholder={altPlaceholder}
+          className={controlClass}
+        />
+      </Field>
+    </div>
   );
 }

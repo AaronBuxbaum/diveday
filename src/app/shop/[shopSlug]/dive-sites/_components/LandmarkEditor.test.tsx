@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   REPEATING_ITEM_CARD_CLASS,
@@ -24,6 +24,14 @@ const copy: LandmarkEditorCopy = {
   },
   noteLabel: "What to say about it",
   notePlaceholder: "The easiest above-water reference.",
+  photoLabel: "Photo",
+  removePhoto: "Remove photo",
+  imageInput: {
+    choose: "Choose a photo",
+    chooseAnother: "Choose a different photo",
+    wrongTypeSuffix: ": use a photo.",
+    tooBigSuffix: ": too big.",
+  },
   add: "Add a landmark",
   remove: "Remove",
   removeAriaLabel: "Remove the landmark {name}",
@@ -99,5 +107,46 @@ describe("LandmarkEditor", () => {
       expect(label).toHaveAttribute("for", control.id);
       expect(control.closest("label")).toBeNull();
     }
+  });
+
+  it("names each row's photo input by its row, and keeps a picked file with its row", () => {
+    const { container } = render(
+      <LandmarkEditor
+        initialLandmarks={[
+          { name: "Light", kind: "navigationMark", note: "" },
+          { name: "Anchor", kind: "reefHistory", note: "" },
+        ]}
+        copy={copy}
+      />,
+    );
+    const inputs = () => [...container.querySelectorAll<HTMLInputElement>('input[type="file"]')];
+    const anchorInput = inputs()[1];
+    expect(inputs().map((input) => input.name)).toEqual([
+      "landmarkPhotoFile-0",
+      "landmarkPhotoFile-1",
+    ]);
+    fireEvent.click(screen.getByRole("button", { name: "Remove the landmark Light" }));
+    // The Anchor's own input — the node a picked file lives in — moved up and
+    // was renamed for the row it now is.
+    expect(inputs()).toEqual([anchorInput]);
+    expect(anchorInput.name).toBe("landmarkPhotoFile-0");
+  });
+
+  it("shows a stored photo, and takes it off the posted list when removed", () => {
+    const { container } = render(
+      <LandmarkEditor
+        initialLandmarks={[
+          { name: "Light", kind: "navigationMark", note: "", photoUrl: "/dive-sites/light.jpg" },
+        ]}
+        copy={copy}
+      />,
+    );
+    const posted = () =>
+      JSON.parse(container.querySelector<HTMLInputElement>('input[name="landmarks"]')?.value ?? "");
+    expect(posted()[0].photoUrl).toBe("/dive-sites/light.jpg");
+    expect(container.querySelector('input[type="file"]')).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: copy.removePhoto }));
+    expect(posted()[0]).not.toHaveProperty("photoUrl");
+    expect(container.querySelector('input[type="file"]')).not.toBeNull();
   });
 });

@@ -627,25 +627,21 @@ new domain concept, define it here in the same PR.
   row would re-open that gap. The **refusal** counts too: the sentence a turned-down boarding tap
   shows (`shared.offlineManifest.single.record.notAllowed`) reads "wasn't ready to board when this
   copy was saved", never the present tense.
-- **Close-out** — the end-of-day ritual, and Today's evening mirror: one surface
-  (`/shop/<slug>/close-out`, ADR 20260804-day-closeout) where staff confirm the day actually
-  ended — every departure's end state read in strict precedence off the same roll-call evidence
-  Today chases, then the clock, and only then the crew's own **trip stage** (`departureStatus`,
-  `src/lib/closeout.ts`); today's unresolved queue rows each given an explicit **carry** or
-  **dismiss**; and tomorrow's first blockers as the parting glance. **A stage settles a station the
-  clock would leave open, and never reopens one the clock has closed** (issue #1480): inside the
-  late-arrival hour a live `home` reads `all_home`, because a crew member tapping Home at the rail
-  is the statement that buffer was standing in for rather than an inference from a time. Nothing
-  demotes — a stage that says `underway` over a departure the clock calls back is silence, not a
-  contradiction, and so is one the crew stopped maintaining. The asymmetry is affordable only
-  because the head count returns before any of it: the promotion is reached solely over a departure
-  whose divers are all already counted back aboard. Closing the day is a **recorded act, never a
-  gate**: an append-only `day_closeouts` row remembers who closed, when, and exactly what was
-  outstanding, and nothing anywhere conditions on it — a dismissed item resurfaces tomorrow if it
-  is still true, and re-opening is just working again and closing again. An open after-dive head
-  count or a boat still out makes the close *loud* (a by-name acknowledgement before the button)
-  but never impossible: the human is the authority on their own day, and the count stays chased
-  either way.
+- **Close-out** — the shop home's evening state (ADR 20260827-clearwater-surface-language,
+  decision 4): once every departure of the shop day has settled, each station reads its end state
+  in strict precedence off the same roll-call evidence Today chases, then the clock, and only then
+  the crew's own **trip stage** (`departureStatus`, `src/lib/closeout.ts`), and the day's takings
+  read beneath them. **A stage settles a station the clock would leave open, and never reopens one
+  the clock has closed** (issue #1480): inside the late-arrival hour a live `home` reads `all_home`,
+  because a crew member tapping Home at the rail is the statement that buffer was standing in for
+  rather than an inference from a time. Nothing demotes — a stage that says `underway` over a
+  departure the clock calls back is silence, not a contradiction, and so is one the crew stopped
+  maintaining. The asymmetry is affordable only because the head count returns before any of it:
+  the promotion is reached solely over a departure whose divers are all already counted back
+  aboard. There is **no act of closing the day**: a "Close the day" button that recorded who closed
+  it (`day_closeouts`) and a leftovers list with per-row Dismiss were removed on 2026-10-05,
+  because nothing read the record and the leftovers repeated Needs you (ADR 20260804-day-closeout,
+  withdrawn).
   The evening's **"All boats are home"** line is narrower than the close itself, and deliberately:
   it needs every departure of the shop day settled, every one of them reading `all_home`, **and**
   every *assigned* crew member accounted for at the closing checkpoint — the manifest's own
@@ -2061,21 +2057,6 @@ new domain concept, define it here in the same PR.
   weekend's day-one close and day-two open are two days rather than one long rest. The arithmetic is
   the dock-day timeline's own (`betweenDivesMinutes`), so the figure a diver reads before booking is
   the figure their thread reads after.
-- **Stated card** — a certification level a reader picks for themselves on a public page, held in
-  their own browser and nowhere else: no `people` row, no account, nothing that travels with a
-  booking. The departure page uses one to answer "does this day go deeper than what I hold?"
-  (`statedLevelDepthLimit`), and it is a claim about a **card** rather than about a person — no
-  junior age band, no Deep specialty, because neither has been said. The junior half of that is
-  wrong-side-permissive and was **raised and deliberately accepted** (issue #1482, owner's call
-  2026-09-10): a child picking "Open Water" reads the adult 18 m, and the answer is left alone
-  because every sentence it renders claims the card in so many words — the clean day ("nothing on
-  this day goes past the 18 m your card covers") as much as the over-limit one, since the clean day
-  is the branch the gap happens on — because asking an anonymous stranger for a child's date of
-  birth costs more than the gap it closes, and because the roster's boarding-time depth advisory
-  still applies the band in full from a real date of birth (`diverDepthLimit`). The Deep half needs
-  no decision — a specialty holder reading their base rung understates what they may do. It
-  **informs and gates nothing** (H-08), and it is not a **self-declared card**, which is an answer
-  given *to the shop* on a form and stored.
 - **Material generation** — a shop's explicit assertion that a new waiver version changes the
   bargain, and therefore that standing signatures no longer cover it
   (`waiver_materiality_decisions`, ADR

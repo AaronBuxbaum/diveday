@@ -1,9 +1,4 @@
-import type {
-  CloseoutAdminTaskStatus,
-  CloseoutDepartureStatus,
-  CloseoutPlanChange,
-  LeftoverDecision,
-} from "@/lib/closeout";
+import type { CloseoutDepartureStatus, CloseoutPlanChange } from "@/lib/closeout";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { OpenSeatsDebrief } from "@/lib/open-seats";
 import type { PlanChangeReason } from "@/lib/plan-change";
@@ -29,13 +24,6 @@ export const CLOSEOUT_STATUS_KEYS: Record<CloseoutDepartureStatus, StaffMessageK
   still_out: "closeout.departures.status.stillOut",
   count_open: "closeout.departures.status.countOpen",
   not_departed: "closeout.departures.status.notDeparted",
-};
-
-/** The administrative task chip; its tone is derived in `src/lib/closeout.ts`. */
-export const CLOSEOUT_ADMIN_STATUS_KEYS: Record<CloseoutAdminTaskStatus, StaffMessageKey> = {
-  complete: "closeout.admin.status.complete",
-  pending: "closeout.admin.status.pending",
-  attention: "closeout.admin.status.attention",
 };
 
 /** Each gap reason's own sentence — deliberately never a shared one (DOM-H3). */
@@ -186,9 +174,3 @@ export function planChangeText(
     changes: cachedListFormat(locale, { style: "long", type: "conjunction" }).format(clauses),
   });
 }
-
-/** The recorded decision's word on a snapshot leftover. */
-export const CLOSEOUT_DECISION_KEYS: Record<LeftoverDecision, StaffMessageKey> = {
-  carry: "closeout.record.carried",
-  dismiss: "closeout.record.dismissed",
-};

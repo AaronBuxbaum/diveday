@@ -49,4 +49,15 @@ describe("dive-site landmarks", () => {
     expect(parseDiveSiteLandmarks(undefined)).toEqual([]);
     expect(parseDiveSiteLandmarks({ name: "not a list" })).toEqual([]);
   });
+
+  it("keeps a photo only from our own storage or a root-relative path", () => {
+    const [kept, remote, protocolRelative] = parseDiveSiteLandmarks([
+      { name: "Light", photoUrl: "/dive-sites/light.jpg" },
+      { name: "Anchor", photoUrl: "https://tracker.example/anchor.jpg" },
+      { name: "Winch", photoUrl: "//tracker.example/winch.jpg" },
+    ]);
+    expect(kept?.photoUrl).toBe("/dive-sites/light.jpg");
+    expect(remote).not.toHaveProperty("photoUrl");
+    expect(protocolRelative).not.toHaveProperty("photoUrl");
+  });
 });

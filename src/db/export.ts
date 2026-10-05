@@ -39,7 +39,6 @@ import {
   buddyPairMembers,
   certificationLevel,
   certifications,
-  closeoutLeftoverDecisions,
   courseInquiries,
   courses,
   crewAssignmentRequests,
@@ -710,12 +709,6 @@ export async function loadShopExportBundleInput(
           asc(gearReservations.id),
         );
 
-      const closeoutLeftoverDecisionRows = await tx
-        .select()
-        .from(closeoutLeftoverDecisions)
-        .where(eq(closeoutLeftoverDecisions.shopId, shopId))
-        .orderBy(asc(closeoutLeftoverDecisions.seq));
-
       const checklistItemRows = await tx
         .select()
         .from(preDepartureChecklistItems)
@@ -917,6 +910,7 @@ export async function loadShopExportBundleInput(
             "brand_display_font",
             "brand_hero_image_url",
             "brand_hero_image_alt",
+            "shopfront_photo_urls",
             "established_year",
             "brand_badges",
             "created_at",
@@ -970,6 +964,7 @@ export async function loadShopExportBundleInput(
               shop.brandDisplayFont,
               shop.brandHeroImageUrl,
               shop.brandHeroImageAlt,
+              JSON.stringify(shop.shopfrontPhotoUrls),
               shop.establishedYear,
               JSON.stringify(shop.brandBadges),
               shop.createdAt,
@@ -2753,30 +2748,6 @@ export async function loadShopExportBundleInput(
             ];
           }),
           note: EXPORT_FILE_NOTES["gear_reservations.csv"],
-        },
-        {
-          file: "closeout_leftover_decisions.csv",
-          header: [
-            "id",
-            "shop_day",
-            "action_id",
-            "decision",
-            "actor_person_id",
-            "actor_name",
-            "decided_at",
-            "seq",
-          ],
-          rows: closeoutLeftoverDecisionRows.map((row) => [
-            row.id,
-            row.shopDay,
-            row.actionId,
-            row.decision,
-            row.actorPersonId,
-            personName.get(row.actorPersonId),
-            row.decidedAt,
-            row.seq,
-          ]),
-          note: EXPORT_FILE_NOTES["closeout_leftover_decisions.csv"],
         },
         {
           file: "pre_departure_checklist_items.csv",
@@ -5055,12 +5026,6 @@ export async function loadShopExportCounts(
     ),
     "gear_reservations.csv": await countOf(
       db.select({ n: count() }).from(gearReservations).where(eq(gearReservations.shopId, shopId)),
-    ),
-    "closeout_leftover_decisions.csv": await countOf(
-      db
-        .select({ n: count() })
-        .from(closeoutLeftoverDecisions)
-        .where(eq(closeoutLeftoverDecisions.shopId, shopId)),
     ),
     "pre_departure_checklist_items.csv": await countOf(
       db

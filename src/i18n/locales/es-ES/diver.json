@@ -37,7 +37,6 @@
       },
       "cardNumber": "Número de certificación",
       "levelUnsaid": "Prefiero no decirlo",
-      "useStatedLevel": "Usar {level}, como dijiste arriba",
       "levelNone": "Todavía no tengo certificación",
       "levelInfoLabel": "Por qué preguntamos por la certificación",
       "levelDescription": "El centro compara esto con lo que pide cada salida. Respóndelo aunque no tengas la certificación a mano.",
@@ -63,6 +62,7 @@
   "schedule": {
     "eyebrow": "Salidas",
     "title": "Calendario",
+    "shopPhotos": "Fotos del centro",
     "timesInZone": "Todos los horarios de abajo están en la hora local de {shop} ({zone}).",
     "timesInZoneFooter": "Las horas son locales de {shop} ({zone}).",
     "embedSeeFullSchedule": "Ver el calendario completo",
@@ -213,12 +213,7 @@
     },
     "dayProfile": {
       "bottomTime": "{minutes, plural, one {Alrededor de # minuto en el agua} other {Alrededor de # minutos en el agua}}",
-      "surfaceInterval": "{minutes, plural, one {Alrededor de # minuto en superficie} other {Alrededor de # minutos en superficie}}",
-      "pickerLabel": "Compara estas profundidades con tu certificación",
-      "within": "Nada de este día pasa de los {limit} que cubre tu certificación.",
-      "withinNoCard": "Una primera inmersión sin certificación no pasa de {limit}, y nada de este día pasa de ahí.",
-      "over": "La inmersión {number} es en un sitio que llega a {site}, más de los {limit} que cubre tu certificación. Puedes reservar igual: avisa a la tripulación y planificarán tu inmersión dentro de tu límite.",
-      "overNoCard": "La inmersión {number} es en un sitio que llega a {site}. Una primera inmersión sin certificación no pasa de {limit}. Puedes reservar igual: pregunta a la tripulación qué necesita este día."
+      "surfaceInterval": "{minutes, plural, one {Alrededor de # minuto en superficie} other {Alrededor de # minutos en superficie}}"
     },
     "automatedOutlook": "Previsión marina automática",
     "waterTemperature": "Temperatura del agua",
@@ -1890,7 +1885,7 @@
     "dateOptionsHeading": "¿Cuándo te gustaría bucear?",
     "whenSuits": "Fechas flexibles",
     "moreDetails": "Más detalles",
-    "whereYouAreUpTo": "Por dónde vas",
+    "whereYouAreUpTo": "Tu experiencia de buceo",
     "chooseOne": "Elige una opción",
     "anythingElse": "Algo más",
     "getInTouch": "Ponte en contacto",
@@ -1912,8 +1907,8 @@
     "requestDateBody": "Cuéntanos qué te gustaría bucear y cuándo. No se reserva ni se aparta nada. Veremos quién más pide esos días y te respondemos.",
     "whatToDive": "¿Qué te gustaría bucear?",
     "whatToDivePlaceholder": "Dos inmersiones en los pecios",
-    "preferredDate": "Fecha preferida",
-    "alternateDate": "Fecha alternativa",
+    "preferredDate": "Primera opción de fecha",
+    "alternateDate": "Segunda opción de fecha",
     "experience": {
       "never": "Nunca he buceado",
       "tried": "He probado el buceo una vez, pero no estoy certificado",
@@ -2510,7 +2505,7 @@
       "motion": {
         "eyebrow": "La temporada",
         "title": "El tablero, la tripulación y el dinero",
-        "summary": "Arma las salidas de la temporada una vez y ponles tripulación. El cobro llega a tu propia cuenta de Stripe, y el cierre del día anota lo que pasó para que mañana abra sobre eso."
+        "summary": "Arma las salidas de la temporada una vez y ponles tripulación. El cobro llega a tu propia cuenta de Stripe, y por la tarde ves cada barco de vuelta y lo que dejó el día."
       }
     },
     "price": {
@@ -2585,7 +2580,7 @@
         "item12": "Un registro de llegada en el mostrador pensado para la hora punta",
         "item13": "Una lista de verificación previa a la salida, escrita con las palabras de la tripulación",
         "item14": "Una cancelación por mal tiempo en un toque: cada buceador recibe opciones para volver a reservar, con los pagos con tarjeta reembolsados",
-        "item15": "Un cierre del día, con los pendientes trasladados a mañana",
+        "item15": "Una vista de la tarde: cada barco de vuelta, su recuento cerrado y lo que dejó el día",
         "item16": "Una bitácora de salida con los hechos registrados del día, y un código para cotejar la impresión con el registro"
       },
       "gear": {
@@ -2596,7 +2591,7 @@
         "item4": "Entregas y devoluciones con sello de hora, y una lista de lo que vuelve hoy",
         "item5": "Plazos de mantenimiento (servicio, hidrostática, visual y limpieza de O2) por fecha o por inmersiones",
         "item6": "Un comprobante de alquiler imprimible: qué lleva el buceador y cuándo lo devuelve",
-        "item7": "Devoluciones atrasadas y mantenimiento pendiente en la lista Pendiente de Hoy y en el cierre del día"
+        "item7": "Devoluciones atrasadas y mantenimiento pendiente en la lista Pendiente de Hoy"
       },
       "money": {
         "title": "Dinero",

@@ -15,8 +15,8 @@ const copy: DateRequestCopy = {
   whatToDive: "What would you like to dive?",
   whatToDivePlaceholder: "Two dives on the wrecks",
   dateOptionsHeading: "When would you like to dive?",
-  preferredDate: "Preferred date",
-  alternateDate: "Alternative date",
+  preferredDate: "First-choice date",
+  alternateDate: "Second-choice date",
   yourName: "Your name",
   namePlaceholder: "Priya Sharma",
   yourEmail: "Your email",
@@ -29,7 +29,7 @@ const copy: DateRequestCopy = {
   whenSuits: "Flexible timing",
   whenSuitsPlaceholder: "Any weekend in August",
   moreDetails: "More details",
-  whereYouAreUpTo: "Where you are up to",
+  whereYouAreUpTo: "Your diving experience",
   chooseOne: "Choose one",
   anythingElse: "Anything else",
   messagePlaceholder: "We are ashore on Tuesday.",
@@ -74,7 +74,7 @@ function fillEmail(value = "priya@example.com") {
 }
 
 function pickExperience(value = "never") {
-  fireEvent.change(screen.getByRole("combobox", { name: /Where you are up to/ }), {
+  fireEvent.change(screen.getByRole("combobox", { name: /Your diving experience/ }), {
     target: { value },
   });
 }
@@ -94,7 +94,7 @@ afterEach(() => {
 });
 
 describe("DateRequestForm — experience is optional", () => {
-  it("lets a contact send without choosing where they are up to", async () => {
+  it("lets a contact send without choosing their diving experience", async () => {
     const submitInquiry = succeeds();
     renderInquiry(submitInquiry);
 
@@ -107,7 +107,7 @@ describe("DateRequestForm — experience is optional", () => {
 
   it("does not require the experience control in the browser", () => {
     renderInquiry(vi.fn());
-    expect(screen.getByRole("combobox", { name: /Where you are up to/ })).not.toBeRequired();
+    expect(screen.getByRole("combobox", { name: /Your diving experience/ })).not.toBeRequired();
   });
 
   it("includes the experience answer when the diver volunteers it", async () => {
@@ -390,10 +390,10 @@ describe("DateRequestForm — asking for a date", () => {
     renderInquiry(submitInquiry);
 
     fillEmail();
-    fireEvent.change(screen.getByLabelText(/Preferred date/), {
+    fireEvent.change(screen.getByLabelText(/First-choice date/), {
       target: { value: "2026-09-12" },
     });
-    fireEvent.change(screen.getByLabelText(/Alternative date/), {
+    fireEvent.change(screen.getByLabelText(/Second-choice date/), {
       target: { value: "2026-09-19" },
     });
     pickExperience();
@@ -449,7 +449,7 @@ describe("DateRequestForm — four asks at rest", () => {
     const more = container.querySelector("details");
     expect(more).not.toBeNull();
     expect(more).not.toHaveAttribute("open");
-    for (const label of [/Alternative date/, /Where you are up to/, /Anything else/]) {
+    for (const label of [/Second-choice date/, /Your diving experience/, /Anything else/]) {
       expect(more?.contains(screen.getByLabelText(label))).toBe(true);
     }
 
@@ -471,7 +471,7 @@ describe("DateRequestForm — four asks at rest", () => {
     const { container } = renderInquiry(vi.fn());
     const more = container.querySelector("details");
 
-    for (const label of [/Preferred date/, /Flexible timing/, /Your email/, /How many divers/]) {
+    for (const label of [/First-choice date/, /Flexible timing/, /Your email/, /How many divers/]) {
       expect(more?.contains(screen.getByLabelText(label))).toBe(false);
     }
   });
