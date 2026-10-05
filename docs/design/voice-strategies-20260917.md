@@ -6,6 +6,10 @@ page, with 4, Over a Beer, on `/about`.** The voice now lives in [brand.md](bran
 registers of the public pages"); this document is the dated record of the diagnosis and the
 alternatives, and the samples below are proposals, not the pages as shipped.
 
+**Amended 2026-10-05** (H-93): Margin Notes alone did not sell, so a section on a public page now
+leads with what the shop gets and keeps the builder's notes as the captions under its screen.
+[brand.md](brand.md) carries the amended register.
+
 The owner's brief (2026-09-17): the public pages (`/`, `/product`, `/pricing`, `/about`,
 `/onboard`, `/switching/*`, `/dive/*`, `/status`, `/privacy`, `/terms`) all read as machine-written
 despite the September sweep. Define one human voice from the top down, show it applied to one page

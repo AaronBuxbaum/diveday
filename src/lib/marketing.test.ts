@@ -57,6 +57,8 @@ describe("the price is interpolated, never spelled out in a bundle", () => {
     "marketing.home.priceLine",
     "marketing.product.pricingLink",
     "marketing.about.seeCost",
+    "marketing.featureChrome.includedPrice",
+    "marketing.featureChrome.closePrice",
   ] as const;
 
   for (const locale of DIVER_LOCALES) {
@@ -315,7 +317,7 @@ describe("the manifest's offline answer lives on /product alone", () => {
     it(`still answers it beside the screen it is about in ${locale}`, () => {
       const note = marketingMessages(locale)["marketing.product.dockNote"];
       expect(note).toBeDefined();
-      expect(note).toMatch(locale === "en-US" ? /saves the manifest/i : /guarda el listado/i);
+      expect(note).toMatch(locale === "en-US" ? /saves the manifest/i : /guarda el manifiesto/i);
     });
   }
 });

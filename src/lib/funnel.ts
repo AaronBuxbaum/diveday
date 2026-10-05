@@ -1,3 +1,4 @@
+import { FEATURE_PAGE_SLUGS, type FeaturePageSlug } from "./feature-pages";
 import { MIGRATION_GUIDE_SLUGS } from "./migration-guides";
 import { publicSchedulePath } from "./public-routes";
 
@@ -129,9 +130,26 @@ const FIXED_SOURCES = [
  * widen the type rather than enumerating it — `guideSource` is the only way to
  * build one, and the route has already 404'd an unregistered slug before any
  * page can ask for its tag.
+ *
+ * A feature page contributes its tags the same way, one per page and position
+ * (`featureSource`): which feature a shop owner opened the demo from is the
+ * question the feature pages exist to answer, so they are never folded into
+ * one `product` bucket.
  */
-export type FunnelSource = (typeof FIXED_SOURCES)[number] | `switching-${string}`;
+export type FunnelSource =
+  | (typeof FIXED_SOURCES)[number]
+  | `switching-${string}`
+  | `feature-${FeaturePageSlug}`
+  | `feature-${FeaturePageSlug}-${FeaturePosition}`;
 export type GuidePosition = "mid" | "close";
+
+/**
+ * A feature page's doors, by position: the hero pair is the page's own tag,
+ * `close` is the closing band's pair. Split for the reason the file comment
+ * gives: a reader who moved at the screen is a different moment from one who
+ * read the questions and the limits first.
+ */
+export type FeaturePosition = "close";
 
 const FIXED = new Set<string>(FIXED_SOURCES);
 
@@ -139,6 +157,15 @@ const FIXED = new Set<string>(FIXED_SOURCES);
 export function guideSource(slug: string, position?: GuidePosition): FunnelSource {
   return `switching-${slug}${position ? `-${position}` : ""}`;
 }
+
+/** The funnel tag for one feature page's doors, from the registry's own slug. */
+export function featureSource(slug: FeaturePageSlug, position?: FeaturePosition): FunnelSource {
+  return position ? `feature-${slug}-${position}` : `feature-${slug}`;
+}
+
+const FEATURE_SOURCES = new Set<string>(
+  FEATURE_PAGE_SLUGS.flatMap((slug) => [featureSource(slug), featureSource(slug, "close")]),
+);
 
 /**
  * Normalize a funnel tag that arrived from the visitor's own request — a query
@@ -150,6 +177,7 @@ export function eventSource(value: unknown): FunnelSource | "unknown" {
   if (typeof value !== "string") return "unknown";
   const known =
     FIXED.has(value) ||
+    FEATURE_SOURCES.has(value) ||
     MIGRATION_GUIDE_SLUGS.some((slug) =>
       [guideSource(slug), guideSource(slug, "mid"), guideSource(slug, "close")].some(
         (source) => source === value,

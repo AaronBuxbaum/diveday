@@ -380,6 +380,7 @@ export function shapeTells(value) {
 const SHARED_NAMESPACES = [
   "marketing.common.",
   "marketing.features.",
+  "marketing.featureChrome.",
   "marketing.price.",
   "marketing.export.",
   "marketing.capabilities.",
@@ -391,6 +392,10 @@ const SHARED_NAMESPACES = [
 export function pageOf(key) {
   if (SHARED_NAMESPACES.some((prefix) => key.startsWith(prefix))) return null;
   if (key.startsWith("marketing.guides.")) return "guides";
+  // Each feature page is its own page, unlike the guides: they share a
+  // template (`marketing.featureChrome.*`, shared above) but none of their
+  // words, so a phrase three of them repeat is the tic this rule exists for.
+  if (key.startsWith("marketing.featurePages.")) return `featurePage.${key.split(".")[2]}`;
   const [head, page] = key.split(".");
   if (head === "marketing" || head === "switching") return `${head}.${page}`;
   if (key.startsWith("account.onboard.")) return "onboard";
@@ -453,13 +458,17 @@ export const HOUSE_PHRASE_ALLOWLIST = new Set([
   "switching to diveday",
   "one row per",
   "no setup fee",
+  "date of birth",
   "the full list",
+  "book now button",
+  "needs you list",
   "hoja de cálculo",
   "registros de certificación",
   "día de buceo",
   "contacto de emergencia",
   "tallas de alquiler",
   "historial de pagos",
+  "fecha de nacimiento",
   "centros de buceo",
   "centro de buceo",
   "base de datos",
@@ -493,6 +502,12 @@ export const HOUSE_PHRASE_ALLOWLIST = new Set([
   "nombre del centro",
   "centro de muestra",
   "la vista previa",
+  "lista de espera",
+  "sitio de buceo",
+  "equipo de alquiler",
+  "manifiesto de barco",
+  "la lista pendiente",
+  "la pestaña equipo",
   "inicio de sesión",
   "exportación de datos",
   "lee una persona",

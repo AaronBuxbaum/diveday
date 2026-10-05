@@ -28,17 +28,17 @@ import type { DiverLocale } from "@/i18n/settings";
  * (135 + 136 in 272), and es-ES's "EMBARCADOS" (69.3px) outgrew its stat
  * tile's 67.3px label box.
  */
-const MOCK_INSET_X = "px-5";
-const MOCK_BODY = `${MOCK_INSET_X} py-5`;
-const PHONE_INSET_X = "px-4";
-const PHONE_BODY = `${PHONE_INSET_X} py-4`;
+export const MOCK_INSET_X = "px-5";
+export const MOCK_BODY = `${MOCK_INSET_X} py-5`;
+export const PHONE_INSET_X = "px-4";
+export const PHONE_BODY = `${PHONE_INSET_X} py-4`;
 
 /**
  * The one primary button the mocks draw ("Mark boarded", "Download", "Leave my
  * review"), at the `sm` rung's 44px. The recap's was `min-h-10`, a 40px step
  * off the button ladder, in an otherwise identical string (K-516).
  */
-const MOCK_PRIMARY_BUTTON =
+export const MOCK_PRIMARY_BUTTON =
   "inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground";
 
 /**
@@ -52,10 +52,10 @@ const MOCK_PRIMARY_BUTTON =
  * pair with 9px to spare, and a 12px floor broke it onto two lines.
  */
 /** The mocks' secondary button, the primary's twin in the bordered material. */
-const MOCK_SECONDARY_BUTTON =
+export const MOCK_SECONDARY_BUTTON =
   "inline-flex min-h-11 items-center justify-center rounded-lg border border-border bg-surface text-xs font-semibold text-foreground";
 
-function AppBar({ label, inset = MOCK_INSET_X }: { label: string; inset?: string }) {
+export function AppBar({ label, inset = MOCK_INSET_X }: { label: string; inset?: string }) {
   return (
     <div
       className={`flex flex-wrap items-center justify-between gap-x-1.5 gap-y-0.5 border-b border-border bg-surface ${inset} py-3 text-xs text-muted`}
@@ -77,7 +77,7 @@ function AppBar({ label, inset = MOCK_INSET_X }: { label: string; inset?: string
  * "Tanks analyzed & loaded" needed at 390, and a row that had fitted wrapped
  * to start its second line with "&" (K-578 review).
  */
-function ChecklistRow({
+export function ChecklistRow({
   label,
   status,
   tone,
@@ -146,20 +146,26 @@ export function CaptainRollCallFallback({ locale }: { locale: DiverLocale }) {
               >
                 <p className="text-sm font-semibold">{name}</p>
                 <p className="mt-0.5 text-xs text-success">{t("fallback.readyWhenSaved")}</p>
-                {/* The primary takes the room the secondary leaves: "Mark not
-                    boarded" on one line, even in /about's 290px phone. */}
-                <div className="mt-2 grid grid-cols-[1fr_auto] gap-1.5">
+                {/* The primary takes the room the secondary leaves, and the
+                    pair stacks only where the two will not fit on one line:
+                    the Spanish pair needs 273px, and /about's phone and the
+                    boat manifest page at 390 give it 232 and 254. A grid
+                    with a fixed `1fr auto` overflowed there instead, and
+                    widened the page (design review, 2026-10-05). On one line
+                    `grow-[99]` hands nearly all the spare room to the
+                    primary; alone on a line, either button fills it. */}
+                <div className="mt-2 flex flex-wrap gap-1.5">
                   <button
                     type="button"
                     disabled
-                    className={`${MOCK_PRIMARY_BUTTON} whitespace-nowrap`}
+                    className={`${MOCK_PRIMARY_BUTTON} grow-[99] whitespace-nowrap`}
                   >
                     {t("fallback.markBoarded")}
                   </button>
                   <button
                     type="button"
                     disabled
-                    className={`${MOCK_SECONDARY_BUTTON} whitespace-nowrap px-2`}
+                    className={`${MOCK_SECONDARY_BUTTON} grow whitespace-nowrap px-2`}
                   >
                     {t("fallback.markNotBoarded")}
                   </button>

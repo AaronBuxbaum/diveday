@@ -228,7 +228,7 @@ lines should have a destination or explain a change; they should not wiggle for 
 | Precise where safety or money is involved | Overconfident or vague |
 | Lightly playful when a real moment is complete | Loud, breathless, or celebratory all the time |
 | Helpful about the next action | A software vendor talking about “solutions” and “platforms” |
-| On the public pages, the builder pointing at the screen from the margin, and on `/about`, someone who dives answering a shop owner's questions out loud | A landing page describing the screen, or a brand talking about itself |
+| On the public pages, what a shop gets, proved on the product's own screen with the builder's notes beside it, and on `/about`, someone who dives answering a shop owner's questions out loud | A landing page describing the screen, or a brand talking about itself |
 
 Copy rules:
 
@@ -253,9 +253,29 @@ of the six voices drawn in [voice-strategies-20260917.md](voice-strategies-20260
 pages speak in **6, Margin Notes**, and `/about` in **4, Over a Beer**. That document is the dated
 record of the alternatives and the diagnosis; this section is the voice.
 
-**The builder's note** (every public page but `/about`). Stop writing marketing copy. A page is
-the product's own screens with short notes from the person who built them, pointing at specific
-things, and the brand voice is the note.
+**Amended 2026-10-05** (H-93): the sale goes back in front of the notes. Under H-89 alone a page
+showed the screens and annotated them and never said why a shop would want any of it, so the
+headlines described the page ("Four screens from a dive shop's day, with notes from the person who
+made them") and the owner's brief was that the pages were not selling. A section now says **what
+the shop gets, then shows the screen that proves it, then opens the demo on that screen**. The
+builder's notes stay, as the proof's captions, and `/about` keeps its spoken register.
+
+**The selling register** (every public page but `/about`).
+
+- **The heading and the lede say what the shop gets**, as a fact about the shop's own day: "Waivers
+  and medical forms come back signed before the diver walks in." It is a result an owner wants,
+  never an evaluation of DiveDay ("easy", "powerful", "calm") and never a mood to adopt. The
+  rival-paste test in [product/marketing.md](../product/marketing.md) binds it: a sentence any
+  booking app could print truthfully names no result.
+- **The screen is the proof**, and the notes beside it are how a reader checks the heading against
+  it. A feature page carries three.
+- **The demo opens on that screen.** A feature page's own "Try the live demo" carries the page's
+  role and landing (`src/lib/feature-pages.ts`), so the visitor arrives on the screen they just
+  read about rather than on Today; an annotated screen on a page that argues several things keeps
+  its link-weight `ScreenDoor`, as below.
+
+**The builder's note** is the caption under a screen, wherever one is drawn: the product's own
+screen, with short notes from the person who built it pointing at specific things.
 
 - A note is under twenty words and names **one visible thing** on the screen beside it. It may give
   a reason or a limit. It never gives an evaluation ("fast", "simple", "calm"), and it never asks
@@ -272,11 +292,12 @@ things, and the brand voice is the note.
   shared pair. A screen that reaches its reader another way has no door and says so in its last
   note: the recap arrives by email once the boat is back, so its last note is "No door here on
   purpose", and `e2e/marketing.spec.ts` pins the band at three doors for four screens.
-- Headings say what the screen is, in the builder's words ("The manifest, on a phone with no
-  signal."), never what the reader should feel.
-- Prose that is not a note (the price, the terms, the export claim, the FAQ answers) is the
-  notice-board register: the fact, in the order a buyer asks for it, with no sentence spent on how
-  to feel about it.
+- A heading over a screen says what the shop gets from it, and the screen's name in the builder's
+  words ("The manifest, on a phone with no signal.") is a fine way to say it when the name is the
+  result. It never says what the reader should feel.
+- Prose that is neither a heading nor a note (the steps, what a feature does not do, the price, the
+  terms, the export claim, the FAQ answers) is the notice-board register: the fact, in the order a
+  buyer asks for it, with no sentence spent on how to feel about it.
 
 **The spoken register** (`/about` only). Write the way the best diver in the shop explains the
 software to a mate after the boat is tied up.
@@ -298,8 +319,8 @@ software to a mate after the boat is tied up.
   how a fact is said, never which facts are said.
 
 Both registers keep every rule under "What gives us away" below. The one they bend is the heading
-rule: a builder's heading names the screen, and a spoken heading is a question with the mark left
-off, and neither argues.
+rule: a selling heading states what the shop gets, which the screen under it can be checked
+against, and a spoken heading is a question with the mark left off. Neither is an aphorism.
 
 ### Before / after examples
 

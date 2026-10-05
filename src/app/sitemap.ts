@@ -6,13 +6,15 @@ import { getDb } from "@/db/client";
 import { listActiveCoursesForSitemap } from "@/db/courses";
 import { listDiveSitesForSitemap } from "@/db/dive-sites";
 import { listShopsForSitemap } from "@/db/shops";
+import { FEATURE_PAGE_SLUGS, featurePagePath } from "@/lib/feature-pages";
 import { MIGRATION_GUIDE_SLUGS } from "@/lib/migration-guides";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicCoursePath, publicDiveSitePath, publicSchedulePath } from "@/lib/public-routes";
 
 /**
  * The public marketing surface (the pages in docs/product/marketing.md plus
- * one entry per live switching guide), plus every shop's public schedule,
+ * one entry per feature page and per live switching guide), plus every shop's
+ * public schedule,
  * active course pages and dive-site pages — all of which carry canonicals and
  * JSON-LD (docs ADR
  * 20260729-booking-page-structured-data) and are indexable by design. Demo
@@ -39,6 +41,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const entries: Array<{ path: string; priority: number }> = [
     { path: "/", priority: 1 },
     { path: "/product", priority: 0.9 },
+    // One page per job a shop hires DiveDay for (`src/lib/feature-pages.ts`):
+    // the entry a shop owner searching for "dive shop waiver software" lands
+    // on, so they sit just under the pages that sell the whole.
+    ...FEATURE_PAGE_SLUGS.map((slug) => ({ path: featurePagePath(slug), priority: 0.8 })),
     { path: "/pricing", priority: 0.9 },
     { path: "/about", priority: 0.6 },
     { path: "/switching", priority: 0.7 },

@@ -69,3 +69,44 @@ describe("the funnel's two doors", () => {
     expect(column.split(" ")).toEqual(expect.arrayContaining(["w-full", "sm:w-auto"]));
   });
 });
+
+/**
+ * A feature page opens the demo on its own screen, as the role it is about
+ * (`src/lib/feature-pages.ts`); every other caller opens Today as the owner,
+ * which is what an absent field means to `enterDemoAction`.
+ */
+describe("where the demo opens", () => {
+  const hidden = (container: HTMLElement, name: string) =>
+    container.querySelector<HTMLInputElement>(`input[type="hidden"][name="${name}"]`)?.value;
+
+  it("names the role and the screen a feature page asked for", () => {
+    const { container } = render(
+      <FunnelCtas
+        locale="en-US"
+        source="feature-rental-gear"
+        demo={{ role: "owner", landing: "gear" }}
+      />,
+    );
+    expect(hidden(container, "role")).toBe("owner");
+    expect(hidden(container, "landing")).toBe("gear");
+    expect(hidden(container, "source")).toBe("feature-rental-gear");
+  });
+
+  it("sends a diver door with no landing, since a diver has no staff page", () => {
+    const { container } = render(
+      <FunnelCtas
+        locale="en-US"
+        source="feature-online-booking"
+        demo={{ role: "diver", landing: null }}
+      />,
+    );
+    expect(hidden(container, "role")).toBe("diver");
+    expect(hidden(container, "landing")).toBeUndefined();
+  });
+
+  it("sends neither when the page named nothing", () => {
+    const { container } = render(<FunnelCtas locale="en-US" source="pricing" />);
+    expect(hidden(container, "role")).toBeUndefined();
+    expect(hidden(container, "landing")).toBeUndefined();
+  });
+});

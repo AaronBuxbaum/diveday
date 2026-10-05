@@ -1,4 +1,5 @@
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
+import { FEATURE_PAGE_SLUGS, featurePagePath } from "../src/lib/feature-pages";
 import { expect, READ_ONLY, test } from "./fixtures";
 
 /**
@@ -141,7 +142,16 @@ test("sitemap.xml lists the marketing pages, excludes the demo shop, and never l
   const origin = originMatch?.[1] ?? "";
   expect(origin).toMatch(/^https?:\/\//);
 
-  for (const path of ["/", "/product", "/pricing", "/about", "/switching"]) {
+  // Every feature page too: each answers one question a search is asked
+  // ("dive shop waiver software"), which is the reason they are pages.
+  for (const path of [
+    "/",
+    "/product",
+    ...FEATURE_PAGE_SLUGS.map(featurePagePath),
+    "/pricing",
+    "/about",
+    "/switching",
+  ]) {
     const url = path === "/" ? origin : `${origin}${path}`;
     expect(body, `sitemap.xml missing ${url}`).toContain(`<loc>${url}</loc>`);
   }

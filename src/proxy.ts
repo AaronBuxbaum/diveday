@@ -458,9 +458,9 @@ function reportRefusedQuery(shape: PublicRouteShape["kind"], code: string, now: 
  * with a short TTL and never a negative one — a shop created a second ago must
  * not 404 — and it should be measured before it is written.
  *
- * A switching guide costs nothing at all: the guides are a closed list this
- * repository holds, so `publicRouteShape` settles them and this function never
- * opens a database for one.
+ * A switching guide or a feature page costs nothing at all: both are closed
+ * lists this repository holds, so `publicRouteShape` settles them and this
+ * function never opens a database for one.
  *
  * **What happens when the read fails or hangs.** A throw is not a refusal:
  * `catch` returns `null` and the request continues exactly as it does today,
@@ -494,9 +494,10 @@ async function refusedPublicRoute(
   const shape = publicRouteShape(pathname);
   if (!shape) return null;
   // Already an answer. A segment judged against a closed list this repository
-  // holds — a switching guide — needs no database, so it never opens one:
-  // `getDb()` below is a connection a crawler probing `/switching/nope` would
-  // otherwise be able to ask a cold instance for. No shop frames it either;
+  // holds — a switching guide, a feature page — needs no database, so it never
+  // opens one: `getDb()` below is a connection a crawler probing
+  // `/switching/nope` would otherwise be able to ask a cold instance for. No
+  // shop frames it either;
   // these are DiveDay's own pages, and issue #765's rule is about a diver stranded on a
   // storefront. `PublicRouteQuery` is what makes this branch mandatory rather
   // than remembered — the lookup below does not accept an `absent` shape.

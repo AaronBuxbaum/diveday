@@ -377,9 +377,9 @@ drawn in [its canvas](canvases/20260827-the-divers-thread/README.md). Conversion
   sentence answers the comparison question without competing with the page's argument.
 - **Composition:** claim, price, proof, then door — not a sales dashboard. The page earns a trial
   by showing a shop's day, then gives the interested visitor one place to continue. The reference
-  index that follows the argument is closed at rest (2026-09-17): nine hairline rows, each a
+  index that follows the argument is closed at rest (2026-09-17): a hairline row per group, each a
   `<details>` naming its group and counting its lines, so the page ends where its argument does
-  instead of running on through ninety-odd bullets.
+  instead of running on through every bullet.
 
 **Annotated, 2026-09-24** (H-89, [brand.md](brand.md) "The two registers of the public pages"):
 each chapter is now the screen with the builder's notes under it, a numbered `MarginNotes` list
@@ -394,6 +394,31 @@ roll call became the saved offline copy in Boat mode (Divers, Boarded, Awaiting,
 beside “Mark not boarded”), the prep list became the trip's Gear tab, and the night-before brief
 became the diver's trip page (the dock call line, then Done and Your turn). The notes were re-read
 against each redraw.
+
+### A feature page — `/product/[feature]`
+
+**Reviewed 2026-10-05** — conversion surface, one template for twelve pages (H-93), governed by
+[marketing.md](../product/marketing.md)'s claims and control budget; the registry is
+`src/lib/feature-pages.ts`.
+
+- **One idea:** this one job, done in DiveDay, shown on the screen that does it, with nothing about
+  it left to ask a salesperson.
+- **The question it arrives with:** "does it do this the way my shop does, what doesn't it do, and
+  can I see it?" Answered by the outcome heading beside its screen, the feature's whole checklist
+  ending in the two things it does not do, with the price and the way out beside it, three
+  questions shops ask, and a demo door that opens on that screen.
+- **Controls that dissolved:** the per-screen role door. The hero's own "Try the live demo" carries
+  the role and the landing, so the page has the shared pair at the top and at the close and
+  nothing else at primary weight; the related pages are links.
+- **Remove first:** an FAQ answer that repeats a limit, and any sentence about how the feature
+  should feel. The limits are two flat sentences, not a paragraph of reassurance.
+- **Composition:** the hero (breadcrumb, outcome heading, a one-sentence lede, the pair, the demo
+  note naming where it opens, and the price line) beside the screen and its three notes; how it
+  works in three steps, numbered as the notes are; what's in it as a checklist whose last rows are
+  what it doesn't do, with the price and the Data export button beside it; questions shops ask, on
+  the same two columns and heading size; a closing band with the pair and the price line; then
+  three related pages and every feature. The hero's tracks are `minmax(0, …)`, so a drawing that
+  will not wrap cannot widen the page (design review, 2026-10-05).
 
 ### The pricing page — `/pricing`
 

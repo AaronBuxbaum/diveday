@@ -1,4 +1,5 @@
 import type { DiverMessageKey } from "@/i18n/messages";
+import type { FeaturePageKey } from "@/lib/feature-pages";
 import { openGraphSite, sharedLinkCardImage } from "@/lib/site-metadata";
 
 /**
@@ -168,74 +169,241 @@ export const midSeasonCutover = {
   claimKey: "marketing.guides.shared.cutover.midSeason",
 } as const satisfies { claimKey: DiverMessageKey };
 
+/**
+ * A group of the index: one per feature page, keyed by the page's own key
+ * (`src/lib/feature-pages.ts`), plus three that belong to no single page —
+ * the diver record, running the shop, and the records a shop takes with it.
+ */
+export type CapabilityGroupId = FeaturePageKey | "divers" | "shop" | "records";
+
 export interface CapabilityAreaKeys {
+  id: CapabilityGroupId;
+  /**
+   * A feature page's group is titled with the page's own name
+   * (`marketing.featurePages.<key>.name`), so the index and the page it links
+   * to can never call the same job two things.
+   */
   title: DiverMessageKey;
   items: readonly DiverMessageKey[];
 }
 
 /**
- * The whole shipped surface, by the job it does — the reference section on
- * `/product` for a buyer who has read the story and now wants the list.
+ * The whole shipped surface, by the job it does — the reference list on
+ * `/product` for a buyer who has read the story and now wants the list, and
+ * the "What’s in it" checklist on each feature page.
  *
- * Every line is a workflow a visitor can walk in the live demo today
- * (docs/product/marketing.md, shipped-only). When a slice ships, it belongs
- * here as well as in docs/product/shipped.md; when a claim here can no longer
- * be demonstrated, it comes out. Deliberately plain: this is the section people
- * scan with a competitor's page open beside it, and it earns nothing by being
- * written like the bands above it.
+ * Every line is a workflow shipped today (docs/product/marketing.md,
+ * shipped-only). When a slice ships, it belongs here as well as in
+ * docs/product/shipped.md; when a claim here stops being true, it comes out.
+ * Deliberately plain: this is the list people scan with a competitor's page
+ * open beside it, and it earns nothing by being written like the bands above
+ * it.
  *
  * **It is the full inventory, not a highlight reel.** Until 2026-09-01 this
  * held 49 lines in seven groups — one chosen line per area, which read as
  * precise and left a buyer with the incumbent's feature page open counting
- * what was missing: no reminders, no night-before brief, no buddy teams, no
- * blow-out cascade, no close-out, no backups, no calendar feeds, no
- * QuickBooks/Shopify/Zapier, no two-factor. All of it had shipped. The band's
- * own heading promises "the whole list", so the list is now the whole of
- * docs/product/shipped.md consolidated: every shipped workflow, once, under
- * the group it belongs to. The bar for a line is unchanged (walkable in the
- * demo, in the buyer's words); the bar for *leaving one out* is that it is
- * not a thing a shop would ever look for. The page counts these off the
- * registry, so the sentence introducing the list never drifts from it.
+ * what was missing. The bar for a line is that it is walkable in the product,
+ * in the buyer's words; the bar for *leaving one out* is that it is not a
+ * thing a shop would ever look for. One thing is never listed twice.
+ *
+ * **Grouped by feature page since 2026-10-05** (H-93). The nine groups it had
+ * were the product's own areas ("The dive day", "Reaching divers"), which is
+ * how the code is organised and not how a shop asks; each feature page now
+ * renders its own group as its checklist, so a line lives under the page a
+ * buyer would look for it on. The same rework checked every line against the
+ * code and corrected the ones that had drifted: a diver cancels a booking but
+ * cannot move it, the courtesy text is SMS, a cancelled departure refunds by
+ * itself only when weather or a short head count cancelled it, and the inbox
+ * hears replies to email.
  */
 export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
   {
-    title: "marketing.capabilities.booking.title",
+    id: "onlineBooking",
+    title: "marketing.featurePages.onlineBooking.name",
     items: [
-      "marketing.capabilities.booking.item1",
-      // `item2` ("an embeddable booking widget") retired 2026-09-02: the
-      // website group below inventories the whole catalogue, and one thing is
-      // never listed twice (docs/product/marketing.md). Not resequenced.
-      "marketing.capabilities.booking.item3",
-      "marketing.capabilities.booking.item5",
-      "marketing.capabilities.booking.item6",
-      "marketing.capabilities.booking.item7",
-      "marketing.capabilities.booking.item8",
-      "marketing.capabilities.booking.item9",
-      "marketing.capabilities.booking.item10",
-      "marketing.capabilities.booking.item11",
-      "marketing.capabilities.booking.item12",
-      "marketing.capabilities.booking.item13",
-      "marketing.capabilities.booking.item14",
-      "marketing.capabilities.booking.item15",
-      "marketing.capabilities.booking.item16",
+      "marketing.capabilities.onlineBooking.item1",
+      "marketing.capabilities.onlineBooking.item2",
+      "marketing.capabilities.onlineBooking.item3",
+      "marketing.capabilities.onlineBooking.item4",
+      "marketing.capabilities.onlineBooking.item5",
+      "marketing.capabilities.onlineBooking.item6",
+      "marketing.capabilities.onlineBooking.item7",
+      "marketing.capabilities.onlineBooking.item8",
+      "marketing.capabilities.onlineBooking.item9",
     ],
   },
   {
-    // Harbor's storefront and the embed catalogue (ADR
-    // 20260901-diveday-reimagined, decision 2) — every line a shop can walk
-    // in the demo's Settings → Website embed and on /s/blue-mantis. The
-    // built-to-order website is deliberately *not* here: nothing in this
-    // index may be a promise about a person, only about the product.
-    title: "marketing.capabilities.website.title",
+    id: "website",
+    title: "marketing.featurePages.website.name",
     items: [
       "marketing.capabilities.website.item1",
       "marketing.capabilities.website.item2",
       "marketing.capabilities.website.item3",
       "marketing.capabilities.website.item4",
       "marketing.capabilities.website.item5",
+      "marketing.capabilities.website.item6",
+      "marketing.capabilities.website.item7",
+      "marketing.capabilities.website.item8",
+      "marketing.capabilities.website.item9",
+      "marketing.capabilities.website.item10",
+      "marketing.capabilities.website.item11",
     ],
   },
   {
+    id: "waivers",
+    title: "marketing.featurePages.waivers.name",
+    items: [
+      "marketing.capabilities.waivers.item1",
+      "marketing.capabilities.waivers.item2",
+      "marketing.capabilities.waivers.item3",
+      "marketing.capabilities.waivers.item4",
+      "marketing.capabilities.waivers.item5",
+      "marketing.capabilities.waivers.item6",
+      "marketing.capabilities.waivers.item7",
+      "marketing.capabilities.waivers.item8",
+    ],
+  },
+  {
+    id: "certifications",
+    title: "marketing.featurePages.certifications.name",
+    items: [
+      "marketing.capabilities.certifications.item1",
+      "marketing.capabilities.certifications.item2",
+      "marketing.capabilities.certifications.item3",
+      "marketing.capabilities.certifications.item4",
+      "marketing.capabilities.certifications.item5",
+      "marketing.capabilities.certifications.item6",
+      "marketing.capabilities.certifications.item7",
+      "marketing.capabilities.certifications.item8",
+    ],
+  },
+  {
+    id: "messages",
+    title: "marketing.featurePages.messages.name",
+    items: [
+      "marketing.capabilities.messages.item1",
+      "marketing.capabilities.messages.item2",
+      "marketing.capabilities.messages.item3",
+      "marketing.capabilities.messages.item4",
+      "marketing.capabilities.messages.item5",
+      "marketing.capabilities.messages.item6",
+      "marketing.capabilities.messages.item7",
+      "marketing.capabilities.messages.item8",
+    ],
+  },
+  {
+    id: "checkIn",
+    title: "marketing.featurePages.checkIn.name",
+    items: [
+      "marketing.capabilities.checkIn.item1",
+      "marketing.capabilities.checkIn.item2",
+      "marketing.capabilities.checkIn.item3",
+      "marketing.capabilities.checkIn.item4",
+      "marketing.capabilities.checkIn.item5",
+      "marketing.capabilities.checkIn.item6",
+      "marketing.capabilities.checkIn.item7",
+      "marketing.capabilities.checkIn.item8",
+    ],
+  },
+  {
+    id: "boatManifest",
+    title: "marketing.featurePages.boatManifest.name",
+    items: [
+      "marketing.capabilities.boatManifest.item1",
+      "marketing.capabilities.boatManifest.item2",
+      "marketing.capabilities.boatManifest.item3",
+      "marketing.capabilities.boatManifest.item4",
+      "marketing.capabilities.boatManifest.item5",
+      "marketing.capabilities.boatManifest.item6",
+      "marketing.capabilities.boatManifest.item7",
+      "marketing.capabilities.boatManifest.item8",
+      "marketing.capabilities.boatManifest.item9",
+      "marketing.capabilities.boatManifest.item10",
+    ],
+  },
+  {
+    id: "diveSites",
+    title: "marketing.featurePages.diveSites.name",
+    items: [
+      "marketing.capabilities.diveSites.item1",
+      "marketing.capabilities.diveSites.item2",
+      "marketing.capabilities.diveSites.item3",
+      "marketing.capabilities.diveSites.item4",
+      "marketing.capabilities.diveSites.item5",
+      "marketing.capabilities.diveSites.item6",
+      "marketing.capabilities.diveSites.item7",
+      "marketing.capabilities.diveSites.item8",
+      "marketing.capabilities.diveSites.item9",
+    ],
+  },
+  {
+    id: "rentalGear",
+    title: "marketing.featurePages.rentalGear.name",
+    items: [
+      "marketing.capabilities.rentalGear.item1",
+      "marketing.capabilities.rentalGear.item2",
+      "marketing.capabilities.rentalGear.item3",
+      "marketing.capabilities.rentalGear.item4",
+      "marketing.capabilities.rentalGear.item5",
+      "marketing.capabilities.rentalGear.item6",
+      "marketing.capabilities.rentalGear.item7",
+      "marketing.capabilities.rentalGear.item8",
+      "marketing.capabilities.rentalGear.item9",
+      "marketing.capabilities.rentalGear.item10",
+      "marketing.capabilities.rentalGear.item11",
+      "marketing.capabilities.rentalGear.item12",
+    ],
+  },
+  {
+    id: "schedule",
+    title: "marketing.featurePages.schedule.name",
+    items: [
+      "marketing.capabilities.schedule.item1",
+      "marketing.capabilities.schedule.item2",
+      "marketing.capabilities.schedule.item3",
+      "marketing.capabilities.schedule.item4",
+      "marketing.capabilities.schedule.item5",
+      "marketing.capabilities.schedule.item6",
+      "marketing.capabilities.schedule.item7",
+      "marketing.capabilities.schedule.item8",
+      "marketing.capabilities.schedule.item9",
+      "marketing.capabilities.schedule.item10",
+      "marketing.capabilities.schedule.item11",
+      "marketing.capabilities.schedule.item12",
+    ],
+  },
+  {
+    id: "courses",
+    title: "marketing.featurePages.courses.name",
+    items: [
+      "marketing.capabilities.courses.item1",
+      "marketing.capabilities.courses.item2",
+      "marketing.capabilities.courses.item3",
+      "marketing.capabilities.courses.item4",
+      "marketing.capabilities.courses.item5",
+      "marketing.capabilities.courses.item6",
+      "marketing.capabilities.courses.item7",
+    ],
+  },
+  {
+    id: "payments",
+    title: "marketing.featurePages.payments.name",
+    items: [
+      "marketing.capabilities.payments.item1",
+      "marketing.capabilities.payments.item2",
+      "marketing.capabilities.payments.item3",
+      "marketing.capabilities.payments.item4",
+      "marketing.capabilities.payments.item5",
+      "marketing.capabilities.payments.item6",
+      "marketing.capabilities.payments.item7",
+      "marketing.capabilities.payments.item8",
+      "marketing.capabilities.payments.item9",
+      "marketing.capabilities.payments.item10",
+      "marketing.capabilities.payments.item11",
+    ],
+  },
+  {
+    id: "divers",
     title: "marketing.capabilities.divers.title",
     items: [
       "marketing.capabilities.divers.item1",
@@ -243,71 +411,10 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.divers.item3",
       "marketing.capabilities.divers.item4",
       "marketing.capabilities.divers.item5",
-      "marketing.capabilities.divers.item6",
-      "marketing.capabilities.divers.item7",
-      "marketing.capabilities.divers.item8",
-      "marketing.capabilities.divers.item9",
-      "marketing.capabilities.divers.item10",
-      "marketing.capabilities.divers.item11",
-      "marketing.capabilities.divers.item12",
-      "marketing.capabilities.divers.item13",
     ],
   },
   {
-    title: "marketing.capabilities.diveDay.title",
-    items: [
-      "marketing.capabilities.diveDay.item1",
-      "marketing.capabilities.diveDay.item2",
-      "marketing.capabilities.diveDay.item3",
-      "marketing.capabilities.diveDay.item4",
-      "marketing.capabilities.diveDay.item5",
-      "marketing.capabilities.diveDay.item6",
-      "marketing.capabilities.diveDay.item7",
-      "marketing.capabilities.diveDay.item8",
-      "marketing.capabilities.diveDay.item9",
-      "marketing.capabilities.diveDay.item10",
-      "marketing.capabilities.diveDay.item11",
-      "marketing.capabilities.diveDay.item12",
-      "marketing.capabilities.diveDay.item13",
-      "marketing.capabilities.diveDay.item14",
-      "marketing.capabilities.diveDay.item15",
-      "marketing.capabilities.diveDay.item16",
-    ],
-  },
-  {
-    // The gear register is opt-in by presence (ADR 20260815-minimal-gear-register):
-    // a shop with zero `gear_items` rows sees none of this. It is listed anyway
-    // because the seeded demo fleet makes every line here walkable today, and the
-    // absence of item tracking is what competitive-analysis.md names as the
-    // disqualifier for a gear-heavy shop.
-    title: "marketing.capabilities.gear.title",
-    items: [
-      "marketing.capabilities.gear.item1",
-      "marketing.capabilities.gear.item2",
-      "marketing.capabilities.gear.item3",
-      "marketing.capabilities.gear.item4",
-      "marketing.capabilities.gear.item5",
-      "marketing.capabilities.gear.item6",
-      "marketing.capabilities.gear.item7",
-    ],
-  },
-  {
-    title: "marketing.capabilities.money.title",
-    items: [
-      "marketing.capabilities.money.item1",
-      "marketing.capabilities.money.item2",
-      "marketing.capabilities.money.item3",
-      "marketing.capabilities.money.item4",
-      "marketing.capabilities.money.item5",
-      "marketing.capabilities.money.item6",
-      "marketing.capabilities.money.item7",
-      "marketing.capabilities.money.item8",
-      "marketing.capabilities.money.item9",
-      "marketing.capabilities.money.item10",
-      "marketing.capabilities.money.item11",
-    ],
-  },
-  {
+    id: "shop",
     title: "marketing.capabilities.shop.title",
     items: [
       "marketing.capabilities.shop.item1",
@@ -319,30 +426,10 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.shop.item7",
       "marketing.capabilities.shop.item8",
       "marketing.capabilities.shop.item9",
-      "marketing.capabilities.shop.item10",
-      "marketing.capabilities.shop.item11",
-      "marketing.capabilities.shop.item12",
-      "marketing.capabilities.shop.item13",
     ],
   },
   {
-    // Added in the 2026-09-01 consolidation. Messages used to be scattered
-    // across the other groups as half-lines ("readable email delivery history")
-    // or missing outright (reminders, the night-before brief, WhatsApp, the
-    // recap). A buyer comparing against an incumbent's "communications" tab
-    // needs them in one place.
-    title: "marketing.capabilities.reach.title",
-    items: [
-      "marketing.capabilities.reach.item1",
-      "marketing.capabilities.reach.item2",
-      "marketing.capabilities.reach.item3",
-      "marketing.capabilities.reach.item4",
-      "marketing.capabilities.reach.item5",
-      "marketing.capabilities.reach.item6",
-      "marketing.capabilities.reach.item7",
-    ],
-  },
-  {
+    id: "records",
     title: "marketing.capabilities.records.title",
     items: [
       "marketing.capabilities.records.item1",
@@ -354,8 +441,17 @@ export const productCapabilityIndex: readonly CapabilityAreaKeys[] = [
       "marketing.capabilities.records.item7",
       "marketing.capabilities.records.item8",
       "marketing.capabilities.records.item9",
-      "marketing.capabilities.records.item10",
-      "marketing.capabilities.records.item11",
     ],
   },
 ] as const;
+
+const CAPABILITY_GROUPS = new Map<CapabilityGroupId, CapabilityAreaKeys>(
+  productCapabilityIndex.map((group) => [group.id, group]),
+);
+
+/** One group of the index, by its id; a feature page reads its own this way. */
+export function capabilityGroup(id: CapabilityGroupId): CapabilityAreaKeys {
+  const group = CAPABILITY_GROUPS.get(id);
+  if (!group) throw new Error(`no capability group: ${id}`);
+  return group;
+}

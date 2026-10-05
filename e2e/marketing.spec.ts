@@ -1,5 +1,6 @@
 import { DEMO_SHOP_SLUG } from "../src/db/dev-credentials";
-import { earlyAccessPrice, productCapabilityIndex } from "../src/lib/marketing";
+import { FEATURE_PAGE_SLUGS, featurePagePath } from "../src/lib/feature-pages";
+import { capabilityGroup, earlyAccessPrice, productCapabilityIndex } from "../src/lib/marketing";
 import { expect, test } from "./fixtures";
 import { ONBOARD_FORM_PATH } from "./servers";
 
@@ -292,8 +293,10 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(
     page.getByRole("heading", { name: "Every shipped workflow, in one list." }),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Booking and the public pages" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Your records" })).toBeVisible();
+  // One group per feature page since 2026-10-05 (H-93), titled with the
+  // page's own name, then the three groups only this index carries.
+  await expect(page.getByRole("heading", { name: "Online booking", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Your records/ })).toBeVisible();
   // The product hero has the same decision budget as the homepage hero: the
   // live demo and trial are its two doors, while the price is a fact stated
   // under them rather than a third way out to /pricing.
@@ -1040,6 +1043,84 @@ test("an unknown incumbent answers 404, not 200 with the not-found page", async 
   }
 });
 
+test("an unknown feature page answers 404, and every listed one answers 200", async ({ page }) => {
+  // The feature pages are a closed list (`src/lib/feature-pages.ts`), refused
+  // at the edge like the switching guides above: a kiosk page was never built,
+  // and a slug in the wrong case is not a page either.
+  for (const path of ["/product/kiosk", "/product/Waivers"]) {
+    const cold = await page.request.get(path);
+    expect(cold.status(), `${path} (cold hit)`).toBe(404);
+    expect(cold.headers()["cache-control"], path).toContain("no-store");
+    const warm = await page.request.get(path);
+    expect(warm.status(), `${path} (second hit)`).toBe(404);
+  }
+
+  for (const slug of FEATURE_PAGE_SLUGS) {
+    const path = featurePagePath(slug);
+    expect((await page.request.get(path)).status(), path).toBe(200);
+  }
+});
+
+test("a feature page lists all of its feature and leads on to the next question", async ({
+  page,
+}) => {
+  await page.goto("/product/waivers");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(
+    "Waivers and medical forms come back signed before the diver walks in.",
+  );
+  await expect(
+    page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Features" }),
+  ).toHaveAttribute("href", "/product");
+
+  // The first door says where the demo opens, and the price stands under it.
+  const hero = page.getByRole("main").locator("section").first();
+  await expect(hero).toContainText(
+    "The demo opens on the release and every signed copy, as the owner.",
+  );
+  await expect(hero).toContainText(earlyAccessPrice.price);
+
+  // The checklist is the page's whole group from the capability index, not a
+  // selection: the list a buyer holds against a competitor's feature page.
+  // Where it stops is the end of the same list, under its own heading, and
+  // how leaving works stands beside it with the price.
+  const included = page
+    .getByRole("main")
+    .locator("section")
+    .filter({ has: page.getByRole("heading", { name: "What’s in it" }) });
+  const [inList, outList] = [included.getByRole("list").first(), included.getByRole("list").nth(1)];
+  await expect(inList.getByRole("listitem")).toHaveCount(capabilityGroup("waivers").items.length);
+  await expect(included.getByRole("heading", { name: "What it doesn’t do" })).toBeVisible();
+  await expect(outList.getByRole("listitem")).toHaveCount(2);
+  await expect(included).toContainText(earlyAccessPrice.price);
+  await expect(included).toContainText("Data export");
+
+  const main = page.getByRole("main");
+  await expect(main.getByRole("heading", { name: "Questions shops ask" })).toBeVisible();
+  await expect(main.getByText("How do minors sign?")).toBeVisible();
+
+  await main.getByRole("link", { name: /^Certification checks/ }).click();
+  await expect(page).toHaveURL(/\/product\/certifications$/);
+  await expect(page.getByRole("heading", { level: 1 })).toContainText("Know who can board");
+});
+
+test("a feature page's demo door opens the demo on the screen the page is about", async ({
+  page,
+}) => {
+  // The hero door on the rental gear page drops the visitor on the demo's own
+  // gear register, as its owner, rather than on Today with the register two
+  // taps away (`FeaturePage.demo`).
+  await page.goto("/product/rental-gear");
+  await page
+    .getByRole("main")
+    .locator("section")
+    .first()
+    .getByRole("button", { name: "Try the live demo" })
+    .click();
+
+  await expect(page).toHaveURL(/\/shop\/[^/]+\/gear$/);
+  await expect(page.getByText("Demo shop")).toBeVisible();
+});
+
 test("help arrives before the homework on a switching guide", async ({ page }) => {
   // The 2026-08-27 conversion review's third diagnosis: the concierge — free,
   // personal, product-owner authorized — sat about 80% down every guide, under
@@ -1319,6 +1400,7 @@ test("every public marketing page unfurls as a card, not a bare URL", async ({ p
     "/switching",
     "/switching/spreadsheet",
     "/switching/eve",
+    "/product/waivers",
   ]) {
     await page.goto(path);
     // `.first()`: a dynamic hole resolving after a client-side render can

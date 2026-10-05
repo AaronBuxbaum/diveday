@@ -7,6 +7,20 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## A page for every feature (delivered 2026-10-05)
+
+H-93. Twelve feature pages under `/product/<feature>` (online booking, the shop's website, waivers
+and medical forms, certification checks, messages, check-in, the boat manifest and roll call, dive
+sites, rental gear, the schedule and crew, courses, payments), from one registry
+(`src/lib/feature-pages.ts`) and one template: a headline about what the shop gets beside the real
+screen and three builder's notes, how it works, everything it includes (that page's whole group of
+`productCapabilityIndex`, now filed by page, ending in what it does not do, with the price and the
+Data export button beside it), three questions shops ask (`FAQPage`), the close, and three related
+pages. Each page's "Try the live demo" opens the
+demo on its own screen (`src/lib/demo-landings.ts`), tagged `feature-<slug>` and
+`feature-<slug>-close`. The Spanish manifest is *el manifiesto* everywhere and the roster *el
+listado*; `check:shop-word` refuses *listado del barco* (#1957).
+
 ## No-show frees the seat (delivered 2026-09-11)
 
 Item 11 of the 2026-08-27 sweep (issue #1209). `bookings.status = 'no_show'` had existed since the

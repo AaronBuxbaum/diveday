@@ -38,7 +38,8 @@ the workflow for applying it.
    no tag sentence, no phrase reused on a third page. `pnpm check:voice` refuses the mechanical
    half in every message bundle, the four shapes on the public pages' strings; the rest is this
    step. A public page is also written in its register ("The two registers of the public pages"
-   in the same doc): the builder's note, or speech on `/about`.
+   in the same doc): the selling register (what the shop gets, the screen as proof with the
+   builder's notes, the demo opening on that screen), or speech on `/about`.
 5. For merch or vendor work, provide the ground color, imprint colors, type treatment, placement,
    production constraints, and proof checklist. Keep coral as a small accent and use the bubble
    trail without stretching, rotating, or decorating it.

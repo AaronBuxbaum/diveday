@@ -1,8 +1,8 @@
 # Public marketing surfaces — what they are and how to write them
 
-DiveDay's public pages are the homepage (`/`), product page (`/product`), pricing page
-(`/pricing`), the about page (`/about`), and the onboarding entry (`/onboard`); switching guides
-(`/switching/*`) join them as they ship. They are a truthful sales surface for the product that
+DiveDay's public pages are the homepage (`/`), product page (`/product`), the twelve feature pages
+under it (`/product/<feature>`), pricing page (`/pricing`), the about page (`/about`), and the
+onboarding entry (`/onboard`); switching guides (`/switching/*`) join them as they ship. They are a truthful sales surface for the product that
 exists today.
 
 This document is the living rulebook for those pages: the positioning they argue, the claims they
@@ -18,6 +18,47 @@ has no separate team, tooling, or CMS: copy is code, reviewed like code, tested 
 (`e2e/marketing.spec.ts`, and the marketing captures in `e2e/visual.spec.ts`), and governed by this doc the same way
 `schema.ts` is governed by the schema-change skill. A session editing these pages carries both
 jobs — marketer and maintainer — and must leave both the pages and this rulebook consistent.
+
+## One page per feature, and every section sells (decided 2026-10-05, H-93)
+
+The owner's brief on 2026-10-05 was that the pages were not selling, and that every interesting
+feature should be listed, explained and sold on a page of its own. Three things stood in the way:
+headlines that described the page rather than what a shop gets ("Four screens from a dive shop's
+day, with notes from the person who made them"), a voice rule (H-89) that kept a page from saying
+why any of it matters, and an inventory of every shipped workflow of which the pages argued four
+and listed the rest in a closed index on `/product`.
+
+- **Twelve feature pages**, at `/product/<feature>`, one per job a shop buys software for: online
+  booking, the shop's website, waivers and medical forms, certification checks, messages, check-in,
+  the boat manifest and roll call, dive sites, rental gear, the schedule and crew, courses, and
+  payments. The list, its order, and each page's demo role, landing screen and three related pages
+  are one registry, `src/lib/feature-pages.ts`. An unknown slug is refused at the edge
+  (`src/lib/public-route-shape.ts`), and the sitemap lists all twelve.
+- **One template**, `src/app/product/_components/FeaturePageBody.tsx`: the hero says what the shop
+  gets in one sentence of lede beside the screen that proves it, with three builder's notes, and
+  the price under its doors; then how it works in three steps; then everything the feature
+  includes, which is that feature's whole group of `productCapabilityIndex`, with the two things it
+  does not do as the end of the same list, and the plan's terms beside it (the flat price, and the
+  Data export button with `fullShopExport`'s terms); then three questions shops ask, marked up as
+  `FAQPage`; then the close; and last three related pages, for the reader the close did not
+  convince yet. The order is the order a buyer's doubts arrive in, and the ask lands at the end of
+  the argument rather than after a detour (conversion review, 2026-10-05). Every page has every
+  section, and `src/lib/feature-pages.test.ts` refuses a page whose copy has a field the others
+  lack.
+- **The demo opens on the page's screen.** The hero's "Try the live demo" carries the page's role
+  and landing (`src/lib/demo-landings.ts`, a closed list the server action re-checks), so a reader
+  of the gear page arrives on the gear register as the owner, not on Today. The two pages about what
+  a diver sees (online booking, the website) open the demo shop's public schedule instead. The demo
+  note under the first door says where it opens and as whom
+  (`marketing.featureChrome.demoNote`, filled with the page's `demoPlace`), because on four pages
+  the drawing is the diver's phone and the door lands on the staff side; it is still the one note
+  per page the rule below asks for, with the demo's cost in its second sentence.
+- **The inventory is filed by page.** `productCapabilityIndex` is fifteen groups: one per feature
+  page in the registry's order, plus three only the hub lists (divers, the shop, records). A
+  shipped workflow joins the group of the page a buyer would look for it on, and a feature page's
+  checklist is its group, whole.
+- **What did not change:** the claims policy, the two doors and their order, the demo note once per
+  page, the price stated where the question arises, and `/about`'s spoken register.
 
 ## The homepage breadth band is four cards, numbered (decided 2026-08-20)
 
@@ -127,7 +168,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   after the homework"). The reader deciding whether they can face this now meets the alternative in
   the same breath as the work. Compressed at the top, authored once, never re-worded — the same
   shape `midSeasonCutover` uses for the cutover steps and `GUIDE_FACTS.back` uses for the export
-  claim. A new service claim needs product-owner sign-off the same way the price does. **A second offer was authorized 2026-09-01 (H-64/H-65): a website, built for you** — a shop asks, and a person at DiveDay builds them one (with Claude, when someone asks; nothing is built ahead of a request). It is a human commitment like the concierge: "ask and we'll build it with you", never a turnaround time, never a page count, never "free website" as a product feature — and priced as part of the subscription until H-65 says otherwise. It may sit beside Harbor's storefront (which *is* a website a shop can point a domain at, and a shipped product claim) on `/pricing`, `/product` and the FareHarbor guide, where FareHarbor's own hosted-site price may be stated only as the figure third parties report (FareHarbor publishes none — the Bókun-reported Web Core package, cited in the guide), never as what a shop pays; it is a `sitesPrice` string on the guide interpolated into one sentence, so no bundle carries the figure. Shipped 2026-09-02 as slice 13e: `marketing.price.item7`, the `website` capability group on `/product` (product lines only — the person's offer sits beside the booking chapter, never in the index that promises the demo), and the FareHarbor guide's website ledger. **Founder-direct support retired 2026-08-05 (Aaron Buxbaum,
+  claim. A new service claim needs product-owner sign-off the same way the price does. **A second offer was authorized 2026-09-01 (H-64/H-65): a website, built for you** — a shop asks, and a person at DiveDay builds them one (with Claude, when someone asks; nothing is built ahead of a request). It is a human commitment like the concierge: "ask and we'll build it with you", never a turnaround time, never a page count, never "free website" as a product feature — and priced as part of the subscription until H-65 says otherwise. It may sit beside Harbor's storefront (which *is* a website a shop can point a domain at, and a shipped product claim) on `/pricing`, `/product`, the website feature page (`/product/website`, in its lede and its first question) and the FareHarbor guide, where FareHarbor's own hosted-site price may be stated only as the figure third parties report (FareHarbor publishes none — the Bókun-reported Web Core package, cited in the guide), never as what a shop pays; it is a `sitesPrice` string on the guide interpolated into one sentence, so no bundle carries the figure. Shipped 2026-09-02 as slice 13e: `marketing.price.item7`, the `website` capability group on `/product` (product lines only — the person's offer sits beside the booking chapter, never in the index that promises the demo), and the FareHarbor guide's website ledger. **Founder-direct support retired 2026-08-05 (Aaron Buxbaum,
   [human-decisions.md](human-decisions.md#decision-register), H-12/H-26).** From 2026-07-27 through
   that date a general founder-direct contact line, routed to `aaron@dive.day`, was authorized here —
   the same promise the "You can reach the founder" section on `/about` made in prose. It is
@@ -309,6 +350,10 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   pages are now the product's own screens with the builder's notes under them, `/about` is speech,
   both registers are in [design/brand.md](../design/brand.md), and `pnpm check:voice` refuses the
   four shapes on the public pages' strings so they cannot drift back.
+  **On 2026-10-05 (H-93) the sale went back in front of the notes**: a page that only annotated
+  its screens never said why a shop would want them. A section now leads with what the shop gets,
+  shows the screen as proof with the notes as its captions, and opens the demo on that screen (the
+  decision section at the top of this file).
 - **Concrete nouns over software jargon.** The buyer runs a shop, a counter, a boat — not an
   "operating system", "platform", or "solution". Name what DiveDay replaces: the whiteboard, the
   clipboard, the three apps and a spreadsheet.
@@ -318,15 +363,16 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   by `FeatureGroupsGrid` on `/`; the full inventory is `productCapabilityIndex`, rendered on
   `/product` as a spec sheet: one hairline row per group, each a `<details>` naming the group and
   counting its lines, opening onto those lines in two columns. Closed at rest since 2026-09-17 —
-  flat it ran 2,900px of a 9,600px page, arriving after the argument had finished, and nine named
-  rows with their counts say the breadth in one screen where the wall said it in eight. **The inventory is the whole of [shipped.md](shipped.md), consolidated — never a
+  flat it ran 2,900px of a 9,600px page, arriving after the argument had finished, and a named
+  row per group with its count says the breadth in one screen where the wall said it in eight. **The inventory is the whole of [shipped.md](shipped.md), consolidated — never a
   curated subset.** Until 2026-09-01 it held 49 chosen lines, one per idea per area, and under a
   heading that says "the whole list" a chosen list is a false one: a buyer with an incumbent's
   feature page open beside it counted reminders, buddy teams, the blow-out cascade, close-out,
   backups, calendar feeds, QuickBooks/Shopify/Zapier and two-factor as missing, and every one had
-  shipped. It now carries every shipped workflow once (94 lines in eight groups, "Reaching divers"
-  added for the messages that had been scattered as half-lines), and the page counts the lines off
-  the registry so the lede never drifts from the list. The bar for a line is unchanged — walkable in
+  shipped. It now carries every shipped workflow once, filed since 2026-10-05 under the feature page
+  a buyer would look for it on (the messages that had been scattered as half-lines have a page of
+  their own), and every page that states a count takes it off `productCapabilityIndex`, so no
+  sentence, this one included, carries a number the registry can outgrow (#1860). The bar for a line is unchanged — walkable in
   the demo, shipped-only, in the buyer's words; the bar for leaving one out is that no shop would
   ever look for it. When a slice ships, add its line here in the same change as its shipped.md entry.
 
@@ -337,7 +383,7 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   heading, two lines and a "The full list" link in an otherwise empty band — so the disclosure went
   too, and the list a buyer came for is simply on the page. Pricing had already been cut back for
   the same reason. What came back on 2026-09-17 is a different shape and not that one: the group
-  names *are* the list, so the band at rest is nine rows rather than a heading over nothing.
+  names *are* the list, so the band at rest is a row per group rather than a heading over nothing.
 
   The middle density's *machinery* outlived it by a day and was removed on 2026-08-14: the grid's
   `featuresPerGroup` prop chose between a `✓` checklist and a paragraph, and with no caller left
@@ -586,9 +632,11 @@ demo entries and no trials is telling you something different from a page with n
 
 **A page that offers the same action from more than one place splits its tag by position** —
 `home-hero` / `home-closing`, `product` / `product-mid` / `product-index`, `pricing` /
-`pricing-close`, `about-rules` / `about-closing`, and the
+`pricing-close`, `about-rules` / `about-closing`, the
 switching guides' `switching-<slug>` / `switching-<slug>-mid` / `switching-<slug>-close` (with the
-spreadsheet guide using the same three-position shape).
+spreadsheet guide using the same three-position shape), and the feature pages' `feature-<slug>` /
+`feature-<slug>-close`, built from the registry's slugs by `featureSource()` so a new page cannot
+ship untagged.
 Mid-page and closing doors exist because
 one CTA at the bottom of ten sections is a scroll a convinced reader shouldn't have to make; folded
 into the page's own tag, such a door can never be shown to have earned its place, and the next
@@ -815,7 +863,8 @@ structure* live; none of them may contain an English sentence:
 | Export claim shared by home + pricing | `src/lib/marketing.ts` (`fullShopExport`) | `marketing.export.*` in the bundles |
 | Mid-season cutover claim shared by home + the guides | `src/lib/marketing.ts` (`midSeasonCutover`) | `marketing.guides.shared.cutover.*` in the bundles |
 | Shared link-preview card fields every page's `openGraph` needs | `src/lib/marketing.ts` (`sharedLinkCard`) | none — URLs and dimensions, no words |
-| Capability index on `/product` | `src/lib/marketing.ts` (`productCapabilityIndex`) | `marketing.capabilities.*` in the bundles |
+| Capability index on `/product`, one group per feature page | `src/lib/marketing.ts` (`productCapabilityIndex`, `capabilityGroup()`) | `marketing.capabilities.*` in the bundles; a feature page's group is titled by its `name` |
+| The twelve feature pages | `src/lib/feature-pages.ts` (slugs, demo role and landing, related pages, screen); one template in `src/app/product/_components/FeaturePageBody.tsx` | `marketing.featurePages.<page>.*` for each page's words, `marketing.featureChrome.*` for the template's own |
 | Page-specific narrative copy | The page file (`src/app/{page,product/page,pricing/page}.tsx`) | `marketing.home/product/pricing.*` in the bundles |
 | The hero a visitor draws with their own shop, boat and departure | `src/app/_components/TryItHero.tsx` (words as props; `src/lib/try-it.ts` holds the colour, the handoff and the day-line arithmetic) | `marketing.home.tryIt.*` in the bundles |
 | Sign-up reassurance (no card, the exit, the founder line) | `src/app/onboard/page.tsx` | `account.onboard.*` in the bundles |

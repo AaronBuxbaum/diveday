@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { eventSource, guideSource, scheduleAttributionHref, switchingHref } from "./funnel";
+import { FEATURE_PAGE_SLUGS } from "./feature-pages";
+import {
+  eventSource,
+  featureSource,
+  guideSource,
+  scheduleAttributionHref,
+  switchingHref,
+} from "./funnel";
 import { MIGRATION_GUIDE_SLUGS } from "./migration-guides";
 
 describe("eventSource", () => {
@@ -49,6 +56,23 @@ describe("eventSource", () => {
     expect(eventSource("switching-eve-close")).toBe("switching-eve-close");
     expect(eventSource("switching-spreadsheet-mid")).toBe("switching-spreadsheet-mid");
     expect(eventSource("switching-spreadsheet-close")).toBe("switching-spreadsheet-close");
+  });
+
+  it("keeps a tag for every feature page, its closing band apart", () => {
+    // Which feature a shop owner opened the demo from is the question the
+    // feature pages exist to answer, so each page is its own bucket, and its
+    // hero and closing doors are two moments, as on every other page.
+    for (const slug of FEATURE_PAGE_SLUGS) {
+      expect(eventSource(featureSource(slug))).toBe(`feature-${slug}`);
+      expect(eventSource(featureSource(slug, "close"))).toBe(`feature-${slug}-close`);
+    }
+    expect(featureSource("rental-gear", "close")).toBe("feature-rental-gear-close");
+  });
+
+  it("collapses a feature tag naming a page that does not exist", () => {
+    expect(eventSource("feature-kiosk")).toBe("unknown");
+    expect(eventSource("feature-waivers-mid")).toBe("unknown");
+    expect(eventSource("feature-")).toBe("unknown");
   });
 
   it("collapses anything outside the vocabulary to unknown", () => {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { FEATURE_PAGE_SLUGS } from "./feature-pages";
 import { publicRouteShape } from "./public-route-shape";
 
 const SHOP = "blue-mantis";
@@ -148,6 +149,37 @@ describe("publicRouteShape", () => {
     // `MIGRATION_GUIDE_SLUGS` because a spreadsheet is not an incumbent.
     expect(publicRouteShape("/switching")).toBeNull();
     expect(publicRouteShape("/switching/spreadsheet")).toBeNull();
+  });
+
+  it("refuses a feature page that does not exist, and has no opinion about one that does", () => {
+    // `getFeaturePage` is the page's own check (src/lib/feature-pages.ts), so
+    // every registered page is served untouched and anything else is a real
+    // 404 before the shell streams.
+    expect(publicRouteShape("/product/kiosk")).toEqual({ kind: "absent" });
+    expect(publicRouteShape("/product/Waivers")).toEqual({ kind: "absent" });
+    for (const slug of FEATURE_PAGE_SLUGS) {
+      expect(publicRouteShape(`/product/${slug}`), slug).toBeNull();
+    }
+    // The hub is its own static route.
+    expect(publicRouteShape("/product")).toBeNull();
+    expect(publicRouteShape("/product/waivers/extra")).toBeNull();
+  });
+
+  it("refuses a feature slug that only an object's prototype would answer", () => {
+    // Safe because the registry is a `Map`, which never walks the prototype
+    // chain. Rewritten as a plain-object index, `/product/constructor` would
+    // pass the edge and render a soft 200 (security review, 2026-10-05).
+    for (const slug of ["__proto__", "constructor", "toString", "hasOwnProperty"]) {
+      expect(publicRouteShape(`/product/${slug}`), slug).toEqual({ kind: "absent" });
+    }
+  });
+
+  it("judges a feature slug after decoding it, as the page does", () => {
+    // The path is split before it is decoded, so an escaped slash cannot
+    // smuggle a second segment past the list, and an escaped letter is the
+    // page it spells.
+    expect(publicRouteShape("/product/w%61ivers")).toBeNull();
+    expect(publicRouteShape("/product/waivers%2Fx")).toEqual({ kind: "absent" });
   });
 
   it("has no opinion about anything below the guides", () => {
