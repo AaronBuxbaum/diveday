@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { FEATURE_PHASES, featurePagesIn } from "@/lib/feature-pages";
 import ProductLoading from "./loading";
 
 afterEach(cleanup);
@@ -17,16 +18,14 @@ function linesIn(scope: Element | null, type: string) {
 }
 
 /**
- * **The /product skeleton is as tall as the hero and the chapter strip it
- * stands in for** (K-409).
+ * **The /product skeleton is as tall as the hero it stands in for** (K-409),
+ * and draws the feature directory under it row for row.
  *
  * It drew 48px bars for 40px title lines (two, for three on a phone), two 20px
- * bars for a lede of 32px lines (four on a phone), no bar at all for the price
- * line under the demo note, and the strip as a wrapping row of 16px bars — so
- * the strip landed 36px lower at 1280 and 156px lower at 390, where six bars
- * had wrapped to three rows. Each bar is now a line box of the text it stands
- * for, and the strip is one row of 52px items with no padding above or below
- * them, as the real strip's tabs fill its bar (K-400).
+ * bars for a lede of 32px lines (four on a phone) and no bar at all for the
+ * price line under the demo note, so what came after the hero landed 36px
+ * lower at 1280 and 156px lower at 390. Each bar is now a line box of the text
+ * it stands for.
  */
 describe("the /product skeleton", () => {
   it("draws the title as three lines of its own type below sm and two from it", () => {
@@ -49,16 +48,12 @@ describe("the /product skeleton", () => {
     expect(linesIn(hero, "text-sm")).toEqual({ count: 5, phoneOnly: 2 });
   });
 
-  it("stands in for the strip with one unwrapping row of 52px items and no block padding", () => {
+  it("draws one row per feature page under each phase, off the page's own registry", () => {
     const { container } = render(<ProductLoading />);
-    const strip = container.querySelector("main > div > div");
-    expect(strip).toHaveClass("flex-nowrap", "overflow-hidden", "px-6");
-    expect(strip).not.toHaveClass("flex-wrap");
-    expect(
-      [...(strip?.classList ?? [])].filter((token) => /^(?:[\w-]+:)*-?[pm][ytb]-/.test(token)),
-    ).toEqual([]);
-    const items = Array.from(strip?.children ?? []);
-    expect(items).toHaveLength(6);
-    for (const item of items) expect(item).toHaveClass("h-13", "shrink-0");
+    const directory = container.querySelectorAll("main > section")[1];
+    const lists = Array.from(directory?.querySelectorAll("ul") ?? []);
+    expect(lists.map((list) => list.children.length)).toEqual(
+      FEATURE_PHASES.map((phase) => featurePagesIn(phase).length),
+    );
   });
 });

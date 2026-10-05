@@ -148,8 +148,8 @@ Not exempt: marketing pages under `src/app`/`src/components`. They go through `d
 everything else on those routes. Also not exempt: **data modules that feed the UI.**
 `src/lib/marketing.ts`, `src/lib/migration-guides.ts`, and `src/lib/demo-roles.ts` are
 key registries — they hold `DiverMessageKey` values and structure (slugs, ordering, URLs,
-the price figure), and the words live in the bundles under `marketing.features/price/export/
-capabilities/guides.*`. These files are listed in `check-domain-strings.mjs`'s `proseFreeFiles`
+the price figure), and the words live in the bundles under `marketing.price/export/capabilities/
+featurePages/guides.*`. These files are listed in `check-domain-strings.mjs`'s `proseFreeFiles`
 and hard-fail on any prose literal without an `// i18n-exempt: reason` marker (reserved for
 genuine non-language: proper names, cited document titles, currency figures). When a new data
 module starts feeding words to a page, add it to `proseFreeFiles` in the same change.

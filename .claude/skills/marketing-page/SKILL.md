@@ -31,7 +31,8 @@ the same PR.
 
 | Change | File |
 | --- | --- |
-| Claim shared across pages | `src/lib/marketing.ts` → `productFeatureGroups` |
+| A shipped capability line | `src/lib/marketing.ts` → `productCapabilityIndex`, under the group of the feature page a shop would look for it on |
+| The list of feature pages on `/` and `/product` | `FeatureDirectory` in `src/components/MarketingSections.tsx`, which reads the registry `src/lib/feature-pages.ts`; never a page-by-page list |
 | Price / plan / included list | `src/lib/marketing.ts` → `earlyAccessPrice` — the ONLY place the number exists |
 | Page narrative copy | `src/app/page.tsx`, `src/app/product/page.tsx`, `src/app/pricing/page.tsx`, `src/app/onboard/page.tsx` |
 | A feature page (`/product/<feature>`) | the registry `src/lib/feature-pages.ts`, the one template `src/app/product/_components/FeaturePageBody.tsx`, words in `marketing.featurePages.<page>`; its checklist is that page's group of `productCapabilityIndex` |

@@ -370,7 +370,7 @@ export function shapeTells(value) {
 
 /**
  * Which public page a bundle key belongs to, or `null` for a namespace that is
- * rendered on several pages by design (the shared feature groups, the price
+ * rendered on several pages by design (the feature pages' chrome, the price
  * list, the export claim, the switching chrome and the guides' shared phases)
  * or for a product-screen key, which the rule never compares.
  *
@@ -379,7 +379,6 @@ export function shapeTells(value) {
  */
 const SHARED_NAMESPACES = [
   "marketing.common.",
-  "marketing.features.",
   "marketing.featureChrome.",
   "marketing.price.",
   "marketing.export.",
@@ -439,6 +438,7 @@ export const HOUSE_PHRASE_ALLOWLIST = new Set([
   "a dive shop",
   "the dive day",
   "roll call",
+  "the roll call",
   "run roll call",
   "certification records",
   "the export button",
@@ -463,6 +463,7 @@ export const HOUSE_PHRASE_ALLOWLIST = new Set([
   "book now button",
   "needs you list",
   "hoja de cálculo",
+  "control de certificaciones",
   "registros de certificación",
   "día de buceo",
   "contacto de emergencia",

@@ -1314,8 +1314,8 @@ async function waitForEntranceAnimations(page: Page) {
  * Deliberately *not* `reducedMotion: "reduce"` on the context, which would
  * reach the same CSS through the app's own kill-switch: that also flips every
  * `matchMedia("(prefers-reduced-motion: reduce)")` branch in the tree —
- * `MarketingReveal`, `MissingDiversGrid`'s ring, `useExitAnimation`,
- * `ProductChapterNav` — and the suite would quietly stop photographing the app
+ * `MarketingReveal`, `MissingDiversGrid`'s ring, `useExitAnimation` — and the
+ * suite would quietly stop photographing the app
  * a standard-motion reader sees. Deliberately not `animation: none` either:
  * `.marketing-reveal-pending` holds `opacity: 0` in its base style and relies
  * on its animation's fill to become visible, so cancelling animations would
@@ -2174,9 +2174,10 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "landing", scheme);
       });
 
-      // The other two buyer-facing sales surfaces: the product narrative
-      // (readiness, dock, diver arc, honest-no scope) and the pricing page
-      // with its objection FAQ. Copy changes here are product changes.
+      // The other two buyer-facing sales surfaces: the features hub (every
+      // feature page by phase, the capability index, honest-no scope) and the
+      // pricing page with its objection FAQ. Copy changes here are product
+      // changes.
       test(`the product page renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/product");
         await capture(page, "product", scheme);

@@ -2161,8 +2161,8 @@
           "body": "Un buceador elige su plaza y firma la exención desde un enlace, sin cuenta y sin app. Una sin firmar aparece en la lista Pendiente de Hoy la noche anterior."
         },
         "manifestHeadCount": {
-          "title": "Un manifiesto que es un recuento",
-          "body": "El capitán marca a los buceadores inmersión por inmersión en un teléfono, desde una copia guardada en él antes de que salga el barco, así que el recuento sigue funcionando sin señal en la rampa."
+          "title": "Un manifiesto que pasa lista por nombre",
+          "body": "El capitán marca a bordo a los buceadores por nombre, inmersión por inmersión, en un teléfono, desde una copia guardada en él antes de que salga el barco, así que el pase de lista sigue funcionando sin señal en la rampa."
         }
       },
       "columnsTitle": "Las columnas que lee",
@@ -2327,20 +2327,6 @@
       "gear": "Equipo y ajuste",
       "done": "Hecho",
       "yourTurn": "Te toca"
-    },
-    "shopPrep": {
-      "label": "Equipo",
-      "time": "Mañana · 7:30 · 12 buceadores · 2 inmersiones",
-      "tanksHeading": "Tanques",
-      "air": "Aire",
-      "nitrox": "Nitrox",
-      "total": "Total",
-      "missingSizesHeading": "Faltan tallas",
-      "missingRow": "— sin talla para traje",
-      "rentalKitHeading": "Equipo de alquiler",
-      "kitBcd": "Chaleco · M",
-      "kitWetsuit": "Traje 3mm · L",
-      "kitRegulator": "Regulador"
     },
     "today": "Hoy",
     "todayStart": "7:30",
@@ -2568,56 +2554,53 @@
   "marketing": {
     "home": {
       "eyebrow": "Software para centros de buceo",
-      "heroTitle": "Cuatro pantallas del día de un centro de buceo, con notas de la persona que las hizo.",
-      "heroDescription": "La reserva, Hoy, el pase de lista y el recuerdo. Un buceador que no está listo aparece con su nombre en recepción, horas antes del muelle, y cada pantalla funciona en el centro de demostración.",
+      "heroTitle": "Cada buceador reservado, con su exención firmada, verificado y presente en el pase de lista.",
+      "heroDescription": "Reservas en línea, exenciones y formularios médicos, control de certificaciones, registro de llegada y el manifiesto del barco, en una sola aplicación para tu centro de buceo. Un buceador que no está listo aparece con su nombre en recepción horas antes del muelle, y cada pantalla funciona en el centro de demostración.",
       "heroPriceLine": "Un precio único de {price} {cadence}, sin comisión sobre tus reservas.",
       "phoneFrameLabel": "Un capitán marcando buceadores como embarcados en la pantalla de pase de lista de DiveDay, desde la copia guardada en el teléfono.",
       "dockEyebrow": "En el muelle",
-      "dockDetail": "Guardado en este teléfono antes de que saliera el barco, así que el recuento sigue aunque no haya señal.",
-      "momentsTitle": "Cuatro pantallas, en el orden en que las usa un día.",
-      "moments": {
-        "diver": {
+      "dockDetail": "Guardado en este teléfono antes de que saliera el barco, así que el pase de lista no depende de la señal.",
+      "stepsTitle": "Una reserva, de tu web al barco y de vuelta a casa.",
+      "steps": {
+        "book": {
           "when": "Días antes",
-          "title": "El horario desde el que reserva un buceador",
+          "title": "Un buceador reserva y paga desde tu horario",
           "note1": "Las plazas que quedan se cuentan contra el barco, en vivo. Un barco lleno lo dice y no toma más.",
           "note2": "Sin inicio de sesión en esta página. El buceador reserva, paga y recibe por correo un enlace a su salida.",
-          "note3": "El formulario que sigue pide las tallas de neopreno y BCD, así que el mostrador nunca tiene que hacerlo.",
-          "note4": "Va en tu web como un embed, o vive en la nuestra con tus colores.",
-          "door": "Reserva una plaza en la demo →",
           "mockupLabel": "El horario público de Blue Mantis, dos salidas próximas con las plazas que quedan en cada una."
         },
-        "frontDesk": {
+        "sign": {
+          "when": "Antes de que lleguen",
+          "title": "Firman la exención y responden el formulario médico desde casa"
+        },
+        "check": {
           "when": "La mañana de la salida",
-          "title": "Hoy, y quién aún no puede embarcar",
-          "note1": "Las palabras bajo la barra dicen lo mismo que la barra. El teléfono de recepción a veces está al sol.",
-          "note2": "Cada fila de Pendiente nombra a un buceador y lo que le falta.",
-          "note3": "La exención de Priya nunca se envió, así que su fila lleva el botón Enviar exención.",
-          "note4": "No hay botón de “marcar a todos como listos”. Lo dejé fuera a propósito.",
-          "door": "Abre Hoy como propietario →",
+          "title": "Quien aún no puede embarcar aparece con su nombre y el motivo",
+          "note1": "Cada fila de Pendiente nombra a un buceador y lo que le falta.",
+          "note2": "No hay botón de “marcar a todos como listos”. Lo dejé fuera a propósito.",
           "mockupLabel": "Hoy en el centro de demostración: una salida con 7 de 9 buceadores listos y dos filas en Pendiente."
         },
-        "dock": {
-          "when": "En el muelle",
-          "title": "El pase de lista, en el teléfono del capitán",
+        "checkIn": {
+          "when": "En el mostrador",
+          "title": "El registro de llegada es un toque por buceador"
+        },
+        "aboard": {
+          "when": "En el muelle, y después de cada inmersión",
+          "title": "El capitán pasa lista nombre por nombre, con señal o sin ella",
           "note1": "Botones así de grandes para que un pulgar mojado caiga en el nombre correcto.",
-          "note2": "Los recuentos salen de los toques. Embarcados marca 4 hasta que se toca un quinto nombre.",
-          "note3": "“Guardado” en la esquina dice cuándo llegó la copia a este teléfono. La preparación que muestra es la de ese momento.",
-          "note4": "Cada fila dice “Listo cuando se guardó”. Un nombre bloqueado se resuelve en tierra, en recepción, nunca aquí.",
-          "door": "Abre la demo como capitán →",
+          "note2": "“Guardado” en la esquina dice cuándo llegó la copia a este teléfono. La preparación que muestra es la de ese momento.",
           "mockupLabel": "El pase de lista guardado del capitán: tres recuentos del barco y una fila por buceador con Marcar embarcado y Marcar no embarcado."
         },
         "recap": {
           "when": "Esa noche",
-          "title": "Lo que recibe el buceador esa tarde",
+          "title": "Cada buceador recibe el recuerdo del día, con el nombre de tu centro",
           "note1": "El registro de arriba es del centro, escrito una vez: barco, tripulación, sitio, condiciones.",
           "note2": "La nota de la tripulación es una cita. Es lo que la tripulación escribió, sin plantilla detrás.",
-          "note3": "Lleva el nombre de tu centro, arriba del todo, y es del buceador para compartirlo.",
-          "note4": "Aquí no hay puerta a propósito. Esta le llega al buceador por correo cuando el barco ha vuelto.",
-          "mockupLabel": "La página de resumen de un buceador con el registro del día, una nota de la tripulación y una sola petición de opinión."
+          "mockupLabel": "La página de recuerdo de un buceador, con el registro del día, una nota de la tripulación y una sola petición de opinión."
         }
       },
-      "productTitle": "Lo que hacían la pizarra, la tablilla y las tres aplicaciones, en cuatro grupos.",
-      "seeFullProduct": "Ver el producto completo",
+      "featuresTitle": "Todas las funciones van en el mismo plan.",
+      "featuresLink": "La lista completa de lo que incluye cada función →",
       "exportTitle": "Cómo llegan los registros, y cómo se van.",
       "arrivingLabel": "Al entrar",
       "exportDescription1": "Sube una hoja de cálculo. Antes de guardar nada, la vista previa muestra en qué se convirtió cada columna y qué filas va a saltar. O envíanos el archivo por correo y una persona hace la importación contigo, gratis.",
@@ -2644,30 +2627,7 @@
       "getSetUp": "Pide tu centro",
       "setUpSubject": "Quiero abrir mi centro en DiveDay",
       "demoNote": "La demo abre un centro de muestra en funcionamiento con un clic. Sin registro y sin tarjeta.",
-      "midCtaTitle": "Míralo en la demo en vivo",
       "checkItLabel": "Verifícalo: "
-    },
-    "features": {
-      "welcome": {
-        "eyebrow": "Reservas",
-        "title": "Un buceador reserva y paga sin una llamada",
-        "summary": "El horario toma la reserva, el depósito y el grupo en un solo paso, desde tu web o la nuestra, en el idioma del buceador. Puedes ver que la confirmación salió."
-      },
-      "ready": {
-        "eyebrow": "Antes del barco",
-        "title": "Exenciones, tarjetas y respuestas médicas llegan desde casa",
-        "summary": "El que falta aparece en Hoy con días de margen, con el nombre y la cosa al lado. Una respuesta médica que necesita la firma de un médico bloquea al buceador hasta que esté."
-      },
-      "diveDay": {
-        "eyebrow": "El día",
-        "title": "El mostrador y el barco leen una sola lista",
-        "summary": "Las tallas de alquiler, el briefing del sitio, los llenados de nitrox y el pase de lista salen del mismo manifiesto, así que el capitán pasa lista sobre la misma lista que cerró la recepción."
-      },
-      "motion": {
-        "eyebrow": "La temporada",
-        "title": "El tablero, la tripulación y el dinero",
-        "summary": "Arma las salidas de la temporada una vez y ponles tripulación. El cobro llega a tu propia cuenta de Stripe, y por la tarde ves cada barco de vuelta y lo que dejó el día."
-      }
     },
     "price": {
       "name": "Centro fundador",
@@ -2675,7 +2635,7 @@
       "item1": "Reservas, cursos, exenciones, certificaciones, tallas de alquiler, sitios de buceo, nitrox y el manifiesto listo para funcionar sin conexión",
       "item2": "Cada rol del personal, de recepción a capitán",
       "item3": "Las funciones nuevas según salen, sin un nivel superior",
-      "item4": "Un centro de práctica, precargado con salidas, para entrenar al personal nuevo",
+      "item4": "El centro de demostración, precargado con salidas, para formar al personal nuevo",
       "item6": "Soporte por correo. Lo lee una persona real",
       "item7": "Un escaparate con tu marca y piezas para pegar en tu propia web, o una web que construimos contigo cuando la pidas"
     },
@@ -2896,7 +2856,7 @@
           },
           "item4": {
             "title": "Un manifiesto con pase de lista que sobrevive al muelle",
-            "detail": "Botones grandes de Embarcado / No embarcado para manos mojadas, un recuento por cada inmersión, y un manifiesto que la tripulación guarda en el teléfono para que siga funcionando cuando la señal se cae en la rampa."
+            "detail": "Botones grandes de Embarcado / No embarcado para manos mojadas, un pase de lista después de cada inmersión, y un manifiesto que la tripulación guarda en el teléfono para que siga funcionando cuando la señal se cae en la rampa."
           },
           "item5": {
             "title": "Tallas de alquiler y la lista de carga de la salida",
@@ -3290,7 +3250,7 @@
         "yourRecords": {
           "title": "Tus registros son tuyos.",
           "body": "El botón de exportar funciona el primer día de la prueba, antes de que hayas cargado un solo buceador. Te da archivos documentados que puedes abrir en cualquier sitio, y nadie tiene que aprobarlo antes.",
-          "check": "empieza una prueba y descarga el ZIP antes de haber introducido nada."
+          "check": "abre la demo como propietario, ve a Ajustes y descarga el ZIP."
         }
       },
       "plainlyEyebrow": "La trampa",
@@ -3325,57 +3285,9 @@
       "closingDescription": "Sin llamada y sin formulario. Abre el centro de muestra como propietario, capitán o buceador, recorre un día entero y decide si tu tripulación lo tomaría una mañana ajetreada."
     },
     "product": {
-      "eyebrow": "El producto",
-      "heroTitle": "El día, una pantalla a la vez, con una nota en cada una.",
-      "heroDescription": "Cinco pantallas, en el orden en que las usa una salida: la reserva, la preparación, la noche anterior, el muelle, el recuerdo. Cada nota señala una cosa y dice por qué está ahí.",
-      "arcTitle": "Un día de buceo",
-      "bookingEyebrow": "Días antes",
-      "bookingTitle": "El horario toma la reserva, y el barco no se puede sobrevender.",
-      "bookingNote1": "El recuento de plazas sale de la capacidad del barco, así que un barco lleno no toma más reservas.",
-      "bookingNote2": "Una reserva puede cubrir a un grupo entero.",
-      "bookingNote3": "Un código de descuento vale en todo el centro. Una oferta de última hora es un precio en un barco con plazas libres.",
-      "bookingNote4": "El formulario de reserva que sigue a esta página pide las tallas, y caen en la lista de equipo.",
-      "bookingNote5": "Tu marca, en tu web o en la nuestra. Una persona de aquí construye la web contigo si lo pides.",
-      "bookingMockupLabel": "El calendario público de DiveDay desde el que reserva un buceador.",
-      "readinessEyebrow": "Antes de salir",
-      "readinessTitle": "Una respuesta por buceador, y la recepción y el muelle leen la misma.",
-      "readinessNote1": "La salida y el sitio de buceo deciden qué necesita cada buceador. Un sitio marcado como profundo pide la especialidad de Profundidad.",
-      "readinessNote2": "Cuando algo del registro no deja pasar a un buceador, la lista dice qué es, y el nombre sigue bloqueado.",
-      "readinessNote3": "El arreglo se hace en recepción, mientras todavía hay tiempo. El muelle solo lee la respuesta.",
-      "readinessMockupLabel": "Hoy en DiveDay: la barra de preparación de una salida y, debajo, el motivo junto a cada nombre.",
-      "nightBeforeEyebrow": "La noche anterior",
-      "prepTitle": "Dos pantallas la noche anterior: la lista de equipo de la tripulación y el aviso del buceador.",
-      "prepShopLabel": "En el centro",
-      "prepShopTitle": "Una lista de equipo escrita con las tallas de los propios buceadores",
-      "prepShopBody": "Doce buceadores, dos inmersiones, veinticuatro botellas, contados desde el listado. Un buceador sin talla registrada aparece con su nombre.",
-      "prepShopMockupLabel": "La pestaña Equipo de una salida: botellas de aire y de nitrox, un buceador al que le falta una talla y el equipo de alquiler que hay que sacar.",
-      "prepDiverLabel": "En el teléfono del buceador",
-      "nightBeforeTitle": "Un aviso en palabras sencillas",
-      "nightBeforeBody": "La hora en el muelle y una lista que dice qué está hecho y qué le toca al buceador. El pronóstico llega en el correo de la noche anterior.",
-      "nightBeforeMockupLabel": "La página de viaje del buceador la noche anterior: la hora en el muelle, la exención y la certificación hechas, y el equipo por completar.",
-      "dockEyebrow": "En el muelle",
-      "dockTitle": "El manifiesto, en un teléfono sin señal.",
-      "dockNote1": "Un pase de lista por cada inmersión, separados, para que la segunda inmersión no herede la primera.",
-      "dockNote2": "Embarcados marca 4 de 9 buceadores, y solo cambia cuando se toca un nombre.",
-      "dockNote3": "Dos verbos en cada fila, Marcar embarcado y Marcar no embarcado. No hay “marcar a todos” ni deslizar.",
-      "dockNote4": "La vista para imprimir sale de este mismo manifiesto.",
-      "dockNote": "La tripulación guarda el manifiesto en el teléfono antes de salir del muelle. Todo lo marcado sin señal queda etiquetado así hasta que DiveDay vuelve a tener servicio, y un toque que el registro en vivo ya dejó atrás vuelve marcado como rechazado en vez de sobrescribir nada.",
-      "captainPhoneLabel": "Un capitán usando la vista móvil de pase de lista en DiveDay.",
-      "recapEyebrow": "Con el barco de vuelta",
-      "recapTitle": "El recuerdo, en el teléfono del buceador esa tarde.",
-      "recapNote1": "El registro de arriba es del centro, escrito una vez: barco, tripulación, sitio y condiciones.",
-      "recapNote2": "La nota de la tripulación es una cita, con las palabras que la tripulación escribió.",
-      "recapNote3": "“¿Qué tal tu día?” es el único botón que lleva. Los enlaces de fotos y propina quedan fuera de este dibujo.",
-      "recapNote4": "Lleva el nombre del centro, y es del buceador para compartirlo.",
-      "recapMockupLabel": "Una página de resumen después de la inmersión, con el registro del día, una nota de la tripulación y una sola petición de opinión.",
-      "paymentEyebrow": "Cobrar",
-      "paymentTitle": "El dinero pasa por tu propia cuenta de Stripe.",
-      "paymentDescription": "Los buceadores pagan al reservar, o dejan un depósito y liquidan en el muelle. El personal factura un viaje, curso, alquiler, nitrox o venta minorista. Si se cancela dentro de la ventana publicada, el reembolso es automático.",
-      "yourAccountTitle": "La cuenta es tuya",
-      "yourAccountBody": "Los cobros, las disputas y el historial están en la cuenta de Stripe que ya tienes. No hay comisión por reserva encima del precio fijo.",
-      "pricedTitle": "Pagado antes de embarcar",
-      "pricedBody": "El pago cuenta para estar listo, como la exención y la tarjeta, así que nadie embarca por lo que otro dio por hecho.",
-      "pricingLink": "Un precio único de {price} {cadence}. La página de precios lista lo que cubre →",
+      "eyebrow": "Funciones",
+      "heroTitle": "De la primera reserva al pase de lista después de la última inmersión.",
+      "heroDescription": "Cada función tiene su propia página, con la pantalla que hace el trabajo, todo lo que incluye, lo que no hace y la demo abierta en esa pantalla.",
       "boxEyebrow": "La lista completa",
       "boxTitle": "Cada función publicada, en una sola lista.",
       "boxDescription": "Hay un solo plan, y las {count, plural, one {# línea} other {# líneas}} están todas dentro. Cada una funciona hoy en la demo en vivo.",
@@ -3398,8 +3310,8 @@
           "detail": "DiveDay no se conecta con ninguna agencia. El personal coteja el registro con la agencia y lo marca certificado."
         }
       },
-      "closingTitle": "La demo es el centro de muestra de las pantallas de arriba.",
-      "closingDescription": "Un selector dentro te mueve entre el propietario, la tripulación y un buceador. Tu propio centro de prueba empieza vacío.",
+      "closingTitle": "El centro de demostración tiene salidas en el tablero y buceadores reservados en ellas.",
+      "closingDescription": "Un selector dentro te mueve entre el propietario, la tripulación y un buceador. Tu propio centro empieza vacío, y lo configuramos contigo.",
       "spreadsheetLink": "Mira cómo DiveDay lee tu hoja de cálculo →"
     },
     "pricing": {
@@ -3484,11 +3396,11 @@
         },
         "seeBefore": {
           "question": "¿Puedo verlo antes de comprometerme?",
-          "answer": "Sí. La demo en vivo es un centro de muestra con salidas ya en el tablero, y un selector dentro te mueve entre el propietario, un instructor, un divemaster, el capitán y un buceador. Tu propio centro de prueba empieza vacío."
+          "answer": "Sí. La demo en vivo es un centro de muestra con salidas ya en el tablero, y un selector dentro te mueve entre el propietario, un instructor, un divemaster, el capitán y un buceador. Tu propio centro empieza vacío, y lo configuramos contigo."
         },
         "setupTime": {
           "question": "¿Cuánto se tarda en montarlo?",
-          "answer": "Seis campos: el nombre de tu centro, su dirección web, su zona horaria, y luego tu propio nombre, correo y contraseña. El centro existe en el momento en que lo envías. Traer una hoja de cálculo de buceadores es un paso aparte."
+          "answer": "Un correo tuyo: escribe a {email} y configuramos el nombre de tu centro, su dirección web y su zona horaria, y tu propio acceso. Traer una hoja de cálculo de buceadores es un paso aparte, y una persona puede hacer esa importación contigo, gratis."
         },
         "dataIfNotWorking": {
           "question": "¿Cómo accedo a los registros de mi centro?",
@@ -3546,7 +3458,7 @@
         "trailsTerm": "Historiales operativos",
         "trailsBody": "quién movió una reserva, quién marcó a un buceador a bordo, si llegó una confirmación. Filas breves de quién-hizo-qué-cuándo, en el espacio del propio centro.",
         "devicesTerm": "La copia en un teléfono del barco",
-        "devicesBody": "Para que el recuento siga funcionando sin señal, un teléfono de la tripulación guarda su propia copia de los manifiestos de los próximos dos días: el listado, los contactos de emergencia y si cada buceador puede embarcar. Se guarda cifrada en ese teléfono, con una clave que el navegador no devuelve, así que no se puede leer desde el almacenamiento del dispositivo. Quien tenga el teléfono desbloqueado puede abrirla, igual que con el manifiesto en papel al que sustituye. Se elimina cuando otro centro inicia sesión en ese teléfono, y se borra sola a los catorce días de haberse guardado o a los siete días del fin de la salida, lo que ocurra antes."
+        "devicesBody": "Para que el pase de lista siga funcionando sin señal, un teléfono de la tripulación guarda su propia copia de los manifiestos de los próximos dos días: el listado, los contactos de emergencia y si cada buceador puede embarcar. Se guarda cifrada en ese teléfono, con una clave que el navegador no devuelve, así que no se puede leer desde el almacenamiento del dispositivo. Quien tenga el teléfono desbloqueado puede abrirla, igual que con el manifiesto en papel al que sustituye. Se elimina cuando otro centro inicia sesión en ese teléfono, y se borra sola a los catorce días de haberse guardado o a los siete días del fin de la salida, lo que ocurra antes."
       },
       "where": {
         "heading": "Dónde se procesa",
@@ -3682,6 +3594,11 @@
       "faqTitle": "Lo que preguntan los centros",
       "relatedTitle": "Funciones relacionadas",
       "allFeatures": "Todas las funciones",
+      "phases": {
+        "before": "Antes del día de buceo",
+        "day": "El día de la salida",
+        "season": "A lo largo de la temporada"
+      },
       "closePrice": "{price} {cadence}, con todas las funciones incluidas.",
       "demoNote": "La demo se abre en {place}. Es un centro de muestra en funcionamiento, sin registro y sin tarjeta."
     },
@@ -3962,7 +3879,7 @@
         "faq2Q": "¿La tripulación puede ver sus salidas en su propio calendario?",
         "faq2A": "Sí. Cada miembro del personal puede suscribirse a las salidas en Google Calendar, Apple Calendar u Outlook.",
         "faq3Q": "¿Y si una salida no junta suficientes buceadores?",
-        "faq3A": "Ponle un mínimo y una hora límite para decidir. Si para entonces no se llega al mínimo, la salida se cancela sola, avisa por correo a cada buceador reservado y reembolsa sus pagos con tarjeta.",
+        "faq3A": "Ponle un mínimo y una hora límite para decidir. Si para entonces no se llega al mínimo, la salida se cancela sola, avisa por correo a cada buceador de la salida y reembolsa sus pagos con tarjeta.",
         "closeTitle": "Añade una salida a la semana de la demo.",
         "demoPlace": "el horario de la semana, como propietario"
       },

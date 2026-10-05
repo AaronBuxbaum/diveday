@@ -41,21 +41,20 @@ function marketingMessages(locale: (typeof DIVER_LOCALES)[number]): Record<strin
  */
 describe("the price is interpolated, never spelled out in a bundle", () => {
   /**
-   * The sentences that carry the figure: the hero and the closing band of `/`,
-   * and — since 2026-08-28 — `/product`'s money band, whose link stopped
-   * parking the number behind itself and now states it in its own words
-   * (docs/product/marketing-review-20260827.md, "the dare gets a door"), and
-   * `/about`'s pricing door, the fourth surface this list already anticipated:
-   * a trust page that raises the cost question three times and
-   * answers it with "See what it costs" is the same unlabeled door, on the one
-   * page whose whole argument is that nothing here is hidden.
-   * Each addition here is the point: a fifth surface that shows the price
-   * must interpolate it or this list is where it fails.
+   * The sentences that carry the figure: the hero and the closing band of `/`
+   * (the hub's hero reads the same `heroPriceLine`), `/about`'s pricing door
+   * — a trust page that raises the cost question three times and answers it
+   * with "See what it costs" is the same unlabeled door, on the one page whose
+   * whole argument is that nothing here is hidden — and the two lines every
+   * feature page prints beside its checklist and its close. `/product`'s
+   * money band carried one from 2026-08-28 until the hub became the directory
+   * of the feature pages (H-93). Each addition here is the point: a new
+   * surface that shows the price must interpolate it or this list is where it
+   * fails.
    */
   const priceSentenceKeys = [
     "marketing.home.heroPriceLine",
     "marketing.home.priceLine",
-    "marketing.product.pricingLink",
     "marketing.about.seeCost",
     "marketing.featureChrome.includedPrice",
     "marketing.featureChrome.closePrice",
@@ -301,10 +300,12 @@ describe("the fee footnote raises no charge that does not exist", () => {
 /**
  * The offline row left `/pricing` on 2026-08-28 — a product question wearing
  * pricing clothes. A cut copy is only honest if the claim still has a home, so
- * this pins both halves: the pricing key is gone, and `/product`'s dock note
- * still carries the sentence the row was made of.
+ * this pins both halves: the pricing key is gone, and the boat manifest page
+ * still carries the sentence the row was made of. It moved there from
+ * `/product`'s dock chapter on 2026-10-05, when the hub became the directory
+ * of the feature pages (H-93).
  */
-describe("the manifest's offline answer lives on /product alone", () => {
+describe("the manifest's offline answer lives on the boat manifest page alone", () => {
   for (const locale of DIVER_LOCALES) {
     it(`carries no offline FAQ row on the pricing page in ${locale}`, () => {
       const messages = marketingMessages(locale);
@@ -315,9 +316,11 @@ describe("the manifest's offline answer lives on /product alone", () => {
     });
 
     it(`still answers it beside the screen it is about in ${locale}`, () => {
-      const note = marketingMessages(locale)["marketing.product.dockNote"];
-      expect(note).toBeDefined();
-      expect(note).toMatch(locale === "en-US" ? /saves the manifest/i : /guarda el manifiesto/i);
+      const lede = marketingMessages(locale)["marketing.featurePages.boatManifest.lede"];
+      expect(lede).toBeDefined();
+      expect(lede).toMatch(
+        locale === "en-US" ? /saves the next two days/i : /guarda los manifiestos/i,
+      );
     });
   }
 });

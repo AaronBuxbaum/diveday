@@ -16,8 +16,8 @@ import { publicSchedulePath } from "./public-routes";
  * arrives off a request is clamped back to it by `eventSource`.
  *
  * A page that offers the same action from more than one place splits its tag by
- * position (`home-hero` / `home-closing`, `product` / `product-mid` /
- * `product-index`, `pricing` / `pricing-close`, `about-rules` / `about-closing`)
+ * position (`home-hero` / `home-closing`, `product` / `product-index`,
+ * `pricing` / `pricing-close`, `about-rules` / `about-closing`)
  * — otherwise a mid-page door added to answer "one CTA at the bottom of ten
  * sections" folds into the page total and can never be shown to have earned its
  * place. The unsuffixed tag stays the page's original one so attribution
@@ -32,12 +32,12 @@ import { publicSchedulePath } from "./public-routes";
  */
 const FIXED_SOURCES = [
   "home-hero",
-  // The homepage's screens each end in one door into the demo as the role the
-  // screen belongs to (the 2026-09-24 voice decision; docs/design/brand.md).
-  // One tag per screen, for the same reason the switching guides are split per
-  // slug: which screen a shop owner opened the demo from is the question these
-  // exist to answer. `home-diver-moment` predates the other two and keeps its
-  // name so its history holds.
+  // Retired 2026-10-05 — kept for history, not for reuse. The homepage's
+  // annotated screens each ended in one door into the demo as the screen's
+  // role (the 2026-09-24 voice decision), one tag per screen. The screens
+  // became the six steps of one booking (H-93), and each step now links to
+  // its feature page, whose own demo door opens on that screen and carries
+  // that page's tag (`featureSource`).
   "home-diver-moment",
   "home-desk-moment",
   "home-dock-moment",
@@ -59,21 +59,24 @@ const FIXED_SOURCES = [
   "home-closing",
   "nav",
   "product",
+  // Retired 2026-10-05 with the dock chapter's card it tagged, when `/product`
+  // became the directory of the feature pages (H-93). Kept for history, not
+  // for reuse.
   "product-mid",
   // The door under `/product`'s capability index. Its band's lede — "every one
   // of these lines is something you can go and do in the live demo right now" —
   // makes the page's most explicit dare, and until 2026-08-28 the reader who
   // took it had nothing to act on for another two bands
   // (docs/product/marketing-review-20260827.md, "the dare gets a door"). It is
-  // a third *position* for the same action rather than a different one, so it
-  // suffixes `product` the way `product-mid` does: a reader convinced by the
-  // inventory is a different moment from one convinced by the dock story, and
-  // folded together neither could be read on its own.
+  // a second *position* for the same action rather than a different one, so it
+  // suffixes `product`: a reader convinced by the inventory is a different
+  // moment from one convinced by the hero or the close, and folded together
+  // neither could be read on its own.
   "product-index",
   // The in-page switching doors on `/product` and `/about` — one each, so they
   // take the page's name rather than a position suffix (the split above is for
   // one *action* offered from several places, which is
-  // `product`/`product-mid`/`product-index` and
+  // `product`/`product-index` and
   // `home-records`/`home-records-arriving`). They are named apart from those
   // demo/trial tags because they are a different action: the reader is going to
   // read about moving, not to open the demo. Untagged until 2026-08-15, which
@@ -110,9 +113,9 @@ const FIXED_SOURCES = [
   "switching-hub",
   // The hub's annotated import-preview screen ends in one door into the demo
   // as the owner, the role that runs the import (docs/design/brand.md, "The
-  // builder's note"). Its own tag for the reason `home-desk-moment` has one:
-  // a reader who opened the demo from the screen itself is a different moment
-  // from one who did not find their system in the list above it.
+  // builder's note"). Its own tag because a reader who opened the demo from
+  // the screen itself is a different moment from one who did not find their
+  // system in the list above it.
   "switching-hub-preview",
   "switching-spreadsheet",
   "switching-spreadsheet-mid",

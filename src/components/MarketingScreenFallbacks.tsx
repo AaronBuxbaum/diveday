@@ -480,16 +480,15 @@ export function DiverBookingFallback({ locale }: { locale: DiverLocale }) {
  * tip doors are deliberately absent: they are quiet on the real page, and a
  * mockup that shows every door shows none of them as quiet.
  *
- * **Two callers, and both describe this screen in their own `aria-label`**:
- * `/product`'s after-trip chapter, and the homepage's evening moment row
- * (docs/product/marketing-review-20260827.md, "A third moment: the evening").
- * So a redraw of this component has to carry
- * `marketing.product.recapMockupLabel` and
- * `marketing.home.moments.recap.mockupLabel` with it, in both locales, or the
+ * **Its caller describes this screen in its own `aria-label`**: the
+ * homepage's recap step, the last of one booking's six (H-93), which first
+ * drew it as the evening moment (docs/product/marketing-review-20260827.md,
+ * "A third moment: the evening"). So a redraw of this component has to carry
+ * `marketing.home.steps.recap.mockupLabel` with it, in both locales, or the
  * label stops naming what the reader is looking at.
  *
- * Every control stays `disabled`: the homepage's moments band offers exactly
- * one door and it is not this one (`e2e/marketing.spec.ts`).
+ * Every control stays `disabled`: the homepage's steps open no door into the
+ * demo, and this screen is not one (`e2e/marketing.spec.ts`).
  */
 export function RecapPageFallback({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
@@ -602,65 +601,6 @@ export function NightBeforeBriefFallback({ locale }: { locale: DiverLocale }) {
             tone={yourTurn}
             mark={false}
           />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/**
- * **A departure's Gear tab** (`trips/[id]/prep`), drawn small: tanks split
- * into air and nitrox, the divers whose sizes are still missing (named, so the
- * desk can ask), and the rental kit to pull. Its section headings are the
- * tab's own (`tripPrep.json`).
- */
-export function ShopPrepListFallback({ locale }: { locale: DiverLocale }) {
-  const t = diverTranslator(locale);
-  return (
-    <div className="bg-background">
-      <AppBar label={t("fallback.shopPrep.label")} />
-      <div className={`space-y-5 ${MOCK_BODY}`}>
-        <div>
-          <h3 className={SUB_TITLE_CLASS}>{t("fallback.tripName")}</h3>
-          <p className="mt-1 text-sm text-muted">{t("fallback.shopPrep.time")}</p>
-        </div>
-        <div>
-          <h4 className="text-sm font-semibold">{t("fallback.shopPrep.tanksHeading")}</h4>
-          <div className="mt-2 grid grid-cols-3 gap-2">
-            {[
-              [t("fallback.shopPrep.air"), "18"],
-              [t("fallback.shopPrep.nitrox"), "6"],
-              [t("fallback.shopPrep.total"), "24"],
-            ].map(([label, value]) => (
-              <div key={label} className="rounded-lg border border-border bg-surface p-2">
-                <p className="text-xs font-medium text-muted">{label}</p>
-                <p className="mt-0.5 text-sm font-semibold tabular-nums">{value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div>
-          <h4 className="text-sm font-semibold">{t("fallback.shopPrep.missingSizesHeading")}</h4>
-          <p className="mt-1 text-sm">
-            {/* i18n-exempt: sample diver name used only in marketing mockups */}
-            <span className="font-semibold">Diego Alvarez</span>{" "}
-            <span className="text-muted">{t("fallback.shopPrep.missingRow")}</span>
-          </p>
-        </div>
-        <div>
-          <h4 className="text-sm font-semibold">{t("fallback.shopPrep.rentalKitHeading")}</h4>
-          <div className="mt-2 divide-y divide-border rounded-inset border border-border bg-surface text-sm">
-            {[
-              [t("fallback.shopPrep.kitBcd"), "2"],
-              [t("fallback.shopPrep.kitWetsuit"), "1"],
-              [t("fallback.shopPrep.kitRegulator"), "3"],
-            ].map(([item, qty]) => (
-              <div key={item} className="flex items-center justify-between gap-3 px-3 py-2">
-                <span>{item}</span>
-                <span className="font-semibold tabular-nums">×{qty}</span>
-              </div>
-            ))}
-          </div>
         </div>
       </div>
     </div>

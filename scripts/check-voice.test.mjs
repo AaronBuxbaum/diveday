@@ -478,7 +478,7 @@ describe("the four shapes (2026-09-24)", () => {
         [
           // Rendered on every page by design.
           { key: "marketing.common.demoNote", value: "The demo opens a working sample shop." },
-          { key: "marketing.features.a", value: "The demo opens a working sample shop." },
+          { key: "marketing.featureChrome.a", value: "The demo opens a working sample shop." },
           { key: "switching.common.b", value: "The demo opens a working sample shop." },
           { key: "marketing.guides.shared.c", value: "The demo opens a working sample shop." },
           // The name of a thing, on three pages.

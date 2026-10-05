@@ -27,14 +27,15 @@ describe("eventSource", () => {
   it("keeps a page's mid-page door distinct from the page itself", () => {
     // The whole reason a mid-page CTA gets its own tag: folded into the page's
     // one bucket, a door added to answer "one CTA at the bottom of ten
-    // sections" can never be shown to have earned its place.
+    // sections" can never be shown to have earned its place. `product-mid`
+    // was retired with its card on 2026-10-05 and still reads as its own
+    // bucket, so the history it collected holds.
     expect(eventSource("product-mid")).toBe("product-mid");
     expect(eventSource("product")).toBe("product");
-    // `/product` now offers the same action from three positions. The index
-    // door is the page's own dare — "every one of these lines is something you
-    // can go and do in the live demo right now" — and a reader convinced by the
-    // inventory is a different moment from one convinced by the dock story
-    // above it, so it gets its own bucket rather than inflating either.
+    // The index door is the page's own dare — "every one of these lines is
+    // something you can go and do in the live demo right now" — and a reader
+    // convinced by the inventory is a different moment from one convinced by
+    // the hero, so it gets its own bucket rather than inflating either.
     expect(eventSource("product-index")).toBe("product-index");
     // Same split on the pricing page: its hero door and the door that closes
     // the objection layer answer different moments in the same visit.

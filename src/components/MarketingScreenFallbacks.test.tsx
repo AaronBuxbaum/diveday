@@ -9,7 +9,6 @@ import {
   ImportPreviewFallback,
   NightBeforeBriefFallback,
   RecapPageFallback,
-  ShopPrepListFallback,
 } from "./MarketingScreenFallbacks";
 
 afterEach(cleanup);
@@ -22,7 +21,6 @@ const EVERY_MOCK = [
   ["DiverBookingFallback", DiverBookingFallback],
   ["RecapPageFallback", RecapPageFallback],
   ["NightBeforeBriefFallback", NightBeforeBriefFallback],
-  ["ShopPrepListFallback", ShopPrepListFallback],
 ] as const;
 
 /** A mock's two parts: its app bar and the body under it. */
@@ -41,6 +39,21 @@ function insetOf(element: Element) {
   expect(steps).toHaveLength(1);
   return steps[0];
 }
+
+/**
+ * The silence: an illustration names nothing on its own. A page frames it in
+ * `MarketingMockup`, whose `aria-label` the page resolves from its own bundle;
+ * a mock that grew its own `role="img"` or `aria-label` would give one picture
+ * a second name, and the English one baked into the component would never
+ * reach a Spanish reader.
+ */
+describe("the mocks' accessible names", () => {
+  it.each(EVERY_MOCK)("%s gives itself none", (_name, Mock) => {
+    const { container } = render(<Mock locale="en-US" />);
+    expect(container.querySelectorAll("[aria-label]")).toHaveLength(0);
+    expect(container.querySelectorAll('[role="img"]')).toHaveLength(0);
+  });
+});
 
 /**
  * The bar's label sat 16px in over bodies inset 20px, so the shop name and the
@@ -194,18 +207,19 @@ describe("MarketingScreenFallbacks", () => {
     });
   });
 
-  describe("ShopPrepListFallback, the Gear tab", () => {
-    it("renders in English with the tab's own sections", () => {
-      render(<ShopPrepListFallback locale="en-US" />);
-      expect(screen.getByText("Tanks")).toBeInTheDocument();
-      expect(screen.getByText("Sizes still missing")).toBeInTheDocument();
-      expect(screen.getByText("Rental kit")).toBeInTheDocument();
+  describe("RecapPageFallback, the diver's after-trip page", () => {
+    it("draws the dive log entry, the crew's note and the one ask", () => {
+      render(<RecapPageFallback locale="en-US" />);
+      // The keepsake and the one ask, the two blocks the homepage's recap
+      // step quotes: the shop wrote something, and the diver is asked once.
+      expect(screen.getByText("Dive log entry")).toBeInTheDocument();
+      expect(screen.getByText("From your crew")).toBeInTheDocument();
+      expect(screen.getByText("How was your day?")).toBeInTheDocument();
     });
 
     it("renders in Spanish", () => {
-      render(<ShopPrepListFallback locale="es-ES" />);
-      expect(screen.getByText("Faltan tallas")).toBeInTheDocument();
-      expect(screen.getByText("Equipo de alquiler")).toBeInTheDocument();
+      render(<RecapPageFallback locale="es-ES" />);
+      expect(screen.getByText("De tu tripulación")).toBeInTheDocument();
     });
   });
 

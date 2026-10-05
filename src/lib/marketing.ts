@@ -9,8 +9,8 @@ import { openGraphSite, sharedLinkCardImage } from "@/lib/site-metadata";
  * language and the pages always describe the same product. Keep claims
  * constrained to workflows that are available in DiveDay today; the words
  * themselves live in `src/i18n/locales/<locale>/diver.json` under
- * `marketing.features`, `marketing.price`, `marketing.export`, and
- * `marketing.capabilities` — edit every locale together.
+ * `marketing.price`, `marketing.export`, and `marketing.capabilities` — edit
+ * every locale together.
  *
  * This file holds structure (grouping, ordering, the price figure), following
  * the same keys-not-copy pattern as `src/lib/demo-roles.ts`: `src/lib`
@@ -38,54 +38,6 @@ export const sharedLinkCard = {
   ...openGraphSite,
   images: [sharedLinkCardImage],
 };
-
-export interface FeatureGroupKeys {
-  eyebrow: DiverMessageKey;
-  title: DiverMessageKey;
-  /**
-   * One paragraph for the group's card — a summary written as a summary.
-   *
-   * This used to be `features: readonly DiverMessageKey[]`, a checklist of
-   * seven or eight claims per group, and `FeatureGroupsGrid` chose between a
-   * checklist and a paragraph by how many of them a caller asked for. When
-   * `/product`'s middle density was removed on 2026-08-13 both remaining
-   * callers settled on `featuresPerGroup={1}`, which meant only `item1` of
-   * each group could reach a page — 26 keys, translated in two locales,
-   * rendering nowhere, and a checklist branch that nothing could execute.
-   *
-   * The card paragraph is now its own string rather than the first line of a
-   * list read out of context: three of the four `item1`s were written as list
-   * openers, so as summaries they were thinner than a sentence written for
-   * the job. The full inventory a buyer wants is `productCapabilityIndex`,
-   * rendered flat on `/product` — one density per page, and the way to add a
-   * list to a page is to check the other density first
-   * (docs/product/marketing.md).
-   */
-  summary: DiverMessageKey;
-}
-
-export const productFeatureGroups: readonly FeatureGroupKeys[] = [
-  {
-    eyebrow: "marketing.features.welcome.eyebrow",
-    title: "marketing.features.welcome.title",
-    summary: "marketing.features.welcome.summary",
-  },
-  {
-    eyebrow: "marketing.features.ready.eyebrow",
-    title: "marketing.features.ready.title",
-    summary: "marketing.features.ready.summary",
-  },
-  {
-    eyebrow: "marketing.features.diveDay.eyebrow",
-    title: "marketing.features.diveDay.title",
-    summary: "marketing.features.diveDay.summary",
-  },
-  {
-    eyebrow: "marketing.features.motion.eyebrow",
-    title: "marketing.features.motion.title",
-    summary: "marketing.features.motion.summary",
-  },
-] as const;
 
 /**
  * The price itself is the one figure that stays here — H-12 requires exactly

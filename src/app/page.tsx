@@ -5,16 +5,21 @@ import { type ReactNode, Suspense } from "react";
 import { FunnelCtas } from "@/app/_components/FunnelCtas";
 import { HomeBodySkeleton } from "@/app/_components/HomeBodySkeleton";
 import { MarketingNav, MarketingNavFallback } from "@/app/_components/MarketingNav";
-import { ScreenDoor } from "@/app/_components/ScreenDoor";
+import { ArrivalDeskFallback, WaiverSigningFallback } from "@/components/MarketingFeatureScreens";
 import { MarketingFooter, MarketingFooterFallback } from "@/components/MarketingFooter";
 import { MarketingHeroMotion, MarketingReveal } from "@/components/MarketingReveal";
-import { ImportPreviewFallback } from "@/components/MarketingScreenFallbacks";
+import {
+  CaptainRollCallFallback,
+  DiverBookingFallback,
+  FrontDeskReadinessFallback,
+  ImportPreviewFallback,
+  RecapPageFallback,
+} from "@/components/MarketingScreenFallbacks";
 import {
   CaptainPhoneFrame,
-  FeatureGroupsGrid,
+  FeatureDirectory,
   MarginNotes,
   MarketingMockup,
-  marketingMockups,
 } from "@/components/MarketingSections";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
@@ -25,11 +30,11 @@ import {
   MARKETING_EYEBROW_CLASS,
   SUB_TITLE_CLASS,
 } from "@/components/ui/typography";
-import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
-import { diverTranslator } from "@/i18n/messages";
+import { type DiverMessageKey, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
-import { scheduleAttributionHref, switchingHref } from "@/lib/funnel";
+import { type FeaturePageSlug, featurePagePath, getFeaturePage } from "@/lib/feature-pages";
+import { switchingHref } from "@/lib/funnel";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
   earlyAccessPrice,
@@ -52,15 +57,15 @@ import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 export const instant = true;
 
 export const metadata: Metadata = {
-  title: "Dive shop software, from booking to head count — DiveDay",
+  title: "Dive shop software, from booking to roll call — DiveDay",
   description:
-    "Four screens from a dive shop’s day, with notes from the person who made them: the schedule, Today, the captain’s roll call and the diver’s recap. All of it runs in a live demo with no sign-up.",
+    "Online booking, waivers and medical forms, certification checks, check-in and a boat manifest that works with no signal, in one app for dive shops. Every screen runs in a live demo with no sign-up.",
   alternates: { canonical: "/" },
   openGraph: {
     ...sharedLinkCard,
-    title: "DiveDay — dive shop software, from booking to head count",
+    title: "DiveDay — dive shop software, from booking to roll call",
     description:
-      "Bookings, waivers, cert checks, trip prep and the boat manifest, shown as the screens a shop runs its day on.",
+      "Online booking, waivers, certification checks, check-in and the boat manifest, in one app for dive shops.",
     url: "/",
   },
   // `summary_large_image`: the shared link card resolves here, and this page
@@ -72,9 +77,9 @@ export const metadata: Metadata = {
   // policy).
   twitter: {
     card: "summary_large_image",
-    title: "DiveDay — dive shop software, from booking to head count",
+    title: "DiveDay — dive shop software, from booking to roll call",
     description:
-      "Bookings, waivers, cert checks, trip prep and the boat manifest, shown as the screens a shop runs its day on.",
+      "Online booking, waivers, certification checks, check-in and the boat manifest, in one app for dive shops.",
   },
 };
 
@@ -135,23 +140,23 @@ async function LocalizedHomeBody() {
 
 /**
  * The one kicker for a *part of a section*: a short marker with a hairline rule
- * running out to the edge of its column. The daily-moment rows use it for where
- * in the day they sit, the portability diptych for which direction a record is
+ * running out to the edge of its column. The booking's steps use it for when
+ * each one happens, the portability diptych for which direction a record is
  * travelling. One atom, several compositions around it — inventing a new
  * treatment per band is what made the old page read as six renders of one
  * template.
  *
  * It is deliberately *not* the page's only small-caps-ish label: the hero's
- * category line and the breadth band's four card eyebrows are uppercase, and
- * they stay that way because they name a whole thing (the product category, a
- * capability group) rather than locate a part within a section.
+ * category line and the directory's phase labels are uppercase, and they stay
+ * that way because they name a whole thing (the product category, a part of a
+ * shop's year) rather than locate a part within a section.
  *
  * Page-local until a second marketing page wants the same marker — at which
  * point it belongs in `src/components/MarketingSections.tsx` with the other
  * shared visual atoms, not copied.
  *
  * `as="h3"` where the marker is the *only* label its column has (the diptych),
- * so the section's two halves are named in the document outline; the moment
+ * so the section's two halves are named in the document outline; the step
  * rows leave it a `<p>`, because the `<h3>` they already carry is their name
  * and a marker heading above it would be a second, emptier one.
  */
@@ -165,6 +170,85 @@ function SectionMarker({ children, as: Tag = "p" }: { children: ReactNode; as?: 
 }
 
 /**
+ * One booking, followed from the shop's website to the boat and home again
+ * (H-93, the 2026-10-05 rework). Each step is the screen that does it, two of
+ * the builder's notes beside it, and a link to the feature page that tells the
+ * rest. The order is the order a diver meets the shop in, which is also the
+ * order an owner's doubts arrive in: will they book, does the paperwork come
+ * back, who catches the diver who isn't cleared, how long is the line at the
+ * counter, does the roll call on the boat hold, and what does the diver take
+ * home.
+ *
+ * A step ends in its feature page rather than in a door into the demo, as the
+ * rows here did until 2026-10-05: the feature page's own door opens the demo
+ * on that very screen, as the role that uses it, which a door here could only
+ * do by repeating it. The page keeps its two demo doors, hero and close.
+ *
+ * Two steps draw a feature page's own screen and read that page's notes and
+ * label by key (the release on the diver's phone, the arrival desk), so the
+ * homepage and the page can never describe one drawing two ways. The other
+ * four keep the drawings and notes this page already carried, under
+ * `marketing.home.steps`.
+ *
+ * `id` is the bundle namespace under `marketing.home.steps`, never a rendered
+ * string.
+ */
+const STEPS: readonly {
+  id: "book" | "sign" | "check" | "checkIn" | "aboard" | "recap";
+  feature: FeaturePageSlug;
+  notes: readonly [DiverMessageKey, DiverMessageKey];
+  label: DiverMessageKey;
+  screen: (locale: DiverLocale) => ReactNode;
+}[] = [
+  {
+    id: "book",
+    feature: "online-booking",
+    notes: ["marketing.home.steps.book.note1", "marketing.home.steps.book.note2"],
+    label: "marketing.home.steps.book.mockupLabel",
+    screen: (locale) => <DiverBookingFallback locale={locale} />,
+  },
+  {
+    id: "sign",
+    feature: "waivers",
+    notes: ["marketing.featurePages.waivers.note1", "marketing.featurePages.waivers.note3"],
+    label: "marketing.featurePages.waivers.screenLabel",
+    screen: (locale) => <WaiverSigningFallback locale={locale} />,
+  },
+  {
+    id: "check",
+    feature: "certifications",
+    notes: ["marketing.home.steps.check.note1", "marketing.home.steps.check.note2"],
+    label: "marketing.home.steps.check.mockupLabel",
+    screen: (locale) => <FrontDeskReadinessFallback locale={locale} />,
+  },
+  {
+    id: "checkIn",
+    feature: "check-in",
+    notes: ["marketing.featurePages.checkIn.note1", "marketing.featurePages.checkIn.note3"],
+    label: "marketing.featurePages.checkIn.screenLabel",
+    screen: (locale) => <ArrivalDeskFallback locale={locale} />,
+  },
+  {
+    // The roll call as a flat still: the hero already holds the same screen
+    // in the phone, and a second bezel on one page reads as two phones.
+    id: "aboard",
+    feature: "boat-manifest",
+    notes: ["marketing.home.steps.aboard.note1", "marketing.home.steps.aboard.note2"],
+    label: "marketing.home.steps.aboard.mockupLabel",
+    screen: (locale) => <CaptainRollCallFallback locale={locale} />,
+  },
+  {
+    // The recap goes out by itself a few hours after the boat is due back,
+    // which is why it is the messages page this step opens.
+    id: "recap",
+    feature: "messages",
+    notes: ["marketing.home.steps.recap.note1", "marketing.home.steps.recap.note2"],
+    label: "marketing.home.steps.recap.mockupLabel",
+    screen: (locale) => <RecapPageFallback locale={locale} />,
+  },
+];
+
+/**
  * The whole home page body, cached per negotiated locale (DIVER_LOCALES —
  * two entries). Everything here is deterministic given `locale`:
  * message-bundle copy and the migration-guide competitor list. Nothing
@@ -172,12 +256,13 @@ function SectionMarker({ children, as: Tag = "p" }: { children: ReactNode; as?: 
  * `enterDemoAction` (a Server Action reference, safe to pass through per
  * Next's `"use cache"` interleaving rules).
  *
- * The page's shape (redesigned 2026-08-13): one argument — the whole dive day
- * runs from one calm place — told once per section, each section in its own
- * composition rather than six renders of the same eyebrow/h2/lede/card-grid
- * template. Two demo doors, hero and close, with the demo's cost stated once
- * at the first of them; the old mid-page door and the two extra banded closes
- * merged into the single closing band (docs/product/marketing.md).
+ * The page's shape (redesigned 2026-08-13, its middle rewritten 2026-10-05 for
+ * H-93): the hero says what DiveDay is and what a shop gets, the steps follow
+ * one booking to the boat, the directory names every feature page, and the
+ * records band and the close answer how a shop arrives, leaves and pays. Each
+ * section has its own composition rather than six renders of the same
+ * eyebrow/h2/lede/card-grid template. Two demo doors, hero and close, with the
+ * demo's cost stated once at the first of them (docs/product/marketing.md).
  */
 async function HomeBody({ locale }: { locale: DiverLocale }) {
   "use cache";
@@ -188,108 +273,6 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
   const competitors = cachedListFormat(locale, { type: "disjunction" }).format(
     MIGRATION_GUIDES.map((guide) => guide.competitor),
   );
-  // **Four screens, with notes** (the 2026-09-24 voice decision:
-  // docs/design/brand.md, "The voice on the public pages"). Each row is one
-  // of the product's own screens, drawn as it is, with the builder's notes
-  // beside it — under twenty words each, naming one thing on the screen and
-  // giving its reason or its limit — and one door into the demo as the role
-  // the screen belongs to. The rows used to be three "moments" told in prose
-  // with the screen as illustration; the screen is now the claim and the
-  // prose is what a person would say pointing at it.
-  //
-  // The dock row is new here: the roll call was the hero's picture and
-  // nowhere else on the page, so the one screen the doc that chose this voice
-  // says to show first had no notes. The hero keeps the phone (its motion is
-  // the page's opening beat); this row is the same screen as a flat still.
-  //
-  // Doors: the diver row keeps its link to the public schedule (no sign-in
-  // needed, so no demo mint); the desk and dock rows submit `enterDemoAction`
-  // with their role through `ScreenDoor`; the recap row has none, and says so
-  // in its last note — it reaches a diver by email after a trip and is not a
-  // screen a visitor is sent to poke, which is also why the page's
-  // "Try the live demo" count did not move (e2e/marketing.spec.ts).
-  //
-  // `id` is the message-bundle namespace, never a rendered string: it is this
-  // list's React key, and every other field here is localized copy.
-  const screens = [
-    {
-      id: "diver",
-      when: t("marketing.home.moments.diver.when"),
-      title: t("marketing.home.moments.diver.title"),
-      notes: [
-        t("marketing.home.moments.diver.note1"),
-        t("marketing.home.moments.diver.note2"),
-        t("marketing.home.moments.diver.note3"),
-        t("marketing.home.moments.diver.note4"),
-      ],
-      door: (
-        <Link
-          href={scheduleAttributionHref(DEMO_SHOP_SLUG, "home-diver-moment")}
-          className={buttonClass({ variant: "link", flush: true, className: "mt-2 self-start" })}
-        >
-          {t("marketing.home.moments.diver.door")}
-        </Link>
-      ),
-      mockupLabel: t("marketing.home.moments.diver.mockupLabel"),
-      mockup: marketingMockups.diverBooking,
-    },
-    {
-      id: "frontDesk",
-      when: t("marketing.home.moments.frontDesk.when"),
-      title: t("marketing.home.moments.frontDesk.title"),
-      notes: [
-        t("marketing.home.moments.frontDesk.note1"),
-        t("marketing.home.moments.frontDesk.note2"),
-        t("marketing.home.moments.frontDesk.note3"),
-        t("marketing.home.moments.frontDesk.note4"),
-      ],
-      door: (
-        <ScreenDoor
-          locale={locale}
-          demoRole="owner"
-          source="home-desk-moment"
-          label={t("marketing.home.moments.frontDesk.door")}
-        />
-      ),
-      mockupLabel: t("marketing.home.moments.frontDesk.mockupLabel"),
-      mockup: marketingMockups.frontDeskReadiness,
-    },
-    {
-      id: "dock",
-      when: t("marketing.home.moments.dock.when"),
-      title: t("marketing.home.moments.dock.title"),
-      notes: [
-        t("marketing.home.moments.dock.note1"),
-        t("marketing.home.moments.dock.note2"),
-        t("marketing.home.moments.dock.note3"),
-        t("marketing.home.moments.dock.note4"),
-      ],
-      door: (
-        <ScreenDoor
-          locale={locale}
-          demoRole="captain"
-          source="home-dock-moment"
-          label={t("marketing.home.moments.dock.door")}
-        />
-      ),
-      mockupLabel: t("marketing.home.moments.dock.mockupLabel"),
-      mockup: marketingMockups.captainRollCall,
-    },
-    {
-      id: "recap",
-      when: t("marketing.home.moments.recap.when"),
-      title: t("marketing.home.moments.recap.title"),
-      notes: [
-        t("marketing.home.moments.recap.note1"),
-        t("marketing.home.moments.recap.note2"),
-        t("marketing.home.moments.recap.note3"),
-        t("marketing.home.moments.recap.note4"),
-      ],
-      door: null,
-      mockupLabel: t("marketing.home.moments.recap.mockupLabel"),
-      mockup: marketingMockups.recap,
-    },
-  ] as const;
   // What a shop gets back on the way out, listed rather than described — the
   // inventory is the reassurance, so it reads as a manifest, not a paragraph.
   // Keyed by message key, never by the rendered sentence: two locales edit
@@ -344,68 +327,84 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
         </div>
       </section>
 
-      {/* The four screens, in the order the day runs them: alternating rows,
-          each a marker, a title, the builder's notes and one door beside a
-          large mockup. The rows are the page's argument now — the screen is
-          the claim, the notes say why it is drawn that way — so the section
-          holds four of them rather than the three prose "moments" it held
-          until 2026-09-24. */}
+      {/* The booking's steps, in the order a diver meets the shop:
+          alternating rows, each a marker, a title, two of the builder's notes
+          and the feature page's name beside a large drawing (`STEPS`). */}
       <MarketingReveal>
         <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
           <div className="max-w-2xl">
-            {/* One sentence and no lede: the four rows beneath are the whole
-                of what the band has to say. */}
+            {/* One sentence and no lede: the rows beneath are the whole of
+                what the band has to say. */}
             <h2 className={`${BANNER_TITLE_CLASS} sm:text-4xl`}>
-              {t("marketing.home.momentsTitle")}
+              {t("marketing.home.stepsTitle")}
             </h2>
           </div>
 
-          <div className="mt-14 space-y-16 lg:mt-20 lg:space-y-24">
-            {screens.map((screen, index) => (
-              // One `<article>` per screen: each is its own labelled thing in
-              // the outline, and each carries at most one door, which is what
-              // keeps "one primary per screen" countable per screen rather
-              // than per band (e2e/marketing.spec.ts).
-              <article
-                key={screen.id}
-                className="grid items-center gap-8 lg:grid-cols-11 lg:gap-14"
-              >
-                <div
-                  className={`flex flex-col lg:col-span-5 ${index % 2 === 1 ? "lg:order-last" : ""}`}
-                >
-                  <SectionMarker>{screen.when}</SectionMarker>
-                  <h3 className={`mt-3 ${LEAD_TITLE_CLASS} text-balance sm:text-3xl`}>
-                    {screen.title}
-                  </h3>
-                  <MarginNotes notes={screen.notes} className="mt-5 max-w-lg" />
-                  {screen.door}
-                </div>
-                <div className="lg:col-span-6">
-                  <MarketingMockup label={screen.mockupLabel}>
-                    {screen.mockup.render(locale)}
-                  </MarketingMockup>
-                </div>
-              </article>
-            ))}
-          </div>
+          <ol className="mt-14 space-y-16 lg:mt-20 lg:space-y-24">
+            {STEPS.map((step, index) => {
+              const page = getFeaturePage(step.feature);
+              if (!page) return null;
+              return (
+                // One list item per step, so a screen reader hears the
+                // booking as the sequence it is; the step's `<h3>` names it
+                // in the outline.
+                <li key={step.id} className="grid items-center gap-8 lg:grid-cols-11 lg:gap-14">
+                  <div
+                    className={`flex flex-col lg:col-span-5 ${index % 2 === 1 ? "lg:order-last" : ""}`}
+                  >
+                    <SectionMarker>{t(`marketing.home.steps.${step.id}.when`)}</SectionMarker>
+                    <h3 className={`mt-3 ${LEAD_TITLE_CLASS} text-balance sm:text-3xl`}>
+                      {t(`marketing.home.steps.${step.id}.title`)}
+                    </h3>
+                    <MarginNotes
+                      notes={step.notes.map((key) => t(key))}
+                      className="mt-5 max-w-lg"
+                    />
+                    {/* The page's own name is the link's words: the reader
+                        has just read what the step does, and the name says
+                        where the rest of it is. `self-start` keeps the link
+                        its own width in the flex column. */}
+                    <Link
+                      href={featurePagePath(page.slug)}
+                      className={buttonClass({
+                        variant: "link",
+                        flush: true,
+                        className: "mt-4 gap-2 self-start text-left",
+                      })}
+                    >
+                      {t(`marketing.featurePages.${page.key}.name`)}
+                      <DiveDayIcon name="arrow-right" className="size-4 shrink-0" />
+                    </Link>
+                  </div>
+                  <div className="lg:col-span-6">
+                    <MarketingMockup label={t(step.label)}>{step.screen(locale)}</MarketingMockup>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
         </section>
       </MarketingReveal>
 
-      {/* The breadth band: one provocative statement, the four groups as the
-          answer, one door to the full story. Deliberately still four
-          assertions rather than imagery — see docs/product/marketing.md. */}
+      {/* Every feature page, filed by when in a shop's year its job falls:
+          the page's answer to "does it do X?", and the one place it links to
+          all of them. The heading says they are all in the one plan, which
+          is the price question a list of features raises. */}
       <MarketingReveal>
         <section className="border-y border-border bg-surface">
           <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
-            <h2 className={`mx-auto max-w-3xl text-center ${BANNER_TITLE_CLASS} sm:text-4xl`}>
-              {t("marketing.home.productTitle")}
+            <h2 className={`max-w-3xl ${BANNER_TITLE_CLASS} sm:text-4xl`}>
+              {t("marketing.home.featuresTitle")}
             </h2>
             <div className="mt-12">
-              <FeatureGroupsGrid locale={locale} />
+              <FeatureDirectory locale={locale} />
             </div>
-            <div className="mt-10 text-center">
-              <Link href="/product" className={buttonClass({ variant: "outline" })}>
-                {t("marketing.home.seeFullProduct")}
+            <div className="mt-10 border-t border-border pt-6">
+              <Link
+                href="/product"
+                className={buttonClass({ variant: "link", flush: true, className: "text-left" })}
+              >
+                {t("marketing.home.featuresLink")}
               </Link>
             </div>
           </div>
@@ -416,7 +415,7 @@ async function HomeBody({ locale }: { locale: DiverLocale }) {
           argument: records come in clean and leave the same way, so the two
           directions are a mirrored pair of equal columns under one statement —
           same marker, same rule, same weight — rather than the copy-left /
-          visual-right split it shared with the hero and the first moment row.
+          visual-right split it shares with the hero and the steps.
           Arriving reads first (docs/product/marketing.md). */}
       <MarketingReveal>
         <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-28">
