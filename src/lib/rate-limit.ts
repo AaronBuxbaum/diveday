@@ -386,6 +386,8 @@ export const RATE_LIMITS = {
    * (ADR 20260724-per-visitor-demo-shops).
    */
   demoCreate: perHour(10),
+  /** Marking a browser as the founder's (`/api/demo/quiet`), per IP — a key-guessing oracle otherwise. */
+  demoQuiet: perHour(10),
   /** Credentials sign-in attempts, per IP — the wider net. */
   signInByIp: per15Min(20),
   /** Credentials sign-in attempts, per attempted email — the narrow net. */

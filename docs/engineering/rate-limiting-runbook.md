@@ -23,6 +23,7 @@ cannot see it.
 | --- | --- | --- | --- |
 | Onboarding (account + shop creation) | `src/app/onboard/actions.ts` | IP | `RATE_LIMITS.onboard` (5/hour) |
 | "Try the live demo" (mints a seeded demo shop) | `src/app/actions/demo.ts` | IP | `RATE_LIMITS.demoCreate` (10/hour) |
+| Marking a browser as the founder's, so its demos send no alert | `src/app/api/demo/quiet/route.ts` | IP | `RATE_LIMITS.demoQuiet` (10/hour) |
 | Sign-in | `src/lib/auth.ts` `authorize()` | IP **and** attempted email | `RATE_LIMITS.signInByIp` (20/15min) + `RATE_LIMITS.signInByEmail` (8/15min) |
 | Password-reset request | `src/app/forgot-password/actions.ts` | IP **and** requested email, checked concurrently | `RATE_LIMITS.passwordResetRequestByIp` (5/hour) + `RATE_LIMITS.passwordResetRequestByEmail` (3/15min) |
 | "Can't find your link?" request | `src/app/s/[shopSlug]/actions.ts` `requestFindMyBookingAction` (IP) + `src/db/find-my-booking.ts` `sendFindMyBookingLinks` (email) | IP, checked synchronously; requested email, checked only once at least one matching booking actually needs a fresh mint | `RATE_LIMITS.findMyBookingByIp` (5/hour) + `RATE_LIMITS.findMyBookingByEmail` (3/15min) |
