@@ -501,7 +501,7 @@ export async function bookSpot(
   // 20260801-checkout-upsells-rental-gear).
   if (offersGearAtCheckout) {
     await Promise.all(
-      outcome.bookings.map(async ({ bookingId, personId }, index) => {
+      outcome.bookings.map(async ({ bookingId, personId, identityUnconfirmed }, index) => {
         const selection = gearSelections[index];
         if (!selection) return;
         const rentedSet = new Set(selection.rentedKinds);
@@ -526,11 +526,21 @@ export async function bookSpot(
           rentsSmb: rentedSet.has("smb"),
         } satisfies Record<RentalFitField, boolean>;
         try {
-          await saveRentalFit(dbi, {
-            shopId: shopNow.id,
-            personId,
-            ...rents,
-          });
+          // **A held seat writes nothing to the person it matched.** The row
+          // is an existing diver's, reached by an email whose name on file
+          // does not match (H-13), so whoever booked may not be them, and the
+          // fit is theirs. A rented wetsuit ticked here would clear their
+          // `dives_dry`, and with it the drysuit weight check on every later
+          // trip (`security-reviewer`, layer 2). The paid gear still stands on
+          // the order, and the nitrox request below is this booking's own.
+          // `/ready` still writes the fit for a held seat: issue #2137.
+          if (!identityUnconfirmed) {
+            await saveRentalFit(dbi, {
+              shopId: shopNow.id,
+              personId,
+              ...rents,
+            });
+          }
           if (nitroxOfferedAtCheckout) {
             await setBookingNitrox(dbi, {
               shopId: shopNow.id,

@@ -291,6 +291,8 @@ export type BookingPartyOutcome =
         bookingId: string;
         personId: string;
         personName: string;
+        /** {@link BookingSuccess.identityUnconfirmed}, per seat. */
+        identityUnconfirmed: boolean;
         admissionAdvisory?: BookingAdmissionAdvisory;
       }>;
     }
@@ -335,6 +337,7 @@ export async function createBookingParty(
         bookingId: string;
         personId: string;
         personName: string;
+        identityUnconfirmed: boolean;
         admissionAdvisory?: BookingAdmissionAdvisory;
       }> = [];
       const pending: PendingDeclaration[] = [];
