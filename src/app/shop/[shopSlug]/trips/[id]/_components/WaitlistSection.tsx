@@ -108,7 +108,7 @@ export function WaitlistGroup({
             >
               <div className="min-w-0">
                 <p className="font-medium text-base">{person.fullName}</p>
-                <p className="text-muted">
+                <p className="text-muted wrap-anywhere">
                   {person.email ?? t("trips.waitlist.noEmailOnFile")}
                   {" · "}
                   {t("trips.waitlist.joined", {
