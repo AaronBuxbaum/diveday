@@ -98,7 +98,7 @@ describe("selfRegistrationReleaseDelivery", () => {
       );
     }
     expect(results.slice(0, cap).every((result) => result === "send")).toBe(true);
-    expect(results[cap]).toBe("rate_limited");
+    expect(results[cap]).toBe("shop_text_cap");
   });
 
   it("never spends a shop's daily text on a number it refused", async () => {

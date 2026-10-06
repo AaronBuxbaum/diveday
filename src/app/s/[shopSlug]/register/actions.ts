@@ -162,7 +162,12 @@ export async function registerAtShopAction(
   // only, never the address or number.
   after(async () => {
     if (delivery !== "send") {
-      log("self_registration.release_skipped", "info", { shopId: shop.id, outcome: delivery });
+      // A spent daily cap is the one skip that may be someone pumping texts
+      // through this shop's QR, so it is the one an operator is told about.
+      log("self_registration.release_skipped", delivery === "shop_text_cap" ? "warn" : "info", {
+        shopId: shop.id,
+        outcome: delivery,
+      });
       return;
     }
     try {

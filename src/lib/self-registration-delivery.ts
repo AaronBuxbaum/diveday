@@ -12,6 +12,8 @@ import { type AnonymousTextRefusal, anonymousTextRecipient } from "./self-regist
 export type SelfRegistrationDelivery =
   | "send"
   | "rate_limited"
+  /** The shop's daily text cap is spent: a burst worth a look, logged at warn. */
+  | "shop_text_cap"
   | "no_contact"
   | AnonymousTextRefusal;
 
@@ -61,5 +63,5 @@ export async function selfRegistrationReleaseDelivery(
     rateLimitKey("self-register-text-shop", shop.id),
     RATE_LIMITS.selfRegisterTextByShop,
   );
-  return byShop.allowed ? "send" : "rate_limited";
+  return byShop.allowed ? "send" : "shop_text_cap";
 }
