@@ -1091,6 +1091,55 @@ export async function courseCrewCountsByTrip(
 const OUT_LOOKBACK_MS = 14 * 24 * HOUR_MS;
 
 /**
+ * The bookings whose standing result at their departure's **last** after-dive
+ * checkpoint is `boarded`: counted back aboard with no dive left to make. The
+ * newest result per booking wins, so a later `cleared` or `not_boarded`
+ * takes the booking back out (the supersession every roll-call reader here
+ * applies).
+ */
+async function boardedAfterLastDive(
+  db: AppDb,
+  shopId: string,
+  departures: readonly { id: string; plannedDives: number }[],
+): Promise<Set<string>> {
+  const counted = new Set<string>();
+  if (departures.length === 0) return counted;
+  const lastCheckpoint = new Map(
+    departures.map((trip) => [trip.id, `after_dive_${Math.max(1, trip.plannedDives)}`]),
+  );
+  const rows = await db
+    .select({
+      tripId: rollCallEvents.tripId,
+      bookingId: rollCallEvents.bookingId,
+      checkpoint: rollCallEvents.checkpoint,
+      status: rollCallEvents.status,
+    })
+    .from(rollCallEvents)
+    .where(
+      and(
+        eq(rollCallEvents.shopId, shopId),
+        inArray(
+          rollCallEvents.tripId,
+          departures.map((trip) => trip.id),
+        ),
+      ),
+    )
+    .orderBy(
+      desc(rollCallEvents.occurredAt),
+      desc(rollCallEvents.createdAt),
+      desc(rollCallEvents.seq),
+    );
+  const seen = new Set<string>();
+  for (const row of rows) {
+    if (row.checkpoint !== lastCheckpoint.get(row.tripId)) continue;
+    if (seen.has(row.bookingId)) continue;
+    seen.add(row.bookingId);
+    if (row.status === "boarded") counted.add(row.bookingId);
+  }
+  return counted;
+}
+
+/**
  * **Blocked divers aboard a boat that is still out** (issue #2064).
  *
  * Every other readiness row on Today comes from the forward-looking horizon
@@ -1128,6 +1177,7 @@ async function blockedAboardOnBoatsOut(
       startsAt: trips.startsAt,
       endsAt: trips.endsAt,
       status: trips.status,
+      plannedDives: trips.plannedDives,
     })
     .from(trips)
     .where(
@@ -1178,11 +1228,19 @@ async function blockedAboardOnBoatsOut(
   );
   if (out.length === 0) return { out: [], blocked: [] };
   const outIds = out.map((trip) => trip.id);
-  const readiness = await listTripsReadiness(db, shopId, outIds, now);
+  const [readiness, countedBackAfterLastDive] = await Promise.all([
+    listTripsReadiness(db, shopId, outIds, now),
+    boardedAfterLastDive(db, shopId, out),
+  ]);
+  // The row is about somebody who may be in the water. A diver the crew
+  // counted back aboard after the boat's last dive is not, however long the
+  // ride home: the evening's "All boats are home" line is drawn from exactly
+  // that count, and the two must not disagree.
   const blocked = readiness.filter(
     (row) =>
       row.readiness.status === "blocked" &&
-      departureRollCall.get(row.booking.tripId)?.get(row.booking.id) === "boarded",
+      departureRollCall.get(row.booking.tripId)?.get(row.booking.id) === "boarded" &&
+      !countedBackAfterLastDive.has(row.booking.id),
   );
   return { out, blocked };
 }
