@@ -236,7 +236,8 @@ export type IncidentRosterEntry = {
   rollCall: IncidentRollCallResult[];
   /** Empty means "no certification evidence on file" — the UI must say so. */
   certifications: IncidentCertificationEvidence[];
-  waiver: IncidentWaiverStatus;
+  /** Null only on a held seat (`identityWithheld`): withheld, never a stated absence. */
+  waiver: IncidentWaiverStatus | null;
 };
 
 export type IncidentCrewEntry = {
@@ -676,7 +677,9 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
               manifest.divers.find((entry) => entry.bookingId === diver.bookingId) ?? null,
           ),
           certifications: [],
-          waiver: waiverStatus(null, input.generatedAt, null, null, null),
+          // Null, not `not_sent`: the hashed document states no waiver fact
+          // about a seat whose waiver read is somebody else's.
+          waiver: null,
         };
       }
       const evidence = evidenceByBooking.get(diver.bookingId);

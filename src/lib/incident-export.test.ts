@@ -335,7 +335,7 @@ describe("buildIncidentExport", () => {
       }),
     );
 
-    expect(doc.roster.find((entry) => entry.bookingId === "b1")?.waiver.recordedByName).toBeNull();
+    expect(doc.roster.find((entry) => entry.bookingId === "b1")?.waiver?.recordedByName).toBeNull();
   });
 
   /**
@@ -380,7 +380,7 @@ describe("buildIncidentExport", () => {
       emergencyContactPhone: null,
       certifications: [],
     });
-    expect(held?.waiver.state).not.toBe("medical_review");
+    expect(held?.waiver).toBeNull();
     expect(held?.rollCall[0]?.label).toBeDefined();
     const serialized = JSON.stringify(doc.roster);
     expect(serialized).not.toContain("Ana Diaz");
@@ -408,7 +408,7 @@ describe("buildIncidentExport", () => {
       }),
     );
 
-    expect(doc.roster[0]?.waiver.state).toBe("medical_review");
+    expect(doc.roster[0]?.waiver?.state).toBe("medical_review");
     const serialized = JSON.stringify(doc);
     expect(serialized).not.toContain("MEDICAL-ANSWER-NEVER-EXPORTED");
     expect(serialized).not.toContain("TEMPLATE-BODY-NEVER-EXPORTED");

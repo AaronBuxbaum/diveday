@@ -397,7 +397,7 @@ export default async function IncidentExportPage({
               {/* A held seat's release and cards would be the matched
                   person's (issue #2128): one sentence, never "not sent" or
                   "no cards", which would be wrong facts on this document. */}
-              {diver.identityWithheld ? (
+              {diver.identityWithheld || !diver.waiver ? (
                 <p className="mt-1 text-sm text-muted">{t("incidentExport.identityWithheld")}</p>
               ) : (
                 <p className="mt-1 text-sm">
