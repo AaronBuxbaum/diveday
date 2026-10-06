@@ -441,6 +441,34 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       screen.queryByText("A medical answer needs a doctor’s sign-off before this diver dives."),
     ).toBeNull();
     expect(screen.getAllByText("Payment is outstanding for this trip.").length).toBeGreaterThan(0);
+    // The medical hold on the matched person's release is theirs: no status
+    // block, no follow-up line, only that other holds may still apply.
+    expect(screen.queryByText("Follow up before boarding")).toBeNull();
+    expect(screen.getAllByText("Other holds may still apply.").length).toBeGreaterThan(0);
+  });
+
+  it("withholds on the booking's own flag when readiness could not be read", () => {
+    // Fails closed: the read raised no identity blocker, but the booking
+    // still says it is held (security review 2026-10-06).
+    const heldRow = entry("u", "Marisol Vega", {
+      dateOfBirth: "2012-05-04",
+      emergencyContactName: "Pilar Vega",
+      emergencyContactPhone: "+34 600 111 222",
+    });
+    (heldRow.booking as { identityUnconfirmedAt: Date | null }).identityUnconfirmedAt = new Date(
+      "2026-10-01T12:00:00Z",
+    );
+    renderRoster({
+      roster: [heldRow],
+      readiness: new Map([
+        ["u", readinessRow("blocked", [{ code: "readiness_unavailable", params: undefined }])],
+      ]) as ReadinessByBooking,
+      waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+      rentalFit,
+    });
+    expect(screen.queryByText(/Pilar Vega/)).toBeNull();
+    expect(screen.queryByText(flaggedPrompt)).toBeNull();
+    expect(screen.queryByText("Follow up before boarding")).toBeNull();
   });
 
   it("prints none of the matched person's medical answers, age, emergency contact or sizes", () => {

@@ -1067,11 +1067,14 @@ describe("offline manifest policy", () => {
     const payload = serializeManifests(
       [{ ...base, divers: [heldDiver] }],
       shop,
-      (blocker) => blocker.code,
+      // The resolver sees the withheld row, so it can say other holds apply.
+      (blocker, diver) => `${blocker.code}${diver.moreHoldsBehindConfirmation ? "+more" : ""}`,
     );
     expect(payload.manifests[0]?.divers[0]).toMatchObject({
       bookingId: "booking-1",
-      fullName: "Nobody Asked",
+      // Named as booked: the phone never names the matched person.
+      fullName: "Maria",
+      identityWithheld: true,
       emergencyContactName: null,
       emergencyContactPhone: null,
       rentalFit: { state: "not_recorded" },
@@ -1079,9 +1082,10 @@ describe("offline manifest policy", () => {
       checkedIn: true,
       readiness: {
         status: "blocked",
-        blockers: [{ code: "identity_unconfirmed", text: "identity_unconfirmed" }],
+        blockers: [{ code: "identity_unconfirmed", text: "identity_unconfirmed+more" }],
       },
     });
+    expect(JSON.stringify(payload)).not.toContain("Nobody Asked");
 
     // Confirmed, the same diver's contact rides as it always has.
     const confirmed = serializeManifests(
@@ -1100,6 +1104,7 @@ describe("offline manifest policy", () => {
       shop,
       (blocker) => blocker.code,
     );
+    expect(confirmed.manifests[0]?.divers[0]?.identityWithheld).toBeUndefined();
     expect(confirmed.manifests[0]?.divers[0]).toMatchObject({
       emergencyContactName: "Luis Santos",
       emergencyContactPhone: "+1-305-555-0199",

@@ -433,6 +433,7 @@
     "emergencyContactOnFile": "{name} · {phone}",
     "emergencyContactPhoneLabel": "Teléfono del contacto",
     "followUpBeforeBoarding": "Seguimiento antes de embarcar",
+    "heldSeatMoreHolds": "Puede haber otras retenciones.",
     "notClearedBeforeBoarding": "La retención sigue en pie. Esta persona no embarca.",
     "groupInvited": "Invitados",
     "groupReady": "Listos",

@@ -2409,10 +2409,44 @@ describe("the row grammar the live manifest already reads", () => {
     const details = summary?.closest("details") as HTMLElement;
     expect(
       within(details).getByText(
-        "Contact, age, gear and medical details wait until the desk confirms who this is.",
+        "Their contact, age and other details wait until the desk confirms who this is.",
       ),
     ).toBeTruthy();
     expect(within(details).queryByText("Not on file")).toBeNull();
+  });
+
+  it("reads the saved withheld flag, whatever the blockers say", async () => {
+    // The flag is what the save wrote; a seat it marks withheld says so even
+    // when the identity code is not the blocker it kept.
+    const envelope = richEnvelope("trip-1", { readiness: "blocked" });
+    for (const manifest of envelope.snapshot.manifests) {
+      manifest.divers = manifest.divers.map((diver) =>
+        diver.bookingId === "diver-priya"
+          ? {
+              ...diver,
+              identityWithheld: true,
+              emergencyContactName: null,
+              emergencyContactPhone: null,
+              readiness: {
+                status: "blocked",
+                blockers: [{ code: "readiness_unavailable", text: "Readiness unavailable." }],
+              },
+            }
+          : diver,
+      );
+    }
+    vi.mocked(loadOfflineManifest).mockResolvedValue(envelope);
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    const summary = screen.getAllByText("Contact & gear")[0];
+    const details = summary?.closest("details") as HTMLElement;
+    expect(
+      within(details).getByText(
+        "Their contact, age and other details wait until the desk confirms who this is.",
+      ),
+    ).toBeTruthy();
   });
 
   it("drops the box off the exception control while boarding is still on offer", async () => {

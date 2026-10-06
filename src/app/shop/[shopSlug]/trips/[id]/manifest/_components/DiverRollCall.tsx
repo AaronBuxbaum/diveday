@@ -13,13 +13,9 @@ import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { buddyAlertText } from "@/i18n/buddy-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
-import { identityReasonText } from "@/i18n/identity-check-labels";
+import { crewBlockerText } from "@/i18n/identity-check-labels";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
-import {
-  readinessBlockerText,
-  readinessStatusText,
-  readinessStatusTone,
-} from "@/i18n/readiness-labels";
+import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { welcomeCueText } from "@/i18n/welcome-cue-labels";
@@ -54,19 +50,18 @@ import {
 } from "./RollCallControls";
 
 /**
- * A blocker's sentence on this diver's row. A held seat's names both people
- * the guess was between (`identityReasonText`), the same sentence the Divers
- * tab prints, so the dock is not left with "might be someone else" and nothing
- * to compare it to (Aaron, 2026-10-06).
+ * A blocker's sentence on this diver's row: the crew's (`crewBlockerText`).
+ * A held seat says the desk must settle it, and that other holds may still
+ * apply when withholding dropped any, without naming the matched person or
+ * which hold it was (dive-domain review 2026-10-06). "Confirm who this is"
+ * stays on the Divers tab, beside the control that does it.
  */
 function diverBlockerText(
   t: StaffTranslator,
   diver: TripManifest["divers"][number],
   blocker: ReadinessBlocker,
 ): string {
-  const text = readinessBlockerText(t, blocker);
-  if (blocker.code !== "identity_unconfirmed" || !diver.identityClaim) return text;
-  return identityReasonText(t, diver.identityClaim, diver.fullName, text);
+  return crewBlockerText(t, diver, blocker);
 }
 
 /**

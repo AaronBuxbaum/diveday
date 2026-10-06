@@ -34,11 +34,18 @@ import type { TripManifest } from "./manifests";
  * `identity-match.ts`, which reads the same answer off `BLOCKER_CATEGORY`.
  */
 
-/** The blockers that belong to the seat rather than to the matched person. */
+/**
+ * The blockers that belong to the seat rather than to the matched person: the
+ * identity question, the seat's payment, and the two about the system rather
+ * than anybody's record (`readiness_unavailable`, `requirements_not_configured`),
+ * which no answer to the identity question would clear.
+ */
 export const SEAT_OWN_BLOCKER_CODES: ReadonlySet<string> = new Set([
   "identity_unconfirmed",
   "payment_due",
   "payment_refunded",
+  "readiness_unavailable",
+  "requirements_not_configured",
 ]);
 
 type BlockerLike = { code: string };
@@ -67,29 +74,38 @@ type ManifestDiver = TripManifest["divers"][number];
  * rather than print "Not on file" (a wrong fact, not an absent one).
  *
  * Readiness keeps its status: the seat is still blocked on everything it was
- * blocked on. Only the sentences measured against the matched person go.
+ * blocked on. Only the sentences measured against the matched person go, and
+ * **their going is said** (dive-domain review 2026-10-06):
+ * `moreHoldsBehindConfirmation` is set whenever any of them was dropped, with
+ * no hint of which, so a medical hold behind the identity question still
+ * reaches the rail as "other holds may still apply" rather than vanishing.
+ *
+ * The name is the one the seat was **booked under** when the claim carries
+ * it: that is who will walk up the gangway, and the matched person's name on
+ * a crew phone or a printed sheet is itself a fact about somebody else.
+ * `minor` is null, not false: unknown, never "an adult".
  */
 export function withholdHeldSeatParticulars(diver: ManifestDiver): ManifestDiver {
   if (!isHeldSeat(diver)) return diver;
+  const kept = diver.readiness.blockers.filter((blocker) =>
+    SEAT_OWN_BLOCKER_CODES.has(blocker.code),
+  );
   return {
     ...diver,
+    fullName: diver.identityClaim?.bookedAs?.trim() || diver.fullName,
     identityWithheld: true,
+    moreHoldsBehindConfirmation: kept.length < diver.readiness.blockers.length,
     email: null,
     emergencyContactName: null,
     emergencyContactPhone: null,
     rentalFit: { state: "not_recorded" },
     nitroxRequested: false,
     age: null,
-    minor: false,
+    minor: null,
     birthday: null,
     welcomeCue: null,
     depthAdvisory: undefined,
     medicalWaiver: null,
-    readiness: {
-      ...diver.readiness,
-      blockers: diver.readiness.blockers.filter((blocker) =>
-        SEAT_OWN_BLOCKER_CODES.has(blocker.code),
-      ),
-    },
+    readiness: { ...diver.readiness, blockers: kept },
   };
 }

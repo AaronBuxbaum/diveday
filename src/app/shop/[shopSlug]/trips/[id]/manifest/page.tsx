@@ -26,10 +26,10 @@ import { latestTripStage } from "@/db/trip-stages";
 import { listTripDives } from "@/db/trips";
 import { catchUpSentences } from "@/i18n/desk-event-labels";
 import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
+import { crewBlockerText } from "@/i18n/identity-check-labels";
 import { rollCallCheckpointShortText, rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { fieldGuideCards, marineLifeCatalogCards } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
-import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -1053,7 +1053,7 @@ export default async function TripManifestPage({
               timezone: shop.timezone,
               emergencyReference: shop.emergencyReference,
             },
-            (blocker) => readinessBlockerText(t, blocker),
+            (blocker, diver) => crewBlockerText(t, diver, blocker),
             checklistItems.map((item) => ({
               id: item.id,
               label: item.label,

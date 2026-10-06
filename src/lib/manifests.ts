@@ -133,6 +133,13 @@ export type ManifestDiverInput = {
    * surface says they wait for confirmation instead of "Not on file".
    */
   identityWithheld?: boolean;
+  /**
+   * Set beside `identityWithheld`: withholding dropped at least one blocker
+   * measured against the matched person, so the crew line says other holds may
+   * still apply. Deliberately a boolean with no category: which hold it was
+   * (a medical one, say) is a fact about the matched person.
+   */
+  moreHoldsBehindConfirmation?: boolean;
   /** Rental kit line, including whether a fit was ever recorded at all. */
   rentalFit: RentalFitLine;
   /**
@@ -149,7 +156,8 @@ export type ManifestDiverInput = {
    * entitled to know before the lines come off.
    */
   age?: number | null;
-  minor?: boolean;
+  /** Null on a held seat (`identityWithheld`): unknown, which is not "an adult". */
+  minor?: boolean | null;
   /** The diver has a birthday today or within the callout window (H-21). */
   birthday?: BirthdayCallout | null;
   /**

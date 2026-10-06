@@ -433,6 +433,7 @@
     "emergencyContactOnFile": "{name} · {phone}",
     "emergencyContactPhoneLabel": "Contact phone",
     "followUpBeforeBoarding": "Follow up before boarding",
+    "heldSeatMoreHolds": "Other holds may still apply.",
     "notClearedBeforeBoarding": "The hold stands. This diver does not board.",
     "groupInvited": "Invited",
     "groupReady": "Ready",

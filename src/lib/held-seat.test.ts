@@ -60,7 +60,8 @@ describe("withholding a held seat's particulars (issue #1690)", () => {
       rentalFit: { state: "not_recorded" },
       nitroxRequested: false,
       age: null,
-      minor: false,
+      // Unknown, never "an adult".
+      minor: null,
       birthday: null,
       welcomeCue: null,
       medicalWaiver: null,
@@ -68,11 +69,13 @@ describe("withholding a held seat's particulars (issue #1690)", () => {
     expect(shown.depthAdvisory).toBeUndefined();
   });
 
-  it("keeps the seat: its name, state, mark, desk flags, team and pickup", () => {
+  it("keeps the seat: its name as booked, state, mark, desk flags, team and pickup", () => {
     const shown = withholdHeldSeatParticulars(held([{ code: "identity_unconfirmed" }]));
     expect(shown).toMatchObject({
       bookingId: matchedPerson.bookingId,
-      fullName: "Maria Santos",
+      // Who walks up the gangway, not the matched person.
+      fullName: "Maria",
+      moreHoldsBehindConfirmation: false,
       identityClaim: { bookedAs: "Maria", matchedBy: "picked_name" },
       hotelPickupLocation: "Casa Marina",
       pickupTime: "07:15",
@@ -99,6 +102,32 @@ describe("withholding a held seat's particulars (issue #1690)", () => {
       "identity_unconfirmed",
       "payment_due",
     ]);
+    // The dropped ones are still said to exist, by a flag with no category.
+    expect(shown.moreHoldsBehindConfirmation).toBe(true);
+  });
+
+  it("keeps the blockers about the system, which no identity answer clears", () => {
+    const shown = withholdHeldSeatParticulars(
+      held([
+        { code: "identity_unconfirmed" },
+        { code: "readiness_unavailable" },
+        { code: "requirements_not_configured" },
+      ]),
+    );
+    expect(shown.readiness.blockers.map((blocker) => blocker.code)).toEqual([
+      "identity_unconfirmed",
+      "readiness_unavailable",
+      "requirements_not_configured",
+    ]);
+    expect(shown.moreHoldsBehindConfirmation).toBe(false);
+  });
+
+  it("keeps the matched person's name when the claim never recorded another", () => {
+    const shown = withholdHeldSeatParticulars({
+      ...held([{ code: "identity_unconfirmed" }]),
+      identityClaim: { bookedAs: null, matchedBy: null },
+    });
+    expect(shown.fullName).toBe("Maria Santos");
   });
 
   it("leaves a confirmed seat exactly as it was", () => {

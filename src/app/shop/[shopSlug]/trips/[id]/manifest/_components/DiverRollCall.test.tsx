@@ -822,24 +822,60 @@ describe("a held seat on the manifest", () => {
     const printed = container.querySelector<HTMLElement>(".print\\:block");
     expect(printed).not.toBeNull();
     expect(printed).toHaveTextContent(
-      "Contact, age, gear and medical details wait until the desk confirms who this is.",
+      "Their contact, age and other details wait until the desk confirms who this is.",
     );
     expect(printed).not.toHaveTextContent("Not on file");
   });
 
-  it("keeps the seat's own state: the blocked word, the identity question and the pickup", () => {
+  it("keeps the seat's own state: its name as booked, the blocked word and the pickup", () => {
     const { container } = heldSeat();
     expect(screen.getAllByText("Blocked").length).toBeGreaterThan(0);
-    expect(container.textContent).toContain("Booked as Maria, then matched to Meera Iyer");
+    // Named as booked; the matched person is not named at the rail.
+    expect(container.textContent).toContain("Maria");
+    expect(container.textContent).not.toContain("Meera Iyer");
     expect(container.textContent).toContain("Casa Marina");
+  });
+
+  /**
+   * **A hold behind the identity question still reaches the rail** (dive-domain
+   * review 2026-10-06). The crew line says the desk settles it and that other
+   * holds may apply, never which: "medical" would be a fact about the matched
+   * person, and "confirm who this is" on paper tells the crew to settle it.
+   */
+  it("flags other holds on a held seat with a medical hold, and never says medical", () => {
+    const { container } = heldSeat();
+    const crewLine =
+      "Not confirmed. The desk must confirm or split this seat before boarding. Other holds may still apply.";
+    expect(container.textContent).toContain(crewLine);
+    const printed = container.querySelector<HTMLElement>(".print\\:block");
+    expect(printed).toHaveTextContent(crewLine);
+    expect(container.textContent?.toLowerCase()).not.toContain("medical");
+    expect(printed?.textContent?.toLowerCase()).not.toContain("medical");
+    expect(container.textContent).not.toContain("Confirm who this is");
+  });
+
+  it("says nothing of other holds when the identity question is the only one", () => {
+    const { container } = renderList({
+      checkpoint: "departure",
+      divers: [
+        diver({
+          identityClaim: { bookedAs: "Maria", matchedBy: "picked_name" },
+          readiness: { status: "blocked", blockers: [{ code: "identity_unconfirmed" }] },
+        }),
+      ],
+    });
+    expect(container.textContent).toContain(
+      "Not confirmed. The desk must confirm or split this seat before boarding.",
+    );
+    expect(container.textContent).not.toContain("Other holds may still apply.");
   });
 
   it("says the same in the person's own panel", () => {
     heldSeat("after_dive_1");
-    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Maria" }));
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveTextContent(
-      "Contact, age, gear and medical details wait until the desk confirms who this is.",
+      "Their contact, age and other details wait until the desk confirms who this is.",
     );
     expect(dialog).not.toHaveTextContent("Asha Iyer");
     expect(dialog).toHaveTextContent("Diver · not yet confirmed");
@@ -875,7 +911,7 @@ describe("a held seat on the manifest", () => {
       ],
     });
     expect(container.textContent).toContain(
-      "Los datos de contacto, edad, equipo y ficha médica esperan a que el mostrador confirme de quién se trata.",
+      "Su contacto, su edad y sus demás datos esperan a que el mostrador confirme de quién se trata.",
     );
   });
 });

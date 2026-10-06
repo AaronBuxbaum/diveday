@@ -444,9 +444,9 @@ export function RosterSection({
     const currentWaiver = waiverByBooking.get(booking.id)?.waiver ?? null;
     const status = waiverState(currentWaiver);
     const control = WAIVER_CONTROLS[status];
-    const identityUnconfirmed = Boolean(
-      readiness?.blockers.some((blocker) => blocker.code === "identity_unconfirmed"),
-    );
+    const identityUnconfirmed =
+      Boolean(booking.identityUnconfirmedAt) ||
+      Boolean(readiness?.blockers.some((blocker) => blocker.code === "identity_unconfirmed"));
     // A name with no number reads as "on file" but is unreachable in an
     // incident — same both-fields rule Today's nudge uses (src/db/today.ts).
     const hasEmergencyContact = Boolean(
@@ -559,9 +559,12 @@ export function RosterSection({
     const waiverStatus = waiverState(currentWaiver);
     const waiverControl = WAIVER_CONTROLS[waiverStatus];
     const nitrox = nitroxByBooking.get(booking.id);
-    const identityUnconfirmed = Boolean(
-      readiness?.blockers.some((blocker) => blocker.code === "identity_unconfirmed"),
-    );
+    // Either signal holds the seat, so a readiness read that failed closed
+    // (and so raised no identity blocker) still withholds (security review
+    // 2026-10-06).
+    const identityUnconfirmed =
+      Boolean(booking.identityUnconfirmedAt) ||
+      Boolean(readiness?.blockers.some((blocker) => blocker.code === "identity_unconfirmed"));
     /**
      * **The flag gates disclosure as well as boarding** (security review
      * 2026-09-11). This seat attached itself to an existing person on a guess
@@ -850,8 +853,12 @@ export function RosterSection({
         {/* Safety-critical and never disclosed: a flagged medical answer is
             the one thing on this row that must be read before the diver
             boards. It carries the **status word** as well as the instruction
-            (caught by waivers.spec.ts). */}
-        {waiverStatus === "medical_review" || waiverStatus === "medical_not_cleared" ? (
+            (caught by waivers.spec.ts). On a held seat the release is the
+            matched person's, so the hold is theirs too and the row says only
+            that other holds may apply, as the manifest does (dive-domain
+            review 2026-10-06). */}
+        {!identityUnconfirmed &&
+        (waiverStatus === "medical_review" || waiverStatus === "medical_not_cleared") ? (
           <div
             className={`mt-3 rounded-lg px-3 py-2 text-sm ${
               waiverStatus === "medical_not_cleared"
@@ -932,8 +939,24 @@ export function RosterSection({
     const recencyText = diveRecencyIsNotable(booking.lastDivedBand)
       ? diveRecencyText(t, booking.lastDivedBand)
       : null;
+    // What withholding dropped is still said to exist, never which: the
+    // manifest's rule (dive-domain review 2026-10-06).
+    const moreHoldsBehindConfirmation =
+      identityUnconfirmed &&
+      readiness !== undefined &&
+      readiness.status !== "ready" &&
+      heldSeatBlockers(readiness.blockers).length < readiness.blockers.length;
     const reasonLines: { key: string; text: string; tone: "danger" | "warning" }[] = [
       ...blockerTexts.map(({ text }) => ({ key: text, text, tone: "danger" as const })),
+      ...(moreHoldsBehindConfirmation
+        ? [
+            {
+              key: "more-holds",
+              text: t("trips.roster.heldSeatMoreHolds"),
+              tone: "danger" as const,
+            },
+          ]
+        : []),
       ...(depthText !== null && !depthShared
         ? [{ key: "depth", text: depthText, tone: "warning" as const }]
         : []),

@@ -288,6 +288,14 @@ export type OfflineManifestPayload = {
            */
           checkedIn?: boolean;
           /**
+           * A held seat (`withholdHeldSeatParticulars`, issue #1690): the
+           * matched person's particulars were cleared at save time, so the
+           * view says they wait for the desk rather than "Not on file".
+           * Optional and additive (no record-version bump): a copy saved
+           * before it has none, and the view also reads the identity blocker.
+           */
+          identityWithheld?: true;
+          /**
            * **The desk released this seat** (`notHere`, issue #1209) — the
            * other thing the counter can say about a booking, and the one a
            * crew with no signal has no other way to learn.
@@ -765,8 +773,12 @@ export async function fetchOfflineManifestShopSlug(): Promise<string | null> {
 export function serializeManifests(
   manifests: readonly TripManifest[],
   shop: OfflineManifestPayload["shop"],
-  /** Same resolver `src/i18n/readiness-labels.ts#readinessBlockerText` gives a caller with a translator. */
-  resolveBlockerText: (blocker: ReadinessBlocker) => string,
+  /**
+   * The crew's sentence for a blocker on a diver's (already withheld) row:
+   * `crewBlockerText` in `src/i18n/identity-check-labels.ts` for a caller with
+   * a translator, which reads the row's `moreHoldsBehindConfirmation`.
+   */
+  resolveBlockerText: (blocker: ReadinessBlocker, diver: TripManifest["divers"][number]) => string,
   /** The shop's checklist items and this trip's latest known check per item — absent (or empty) is a shop with none. */
   checklist: ReadonlyArray<{
     id: string;
@@ -835,11 +847,13 @@ export function serializeManifests(
       // A held seat goes through `withholdHeldSeatParticulars` first (issue
       // #1690, H-79): the copy that lives longest on a crew phone is the last
       // one that should carry the matched person's next of kin, sizes or
-      // medical hold under a name nobody has confirmed. Its blockers keep the
-      // `identity_unconfirmed` code, which is how the saved copy knows to say so.
+      // medical hold under a name nobody has confirmed. The row is named as
+      // booked, and carries `identityWithheld` so the saved copy says why its
+      // facts are missing.
       divers: manifest.divers.map(withholdHeldSeatParticulars).map((diver) => ({
         bookingId: diver.bookingId,
         fullName: diver.fullName,
+        ...(diver.identityWithheld ? { identityWithheld: true as const } : {}),
         emergencyContactName: diver.emergencyContactName,
         emergencyContactPhone: diver.emergencyContactPhone,
         rentalFit: diver.rentalFit,
@@ -856,7 +870,7 @@ export function serializeManifests(
           status: diver.readiness.status,
           blockers: diver.readiness.blockers.map((blocker) => ({
             code: blocker.code,
-            text: resolveBlockerText(blocker),
+            text: resolveBlockerText(blocker, diver),
           })),
         },
         rollCall: diver.rollCall

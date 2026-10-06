@@ -1,4 +1,6 @@
 import type { IdentityMatchKind } from "@/lib/identity-match";
+import type { ReadinessBlocker } from "@/lib/readiness";
+import { readinessBlockerText } from "./readiness-labels";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
 /**
@@ -57,4 +59,27 @@ export function identityReasonText(
 ): string {
   const message = identityReasonMessage(claim, recordName);
   return message ? t(message.key, message.values) : fallback;
+}
+
+/**
+ * **A blocker's sentence for the crew**: the boat manifest, its printed sheet
+ * and the copy a crew phone saves (dive-domain review 2026-10-06).
+ *
+ * Every blocker reads as everywhere else but the identity question. On a held
+ * seat that one says the seat is unconfirmed and that the *desk* settles it,
+ * never "confirm who this is", which on a sheet at the rail tells the crew to
+ * settle identity themselves; and when withholding dropped any other blocker
+ * (`moreHoldsBehindConfirmation`), that other holds may still apply, without
+ * saying which. "Confirm who this is" stays on the roster, where the confirm
+ * control is.
+ */
+export function crewBlockerText(
+  t: StaffTranslator,
+  diver: { moreHoldsBehindConfirmation?: boolean },
+  blocker: ReadinessBlocker,
+): string {
+  if (blocker.code !== "identity_unconfirmed") return readinessBlockerText(t, blocker);
+  return t("manifest.heldSeatNotConfirmed", {
+    moreHolds: diver.moreHoldsBehindConfirmation ? "yes" : "no",
+  });
 }
