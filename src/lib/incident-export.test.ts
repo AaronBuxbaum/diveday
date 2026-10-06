@@ -338,6 +338,61 @@ describe("buildIncidentExport", () => {
     expect(doc.roster.find((entry) => entry.bookingId === "b1")?.waiver.recordedByName).toBeNull();
   });
 
+  /**
+   * **A held seat is on the document as the seat** (issue #2128). The
+   * booking was matched to an existing diver by a guess, so that diver's next
+   * of kin, cards and release are facts about somebody else: an investigator
+   * phoning the number on this page would reach the wrong family.
+   */
+  it("withholds a held seat's matched particulars and says so, keeping its roll call", () => {
+    const boarded = {
+      state: "boarded" as const,
+      occurredAt: new Date("2026-08-04T12:45:00.000Z"),
+      recordedByName: "Captain Sol",
+      note: null,
+    };
+    const doc = buildIncidentExport(
+      baseInput({
+        manifests: manifestsFor([
+          {
+            ...diver("b1", "Ana Diaz", boarded),
+            identityClaim: { bookedAs: "Ana Duarte", matchedBy: "shared_email" },
+          },
+          diver("b2", "Ben Cho"),
+        ]),
+        diverEvidence: [
+          {
+            bookingId: "b1",
+            certifications: [verifiedCard()],
+            specialtyCertifications: [],
+            nitroxCertifications: [],
+            waiver: completedWaiver({ status: "medical_review", signedAt: null }),
+          },
+        ],
+      }),
+    );
+
+    const held = doc.roster.find((entry) => entry.bookingId === "b1");
+    expect(held).toMatchObject({
+      fullName: "Ana Duarte",
+      identityWithheld: true,
+      emergencyContactName: null,
+      emergencyContactPhone: null,
+      certifications: [],
+    });
+    expect(held?.waiver.state).not.toBe("medical_review");
+    expect(held?.rollCall[0]?.label).toBeDefined();
+    const serialized = JSON.stringify(doc.roster);
+    expect(serialized).not.toContain("Ana Diaz");
+    expect(serialized).not.toContain("AB-1234");
+    // Everyone else is exactly as before.
+    expect(doc.roster.find((entry) => entry.bookingId === "b2")).toMatchObject({
+      fullName: "Ben Cho",
+      emergencyContactName: "Pat Reyes",
+    });
+    expect(doc.roster.find((entry) => entry.bookingId === "b2")?.identityWithheld).toBeUndefined();
+  });
+
   it("reports a medical hold as a status only — answers and template body never appear", () => {
     const doc = buildIncidentExport(
       baseInput({

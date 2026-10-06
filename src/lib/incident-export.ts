@@ -6,6 +6,7 @@ import type {
   WaiverRecord,
 } from "@/db/schema";
 import type { DepthUnit } from "./depth-units";
+import { withholdHeldSeatParticulars } from "./held-seat";
 import {
   type RollCallCheckpoint,
   type RollCallLabel,
@@ -194,7 +195,15 @@ export type IncidentBuddyPairing = {
 
 export type IncidentRosterEntry = {
   bookingId: string;
+  /** As booked, on a held seat (`identityWithheld`). */
   fullName: string;
+  /**
+   * A held seat (`identity_unconfirmed`, issue #2128): the contact,
+   * certifications and waiver below are deliberately empty because they
+   * would be the matched person's, and the page says so in words. Absent on
+   * every other row, so their content hash is unchanged.
+   */
+  identityWithheld?: true;
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
   /**
@@ -644,30 +653,56 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
 
   // Every diver on the departure manifest is on this document — the manifest
   // derivation already refuses to filter anyone away, and so does this.
-  const roster: IncidentRosterEntry[] = departure.divers.map((diver) => {
-    const evidence = evidenceByBooking.get(diver.bookingId);
-    return {
-      bookingId: diver.bookingId,
-      fullName: diver.fullName,
-      emergencyContactName: diver.emergencyContactName,
-      emergencyContactPhone: diver.emergencyContactPhone,
-      buddy: pairingFor(diver.bookingId),
-      rollCall: rollCallResults(
-        input.manifests,
-        (manifest) => manifest.divers.find((entry) => entry.bookingId === diver.bookingId) ?? null,
-      ),
-      // No evidence entry at all reads the same as empty evidence: an
-      // explicit "nothing on file", never a crash and never a filtered row.
-      certifications: evidence ? certificationEvidence(evidence) : [],
-      waiver: waiverStatus(
-        evidence?.waiver ?? null,
-        input.generatedAt,
-        evidence?.waiverRecordedByName,
-        evidence?.waiverMedicalClearedByName,
-        evidence?.waiverMedicalClearanceDeclinedByName,
-      ),
-    };
-  });
+  //
+  // A held seat is on it too, as the seat: named as booked, its roll call and
+  // its team, and nothing of the matched person's, whose contact, cards and
+  // release are facts about somebody else (issue #2128, the manifest's rule
+  // from #1690). `identityWithheld` says so, so the page states it rather
+  // than printing "no cards on file" or "not sent", which would be wrong facts.
+  const roster: IncidentRosterEntry[] = departure.divers
+    .map(withholdHeldSeatParticulars)
+    .map((diver) => {
+      if (diver.identityWithheld) {
+        return {
+          bookingId: diver.bookingId,
+          fullName: diver.fullName,
+          identityWithheld: true as const,
+          emergencyContactName: null,
+          emergencyContactPhone: null,
+          buddy: pairingFor(diver.bookingId),
+          rollCall: rollCallResults(
+            input.manifests,
+            (manifest) =>
+              manifest.divers.find((entry) => entry.bookingId === diver.bookingId) ?? null,
+          ),
+          certifications: [],
+          waiver: waiverStatus(null, input.generatedAt, null, null, null),
+        };
+      }
+      const evidence = evidenceByBooking.get(diver.bookingId);
+      return {
+        bookingId: diver.bookingId,
+        fullName: diver.fullName,
+        emergencyContactName: diver.emergencyContactName,
+        emergencyContactPhone: diver.emergencyContactPhone,
+        buddy: pairingFor(diver.bookingId),
+        rollCall: rollCallResults(
+          input.manifests,
+          (manifest) =>
+            manifest.divers.find((entry) => entry.bookingId === diver.bookingId) ?? null,
+        ),
+        // No evidence entry at all reads the same as empty evidence: an
+        // explicit "nothing on file", never a crash and never a filtered row.
+        certifications: evidence ? certificationEvidence(evidence) : [],
+        waiver: waiverStatus(
+          evidence?.waiver ?? null,
+          input.generatedAt,
+          evidence?.waiverRecordedByName,
+          evidence?.waiverMedicalClearedByName,
+          evidence?.waiverMedicalClearanceDeclinedByName,
+        ),
+      };
+    });
 
   const crew: IncidentCrewEntry[] = departure.crew.map((member) => ({
     fullName: member.fullName,

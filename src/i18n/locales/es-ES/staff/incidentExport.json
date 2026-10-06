@@ -62,6 +62,7 @@
   "medicalClearanceRecordedBy": "Autorización médica registrada el {date} por {name}; evaluación fechada el {evaluatedOn}.",
   "noBuddyRecorded": "No se registró ningún equipo de buceo",
   "notOnFile": "No registrado",
+  "identityWithheld": "Identidad sin confirmar: datos no mostrados",
   "openLink": "Generar registro",
   "ownerOnlyNotice": "Solo un propietario puede generar el registro de una salida. Todo lo que recoge (recuento, cronología, estado de cada buceador) está en el manifiesto de esa salida.",
   "recordedByName": "Registrado por {name}",

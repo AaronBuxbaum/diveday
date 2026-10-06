@@ -64,7 +64,13 @@ export async function getIncidentExport(
       // The full history, oldest first — not the latest-per-subject reduction
       // the live manifest shows. An incident document is the audit trail.
       db
-        .select({ event: rollCallEvents, subject: people, recorder: recorders })
+        .select({
+          event: rollCallEvents,
+          subject: people,
+          recorder: recorders,
+          heldAt: bookings.identityUnconfirmedAt,
+          bookedAs: bookings.identityBookedAs,
+        })
         .from(rollCallEvents)
         .innerJoin(bookings, eq(bookings.id, rollCallEvents.bookingId))
         .innerJoin(people, eq(people.id, bookings.personId))
@@ -136,9 +142,11 @@ export async function getIncidentExport(
   );
 
   const events: IncidentTimelineEventInput[] = [
-    ...diverEventRows.map(({ event, subject, recorder }) => ({
+    ...diverEventRows.map(({ event, subject, recorder, heldAt, bookedAs }) => ({
       subjectKind: "diver" as const,
-      subjectName: subject.fullName,
+      // A held seat is named as booked, the same as its roster row (issue
+      // #2128): the matched person's name is a fact about somebody else.
+      subjectName: heldAt ? bookedAs?.trim() || subject.fullName : subject.fullName,
       checkpoint: event.checkpoint,
       status: event.status,
       source: event.source,
