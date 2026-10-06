@@ -19,6 +19,7 @@
     "chooseOthers": "Choose different photos"
   },
   "paperWaiver": {
+    "physicianRefused": "A physician did not clear this diver, so a paper waiver cannot stand in. Send them a new waiver to sign online; a physician then clears it.",
     "markSignedOnPaper": "Mark signed on paper",
     "medicalAttestationLabel": "I have this diver’s signed release on file, I have reviewed their medical questionnaire, and no answer needs physician sign-off.",
     "medicalAttestationMinorLabel": "I have this diver’s signed release on file, I have reviewed their medical questionnaire, no answer needs physician sign-off, and the parent or guardian answered the health questions.",
@@ -200,7 +201,7 @@
       "waiverNotSent": "Waiver not signed. Not sent yet.",
       "waiverPending": "Waiver not signed. Link sent.",
       "waiverExpired": "Waiver link expired; issue a fresh link.",
-      "medicalReview": "A medical answer needs staff follow-up.",
+      "medicalReview": "Held for a physician’s sign-off.",
       "medicalNotCleared": "A physician did not clear this diver to dive.",
       "guardianSignatureMissing": "Signed by a minor alone. A parent or guardian has to sign too; send a fresh waiver link.",
       "certificationMissing": "No certification is on file for this trip.",

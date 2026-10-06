@@ -680,7 +680,7 @@ new domain concept, define it here in the same PR.
   ([ADR 20260907-the-counter-survives-offline](../architecture/decisions/20260907-the-counter-survives-offline.md)).
 - **No-show** — one staffer's recorded statement that a booked diver did not come. The status is
   `bookings.status = "no_show"`, written only by `markBookingNoShow` (`src/db/no-show.ts`), behind
-  the Divers tab's "Not here?" disclosure (inside the arrivals window, on any row the gate allows, blocked or not) and its confirm tap. **It is not the three things it is most easily mistaken
+  the Divers tab's "Not here" disclosure (inside the arrivals window, on any row the gate allows, blocked or not) and its confirm tap. **It is not the three things it is most easily mistaken
   for.** Not a **cancellation**: a diver who told the shop they were not coming gave the seat up
   themselves, and the mark is refused on that booking (`not_booked`), because the difference between
   a courtesy and an accusation is the whole point of keeping them apart. Not a charge or a refund:
@@ -910,7 +910,8 @@ new domain concept, define it here in the same PR.
   or safely re-stored imported receipt survives after the account closes — a pasted external link or
   bundled template asset stays a reference only (20260724-export-bundled-photos).
   Gated to owner/manager because it carries the
-  roster's complete medical evidence, which staff surfaces never show in full. The "leave anytime"
+  roster's complete medical evidence in one file, where staff surfaces show it one signed record at a
+  time (`divers/[personId]/waivers/[recordId]`). The "leave anytime"
   half of the data-portability strategy; its CSV schemas are the contract the planned importer and
   read API reuse. See [20260722-full-shop-export](../architecture/decisions/20260722-full-shop-export.md)
   and [20260724-export-bundled-photos](../architecture/decisions/20260724-export-bundled-photos.md).
@@ -1412,12 +1413,16 @@ new domain concept, define it here in the same PR.
   are mutually exclusive by the `waiver_records_medical_clearance_attributed` check, so recording a
   clearance over a refusal is refused and so is the reverse: a physician's "no" is not erasable by
   whoever is at the desk next. A diver re-evaluated three months later gets back on a boat by
-  **signing a fresh release** — a new questionnaire, a new record, cleared on its own terms, which
-  is also the honest thing to do with a disclosure that is now months old. Deliberate and
-  fail-closed, not an omission, and the staff notice says the act rather than the rule ("Seat them
-  on a departure and send a new release from there"). A supersede act — one owner/manager tap that
-  retires the refused record and issues a new link — is the thing to build if a pilot shop actually
-  hits this.
+  **signing a fresh release** that a physician then clears — a new questionnaire, a new record,
+  which is also the honest thing to do with a disclosure that is now months old. Deliberate and
+  fail-closed, not an omission. The act is **Send a new waiver** on the refused diver's roster row:
+  one owner/manager tap (`retireMedicalRefusal` in `src/db/waivers.ts`) that marks the refused
+  record superseded and emails a fresh link. The refusal stays on file and **keeps outranking every
+  older signature** (`isStandingRefusal` in `src/lib/waivers.ts`), so the seat stays blocked as not
+  cleared. **The way back runs through a physician** (`physicianRefusalStands`, dive-domain review
+  2026-10-06): until a release signed after the refusal carries its own clearance, a new online
+  release parks in medical review whatever it answers, and a paper attestation is refused
+  (`physician_refused`). A self-declared clean questionnaire never overrides a physician's "no".
 - **Paper / in-person signature** — a non-diver (staff) recording that a diver signed the release on
   paper — a copy on the boat or on shore — that the app never saw signed. It creates the same
   immutable completed record, marked as staff-attested and stamped with the staff member who recorded

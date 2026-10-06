@@ -42,5 +42,34 @@
     "pagination": {
       "total": "{count, plural, one {# record} other {# records}}"
     }
+  },
+  "record": {
+    "title": "Signed waiver",
+    "signedLabel": "Signed",
+    "signedAsLabel": "Signed as",
+    "howLabel": "How",
+    "howOnline": "Online",
+    "howPaper": "On paper, recorded by staff",
+    "howImported": "Imported from another system",
+    "releaseLabel": "Release",
+    "releaseValue": "{title}, version {version}",
+    "departureLabel": "Departure",
+    "coSignedLabel": "Co-signed",
+    "sealLabel": "Seal",
+    "sealValid": "Sealed and unchanged",
+    "replaced": "Replaced {date} by a newer waiver.",
+    "medicalHeading": "Medical questionnaire",
+    "medicalReview": "Waiting on a physician’s evaluation.",
+    "medicalCleared": "A physician cleared this diver. Evaluated {date}.",
+    "medicalNotCleared": "A physician did not clear this diver. Evaluated {date}.",
+    "physician": "Physician: {name}",
+    "noQuestionnaire": "No questionnaire was answered on this waiver.",
+    "newWaiverSent": "A new waiver was sent {date}. This answer still blocks them until a physician clears the new one.",
+    "noQuestionnairePaper": "The shop reviewed the medical form on paper. The answers are not kept here.",
+    "answersRestricted": "Only an owner or manager can read the full questionnaire.",
+    "identityHeld": "Medical answers stay hidden until someone confirms who is in this seat.",
+    "answerYes": "Yes",
+    "answerNo": "No",
+    "releaseHeading": "What they signed"
   }
 }

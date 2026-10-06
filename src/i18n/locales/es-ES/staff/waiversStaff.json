@@ -42,5 +42,34 @@
     "pagination": {
       "total": "{count, plural, one {# registro} other {# registros}}"
     }
+  },
+  "record": {
+    "title": "Exención firmada",
+    "signedLabel": "Firmada",
+    "signedAsLabel": "Firmada como",
+    "howLabel": "Cómo",
+    "howOnline": "En línea",
+    "howPaper": "En papel, registrada por el personal",
+    "howImported": "Importada de otro sistema",
+    "releaseLabel": "Documento",
+    "releaseValue": "{title}, versión {version}",
+    "departureLabel": "Salida",
+    "coSignedLabel": "Cofirmada",
+    "sealLabel": "Sello",
+    "sealValid": "Sellada y sin cambios",
+    "replaced": "Sustituida el {date} por una exención más reciente.",
+    "medicalHeading": "Cuestionario médico",
+    "medicalReview": "Pendiente de la evaluación de un médico.",
+    "medicalCleared": "Un médico autorizó a este buceador. Evaluado el {date}.",
+    "medicalNotCleared": "Un médico no autorizó a este buceador. Evaluado el {date}.",
+    "physician": "Médico: {name}",
+    "noQuestionnaire": "En esta exención no se respondió ningún cuestionario.",
+    "newWaiverSent": "Se envió una nueva exención el {date}. Esta respuesta sigue bloqueando la plaza hasta que un médico autorice la nueva.",
+    "noQuestionnairePaper": "El centro revisó el formulario médico en papel. Las respuestas no se guardan aquí.",
+    "answersRestricted": "Solo un propietario o un gerente puede leer el cuestionario completo.",
+    "identityHeld": "Las respuestas médicas quedan ocultas hasta que alguien confirme quién ocupa esta plaza.",
+    "answerYes": "Sí",
+    "answerNo": "No",
+    "releaseHeading": "Lo que firmó"
   }
 }

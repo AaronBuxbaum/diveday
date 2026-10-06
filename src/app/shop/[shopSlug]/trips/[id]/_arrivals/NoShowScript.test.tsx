@@ -17,7 +17,7 @@ afterEach(() => {
 });
 
 const scriptCopy = {
-  door: "Not here?",
+  door: "Not here",
   consequence:
     "Records that they did not arrive and frees the seat. You can put them back while the seat is still free.",
   confirm: "Mark not here",
@@ -47,7 +47,7 @@ describe("NoShowScript", () => {
     const { container } = render(
       <NoShowScript action={vi.fn()} bookingId="booking-1" copy={scriptCopy} />,
     );
-    expect(screen.getByText("Not here?")).toBeTruthy();
+    expect(screen.getByText("Not here")).toBeTruthy();
     const details = container.querySelector("details");
     expect(details).toBeTruthy();
     expect(

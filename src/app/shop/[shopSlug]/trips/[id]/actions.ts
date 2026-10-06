@@ -5,7 +5,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { paperGuardianFrom, paperWaiverRefused } from "@/app/actions/paper-waiver-fields";
-import { canPersonConfigureTrips, canPersonRefund } from "@/db/authz";
+import {
+  canPersonConfigureTrips,
+  canPersonRefund,
+  canPersonRetireMedicalRefusal,
+} from "@/db/authz";
 import { getBoatById } from "@/db/boats";
 import {
   bookingDiverName,
@@ -58,7 +62,12 @@ import {
   updateTripConditions,
 } from "@/db/trips";
 import { joinTripWaitlist, type WaitlistOutcome } from "@/db/waitlist";
-import { recordInPersonWaiver, saveBookingEmergencyContact } from "@/db/waivers";
+import { deliverWaiverBatch } from "@/db/waiver-issue";
+import {
+  recordInPersonWaiver,
+  retireMedicalRefusal,
+  saveBookingEmergencyContact,
+} from "@/db/waivers";
 import { toDiverLocale } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
 import { isValidCalendarDate } from "@/lib/calendar-date";
@@ -1124,6 +1133,53 @@ export async function undoRemoveBookingAction(
     }
   }
   revalidateAndRedirect(back, noticeUrl(back, restoreNotice));
+}
+
+/**
+ * **"Send a new waiver" on a seat a physician refused** (Aaron, 2026-10-06).
+ * Retires the refusal from this seat (`retireMedicalRefusal`), when the seat
+ * holds it, and emails the diver a fresh release in the same tap. The refusal
+ * keeps the seat blocked until that release is signed and a physician clears
+ * it, so nothing here lets anybody board.
+ *
+ * Owner or manager, refused on the live roles before anything is written. A
+ * diver with no email on file still gets the seat freed for a new release, and
+ * the row's own waiver controls (copy the link, text it) take over; paper is
+ * refused after a physician's "no" (`physician_refused`).
+ */
+export async function sendNewWaiverAction(shopSlug: string, tripId: string, formData: FormData) {
+  const back = tripPath(shopSlug, tripId);
+  const s = (await requireShopSurface(shopSlug)).session;
+  const bookingId = String(formData.get("bookingId") ?? "");
+  if (!uuidParam(bookingId)) redirect(back);
+  const dbi = await getDb();
+  if (!(await canPersonRetireMedicalRefusal(dbi, s.user.shopId, s.user.personId))) {
+    redirect(noticeUrl(back, "not-authorized"));
+  }
+  const retired = await retireMedicalRefusal(dbi, {
+    shopId: s.user.shopId,
+    bookingId,
+    actorPersonId: s.user.personId,
+  });
+  // A refusal recorded on another of the diver's seats has nothing to retire
+  // here: this seat simply never had a release of its own, and the new one is
+  // sent all the same. The refusal still outranks everything older than it.
+  if (!retired.ok && retired.reason === "not_authorized") {
+    redirect(noticeUrl(back, "not-authorized"));
+  }
+  const delivered = await deliverWaiverBatch(dbi, s.user.shopId, {
+    bookingIds: [bookingId],
+    channel: "email",
+  });
+  // No link at all (the seat was cancelled or the boat sailed) is said as a
+  // failure: "ready" would promise a link that does not exist.
+  const notice =
+    delivered.sent.length > 0
+      ? "new-waiver-sent"
+      : delivered.links.length > 0
+        ? "new-waiver-ready"
+        : "new-waiver-failed";
+  revalidateAndRedirect(back, noticeUrl(back, notice, { bid: bookingId }));
 }
 
 /**

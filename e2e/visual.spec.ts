@@ -4028,7 +4028,7 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
-       * **"Not here?", open** (issue #1209) — the desk's script for the diver
+       * **"Not here", open** (issue #1209) — the desk's script for the diver
        * who never turned up, under their row on the Divers tab.
        *
        * The one state of this surface no seeded day can hold. The door opens
@@ -4045,9 +4045,10 @@ for (const scheme of ["light", "dark"] as const) {
        * (`noShowClaim`, src/lib/no-show.ts). Ten minutes out it is about a
        * seat the shop can still sell, and the door is three quiet words.
        * Ninety minutes out the boat is gone, the seat is worth nothing, and the
-       * same tap says this person did not dive — the one nobody comes back to
-       * undo, because the diver is at sea or home. That frame is the argument
-       * that the louder script is actually louder.
+       * same tap records that the boat left without them — the one nobody
+       * comes back to undo, because the diver is at sea or home. The door keeps
+       * its two words either side (Aaron, 2026-10-06), and what the second
+       * frame shows is the sentence behind it saying what that costs.
        *
        * What both frames are for is the restraint: the door sits *under* a
        * check-in tap that stays the only large target on the row, and behind it
@@ -4115,7 +4116,9 @@ for (const scheme of ["light", "dark"] as const) {
         // offered under a ready row's check-in tap and nowhere else.
         await expect(row.getByRole("button", { name: "Check in Odile Marchand" })).toBeVisible();
 
-        const door = row.locator("details").filter({ hasText: "Not here?" });
+        const door = row
+          .locator("details")
+          .filter({ has: page.getByText("Not here", { exact: true }) });
         await door.locator("> summary").click();
         // The body animates in, so `open` flipping is not the frame it is laid
         // out in — waited on the arrival's end state, never a duration.
@@ -4130,7 +4133,9 @@ for (const scheme of ["light", "dark"] as const) {
         await depart(90);
         await page.goto(counterPath("blue-mantis", tripId));
         const sailedRow = deskRow();
-        const sailedDoor = sailedRow.locator("details").filter({ hasText: "Did not dive?" });
+        const sailedDoor = sailedRow
+          .locator("details")
+          .filter({ has: page.getByText("Not here", { exact: true }) });
         // Hydrated before the tap, not after: this frame opens the door
         // straight off a page load, and a summary tapped while the page is
         // still the server's markup did not stay open on CI or locally. The
@@ -4971,6 +4976,26 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The signed release itself** (Aaron, 2026-10-06: "you actually can't
+       * even view the signed record!") — what the roster's "View signed
+       * record" opens. Rowan Pike's, because it is the one with the most to
+       * say: the physician's refusal, dated and named, above the release text.
+       */
+      test(`a signed waiver renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/schedule/board");
+        await openTripFromBoard(page, "Afternoon Two-Tank — French Reef");
+        const row = page
+          .locator("li")
+          .filter({ has: page.getByText("Rowan Pike", { exact: true }) })
+          .filter({ visible: true });
+        await row.getByRole("link", { name: "View signed record" }).click();
+        await page.getByRole("heading", { level: 1, name: "Signed waiver" }).waitFor();
+        await page.getByRole("heading", { name: "What they signed" }).waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "diver-signed-waiver", scheme);
+      });
+
+      /**
        * The explicit duplicate-resolution surface: create a second record for
        * a seeded diver, then photograph the owner/manager's survivor choice.
        * This keeps the warning, match reasons, radio controls, and one primary
@@ -5506,7 +5531,7 @@ for (const scheme of ["light", "dark"] as const) {
         }
 
         const odile = counterRow("Odile Marchand");
-        await odile.getByText("Not here?").click();
+        await odile.getByText("Not here", { exact: true }).click();
         await odile.getByRole("button", { name: "Mark Odile Marchand as not here" }).click();
         await expect(page.getByRole("heading", { name: "Not here · 1" })).toBeVisible();
 

@@ -594,7 +594,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
 
   // **The door, and one tap inside it.** Closed it is two words under the
   // check-in tap; open it says what the tap does before it does it.
-  await odile.getByText("Not here?").click();
+  await odile.getByText("Not here", { exact: true }).click();
   await expect(
     odile.getByText("Records that they did not arrive and frees the seat.", { exact: false }),
   ).toBeVisible();

@@ -427,7 +427,7 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
       rentalFit,
     });
-    expect(screen.queryByText("A medical answer needs staff follow-up.")).toBeNull();
+    expect(screen.queryByText("Held for a physician’s sign-off.")).toBeNull();
     expect(screen.getAllByText("Payment is outstanding for this trip.").length).toBeGreaterThan(0);
   });
 
@@ -565,7 +565,10 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     expect(screen.queryByTestId("identity-contact")).toBeNull();
   });
 
-  it("keeps the flagged medical answer outside the row's fold", () => {
+  // The row's Blocked reason says a medical answer needs follow-up (Aaron,
+  // 2026-10-06: no separate alert panel); the answer itself waits in the fold
+  // and on the signed record.
+  it("keeps the flagged medical answer in the row's fold", () => {
     renderRoster({
       roster: [matched],
       readiness: confirmed,
@@ -573,9 +576,7 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       rentalFit,
     });
 
-    const prompt = screen.getByText(flaggedPrompt);
-    expect(prompt).toBeVisible();
-    expect(prompt.closest("details")).toBeNull();
+    expect(screen.getByText(flaggedPrompt).closest("details")).not.toBeNull();
   });
 
   it("keeps the identity sentence outside the row's fold", () => {
@@ -597,7 +598,7 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       rentalFit,
     });
 
-    expect(screen.getByText(flaggedPrompt)).toBeVisible();
+    expect(screen.getByText(flaggedPrompt)).toBeInTheDocument();
     expect(screen.getByText("Minor · age 14")).toBeVisible();
     // The last three live in the row's collapsed reference panel, which jsdom
     // reports as hidden — being in the document is the whole claim.

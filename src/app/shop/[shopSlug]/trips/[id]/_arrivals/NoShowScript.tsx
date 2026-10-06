@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
-import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { RowActionForm } from "./RowActionForm";
 
 /**
- * **"Not here?" — the counter's script for the diver who never turned up**
+ * **"Not here" — the counter's script for the diver who never turned up**
  * (issue #1209).
  *
  * Two halves of one conversation, in one file because they are read in
@@ -33,7 +32,7 @@ import { RowActionForm } from "./RowActionForm";
  */
 
 export type NoShowScriptCopy = {
-  /** The closed disclosure: three words, no promise. */
+  /** The closed disclosure: two words, no promise and no question mark. */
   door: string;
   /** What the confirm does, in one sentence, including that it can be undone. */
   consequence: string;
@@ -67,9 +66,21 @@ export function NoShowScript({
     // No horizontal padding of its own: the roster row already keeps its room,
     // so the caret sits on the column the name above it
     // starts on, and the summary's hover chip bleeds 8px past it.
-    <details className="group/no-show pb-3">
-      <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-lg px-2 text-sm font-medium text-muted transition-colors select-none [&::-webkit-details-marker]:hidden hover:bg-surface-sunken">
-        <DisclosureCaret className="group-open/no-show:rotate-90" />
+    // **A quiet tap, not a section** (Aaron, 2026-10-06: "I don't like the
+    // 'Did not dive?' section"). Closed, it is the row's last control: two
+    // words in the same quiet ink as the row's other doors, no caret and no
+    // question mark, so it reads as something to do rather than a heading.
+    // Open, the consequence and the one confirm sit in a sunken box under it,
+    // the shape every inline confirm on the roster takes.
+    <details className="group/no-show pb-2">
+      <summary
+        className={buttonClass({
+          variant: "ghost",
+          size: "sm",
+          flush: true,
+          className: "cursor-pointer list-none text-muted [&::-webkit-details-marker]:hidden",
+        })}
+      >
         {copy.door}
       </summary>
       {/* **The confirm ends on the row's edge** (K-253), where the row's own
@@ -78,7 +89,7 @@ export function NoShowScript({
           sentence, or under it once the two do not share a line. `grow`, not
           `flex-1`, whose zero basis never wraps and squeezed the sentence into
           a narrow column beside the button on a phone. */}
-      <div className="mt-2 flex flex-wrap items-center justify-end gap-3 ps-5">
+      <div className="mt-1 flex flex-wrap items-center justify-end gap-3 rounded-lg bg-surface-sunken p-3">
         <p className="min-w-0 grow text-sm text-muted">{copy.consequence}</p>
         <RowActionForm action={action} sendFailedLabel={copy.sendFailed}>
           <input type="hidden" name="bookingId" value={bookingId} />

@@ -19,6 +19,7 @@
     "chooseOthers": "Elige otras fotos"
   },
   "paperWaiver": {
+    "physicianRefused": "Un médico no autorizó a este buceador, así que una exención en papel no sirve. Envíale una nueva exención para firmar en línea; luego un médico la autoriza.",
     "markSignedOnPaper": "Marcar como firmado en papel",
     "medicalAttestationLabel": "Tengo la exención firmada de este buceador archivada, he revisado su cuestionario médico y ninguna respuesta necesita el visto bueno de un médico.",
     "medicalAttestationMinorLabel": "Tengo la exención firmada de este buceador archivada, he revisado su cuestionario médico, ninguna respuesta necesita el visto bueno de un médico y la madre, el padre o el tutor respondió las preguntas de salud.",
@@ -200,7 +201,7 @@
       "waiverNotSent": "Exención sin firmar. Aún no se ha enviado.",
       "waiverPending": "Exención sin firmar. Enlace enviado.",
       "waiverExpired": "El enlace de la exención caducó; emite uno nuevo.",
-      "medicalReview": "Una respuesta médica necesita seguimiento del personal.",
+      "medicalReview": "Pendiente de la autorización de un médico.",
       "medicalNotCleared": "Un médico no autorizó a esta persona a bucear.",
       "guardianSignatureMissing": "Firmada por un menor sin acompañante. Falta la firma de su madre, padre o tutor legal; envía un enlace nuevo de la exención.",
       "certificationMissing": "No hay ninguna certificación registrada para esta salida.",

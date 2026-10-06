@@ -78,22 +78,17 @@ test("the demo keeps its synthetic medical-review training hold on a future trip
     .locator("li")
     .filter({ has: page.getByText("Morgan Vale", { exact: true }) })
     .filter({ visible: true });
-  await expect(diver.getByText("Medical review", { exact: true })).toBeVisible();
-  await expect(diver.getByText("Follow up before boarding")).toBeVisible();
+  // The hold is the row's reason line, with its doors under it (Aaron,
+  // 2026-10-06): no tinted panel restating it.
+  await expect(diver.getByText("Held for a physician’s sign-off.")).toBeVisible();
+  await expect(diver.getByRole("link", { name: "Record physician clearance" })).toBeVisible();
   await diver.getByRole("link", { name: "View signed record" }).click();
-  const record = page.locator('details[id^="waiver-record-"]').filter({ hasText: "Morgan Vale" });
-  // Exactly one, and that is the assertion, not an incidental `toBeVisible`.
-  // The signature log renders the `?record=` row first inside its own day
-  // group, and the page's own rows used to render it a second time whenever it
-  // also fell on the visible page — two elements sharing one DOM id. Which
-  // page it lands on is decided by a random-UUID tiebreak among rows that
-  // share a signing timestamp, so this test lost that coin toss rather than
-  // catching a change.
-  await expect(record).toHaveCount(1);
-  await expect(record).toBeVisible();
-  // The demo's hold is synthetic: the record itself carries no flagged answer,
-  // so the row wears no medical badge.
-  await expect(record.getByText("Medical follow-up flagged")).toHaveCount(0);
+  // The signed release itself, on the diver's record: what they signed and
+  // where its medical side stands.
+  await page.waitForURL(/\/divers\/[^/]+\/waivers\/[^/]+$/);
+  await expect(page.getByRole("heading", { name: "Signed waiver" })).toBeVisible();
+  await expect(page.getByText("Waiting on a physician’s evaluation.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "What they signed" })).toBeVisible();
 });
 
 test("one waiver button sends a resumable link and a medical yes surfaces follow-up", async ({
@@ -254,29 +249,19 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // Back on the roster, the single button now reports the completed-but-flagged
   // state, and the medical answer is spelled out for staff follow-up.
   await page.goto(staffTripUrl);
-  await expect(diverSection.getByText("Medical review", { exact: true })).toBeVisible();
-  await expect(diverSection.getByText("Follow up before boarding")).toBeVisible();
+  await expect(diverSection.getByText("Held for a physician’s sign-off.")).toBeVisible();
 
-  // The roster's follow-up notice links straight to the signed-record
-  // evidence (task 155) — closing the loop between signature chasing here and
-  // the signature log, rather than leaving them as unconnected surfaces. It
-  // carries the record's id as `?record=` (resolved through
-  // `getSignedWaiverRecordForShop`) rather than a bare URL anchor into the
-  // list, so it still resolves on a shop with enough signed history that the
-  // record falls off the log's first page.
+  // The reason line's door opens the signed release itself (Aaron,
+  // 2026-10-06: "you actually can't even view the signed record!"): every
+  // question the diver was asked, with the yes they gave standing out.
   await diverSection.getByRole("link", { name: "View signed record" }).click();
-  await page.waitForURL(/\/waivers\?record=/);
-  const recordRow = page
-    .locator('details[id^="waiver-record-"]')
-    .filter({ hasText: "Priya Sharma" });
-  await expect(recordRow.getByText("Medical follow-up flagged")).toBeVisible();
-  // The row the URL named opens itself — reading it is why the reviewer
-  // followed the link — and it is the *only* one that does. Every other row's
-  // answers stay behind its own disclosure, which is the gate that matters:
-  // the log at rest never renders a medical answer (ADR
-  // 20260827-people-not-lists, decision 4).
-  await expect(recordRow.getByText("I struggle to perform moderate exercise")).toBeVisible();
-  await expect(page.locator('details[id^="waiver-record-"][open]')).toHaveCount(1);
+  await page.waitForURL(/\/divers\/[^/]+\/waivers\/[^/]+$/);
+  await expect(page.getByRole("heading", { name: "Signed waiver" })).toBeVisible();
+  const flagged = page
+    .getByRole("listitem")
+    .filter({ hasText: "I struggle to perform moderate exercise" });
+  await expect(flagged).toContainText("Yes");
+  await expect(page.getByText("Waiting on a physician’s evaluation.")).toBeVisible();
 });
 
 test("the medical questionnaire refuses to complete with an unanswered question, even past client validation", async ({
@@ -1103,7 +1088,7 @@ test("a physician's clearance ends a medical hold, and the roster leads to it", 
     .locator("li")
     .filter({ has: page.getByText("Morgan Vale", { exact: true }) })
     .filter({ visible: true });
-  await expect(diver.getByText("Medical review", { exact: true })).toBeVisible();
+  await expect(diver.getByText("Held for a physician’s sign-off.")).toBeVisible();
 
   // The link this panel did not have. It is the assertion, not navigation
   // convenience: the dock is where the letter is handed over.
@@ -1230,9 +1215,9 @@ test("a refused physician evaluation stops the chase without lifting the hold", 
     .locator("li")
     .filter({ has: page.getByText("Morgan Vale", { exact: true }) })
     .filter({ visible: true });
-  await expect(row.getByText("Not cleared", { exact: true }).first()).toBeVisible();
-  await expect(row.getByText("The hold stands. This diver does not board.")).toBeVisible();
-  // The one door that would be wrong to draw here: another link lets a refused
-  // diver answer the questionnaire again and board on a fresh clean signature.
+  await expect(row.getByText("A physician did not clear this diver to dive.")).toBeVisible();
+  // The record has nowhere for a second answer to go, so its door is gone; the
+  // way back is a fresh release (Aaron, 2026-10-06), offered to the owner.
   await expect(row.getByRole("link", { name: "Record physician clearance" })).toHaveCount(0);
+  await expect(row.getByRole("button", { name: "Send a new waiver" })).toBeVisible();
 });

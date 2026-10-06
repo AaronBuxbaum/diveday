@@ -10,15 +10,12 @@
     "arrived": "Registrado"
   },
   "noShow": {
-    "door": "¿No vino?",
+    "door": "No vino",
     "consequence": "Registra que no se presentó y libera la plaza. Puedes volver a ponerlo mientras la plaza siga libre.",
     "confirm": "Marcar que no vino",
     "confirming": "Marcando…",
     "confirmAriaLabel": "Marcar que {name} no vino",
-    "sailedDoor": "¿No buceó?",
-    "sailedConsequence": "El barco ya salió, así que esto registra que no buceó. No recibirá el resumen y el día no le contará. Puedes volver a ponerlo.",
-    "sailedConfirm": "Marcar que no buceó",
-    "sailedConfirmAriaLabel": "Marcar que {name} no buceó",
+    "sailedConsequence": "El barco salió sin esta persona. No recibirá el resumen y el día no le contará. Puedes volver a ponerlo.",
     "badge": "No vino",
     "undo": "Volver a ponerlo en la lista",
     "undoing": "Poniéndolo…",

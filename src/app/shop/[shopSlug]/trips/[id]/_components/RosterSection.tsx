@@ -52,6 +52,7 @@ import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { paymentSourceLine } from "@/lib/payment-source";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
+import { shopPath } from "@/lib/staff-notices";
 import { waiverState } from "@/lib/waivers";
 import {
   type PaymentStatus,
@@ -93,7 +94,7 @@ const PAYMENT_STATUSES_RECORDING_ONLY: readonly PaymentStatus[] = [
 /**
  * What the desk adds to the roster once arrivals open, already drawn by the
  * page (`buildArrivalDesk`): the count above the list, each seat's tap at the
- * end of its name line, what stands under the row (the "Not here?" door, a
+ * end of its name line, what stands under the row (the "Not here" door, a
  * released seat's next step), and which seats the crew has boarded.
  *
  * The count is drawn here rather than by the page because whether the desk is
@@ -228,6 +229,7 @@ export function RosterSection({
   removeBookingAction,
   confirmIdentityAction,
   splitIdentityAction,
+  sendNewWaiverAction,
   notesByBooking,
   addNoteAction,
   deleteNoteAction,
@@ -310,6 +312,12 @@ export function RosterSection({
   confirmIdentityAction: (formData: FormData) => void;
   /** "Different person": the held seat becomes a new diver (`splitBookingIdentity`). */
   splitIdentityAction: (formData: FormData) => void;
+  /**
+   * "Send a new waiver" on a seat a physician refused: retires the refusal from
+   * the seat and emails a fresh release. Absent for staff who may not
+   * (`canRetireMedicalRefusal`), and then the row offers no such door.
+   */
+  sendNewWaiverAction?: (formData: FormData) => void;
   notesByBooking: Map<string, RosterPrivateNote[]>;
   addNoteAction: (formData: FormData) => void;
   deleteNoteAction: (formData: FormData) => void;
@@ -539,7 +547,14 @@ export function RosterSection({
               : null;
     const currentWaiver = waiverByBooking.get(booking.id)?.waiver ?? null;
     const waiverStatus = waiverState(currentWaiver);
-    const waiverControl = WAIVER_CONTROLS[waiverStatus];
+    // **A retired refusal still governs, and the seat's own new link is what
+    // there is to do** (`retireMedicalRefusal`). The physician's "no" keeps the
+    // seat blocked and keeps its reason line, while the waiver control speaks
+    // for the fresh release the seat now carries: sent, expired, or not yet.
+    const refusalRetired =
+      waiverStatus === "medical_not_cleared" && Boolean(currentWaiver?.supersededAt);
+    const ownWaiver = readinessByBooking.get(booking.id)?.bookingWaiver ?? null;
+    const waiverControl = WAIVER_CONTROLS[refusalRetired ? waiverState(ownWaiver) : waiverStatus];
     const nitrox = nitroxByBooking.get(booking.id);
     const identityUnconfirmed = Boolean(
       readiness?.blockers.some((blocker) => blocker.code === "identity_unconfirmed"),
@@ -805,19 +820,12 @@ export function RosterSection({
       </div>
     );
 
-    /**
-     * **The flagged medical answer**, the one piece of a row's work that never
-     * folds away: it must be read before the diver boards, so it stands under
-     * the name on every visit while everything else waits behind the row.
-     */
-    // **With the desk open, the screen faces the queue** (issue #716;
-    // dive-domain review 2026-10-05). The hold's status word and instruction
-    // stay in the open, because they are what a crew must read before the
-    // diver boards; *which* questions were answered yes — health data about
-    // the person at the desk — waits behind the row's mark, with the money
-    // owed, a long gap since the last dive, and a returning diver's own ask.
-    const openPrompts = arrival ? [] : flaggedPrompts;
-    const medicalHold = (
+    // **With the hold's reason in the open, its particulars wait behind the
+    // row** (issue #716; dive-domain review 2026-10-05; Aaron, 2026-10-06).
+    // The reason line says what a crew must read before the diver boards;
+    // *which* questions were answered yes — health data about the person —
+    // waits behind the row's mark, on the desk and off it alike.
+    const reEntryNote = (
       <>
         {/* What this diver asked for when they said they were easing back, in
             the open. A fact beside a name in a muted tone — no warning
@@ -828,77 +836,6 @@ export function RosterSection({
             per person (#1183's boundary). */}
         {booking.reEntryAsk && !arrival ? (
           <p className={`mt-3 ${INSET_NOTE_CLASS}`}>{t(STAFF_RE_ENTRY_KEYS[booking.reEntryAsk])}</p>
-        ) : null}
-        {/* Safety-critical and never disclosed: a flagged medical answer is
-            the one thing on this row that must be read before the diver
-            boards. It carries the **status word** as well as the instruction
-            (caught by waivers.spec.ts). */}
-        {waiverStatus === "medical_review" || waiverStatus === "medical_not_cleared" ? (
-          <div
-            className={`mt-3 rounded-lg px-3 py-2 text-sm ${
-              waiverStatus === "medical_not_cleared"
-                ? "bg-danger-tint text-danger-strong"
-                : "bg-warning-tint text-warning-strong"
-            }`}
-          >
-            <p className="font-semibold">{waiverControl.label}</p>
-            <p className="mt-0.5 font-medium">
-              {/* The hold reads "follow up before boarding" because somebody
-                  still can. A refusal has nobody left to follow up with, and
-                  saying so is the whole of issue #1283 at the rail. */}
-              {t(
-                waiverStatus === "medical_not_cleared"
-                  ? "trips.roster.notClearedBeforeBoarding"
-                  : "trips.roster.followUpBeforeBoarding",
-              )}
-            </p>
-            {openPrompts.length > 0 ? (
-              <ul className="mt-1 flex list-disc flex-col gap-1 pl-4">
-                {openPrompts.map((prompt) => (
-                  <li key={prompt}>{prompt}</li>
-                ))}
-              </ul>
-            ) : waiverStatus === "medical_review" ? (
-              // Only while the answer is still outstanding. This sentence ends
-              // "confirm physician clearance before boarding", which under a
-              // recorded refusal contradicts the line directly above it and
-              // tells a crew member to go looking for a clearance that has
-              // already been refused (caught by looking at the row).
-              <p className="mt-1">{t("trips.roster.medicalFollowUpDescription")}</p>
-            ) : null}
-            <div className="flex flex-wrap items-center gap-x-4">
-              {currentWaiver ? (
-                <Link
-                  // The whole waiver surface is one page now (ADR
-                  // 20260827-people-not-lists): `?record=` pins the row first
-                  // inside its own day group, and the fragment is what opens it
-                  // and scrolls past the release editor.
-                  href={`/shop/${shopSlug}/waivers?record=${currentWaiver.id}#waiver-record-${currentWaiver.id}`}
-                  className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline"
-                >
-                  {t("trips.roster.viewSignedRecord")}
-                </Link>
-              ) : null}
-              {/* The way out, which this panel did not have. A diver hands the
-                  doctor's letter to whoever is at the rail, and until #1252
-                  every dock surface pointed them at a page where the hold
-                  could be read and not resolved. The act itself lives on the
-                  diver's record, because a clearance is a fact about the
-                  person rather than about Saturday's boat.
-
-                  Not drawn once the answer has arrived: the record has nowhere
-                  for a second one to go, and offering the door anyway sends a
-                  staffer to a form that is no longer there. */}
-              {waiverStatus === "medical_review" ? (
-                <Link
-                  href={`/shop/${shopSlug}/divers/${person.id}#waiver`}
-                  className="mt-2 inline-flex min-h-11 items-center text-sm font-semibold underline"
-                >
-                  {t("trips.roster.recordPhysicianClearance")}
-                </Link>
-              ) : null}
-            </div>
-          </div>
         ) : null}
       </>
     );
@@ -914,8 +851,70 @@ export function RosterSection({
     const recencyText = diveRecencyIsNotable(booking.lastDivedBand)
       ? diveRecencyText(t, booking.lastDivedBand)
       : null;
-    const reasonLines: { key: string; text: string; tone: "danger" | "warning" }[] = [
-      ...blockerTexts.map(({ text }) => ({ key: text, text, tone: "danger" as const })),
+    /**
+     * **A medical hold is a reason line with its doors under it** (Aaron,
+     * 2026-10-06: "just having them in Blocked with a reason provided after
+     * the X is good enough. But we do need controls"). The tinted panel that
+     * restated the hold under the reason line is gone; what it carried that the
+     * line does not — the doors — sits under the line's words, and which
+     * questions were answered yes waits behind the row's mark with the rest of
+     * the seat's health detail.
+     */
+    const linkAction = buttonClass({ variant: "link", size: "sm", flush: true });
+    const medicalActions =
+      waiverStatus === "medical_review" || waiverStatus === "medical_not_cleared" ? (
+        <>
+          {currentWaiver && showsPersonDetail ? (
+            <Link
+              href={shopPath(shopSlug, "divers", person.id, "waivers", currentWaiver.id)}
+              className={linkAction}
+            >
+              {t("trips.roster.viewSignedRecord")}
+            </Link>
+          ) : null}
+          {/* The clearance is a fact about the person, so it is recorded on
+              their record. Not drawn once the answer has arrived: the record
+              has nowhere for a second one to go. */}
+          {waiverStatus === "medical_review" ? (
+            <Link href={`${shopPath(shopSlug, "divers", person.id)}#waiver`} className={linkAction}>
+              {t("trips.roster.recordPhysicianClearance")}
+            </Link>
+          ) : null}
+          {/* A physician's "no" is final for its record, and a diver
+              re-evaluated later gets back on a boat by signing a fresh release
+              (docs/product/glossary.md, *Physician clearance*). Once retired,
+              the seat's own waiver control carries the new link instead. */}
+          {waiverStatus === "medical_not_cleared" && !refusalRetired && sendNewWaiverAction ? (
+            <form action={sendNewWaiverAction}>
+              <input type="hidden" name="bookingId" value={booking.id} />
+              <InlineConfirm
+                triggerLabel={t("trips.roster.sendNewWaiver")}
+                message={t("trips.roster.sendNewWaiverMessage", { name: person.fullName })}
+                confirmLabel={t("trips.roster.sendNewWaiverConfirm")}
+                cancelLabel={t("trips.roster.neverMind")}
+                pendingLabel={t("trips.roster.sending")}
+                triggerClassName={linkAction}
+                confirmClassName={buttonClass({ variant: "primary", size: "sm" })}
+              />
+            </form>
+          ) : null}
+        </>
+      ) : null;
+    const reasonLines: {
+      key: string;
+      text: string;
+      tone: "danger" | "warning";
+      actions?: ReactNode;
+    }[] = [
+      ...blockerTexts.map(({ blocker, text }) => ({
+        key: text,
+        text,
+        tone: "danger" as const,
+        actions:
+          blocker.code === "medical_review" || blocker.code === "medical_not_cleared"
+            ? medicalActions
+            : undefined,
+      })),
       ...(depthText !== null && !depthShared
         ? [{ key: "depth", text: depthText, tone: "warning" as const }]
         : []),
@@ -1060,7 +1059,7 @@ export function RosterSection({
     const reasonList =
       openReasonLines.length === 0 ? null : (
         <ul className="-mt-1 grid gap-1 pb-2 text-sm">
-          {openReasonLines.map(({ key, text, tone }) => (
+          {openReasonLines.map(({ key, text, tone, actions }) => (
             <li
               key={key}
               className={`flex items-baseline gap-2 ${
@@ -1068,7 +1067,18 @@ export function RosterSection({
               }`}
             >
               <StatusMarkColumn variant={tone} />
-              <span>{text}</span>
+              <span className="min-w-0">
+                {text}
+                {/* The line's doors, under its words and on its column, in the
+                    page's link ink so they read as controls, not as more of
+                    the reason. `-mb-3` hands back the 44px target's unseen
+                    half so the next line does not drift away. */}
+                {actions ? (
+                  <span className="-mb-3 flex flex-wrap items-center gap-x-4 text-foreground">
+                    {actions}
+                  </span>
+                ) : null}
+              </span>
             </li>
           ))}
         </ul>
@@ -1097,9 +1107,9 @@ export function RosterSection({
         {arrival && booking.reEntryAsk ? (
           <p className={`mt-3 ${INSET_NOTE_CLASS}`}>{t(STAFF_RE_ENTRY_KEYS[booking.reEntryAsk])}</p>
         ) : null}
-        {arrival && flaggedPrompts.length > 0 ? (
+        {flaggedPrompts.length > 0 ? (
           <div className="mt-3 text-sm">
-            <GroupLabel as="p">{waiverControl.label}</GroupLabel>
+            <GroupLabel as="p">{WAIVER_CONTROLS[waiverStatus].label}</GroupLabel>
             <ul className="mt-1 flex list-disc flex-col gap-1 ps-4">
               {flaggedPrompts.map((prompt) => (
                 <li key={prompt}>{prompt}</li>
@@ -1257,28 +1267,32 @@ export function RosterSection({
             />
             {/* A diver who signed on paper or on shore: let a non-diver
                 record it so the waiver gate isn't held up by a signature the
-                app never sees. */}
-            <PaperWaiverControl
-              action={markWaiverInPersonAction}
-              bookingId={booking.id}
-              copy={paperWaiverCopy(t, "roster")}
-              requiresGuardian={requiresGuardian}
-              // A diver is standing at this departure, so the staffer here can
-              // truthfully say they watched both a namesake parent and child
-              // sign — the counter is the other such door, the diver's record
-              // deliberately not one.
-              offersNamesake
-              // Drawn on this row's own refusal, or on a page notice that
-              // named this booking, and on no other minor on the boat.
-              noticedNamesake={namesakeRefused}
-              // A page-level notice that landed the staffer back here reopens
-              // the form; a refusal of this form no longer navigates at all.
-              defaultOpen={namesakeRefused}
-              // The fallback under the row's leading action reads in quiet
-              // ink — a teal link out-shouted the bordered send pill above it
-              // (design review 2026-08-29).
-              variant="ghost"
-            />
+                app never sees. Never after a physician's "no": paper has no
+                questionnaire a physician could clear (the writer refuses it
+                too, `physician_refused`). */}
+            {refusalRetired ? null : (
+              <PaperWaiverControl
+                action={markWaiverInPersonAction}
+                bookingId={booking.id}
+                copy={paperWaiverCopy(t, "roster")}
+                requiresGuardian={requiresGuardian}
+                // A diver is standing at this departure, so the staffer here can
+                // truthfully say they watched both a namesake parent and child
+                // sign — the counter is the other such door, the diver's record
+                // deliberately not one.
+                offersNamesake
+                // Drawn on this row's own refusal, or on a page notice that
+                // named this booking, and on no other minor on the boat.
+                noticedNamesake={namesakeRefused}
+                // A page-level notice that landed the staffer back here reopens
+                // the form; a refusal of this form no longer navigates at all.
+                defaultOpen={namesakeRefused}
+                // The fallback under the row's leading action reads in quiet
+                // ink — a teal link out-shouted the bordered send pill above it
+                // (design review 2026-08-29).
+                variant="ghost"
+              />
+            )}
           </div>
         ) : null}
 
@@ -1319,7 +1333,7 @@ export function RosterSection({
       Boolean(arrival && identityContact) ||
       deskPrivateLines.length > 0 ||
       Boolean(arrival && booking.reEntryAsk) ||
-      Boolean(arrival && flaggedPrompts.length > 0) ||
+      flaggedPrompts.length > 0 ||
       certificationBlocked ||
       Boolean(certifyDiverAction) ||
       Boolean(saveCourseNextStepAction) ||
@@ -1677,7 +1691,7 @@ export function RosterSection({
         {reasonList}
         {arrival ? null : identityContact}
         {identityCheck}
-        {medicalHold}
+        {reEntryNote}
         {arrivalBelow}
         <AutoOpenDetails openOnHash={`booking-${booking.id}`} open={holdOpen} className="group">
           {markSummary}
