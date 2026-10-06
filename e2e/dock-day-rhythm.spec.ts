@@ -180,11 +180,7 @@ test("the demo shop's long-range run reads its own legs", async ({ page }) => {
   // A live sign-in and a board crawl before the page under test even loads.
   test.setTimeout(45_000);
   await signInAsOwner(page);
-  const tripId = await seededTripId(
-    page,
-    "blue-mantis",
-    "Long-Range Day — Duane & Outer Reef",
-  );
+  const tripId = await seededTripId(page, "blue-mantis", "Long-Range Day — Duane & Outer Reef");
 
   await page.goto(`/s/blue-mantis/trips/${tripId}`);
   await bookASeatAndOpenThread(page, "Long-Range Reader");

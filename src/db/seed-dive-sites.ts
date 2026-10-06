@@ -1,8 +1,7 @@
 import type { DbExecutor } from "./client";
-import { isMarineLifeSlug } from "./marine-life-catalog";
+import { isMarineLifeSlug, marineLifeImage } from "./marine-life-catalog";
 import { type DiveSpecialty, diveSiteCreatures, diveSiteMoments, diveSites } from "./schema";
 import { publishedTemplateId } from "./seed-dive-site-catalog";
-import { marineLifeImage } from "./marine-life-catalog";
 import { commonsImage } from "./seed-images";
 
 /**

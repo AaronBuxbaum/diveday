@@ -37,9 +37,7 @@ describe("seeded per-leg travel", () => {
     // is an answer here, not an absence, and this is the only seeded row saying
     // it, so a reader that started treating 0 as "unstated" would be caught.
     expect(await legsOf(db, shop.id, "Wreck Trip — Spiegel Grove")).toEqual([40, 0]);
-    expect(await legsOf(db, shop.id, "Long-Range Day — Duane & Outer Reef")).toEqual([
-      120, 75, 25,
-    ]);
+    expect(await legsOf(db, shop.id, "Long-Range Day — Duane & Outer Reef")).toEqual([120, 75, 25]);
   });
 
   it("leaves the rest of the board on the shop's own figure", async () => {
