@@ -350,13 +350,13 @@ describe("prepareContactImport — safety rules", () => {
   });
 
   it("maps an unknown agency to 'other' rather than dropping the card", () => {
-    // The enum is not exhaustive and never will be (IANTD, SEI, ANDI, ACUC,
-    // PSAI, NASE are all still out), so the card still has to land — under
-    // "other" rather than being thrown away, which is the behaviour this test
-    // has always been about. (It used to say CMAS, then BSAC; both are real
-    // values now — see below.)
+    // The enum is not exhaustive and never will be (SEI, ANDI, ACUC, PSAI and
+    // NASE are all still out), so the card still has to land — under "other"
+    // rather than being thrown away, which is the behaviour this test has
+    // always been about. (It used to say CMAS, then BSAC, then IANTD; all three
+    // are real values now — see below.)
     const csv =
-      "full_name,certification_agency,certification_level,certification_number\nSylvia Earle,IANTD,Divemaster,DM-9";
+      "full_name,certification_agency,certification_level,certification_number\nSylvia Earle,SEI,Divemaster,DM-9";
     const [row] = prepareContactImport(csv).rows;
     expect(row.cert).toMatchObject({ agency: "other", level: "divemaster" });
   });
@@ -381,6 +381,51 @@ describe("prepareContactImport — safety rules", () => {
     // Real cell shapes: the separator is not always a space.
     expect(agencyOf("CMAS***")).toBe("cmas");
     expect(agencyOf("SDI/TDI")).toBe("sdi");
+  });
+
+  it("records a Cavern card from NSS-CDS, NACD or IANTD under its own agency (#2091)", () => {
+    // Most Florida cavern cards come from these three, and Cavern gates a
+    // springs site. Filed as "other", the staffer at the desk cannot find the
+    // card in the issuer's own records.
+    const cavernFrom = (agency: string) =>
+      prepareContactImport(
+        `full_name,certification_agency,certification_level,certification_number\nSpring Sue,${agency},Cavern Diver,CV-1`,
+      ).rows[0]?.specialties[0];
+
+    expect(cavernFrom("NSS-CDS")).toMatchObject({ agency: "nss_cds", specialty: "cavern" });
+    expect(cavernFrom("NSS CDS")).toMatchObject({ agency: "nss_cds", specialty: "cavern" });
+    expect(cavernFrom("NSSCDS")).toMatchObject({ agency: "nss_cds", specialty: "cavern" });
+    expect(cavernFrom("NSS Cave Diving Section")).toMatchObject({ agency: "nss_cds" });
+    expect(cavernFrom("NACD")).toMatchObject({ agency: "nacd", specialty: "cavern" });
+    expect(cavernFrom("National Association for Cave Diving")).toMatchObject({ agency: "nacd" });
+    expect(cavernFrom("IANTD")).toMatchObject({ agency: "iantd", specialty: "cavern" });
+    expect(cavernFrom("International Association of Nitrox and Technical Divers")).toMatchObject({
+      agency: "iantd",
+    });
+    expect(cavernFrom("International Association of Nitrox & Technical Divers")).toMatchObject({
+      agency: "iantd",
+    });
+    expect(cavernFrom("National Speleological Society Cave Diving Section")).toMatchObject({
+      agency: "nss_cds",
+    });
+    // The society alone is still not the section that issues the card.
+    expect(cavernFrom("National Speleological Society")).toMatchObject({ agency: "other" });
+  });
+
+  it("does not read NSS-CDS out of a bare NSS or out of half its name (#2091)", () => {
+    // Bare NSS is the National Speleological Society, not the section that
+    // issues the card; and the two halves must arrive in order, as whole words.
+    const agencyOf = (name: string) =>
+      prepareContactImport(
+        `full_name,certification_agency,certification_level,certification_number\nA Diver,${name},Open Water,OW-1`,
+      ).rows[0]?.cert?.agency;
+
+    expect(agencyOf("NSS")).toBe("other");
+    expect(agencyOf("CDS")).toBe("other");
+    expect(agencyOf("CDS NSS")).toBe("other");
+    expect(agencyOf("NSS-CDSX")).toBe("other");
+    // An agency that already resolved is not taken over by a later one.
+    expect(agencyOf("PADI/IANTD")).toBe("padi");
   });
 
   it("never reads a short agency code out of the middle of a word", () => {

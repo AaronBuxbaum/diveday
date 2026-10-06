@@ -6,6 +6,8 @@ import { createTrip, daysFromNow, e2eNow, openTripAbout, tripPathByTitle } from 
 signedInAsOwner();
 
 const SHOP = "blue-mantis";
+/** A hull from the demo fleet. Every assertion names this spec's own departures. */
+const HULL = "Mantis II";
 const BOARD = `/shop/${SHOP}/schedule/board`;
 
 /** The builder's controls name a departure by title, day, and time — see ScheduleBuilder. */
@@ -54,8 +56,22 @@ test.describe("a standing crew clash", () => {
     // The host: 09:00 to 13:00. And the boat that will land on it, tied up an
     // hour before it sails — a state the roster happily writes, because it is
     // an ordinary double shift.
-    await createTrip(page, { title: drift, date: day, departsAt: "09:00", returnsAt: "13:00" });
-    await createTrip(page, { title: twoTank, date: day, departsAt: "06:30", returnsAt: "08:00" });
+    // Both on one hull, which H-80 says is one departure at a time (issue
+    // #1780): nose to tail is the plan, the move below is the defect.
+    await createTrip(page, {
+      title: drift,
+      date: day,
+      departsAt: "09:00",
+      returnsAt: "13:00",
+      boat: HULL,
+    });
+    await createTrip(page, {
+      title: twoTank,
+      date: day,
+      departsAt: "06:30",
+      returnsAt: "08:00",
+      boat: HULL,
+    });
 
     for (const title of [drift, twoTank]) {
       await page.goto(await tripPathByTitle(page, SHOP, title));
@@ -67,7 +83,7 @@ test.describe("a standing crew clash", () => {
       await expect(page.getByRole("button", { name: "Unassign Marcus Webb" })).toBeVisible();
       // Nothing is wrong yet: the two boats do not overlap, so neither panel
       // says a word about the other.
-      await expect(page.locator("#crew").getByText(/cannot be on both/)).toHaveCount(0);
+      await expect(page.locator("#crew").getByText(/^Also rostered on /)).toHaveCount(0);
     }
 
     // The move that manufactures the clash: 06:30 slides to 09:00, straight on
@@ -80,18 +96,24 @@ test.describe("a standing crew clash", () => {
     // The Move panel does say so — which is the whole of what the shop used to
     // be told, and it is about to close.
     await expect(
-      page.getByText(`Marcus Webb is already crewing ${drift} at that time and cannot be on both.`),
+      page.getByText(`Marcus Webb is already rostered on ${drift} at that time.`),
     ).toBeVisible();
+    // And the hull, above the crew: one boat cannot be on both.
+    await expect(page.getByText(`${HULL} is already out on ${drift} at that time.`)).toBeVisible();
     await page.getByRole("button", { name: "Move it" }).click();
     await expect(page.getByRole("status")).toContainText("Moved.");
     // Gone with the panel, exactly as before this issue.
-    await expect(page.getByText(/is already crewing/)).toHaveCount(0);
+    await expect(page.getByText(/is already rostered on/)).toHaveCount(0);
 
-    // **The departure's own page**, which is where a staffer looks next.
-    await page.goto(await tripPathByTitle(page, SHOP, twoTank));
+    // **The departure's own page**, which is where a staffer looks next. The
+    // Divers tab's pulse names the hull's other departure (H-80).
+    const twoTankPath = await tripPathByTitle(page, SHOP, twoTank);
+    await page.goto(twoTankPath);
+    await expect(page.getByRole("link", { name: `${HULL} is also on ${drift}` })).toBeVisible();
+    await page.goto(twoTankPath);
     await openTripAbout(page);
     await expect(page.locator("#crew").getByRole("status")).toContainText(
-      `Also crewing ${drift} at these hours and cannot be on both.`,
+      `Also rostered on ${drift} at these hours.`,
     );
     // Still nobody's gate: the roster is the owner's, so every control on the
     // row keeps working (issue #1345).
@@ -105,7 +127,7 @@ test.describe("a standing crew clash", () => {
     // Both chips say it, each naming the other boat: a manager fixes this from
     // whichever one they opened. `.first()` because the week renders as a grid
     // above `lg` and as a day list below it, and one of the two is hidden.
-    await expect(page.getByText(`Also on ${drift}: cannot be on both`).first()).toBeVisible();
-    await expect(page.getByText(`Also on ${twoTank}: cannot be on both`).first()).toBeVisible();
+    await expect(page.getByText(`Also rostered on ${drift}`).first()).toBeVisible();
+    await expect(page.getByText(`Also rostered on ${twoTank}`).first()).toBeVisible();
   });
 });

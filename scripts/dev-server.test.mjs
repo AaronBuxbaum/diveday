@@ -1,16 +1,24 @@
-import { describe, expect, it } from "vitest";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { afterEach, describe, expect, it } from "vitest";
 
 import {
   budgetIsUnreachable,
   cgroupAnonBytes,
   cgroupMemoryLimitBytes,
   countFutileRestart,
+  DEV_STATE_IN_USE_MARKER,
   databaseDescription,
   devLockPid,
+  devStateIsAbandoned,
+  discardAbandonedDevState,
   formatMb,
   hardLimitBytes,
   lineSplitter,
   localPortFromLine,
+  markDevStateClean,
+  markDevStateInUse,
   memoryBudgetBytes,
   memoryCeilingBytes,
   parseProcessRows,
@@ -450,6 +458,95 @@ describe("databaseDescription", () => {
     const said = databaseDescription({ DATABASE_URL: "postgres://user:secret@db.example.com/app" });
     expect(said).not.toContain("secret");
     expect(said).not.toContain("user");
+  });
+});
+
+/**
+ * Issue #1882: a `next-server` killed mid-compile left `.next/dev` describing a
+ * route it never finished, and every later server — restarts and clean starts
+ * alike — answered that route 404 before any page code ran. The supervisor
+ * marks `.next/dev` in use while a child owns it and clears the mark only on a
+ * clean exit, so the state a killed server leaves is thrown away before the
+ * next one restores it.
+ */
+describe("abandoned dev state", () => {
+  const roots = [];
+  afterEach(() => {
+    for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+  });
+
+  /** A checkout with the `.next/dev` a server leaves behind. */
+  function checkout({ lockPid } = {}) {
+    const root = mkdtempSync(path.join(os.tmpdir(), "dev-state-"));
+    roots.push(root);
+    const dev = path.join(root, ".next/dev");
+    mkdirSync(path.join(dev, "cache/turbopack"), { recursive: true });
+    mkdirSync(path.join(dev, "server/app"), { recursive: true });
+    mkdirSync(path.join(dev, "logs"), { recursive: true });
+    writeFileSync(path.join(dev, "cache/turbopack/00000007.sst"), "persisted");
+    writeFileSync(path.join(dev, "routes-manifest.json"), "{}");
+    writeFileSync(path.join(dev, "logs/next-development.log"), "why it died");
+    if (lockPid !== undefined)
+      writeFileSync(path.join(dev, "lock"), JSON.stringify({ pid: lockPid }));
+    return root;
+  }
+  const at = (root, file) => existsSync(path.join(root, file));
+
+  it("throws away everything a killed server left except Next's logs", () => {
+    const root = checkout({ lockPid: 4242 });
+    markDevStateInUse(root);
+    // The child was killed: nothing cleared the mark.
+    expect(discardAbandonedDevState(root, { alive: () => false })).toBe(true);
+    expect(at(root, ".next/dev/cache/turbopack")).toBe(false);
+    expect(at(root, ".next/dev/routes-manifest.json")).toBe(false);
+    expect(at(root, ".next/dev/server")).toBe(false);
+    expect(at(root, ".next/dev/lock")).toBe(false);
+    expect(at(root, DEV_STATE_IN_USE_MARKER)).toBe(false);
+    expect(at(root, ".next/dev/logs/next-development.log")).toBe(true);
+  });
+
+  it("keeps the warm cache a cleanly stopped server left", () => {
+    const root = checkout();
+    markDevStateInUse(root);
+    markDevStateClean(root);
+    expect(discardAbandonedDevState(root, { alive: () => false })).toBe(false);
+    expect(at(root, ".next/dev/cache/turbopack/00000007.sst")).toBe(true);
+  });
+
+  it("keeps a checkout no supervised server has used", () => {
+    const root = checkout();
+    expect(discardAbandonedDevState(root, { alive: () => false })).toBe(false);
+    expect(at(root, ".next/dev/cache/turbopack/00000007.sst")).toBe(true);
+  });
+
+  it("never deletes state under a server that is still running", () => {
+    // Another server holds the checkout; Next will refuse this start on its own,
+    // and deleting `.next/dev` from under the live one would break it.
+    const root = checkout({ lockPid: 4242 });
+    markDevStateInUse(root);
+    expect(discardAbandonedDevState(root, { alive: (pid) => pid === 4242 })).toBe(false);
+    expect(at(root, ".next/dev/cache/turbopack/00000007.sst")).toBe(true);
+    expect(at(root, DEV_STATE_IN_USE_MARKER)).toBe(true);
+  });
+
+  it("treats a lock naming a dead process as no lock", () => {
+    const root = checkout({ lockPid: 4242 });
+    markDevStateInUse(root);
+    expect(discardAbandonedDevState(root, { alive: () => false })).toBe(true);
+  });
+
+  it("decides on the mark and the lock together", () => {
+    expect(devStateIsAbandoned({ markerPresent: true, lockHolderAlive: false })).toBe(true);
+    expect(devStateIsAbandoned({ markerPresent: true, lockHolderAlive: true })).toBe(false);
+    expect(devStateIsAbandoned({ markerPresent: false, lockHolderAlive: false })).toBe(false);
+  });
+
+  it("works on a checkout with no .next at all", () => {
+    const root = mkdtempSync(path.join(os.tmpdir(), "dev-state-"));
+    roots.push(root);
+    expect(discardAbandonedDevState(root)).toBe(false);
+    markDevStateInUse(root);
+    expect(at(root, DEV_STATE_IN_USE_MARKER)).toBe(true);
   });
 });
 

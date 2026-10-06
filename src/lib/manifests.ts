@@ -127,6 +127,19 @@ export type ManifestDiverInput = {
    * nothing to compare. Absent on a seat that was never held.
    */
   identityClaim?: { bookedAs: string | null; matchedBy: IdentityMatchKind | null };
+  /**
+   * Set only by `withholdHeldSeatParticulars` (`src/lib/held-seat.ts`): this
+   * row is a held seat and the matched person's particulars were cleared, so a
+   * surface says they wait for confirmation instead of "Not on file".
+   */
+  identityWithheld?: boolean;
+  /**
+   * Set beside `identityWithheld`: withholding dropped at least one blocker
+   * measured against the matched person, so the crew line says other holds may
+   * still apply. Deliberately a boolean with no category: which hold it was
+   * (a medical one, say) is a fact about the matched person.
+   */
+  moreHoldsBehindConfirmation?: boolean;
   /** Rental kit line, including whether a fit was ever recorded at all. */
   rentalFit: RentalFitLine;
   /**
@@ -143,7 +156,8 @@ export type ManifestDiverInput = {
    * entitled to know before the lines come off.
    */
   age?: number | null;
-  minor?: boolean;
+  /** Null on a held seat (`identityWithheld`): unknown, which is not "an adult". */
+  minor?: boolean | null;
   /** The diver has a birthday today or within the callout window (H-21). */
   birthday?: BirthdayCallout | null;
   /**
@@ -244,6 +258,15 @@ export type ManifestCrewMember = {
    * role and the shop-wide roles together, never this list.
    */
   roles: string[];
+  /**
+   * The standing professional ratings the job in `roles` does not already say
+   * (`standingRatingsBesideJob`, src/lib/crew-roles.ts; issue #1852): an
+   * Assistant Instructor rostered as the day's divemaster carries
+   * `["assistant_instructor"]` here. Empty is the ordinary state. Read by the
+   * departure log and the incident export, which are asked what rating each
+   * professional held; never by the supervision ratio.
+   */
+  standingRatings: string[];
   /**
    * Who to call for **this crew member**, carried for exactly the reason a
    * diver's is: the glossary defines a manifest as every person on the boat

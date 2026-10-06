@@ -347,6 +347,16 @@ export async function POST(request: Request) {
       ? await slideOneDepartureOntoAnother(db, shop.id, now, shop.timezone)
       : null;
 
+  // The same clash with both boats already out on the water, two hours gone:
+  // no longer stations, so Today files the sailed row at the desk (H-80,
+  // issue #1814). Opt-in for the same reason, and it moves two departures.
+  const crewClashSailed =
+    new URL(request.url).searchParams.get("crewClashSailed") === "1"
+      ? await slideOneDepartureOntoAnother(db, shop.id, now, shop.timezone, {
+          hostSailedAt: new Date(now.getTime() - 2 * HOUR_MS),
+        })
+      : null;
+
   // Opt-in for the readiness reason again, and it puts a tenth name on today's
   // boat — every count on the counter, the board and Today moves with it. The
   // capture that wants the counter's held row asks for it, and addresses the
@@ -389,6 +399,7 @@ export async function POST(request: Request) {
     ok: true,
     ...(blockedMinor ? { blockedMinor } : {}),
     ...(crewClash ? { crewClash } : {}),
+    ...(crewClashSailed ? { crewClashSailed } : {}),
     ...(identityHeld ? { identityHeld } : {}),
     ...(moveBlocked ? { moveBlocked } : {}),
     ...(farStation ? { farStation } : {}),
@@ -671,12 +682,17 @@ async function seatSomebodyOffTheNamePrompt(
  * Returns the boat that moved, because both captures address it — the trip
  * page by id, the staffing week by the shop-local day it landed on (`?week=`
  * snaps any date to its Monday, `resolveWeekStart`).
+ *
+ * `hostSailedAt` first slides the host itself back to that instant, through
+ * the same `moveTrip`, so both boats are out on the water when the queue is
+ * read — the state Today's sailed row (issue #1814) is photographed in.
  */
 async function slideOneDepartureOntoAnother(
   db: Awaited<ReturnType<typeof getDb>>,
   shopId: string,
   now: Date,
   timezone: string,
+  options: { hostSailedAt?: Date } = {},
 ): Promise<{ tripId: string; otherTitle: string; date: string } | null> {
   // Upcoming, crewed, scheduled departures, earliest first — one row per crew
   // member. An hour of slack ahead of the frozen clock keeps a boat that is
@@ -721,11 +737,13 @@ async function slideOneDepartureOntoAnother(
       (departure.startsAt >= host.endsAt || departure.endsAt <= host.startsAt),
   );
   if (!mover) return null;
-  if (!(await moveTrip(db, shopId, mover.id, host.startsAt)).ok) return null;
+  const landing = options.hostSailedAt ?? host.startsAt;
+  if (options.hostSailedAt && !(await moveTrip(db, shopId, host.id, landing)).ok) return null;
+  if (!(await moveTrip(db, shopId, mover.id, landing)).ok) return null;
   return {
     tripId: mover.id,
     otherTitle: host.title,
-    date: calendarDateInTimezone(host.startsAt, timezone),
+    date: calendarDateInTimezone(landing, timezone),
   };
 }
 

@@ -3863,6 +3863,45 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "today-crew-uncounted", scheme);
       });
 
+      /**
+       * **A crew member on two of today's boats** (H-80, issue #1776). Each
+       * boat shows a full crew list, so the clash is invisible on both until
+       * the queue says so. `?crewClash=1` slides a seeded departure onto
+       * today's through `moveTrip`, the one door into the state, and both
+       * stations carry the row.
+       */
+      test(`today names a crew member on two boats at once (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?crewClash=1");
+        expect(seeded.ok()).toBe(true);
+        await page.goto("/shop/blue-mantis");
+        // The destination's own words, not a timing guess.
+        await page.getByText("Crew on two departures").first().waitFor();
+        await capture(page, "today-crew-clash", scheme);
+      });
+
+      /**
+       * **The same clash with both boats two hours out** (H-80, issue #1814).
+       * Neither is a station any more, so the sailed row files at the desk in
+       * Needs you, naming its own boat, rather than into the week's count.
+       */
+      test(`today names a boat that left with a crew clash (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?crewClashSailed=1");
+        expect(seeded.ok()).toBe(true);
+        expect(
+          ((await seeded.json()) as { crewClashSailed?: unknown }).crewClashSailed,
+        ).toBeTruthy();
+        await page.goto("/shop/blue-mantis");
+        // The destination's own words, not a timing guess.
+        await page.getByText("Left with a crew clash").first().waitFor();
+        await capture(page, "today-crew-clash-sailed", scheme);
+      });
+
       // The phone's More menu: the sections the tab bar's four leave out (ADR
       // 20261001-logbook). Opened at the phone viewport because it only exists
       // below `lg`; the 1280 image is the plain page with its sidebar.
@@ -4264,7 +4303,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`/shop/blue-mantis/staffing?week=${crewClash.date}`);
         // The destination's own words, not a timing guess.
         await page
-          .getByText(/cannot be on both/)
+          .getByText(/^Also rostered on /)
           .first()
           .waitFor();
         await capture(page, "staffing-week-crew-clash", scheme);
@@ -4599,7 +4638,7 @@ for (const scheme of ["light", "dark"] as const) {
         // the muted list is still under them, which is the stack worth a
         // baseline.
         await expect(
-          page.getByText(new RegExp(`is already crewing ${host} at that time`)),
+          page.getByText(new RegExp(`is already rostered on ${host} at that time`)),
         ).toHaveCount(2);
         await expect(page.getByText("If you move it")).toBeVisible();
         await capture(page, "schedule-builder-move-clash", scheme);
@@ -5181,7 +5220,7 @@ for (const scheme of ["light", "dark"] as const) {
         await openTripAbout(page);
         await page
           .locator("#crew")
-          .getByText(/cannot be on both/)
+          .getByText(/^Also rostered on /)
           .first()
           .waitFor();
         await capture(page, "trip-crew-clash", scheme);
@@ -5735,6 +5774,30 @@ for (const scheme of ["light", "dark"] as const) {
         // the shell renders its chrome before the store resolves.
         await expect(page.getByRole("heading", { name: "Priya Sharma" })).toBeVisible();
         await capture(page, "offline-manifest-roll-call", scheme);
+      });
+
+      /**
+       * **The same saved copy after a dive, with nothing recorded yet** — the
+       * ordinary opening of a surface-interval count at sea. "Mark not back
+       * aboard" is neutral on every row until somebody records it, as on the
+       * live page (decision 4 of ADR 20260827-the-departure-is-two-working-
+       * surfaces, issue #2107). The frame above is the departure checkpoint,
+       * whose controls were already neutral, so nothing photographed this one.
+       */
+      test(`the offline after-dive roll call renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await openReefTrip(page);
+        await openTripTab(page, "Manifest");
+        await settleOfflineShellWorker(page);
+        await openOnThisPhone(page);
+        await page.getByRole("link", { name: "Open offline roll call" }).click();
+        await page.waitForURL(/offline-manifest/);
+        await expect(page.getByRole("heading", { name: "Priya Sharma" })).toBeVisible();
+        await page.getByRole("button", { name: "After dive 1" }).click();
+        await expect(page.getByRole("heading", { name: "After dive 1 roll call" })).toBeVisible();
+        await capture(page, "offline-manifest-after-dive", scheme);
       });
 
       /**

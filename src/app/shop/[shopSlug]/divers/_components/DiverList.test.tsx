@@ -111,6 +111,22 @@ describe("DiverList search", () => {
     renderList({ query: "nobody" });
     expect(document.activeElement).toBe(screen.getByRole("searchbox"));
   });
+
+  it("takes the focus without moving the page under the reader", () => {
+    // A plain `focus()` scrolls the box into view, and it runs when the page
+    // hydrates — by which time a staffer may already have scrolled down to the
+    // pager. The roster jumped back to the top under their pointer and the tap
+    // meant for "Next" landed on a row's gap (`divers.spec.ts`'s pager tests
+    // failed on CI exactly this way: the click hit a `<div>`, no request left).
+    const focus = vi.spyOn(HTMLElement.prototype, "focus");
+    try {
+      renderList();
+      expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+      expect(focus).not.toHaveBeenCalledWith();
+    } finally {
+      focus.mockRestore();
+    }
+  });
 });
 
 describe("DiverList empty state", () => {

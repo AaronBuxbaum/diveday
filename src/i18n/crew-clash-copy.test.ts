@@ -3,110 +3,72 @@ import { DIVER_LOCALES } from "./settings";
 import { STAFF_MESSAGES } from "./staff-messages";
 
 /**
- * **Every sentence about a crew clash names the impossibility, not the
- * overlap.** A person on two overlapping departures is a state
- * `setTripCrew`/`changeTripCrew` both refuse outright, three writes that move
- * the boat manufacture anyway (`crewClashes`, src/db/trips-crew.ts), and the
- * manifest the coastguard reads prints twice.
+ * **Every sentence about a crew clash states the fact — rostered on both —
+ * and never an impossibility** (H-80, issue #1780).
  *
- * The guard was written for one line — `schedule.builder.impactCrewClash`, the
- * Move panel's (issue #1345). Until 2026-09-11 that sentence carried none of
- * it: "{name} is already on {departure} at that time." states a coincidence,
- * and at a glance it was the `impactCrewAway` line directly below wearing the
- * louder colour — the tone escalated in the component and the words never
- * followed.
+ * This guard used to require the opposite. Issue #1345 found the Move panel's
+ * line stating a coincidence ("is already on {departure} at that time") in the
+ * louder colour, and the fix was to say "cannot be on both"; issues #1695 and
+ * #1779 carried that sentence to the Crew panel, the staffing week, the
+ * roster's refusal and the boat manifest, and this file followed each one.
  *
- * **Then issue #1695 added two more readers of the same fact** — the
- * departure's Crew panel and the staffing week — and this file still covered
- * only the first. It covers all three now (dive-domain-expert review,
- * 2026-09-12): the class of failure it exists to catch is a tone that moves
- * without its words, and a new surface is exactly where that happens. Issue
- * #1779 then added the fifth and loudest, the boat manifest, and it arrived
- * hedging the one certain half of the fact — caught by the review that asked
- * for this line rather than by this guard, which is why the guard now names it
- * too.
+ * H-80 then ruled on what a clash *is*. "Cannot be on both" is false of an
+ * arrangement a shop can deliberately build — one captain across a course
+ * group and a fun-dive group — and under "one hull, one departure at a time"
+ * a shop models that as one departure with two groups. So every surface says
+ * the roster fact: this person is **rostered on** the other departure at these
+ * hours. That is true of every state a shop can reach, and it is still the
+ * roster contradicting itself rather than a coincidence, because the word is
+ * about the roster, not the clock.
  *
- * A reader told only that two things happen at once has been told to reconcile
- * them.
+ * The class of failure this file catches is unchanged: one surface's words
+ * drifting from the others'. A new reader of the clash belongs in this list.
  */
-const CANNOT = {
-  "en-US": /cannot/i,
+const ROSTERED = {
+  "en-US": /rostered on/i,
+  "es-ES": /figura en|en la tripulación de/i,
+} as const satisfies Record<(typeof DIVER_LOCALES)[number], RegExp>;
+
+const IMPOSSIBLE = {
+  "en-US": /cannot|can’t|can't/i,
   "es-ES": /no puede/i,
 } as const satisfies Record<(typeof DIVER_LOCALES)[number], RegExp>;
 
 describe("crew-clash copy, on every surface that says it", () => {
   for (const locale of DIVER_LOCALES) {
-    it(`names the impossibility rather than the coincidence in ${locale}`, () => {
-      const sentence = STAFF_MESSAGES[locale].schedule.builder.impactCrewClash;
+    const messages = STAFF_MESSAGES[locale];
+    const surfaces: readonly [string, string, readonly string[]][] = [
+      // The Move panel: who, and which of the day's departures.
+      ["the Move panel", messages.schedule.builder.impactCrewClash, ["{name}", "{departure}"]],
+      // The departure's own Crew panel, in the person's row: the other boat.
+      ["the departure's crew row", messages.trips.crew.clash, ["{departure}"]],
+      // The staffing week's chip: no room for a name, the row is the person.
+      ["the staffing week's chip", messages.staffing.week.crewClash, ["{departure}"]],
+      // The roster's refusal: the panel knows who was picked, not which boat.
+      ["the roster's refusal", messages.trips.crew.assignClash, ["{name}"]],
+      // The boat manifest, which ends in an instruction for the captain.
+      ["the boat manifest", messages.manifest.crewClashDetail, ["{departures}"]],
+      // Today's queue, before the boat sails and after (issues #1776, #1814).
+      ["Today, before it sails", messages.today.detail.crewClash, ["{names}", "{departure}"]],
+      ["Today, once it sails", messages.today.detail.crewClashSailed, ["{names}", "{departure}"]],
+    ];
 
-      // Both halves of the question the panel was opened to settle: who, and
-      // which of the day's departures they are already rostered to.
-      expect(sentence, locale).toContain("{name}");
-      expect(sentence, locale).toContain("{departure}");
-      expect(sentence, locale).toMatch(CANNOT[locale]);
-    });
-
-    /**
-     * The departure's own Crew panel (issue #1695). It sits in the clashing
-     * person's row, under their name, so it spends its words on the **other**
-     * boat and names no name — which is why `{name}` is not asked for here.
-     */
-    it(`names the impossibility on the departure's crew row in ${locale}`, () => {
-      const sentence = STAFF_MESSAGES[locale].trips.crew.clash;
-
-      expect(sentence, locale).toContain("{departure}");
-      expect(sentence, locale).toMatch(CANNOT[locale]);
-    });
-
-    /**
-     * The staffing week's chip, which has a 135px cell and no room for a name
-     * — the person is the row it is drawn in. The other departure is still
-     * named, because which boat is the question a manager has the instant they
-     * see it, and a count was built for #1203 and removed.
-     */
-    it(`names the impossibility on the staffing week's chip in ${locale}`, () => {
-      const sentence = STAFF_MESSAGES[locale].staffing.week.crewClash;
-
-      expect(sentence, locale).toContain("{departure}");
-      expect(sentence, locale).toMatch(CANNOT[locale]);
-    });
-
-    /**
-     * And the refusal a staffer meets trying to *create* one, which read as a
-     * connection error until the dive-domain-expert review of 2026-09-12. It
-     * names the person, because the panel knows who was picked and cannot know
-     * which other boat — the write reports the impossibility, not its
-     * counterpart.
-     */
-    it(`names the impossibility when the roster refuses one in ${locale}`, () => {
-      const sentence = STAFF_MESSAGES[locale].trips.crew.assignClash;
-
-      expect(sentence, locale).toContain("{name}");
-      expect(sentence, locale).toMatch(CANNOT[locale]);
-    });
-
-    /**
-     * The boat manifest, which is the document the coastguard's copy is made
-     * from (issue #1779). It prints on the crew member's own row at the
-     * departure checkpoint, so it names no name — and unlike every surface
-     * above it ends in an instruction, because the reader is a captain about to
-     * sail rather than a manager rearranging a week.
-     */
-    it(`names the impossibility on the boat manifest in ${locale}`, () => {
-      const sentence = STAFF_MESSAGES[locale].manifest.crewClashDetail;
-
-      expect(sentence, locale).toContain("{departures}");
-      expect(sentence, locale).toMatch(CANNOT[locale]);
-    });
+    for (const [surface, sentence, placeholders] of surfaces) {
+      it(`states the roster fact on ${surface} in ${locale}`, () => {
+        for (const placeholder of placeholders) expect(sentence, locale).toContain(placeholder);
+        expect(sentence, locale).toMatch(ROSTERED[locale]);
+        expect(sentence, locale).not.toMatch(IMPOSSIBLE[locale]);
+      });
+    }
 
     it(`does not read like the blackout line in ${locale}`, () => {
       // The two sit one above the other and carry different weights on purpose:
       // a blackout is the crew member's own note and stays muted. If they ever
       // converge the split in `ScheduleBuilder.tsx` stops being legible to the
       // reader it was built for.
-      const away = STAFF_MESSAGES[locale].schedule.builder.impactCrewAway;
+      const away = messages.schedule.builder.impactCrewAway;
 
-      expect(away, locale).not.toMatch(CANNOT[locale]);
+      expect(away, locale).not.toMatch(ROSTERED[locale]);
     });
   }
 });

@@ -1,12 +1,22 @@
-import { and, asc, eq, gte, inArray, isNotNull, isNull, lt, ne, or } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lt, ne } from "drizzle-orm";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS } from "@/lib/fly-safe";
 import { PLAN_CHANGE_NOTE_MAX, type PlanChangeReason } from "@/lib/plan-change";
+import { standingResultMeansSailed } from "@/lib/roll-call";
 import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { isMarineLifeSlug } from "./marine-life-catalog";
-import { bookings, diveSites, executedDives, people, tripDives, trips } from "./schema";
+import {
+  bookings,
+  diveSites,
+  executedDives,
+  people,
+  rollCallCrewEvents,
+  rollCallEvents,
+  tripDives,
+  trips,
+} from "./schema";
 import { liveTrip } from "./trips-live";
 
 export type ExecutedDiveInput = {
@@ -73,7 +83,9 @@ export async function listExecutedDives(db: DbExecutor, shopId: string, tripId: 
  * `src/lib/fly-safe.ts`).
  *
  * A `Set` rather than a boolean because the recap run answers a whole boat at
- * once, and this must stay **one query per departure**, never one per booking.
+ * once, and this must stay a **fixed number of queries per departure**, never
+ * one per booking: one read in the ordinary case, and at most two more (one
+ * per roll-call trail) when a status word written at a desk contests a day.
  *
  * **Local calendar days, not a span of hours.** DAN's clause is about days,
  * and counting hours got all three of these wrong: two 8 AM departures on
@@ -93,6 +105,27 @@ export async function listExecutedDives(db: DbExecutor, shopId: string, tripId: 
  * case, and it fails toward the shorter advice. So the rule is the one
  * `src/db/recap.ts` already uses for the prior-visit count: a live booking,
  * on a live departure the shop still says ran.
+ *
+ * **The boat's roll call outranks a status word written later at a desk**
+ * (issue #1836). `bookings.status = "cancelled"` and `trips.status =
+ * "cancelled"` can both be written after the boat came back, by doors that
+ * check neither the clock nor the roll call: a refund, a chargeback, a
+ * re-papered charter, or "Remove from trip" used to tidy yesterday's boat once
+ * the no-show tap has expired. Neither says anything about the water. A
+ * standing roll-call result meaning the person sailed
+ * (`standingResultMeansSailed`, src/lib/roll-call.ts) is a crew member's
+ * statement at the rail, and both roll-call writers refuse a cancelled seat or
+ * a cancelled departure, so such a result is always older than the
+ * cancellation and was true when it was made. Being wrong this way costs a
+ * diver six extra hours ashore; being wrong the other way hands a two-day
+ * diver the single-day figure, which is the failure this reader exists to
+ * prevent.
+ *
+ * This deliberately makes the opposite trade from the counter's identity
+ * prompt in `src/db/divers.ts`, which would rather ask a human than assume.
+ * That reader decides whether to *interrupt* someone; this one decides how long
+ * a diver waits before flying. Anyone unifying the "did this person dive"
+ * readers (issue #1694) should keep them able to disagree.
  */
 export async function peopleWhoDivedBefore(
   db: DbExecutor,
@@ -119,11 +152,19 @@ export async function peopleWhoDivedBefore(
   // it is tested, rather than reconstructing a local midnight inside a query.
   const slack = (FLY_SAFE_MULTI_DAY_LOOKBACK_DAYS + 2) * 24 * HOUR_MS;
   const rows = await db
-    .select({ personId: bookings.personId, startsAt: trips.startsAt })
+    .select({
+      personId: bookings.personId,
+      bookingId: bookings.id,
+      tripId: trips.id,
+      startsAt: trips.startsAt,
+      bookingStatus: bookings.status,
+      tripStatus: trips.status,
+      loggedDiveId: executedDives.id,
+    })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     // Only to let a logged dive speak for a departure the shop later marked
-    // something other than `scheduled` — see the status filter below.
+    // something other than `scheduled`: see `deskSaysItRan`.
     .leftJoin(
       executedDives,
       and(
@@ -140,36 +181,26 @@ export async function peopleWhoDivedBefore(
         eq(bookings.shopId, shopId),
         eq(trips.shopId, shopId),
         inArray(bookings.personId, [...personIds]),
-        // A diver who cancelled was not aboard, whatever the crew recorded for
-        // the boat. Crediting them would hand them the longer wait for a day
-        // they spent ashore.
-        ne(bookings.status, "cancelled"),
-        // **A no-show excludes, with no escape** (issue #1558, settled the
-        // other way by a `dive-domain-expert` review on 2026-09-11). This
-        // clause used to let a standing tokenless `arrived` row outrank the
-        // status slot, on the reasoning that a close-of-day sweep would
-        // otherwise erase the fact that a staffer stood in front of this diver
-        // at 06:40. There is no
-        // such sweep and there never was: `markBookingNoShow`
-        // (`src/db/no-show.ts`) is the only writer of `no_show`, it is one
-        // staffer's deliberate tap on one seat, and `checkInBooking` refuses
-        // anything but a `booked` seat — so the sighting is *always* older than
-        // the mark. The escape could only ever let an earlier human statement
-        // beat a later human correction, which is the opposite of the
-        // newest-row-wins rule the arrival trail is built on.
+        // **A no-show excludes, with no escape**, the roll call included
+        // (issue #1558, settled the other way by a `dive-domain-expert` review
+        // on 2026-09-11). This clause used to let a standing tokenless
+        // `arrived` row outrank the status slot, on the reasoning that a
+        // close-of-day sweep would otherwise erase the fact that a staffer
+        // stood in front of this diver at 06:40. There is no such sweep and
+        // there never was: `markBookingNoShow` (`src/db/no-show.ts`) is the
+        // only writer of `no_show`, it is one staffer's deliberate tap on one
+        // seat, and `checkInBooking` refuses anything but a `booked` seat — so
+        // the sighting is *always* older than the mark. The escape could only
+        // ever let an earlier human statement beat a later human correction,
+        // which is the opposite of the newest-row-wins rule the arrival trail
+        // is built on. A boarding needs no escape either: both roll-call
+        // writers reclaim a `no_show` seat to `booked` when they record one.
         //
-        // `cancelled` never had the escape and still does not: a cancellation
-        // is a re-papering of the sale — it can land days later, on a seat
-        // somebody really did check in before the card failed — and says
-        // nothing about the dock.
+        // `cancelled` is the opposite case and is *not* filtered here. A
+        // cancellation is a re-papering of the sale — it can land days later,
+        // on a seat somebody really did board — and says nothing about the
+        // dock, so the roll call is asked about it below.
         ne(bookings.status, "no_show"),
-        // A blown-out departure is not a dive day — a cancellation leaves its
-        // bookings active by design, so without this the answer counts days
-        // nobody dived. **Unless the crew logged a dive on it**, which is
-        // affirmative evidence that people went in the water and beats a
-        // status column changed afterwards for a refund or a re-papered
-        // charter.
-        or(eq(trips.status, "scheduled"), isNotNull(executedDives.id)),
         // A deleted departure is off the board, and here that reads as a row
         // staff say should not exist rather than a day to count.
         liveTrip(),
@@ -179,6 +210,10 @@ export async function peopleWhoDivedBefore(
     );
 
   const dived = new Set<string>();
+  // Seats whose day only the desk's status words strike, kept to ask the roll
+  // call about. Keyed by booking, so a departure with several logged dives (a
+  // joined row each) is asked about once.
+  const contested = new Map<string, ContestedSeat>();
   for (const row of rows) {
     // Any departure that already sailed, from the first day of the window
     // onward. Strictly earlier than this one, because this departure's own
@@ -187,9 +222,142 @@ export async function peopleWhoDivedBefore(
     // counts for the afternoon one, because `flySafeFrom` sees only its own
     // departure's dives and would otherwise read a two-boat day as a single.
     if (row.startsAt.getTime() >= departureStartsAt.getTime()) continue;
-    if (calendarDateInTimezone(row.startsAt, timeZone) >= firstDay) dived.add(row.personId);
+    if (calendarDateInTimezone(row.startsAt, timeZone) < firstDay) continue;
+    if (deskSaysItRan(row)) dived.add(row.personId);
+    else contested.set(row.bookingId, { personId: row.personId, tripId: row.tripId });
   }
+  for (const [bookingId, seat] of contested) {
+    if (dived.has(seat.personId)) contested.delete(bookingId);
+  }
+  if (contested.size === 0) return dived;
+
+  for (const personId of await sailedByRollCall(db, shopId, contested)) dived.add(personId);
   return dived;
+}
+
+type ContestedSeat = { personId: string; tripId: string };
+
+/**
+ * What the status columns alone say about a seat on a departure.
+ *
+ * A cancelled booking, or a departure marked something other than `scheduled`
+ * with no live dive log on it, reads as "did not dive" here — and that is only
+ * the desk's answer, which the roll call outranks (`sailedByRollCall`).
+ *
+ * A logged dive speaks for a departure the shop later marked `cancelled`: it is
+ * affirmative evidence that people went in the water and beats a status column
+ * changed afterwards for a refund or a re-papered charter. It does not speak
+ * for a cancelled *booking*: the boat diving says nothing about whether this
+ * seat was on it.
+ */
+function deskSaysItRan(row: {
+  bookingStatus: string;
+  tripStatus: string;
+  loggedDiveId: string | null;
+}): boolean {
+  if (row.bookingStatus === "cancelled") return false;
+  return row.tripStatus === "scheduled" || row.loggedDiveId !== null;
+}
+
+/**
+ * Which people a standing roll-call result puts at sea on their contested
+ * seat's departure. Both halves of the head count, as `onTheWaterByRollCall`
+ * (src/db/manifests.ts) reads them: the diver trail answers for the seat, the
+ * crew trail for a staffer who holds a seat on a departure they also crew.
+ *
+ * One query per trail however many seats are contested, each reaching the
+ * `(shop_id, trip_id)` prefix of its trail's index: tens of rows on a real
+ * boat. Per checkpoint the newest event wins and a `cleared` newest drops out,
+ * the supersession every roll-call reader applies, and the standing result is
+ * read through `standingResultMeansSailed`, so a dock `not_boarded` is not a
+ * dive day and an after-dive `not_boarded` (did not come back) is.
+ *
+ * The crew trail is not narrowed to the departure's current crew list: taking
+ * somebody off it after the boat came back is one more desk word written later,
+ * and a recorded boarding is still the better evidence.
+ */
+async function sailedByRollCall(
+  db: DbExecutor,
+  shopId: string,
+  contested: ReadonlyMap<string, ContestedSeat>,
+): Promise<Set<string>> {
+  const seats = [...contested.values()];
+  const sailed = new Set<string>();
+
+  const diverRows = await db
+    .select({
+      bookingId: rollCallEvents.bookingId,
+      checkpoint: rollCallEvents.checkpoint,
+      status: rollCallEvents.status,
+    })
+    .from(rollCallEvents)
+    .where(
+      and(
+        eq(rollCallEvents.shopId, shopId),
+        inArray(rollCallEvents.tripId, [...new Set(seats.map((seat) => seat.tripId))]),
+        inArray(rollCallEvents.bookingId, [...contested.keys()]),
+      ),
+    )
+    .orderBy(
+      desc(rollCallEvents.occurredAt),
+      desc(rollCallEvents.createdAt),
+      desc(rollCallEvents.seq),
+    );
+  for (const bookingId of standingSailedSubjects(diverRows, (row) => row.bookingId)) {
+    const seat = contested.get(bookingId);
+    if (seat) sailed.add(seat.personId);
+  }
+
+  const unanswered = seats.filter((seat) => !sailed.has(seat.personId));
+  if (unanswered.length === 0) return sailed;
+  const crewRows = await db
+    .select({
+      tripId: rollCallCrewEvents.tripId,
+      personId: rollCallCrewEvents.personId,
+      checkpoint: rollCallCrewEvents.checkpoint,
+      status: rollCallCrewEvents.status,
+    })
+    .from(rollCallCrewEvents)
+    .where(
+      and(
+        eq(rollCallCrewEvents.shopId, shopId),
+        inArray(rollCallCrewEvents.tripId, [...new Set(unanswered.map((seat) => seat.tripId))]),
+        inArray(rollCallCrewEvents.personId, [...new Set(unanswered.map((seat) => seat.personId))]),
+      ),
+    )
+    .orderBy(
+      desc(rollCallCrewEvents.occurredAt),
+      desc(rollCallCrewEvents.createdAt),
+      desc(rollCallCrewEvents.seq),
+    );
+  // A crew result answers only for the departure the contested seat is on,
+  // never for another boat that person crewed in the window.
+  const crewSailed = standingSailedSubjects(crewRows, (row) => `${row.tripId}|${row.personId}`);
+  for (const seat of unanswered) {
+    if (crewSailed.has(`${seat.tripId}|${seat.personId}`)) sailed.add(seat.personId);
+  }
+  return sailed;
+}
+
+/**
+ * The subjects whose standing result at some checkpoint means they sailed.
+ * `rows` arrive newest first; the first row per subject and checkpoint is the
+ * standing one, and a `cleared` there drops that checkpoint out rather than
+ * falling back to an older result.
+ */
+function standingSailedSubjects<
+  Row extends { checkpoint: string; status: "boarded" | "not_boarded" | "cleared" },
+>(rows: readonly Row[], subjectOf: (row: Row) => string): Set<string> {
+  const seen = new Set<string>();
+  const sailed = new Set<string>();
+  for (const row of rows) {
+    const subject = subjectOf(row);
+    const key = `${subject}|${row.checkpoint}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    if (standingResultMeansSailed(row.checkpoint, row.status)) sailed.add(subject);
+  }
+  return sailed;
 }
 
 /**

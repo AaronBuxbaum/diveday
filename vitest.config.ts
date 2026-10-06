@@ -111,6 +111,12 @@ export default defineConfig({
     env: {
       DATABASE_URL: "",
       DATABASE_URL_UNPOOLED: "",
+      // A test that reaches the real `getDb()` (a server action called end to
+      // end) gets a private in-memory database, migrated and seeded like the dev
+      // one. Unset, it opened `.pglite` — the developer's own dev database — and
+      // went red while `pnpm dev` held it (issue #2101). Tests that build their
+      // own database through src/test/db.ts never read this.
+      PGLITE_DATA_DIR: "memory",
       // Set-but-empty is this repo's "off" switch (src/lib/configured.ts), and
       // the DSN needs one now that it is compiled in rather than supplied by
       // the environment: `register()` is called directly by

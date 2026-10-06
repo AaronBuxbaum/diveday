@@ -2120,6 +2120,10 @@ export default async function DiverReadinessPage({
               sites={tripDives
                 .map(({ diveSite }) => diveSite?.name)
                 .filter((name): name is string => Boolean(name))}
+              // The same dock call the masthead names, so the card says it
+              // too (issue #2034) — and the same exception: a diver being
+              // collected from their hotel is told the pickup, not the dock.
+              dockCallMinutes={data.pickupTime ? null : shop.dockCallMinutes}
               downloadHref={`${publicTripArrivalCardPath(fullShop.slug, fullTrip.id)}?booking=${encodeURIComponent(
                 token,
               )}`}

@@ -2,9 +2,10 @@ import { eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { issueBookingCapability } from "@/db/booking-capabilities";
-import { cancelBooking } from "@/db/bookings";
-import { bookingCapabilities } from "@/db/schema";
+import { cancelBooking, setBookingPickupDetails } from "@/db/bookings";
+import { bookingCapabilities, shops } from "@/db/schema";
 import { getTripRoster, upcomingTripsWithCounts } from "@/db/trips";
+import { formatTime } from "@/lib/format";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { seededShopContext } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
@@ -164,6 +165,46 @@ describe("GET /s/[shopSlug]/trips/[id]/arrival-card", () => {
     expect(publicAppUrl()).toBe("https://dive.day");
     expect(body).toContain(`href="https://dive.day/s/${shop.slug}/trips/${trip.id}"`);
     expect(body).not.toContain("http://localhost");
+  });
+
+  /**
+   * **The paper names the dock call** (issue #2034): the minute `/ready`'s
+   * masthead gives, `startsAt - dockCallMinutes` in the shop's zone — unless
+   * the diver is being collected from their hotel, or the shop asks for no
+   * lead time.
+   */
+  it("names when to be at the dock, the same minute /ready gives", async () => {
+    const { shop, trip, token } = await bookedDiver();
+    expect(shop.dockCallMinutes).toBeGreaterThan(0);
+    const time = formatTime(
+      new Date(trip.startsAt.getTime() - shop.dockCallMinutes * 60_000),
+      shop.defaultLocale,
+      shop.timezone,
+    );
+
+    const body = await (await card(shop.slug, trip.id, token)).text();
+
+    expect(body).toContain(
+      `Aim to be at the dock by ${time}, ${shop.dockCallMinutes} minutes before we sail.`,
+    );
+  });
+
+  it("leaves the dock call off for a diver collected from their hotel", async () => {
+    const { db, shop, trip, bookingId, token } = await bookedDiver();
+    await setBookingPickupDetails(db, { shopId: shop.id, bookingId, pickupTime: "7:15 AM" });
+
+    const body = await (await card(shop.slug, trip.id, token)).text();
+
+    expect(body).not.toContain("at the dock by");
+  });
+
+  it("leaves the dock call off when the shop asks for no lead time", async () => {
+    const { db, shop, trip, token } = await bookedDiver();
+    await db.update(shops).set({ dockCallMinutes: 0 }).where(eq(shops.id, shop.id));
+
+    const body = await (await card(shop.slug, trip.id, token)).text();
+
+    expect(body).not.toContain("at the dock by");
   });
 
   it("refuses a canceled booking", async () => {

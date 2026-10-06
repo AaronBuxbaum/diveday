@@ -1,6 +1,7 @@
 import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { ACTIVITY_REDACTED } from "@/lib/activity";
+import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
@@ -16,7 +17,7 @@ import {
   listTripActivity,
   pagedDiverActivity,
 } from "./operations";
-import { activityEvents, people } from "./schema";
+import { activityEvents, bookings, people } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 describe("staff-only operational context", () => {
@@ -119,6 +120,45 @@ describe("staff-only operational context", () => {
         body: "   ",
       }),
     ).resolves.toBeNull();
+  });
+
+  it("keeps the matched diver's notes off a held seat, and the seat's own notes on it (issue #1690)", async () => {
+    const { db, shop } = await seededShopContext();
+    const trip = (await upcomingTripsWithCounts(db, shop.id)).find((row) => row.booked > 0);
+    if (!trip) throw new Error("expected a booked trip");
+    const [rosterEntry] = await getTripRoster(db, shop.id, trip.id);
+    const [actor] = await listStaff(db, shop.id);
+    if (!rosterEntry || !actor) throw new Error("expected seeded people");
+    await addDiverNote(db, {
+      shopId: shop.id,
+      personId: rosterEntry.person.id,
+      actorPersonId: actor.person.id,
+      body: "Panicked on a deep dive last season; keep them shallow.",
+    });
+    const seatNote = await addInternalNote(db, {
+      shopId: shop.id,
+      tripId: trip.id,
+      bookingId: rosterEntry.booking.id,
+      actorPersonId: actor.person.id,
+      body: "Asked at the desk for a later pickup.",
+    });
+    if (!seatNote) throw new Error("expected the booking note to be created");
+    await db
+      .update(bookings)
+      .set({
+        identityUnconfirmedAt: nowDate(),
+        identityBookedAs: "Kai Quillfeather",
+        identityMatchedBy: "shared_email",
+      })
+      .where(eq(bookings.id, rosterEntry.booking.id));
+
+    const personNotes = await listDiverNotesForTrip(db, shop.id, trip.id);
+    expect(personNotes.some((row) => row.bookingId === rosterEntry.booking.id)).toBe(false);
+    expect(await listBookingNotes(db, shop.id, trip.id)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ note: expect.objectContaining({ id: seatNote.id }) }),
+      ]),
+    );
   });
 
   it("shares a diver note between the diver record and a trip manifest", async () => {

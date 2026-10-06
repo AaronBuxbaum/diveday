@@ -239,13 +239,14 @@ describe("rate-limiting runbook", () => {
     path.join(process.cwd(), "docs/engineering/rate-limiting-runbook.md"),
     "utf8",
   );
-  const documented = /`RATE_LIMITS\.([A-Za-z]+)`\s+\((\d+)\/(hour|15min)\)/g;
+  const documented = /`RATE_LIMITS\.([A-Za-z]+)`\s+\((\d+)\/(hour|15min|day)\)/g;
 
   /** The window a config's refill rate encodes, as the runbook spells it. */
   function policyText(config: RateLimitConfig): string {
     const windowMs = Math.round(config.capacity / config.refillPerMs);
     if (windowMs === 60 * 60 * 1000) return `${config.capacity}/hour`;
     if (windowMs === 15 * 60 * 1000) return `${config.capacity}/15min`;
+    if (windowMs === 24 * 60 * 60 * 1000) return `${config.capacity}/day`;
     throw new Error(`RATE_LIMITS uses a window the runbook has no spelling for: ${windowMs}ms`);
   }
 

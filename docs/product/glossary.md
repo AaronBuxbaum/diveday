@@ -45,8 +45,10 @@ new domain concept, define it here in the same PR.
 ## Certification
 
 - **Agency** — organization that trains and certifies divers. Major ones: **PADI**, **SSI**,
-  **NAUI**, **SDI/TDI**, **RAID**, **CMAS**, **GUE**, **BSAC**. A diver's card is agency-specific but
-  levels are broadly equivalent across agencies. Two different fields carry an agency name and they
+  **NAUI**, **SDI/TDI**, **RAID**, **CMAS**, **GUE**, **BSAC**, the cave-diving bodies
+  **NSS-CDS** and **NACD**, and the technical agency **IANTD**, common issuers of Florida Cavern
+  cards. A diver's card is
+  agency-specific but levels are broadly equivalent across agencies. Two different fields carry an agency name and they
   must not be confused: `certification_agency` is a **pg enum** — the agencies a diver's *card* may
   be recorded under — while `courses.agency` is **free text a shop types** for a course it teaches,
   and is the one `src/lib/course-ratios.ts` reads. Nothing in readiness, trip admission, or the
@@ -387,10 +389,11 @@ new domain concept, define it here in the same PR.
   the two things a staffer does instead — refuse a fill to a properly trained diver, or hand the
   tank over off-system — are both worse than an entry that looks odd.
 - **Other agency** — the enum's escape hatch (`certification_agency = 'other'`), and **a lossy one**:
-  there is no free-text companion column anywhere in the schema, so a diver holding an **IANTD**,
-  **SEI**, **ANDI**, **ACUC**, **PSAI** or **NASE** card is recorded as "Other agency" with nowhere
+  there is no free-text companion column anywhere in the schema, so a diver holding an **SEI**,
+  **ANDI**, **ACUC**, **PSAI** or **NASE** card is recorded as "Other agency" with nowhere
   to write *which* one — and the staffer who later has to look that number up has no idea whose
-  portal to open. Widening the enum (CMAS/RAID/GUE, then BSAC) narrows the problem for the next shop
+  portal to open. Widening the enum (CMAS/RAID/GUE, then BSAC, then NSS-CDS/NACD/IANTD for Cavern
+  cards) narrows the problem for the next shop
   and never closes it; the closing fix is the companion field, not a longer list. **BSAC** —
   British Sub-Aqua Club, the UK national governing body, ISO-aligned ladder **Ocean Diver ≈ Open
   Water → Sports Diver ≈ Advanced Open Water → Dive Leader ≈ Divemaster → Advanced Diver → First
@@ -759,6 +762,17 @@ new domain concept, define it here in the same PR.
 - **Working shift** — a dated availability window for a staff member. It is not a crew assignment:
   the shift says who is available, while the trip assignment says who is actually on that
   manifest. Overlapping shifts for one person are rejected.
+- **Boat clash** — one hull on two departures whose windows **overlap** (H-80: one hull, one
+  departure at a time). Same half-open predicate as the **Crew clash** below
+  (`src/db/trips-clashes.ts`), so a hull that ties up at 12:00 and takes the 12:00 out is the plan
+  rather than a defect, and a departure with no boat clashes with nothing. A shop wanting a course
+  group and a fun-dive group on one charter models it as one departure with two groups. Said on the
+  Move panel before a move lands one (`boatMoveClashes`), and on both departures' pages while it
+  stands — the Divers tab's pulse and the Details tab's Boat and crew row (`boatClashes`). Like the
+  crew clash it is information, never a gate. Each side goes silent once **its own** overlapping leg
+  has sailed, since nothing on a hull that has left is left to move; the side still on the dock
+  keeps the warning until it sails or its boat changes, because its divers are the ones with no
+  boat.
 - **Crew clash** — one person on two departures whose windows **overlap**. It is a time overlap and
   never a shared day: a divemaster on the 08:00 and the 14:00 is how a shop runs a Saturday, and
   `setTripCrew`/`changeTripCrew` allow it deliberately while refusing the overlap outright. The
@@ -769,7 +783,9 @@ new domain concept, define it here in the same PR.
   can answer are this one and the **Working shift** blackout above, reported as its own separate
   line because one is an inference from the roster and the other is the crew member's own
   statement. The third — over her hours — is unmodelled, and nothing says otherwise. `moveTrip`
-  does not refuse a clash; the preview informs and the owner decides. **And the preview is no longer
+  does not refuse a clash; the preview informs and the owner decides. **The words state the fact,
+  "also rostered on", never an impossibility** (H-80): "cannot be on both" was false of a
+  split charter, and the sentence has to stay true of every state a shop can reach. **And the preview is no longer
   the only reader** (issue #1695): the panel that warned about a move closes with the move, so the
   clash a departure is *standing* in is read back on its own Crew panel, on its About summary row,
   and in the staffing week on the day the overlap falls (`crewClashes`, the same overlap query the
@@ -782,6 +798,13 @@ new domain concept, define it here in the same PR.
   redirect with a `?notice=` whose form re-opens About, so the read speaks on the next paint. A
   clash already **home** is reported nowhere: it is permanent, unfixable and true, which is the
   shape of a warning a shop learns to scroll past.
+  **Today names it on both boats** (H-80), decided **per leg** by `crewClashPhase`: `crew_clash`
+  while the clashing leg has yet to sail (issue #1776), and `crew_clash_sailed` while it is out,
+  pointing at the roll call (issue #1814), so a course clashing on its second morning is still a
+  clash to fix while its first day is out. Both read through one batched `crewClashesByTrip`, never
+  from roll-call events, so a crew member nobody tapped is still not a roll-call subject; a person
+  the departure roll call has already answered for drops off the sailed row. A boat that is out but
+  no longer a station files these rows at the desk, never into the week's count.
   **The boat manifest reads it too, and it is the loudest of the five** (issue #1779): a crew member
   on two overlapping departures prints aboard both, and the sheet said nothing — so the second boat's
   deck met a crew member missing at the count with no reason, and souls-on-board named a body that
@@ -1257,7 +1280,10 @@ new domain concept, define it here in the same PR.
   paths refuse to leave a course session with nobody on the ratio, so rostering the session's only
   instructor onto the deck is refused exactly as removing them is — the two say the same thing about
   the session. Unassign-then-reassign does not preserve it: the row and its role go together, and
-  the picker is how it is set again.
+  the picker is how it is set again. The manifest's crew rows, the departure log and the incident
+  export print the professional rating beside a set job when the job does not already say it
+  ("Divemaster (Assistant Instructor)", `standingRatingsBesideJob` in `src/lib/crew-roles.ts`), so
+  narrowing the job never takes the rating off the record (#1852).
 - **In-water certified assistant** — a Divemaster **or an Assistant Instructor** actually
   supervising students in the water on this trip; each one extends the **entry-level in-water
   ratio** by two students per instructor. A person holding both instructor and divemaster roles is
@@ -1607,15 +1633,21 @@ new domain concept, define it here in the same PR.
   the 06:40 tap. No sweep exists and none is coming: `markBookingNoShow` (`src/db/no-show.ts`) is
   the only writer of that status, it is one staffer's deliberate tap on one seat, and check-in
   refuses anything but a `booked` seat — so the sighting is always the older statement, and the
-  escape only ever let 06:40 beat 07:15. **One exclusion still has an escape, and only two of the
-  three readers carry it.** A cancelled departure the crew logged dives on is a dive day to the
+  escape only ever let 06:40 beat 07:15. **The cancellations have escapes, and the three readers
+  carry different ones.** A cancelled departure the crew logged dives on is a dive day to the
   fly-safe reader (`peopleWhoDivedBefore`, `src/db/executed-dives.ts`) and to the counter's
   name-match prompt (`SimilarDiver.lastDiveDayAt`, `src/db/divers.ts`) — but not to the recap's own
   count (`getRecapPageData`, `src/db/recap.ts`), which still reads a plain non-`scheduled` departure
   as disqualifying. The gap is deliberate: the two that widened answer a staffer who can see the
   person and can shake their head, while this count tells the diver "your 3rd dive day" with nobody
   there to correct it and feeds `visitMilestone`'s exact equality, where a day that moves skips a
-  stamp permanently rather than blurring it. Putting all three behind one predicate is issue #1694.
+  stamp permanently rather than blurring it. **The fly-safe reader has a second, wider escape:
+  the roll call outranks a later desk word** (issue #1836). A standing roll-call result meaning the
+  person sailed counts the day even when the booking or the departure was marked `cancelled`
+  afterwards, logged dives or not, because both cancel doors check neither the clock nor the roll
+  call and being wrong there hands a two-day diver the single-day flying wait. The name-match prompt
+  deliberately makes the opposite trade and would rather ask. Putting all three behind one predicate
+  is issue #1694, and these two may legitimately keep disagreeing.
 - **Milestone stamp** — the drawn double-ring roundel beside the dive record, on the dive days
   `src/lib/visit-milestones.ts` names and no others: the 1st, 10th, 25th, 50th and 100th. Exact
   equality, not "at least", so a miscounted day does not blur a milestone — it skips it permanently.
@@ -1758,12 +1790,10 @@ new domain concept, define it here in the same PR.
   it now (issue #1804), because two surfaces describing one departure differently is worse than
   either sentence. The offline snapshot freezes that fact with everything else it holds, so a shop
   that re-adds the piece after a snapshot is taken carries the old mark onto the boat until the
-  next one. What
-  comes off is everything that piece was making *other* lines say. So a diver whose shop stopped
-  renting drysuits gets their stated weighting back on the weights line, ordinary fin sizing, and
-  no drysuit-card advisory — none of those three is about the suit itself; each is a claim about
-  what changes *because a rental suit is going out*, which a contradicted flag does not say
-  (`src/lib/dive-prep.ts`'s `inShopDrysuit`, `src/lib/drysuit-card.ts`). Completeness stops
+  next one. No *other* line changes with it: the weighting, the fin sizing and the drysuit-card
+  advisory are not about the rental at all. They follow **Dives dry** below, which the catalog
+  never touches, so a diver in a drysuit keeps "weight check in the water", fins sized over the
+  boot and the card question whoever owns the suit (issue #1810). Completeness stops
   chasing that piece's size at the same time (**Complete rental fit** below), so the list neither
   nags for a size nobody can hand over nor pretends the piece was never asked for. The catalog is
   only **half** the nitrox answer — see **Nitrox-compatible course** below.
@@ -1817,7 +1847,7 @@ new domain concept, define it here in the same PR.
   while a size DiveDay does not hold is a gap completeness already chases and the diver's own form
   asks for again. It is the tightest constraint on the drysuit's second fact above: a fleet
   writing its rock-boot size into `drysuit_size` has 40 characters for both.
-  A drysuit ticked here with no **Drysuit** specialty on the diver's record raises a roster advisory
+  A diver who **dives dry** with no **Drysuit** specialty on their record raises a roster advisory
   (`src/lib/drysuit-card.ts`) and nothing more: air in the suit expands on the way up and the
   specialty exists for exactly that, but a shop runs its own orientations, so this is a
   conversation before the first dive and never a boarding refusal (H-08's instrument, not readiness').
@@ -1825,6 +1855,20 @@ new domain concept, define it here in the same PR.
   dock-side fit check. It is the single input to the trip prep list. Reserving a particular unit is
   the **gear register**'s separate act (below) — a shop that keeps no register still has fits, and a
   fit alone still reserves nothing.
+- **Dives dry** — the diver-level fact that this diver dives in a drysuit, whoever owns it
+  (`rental_fit_profiles.dives_dry`, H-78, issue #1752). It is not a rental: most drysuit divers own
+  their suit, and before this column a diver in their own drysuit looked exactly like a diver in
+  their own wetsuit. Three readers key on it: the packing list's weights line, which says "weight
+  check in the water" instead of the stated weighting because a drysuit's undergarments and trapped
+  air change what a diver needs; the fins line, sized up over the drysuit boot; and the drysuit-card
+  roster advisory. The rental flag (`rents_drysuit`) only answers "does a suit come off our wall".
+  Every fit form asks the **suit** as one choice of four — own wetsuit (or none), rented
+  wetsuit, own drysuit, rented drysuit — so a diver can never record two suits, and the database
+  holds the same rule: a rented drysuit implies dives dry, and a diver who dives dry rents no
+  wetsuit (two checks on `rental_fit_profiles`). `saveRentalFit` settles a post that names both
+  suits for the drysuit, the conservative answer for weighting; a post that says nothing about the
+  suit changes nothing. It defaults false with no separate "unknown": every fit form opens on the
+  stored answer, and a diver nobody has asked is shown no weight check either way.
 - **Gear register** — the shop's own rental fleet as physical units (`gear_items`), opt-in **by
   presence**: a shop with zero units sees no gear UI anywhere and its prep flow is untouched, and
   adding the first unit is what turns it on — never a settings flag
@@ -1910,8 +1954,9 @@ new domain concept, define it here in the same PR.
   all, which is the judgement call.
 - **Trip prep list** — the derived packing list for one departure: tanks (one per diver per planned
   dive, split air/nitrox) plus rental kit grouped by item and size, with the divers each line is
-  for. Purely derived — nothing on it is an allocation. A diver in a **drysuit** is the one piece of
-  kit whose line deliberately carries no number: both fit forms ask usual weighting against a
+  for. Purely derived — nothing on it is an allocation. A diver who **dives dry** (above, rented
+  suit or their own) is the one diver whose weights line deliberately carries no number: every fit
+  form asks usual weighting against a
   wetsuit ("Usually 12 lb with 3 mm suit"), and a drysuit needs two to four kilos more, so their
   weights line reads "weight check in the water" on the prep list and carries no size on a manifest
   or roster line. Under-weighted is the direction a drysuit diver cannot hold a safety stop in; the
@@ -1920,11 +1965,12 @@ new domain concept, define it here in the same PR.
   42"), a vulcanised drysuit boot is two to three fin sizes bigger than the foot in it, and a pair
   packed to the stated number does not go on at the bench. That size stays on the line as the
   number the packer sizes up from, and the line says the pair has to clear the boot.
-  **Both of those hold only while the shop actually rents drysuits.** A piece the shop has since
-  dropped from its **rental catalog** is the one line here that carries a reason rather than only
-  a size: it stays on the list and on every other surface that reads the fit, says the shop no
-  longer rents it, and stops changing any other line — so a diver at a shop that stopped renting suits is packed lead to their stated number
-  and fins to their stated size, like anyone else. Rules in `src/lib/dive-prep.ts`.
+  **Both follow the diver, never the catalog** (H-78, issue #1810): every drysuit has a boot, a
+  rented suit's vulcanised one or the diver's own, so a diver in their own suit gets the same fin
+  line as one in ours. A piece the shop has since dropped from its **rental catalog** is the one
+  line here that carries a reason rather than only a size: it stays on the list and on every other
+  surface that reads the fit and says the shop no longer rents it, while the diver's weights and
+  fins still read as a drysuit diver's. Rules in `src/lib/dive-prep.ts`.
 - **Diver profile** — the shop's person-first operational record. A diver profile gathers contact
   details, certification evidence, rental fit, and bookings; cards are not managed as an unrelated
   certification inbox.
@@ -2189,6 +2235,17 @@ new domain concept, define it here in the same PR.
   unrelated person (that soft-delete window is accepted as-is; it fails closed to a blank record). See H-13 in
   [human-decisions.md](human-decisions.md) and
   [20260723-person-email-uniqueness](../architecture/decisions/20260723-person-email-uniqueness.md).
+- **Held seat** — a booking attached to an existing diver on a guess: it carries
+  `bookings.identity_unconfirmed_at` (with `identity_booked_as` and `identity_matched_by`) and the
+  `identity_unconfirmed` readiness blocker, raised by the **Identity match key** above. The seat is
+  real and counts against the boat; the *person* is not settled. It boards on nothing of the
+  matched diver's, and the flag gates **disclosure** as well as boarding (security review
+  2026-09-11): the roster, the boat manifest, its printed sheet, the crew phone's offline copy and
+  the departure log show the seat's own state (its name as booked, readiness, payment, roll-call
+  marks) and withhold the matched person's particulars (contact, emergency contact, age, sizes,
+  nitrox, medical answers), saying only that other holds may apply (`withholdHeldSeatParticulars`,
+  `src/lib/held-seat.ts`; issue #1690). It ends one of two ways, both on the roster: **Confirm
+  identity** or **Split off a held seat**. Crew never settle it at the rail.
 - **Confirm identity** — the staff tap that clears `bookings.identity_unconfirmed_at`, and the
   most consequential one in the product: it says *this person is the diver this seat was attached
   to*. Clearing the flag hands the seat the matched diver's **certifications** (readiness stops
@@ -2216,13 +2273,27 @@ new domain concept, define it here in the same PR.
 - **Split off a held seat** ("Different person") — the other answer to a held seat: this booking is
   *not* the diver it was attached to. `splitBookingIdentity` (`src/db/bookings.ts`) creates a new
   diver record, named by the staffer and prefilled with the name the seat was booked under
-  (`bookings.identity_booked_as`), and moves onto it what was about the seat: the booking, the gear
-  held for it, and the staff notes written on it. It **carries nothing** of the matched diver's:
+  (`bookings.identity_booked_as`), and moves onto it what was about the seat: the booking and the
+  gear held for it. Staff notes stay with the matched person, since they were written while the
+  seat read as theirs. It **carries nothing** of the matched diver's:
   no cards, sizes, date of birth, contact or email (the shared address stays with the record that
-  owns it). Every release and link on the seat is **superseded** and every bearer link minted over
-  the booking **revoked**, because any signature on it names the matched diver, so the seat asks
-  for its own release and is blocked until it has one. A seat with an **unanswered medical
-  referral** is refused until the referral is answered, since superseding it would lift the hold.
+  owns it, and is refused if typed). What the staffer types about the person in front of them
+  lands on the new record (issue #2081): a **date of birth**, required when a moving seat is on a
+  course with a minimum age, because the age check and the guardian co-signature rule both read it
+  and fail open without one, and an optional **email or phone** for sending their own waiver. When
+  there are **other held seats under the same name** matched to the same diver on *other*
+  departures, one box names each of those departures and, when ticked (it starts unticked: two
+  strangers can share a name), moves them onto the one new record, so three dives booked with a
+  friend's email make one person rather than three. It never moves a seat on the split seat's own
+  departure, nor on a departure carrying two such seats: one person is never on one boat twice. A
+  medical hold on any of them refuses the lot, and an age-gated course among them makes the date
+  of birth required. Every release and link on the seat is **superseded** and every bearer link
+  minted over the booking **revoked**, because any signature on it names the matched diver, so the
+  seat asks for its own release and is blocked until it has one; the moved links lose the
+  delivery outcome they recorded for the matched diver's address. A seat on a **medical hold**,
+  whether the physician referral is unanswered or the physician did not clear the diver, is
+  refused, since superseding it would lift the hold; the desk's way out is to cancel the seat and
+  seat the person fresh, which asks for their own release and medical answers.
   A **signed release stays with the matched diver** (issue #2080): a signature is refused unless
   the typed name matches the record's diver, so every signed release on a held seat names the
   matched person and is their paper. The seat's **unsigned links** follow it, with any half-typed

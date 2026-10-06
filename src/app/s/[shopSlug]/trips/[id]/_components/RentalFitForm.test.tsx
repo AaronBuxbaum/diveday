@@ -19,6 +19,7 @@ const emptyFit: DiverRentalFit = {
   finSize: null,
   rentsWeights: false,
   weightPreference: null,
+  divesDry: false,
   rentsDiveComputer: false,
   rentsGopro: false,
   rentsDrysuit: false,
@@ -160,15 +161,16 @@ describe("RentalFitForm geometry", () => {
         currency="usd"
       />,
     );
-    const priceOf = (item: RegExp) =>
-      screen.getByRole("checkbox", { name: item }).closest("label")?.parentElement
-        ?.lastElementChild;
-    for (const [item, own] of [
-      [/^BCD/, "$8.00"],
-      [/^Drysuit/, "$35.00"],
-      [/^Weights/, "$5.00"],
+    // The drysuit is a suit choice now, a radio rather than a tick (H-78), and
+    // it keeps the same price column as the ticks.
+    const priceOf = (role: "checkbox" | "radio", item: RegExp) =>
+      screen.getByRole(role, { name: item }).closest("label")?.parentElement?.lastElementChild;
+    for (const [role, item, own] of [
+      ["checkbox", /^BCD/, "$8.00"],
+      ["radio", /^Rent a drysuit/, "$35.00"],
+      ["checkbox", /^Weights/, "$5.00"],
     ] as const) {
-      const price = priceOf(item);
+      const price = priceOf(role, item);
       expect(price, own).toHaveClass("tabular-nums", "text-end");
       const shown = [...(price?.children ?? [])].filter((c) => !c.hasAttribute("aria-hidden"));
       expect(
@@ -793,7 +795,74 @@ describe("RentalFitForm drysuit size (issue 1414)", () => {
     expect(document.getElementById(describedBy ?? "")?.textContent).toMatch(
       /boots are part of the suit/i,
     );
-    expect(screen.getByRole("checkbox", { name: "Drysuit" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Rent a drysuit" })).toBeChecked();
+  });
+});
+
+/**
+ * **The suit is one choice** (H-78, issues #1752 and #1800). A diver dives one
+ * suit, and most drysuit divers own theirs; two independent ticks could say
+ * neither of those things.
+ */
+describe("RentalFitForm suit choice", () => {
+  function renderSuit(fit: DiverRentalFit | null, rentalItems: string[]) {
+    return renderDiver(
+      <RentalFitForm
+        action={mockAction}
+        rentalFit={fit}
+        rentalItems={rentalItems}
+        course={null}
+        pricing={defaultPricing}
+        wantsNitrox={false}
+        nitroxCardVerified={false}
+        plannedDives={2}
+        saved={false}
+        currency="usd"
+      />,
+    );
+  }
+
+  it("offers the diver's own suit either way, and ours only when the shop rents it", () => {
+    renderSuit(emptyFit, ["bcd", "wetsuit"]);
+    const names = screen.getAllByRole("radio").map((radio) => radio.getAttribute("value"));
+    expect(names).toEqual(["own_wetsuit", "rents_wetsuit", "own_drysuit"]);
+    // No suit tick left among the pieces: the suit has one question.
+    expect(screen.queryByRole("checkbox", { name: /^Wetsuit/ })).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: /^Drysuit/ })).toBeNull();
+  });
+
+  it("opens on the diver's own drysuit when that is what they said", () => {
+    renderSuit({ ...emptyFit, divesDry: true }, ["bcd", "wetsuit", "drysuit"]);
+    expect(screen.getByRole("radio", { name: "My own drysuit" })).toBeChecked();
+  });
+
+  it("keeps a rented drysuit selected after the shop stops renting them", () => {
+    // Left off the list, the next save would post the diver's answer as a
+    // different one (issue #1755's rule, applied to a radio).
+    renderSuit({ ...emptyFit, rentsDrysuit: true, divesDry: true }, ["bcd", "wetsuit"]);
+    expect(screen.getByRole("radio", { name: /^Rent a drysuit/ })).toBeChecked();
+  });
+
+  it("posts the one answer as `suit`", () => {
+    renderSuit({ ...emptyFit, rentsWetsuit: true }, ["wetsuit", "drysuit"]);
+    fireEvent.click(screen.getByRole("radio", { name: "My own drysuit" }));
+    const form = screen.getByRole("radio", { name: "My own drysuit" }).closest("form");
+    expect(new FormData(form ?? undefined).getAll("suit")).toEqual(["own_drysuit"]);
+  });
+
+  it("gives a drysuit example for the weighting once the diver picks a drysuit", () => {
+    // A wetsuit number is short for a dry diver, and the example is the one
+    // sentence on the form that suggests a number (H-78).
+    renderSuit({ ...emptyFit, rentsWeights: true }, ["weights", "wetsuit"]);
+    const weighting = () => screen.getByRole("textbox", { name: /^Usual weight setup/ });
+    expect(weighting()).toHaveAttribute("placeholder", "e.g. 16 lb with a 3 mm suit");
+    fireEvent.click(screen.getByRole("radio", { name: "My own drysuit" }));
+    expect(weighting()).toHaveAttribute("placeholder", "e.g. 22 lb with a drysuit and undersuit");
+  });
+
+  it("starts a diver with no fit on the wetsuit the shop rents", () => {
+    renderSuit(null, ["bcd", "wetsuit"]);
+    expect(screen.getByRole("radio", { name: /^Rent a wetsuit/ })).toBeChecked();
   });
 });
 

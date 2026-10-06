@@ -1934,6 +1934,63 @@ describe("OfflineManifestView — the crew panel tells apart 'still to call' fro
 });
 
 /**
+ * Decision 4 of ADR 20260827-the-departure-is-two-working-surfaces: an alarm is
+ * earned by a recorded fact. The live page keeps "Mark not back aboard" neutral
+ * until somebody records it, so the saved copy does too, or the same control
+ * changes colour between the dock and the open water (issue #2107).
+ */
+describe("OfflineManifestView — after a dive, red only once someone is recorded not back", () => {
+  it("draws every unrecorded after-dive exception control, diver and crew, without danger ink", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+    vi.mocked(loadOfflineManifest).mockResolvedValue(richEnvelope("trip-1"));
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    const controls = screen.getAllByRole("button", { name: "Mark not back aboard" });
+    // One diver (Priya) and two crew (Dana, Sal), none recorded yet.
+    expect(controls).toHaveLength(3);
+    for (const control of controls) {
+      expect(control.className).not.toMatch(/danger/);
+    }
+  });
+
+  it("keeps a recorded not-back-aboard loud, crew and diver alike", async () => {
+    searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
+    const saved = richEnvelope("trip-1", { crewCalled: true, crewNotBackAboard: true });
+    const priyaMissing: OfflineManifestEnvelope = {
+      ...saved,
+      events: [
+        {
+          clientEventId: "evt-missing",
+          snapshotId: saved.snapshot.snapshotId,
+          snapshotSavedAt: saved.snapshot.savedAt,
+          tripId: "trip-1",
+          bookingId: "diver-priya",
+          checkpoint: "after_dive_1",
+          status: "not_boarded",
+          occurredAt: new Date(FROZEN_MS).toISOString(),
+          syncStatus: "pending",
+        },
+      ],
+    };
+    vi.mocked(loadOfflineManifest).mockResolvedValue(priyaMissing);
+    vi.mocked(syncOfflineManifest).mockResolvedValue(null);
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+    const recorded = screen.getAllByRole("button", { name: "Not back aboard" });
+    expect(recorded).toHaveLength(2);
+    for (const control of recorded) {
+      expect(control.className).toContain("text-danger");
+    }
+    // Dana is recorded aboard: her exception control stays quiet.
+    const quiet = screen.getByRole("button", { name: "Mark not back aboard" });
+    expect(quiet.className).not.toMatch(/danger/);
+  });
+});
+
+/**
  * DOM-H3. The dock copy and the live manifest read the same rows through the
  * same predicate and the same word list (`isNotBackAboard` / `rollCallLabel` in
  * src/lib/manifests.ts, `rollCallLabelText` in src/i18n/manifest-labels.ts), so
@@ -2317,6 +2374,79 @@ describe("the row grammar the live manifest already reads", () => {
     // Shut at rest, and holding the facts rather than sitting beside them.
     expect(details?.open).toBe(false);
     expect(within(details as HTMLElement).getByText("Anil Shah · +1-305-555-0177")).toBeTruthy();
+  });
+
+  it("says a held seat's details wait for confirmation, rather than 'Not on file' (issue #1690)", async () => {
+    // `serializeManifests` saved this seat with the matched person's contact
+    // cleared; the identity code on its blockers is how the copy knows why.
+    const envelope = richEnvelope("trip-1", { readiness: "blocked" });
+    for (const manifest of envelope.snapshot.manifests) {
+      manifest.divers = manifest.divers.map((diver) =>
+        diver.bookingId === "diver-priya"
+          ? {
+              ...diver,
+              emergencyContactName: null,
+              emergencyContactPhone: null,
+              readiness: {
+                status: "blocked",
+                blockers: [
+                  {
+                    code: "identity_unconfirmed",
+                    text: "Might be someone else. Confirm who this is before boarding.",
+                  },
+                ],
+              },
+            }
+          : diver,
+      );
+    }
+    vi.mocked(loadOfflineManifest).mockResolvedValue(envelope);
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    const summary = screen.getAllByText("Contact & gear")[0];
+    const details = summary?.closest("details") as HTMLElement;
+    expect(
+      within(details).getByText(
+        "Their contact, age and other details wait until the desk confirms who this is.",
+      ),
+    ).toBeTruthy();
+    expect(within(details).queryByText("Not on file")).toBeNull();
+  });
+
+  it("reads the saved withheld flag, whatever the blockers say", async () => {
+    // The flag is what the save wrote; a seat it marks withheld says so even
+    // when the identity code is not the blocker it kept.
+    const envelope = richEnvelope("trip-1", { readiness: "blocked" });
+    for (const manifest of envelope.snapshot.manifests) {
+      manifest.divers = manifest.divers.map((diver) =>
+        diver.bookingId === "diver-priya"
+          ? {
+              ...diver,
+              identityWithheld: true,
+              emergencyContactName: null,
+              emergencyContactPhone: null,
+              readiness: {
+                status: "blocked",
+                blockers: [{ code: "readiness_unavailable", text: "Readiness unavailable." }],
+              },
+            }
+          : diver,
+      );
+    }
+    vi.mocked(loadOfflineManifest).mockResolvedValue(envelope);
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    const summary = screen.getAllByText("Contact & gear")[0];
+    const details = summary?.closest("details") as HTMLElement;
+    expect(
+      within(details).getByText(
+        "Their contact, age and other details wait until the desk confirms who this is.",
+      ),
+    ).toBeTruthy();
   });
 
   it("drops the box off the exception control while boarding is still on offer", async () => {

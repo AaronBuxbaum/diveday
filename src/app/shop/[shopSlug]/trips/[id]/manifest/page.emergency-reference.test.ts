@@ -41,6 +41,27 @@ describe("the manifest's emergency reference", () => {
     expect(SOURCE.slice(menu, SOURCE.indexOf(phone))).toContain('variant="header"');
   });
 
+  /**
+   * The trip packet and the day's paper both compose this page, so the paper
+   * copy here is where the cut boat card's missing-diver procedure and kit
+   * blanks print (issue #2035). The procedure ends "call for help on the
+   * numbers below", so it sits above the card it points at.
+   */
+  it("prints the missing-diver procedure above the numbers and the kit blanks below, on paper only", () => {
+    const printOnly = SOURCE.indexOf('<div className="hidden print:block">');
+    expect(printOnly).toBeGreaterThan(-1);
+    const block = SOURCE.slice(printOnly, SOURCE.indexOf("</div>", printOnly));
+    const procedure = block.indexOf("<PrintedMissingProcedure");
+    const numbers = block.indexOf("emergency-reference-print-heading");
+    const blanks = block.indexOf("<PrintedKitBlanks");
+    expect(procedure).toBeGreaterThan(-1);
+    expect(blanks).toBeGreaterThan(-1);
+    expect(procedure).toBeLessThan(numbers);
+    expect(numbers).toBeLessThan(blanks);
+    expect(SOURCE.split("<PrintedMissingProcedure")).toHaveLength(2);
+    expect(SOURCE.split("<PrintedKitBlanks")).toHaveLength(2);
+  });
+
   it("keeps the bed at rest in the desktop footer and on paper", () => {
     expect(card("emergency-reference-desktop-heading")).not.toMatch(/\binOverlay\b/);
     expect(card("emergency-reference-print-heading")).not.toMatch(/\binOverlay\b/);

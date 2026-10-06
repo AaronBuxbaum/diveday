@@ -15,7 +15,9 @@ import {
   confirmBookingIdentity,
   createBooking,
   createBookingParty,
+  movableSameNameSeats,
   restoreBooking,
+  sameNameHeldSeats,
   selfCancelBooking,
   splitBookingIdentity,
 } from "./bookings";
@@ -30,6 +32,7 @@ import {
   certifications,
   courses,
   diveSites,
+  internalNotes,
   nitroxCertifications,
   people,
   personRoles,
@@ -1441,6 +1444,33 @@ describe("createBooking identity safeguard (H-13)", () => {
       expect(still?.supersededAt).toBeNull();
     });
 
+    it("refuses a seat whose physician did not clear the diver, which is still a hold", async () => {
+      const { db, shop, open } = await seededContext();
+      const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+      const staffer = await counterStaffer(db, shop.id);
+      await issueWaiverRequest(db, { shopId: shop.id, bookingId: shared.bookingId });
+      await db
+        .update(waiverRecords)
+        .set({
+          status: "medical_review",
+          medicalReviewRequired: true,
+          medicalClearanceDeclinedAt: nowDate(),
+          medicalClearanceDeclinedByPersonId: staffer.id,
+          medicalClearanceEvaluatedOn: "2026-07-18",
+          medicalClearancePhysicianName: "Dr. Imani Okafor",
+        })
+        .where(eq(waiverRecords.bookingId, shared.bookingId));
+
+      expect(
+        await splitBookingIdentity(db, {
+          shopId: shop.id,
+          bookingId: shared.bookingId,
+          actorPersonId: staffer.id,
+          fullName: "Ben Quinn",
+        }),
+      ).toEqual({ ok: false, reason: "medical_hold" });
+    });
+
     // Issue #2080, after the dive-domain review: `completeWaiver` only accepts
     // the record's diver's own name, so a signed release on a held seat names
     // the matched diver and stays theirs; unsigned links follow the seat.
@@ -1529,6 +1559,372 @@ describe("createBooking identity safeguard (H-13)", () => {
         expect(release.draftAcknowledged).toBe(false);
         expect(verifyWaiverIntegrity(release)).toBe("unsealed");
       }
+    });
+
+    /**
+     * **Who the new record is, beyond a name** (issue #2081). A minor split
+     * off a parent's booking with no date of birth reads as an adult, so the
+     * minimum-age check and the guardian rule both fail open on them.
+     */
+    describe("what the staffer says about the new diver", () => {
+      async function ageGate(db: AppDb, shopId: string, tripId: string, minimumAge: number) {
+        const [course] = await db
+          .insert(courses)
+          .values({
+            shopId,
+            title: `Split age gate ${tripId}`,
+            slug: `split-age-gate-${tripId}`,
+            minimumAge,
+          })
+          .returning();
+        if (!course) throw new Error("course setup failed");
+        await db.update(trips).set({ courseId: course.id }).where(eq(trips.id, tripId));
+      }
+
+      it("asks for a date of birth when the seat is on a course with a minimum age", async () => {
+        const { db, shop, open } = await seededContext();
+        const { night, shared } = await sharedInboxSeat(db, shop.id, open.id);
+        await ageGate(db, shop.id, night.id, 12);
+        const staffer = await counterStaffer(db, shop.id);
+        const input = {
+          shopId: shop.id,
+          bookingId: shared.bookingId,
+          actorPersonId: staffer.id,
+          fullName: "Ben Quinn",
+        };
+        const before = await db.select({ id: people.id }).from(people);
+
+        expect(await splitBookingIdentity(db, input)).toEqual({
+          ok: false,
+          reason: "date_of_birth_required",
+        });
+        expect(await splitBookingIdentity(db, { ...input, dateOfBirth: "   " })).toEqual({
+          ok: false,
+          reason: "date_of_birth_required",
+        });
+        // A refusal leaves the seat held and writes no orphan person.
+        expect(await identityFlag(db, shared.bookingId)).not.toBeNull();
+        expect(await db.select({ id: people.id }).from(people)).toHaveLength(before.length);
+      });
+
+      it("files the date on the new record, so the age check reads the person who is here", async () => {
+        const { db, shop, open } = await seededContext();
+        const { night, shared } = await sharedInboxSeat(db, shop.id, open.id);
+        await ageGate(db, shop.id, night.id, 99);
+        const staffer = await counterStaffer(db, shop.id);
+        const result = await splitBookingIdentity(db, {
+          shopId: shop.id,
+          bookingId: shared.bookingId,
+          actorPersonId: staffer.id,
+          fullName: "Ben Quinn",
+          dateOfBirth: "2014-03-02",
+        });
+        if (!result.ok) throw new Error(`split refused: ${result.reason}`);
+        const [created] = await db.select().from(people).where(eq(people.id, result.personId));
+        expect(created?.dateOfBirth).toBe("2014-03-02");
+        const readiness = await readinessModule.getBookingReadiness(db, shop.id, shared.bookingId);
+        expect(readiness?.blockers.map((b) => b.code)).toContain("under_minimum_age");
+      });
+
+      it("refuses a date of birth that cannot be one", async () => {
+        const { db, shop, open } = await seededContext();
+        const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const staffer = await counterStaffer(db, shop.id);
+        const input = {
+          shopId: shop.id,
+          bookingId: shared.bookingId,
+          actorPersonId: staffer.id,
+          fullName: "Ben Quinn",
+        };
+        for (const dateOfBirth of ["2999-01-01", "1850-01-01", "2014-02-30", "next week"]) {
+          expect(await splitBookingIdentity(db, { ...input, dateOfBirth })).toEqual({
+            ok: false,
+            reason: "date_of_birth_invalid",
+          });
+        }
+        expect(await identityFlag(db, shared.bookingId)).not.toBeNull();
+      });
+
+      it("keeps an email and phone the staffer typed, and works with neither", async () => {
+        const { db, shop, open } = await seededContext();
+        const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const staffer = await counterStaffer(db, shop.id);
+        const result = await splitBookingIdentity(db, {
+          shopId: shop.id,
+          bookingId: shared.bookingId,
+          actorPersonId: staffer.id,
+          fullName: "Ben Quinn",
+          email: "  Ben.Quinn@Example.com ",
+          phone: "+1 305 555 0188",
+        });
+        if (!result.ok) throw new Error(`split refused: ${result.reason}`);
+        const [created] = await db.select().from(people).where(eq(people.id, result.personId));
+        expect(created?.email).toBe("ben.quinn@example.com");
+        expect(created?.phone).toBeTruthy();
+        expect(created?.dateOfBirth).toBeNull();
+      });
+
+      it("refuses an address another diver already holds, the shared inbox above all", async () => {
+        const { db, shop, open } = await seededContext();
+        const { nora, shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const staffer = await counterStaffer(db, shop.id);
+        const before = await db.select({ id: people.id }).from(people);
+        expect(
+          await splitBookingIdentity(db, {
+            shopId: shop.id,
+            bookingId: shared.bookingId,
+            actorPersonId: staffer.id,
+            fullName: "Ben Quinn",
+            email: "NORA@example.com",
+          }),
+        ).toEqual({ ok: false, reason: "email_in_use" });
+        // Nora's address stays hers, the seat stays held, nobody new exists.
+        const [match] = await db.select().from(people).where(eq(people.id, nora));
+        expect(match?.email).toBe("nora@example.com");
+        expect(await identityFlag(db, shared.bookingId)).not.toBeNull();
+        expect(await db.select({ id: people.id }).from(people)).toHaveLength(before.length);
+      });
+    });
+
+    /**
+     * **One person who booked several dives with somebody else's email is one
+     * record** (issue #2081). Each held seat used to need its own split, and
+     * each split made its own duplicate.
+     */
+    describe("splitting every held seat booked under the same name", () => {
+      async function secondHeldSeat(db: AppDb, shopId: string, fullName: string) {
+        const all = await upcomingTripsWithCounts(db, shopId);
+        const other = all.find(
+          (t) => !t.title.startsWith("Night Dive") && t.title !== "Wreck Trip — Spiegel Grove",
+        );
+        if (!other) throw new Error("expected another seeded trip");
+        const seat = await createBooking(db, {
+          actor: "staff",
+          shopId,
+          tripId: other.id,
+          fullName,
+          email: "nora@example.com",
+        });
+        if (!seat.ok) throw new Error("second shared-inbox booking failed");
+        return { trip: other, seat };
+      }
+
+      it("moves every held seat with that name onto one new record", async () => {
+        const { db, shop, open } = await seededContext();
+        const { night, nora, shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const { trip: other, seat } = await secondHeldSeat(db, shop.id, "ben quinn");
+        expect(seat.personId).toBe(nora);
+        const staffer = await counterStaffer(db, shop.id);
+        // What the form offers to move along with each seat, named by departure.
+        const offered = await sameNameHeldSeats(db, shop.id, [
+          { bookingId: shared.bookingId, personId: nora, tripId: night.id, bookedAs: "Ben Quinn" },
+          { bookingId: seat.bookingId, personId: nora, tripId: other.id, bookedAs: "ben quinn" },
+        ]);
+        expect(offered.get(shared.bookingId)).toEqual([
+          expect.objectContaining({
+            bookingId: seat.bookingId,
+            tripId: other.id,
+            tripTitle: other.title,
+            asksDateOfBirth: false,
+          }),
+        ]);
+        expect(offered.get(seat.bookingId)?.map((row) => row.bookingId)).toEqual([
+          shared.bookingId,
+        ]);
+
+        const result = await splitBookingIdentity(db, {
+          shopId: shop.id,
+          bookingId: shared.bookingId,
+          actorPersonId: staffer.id,
+          fullName: "Ben Quinn",
+          sameNameSeatIds: [seat.bookingId],
+        });
+        if (!result.ok) throw new Error(`split refused: ${result.reason}`);
+        expect(result.seats).toBe(2);
+        const moved = await db
+          .select({ personId: bookings.personId, held: bookings.identityUnconfirmedAt })
+          .from(bookings)
+          .where(eq(bookings.personId, result.personId));
+        expect(moved).toHaveLength(2);
+        expect(moved.every((row) => row.held === null)).toBe(true);
+        // Each departure's trail says what happened to its own roster.
+        for (const tripId of [night.id, other.id]) {
+          const trail = await listTripActivity(db, shop.id, tripId);
+          expect(trail.map((e) => e.code)).toContain("identity_split");
+        }
+      });
+
+      it("moves only the one seat unless asked, and never a seat booked under another name", async () => {
+        const { db, shop, open } = await seededContext();
+        const { nora, shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const { seat: sameName } = await secondHeldSeat(db, shop.id, "Ben Quinn");
+        const staffer = await counterStaffer(db, shop.id);
+
+        const one = await splitBookingIdentity(db, {
+          shopId: shop.id,
+          bookingId: shared.bookingId,
+          actorPersonId: staffer.id,
+          fullName: "Ben Quinn",
+        });
+        if (!one.ok) throw new Error(`split refused: ${one.reason}`);
+        expect(one.seats).toBe(1);
+        const [stillHeld] = await db
+          .select()
+          .from(bookings)
+          .where(eq(bookings.id, sameName.bookingId));
+        expect(stillHeld?.personId).toBe(nora);
+        expect(stillHeld?.identityUnconfirmedAt).not.toBeNull();
+      });
+
+      it("refuses the lot when any seat moving has an unanswered medical referral", async () => {
+        const { db, shop, open } = await seededContext();
+        const { nora, shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const { seat } = await secondHeldSeat(db, shop.id, "Ben Quinn");
+        await issueWaiverRequest(db, { shopId: shop.id, bookingId: seat.bookingId });
+        await db
+          .update(waiverRecords)
+          .set({ status: "medical_review" })
+          .where(eq(waiverRecords.bookingId, seat.bookingId));
+        const staffer = await counterStaffer(db, shop.id);
+
+        expect(
+          await splitBookingIdentity(db, {
+            shopId: shop.id,
+            bookingId: shared.bookingId,
+            actorPersonId: staffer.id,
+            fullName: "Ben Quinn",
+            sameNameSeatIds: [seat.bookingId],
+          }),
+        ).toEqual({ ok: false, reason: "medical_hold" });
+        const seats = await db.select().from(bookings).where(eq(bookings.personId, nora));
+        expect(seats.map((row) => row.id)).toEqual(
+          expect.arrayContaining([shared.bookingId, seat.bookingId]),
+        );
+      });
+
+      /**
+       * **Never two seats on one departure in one person** (dive-domain review
+       * 2026-10-06). Two held seats on one boat booked under one name are two
+       * people standing on the dock, whatever the booking form was told, and
+       * merging them would put one name on the manifest for two divers.
+       */
+      it("never puts a held seat on the same departure onto the new record, whatever the form posts", async () => {
+        const { db, shop, open } = await seededContext();
+        const { night, nora, shared } = await sharedInboxSeat(db, shop.id, open.id);
+        // A second "Ben Quinn" on the same boat, guessed onto another diver.
+        const [omar] = await db
+          .insert(people)
+          .values({ shopId: shop.id, fullName: "Omar Quinn", email: "quinns@example.com" })
+          .returning();
+        if (!omar) throw new Error("person setup failed");
+        const twin = await createBooking(db, {
+          actor: "staff",
+          shopId: shop.id,
+          tripId: night.id,
+          fullName: "Ben Quinn",
+          email: "quinns@example.com",
+        });
+        if (!twin.ok) throw new Error("second same-name booking failed");
+        expect(await identityFlag(db, twin.bookingId)).not.toBeNull();
+        const staffer = await counterStaffer(db, shop.id);
+
+        // Nothing on the same departure is offered.
+        const offered = await sameNameHeldSeats(db, shop.id, [
+          { bookingId: shared.bookingId, personId: nora, tripId: night.id, bookedAs: "Ben Quinn" },
+        ]);
+        expect(offered.get(shared.bookingId)).toBeUndefined();
+
+        // And nothing on it moves when a crafted form names it.
+        const result = await splitBookingIdentity(db, {
+          shopId: shop.id,
+          bookingId: shared.bookingId,
+          actorPersonId: staffer.id,
+          fullName: "Ben Quinn",
+          sameNameSeatIds: [twin.bookingId],
+        });
+        if (!result.ok) throw new Error(`split refused: ${result.reason}`);
+        expect(result.seats).toBe(1);
+        const onNight = await db
+          .select({ personId: bookings.personId })
+          .from(bookings)
+          .where(and(eq(bookings.tripId, night.id), eq(bookings.personId, result.personId)));
+        expect(onNight).toHaveLength(1);
+        const [twinAfter] = await db.select().from(bookings).where(eq(bookings.id, twin.bookingId));
+        expect(twinAfter?.personId).toBe(omar.id);
+        expect(twinAfter?.identityUnconfirmedAt).not.toBeNull();
+      });
+
+      it("offers nothing on the seat's own departure, nor on one carrying two candidates", () => {
+        const seat = (bookingId: string, tripId: string) => ({ bookingId, tripId });
+        expect(
+          movableSameNameSeats("boat-a", [
+            seat("same-boat", "boat-a"),
+            seat("twin-1", "boat-b"),
+            seat("twin-2", "boat-b"),
+            seat("alone", "boat-c"),
+          ]).map((row) => row.bookingId),
+        ).toEqual(["alone"]);
+      });
+
+      it("leaves the staff notes with the matched person", async () => {
+        const { db, shop, open } = await seededContext();
+        const { nora, shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const staffer = await counterStaffer(db, shop.id);
+        const [note] = await db
+          .insert(internalNotes)
+          .values({
+            shopId: shop.id,
+            personId: nora,
+            bookingId: shared.bookingId,
+            createdByPersonId: staffer.id,
+            body: "Asked about the wreck penetration",
+          })
+          .returning();
+        if (!note) throw new Error("note setup failed");
+        const result = await splitBookingIdentity(db, {
+          shopId: shop.id,
+          bookingId: shared.bookingId,
+          actorPersonId: staffer.id,
+          fullName: "Ben Quinn",
+        });
+        if (!result.ok) throw new Error(`split refused: ${result.reason}`);
+        const [after] = await db.select().from(internalNotes).where(eq(internalNotes.id, note.id));
+        expect(after?.personId).toBe(nora);
+      });
+
+      it("clears how the moved link last reached the matched diver", async () => {
+        const { db, shop, open } = await seededContext();
+        const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const staffer = await counterStaffer(db, shop.id);
+        await issueWaiverRequest(db, { shopId: shop.id, bookingId: shared.bookingId });
+        await db
+          .update(waiverRecords)
+          .set({
+            deliveryError: "Mailbox full",
+            deliveryProviderMessageId: "ses-123",
+            deliveryProviderStatus: "bounced",
+            deliveryProviderStatusAt: nowDate(),
+          })
+          .where(eq(waiverRecords.bookingId, shared.bookingId));
+        const result = await splitBookingIdentity(db, {
+          shopId: shop.id,
+          bookingId: shared.bookingId,
+          actorPersonId: staffer.id,
+          fullName: "Ben Quinn",
+        });
+        if (!result.ok) throw new Error(`split refused: ${result.reason}`);
+        const moved = await db
+          .select()
+          .from(waiverRecords)
+          .where(eq(waiverRecords.personId, result.personId));
+        expect(moved.length).toBeGreaterThan(0);
+        for (const release of moved) {
+          expect(release.deliveryError).toBeNull();
+          expect(release.deliveryProviderMessageId).toBeNull();
+          expect(release.deliveryProviderStatus).toBeNull();
+          expect(release.deliveryProviderStatusAt).toBeNull();
+        }
+      });
     });
 
     it("refuses a canceled seat: there is nobody to give a record to", async () => {

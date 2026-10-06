@@ -238,6 +238,13 @@ const waitlistInviteSchema = z.object({
   unsubscribeUrl: z.url().max(2_000),
 });
 
+/**
+ * A staffer's answer to a diver who asked the shop for a date (`source:
+ * "date_request"`). **Service mail**: the diver asked, so it carries no
+ * unsubscribe and reaches someone who opted out of courtesy email (Aaron,
+ * 2026-10-06, issue #1953). The cold invitation to a diver who asked for
+ * nothing is `direct_trip_invitation` below.
+ */
 const tripInvitationSchema = z.object({
   kind: z.literal("trip_invitation"),
   invitationId: z.uuid(),
@@ -252,6 +259,22 @@ const tripInvitationSchema = z.object({
   timezone: z.string().trim().min(1).max(100),
   bookingUrl: z.url().max(2_000),
   invitedAt: z.date(),
+});
+
+/**
+ * A staffer inviting a diver already on the shop's records to a departure they
+ * never asked about (`source: "direct"`). **Commercial mail** (Aaron,
+ * 2026-10-06, issue #1953): the shop deciding to mail someone about a seat it
+ * is selling is what 16 CFR 316.2 describes, so it carries the one-click
+ * courtesy unsubscribe — and through it the postal footer (`withPostalFooter`,
+ * render.ts) — and is not sent to a person whose `courtesyEmailOptOutAt` is
+ * set. Same words as `trip_invitation`; a required `unsubscribeUrl`, for the
+ * reason `checkoutRecoverySchema` gives: an optional field is one a future
+ * caller forgets.
+ */
+const directTripInvitationSchema = tripInvitationSchema.extend({
+  kind: z.literal("direct_trip_invitation"),
+  unsubscribeUrl: z.url().max(2_000),
 });
 
 // A staff-triggered last-minute-fill blast (docs ADR
@@ -775,6 +798,7 @@ export const notificationSchema = z
     bookingHandoffSchema,
     waitlistInviteSchema,
     tripInvitationSchema,
+    directTripInvitationSchema,
     tripReminder7dSchema,
     tripReminder24hSchema,
     tripRecapSchema,
@@ -940,6 +964,8 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // notification_send_queue level.
     case "trip_invitation":
       return `trip-invitation/${notification.invitationId}/${notification.invitedAt.toISOString()}`;
+    case "direct_trip_invitation":
+      return `direct-trip-invitation/${notification.invitationId}/${notification.invitedAt.toISOString()}`;
     case "waitlist_invite":
       return `waitlist-invite/${notification.waitlistEntryId}/${notification.invitedAt.toISOString()}`;
     // One reminder per booking per cadence — the kind alone keys it.

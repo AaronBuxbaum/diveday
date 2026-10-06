@@ -137,21 +137,28 @@ export function rentalFitLineText(t: StaffTranslator, locale: string, line: Rent
     case "rents": {
       const parts = line.items.map((item) => {
         const label = rentalItemLabel(t, item.kind);
-        // A drysuit diver's fins. The stated size is the shoe size the fit
-        // forms ask for, and the pair has to clear a vulcanised boot two to
-        // three sizes bigger, so the rail reads the job rather than a number
-        // to hand over (src/lib/dive-prep.ts's `rentedItems`). A sentence, so
-        // the words around the size can still wrap.
-        const piece = item.drysuitFinFit
-          ? item.size
-            ? t("shared.rentalFit.itemOverDrysuitBootWithSize", {
-                item: label,
-                size: sizeText(item.size),
-              })
-            : t("shared.rentalFit.itemOverDrysuitBoot", { item: label })
-          : item.size
-            ? sizedPiece(t, label, item.size)
-            : oneUnit(label);
+        // A drysuit diver's fins, rented suit or their own. The stated size is
+        // the shoe size the fit forms ask for, and the pair has to clear a
+        // drysuit boot two to three sizes bigger, so the rail reads the job
+        // rather than a number to hand over (src/lib/dive-prep.ts's
+        // `rentedItems`). A sentence, so the words around the size can still
+        // wrap.
+        //
+        // A drysuit diver's weights carry no number, because the stated one is
+        // a wetsuit answer: the rail says so, rather than reading like a size
+        // nobody wrote down (H-78).
+        const piece = item.drysuitWeightCheck
+          ? t("shared.rentalFit.itemDrysuitWeightCheck", { item: label })
+          : item.drysuitFinFit
+            ? item.size
+              ? t("shared.rentalFit.itemOverDrysuitBootWithSize", {
+                  item: label,
+                  size: sizeText(item.size),
+                })
+              : t("shared.rentalFit.itemOverDrysuitBoot", { item: label })
+            : item.size
+              ? sizedPiece(t, label, item.size)
+              : oneUnit(label);
         // Wrapped rather than substituted, so the piece keeps whatever it
         // already said and gains the contradiction. A staffer reading the rail
         // is about to go and fetch this: "Drysuit ML" with nothing on it sends
@@ -166,7 +173,8 @@ export function rentalFitLineText(t: StaffTranslator, locale: string, line: Rent
 }
 
 /**
- * The staff-facing sentence for a drysuit rental with no card behind it
+ * The staff-facing sentence for a diver who dives dry, in a rented suit or
+ * their own, with no Drysuit card behind it
  * (src/lib/drysuit-card.ts returns the state, this picks the words — AGENTS.md:
  * domain returns codes, the UI picks the copy). Both sentences end in an action
  * and say in as many words that nothing is blocked, the same shape the depth

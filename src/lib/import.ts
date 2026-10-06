@@ -1159,10 +1159,54 @@ export type PreparedImport = {
 function normalizeAgency(raw: string | undefined): { agency: ImportAgency; recognized: boolean } {
   const value = (raw ?? "").trim().toLowerCase();
   if (!value) return { agency: "other", recognized: false };
-  const tokens = new Set(value.split(/[^\p{L}\p{N}]+/u).filter(Boolean));
-  const direct = IMPORT_AGENCIES.find((agency) => agency !== "other" && tokens.has(agency));
+  const tokens = value.split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  const direct = IMPORT_AGENCIES.find(
+    (agency) =>
+      agency !== "other" &&
+      agencySpellings(agency).some((spelling) => containsRun(tokens, spelling)),
+  );
   if (direct) return { agency: direct, recognized: true };
   return { agency: "other", recognized: false };
+}
+
+/**
+ * **The spellings of an agency beyond its own code** (issue #2091). Every
+ * other agency is spelled by its code, which is one token. `nss_cds` is not: a
+ * cell reads "NSS-CDS", "NSS CDS" or "NSSCDS", and the splitter above turns the
+ * first two into `nss`, `cds`. Each spelling is a run of whole tokens matched
+ * in order, so the rule against reading an agency out of the middle of a word
+ * holds for these too. Bare "NSS" is deliberately absent: that is the National
+ * Speleological Society, not the section that issues the card.
+ *
+ * The long names are here because a springs shop's own records often spell
+ * the issuer out, and an honest Cavern card filed as "other" is the miss the
+ * issue is about.
+ */
+const LONG_AGENCY_SPELLINGS: Partial<Record<ImportAgency, readonly (readonly string[])[]>> = {
+  nss_cds: [
+    ["nss", "cds"],
+    ["nsscds"],
+    ["nss", "cave", "diving", "section"],
+    ["national", "speleological", "society", "cave", "diving", "section"],
+  ],
+  nacd: [["national", "association", "for", "cave", "diving"]],
+  iantd: [
+    ["international", "association", "of", "nitrox", "and", "technical", "divers"],
+    // "Nitrox & Technical": the splitter drops the ampersand with the spaces.
+    ["international", "association", "of", "nitrox", "technical", "divers"],
+  ],
+};
+
+function agencySpellings(agency: ImportAgency): readonly (readonly string[])[] {
+  return [[agency], ...(LONG_AGENCY_SPELLINGS[agency] ?? [])];
+}
+
+/** Whether `run` appears in `tokens` as consecutive whole tokens. */
+function containsRun(tokens: readonly string[], run: readonly string[]): boolean {
+  for (let start = 0; start + run.length <= tokens.length; start += 1) {
+    if (run.every((token, offset) => tokens[start + offset] === token)) return true;
+  }
+  return false;
 }
 
 /**

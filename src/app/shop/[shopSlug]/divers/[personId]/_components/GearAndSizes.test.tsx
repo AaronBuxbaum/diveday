@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import type { RentalFit } from "@/lib/dive-prep";
@@ -35,6 +35,7 @@ function makeRentalFit(overrides: Partial<RentalFit> = {}): RentalFit {
     bootSize: null,
     finSize: null,
     weightPreference: null,
+    divesDry: false,
     fitStatedAt: new Date("2026-08-20T10:00:00.000Z"),
     ...overrides,
   };
@@ -123,6 +124,35 @@ describe("GearAndSizes", () => {
     );
     // The hint is a description, never folded into what the box is called.
     expect(screen.getByLabelText("Drysuit size")).toHaveValue("MT");
+  });
+
+  /**
+   * The suit is one choice of four (H-78): a staffer taking a call can record
+   * a diver in their own drysuit, which no tick could say, and can never
+   * record two suits for one diver.
+   */
+  it("asks the suit as one choice, opening on the diver's own drysuit", () => {
+    renderGear(makeRentalFit({ divesDry: true }), ["bcd", "wetsuit", "drysuit"]);
+    const values = screen.getAllByRole("radio").map((radio) => radio.getAttribute("value"));
+    expect(values).toEqual(["own_wetsuit", "rents_wetsuit", "own_drysuit", "rents_drysuit"]);
+    expect(screen.getByRole("radio", { name: "Own drysuit" })).toBeChecked();
+    expect(screen.queryByRole("checkbox", { name: "Wetsuit" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: "Drysuit" })).not.toBeInTheDocument();
+  });
+
+  it("asks the wetsuit size once the staffer picks a rented wetsuit", () => {
+    renderGear(makeRentalFit(), ["bcd", "wetsuit"]);
+    expect(screen.queryByLabelText("Wetsuit size")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("radio", { name: "Rents a wetsuit" }));
+    expect(screen.getByLabelText("Wetsuit size")).toBeInTheDocument();
+  });
+
+  it("gives a drysuit example for the weighting while the suit is a drysuit", () => {
+    renderGear(makeRentalFit({ rentsWeights: true }), ["weights", "drysuit"]);
+    const weighting = () => screen.getByRole("textbox", { name: "Weight preference" });
+    expect(weighting()).toHaveAttribute("placeholder", "Usually 12 lb with 3 mm suit");
+    fireEvent.click(screen.getByRole("radio", { name: "Own drysuit" }));
+    expect(weighting()).toHaveAttribute("placeholder", "Usually 22 lb in a drysuit");
   });
 
   it("hangs no hint on a size box that has nothing extra to say", () => {

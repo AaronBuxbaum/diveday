@@ -53,6 +53,7 @@ All of them start `dev:`. Everything else is Next's own output, passed through u
 | `giving up on the … budget` | Three restarts in a minute all came back over the line, so the budget is below what this app needs at rest and no restart can meet it. Supervision switches off, the server keeps running. Raise `DIVEDAY_DEV_MEMORY_BUDGET_MB`, or read it as the machine being too small |
 | `port 3000 belongs to another process, so Next took 3001` | Read 3001. Whatever answers on 3000 is a different app, and it will look exactly like your change not landing |
 | `next dev refused to start` | Read Next's own message above it — it names the pid holding the checkout |
+| `the last dev server in this checkout was killed rather than stopped …` | It threw away the build state in `.next/dev` that a killed server left, because a killed compile can leave routes answering 404 before any page code runs (issue #1882). This start compiles cold. A clean stop or restart keeps the warm cache |
 
 Why any of this exists: `next dev` here never unloads a route it has served (155 MB at boot, 1.4 GB
 after one page, 13 GB and OOM-killed after ~30 routes) and no Node flag bounds it, because the memory is
@@ -113,6 +114,9 @@ tasks" with a live shell twice.
   something rewrites them. `rm -rf .next/dev/types` clears it — Next regenerates them — and the
   errors are never in your code. Cost one full e2e run to rediscover on 2026-09-03.
 - **`.next` grows without bound** (about 2 GB across a working day, mostly Turbopack's cache).
-  It is not the cause of a stale render, and deleting it buys a cold boot and fixes nothing.
+  It is not the cause of a stale render, and deleting it buys a cold boot and fixes nothing — with
+  one exception the supervisor handles for you: the state a *killed* server leaves, which can
+  answer a route 404 in ~50 ms without entering the page. `pnpm dev` discards that on its next
+  start; a bare `next dev` does not, so start the server through `pnpm dev`.
 
 When something is wrong rather than merely slow, the `debug` skill's symptom table has the rest.

@@ -67,9 +67,14 @@
     "diverAddedWaiverUndelivered": "Diver added to the trip, but their waiver wasn’t emailed. Send it or share the link from their row below.",
     "diverAddedIdentityUnconfirmed": "Diver added to the trip, but the seat is held until you confirm it’s the same person. Confirm it on their row below.",
     "diverWaitlisted": "Diver added to the wait list.",
+    "invitationOptedOut": "Invitation recorded but not emailed: this diver turned off optional emails from the shop.",
     "identityConfirmed": "Identity confirmed. This diver can be cleared to board.",
-    "identitySplit": "They have their own diver record now, with no waiver or certifications on file yet.",
-    "identityMedicalHold": "This seat has a physician referral nobody has answered. Answer it before giving them their own record.",
+    "identitySplit": "They have their own diver record now, with no waiver or certifications on file yet. Before they board, send their waiver from their record or record a paper release on their row.",
+    "identityMedicalHold": "This seat, or a held seat moving with it, is on a medical hold: a physician referral nobody has answered, or one the physician did not clear. To give this person their own record, cancel this seat and seat them fresh.",
+    "identitySplitDobRequired": "A departure moving to their record is a course with a minimum age. Add their date of birth to give them their own record.",
+    "identitySplitDobInvalid": "That date of birth can’t be right. Check it and try again.",
+    "identitySplitEmailInvalid": "That email doesn’t look right. Check it, or leave it blank.",
+    "identitySplitEmailInUse": "Another diver already has that email. Use their own, or leave it blank.",
     "certified": "Certified. They can book their next level with no further review.",
     "certifiedAwaitingCard": "Recorded. It won’t clear a gate until someone confirms it against the card.",
     "certifyFailed": "That didn’t save. Check they’re still on this roster and the level is picked, then try again.",
@@ -134,7 +139,8 @@
     "overIntroRatio": "Over intro ratio",
     "prepGaps": "{count, plural, one {# diver is missing rental sizes} other {# divers are missing rental sizes}}",
     "awaitingPayment": "{count, plural, one {# order is awaiting payment} other {# orders are awaiting payment}}",
-    "noRequirements": "Set the requirements before anyone can board"
+    "noRequirements": "Set the requirements before anyone can board",
+    "boatClash": "{boat} is also on {departure}"
   },
   "detail": {
     "viewBookingPage": "View booking page",
@@ -251,8 +257,8 @@
     "assignLabel": "Assign crew",
     "assignOption": "Assign crew…",
     "unassignAria": "Unassign {name}",
-    "clash": "Also crewing {departure} at these hours and cannot be on both.",
-    "assignClash": "{name} is already crewing another departure at these hours and cannot be on both.",
+    "clash": "Also rostered on {departure} at these hours.",
+    "assignClash": "{name} is already rostered on another departure at these hours.",
     "assignFailed": "That didn’t save. Recheck your connection or try again."
   },
   "recapNote": {
@@ -427,6 +433,7 @@
     "emergencyContactOnFile": "{name} · {phone}",
     "emergencyContactPhoneLabel": "Contact phone",
     "followUpBeforeBoarding": "Follow up before boarding",
+    "heldSeatMoreHolds": "Other holds may still apply.",
     "notClearedBeforeBoarding": "The hold stands. This diver does not board.",
     "groupInvited": "Invited",
     "groupReady": "Ready",

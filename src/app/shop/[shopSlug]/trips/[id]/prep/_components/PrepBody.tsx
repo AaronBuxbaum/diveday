@@ -189,9 +189,9 @@ export function PrepBody({
    * survives the shop dropping that item (issue #1755), so dropping the line
    * here would be the same silence one layer down — the packer would see
    * nothing while the fit behind it still records a suit. The size stays too,
-   * because it is what the conversation with the diver is about. What comes
-   * off is everything this flag was making the *other* lines say
-   * (`inShopDrysuit`, `src/lib/dive-prep.ts`).
+   * because it is what the conversation with the diver is about. Nothing
+   * else changes: the weight check and the fin sizing follow `divesDry`, what
+   * the diver wears, not the catalog (`src/lib/dive-prep.ts`).
    */
   const pieceSize = (piece: PrepPiece) => {
     const detail = pieceDetail(piece);

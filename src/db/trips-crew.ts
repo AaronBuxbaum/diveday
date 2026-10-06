@@ -1,4 +1,5 @@
-import { and, asc, eq, gt, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { shopDayOf } from "@/lib/closeout";
@@ -16,8 +17,13 @@ import {
   tripScheduleDays,
   trips,
 } from "./schema";
+import {
+  type DepartureWindow,
+  legWindow,
+  proposedDepartureWindows,
+  windowsOverlap,
+} from "./trips-clashes";
 import { liveTrip } from "./trips-live";
-import { tripShiftPlan } from "./trips-schedule";
 
 /**
  * Who is working a departure.
@@ -94,9 +100,6 @@ export type CrewMoveConflicts = {
   away: CrewMoveConflict[];
 };
 
-/** One window a departure occupies — its own, or the one a move proposes. */
-type CrewWindow = { startsAt: Date; endsAt: Date };
-
 /**
  * **The overlap question, asked once.** Who among these crew members is on
  * another live, scheduled departure whose window meets any of `windows`.
@@ -130,7 +133,7 @@ async function overlappingCrewDepartures(
   shopId: string,
   tripId: string,
   crewIds: readonly string[],
-  windows: readonly CrewWindow[],
+  windows: readonly DepartureWindow[],
 ) {
   return db
     .select({
@@ -158,14 +161,7 @@ async function overlappingCrewDepartures(
         isNull(people.deletedAt),
         // The predicate `setTripCrew` refuses on, against the *other* side's
         // own legs where it has them.
-        or(
-          ...windows.map((day) =>
-            and(
-              lt(sql`coalesce(${tripScheduleDays.startsAt}, ${trips.startsAt})`, day.endsAt),
-              gt(sql`coalesce(${tripScheduleDays.endsAt}, ${trips.endsAt})`, day.startsAt),
-            ),
-          ),
-        ),
+        or(...windows.map((day) => windowsOverlap(legWindow(tripScheduleDays, trips), day))),
       ),
     )
     .orderBy(asc(people.fullName), asc(trips.startsAt));
@@ -238,50 +234,131 @@ export async function crewClashes(
   tripId: string,
   now: Date = nowDate(),
 ): Promise<CrewClash[]> {
-  const [trip] = await db
-    .select({ startsAt: trips.startsAt, endsAt: trips.endsAt })
-    .from(trips)
-    .where(
+  const clashes = (await crewClashesByTrip(db, shopId, [tripId], now)).get(tripId) ?? [];
+  return clashes.map(({ legs: _legs, ...clash }) => clash);
+}
+
+/**
+ * A {@link CrewClash} with **which of the subject's own legs** it falls on —
+ * the windows of this departure that overlap the other one. A multi-day course
+ * clashing on its third morning is a clash still to fix on the first two and a
+ * boat out with it on the third, so a reader that splits "before it sails" from
+ * "once it has" (Today, H-80) needs the leg rather than the departure.
+ */
+export type CrewClashOnLegs = CrewClash & { legs: DepartureWindow[] };
+
+/**
+ * {@link crewClashes} for many departures in **one query** (H-80, issue
+ * #1776) — Today asks it of every boat in its window at once rather than once
+ * per boat, and the departure page's single read is this with one id.
+ *
+ * A self-join on `trip_assignments`: each subject departure's crew, matched to
+ * the same person on another live, scheduled departure whose leg overlaps one
+ * of the subject's own legs (`windowsOverlap` over `legWindow` on both sides,
+ * src/db/trips-clashes.ts — the predicate `overlappingCrewDepartures` asks of a
+ * proposed window, asked here of the window the departure has). The subject
+ * must be this shop's, live and scheduled; a subject already **home** is
+ * dropped by `hasReturned`, per departure, so one boat's clash can fall silent
+ * while the other boat in it is still out.
+ *
+ * A subject id gets an entry only when it has a clash; an absent key is the
+ * ordinary "nobody is double-booked". Each clash carries the subject's legs it
+ * falls on ({@link CrewClashOnLegs}), earliest first.
+ */
+export async function crewClashesByTrip(
+  db: AppDb,
+  shopId: string,
+  tripIds: readonly string[],
+  now: Date = nowDate(),
+): Promise<Map<string, CrewClashOnLegs[]>> {
+  const byTrip = new Map<string, CrewClashOnLegs[]>();
+  if (tripIds.length === 0) return byTrip;
+
+  const subject = alias(trips, "subject_trip");
+  const subjectCrew = alias(tripAssignments, "subject_crew");
+  const subjectDay = alias(tripScheduleDays, "subject_day");
+  const rows = await db
+    .select({
+      tripId: subject.id,
+      subjectStartsAt: subject.startsAt,
+      subjectEndsAt: subject.endsAt,
+      legStartsAt: subjectDay.startsAt,
+      legEndsAt: subjectDay.endsAt,
+      personId: tripAssignments.personId,
+      fullName: people.fullName,
+      otherTripId: trips.id,
+      title: trips.title,
+    })
+    .from(subjectCrew)
+    .innerJoin(subject, eq(subject.id, subjectCrew.tripId))
+    .leftJoin(subjectDay, eq(subjectDay.tripId, subject.id))
+    .innerJoin(
+      tripAssignments,
       and(
-        eq(trips.id, tripId),
-        eq(trips.shopId, shopId),
-        eq(trips.status, "scheduled"),
-        liveTrip(),
+        eq(tripAssignments.personId, subjectCrew.personId),
+        ne(tripAssignments.tripId, subjectCrew.tripId),
       ),
     )
-    .limit(1);
-  if (!trip) return [];
-  if (hasReturned(trip.endsAt, now)) return [];
+    .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    .innerJoin(people, eq(people.id, tripAssignments.personId))
+    .leftJoin(tripScheduleDays, eq(tripScheduleDays.tripId, trips.id))
+    .where(
+      and(
+        inArray(subject.id, [...tripIds]),
+        eq(subject.shopId, shopId),
+        // A called-off departure holds nobody's day, on either side.
+        eq(subject.status, "scheduled"),
+        isNull(subject.deletedAt),
+        liveTrip(),
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        eq(people.shopId, shopId),
+        isNull(people.deletedAt),
+        windowsOverlap(legWindow(tripScheduleDays, trips), legWindow(subjectDay, subject)),
+      ),
+    )
+    .orderBy(
+      asc(people.fullName),
+      asc(trips.startsAt),
+      asc(trips.id),
+      asc(sql`coalesce(${subjectDay.startsAt}, ${subject.startsAt})`),
+    );
 
-  const crewIds = await getTripCrewIds(db, shopId, tripId);
-  if (crewIds.length === 0) return [];
-
-  // Every leg, because the overlap is per window: a course whose Tuesday
-  // meeting lands on another boat clashes even though its Monday is clear.
-  const days = await db
-    .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
-    .from(tripScheduleDays)
-    .where(eq(tripScheduleDays.tripId, tripId));
-  const windows = days.length > 0 ? days : [{ startsAt: trip.startsAt, endsAt: trip.endsAt }];
-
-  const rows = await overlappingCrewDepartures(db, shopId, tripId, crewIds, windows);
-  // **One line per person per other departure**, and the id is what dedupes —
-  // never the name. Two crew members who share a name are two people to ring,
-  // and the left join above repeats a row per leg of the other boat.
-  const clashes: CrewClash[] = [];
-  const seen = new Set<string>();
+  // **One line per person per other departure, per subject**, and the id is
+  // what dedupes — never the name. Two crew members who share a name are two
+  // people to ring. The left joins repeat a row per pair of legs, which is
+  // what collects the subject's legs the clash falls on.
+  const byKey = new Map<string, CrewClashOnLegs>();
   for (const row of rows) {
-    const key = `${row.personId}:${row.otherTripId}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    clashes.push({
+    if (hasReturned(row.subjectEndsAt, now)) continue;
+    const leg = {
+      startsAt: row.legStartsAt ?? row.subjectStartsAt,
+      endsAt: row.legEndsAt ?? row.subjectEndsAt,
+    };
+    const key = `${row.tripId}:${row.personId}:${row.otherTripId}`;
+    const found = byKey.get(key);
+    if (found) {
+      if (!found.legs.some((known) => known.startsAt.getTime() === leg.startsAt.getTime())) {
+        found.legs.push(leg);
+      }
+      continue;
+    }
+    const clash: CrewClashOnLegs = {
       personId: row.personId,
       fullName: row.fullName,
       otherTripId: row.otherTripId,
       otherTitle: row.title,
-    });
+      legs: [leg],
+    };
+    byKey.set(key, clash);
+    const list = byTrip.get(row.tripId) ?? [];
+    list.push(clash);
+    byTrip.set(row.tripId, list);
   }
-  return clashes;
+  for (const clash of byKey.values()) {
+    clash.legs.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+  }
+  return byTrip;
 }
 
 /**
@@ -324,28 +401,14 @@ export async function crewMoveConflicts(
   timeZone: string,
 ): Promise<CrewMoveConflicts> {
   const none: CrewMoveConflicts = { clashes: [], away: [] };
-  if (Number.isNaN(newStartsAt.getTime())) return none;
-
-  const [trip] = await db
-    .select({ startsAt: trips.startsAt, endsAt: trips.endsAt })
-    .from(trips)
-    .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
-    .limit(1);
-  if (!trip) return none;
-
-  const crewIds = await getTripCrewIds(db, shopId, tripId);
-  if (crewIds.length === 0) return none;
 
   // The same shift the mutation will apply, from the same function — so the
   // preview and the move cannot disagree about where the boat lands.
-  const shift = tripShiftPlan(trip.startsAt, newStartsAt, timeZone);
-  const days = await db
-    .select({ startsAt: tripScheduleDays.startsAt, endsAt: tripScheduleDays.endsAt })
-    .from(tripScheduleDays)
-    .where(eq(tripScheduleDays.tripId, tripId));
-  const proposed = (
-    days.length > 0 ? days : [{ startsAt: trip.startsAt, endsAt: trip.endsAt }]
-  ).map((day) => ({ startsAt: shift(day.startsAt), endsAt: shift(day.endsAt) }));
+  const proposed = await proposedDepartureWindows(db, shopId, tripId, newStartsAt, timeZone);
+  if (!proposed || proposed.length === 0) return none;
+
+  const crewIds = await getTripCrewIds(db, shopId, tripId);
+  if (crewIds.length === 0) return none;
 
   const [overlapping, blocks] = await Promise.all([
     // The same predicate `crewClashes` asks of a departure standing still,
@@ -589,13 +652,11 @@ export async function setTripCrew(
             eq(trips.shopId, shopId),
             ne(trips.id, tripId),
             inArray(tripAssignments.personId, valid),
+            // The one overlap predicate every clash reader shares
+            // (src/db/trips-clashes.ts), so a refusal here and a warning there
+            // cannot disagree about the same pair of departures.
             or(
-              ...proposedDays.map((day) =>
-                and(
-                  lt(sql`coalesce(${tripScheduleDays.startsAt}, ${trips.startsAt})`, day.endsAt),
-                  gt(sql`coalesce(${tripScheduleDays.endsAt}, ${trips.endsAt})`, day.startsAt),
-                ),
-              ),
+              ...proposedDays.map((day) => windowsOverlap(legWindow(tripScheduleDays, trips), day)),
             ),
           ),
         )
@@ -807,12 +868,12 @@ export async function changeTripCrewOutcome(
             eq(trips.shopId, shopId),
             ne(trips.id, tripId),
             eq(tripAssignments.personId, change.personId),
+            // The one overlap predicate every clash reader shares
+            // (src/db/trips-clashes.ts), so a refusal here and a warning there
+            // cannot disagree about the same pair of departures.
             or(
               ...effectiveDays.map((day) =>
-                and(
-                  lt(sql`coalesce(${tripScheduleDays.startsAt}, ${trips.startsAt})`, day.endsAt),
-                  gt(sql`coalesce(${tripScheduleDays.endsAt}, ${trips.endsAt})`, day.startsAt),
-                ),
+                windowsOverlap(legWindow(tripScheduleDays, trips), day),
               ),
             ),
           ),

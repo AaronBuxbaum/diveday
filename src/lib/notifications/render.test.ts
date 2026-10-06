@@ -124,6 +124,48 @@ describe("messageFor", () => {
       expect(withNone.html).not.toContain("font-size: 12px");
     });
 
+    /**
+     * **A cold invitation is commercial; an answer to a request is not**
+     * (Aaron, 2026-10-06, issue #1953). Same words, two kinds: the one staff
+     * send to a diver who asked for nothing carries the unsubscribe and so the
+     * postal footer; the reply to a diver's own date request carries neither.
+     */
+    describe("the two trip invitations", () => {
+      const invitation = {
+        ...trip,
+        invitationId: "3f2504e0-4f89-41d3-9a0c-0305e82c3305",
+        bookingUrl: "https://dive.day/s/blue-mantis/trips/trip-1",
+        invitedAt: new Date("2026-07-30T12:00:00.000Z"),
+      };
+
+      it("closes a cold invitation with the unsubscribe link and the shop's address", () => {
+        const email = messageFor({
+          ...invitation,
+          kind: "direct_trip_invitation",
+          unsubscribeUrl: "https://dive.day/unsubscribe/tok",
+          sender,
+        });
+        expect(email.text).toContain(
+          "Stop optional emails from Blue Mantis:\nhttps://dive.day/unsubscribe/tok",
+        );
+        expect(email.html).toContain(
+          '<a href="https://dive.day/unsubscribe/tok">Stop optional emails from Blue Mantis</a>',
+        );
+        expect(
+          email.text.endsWith("\n\nBlue Mantis · 1 Harbor Rd, Key Largo, FL 33037, US\n"),
+        ).toBe(true);
+        expect(email.html).toContain("Blue Mantis · 1 Harbor Rd, Key Largo, FL 33037, US</p>");
+      });
+
+      it("leaves the answer to a diver's own request without either", () => {
+        const email = messageFor({ ...invitation, kind: "trip_invitation", sender });
+        expect(email.text).not.toContain("unsubscribe");
+        expect(email.html).not.toContain("unsubscribe");
+        expect(email.text).not.toContain("1 Harbor Rd");
+        expect(email.html).not.toContain("1 Harbor Rd");
+      });
+    });
+
     it("leaves a transactional message alone even when the address is known", () => {
       const email = messageFor({ kind: "booking_confirmation", ...trip, sender });
       expect(email.text).not.toContain("1 Harbor Rd");

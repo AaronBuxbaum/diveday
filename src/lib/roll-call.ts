@@ -171,7 +171,10 @@ export function rollCallNoteAllowed(
  * (src/db/today.ts), and `seatSailed` (src/lib/closeout.ts). The two reclaims
  * are one predicate for one reason: the reader that refuses the desk consults
  * both trails, so a mirror act on only one of them is a promise the reader
- * makes and the writer does not keep (issue #1686).
+ * makes and the writer does not keep (issue #1686). A sixth, the fly-safe
+ * dive-day reader `peopleWhoDivedBefore` (src/db/executed-dives.ts), reads it
+ * to let the roll call outrank a booking or departure cancelled later at a desk
+ * (issue #1836).
  */
 export function standingResultMeansSailed(
   checkpoint: string,

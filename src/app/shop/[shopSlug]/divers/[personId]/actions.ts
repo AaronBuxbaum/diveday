@@ -63,7 +63,7 @@ import { isPlausibleCardNumber } from "@/lib/card-number";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import type { PaperWaiverFormState } from "@/lib/paper-waiver-form";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
-import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
+import { RENTAL_FIT_TEXT_LIMITS, suitFlagsFromPost } from "@/lib/rentals";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { storeMedicalClearanceDocument } from "@/lib/storage";
@@ -153,12 +153,12 @@ const needsStaffFitSchema = z.object({
 const profileSchema = z.object({
   bcd: z.string().optional(),
   regulator: z.string().optional(),
-  wetsuit: z.string().optional(),
+  // One suit choice rather than two checkboxes (H-78); see `suitFlagsFromPost`.
+  suit: z.string().optional(),
   maskFins: z.string().optional(),
   weights: z.string().optional(),
   diveComputer: z.string().optional(),
   gopro: z.string().optional(),
-  drysuit: z.string().optional(),
   hoodGloves: z.string().optional(),
   torch: z.string().optional(),
   smb: z.string().optional(),
@@ -965,12 +965,11 @@ export async function saveProfileAction(shopSlug: string, personId: string, form
     // correcting a boot size, who would never be told.
     rentsBcd: parsed.data.bcd === "on",
     rentsRegulator: parsed.data.regulator === "on",
-    rentsWetsuit: parsed.data.wetsuit === "on",
+    ...suitFlagsFromPost(parsed.data.suit),
     rentsMaskFins: parsed.data.maskFins === "on",
     rentsWeights: parsed.data.weights === "on",
     rentsDiveComputer: parsed.data.diveComputer === "on",
     rentsGopro: parsed.data.gopro === "on",
-    rentsDrysuit: parsed.data.drysuit === "on",
     rentsHoodGloves: parsed.data.hoodGloves === "on",
     rentsTorch: parsed.data.torch === "on",
     rentsSmb: parsed.data.smb === "on",

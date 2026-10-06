@@ -293,6 +293,7 @@ market is, and it cannot be read as the other suit.
 | a 3 mm wetsuit | un neopreno de 3 mm |
 | drysuit | el traje seco |
 | Drysuit size | Talla de traje seco |
+| Suit (the fit form's one question, wet or dry) | Neopreno o traje seco |
 
 The noun is **masculine**: `el`/`un`/`este`, and anything reaching back to it agrees (`corto`,
 `completo`, `húmedo`).

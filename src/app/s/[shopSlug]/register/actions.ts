@@ -8,6 +8,7 @@ import { deliverSelfRegistrationWaiver, registerDiverAtShop } from "@/db/self-re
 import { getShopBySlug } from "@/db/shops";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { log } from "@/lib/log";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { clientIp } from "@/lib/request-ip";
@@ -17,6 +18,7 @@ import {
   SELF_REGISTRATION_DONE,
   type SelfRegistrationFormState,
 } from "@/lib/self-registration";
+import { selfRegistrationReleaseDelivery } from "@/lib/self-registration-delivery";
 
 const registrationSchema = z.object({
   fullName: z.string().trim().min(1).max(120),
@@ -113,21 +115,16 @@ export async function registerAtShopAction(
   const shop = await getShopBySlug(db, shopSlug);
   if (!shop) return { error: t("register.unavailable") };
 
-  // The third bucket, keyed on the address being *written to* rather than the
-  // one submitting: without it, ten submissions an hour aimed at one inbox is
-  // ten waiver emails an hour with this shop's name on them, and an attacker
-  // can point the shop's own sender at strangers. An empty bucket drops the
-  // send and keeps the registration: a mail-bombing bucket must never become
-  // a registration-blocking one.
+  // Whether the release goes out at all, decided per recipient: a bucket on
+  // the address or number being *written to*, and for a text (billed to the
+  // shop, issue #2092) the shop's own country, no demo shop, and a daily cap.
+  // Every refusal drops the send and keeps the registration: a mail-bombing
+  // bucket must never become a registration-blocking one.
   const email = parsed.data.email?.trim().toLowerCase() ?? null;
-  const mayDeliverWaiver =
-    email === null ||
-    (
-      await checkRateLimit(
-        rateLimitKey("self-register-email", shop.id, email),
-        RATE_LIMITS.selfRegisterEmailByRecipient,
-      )
-    ).allowed;
+  const delivery = await selfRegistrationReleaseDelivery(shop, {
+    email,
+    phone: parsed.data.phone ?? null,
+  });
 
   const { personId } = await registerDiverAtShop(db, {
     shopId: shop.id,
@@ -161,14 +158,27 @@ export async function registerAtShopAction(
   // deny — so both submissions return on the same work
   // (`deliverSelfRegistrationWaiver`, `security-reviewer` #1236). A stalled or
   // failed send must never reach the visitor either; the shop sees the pending
-  // release on its own surfaces.
-  if (mayDeliverWaiver) {
-    after(async () => {
-      await deliverSelfRegistrationWaiver(await getDb(), { shopId: shop.id, personId }).catch(
-        () => undefined,
-      );
-    });
-  }
+  // release on its own surfaces. What happened is logged by code and shop id
+  // only, never the address or number.
+  after(async () => {
+    if (delivery !== "send") {
+      // A spent daily cap is the one skip that may be someone pumping texts
+      // through this shop's QR, so it is the one an operator is told about.
+      log("self_registration.release_skipped", delivery === "shop_text_cap" ? "warn" : "info", {
+        shopId: shop.id,
+        outcome: delivery,
+      });
+      return;
+    }
+    try {
+      await deliverSelfRegistrationWaiver(await getDb(), { shopId: shop.id, personId });
+    } catch {
+      log("self_registration.release_failed", "warn", {
+        shopId: shop.id,
+        outcome: "delivery_threw",
+      });
+    }
+  });
 
   return { status: SELF_REGISTRATION_DONE };
 }
