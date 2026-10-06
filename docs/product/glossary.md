@@ -1324,7 +1324,7 @@ new domain concept, define it here in the same PR.
   aboard" that a non-rejected source states — silently demoting a missing diver to "awaiting" is the
   one direction that takes an alarm off the screen — while it still may never resurrect a superseded
   "aboard", which is the stale optimism reconciliation exists to overrule.
-- **Boat mode** — the Night Dive palette (navy, white ink, safety yellow, Atkinson Hyperlegible) for reading a screen on deck (ADR 20261001-logbook, decision 6). The roll call always wears it; anyone can put the rest of a device in it from the staff identity menu (`src/lib/boat-mode.ts`). A manual switch only: there is no light sensor, water lock or glare skin.
+- **Boat mode** — the high-contrast palette (navy and safety yellow, Atkinson Hyperlegible) for reading a screen on deck (ADR 20261001-logbook, decision 6). By day it is light, white ground and navy ink, because sun washes a dark screen out; with the device in its dark scheme it is Night Dive, navy ground and white ink (H-97). The roll call always wears it; anyone can put the rest of a device in it from the staff identity menu (`src/lib/boat-mode.ts`). A manual switch only: there is no light sensor, water lock or glare skin.
 - **Boarding** — the fast pre-departure pass: get every ready diver aboard before the boat leaves,
   waiver/cert/payment confirmed at a glance. It is not a separate surface — it is the **Manifest's**
   "Before departure" checkpoint, where readiness pills and a resolve-blockers link show alongside the

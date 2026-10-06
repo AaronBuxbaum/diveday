@@ -27,8 +27,8 @@
  * Semantic names only: components never reference raw hex values.
  * Palette story (Logbook, ADR 20261001-logbook): paper with a faint sea-green
  * cast under white groups, slate ink, one sea-teal action colour and a rare
- * marine-amber accent; at depth, deep slate. `.boat-mode` is Night Dive:
- * navy and safety yellow in both schemes, for the roll call.
+ * marine-amber accent; at depth, deep slate. `.boat-mode` is the roll call's
+ * high-contrast skin: light by day, Night Dive navy in the dark scheme.
  * See docs/design/principles.md before adding or changing tokens.
  */
 
@@ -547,64 +547,104 @@ body {
 /*
  * **The roll call's whole content area is the boat.** `.boat-mode` paints its
  * own ground, but it sits inside the page's padded column, so on its own the
- * navy stopped at the column's edge with the roll call flush against it and
+ * ground stopped at the column's edge with the roll call flush against it and
  * paper all round. The content area takes the same ground (`.boat-mode`'s
- * `--background`, stated once more because this element is outside it), so
- * the page's own padding insets the roll call on navy. Screen only: paper
- * prints the manifest in ink.
+ * `--background` in each scheme, stated once more because this element is
+ * outside it), so the page's own padding insets the roll call on it. Screen
+ * only: paper prints the manifest in ink.
  */
 @media screen {
   #shop-main-content:has(
     > main:not([style*="display: none"]) > div.boat-mode:not([style*="display: none"])
   ) {
-    background-color: #0a141c;
+    background-color: #ffffff;
+
+    @media (prefers-color-scheme: dark) {
+      background-color: #0a141c;
+    }
   }
 }
 
 /*
- * **Boat mode — Night Dive** (ADR 20261001-logbook). The roll call wears it in
- * both schemes: deep navy, white ink, and marine safety yellow as the one
- * action colour, in Atkinson Hyperlegible. Every pair clears AA by a wide
- * margin: ink 15.0 on the surface, muted 8.3, yellow 11.2, ink on yellow 12.6.
- * It is the single high-contrast surface: there is no ambient-light switch
- * and no separate glare skin. Anyone can put a whole device in it from the
- * identity menu, which sets the class on `<html>` (`src/lib/boat-mode.ts`);
- * `:root.boat-mode` outranks the dark scheme's `:root` block.
+ * **Boat mode** (ADR 20261001-logbook, decision 6, as amended by H-97). The
+ * roll call wears it in both schemes, in Atkinson Hyperlegible, with navy and
+ * marine safety yellow as its identity. **By day it is light**: white ground,
+ * navy ink, navy actions labelled in yellow. Sun reflected off a screen lands
+ * on top of what it shows, so it lifts a dark ground towards grey and the
+ * contrast collapses; a white ground is brighter than the glare and dark ink
+ * on it holds. **When the device is in its dark scheme it is Night Dive**:
+ * navy ground, white ink, yellow actions, for a dawn or night departure. No
+ * new switch chooses between them; the phone's own setting does.
+ *
+ * Every pair clears 6:1, held by `src/lib/boat-palette.test.ts`. There is no
+ * ambient-light switch and no separate glare skin. Anyone can put a whole
+ * device in Boat mode from the identity menu, which sets the class on
+ * `<html>` (`src/lib/boat-mode.ts`); `:root.boat-mode` outranks the dark
+ * scheme's `:root` block.
  */
 :root.boat-mode,
 .boat-mode {
-  color-scheme: dark;
-  --background: #0a141c;
-  --surface: #13222d;
-  --surface-sunken: #071017;
-  --border: #2b4352;
-  --border-strong: #7d98a8;
-  --foreground: #f2f7fa;
-  --muted: #a9bcc8;
-  --primary: #ffd23f;
-  --primary-hover: #ffe38a;
-  --primary-foreground: #1a1500;
-  --primary-tint: #2e2a12;
-  --accent: #ffd23f;
-  --accent-deep: #ffe38a;
-  --accent-tint: #2e2a12;
-  --success: #58e08f;
-  --warning: #ffb648;
-  --danger: #ff7a7a;
-  --info: #a5b4fc;
-  --success-tint: #123222;
-  --warning-tint: #36280f;
-  --danger-tint: #3b1a1c;
+  color-scheme: light;
+  --background: #ffffff;
+  --surface: #ffffff;
+  --surface-sunken: #edf1f4;
+  --border: #b3bec6;
+  --border-strong: #3f4d57;
+  --foreground: #0a141c;
+  --muted: #34434d;
+  --primary: #0a141c;
+  --primary-hover: #1d3140;
+  --primary-foreground: #ffd23f;
+  --primary-tint: #fff0b3;
+  --accent: #0a141c;
+  --accent-foreground: #ffd23f;
+  --accent-deep: #0a141c;
+  --accent-tint: #fff0b3;
+  --success: #0b5e2e;
+  --warning: #7a4100;
+  --danger: #a30f1b;
+  --info: #2c3b9e;
+  --success-tint: #ddf2e4;
+  --warning-tint: #fcebcb;
+  --danger-tint: #fde1e3;
   /* Redeclared here because `:root` resolved them from *its* status
-     colours: inherited, they would be light-page green and amber on these
-     navy tints (2.2:1). On the night palette the status colour is already
-     the strong one. */
+     colors. On both Boat palettes the status colour is already the strong
+     one. */
   --success-strong: var(--success);
   --warning-strong: var(--warning);
   --font-sans: var(--font-boat);
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-boat);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root.boat-mode,
+  .boat-mode {
+    color-scheme: dark;
+    --background: #0a141c;
+    --surface: #13222d;
+    --surface-sunken: #071017;
+    --border: #2b4352;
+    --border-strong: #7d98a8;
+    --foreground: #f2f7fa;
+    --muted: #a9bcc8;
+    --primary: #ffd23f;
+    --primary-hover: #ffe38a;
+    --primary-foreground: #1a1500;
+    --primary-tint: #2e2a12;
+    --accent: #ffd23f;
+    --accent-foreground: #1a1500;
+    --accent-deep: #ffe38a;
+    --accent-tint: #2e2a12;
+    --success: #58e08f;
+    --warning: #ffb648;
+    --danger: #ff7a7a;
+    --info: #a5b4fc;
+    --success-tint: #123222;
+    --warning-tint: #36280f;
+    --danger-tint: #3b1a1c;
+  }
 }
 
 /*

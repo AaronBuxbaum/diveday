@@ -208,9 +208,9 @@ export function ShopIdentityMenu({
 }
 
 /**
- * Boat mode, by hand (ADR 20261001-logbook, decision 6): the Night Dive
- * palette on every page of this device, for a crew reading in sun or at
- * night. Ticked like the language in force, because it is the same kind of
+ * Boat mode, by hand (ADR 20261001-logbook, decision 6): the high-contrast
+ * palette on every page of this device, light in sun and navy at night
+ * (H-97). Ticked like the language in force, because it is the same kind of
  * choice: about this reader on this device.
  */
 function BoatModeRow({ label }: { label: string }) {

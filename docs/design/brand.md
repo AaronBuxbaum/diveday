@@ -85,7 +85,7 @@ the implementation. Do not send a screenshot of the website as the artwork.
 > **Direction change, 2026-10-01 (H-91, ADR 20261001-logbook).** The staff app and the default
 > storefront move to **Logbook**: paper with a faint sea-green cast, slate ink, one sea-teal action
 > color and a rare marine-amber accent, with a designed deep-slate dark scheme. The roll call wears
-> **Boat mode** (Night Dive): navy and marine safety yellow in both schemes. Diver-facing surfaces
+> **Boat mode**: navy and marine safety yellow, light by day and Night Dive navy in the dark scheme (H-97). Diver-facing surfaces
 > still wear the **shop's** brand color, with these tokens as the default for a shop that has set
 > none. The values below are the tree.
 
@@ -104,7 +104,7 @@ embroidery, and vendor conversations.
 | Sea teal | `#0B6E8A` | `#4FBCD8` | Action color and primary brand signal. | Main imprint color on paper or slate. |
 | Sea teal, deep | `#08566C` | `#7FD0E4` | Hover and depth. | Use sparingly for a two-tone mark. |
 | Marine amber | `#D97A1E` | `#F0A24A` | Rare warm accent; the smallest bubble. Its wash (`#FBEFE0` / `#33240F`) is the bed it sits on; its deep (`#8A4A0C` / `#F6C27F`) is ink on that wash. Never a status. | One small accent only. |
-| Safety yellow (Boat mode) | `#FFD23F` on navy `#0A141C` | same | The roll call's one action color, in both schemes. | Not a merch color. |
+| Safety yellow (Boat mode) | Navy `#0A141C` actions labeled in `#FFD23F`, on white | `#FFD23F` actions on navy `#0A141C` | The roll call's one action color. Light by day because a dark screen washes out in sun (H-97). | Not a merch color. |
 
 ### Supporting colors
 

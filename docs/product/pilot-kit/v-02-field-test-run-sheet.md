@@ -52,8 +52,8 @@ defect found here is a stop-the-line fix (AGENTS.md safety rules), not a punch-l
 
 Open the trip's manifest on Phone A.
 
-Expect: the roll call in Boat mode (deep navy, white ink, yellow actions) whatever the phone's own
-scheme; an **Offline safety copy** panel; inside it a connectivity pill reading **Online**, a freshness pill
+Expect: the roll call in Boat mode: white ground, navy ink and navy buttons labeled in yellow with
+the phone in light mode, deep navy with white ink and yellow buttons with it in dark mode; an **Offline safety copy** panel; inside it a connectivity pill reading **Online**, a freshness pill
 (**Fresh copy** / **Aging copy** / **Stale copy**), and a saved-summary line reading *Saved {date} ·
 {n} waiting to send · {n} need a look*.
 
