@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ALERT_EMAIL } from "@/lib/platform-mail";
+import { QUIET_DEMO_COOKIE, quietDemoToken } from "@/lib/quiet-demo-device";
 import { seededTestDb } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
 
@@ -29,6 +30,7 @@ const hoisted = vi.hoisted(() => ({
   afterTasks: [] as Promise<unknown>[],
   signInDiveDayCredentials: vi.fn(async () => ({})),
   signOut: vi.fn(async () => ({})),
+  cookies: {} as Record<string, string>,
 }));
 
 vi.mock("next/navigation", () => ({
@@ -41,7 +43,7 @@ vi.mock("next/server", () => ({
     hoisted.afterTasks.push(Promise.resolve().then(task));
   }),
 }));
-vi.mock("next/headers", () => nextHeadersStub());
+vi.mock("next/headers", () => nextHeadersStub({ cookies: hoisted.cookies }));
 vi.mock("@/lib/auth", () => ({
   auth: vi.fn(),
   getAuth: vi.fn(async () => ({
@@ -108,6 +110,7 @@ async function useDb(): Promise<void> {
 
 beforeEach(() => {
   hoisted.afterTasks.length = 0;
+  for (const name of Object.keys(hoisted.cookies)) delete hoisted.cookies[name];
   vi.mocked(getDb).mockReset();
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true } as never);
   // `mockReset`, not `mockClear`: several tests below install a rejecting
@@ -220,6 +223,30 @@ describe("enterDemoAction instrumentation", () => {
     );
     expect(trackEvent).not.toHaveBeenCalled();
     expect(sendNotification).not.toHaveBeenCalled();
+  });
+
+  it("stays quiet for a browser the founder marked as his own", async () => {
+    // Aaron, 2026-10-06: alert on a new demo shop "unless it's me". His
+    // browser carries the cookie /api/demo/quiet leaves behind; his demo still
+    // mints and lands exactly as anyone's does, and neither observer hears it.
+    await useDb();
+    hoisted.cookies[QUIET_DEMO_COOKIE] = quietDemoToken() ?? "";
+
+    const landing = await enterDemo(demoForm({ role: "owner", source: "nav" }));
+
+    expect(landing).toMatch(/^\/shop\/[^/]+$/);
+    expect(sendNotification).not.toHaveBeenCalled();
+    expect(trackEvent).not.toHaveBeenCalled();
+  });
+
+  it("still alerts for a cookie this deployment never issued", async () => {
+    // Anyone can set a cookie by that name; only the key-derived value counts.
+    await useDb();
+    hoisted.cookies[QUIET_DEMO_COOKIE] = "1";
+
+    await enterDemo(demoForm({ role: "diver", source: "nav" }));
+
+    expect(sendNotification).toHaveBeenCalledTimes(1);
   });
 
   it("still lands the visitor in their demo when the alert throws", async () => {

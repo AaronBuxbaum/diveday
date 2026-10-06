@@ -112,3 +112,21 @@ digest. Nothing outside `announceDemoEntry` would move.
 
 Adding a notification kind also costs what every kind costs: a schema, an idempotency case, and a
 body, with the type checker enforcing the last two.
+
+## Amendment 2026-10-06 — the founder's own demo tries stay quiet
+
+The product owner asked for the alert "unless it's me", with some way to verify it is him. A demo
+visitor is anonymous and entering a demo signs the browser in as the minted shop's generated owner,
+so no session or account can answer that when the alert fires. A secret can: the onboard setup key
+(ADR 20260925-shops-are-set-up-by-hand) is a standing credential only the founder holds.
+
+Opening `/api/demo/quiet?setup=<key>` once in a browser sets `diveday_quiet_demo`, an httpOnly
+host-only cookie holding an HMAC of the key (never the key), for the browser's 400-day maximum.
+`enterDemoAction` skips `announceDemoEntry` whole for an entry carrying the right value: no alert,
+and no `demo_entered` event, because his own clicks are not a prospect either. A wrong key is a bare
+404. Rotating `ONBOARD_SETUP_KEY` changes the expected value and so unmarks every browser at once;
+with no key configured nothing can be marked and every try alerts. No new environment variable.
+The logic is `src/lib/quiet-demo-device.ts`; the route is `src/app/api/demo/quiet/route.ts`.
+
+Rejected: matching a signed-in account against a configured email, because the demo replaces the
+session it would read, and an IP allowlist, because a phone on a boat changes address hourly.
