@@ -279,11 +279,10 @@ export function RosterSection({
    * a diver's fit the way the packing list does.
    *
    * A stored `rents_*` flag outlives the shop dropping that item, deliberately
-   * (issue #1755) — but "size up over the boot" on the fit line is
-   * conditioned on a suit actually coming off the wall. Omitted, it is raised
-   * as before; over-warning is the safe direction for something that gates
-   * nothing (`src/lib/dive-prep.ts`'s `inShopDrysuit`). The card advisory does
-   * not read it: it follows `dives_dry`, what the diver wears (H-78).
+   * (issue #1755), and the fit line marks such a piece as no longer rented.
+   * Omitted, every piece reads as offered. The drysuit consequences (weight
+   * check, fin sizing, the card advisory) do not read it: they follow
+   * `dives_dry`, what the diver wears (H-78).
    */
   shopRentalItems?: readonly string[];
   nitroxByBooking: NitroxByBooking;

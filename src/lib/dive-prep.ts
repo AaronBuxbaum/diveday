@@ -468,10 +468,9 @@ function offersKind(offered: CatalogScope, kind: RentalItemKind): boolean {
  * a size the shop already knows it is short of.
  *
  * `offered` is the shop's own catalog. A piece the catalog no longer offers is
- * **kept and marked** rather than filtered out (`PrepPiece.notOffered`); what
- * it loses is the right to change any *other* line, which is the whole of
- * `inShopDrysuit` below. `inDrysuit` is the other half: a fact about the
- * diver, which no catalog edit changes.
+ * **kept and marked** rather than filtered out (`PrepPiece.notOffered`). No
+ * other line reads the catalog: the two drysuit consequences follow
+ * `inDrysuit` below, a fact about the diver that no catalog edit changes.
  */
 function rentedItems(fit: RentalFit, offered: CatalogScope = null): PrepPiece[] {
   const flagged = Boolean(fit.needsStaffFitAt);
@@ -485,34 +484,22 @@ function rentedItems(fit: RentalFit, offered: CatalogScope = null): PrepPiece[] 
    * by hand: a suit we hand over is a suit they are in, whatever the other
    * flag says, and over-reading is the safe direction for a weight check.
    *
-   * It drives **the weights line**. `weightPreference` is a wetsuit answer and
-   * a drysuit needs two to four kilos more, so the lead is settled in the
-   * water. This used to key on `inShopDrysuit` below, which asked whether the
-   * shop was renting a suit — so a diver in their own drysuit, most drysuit
-   * divers, had their wetsuit number printed as one to pack to (issue #1752),
-   * and so did a diver whose shop had since dropped drysuits from its catalog
-   * (issue #1810). The catalog says what the shop hands over; it says nothing
-   * about what the diver wears.
+   * It drives **the weights line** and **the fins line**. `weightPreference`
+   * is a wetsuit answer and a drysuit needs two to four kilos more, so the
+   * lead is settled in the water. And every drysuit diver has a boot on, a
+   * rented suit's vulcanised one or their own, two to three fin sizes bigger
+   * than the bare foot, so the fins are sized up over it. Both used to key on
+   * whether the shop was renting a suit — so a diver in their own drysuit,
+   * most drysuit divers, had their wetsuit number printed as one to pack to
+   * and fins packed to their bare foot (issues #1752 and #1810), and so did a
+   * diver whose shop had since dropped drysuits from its catalog. The catalog
+   * says what the shop hands over; it says nothing about what the diver wears.
+   *
+   * The drysuit piece itself stays when the catalog drops it, marked
+   * `notOffered`, so the packer still meets the contradiction on the surface
+   * where gear is reasoned about.
    */
   const inDrysuit = fit.divesDry || fit.rentsDrysuit;
-  /**
-   * **A drysuit off this shop's wall is actually going out to this diver.**
-   *
-   * `rents_drysuit` survives a shop dropping drysuits from its catalog, which
-   * is correct: the diver's answer was theirs and a catalog edit is not the
-   * diver speaking (`saveRentalFit`, issue #1755, and the glossary's **Rental
-   * catalog**). It gates the one consequence that is about the *rented suit*:
-   * **the fins line sizes up over its boot.** A vulcanised drysuit boot is two
-   * to three fin sizes bigger than the foot in it, and the boot only exists if
-   * the shop is handing one over. With no rental boot in the picture that
-   * instruction packs a pair two to three sizes too big, which is a fin that
-   * comes off on a drift dive — and a diver in their own suit stated their
-   * size knowing what they wear (H-78 kept this key; #1810's ruling).
-   *
-   * The drysuit piece itself stays, marked `notOffered`, so the packer still
-   * meets the contradiction on the surface where gear is reasoned about.
-   */
-  const inShopDrysuit = fit.rentsDrysuit && offers("drysuit");
   /** A piece whose size is the thing in question — blanked when flagged. */
   const sized = (kind: RentalItemKind, value: string | null): PrepPiece =>
     flagged
@@ -600,13 +587,13 @@ function rentedItems(fit: RentalFit, offered: CatalogScope = null): PrepPiece[] 
    * reading like any other size to pull. A diver already flagged for hands-on
    * fitting keeps "fit at check-in", which is this same job done in person.
    *
-   * **Only while the shop actually rents drysuits** — `inShopDrysuit`, not the
-   * raw flag. Sizing up over a boot that is not coming is how a fin ends up two
-   * to three sizes too big.
+   * **Whenever the diver dives dry**, owned suit or rented (H-78 names this
+   * signal): every drysuit has a boot, and the stated shoe size is the foot,
+   * not the boot.
    */
   const maskFins = (): PrepPiece => ({
     ...sized("mask_fins", fit.finSize),
-    drysuitFinFit: inShopDrysuit && !flagged,
+    drysuitFinFit: inDrysuit && !flagged,
   });
 
   const items: PrepPiece[] = [];
@@ -706,10 +693,9 @@ export function buildDivePrepChecklist(input: {
    * a fit written before the shop stopped renting BCDs doesn't flag a size
    * nobody can be given. It also decides which pieces are still the shop's to
    * hand over at all: a piece the catalog has dropped is marked
-   * (`PrepPiece.notOffered`) and stops changing any other line
-   * (`inShopDrysuit` in `rentedItems`). It never decides whether a diver is
-   * in a drysuit: that is their own answer (`divesDry`, H-78), so the weight
-   * check survives a catalog edit.
+   * (`PrepPiece.notOffered`). It never decides whether a diver is in a
+   * drysuit: that is their own answer (`divesDry`, H-78), so the weight check
+   * and the fin sizing survive a catalog edit.
    *
    * Omit it and every item counts — which is what a caller with no catalog to
    * hand should want, since over-including is the safe direction.
@@ -924,9 +910,8 @@ export type RentalFitLine =
  * `offeredKinds` is the shop's catalog, and it is optional for the same reason
  * it is optional on {@link buildDivePrepChecklist}: a caller with none to hand
  * sees every piece the fit asks for. A caller that **has** one should pass it,
- * so `drysuitFinFit` cannot ride on a flag the catalog contradicts — the rail
- * is the last place to read "size up over the boot" about a suit the shop
- * stopped renting (`inShopDrysuit` in `rentedItems`, issue #1755's review).
+ * so a piece the shop stopped renting reads as such on the rail too
+ * (`notOffered`, issue #1755's review).
  */
 export function rentalFitLine(
   fit: RentalFit | null,

@@ -389,15 +389,16 @@ describe("a diver in their own drysuit", () => {
     expect(lineFor(checklist, "weights", null)).toMatchObject({ drysuitWeightCheck: true });
   });
 
-  it("leaves their fins at the stated size: the boot is their own, not one we hand over", () => {
-    // H-78 kept the fin flag on the rented suit (#1810's ruling): a vulcanised
-    // boot two to three sizes up only comes off the shop's wall, and a diver in
-    // their own suit stated their size knowing what they wear.
+  it("sizes their fins up over the boot: their own suit has one too", () => {
+    // H-78 names `drysuitFinFit` among the signals that key on what the diver
+    // wears. Every drysuit has a boot, ours vulcanised or theirs, and the fit
+    // forms ask the bare shoe size (dive-domain-expert review).
+    expect(ownDrysuit).toMatchObject({ divesDry: true, rentsDrysuit: false, rentsMaskFins: true });
     const checklist = buildDivePrepChecklist({
       divers: [diver({ bookingId: "b1", fullName: "Own-suit Olu", fit: ownDrysuit })],
       plannedDives: 1,
     });
-    expect(lineFor(checklist, "mask_fins", "US 9")).toMatchObject({ drysuitFinFit: false });
+    expect(lineFor(checklist, "mask_fins", "US 9")).toMatchObject({ drysuitFinFit: true });
   });
 
   it("packs a wet diver renting the same kit to their stated number", () => {
@@ -1126,20 +1127,19 @@ describe("a piece the shop stopped renting", () => {
     expect(checklist.lines.some((line) => line.size === "12 lb with 3 mm suit")).toBe(false);
   });
 
-  it("gives the diver ordinary fin sizing back", () => {
+  it("still sizes the diver's fins over the drysuit boot", () => {
     const checklist = buildDivePrepChecklist({
       divers: [diver({ bookingId: "b1", fullName: "Dry Dana", fit: drysuitDiver })],
       plannedDives: 1,
       offeredKinds: noDrysuits,
     });
-    // "Size up over the boot" packs two to three sizes too big with no boot in
-    // the picture, and a fin that loose comes off on a drift dive.
+    // The diver still dives dry, so a boot is still on their foot: the catalog
+    // says what the shop hands over, not what the diver wears (H-78).
     expect(lineFor(checklist, "mask_fins", "US 9")).toMatchObject({
       count: 1,
-      drysuitFinFit: false,
+      drysuitFinFit: true,
       notOffered: false,
     });
-    expect(checklist.lines.some((line) => line.drysuitFinFit)).toBe(false);
   });
 
   it("says the same thing on the roll call and the offline manifest", () => {
@@ -1155,6 +1155,7 @@ describe("a piece the shop stopped renting", () => {
     expect(items.find((item) => item.kind === "mask_fins")).toEqual({
       kind: "mask_fins",
       size: "US 9",
+      drysuitFinFit: true,
     });
     // And the suit itself carries the contradiction rather than reading as an
     // ordinary piece to fetch. The rail is where a staffer acts on this line
@@ -1190,7 +1191,7 @@ describe("a piece the shop stopped renting", () => {
       plannedDives: 1,
       offeredKinds: withDrysuits,
     });
-    // The mirror case: the catalog is the discriminator, never the flag alone.
+    // The mirror case: only the suit's own mark follows the catalog.
     expect(lineFor(checklist, "weights", null)).toMatchObject({ drysuitWeightCheck: true });
     expect(lineFor(checklist, "mask_fins", "US 9")).toMatchObject({ drysuitFinFit: true });
     expect(lineFor(checklist, "drysuit", "ML")).toMatchObject({ notOffered: false });

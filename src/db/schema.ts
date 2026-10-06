@@ -959,8 +959,9 @@ export const tripSeriesSkips = pgTable(
  * traffic alone — it was the omission the first widening still left in place
  * (`dive-domain-expert` review of DOM-L1).
  *
- * `nss_cds`, `nacd` and `iantd` issue most of the Cavern cards on a Florida
- * springs boat, and Cavern is a gating specialty (issue #2091). Recording them
+ * The cave-diving bodies `nss_cds` and `nacd`, and the technical agency
+ * `iantd`, are common issuers of Florida Cavern cards, and Cavern is a gating
+ * specialty (issue #2091). Recording them
  * under their own name is still recording only: no cave rating is a tier here,
  * and a cave card is never read as a Cavern card (ADR
  * 20260718-specialty-site-cert-requirements, 2026-10-05 amendment).
@@ -7151,10 +7152,11 @@ export const rentalFitProfiles = pgTable(
      * than what the shop hands over, and the one the drysuit's safety signals
      * key on: the in-water weight check (`weightPreference` is a wetsuit
      * answer, short by the two to four kilos a drysuit adds, and short is the
-     * direction that cannot hold a safety stop) and the drysuit-card advisory
-     * (`src/lib/drysuit-card.ts`). `rents_drysuit` used to stand in for it,
-     * which left every diver in their own suit — most drysuit divers — with a
-     * wetsuit number on the rail and no advisory at all.
+     * direction that cannot hold a safety stop), fins sized up over the
+     * drysuit boot, and the drysuit-card advisory (`src/lib/drysuit-card.ts`).
+     * `rents_drysuit` used to stand in for it, which left every diver in their
+     * own suit — most drysuit divers — with a wetsuit number on the rail, fins
+     * packed to the bare foot and no advisory at all.
      *
      * A standing answer, not a per-trip one: the diver who dives dry in winter
      * and wet in summer will sometimes be wrong for one trip, which is the cost
