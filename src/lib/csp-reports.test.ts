@@ -104,7 +104,7 @@ describe("parsing a violation report", () => {
     });
   });
 
-  it("answers nothing rather than throwing on a body it does not recognise", () => {
+  it("answers nothing rather than throwing on a body it does not recognize", () => {
     // The route answers 204 to everything, so a stranger's malformed body must
     // be a non-event rather than an error path.
     expect(parseCspReports({ nonsense: true })).toEqual([]);

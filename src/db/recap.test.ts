@@ -90,7 +90,7 @@ describe("getRecapPageData", () => {
     expect(new Set(data.sites.map((s) => s.name)).size).toBe(data.sites.length);
   });
 
-  it("returns null for a cancelled booking — a cancelled diver never dived", async () => {
+  it("returns null for a canceled booking — a canceled diver never dived", async () => {
     const { db, bookingId } = await recapContext();
     await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingId));
     expect(await getRecapPageData(db, bookingId)).toBeNull();
@@ -101,7 +101,7 @@ describe("getRecapPageData", () => {
     expect(await getRecapPageData(db, "00000000-0000-0000-0000-000000000000")).toBeNull();
   });
 
-  it("returns null for a no-show — a no-show never dived, same as a cancelled booking (Codex finding)", async () => {
+  it("returns null for a no-show — a no-show never dived, same as a canceled booking (Codex finding)", async () => {
     // The narrower fix (hide canTip/reviewUrl only) still let the page show
     // "here's what you dived" content and a diver-facing recap email to
     // someone staff marked as not having shown up. Gating the whole loader
@@ -120,7 +120,7 @@ describe("getRecapPageData", () => {
     expect(await getRecapPageData(db, bookingId)).toBeNull();
   });
 
-  it("returns null for a cancelled departure, whose bookings stay active by design (review, 2026-08-28)", async () => {
+  it("returns null for a canceled departure, whose bookings stay active by design (review, 2026-08-28)", async () => {
     // The third way there is no day, and the one nothing downstream caught.
     // `callTripBlowout` sets `trips.status = 'cancelled'` and deliberately
     // leaves every booking `booked` — refunds are a per-booking staff decision
@@ -440,7 +440,7 @@ describe("getRecapPageState", () => {
     });
   });
 
-  it("gives a cancelled booking and a no-show the same answer, so neither is disclosed", async () => {
+  it("gives a canceled booking and a no-show the same answer, so neither is disclosed", async () => {
     const { db, bookingId } = await recapContext();
     await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingId));
     const cancelled = await getRecapPageState(db, bookingId);
@@ -484,7 +484,7 @@ describe("getRecapPageState", () => {
     expect((await getRecapPageState(db, bookingId)).kind).toBe("dead");
   });
 
-  it("keeps a diver who cancelled their own seat off the departure-cancelled sentence", async () => {
+  it("keeps a diver who canceled their own seat off the departure-canceled sentence", async () => {
     // Both are true at once when a shop calls off a trip a diver had already
     // left. Their own cancellation is the fact about them, and it stays
     // collapsed with the no-show.
@@ -790,7 +790,7 @@ describe("recap photos and crew shout-out", () => {
     ]);
   });
 
-  it("refuses a photo on a cancelled booking and past the per-booking cap", async () => {
+  it("refuses a photo on a canceled booking and past the per-booking cap", async () => {
     const { db, bookingId } = await recapContext();
     for (let i = 0; i < MAX_RECAP_PHOTOS_PER_BOOKING; i++) {
       expect((await addRecapPhoto(db, { bookingId, imageUrl: `https://img/${i}.jpg` })).ok).toBe(
@@ -815,7 +815,7 @@ describe("recap photos and crew shout-out", () => {
     ).toEqual({ ok: false, reason: "cancelled" });
   });
 
-  it("refuses a no-show upload the same as a cancelled one, at the locked insert-time gate (Codex finding)", async () => {
+  it("refuses a no-show upload the same as a canceled one, at the locked insert-time gate (Codex finding)", async () => {
     // A recap link can be bookmarked/reloaded from before a staff
     // correction — a form loaded while the booking still read "booked"
     // could otherwise still write photos into a no-show's gallery.
@@ -1157,7 +1157,7 @@ describe("sendDueRecaps", () => {
     }
   });
 
-  it("does not credit a diver for a day they cancelled or never showed", async () => {
+  it("does not credit a diver for a day they canceled or never showed", async () => {
     // The two booking statuses that leave an active row on a departure the
     // diver spent ashore. Crediting either would hand them the longer wait for
     // nothing.

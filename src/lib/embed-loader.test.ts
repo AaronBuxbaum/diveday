@@ -29,7 +29,7 @@ afterEach(() => {
 });
 
 describe("the loader", () => {
-  it("turns a framed kind into an iframe carrying the host page's colour and face, and one credit", () => {
+  it("turns a framed kind into an iframe carrying the host page's color and face, and one credit", () => {
     // Inline, because jsdom's computed styles do not cascade a stylesheet
     // the way a browser's do; the loader reads computed colour and face either way.
     host(`
@@ -90,7 +90,7 @@ describe("the loader", () => {
     expect(grid.searchParams.has("show")).toBe(false);
   });
 
-  it("darkens a pale host colour until white reads on the button", () => {
+  it("darkens a pale host color until white reads on the button", () => {
     // Amber: 1.9:1 on white as it stands. The settings copy promises the
     // button darkens itself, and this is the rule that keeps that promise —
     // the same 8% steps `deriveBrandTheme` takes on the server.
@@ -107,7 +107,7 @@ describe("the loader", () => {
     expect(button?.style.color).toBe("rgb(255, 255, 255)");
   });
 
-  it("keeps a readable host colour as it is, and DiveDay's lagoon for the light look", () => {
+  it("keeps a readable host color as it is, and DiveDay's lagoon for the light look", () => {
     host(`
       <a href="/s/blue-mantis" style="color: rgb(21, 132, 98)" data-diveday="button" data-shop="blue-mantis" data-look="site" data-lang="auto">Site</a>
       <a href="/s/blue-mantis" style="color: rgb(21, 132, 98)" data-diveday="button" data-shop="blue-mantis" data-look="light" data-lang="auto">Light</a>

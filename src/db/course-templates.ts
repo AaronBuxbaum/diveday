@@ -1057,7 +1057,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
             "Setup: your camera, its housing, and the handful of settings you will actually use",
             "Dive 1: getting close, shooting slightly upward, holding position without touching anything",
             "Surface interval: going through your own frames with your instructor, honestly",
-            "Dive 2: light and colour — strobe or video light, angle, and distance",
+            "Dive 2: light and color — strobe or video light, angle, and distance",
             "Choosing your best few frames, and working out why the rest did not land",
           ],
         },
@@ -1321,7 +1321,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         {
           question: "What visibility do you run this in?",
           answer:
-            "Whatever the day gives us, and a murky day is good training rather than a cancelled one. Line searches exist precisely because you cannot see the object until you are on top of it.",
+            "Whatever the day gives us, and a murky day is good training rather than a canceled one. Line searches exist precisely because you cannot see the object until you are on top of it.",
         },
         {
           question: "Will this help me find things people actually lose?",
@@ -1476,9 +1476,9 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ],
       faqs: [
         {
-          question: "Do I need to memorise Latin names?",
+          question: "Do I need to memorize Latin names?",
           answer:
-            "No. You need to recognise about a dozen families by shape; species names follow from there, and the guide does the rest of the work.",
+            "No. You need to recognize about a dozen families by shape; species names follow from there, and the guide does the rest of the work.",
         },
         {
           question: "Is this only useful here?",
@@ -1789,7 +1789,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     minimumCertificationLevel: "open_water",
     content: {
       ...blank,
-      summary: "See aquatic life through an ecological and behavioural lens",
+      summary: "See aquatic life through an ecological and behavioral lens",
       overview:
         "Instead of just seeing a fish or a coral head, learn to see the complex relationships that make underwater ecosystems thrive. The Underwater Naturalist course teaches you to identify groupings of marine organisms, understand symbiotic relationships, and observe behavior without disturbing aquatic life.\n\nYou will learn the major aquatic life groupings, food chains, habitats, and the role divers play in preserving fragile underwater environments.\n\nAcross two open water dives, you will observe symbiotic relationships, practice non-destructive diving techniques, and identify organisms and their habitats.",
       heroImageUrl: bundledImage("Yellowtail Snappers Molasses Reef 1999.jpg"),
@@ -2601,7 +2601,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ...blank,
       summary: "Certify to dive with a buddy, worldwide, to {depth18}",
       overview:
-        "SDI Open Water Scuba Diver is the certification that lets you rent gear, book a boat, and dive with a buddy anywhere in the world.\n\nWhat sets it apart from the other agencies' entry-level courses is the computer. SDI teaches dive planning on a personal dive computer from the start rather than on printed tables, because that is what you will actually use on every dive afterwards. You still learn how decompression works — you just learn it on the device that will be on your wrist.\n\nYou will cover the academics, practise the skills in confined water until they are dull, and then make four open-water dives on the reef with your instructor.",
+        "SDI Open Water Scuba Diver is the certification that lets you rent gear, book a boat, and dive with a buddy anywhere in the world.\n\nWhat sets it apart from the other agencies' entry-level courses is the computer. SDI teaches dive planning on a personal dive computer from the start rather than on printed tables, because that is what you will actually use on every dive afterwards. You still learn how decompression works — you just learn it on the device that will be on your wrist.\n\nYou will cover the academics, practice the skills in confined water until they are dull, and then make four open-water dives on the reef with your instructor.",
       heroImageUrl: bundledImage("Yellowtail Snappers Molasses Reef 1999.jpg"),
       galleryPhotos: bundledGallery(
         "Brain coral 2 Molasses Reef 20080309.jpg",
@@ -2720,7 +2720,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         {
           question: "Is this the same as Advanced Open Water?",
           answer:
-            "It is SDI's equivalent rung and it is recognised as such. Our system records certification levels rather than each agency's own names, so it is stored as an advanced certification.",
+            "It is SDI's equivalent rung and it is recognized as such. Our system records certification levels rather than each agency's own names, so it is stored as an advanced certification.",
         },
       ],
     },
@@ -2909,19 +2909,19 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ...blank,
       summary: "More time on the reef, less time on the surface waiting",
       overview:
-        "Enriched air is more oxygen and less nitrogen, which means longer no-decompression limits at the depths this coast actually dives. On a two-tank morning it is often the difference between a rushed second dive and an unhurried one.\n\nSDI teaches it the way you will dive it: on a computer set for the mix, not from a second set of printed tables. You will learn what the mix does, what the oxygen limits are and why they matter, and how to analyse and log every cylinder yourself before it goes on your back.\n\nAnalysing your own gas is not a formality. It is the one check nobody else can do for you.",
+        "Enriched air is more oxygen and less nitrogen, which means longer no-decompression limits at the depths this coast actually dives. On a two-tank morning it is often the difference between a rushed second dive and an unhurried one.\n\nSDI teaches it the way you will dive it: on a computer set for the mix, not from a second set of printed tables. You will learn what the mix does, what the oxygen limits are and why they matter, and how to analyze and log every cylinder yourself before it goes on your back.\n\nAnalysing your own gas is not a formality. It is the one check nobody else can do for you.",
       heroImageUrl: bundledImage("Blue Tang Pickles 20080310.jpg"),
       galleryPhotos: bundledGallery(
         "Stoplight parrotfish Pickles Reef.jpg",
         "French Angelfish Molasses Reef 20080309.jpg",
       ),
       durationText: "One day · academics plus two optional dives",
-      groupSizeText: "Small groups around the analyser",
+      groupSizeText: "Small groups around the analyzer",
       prerequisiteNote:
         "SDI Open Water Scuba Diver or an equivalent certification from another agency. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive.",
       includes: [
         "SDI digital materials and certification card",
-        "Analyser use and cylinder logging practice",
+        "Analyzer use and cylinder logging practice",
         "Two enriched-air dives, if you take the in-water option",
       ],
       excludes: ["Enriched-air fills after the course", "Personal gear rental"],
@@ -2933,7 +2933,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
           items: [
             "What the mix changes, and what it does not",
             "Oxygen exposure limits and the depth ceiling your mix carries",
-            "Analysing, labelling and logging a cylinder — every time",
+            "Analyzing, labeling and logging a cylinder — every time",
             "Setting your computer for the mix, and two dives on it",
           ],
         },
@@ -2958,7 +2958,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ...blank,
       summary: "The wrecks and walls that start where the reef stops",
       overview:
-        "Below {depth30} everything changes: the light goes flat, gas disappears faster than the gauge feels like it should, and narcosis arrives quietly enough that you will not notice it without having practised noticing it.\n\nThis course is about planning for all three. Gas management with a real reserve, ascent profiles you commit to before you descend, and a frank look at how you personally behave at depth.\n\nIt is what the deeper wrecks and the outer wall require, and it is where most divers finally get honest about their air consumption.",
+        "Below {depth30} everything changes: the light goes flat, gas disappears faster than the gauge feels like it should, and narcosis arrives quietly enough that you will not notice it without having practiced noticing it.\n\nThis course is about planning for all three. Gas management with a real reserve, ascent profiles you commit to before you descend, and a frank look at how you personally behave at depth.\n\nIt is what the deeper wrecks and the outer wall require, and it is where most divers finally get honest about their air consumption.",
       heroImageUrl: bundledImage("Grouper 2 Molasses Reef 1999.jpg"),
       galleryPhotos: bundledGallery(
         "AtlanticGoliathGrouper.jpg",
@@ -2981,7 +2981,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
           endTime: "15:00",
           items: [
             "Gas planning, reserves, and turn pressures you actually hold to",
-            "Narcosis: recognising it on yourself and on your buddy",
+            "Narcosis: recognizing it on yourself and on your buddy",
             "Two dives building depth with a controlled, planned ascent",
           ],
         },
@@ -3092,7 +3092,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         {
           question: "What if my torch fails?",
           answer:
-            "You carry a backup, and the course drills the failure before it happens. A lost light is an inconvenience you have practised, not an emergency.",
+            "You carry a backup, and the course drills the failure before it happens. A lost light is an inconvenience you have practiced, not an emergency.",
         },
       ],
     },
@@ -3108,7 +3108,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ...blank,
       summary: "How to dive a wreck as a structure, not just swim past one",
       overview:
-        "A wreck is a building that fell into the sea, and it rewards being read like one. You will learn to survey from the outside in: orientation, the current running over and around it, where the fish stack up, and which openings are as inviting as they are dangerous.\n\nThis is a recreational wreck course. It covers the hazards of overhead environments and how to recognise the line you do not cross — entanglement, silt-out, and the fact that a ceiling means the surface is no longer above you.\n\nWhat you get is the confidence to dive our wrecks well and the judgement to know what a penetration course would still require.",
+        "A wreck is a building that fell into the sea, and it rewards being read like one. You will learn to survey from the outside in: orientation, the current running over and around it, where the fish stack up, and which openings are as inviting as they are dangerous.\n\nThis is a recreational wreck course. It covers the hazards of overhead environments and how to recognize the line you do not cross — entanglement, silt-out, and the fact that a ceiling means the surface is no longer above you.\n\nWhat you get is the confidence to dive our wrecks well and the judgment to know what a penetration course would still require.",
       heroImageUrl: bundledImage("FKNMS - Goliath Grouper With Remora (27094933605).jpg"),
       galleryPhotos: bundledGallery(
         "AtlanticGoliathGrouper.jpg",
@@ -3135,7 +3135,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
           ],
         },
         {
-          title: "Day two — lines, silt, and judgement",
+          title: "Day two — lines, silt, and judgment",
           startTime: "08:00",
           endTime: "15:00",
           items: [
@@ -3297,7 +3297,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         {
           question: "How heavy can we lift?",
           answer:
-            "Within the bags we carry and the training you have. The judgement of what to leave for a professional salvage crew is part of the course.",
+            "Within the bags we carry and the training you have. The judgment of what to leave for a professional salvage crew is part of the course.",
         },
       ],
     },
@@ -3313,7 +3313,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ...blank,
       summary: "Get close, add light, and hold still — the three things that fix everything",
       overview:
-        "Almost every disappointing underwater photograph has the same three causes: too far away, no light, and a photographer who was moving.\n\nThis course fixes all three. You will learn how water eats colour with depth and what a strobe or video light gives back, how close you actually need to be, and — the part nobody expects — how much of underwater photography is buoyancy control.\n\nWe will shoot, review the frames together, and shoot again. Bring whatever camera you own; the principles are the same from a phone housing to a full rig.",
+        "Almost every disappointing underwater photograph has the same three causes: too far away, no light, and a photographer who was moving.\n\nThis course fixes all three. You will learn how water eats color with depth and what a strobe or video light gives back, how close you actually need to be, and — the part nobody expects — how much of underwater photography is buoyancy control.\n\nWe will shoot, review the frames together, and shoot again. Bring whatever camera you own; the principles are the same from a phone housing to a full rig.",
       heroImageUrl: bundledImage("French Angelfish Molasses Reef 20080309.jpg"),
       galleryPhotos: bundledGallery(
         "Stoplight parrotfish Pickles Reef.jpg",
@@ -3335,7 +3335,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
           startTime: "08:30",
           endTime: "16:00",
           items: [
-            "How depth eats colour, and what artificial light puts back",
+            "How depth eats color, and what artificial light puts back",
             "Composition, distance, and the backscatter that ruins a good frame",
             "Dives: shoot, review together, adjust, shoot again",
           ],
@@ -3361,7 +3361,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ...blank,
       summary: "Stay warm on long dives — and learn the one skill a wetsuit never taught you",
       overview:
-        "A dry suit keeps you warm enough to enjoy a second and third dive that a wetsuit would have ended. It also adds a second air space to manage, and that is the whole reason this course exists.\n\nYou will learn to vent on ascent, to keep gas out of your boots, and to recover from an inverted position calmly — because a suit full of air at your ankles is a runaway ascent if you have never practised it.\n\nBy the end the suit is something you stop thinking about, which is the point.",
+        "A dry suit keeps you warm enough to enjoy a second and third dive that a wetsuit would have ended. It also adds a second air space to manage, and that is the whole reason this course exists.\n\nYou will learn to vent on ascent, to keep gas out of your boots, and to recover from an inverted position calmly — because a suit full of air at your ankles is a runaway ascent if you have never practiced it.\n\nBy the end the suit is something you stop thinking about, which is the point.",
       heroImageUrl: bundledImage("Blue Tang Pickles 20080310.jpg"),
       galleryPhotos: bundledGallery(
         "Brain coral 2 Molasses Reef 20080309.jpg",
@@ -3513,7 +3513,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       ...blank,
       summary: "Know what you are looking at, and leave it exactly as you found it",
       overview:
-        "A reef stops being scenery once you can read it. Which fish is cleaning which, why that coral is bleached and that one is not, what the sponges are doing, and which of the day's animals were only there because of the tide.\n\nThe second half is about impact, and it is blunt: a fin tip on a coral head undoes decades, sunscreen matters, and touching almost anything is worse for it than it is for you.\n\nOpen to divers and snorkellers alike — the knowledge half needs no certification at all.",
+        "A reef stops being scenery once you can read it. Which fish is cleaning which, why that coral is bleached and that one is not, what the sponges are doing, and which of the day's animals were only there because of the tide.\n\nThe second half is about impact, and it is blunt: a fin tip on a coral head undoes decades, sunscreen matters, and touching almost anything is worse for it than it is for you.\n\nOpen to divers and snorkelers alike — the knowledge half needs no certification at all.",
       heroImageUrl: bundledImage("French Angelfish Pickles Reef 20230713.jpg"),
       galleryPhotos: bundledGallery(
         "Stoplight parrotfish Pickles Reef.jpg",
@@ -3522,7 +3522,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       durationText: "Half a day of academics, plus an optional dive",
       groupSizeText: "Any size for the classroom; small groups in the water",
       prerequisiteNote:
-        "No certification needed for the knowledge session. If you want to add the dive, an Open Water certification from any recognised agency and a medical questionnaire are required; some answers need a physician's sign-off before you can dive.",
+        "No certification needed for the knowledge session. If you want to add the dive, an Open Water certification from any recognized agency and a medical questionnaire are required; some answers need a physician's sign-off before you can dive.",
       includes: ["SDI digital certification card", "Reef identification session and slate"],
       excludes: ["The optional dive", "Personal gear rental"],
       scheduleDays: [
@@ -3542,7 +3542,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
         {
           question: "Do I need to be a diver?",
           answer:
-            "Not for the knowledge session — snorkellers and non-divers are welcome. The optional dive needs an Open Water certification.",
+            "Not for the knowledge session — snorkelers and non-divers are welcome. The optional dive needs an Open Water certification.",
         },
       ],
     },
@@ -3567,7 +3567,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
       durationText: "Half a day · confined water, with an optional reef dive",
       groupSizeText: "Small groups, or one-to-one if you would rather",
       prerequisiteNote:
-        "An Open Water certification from any recognised agency, however long ago. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive, and a gap in diving is a good moment to check.",
+        "An Open Water certification from any recognized agency, however long ago. You will complete a medical questionnaire; some answers require a physician's sign-off before you can dive, and a gap in diving is a good moment to check.",
       includes: [
         "All scuba equipment for the session",
         "Confined-water skills review",

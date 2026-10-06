@@ -231,7 +231,7 @@ describe("setBookingNitrox", () => {
     expect(await wantsNitrox(ctx.db, ctx.bookingId)).toBe(false);
   });
 
-  it("refuses a request on a cancelled booking", async () => {
+  it("refuses a request on a canceled booking", async () => {
     const ctx = await context();
     await certifyDiver(ctx.db, ctx.shopId, ctx.personId);
     await cancelBooking(ctx.db, ctx.shopId, ctx.bookingId);

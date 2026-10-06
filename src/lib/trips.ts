@@ -52,6 +52,23 @@ export function hasSailed(startsAt: Date, now: Date): boolean {
 }
 
 /**
+ * **Can this departure take one more diver?** — the booking transaction's own
+ * gate, read ahead of it: scheduled (not cancelled), not held for conditions,
+ * and not yet sailed. Capacity is a separate question ({@link isFull}): a full
+ * boat still takes a wait-list name.
+ *
+ * Staff surfaces read it to decide whether to draw an add or invite control at
+ * all, so a button never offers what `createBooking` would refuse
+ * (owner, 2026-10-06).
+ */
+export function acceptsNewDivers(
+  trip: { status: string; conditionsHold: boolean; startsAt: Date },
+  now: Date,
+): boolean {
+  return trip.status === "scheduled" && !trip.conditionsHold && !hasSailed(trip.startsAt, now);
+}
+
+/**
  * **Is everyone home?** — true once the departure is a buffered hour past its
  * scheduled return.
  *

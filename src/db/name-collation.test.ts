@@ -122,7 +122,7 @@ describe("people.full_name matching, not ordering", () => {
  * finds them, so an expression index counts here exactly as it counts there.
  */
 describe("indexes depending on people.full_name", () => {
-  it("is the one trigram index the acknowledgement names", async () => {
+  it("is the one trigram index the acknowledgment names", async () => {
     const rows = await ctx.db.execute<{ index_name: string }>(sql`
       select distinct i.relname as index_name
         from pg_depend d

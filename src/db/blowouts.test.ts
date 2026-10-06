@@ -358,7 +358,7 @@ describe("callTripBlowout — what the message says", () => {
     expect(record?.divers[0].paymentStatus).toBe("paid");
   });
 
-  it("refunds a Stripe-paid seat by itself and says so — the shop cancelled, so no window applies", async () => {
+  it("refunds a Stripe-paid seat by itself and says so — the shop canceled, so no window applies", async () => {
     const ctx = await context([{ fullName: "Ada Storm", email: "ada.storm@example.com" }]);
     await connectStripe(ctx);
     await setBookingPayment(ctx.db, {

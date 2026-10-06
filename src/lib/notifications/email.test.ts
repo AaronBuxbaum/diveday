@@ -143,7 +143,7 @@ describe("tripBlowoutEmail", () => {
       ],
       scheduleUrl: "https://diveday.example/s/blue-mantis",
     });
-    expect(email.subject).toContain("Trip cancelled");
+    expect(email.subject).toContain("Trip canceled");
     expect(email.text).toContain("because of the weather");
     expect(email.text).toContain("Your payment is safe");
     expect(email.text).toContain("Night Dive — City of Washington");
@@ -800,14 +800,14 @@ describe("wrapEmailHtml", () => {
   // The invariant, not the palette: `color-scheme: light dark` tells a client
   // to stop inverting because the message handles both schemes, so a document
   // that declares it and ships no dark block is the dark-on-dark of issue #771.
-  it("never claims both colour schemes without supplying dark values", () => {
+  it("never claims both color schemes without supplying dark values", () => {
     const html = wrapEmailHtml("<p>Body</p>", { shopName: "Blue Mantis", locale: "en-US" });
     if (html.includes('name="color-scheme"')) {
       expect(html).toContain("@media (prefers-color-scheme:dark)");
     }
   });
 
-  it("flips page, ink, and action colours in dark mode", () => {
+  it("flips page, ink, and action colors in dark mode", () => {
     const html = wrapEmailHtml("<p>Body</p>", { shopName: "Blue Mantis", locale: "en-US" });
     const dark = html.slice(html.indexOf("@media (prefers-color-scheme:dark)"));
     // The Logbook dark theme: ground, ink, and teal (ADR 20261001-logbook).

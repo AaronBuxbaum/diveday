@@ -25,7 +25,7 @@ test.describe("the widget views", () => {
     expect(response?.status()).toBe(404);
   });
 
-  test("a widget wears the host page's colour and face when the loader says so", async ({
+  test("a widget wears the host page's color and face when the loader says so", async ({
     page,
   }) => {
     await page.goto("/s/blue-mantis/embed/courses?brand=%23b45309&font=Georgia%2C%20serif");
@@ -97,7 +97,7 @@ test.describe("the widget views", () => {
     await expect(page.getByRole("listitem")).toHaveCount(0);
   });
 
-  test("the storefront itself cannot be recoloured by URL", async ({ page }) => {
+  test("the storefront itself cannot be recolored by URL", async ({ page }) => {
     await page.goto("/s/blue-mantis?brand=%23b45309");
     const primary = await page.evaluate(() =>
       getComputedStyle(document.documentElement).getPropertyValue("--primary").trim(),
@@ -110,7 +110,7 @@ test.describe("the widget views", () => {
 });
 
 test.describe("the loader on a host page", () => {
-  test("turns one line into a frame carrying the host's colour, and grows it to fit", async ({
+  test("turns one line into a frame carrying the host's color, and grows it to fit", async ({
     page,
     baseURL,
   }) => {

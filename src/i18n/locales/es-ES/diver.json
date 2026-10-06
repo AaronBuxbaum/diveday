@@ -610,7 +610,7 @@
     "photoAlt": "Una foto de {trip}",
     "photoLimitReached": "Ya has añadido el máximo de fotos que admite un resumen. ¡Buen botín!",
     "addAPhoto": "Añadir una foto",
-    "addAnotherPhoto": "Añadir otra foto",
+    "chooseDifferentPhotos": "Elegir otras fotos",
     "photoWrongTypeSuffix": ": usa una foto JPG, PNG, WebP o HEIC.",
     "photoTooBigSuffix": ": supera los {maxMb}\u00a0MB. Prueba con una foto más pequeña.",
     "photoTooMany": "Elige un máximo de {max, plural, one {# foto} other {# fotos}} a la vez.",

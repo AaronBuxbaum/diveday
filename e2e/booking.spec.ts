@@ -135,7 +135,7 @@ test.describe("staff", () => {
     await openRosterDetails(noraRow);
     await noraRow.getByRole("button", { name: "Remove booking" }).click();
     await noraRow.getByRole("button", { name: "Yes, remove booking" }).click();
-    await expect(page.getByRole("status")).toContainText("Booking cancelled");
+    await expect(page.getByRole("status")).toContainText("Booking canceled");
     // Scoped to the roster: removals now also write the trip activity trail
     // ("… removed Nora Quinn from the trip"), so the name legitimately stays
     // on the page — what must be gone is her seat.
@@ -191,9 +191,7 @@ test.describe("staff", () => {
     await expect(page.getByLabel("Number of divers")).toHaveCount(0);
   });
 
-  test("staff edits a trip and cancelling removes it from the public schedule", async ({
-    page,
-  }) => {
+  test("staff edits a trip and canceling removes it from the public schedule", async ({ page }) => {
     // Same aggregate sequential-navigation cost as this file's other heavy
     // tests — see the comment on "full loop" above.
     test.setTimeout(30_000);
@@ -238,7 +236,7 @@ test.describe("staff", () => {
     // The cancellation badge is in the shared masthead and keeps the state
     // visible after the redirect; match the word rather than the lifecycle
     // notice, which is also present on this page.
-    await expect(page.getByText("Cancelled").filter({ visible: true }).first()).toBeVisible();
+    await expect(page.getByText("Canceled").filter({ visible: true }).first()).toBeVisible();
     // **On the departure's own week**, because the board is one week now
     // (#1923) and `?week=` takes any date inside the one it means
     // (src/lib/week-board.ts). A `toHaveCount(0)` on the week the board opens

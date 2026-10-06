@@ -122,7 +122,7 @@ describe("parseDiveSiteForm", () => {
    * `src/db/dive-sites.ts` that decide whether a yes may reach the row, so the
    * parse carries the tick and judges nothing.
    */
-  it("reads the station acknowledgement off a checkbox, absent meaning no", () => {
+  it("reads the station acknowledgment off a checkbox, absent meaning no", () => {
     const ticked = parseDiveSiteForm(
       formEntries({ tideStationId: "8723583", tideStationConfirmed: "on" }),
       "meters",

@@ -142,7 +142,7 @@ describe("canExportIncidentRecord (owner only)", () => {
 });
 
 describe("canOverrideGearRequest (H-06 — owner/manager/instructor/divemaster)", () => {
-  it("admits the in-water judgement roles, divemaster included", () => {
+  it("admits the in-water judgment roles, divemaster included", () => {
     expect(canOverrideGearRequest(["owner"])).toBe(true);
     expect(canOverrideGearRequest(["manager"])).toBe(true);
     expect(canOverrideGearRequest(["instructor"])).toBe(true);

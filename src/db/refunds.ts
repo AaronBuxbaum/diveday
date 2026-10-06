@@ -474,7 +474,7 @@ export async function refundBookingOnShopCancellation(
       currency: plan.currency,
       provider: "stripe",
       providerRef: result.refundId ?? plan.providerRef,
-      note: "Auto-refunded: the shop cancelled this departure",
+      note: "Auto-refunded: the shop canceled this departure",
       operation: "shop_cancellation_refund",
     });
     await resolvePaymentOperation(db, intent.id, { status: "succeeded" });

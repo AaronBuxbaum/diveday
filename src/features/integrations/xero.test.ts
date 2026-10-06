@@ -84,7 +84,7 @@ describe("Xero authorization", () => {
 describe("Xero tenant lookup", () => {
   const credentials = { accessToken: "access", refreshToken: "refresh", expiresAt: 0 };
 
-  it("takes the organisation the shop authorized", async () => {
+  it("takes the organization the shop authorized", async () => {
     const fetchImpl = (async () => ({
       ok: true,
       status: 200,
@@ -125,7 +125,7 @@ describe("Xero tenant lookup", () => {
   });
 
   /** A practice-manager connection carries no organisation to write into. */
-  it("refuses a grant with no organisation on it", async () => {
+  it("refuses a grant with no organization on it", async () => {
     const fetchImpl = (async () => ({
       ok: true,
       status: 200,

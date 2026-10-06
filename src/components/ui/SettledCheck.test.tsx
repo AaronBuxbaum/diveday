@@ -24,7 +24,7 @@ describe("SettledCheck", () => {
     expect(screen.getByText("Not yet here")).toBeInTheDocument();
   });
 
-  it("draws a different shape, not only a different colour", () => {
+  it("draws a different shape, not only a different color", () => {
     const { container } = render(<SettledCheck settled label="Checked in" />);
     expect(container.querySelectorAll("path")).toHaveLength(1);
 

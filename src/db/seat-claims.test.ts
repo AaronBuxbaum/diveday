@@ -88,7 +88,7 @@ describe("party linkage (createBookingParty)", () => {
     expect(byId.get(memberTwo.bookingId)).toBe(lead.bookingId);
   });
 
-  it("clears stale party linkage when a cancelled seat is reactivated by a fresh booking", async () => {
+  it("clears stale party linkage when a canceled seat is reactivated by a fresh booking", async () => {
     const { db, shop, open } = await seededContext();
     const { lead, memberOne } = await bookParty(db, shop.id, open.id);
 
@@ -483,7 +483,7 @@ describe("claimPartySeat", () => {
     expect(row?.claimedAt).toBeNull();
   });
 
-  it("fails closed on a cancelled booking", async () => {
+  it("fails closed on a canceled booking", async () => {
     const { db, shop, open } = await seededContext();
     const { lead, memberOne } = await bookParty(db, shop.id, open.id);
     const token = await claimTokenFor(db, shop.id, lead.bookingId, memberOne.bookingId);
@@ -860,7 +860,7 @@ describe("getClaimPageState (what a dead claim link may name)", () => {
     expect(state.shop.name).toBe(shop.name);
   });
 
-  it("names the shop when the seat itself was cancelled", async () => {
+  it("names the shop when the seat itself was canceled", async () => {
     const { db, shop, open } = await seededContext();
     const { lead, memberOne } = await bookParty(db, shop.id, open.id);
     const token = await claimTokenFor(db, shop.id, lead.bookingId, memberOne.bookingId);

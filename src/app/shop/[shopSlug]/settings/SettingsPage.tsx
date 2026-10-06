@@ -1895,17 +1895,22 @@ export default async function SettingsPage({
                   {/* The stored logo is taken back off the way every stored
                       photo is (K-247 follow-up), in the square it is drawn as
                       on the storefront. */}
-                  {shop.logoUrl ? (
-                    <div className="mb-3">
+                  <div className="flex flex-wrap items-start gap-3">
+                    {shop.logoUrl ? (
                       <RemovablePhoto
                         url={shop.logoUrl}
                         name="removeLogo"
                         label={t("settings.main.profile.removeLogo")}
                         shape="logo"
                       />
-                    </div>
-                  ) : null}
-                  <ImageFileInput id="settings-logo-file" name="logoFile" copy={imageInputCopy} />
+                    ) : null}
+                    <ImageFileInput
+                      id="settings-logo-file"
+                      name="logoFile"
+                      shape="logo"
+                      copy={imageInputCopy}
+                    />
+                  </div>
                 </Field>
                 <FieldGrid columns={2}>
                   <Field
@@ -1958,20 +1963,20 @@ export default async function SettingsPage({
                   {/* One cell of the gallery grid, as the course hero is: a
                       full-width field holding one photo draws it at a
                       gallery cell's size (RemovablePhoto's grid doc). */}
-                  {shop.brandHeroImageUrl ? (
-                    <div className={`mb-3 ${removablePhotoGridClass}`}>
+                  <div className={removablePhotoGridClass}>
+                    {shop.brandHeroImageUrl ? (
                       <RemovablePhoto
                         url={shop.brandHeroImageUrl}
                         name="removeHero"
                         label={t("settings.main.profile.removeHero")}
                       />
-                    </div>
-                  ) : null}
-                  <ImageFileInput
-                    id="settings-cover-photo-file"
-                    name="brandHeroFile"
-                    copy={imageInputCopy}
-                  />
+                    ) : null}
+                    <ImageFileInput
+                      id="settings-cover-photo-file"
+                      name="brandHeroFile"
+                      copy={imageInputCopy}
+                    />
+                  </div>
                 </Field>
                 <FieldGrid columns={2}>
                   <Field label={t("settings.main.profile.heroAlt")}>
@@ -2054,32 +2059,31 @@ export default async function SettingsPage({
                   })}
                   htmlFor="settings-shop-photo-files"
                 >
-                  {shop.shopfrontPhotoUrls.length > 0 ? (
-                    <div className={`mb-3 ${removablePhotoGridClass}`}>
-                      {shop.shopfrontPhotoUrls.map((url) => (
-                        <RemovablePhoto
-                          key={url}
-                          url={url}
-                          name="removeShopPhotoUrls"
-                          value={url}
-                          label={t("settings.main.shopPhotos.remove")}
-                        />
-                      ))}
-                    </div>
-                  ) : null}
-                  <ImageFileInput
-                    id="settings-shop-photo-files"
-                    name="shopPhotoFiles"
-                    multiple
-                    maxFiles={MAX_NEW_SHOPFRONT_PHOTOS_PER_SAVE}
-                    copy={{
-                      ...imageInputCopy,
-                      choose: t("settings.main.shopPhotos.add"),
-                      tooMany: t("settings.main.shopPhotos.tooMany", {
-                        count: MAX_NEW_SHOPFRONT_PHOTOS_PER_SAVE,
-                      }),
-                    }}
-                  />
+                  <div className={removablePhotoGridClass}>
+                    {shop.shopfrontPhotoUrls.map((url) => (
+                      <RemovablePhoto
+                        key={url}
+                        url={url}
+                        name="removeShopPhotoUrls"
+                        value={url}
+                        label={t("settings.main.shopPhotos.remove")}
+                      />
+                    ))}
+                    <ImageFileInput
+                      id="settings-shop-photo-files"
+                      name="shopPhotoFiles"
+                      multiple
+                      maxFiles={MAX_NEW_SHOPFRONT_PHOTOS_PER_SAVE}
+                      copy={{
+                        ...imageInputCopy,
+                        choose: t("settings.main.shopPhotos.add"),
+                        chooseAnother: t("shared.imageInput.chooseOthers"),
+                        tooMany: t("settings.main.shopPhotos.tooMany", {
+                          count: MAX_NEW_SHOPFRONT_PHOTOS_PER_SAVE,
+                        }),
+                      }}
+                    />
+                  </div>
                 </Field>
                 <FieldActions>
                   <SubmitButton

@@ -357,7 +357,7 @@ describe("the back-link chevron", () => {
    * `min-h`, not `h`: an eyebrow that wraps grows its row upward inside the
    * link's box rather than spilling out under it onto the title.
    */
-  it("stands on the words' own line box, centred on it, not in the 44px link", () => {
+  it("stands on the words' own line box, centered on it, not in the 44px link", () => {
     const svg = chevron();
     const link = svg.closest("a");
     const row = svg.parentElement;
@@ -433,7 +433,7 @@ describe("the header's actions below sm", () => {
  * give is the subgrid's own row gap.
  */
 describe("ShopStat's figure", () => {
-  it("stands on a row shared with its neighbours, not under its own label", () => {
+  it("stands on a row shared with its neighbors, not under its own label", () => {
     const { container } = render(
       <ShopStat label="Divers on the manifest" value={12} detail="All accounted for" />,
     );

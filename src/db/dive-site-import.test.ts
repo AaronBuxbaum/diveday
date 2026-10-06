@@ -151,7 +151,7 @@ describe("the dive-site importer", () => {
    * which is the rule `confirmedStationWrite` states, inherited here rather
    * than restated.
    */
-  it("refuses a tide acknowledgement for a station the site does not already hold", async () => {
+  it("refuses a tide acknowledgment for a station the site does not already hold", async () => {
     const { db, shop, staffId } = await bareShopContext("import-tide");
     const csv = buildCsv(
       [...DIVE_SITE_IMPORT_COLUMNS],

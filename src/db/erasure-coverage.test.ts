@@ -272,7 +272,7 @@ const ERASURE_KEEPS: Record<string, string> = {
   booking_referrals:
     "that one seat arrived from another seat's recap link — two booking ids and a timestamp, and nothing else. Both bookings carry their own erasure, so the diver either side of the link is erased where they are stored",
   trip_sightings:
-    "what a crew tapped at a site: a species slug from DiveDay’s own catalogue, a count, and the site’s name as it stood. Its two person columns are the crew member who tapped and the one who undid it, pointers joined at read the way `trip_desk_events` is",
+    "what a crew tapped at a site: a species slug from DiveDay’s own catalog, a count, and the site’s name as it stood. Its two person columns are the crew member who tapped and the one who undid it, pointers joined at read the way `trip_desk_events` is",
   trip_desk_events:
     "`subject_person_id` is a pointer by design and the name is joined at read, which resolves to the anonymized one after this runs",
   trip_help_requests:
@@ -297,7 +297,7 @@ const ERASURE_KEEPS: Record<string, string> = {
   trip_recap_photos:
     "the shop’s photographs of a departure, uploaded by a staff member and attached to the trip rather than to anyone on it. A photo *of* a diver is `recap_photos`, which the erasure deletes and queues for blob deletion",
   dive_sites: "a place, its briefing and its conditions",
-  dive_site_creatures: "which catalogue species a site lists",
+  dive_site_creatures: "which catalog species a site lists",
   dive_site_moments: "the shop’s own photographs of a site and their captions",
   dive_packages: "the shop’s price list of multi-dive packages",
   pre_departure_checklist_items: "the shop’s own checklist lines",
@@ -376,7 +376,7 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   shop_backup_deliveries:
     "whether one of those bundles arrived; a period key, a byte count and a status",
   boats: "the shop’s vessels",
-  courses: "the shop’s course catalogue, copied from a template and then its own",
+  courses: "the shop’s course catalog, copied from a template and then its own",
   waiver_templates:
     "the text a shop asks people to sign, versioned. The *signatures* are `waiver_records`, which the erasure strips and re-seals",
   trip_lenses: "the shop’s own word for a kind of day",
@@ -386,8 +386,8 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
     "a date the shop took out of that cadence, so the nightly roll does not put it back",
 
   // DiveDay's own catalogue, shared by every shop and owned by none.
-  global_dive_sites: "DiveDay’s catalogue of sites",
-  global_dive_site_versions: "that catalogue's own history",
+  global_dive_sites: "DiveDay’s catalog of sites",
+  global_dive_site_versions: "that catalog's own history",
 
   // Plumbing: provider coordination and delivery ledgers, holding no person.
   notification_rate_limit_state: "provider coordination keyed by ceiling and period",

@@ -372,7 +372,7 @@ describe("sendDueCheckoutRecoveries", () => {
     expect(row?.abandonedRecoverySentAt).toBeNull();
   });
 
-  it("never emails a checkout whose trip was cancelled since it started", async () => {
+  it("never emails a checkout whose trip was canceled since it started", async () => {
     const { db, tripId, checkoutId } = await pendingCheckoutContext(3);
     await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, tripId));
 
@@ -396,7 +396,7 @@ describe("sendDueCheckoutRecoveries", () => {
     expect(row?.status).toBe("expired");
   });
 
-  it("never emails a party checkout when one of its divers was since cancelled", async () => {
+  it("never emails a party checkout when one of its divers was since canceled", async () => {
     const { db, bookingIds, checkoutId } = await pendingCheckoutContext(3, 2);
     await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingIds[1]));
 

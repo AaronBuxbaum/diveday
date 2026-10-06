@@ -56,7 +56,7 @@ describe("tideWindowAt", () => {
     expect(tideWindowAt(DAY, past)?.phase).toBe("ebb");
   });
 
-  it("honours a narrower slack window when asked", () => {
+  it("honors a narrower slack window when asked", () => {
     expect(tideWindowAt(DAY, new Date("2026-07-21T07:10:00Z"), 10)?.phase).toBe("ebb");
   });
 

@@ -433,7 +433,7 @@ describe("emailFreshWaiverLink", () => {
     expect(state.state === "available" ? state.record.draftSignerName : null).toBe("Nora Quinn");
   });
 
-  it("refuses a cancelled booking", async () => {
+  it("refuses a canceled booking", async () => {
     configureEmail();
     const { db, shop, bookingId, token, after } = await expiredLink();
     await cancelBooking(db, shop.id, bookingId);

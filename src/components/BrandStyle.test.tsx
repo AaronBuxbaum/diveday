@@ -38,7 +38,7 @@ describe("BrandStyle", () => {
     expect(container.innerHTML).toBe("");
   });
 
-  it("re-points the four action tokens and the focus ring, derived from the colour", () => {
+  it("re-points the four action tokens and the focus ring, derived from the color", () => {
     const css = styleText(<BrandStyle brandColor={COLOR} brandDisplayFont={null} />);
     expect(css).toContain(`--primary:${THEME.primary}`);
     expect(css).toContain(`--primary-hover:${THEME.primaryHover}`);
@@ -108,7 +108,7 @@ describe("BrandStyle, inheriting a host page", () => {
  * around 3:1. The dark half is a second block, not a second picker.
  */
 describe("BrandStyle, at depth", () => {
-  it("emits a dark-scheme block with the dark derivation of the same colour", () => {
+  it("emits a dark-scheme block with the dark derivation of the same color", () => {
     const { dark } = blocks(styleText(<BrandStyle brandColor={COLOR} brandDisplayFont={null} />));
     expect(dark).toContain("@media(prefers-color-scheme:dark)");
     expect(dark).toContain(`--primary:${DARK_THEME.primary}`);
@@ -118,7 +118,7 @@ describe("BrandStyle, at depth", () => {
     expect(dark).toContain(`--focus-ring:${DARK_THEME.primary}`);
   });
 
-  it("emits a colour that reads on the dark ground, where the light one does not", () => {
+  it("emits a color that reads on the dark ground, where the light one does not", () => {
     expect(contrastRatio(THEME.primary, BRAND_DARK_GROUND)).toBeLessThan(4.5);
     expect(contrastRatio(DARK_THEME.primary, BRAND_DARK_GROUND)).toBeGreaterThanOrEqual(4.5);
   });

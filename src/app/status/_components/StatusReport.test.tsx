@@ -66,7 +66,7 @@ describe("StatusReport", () => {
     expect(screen.getByText("Last checked Sep 7, 3:04 PM UTC.")).toBeInTheDocument();
   });
 
-  it("carries the state in the row's text, never in colour alone", () => {
+  it("carries the state in the row's text, never in color alone", () => {
     renderReport("degraded", DB_GONE);
     // Every drawn mark is aria-hidden; the words are what assistive technology
     // and a monochrome print both read.

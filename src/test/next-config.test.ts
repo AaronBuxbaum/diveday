@@ -128,7 +128,7 @@ describe("next.config.ts isVercelPreviewBuild", () => {
     expect(await loadPreviewFlag({ VERCEL: "1", VERCEL_ENV: "production" })).toBe(false);
   });
 
-  it("is false off Vercel, so a local build and CI keep the behaviour they had", async () => {
+  it("is false off Vercel, so a local build and CI keep the behavior they had", async () => {
     expect(await loadPreviewFlag({ VERCEL: "", VERCEL_ENV: "" })).toBe(false);
     expect(await loadPreviewFlag({ VERCEL: "", VERCEL_ENV: "preview" })).toBe(false);
   });

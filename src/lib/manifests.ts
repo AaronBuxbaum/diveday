@@ -1,6 +1,7 @@
 import type { BirthdayCallout } from "./age";
 import type { DepthCeilingCheck } from "./depth-ceiling";
 import type { RentalFitLine } from "./dive-prep";
+import type { IdentityMatchKind } from "./identity-match";
 import type { ReadinessResult } from "./readiness";
 import type { RollCallCheckpoint, RollCallRecord } from "./roll-call";
 import { isNotBackAboard } from "./roll-call";
@@ -119,6 +120,13 @@ export type ManifestDiverInput = {
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
   readiness?: ReadinessResult;
+  /**
+   * The name a held seat was booked under and why it was matched to this
+   * diver (H-13), so its `identity_unconfirmed` line can name both people
+   * (`identityReasonText`) rather than say "might be someone else" with
+   * nothing to compare. Absent on a seat that was never held.
+   */
+  identityClaim?: { bookedAs: string | null; matchedBy: IdentityMatchKind | null };
   /** Rental kit line, including whether a fit was ever recorded at all. */
   rentalFit: RentalFitLine;
   /**

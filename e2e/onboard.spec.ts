@@ -263,12 +263,12 @@ test.describe("a shop signing up from the Caribbean", () => {
     // saying "check your units" without saying what they are makes a shop
     // navigate to find out whether it needs to.
     await expect(page.getByText("Check your currency and depth unit")).toBeVisible();
-    await expect(page.getByText(/MXN and metres/)).toBeVisible();
+    await expect(page.getByText(/MXN and meters/)).toBeVisible();
 
     // ...and the shop row itself agrees, which is the assertion that the
     // derivation reached the database rather than only the checklist copy. The
     // Units row's own closed summary is where a shop reads it back.
     await page.goto(`/shop/${unique}/settings`);
-    await expect(page.getByText(/Metres \(m\).*MXN/)).toBeVisible();
+    await expect(page.getByText(/Meters \(m\).*MXN/)).toBeVisible();
   });
 });

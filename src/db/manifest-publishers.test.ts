@@ -66,7 +66,7 @@ describe("writes that announce a manifest change", () => {
     expect(publishManifestEvent).toHaveBeenCalledWith(db, shop.id, trip.id);
   });
 
-  it("announces when a booking is cancelled", async () => {
+  it("announces when a booking is canceled", async () => {
     const { db, shop, trip } = await context();
     const [booking] = await db
       .select({ id: bookings.id })

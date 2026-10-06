@@ -130,7 +130,7 @@ describe("ForgivingInput", () => {
     expect(hidden("phone")).toHaveValue("+1 305 555 0142 x21");
   });
 
-  it("still canonicalises once somebody types in it", async () => {
+  it("still canonicalizes once somebody types in it", async () => {
     const user = userEvent.setup();
     render(
       <ForgivingInput

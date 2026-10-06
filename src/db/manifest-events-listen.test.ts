@@ -384,7 +384,7 @@ describe("the shared LISTEN connection's lifetime", () => {
     expect(clients[1]?.queries).toEqual(["LISTEN manifest_events"]);
   });
 
-  it("arms nothing in the in-process (PGlite) mode, where no connection was ever dialled", async () => {
+  it("arms nothing in the in-process (PGlite) mode, where no connection was ever dialed", async () => {
     // No connectAndListen: this is dev/test, where subscribeManifestEvents
     // dispatches in-process and there is nothing to close.
     const unsubscribe = subscribeManifestEvents("shop-a", "trip-1", () => {});

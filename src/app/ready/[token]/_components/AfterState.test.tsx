@@ -876,7 +876,7 @@ describe("the private pulse", () => {
     expect(pulseDoor(container)?.hasAttribute("open")).toBe(true);
   });
 
-  it("stays shut for a ?pulse= it does not recognise", () => {
+  it("stays shut for a ?pulse= it does not recognize", () => {
     // The param is attacker-supplied, so `noticeFromParam` decides whether it
     // is real — and a value that says nothing must open nothing either.
     const { container } = render(<AfterState {...props({ params: { pulse: "constructor" } })} />);
@@ -918,7 +918,7 @@ describe("the private pulse", () => {
    * `?pulse=` is attacker-supplied like the other three, so an unrecognised
    * value renders nothing rather than walking the prototype.
    */
-  it("says nothing for a notice code it does not recognise", () => {
+  it("says nothing for a notice code it does not recognize", () => {
     render(<AfterState {...props({ params: { pulse: "constructor" } })} />);
     expect(screen.queryByRole("status")).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();

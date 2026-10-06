@@ -333,7 +333,7 @@
     "passThroughFee": "{name}: {price} per diver (third-party charge)",
     "stripeHint": "You’ll finish paying on a secure Stripe page.",
     "ageAttestation": "I confirm every diver on this booking meets the minimum age of {age}.",
-    "cancelledHeading": "This trip was cancelled",
+    "cancelledHeading": "This trip was canceled",
     "cancelledBody": "for another date, or get in touch with the shop.",
     "cancelledContact": "Questions? Contact the shop at {contact}.",
     "bookAndPay": "Book and pay",
@@ -406,7 +406,7 @@
       "easingBack": "Getting comfortable again",
       "smallLife": "Small life and photos",
       "aWreck": "A wreck, someday",
-      "skills": "Practising skills",
+      "skills": "Practicing skills",
       "goodDay": "Just a good day out",
       "audience": "Your crew sees how many picked each, not who."
     },
@@ -610,7 +610,7 @@
     "photoAlt": "A photo from {trip}",
     "photoLimitReached": "You’ve added the most photos one recap holds. Nice haul!",
     "addAPhoto": "Add a photo",
-    "addAnotherPhoto": "Add another photo",
+    "chooseDifferentPhotos": "Choose different photos",
     "photoWrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
     "photoTooBigSuffix": ": that’s over {maxMb}\u00a0MB. Try a smaller photo.",
     "photoTooMany": "Pick up to {max, plural, one {# photo} other {# photos}} at a time.",
@@ -714,7 +714,7 @@
     "namelessFallback": "there",
     "allSetHeading": "You’re all set",
     "openingPayment": "Opening payment…",
-    "cancelledHeading": "This booking was cancelled",
+    "cancelledHeading": "This booking was canceled",
     "unavailableHeading": "This readiness link isn’t available",
     "unavailableBody": "Ask your dive shop for a fresh link.",
     "expiredBody": "Trip-prep links don’t stay open for long, and this one has run out. We can email you a fresh one.",
@@ -729,16 +729,16 @@
     "paymentReceived": "Payment received. We’re confirming it with your shop. Nothing more to do.",
     "waiverUnavailable": "We couldn’t open your waiver just now. Try again, or ask the shop for a link.",
     "paymentUnavailable": "We couldn’t open the payment page. Your seat is safe. Try again, or pay at the shop.",
-    "paymentCancelled": "Payment cancelled. Your seat is still held.",
+    "paymentCancelled": "Payment canceled. Your seat is still held.",
     "cancelSpot": "Cancel my spot",
     "cancelConfirm": "Cancel your spot on {trip}? This can’t be undone.",
     "cancelConfirmButton": "Yes, cancel my spot",
     "neverMind": "Never mind",
-    "cancelling": "Cancelling…",
+    "cancelling": "Canceling…",
     "cancelPreviewRefund": "You’re still inside the free-cancellation window, so what you paid comes back to you.",
     "cancelPreviewForfeit": "You’re past the free-cancellation window, so what you paid won’t be refunded.",
     "cancelPreviewNoPolicy": "This shop doesn’t automate cancellation refunds, so nothing is refunded right away.",
-    "cancelUnavailable": "This spot can no longer be cancelled here. The shop can release it for you.",
+    "cancelUnavailable": "This spot can no longer be canceled here. The shop can release it for you.",
     "refundIssued": "You paid for this trip, so a refund has been issued back to your card.",
     "refundManual": "You paid for this trip. This shop handles cancellation refunds directly, so reach out to them about it.",
     "stateDone": "Done",
@@ -1147,7 +1147,7 @@
       "azure-vase-sponge": {
         "name": "Azure vase sponge",
         "description": "A fluted violet-pink cup that almost glows against the reef face.",
-        "tip": "Get low and shoot up into the cup. The colour only reads with light in it."
+        "tip": "Get low and shoot up into the cup. The color only reads with light in it."
       },
       "balloonfish": {
         "name": "Balloonfish",
@@ -1181,13 +1181,13 @@
       },
       "black-coral": {
         "name": "Black coral",
-        "description": "Feathery grey-green bushes on deep walls; the black is the skeleton inside.",
+        "description": "Feathery gray-green bushes on deep walls; the black is the skeleton inside.",
         "tip": "Slow-growing and protected nearly everywhere. Keep fins and gauges well off the wall."
       },
       "black-durgon": {
         "name": "Black durgon",
         "description": "Black at a glance, and blue-green with bright seams once light reaches it.",
-        "tip": "Put a light on one. The colour it looks at ten metres is not the colour it is."
+        "tip": "Put a light on one. The color it looks at ten meters is not the color it is."
       },
       "black-grouper": {
         "name": "Black grouper",
@@ -1231,7 +1231,7 @@
       },
       "branching-vase-sponge": {
         "name": "Branching vase sponge",
-        "description": "Clusters of purple-grey tubes with rough walls, leaning away from the current.",
+        "description": "Clusters of purple-gray tubes with rough walls, leaning away from the current.",
         "tip": "Look into the tubes. Brittle stars and small gobies live down inside them."
       },
       "brown-chromis": {
@@ -1246,13 +1246,13 @@
       },
       "caribbean-reef-shark": {
         "name": "Caribbean reef shark",
-        "description": "A classic grey requiem shark that patrols the reef edge in open water.",
+        "description": "A classic gray requiem shark that patrols the reef edge in open water.",
         "tip": "Stay off the bottom, keep the group together, and watch it rather than follow it."
       },
       "caribbean-reef-squid": {
         "name": "Caribbean reef squid",
-        "description": "A small squadron holding formation in mid-water, colours running across them.",
-        "tip": "Approach slowly and they hold. They are talking to each other in those colours."
+        "description": "A small squadron holding formation in mid-water, colors running across them.",
+        "tip": "Approach slowly and they hold. They are talking to each other in those colors."
       },
       "chain-moray": {
         "name": "Chain moray",
@@ -1266,7 +1266,7 @@
       },
       "christmas-tree-worm": {
         "name": "Christmas tree worm",
-        "description": "Pairs of tiny coloured spirals growing straight out of hard coral.",
+        "description": "Pairs of tiny colored spirals growing straight out of hard coral.",
         "tip": "Wave a hand near one and every worm on the head vanishes at once. Then wait."
       },
       "cobia": {
@@ -1296,7 +1296,7 @@
       },
       "cubera-snapper": {
         "name": "Cubera snapper",
-        "description": "The biggest Caribbean snapper: heavy-jawed, grey, and usually alone on a wreck.",
+        "description": "The biggest Caribbean snapper: heavy-jawed, gray, and usually alone on a wreck.",
         "tip": "Solitary and wary. If one lets you close, stop where you are rather than pressing on."
       },
       "cushion-sea-star": {
@@ -1332,7 +1332,7 @@
       "fire-coral": {
         "name": "Branching fire coral",
         "description": "Mustard-tan blades with pale tips, growing over anything that stops moving.",
-        "tip": "Not a coral and it does sting. Learn the mustard colour and keep clear."
+        "tip": "Not a coral and it does sting. Learn the mustard color and keep clear."
       },
       "flamingo-tongue": {
         "name": "Flamingo tongue",
@@ -1366,7 +1366,7 @@
       },
       "giant-barrel-sponge": {
         "name": "Giant barrel sponge",
-        "description": "A rust-coloured barrel wide enough to climb into, and centuries old.",
+        "description": "A rust-colored barrel wide enough to climb into, and centuries old.",
         "tip": "Never rest a hand on the rim. Some of these were here before Florida was a state."
       },
       "giant-basket-star": {
@@ -1381,7 +1381,7 @@
       },
       "glassy-sweeper": {
         "name": "Glassy sweeper",
-        "description": "Copper-coloured clouds that fill the shaded spaces inside a wreck or ledge.",
+        "description": "Copper-colored clouds that fill the shaded spaces inside a wreck or ledge.",
         "tip": "Stay outside the structure and let the school reform around you."
       },
       "goldentail-moray": {
@@ -1401,7 +1401,7 @@
       },
       "gray-snapper": {
         "name": "Gray snapper",
-        "description": "Wary grey-red snapper that hang in the lee of wrecks and mangrove roots.",
+        "description": "Wary gray-red snapper that hang in the lee of wrecks and mangrove roots.",
         "tip": "They watch you first. Approach at an angle rather than head-on and they hold."
       },
       "graysby": {
@@ -1511,7 +1511,7 @@
       },
       "manatee": {
         "name": "West Indian manatee",
-        "description": "A grey, slow, whiskered grazer of warm springs and inshore channels.",
+        "description": "A gray, slow, whiskered grazer of warm springs and inshore channels.",
         "tip": "Protected: passive observation only. Hands off, no pursuit, no blocking its route."
       },
       "maze-coral": {
@@ -1556,7 +1556,7 @@
       },
       "ocean-triggerfish": {
         "name": "Ocean triggerfish",
-        "description": "A tall grey diamond with a dark blotch at the pectoral, out in the blue off a wall.",
+        "description": "A tall gray diamond with a dark blotch at the pectoral, out in the blue off a wall.",
         "tip": "Look off the wall rather than along it. This one hangs in open water, not on the reef."
       },
       "orange-elephant-ear-sponge": {
@@ -1566,7 +1566,7 @@
       },
       "peacock-flounder": {
         "name": "Peacock flounder",
-        "description": "A flat sand-coloured disc with blue rings, both eyes on one side.",
+        "description": "A flat sand-colored disc with blue rings, both eyes on one side.",
         "tip": "It only becomes visible when it moves, so sweep the sand rather than staring at it."
       },
       "pederson-cleaner-shrimp": {
@@ -1621,18 +1621,18 @@
       },
       "rainbow-parrotfish": {
         "name": "Rainbow parrotfish",
-        "description": "The biggest parrotfish in the Atlantic: bronze-green, and over a metre grown.",
+        "description": "The biggest parrotfish in the Atlantic: bronze-green, and over a meter grown.",
         "tip": "It grows up in the mangroves, so a reef beside one is where you have the best chance."
       },
       "red-grouper": {
         "name": "Red grouper",
-        "description": "Rust-coloured, square-jawed, and dug into its own excavated hollow in the bottom.",
+        "description": "Rust-colored, square-jawed, and dug into its own excavated hollow in the bottom.",
         "tip": "Look for a scooped pit in the sand or rubble. The fish is usually sitting in it."
       },
       "red-rope-sponge": {
         "name": "Erect rope sponge",
         "description": "Deep red cords standing off the reef, stiff and slightly branched.",
-        "tip": "The red survives deeper than most colours, which makes it a useful marker on a wall."
+        "tip": "The red survives deeper than most colors, which makes it a useful marker on a wall."
       },
       "redband-parrotfish": {
         "name": "Redband parrotfish",
@@ -1647,7 +1647,7 @@
       "reef-butterflyfish": {
         "name": "Reef butterflyfish",
         "description": "Pale with a dark wash across the back half, always somewhere near its partner.",
-        "tip": "Deeper than the other butterflyfish here. Expect it below twenty metres, in pairs."
+        "tip": "Deeper than the other butterflyfish here. Expect it below twenty meters, in pairs."
       },
       "remora": {
         "name": "Remora",
@@ -1721,7 +1721,7 @@
       },
       "southern-stingray": {
         "name": "Southern stingray",
-        "description": "A grey diamond gliding over the sand, or buried with only its eyes showing.",
+        "description": "A gray diamond gliding over the sand, or buried with only its eyes showing.",
         "tip": "Give rays space and watch from the side, not from above."
       },
       "spanish-hogfish": {
@@ -1777,7 +1777,7 @@
       "squirrelfish": {
         "name": "Squirrelfish",
         "description": "Red and silver with huge night-adapted eyes, tucked into a hole by day.",
-        "tip": "Red goes grey at depth without a light, so hold a torch on it to see the colour."
+        "tip": "Red goes gray at depth without a light, so hold a torch on it to see the color."
       },
       "staghorn-coral": {
         "name": "Staghorn coral",
@@ -1787,7 +1787,7 @@
       "stoplight-parrotfish": {
         "name": "Stoplight parrotfish",
         "description": "A heavy beaked grazer: green and gold as an adult, mottled red as a youngster.",
-        "tip": "Move slowly near coral heads and let the colour find you."
+        "tip": "Move slowly near coral heads and let the color find you."
       },
       "stovepipe-sponge": {
         "name": "Stovepipe sponge",
@@ -1801,7 +1801,7 @@
       },
       "tarpon": {
         "name": "Tarpon",
-        "description": "A slab of living chrome, up to two metres, hanging in a wreck’s lee.",
+        "description": "A slab of living chrome, up to two meters, hanging in a wreck’s lee.",
         "tip": "Cut your light on a night dive and let them work the edge of everyone else’s."
       },
       "threespot-damselfish": {
@@ -1847,12 +1847,12 @@
       "yellow-tube-sponge": {
         "name": "Yellow tube sponge",
         "description": "Clusters of yellow chimneys standing off the wall, each one an open pipe.",
-        "tip": "A reliable colour marker in poor visibility. You can see the yellow from far off."
+        "tip": "A reliable color marker in poor visibility. You can see the yellow from far off."
       },
       "yellowfin-grouper": {
         "name": "Yellowfin grouper",
-        "description": "Blotched red or grey with a yellow rim to the pectoral fins, out on the wall.",
-        "tip": "The yellow fin edge is the only reliable mark. Its body colour changes as you watch."
+        "description": "Blotched red or gray with a yellow rim to the pectoral fins, out on the wall.",
+        "tip": "The yellow fin edge is the only reliable mark. Its body color changes as you watch."
       },
       "yellowhead-jawfish": {
         "name": "Yellowhead jawfish",
@@ -2655,13 +2655,13 @@
         "item5": "Shop-wide discount codes and one-trip last-minute deals",
         "item6": "A diver cancels their own booking from their link, paid or not, until the boat leaves",
         "item7": "A calendar file and a share link on every departure, and the meeting point with a maps link once booked",
-        "item8": "A conditions hold that pauses new bookings without cancelling a seat",
+        "item8": "A conditions hold that pauses new bookings without canceling a seat",
         "item9": "A private charter kept off the public schedule and booked from its own link"
       },
       "website": {
-        "item1": "A storefront in your own brand: your colour, your typeface, your cover photo, up to eight shop photos, your badges, the year you opened",
+        "item1": "A storefront in your own brand: your color, your typeface, your cover photo, up to eight shop photos, your badges, the year you opened",
         "item2": "Six things to paste on the site you have: a Book Now button, a booking window, the calendar, a trip grid, one departure, your courses",
-        "item3": "Every one takes your site’s colour and typeface, so the booking never looks like someone else’s page",
+        "item3": "Every one takes your site’s color and typeface, so the booking never looks like someone else’s page",
         "item4": "A QR code for the counter and a referral link for the hotel that sends you divers",
         "item5": "One embed code for WordPress, Squarespace and Wix, with the line each one needs",
         "item6": "Verified diver reviews and the shop’s rating on the public schedule",
@@ -2970,7 +2970,7 @@
           },
           "step6": {
             "title": "Can’t reach the export? Ask EVE’s current owner",
-            "detail": "If your license has lapsed or the export is greyed out, DiveShop360 now owns EVE and can produce a customer and certification export for you. Ask in writing and keep the file. That file is all DiveDay needs."
+            "detail": "If your license has lapsed or the export is grayed out, DiveShop360 now owns EVE and can produce a customer and certification export for you. Ask in writing and keep the file. That file is all DiveDay needs."
           }
         },
         "exportNotes": {
@@ -3087,7 +3087,7 @@
         },
         "website": {
           "heading": "Leaving FareHarbor does not mean rebuilding your site.",
-          "intro": "Every button, frame and link you pasted from it has a twin here, in your colours and your typeface.",
+          "intro": "Every button, frame and link you pasted from it has a twin here, in your colors and your typeface.",
           "rows": {
             "row1": {
               "theirs": "Book Now button",
@@ -3099,7 +3099,7 @@
             },
             "row3": {
               "theirs": "Calendar",
-              "ours": "The whole schedule, in your colour"
+              "ours": "The whole schedule, in your color"
             },
             "row4": {
               "theirs": "Item grid",
@@ -3419,7 +3419,7 @@
       "eyebrow": "How DiveDay handles data",
       "title": "What we hold, where it lives, and how it leaves",
       "updated": "Describes DiveDay as it works today.",
-      "intro": "DiveDay is dive-shop software. Most of the personal data in it belongs neither to us nor to the shop alone: it is the shop’s divers’ data, held on the shop’s instruction. This page says what we hold, who else can touch it, and how it comes back out. It describes current behaviour rather than intentions, and where something is still being decided it says so.",
+      "intro": "DiveDay is dive-shop software. Most of the personal data in it belongs neither to us nor to the shop alone: it is the shop’s divers’ data, held on the shop’s instruction. This page says what we hold, who else can touch it, and how it comes back out. It describes current behavior rather than intentions, and where something is still being decided it says so.",
       "roles": {
         "heading": "Two different relationships",
         "shopTerm": "With a dive shop",
@@ -3525,7 +3525,7 @@
       "intro": "Plain terms for an early-access product: how DiveDay is meant to be used, what we do and do not promise, and what happens when a shop wants to leave.",
       "what": {
         "heading": "What DiveDay is",
-        "body": "Software a dive shop uses to run bookings, waivers, certification checks, trip prep and boat manifests. It is a tool the shop operates, not a service that operates the shop. Every judgement that matters on a dock (whether a diver is fit to dive, a certification genuine, or a boat ready to sail) stays with the shop’s own staff. DiveDay shows what it has been told, refuses to hide a gap, and does not decide."
+        "body": "Software a dive shop uses to run bookings, waivers, certification checks, trip prep and boat manifests. It is a tool the shop operates, not a service that operates the shop. Every judgment that matters on a dock (whether a diver is fit to dive, a certification genuine, or a boat ready to sail) stays with the shop’s own staff. DiveDay shows what it has been told, refuses to hide a gap, and does not decide."
       },
       "account": {
         "heading": "The shop’s side",
@@ -3612,19 +3612,19 @@
       },
       "website": {
         "name": "Your website",
-        "summary": "A booking page in your shop’s colours, and booking buttons for the site you already have.",
+        "summary": "A booking page in your shop’s colors, and booking buttons for the site you already have.",
         "metaTitle": "Dive shop website and booking page",
-        "metaDescription": "A booking page in your shop’s colour, typeface and photos, plus a Book Now button, calendar and trip grid for WordPress, Squarespace or Wix.",
-        "title": "Divers book on a page in your shop’s colours, rated only by divers who dived with you.",
-        "lede": "Your booking page wears your colour, typeface and photos, and its buttons paste onto the site you run. With no site, ask, and a person here builds one with you, in the same monthly price.",
+        "metaDescription": "A booking page in your shop’s color, typeface and photos, plus a Book Now button, calendar and trip grid for WordPress, Squarespace or Wix.",
+        "title": "Divers book on a page in your shop’s colors, rated only by divers who dived with you.",
+        "lede": "Your booking page wears your color, typeface and photos, and its buttons paste onto the site you run. With no site, ask, and a person here builds one with you, in the same monthly price.",
         "screenLabel": "A shop’s public booking page: the shop’s name and rating, the next boat with space, and the week’s departures.",
-        "note1": "The shop’s colour, the typeface on its name and “Since 1987” are set once, in Settings.",
+        "note1": "The shop’s color, the typeface on its name and “Since 1987” are set once, in Settings.",
         "note2": "The next boat with space comes first, for the diver who wants to go out tomorrow.",
         "note3": "The stars count only reviews written after a trip with you.",
         "step1Title": "Set your look",
-        "step1Body": "Choose a colour, a typeface and a cover photo, then add your agency badges and photos of the shop.",
+        "step1Body": "Choose a color, a typeface and a cover photo, then add your agency badges and photos of the shop.",
         "step2Title": "Put booking on your site",
-        "step2Body": "Copy one code for a Book Now button, a booking window, the calendar, a trip grid, one departure or your courses. It picks up your site’s colour and typeface.",
+        "step2Body": "Copy one code for a Book Now button, a booking window, the calendar, a trip grid, one departure or your courses. It picks up your site’s color and typeface.",
         "step3Title": "Let search engines read the trips",
         "step3Body": "Each trip, course and dive site page carries its price, open seats and rating in the form search engines read, and you decide whether the shop is listed.",
         "faq1Q": "I don’t have a website. Can you make one?",
@@ -3876,7 +3876,7 @@
         "metaTitle": "Dive shop payments, deposits and refunds",
         "metaDescription": "Take card payments and deposits at booking through your own Stripe account. Refunds go out by themselves when you call a blow-out or too few divers cancels a boat.",
         "title": "Divers pay when they book, and the money lands in your own Stripe account.",
-        "lede": "Take the full price or a deposit at booking, invoice anything else from the desk, and when a boat is cancelled, every online card payment on it refunds by itself.",
+        "lede": "Take the full price or a deposit at booking, invoice anything else from the desk, and when a boat is canceled, every online card payment on it refunds by itself.",
         "screenLabel": "The Orders page: one day’s orders with the count and subtotal, and each order’s status.",
         "note1": "Orders file by day with the day’s count and subtotal, the way the till is counted at close.",
         "note2": "Open means the order still has money owed on it.",
@@ -3938,7 +3938,7 @@
     "replyKeyword": {
       "offer": "Reply C to cancel your seat, or M to ask about moving it.",
       "confirmCancel": "{tripTitle}, {date} at {time}. Reply {code} in the next half hour to give up your seat. Nothing has changed yet.",
-      "cancelled": "Your seat on {tripTitle}, {date}, is cancelled.",
+      "cancelled": "Your seat on {tripTitle}, {date}, is canceled.",
       "refundOnItsWay": "Your refund is on its way.",
       "cancelRefused": "That seat could not be released. {shopName} will pick this up.",
       "codeMismatch": "That code did not match, so nothing has changed. {shopName} will pick this up.",
@@ -3964,14 +3964,14 @@
       "seeUpdate": "See the live trip update"
     },
     "tripMinimumNotMet": {
-      "subject": "Trip cancelled — {tripTitle}",
+      "subject": "Trip canceled — {tripTitle}",
       "body": "{shopName} runs {tripTitle} on {date} with at least {minimum, plural, one {# diver} other {# divers}}, and it had {booked, plural, one {# booking} other {# bookings}} by the time they said they’d decide, so it’s off. Your seat is released, and there’s nothing you need to do.",
       "moneyRefunded": "You’ve been refunded in full. The money is on its way back to the card you paid with, and can take a few days to land.",
       "moneyRefundOwed": "You’re owed a full refund, and {shopName} will be in touch to get it back to you.",
       "findAnother": "See what else is running"
     },
     "tripBlowout": {
-      "subject": "Trip cancelled — {tripTitle}",
+      "subject": "Trip canceled — {tripTitle}",
       "body": "{shopName} has had to cancel {tripTitle} on {date} because of the weather. Your seat is released, and there’s nothing you need to do.",
       "moneyNone": "You haven’t been charged anything for this trip.",
       "moneyDeposit": "Your deposit is safe. {shopName} will be in touch to move it to a new date or arrange your refund.",
@@ -4151,7 +4151,7 @@
   },
   "embed": {
     "book": "Book",
-    "enrol": "Enrol"
+    "enrol": "Enroll"
   },
   "shopYear": {
     "card": {

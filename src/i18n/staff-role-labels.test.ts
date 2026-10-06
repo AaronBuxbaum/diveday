@@ -31,7 +31,7 @@ describe("staff role labels", () => {
     });
   }
 
-  it("passes an unrecognised code through rather than dropping the crew member", () => {
+  it("passes an unrecognized code through rather than dropping the crew member", () => {
     const t = staffTranslator("en-US");
     // Cannot happen through the schema. A role that silently vanished off a
     // roll-call sheet would be worse than one that reads oddly.

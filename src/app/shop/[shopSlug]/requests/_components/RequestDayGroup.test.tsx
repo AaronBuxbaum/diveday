@@ -114,7 +114,7 @@ describe("the add-a-departure link", () => {
 describe("the group header's height", () => {
   const HEADER_ROW = ["sm:min-h-11", "sm:items-center"];
 
-  it("is the act's height with the label centred, on a dated group", () => {
+  it("is the act's height with the label centered, on a dated group", () => {
     render(
       <RequestDayGroup
         id="date-2027-03-06"
@@ -179,7 +179,7 @@ describe("the day's advice", () => {
     expect(lines.every((line) => line.tone === undefined)).toBe(true);
   });
 
-  it("states a party no hull holds in words, not in colour alone", () => {
+  it("states a party no hull holds in words, not in color alone", () => {
     const lines = requestAdviceLines(
       adviseRequests(party(6, 6), {
         hulls: [{ id: "b1", name: "Skiff", capacity: 4 }],

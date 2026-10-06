@@ -157,7 +157,7 @@ test.describe("staff", () => {
       page,
       "Christ of the Abyss",
       "18",
-      /Maximum depth \(metres\)/,
+      /Maximum depth \(meters\)/,
     );
 
     // Switch the shop to feet; 18 m must read back as 59 ft, not as 18.

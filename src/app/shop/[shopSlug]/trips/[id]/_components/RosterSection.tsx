@@ -38,10 +38,12 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { mailtoHref, telHref } from "@/lib/contact-links";
 import type { DepthUnit } from "@/lib/depth-units";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import { checkDrysuitCard } from "@/lib/drysuit-card";
+import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
 import { formatDateTimeTz } from "@/lib/format";
 import { guardianSignatureOf, guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { heldSeatBlockers } from "@/lib/identity-match";
@@ -964,6 +966,60 @@ export function RosterSection({
     // Each line's mark is its first column, one line of the words tall, so it
     // centres on their first line whatever wraps below it (K-494).
     /**
+     * **The matched record's contact stands beside the question** (Aaron,
+     * 2026-10-06: "needs to show some information so you know what you're
+     * comparing … show the contact info still so you can contact them and
+     * ask"). The reason line names the two people; these are the two ways to
+     * ask the person on file. Only the record's email and phone come out from
+     * behind the flag: the diver record prints both in its header to every
+     * staffer anyway, and for a shared-inbox match the email is the one the
+     * booker typed. Medical answers, date of birth, emergency contact and
+     * sizes still wait for "Same person" (security review 2026-09-11).
+     *
+     * While arrivals are open the screen faces the queue, so the line moves
+     * behind the row's mark with the desk's other private lines rather than
+     * printing a stranger's email and phone to whoever is next in line.
+     */
+    const identityContact = identityUnconfirmed ? (
+      <div
+        className={`flex flex-wrap items-center gap-x-3 text-sm ${arrival ? "mt-2" : "-mt-1 pb-2"}`}
+        data-testid="identity-contact"
+      >
+        {person.email || person.phone ? (
+          <>
+            <span className="text-muted">
+              {t("shared.identityCheck.contactOnFile", { name: person.fullName })}
+            </span>
+            {person.email ? (
+              <a
+                href={mailtoHref(person.email)}
+                className={buttonClass({
+                  variant: "link",
+                  size: "sm",
+                  flush: true,
+                  className: "[overflow-wrap:anywhere]",
+                })}
+              >
+                {person.email}
+              </a>
+            ) : null}
+            {person.phone ? (
+              <a
+                href={telHref(person.phone)}
+                className={buttonClass({ variant: "link", size: "sm", flush: true })}
+              >
+                {displayStoredPhoneWhole(person.phone)}
+              </a>
+            ) : null}
+          </>
+        ) : (
+          <span className="text-muted">
+            {t("shared.identityCheck.noContactOnFile", { name: person.fullName })}
+          </span>
+        )}
+      </div>
+    ) : null;
+    /**
      * **A held seat's two answers stand in the open, under its reason line**
      * (Aaron, 2026-10-05). The seat attached itself to an existing diver on
      * something short of proof — a reused email under a different name
@@ -1027,6 +1083,7 @@ export function RosterSection({
      */
     const outstanding = (
       <>
+        {arrival ? identityContact : null}
         {deskPrivateLines.length > 0 ? (
           <ul className="mt-2 grid gap-1 text-sm">
             {deskPrivateLines.map(({ key, text }) => (
@@ -1259,6 +1316,7 @@ export function RosterSection({
       ({ blocker }) => BLOCKER_CATEGORY[blocker.code] === "certification",
     );
     const hasWork =
+      Boolean(arrival && identityContact) ||
       deskPrivateLines.length > 0 ||
       Boolean(arrival && booking.reEntryAsk) ||
       Boolean(arrival && flaggedPrompts.length > 0) ||
@@ -1617,6 +1675,7 @@ export function RosterSection({
             swallow what a link promised, and `holdOpen` keeps open the row a
             form on it just answered. */}
         {reasonList}
+        {arrival ? null : identityContact}
         {identityCheck}
         {medicalHold}
         {arrivalBelow}

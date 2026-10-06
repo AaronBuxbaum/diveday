@@ -238,6 +238,15 @@ carry at least as much weight as the refusals:
   it is what the thing is called, never because it reads well. The hit is reported once per
   phrase, naming the pages.
 
+**American spelling joined it on 2026-10-06** (H-95): *colour*, *centre*, *cancelled*, *grey*,
+*enrolment* and the rest of `BRITISH_SPELLINGS` are refused in every English bundle value, in a
+route's metadata, and in every prose literal (a string with a space in it) in a non-test `.ts`/`.tsx`
+under `src/` — the course and dive-site templates, the demo seeds and the export descriptions are
+copy that never passes through a bundle. A one-word literal is a name (the `cancelled` booking
+status) and is not read; comments and tagged templates (``sql`…` ``) are skipped by a small tokenizer
+(`stringLiterals`). The list names every form whole rather than matching `-ise` or `-our`, which
+would refuse *advise*, *promise*, *four* and *your*.
+
 A short label separator is deliberately not a hit: "Boarded — tap again to undo" and "Checked in —
 2" are not sentences, and the tell is the dash that replaced a full stop or a comma in running
 prose. Ratcheted per file in `scripts/voice-baseline.json` exactly like `check:copy` (`--write`

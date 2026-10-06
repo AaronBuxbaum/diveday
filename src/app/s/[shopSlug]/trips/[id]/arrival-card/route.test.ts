@@ -166,7 +166,7 @@ describe("GET /s/[shopSlug]/trips/[id]/arrival-card", () => {
     expect(body).not.toContain("http://localhost");
   });
 
-  it("refuses a cancelled booking", async () => {
+  it("refuses a canceled booking", async () => {
     const { db, shop, trip, bookingId, token } = await bookedDiver();
     await cancelBooking(db, shop.id, bookingId);
 

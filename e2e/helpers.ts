@@ -343,9 +343,9 @@ export async function openTripAbout(page: Page): Promise<Locator> {
 }
 
 /**
- * Open the About panel's "More for this departure" list — where the rare and
+ * Open the Details tab's "More for this departure" row — where the rare and
  * destructive acts live (the weather blow-out, cancelling the departure, the
- * series-wide writes). Opens the panel itself first.
+ * series-wide writes), beside Promote and Activity. Opens the tab first.
  */
 export async function openTripMore(page: Page): Promise<Locator> {
   await openTripAbout(page);

@@ -221,7 +221,7 @@ describe("buddy teams (in-memory PGlite)", () => {
     ).toEqual({ ok: false, reason: "booking_unavailable" });
   });
 
-  it("refuses a cancelled booking", async () => {
+  it("refuses a canceled booking", async () => {
     const { db, shop, trip, a, b, staff } = await buddyContext();
     await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, b.booking.id));
     expect(
@@ -654,7 +654,7 @@ describe("buddy teams (in-memory PGlite)", () => {
     expect(team?.createdAt).toBeInstanceOf(Date);
   });
 
-  it("keeps a half-cancelled team visible and dissolvable, but off the manifest", async () => {
+  it("keeps a half-canceled team visible and dissolvable, but off the manifest", async () => {
     const { db, shop, trip, a, b, c, staff } = await buddyContext();
     const base = { shopId: shop.id, tripId: trip.id, recordedByPersonId: staff.id };
     const formed = await formBuddyTeam(db, {
@@ -846,7 +846,7 @@ describe("buddy teams (in-memory PGlite)", () => {
  * stays the module's existing `staff_not_found`, one of its nine codes, which
  * the manifest page already words.
  */
-describe("the buddy-team recorder must be live staff (defence in depth)", () => {
+describe("the buddy-team recorder must be live staff (defense in depth)", () => {
   async function stateOf(
     db: Awaited<ReturnType<typeof buddyContext>>["db"],
     shopId: string,

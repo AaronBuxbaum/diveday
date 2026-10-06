@@ -302,3 +302,33 @@ describe("WaitlistGroup below the departure's bar", () => {
     expect(screen.getByRole("button", { name: /Email Rafa an invite/ })).toBeEnabled();
   });
 });
+
+describe("WaitlistGroup on a departure that can take nobody", () => {
+  const waiting = [entry("a", "Nora Quinn", new Date("2026-08-01T14:00:00Z"))];
+
+  it("offers the invite while the departure can still take a diver", () => {
+    renderSection(waiting);
+    expect(screen.queryAllByRole("button").length).toBeGreaterThan(0);
+  });
+
+  it("keeps the names and draws no invite once it cannot (owner, 2026-10-06)", () => {
+    render(
+      <WaitlistGroup
+        departureRequirement={null}
+        waitlist={waiting}
+        shopSlug="blue-mantis"
+        tripId="trip-1"
+        shopName="Blue Mantis"
+        tripTitle="Wreck Trip"
+        tripWhen="Sat 15 Aug"
+        certificationSummaries={new Map()}
+        locale="en-US"
+        timezone="America/New_York"
+        canInvite={false}
+      />,
+    );
+    expect(screen.getByText("Nora Quinn")).toBeVisible();
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
+  });
+});

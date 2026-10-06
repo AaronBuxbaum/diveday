@@ -486,7 +486,7 @@ describe("today's work queue (in-memory PGlite)", () => {
     expect(after.departures.find((row) => row.tripId === reef.id)).toBeUndefined();
   });
 
-  it("drops a cancelled booking from the boarded count, not just the booked count", async () => {
+  it("drops a canceled booking from the boarded count, not just the booked count", async () => {
     const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
@@ -1482,7 +1482,7 @@ describe("role lens raw material", () => {
       expect(row?.href).toBe(`/shop/${shop.slug}/settings#data`);
     });
 
-    it("mirrors money owed for a cancelled departure, once it has sat for a day", async () => {
+    it("mirrors money owed for a canceled departure, once it has sat for a day", async () => {
       // The panel on the Orders index owns this queue; Today mirrors it, the
       // same arrangement the two rows above use
       // (ADR 20260813-shop-cancellation-refunds-itself).
@@ -2269,7 +2269,7 @@ describe("unclosed roll call (DOM-H3)", () => {
       expect(rollCallRows(work, trip.id)).toEqual([]);
     });
 
-    it("drops a cancelled booking from the count instead of alarming forever", async () => {
+    it("drops a canceled booking from the count instead of alarming forever", async () => {
       const { db, shop } = ctx;
       const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
         endedHoursAgo: 2,

@@ -638,7 +638,7 @@ const REEF_TRIP = "Two-Tank Reef — Molasses & French";
 const EASING_BACK_TRIP = "Two-Tank Reef — French Reef";
 
 /** The seeded long-range run that only sails with six (src/db/seed-minimum-seats.ts). */
-const MINIMUM_SEATS_TRIP = "Tortugas Run — 3 days out, 6 divers to sail";
+const MINIMUM_SEATS_TRIP = "Long-Range Day — Duane & Outer Reef";
 
 /**
  * The three cert-gate departures from `src/db/seed-cert-gates.ts`. Each one can
@@ -2459,7 +2459,7 @@ for (const scheme of ["light", "dark"] as const) {
 
       test(`the embed course list renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis/embed/courses");
-        await page.getByRole("link", { name: "Enrol" }).first().waitFor();
+        await page.getByRole("link", { name: "Enroll" }).first().waitFor();
         await capture(page, "embed-courses", scheme);
       });
 
@@ -3155,7 +3155,7 @@ for (const scheme of ["light", "dark"] as const) {
         await threadStatus(page).waitFor();
         await page.getByRole("button", { name: "Cancel my spot" }).click();
         await page.getByRole("button", { name: "Yes, cancel my spot" }).click();
-        await page.getByRole("heading", { name: "This booking was cancelled" }).waitFor();
+        await page.getByRole("heading", { name: "This booking was canceled" }).waitFor();
         // Without `?cancelled=1` — the bookmarked URL, or the link out of an
         // old reminder email, which is how a diver actually arrives here.
         await page.goto(new URL(page.url()).pathname);
@@ -3214,7 +3214,7 @@ for (const scheme of ["light", "dark"] as const) {
         }
 
         await page.goto(threadUrl);
-        await page.getByRole("heading", { level: 1, name: "This trip was cancelled" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "This trip was canceled" }).waitFor();
         await page.getByText("Still on file for you").waitFor();
         await capture(page, "stranded-diver-card", scheme);
       });
@@ -5214,7 +5214,7 @@ for (const scheme of ["light", "dark"] as const) {
        * calling a blow-out on the seeded reef trip (safe: the per-test reset
        * restores it), then opening the departure.
        */
-      test(`a cancelled departure shows its reinstate band (${scheme})`, async ({ page }) => {
+      test(`a canceled departure shows its reinstate band (${scheme})`, async ({ page }) => {
         const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
         await page.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
         await page.getByRole("button", { name: "Call the blow-out" }).click();
@@ -6713,7 +6713,7 @@ for (const scheme of ["light", "dark"] as const) {
        * watching is in the open half: the flag gates *disclosure* as well as
        * boarding, so while it stands the panel prints none of the matched
        * person's flagged medical prompts, date of birth, emergency contact or
-       * sizes, and one substitute line stands where they would be
+       * sizes (only their email and phone stand out, to ask with), and one substitute line stands where they would be
        * (`RosterSection.tsx`'s `showsPersonDetail`). A later hand putting a
        * stranger's medical answers back on that row would move no pixels in the
        * collapsed frame at all.
@@ -6741,8 +6741,11 @@ for (const scheme of ["light", "dark"] as const) {
         // than the panel, because the panel is open either way and it is this
         // sentence the baseline exists for.
         await expect(
-          row.getByText("Contact, medical and gear details stay hidden until you confirm"),
+          row.getByText("Medical and gear details stay hidden until you confirm"),
         ).toBeVisible();
+        // The record's own email and phone, which stay out to ask with
+        // (Aaron, 2026-10-06).
+        await expect(row.getByTestId("identity-contact")).toBeVisible();
         // And the control that clears it, in the frame beside them.
         await expect(row.getByRole("button", { name: "Same person as June Park" })).toBeVisible();
         await expect(row.getByText("Different person")).toBeVisible();
@@ -7131,7 +7134,7 @@ for (const scheme of ["light", "dark"] as const) {
         await openTripAbout(page);
         await page
           .locator("details#requirements")
-          .getByText(/never blocks? enrolment/)
+          .getByText(/never blocks? enrollment/)
           .first()
           .waitFor();
         await capture(page, "trip-manage-course-requirements", scheme);
@@ -7682,7 +7685,7 @@ test.describe("capture harness", () => {
           "*else* on this page transitions across a breakpoint, which is its own capture bug: " +
           "a screenshot taken during that fade catches the property half-applied. Print the " +
           "animations' transitionProperty and target to tell them apart — on 2026-09-20 it was " +
-          "the header search button's four border-colour longhands, from a `sm:border` meeting " +
+          "the header search button's four border-color longhands, from a `sm:border` meeting " +
           "a `transition-colors` that covered it",
       ).toEqual([]);
     });

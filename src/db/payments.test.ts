@@ -210,7 +210,7 @@ describe("setBookingPaymentIfNotFinal", () => {
   // cancelled booking (Codex finding). PGlite is single-connection so this is
   // the sequential regression check (see the comment above), not a
   // reproduction of the actual race.
-  it("refuses to pay a cancelled booking, even with no prior payment row", async () => {
+  it("refuses to pay a canceled booking, even with no prior payment row", async () => {
     const { db, shop, entry } = await paymentContext();
     expect(await getBookingPayment(db, shop.id, entry.booking.id)).toBeNull();
     await cancelBooking(db, shop.id, entry.booking.id);
@@ -368,7 +368,7 @@ describe("booking_payment_events (append-only money trail)", () => {
     expect(events[0]?.status).toBe("refunded");
   });
 
-  it("appends nothing when the write is refused for a cancelled booking", async () => {
+  it("appends nothing when the write is refused for a canceled booking", async () => {
     const { db, shop, entry } = await paymentContext();
     await cancelBooking(db, shop.id, entry.booking.id);
     await db.transaction((tx) =>

@@ -89,12 +89,12 @@ describe("one seat, one row", () => {
     expect(rows[1]?.textContent).toContain("Last month’s wreck dive");
   });
 
-  it("files a cancelled future booking behind the diver — the seat is not coming back", () => {
-    const cancelled = booking("b-x", "Cancelled charter", AHEAD_AT, { bookingStatus: "cancelled" });
+  it("files a canceled future booking behind the diver — the seat is not coming back", () => {
+    const cancelled = booking("b-x", "Canceled charter", AHEAD_AT, { bookingStatus: "cancelled" });
     renderStory(diver({ bookings: [cancelled, AHEAD] }));
     const rows = screen.getAllByRole("listitem");
     expect(rows[0]?.textContent).toContain("Saturday reef charter");
-    expect(rows[1]?.textContent).toContain("Cancelled charter");
+    expect(rows[1]?.textContent).toContain("Canceled charter");
   });
 
   it("files a future booking on a blown-out departure the same way", () => {

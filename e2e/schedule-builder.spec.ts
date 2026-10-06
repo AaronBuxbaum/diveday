@@ -252,7 +252,7 @@ test.describe("schedule builder", () => {
     await expect(page.getByLabel(/Price per diver/)).toHaveValue("129");
   });
 
-  test("opening and cancelling the add/move panels manages keyboard focus", async ({ page }) => {
+  test("opening and canceling the add/move panels manages keyboard focus", async ({ page }) => {
     await page.goto(BOARD);
     await expect(page.getByRole("heading", { name: "Schedule", level: 1 })).toBeVisible();
 

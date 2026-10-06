@@ -228,7 +228,7 @@ describe("the units card", () => {
    * Harbor's brand (ADR 20260901-diveday-reimagined, decision 2) is edited on
    * the same row as the logo and tagline: one place a shop says who it is.
    */
-  it("renders the brand fields — colour, face, cover photo, year and badges — on the profile row", async () => {
+  it("renders the brand fields — color, face, cover photo, year and badges — on the profile row", async () => {
     const element = await renderSettings("owner");
     const names = inputNamesIn(element);
     for (const name of ["brandHeroFile", "brandHeroImageAlt", "establishedYear", "badge"]) {

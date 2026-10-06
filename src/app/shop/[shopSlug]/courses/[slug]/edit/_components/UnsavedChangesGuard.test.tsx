@@ -212,7 +212,7 @@ describe("UnsavedChangesGuard", () => {
    * keystrokes this exists to keep, for any writer who typed and tapped a nav
    * tab inside the half-second debounce.
    */
-  it("flushes a pending draft when the page goes away, rather than cancelling it", () => {
+  it("flushes a pending draft when the page goes away, rather than canceling it", () => {
     vi.useFakeTimers();
     const { unmount } = render(<Editor />);
     fireEvent.input(screen.getByLabelText("Subhead"), { target: { value: "Typed, then gone" } });

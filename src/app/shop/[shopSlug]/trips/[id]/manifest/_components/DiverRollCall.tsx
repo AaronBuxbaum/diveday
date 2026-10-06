@@ -13,6 +13,7 @@ import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { buddyAlertText } from "@/i18n/buddy-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
+import { identityReasonText } from "@/i18n/identity-check-labels";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
 import {
   readinessBlockerText,
@@ -31,6 +32,7 @@ import {
   rollCallLabel,
   type TripManifest,
 } from "@/lib/manifests";
+import type { ReadinessBlocker } from "@/lib/readiness";
 import { SHARED_FACT_MIN } from "../../_components/shared-facts";
 import { PersonBuddyList } from "./PersonBuddyList";
 import { PersonSheet, type PersonTrailEntry } from "./PersonSheet";
@@ -49,6 +51,22 @@ import {
   rollCallRuleClass,
   rollCallScrollMargin,
 } from "./RollCallControls";
+
+/**
+ * A blocker's sentence on this diver's row. A held seat's names both people
+ * the guess was between (`identityReasonText`), the same sentence the Divers
+ * tab prints, so the dock is not left with "might be someone else" and nothing
+ * to compare it to (Aaron, 2026-10-06).
+ */
+function diverBlockerText(
+  t: StaffTranslator,
+  diver: TripManifest["divers"][number],
+  blocker: ReadinessBlocker,
+): string {
+  const text = readinessBlockerText(t, blocker);
+  if (blocker.code !== "identity_unconfirmed" || !diver.identityClaim) return text;
+  return identityReasonText(t, diver.identityClaim, diver.fullName, text);
+}
 
 /**
  * The reference half of a diver's row — emergency contact, rental fit, medical
@@ -663,7 +681,7 @@ export function DiverRollCall({
                             requiring two specialties yields two blockers with
                             one code and different params. */}
                           {diver.readiness.blockers.map((blocker) => {
-                            const text = readinessBlockerText(t, blocker);
+                            const text = diverBlockerText(t, diver, blocker);
                             return <li key={text}>• {text}</li>;
                           })}
                         </ul>
@@ -850,7 +868,7 @@ export function DiverRollCall({
                   {ready ? null : (
                     <ul className="mt-2 flex flex-col gap-1 text-base">
                       {diver.readiness.blockers.map((blocker) => {
-                        const text = readinessBlockerText(t, blocker);
+                        const text = diverBlockerText(t, diver, blocker);
                         return <li key={text}>• {text}</li>;
                       })}
                     </ul>

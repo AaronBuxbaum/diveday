@@ -190,7 +190,7 @@ describe("fixtureTideStation", () => {
 });
 
 describe("stationDistanceKm", () => {
-  it("measures the Keys to within a kilometre", () => {
+  it("measures the Keys to within a kilometer", () => {
     expect(stationDistanceKm(CARYSFORT, { latitude: 25.0117, longitude: -80.3764 })).toBeCloseTo(
       28.6,
       0,

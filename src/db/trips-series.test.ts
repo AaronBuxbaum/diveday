@@ -639,7 +639,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
     expect(stale.every((trip) => calendarDateWeekday(trip.occurrenceDate) === WED)).toBe(true);
   });
 
-  it("reports how many of the orphaned dates carry divers before anything is cancelled", async () => {
+  it("reports how many of the orphaned dates carry divers before anything is canceled", async () => {
     const { db, shop } = await seededShopContext();
     const now = at("2030-09-07T12:00:00.000Z");
     const result = await createTripSeries(

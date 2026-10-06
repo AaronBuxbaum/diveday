@@ -15,7 +15,8 @@
     "wrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
     "tooBigSuffix": ": that’s over {maxMb} MB, so try a smaller photo.",
     "choose": "Choose a photo",
-    "chooseAnother": "Choose a different photo"
+    "chooseAnother": "Choose a different photo",
+    "chooseOthers": "Choose different photos"
   },
   "paperWaiver": {
     "markSignedOnPaper": "Mark signed on paper",
@@ -189,7 +190,6 @@
       "drysuit": "Drysuit",
       "cavern": "Cavern"
     },
-    "cavernHint": "Tick Cavern only if every diver must hold the card. A guided cavern tour for Open Water divers needs none.",
     "status": {
       "ready": "Ready",
       "blocked": "Blocked"
@@ -397,7 +397,7 @@
         "notCheckedInLabel": "Check in",
         "checkedInWhenSavedLabel": "Checked in when saved",
         "refusedNotReady": "Not checked in: readiness stopped clearing them after you tapped. Open the live counter before they board.",
-        "refusedNotBookable": "Not checked in: this seat is no longer on the boat’s list. It was either cancelled or marked not here at the desk. Open the live counter.",
+        "refusedNotBookable": "Not checked in: this seat is no longer on the boat’s list. It was either canceled or marked not here at the desk. Open the live counter.",
         "refusedBoarded": "Still checked in: the crew recorded them aboard.",
         "refusedGeneric": "DiveDay did not apply this tap. Open the live counter."
       }
@@ -504,7 +504,7 @@
     "easingBack": "{count} getting comfortable again",
     "smallLife": "{count} looking for small life",
     "aWreck": "{count} hoping for a wreck",
-    "skills": "{count} practising skills",
+    "skills": "{count} practicing skills",
     "goodDay": "{count} out for a good day"
   },
   "reEntry": {
@@ -527,6 +527,8 @@
     "reasonSharedEmail": "Booked as {bookedAs} with {name}’s email. Confirm who this is.",
     "reasonPickedName": "Booked as {bookedAs}, then matched to {name} from the name list. Confirm who this is.",
     "reasonSameName": "More than one diver is named {name}. Confirm this is the right record.",
+    "contactOnFile": "On file for {name}:",
+    "noContactOnFile": "No email or phone on file for {name}.",
     "same": "Same person",
     "sameAria": "Same person as {name}",
     "different": "Different person",

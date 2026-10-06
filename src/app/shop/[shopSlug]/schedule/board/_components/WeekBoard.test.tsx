@@ -265,7 +265,7 @@ describe("the day rail (K-326, K-327, K-328)", () => {
     expect(screen.getByText("27")).toHaveClass("size-8", "shrink-0");
   });
 
-  it("centres the weekday, a departure's first line and 'No boats' on one 32px line, 8px down the day", () => {
+  it("centers the weekday, a departure's first line and 'No boats' on one 32px line, 8px down the day", () => {
     // The weekday's cap sat 9px above the first departure's time at 1280, and
     // 4px above "No boats" on an empty day. Then "No boats" read 6px high:
     // `min-h-8` and `py-2` on one border-box <p> left a 16px floor under its
@@ -325,7 +325,7 @@ describe("an asked-for day's row (K-333, K-338)", () => {
     );
   });
 
-  it("centres its act on the words beside it, however many lines they wrap to", () => {
+  it("centers its act on the words beside it, however many lines they wrap to", () => {
     // On a phone the names wrap to two lines and the 44px act sat at the
     // row's top: 12px under the first line's centre, 9.5px over the block's.
     board(week(ASKED));

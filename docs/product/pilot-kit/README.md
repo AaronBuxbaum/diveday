@@ -30,7 +30,7 @@ that goes in the bag; it never carries status.
 ## What is deliberately blank, and why
 
 **The call list has no shops in it.** Ten plausible-looking shop names with phone numbers would be
-acted on — dialled, emailed, counted as pipeline — and there is no honest way for a session in this
+acted on — dialed, emailed, counted as pipeline — and there is no honest way for a session in this
 repo to produce them. So [florida-call-list.md](florida-call-list.md) ships the qualification
 criteria, the columns, the disqualifiers, and the exact public directories to work from, and the
 rows stay empty until a human has actually looked a shop up.

@@ -303,7 +303,7 @@ test.describe("as owner", () => {
     ).toBeVisible();
     // One site or several, singular or plural — the carve-out is the clause
     // that has to survive a copy trim, not the sentence carrying it.
-    await expect(requirements.getByText(/never blocks? enrolment/)).toBeVisible();
+    await expect(requirements.getByText(/never blocks? enrollment/)).toBeVisible();
     // A course session's rules are frozen; there is no form to tighten them.
     await expect(requirements.getByRole("button", { name: "Save requirements" })).toHaveCount(0);
   });

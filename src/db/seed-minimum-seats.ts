@@ -45,7 +45,7 @@ import { at, nextCreatedAt } from "./seed-clock";
  *   made the board mixed and quietly retired the flag. A price adds nothing to
  *   what this fixture is for, which is a head count.
  */
-const DEMO_MINIMUM_TRIP = "Tortugas Run — 3 days out, 6 divers to sail";
+const DEMO_MINIMUM_TRIP = "Long-Range Day — Duane & Outer Reef";
 const DEMO_MINIMUM_DIVERS = [
   { fullName: "Rosa Lindqvist", email: simulatorEmail("rosa.lindqvist"), phone: "+13055550192" },
   { fullName: "Amir Haddad", email: simulatorEmail("amir.haddad"), phone: "+13055550193" },
@@ -59,7 +59,7 @@ export async function seedMinimumSeats(
     siteByName: Map<string, typeof diveSites.$inferSelect>;
     captainId: string | undefined;
     /**
-     * Who skippers the Tortugas run. It is offshore 06:30–17:00 local, and the
+     * Who skippers the long-range day. It is offshore 06:30–17:00 local, and the
      * shop's one captain is at the counter that same day running the refresher
      * and the Discover Scuba session — so rostering him here had him on the
      * water and in the pool at once, which `setTripCrew` refuses to write and

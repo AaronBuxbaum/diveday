@@ -53,7 +53,7 @@ describe("the reviews page's pulse card", () => {
  * row's right.
  */
 describe("a pulse item's act", () => {
-  it("centres on the item from sm up", () => {
+  it("centers on the item from sm up", () => {
     const item = panel.match(/<li\s+key=\{pulse\.id\}\s+className="([^"]*)"/)?.[1];
     expect(item?.split(" ")).toContain("sm:items-center");
   });

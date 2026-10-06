@@ -137,8 +137,8 @@ describe("submitTripReview", () => {
     });
   });
 
-  it("refuses a booking that never dived — cancelled or no-show", async () => {
-    const { db, bookingIds } = await reviewContext(["Cancelled Diver", "No Show Diver"]);
+  it("refuses a booking that never dived — canceled or no-show", async () => {
+    const { db, bookingIds } = await reviewContext(["Canceled Diver", "No Show Diver"]);
     await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, bookingIds[0]));
     await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, bookingIds[1]));
 

@@ -613,7 +613,7 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
         reservedFrom: "2026-03-05",
         reservedUntil: "2026-03-06",
         returnedAt: new Date("2026-03-06T18:00:00.000Z"),
-        returnNote: "returned wet, Kwame apologised",
+        returnNote: "returned wet, Kwame apologized",
       },
     ]);
 
@@ -1354,7 +1354,7 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
       .returning({ id: people.id });
     const [traveller] = await db
       .insert(people)
-      .values({ shopId: shop.id, fullName: "Travelling Tom", email: "tom@example.com" })
+      .values({ shopId: shop.id, fullName: "Traveling Tom", email: "tom@example.com" })
       .returning({ id: people.id });
     if (!payer || !traveller) throw new Error("fixture insert failed");
     await db.insert(personRoles).values({ personId: payer.id, role: "diver" });
@@ -1408,7 +1408,7 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
       .returning({ id: people.id });
     const [traveller] = await db
       .insert(people)
-      .values({ shopId: shop.id, fullName: "Travelling Theo", email: "theo@example.com" })
+      .values({ shopId: shop.id, fullName: "Traveling Theo", email: "theo@example.com" })
       .returning({ id: people.id });
     if (!payer || !traveller) throw new Error("fixture insert failed");
     await db.insert(personRoles).values({ personId: payer.id, role: "diver" });

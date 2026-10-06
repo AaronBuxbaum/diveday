@@ -28,7 +28,7 @@ const history = detailsAround("gear.unit.history.title");
  * browser's marker, so nothing said it opened.
  */
 describe("the gear unit's history disclosure", () => {
-  it("is summarised the way the card's service door is, caret and all", () => {
+  it("is summarized the way the card's service door is, caret and all", () => {
     expect(history).toMatch(/^<details[^>]*className="[^"]*\bgroup\b/);
     const door = summaryOf(service);
     const buttonCall = door.match(/buttonClass\(\{[\s\S]*?\}\)/)?.[0];

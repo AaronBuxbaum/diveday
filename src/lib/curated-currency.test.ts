@@ -110,7 +110,7 @@ describe("what a shop's timezone starts it on", () => {
     }
   });
 
-  it("gives every curated zone a depth unit its divers would recognise", () => {
+  it("gives every curated zone a depth unit its divers would recognize", () => {
     // Feet only where it is the standard on the boat and the agency card.
     const feet = curatedZones.filter((zone) => shopDefaultsForTimeZone(zone).depthUnit === "feet");
     expect(feet.sort()).toEqual([

@@ -254,7 +254,7 @@ function everyPanelPrep(): TripPrep {
       {
         bookingId: "b1",
         diverName: "Carmen Ruiz",
-        hotelPickupLocation: "Harbour Inn",
+        hotelPickupLocation: "Harbor Inn",
         pickupTime: "07:15",
       },
     ],

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  acceptsNewDivers,
   capacityLabel,
   DEPARTURE_BUFFER_MS,
   hasReturned,
@@ -112,5 +113,28 @@ describe("the late-arrival buffer", () => {
     const underway = plus(SAILS, 2 * 60 * 60 * 1000);
     expect(hasSailed(SAILS, underway)).toBe(true);
     expect(hasReturned(RETURNS, underway)).toBe(false);
+  });
+});
+
+describe("acceptsNewDivers", () => {
+  const SAILS = new Date("2026-08-27T11:00:00.000Z");
+  const open = { status: "scheduled", conditionsHold: false, startsAt: SAILS };
+  const before = new Date("2026-08-26T09:00:00.000Z");
+
+  it("takes a diver on a scheduled departure that has not sailed", () => {
+    expect(acceptsNewDivers(open, before)).toBe(true);
+  });
+
+  it("refuses once the boat has sailed, on the same buffer the booking gate uses", () => {
+    expect(acceptsNewDivers(open, new Date(SAILS.getTime() + DEPARTURE_BUFFER_MS - 1))).toBe(true);
+    expect(acceptsNewDivers(open, new Date(SAILS.getTime() + DEPARTURE_BUFFER_MS))).toBe(false);
+  });
+
+  it("refuses a cancelled departure", () => {
+    expect(acceptsNewDivers({ ...open, status: "cancelled" }, before)).toBe(false);
+  });
+
+  it("refuses a departure held for conditions", () => {
+    expect(acceptsNewDivers({ ...open, conditionsHold: true }, before)).toBe(false);
   });
 });

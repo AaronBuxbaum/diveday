@@ -377,7 +377,7 @@ describe("after the dive", () => {
     expect(SOURCE).toContain("theBoatIsHome({ endsAt: detail.trip.endsAt })");
   });
 
-  it("answers a cancelled departure on the branch a cancelled departure reaches", () => {
+  it("answers a canceled departure on the branch a canceled departure reaches", () => {
     // A blow-out cancels the *trip* and deliberately leaves every booking
     // active (src/db/blowouts.ts), so `detail.cancelled` is false for every
     // diver a cancellation stranded — and this page read only that. Before the

@@ -69,7 +69,7 @@ describe("recordCourseNextStep", () => {
       bookingId: studentBookingId,
       instructorPersonId: instructorId,
     };
-    await recordCourseNextStep(db, { ...base, note: "Practise your buoyancy." });
+    await recordCourseNextStep(db, { ...base, note: "Practice your buoyancy." });
     expect(await recordCourseNextStep(db, { ...base, note: "Log the Duane dive." })).toEqual({
       ok: true,
     });
@@ -85,7 +85,7 @@ describe("recordCourseNextStep", () => {
       bookingId: studentBookingId,
       instructorPersonId: instructorId,
     };
-    await recordCourseNextStep(db, { ...base, note: "Practise your buoyancy." });
+    await recordCourseNextStep(db, { ...base, note: "Practice your buoyancy." });
     expect(await recordCourseNextStep(db, { ...base, note: "   " })).toEqual({ ok: true });
 
     const row = await stored(db, studentBookingId);

@@ -24,7 +24,7 @@ describe("BoatStageLine", () => {
    * **The mark centred on the words** (K-155): an `items-start` hung it 20px
    * above the card's centre at 390.
    */
-  it("centres the mark on the words", () => {
+  it("centers the mark on the words", () => {
     const { container } = render(
       <BoatStageLine sentence="Out on Molasses Reef." said="The crew said so at 7:04 AM." />,
     );

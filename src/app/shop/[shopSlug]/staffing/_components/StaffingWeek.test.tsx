@@ -571,7 +571,7 @@ describe("StaffingWeek geometry", () => {
    * K-499: `pt-3 pb-2` set the band's caps 15px under its top rule and 12px
    * over its bottom one, 1.5px below the band's centre. One inset each side.
    */
-  it("centres the day-header band's labels between its rules", () => {
+  it("centers the day-header band's labels between its rules", () => {
     const { container } = renderWeek();
     const [header] = branches(container).grid.children;
     for (const cell of header.children) {
@@ -710,7 +710,7 @@ describe("StaffingWeek geometry", () => {
    * gap per type size — 12px and 4px beside the chips' `text-xs`, 14px and
    * 6px beside the phone list's `text-sm`.
    */
-  it("draws the warning glyph one way per type size, centred on its line", () => {
+  it("draws the warning glyph one way per type size, centered on its line", () => {
     const { container } = renderWeek({
       people: [
         {
