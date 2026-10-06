@@ -38,10 +38,12 @@ import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { mailtoHref, telHref } from "@/lib/contact-links";
 import type { DepthUnit } from "@/lib/depth-units";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import { checkDrysuitCard } from "@/lib/drysuit-card";
+import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
 import { formatDateTimeTz } from "@/lib/format";
 import { guardianSignatureOf, guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { heldSeatBlockers } from "@/lib/identity-match";
@@ -974,6 +976,56 @@ export function RosterSection({
      * seat into its own record. Like the medical hold, it is a decision about
      * who may board, so it does not wait behind the row's mark.
      */
+    /**
+     * **The matched record's contact stands beside the question** (Aaron,
+     * 2026-10-06: "needs to show some information so you know what you're
+     * comparing … show the contact info still so you can contact them and
+     * ask"). The reason line names the two people; these are the two ways to
+     * ask the person on file. Only the record's email and phone come out from
+     * behind the flag: the diver record prints both in its header to every
+     * staffer anyway, and for a shared-inbox match the email is the one the
+     * booker typed. Medical answers, date of birth, emergency contact and
+     * sizes still wait for "Same person" (security review 2026-09-11).
+     */
+    const identityContact = identityUnconfirmed ? (
+      <div
+        className="-mt-1 flex flex-wrap items-center gap-x-3 pb-2 text-sm"
+        data-testid="identity-contact"
+      >
+        {person.email || person.phone ? (
+          <>
+            <span className="text-muted">
+              {t("shared.identityCheck.contactOnFile", { name: person.fullName })}
+            </span>
+            {person.email ? (
+              <a
+                href={mailtoHref(person.email)}
+                className={buttonClass({
+                  variant: "link",
+                  size: "sm",
+                  flush: true,
+                  className: "[overflow-wrap:anywhere]",
+                })}
+              >
+                {person.email}
+              </a>
+            ) : null}
+            {person.phone ? (
+              <a
+                href={telHref(person.phone)}
+                className={buttonClass({ variant: "link", size: "sm", flush: true })}
+              >
+                {displayStoredPhoneWhole(person.phone)}
+              </a>
+            ) : null}
+          </>
+        ) : (
+          <span className="text-muted">
+            {t("shared.identityCheck.noContactOnFile", { name: person.fullName })}
+          </span>
+        )}
+      </div>
+    ) : null;
     const identityCheck = identityUnconfirmed ? (
       <IdentityCheck
         bookingId={booking.id}
@@ -1617,6 +1669,7 @@ export function RosterSection({
             swallow what a link promised, and `holdOpen` keeps open the row a
             form on it just answered. */}
         {reasonList}
+        {identityContact}
         {identityCheck}
         {medicalHold}
         {arrivalBelow}

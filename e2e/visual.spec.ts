@@ -6713,7 +6713,7 @@ for (const scheme of ["light", "dark"] as const) {
        * watching is in the open half: the flag gates *disclosure* as well as
        * boarding, so while it stands the panel prints none of the matched
        * person's flagged medical prompts, date of birth, emergency contact or
-       * sizes, and one substitute line stands where they would be
+       * sizes (only their email and phone stand out, to ask with), and one substitute line stands where they would be
        * (`RosterSection.tsx`'s `showsPersonDetail`). A later hand putting a
        * stranger's medical answers back on that row would move no pixels in the
        * collapsed frame at all.
@@ -6741,8 +6741,11 @@ for (const scheme of ["light", "dark"] as const) {
         // than the panel, because the panel is open either way and it is this
         // sentence the baseline exists for.
         await expect(
-          row.getByText("Contact, medical and gear details stay hidden until you confirm"),
+          row.getByText("Medical and gear details stay hidden until you confirm"),
         ).toBeVisible();
+        // The record's own email and phone, which stay out to ask with
+        // (Aaron, 2026-10-06).
+        await expect(row.getByTestId("identity-contact")).toBeVisible();
         // And the control that clears it, in the frame beside them.
         await expect(row.getByRole("button", { name: "Same person as June Park" })).toBeVisible();
         await expect(row.getByText("Different person")).toBeVisible();
