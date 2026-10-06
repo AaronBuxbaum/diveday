@@ -1735,6 +1735,7 @@ export type GearReturnRow = {
   reservedFrom: CalendarDate;
   reservedUntil: CalendarDate;
   checkedOutAt: Date | null;
+  personId: string;
   personName: string;
   tripTitle: string | null;
 };
@@ -1934,6 +1935,7 @@ async function listReturnRows(
         reservedFrom: gearReservations.reservedFrom,
         reservedUntil: gearReservations.reservedUntil,
         checkedOutAt: gearReservations.checkedOutAt,
+        personId: people.id,
         personName: people.fullName,
         tripTitle: trips.title,
       })

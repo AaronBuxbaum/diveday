@@ -248,8 +248,8 @@ export async function POST(request: Request) {
   //    the ring on those buttons had no baseline.
   await markMixedWaiverDelivery(db, shop.id);
 
-  // 8. Gear on its worst day (ADR 20260815-minimal-gear-register): one seeded
-  //    reservation dragged into the past so the register's Overdue group wears
+  // 8. Gear on its worst day (ADR 20260815-minimal-gear-register): one
+  //    diver's kit dragged into the past so the register's Overdue group wears
   //    its amber "was due" state and Today gains its gear-overdue row, and one
   //    tank's visual-inspection clock expired so the service sentence and the
   //    unit page show the overdue grammar. Backdated in place rather than
@@ -267,11 +267,26 @@ export async function POST(request: Request) {
     .from(gearItems)
     .where(and(eq(gearItems.shopId, shop.id), eq(gearItems.label, "BCD #2")))
     .limit(1);
-  if (overdueUnit) {
+  // The whole kit that went out with BCD #2 (its regulator and wetsuit ride
+  // the same booking) comes back late together, the way a diver's rental
+  // actually does: three units on the register, one combined row on Today.
+  const [overdueKit] = overdueUnit
+    ? await db
+        .select({ bookingId: gearReservations.bookingId })
+        .from(gearReservations)
+        .where(eq(gearReservations.gearItemId, overdueUnit.id))
+        .limit(1)
+    : [];
+  if (overdueKit?.bookingId) {
     await db
       .update(gearReservations)
       .set({ ...overdueWindow, checkedOutAt: new Date(now.getTime() - 4 * 24 * HOUR_MS) })
-      .where(eq(gearReservations.gearItemId, overdueUnit.id));
+      .where(
+        and(
+          eq(gearReservations.shopId, shop.id),
+          eq(gearReservations.bookingId, overdueKit.bookingId),
+        ),
+      );
   }
   const [lapsedTank] = await db
     .select({ id: gearItems.id })

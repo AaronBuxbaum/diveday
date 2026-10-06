@@ -36,6 +36,7 @@ import {
   tripWaitlistEntries,
 } from "./schema";
 import { markShopUnitsConfirmed } from "./shops";
+import { createStaffCredential } from "./staff-credentials";
 import { getStaffingView } from "./staffing";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTodayWork } from "./today";
@@ -2797,9 +2798,7 @@ describe("unclosed roll call (DOM-H3)", () => {
       if (!reserved.ok) throw new Error("reserve refused");
 
       const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-      const row = work.actions.find(
-        (action) => action.id === `gear-overdue:${reserved.reservation.id}`,
-      );
+      const row = work.actions.find((action) => action.id === `gear-overdue:${booking.personId}`);
       expect(row).toMatchObject({
         kind: "gear_overdue",
         urgency: "now",
@@ -2814,8 +2813,42 @@ describe("unclosed roll call (DOM-H3)", () => {
       });
       const cleared = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
       expect(
-        cleared.actions.some((action) => action.id === `gear-overdue:${reserved.reservation.id}`),
+        cleared.actions.some((action) => action.id === `gear-overdue:${booking.personId}`),
       ).toBe(false);
+    });
+
+    it("folds one diver's overdue units into one row, a sentence per chase and per day", async () => {
+      const { db, shop } = ctx;
+      const today = calendarDateInTimezone(nowDate(), shop.timezone);
+      const booking = await anySeededBooking(db, shop.id);
+      const reserve = async (label: string, until: string) => {
+        const item = await createGearItem(db, { shopId: shop.id, kind: "bcd", label });
+        if (!item.ok) throw new Error("item refused");
+        const reserved = await reserveGearUnit(db, {
+          shopId: shop.id,
+          gearItemId: item.item.id,
+          bookingId: booking.id,
+          reservedFrom: shiftCalendarDate(today, -6),
+          reservedUntil: until,
+        });
+        if (!reserved.ok) throw new Error("reserve refused");
+      };
+      await reserve("BCD #91", shiftCalendarDate(today, -2));
+      await reserve("BCD #92", shiftCalendarDate(today, -2));
+      await reserve("BCD #93", shiftCalendarDate(today, -1));
+
+      const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+      const rows = work.actions.filter(
+        (action) => action.kind === "gear_overdue" && action.detail.includes("BCD #9"),
+      );
+      expect(rows).toHaveLength(1);
+      const [row] = rows;
+      expect(row?.id).toBe(`gear-overdue:${booking.personId}`);
+      // Never collected, so the "reserved until" sentence; the two units that
+      // share a day share it, and the third day keeps a sentence of its own.
+      expect(row?.detail).toMatch(
+        /^BCD #91 and BCD #92 were reserved until .+ and never picked up\. BCD #93 was reserved until .+ and never picked up\.$/,
+      );
     });
 
     it("lists a unit due back today, dated to the end of the shop's own day", async () => {
@@ -2834,9 +2867,7 @@ describe("unclosed roll call (DOM-H3)", () => {
       if (!reserved.ok) throw new Error("reserve refused");
 
       const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-      const row = work.actions.find(
-        (action) => action.id === `gear-due-back:${reserved.reservation.id}`,
-      );
+      const row = work.actions.find((action) => action.id === `gear-due-back:${booking.personId}`);
       expect(row).toMatchObject({ kind: "gear_due_back" });
       // Due by tonight, not overdue at breakfast: the deadline is the end of
       // the shop-local day and still ahead of now.
@@ -3406,5 +3437,39 @@ describe("crew clashes on Today (H-80)", () => {
         [host.id, mover.id].includes(action.departure?.tripId ?? ""),
     );
     expect(rollCallCrew).toEqual([]);
+  });
+});
+
+describe("staff credentials on Today (one row per staffer)", () => {
+  const ctx = fileScopedShopContext();
+
+  it("folds a staffer's lapsing credentials into one row, each with its own date", async () => {
+    const { db, shop } = ctx;
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("demo staff missing");
+    const today = calendarDateInTimezone(nowDate(), shop.timezone);
+    for (const [kind, name, renewsAt] of [
+      ["first_aid_cpr", "First aid", shiftCalendarDate(today, -3)],
+      ["liability_insurance", "Insurance", shiftCalendarDate(today, 10)],
+    ] as const) {
+      const made = await createStaffCredential(db, {
+        shopId: shop.id,
+        personId: staff.person.id,
+        kind,
+        name,
+        renewsAt,
+      });
+      if (!made) throw new Error("credential refused");
+    }
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const rows = work.actions.filter(
+      (action) =>
+        action.kind === "staff_credential_due" && action.subject === staff.person.fullName,
+    );
+    expect(rows).toHaveLength(1);
+    // Any lapsed credential makes the whole row today's work.
+    expect(rows[0]).toMatchObject({ id: `staff-credential:${staff.person.id}`, urgency: "now" });
+    expect(rows[0]?.detail).toMatch(/^First aid expired .+\. Insurance renews .+\.$/);
   });
 });

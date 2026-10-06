@@ -120,9 +120,13 @@ test.describe("staff", () => {
     await page.goto("/shop/blue-mantis/gear");
     await expect(page.getByRole("heading", { level: 2, name: /^Overdue/ })).toBeVisible();
 
-    // The chase: BCD #2 is with a diver and its window lapsed two days ago.
+    // The chase: BCD #2 and the wetsuit that went with it are with a diver
+    // and their window lapsed two days ago. The register keeps a row per unit
+    // (each one comes home on its own tap); Today folds them into one.
     await page.getByRole("button", { name: "Mark returned — BCD #2" }).click();
     await expect(page.getByRole("status").filter({ hasText: "the unit is home" })).toBeVisible();
+    await page.getByRole("button", { name: "Mark returned — 3mm #1" }).click();
+    await expect(page.getByRole("button", { name: "Mark returned — 3mm #1" })).toHaveCount(0);
     // A group with nothing in it is not a group — never "Overdue — 0".
     await expect(page.getByRole("heading", { level: 2, name: /^Overdue/ })).toHaveCount(0);
 
