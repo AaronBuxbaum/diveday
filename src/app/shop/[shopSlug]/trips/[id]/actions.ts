@@ -905,6 +905,7 @@ export async function recordTripInvitationAction(
   invitationId: string,
 ): Promise<"sent" | "fallback"> {
   const s = (await requireShopSurface(shopSlug)).session;
+  if (!uuidParam(tripId) || !uuidParam(invitationId)) return "fallback";
   const db = await getDb();
   const result = await deliverTripInvitation(db, {
     shopId: s.user.shopId,
