@@ -73,6 +73,7 @@ import {
 } from "@/lib/divemaster-ratio";
 import { PREP_SECTION_ID } from "@/lib/element-id";
 import { formatDateTimeTz, formatShortDate, formatTime } from "@/lib/format";
+import { cachedListFormat } from "@/lib/intl-cache";
 import { lastMinuteEntryMatchesTripDate } from "@/lib/last-minute-list";
 import {
   type CrewIncompleteReason,
@@ -2435,45 +2436,62 @@ export async function getTodayWork(
       timeZone,
     );
   };
-  for (const row of overdueGear) {
+  // One row per diver, not per unit (Aaron, 2026-10-06): a BCD, a regulator
+  // and a wetsuit that never came home are one phone call to one person, and
+  // three rows under one name read as three people to chase. The units still
+  // all show — in the detail, grouped by chase and by day.
+  for (const rows of groupByPerson(overdueGear)) {
+    const first = rows[0];
+    if (!first) continue;
+    // Two different chases wearing one kind: a checked-out unit is out with a
+    // diver (a phone call), a never-collected one hangs on the wall and wants
+    // its stale claim released — saying "out with" about the second would
+    // teach staff to skim the rows that matter. Each day and each chase keeps
+    // its own sentence, so no date is averaged into one it never had.
+    const sentences = new Map<string, { out: boolean; dueOn: string; unitLabels: string[] }>();
+    for (const row of rows) {
+      const out = row.checkedOutAt !== null;
+      const key = `${out}:${row.reservedUntil}`;
+      const sentence = sentences.get(key) ?? { out, dueOn: row.reservedUntil, unitLabels: [] };
+      sentence.unitLabels.push(row.label);
+      sentences.set(key, sentence);
+    }
     actions.push({
-      id: `gear-overdue:${row.reservationId}`,
+      id: `gear-overdue:${first.personId}`,
       kind: "gear_overdue",
       // Forced: the window already closed, so there is no future instant to
       // derive urgency from — this is today's work however old the date is.
       urgency: "now",
-      subject: row.personName,
-      context: row.tripTitle,
-      // Two different chases wearing one kind: a checked-out unit is out
-      // with a diver (a phone call), a never-collected one hangs on the
-      // wall and wants its stale claim released — saying "out with" about
-      // the second would teach staff to skim the rows that matter.
-      detail: row.checkedOutAt
-        ? gearOverdueDetailText(t, {
-            unitLabel: row.label,
-            dueOn: formatCalendarDate(row.reservedUntil, locale),
-          })
-        : gearNeverPickedUpDetailText(t, {
-            unitLabel: row.label,
-            dueOn: formatCalendarDate(row.reservedUntil, locale),
+      subject: first.personName,
+      context: tripTitlesContext(rows, locale),
+      detail: [...sentences.values()]
+        .map(({ out, dueOn, unitLabels }) =>
+          (out ? gearOverdueDetailText : gearNeverPickedUpDetailText)(t, locale, {
+            unitLabels,
+            dueOn: formatCalendarDate(dueOn, locale),
           }),
+        )
+        .join(" "),
       actionLabel: openGearRegisterActionText(t),
       href: `/shop/${shopSlug}/gear`,
-      // The closed window's end, in the past — the longest-out unit leads.
-      dueAt: localMidnight(row.reservedUntil, 1),
+      // The earliest closed window's end, in the past — the longest-out diver
+      // leads. The reader orders by `reservedUntil`, so the first row is it.
+      dueAt: localMidnight(first.reservedUntil, 1),
     });
   }
-  for (const row of dueBackGear) {
+  for (const rows of groupByPerson(dueBackGear)) {
+    const first = rows[0];
+    if (!first) continue;
     // Due by the end of the shop's own day: "now" all day, sharpening to
     // "imminent" as the evening runs out.
-    const dueAt = localMidnight(row.reservedUntil, 1);
+    const dueAt = localMidnight(first.reservedUntil, 1);
     actions.push({
-      id: `gear-due-back:${row.reservationId}`,
+      id: `gear-due-back:${first.personId}`,
       kind: "gear_due_back",
       urgency: urgencyFor(dueAt, now),
-      subject: row.personName,
-      context: row.tripTitle,
-      detail: gearDueBackDetailText(t, { unitLabel: row.label }),
+      subject: first.personName,
+      context: tripTitlesContext(rows, locale),
+      detail: gearDueBackDetailText(t, locale, { unitLabels: rows.map((row) => row.label) }),
       actionLabel: openGearRegisterActionText(t),
       href: `/shop/${shopSlug}/gear`,
       dueAt,
@@ -2524,6 +2542,13 @@ export async function getTodayWork(
   }
 
   const credentialHorizon = now.getTime() + 30 * 24 * HOUR_MS;
+  // One row per staffer, the same reasoning as the gear rows above: a
+  // divemaster whose first aid and insurance both lapse this month is one
+  // conversation, and each credential keeps its own sentence and date.
+  const credentialsByPerson = new Map<
+    string,
+    { name: string; dueAt: Date; overdue: boolean; sentences: string[] }
+  >();
   for (const row of credentialRows) {
     const renewsAt = row.credential.renewsAt;
     if (!renewsAt || !isValidCalendarDate(renewsAt)) continue;
@@ -2535,20 +2560,36 @@ export async function getTodayWork(
     // 19:00 the evening before. CR-009: a date-only expiry is good through the
     // end of its own local day.
     const overdue = isCalendarDateExpired(renewsAt, todayLocal);
-    actions.push({
-      id: `staff-credential:${row.credential.id}`,
-      kind: "staff_credential_due",
-      urgency: overdue ? "now" : urgencyFor(dueAt, now),
-      subject: row.person.fullName,
-      context: null,
-      detail: staffCredentialDueDetailText(t, {
-        credential: row.credential.name,
-        dueOn: formatCalendarDate(renewsAt, locale),
+    const sentence = staffCredentialDueDetailText(t, {
+      credential: row.credential.name,
+      dueOn: formatCalendarDate(renewsAt, locale),
+      overdue,
+    });
+    const entry = credentialsByPerson.get(row.person.id);
+    if (!entry) {
+      credentialsByPerson.set(row.person.id, {
+        name: row.person.fullName,
+        dueAt,
         overdue,
-      }),
+        sentences: [sentence],
+      });
+      continue;
+    }
+    entry.sentences.push(sentence);
+    entry.overdue ||= overdue;
+    if (dueAt < entry.dueAt) entry.dueAt = dueAt;
+  }
+  for (const [personId, entry] of credentialsByPerson) {
+    actions.push({
+      id: `staff-credential:${personId}`,
+      kind: "staff_credential_due",
+      urgency: entry.overdue ? "now" : urgencyFor(entry.dueAt, now),
+      subject: entry.name,
+      context: null,
+      detail: entry.sentences.join(" "),
       actionLabel: openStaffingActionText(t),
       href: `/shop/${shopSlug}/settings/team#credentials`,
-      dueAt,
+      dueAt: entry.dueAt,
     });
   }
 
@@ -2690,4 +2731,26 @@ export async function getTodayWork(
     crewedSessions,
     availableStaff,
   };
+}
+
+/** Rows grouped by diver, each group in the reader's own order. */
+function groupByPerson<T extends { personId: string }>(rows: readonly T[]): T[][] {
+  const groups = new Map<string, T[]>();
+  for (const row of rows) {
+    const group = groups.get(row.personId);
+    if (group) group.push(row);
+    else groups.set(row.personId, [row]);
+  }
+  return [...groups.values()];
+}
+
+/** The departures a diver's units went out on, each named once. */
+function tripTitlesContext(
+  rows: readonly { tripTitle: string | null }[],
+  locale: string,
+): string | null {
+  const titles = [...new Set(rows.flatMap((row) => (row.tripTitle ? [row.tripTitle] : [])))];
+  return titles.length > 0
+    ? cachedListFormat(locale, { type: "conjunction" }).format(titles)
+    : null;
 }

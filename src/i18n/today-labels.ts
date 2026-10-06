@@ -804,18 +804,42 @@ export function emailResendActionText(
 /**
  * The gear register's queue rows (ADR 20260815-minimal-gear-register). The
  * diver's name is an overdue/due-back row's subject, so the detail carries
- * the unit and the window; a service row's subject is the unit itself.
+ * the units and the window; a service row's subject is the unit itself.
+ *
+ * One row per diver, not per unit: three pieces of one kit that never came
+ * home are one phone call, and three rows saying the same name read as three
+ * people. The units are joined through `Intl.ListFormat`; a diver whose units
+ * fell due on different days gets one sentence per day, because averaging the
+ * date would invent one.
  */
 export function gearOverdueDetailText(
   t: StaffTranslator,
-  input: { unitLabel: string; dueOn: string },
+  locale: string,
+  input: { unitLabels: readonly string[]; dueOn: string },
 ): string {
-  return t("today.gear.overdueDetail", input);
+  return t("today.gear.overdueDetail", gearUnitsParams(locale, input));
 }
 
-export function gearDueBackDetailText(t: StaffTranslator, input: { unitLabel: string }): string {
-  return t("today.gear.dueBackDetail", input);
+export function gearDueBackDetailText(
+  t: StaffTranslator,
+  locale: string,
+  input: { unitLabels: readonly string[] },
+): string {
+  return t("today.gear.dueBackDetail", gearUnitsParams(locale, input));
 }
+
+function gearUnitsParams<T extends { unitLabels: readonly string[] }>(
+  locale: string,
+  input: T,
+): Omit<T, "unitLabels"> & { units: string; count: number } {
+  const { unitLabels, ...rest } = input;
+  return {
+    ...rest,
+    units: cachedListFormat(locale, { type: "conjunction" }).format(unitLabels),
+    count: unitLabels.length,
+  };
+}
+
 /**
  * The evening's rental-fit question (issue #1174, D14).
  *
@@ -837,9 +861,10 @@ export function rentalFitConfirmDetailText(
 
 export function gearNeverPickedUpDetailText(
   t: StaffTranslator,
-  input: { unitLabel: string; dueOn: string },
+  locale: string,
+  input: { unitLabels: readonly string[]; dueOn: string },
 ): string {
-  return t("today.gear.neverPickedUpDetail", input);
+  return t("today.gear.neverPickedUpDetail", gearUnitsParams(locale, input));
 }
 
 export function gearServiceDueDetailText(

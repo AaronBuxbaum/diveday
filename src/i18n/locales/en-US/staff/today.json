@@ -246,11 +246,11 @@
     "meters": "meters"
   },
   "gear": {
-    "overdueDetail": "{unitLabel} was due back {dueOn} and is still out.",
-    "dueBackDetail": "{unitLabel} is due back today.",
+    "overdueDetail": "{units} {count, plural, one {was} other {were}} due back {dueOn} and {count, plural, one {is} other {are}} still out.",
+    "dueBackDetail": "{units} {count, plural, one {is} other {are}} due back today.",
     "serviceDueDetail": "{clockLabel} is due {dueOn}.",
     "serviceOverdueDetail": "{clockLabel} was due {dueOn}.",
-    "neverPickedUpDetail": "{unitLabel} was reserved until {dueOn} and never picked up.",
+    "neverPickedUpDetail": "{units} {count, plural, one {was} other {were}} reserved until {dueOn} and never picked up.",
     "fitConfirmDetail": "{name}’s {unitLabel} went out as {size}. Keep that as the fit next time?",
     "fitConfirmKeep": "Keep it",
     "fitConfirmSaving": "Keeping"
