@@ -34,7 +34,7 @@ const pick = (input: HTMLElement, files: File[]) => fireEvent.change(input, { ta
 
 beforeEach(() => {
   let next = 0;
-  URL.createObjectURL = vi.fn(() => `blob:preview-${next++}`);
+  URL.createObjectURL = vi.fn(() => `blob:http://localhost/preview-${next++}`);
   URL.revokeObjectURL = vi.fn();
 });
 
@@ -59,7 +59,7 @@ describe("ImageFileInput", () => {
     // The tile *is* the photo now: one preview, inside the same label.
     const previews = container.querySelectorAll("img");
     expect(previews).toHaveLength(1);
-    expect(previews[0]).toHaveAttribute("src", "blob:preview-0");
+    expect(previews[0]).toHaveAttribute("src", "blob:http://localhost/preview-0");
     expect(previews[0].closest("label")).toBe(container.querySelector("label"));
     expect(screen.getByText("reef.jpg")).toBeInTheDocument();
     expect(screen.getByLabelText(/Add another photo/)).toHaveAttribute("type", "file");
@@ -83,7 +83,7 @@ describe("ImageFileInput", () => {
     pick(screen.getByLabelText("Add a photo"), [file("reef.jpg")]);
     pick(screen.getByLabelText(/Add another photo/), [file("wreck.jpg")]);
 
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:preview-0");
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:http://localhost/preview-0");
     expect(screen.queryByText("reef.jpg")).toBeNull();
     expect(screen.getByText("wreck.jpg")).toBeInTheDocument();
   });

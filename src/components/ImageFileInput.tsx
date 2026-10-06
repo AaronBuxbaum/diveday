@@ -136,7 +136,8 @@ export function ImageFileInput({
   );
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.target.files ?? []);
+    const input = event.currentTarget;
+    const files = Array.from(input.files ?? []);
     if (files.length === 0) {
       setError(null);
       setPicked([]);
@@ -144,7 +145,7 @@ export function ImageFileInput({
     }
     const problem = describeImageProblem(files, maxFiles, copy);
     if (problem) {
-      event.target.value = "";
+      input.value = "";
       setError(problem);
       setPicked([]);
       return;
@@ -155,7 +156,7 @@ export function ImageFileInput({
     setPicked(
       files.map((file) => ({
         name: file.name,
-        preview: typeof URL.createObjectURL === "function" ? URL.createObjectURL(file) : null,
+        preview: blobPreview(file),
       })),
     );
   }
@@ -220,6 +221,16 @@ export function ImageFileInput({
       </div>
     </>
   );
+}
+
+/**
+ * An object URL for the reader's own file, and only ever a `blob:` one: the
+ * preview's `src` is never anything a filename or a page could have written.
+ */
+function blobPreview(file: File): string | null {
+  if (typeof URL.createObjectURL !== "function") return null;
+  const url = URL.createObjectURL(file);
+  return url.startsWith("blob:") ? url : null;
 }
 
 /** A picked photo, drawn the way a saved one is until the save sends it. */
