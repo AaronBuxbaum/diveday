@@ -308,8 +308,8 @@ software to a mate after the boat is tied up.
   are first-person singular; what both people here share is "we"
   ([product/marketing.md](../product/marketing.md)'s biography rules are unchanged).
 - Every heading is **the owner's question, repeated back** the way a person repeats a question
-  before answering it: no question mark, no full stop ("Who am I dealing with", "What's the
-  catch", "What happens to my records if I leave"). The band under it is the answer, and the
+  before answering it: no question mark, no full stop ("Why did you build this", "What's the
+  catch", "What happens to my records if I go"). The band under it is the answer, and the
   headline test binds the first sentence of that answer rather than the question.
   `src/app/about/copy.test.ts` holds the arithmetic for the exit band.
 - Contractions always. "Honestly" and "look" get a budget of one each on the page. Paragraphs run

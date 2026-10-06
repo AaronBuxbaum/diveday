@@ -3215,77 +3215,74 @@
       }
     },
     "about": {
-      "eyebrow": "The people behind it",
-      "heroTitle": "Who am I dealing with",
-      "phoneFrameLabel": "A captain running roll call in DiveDay from the phone’s offline copy.",
-      "heroDescription": "Two of us, both divers, and I write the code. Before you read any further: the parts your season would hang on don’t hang on us. Payments run through your own Stripe account, your records come out as a ZIP any day you like, and roll call runs on a phone with no signal. Everything on this page is something you can check in the demo before you write to anyone.",
-      "founderEyebrow": "From the founder",
-      "founderTitle": "Why did you build this",
-      "founderP1": "A dive shop owner walked me through his ordinary day. A whiteboard, a clipboard, a spreadsheet somebody updates by hand, and a handful of apps that don’t talk to each other. He was paying for all of it twice: once in software, and again in the hours it ate out of his crew’s day.",
-      "founderP2": "I’m a software engineer. I’ve worked on Google Maps, helped build a biotech company that went public, and these days I work on self-driving cars, and I’d never seen a business run on so much software nobody built for it. What those shops pay for was made for a back office, and the dock is wet, bright and in a hurry. The whiteboard stays because it has never once crashed on anybody. That’s the bar. If the crew would still rather reach for the marker, the screen isn’t good enough yet.",
-      "founderP3": "The other person here, also a diver, does the legal and the outreach, and I do the rest. DiveDay is what came out of watching how a boat day runs and building for the eight-in-the-morning version of it instead of the office version.",
-      "runEyebrow": "How it’s run",
-      "runTitle": "What happens when something breaks at seven in the morning",
-      "runP1": "You write in and a real person reads it. There’s no form that wants a screenshot before anyone will look, and nobody’s going to ask if you’ve tried turning it off and on again. Tell us what the counter looked like.",
-      "runP2": "Pricing works the same way. All of it’s on one page, and you can read every line without talking to anyone here first.",
+      "eyebrow": "Why DiveDay exists",
+      "heroTitle": "Why did you build this",
+      "phoneFrameLabel": "A captain calling the roll in DiveDay, name by name, from the copy saved on the phone.",
+      "heroDescription": "In January 1998, Tom and Eileen Lonergan went out on a dive boat to St. Crispin’s Reef, on the Great Barrier Reef. The boat went back to port without them, and nobody noticed they were missing until two days later, when their bag turned up still aboard. Neither of them was ever found.",
+      "heroP2": "That story is why I built DiveDay. A head count is a number, and a number can come out right while someone is still in the water, so DiveDay’s roll call names every diver and crew member before the boat leaves and after every dive, and it isn’t finished until each of them is accounted for.",
+      "founderEyebrow": "The people",
+      "founderTitle": "Who am I dealing with",
+      "founderP1": "Two of us, both divers. I’m a software engineer. I’ve worked on Google Maps, helped build a biotech company that went public, and these days I work on self-driving cars. I write DiveDay’s code, and the other person here handles the legal side and talks to shops.",
+      "founderP2": "The rest of it came from a dive shop owner who walked me through his ordinary day: a whiteboard, a clipboard, a spreadsheet somebody updates by hand, and a handful of apps that don’t talk to each other. He was paying for all of it twice, once in software and again in the hours it took out of his crew’s day.",
+      "founderP3": "Your season doesn’t hang on the two of us. Payments run through your own Stripe account, your records download as a ZIP any day you like, and roll call runs from the copy a phone saved while it had signal.",
+      "runEyebrow": "Support",
+      "runTitle": "Who answers when something breaks",
+      "runP1": "You email us and one of the two of us reads it. Tell us what the screen said and what you were trying to do. Nobody will ask whether you’ve tried turning it off and on again.",
+      "runP2": "The price works the same way. It’s all on one page, and you can read every line before you talk to anyone here.",
       "emailCta": "Email {email}",
       "seeCost": "One flat {price} {cadence}. See the full list",
       "seeProduct": "See what it does →",
-      "rulesEyebrow": "The rules",
+      "rulesEyebrow": "What we build to",
       "rulesTitle": "How do I know any of that’s true",
-      "rulesDescription": "Look, you don’t have to take it from me. These are the four rules we build to, and under each one is the thing to go and do in the demo. Ten minutes covers all four of them.",
+      "rulesDescription": "You don’t have to take my word for it. DiveDay is held to four rules, and each one comes with something to go and do in the demo. All four take about ten minutes.",
       "rules": {
         "survivesDock": {
-          "title": "It has to survive the dock.",
-          "body": "Wet hands, bright sun, one bar of signal and a boat that’s already late. If a screen only works sitting down in an office, it isn’t done, and I’ve thrown out a few that weren’t.",
-          "check": "save a manifest to your phone, turn the network off, and run roll call anyway."
+          "title": "It has to work on the boat.",
+          "body": "Wet hands, bright sun and no signal once you’re past the harbor. Any crew phone that opens DiveDay with signal keeps a copy of the coming manifests, and with no signal each phone shows its own taps until it’s back in range.",
+          "check": "open a manifest on your phone, turn the network off, and call the roll anyway."
         },
         "noSilentPasses": {
-          "title": "No silent passes.",
-          "body": "Software that waves a diver through because a field was blank is worse than paper. When nothing on file clears a diver, DiveDay stops and tells you which thing, and it would rather annoy your desk than let someone on the boat it can’t vouch for.",
-          "check": "open Today and read why each name in Needs you is there."
+          "title": "A blank field is never a yes.",
+          "body": "If nothing on file clears a diver, DiveDay marks them Blocked and names what’s missing. It would rather hold up your desk than call someone ready on a blank.",
+          "check": "open Today and read why each name under Needs you is there."
         },
         "onePrice": {
-          "title": "One price, no seats.",
-          "body": "Everything it does is in the price. There’s no tier holding back the one thing you need, and nobody here gets paid to sell you more of it.",
+          "title": "One price, with everything in it.",
+          "body": "Every part of DiveDay is in the plan. There’s no tier that holds back the part you need, and you don’t pay by the seat.",
           "check": "read the pricing page. It’s one number and one list."
         },
         "yourRecords": {
-          "title": "Your records are yours.",
-          "body": "The export button works on the first day of a trial, before you’ve typed a single diver in. It gives you documented files you can open anywhere, and nobody has to approve it first.",
+          "title": "Your records leave when you do.",
+          "body": "You can export on the first day of a trial, before you’ve added a single diver. It’s a ZIP of documented files you can open anywhere, and nobody has to approve it.",
           "check": "open the demo as the owner, go to Settings, and download the ZIP."
         }
       },
-      "plainlyEyebrow": "The catch",
+      "plainlyEyebrow": "Before you switch",
       "plainlyTitle": "What’s the catch",
-      "plainlyDescription": "Three things, and you’d find all of them out inside a month anyway. Better from me now than from your crew in August.",
+      "plainlyDescription": "Two things, and you’d find both out inside a month anyway, so here they are now.",
       "truths": {
         "new": {
           "title": "DiveDay is new.",
-          "body": "You’d be one of the first shops on it. That’s why the demo is a whole working shop instead of a sales call, and why the export button works on your first day: if it’s wrong for you, you leave with your spreadsheets and we’ve cost you an afternoon."
-        },
-        "notEverything": {
-          "title": "It doesn’t do everything.",
-          "body": "No retail register and no agency sync. Keep the till you’ve got. A cert check here is your staff looking at the card and tapping confirm, and DiveDay stays on the water side of the shop."
+          "body": "You’d be one of the first shops on it. That’s why the demo is a working shop you open yourself, and why you can take your records out on your first day. If DiveDay turns out wrong for you, you leave with your records and it’s cost you an afternoon."
         },
         "stillMoving": {
-          "title": "It’s still moving.",
-          "body": "Shops that join now steer what gets built next, and what your crew hits this season is what I work on. The trade is a product that bends toward your shop while it’s still changing under you, and I won’t pretend that second part is free."
+          "title": "It’s still changing.",
+          "body": "What your crew runs into this season is what I work on next, so DiveDay bends toward the way your shop runs. The cost is that a screen your crew learned in May might look different by August, and I won’t pretend that’s free."
         }
       },
-      "leaveEyebrow": "The exit",
-      "leaveTitle": "What happens to my records if I leave",
-      "leaveP1": "They’re yours, and they’re the ones that get your divers on a boat, so nothing about the plan is built to keep hold of them. The whole of the terms fits in three lines, and the short version is that you can go on any day of the month and take your records with you.",
-      "leaveP2": "{terms} And if you’re bringing over an export or a spreadsheet from somewhere else, a person here sits with it and brings your divers across with you.",
+      "leaveEyebrow": "Leaving",
+      "leaveTitle": "What happens to my records if I go",
+      "leaveP1": "Your records go with you, any day of the month. They’re what gets your divers on a boat, so nothing about the plan is built to hold on to them.",
+      "leaveP2": "{terms} If you’re coming the other way, with an export or a spreadsheet from somewhere else, someone here sits down with it and brings your divers across with you.",
       "switchingLink": "How switching works, both directions →",
       "whereLiveLabel": "Where your records live",
       "whereLiveValue": "On servers in the United States, in a download you can take whenever you like, and, if you turn it on, in a weekly copy delivered to storage your shop owns.",
       "committingLabel": "How the plan works",
       "committingValue": "Month to month, per location. No setup fee and no annual contract.",
       "whoAnswersLabel": "Who answers you",
-      "whoAnswersValue": "A real person on the DiveDay team. Email {email} whenever you like.",
-      "closingTitle": "Alright, how do I try it",
-      "closingDescription": "No call and no form. Open the sample shop as the owner, the captain or a diver, walk a whole day in it, and decide whether your crew would reach for it on a busy morning."
+      "whoAnswersValue": "One of the two of us. Email {email} whenever you like.",
+      "closingTitle": "How do I try it",
+      "closingDescription": "Open the demo as the owner, the captain or a diver and run a boat day in it. There’s no call to book and no form to fill in first."
     },
     "product": {
       "eyebrow": "Features",

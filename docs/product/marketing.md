@@ -214,7 +214,16 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   published on `/about`: a software engineer who worked on Google Maps, helped build a biotech
   company that went public, and works on self-driving cars; and the origin — a
   conversation with a dive shop owner about what his systems were costing him. Anything beyond that
-  list needs its own confirmation — **the founder's home location is explicitly not confirmed and
+  list needs its own confirmation. **Confirmed by the product owner 2026-10-06:** the
+  disappearance of Tom and Eileen Lonergan is the motivation for building DiveDay, and `/about`
+  opens on it. Only what the public record holds is stated: in January 1998 they went out on a dive
+  boat to St. Crispin's Reef on the Great Barrier Reef, the boat returned to port without them,
+  nobody noticed until their bag was found aboard two days later, and neither was ever found
+  ([Wikipedia](https://en.wikipedia.org/wiki/Disappearance_of_Tom_and_Eileen_Lonergan), citing the
+  coroner's findings and contemporary press; the
+  [Australian Missing Persons Register](https://australianmissingpersonsregister.com/ampr/Lonergans.htm)).
+  The operator and skipper are not named, the account carries no adjective, and no sentence says or
+  implies DiveDay would have prevented it. **The founder's home location is explicitly not confirmed and
   must not appear on the page**; an earlier draft stated "made in Florida" without confirmation and
   that was a real violation of this rule, corrected 2026-07-25. **Confirmed by the product owner
   2026-07-25:** DiveDay now has a second person contributing (legal and outreach, also a diver), so
@@ -335,17 +344,19 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   `src/app/about/copy.test.ts` makes the test mechanical for that heading: some clause of it has to
   appear in the band's own published prose, which no metaphor can satisfy.
   **Since 2026-09-24 (H-89) `/about` is written as speech**, and every heading on it is the shop
-  owner's question repeated back without a mark: "Who am I dealing with", "How do I know any of
-  that's true", "Why did you build this", "What happens when something breaks at seven in the
-  morning", "What's the catch", "What happens to my records if I leave", "Alright, how do I try
-  it". The sentence that survived four failures ("your season doesn't hang on us") is now the first
-  thing said under the H1 rather than the H1 itself. The headline test binds the first sentence of
+  owner's question repeated back without a mark. **Since the 2026-10-06 rewrite** (Aaron: "I don't
+  like the copy on the about section. Redo it completely") they run "Why did you build this" (the
+  H1), "Who am I dealing with", "How do I know any of that's true", "Who answers when something
+  breaks", "What's the catch", "What happens to my records if I go", "How do I try it". The
+  sentence that survived four failures ("your season doesn't hang on us") now closes the "Who am I
+  dealing with" band, with its proof beside it. The headline test binds the first sentence of
   each answer rather than the question, and the copy test's arithmetic moved with it: the exit
   heading names the thing its band publishes (a content word of the question appears in the band's
   own prose), carries no mark at either end, and is none of the three retired headings.
 - **Concede the facts; never apologize for them.** This is the rule the page-level version of the
-  claims policy kept losing. "DiveDay is new", "it doesn't do everything", and "it's still moving"
-  are honesty the policy requires, and they stay. What is banned is the register that grew up around them — by
+  claims policy kept losing. "DiveDay is new" and "it's still changing" are honesty the policy
+  requires, and they stay on `/about`; its scope card ("it doesn't do everything") left in the
+  2026-10-06 rewrite, the day the "What it doesn't do" sections came off the public pages. What is banned is the register that grew up around them — by
   2026-08-12 nine framings of *we're small, we're new, you've never heard of us, don't take us on
   faith* had accumulated across the five pages, including the `/about` H1, the lead-in to its four
   checkable rules, the homepage's export band, `/product`'s honest-no, and the `/pricing` FAQ

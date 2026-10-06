@@ -14,8 +14,7 @@ afterEach(cleanup);
  * height is its mockup's, and the mockup wraps one line more in the 320px
  * `max-w-xs` column than in the 384px `lg:max-w-sm` one). From `lg` the phone
  * sets the hero's height, so everything under it dropped 30px on arrival.
- * And the demo/trial pair was drawn at `h-11` under a comment that named
- * `buttonClass`'s `md` height, which is 48px.
+ * The band under the hero is drawn as the band that lands there.
  */
 describe("the /about skeleton", () => {
   it("draws the phone at the height the frame renders at each width", () => {
@@ -25,13 +24,14 @@ describe("the /about skeleton", () => {
     expect(phone).not.toHaveClass("h-[30rem]");
   });
 
-  it("draws the demo/trial pair at the md button's 48px", () => {
+  it("draws the band that follows the hero, on the surface fill, with no button bars", () => {
+    // The four rules and their demo/trial pair followed the hero until the
+    // 2026-10-06 rewrite; the band on who is behind DiveDay does now, and it
+    // has no controls, so a button-shaped bar here would be a jump on arrival.
     const { container } = render(<AboutLoading />);
-    const bars = [...container.querySelectorAll("main .rounded-lg")];
-    expect(bars).toHaveLength(2);
-    for (const bar of bars) {
-      expect(bar).toHaveClass("h-12");
-      expect(bar).not.toHaveClass("h-11");
-    }
+    const sections = container.querySelectorAll("main > section");
+    expect(sections).toHaveLength(2);
+    expect(sections[1]).toHaveClass("bg-surface");
+    expect(container.querySelectorAll("main .rounded-lg")).toHaveLength(0);
   });
 });

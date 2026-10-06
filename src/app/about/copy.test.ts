@@ -69,6 +69,10 @@ describe("the /about exit band", () => {
       // and the one heading on the page that argued instead of asked.
       "Month to month, and the export is one button.",
       "Mes a mes, y la exportación es un botón.",
+      // The spoken question's first wording, 2026-09-24 to 2026-10-06. Not
+      // wrong; retired with the rest of the page's copy in the rewrite that
+      // opened it on the Lonergans.
+      "What happens to my records if I leave",
     ];
     expect(retired).not.toContain(messages.marketing.about.leaveTitle);
   });

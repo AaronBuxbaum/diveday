@@ -66,7 +66,12 @@ describe("the price is interpolated, never spelled out in a bundle", () => {
         .filter(
           ([, message]) =>
             message.includes(earlyAccessPrice.price) ||
-            message.includes(earlyAccessPriceAmount) ||
+            // Bounded by anything but a digit, so a year that happens to
+            // contain the amount ("1998" holds "99", /about's Lonergan story)
+            // is not mistaken for the price.
+            new RegExp(`(?<![\\d.])${earlyAccessPriceAmount.replace(".", "\\.")}(?![\\d])`).test(
+              message,
+            ) ||
             /\p{Sc}\s?\d/u.test(message),
         )
         .map(([key]) => key);

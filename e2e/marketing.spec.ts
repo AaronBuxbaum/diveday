@@ -644,8 +644,16 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
   // account, the ZIP, roll call with no signal. The Stripe half is asserted
   // beside the headline because the headline alone would be the second failure
   // again.
+  //
+  // Since 2026-10-06 the page opens on why DiveDay exists (the Lonergans,
+  // left behind on the Great Barrier Reef in 1998) and "Who am I dealing
+  // with" is the band right under it, still closing on the same reassurance.
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Why did you build this" }),
+  ).toBeVisible();
+  await expect(page.getByText(/Tom and Eileen Lonergan/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Who am I dealing with" })).toBeVisible();
-  await expect(page.getByText(/don’t hang on us/)).toBeVisible();
+  await expect(page.getByText(/doesn’t hang on the two of us/)).toBeVisible();
   // Case-insensitive on purpose. The claim is "the money is in the shop's own
   // account"; whether the sentence happens to start with it is not part of the
   // claim, and pinning the capital broke this line when the hero was reordered
@@ -661,16 +669,15 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
   // one here would only re-introduce it by the back door.)
   await expect(page.getByRole("heading", { name: "What’s the catch" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "DiveDay is new." })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "It doesn’t do everything." })).toBeVisible();
 
   // Trust here is checkable, not asserted: each rule ships with the demo action
   // that proves it.
   await expect(
     page.getByRole("heading", { name: "How do I know any of that’s true" }),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "It has to survive the dock." })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "No silent passes." })).toBeVisible();
-  await expect(page.getByText("save a manifest to your phone")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "It has to work on the boat." })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "A blank field is never a yes." })).toBeVisible();
+  await expect(page.getByText("open a manifest on your phone")).toBeVisible();
 
   // The checkable half comes *before* the conceding half. The rules used to sit
   // fourth, below two sections of prose, which put the page's only verifiable
@@ -693,7 +700,7 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
   // question, and the terms it used to carry are the first thing said under
   // it (src/app/about/copy.test.ts holds the arithmetic).
   await expect(
-    page.getByRole("heading", { name: "What happens to my records if I leave" }),
+    page.getByRole("heading", { name: "What happens to my records if I go" }),
   ).toBeVisible();
   await expect(page.getByText(/No export fee, no support ticket/)).toBeVisible();
   // …and the door out of that band is tagged, like every other in-page
