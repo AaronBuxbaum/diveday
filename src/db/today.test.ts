@@ -2486,6 +2486,60 @@ describe("unclosed roll call (DOM-H3)", () => {
         expect(work.outTripIds).not.toContain(trip.id);
       });
 
+      it("drops the row once the crew count the diver back aboard after the last dive", async () => {
+        // The boat is still out by the clock, but the diver this row is about
+        // is out of the water: the evening's "All boats are home" line reads
+        // the same count, and the two must not disagree.
+        const { db, shop } = ctx;
+        const { trip, boarded, staffId } = await sailedNinetyMinutesAgo();
+        await recordRollCall(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          bookingId: boarded,
+          recordedByPersonId: staffId,
+          status: "boarded",
+          checkpoint: "after_dive_1",
+        });
+
+        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+        expect(rowsFor(work, trip.id)).toEqual([]);
+        expect(work.outTripIds).toContain(trip.id);
+      });
+
+      it("keeps the row while a dive is still to come", async () => {
+        // Counted back after dive one of two is a surface interval, not home.
+        const { db, shop } = ctx;
+        const fixture = await returnedTrip(db, shop.id, {
+          endedHoursAgo: -2.5,
+          divers: 1,
+          plannedDives: 2,
+          title: "Blocked Aboard, two tanks — Molasses",
+        });
+        const [boarded] = fixture.bookingIds;
+        if (!boarded) throw new Error("fixture booking missing");
+        await boardAtDeparture(
+          db,
+          {
+            shopId: shop.id,
+            tripId: fixture.trip.id,
+            staffId: fixture.staffId,
+            bookingIds: [boarded],
+          },
+          new Date(fixture.trip.startsAt.getTime() + 5 * 60 * 1000),
+        );
+        await recordRollCall(db, {
+          shopId: shop.id,
+          tripId: fixture.trip.id,
+          bookingId: boarded,
+          recordedByPersonId: fixture.staffId,
+          status: "boarded",
+          checkpoint: "after_dive_1",
+        });
+
+        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+        expect(rowsFor(work, fixture.trip.id).map((row) => row.kind)).toEqual(["blocked_aboard"]);
+      });
+
       it("keeps the Aboard row when the desk cancels the departure after it boarded", async () => {
         // The roll call outranks a later desk word, as for the fly-safe reader
         // (#1836): the boarding was recorded before the cancel and the diver is
