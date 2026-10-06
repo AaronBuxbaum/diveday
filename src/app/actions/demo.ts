@@ -2,7 +2,7 @@
 
 import { APIError } from "better-auth/api";
 import { and, eq } from "drizzle-orm";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import type { DbExecutor } from "@/db/client";
@@ -16,6 +16,7 @@ import { demoLandingFrom, demoLandingPath } from "@/lib/demo-landings";
 import type { DemoRoleId } from "@/lib/demo-roles";
 import { eventSource } from "@/lib/funnel";
 import { publicSchedulePath } from "@/lib/public-routes";
+import { isQuietDemoDevice, QUIET_DEMO_COOKIE } from "@/lib/quiet-demo-device";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import { requireStaffSession } from "@/lib/session";
@@ -134,7 +135,12 @@ export async function enterDemoAction(formData?: FormData) {
   // of every demo-to-trial ratio read off it). Deferred with after() for the
   // same reason the trial half is (src/app/onboard/actions.ts): a redirect the
   // visitor is waiting on must not queue behind a telemetry or mail round trip.
-  after(() => announceDemoEntry({ slug, role, source }));
+  //
+  // Skipped whole for a browser the founder marked as his own
+  // (src/lib/quiet-demo-device.ts): his own demo is neither news for his inbox
+  // nor a prospect for the funnel.
+  const quiet = isQuietDemoDevice((await cookies()).get(QUIET_DEMO_COOKIE)?.value);
+  if (!quiet) after(() => announceDemoEntry({ slug, role, source }));
 
   // The diver pick previews the customer view — the public schedule needs no
   // sign-in at all, so it skips straight there instead of minting a session.
