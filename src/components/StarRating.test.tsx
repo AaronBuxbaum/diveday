@@ -43,7 +43,7 @@ describe("the mark", () => {
    * (pixel-craft K-57). As a flex box the outer span is exactly the stars'
    * height, and a parent centres the stars themselves.
    */
-  it("is a box the height of its stars, so a row centres the stars", () => {
+  it("is a box the height of its stars, so a row centers the stars", () => {
     const { container } = render(<StarRating rating={4} label="4 out of 5 stars" />);
 
     expect(container.firstElementChild).toHaveClass("inline-flex", "items-center");

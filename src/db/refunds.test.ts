@@ -538,7 +538,7 @@ describe("refundBookingOnCancellation", () => {
   // that Stripe is not asked for anything a second time. The refunded status
   // is what holds it — not the idempotency key, which is minted fresh per
   // attempt on purpose (PAY-C1) and would happily issue a second real refund.
-  it("moves no money the second time a cancelled booking is refunded", async () => {
+  it("moves no money the second time a canceled booking is refunded", async () => {
     const { db, shop, bookingId, insideWindow } = await paidBookingContext(48);
     const refundCalls: RefundCall[] = [];
     const provider = fakeCheckout({ status: "refunded", refundId: "re_once" }, refundCalls);
@@ -803,7 +803,7 @@ describe("listOwedShopCancellationRefunds", () => {
     return (await listOwedShopCancellationRefunds(...args)).map((row) => row.bookingId);
   }
 
-  it("lists a seat still holding its money on a departure the shop cancelled", async () => {
+  it("lists a seat still holding its money on a departure the shop canceled", async () => {
     const { db, shop, bookingIds } = await cancelledDepartureContext();
 
     const owed = await listOwedShopCancellationRefunds(db, shop.id);
@@ -876,7 +876,7 @@ describe("listOwedShopCancellationRefunds", () => {
     expect(await listOwedShopCancellationRefunds(db, shop.id)).toEqual([]);
   });
 
-  it("holds back a departure the shop only just cancelled, for Today's sake", async () => {
+  it("holds back a departure the shop only just canceled, for Today's sake", async () => {
     // The panel shows everything; Today waits a day, so a trip called off
     // minutes before the sweep does not land in the queue the same breath.
     //
@@ -930,7 +930,7 @@ describe("listOwedShopCancellationRefunds", () => {
     ).toContain(bookingIds[0]);
   });
 
-  it("treats a departure cancelled before the column existed as already stale", async () => {
+  it("treats a departure canceled before the column existed as already stale", async () => {
     // No backfill: those trips genuinely have no recorded cancellation time.
     // Failing toward showing the money is the right direction to fail.
     const { db, shop, bookingIds, reef } = await cancelledDepartureContext();
@@ -941,7 +941,7 @@ describe("listOwedShopCancellationRefunds", () => {
     ).toEqual(expect.arrayContaining(bookingIds));
   });
 
-  it("clears the stamp when a cancelled departure is put back on the board", async () => {
+  it("clears the stamp when a canceled departure is put back on the board", async () => {
     // A stale date on a sailing trip would tell the queue it had been owed since
     // the day the shop changed its mind.
     const { db, shop, reef } = await cancelledDepartureContext();

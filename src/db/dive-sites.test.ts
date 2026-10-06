@@ -219,7 +219,7 @@ describe("dive-site library", () => {
    * digits would otherwise have silenced the prompt on a pairing nobody has
    * ever looked at, which is worse than the nagging it replaced.
    */
-  it("keeps a station acknowledgement only for the id it was given for", async () => {
+  it("keeps a station acknowledgment only for the id it was given for", async () => {
     const { db, shop } = await seededShopContext();
     const site = await createDiveSite(db, {
       shopId: shop.id,
@@ -268,7 +268,7 @@ describe("dive-site library", () => {
     expect(withdrawn).toMatchObject({ tideStationConfirmed: false });
   });
 
-  it("refuses to store an acknowledgement with no station to acknowledge", async () => {
+  it("refuses to store an acknowledgment with no station to acknowledge", async () => {
     const { db, shop } = await seededShopContext();
     // A tick with no id suppresses nothing and would read in the CSV as an
     // answer to a question nobody put.
@@ -296,7 +296,7 @@ describe("dive-site library", () => {
     expect(cleared).toMatchObject({ tideStationId: null, tideStationConfirmed: false });
   });
 
-  it("carries a station acknowledgement onto a copy, which copies the pairing whole", async () => {
+  it("carries a station acknowledgment onto a copy, which copies the pairing whole", async () => {
     const { db, shop } = await seededShopContext();
     const source = await createDiveSite(db, {
       shopId: shop.id,
@@ -479,7 +479,7 @@ describe("the shop's search anchor", () => {
     expect(await shopSearchAnchor(db, shop.id)).toBeNull();
   });
 
-  it("is null for a shop with no sited water yet, rather than an invented centre", async () => {
+  it("is null for a shop with no sited water yet, rather than an invented center", async () => {
     const { db, shop } = await seededShopContext();
     for (const site of await listDiveSites(db, shop.id)) {
       await deleteDiveSite(db, shop.id, site.id);

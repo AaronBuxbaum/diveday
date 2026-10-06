@@ -570,7 +570,7 @@ describe("notificationProviderFromEnvironment (ADR 20260803-ses-sole-email-provi
     });
   });
 
-  it("brands an unlabelled configured sender as DiveDay", async () => {
+  it("brands an unlabeled configured sender as DiveDay", async () => {
     const sesClient = { send: vi.fn().mockResolvedValue({ MessageId: "ses-id" }) };
     const provider = notificationProviderFromEnvironment(
       {

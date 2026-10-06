@@ -59,7 +59,7 @@ describe("an open item", () => {
    * Colour never carries a state on its own (principles.md #6): the tone is in
    * the kind word's ink, and the kind word is a word.
    */
-  it("never carries its tone in colour alone", () => {
+  it("never carries its tone in color alone", () => {
     renderLedger([
       {
         kind: "waiver",

@@ -21,7 +21,7 @@ describe("x", () => {
     expect(estimateCost(source)).toBe(PER_FILE_DB_COST + 3 * PER_TEST_DB_COST);
   });
 
-  it("recognises the slow path taken without the helper", () => {
+  it("recognizes the slow path taken without the helper", () => {
     const source = `import { createTestDb } from "@/db/client";
 it("a", async () => { const db = await createTestDb(); });`;
     expect(estimateCost(source)).toBe(PER_FILE_DB_COST + PER_TEST_DB_COST);

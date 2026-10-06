@@ -114,7 +114,7 @@ describe("recordTripStage", () => {
       .insert(shops)
       .values({ name: "Neighbour", slug: "stage-neighbour", timezone: ZONE })
       .returning();
-    if (!other) throw new Error("neighbour insert failed");
+    if (!other) throw new Error("neighbor insert failed");
     const theirs = await aDeparture(db, other.id);
     const staffer = await aStaffer(db, shopId);
     expect(

@@ -119,10 +119,10 @@
       "descriptionSet": "Description set",
       "submitting": "Saving…",
       "submit": "Save profile",
-      "brandColor": "Brand colour",
-      "brandColorPicker": "Pick a brand colour",
+      "brandColor": "Brand color",
+      "brandColorPicker": "Pick a brand color",
       "brandColorHint": "Buttons and links on your public pages. Leave it blank to keep DiveDay’s teal.",
-      "brandColorDarkened": "Your colour was too light to read as text, so your storefront uses {hex}.",
+      "brandColorDarkened": "Your color was too light to read as text, so your storefront uses {hex}.",
       "displayFont": "Headline face",
       "displayFontDefault": "DiveDay’s own",
       "heroPhoto": "Cover photo",
@@ -239,7 +239,7 @@
     "units": {
       "heading": "Units",
       "depthLabel": "Show depths in",
-      "meters": "Metres (m)",
+      "meters": "Meters (m)",
       "feet": "Feet (ft)",
       "temperatureLabel": "Show water temperature in",
       "celsius": "Celsius (°C)",
@@ -942,7 +942,7 @@
     "look": "Look",
     "lookSite": "Your site",
     "lookLight": "DiveDay",
-    "lookNote": "Reads your page’s link colour and font. If the colour is too pale for white text, the button darkens itself.",
+    "lookNote": "Reads your page’s link color and font. If the color is too pale for white text, the button darkens itself.",
     "language": "Language",
     "languageAuto": "Follow the visitor’s browser",
     "preview": "Preview",
@@ -957,7 +957,7 @@
     "kinds": {
       "button": {
         "name": "Button",
-        "hint": "A link in your colour"
+        "hint": "A link in your color"
       },
       "lightbox": {
         "name": "Lightbox",

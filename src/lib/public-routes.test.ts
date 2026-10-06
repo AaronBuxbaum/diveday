@@ -8,7 +8,7 @@ import {
 } from "./public-routes";
 
 describe("agent-facing paths", () => {
-  it("puts the availability document beside the schedule it summarises", () => {
+  it("puts the availability document beside the schedule it summarizes", () => {
     expect(publicAvailabilityPath("blue-mantis")).toBe("/s/blue-mantis/availability.json");
   });
 

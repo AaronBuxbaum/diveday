@@ -244,7 +244,7 @@ describe("double-submitted actions settle exactly once", () => {
   });
 });
 
-describe("a cancelled or moved seat versus the tab that kept paying", () => {
+describe("a canceled or moved seat versus the tab that kept paying", () => {
   it("an abandoned tab completing after a self-cancel cannot pay for the freed seat", async () => {
     const { db, shop } = await connectedShop();
     const reef = await pricedReef(db, shop.id, 48);

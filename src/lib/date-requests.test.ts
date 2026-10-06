@@ -55,7 +55,7 @@ describe("homeDate", () => {
     expect(entry?.homeDate).toBe("2026-09-19");
   });
 
-  it("points a flexible neighbour back at the day it did name", () => {
+  it("points a flexible neighbor back at the day it did name", () => {
     const rows = [
       request("flo", { preferredDate: september(12), dateFlexible: true }),
       request("anchor", { preferredDate: september(14) }),

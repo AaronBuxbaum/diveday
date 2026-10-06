@@ -40,7 +40,7 @@ describe("every sheet", () => {
     expect(container.querySelector(".paper-sheet-fold")).not.toBeNull();
   });
 
-  it("is drawn at the millimetres of its own paper", () => {
+  it("is drawn at the millimeters of its own paper", () => {
     const { container } = renderSheet();
     const sheet = container.querySelector<HTMLElement>(".paper-sheet");
     const box = PRINT_SHEET_BOX_MM[PAPER_PASS_PAPER];
@@ -51,7 +51,7 @@ describe("every sheet", () => {
     expect(sheet?.style.height).toBe("");
   });
 
-  it("takes its band colour as a value, not a token", () => {
+  it("takes its band color as a value, not a token", () => {
     // `@media print` redefines `--primary` to repaint the app monochrome, so a
     // band drawn from the token would print grey. The caller resolves it.
     const { container } = renderSheet();

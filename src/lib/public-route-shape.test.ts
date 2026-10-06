@@ -78,7 +78,7 @@ describe("publicRouteShape", () => {
     });
   });
 
-  it("knows the widget catalogue is a closed list", () => {
+  it("knows the widget catalog is a closed list", () => {
     expect(publicRouteShape(`/s/${SHOP}/embed/grid`)).toEqual({ kind: "shop", shopSlug: SHOP });
     expect(publicRouteShape(`/s/${SHOP}/embed/departure`)).toEqual({
       kind: "shop",

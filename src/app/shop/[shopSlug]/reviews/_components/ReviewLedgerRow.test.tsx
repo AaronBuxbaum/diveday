@@ -191,7 +191,7 @@ describe("a review row", () => {
   });
 
   /** The stars are decoration; the rating is spoken (`StarRating`). */
-  it("speaks the rating rather than leaving it to colour", () => {
+  it("speaks the rating rather than leaving it to color", () => {
     row({ rating: 3 });
     expect(screen.getByText("3 out of 5 stars")).toBeInTheDocument();
   });

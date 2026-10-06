@@ -3,7 +3,7 @@ import { daysFromNow, e2eNow, openTripAbout, openTripFromBoard, openTripMore } f
 
 signedInAsOwner();
 
-test("a repeating trip is scheduled on two weekdays, stopped, and cancelled as one", async ({
+test("a repeating trip is scheduled on two weekdays, stopped, and canceled as one", async ({
   page,
 }) => {
   // A repeating trip is scheduled from the board's own add panel (ADR
@@ -100,5 +100,5 @@ test("a repeating trip is scheduled on two weekdays, stopped, and cancelled as o
   await moreAgain.getByRole("button", { name: "Cancel every upcoming date" }).click();
   await expect(moreAgain.getByText(/off the public schedule/)).toBeVisible();
   await moreAgain.getByRole("button", { name: "Yes, cancel every upcoming date" }).click();
-  await expect(page.getByText(/Cancelled every upcoming date in this series/)).toBeVisible();
+  await expect(page.getByText(/Canceled every upcoming date in this series/)).toBeVisible();
 });

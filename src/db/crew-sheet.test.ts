@@ -252,7 +252,7 @@ describe("crewSheetForMonth", () => {
     expect(input.tips).toEqual([{ tripId: trip.id, amountCents: 4000 }]);
   });
 
-  it("leaves a cancelled or deleted departure off the sheet", async () => {
+  it("leaves a canceled or deleted departure off the sheet", async () => {
     const db = await unseededTestDb();
     const shop = await bareShop(db);
     const ana = await crewMember(db, shop.id, "Ana Reyes");

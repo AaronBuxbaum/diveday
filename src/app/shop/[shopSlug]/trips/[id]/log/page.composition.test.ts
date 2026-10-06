@@ -14,7 +14,7 @@ const SOURCE = readFileSync(join(__dirname, "page.tsx"), "utf8");
 /** The source of the `<section>` its heading id labels, up to its close. */
 function section(headingId: string): string {
   const label = SOURCE.indexOf(`aria-labelledby="${headingId}"`);
-  expect(label, `the section labelled ${headingId} is where this test looks`).toBeGreaterThan(-1);
+  expect(label, `the section labeled ${headingId} is where this test looks`).toBeGreaterThan(-1);
   const start = SOURCE.lastIndexOf("<section", label);
   return SOURCE.slice(start, SOURCE.indexOf("</section>", start));
 }

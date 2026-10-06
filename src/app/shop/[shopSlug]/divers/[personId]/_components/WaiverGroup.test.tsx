@@ -470,7 +470,7 @@ describe("the waiver group", () => {
    * and a ring takes no room, so a failed Email and a sent Text stood 4px apart
    * in a row whose plain buttons keep 8.
    */
-  it("never carries a channel's state in colour alone", () => {
+  it("never carries a channel's state in color alone", () => {
     renderCard(
       diver({
         email: "priya@dive.day",

@@ -147,7 +147,7 @@ describe("birthdayCallout", () => {
     expect(birthdayCallout("2012-12-30", "2026-01-02")).toEqual({ status: "recent", daysAgo: 3 });
   });
 
-  it("honours a caller-supplied window", () => {
+  it("honors a caller-supplied window", () => {
     expect(birthdayCallout("2012-07-27", "2026-07-24", 2)).toBeNull();
     expect(birthdayCallout("2012-07-22", "2026-07-24", 1)).toBeNull();
   });

@@ -88,7 +88,7 @@ describe("the settings frame the pane's left edge reads", () => {
     expect(main.matches(BESIDE_THE_RAIL)).toBe(true);
   });
 
-  it("stands nothing before the pane when the rail draws nothing, so the column stays centred", async () => {
+  it("stands nothing before the pane when the rail draws nothing, so the column stays centered", async () => {
     vi.mocked(canPersonManageShopSettings).mockResolvedValue(false);
     const { main, pane } = await renderFrame();
     expect(pane.previousElementSibling).toBeNull();

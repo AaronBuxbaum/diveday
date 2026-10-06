@@ -61,7 +61,7 @@ describe("SheetHeader", () => {
     return { title, header };
   }
 
-  it("centres the name and the trailing group on one row", () => {
+  it("centers the name and the trailing group on one row", () => {
     const { title, header } = renderHeader();
     expect(header.tagName).toBe("HEADER");
     expect(header).toHaveClass("grid", "items-center");

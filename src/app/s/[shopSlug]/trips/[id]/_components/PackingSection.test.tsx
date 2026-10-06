@@ -124,7 +124,7 @@ describe("PackingSection — the dock-day rhythm's meeting point", () => {
     expect(screen.getByText("North Jetty Marina")).toBeInTheDocument();
   });
 
-  it("centres each step's circle on its time's line", () => {
+  it("centers each step's circle on its time's line", () => {
     // The 24px circle sat `top-0.5` beside a 20px `text-sm` line, so its
     // centre fell 14px down the row against the time's 10: the circles hung
     // 3–4px below their times on every row (K-160). One 24px line box for the

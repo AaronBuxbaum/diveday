@@ -136,8 +136,8 @@ function allTableNames(): string[] {
 const UNSCOPED_REASONS: Record<string, string> = {
   auth_verifications:
     "better-auth's `verification` model: no foreign key, names its person as text in `identifier`. Both paths sweep it by that column, and so does the erasure (src/db/anonymize.ts) — a pending row holds an address and a live token",
-  global_dive_sites: "DiveDay’s own catalogue of sites, shared by every shop and owned by none",
-  global_dive_site_versions: "the catalogue's own history, beside the table above",
+  global_dive_sites: "DiveDay’s own catalog of sites, shared by every shop and owned by none",
+  global_dive_site_versions: "the catalog's own history, beside the table above",
   notification_rate_limit_state:
     "provider coordination keyed by ceiling and period, holding no person",
   stripe_webhook_events:

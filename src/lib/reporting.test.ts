@@ -110,7 +110,7 @@ describe("summarizeMonth", () => {
     });
   });
 
-  it("carries the labelled imported payment and refund slice without turning it into trip activity", () => {
+  it("carries the labeled imported payment and refund slice without turning it into trip activity", () => {
     const report = summarizeMonth(
       input({
         trips: [],

@@ -138,7 +138,7 @@ function handDrawnRings(source: string): string[] {
 }
 
 describe("no component draws its own ring", () => {
-  it("recognises every shape a hand-drawn ring has taken here", () => {
+  it("recognizes every shape a hand-drawn ring has taken here", () => {
     expect(
       handDrawnRings(
         [
@@ -170,7 +170,7 @@ describe("no component draws its own ring", () => {
     ]);
   });
 
-  it("leaves the two utilities, colour, an outline switched off (the next guard's), and rings that are not focus", () => {
+  it("leaves the two utilities, color, an outline switched off (the next guard's), and rings that are not focus", () => {
     expect(
       handDrawnRings(
         "focus-visible:focus-ring-inset peer-focus-visible:focus-ring has-[:focus-visible]:focus-ring focus:ring-primary focus:outline-none outline-2 outline-offset-1 ring-2 has-[:checked]:ring-2 has-checked:ring-2",

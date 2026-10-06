@@ -807,7 +807,7 @@ describe("prepareContactImport — prior visits", () => {
     });
   });
 
-  it("keeps a cancelled booking rather than dropping it", () => {
+  it("keeps a canceled booking rather than dropping it", () => {
     // The row is history either way; hiding it would misstate what the old
     // system held, and counting it as a dive would invent one. It comes in
     // carrying the word "Cancelled" and the profile renders that.

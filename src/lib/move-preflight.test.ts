@@ -89,7 +89,7 @@ describe("composeMovePreflight", () => {
       );
     });
 
-    it("says a cancelled departure will be refused", () => {
+    it("says a canceled departure will be refused", () => {
       expect(composeMovePreflight({ ...quiet, scheduled: false }).blocked).toBe("not_scheduled");
     });
 

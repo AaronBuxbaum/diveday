@@ -168,7 +168,7 @@ test("comment moderation is disclosed when the words land, not as a standing hin
   ).toBeVisible();
 });
 
-test("a booking cancelled after the recap page loaded gets an honest notice, not a lie about a bad rating or a bad file (task 56)", async ({
+test("a booking canceled after the recap page loaded gets an honest notice, not a lie about a bad rating or a bad file (task 56)", async ({
   page,
   staffStorageState,
   workerBaseURL,
@@ -211,7 +211,7 @@ test("a booking cancelled after the recap page loaded gets an honest notice, not
   // Two-tap InlineConfirm, not a native dialog: the first tap only arms it.
   await diverRow.getByRole("button", { name: "Remove booking" }).click();
   await diverRow.getByRole("button", { name: "Yes, remove booking" }).click();
-  await expect(staffPage.getByRole("status")).toContainText("Booking cancelled");
+  await expect(staffPage.getByRole("status")).toContainText("Booking canceled");
   await staffContext.close();
 
   // Back on the diver's still-open page: submitting the rating now hits a

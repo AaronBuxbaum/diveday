@@ -682,14 +682,14 @@ describe("the rows the pane is made of", () => {
 
   it("stacks a row's value under its heading on a phone", () => {
     const { container } = render(
-      <SettingsRow sectionId="address" heading="Address" value="12 Harbour Rd">
+      <SettingsRow sectionId="address" heading="Address" value="12 Harbor Rd">
         <span>form</span>
       </SettingsRow>,
     );
     const summary = container.querySelector("summary");
     const shown = summary?.querySelectorAll(":scope > :not(.hidden)");
     expect(shown).toHaveLength(2);
-    expect(shown?.[1]).toHaveTextContent("12 Harbour Rd");
+    expect(shown?.[1]).toHaveTextContent("12 Harbor Rd");
   });
 });
 

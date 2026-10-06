@@ -1201,7 +1201,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
 
     const saved = await updateCourseContent(db, shop.id, course.id, {
       ...emptyContent,
-      summary: "Plan and make dives to 40 metres",
+      summary: "Plan and make dives to 40 meters",
       overview: "Four training dives over two days.",
       durationText: "2 days",
       includes: ["Four dives", "Tanks and weights"],
@@ -1212,7 +1212,7 @@ describe("course content and public pages (in-memory PGlite)", () => {
     });
     expect(saved.ok).toBe(true);
     expect(saved.ok && saved.course).toMatchObject({
-      summary: "Plan and make dives to 40 metres",
+      summary: "Plan and make dives to 40 meters",
       minimumAge: 15,
       priceCents: 32500,
       minimumCertificationLevel: "open_water",

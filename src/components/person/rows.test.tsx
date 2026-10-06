@@ -93,7 +93,7 @@ describe("CertificationCardRow — the state→badge table", () => {
     }
   });
 
-  it("gives every non-certified state a visible word, never colour or a glyph alone", () => {
+  it("gives every non-certified state a visible word, never color or a glyph alone", () => {
     for (const state of ["pending", "self_declared", "imported_unconfirmed"] as const) {
       const { container } = render(
         <CertificationCardRow as="div" t={t} title="PADI Open Water" state={state} />,
@@ -237,7 +237,7 @@ describe("WaiverStateRow", () => {
     expect(none.textContent).not.toBe(expiredWord);
   });
 
-  it("states the delivery failure rather than colouring the row red in silence", () => {
+  it("states the delivery failure rather than coloring the row red in silence", () => {
     const { container } = render(<WaiverStateRow as="div" t={t} state="failed" />);
     expect(container.textContent).toContain(t("divers.stats.waiverFailed"));
     expect(container.querySelector(".text-danger")).not.toBeNull();
@@ -250,7 +250,7 @@ describe("WaiverStateRow", () => {
     expect(screen.getByText("signed Wed, Aug 26 · release v4")).toBeTruthy();
   });
 
-  it("wears no colour and no pill when the release is current", () => {
+  it("wears no color and no pill when the release is current", () => {
     const { container } = render(<WaiverStateRow as="div" t={t} state="current" />);
     expect(badgeIn(container)).toBeNull();
     expect(container.innerHTML).not.toMatch(/text-warning|text-danger/);

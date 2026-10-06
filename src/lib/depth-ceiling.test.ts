@@ -26,7 +26,7 @@ function specialty(overrides: Partial<SpecialtyCertification> = {}): SpecialtyCe
 }
 
 describe("diverDepthLimit", () => {
-  it("reads the ceiling off the ladder, as the agencies publish it — a metre/foot pair", () => {
+  it("reads the ceiling off the ladder, as the agencies publish it — a meter/foot pair", () => {
     expect(diverDepthLimit([card("open_water")], [])).toEqual({
       ceiling: { meters: 18, feet: 60 },
       basis: "certification",

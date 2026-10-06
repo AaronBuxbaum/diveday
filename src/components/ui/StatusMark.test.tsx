@@ -37,7 +37,7 @@ describe("StatusMark", () => {
    * is a box one line tall, standing at the top of the line it opens, with the
    * mark centred in it: where the line's own capitals are centred.
    */
-  it("stands inline as a one-line box with the mark centred in it", () => {
+  it("stands inline as a one-line box with the mark centered in it", () => {
     const { container } = render(<StatusMark variant="warning" inline className="text-warning" />);
     const box = container.firstElementChild;
     const svg = container.querySelector("svg");
@@ -65,7 +65,7 @@ describe("StatusMark", () => {
    * row's flex item) holding the inline one-line box, so it has a real line
    * and a real first baseline, with the mark centred on that line.
    */
-  it("heads a row as a block holding one line of the row's text, the mark centred in it", () => {
+  it("heads a row as a block holding one line of the row's text, the mark centered in it", () => {
     const { container } = render(<StatusMarkColumn variant="danger" className="text-danger" />);
     const column = container.firstElementChild;
     const line = column?.firstElementChild;

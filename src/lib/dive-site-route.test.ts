@@ -152,7 +152,7 @@ describe("cropping the briefing frame to the route", () => {
   const project = (focus: { scale: number; translateX: number; translateY: number }, at: number) =>
     focus.translateX + focus.scale * at;
 
-  it("puts a small route's centre in the middle of the window", () => {
+  it("puts a small route's center in the middle of the window", () => {
     // Four waypoints inside the middle fifth of the frame — the shape the
     // editor produces for a short swim around one mooring, and the case the
     // briefing used to render as a correct line too small to read.

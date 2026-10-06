@@ -51,7 +51,7 @@
     "connect": "Connect WhatsApp",
     "reconnect": "Reconnect WhatsApp",
     "connecting": "Connecting…",
-    "cancelled": "Connection cancelled. Nothing was changed.",
+    "cancelled": "Connection canceled. Nothing was changed.",
     "blocked": "Meta’s window could not open. Check that your browser isn’t blocking pop-ups, then try again."
   }
 }

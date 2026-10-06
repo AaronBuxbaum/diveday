@@ -116,7 +116,7 @@
   "carriedForwardFromDock": "Ashore since the dock",
   "buddyHeading": "Buddy teams",
   "buddyTeamLabel": "Team {number, number, ::00}",
-  "buddyCancelledName": "{name} (seat cancelled)",
+  "buddyCancelledName": "{name} (seat canceled)",
   "buddyCrewName": "{name} (crew)",
   "buddyRecordedBy": "Recorded by {name}",
   "buddyDissolve": "Dissolve team",

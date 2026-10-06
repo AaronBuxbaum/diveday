@@ -215,7 +215,7 @@ describe("SiteMark", () => {
     }
   });
 
-  it("centres the boat in its canvas, and keeps its stroke inside it", () => {
+  it("centers the boat in its canvas, and keeps its stroke inside it", () => {
     // The boat's lines ran x 6–120 and y 22–76 of the 120×80 canvas, whose
     // centre is (60, 40): its ink sat 2.5px low and 1.5px right in the 44×30
     // tile, and the swell's right end ran into the canvas edge, which cut its

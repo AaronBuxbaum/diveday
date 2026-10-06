@@ -152,7 +152,7 @@ describe("person-first diver records", () => {
     expect(plussed?.phone).toBe("+34612345678");
   });
 
-  it("normalises on the way in through an edit as well as a create", async () => {
+  it("normalizes on the way in through an edit as well as a create", async () => {
     const { db, shop } = ctx;
     const diver = await createDiver(db, {
       shopId: shop.id,
@@ -2750,14 +2750,14 @@ describe("findSimilarDivers last dive day", () => {
     expect(await lastDiveDayOf(db, shop.id, person.id)).toBeNull();
   });
 
-  it("reports nothing when the one seat on file was cancelled", async () => {
+  it("reports nothing when the one seat on file was canceled", async () => {
     const { db, shop } = ctx;
     const person = await candidate(db, shop.id);
     const trip = await sailedSeat(
       db,
       shop.id,
       person.id,
-      "Cancelled seat",
+      "Canceled seat",
       new Date(nowMs() - 24 * HOUR_MS),
     );
     await db

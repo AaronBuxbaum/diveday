@@ -465,7 +465,7 @@ test.describe("the prep list's two groupings", () => {
     await expect(kit.getByRole("columnheader", { name: "Item" })).toBeVisible();
   });
 
-  test("reads an unrecognised grouping as the rack rather than rendering nothing", async ({
+  test("reads an unrecognized grouping as the rack rather than rendering nothing", async ({
     page,
   }) => {
     const tripPath = await tripPathByTitle(page, SHOP, "Two-Tank Reef — Molasses & French");

@@ -368,7 +368,7 @@ describe("Amazon Location address suggestions", () => {
     warn.mockRestore();
   });
 
-  it("asks for a pickable list, not a catalogue, and sends the trimmed query", async () => {
+  it("asks for a pickable list, not a catalog, and sends the trimmed query", async () => {
     const client = clientReturning({ ResultItems: [] });
     await awsAddressLookupProvider(config, { client }).suggest("  102 Ocean  ");
     const command = client.send.mock.calls[0][0] as { input: Record<string, unknown> };

@@ -77,7 +77,7 @@ describe("forecastText", () => {
     ).toBe("Expect water around 81°F and visibility near 66 ft.");
   });
 
-  it("honours the two settings independently", () => {
+  it("honors the two settings independently", () => {
     // Feet with Celsius — the combination the old `depth_unit` derivation
     // could not express at all.
     expect(

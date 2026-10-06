@@ -53,7 +53,7 @@ describe("languageEndonymList", () => {
 });
 
 describe("localeEndonym", () => {
-  it("sentence-cases the name, so a switcher's options are not half-capitalised", () => {
+  it("sentence-cases the name, so a switcher's options are not half-capitalized", () => {
     // CLDR follows each language's own orthography — English capitalises the
     // names of languages and Spanish does not — which put "English" beside
     // "español" on the same row of buttons and read as a bug.
@@ -67,7 +67,7 @@ describe("localeEndonym", () => {
     expect(localeEndonym("en-GB")).toBe("English");
   });
 
-  it("gives every language DiveDay carries a capitalised label", () => {
+  it("gives every language DiveDay carries a capitalized label", () => {
     // The switcher is generated from this list (ShopNav, the public shop
     // header, the command palette), so a language added later cannot quietly
     // arrive lowercase beside the others.

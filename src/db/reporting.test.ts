@@ -665,7 +665,7 @@ describe("getMonthlyReport", () => {
       expect(report.tipCount).toBe(1);
     });
 
-    it("buckets a tip by the trip's departure month, and never counts a cancelled boat's", async () => {
+    it("buckets a tip by the trip's departure month, and never counts a canceled boat's", async () => {
       const { db, shop } = await seededShopContext();
       const diver = await makePerson(db, shop.id, "Tipper Tess");
       const june = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "June reef");
@@ -799,7 +799,7 @@ describe("getMonthlyReport partner referrals (issue #1285)", () => {
     expect(report.partnerReferredSeats).toBe(14);
   });
 
-  it("excludes a cancelled seat, on the same basis as every other figure", async () => {
+  it("excludes a canceled seat, on the same basis as every other figure", async () => {
     const { db, shop } = await seededShopContext();
     const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
     await referredBooking(db, shop.id, trip, "Still Coming", "coral-sands");
@@ -834,14 +834,14 @@ describe("getMonthlyReport partner referrals (issue #1285)", () => {
     ).toBe(0);
   });
 
-  it("excludes a referred seat on a cancelled departure", async () => {
+  it("excludes a referred seat on a canceled departure", async () => {
     // The seats figure this is a slice of counts live departures only, so a
     // called-off trip's referred seats must not be in the total either. Nothing
     // else pins the trip-status half: `check:live-trips` catches a dropped
     // `liveTrip()`, and nothing catches a dropped `ne(status, "cancelled")`.
     const { db, shop } = await seededShopContext();
     const trip = await makeTrip(db, shop.id, new Date("2026-06-10T12:00:00Z"), 10, "Reef");
-    await referredBooking(db, shop.id, trip, "Aboard A Cancelled Boat", "coral-sands");
+    await referredBooking(db, shop.id, trip, "Aboard A Canceled Boat", "coral-sands");
     await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, trip));
 
     const report = await getMonthlyReport(db, shop.id, JUNE_START, JULY_START);
@@ -963,7 +963,7 @@ describe("pagedMonthlyReportTrips", () => {
 });
 
 describe("earliestReportedTripStart", () => {
-  it("returns the oldest scheduled departure, ignoring cancelled ones", async () => {
+  it("returns the oldest scheduled departure, ignoring canceled ones", async () => {
     const { db, shop } = await seededShopContext();
     // Older than anything the demo seed lays down, so it is unambiguously the
     // floor whatever the seeded history happens to contain.
@@ -1334,7 +1334,7 @@ describe("getShopYear", () => {
     expect(year.sites[1]?.share).toBe(0.5);
   });
 
-  it("leaves a departure that has not sailed, and a cancelled one, out of the year", async () => {
+  it("leaves a departure that has not sailed, and a canceled one, out of the year", async () => {
     const db = await unseededTestDb();
     const shopId = await yearShop(db, "year-unsailed");
     await sailedTrip(db, shopId, "2026-06-01", 10, 5);

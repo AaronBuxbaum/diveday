@@ -193,7 +193,7 @@ describe("medical waiver mark", () => {
     });
   });
 
-  it("surfaces nothing for an in-review, unrecognised, or absent record", () => {
+  it("surfaces nothing for an in-review, unrecognized, or absent record", () => {
     expect(
       medicalWaiverMark(completedWaiver({ status: "medical_review", medicalAnswers: answers })),
     ).toBeNull();

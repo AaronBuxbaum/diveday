@@ -115,7 +115,7 @@ describe("ThreadSpine", () => {
     expect(screen.getByText("Your shop is confirming your readiness.")).toBeVisible();
   });
 
-  it("gives every state a word, never colour alone", () => {
+  it("gives every state a word, never color alone", () => {
     render(
       <ThreadSpine
         steps={[

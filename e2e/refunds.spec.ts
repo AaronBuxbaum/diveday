@@ -98,7 +98,7 @@ test.describe("refunds", () => {
     return noraRow;
   }
 
-  test("cancelling a paid counter booking inside the free-cancellation window flags a manual refund", async ({
+  test("canceling a paid counter booking inside the free-cancellation window flags a manual refund", async ({
     page,
   }) => {
     // `createPaymentRequiredTrip` + `bookAndMarkPaid` alone chain several full
@@ -133,7 +133,7 @@ test.describe("refunds", () => {
     await expect(page.getByText(/removed Nora Quinn from the trip/)).toBeVisible();
   });
 
-  test("cancelling a paid booking past the cancellation deadline forfeits the refund", async ({
+  test("canceling a paid booking past the cancellation deadline forfeits the refund", async ({
     page,
   }) => {
     // Same aggregate-cost reasoning as the free-cancellation-window test

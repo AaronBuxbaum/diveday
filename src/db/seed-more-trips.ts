@@ -193,7 +193,7 @@ export async function seedMoreTrips(
     },
     {
       title: "Sunset Two-Tank — Christ of the Abyss (weather hold)",
-      description: "Cancelled ahead of a small-craft advisory; rescheduling with everyone booked.",
+      description: "Canceled ahead of a small-craft advisory; rescheduling with everyone booked.",
       startsAt: at(10, 16, 0),
       endsAt: at(10, 19, 30),
       capacity: 10,
@@ -225,7 +225,7 @@ export async function seedMoreTrips(
     },
     {
       title: "Two-Tank Reef — French Reef (small craft advisory)",
-      description: "Cancelled for weather; nobody had booked yet.",
+      description: "Canceled for weather; nobody had booked yet.",
       startsAt: at(17, 11, 0),
       endsAt: at(17, 14, 30),
       capacity: 10,

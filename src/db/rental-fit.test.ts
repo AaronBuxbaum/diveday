@@ -608,7 +608,7 @@ describe("listTripPrepDivers", () => {
     });
   });
 
-  it("excludes a cancelled booking from the active roster", async () => {
+  it("excludes a canceled booking from the active roster", async () => {
     const { db, shopId, tripId } = await context();
     const { bookingId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
     await cancelBooking(db, shopId, bookingId);
@@ -637,7 +637,7 @@ describe("rentalFitByBooking", () => {
     expect(map.get(bookingId)).toBeNull();
   });
 
-  it("excludes cancelled bookings from the map", async () => {
+  it("excludes canceled bookings from the map", async () => {
     const { db, shopId, tripId } = await context();
     const { bookingId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
     await cancelBooking(db, shopId, bookingId);
