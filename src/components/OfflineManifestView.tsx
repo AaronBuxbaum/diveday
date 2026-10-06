@@ -2361,8 +2361,8 @@ export function OfflineManifestView() {
                           {/* A held seat was saved with the matched person's
                             particulars already cleared (`serializeManifests`),
                             so it says why rather than "Not on file" (issue
-                            #1690). The saved flag first; the identity blocker
-                            covers a copy saved before the flag existed. */}
+                            #1690). Either signal withholds: the saved flag, or
+                            the identity blocker on the row, failing closed. */}
                           {diver.identityWithheld || isHeldSeat(diver) ? (
                             <p className="text-muted">{t("manifest.identityWithheldDetails")}</p>
                           ) : (

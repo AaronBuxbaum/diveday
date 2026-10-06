@@ -103,7 +103,7 @@
   "crewClashDetail": "Also rostered on {departures} at the same time. Confirm who is aboard before you sail.",
   "notOnFile": "Not on file",
   "identityWithheldDetails": "Their contact, age and other details wait until the desk confirms who this is.",
-  "heldSeatNotConfirmed": "{moreHolds, select, yes {Not confirmed. The desk must confirm or split this seat before boarding. Other holds may still apply.} other {Not confirmed. The desk must confirm or split this seat before boarding.}}",
+  "heldSeatNotConfirmed": "{moreHolds, select, yes {Not confirmed. The desk must settle who this is before boarding. Other holds may still apply.} other {Not confirmed. The desk must settle who this is before boarding.}}",
   "rentalFitLabel": "Rental fit",
   "nitroxRequestedSuffix": " · Nitrox requested",
   "hotelPickupLabel": "Hotel pickup",

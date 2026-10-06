@@ -3745,7 +3745,7 @@
         "faq1Q": "What if a diver can’t remember which boat they’re on?",
         "faq1A": "Search by name, phone or email from DiveDay’s opening screen, or scan the code on their confirmation. It looks across every departure from six hours ago to a day and a half ahead.",
         "faq2Q": "Can a walk-in fill in their own details?",
-        "faq2A": "Yes. The code on your counter card opens a form on their phone for their name, contact details, certification and rental sizes, and a walk-in is sent the release, by text if they gave only a local phone number. Then seat them from the Divers tab.",
+        "faq2A": "Yes. The code on your counter card opens a form on their phone for their name, contact details, certification and rental sizes, and a walk-in is sent the release, by text if they gave a phone number and no email. Then seat them from the Divers tab.",
         "faq3Q": "What happens when someone doesn’t show?",
         "faq3A": "Once the boat’s time has passed, mark them Not here. Their seat opens, the wait list shows beside it, and nothing is charged or refunded by that tap.",
         "closeTitle": "Check in the divers on the next demo boat.",

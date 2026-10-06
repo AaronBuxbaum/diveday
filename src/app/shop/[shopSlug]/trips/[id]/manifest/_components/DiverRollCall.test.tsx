@@ -847,7 +847,7 @@ describe("a held seat on the manifest", () => {
   it("flags other holds on a held seat with a medical hold, and never says medical", () => {
     const { container } = heldSeat();
     const crewLine =
-      "Not confirmed. The desk must confirm or split this seat before boarding. Other holds may still apply.";
+      "Not confirmed. The desk must settle who this is before boarding. Other holds may still apply.";
     expect(container.textContent).toContain(crewLine);
     const printed = container.querySelector<HTMLElement>(".print\\:block");
     expect(printed).toHaveTextContent(crewLine);
@@ -867,7 +867,7 @@ describe("a held seat on the manifest", () => {
       ],
     });
     expect(container.textContent).toContain(
-      "Not confirmed. The desk must confirm or split this seat before boarding.",
+      "Not confirmed. The desk must settle who this is before boarding.",
     );
     expect(container.textContent).not.toContain("Other holds may still apply.");
   });

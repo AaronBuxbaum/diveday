@@ -2284,7 +2284,8 @@ new domain concept, define it here in the same PR.
   seat asks for its own release and is blocked until it has one; the moved links lose the
   delivery outcome they recorded for the matched diver's address. A seat on a **medical hold**,
   whether the physician referral is unanswered or the physician did not clear the diver, is
-  refused until a physician clears it, since superseding it would lift the hold.
+  refused, since superseding it would lift the hold; the desk's way out is to cancel the seat and
+  seat the person fresh, which asks for their own release and medical answers.
   A **signed release stays with the matched diver** (issue #2080): a signature is refused unless
   the typed name matches the record's diver, so every signed release on a held seat names the
   matched person and is their paper. The seat's **unsigned links** follow it, with any half-typed

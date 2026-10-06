@@ -3745,7 +3745,7 @@
         "faq1Q": "¿Y si un buceador no recuerda en qué barco va?",
         "faq1A": "Búscalo por nombre, teléfono o correo desde la pantalla de inicio de DiveDay, o escanea el código de su confirmación. La búsqueda abarca cada salida desde seis horas atrás hasta un día y medio adelante.",
         "faq2Q": "¿Quien llega sin reserva puede completar sus propios datos?",
-        "faq2A": "Sí. El código de la tarjeta de tu mostrador abre un formulario en su teléfono para su nombre, su correo o teléfono, su certificación y sus tallas de alquiler, y se le envía la exención, por SMS si solo dejó un teléfono local. Luego dale su plaza desde la pestaña Buceadores.",
+        "faq2A": "Sí. El código de la tarjeta de tu mostrador abre un formulario en su teléfono para su nombre, su correo o teléfono, su certificación y sus tallas de alquiler, y se le envía la exención, por SMS si dejó un teléfono y ningún correo. Luego dale su plaza desde la pestaña Buceadores.",
         "faq3Q": "¿Qué pasa cuando alguien no se presenta?",
         "faq3A": "Una vez pasada la hora del barco, márcalo como que no vino. La plaza se libera, la lista de espera aparece al lado, y ese toque no cobra ni reembolsa nada.",
         "closeTitle": "Registra a los buceadores del próximo barco de la demo.",
