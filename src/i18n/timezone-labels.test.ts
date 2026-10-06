@@ -7,7 +7,7 @@ const summerDeparture = new Date("2026-07-15T11:30:00Z");
 const winterDeparture = new Date("2026-01-15T12:30:00Z");
 
 describe("timeZoneLabel", () => {
-  it("names the zone as it stands on the day being labelled", () => {
+  it("names the zone as it stands on the day being labeled", () => {
     // Not "the shop's zone" as a constant — a schedule read in March listing
     // July boats must say EDT, and the same page in January must say EST.
     expect(timeZoneLabel(summerDeparture, "en-US", "America/New_York")).toBe("EDT");

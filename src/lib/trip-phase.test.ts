@@ -84,7 +84,7 @@ describe("tripPhaseOf", () => {
     expect(phaseAt("2026-07-21T14:00:00.000Z", "home")).toBe("back");
   });
 
-  it("names no phase for a cancelled departure", () => {
+  it("names no phase for a canceled departure", () => {
     expect(phaseAt("2026-07-21T10:00:00.000Z", null, true)).toBeNull();
     expect(phaseAt("2026-07-21T12:00:00.000Z", "underway", true)).toBeNull();
   });

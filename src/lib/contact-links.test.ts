@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mailtoHref, telHref } from "./contact-links";
 
 describe("telHref", () => {
-  it("strips what a dialler refuses from a number a shop typed to be read", () => {
+  it("strips what a dialer refuses from a number a shop typed to be read", () => {
     // The regression this module exists for: two surfaces shipped the stored
     // string straight into the href, and a `tel:` carrying spaces and
     // parentheses is refused outright by several diallers — so the tap did

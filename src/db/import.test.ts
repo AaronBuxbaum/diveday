@@ -128,7 +128,7 @@ describe("commitContactImport", () => {
     expect(again).toMatchObject({ cardsAdded: 0, cardsSkippedExisting: 1, peopleUpdated: 1 });
   });
 
-  it("normalises the phone on the update branch too, not only on insert", async () => {
+  it("normalizes the phone on the update branch too, not only on insert", async () => {
     const { db, shop } = await seededShopContext();
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     // First file has no phone, so the second one lands through `applyUpdate`

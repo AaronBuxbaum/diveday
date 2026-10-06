@@ -72,7 +72,7 @@ describe("the counter's no-show copy", () => {
       expect(STAFF_MESSAGES[locale].checkIn.noShow.rebook, locale).toMatch(NAMES_THE_DIVER);
     });
 
-    it(`keeps a cancelled seat and a freed one apart in ${locale}`, () => {
+    it(`keeps a canceled seat and a freed one apart in ${locale}`, () => {
       const notice = STAFF_MESSAGES[locale].checkIn.notice;
 
       // `not_booked` fires only on a cancellation: the diver told the shop.

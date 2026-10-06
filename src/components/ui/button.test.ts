@@ -73,7 +73,7 @@ describe("buttonClass", () => {
     }
   });
 
-  it("centres a wrapped label's lines, not only the box", () => {
+  it("centers a wrapped label's lines, not only the box", () => {
     // `justify-center` centres the label's box, and a label that wraps fills
     // the box, so its lines fell back to start alignment: "One flat $99 per
     // location / month. See the full list" on /about at 390 started 17px
@@ -442,7 +442,7 @@ describe("buttonClass", () => {
    * courses" would have stood its row 44px tall.
    */
   describe("tapTargetLineClass", () => {
-    it("is a block exactly the sm link's 20px line box, centring the target on it", () => {
+    it("is a block exactly the sm link's 20px line box, centering the target on it", () => {
       expect(tapTargetLineClass.split(" ")).toEqual(["flex", "h-5", "items-center"]);
       // `h-5` is `text-sm`'s line box, which is the `sm` size's type.
       expect(buttonClass({ variant: "link", size: "sm" }).split(" ")).toContain("text-sm");
@@ -598,7 +598,7 @@ describe("buttonClass", () => {
    * `flush` gave for padding — never Tailwind's `!` suffix, which papers over
    * one instance and leaves the next override just as inert.
    */
-  describe("no call site passes a colour through className", () => {
+  describe("no call site passes a color through className", () => {
     /**
      * Every `text-<token>` that names a colour, read off the `@theme` block in
      * `globals.css` rather than hard-coded here — so a token added tomorrow is
@@ -645,7 +645,7 @@ describe("buttonClass", () => {
 
     it("hands no `text-<color>` token to buttonClass", () => {
       const colours = colourTokens();
-      expect(colours.size, "globals.css @theme colours were not found").toBeGreaterThan(5);
+      expect(colours.size, "globals.css @theme colors were not found").toBeGreaterThan(5);
 
       const offenders: string[] = [];
       for (const file of sourceFiles(SRC_DIR)) {
@@ -663,7 +663,7 @@ describe("buttonClass", () => {
       expect(offenders).toEqual([]);
     });
 
-    it("hands no border or fill colour to buttonClass: the box is the variant's", () => {
+    it("hands no border or fill color to buttonClass: the box is the variant's", () => {
       // Eight public call sites wrote `border-border-strong` over `secondary`'s
       // own `border-border` while the marketing header's did not, so the
       // header's "Try the demo" and the hero's "Get set up" were one button
@@ -950,7 +950,7 @@ describe("buttonClass", () => {
  * reads — that is a follow-up filed from K-500.
  */
 describe("proseLinkClass", () => {
-  it("underlines at rest and paints a colour under the pointer", () => {
+  it("underlines at rest and paints a color under the pointer", () => {
     const tokens = proseLinkClass.split(" ");
     expect(tokens).toContain("underline");
     expect(tokens.filter((token) => token.startsWith("hover:text-"))).toHaveLength(1);

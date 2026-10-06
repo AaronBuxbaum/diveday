@@ -69,7 +69,7 @@ const COPY: BuilderCopy = {
   impactWindowOne: "Cancellations close {count} hour before it departs.",
   impactWindowOther: "Cancellations close {count} hours before it departs.",
   impactBlockedSailed: "The crew has already counted heads against this departure.",
-  impactBlockedNotScheduled: "A cancelled trip can’t be moved.",
+  impactBlockedNotScheduled: "A canceled trip can’t be moved.",
   crewLabel: "Crew:",
   crewNobodyYet: "nobody yet",
   windLabel: "Wind:",
@@ -1159,7 +1159,7 @@ describe("ScheduleBuilder add panel: one form, two depths (ADR 20260806-one-trip
     expect(screen.getByLabelText("Dives")).toHaveValue(4);
   });
 
-  it("opens already pointed at the course a catalogue link named", async () => {
+  it("opens already pointed at the course a catalog link named", async () => {
     renderBuilder({
       openAdd: "quick",
       initialCourse: {
@@ -2347,7 +2347,7 @@ describe("ScheduleBuilder move impact preview (issue #1203)", () => {
     ).toBeInTheDocument();
   });
 
-  it("names the cancelled refusal instead, when that is the one that applies", async () => {
+  it("names the canceled refusal instead, when that is the one that applies", async () => {
     loadMovePreflight.mockImplementation(async () => ({
       blocked: "not_scheduled",
       sections: [],

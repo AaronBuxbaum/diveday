@@ -87,7 +87,7 @@ test.describe("weather blow-out cascade", () => {
     // `import.spec.ts` matches this badge the same way. The "Reinstate trip"
     // button on the next line is what makes the pair specific to a cancelled
     // trip rather than to any prose containing the word.
-    await expect(page.getByText("Cancelled").filter({ visible: true }).first()).toBeVisible();
+    await expect(page.getByText("Canceled").filter({ visible: true }).first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Reinstate trip" })).toBeVisible();
     /**
      * **But the roll call is still one tap away** (dive-domain review
@@ -109,7 +109,7 @@ test.describe("weather blow-out cascade", () => {
      */
     await tabs.getByRole("link", { name: "Gear" }).click();
     await expect(page).toHaveURL(/\/prep$/);
-    await expect(page.getByText("The departure is cancelled. Nothing to pack.")).toBeVisible();
+    await expect(page.getByText("The departure is canceled. Nothing to pack.")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Tanks", exact: true })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Rental kit", exact: true })).toHaveCount(0);
 
@@ -150,7 +150,7 @@ test.describe("weather blow-out cascade", () => {
     ).toBeVisible();
   });
 
-  test("the stranded diver's own link says the trip was cancelled, not 'welcome back'", async ({
+  test("the stranded diver's own link says the trip was canceled, not 'welcome back'", async ({
     page,
   }) => {
     // **The other side of the cascade**, and the half nothing looked at until a
@@ -198,7 +198,7 @@ test.describe("weather blow-out cascade", () => {
     // The same link, unchanged, opened again.
     await page.goto(threadUrl);
     await expect(
-      page.getByRole("heading", { level: 1, name: "This trip was cancelled" }),
+      page.getByRole("heading", { level: 1, name: "This trip was canceled" }),
     ).toBeVisible();
     // Nothing left to prepare for, a way back to the shop's schedule, and the
     // shop's own name — a diver reading this needs somebody to ask (issue #801).

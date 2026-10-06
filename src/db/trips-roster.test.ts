@@ -61,7 +61,7 @@ async function twoTrips(db: AppDb, shopId: string) {
 }
 
 describe("getTripRoster", () => {
-  it("lists every non-cancelled seat, oldest first, with its person", async () => {
+  it("lists every non-canceled seat, oldest first, with its person", async () => {
     const { db, shop } = await seededShopContext();
     const [trip] = await twoTrips(db, shop.id);
     const booked = await makeDiver(db, shop.id);

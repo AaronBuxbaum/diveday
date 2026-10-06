@@ -949,7 +949,7 @@ test("staff read a dive_sites.csv back into the library", async ({ page, private
     mimeType: "text/csv",
     buffer: Buffer.from(
       "name,location_name,description,difficulty_level,requires_nitrox\n" +
-        '"Lantern Wall","Outer Bank","A wall that starts at eighteen metres.",advanced,true\n',
+        '"Lantern Wall","Outer Bank","A wall that starts at eighteen meters.",advanced,true\n',
     ),
   });
   await page.getByRole("button", { name: "Import dive sites" }).click();
@@ -977,7 +977,7 @@ test("staff read a dive_sites.csv back into the library", async ({ page, private
   // The banner's own words rather than its role: a refusal is `role="alert"`
   // (the shared tone-to-role rule, `noticeRole`) and so is Next's route
   // announcer, which wins the match on a fresh navigation.
-  await expect(page.getByText(/column DiveDay does not recognise/)).toBeVisible();
+  await expect(page.getByText(/column DiveDay does not recognize/)).toBeVisible();
   await page.goto(`/shop/${privateShop.slug}/dive-sites`);
   await expect(page.getByText("Somewhere Else")).toHaveCount(0);
 });

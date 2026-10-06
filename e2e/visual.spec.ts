@@ -2459,7 +2459,7 @@ for (const scheme of ["light", "dark"] as const) {
 
       test(`the embed course list renders true to the design (${scheme})`, async ({ page }) => {
         await page.goto("/s/blue-mantis/embed/courses");
-        await page.getByRole("link", { name: "Enrol" }).first().waitFor();
+        await page.getByRole("link", { name: "Enroll" }).first().waitFor();
         await capture(page, "embed-courses", scheme);
       });
 
@@ -3155,7 +3155,7 @@ for (const scheme of ["light", "dark"] as const) {
         await threadStatus(page).waitFor();
         await page.getByRole("button", { name: "Cancel my spot" }).click();
         await page.getByRole("button", { name: "Yes, cancel my spot" }).click();
-        await page.getByRole("heading", { name: "This booking was cancelled" }).waitFor();
+        await page.getByRole("heading", { name: "This booking was canceled" }).waitFor();
         // Without `?cancelled=1` — the bookmarked URL, or the link out of an
         // old reminder email, which is how a diver actually arrives here.
         await page.goto(new URL(page.url()).pathname);
@@ -3214,7 +3214,7 @@ for (const scheme of ["light", "dark"] as const) {
         }
 
         await page.goto(threadUrl);
-        await page.getByRole("heading", { level: 1, name: "This trip was cancelled" }).waitFor();
+        await page.getByRole("heading", { level: 1, name: "This trip was canceled" }).waitFor();
         await page.getByText("Still on file for you").waitFor();
         await capture(page, "stranded-diver-card", scheme);
       });
@@ -5214,7 +5214,7 @@ for (const scheme of ["light", "dark"] as const) {
        * calling a blow-out on the seeded reef trip (safe: the per-test reset
        * restores it), then opening the departure.
        */
-      test(`a cancelled departure shows its reinstate band (${scheme})`, async ({ page }) => {
+      test(`a canceled departure shows its reinstate band (${scheme})`, async ({ page }) => {
         const tripId = await seededTripId(page, "blue-mantis", REEF_TRIP);
         await page.goto(`/shop/blue-mantis/schedule/blowout/${tripId}`);
         await page.getByRole("button", { name: "Call the blow-out" }).click();
@@ -7134,7 +7134,7 @@ for (const scheme of ["light", "dark"] as const) {
         await openTripAbout(page);
         await page
           .locator("details#requirements")
-          .getByText(/never blocks? enrolment/)
+          .getByText(/never blocks? enrollment/)
           .first()
           .waitFor();
         await capture(page, "trip-manage-course-requirements", scheme);
@@ -7685,7 +7685,7 @@ test.describe("capture harness", () => {
           "*else* on this page transitions across a breakpoint, which is its own capture bug: " +
           "a screenshot taken during that fade catches the property half-applied. Print the " +
           "animations' transitionProperty and target to tell them apart — on 2026-09-20 it was " +
-          "the header search button's four border-colour longhands, from a `sm:border` meeting " +
+          "the header search button's four border-color longhands, from a `sm:border` meeting " +
           "a `transition-colors` that covered it",
       ).toEqual([]);
     });

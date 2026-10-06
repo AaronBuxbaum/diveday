@@ -247,7 +247,7 @@ describe("createBooking (in-memory PGlite)", () => {
     expect(again).toEqual({ ok: false, reason: "already_booked" });
   });
 
-  it("re-activates a cancelled booking instead of failing", async () => {
+  it("re-activates a canceled booking instead of failing", async () => {
     const { db, shop, open } = await seededContext();
     const first = await bookVisitor(db, shop.id, open.id);
     if (!first.ok) throw new Error("setup booking failed");
@@ -340,7 +340,7 @@ describe("createBooking (in-memory PGlite)", () => {
     expect(matches.filter((p) => p.deletedAt === null)).toHaveLength(1);
   });
 
-  it("rejects unknown and cancelled trips", async () => {
+  it("rejects unknown and canceled trips", async () => {
     const { db, shop, open } = await seededContext();
     const unknown = await bookVisitor(db, shop.id, "00000000-0000-4000-8000-000000000000");
     expect(unknown).toEqual({ ok: false, reason: "trip_unavailable" });
@@ -572,7 +572,7 @@ describe("createBooking referral attribution (issue #1285)", () => {
    * than trusted. A hostile one must reach the column as a slug or not at all —
    * this is a third party's identity stored against a person's booking.
    */
-  it("normalises a hostile cookie value rather than storing it", async () => {
+  it("normalizes a hostile cookie value rather than storing it", async () => {
     const { db, shop, open } = await seededContext();
     const outcome = await createBooking(db, {
       actor: "public",
@@ -604,7 +604,7 @@ describe("createBooking referral attribution (issue #1285)", () => {
    * party membership and its claim. A partner who did not send this visit must
    * not inherit credit for it from the seat's earlier life.
    */
-  it("re-attributes a reactivated seat to this booking, not the cancelled one", async () => {
+  it("re-attributes a reactivated seat to this booking, not the canceled one", async () => {
     const { db, shop, open } = await seededContext();
     const first = await createBooking(db, {
       actor: "public",
@@ -716,7 +716,7 @@ describe("createBooking by identity (returning diver, no re-entry)", () => {
 });
 
 describe("restoreBooking (undo of a roster removal)", () => {
-  it("restores a cancelled booking while the seat is still free", async () => {
+  it("restores a canceled booking while the seat is still free", async () => {
     const { db, shop, open } = await seededContext();
     const booked = await bookVisitor(db, shop.id, open.id);
     if (!booked.ok) throw new Error("setup booking failed");
@@ -753,7 +753,7 @@ describe("restoreBooking (undo of a roster removal)", () => {
     expect(roster.map((r) => r.person.fullName)).not.toContain("Nora Quinn");
   });
 
-  it("never clobbers a booking that isn't cancelled", async () => {
+  it("never clobbers a booking that isn't canceled", async () => {
     const { db, shop, open } = await seededContext();
     const booked = await bookVisitor(db, shop.id, open.id);
     if (!booked.ok) throw new Error("setup booking failed");
@@ -1077,7 +1077,7 @@ describe("restoreBooking (undo of a roster removal)", () => {
    * outcome reads as success. Either check on its own would pass for a bug
    * wearing a better return value.
    */
-  it("refuses to restore onto a trip the crew has since cancelled", async () => {
+  it("refuses to restore onto a trip the crew has since canceled", async () => {
     const { db, shop, open } = await seededContext();
     const booked = await bookVisitor(db, shop.id, open.id);
     if (!booked.ok) throw new Error("setup booking failed");
@@ -1131,7 +1131,7 @@ describe("restoreBooking (undo of a roster removal)", () => {
     expect(roster.map((r) => r.person.fullName)).toContain(visitor.fullName);
   });
 
-  it("takes the undo once the crew reinstates the trip they had cancelled", async () => {
+  it("takes the undo once the crew reinstates the trip they had canceled", async () => {
     const { db, shop, open } = await seededContext();
     const booked = await bookVisitor(db, shop.id, open.id);
     if (!booked.ok) throw new Error("setup booking failed");
@@ -1531,7 +1531,7 @@ describe("createBooking identity safeguard (H-13)", () => {
       }
     });
 
-    it("refuses a cancelled seat: there is nobody to give a record to", async () => {
+    it("refuses a canceled seat: there is nobody to give a record to", async () => {
       const { db, shop, open } = await seededContext();
       const { shared } = await sharedInboxSeat(db, shop.id, open.id);
       const staffer = await counterStaffer(db, shop.id);
@@ -1845,7 +1845,7 @@ describe("selfCancelBooking (diver self-service, docs ADR 20260727-diver-self-se
     expect(row?.status).toBe("cancelled");
   });
 
-  it("refuses a booking that's already cancelled", async () => {
+  it("refuses a booking that's already canceled", async () => {
     const { db, shop, open } = await seededContext();
     const booked = await bookVisitor(db, shop.id, open.id);
     if (!booked.ok) throw new Error("setup booking failed");
@@ -1923,7 +1923,7 @@ describe("cancelBooking (staff cancellation runs status update + capability revo
     expect(capability?.revokedAt).not.toBeNull();
   });
 
-  it("rolls the booking status back to booked when the capability revoke fails, instead of leaving it cancelled with live capabilities", async () => {
+  it("rolls the booking status back to booked when the capability revoke fails, instead of leaving it canceled with live capabilities", async () => {
     const { db, shop, open } = await seededContext();
     const booked = await bookVisitor(db, shop.id, open.id);
     if (!booked.ok) throw new Error("setup booking failed");
@@ -2555,7 +2555,7 @@ describe("createBooking trip admission (the boat's own cert gate, DOM-M6)", () =
    * is the admission rule; readiness still shows the site's gate to the
    * instructor.
    */
-  it("enrols an Open Water diver in the AOW course whose dive site demands AOW", async () => {
+  it("enrolls an Open Water diver in the AOW course whose dive site demands AOW", async () => {
     const { db, shop } = await seededContext();
     const [advancedSite] = await db
       .insert(diveSites)
@@ -2870,7 +2870,7 @@ describe("seat capacity counts only the seats somebody holds", () => {
     ).toEqual({ ok: false, reason: "trip_full" });
   });
 
-  it("still frees a cancelled seat, which never held one", async () => {
+  it("still frees a canceled seat, which never held one", async () => {
     const { db, shop, fullTrip } = await seededContext();
     const roster = await getTripRoster(db, shop.id, fullTrip.id);
     const given = roster[0];

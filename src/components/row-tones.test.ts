@@ -51,7 +51,7 @@ describe("the rule between two roll-call rows", () => {
     );
   });
 
-  it("draws it in the rule colour and never a tone's", () => {
+  it("draws it in the rule color and never a tone's", () => {
     const rule = classes(rollCallRuleClass({ firstOnScreen: false, firstOnPaper: false }));
     expect(rule).toContain("border-border");
     const toneColours = Object.values(ROLL_CALL_ROW_TONE)

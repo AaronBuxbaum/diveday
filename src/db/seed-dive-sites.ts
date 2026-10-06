@@ -187,7 +187,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
         ],
         fitTone: "welcoming" as const,
         fitNote:
-          "Shallow, sheltered and busy. Snorkellers share the site, so stay low and let the surface belong to them.",
+          "Shallow, sheltered and busy. Snorkelers share the site, so stay low and let the surface belong to them.",
         imageUrls: [
           commonsImage("French Angelfish Pickles Reef 20230713.jpg"),
           commonsImage("Blue Tang Pickles 20080310.jpg"),
@@ -302,7 +302,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
           {
             name: "Wheelhouse",
             kind: "wreckFeature" as const,
-            note: "Open, recognisable, and usually holding the resident grouper. Approach along the deck, not from above.",
+            note: "Open, recognizable, and usually holding the resident grouper. Approach along the deck, not from above.",
           },
           {
             name: "Forward gun mount",
@@ -342,7 +342,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
           {
             name: "Barrel coral heads",
             kind: "reefFormation" as const,
-            note: "The fossilised cement casks the reef is named for, grown into the coral.",
+            note: "The fossilized cement casks the reef is named for, grown into the coral.",
           },
           {
             name: "Anchor chain remnant",

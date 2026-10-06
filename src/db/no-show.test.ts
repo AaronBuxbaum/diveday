@@ -816,7 +816,7 @@ describe("undoBookingNoShow", () => {
    * reinstating the trip is the recovery, not a roster write against a day
    * that is off the board.
    */
-  it("refuses an undo onto a departure the shop cancelled in between", async () => {
+  it("refuses an undo onto a departure the shop canceled in between", async () => {
     const { db, shop, trip, staffId, bookingId, now } = await context();
     await markBookingNoShow(db, { shopId: shop.id, bookingId, recordedByPersonId: staffId, now });
     expect(await setTripStatus(db, shop.id, trip.id, "cancelled")).toBeTruthy();

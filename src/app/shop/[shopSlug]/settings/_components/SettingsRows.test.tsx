@@ -108,8 +108,8 @@ describe("where a row states its value", () => {
   });
 
   it("still stacks a value under its heading on a phone by default", () => {
-    const row = settingRow({ value: "12 Harbour Rd" });
-    expect(row.querySelector("h3")?.parentElement).not.toHaveTextContent("12 Harbour Rd");
+    const row = settingRow({ value: "12 Harbor Rd" });
+    expect(row.querySelector("h3")?.parentElement).not.toHaveTextContent("12 Harbor Rd");
     expect(phoneLines(row)).toHaveLength(2);
   });
 

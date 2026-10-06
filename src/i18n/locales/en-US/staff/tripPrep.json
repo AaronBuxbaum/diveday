@@ -53,5 +53,5 @@
   "pickupHotelColumn": "Hotel / Lodging",
   "pickupDiverColumn": "Diver",
   "pickupTimeUnset": "Unscheduled",
-  "cancelledNothingToPack": "The departure is cancelled. Nothing to pack."
+  "cancelledNothingToPack": "The departure is canceled. Nothing to pack."
 }

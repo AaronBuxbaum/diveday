@@ -79,7 +79,7 @@ describe("a request seen from a day it did not name first", () => {
     expect(up).toHaveClass("underline");
   });
 
-  it("keeps the flexible neighbour's own words rather than claiming it asked", () => {
+  it("keeps the flexible neighbor's own words rather than claiming it asked", () => {
     row(
       "nearby",
       { preferredDate: "2027-03-04", alternateDate: null, dateFlexible: true },

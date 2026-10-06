@@ -121,7 +121,7 @@ describe("emailFreshReadinessLink", () => {
    * rule — so a diver who cancelled cannot be mailed a working link to a seat
    * they no longer hold, and nobody holding their old URL can trigger one.
    */
-  it("says unavailable once the booking is cancelled", async () => {
+  it("says unavailable once the booking is canceled", async () => {
     const { db, shop, bookingId, token } = await bookingWithDeadLink();
     await cancelBooking(db, shop.id, bookingId);
 
@@ -174,7 +174,7 @@ describe("emailFreshReadinessLink", () => {
    * capabilities aged out it mailed a fresh link naming the cancelled
    * departure. Found by `security-reviewer` (issue #850).
    */
-  it("refuses once the trip is cancelled, rather than pointing at a link that cannot work", async () => {
+  it("refuses once the trip is canceled, rather than pointing at a link that cannot work", async () => {
     const { db, shop, bookingId, token } = await bookingWithDeadLink();
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("expected a seeded trip");

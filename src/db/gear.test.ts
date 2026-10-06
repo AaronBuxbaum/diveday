@@ -757,7 +757,7 @@ describe("gear reservations", () => {
     ).toEqual({ ok: false, reason: "booking_not_found" });
   });
 
-  it("a cancelled booking lets go of the units it never collected, and keeps the one out the door", async () => {
+  it("a canceled booking lets go of the units it never collected, and keeps the one out the door", async () => {
     const { db, shop } = await gearShopContext();
     const collected = mustCreate(
       await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #40" }),
@@ -795,7 +795,7 @@ describe("gear reservations", () => {
     expect(remaining.map((row) => row.label)).toEqual(["BCD #40"]);
   });
 
-  it("a cancelled departure frees its counter pile, keeps what's out, and touches no other trip", async () => {
+  it("a canceled departure frees its counter pile, keeps what's out, and touches no other trip", async () => {
     // Trip-level cancellations (per-date cancel, blow-out, the minimum sweep,
     // series narrowing) keep their bookings, so the booking cascade never
     // runs — without the release in setTripStatus these units would sit

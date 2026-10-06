@@ -27,10 +27,10 @@ test.describe("the storefront wears the shop's brand", () => {
     await expect(page.getByRole("link", { name: "Bookings by DiveDay" })).toBeVisible();
   });
 
-  test.describe("a shop with a colour of its own", () => {
+  test.describe("a shop with a color of its own", () => {
     test.use({ privateShopBrand: true });
 
-    test("paints its storefront and its embed in that colour", async ({ page, privateShop }) => {
+    test("paints its storefront and its embed in that color", async ({ page, privateShop }) => {
       test.setTimeout(45_000);
       const expected = deriveBrandTheme(MINTED_DEMO_BRAND_COLOR).primary;
 
@@ -68,7 +68,7 @@ test.describe("the storefront wears the shop's brand", () => {
   test.describe("in the dark", () => {
     test.use({ privateShopBrand: true, colorScheme: "dark" });
 
-    test("reads at depth in the shop's own colour", async ({ page, privateShop }) => {
+    test("reads at depth in the shop's own color", async ({ page, privateShop }) => {
       test.setTimeout(60_000);
       await page.goto(`/s/${privateShop.slug}`, { waitUntil: "domcontentloaded" });
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();

@@ -159,7 +159,7 @@ describe("getTripOverview", () => {
    * recorded languages.
    */
   describe("crew.languageGap", () => {
-    it("reports none when no booked diver has signalled a language preference", async () => {
+    it("reports none when no booked diver has signaled a language preference", async () => {
       const ctx = await context();
       const { crew } = await overviewFor(ctx);
       expect(crew.languageGap).toEqual({ code: "none" });
@@ -181,7 +181,7 @@ describe("getTripOverview", () => {
       expect(crew.languageGap).toEqual({ code: "uncovered", missing: ["es"] });
     });
 
-    it("reports none once an assigned crew member records the language a booked diver signalled", async () => {
+    it("reports none once an assigned crew member records the language a booked diver signaled", async () => {
       const ctx = await context();
       const outcome = await createBooking(ctx.db, {
         actor: "staff",

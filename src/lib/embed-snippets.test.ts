@@ -45,7 +45,7 @@ describe("the embed grammar", () => {
     ).toBe("https://diveday.example/s/blue-mantis/embed/departure?show=t1&lang=es-ES");
   });
 
-  it("passes the host's colour and face only when the look is the site's", () => {
+  it("passes the host's color and face only when the look is the site's", () => {
     const host = { brand: "#178f6a", font: "Manrope, sans-serif" };
     expect(embedFrameUrl(ORIGIN, "blue-mantis", "grid", DEFAULT_EMBED_OPTIONS, host)).toBe(
       "https://diveday.example/s/blue-mantis/embed/grid?brand=%23178f6a&font=Manrope%2C+sans-serif",

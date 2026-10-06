@@ -46,7 +46,7 @@ describe("getReadyPageData", () => {
     expect(data?.canPay).toBe(false);
   });
 
-  it("marks a cancelled booking so the page (and its write actions) refuse it", async () => {
+  it("marks a canceled booking so the page (and its write actions) refuse it", async () => {
     const { db, shop, booking } = await seededBooking();
     await cancelBooking(db, shop.id, booking.id);
     const data = await getReadyPageData(db, booking.id);
@@ -57,7 +57,7 @@ describe("getReadyPageData", () => {
     expect(data?.departureCancelled).toBe(false);
   });
 
-  it("reports a cancelled departure separately from a cancelled booking", async () => {
+  it("reports a canceled departure separately from a canceled booking", async () => {
     // A blow-out cancels the trip and deliberately leaves every booking active
     // — refunds stay a per-booking staff decision (src/db/blowouts.ts) — so
     // `detail.cancelled` is false for every diver it stranded. Reading only
@@ -181,7 +181,7 @@ describe("getReadyPageData", () => {
     );
   });
 
-  it("refuses to record currency against a cancelled seat", async () => {
+  it("refuses to record currency against a canceled seat", async () => {
     const { db, shop, bookingId } = await unpaidBooking();
     await cancelBooking(db, shop.id, bookingId);
     expect(await setBookingLastDived(db, { shopId: shop.id, bookingId, band: "this_season" })).toBe(

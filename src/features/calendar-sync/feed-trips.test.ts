@@ -79,7 +79,7 @@ describe("listFeedTrips", () => {
     expect(days.map((row) => row.dayNumber)).toEqual([1, 2]);
   });
 
-  it("drops a cancelled trip, because a subscriber's calendar removes it by absence", async () => {
+  it("drops a canceled trip, because a subscriber's calendar removes it by absence", async () => {
     const { db, shop, personId, trip } = await context();
     await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, trip.id));
 

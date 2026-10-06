@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  BRITISH_SPELLINGS,
   findTells,
   housePhrases,
   metadataStrings,
@@ -10,6 +11,7 @@ import {
   RULES,
   straightApostrophes,
   straightDoubleQuotes,
+  stringLiterals,
 } from "./check-voice.mjs";
 
 const rules = (value, locale = "en-US") => findTells(value, locale).map((hit) => hit.rule);
@@ -191,8 +193,8 @@ describe("the house quotation marks", () => {
    * this rule has no exemption list and could land at zero.
    */
   it("still reads a value that carries an ICU-quoted marker", () => {
-    expect(rules("<marker>'{depth18}'</marker> is \u201cabout 18 metres\u201d")).toEqual([]);
-    expect(rules(`<marker>'{depth18}'</marker> is "about 18 metres"`)).toContain("quote");
+    expect(rules("<marker>'{depth18}'</marker> is \u201cabout 18 meters\u201d")).toEqual([]);
+    expect(rules(`<marker>'{depth18}'</marker> is "about 18 meters"`)).toContain("quote");
   });
 
   it("holds every locale to it \u2014 es-ES is \u201c \u201d, not \xab \xbb", () => {
@@ -211,6 +213,104 @@ describe("the house quotation marks", () => {
       // shape too, and it is what makes both greppable back to the string.
       { rule: "quote", text: 'Its "manifest"is a' },
     ]);
+  });
+});
+
+describe("American spelling", () => {
+  it("catches a British spelling in any case", () => {
+    expect(rules("Pick the colour your divers see.")).toContain("spelling");
+    expect(rules("Centre the map on the site.")).toContain("spelling");
+    expect(rules("BOOKING CANCELLED")).toContain("spelling");
+    expect(rules("Rental fins in grey")).toContain("spelling");
+  });
+
+  it("reports each British word once, by itself", () => {
+    expect(
+      findTells("The colour of the centre was grey.", "en-US")
+        .filter((hit) => hit.rule === "spelling")
+        .map((hit) => hit.text),
+    ).toEqual(["colour", "centre", "grey"]);
+  });
+
+  it("catches the inflections and the -ise verbs", () => {
+    for (const word of [
+      "coloured",
+      "cancelling",
+      "recognised",
+      "organisation",
+      "enrolment",
+      "labelled",
+      "metres",
+      "judgement",
+      "analyse",
+      "catalogue",
+      "practising",
+      "licence",
+    ]) {
+      expect(rules(`One ${word} here.`), word).toContain("spelling");
+    }
+  });
+
+  it("leaves the American forms alone", () => {
+    expect(rules("Pick the color, center it, and gray it out once canceled.")).toEqual([]);
+    expect(rules("Enroll now. Fulfillment, judgment, catalog, license, meters.")).toEqual([]);
+  });
+
+  it("leaves words spelled the same in both alone", () => {
+    // An -ise rule would refuse these; an -our rule would refuse four, your and hour.
+    expect(
+      rules("Advise them to exercise, revise the plan, and promise a surprise at four. Your hour."),
+    ).toEqual([]);
+    expect(rules("A cancellation fee, a dialogue, and the enrolled divers.")).toEqual([]);
+    expect(rules("The Greyhound bus leaves from the dock.")).toEqual([]);
+  });
+
+  it("does not hold Spanish to English spelling", () => {
+    expect(rules("Elige el colour", "es-ES")).not.toContain("spelling");
+  });
+
+  it("maps every British form to a different American one", () => {
+    for (const [british, american] of BRITISH_SPELLINGS) {
+      expect(american, british).not.toBe(british);
+      expect(BRITISH_SPELLINGS.has(american), american).toBe(false);
+    }
+  });
+});
+
+/**
+ * The prose outside the bundles: course and site templates, demo seeds and
+ * export descriptions are string literals in `src/`. The extraction is what
+ * needs pinning, since a comment is where British spelling is allowed.
+ */
+describe("source literals", () => {
+  it("reads every quote style and skips comments", () => {
+    const source = [
+      "// centre the chip",
+      "/* the colour token */",
+      'const a = "Strobe light and colour";',
+      "const b = 'Grey reef';",
+      "const c = `A ${name} was cancelled`;",
+    ].join("\n");
+    expect(stringLiterals(source)).toEqual([
+      "Strobe light and colour",
+      "Grey reef",
+      "A   was cancelled",
+    ]);
+  });
+
+  it("does not read a URL's slashes as a comment", () => {
+    expect(stringLiterals('const u = "https://example.com/colour"; const v = "a b";')).toEqual([
+      "https://example.com/colour",
+      "a b",
+    ]);
+  });
+
+  it("steps over a regex literal that holds a quote", () => {
+    expect(stringLiterals('const r = /[\'’]/g; const s = "two words";')).toEqual(["two words"]);
+  });
+
+  it("leaves a tagged template alone, because it is a query", () => {
+    expect(stringLiterals("sql`status <> 'cancelled'`; const s = \"a b\";")).toEqual(["a b"]);
   });
 });
 

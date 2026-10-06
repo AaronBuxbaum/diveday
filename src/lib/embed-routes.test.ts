@@ -169,7 +169,7 @@ describe("embedRenderPath", () => {
     }
   });
 
-  it("keeps the schedule's segment out of the widget catalogue", () => {
+  it("keeps the schedule's segment out of the widget catalog", () => {
     // `embed/schedule` is a static segment beside `embed/[widget]`, and a
     // direct request for it is refused because it names no widget. Listing it
     // would make it a widget view: framable by path, with no `?embed=1`.

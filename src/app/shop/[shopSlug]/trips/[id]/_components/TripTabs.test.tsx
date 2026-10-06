@@ -41,7 +41,7 @@ describe("TripStageBadge", () => {
     expect(screen.getByText(/Stage:/)).toHaveClass("sr-only");
   });
 
-  it("draws nothing for a cancelled departure", () => {
+  it("draws nothing for a canceled departure", () => {
     const { container } = render(<TripStageBadge phase={null} copy={copy} />);
     expect(container).toBeEmptyDOMElement();
   });

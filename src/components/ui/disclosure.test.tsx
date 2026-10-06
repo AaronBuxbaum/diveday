@@ -52,7 +52,7 @@ describe("DisclosureRow's focus ring", () => {
  * checklist at 390, 21px on "On this phone". Its box is one line tall.
  */
 describe("SummaryCaret", () => {
-  it("boxes the caret one line tall, centred in that line", () => {
+  it("boxes the caret one line tall, centered in that line", () => {
     const { container } = render(<SummaryCaret className="group-open/x:rotate-90" />);
     const box = container.firstElementChild;
     expect(box).toHaveClass("flex", "h-lh", "shrink-0", "items-center");

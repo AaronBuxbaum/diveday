@@ -34,7 +34,7 @@ describe("PersonSheet", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("opens a labelled bottom sheet without joining the roll-call mark", () => {
+  it("opens a labeled bottom sheet without joining the roll-call mark", () => {
     render(
       <div>
         <PersonSheet {...props} />
@@ -107,7 +107,7 @@ describe("the trigger's caret", () => {
  * and close centred on one row with the subtitle under all three.
  */
 describe("the opened sheet's geometry", () => {
-  it("rounds on the panel rung and centres its header row", () => {
+  it("rounds on the panel rung and centers its header row", () => {
     render(<PersonSheet {...props} />);
     fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
     const dialog = screen.getByRole("dialog");

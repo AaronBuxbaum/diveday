@@ -21,7 +21,7 @@ describe("metersToFeet / feetToMeters", () => {
 });
 
 describe("depthInUnit", () => {
-  it("passes metres straight through, rounded to a whole number", () => {
+  it("passes meters straight through, rounded to a whole number", () => {
     expect(depthInUnit(18, "meters")).toBe(18);
     expect(depthInUnit(18.288, "meters")).toBe(18);
   });
@@ -41,11 +41,11 @@ describe("depthInUnit", () => {
 });
 
 describe("depthToMeters", () => {
-  it("leaves a metres entry alone", () => {
+  it("leaves a meters entry alone", () => {
     expect(depthToMeters(18, "meters")).toBe(18);
   });
 
-  it("converts a feet entry to stored metres", () => {
+  it("converts a feet entry to stored meters", () => {
     expect(depthToMeters(60, "feet")).toBeCloseTo(18.288, 10);
   });
 });

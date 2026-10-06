@@ -31,7 +31,7 @@ describe("demoBypassEnabled", () => {
     expect(demoBypassEnabled({ NODE_ENV: "Production" })).toBe(false);
   });
 
-  it("honours an explicit off kill switch", () => {
+  it("honors an explicit off kill switch", () => {
     expect(demoBypassEnabled({ NODE_ENV: "production", DIVEDAY_DEMO_BYPASS: "off" })).toBe(false);
     expect(demoBypassEnabled({ NODE_ENV: "development", DIVEDAY_DEMO_BYPASS: "off" })).toBe(false);
   });

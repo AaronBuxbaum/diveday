@@ -48,7 +48,7 @@ export function renderLlmsTxt({ origin, shops, specialtyCodes }: LlmsTxtInput): 
     "",
     "- departures[]: id, title, starts_at and ends_at (the shop's wall clock with its UTC offset, e.g. 2026-07-25T07:30:00-04:00), time_zone (IANA), sites (dive site names in dive order), price ({ amount, currency } as a decimal string in the currency's own places, or null when the shop has not priced it), certification (null when the departure asks nothing, otherwise minimum_level, required_specialties and requires_nitrox), seats_open, booking_url.",
     `- certification.minimum_level is one of ${REQUIRABLE_CERTIFICATION_LEVELS.join(", ")} (lowest to highest) or null; required_specialties are codes from ${specialtyCodes.join(", ")}; requires_nitrox is a boolean. These are what the diver will be asked to show before boarding, not a suggestion.`,
-    "- Only departures a visitor could book right now appear: a full boat, a private charter and a departure on a conditions hold are left out. Fields you do not recognise are safe to ignore.",
+    "- Only departures a visitor could book right now appear: a full boat, a private charter and a departure on a conditions hold are left out. Fields you do not recognize are safe to ignore.",
     "- window.from and window.to bound the document; generated_at is when it was written. Seats change as people book, so treat seats_open as a snapshot and let the booking page have the last word.",
     "",
     "## Shops listed for search",

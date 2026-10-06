@@ -222,7 +222,7 @@ describe("the crew list's hairlines", () => {
    * read `border`, and a boarded or missing crew member's would turn green or
    * red. The rule is drawn inside the row now, off the diver list's helper.
    */
-  it("draws each rule inside its row, in the rule colour, from the second row down", () => {
+  it("draws each rule inside its row, in the rule color, from the second row down", () => {
     const { container } = renderCrew({
       members: [
         crew(),

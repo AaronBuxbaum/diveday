@@ -128,7 +128,7 @@ describe("qualifyingAlternatives — the admission filter", () => {
 });
 
 describe("qualifyingAlternatives — offerability", () => {
-  it("never offers the cancelled trip itself, whatever state its row arrives in", () => {
+  it("never offers the canceled trip itself, whatever state its row arrives in", () => {
     const ghost = candidate({ id: CANCELLED_TRIP_ID, status: "scheduled" });
     const real = candidate();
     expect(offers([ghost, real], openWaterDiver())).toEqual([real.id]);
@@ -140,7 +140,7 @@ describe("qualifyingAlternatives — offerability", () => {
     expect(offers([full, oneSeatLeft], openWaterDiver())).toEqual([oneSeatLeft.id]);
   });
 
-  it("excludes cancelled and already-departed candidates", () => {
+  it("excludes canceled and already-departed candidates", () => {
     const alsoBlownOut = candidate({ status: "cancelled" });
     const departedDaysAgo = candidate({ startsAt: daysFromNow(-1) });
     const departedTwoHoursAgo = candidate({
@@ -156,7 +156,7 @@ describe("qualifyingAlternatives — offerability", () => {
     ).toEqual([departingRightNow.id, upcoming.id]);
   });
 
-  it("excludes course sessions — enrolment is not a charter-seat replacement", () => {
+  it("excludes course sessions — enrollment is not a charter-seat replacement", () => {
     const courseSession = candidate({ courseSession: true });
     const charter = candidate();
     expect(offers([courseSession, charter], openWaterDiver())).toEqual([charter.id]);
@@ -187,7 +187,7 @@ describe("qualifyingAlternatives — ordering and cap", () => {
     );
   });
 
-  it("honours a caller-supplied cap and horizon", () => {
+  it("honors a caller-supplied cap and horizon", () => {
     const trips = [1, 2, 3].map((day) => candidate({ startsAt: daysFromNow(day) }));
     expect(offers(trips, openWaterDiver(), { maxOffers: 1 })).toEqual([trips[0].id]);
     expect(offers(trips, openWaterDiver(), { horizonDays: 1 })).toEqual([trips[0].id]);

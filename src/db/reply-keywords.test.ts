@@ -336,7 +336,7 @@ describe("handleInboundReplyKeyword — what it refuses", () => {
 });
 
 describe("handleInboundReplyKeyword — what it does", () => {
-  it("names the departure and asks for a code before anything is cancelled", async () => {
+  it("names the departure and asks for a code before anything is canceled", async () => {
     const { db, shop, trip, bookingId, now } = await context();
     const provider = acceptingProvider();
     const messageId = await inbound(db, shop.id, "C", { receivedAt: now });

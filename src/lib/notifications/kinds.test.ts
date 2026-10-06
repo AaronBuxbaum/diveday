@@ -128,7 +128,7 @@ describe("every handle a notification carries is reachable by the erasure sweep"
     expect(kinds).toContain("booking_confirmation");
   });
 
-  it("recognises an address by its schema rather than its name", () => {
+  it("recognizes an address by its schema rather than its name", () => {
     // The half that stops a future `replyTo` or `mailbox` slipping past. If
     // this ever reads zero, `unwrap` has lost track of zod's shape and every
     // assertion below is vacuous.

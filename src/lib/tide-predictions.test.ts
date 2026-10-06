@@ -47,7 +47,7 @@ describe("parseTidePredictions", () => {
 });
 
 describe("fetchTidePredictions", () => {
-  it("asks NOAA for the local day before, three days on, in GMT and metres", async () => {
+  it("asks NOAA for the local day before, three days on, in GMT and meters", async () => {
     const fetcher = vi.fn().mockResolvedValue(new Response(JSON.stringify(NOAA_PAYLOAD)));
     const turns = await fetchTidePredictions("8723583", "2026-07-21", fetcher);
     expect(turns).toHaveLength(4);

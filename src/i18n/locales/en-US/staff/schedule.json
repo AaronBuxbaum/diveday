@@ -17,7 +17,7 @@
     "endBeforeStart": "The trip has to end after it starts. Check the times.",
     "notAuthorized": "Building the board is limited to owners, managers, and instructors.",
     "notFound": "That departure is no longer on the board.",
-    "notScheduled": "A cancelled trip can’t be moved. Reinstate it from its own page first.",
+    "notScheduled": "A canceled trip can’t be moved. Reinstate it from its own page first.",
     "alreadySailed": "The crew has already counted heads against this departure. Cancel it from its own page if the day is off.",
     "hasRoster": "Divers have booked this departure, so it can’t be deleted. Cancel it from its own page.",
     "addedNamed": "“{title}” is on the board.",

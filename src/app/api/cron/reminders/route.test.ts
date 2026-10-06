@@ -296,7 +296,7 @@ describe("GET /api/cron/reminders — dead-man's switch", () => {
     });
   });
 
-  it("honours SENTRY_CRON_MONITOR_SLUG so one Sentry project can watch several environments", async () => {
+  it("honors SENTRY_CRON_MONITOR_SLUG so one Sentry project can watch several environments", async () => {
     vi.stubEnv("SENTRY_CRON_MONITOR_SLUG", "diveday-staging-tick");
     vi.resetModules();
     const { GET: freshGet } = await import("./route");

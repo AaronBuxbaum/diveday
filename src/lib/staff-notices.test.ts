@@ -139,7 +139,7 @@ describe("safeShopReturnPath", () => {
    * normalises to `/evil` in the browser, which is also the string
    * `revalidatePath` would have been keyed on.
    */
-  it("refuses traversal that only escapes the shop once normalised", () => {
+  it("refuses traversal that only escapes the shop once normalized", () => {
     expect(safeShopReturnPath("blue-mantis", "/shop/blue-mantis/../../evil")).toBeNull();
     expect(safeShopReturnPath("blue-mantis", "/shop/blue-mantis/trips/../../../evil")).toBeNull();
   });
@@ -159,7 +159,7 @@ describe("safeShopReturnPath", () => {
 });
 
 describe("noticeCode", () => {
-  it("normalises the casing a domain reason arrives in", () => {
+  it("normalizes the casing a domain reason arrives in", () => {
     expect(noticeCode("medical_attestation_required")).toBe("medical-attestation-required");
     expect(noticeCode("not_authorized")).toBe("not-authorized");
     expect(noticeCode("NOT_FOUND")).toBe("not-found");
@@ -226,7 +226,7 @@ describe("noticeUrl", () => {
     );
   });
 
-  it("normalises a snake_case runtime reason", () => {
+  it("normalizes a snake_case runtime reason", () => {
     expect(noticeUrl("/shop/blue-mantis/check-in", "not_ready")).toBe(
       "/shop/blue-mantis/check-in?notice=not-ready",
     );

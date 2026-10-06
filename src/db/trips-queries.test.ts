@@ -62,7 +62,7 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
     ).toBe("Open Water Diver");
   });
 
-  it("frees the spot when a booking is cancelled", async () => {
+  it("frees the spot when a booking is canceled", async () => {
     const { db, shop } = ctx;
 
     const before = await upcomingTripsWithCounts(db, shop.id);
@@ -396,7 +396,7 @@ describe("paged schedule queries", () => {
 });
 
 describe("countShopTrips", () => {
-  it("counts only the shop's own departures, from zero, including past and cancelled ones", async () => {
+  it("counts only the shop's own departures, from zero, including past and canceled ones", async () => {
     const { db, shop } = ctx;
 
     // A brand-new shop next door: zero, untouched by the seeded shop's board.
@@ -540,7 +540,7 @@ describe("tripDiveSiteSummaries", () => {
     expect((await tripDiveSiteSummaries(db, shop.id, [])).size).toBe(0);
   });
 
-  it("summarises the whole page of departures in one read", async () => {
+  it("summarizes the whole page of departures in one read", async () => {
     const { db, shop, benwood, elbow } = await twoSiteShop();
     const first = await createTrip(db, {
       shopId: shop.id,
@@ -939,7 +939,7 @@ describe("listShopDayDepartures", () => {
     expect(starts).toEqual([...starts].sort((a, b) => a - b));
   });
 
-  it("leaves out a cancelled departure, a deleted one, and another shop's", async () => {
+  it("leaves out a canceled departure, a deleted one, and another shop's", async () => {
     const { db, shop } = ctx2;
     const dawn = new Date("2026-07-21T09:00:00.000Z");
 

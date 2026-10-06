@@ -38,7 +38,7 @@ const horizontalPadding = (element: Element) =>
  * the globe and its padding — in every shopfront's phone header.
  */
 describe("LanguagePicker — the closed control", () => {
-  it("keeps a 44px square when the globe stands alone, its glyph centred in it", () => {
+  it("keeps a 44px square when the globe stands alone, its glyph centered in it", () => {
     render(
       <LanguagePicker
         current="es-ES"

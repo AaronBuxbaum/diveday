@@ -103,7 +103,7 @@ describe("POST /api/vitals", () => {
     expect(loggedLines()).toEqual([]);
   });
 
-  it("redacts a capability token travelling as a query parameter", async () => {
+  it("redacts a capability token traveling as a query parameter", async () => {
     await POST(
       beacon({
         url: "/s/blue-mantis/trips/42?booking=aVeryRealBearerToken",

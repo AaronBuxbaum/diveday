@@ -659,7 +659,7 @@ describe("peopleWhoDivedBefore", () => {
     expect(found.size).toBe(0);
   });
 
-  it("does not count a diver who cancelled or never showed", async () => {
+  it("does not count a diver who canceled or never showed", async () => {
     // The plain shape, with nothing on the arrival trail — the leg that proves
     // #1558's escape hatch below did not simply delete the exclusion.
     for (const status of ["cancelled", "no_show"] as const) {
@@ -771,7 +771,7 @@ describe("peopleWhoDivedBefore", () => {
     expect((await ctx.ask()).size).toBe(0);
   });
 
-  it("leaves cancelled alone even with a standing arrival", async () => {
+  it("leaves canceled alone even with a standing arrival", async () => {
     // A cancellation is a re-papering of the sale, not a statement about the
     // dock — it lands days later, on a seat somebody really did check in — so
     // it gets none of the escape `no_show` gets.

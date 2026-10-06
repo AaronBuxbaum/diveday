@@ -224,7 +224,7 @@ describe("getMovePreflight", () => {
     ).toEqual({ ok: false, reason: "already_sailed" });
   });
 
-  it("says a cancelled departure cannot move, as the mutation does", async () => {
+  it("says a canceled departure cannot move, as the mutation does", async () => {
     const trip = await busiestTrip();
     await ctx.db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, trip.id));
 

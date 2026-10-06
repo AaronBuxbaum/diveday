@@ -424,7 +424,7 @@ describe("counter check-in", () => {
     expect(await trailCount()).toBe(before + 2);
   });
 
-  it("refuses to undo a booking that is cancelled rather than checked in", async () => {
+  it("refuses to undo a booking that is canceled rather than checked in", async () => {
     const { db, shop, staff, booking } = await context();
     await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, booking.id));
     await expect(
@@ -501,7 +501,7 @@ describe("searching the counter by phone", () => {
  * already redirects any refusal to `?notice=<reason>`, so the vocabulary is a
  * notice key that is already worded.
  */
-describe("the counter check-in recorder must be live staff (defence in depth)", () => {
+describe("the counter check-in recorder must be live staff (defense in depth)", () => {
   /** A booking readiness has already cleared, so only the staff gate is left. */
   async function readyContext() {
     const base = await context();
@@ -983,7 +983,7 @@ describe("a counter arrival queued with no signal", () => {
    * only thing that can refuse a queued arrival, and this is the refusal a
    * shop meets most often (domain review, 2026-09-07).
    */
-  it("refuses a queued arrival for a seat cancelled while the device was dark", async () => {
+  it("refuses a queued arrival for a seat canceled while the device was dark", async () => {
     const { db, shop, staff, booking } = await readySeat();
     await db.update(bookings).set({ status: "cancelled" }).where(eq(bookings.id, booking.id));
 

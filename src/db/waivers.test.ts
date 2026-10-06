@@ -479,7 +479,7 @@ describe("waiver records (in-memory PGlite)", () => {
     ).toEqual({ ok: false, reason: "booking_not_found" });
   });
 
-  it("does not issue a waiver for a cancelled trip", async () => {
+  it("does not issue a waiver for a canceled trip", async () => {
     const { db, shop, trip, booking } = await waiverContext();
     await setTripStatus(db, shop.id, trip.id, "cancelled");
     expect(
@@ -1063,7 +1063,7 @@ describe("staff records a paper / in-person signature", () => {
  * (`markWaiverInPersonAction`, `markWaiverInPersonFromCheckIn`) already fold
  * every non-medical refusal into one `waiver-error` notice.
  */
-describe("the in-person attestor must be live staff (defence in depth)", () => {
+describe("the in-person attestor must be live staff (defense in depth)", () => {
   async function liveStaff(db: Awaited<ReturnType<typeof waiverContext>>["db"], shopId: string) {
     const [staff] = await listStaff(db, shopId);
     if (!staff) throw new Error("demo staff missing");
@@ -1936,7 +1936,7 @@ describe("saving the waiver template", () => {
    * bookings alone until staff work the cascade per seat, so without the status
    * filter a cancelled departure still counted a boatload.
    */
-  it("does not count a diver whose departure inside the horizon was cancelled", async () => {
+  it("does not count a diver whose departure inside the horizon was canceled", async () => {
     const { db, shop } = await signedContext();
     const window = operationalWindow(now);
     const startsAt = new Date(window.to.getTime() - 60 * 60 * 1000);

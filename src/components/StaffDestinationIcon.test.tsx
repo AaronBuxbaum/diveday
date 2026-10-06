@@ -220,7 +220,7 @@ describe("a trimmed badge", () => {
     }
   });
 
-  it("is centred across the square it is drawn in, so the square's users see no shift", () => {
+  it("is centered across the square it is drawn in, so the square's users see no shift", () => {
     const { container } = render(<DiveDayIcon name="badge" />);
     const xs = [...container.querySelectorAll("path")].flatMap((path) =>
       pathXs(path.getAttribute("d") ?? ""),
@@ -281,7 +281,7 @@ describe("the close glyph", () => {
  * ink it wants.
  */
 describe("the empty glyph", () => {
-  it("spans its box's height and sits on its centre", () => {
+  it("spans its box's height and sits on its center", () => {
     const { container } = render(<DiveDayIcon name="empty" />);
     const svg = container.querySelector("svg");
     const half = Number(svg?.getAttribute("stroke-width")) / 2;
