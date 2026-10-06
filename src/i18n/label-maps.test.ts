@@ -23,6 +23,7 @@ import {
   type ReadinessBlockerParams,
 } from "@/lib/readiness";
 import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
+import { SUIT_CHOICES } from "@/lib/rentals";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { ROLL_CALL_GAP_KINDS, type TodaySeason } from "@/lib/today";
 import { buddyAlertText } from "./buddy-labels";
@@ -79,7 +80,7 @@ import {
 } from "./readiness-labels";
 import { CHECKLIST_DETAIL_KEYS } from "./readiness-summary-labels";
 import { reminderActionText } from "./reminder-labels";
-import { rentalItemLabel } from "./rental-labels";
+import { rentalItemLabel, suitChoiceLabel } from "./rental-labels";
 import { DEFAULT_DIVER_LOCALE, DIVER_LOCALES, type DiverLocale } from "./settings";
 import { staffTranslator } from "./staff-messages";
 import { STAFF_ROLE_LABEL_KEYS, staffRoleLabel } from "./staff-role-labels";
@@ -662,6 +663,13 @@ const CASES: readonly LabelMapCase[] = [
     // register and the shop catalog both index this one map.
     rows: codeRows(RENTAL_ITEM_KINDS, (locale, kind) =>
       rentalItemLabel(staffTranslator(locale), kind),
+    ),
+  },
+  {
+    module: "rental-labels.ts",
+    map: "SUIT_CHOICE_KEYS",
+    rows: codeRows(SUIT_CHOICES, (locale, choice) =>
+      suitChoiceLabel(staffTranslator(locale), choice),
     ),
   },
   {
