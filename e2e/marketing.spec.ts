@@ -1533,8 +1533,8 @@ test.describe("with Accept-Language: es", () => {
       spanish: "Trae la hoja de cálculo contigo.",
     },
     "/about": {
-      english: "Who am I dealing with",
-      spanish: "Con quién estoy tratando",
+      english: "Why did you build this",
+      spanish: "Por qué lo construiste",
     },
   } as const;
 
