@@ -15,7 +15,8 @@
     "wrongTypeSuffix": ": use a JPG, PNG, WebP, or HEIC photo.",
     "tooBigSuffix": ": that’s over {maxMb} MB, so try a smaller photo.",
     "choose": "Choose a photo",
-    "chooseAnother": "Choose a different photo"
+    "chooseAnother": "Choose a different photo",
+    "chooseOthers": "Choose different photos"
   },
   "paperWaiver": {
     "markSignedOnPaper": "Mark signed on paper",

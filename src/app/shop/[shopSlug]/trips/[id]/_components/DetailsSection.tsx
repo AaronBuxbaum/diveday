@@ -231,26 +231,26 @@ export function DetailsSection({
                 field is a half column from `sm` up, so the photo takes the
                 column, as the dive-site editor's map and route stills do: in
                 the gallery's three-across grid it was a third of a half. */}
-            {trip.arrivalPhotoUrl ? (
-              <div className="mb-3">
+            <div className="grid grid-cols-1 gap-3">
+              {trip.arrivalPhotoUrl ? (
                 <RemovablePhoto
                   url={trip.arrivalPhotoUrl}
                   name="removeArrivalPhoto"
                   value="on"
                   label={t("trips.details.arrivalPhotoRemove")}
                 />
-              </div>
-            ) : null}
-            <ImageFileInput
-              id="arrival-photo"
-              name="arrivalPhoto"
-              copy={{
-                wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
-                tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
-                choose: t("trips.details.arrivalPhotoChoose"),
-                chooseAnother: t("trips.details.arrivalPhotoReplace"),
-              }}
-            />
+              ) : null}
+              <ImageFileInput
+                id="arrival-photo"
+                name="arrivalPhoto"
+                copy={{
+                  wrongTypeSuffix: t("shared.imageInput.wrongTypeSuffix"),
+                  tooBigSuffix: t("shared.imageInput.tooBigSuffix", { maxMb: MAX_IMAGE_MB }),
+                  choose: t("trips.details.arrivalPhotoChoose"),
+                  chooseAnother: t("trips.details.arrivalPhotoReplace"),
+                }}
+              />
+            </div>
           </Field>
         </FieldGrid>
       </fieldset>

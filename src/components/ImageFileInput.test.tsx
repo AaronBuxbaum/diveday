@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ImageFileInput } from "./ImageFileInput";
 
 afterEach(cleanup);
@@ -32,6 +32,12 @@ const file = (name: string, type = "image/jpeg", size = 1000) => {
 
 const pick = (input: HTMLElement, files: File[]) => fireEvent.change(input, { target: { files } });
 
+beforeEach(() => {
+  let next = 0;
+  URL.createObjectURL = vi.fn(() => `blob:preview-${next++}`);
+  URL.revokeObjectURL = vi.fn();
+});
+
 describe("ImageFileInput", () => {
   it("shows the app's own words on a control that is still a real file input", () => {
     render(<ImageFileInput name="photo" required copy={COPY} />);
@@ -46,19 +52,40 @@ describe("ImageFileInput", () => {
     expect(input).not.toHaveAttribute("hidden");
   });
 
-  it("names what was picked, and offers to swap it rather than repeating the ask", () => {
-    render(<ImageFileInput name="photo" copy={COPY} />);
+  it("turns into the picked photo, named under it, and offers to swap it", () => {
+    const { container } = render(<ImageFileInput name="photo" copy={COPY} />);
     pick(screen.getByLabelText("Add a photo"), [file("reef.jpg")]);
 
+    // The tile *is* the photo now: one preview, inside the same label.
+    const previews = container.querySelectorAll("img");
+    expect(previews).toHaveLength(1);
+    expect(previews[0]).toHaveAttribute("src", "blob:preview-0");
+    expect(previews[0].closest("label")).toBe(container.querySelector("label"));
     expect(screen.getByText("reef.jpg")).toBeInTheDocument();
-    expect(screen.getByLabelText("Add another photo")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Add another photo/)).toHaveAttribute("type", "file");
   });
 
-  it("lists every file when several are picked at once", () => {
-    render(<ImageFileInput name="photos" multiple maxFiles={3} copy={COPY} />);
+  it("draws each of several picked photos as its own cell before the tile", () => {
+    const { container } = render(
+      <ImageFileInput name="photos" multiple maxFiles={3} copy={COPY} />,
+    );
     pick(screen.getByLabelText("Add a photo"), [file("one.jpg"), file("two.jpg")]);
 
-    expect(screen.getByText("one.jpg, two.jpg")).toBeInTheDocument();
+    expect(container.querySelectorAll("img")).toHaveLength(2);
+    expect(screen.getByText("one.jpg")).toBeInTheDocument();
+    expect(screen.getByText("two.jpg")).toBeInTheDocument();
+    // The tile stays a tile, asking for a different set.
+    expect(screen.getByLabelText("Add another photo")).toHaveAttribute("type", "file");
+  });
+
+  it("lets go of the previews it no longer shows", () => {
+    render(<ImageFileInput name="photo" copy={COPY} />);
+    pick(screen.getByLabelText("Add a photo"), [file("reef.jpg")]);
+    pick(screen.getByLabelText(/Add another photo/), [file("wreck.jpg")]);
+
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:preview-0");
+    expect(screen.queryByText("reef.jpg")).toBeNull();
+    expect(screen.getByText("wreck.jpg")).toBeInTheDocument();
   });
 
   it("refuses a wrong-type file by name, keeps nothing, and asks again", () => {
@@ -87,7 +114,7 @@ describe("ImageFileInput", () => {
   it("clears the named file when the picker is dismissed with nothing chosen", () => {
     render(<ImageFileInput name="photo" copy={COPY} />);
     pick(screen.getByLabelText("Add a photo"), [file("reef.jpg")]);
-    pick(screen.getByLabelText("Add another photo"), []);
+    pick(screen.getByLabelText(/Add another photo/), []);
 
     expect(screen.queryByText("reef.jpg")).toBeNull();
     expect(screen.getByLabelText("Add a photo")).toBeInTheDocument();
