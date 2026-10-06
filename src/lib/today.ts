@@ -1578,8 +1578,13 @@ function stationFor(departure: SpineDeparture, rows: readonly TodayAction[]): Da
  * a clock.
  */
 export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpine {
+  // Two boats at the same minute read by title before id: ids are minted
+  // fresh by every seed, so an id tiebreak alone swaps the two cards from one
+  // run to the next.
   const byClock = (a: SpineDeparture, b: SpineDeparture) =>
-    a.startsAt.getTime() - b.startsAt.getTime() || a.tripId.localeCompare(b.tripId);
+    a.startsAt.getTime() - b.startsAt.getTime() ||
+    a.title.localeCompare(b.title) ||
+    a.tripId.localeCompare(b.tripId);
   const todayDepartures = [...today.departures].sort(byClock);
   const tomorrowDepartures = [...tomorrow.departures].sort(byClock);
 

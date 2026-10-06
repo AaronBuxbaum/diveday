@@ -617,6 +617,41 @@ describe("assembleDaySpine", () => {
     expect(spine.stations.map((station) => station.tripId)).toEqual(["morning", "afternoon"]);
   });
 
+  it("reads two boats at the same minute by title, whatever ids the seed minted", () => {
+    // An id-only tiebreak swapped two 7:30 cards between two CI runs: ids are
+    // fresh per seed, so the same board came out in two orders.
+    const at = hoursFromNow(1);
+    for (const [first, second] of [
+      ["a-id", "z-id"],
+      ["z-id", "a-id"],
+    ]) {
+      const spine = assembleDaySpine(
+        {
+          departures: [
+            departure({
+              tripId: first,
+              title: "Two-Tank Reef",
+              startsAt: at,
+              endsAt: hoursFromNow(4),
+            }),
+            departure({
+              tripId: second,
+              title: "Morning Two-Tank",
+              startsAt: at,
+              endsAt: hoursFromNow(4),
+            }),
+          ],
+          actions: [],
+        },
+        { departures: [], actions: [] },
+      );
+      expect(spine.stations.map((station) => station.title)).toEqual([
+        "Morning Two-Tank",
+        "Two-Tank Reef",
+      ]);
+    }
+  });
+
   it("ranks a station's rows danger, then warning, then quiet", () => {
     const spine = assembleDaySpine(
       {

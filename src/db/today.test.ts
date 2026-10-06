@@ -3213,7 +3213,7 @@ describe("crew clashes on Today (H-80)", () => {
       urgency: "imminent",
       aboutDeparture: true,
       detail:
-        "Left with Kai Clashwell also rostered on Clash mover charter at these hours. Confirm who is aboard.",
+        "Kai Clashwell is out aboard while also rostered on Clash mover charter at these hours. Confirm who is aboard.",
       href: `/shop/${ctx.shop.slug}/trips/${host.id}/manifest`,
     });
 

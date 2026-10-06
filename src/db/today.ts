@@ -1744,6 +1744,7 @@ export async function getTodayWork(
         aboutDeparture: true,
         detail: crewClashSailedDetailText(
           t,
+          locale,
           out.map((entry) => entry.clash),
         ),
         actionLabel: openRollCallActionText(t),
@@ -1763,6 +1764,7 @@ export async function getTodayWork(
         aboutDeparture: true,
         detail: crewClashDetailText(
           t,
+          locale,
           ahead.map((entry) => entry.clash),
         ),
         actionLabel: openCrewActionText(t),
