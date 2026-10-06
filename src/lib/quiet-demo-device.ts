@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { onboardSetupKey } from "./onboard-setup-key";
 
 /**
@@ -38,6 +38,13 @@ export function quietDemoToken(env: Env = process.env): string | null {
 /** Whether a cookie value marks this browser as the founder's. */
 export function isQuietDemoDevice(candidate: unknown, env: Env = process.env): boolean {
   const token = quietDemoToken(env);
-  if (!token || typeof candidate !== "string" || candidate.length !== token.length) return false;
-  return timingSafeEqual(Buffer.from(candidate), Buffer.from(token));
+  if (!token || typeof candidate !== "string" || !candidate) return false;
+  // Compared as fixed-length digests: a cookie of the token's length in
+  // multibyte characters would otherwise reach `timingSafeEqual` at a
+  // different byte length, and throw out of the demo instead of saying no.
+  return timingSafeEqual(digest(candidate), digest(token));
+}
+
+function digest(value: string): Buffer {
+  return createHash("sha256").update(value, "utf8").digest();
 }

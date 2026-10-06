@@ -35,5 +35,7 @@ describe("isQuietDemoDevice", () => {
     expect(isQuietDemoDevice(undefined, env)).toBe(false);
     expect(isQuietDemoDevice("", env)).toBe(false);
     expect(isQuietDemoDevice(`${quietDemoToken(env)}x`, env)).toBe(false);
+    // Same length in characters, longer in bytes: a no, never a throw.
+    expect(isQuietDemoDevice("é".repeat(quietDemoToken(env)?.length ?? 0), env)).toBe(false);
   });
 });

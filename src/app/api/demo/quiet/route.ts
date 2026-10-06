@@ -5,6 +5,8 @@ import {
   QUIET_DEMO_COOKIE_MAX_AGE,
   quietDemoToken,
 } from "@/lib/quiet-demo-device";
+import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
+import { clientIp } from "@/lib/request-ip";
 
 const NO_STORE = { "Cache-Control": "private, no-store" } as const;
 
@@ -19,6 +21,12 @@ const NO_STORE = { "Cache-Control": "private, no-store" } as const;
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
+  // A 404 and a redirect tell a wrong key from a right one, so guesses are
+  // throttled the way every other door that checks a secret is.
+  const ip = await clientIp(request.headers);
+  if (!(await checkRateLimit(rateLimitKey("demo-quiet", ip), RATE_LIMITS.demoQuiet)).allowed) {
+    return new NextResponse(null, { status: 429, headers: NO_STORE });
+  }
   const token = quietDemoToken();
   if (!token || !isOnboardSetupKey(url.searchParams.get(ONBOARD_SETUP_PARAM))) {
     return new NextResponse(null, { status: 404, headers: NO_STORE });

@@ -122,7 +122,7 @@ so no session or account can answer that when the alert fires. A secret can: the
 
 Opening `/api/demo/quiet?setup=<key>` once in a browser sets `diveday_quiet_demo`, an httpOnly
 host-only cookie holding an HMAC of the key (never the key), for the browser's 400-day maximum.
-`enterDemoAction` skips `announceDemoEntry` whole for an entry carrying the right value: no alert,
+Guesses are throttled per IP (`RATE_LIMITS.demoQuiet`). `enterDemoAction` skips `announceDemoEntry` whole for an entry carrying the right value: no alert,
 and no `demo_entered` event, because his own clicks are not a prospect either. A wrong key is a bare
 404. Rotating `ONBOARD_SETUP_KEY` changes the expected value and so unmarks every browser at once;
 with no key configured nothing can be marked and every try alerts. No new environment variable.
