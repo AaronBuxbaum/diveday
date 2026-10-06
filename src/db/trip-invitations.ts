@@ -285,7 +285,9 @@ export async function deliverTripInvitation(
 
   if (context.invitation.source === "direct") {
     const person = context.person;
-    if (!person?.email) return "fallback";
+    // A record deleted since the invitation was made is not somebody to sell
+    // a seat to (`findCourtesyEmailRecipientByAddress` is blind to them too).
+    if (!person?.email || person.deletedAt) return "fallback";
     // Before anything about the send itself: a diver who opted out is
     // `opted_out` whether or not this deployment could have emailed them.
     if (person.courtesyEmailOptOutAt) return "opted_out";

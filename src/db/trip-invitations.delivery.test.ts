@@ -108,6 +108,25 @@ describe("deliverTripInvitation", () => {
     expect(tokens).toHaveLength(1);
   });
 
+  it("does not email a cold invitation to a diver deleted since it was made", async () => {
+    const ctx = await context();
+    const { invitationId, personId } = await directInvitation(ctx);
+    await ctx.db
+      .update(people)
+      .set({ deletedAt: new Date("2026-07-20T00:00:00.000Z") })
+      .where(eq(people.id, personId));
+
+    await expect(
+      deliverTripInvitation(ctx.db, {
+        shopId: ctx.shop.id,
+        shopSlug: ctx.shop.slug,
+        tripId: ctx.trip.id,
+        invitationId,
+      }),
+    ).resolves.toBe("fallback");
+    expect(sendNotification).not.toHaveBeenCalled();
+  });
+
   it("does not email a cold invitation to a diver who opted out, and says so", async () => {
     const ctx = await context();
     const { invitationId, personId } = await directInvitation(ctx);
