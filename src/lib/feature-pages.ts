@@ -11,7 +11,7 @@ import type { DemoRoleId } from "./demo-roles";
  * the answer inside a line of that index, and a search engine had one page to
  * send every question to. Each page here answers one of those questions on its
  * own: what the shop gets, the screen that does it, how it works, everything
- * in it, what it does not do, and the questions shops ask about it.
+ * in it, and the questions shops ask about it.
  *
  * Keys and codes only, never words (ADR 20260731-domain-layer-copy-leaks; this
  * file is in `scripts/check-domain-strings.mjs`'s `proseFreeFiles`). Every

@@ -35,16 +35,14 @@ const INVENTORY_ROW_CLASS =
 /**
  * **One feature page**, the same six parts for all twelve (H-93): what the
  * shop gets, with the screen that does it and the builder's notes under it;
- * how it works in three steps; everything in it, with what it does not do as
- * the end of the same list; the questions shops ask; the close; and last the
- * pages a reader asks about next.
+ * how it works in three steps; everything in it; the questions shops ask;
+ * the close; and last the pages a reader asks about next.
  *
  * The order is the order a shop owner's doubts arrive in. The headline and the
  * screen answer "does it do the thing", and the price under the doors answers
  * the question that comes straight after it. The steps answer "how much work
  * is it for us", the inventory answers "does it do *all* of the thing" with a
- * competitor's page open beside it, its last rows say where it stops, and the
- * questions answer the objections, leaving included, before the close asks for
+ * competitor's page open beside it, and the questions answer the objections, leaving included, before the close asks for
  * anything. The close ends the argument, and the related pages come after it
  * for the reader who is not ready yet (conversion review, 2026-10-05). The
  * demo door sits at the top and again in the close, and both open the demo on
@@ -88,10 +86,6 @@ export async function FeaturePageBody({
       title: t(`marketing.featurePages.${key}.step3Title`),
       body: t(`marketing.featurePages.${key}.step3Body`),
     },
-  ];
-  const limits = [
-    t(`marketing.featurePages.${key}.limit1`),
-    t(`marketing.featurePages.${key}.limit2`),
   ];
   const questions = [
     { q: t(`marketing.featurePages.${key}.faq1Q`), a: t(`marketing.featurePages.${key}.faq1A`) },
@@ -223,10 +217,9 @@ export async function FeaturePageBody({
       </MarketingReveal>
 
       {/* Everything in it: the whole group from the capability index, the
-          list a buyer reads against a competitor's feature page, and then
-          where it stops, as the last rows of the same list, so what is in and
-          what is out read as one answer (design review, 2026-10-05). Beside
-          it, the plan's terms: the price, where "is all of this extra?" is
+          list a buyer reads against a competitor's feature page. The two
+          "What it doesn't do" rows that ended it were cut (Aaron, 2026-10-06):
+          a sales page lists what a shop gets. Beside it, the plan's terms: the price, where "is all of this extra?" is
           asked, and how leaving works, the third pillar of the positioning in
           the words `/product` and the pricing FAQ use (`fullShopExport`). */}
       <MarketingReveal>
@@ -258,17 +251,6 @@ export async function FeaturePageBody({
                   <li key={itemKey} className={INVENTORY_ROW_CLASS}>
                     <DiveDayIcon name="check" className="mt-1 size-4 shrink-0 text-primary" />
                     <span>{t(itemKey)}</span>
-                  </li>
-                ))}
-              </ul>
-              <h3 className={`mt-10 ${SECTION_TITLE_CLASS}`}>
-                {t("marketing.featureChrome.limitsTitle")}
-              </h3>
-              <ul className="mt-3 grid gap-x-10 sm:grid-cols-2">
-                {limits.map((limit) => (
-                  <li key={limit} className={`${INVENTORY_ROW_CLASS} text-muted`}>
-                    <DiveDayIcon name="close" className="mt-1 size-4 shrink-0" />
-                    <span>{limit}</span>
                   </li>
                 ))}
               </ul>
