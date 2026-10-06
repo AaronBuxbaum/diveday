@@ -4,7 +4,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
-import { sortActions, sortStationRows } from "@/lib/today";
+import { assembleDaySpine, sortStationRows } from "@/lib/today";
 import { dbNowPlus, fileScopedShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { cancelBooking, createBookingParty } from "./bookings";
@@ -3069,6 +3069,18 @@ describe("crew clashes on Today (H-80)", () => {
     return { host, mover, personId };
   }
 
+  /** The shop home's spine for `now`, with no second day to file onto. */
+  async function spineAt(now: Date) {
+    const { db, shop } = ctx;
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    return assembleDaySpine(work, { departures: [], actions: [] });
+  }
+
+  /** The one Needs you list, ranked the way DaySpine ranks it. */
+  function needsYou(spine: Awaited<ReturnType<typeof spineAt>>) {
+    return sortStationRows([...spine.stations.flatMap((station) => station.rows), ...spine.desk]);
+  }
+
   async function clashRows(now: Date, tripIds: readonly string[]) {
     const { db, shop } = ctx;
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
@@ -3201,8 +3213,16 @@ describe("crew clashes on Today (H-80)", () => {
 
     // Day one is out; the clash is on day two, still to sail and still fixable.
     expect(await onCourse(at(1.5))).toEqual([["crew_clash", at(24).getTime()]]);
+    // The course started more than an hour ago, so it is no station: the row
+    // files at the desk, where Needs you reads it, never into the week's count.
+    const dayOne = await spineAt(at(1.5));
+    expect(dayOne.stations.map((station) => station.tripId)).not.toContain(course.id);
+    expect(needsYou(dayOne).map((row) => row.id)).toContain(`crew-clash:${course.id}`);
     // Day two is out with it.
     expect(await onCourse(at(26))).toEqual([["crew_clash_sailed", at(28).getTime()]]);
+    expect(needsYou(await spineAt(at(26))).map((row) => row.id)).toContain(
+      `crew-clash-sailed:${course.id}`,
+    );
     // Day two is home: permanent, said nowhere.
     expect(await onCourse(at(29.5))).toEqual([]);
   });
@@ -3266,12 +3286,58 @@ describe("crew clashes on Today (H-80)", () => {
     });
     expect(counted.ok).toBe(true);
 
-    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
-    const ids = sortActions(work.actions).map((action) => action.id);
+    const ids = needsYou(await spineAt(now)).map((action) => action.id);
     const missing = ids.findIndex((id) => id.startsWith(`roll-call:${later.id}:missing_diver:`));
     const clash = ids.indexOf(`crew-clash-sailed:${host.id}`);
     expect(missing).toBeGreaterThanOrEqual(0);
     expect(clash).toBeGreaterThan(missing);
+  });
+
+  /**
+   * B1 of the re-review: a boat that left more than an hour ago is no longer a
+   * station, and its sailed clash used to fall into the week's count behind a
+   * link. It files at the desk, still naming its boat.
+   */
+  it("files a sailed clash two hours out at the desk, not into the week's count", async () => {
+    const now = nowDate();
+    const hostStartsAt = new Date(now.getTime() - 2 * HOUR);
+    const { host, mover } = await movedOnto(hostStartsAt, hostStartsAt);
+    const { db, shop } = ctx;
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    expect(work.outTripIds).toEqual(expect.arrayContaining([host.id, mover.id]));
+    const clashIds = [`crew-clash-sailed:${host.id}`, `crew-clash-sailed:${mover.id}`];
+    const spine = assembleDaySpine(
+      { ...work, actions: work.actions.filter((action) => clashIds.includes(action.id)) },
+      { departures: [], actions: [] },
+    );
+    expect(spine.desk.map((row) => row.id).sort()).toEqual([...clashIds].sort());
+    expect(spine.desk.find((row) => row.id === clashIds[0])?.departure?.tripId).toBe(host.id);
+    expect(spine.week.jobs).toBe(0);
+  });
+
+  /**
+   * N2: "Confirm who is aboard" is answered for a person once they have a
+   * result at this departure's own checkpoint, so the row stops naming them.
+   */
+  it("drops a crew member from the sailed row once the departure roll call has them", async () => {
+    const now = nowDate();
+    const hostStartsAt = new Date(now.getTime() - 2 * HOUR);
+    const { host, mover, personId } = await movedOnto(hostStartsAt, hostStartsAt);
+    const { db, shop } = ctx;
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("seed staff missing");
+    await recordCrewRollCall(db, {
+      shopId: shop.id,
+      tripId: host.id,
+      personId,
+      recordedByPersonId: staff.person.id,
+      status: "not_boarded",
+      checkpoint: "departure",
+    });
+    // Answered on the host only: the mover still asks.
+    expect((await clashRows(now, [host.id, mover.id])).map((row) => row.id)).toEqual([
+      `crew-clash-sailed:${mover.id}`,
+    ]);
   });
 
   it("leaves the roll-call subject rule alone: no crew roll-call row for an untapped crew", async () => {

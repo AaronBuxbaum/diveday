@@ -769,9 +769,10 @@ new domain concept, define it here in the same PR.
   group and a fun-dive group on one charter models it as one departure with two groups. Said on the
   Move panel before a move lands one (`boatMoveClashes`), and on both departures' pages while it
   stands — the Divers tab's pulse and the Details tab's Boat and crew row (`boatClashes`). Like the
-  crew clash it is information, never a gate; unlike it, it goes silent once **either** departure
-  has sailed, because a hull that has left on one is not going on the other and nothing is left to
-  move.
+  crew clash it is information, never a gate. Each side goes silent once **its own** overlapping leg
+  has sailed, since nothing on a hull that has left is left to move; the side still on the dock
+  keeps the warning until it sails or its boat changes, because its divers are the ones with no
+  boat.
 - **Crew clash** — one person on two departures whose windows **overlap**. It is a time overlap and
   never a shared day: a divemaster on the 08:00 and the 14:00 is how a shop runs a Saturday, and
   `setTripCrew`/`changeTripCrew` allow it deliberately while refusing the overlap outright. The
@@ -797,10 +798,13 @@ new domain concept, define it here in the same PR.
   redirect with a `?notice=` whose form re-opens About, so the read speaks on the next paint. A
   clash already **home** is reported nowhere: it is permanent, unfixable and true, which is the
   shape of a warning a shop learns to scroll past.
-  **Today names it on both boats** (H-80): `crew_clash` while the departure has yet to sail (issue
-  #1776), and `crew_clash_sailed` while it is out, pointing at the roll call (issue #1814) — both
-  read through one batched `crewClashesByTrip`, never from roll-call events, so a crew member nobody
-  tapped is still not a roll-call subject.
+  **Today names it on both boats** (H-80), decided **per leg** by `crewClashPhase`: `crew_clash`
+  while the clashing leg has yet to sail (issue #1776), and `crew_clash_sailed` while it is out,
+  pointing at the roll call (issue #1814), so a course clashing on its second morning is still a
+  clash to fix while its first day is out. Both read through one batched `crewClashesByTrip`, never
+  from roll-call events, so a crew member nobody tapped is still not a roll-call subject; a person
+  the departure roll call has already answered for drops off the sailed row. A boat that is out but
+  no longer a station files these rows at the desk, never into the week's count.
   **The boat manifest reads it too, and it is the loudest of the five** (issue #1779): a crew member
   on two overlapping departures prints aboard both, and the sheet said nothing — so the second boat's
   deck met a crew member missing at the count with no reason, and souls-on-board named a body that

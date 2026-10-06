@@ -302,6 +302,14 @@ export type CrewedSessionSummary = {
 export type TodayWork = {
   departures: DepartureSummary[];
   actions: TodayAction[];
+  /**
+   * Departures that have started and are not home: every started departure
+   * the crew-clash read saw (issue #1814), plus every boat still out by its
+   * roll call or clock, cancelled-after-boarding included (issue #2064). A
+   * row about one that is no longer a station files at the desk rather than
+   * into the week's count (`assembleDaySpine`).
+   */
+  outTripIds: string[];
   /** How many actions were filtered out for the reader's role lens (issue #715). */
   withheldCount: number;
   /** Shown only when nothing sails today, so the page still orients the crew. */
@@ -321,13 +329,6 @@ export type TodayWork = {
   crewedTripIds: string[];
   crewedSessions: CrewedSessionSummary[];
   availableStaff: { id: string; fullName: string; roles: string[] }[];
-  /**
-   * Departures that have sailed past the morning spine's window and are not
-   * back yet (phase `aboard`, `tripPhaseOf`), in clock order. They have no live
-   * station, so `assembleDaySpine` files their rows into Needs you by this list
-   * rather than counting them under the week (issue #2064).
-   */
-  outTripIds: string[];
 };
 
 function shopDay(date: Date, timeZone: string): string {
@@ -829,6 +830,7 @@ async function standingCrewClashes(
   shopId: string,
   inWindow: readonly { id: string; title: string; startsAt: Date; endsAt: Date }[],
   now: Date,
+  timeZone: string,
 ) {
   const started = await db
     .select({
@@ -860,8 +862,43 @@ async function standingCrewClashes(
       });
     }
   }
-  const clashes = await crewClashesByTrip(db, shopId, [...departures.keys()], now);
-  return { clashes, departures: [...departures.values()] };
+  const ids = [...departures.keys()];
+  // The departure roll call is read here for every one of these departures,
+  // not borrowed from the station reader: a boat that left more than an hour
+  // ago is no longer a station, and it is the boat this question is about.
+  const [clashes, divers, crew, stages] = await Promise.all([
+    crewClashesByTrip(db, shopId, ids, now),
+    listDepartureRollCallByTrip(db, shopId, ids),
+    listDepartureCrewRollCallByTrip(db, shopId, ids),
+    latestTripStagesByTrip(
+      db,
+      shopId,
+      started.map((trip) => trip.id),
+    ),
+  ]);
+  // The crew's "home" tap beats the clock, as in `tripPhaseOf`, but only a tap
+  // from the departure's last shop day: a course whose crew said home after
+  // day one is still out on day two.
+  const saidHome = (trip: { id: string; endsAt: Date }) => {
+    const tap = stages.get(trip.id);
+    return (
+      tap?.stage === "home" &&
+      tap.recordedAt.getTime() >= shopDayBounds(trip.endsAt, timeZone).from.getTime()
+    );
+  };
+  return {
+    clashes,
+    divers,
+    crew,
+    departures: [...departures.values()],
+    // Every departure that has started and is not home, which is what files a
+    // row about it at the desk once it has dropped out of the stations
+    // (`assembleDaySpine`). Started is the departure's own `startsAt`, so a
+    // course between two of its days still counts as out.
+    outTripIds: started
+      .filter((trip) => !hasReturned(trip.endsAt, now) && !saidHome(trip))
+      .map((trip) => trip.id),
+  };
 }
 
 /**
@@ -1398,7 +1435,7 @@ export async function getTodayWork(
     ),
     // Who is on two boats at once, on every departure the queue holds and on
     // every boat still out (H-80) — one batched read.
-    standingCrewClashes(db, shopId, inWindow, now),
+    standingCrewClashes(db, shopId, inWindow, now, timeZone),
   ]);
 
   // Who on today's boats said the crew may know it is their first trip, or
@@ -1600,11 +1637,10 @@ export async function getTodayWork(
   // Information, never a gate (#1345).
   //
   // **A missing diver always leads the sailed row** (dive-domain-expert review,
-  // 2026-10-06). Both sit in the top urgency band, where `sortActions` orders
-  // by `dueAt` before severity, and every after-dive roll-call row is dated at
-  // its boat's return. So the sailed row is dated no earlier than the latest
-  // of those: with the dates tied or ahead, severity — where every roll-call
-  // row outranks it — decides.
+  // 2026-10-06). Needs you ranks tone first (`sortStationRows`), and every
+  // after-dive roll-call row is danger where this row is a warning. The row is
+  // also dated no earlier than the latest open after-dive count, so the
+  // ordering holds on dates alone, should a tone ever move.
   const latestOpenAfterDiveCount = Math.max(
     0,
     ...rollCallGaps
@@ -1614,11 +1650,11 @@ export async function getTodayWork(
   for (const trip of crewClashState.departures) {
     const clashes = crewClashState.clashes.get(trip.id) ?? [];
     if (clashes.length === 0) continue;
+    const crewAnswered = crewClashState.crew.get(trip.id) ?? new Map<string, string>();
     const recorded =
-      [...(departureRollCall.get(trip.id)?.values() ?? [])].some((state) => state === "boarded") ||
-      [...(departureCrewRollCall.get(trip.id)?.values() ?? [])].some(
+      [...(crewClashState.divers.get(trip.id)?.values() ?? [])].some(
         (state) => state === "boarded",
-      );
+      ) || [...crewAnswered.values()].some((state) => state === "boarded");
     const ahead: { clash: CrewClash; startsAt: Date }[] = [];
     const out: { clash: CrewClash; endsAt: Date }[] = [];
     for (const clash of clashes) {
@@ -1628,8 +1664,13 @@ export async function getTodayWork(
         departureRollCallRecorded: recorded,
         now,
       });
-      if (standing?.phase === "out") out.push({ clash, endsAt: standing.leg.endsAt });
-      else if (standing?.phase === "ahead") ahead.push({ clash, startsAt: standing.leg.startsAt });
+      // Once this person has a result at this departure's own checkpoint,
+      // "confirm who is aboard" is answered for them (review N2), so the
+      // sailed row stops naming them.
+      if (standing?.phase === "out" && !crewAnswered.has(clash.personId)) {
+        out.push({ clash, endsAt: standing.leg.endsAt });
+      }
+      if (standing?.phase === "ahead") ahead.push({ clash, startsAt: standing.leg.startsAt });
     }
     const when = at(trip.startsAt, timeZone, locale);
     const departure = { tripId: trip.id, label: `${trip.title} · ${when}` };
@@ -2572,6 +2613,9 @@ export async function getTodayWork(
   return {
     departures,
     actions: visibleActions,
+    outTripIds: [
+      ...new Set([...crewClashState.outTripIds, ...boatsOut.out.map((trip) => trip.id)]),
+    ],
     withheldCount,
     nextDeparture: next
       ? {
@@ -2585,6 +2629,5 @@ export async function getTodayWork(
     crewedTripIds,
     crewedSessions,
     availableStaff,
-    outTripIds: boatsOut.out.map((trip) => trip.id),
   };
 }

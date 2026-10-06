@@ -52,8 +52,6 @@ import { utcToWallTime } from "./zoned";
 /** How soon the work has to be done, derived from the departure it belongs to. */
 export type TodayUrgency = "imminent" | "now" | "soon" | "later";
 
-const URGENCY_RANK: Record<TodayUrgency, number> = { imminent: 0, now: 1, soon: 2, later: 3 };
-
 /** The next boat out — close enough that "later today" isn't precise enough. */
 const IMMINENT_WINDOW_MS = 3 * HOUR_MS;
 /** Anything departing inside a day is "get it done today" work. */
@@ -140,11 +138,11 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // which is a named person with a known problem; but the manifest may name a
   // crew member who is on the other boat, and souls-on-board is read over the
   // radio, so it sits above every boarding-time blocker. Severity only breaks
-  // ties: inside the top urgency band the row is dated so that every open
-  // after-dive roll-call row is due no later than it (`getTodayWork`), so a
-  // missing diver always leads it (dive-domain-expert review, 2026-10-06).
-  // Read from the roster (`crewClashes`), never from roll-call events: the
-  // subject rule above is untouched.
+  // ties: Needs you ranks tone first (`sortStationRows`), and every after-dive
+  // roll-call row is danger where this is a warning, so a missing diver always
+  // leads it (dive-domain-expert review, 2026-10-06). Read from the roster
+  // (`crewClashesByTrip`), never from roll-call events: the subject rule above
+  // is untouched.
   crew_clash_sailed: 3.7,
   medical_review: 4,
   // Tied with the hold it settles, deliberately. This table ranks by how long a
@@ -1321,24 +1319,6 @@ export function collapseOwedRefunds(
   return actions;
 }
 
-/**
- * Chronological first: the 7 a.m. boat's problems outrank the 2 p.m. boat's,
- * whatever they are. Severity only decides order inside one departure.
- */
-export function sortActions(actions: readonly TodayAction[]): TodayAction[] {
-  return [...actions].sort((a, b) => {
-    const urgency = URGENCY_RANK[a.urgency] - URGENCY_RANK[b.urgency];
-    if (urgency !== 0) return urgency;
-    const due =
-      (a.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER) -
-      (b.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER);
-    if (due !== 0) return due;
-    const severity = KIND_SEVERITY[a.kind] - KIND_SEVERITY[b.kind];
-    if (severity !== 0) return severity;
-    return a.subject.localeCompare(b.subject);
-  });
-}
-
 export type RoleLens = "boat" | "sessions" | null;
 
 /**
@@ -1539,13 +1519,15 @@ export type SpineWork = {
   departures: readonly SpineDeparture[];
   actions: readonly TodayAction[];
   /**
-   * Departures that sailed past the spine's window and are not back yet
-   * (`TodayWork.outTripIds`). Every row about one of them is today's work, not
-   * the week's: a blocked diver aboard must not become a number behind a link
-   * to the board (issue #2064). An after-dive head count that is still open
+   * Departures that have started and are not home (`TodayWork.outTripIds`),
+   * cancelled-after-boarding included. Every row about one of them that has no
+   * station is today's work, not the week's: a blocked diver aboard or a crew
+   * clash on a boat that sailed must not become a number behind a link to the
+   * board (issues #2064, #1814). An after-dive head count that is still open
    * goes to Needs you whether or not its boat is listed here — a boat that is
    * already back, last night's included, is
-   * {@link AFTER_DIVE_ROLL_CALL_KINDS}' case (issue #2131).
+   * {@link AFTER_DIVE_ROLL_CALL_KINDS}' case (issue #2131). Optional so a
+   * hand-built spine in a test can leave it out.
    */
   outTripIds?: readonly string[];
 };
@@ -1582,6 +1564,14 @@ function stationFor(departure: SpineDeparture, rows: readonly TodayAction[]): Da
  * the horizon is one queue and a job is counted exactly once, wherever its boat
  * happens to sail.
  *
+ * **A boat that is out but no longer a station still speaks at the desk.**
+ * Stations come from a forward-looking reader, so a departure that left more
+ * than an hour ago, or a multi-day course past its first morning, has none. A
+ * row about one of those (`today.outTripIds`) files under the desk, where it
+ * still names its own boat, rather than into the week's count behind a link:
+ * a boat on the water with a question about who is aboard is today's work
+ * (dive-domain-expert review of H-80, 2026-10-06).
+ *
  * Stations arrive in clock order, and nothing re-orders them: the crew-first
  * ordering the departure board used is deliberately gone,
  * because a spine that puts 1:00 PM above 7:00 AM for one reader is no longer
@@ -1593,18 +1583,19 @@ export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpin
   const todayDepartures = [...today.departures].sort(byClock);
   const tomorrowDepartures = [...tomorrow.departures].sort(byClock);
 
+  const stationed = new Set([
+    ...todayDepartures.map((departure) => departure.tripId),
+    ...tomorrowDepartures.map((departure) => departure.tripId),
+  ]);
+  const out = new Set(today.outTripIds ?? []);
   const rowsByTrip = new Map<string, TodayAction[]>();
   const desk: TodayAction[] = [];
   const liveTripIds = new Set(todayDepartures.map((departure) => departure.tripId));
-  const outTripIds = new Set(today.outTripIds ?? []);
   for (const action of today.actions) {
-    if (!action.departure) {
-      desk.push(action);
-      continue;
-    }
     if (
-      !liveTripIds.has(action.departure.tripId) &&
-      (outTripIds.has(action.departure.tripId) || AFTER_DIVE_ROLL_CALL_KINDS.has(action.kind))
+      !action.departure ||
+      (out.has(action.departure.tripId) && !stationed.has(action.departure.tripId)) ||
+      (!liveTripIds.has(action.departure.tripId) && AFTER_DIVE_ROLL_CALL_KINDS.has(action.kind))
     ) {
       desk.push(action);
       continue;
@@ -1621,15 +1612,11 @@ export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpin
     stationFor(departure, rowsByTrip.get(departure.tripId) ?? []),
   );
 
-  const placed = new Set([
-    ...todayDepartures.map((departure) => departure.tripId),
-    ...tomorrowDepartures.map((departure) => departure.tripId),
-    ...outTripIds,
-  ]);
   const weekJobs = today.actions.filter(
     (action) =>
       action.departure &&
-      !placed.has(action.departure.tripId) &&
+      !stationed.has(action.departure.tripId) &&
+      !out.has(action.departure.tripId) &&
       !AFTER_DIVE_ROLL_CALL_KINDS.has(action.kind),
   ).length;
 
