@@ -430,7 +430,9 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
       rentalFit,
     });
-    expect(screen.queryByText("A medical answer needs staff follow-up.")).toBeNull();
+    expect(
+      screen.queryByText("A medical answer needs a doctor’s sign-off before this diver dives."),
+    ).toBeNull();
     expect(screen.getAllByText("Payment is outstanding for this trip.").length).toBeGreaterThan(0);
   });
 
@@ -566,6 +568,22 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     });
 
     expect(screen.queryByTestId("identity-contact")).toBeNull();
+  });
+
+  // A medical hold is cleared by a doctor in writing, never by a word on the
+  // boat (issue #2065): the sentence names who clears it.
+  it("says a medical hold needs a doctor's sign-off", () => {
+    renderRoster({
+      roster: [matched],
+      readiness: confirmed,
+      waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+      rentalFit,
+    });
+
+    expect(
+      screen.getAllByText("A medical answer needs a doctor’s sign-off before this diver dives.")
+        .length,
+    ).toBeGreaterThan(0);
   });
 
   it("keeps the flagged medical answer outside the row's fold", () => {

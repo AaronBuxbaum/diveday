@@ -200,7 +200,7 @@
       "waiverNotSent": "Waiver not signed. Not sent yet.",
       "waiverPending": "Waiver not signed. Link sent.",
       "waiverExpired": "Waiver link expired; issue a fresh link.",
-      "medicalReview": "A medical answer needs staff follow-up.",
+      "medicalReview": "A medical answer needs a doctor’s sign-off before this diver dives.",
       "medicalNotCleared": "A physician did not clear this diver to dive.",
       "guardianSignatureMissing": "Signed by a minor alone. A parent or guardian has to sign too; send a fresh waiver link.",
       "certificationMissing": "No certification is on file for this trip.",
