@@ -94,8 +94,10 @@ V-05 is the `dive-domain-expert` review that closes it.
 - V-rows get their evidence recorded verbatim in the
   [verification queue](../human-decisions.md#human-verification-queue); H-05/H-06/H-08/H-11 rows
   move state with dates and owners.
-- A passing V-02 unlocks offline roll-call claims through [marketing.md](../marketing.md)'s
-  claims policy — the claim ships only after the evidence exists, never before.
+- The no-signal roll-call claim already runs on the public pages, worded with its condition, by
+  the owner's decision ([H-94](../human-decisions.md#decision-register), 2026-10-06). V-02 decides
+  whether it stays: a pass lets the pages say it has been tested on a boat, and a failure takes the
+  claim off every page through [marketing.md](../marketing.md)'s claims policy.
 - Field defects on safety surfaces become stop-the-line fixes with regression tests, per
   AGENTS.md hard rules; policy gaps become updates to the
   [provisional defaults](../human-decisions.md#provisional-implementation-defaults--verify-before-production).

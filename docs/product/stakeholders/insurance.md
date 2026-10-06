@@ -80,8 +80,9 @@ rollout plan calls for. Outline:
 5. The open items we do not claim (whatever H-01–H-03 have not yet cleared — keep this honest,
    per the [claims policy](../marketing.md)).
 
-This asset is *marketing-adjacent*: it must obey the claims policy (no offline roll-call claims
-before V-02 passes; no legal-sufficiency claims before H-03 is signed off).
+This asset is *marketing-adjacent*: it must obey the claims policy (the no-signal roll call only
+as [H-94](../human-decisions.md#decision-register) words it, never as tested on a boat before
+V-02 passes; no legal-sufficiency claims before H-03 is signed off).
 
 ## Where outcomes land
 

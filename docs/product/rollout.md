@@ -104,8 +104,11 @@ it down) for each of:
   candidate — and run the full script in
   [human-decisions.md](human-decisions.md#human-verification-queue): glare, wet hands,
   airplane-mode reload, multi-checkpoint roll call, conflict reconciliation, print fallback.
-  Record everything. **Until V-02 passes, no marketing claim about offline roll call** (per the
-  [claims policy](marketing.md)); the feature ships, the claim waits.
+  Record everything. **The no-signal roll-call claim may run before V-02 passes**
+  ([H-94](human-decisions.md#decision-register), 2026-10-06; until then this line held it back):
+  it is shipped and the demo shows it, the [claims policy](marketing.md#claims-policy-hard-rules)
+  sets its wording, and no page says the roll call has been tested on a boat until V-02 records
+  that it was. If V-02 fails, the claim comes off every page.
 - V-01 (browser pass) and a V-04 dry run (seed a fictional but realistic week and rehearse
   check-in → prep → roll call end-to-end yourself) are the cheap rehearsals that make the first
   real pilot day boring.
@@ -299,8 +302,9 @@ serves it.
 
 ## Risks and pre-decided responses
 
-- **V-02 fails on the boat** → pilot proceeds with live manifest + print backup; offline claims
-  stay off all surfaces (claims policy already enforces this); fix and re-test before Phase 2.
+- **V-02 fails on the boat** → pilot proceeds with live manifest + print backup; the no-signal
+  roll-call claim comes off every surface ([H-94](human-decisions.md#decision-register)); fix and
+  re-test before Phase 2.
 - **Legal review demands a specialist e-signature provider (H-03)** → the `SignatureProvider`
   seam exists for exactly this; it becomes the one Phase-0 engineering task. Budget it, don't
   debate it.

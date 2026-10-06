@@ -276,9 +276,16 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   in ADRs, never in copy ([design/principles.md](../design/principles.md) §4). **`/privacy` is the
   single exception**, and only for encryption: on the page about who can read a shop's divers'
   data, what protects the copy on a crew phone is the reader's actual question, so it is named
-  there — with the limits of that protection named alongside it. Nowhere else. The capability
-  index on `/product` sells the outcome ("a head count with no signal, matching the counter's once
-  you're back"), never the snapshot.
+  there — with the limits of that protection named alongside it. Nowhere else. The boat manifest
+  page's checklist, which `/product` folds under that page's row, sells the outcome ("a roll call
+  with no signal, folded into the live record when the phone reconnects"), never the snapshot.
+- **The no-signal claim runs before the boat test** (H-94, Aaron Buxbaum, 2026-10-06). The launch
+  plan held every offline roll-call claim until V-02, the outdoor test of the manifest on a boat,
+  passed; the claim was live anyway (MKT-F10), and the owner kept it, since it is shipped and the
+  demo shows it. Where a page explains it, the condition sits beside it: the copy is saved to the
+  phone while it has signal, and out of range a phone shows only its own taps. No page says the roll
+  call has been tested on a boat, at sea or in the field until V-02 records that it was, and if
+  V-02 fails, the claim comes off every page in the change that records the result.
 - **What the export withholds is stated scoped, never as an absolute** (2026-08-28). The honest
   short answer to "what stays behind" is *credentials* — passwords and per-device push keys, which
   no other system could use anyway — and that is what `/pricing`'s `dataExit.securityNote` and the
@@ -432,6 +439,7 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   `home-hero`, `home-mid`, `home-closing` still mean what they meant, so attribution history spans
   the rename. This closes the MKT-F4 half of **HD-25**; the remaining HD-25 calls (MKT-F5's "most
   shops…" wording, MKT-F10's offline roll-call claim versus the V-02 embargo) are untouched by it.
+  H-94 settled MKT-F10 on 2026-10-06: the claim stays (see the claims policy above).
   **The role door under an annotated screen is the one exception (2026-09-24, H-89).** A
   `ScreenDoor` (`src/app/_components/ScreenDoor.tsx`) submits the same `enterDemoAction` with a
   hidden `role`, at link weight, labelled for its screen ("Open the demo as the captain →"),
