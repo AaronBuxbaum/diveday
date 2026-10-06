@@ -118,6 +118,41 @@ describe("the Sites row", () => {
 });
 
 /**
+ * **The dock call is on the card** (issue #2034). The card is what a diver has
+ * offline at the dock, and a diver reading only the departure range would
+ * arrive as the boat leaves. Same sentence and same minute `/ready` gives:
+ * the trip sails 9:00 AM New York time, so a 30-minute call is 8:30.
+ */
+describe("the dock-call line", () => {
+  it("names when to be at the dock, in the shop's zone, beside the departure range", () => {
+    render(<TripArrivalCard shop={shop} trip={trip} locale="en-US" dockCallMinutes={30} />);
+    expect(
+      screen.getByText("Aim to be at the dock by 8:30 AM, 30 minutes before we sail."),
+    ).toBeInTheDocument();
+    // The departure range stays, beside it.
+    expect(screen.getByText(/9:00.*1:00\sPM/)).toBeInTheDocument();
+  });
+
+  it("speaks the diver's language", () => {
+    render(<TripArrivalCard shop={shop} trip={trip} locale="es-ES" dockCallMinutes={45} />);
+    expect(
+      screen.getByText("Procura estar en el muelle a las 8:15, 45 minutos antes de zarpar."),
+    ).toBeInTheDocument();
+  });
+
+  it("says nothing when the shop asks for no lead time, or the caller passes none", () => {
+    const { rerender } = render(
+      <TripArrivalCard shop={shop} trip={trip} locale="en-US" dockCallMinutes={0} />,
+    );
+    expect(screen.queryByText(/at the dock by/)).not.toBeInTheDocument();
+    rerender(<TripArrivalCard shop={shop} trip={trip} locale="en-US" dockCallMinutes={null} />);
+    expect(screen.queryByText(/at the dock by/)).not.toBeInTheDocument();
+    rerender(<TripArrivalCard shop={shop} trip={trip} locale="en-US" />);
+    expect(screen.queryByText(/at the dock by/)).not.toBeInTheDocument();
+  });
+});
+
+/**
  * **The thread's one map** (2026-09-17 design review).
  *
  * It used to sit in a trailing "Your dive shop" card that also restated this

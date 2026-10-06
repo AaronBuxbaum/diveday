@@ -1627,6 +1627,24 @@ export async function setBookingHotelPickup(
   return true;
 }
 
+/**
+ * The hotel pickup time staff set on one seat, or `null` when the diver makes
+ * their own way to the dock. Read by the saved arrival card, which states the
+ * dock call only to a diver who is not being collected (issue #2034).
+ */
+export async function getBookingPickupTime(
+  db: DbExecutor,
+  shopId: string,
+  bookingId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ pickupTime: bookings.pickupTime })
+    .from(bookings)
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+    .limit(1);
+  return row?.pickupTime?.trim() || null;
+}
+
 export async function setBookingPickupDetails(
   db: AppDb,
   input: {
