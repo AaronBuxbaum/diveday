@@ -78,7 +78,7 @@ export function NoShowScript({
           variant: "ghost",
           size: "sm",
           flush: true,
-          className: "cursor-pointer list-none text-muted [&::-webkit-details-marker]:hidden",
+          className: "cursor-pointer list-none [&::-webkit-details-marker]:hidden",
         })}
       >
         {copy.door}
