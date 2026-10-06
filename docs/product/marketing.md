@@ -37,8 +37,7 @@ and listed the rest in a closed index on `/product`.
 - **One template**, `src/app/product/_components/FeaturePageBody.tsx`: the hero says what the shop
   gets in one sentence of lede beside the screen that proves it, with three builder's notes, and
   the price under its doors; then how it works in three steps; then everything the feature
-  includes, which is that feature's whole group of `productCapabilityIndex`, with the two things it
-  does not do as the end of the same list, and the plan's terms beside it (the flat price, and the
+  includes, which is that feature's whole group of `productCapabilityIndex`, and the plan's terms beside it (the flat price, and the
   Data export button with `fullShopExport`'s terms); then three questions shops ask, marked up as
   `FAQPage`; then the close; and last three related pages, for the reader the close did not
   convince yet. The order is the order a buyer's doubts arrive in, and the ask lands at the end of

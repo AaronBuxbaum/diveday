@@ -9,7 +9,6 @@ import { MarketingSectionMotion } from "@/components/MarketingReveal";
 import { FeatureDirectory } from "@/components/MarketingSections";
 import { buttonClass } from "@/components/ui/button";
 import {
-  BANNER_TITLE_CLASS,
   DISPLAY_TITLE_CLASS,
   LEAD_TITLE_CLASS,
   MARKETING_EYEBROW_CLASS,
@@ -106,27 +105,6 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
     0,
   );
 
-  const notCovered = [
-    {
-      title: t("marketing.product.notCovered.pos.title"),
-      detail: t("marketing.product.notCovered.pos.detail"),
-    },
-    {
-      title: t("marketing.product.notCovered.workOrders.title"),
-      detail: t("marketing.product.notCovered.workOrders.detail"),
-    },
-    // "Gear serial numbers" used to sit here, saying DiveDay tracked sizes but
-    // not individual units or service history. The gear register shipped
-    // 2026-08-15 (ADR 20260815-minimal-gear-register) and does both — one row
-    // per tagged unit, who has it, when it is due back, and its service clocks
-    // — so the claim was false the day it shipped. A "what we don't do" list is
-    // only worth anything while every line on it is true.
-    {
-      title: t("marketing.product.notCovered.agencyLine.title"),
-      detail: t("marketing.product.notCovered.agencyLine.detail"),
-    },
-  ] as const;
-
   return (
     <main className="flex-1">
       <MarketingSectionMotion />
@@ -188,41 +166,15 @@ async function ProductBody({ locale }: { locale: DiverLocale }) {
         <p className="mt-12 max-w-2xl text-lg leading-8 text-muted">
           {t("marketing.product.boxDescription", { count: capabilityCount })}
         </p>
-      </section>
-
-      {/* The rule the spec sheet's band used to draw: the directory and this
-          band now sit on the same ground, and one rule at the boundary is
-          what tells them apart. */}
-      <section className="border-t border-border">
-        <div className="mx-auto max-w-6xl px-6 py-20 lg:py-24">
-          <div className="max-w-2xl">
-            <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.product.noEyebrow")}</p>
-            <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
-              {t("marketing.product.noTitle")}
-            </h2>
-            <p className="mt-4 text-lg leading-8 text-muted">
-              {t("marketing.product.noDescription")}
-            </p>
-          </div>
-          <dl className="mt-12 grid gap-x-12 gap-y-8 md:grid-cols-3">
-            {notCovered.map((item) => (
-              <div key={item.title} className="border-t border-border pt-5">
-                <dt className="font-semibold leading-6">{item.title}</dt>
-                <dd className="mt-2 text-sm leading-6 text-muted">{item.detail}</dd>
-              </div>
-            ))}
-          </dl>
-          {/* Safe-to-leave, said where the objection actually peaks. It is one
-            third of the positioning spine and the named counter to "you're new
-            and unproven" (docs/product/marketing.md), and until now `/product`
-            only implied it — one line inside a reference list of ninety-odd. The
-            terms come from the shared `fullShopExport` claim rather than a
-            second wording of it, so this page and the pricing FAQ can never
-            drift apart. */}
-          <p className="mt-12 max-w-3xl text-lg leading-8 text-muted">
-            {t("marketing.product.leavingNote", { terms: t(fullShopExport.termsKey) })}
-          </p>
-        </div>
+        {/* Safe-to-leave, said where the objection actually peaks: one third
+            of the positioning spine and the named counter to "you're new and
+            unproven" (docs/product/marketing.md). The terms come from the
+            shared `fullShopExport` claim, so this page and the pricing FAQ can
+            never drift apart. It used to close a "What DiveDay doesn't do"
+            band, cut 2026-10-06 (Aaron). */}
+        <p className="mt-6 max-w-3xl text-lg leading-8 text-muted">
+          {t("marketing.product.leavingNote", { terms: t(fullShopExport.termsKey) })}
+        </p>
       </section>
 
       <section className="border-t border-border bg-surface">

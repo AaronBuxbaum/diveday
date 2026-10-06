@@ -323,14 +323,12 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // five annotated screens of the day from 2026-09-24 until 2026-10-05, when
   // each feature got its own page and this one became their directory (H-93).
   await expect(productHero.getByText(/^Booking, waivers, certification checks/)).toBeVisible();
-  // The honest-no scope block and the demo CTA both land on the product page —
-  // three demo doors: the nav (every marketing page's single CTA), the hero
+  // The demo CTA lands on the product page — three demo doors: the nav (every marketing page's single CTA), the hero
   // (the most evaluation-intent click on the site must offer proof above the
   // fold), and the closing band. A fourth stood under the capability index
   // from 2026-08-28 (docs/product/marketing-review-20260827.md, "the dare gets
   // a door") until the index folded into the directory's rows on 2026-10-05,
   // and the mid-page door after the dock story left with the story.
-  await expect(page.getByRole("heading", { name: "What DiveDay doesn’t do." })).toBeVisible();
   await expect(page.getByRole("button", { name: "Try the live demo" })).toHaveCount(3);
 
   // Each door added beside the page's original pair carries its own funnel
@@ -543,10 +541,10 @@ test("/product holds one primary per screen across both of its doors", async ({ 
 
   // …and no band holds two of them. Every `<section>` is checked, so a door
   // that drifted into another band would read as two primaries in one screen
-  // and fail here: the hero, the directory, what it doesn't do, and the close.
+  // and fail here: the hero, the directory, and the close.
   const sections = main.locator("section");
   const sectionCount = await sections.count();
-  expect(sectionCount).toBeGreaterThanOrEqual(4);
+  expect(sectionCount).toBeGreaterThanOrEqual(3);
   for (let index = 0; index < sectionCount; index += 1) {
     const band = sections.nth(index);
     const primaries = await band.locator("button:not([disabled])").count();
@@ -1062,16 +1060,14 @@ test("a feature page lists all of its feature and leads on to the next question"
 
   // The checklist is the page's whole group from the capability index, not a
   // selection: the list a buyer holds against a competitor's feature page.
-  // Where it stops is the end of the same list, under its own heading, and
-  // how leaving works stands beside it with the price.
+  // It names only what is in it (the "What it doesn't do" rows were cut on
+  // 2026-10-06), and how leaving works stands beside it with the price.
   const included = page
     .getByRole("main")
     .locator("section")
     .filter({ has: page.getByRole("heading", { name: "What’s in it" }) });
-  const [inList, outList] = [included.getByRole("list").first(), included.getByRole("list").nth(1)];
-  await expect(inList.getByRole("listitem")).toHaveCount(capabilityGroup("waivers").items.length);
-  await expect(included.getByRole("heading", { name: "What it doesn’t do" })).toBeVisible();
-  await expect(outList.getByRole("listitem")).toHaveCount(2);
+  await expect(included.getByRole("list")).toHaveCount(1);
+  await expect(included.getByRole("listitem")).toHaveCount(capabilityGroup("waivers").items.length);
   await expect(included).toContainText(earlyAccessPrice.price);
   await expect(included).toContainText("Data export");
 
