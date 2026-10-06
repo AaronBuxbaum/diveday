@@ -1,6 +1,7 @@
 import { and, eq, isNull } from "drizzle-orm";
 
 import { nowDate } from "@/lib/clock";
+import type { CourtesyProviders } from "@/lib/notifications/courtesy";
 import { NOTHING_RENTED } from "@/lib/rentals";
 import type { SelfDeclaredLevel } from "@/lib/self-registration";
 import type { AppDb } from "./client";
@@ -186,7 +187,8 @@ export async function registerDiverAtShop(
  * **The release, issued and sent after the visitor already has their answer.**
  *
  * Deliberately not part of `registerDiverAtShop`, and deliberately called from
- * `after()`: this is the half that talks to SES, and a **new** diver's send is
+ * `after()`: this is the half that talks to SES (or, for a diver who gave only
+ * a phone, the shop's text sender), and a **new** diver's send is
  * a real network round trip while a **returning** diver whose release still
  * stands sends nothing at all (`issueWaiverRequest` refuses `already_completed`,
  * which is sign-once working). On the request path that difference is a
@@ -205,9 +207,37 @@ export async function registerDiverAtShop(
  */
 export async function deliverSelfRegistrationWaiver(
   db: AppDb,
-  input: { shopId: string; personId: string; now?: Date },
+  input: {
+    shopId: string;
+    personId: string;
+    now?: Date;
+    /** Injected text senders, so a test never needs AWS or Meta credentials. */
+    textProviders?: CourtesyProviders;
+  },
 ): Promise<void> {
+  const [contact] = await db
+    .select({ email: people.email, phone: people.phone })
+    .from(people)
+    .where(
+      and(eq(people.id, input.personId), eq(people.shopId, input.shopId), isNull(people.deletedAt)),
+    )
+    .limit(1);
   await issueAndDeliverPersonWaiver(db, input.shopId, input.personId, {
     now: input.now ?? nowDate(),
+    channel: releaseChannel(contact),
+    textProviders: input.textProviders,
   });
+}
+
+/**
+ * **The form promises the release to whichever contact the diver gave**
+ * (issue #2092). Email stays the default whenever there is one, which covers
+ * every matched returning diver (matching is by email). A phone-only diver is
+ * always a fresh row (`createPhoneOnlyPerson`), so the number texted is the one
+ * this visitor typed and never somebody else's.
+ */
+function releaseChannel(
+  contact: { email: string | null; phone: string | null } | undefined,
+): "email" | "text" {
+  return !contact?.email && contact?.phone ? "text" : "email";
 }
