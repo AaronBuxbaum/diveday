@@ -1941,11 +1941,13 @@ export async function sameNameHeldSeatCounts(
  * yet, which is the honest state. A wrong split is undone by merging the two
  * records (owner and manager), the same as any duplicate.
  *
- * **With `includeSameNameSeats`, every held seat the same booker made under
- * the same name on the same matched diver moves too**, onto the one new
- * record: someone who booked three dives with a friend's email is one person,
- * and three splits would make three. All of them or none: a medical hold on
- * any of them refuses the lot.
+ * **With `includeSameNameSeats`, every other held seat booked under the same
+ * name and matched to the same diver moves too**, onto the one new record:
+ * someone who booked three dives with a friend's email is one person, and
+ * three splits would make three. A booking does not record who made it, so
+ * two strangers who share a name are told apart only by the staffer leaving
+ * the box unticked; the box names the count so they can. All of them or
+ * none: a medical hold on any of them refuses the lot.
  *
  * What moves is what was about this seat rather than about the matched person:
  * the booking itself, the gear held for it, the staff notes written on it, and
@@ -2024,8 +2026,8 @@ export async function splitBookingIdentity(
         .for("update");
       if (!booking) return { refused: "not_held" as const };
 
-      // The other held seats the same booker made under the same name on the
-      // same matched diver: the same guess, repeated. Only on a departure that
+      // The other held seats booked under the same name and guessed onto the
+      // same diver: the same guess, repeated. Only on a departure that
       // still exists; a deleted one has nobody to move.
       const siblings =
         input.includeSameNameSeats && booking.bookedAs

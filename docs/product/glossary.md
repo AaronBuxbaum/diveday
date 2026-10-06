@@ -2261,7 +2261,7 @@ new domain concept, define it here in the same PR.
   lands on the new record (issue #2081): a **date of birth**, required when a moving seat is on a
   course with a minimum age, because the age check and the guardian co-signature rule both read it
   and fail open without one, and an optional **email or phone** for sending their own waiver. When
-  the same booker holds **other held seats under the same name** on the same matched diver, one
+  there are **other held seats under the same name** matched to the same diver, one
   box (ticked by default) moves them all onto the one new record, so three dives booked with a
   friend's email make one person rather than three; a medical hold on any of them refuses the
   lot. Every release and link on the seat is **superseded** and every bearer link minted over

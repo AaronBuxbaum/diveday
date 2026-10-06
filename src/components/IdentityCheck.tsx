@@ -30,8 +30,8 @@ export type IdentityCheckWords = {
  * The split also takes who the new diver is (issue #2081): a date of birth,
  * required on a course with a minimum age because the age check and the
  * guardian rule both read it and fail open without it, and an optional email
- * or phone so the shop can send their own waiver. When the same booker holds
- * other seats under the same name on the same matched diver, one box moves
+ * or phone so the shop can send their own waiver. When other held seats were
+ * booked under the same name and matched to the same diver, one box moves
  * them all onto the one new record.
  *
  * Nothing from the matched record is printed here: the flag gates disclosure
