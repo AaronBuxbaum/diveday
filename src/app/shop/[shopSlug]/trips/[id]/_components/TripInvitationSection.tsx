@@ -25,6 +25,7 @@ export function TripInvitationGroup({
   timezone,
   inviteAction,
   locale,
+  canInvite = true,
 }: {
   invitations: TripInvitation[];
   shopSlug: string;
@@ -35,6 +36,8 @@ export function TripInvitationGroup({
   timezone: string;
   inviteAction: (invitationId: string) => Promise<"sent" | "fallback">;
   locale: string;
+  /** False once the departure can take nobody (`acceptsNewDivers`). */
+  canInvite?: boolean;
 }) {
   const t = staffTranslator(locale);
   const bookingPath = publicTripPath(shopSlug, tripId);
@@ -77,23 +80,25 @@ export function TripInvitationGroup({
             >
               <div className="min-w-0">
                 <p className="font-medium text-base">{name}</p>
-                <p className="text-muted">
+                <p className="text-muted wrap-anywhere">
                   {email ?? t("trips.invitations.noEmailOnFile")}
                   {request ? ` · ${t("trips.invitations.fromRequest")}` : ""}
                 </p>
               </div>
-              <WaitlistInvite
-                entryId={invitation.id}
-                personName={name}
-                personEmail={email}
-                invitedAt={invitation.invitedAt}
-                bookingPath={bookingPath}
-                shopName={shopName}
-                tripTitle={tripTitle}
-                tripWhen={tripWhen}
-                invite={inviteAction}
-                copy={inviteCopy}
-              />
+              {canInvite ? (
+                <WaitlistInvite
+                  entryId={invitation.id}
+                  personName={name}
+                  personEmail={email}
+                  invitedAt={invitation.invitedAt}
+                  bookingPath={bookingPath}
+                  shopName={shopName}
+                  tripTitle={tripTitle}
+                  tripWhen={tripWhen}
+                  invite={inviteAction}
+                  copy={inviteCopy}
+                />
+              ) : null}
             </li>
           );
         })}

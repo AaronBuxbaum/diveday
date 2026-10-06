@@ -76,6 +76,9 @@ export function PersonCandidateList({
           <LedgerRow
             key={person.id}
             pad="lg"
+            // On a phone the two buttons drop beneath the name and address
+            // instead of squeezing an email into a column a few letters wide.
+            stacked
             className={rowClassName}
             trailing={
               <div className="flex flex-wrap items-center gap-2">
@@ -124,7 +127,9 @@ export function PersonCandidateList({
               ) : (
                 <p className="font-medium">{person.fullName}</p>
               )}
-              <p className="text-sm text-muted">{person.email ?? noEmailOnFile}</p>
+              {/* `wrap-anywhere`: an address has nowhere to break, and a long one ran
+                  on under the row's buttons (owner, 2026-10-06). */}
+              <p className="text-sm text-muted wrap-anywhere">{person.email ?? noEmailOnFile}</p>
               {extraLine?.(candidate)}
             </div>
           </LedgerRow>

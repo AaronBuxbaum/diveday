@@ -324,9 +324,9 @@ function StaffRow({
   return (
     <li id={`staff-${member.personId}`} className="min-w-0 scroll-mt-24 px-5 py-4 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
+        <div className="min-w-0">
           <p className="font-medium">{member.fullName}</p>
-          <p className="text-sm text-muted">{member.email}</p>
+          <p className="text-sm text-muted wrap-anywhere">{member.email}</p>
           {/* What this person publishes to divers, when they have said yes on
               their own staffing page (issue #1357). Read-only here: the switch
               is theirs, and a shop that could edit it would be overriding

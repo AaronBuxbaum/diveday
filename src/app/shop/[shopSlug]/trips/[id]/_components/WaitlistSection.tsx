@@ -35,6 +35,7 @@ export function WaitlistGroup({
   departureRequirement,
   locale,
   timezone,
+  canInvite = true,
 }: {
   waitlist: Waitlist;
   shopSlug: string;
@@ -54,6 +55,11 @@ export function WaitlistGroup({
   departureRequirement: LastMinuteDepartureBar | null;
   locale: string;
   timezone: string;
+  /**
+   * False once the departure can take nobody (sailed, held, cancelled —
+   * `acceptsNewDivers`): the names stay, the invite does not.
+   */
+  canInvite?: boolean;
 }) {
   const t = staffTranslator(locale);
   const bookingPath = publicTripPath(shopSlug, tripId);
@@ -102,7 +108,7 @@ export function WaitlistGroup({
             >
               <div className="min-w-0">
                 <p className="font-medium text-base">{person.fullName}</p>
-                <p className="text-muted">
+                <p className="text-muted wrap-anywhere">
                   {person.email ?? t("trips.waitlist.noEmailOnFile")}
                   {" · "}
                   {t("trips.waitlist.joined", {
@@ -123,18 +129,20 @@ export function WaitlistGroup({
                     : certificationSummaryText(t, summary, locale)}
                 </p>
               </div>
-              <WaitlistInvite
-                entryId={entry.id}
-                personName={person.fullName}
-                personEmail={person.email}
-                invitedAt={entry.invitedAt}
-                bookingPath={bookingPath}
-                shopName={shopName}
-                tripTitle={tripTitle}
-                tripWhen={tripWhen}
-                tripId={tripId}
-                copy={inviteCopy}
-              />
+              {canInvite ? (
+                <WaitlistInvite
+                  entryId={entry.id}
+                  personName={person.fullName}
+                  personEmail={person.email}
+                  invitedAt={entry.invitedAt}
+                  bookingPath={bookingPath}
+                  shopName={shopName}
+                  tripTitle={tripTitle}
+                  tripWhen={tripWhen}
+                  tripId={tripId}
+                  copy={inviteCopy}
+                />
+              ) : null}
             </li>
           );
         })}
