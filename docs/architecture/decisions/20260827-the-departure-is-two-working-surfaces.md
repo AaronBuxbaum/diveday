@@ -93,7 +93,8 @@ competition. The Trip surface collapses secondary configuration into its inline 
 and reflows its roster rows. The live Manifest owns the phone viewport: its staff dock and staff
 phone header are hidden so the roll-call instrument gets the whole screen. The deferred
 /offline-manifest route keeps the staff shell and inherits the shared control styling until it has
-its own surface slice. The complete cross-page contract is [ADR
+its own surface slice. Its roll-call exception controls already follow decision 4: "Mark not back
+aboard" stays neutral there until somebody records it, as it does on the live page (issue #2107). The complete cross-page contract is [ADR
 20260830-responsive-surface-consistency](20260830-responsive-surface-consistency.md) and its
 [responsive surface review](../../design/20260830-responsive-surface-review.md).
 

@@ -5738,6 +5738,30 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       /**
+       * **The same saved copy after a dive, with nothing recorded yet** — the
+       * ordinary opening of a surface-interval count at sea. "Mark not back
+       * aboard" is neutral on every row until somebody records it, as on the
+       * live page (decision 4 of ADR 20260827-the-departure-is-two-working-
+       * surfaces, issue #2107). The frame above is the departure checkpoint,
+       * whose controls were already neutral, so nothing photographed this one.
+       */
+      test(`the offline after-dive roll call renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        await openReefTrip(page);
+        await openTripTab(page, "Manifest");
+        await settleOfflineShellWorker(page);
+        await openOnThisPhone(page);
+        await page.getByRole("link", { name: "Open offline roll call" }).click();
+        await page.waitForURL(/offline-manifest/);
+        await expect(page.getByRole("heading", { name: "Priya Sharma" })).toBeVisible();
+        await page.getByRole("button", { name: "After dive 1" }).click();
+        await expect(page.getByRole("heading", { name: "After dive 1 roll call" })).toBeVisible();
+        await capture(page, "offline-manifest-after-dive", scheme);
+      });
+
+      /**
        * **The counter's own half of that copy, with a tap made** (ADR
        * 20260907-the-counter-survives-offline).
        *

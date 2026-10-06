@@ -104,14 +104,14 @@ export function ChecklistRow({
 /**
  * The after-dive row's two controls, as the saved copy draws them
  * (`OfflineManifestView`): "Boarded" in the success outline once recorded, and
- * "Mark not back aboard" in danger ink with no box while nothing says the
- * diver is missing, because it is the control that reports a person missing
- * and the crew must find it at the rail without reading every word.
+ * "Mark not back aboard" in plain ink with no box while nothing says the
+ * diver is missing: red is earned by a recorded fact (decision 4 of ADR
+ * 20260827-the-departure-is-two-working-surfaces, issue #2107).
  */
 const MOCK_BOARDED_DONE =
   "inline-flex min-h-11 items-center justify-center gap-1 rounded-lg border border-success bg-success-tint text-xs font-semibold text-success";
 const MOCK_NOT_BACK_ABOARD =
-  "inline-flex min-h-11 items-center justify-center rounded-lg text-xs font-semibold text-danger";
+  "inline-flex min-h-11 items-center justify-center rounded-lg text-xs font-semibold";
 
 /** One checkpoint button in the saved copy's switcher, drawn small. */
 const MOCK_CHECKPOINT =

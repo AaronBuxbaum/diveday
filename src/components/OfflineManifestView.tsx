@@ -2078,9 +2078,7 @@ export function OfflineManifestView() {
                                   ? `${OFFLINE_BOAT_TARGET_CLASS} border border-danger bg-danger/15 text-danger`
                                   : crewRecordedNotBoarded
                                     ? `${OFFLINE_BOAT_TARGET_CLASS} border border-border-strong bg-surface-sunken`
-                                    : isDeparture
-                                      ? `${OFFLINE_BOAT_TARGET_CLASS} hover:bg-surface-sunken`
-                                      : `${OFFLINE_BOAT_TARGET_CLASS} text-danger hover:bg-danger-tint`
+                                    : `${OFFLINE_BOAT_TARGET_CLASS} hover:bg-surface-sunken`
                               }
                             >
                               {busyBooking === crewPersonId ? (
@@ -2515,10 +2513,12 @@ export function OfflineManifestView() {
                             // conditions. It takes the box back the moment it
                             // matters: when it is the row's only control (a
                             // blocked diver at the dock), or when it carries the
-                            // recorded state. After a dive the unrecorded label
-                            // keeps danger ink — it is the control that reports a
-                            // person missing, and it must be findable at the rail
-                            // without reading every word.
+                            // recorded state. After a dive it stays neutral too
+                            // until somebody records a person not back aboard:
+                            // an alarm is earned by a recorded fact, never by the
+                            // absence of one (decision 4 of ADR
+                            // 20260827-the-departure-is-two-working-surfaces), and
+                            // the live page draws it the same way (issue #2107).
                             //
                             // Only the departure settled state gets the undo-bearing
                             // accessible name — after a dive, "not back aboard"
@@ -2535,9 +2535,7 @@ export function OfflineManifestView() {
                                 : recordedNotBoarded
                                   ? `${OFFLINE_BOAT_TARGET_CLASS} border border-border-strong bg-surface-sunken`
                                   : showBoardControl
-                                    ? isDeparture
-                                      ? `${OFFLINE_BOAT_TARGET_CLASS} hover:bg-surface-sunken`
-                                      : `${OFFLINE_BOAT_TARGET_CLASS} text-danger hover:bg-danger-tint`
+                                    ? `${OFFLINE_BOAT_TARGET_CLASS} hover:bg-surface-sunken`
                                     : `${OFFLINE_BOAT_TARGET_CLASS} border border-border hover:bg-surface-sunken`
                             }
                           >
