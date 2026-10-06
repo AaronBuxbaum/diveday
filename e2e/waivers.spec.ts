@@ -80,7 +80,9 @@ test("the demo keeps its synthetic medical-review training hold on a future trip
     .filter({ visible: true });
   // The hold is the row's reason line, with its doors under it (Aaron,
   // 2026-10-06): no tinted panel restating it.
-  await expect(diver.getByText("Held for a physician’s sign-off.")).toBeVisible();
+  await expect(
+    diver.getByText("A medical answer needs a doctor’s sign-off before this diver dives."),
+  ).toBeVisible();
   await expect(diver.getByRole("link", { name: "Record physician clearance" })).toBeVisible();
   await diver.getByRole("link", { name: "View signed record" }).click();
   // The signed release itself, on the diver's record: what they signed and
@@ -249,7 +251,9 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // Back on the roster, the single button now reports the completed-but-flagged
   // state, and the medical answer is spelled out for staff follow-up.
   await page.goto(staffTripUrl);
-  await expect(diverSection.getByText("Held for a physician’s sign-off.")).toBeVisible();
+  await expect(
+    diverSection.getByText("A medical answer needs a doctor’s sign-off before this diver dives."),
+  ).toBeVisible();
 
   // The reason line's door opens the signed release itself (Aaron,
   // 2026-10-06: "you actually can't even view the signed record!"): every
@@ -1088,7 +1092,9 @@ test("a physician's clearance ends a medical hold, and the roster leads to it", 
     .locator("li")
     .filter({ has: page.getByText("Morgan Vale", { exact: true }) })
     .filter({ visible: true });
-  await expect(diver.getByText("Held for a physician’s sign-off.")).toBeVisible();
+  await expect(
+    diver.getByText("A medical answer needs a doctor’s sign-off before this diver dives."),
+  ).toBeVisible();
 
   // The link this panel did not have. It is the assertion, not navigation
   // convenience: the dock is where the letter is handed over.

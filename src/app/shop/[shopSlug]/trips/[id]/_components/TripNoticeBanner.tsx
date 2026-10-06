@@ -122,6 +122,15 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.diverAddedIdentityUnconfirmed",
   },
   "diver-waitlisted": { form: "add-diver", tone: "success", key: "trips.notices.diverWaitlisted" },
+  // A cold invitation is commercial mail, so a diver who turned off optional
+  // email is not sent one (issue #1953). Warning, not danger: the invitation
+  // is recorded and nothing needs undoing, but the staffer must not read
+  // "Invited" as "emailed".
+  "invitation-opted-out": {
+    form: "add-diver",
+    tone: "warning",
+    key: "trips.notices.invitationOptedOut",
+  },
   "identity-confirmed": { form: "roster", tone: "success", key: "trips.notices.identityConfirmed" },
   "identity-split": { form: "roster", tone: "success", key: "trips.notices.identitySplit" },
   // A refused seat freed for a fresh release (`sendNewWaiverAction`). Success
@@ -134,6 +143,28 @@ const NOTICE_KEYS: Record<
     form: "roster",
     tone: "warning",
     key: "trips.notices.identityMedicalHold",
+  },
+  // A split refused for what the staffer typed about the new diver (issue
+  // #2081). The seat stays held under the matched diver; nothing was written.
+  "identity-split-dob-required": {
+    form: "roster",
+    tone: "warning",
+    key: "trips.notices.identitySplitDobRequired",
+  },
+  "identity-split-dob-invalid": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identitySplitDobInvalid",
+  },
+  "identity-split-email-invalid": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identitySplitEmailInvalid",
+  },
+  "identity-split-email-in-use": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identitySplitEmailInUse",
   },
   certified: { form: "roster", tone: "success", key: "trips.notices.certified" },
   // Success, not a warning: the record landed. The tone is the same as its

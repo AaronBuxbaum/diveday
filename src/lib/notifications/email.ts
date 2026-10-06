@@ -104,6 +104,8 @@ type TripInvitationEmailInput = {
   endsAt: Date;
   timezone: string;
   bookingUrl: string;
+  /** Present on the cold, staff-initiated invitation only (`direct_trip_invitation`). */
+  unsubscribeUrl?: string;
 };
 
 type LastMinuteDealEmailInput = {
@@ -624,13 +626,27 @@ export function tripInvitationEmail(input: TripInvitationEmailInput): Notificati
   const greetingHtml = t("notifications.common.greeting", {
     firstName: escapeHtml(firstName),
   });
+  // Only the cold invitation carries a way out (`direct_trip_invitation`,
+  // issue #1953): the reply to a diver's own date request is service mail.
+  // The schema decides which, by requiring the field on one kind and not
+  // having it on the other; this only draws what it was given.
+  const unsubscribe = input.unsubscribeUrl
+    ? t("notifications.common.courtesyUnsubscribe", { shopName: input.shopName })
+    : null;
+  const unsubscribeText = input.unsubscribeUrl
+    ? `\n\n${unsubscribe}:\n${input.unsubscribeUrl}\n`
+    : "";
+  const unsubscribeHtml =
+    input.unsubscribeUrl && unsubscribe
+      ? `<p><a href="${escapeHtml(input.unsubscribeUrl)}">${escapeHtml(unsubscribe)}</a></p>`
+      : "";
   return {
     subject: t("notifications.tripInvitation.subject", {
       shopName: input.shopName,
       tripTitle: input.tripTitle,
     }),
-    text: [greeting, body, `${date} · ${time}`, note, `${link}:`, input.bookingUrl].join("\n\n"),
-    html: `<p>${greetingHtml}</p><p>${bodyHtml}</p><p><strong>${date}</strong><br>${time}</p><p>${note}</p>${emailButton(input.bookingUrl, link)}`,
+    text: `${[greeting, body, `${date} · ${time}`, note, `${link}:`, input.bookingUrl].join("\n\n")}${unsubscribeText}`,
+    html: `<p>${greetingHtml}</p><p>${bodyHtml}</p><p><strong>${date}</strong><br>${time}</p><p>${note}</p>${emailButton(input.bookingUrl, link)}${unsubscribeHtml}`,
   };
 }
 

@@ -15,6 +15,9 @@
       "raid": "RAID",
       "gue": "GUE",
       "bsac": "BSAC",
+      "nss_cds": "NSS-CDS",
+      "nacd": "NACD",
+      "iantd": "IANTD",
       "other": "Otra agencia"
     },
     "paymentStatus": {
@@ -216,6 +219,13 @@
     "description": "La base de la lista de preparación: nunca una reserva ni un sustituto de la prueba de equipo en el muelle.",
     "changeRestricted": "Cambiar lo que este buceador pidió está limitado a propietarios, gerentes, instructores y divemasters.",
     "rentsFromShop": "Alquila del centro",
+    "suitLegend": "Neopreno o traje seco",
+    "suitChoices": {
+      "own_wetsuit": "Neopreno propio, o ninguno",
+      "rents_wetsuit": "Alquila neopreno",
+      "own_drysuit": "Traje seco propio",
+      "rents_drysuit": "Alquila traje seco"
+    },
     "bcdSizeLabel": "Talla de BCD",
     "bcdSizePlaceholder": "M",
     "wetsuitSizeLabel": "Talla de neopreno",
@@ -228,6 +238,7 @@
     "finSizePlaceholder": "US 9 / EU 42",
     "weightPreferenceLabel": "Preferencia de peso",
     "weightPreferencePlaceholder": "Normalmente 12 lb con neopreno de 3 mm",
+    "weightPreferencePlaceholderDry": "Normalmente 22 lb con traje seco",
     "saving": "Guardando…",
     "saveRentalFit": "Guardar ajuste de alquiler",
     "flaggedHeading": "Marcado para ajuste manual",

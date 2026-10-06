@@ -40,9 +40,9 @@ import { getShopById } from "@/db/shops";
 import { getShopCurrency } from "@/db/stripe-accounts";
 import {
   createDirectTripInvitation,
-  getTripInvitation,
+  deliverTripInvitation,
   listTripInvitations,
-  recordTripInvitation,
+  type TripInvitationDelivery,
 } from "@/db/trip-invitations";
 import { getTripLens } from "@/db/trip-lenses";
 import {
@@ -77,10 +77,15 @@ import { depthToMeters, maxEnteredVisibility } from "@/lib/depth-units";
 import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { publicAppUrl, recipientLocale } from "@/lib/notifications";
+import { publicAppUrl } from "@/lib/notifications";
 import { PAPER_WAIVER_IDLE, type PaperWaiverFormState } from "@/lib/paper-waiver-form";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
-import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
+import {
+  blankableDiverEmailSchema,
+  diverEmailSchema,
+  diverNameSchema,
+  diverPhoneSchema,
+} from "@/lib/person-fields";
 import { publicTripPath } from "@/lib/public-routes";
 import { paymentGateIsUnclearable, REQUIRABLE_CERTIFICATION_LEVELS } from "@/lib/readiness";
 import {
@@ -902,10 +907,11 @@ export async function addToWaitlistAction(shopSlug: string, tripId: string, form
 }
 
 /**
- * Records a staff outreach attempt for a request-origin invitation. The
- * browser then opens the same safe composer fallback used by the wait-list
- * invite; this deliberately does not turn a lead into a booking or consume a
- * seat.
+ * Records a staff outreach attempt for an invitation and emails it when it
+ * can (`deliverTripInvitation`). Anything but `sent` opens the same safe
+ * composer fallback the wait-list invite uses — including a cold invitation
+ * to a diver who turned off courtesy email, whom staff may still write to by
+ * hand. This never turns a lead into a booking or consumes a seat.
  */
 export async function recordTripInvitationAction(
   shopSlug: string,
@@ -913,18 +919,24 @@ export async function recordTripInvitationAction(
   invitationId: string,
 ): Promise<"sent" | "fallback"> {
   const s = (await requireShopSurface(shopSlug)).session;
+  if (!uuidParam(tripId) || !uuidParam(invitationId)) return "fallback";
   const db = await getDb();
-  const result = await sendTripInvitation(db, {
+  const result = await deliverTripInvitation(db, {
     shopId: s.user.shopId,
     shopSlug,
     tripId,
     invitationId,
   });
   revalidatePath(tripPath(shopSlug, tripId));
-  return result;
+  return result === "sent" ? "sent" : "fallback";
 }
 
-/** Invites an existing diver without seating them on the departure. */
+/**
+ * Invites an existing diver without seating them on the departure. A cold
+ * invitation is commercial mail (issue #1953), so a diver who turned off
+ * courtesy email is not emailed — and the staffer is told so, rather than
+ * landing on an "Invited" row that looks like a sent message.
+ */
 export async function createDirectTripInvitationAction(
   shopSlug: string,
   tripId: string,
@@ -941,13 +953,14 @@ export async function createDirectTripInvitationAction(
     personId: parsed.data.personId,
     createdByPersonId: s.user.personId,
   });
+  let delivery: TripInvitationDelivery | null = null;
   if (created) {
     const invitation = (await listTripInvitations(db, s.user.shopId, tripId)).find(
       ({ invitation }) =>
         invitation.source === "direct" && invitation.personId === parsed.data.personId,
     );
     if (invitation) {
-      await sendTripInvitation(db, {
+      delivery = await deliverTripInvitation(db, {
         shopId: s.user.shopId,
         shopSlug,
         tripId,
@@ -956,44 +969,11 @@ export async function createDirectTripInvitationAction(
     }
   }
   revalidatePath(guests);
-  redirect(`${guests}#invitations`);
-}
-
-type TripInvitationDelivery = "sent" | "fallback";
-
-async function sendTripInvitation(
-  db: Awaited<ReturnType<typeof getDb>>,
-  input: { shopId: string; shopSlug: string; tripId: string; invitationId: string },
-): Promise<TripInvitationDelivery> {
-  const context = await getTripInvitation(db, input.shopId, input.tripId, input.invitationId);
-  if (!context) return "fallback";
-  const invitedAt = nowDate();
-  const recorded = await recordTripInvitation(db, {
-    shopId: input.shopId,
-    tripId: input.tripId,
-    invitationId: input.invitationId,
-    now: invitedAt,
-  });
-  if (!recorded) return "fallback";
-  const email = context.person?.email ?? context.request?.email ?? null;
-  const origin = publicAppUrl();
-  if (!email || !origin) return "fallback";
-  const delivery = await sendNotification(db, {
-    kind: "trip_invitation",
-    invitationId: context.invitation.id,
-    shopId: input.shopId,
-    to: email,
-    locale: recipientLocale(context.person?.locale, context.shop.defaultLocale),
-    diverName: context.person?.fullName ?? context.request?.name ?? "Diver",
-    shopName: context.shop.name,
-    tripTitle: context.trip.title,
-    startsAt: context.trip.startsAt,
-    endsAt: context.trip.endsAt,
-    timezone: context.shop.timezone,
-    bookingUrl: new URL(publicTripPath(input.shopSlug, context.trip.id), `${origin}/`).toString(),
-    invitedAt,
-  });
-  return delivery.status === "sent" ? "sent" : "fallback";
+  redirect(
+    delivery === "opted_out"
+      ? noticeUrl(`${guests}#invitations`, "invitation-opted-out")
+      : `${guests}#invitations`,
+  );
 }
 
 /**
@@ -1228,25 +1208,52 @@ export async function splitDiverIdentityAction(
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!uuidParam(bookingId)) redirect(back);
+  // Who the new diver is, beyond a name (issue #2081). The email is checked
+  // for shape here; whether another record holds it is the writer's call.
+  const email = blankableDiverEmailSchema.safeParse(String(formData.get("email") ?? "").trim());
+  const phone = diverPhoneSchema.safeParse(String(formData.get("phone") ?? ""));
+  if (!email.success || !phone.success) {
+    revalidateAndRedirect(
+      back,
+      noticeUrl(back, email.success ? "invalid" : "identity-split-email-invalid", {
+        bid: bookingId,
+      }),
+    );
+  }
   const split = await splitBookingIdentity(await getDb(), {
     shopId: s.user.shopId,
     bookingId,
     actorPersonId: s.user.personId,
     fullName: String(formData.get("fullName") ?? ""),
+    dateOfBirth: String(formData.get("dateOfBirth") ?? ""),
+    email: email.data,
+    phone: phone.data,
+    // The bookings the ticked box named. Only ids; the writer moves only those
+    // that are still the same guess and still movable.
+    sameNameSeatIds: String(formData.get("sameNameSeatIds") ?? "")
+      .split(",")
+      .filter((id) => uuidParam(id)),
   });
   revalidateAndRedirect(
     back,
-    noticeUrl(
-      back,
-      split.ok
-        ? "identity-split"
-        : split.reason === "medical_hold"
-          ? "identity-medical-hold"
-          : "invalid",
-      { bid: bookingId },
-    ),
+    noticeUrl(back, split.ok ? "identity-split" : SPLIT_REFUSAL_NOTICE[split.reason], {
+      bid: bookingId,
+    }),
   );
 }
+
+/** Which notice each refused split lands on (`splitBookingIdentity`). */
+const SPLIT_REFUSAL_NOTICE = {
+  not_held: "invalid",
+  name_required: "invalid",
+  medical_hold: "identity-medical-hold",
+  date_of_birth_required: "identity-split-dob-required",
+  date_of_birth_invalid: "identity-split-dob-invalid",
+  email_in_use: "identity-split-email-in-use",
+} as const satisfies Record<
+  Extract<Awaited<ReturnType<typeof splitBookingIdentity>>, { ok: false }>["reason"],
+  string
+>;
 
 /**
  * The one path from "this shop's own instructor taught and ran this course"

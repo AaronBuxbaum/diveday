@@ -235,15 +235,14 @@ describe("the outbox drain's cadence", () => {
     expect(drain?.schedule).toBe(INTEGRATIONS_CRON_CRONTAB);
   });
 
-  it("leaves the retry ladder's upper rungs meaningful", () => {
+  it("drains hourly, on the :00 the other hourly passes already wake the database for", () => {
     // `markIntegrationDeliveryFailed` backs off min(60, 2 ** (attempt - 1))
-    // minutes. The cron cadence is the real floor under every rung, so a pass
-    // slower than the ladder's top rung would collapse the whole ladder into
-    // "next tick" and stretch the dead-letter horizon. Thirty minutes keeps
-    // the 32- and 60-minute rungs doing what they say.
-    const everyMinutes = 30;
-    expect(INTEGRATIONS_CRON_CRONTAB).toBe("0,30 * * * *");
-    expect(everyMinutes).toBeLessThan(60);
+    // minutes, so the cron is the real floor under every rung: hourly means a
+    // failed delivery retries at the next hour. Accepted on 2026-10-06 for the
+    // compute it saves (ADR 20260919-integration-delivery-is-write-driven's
+    // amendment). Never slower than the ladder's top rung of sixty minutes,
+    // and never off the hour, where it would wake the database on its own.
+    expect(INTEGRATIONS_CRON_CRONTAB).toBe("0 * * * *");
   });
 });
 

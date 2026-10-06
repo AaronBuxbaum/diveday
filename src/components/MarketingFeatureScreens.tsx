@@ -391,7 +391,7 @@ function RowCaret() {
  * (`src/components/IdentityCheck.tsx`) asks whether the booking is the same
  * person, and which has no Check in tap. Ready: a diver with the Check in tap
  * (`ArrivalTap.tsx`). Checked in: one of the seven, its tap turned to
- * "Checked in". Left out: the "Not here?" door under each waiting row
+ * "Checked in". Left out: the "Not here" door under each waiting row
  * (`NoShowScript.tsx`), the other six checked-in rows and the walk-in door.
  */
 export function ArrivalDeskFallback({ locale }: { locale: DiverLocale }) {

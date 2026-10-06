@@ -37,6 +37,7 @@ function storedFit(overrides: Partial<DiverRentalFit> = {}): DiverRentalFit {
     bootSize: "9",
     finSize: "9",
     weightPreference: "16 lb",
+    divesDry: false,
     note: null,
     fitStatedAt: new Date("2026-07-01T00:00:00Z"),
     ...overrides,

@@ -89,7 +89,7 @@
     "assignAria": "Assign crew to {trip}",
     "away": "Away",
     "awayConflict": "Away {dates}",
-    "crewClash": "Also on {departure}: cannot be on both",
+    "crewClash": "Also rostered on {departure}",
     "crewing": "Crewing",
     "deciding": "Saving…",
     "decline": "Decline",

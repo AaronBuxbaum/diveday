@@ -201,7 +201,7 @@
       "waiverNotSent": "Waiver not signed. Not sent yet.",
       "waiverPending": "Waiver not signed. Link sent.",
       "waiverExpired": "Waiver link expired; issue a fresh link.",
-      "medicalReview": "Held for a physician’s sign-off.",
+      "medicalReview": "A medical answer needs a doctor’s sign-off before this diver dives.",
       "medicalNotCleared": "A physician did not clear this diver to dive.",
       "guardianSignatureMissing": "Signed by a minor alone. A parent or guardian has to sign too; send a fresh waiver link.",
       "certificationMissing": "No certification is on file for this trip.",
@@ -437,13 +437,14 @@
     "itemWithSize": "{item} {size}",
     "itemOverDrysuitBoot": "{item} over a drysuit boot",
     "itemOverDrysuitBootWithSize": "{item} over a drysuit boot, shoe {size}",
+    "itemDrysuitWeightCheck": "{item}: drysuit, weight check in the water",
     "itemNoLongerRented": "{item} (shop no longer rents this)",
     "notRecorded": "No fit on file, not asked yet",
     "ownKit": "Own kit",
     "needsStaffFit": "Needs staff fit at check-in",
     "needsStaffFitWithNote": "Needs staff fit — {note}",
-    "drysuitCardMissing": "Renting a drysuit with no drysuit certification on file. This is not a block: check what they hold, or plan an orientation before the first dive.",
-    "drysuitCardUnconfirmed": "Renting a drysuit, and the drysuit certification on file is not confirmed. This is not a block: confirm the certification on their record, or plan an orientation before the first dive."
+    "drysuitCardMissing": "In a drysuit with no drysuit certification on file. This is not a block: check what they hold, or plan an orientation before the first dive.",
+    "drysuitCardUnconfirmed": "In a drysuit, and the drysuit certification on file is not confirmed. This is not a block: confirm the certification on their record, or plan an orientation before the first dive."
   },
   "rollCallCheckpoint": {
     "departure": "Before departure",
@@ -534,6 +535,12 @@
     "sameAria": "Same person as {name}",
     "different": "Different person",
     "newNameLabel": "Name for their own record",
+    "dateOfBirthLabel": "Date of birth",
+    "emailLabel": "Email",
+    "phoneLabel": "Phone",
+    "optional": "(optional)",
+    "sameNameSeats": "{count, plural, one {Also move the held seat booked as {bookedAs} on {departures}} other {Also move the held seats booked as {bookedAs} on {departures}}}",
+    "sameNameDeparture": "{trip} ({date}, {time})",
     "split": "Give them their own record",
     "splitting": "Creating…"
   }

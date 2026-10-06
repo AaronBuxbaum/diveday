@@ -20,6 +20,6 @@
     { "path": "/api/cron/trip-series", "schedule": "15 3 * * *" },
     { "path": "/api/cron/minimum-seats", "schedule": "0 * * * *" },
     { "path": "/api/cron/demo-refresh", "schedule": "45 3 * * *" },
-    { "path": "/api/cron/integrations", "schedule": "0,30 * * * *" }
+    { "path": "/api/cron/integrations", "schedule": "0 * * * *" }
   ]
 }

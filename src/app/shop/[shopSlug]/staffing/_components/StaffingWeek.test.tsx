@@ -45,7 +45,7 @@ const WORDS: StaffingWeekWords = {
   empty: "Nothing scheduled this week.",
   away: "Away",
   awayConflict: "Away {dates}",
-  crewClash: "Also on {departure}: cannot be on both",
+  crewClash: "Also rostered on {departure}",
   request: "Ask for this one",
   requestAria: "Ask to work {trip}",
   requesting: "Asking…",
@@ -462,8 +462,8 @@ describe("StaffingWeek standing crew clash", () => {
     // this grid's own rule, and the reason the chip is the blackout's chip
     // rather than a second warning grammar.
     for (const branch of [grid, list]) {
-      expect(within(branch).getByText("Also on Spiegel Grove: cannot be on both")).toBeVisible();
-      expect(within(branch).getByText("Also on Reef drift: cannot be on both")).toBeVisible();
+      expect(within(branch).getByText("Also rostered on Spiegel Grove")).toBeVisible();
+      expect(within(branch).getByText("Also rostered on Reef drift")).toBeVisible();
     }
   });
 
@@ -477,7 +477,7 @@ describe("StaffingWeek standing crew clash", () => {
     const { container } = renderWeek({ people: [{ ...KEIKO, crewingTrips: [DRIFT, WRECK] }] });
     const { list } = branches(container);
 
-    const link = within(list).getByText("Also on Spiegel Grove: cannot be on both").closest("a");
+    const link = within(list).getByText("Also rostered on Spiegel Grove").closest("a");
     expect(link).toHaveAttribute("href", "/shop/blue-mantis/trips/trip-drift?view=details#crew");
     expect(within(list).queryByRole("alert")).toBeNull();
     expect(within(list).queryByRole("status")).toBeNull();
@@ -493,7 +493,7 @@ describe("StaffingWeek standing crew clash", () => {
     const { grid, list } = branches(container);
 
     for (const branch of [grid, list]) {
-      expect(within(branch).queryByText(/cannot be on both/)).toBeNull();
+      expect(within(branch).queryByText(/^Also rostered on /)).toBeNull();
       // The chips themselves are both there — the absence above is about the
       // warning, not about a week that failed to render.
       expect(within(branch).getAllByText(/Reef drift/).length).toBeGreaterThan(0);
@@ -754,7 +754,7 @@ describe("StaffingWeek geometry", () => {
     const lineOf = (words: HTMLElement) => words.parentElement as HTMLElement;
     const chipLines = [
       ...within(grid)
-        .getAllByText(/cannot be on both/)
+        .getAllByText(/^Also rostered on /)
         .map(lineOf),
       ...within(grid)
         .getAllByText(/^Away /)
@@ -762,7 +762,7 @@ describe("StaffingWeek geometry", () => {
       grid.querySelector<HTMLElement>(".bg-warning-tint > span") as HTMLElement,
     ];
     const listLines = within(list)
-      .getAllByText(/cannot be on both/)
+      .getAllByText(/^Also rostered on /)
       .map(lineOf);
     expect(chipLines).toHaveLength(5);
     expect(listLines).toHaveLength(2);

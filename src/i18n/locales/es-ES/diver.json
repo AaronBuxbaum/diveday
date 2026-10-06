@@ -33,6 +33,9 @@
         "raid": "RAID",
         "gue": "GUE",
         "bsac": "BSAC",
+        "nss_cds": "NSS-CDS",
+        "nacd": "NACD",
+        "iantd": "IANTD",
         "other": "Otra agencia"
       },
       "cardNumber": "Número de certificación",
@@ -462,11 +465,11 @@
   },
   "courtesyEmailUnsubscribe": {
     "title": "¿Dejar de recibir estos correos?",
-    "description": "Estás en la lista de {shopName} para avisos de lista de espera y resúmenes tras la inmersión. Seguirás recibiendo correos sobre tus propias reservas, exenciones y actualizaciones de viaje.",
+    "description": "Recibes correos opcionales de {shopName}, como avisos de lista de espera, invitaciones a salidas y resúmenes tras la inmersión. Seguirás recibiendo correos sobre tus propias reservas, exenciones y actualizaciones de viaje.",
     "submit": "Dejar de recibir estos correos",
     "submitting": "Cancelando…",
     "confirmedTitle": "Te has dado de baja",
-    "confirmedText": "Ya no recibirás correos de lista de espera ni de resúmenes de {shopName}. Seguirás recibiendo correos sobre tus propias reservas, exenciones y actualizaciones de viaje."
+    "confirmedText": "Ya no recibirás correos opcionales de {shopName}. Seguirás recibiendo correos sobre tus propias reservas, exenciones y actualizaciones de viaje."
   },
   "contactConfirm": {
     "title": "¿Confirmar esta dirección para {shopName}?",
@@ -1023,6 +1026,13 @@
     "sizesLocked": "Tus tallas están listas para que la tripulación las revise en el muelle.",
     "addSizes": "Añade tallas para todo lo que has marcado.",
     "whatToPlan": "¿Qué preparamos para ti?",
+    "suitLegend": "Tu neopreno o traje seco",
+    "suitChoices": {
+      "own_wetsuit": "Mi propio neopreno, o ninguno",
+      "rents_wetsuit": "Alquilar neopreno",
+      "own_drysuit": "Mi propio traje seco",
+      "rents_drysuit": "Alquilar traje seco"
+    },
     "askWhatsIncluded": "Pregunta al centro qué incluye el precio de la salida.",
     "notSure": "No lo tengo claro: ayúdame a elegir",
     "sizeOnFile": "{size}: registrada por el centro",
@@ -1046,6 +1056,7 @@
     "bcdSize": "Talla de chaleco",
     "finSizePlaceholder": "US 9 / EU 42",
     "weightPlaceholder": "p. ej. 7 kg con un neopreno de 3 mm",
+    "weightPlaceholderDry": "p. ej. 10 kg con traje seco y forro",
     "saveFit": "Guardar equipo de alquiler",
     "bcdIconLabel": "Chaleco",
     "finIconLabel": "Aleta",
@@ -2684,7 +2695,7 @@
       "certifications": {
         "item1": "Listo o Bloqueado para cada buceador en cada salida, con el motivo al lado",
         "item2": "Tarjetas de certificación registradas por agencia, nivel y número. Una tarjeta que ingresa el buceador cuenta solo cuando una persona la verificó, y las importadas quedan marcadas como importadas",
-        "item3": "Tarjetas de PADI, SSI, NAUI, SDI, TDI, CMAS, RAID, GUE y BSAC, y de cualquier otra agencia como Otra agencia",
+        "item3": "Tarjetas de PADI, SSI, NAUI, SDI, TDI, CMAS, RAID, GUE, BSAC, NSS-CDS, NACD e IANTD, y de cualquier otra agencia como Otra agencia",
         "item4": "Nivel, buceo profundo, naufragios, nocturno, traje seco, nitrox y sitio en una sola respuesta de preparación, más la edad mínima del curso cuando hay una fecha de nacimiento archivada",
         "item5": "Nitrox como solicitud por reserva, comparado con la tarjeta cada vez que se lee",
         "item6": "Tarjetas de nitrox y de especialidad traídas de otro sistema, retenidas hasta que alguien del personal confirme cada una",
@@ -3440,7 +3451,7 @@
         "trailsTerm": "Historiales operativos",
         "trailsBody": "quién movió una reserva, quién marcó a un buceador a bordo, si llegó una confirmación. Filas breves de quién-hizo-qué-cuándo, en el espacio del propio centro.",
         "devicesTerm": "La copia en un teléfono del barco",
-        "devicesBody": "Para que el pase de lista siga funcionando sin señal, un teléfono de la tripulación guarda su propia copia de los manifiestos de los próximos dos días: el listado, los contactos de emergencia y si cada buceador puede embarcar. Se guarda cifrada en ese teléfono, con una clave que el navegador no devuelve, así que no se puede leer desde el almacenamiento del dispositivo. Quien tenga el teléfono desbloqueado puede abrirla, igual que con el manifiesto en papel al que sustituye. Se elimina cuando otro centro inicia sesión en ese teléfono, y se borra sola a los catorce días de haberse guardado o a los siete días del fin de la salida, lo que ocurra antes."
+        "devicesBody": "Para que el pase de lista siga funcionando sin señal, un teléfono de la tripulación guarda su propia copia de los manifiestos de los próximos dos días. De cada buceador guarda su nombre y su contacto de emergencia; sus tallas de equipo de alquiler y si pidió nitrox; quién va en su equipo de buceo; si se registró o si el mostrador marcó que no vino; si puede embarcar y, si no, por qué, lo que puede ser una retención médica; y cada marca del pase de lista, con el nombre de quien la hizo en la tripulación y cualquier nota que haya escrito. Se guarda cifrada en ese teléfono, con una clave que el navegador no devuelve, así que no se puede leer desde el almacenamiento del dispositivo. Quien tenga el teléfono desbloqueado puede abrirla, igual que con el manifiesto en papel al que sustituye. Se elimina cuando otro centro inicia sesión en ese teléfono, y se borra sola a los catorce días de haberse guardado o a los siete días del fin de la salida, lo que ocurra antes."
       },
       "where": {
         "heading": "Dónde se procesa",
@@ -3734,7 +3745,7 @@
         "faq1Q": "¿Y si un buceador no recuerda en qué barco va?",
         "faq1A": "Búscalo por nombre, teléfono o correo desde la pantalla de inicio de DiveDay, o escanea el código de su confirmación. La búsqueda abarca cada salida desde seis horas atrás hasta un día y medio adelante.",
         "faq2Q": "¿Quien llega sin reserva puede completar sus propios datos?",
-        "faq2A": "Sí. El código de la tarjeta de tu mostrador abre un formulario en su teléfono para su nombre, su correo o teléfono, su certificación y sus tallas de alquiler, y a quien deja un correo se le envía la exención. Luego dale su plaza desde la pestaña Buceadores.",
+        "faq2A": "Sí. El código de la tarjeta de tu mostrador abre un formulario en su teléfono para su nombre, su correo o teléfono, su certificación y sus tallas de alquiler, y se le envía la exención, por SMS si dejó un teléfono y ningún correo. Luego dale su plaza desde la pestaña Buceadores.",
         "faq3Q": "¿Qué pasa cuando alguien no se presenta?",
         "faq3A": "Una vez pasada la hora del barco, márcalo como que no vino. La plaza se libera, la lista de espera aparece al lado, y ese toque no cobra ni reembolsa nada.",
         "closeTitle": "Registra a los buceadores del próximo barco de la demo.",
@@ -3955,7 +3966,7 @@
       "seeWhatsLeft": "Consulta lo que te falta antes de salir",
       "outstandingHeading": "Aún por resolver antes de embarcar:",
       "medicalReviewNote": "Revisa si una respuesta médica necesita el visto bueno de un médico antes de viajar",
-      "courtesyUnsubscribe": "Dejar de recibir correos de lista de espera y resúmenes de {shopName}"
+      "courtesyUnsubscribe": "Dejar de recibir correos opcionales de {shopName}"
     },
     "tripConditionsHold": {
       "subject": "Salida en espera por condiciones — {tripTitle}",

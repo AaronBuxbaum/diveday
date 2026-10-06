@@ -4,7 +4,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
-import { sortStationRows } from "@/lib/today";
+import { assembleDaySpine, sortStationRows } from "@/lib/today";
 import { dbNowPlus, fileScopedShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { cancelBooking, createBookingParty } from "./bookings";
@@ -26,6 +26,7 @@ import {
   inboundMessages,
   nitroxCertifications,
   people,
+  personRoles as personRolesTable,
   rollCallCrewEvents as rollCallCrewEventsTable,
   rollCallEvents as rollCallEventsTable,
   shops as shopsTable,
@@ -44,6 +45,7 @@ import {
   createTrip,
   getTripRoster,
   listStaff,
+  moveTrip,
   setTripCrew,
   setTripStatus,
   upcomingTripsWithCounts,
@@ -2395,6 +2397,178 @@ describe("unclosed roll call (DOM-H3)", () => {
       const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
       expect(rollCallRow(work, trip.id, "missing_diver")?.urgency).toBe("imminent");
     });
+
+    /**
+     * **A blocked diver aboard stays on the list until the boat is home**
+     * (issue #2064). The readiness rows behind the "Aboard" row come from the
+     * forward-looking horizon, which drops a departure an hour after it sails,
+     * so a diver who boarded on a medical hold vanished while the boat was
+     * still out and they may have been in the water. Ashore blockers for a boat
+     * that has gone stay gone: nothing is left to stop.
+     */
+    describe("a blocked diver who boarded", () => {
+      async function sailedNinetyMinutesAgo() {
+        const { db, shop } = ctx;
+        // Four hours long, so it sailed ninety minutes ago and is out for two
+        // and a half more: well past the horizon's one-hour buffer.
+        const fixture = await returnedTrip(db, shop.id, {
+          endedHoursAgo: -2.5,
+          divers: 2,
+          title: "Blocked Aboard — Molasses",
+        });
+        const [boarded, ashore] = fixture.bookingIds;
+        if (!boarded || !ashore) throw new Error("fixture bookings missing");
+        await boardAtDeparture(
+          db,
+          {
+            shopId: shop.id,
+            tripId: fixture.trip.id,
+            staffId: fixture.staffId,
+            bookingIds: [boarded],
+          },
+          new Date(fixture.trip.startsAt.getTime() + 5 * 60 * 1000),
+        );
+        return { ...fixture, boarded, ashore };
+      }
+
+      const rowsFor = (work: Awaited<ReturnType<typeof getTodayWork>>, tripId: string) =>
+        work.actions.filter(
+          (action) => action.departure?.tripId === tripId && !action.id.startsWith("roll-call:"),
+        );
+
+      it("keeps the Aboard row while the boat is still out, and only that row", async () => {
+        const { db, shop } = ctx;
+        const { trip, boarded } = await sailedNinetyMinutesAgo();
+        // The fixture trip has no requirements row, so both seats read blocked:
+        // the premise, checked rather than assumed.
+        const readiness = await listTripReadiness(db, shop.id, trip.id);
+        expect(readiness.every((row) => row.readiness.status === "blocked")).toBe(true);
+
+        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+        const rows = rowsFor(work, trip.id);
+        expect(rows.map((row) => row.kind)).toEqual(["blocked_aboard"]);
+        expect(rows[0]?.id).toContain(boarded);
+        // The home files it into Needs you rather than under the week's count.
+        expect(work.outTripIds).toContain(trip.id);
+        // The departure is not a live station again: the closing state owns it.
+        expect(work.departures.some((departure) => departure.tripId === trip.id)).toBe(false);
+      });
+
+      it("drops the row once the crew says the boat is home", async () => {
+        const { db, shop } = ctx;
+        const { trip, staffId } = await sailedNinetyMinutesAgo();
+        const recorded = await recordTripStage(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          stage: "home",
+          recordedByPersonId: staffId,
+          recordedAt: nowDate(),
+        });
+        expect(recorded.ok).toBe(true);
+
+        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+        expect(rowsFor(work, trip.id)).toEqual([]);
+        expect(work.outTripIds).not.toContain(trip.id);
+      });
+
+      it("drops the row once the boat is back by the clock", async () => {
+        const { db, shop } = ctx;
+        // Tied up two hours ago, past the return buffer, with nobody tapping.
+        const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
+          endedHoursAgo: 2,
+          divers: 1,
+          title: "Blocked Aboard, home — Molasses",
+        });
+        await boardAtDeparture(db, { shopId: shop.id, tripId: trip.id, staffId, bookingIds });
+
+        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+        expect(rowsFor(work, trip.id)).toEqual([]);
+        expect(work.outTripIds).not.toContain(trip.id);
+      });
+
+      it("drops the row once the crew count the diver back aboard after the last dive", async () => {
+        // The boat is still out by the clock, but the diver this row is about
+        // is out of the water: the evening's "All boats are home" line reads
+        // the same count, and the two must not disagree.
+        const { db, shop } = ctx;
+        const { trip, boarded, staffId } = await sailedNinetyMinutesAgo();
+        await recordRollCall(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          bookingId: boarded,
+          recordedByPersonId: staffId,
+          status: "boarded",
+          checkpoint: "after_dive_1",
+        });
+
+        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+        expect(rowsFor(work, trip.id)).toEqual([]);
+        expect(work.outTripIds).toContain(trip.id);
+      });
+
+      it("keeps the row while a dive is still to come", async () => {
+        // Counted back after dive one of two is a surface interval, not home.
+        const { db, shop } = ctx;
+        const fixture = await returnedTrip(db, shop.id, {
+          endedHoursAgo: -2.5,
+          divers: 1,
+          plannedDives: 2,
+          title: "Blocked Aboard, two tanks — Molasses",
+        });
+        const [boarded] = fixture.bookingIds;
+        if (!boarded) throw new Error("fixture booking missing");
+        await boardAtDeparture(
+          db,
+          {
+            shopId: shop.id,
+            tripId: fixture.trip.id,
+            staffId: fixture.staffId,
+            bookingIds: [boarded],
+          },
+          new Date(fixture.trip.startsAt.getTime() + 5 * 60 * 1000),
+        );
+        await recordRollCall(db, {
+          shopId: shop.id,
+          tripId: fixture.trip.id,
+          bookingId: boarded,
+          recordedByPersonId: fixture.staffId,
+          status: "boarded",
+          checkpoint: "after_dive_1",
+        });
+
+        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+        expect(rowsFor(work, fixture.trip.id).map((row) => row.kind)).toEqual(["blocked_aboard"]);
+      });
+
+      it("keeps the Aboard row when the desk cancels the departure after it boarded", async () => {
+        // The roll call outranks a later desk word, as for the fly-safe reader
+        // (#1836): the boarding was recorded before the cancel and the diver is
+        // on that boat whatever the status column now says.
+        const { db, shop } = ctx;
+        const { trip, boarded } = await sailedNinetyMinutesAgo();
+        await db.update(tripsTable).set({ status: "cancelled" }).where(eq(tripsTable.id, trip.id));
+
+        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+        const rows = rowsFor(work, trip.id);
+        expect(rows.map((row) => row.kind)).toEqual(["blocked_aboard"]);
+        expect(rows[0]?.id).toContain(boarded);
+        expect(work.outTripIds).toContain(trip.id);
+      });
+
+      it("says nothing about a cancelled departure nobody boarded", async () => {
+        const { db, shop } = ctx;
+        const { trip } = await returnedTrip(db, shop.id, {
+          endedHoursAgo: -2.5,
+          divers: 2,
+          title: "Blown out — Molasses",
+        });
+        await db.update(tripsTable).set({ status: "cancelled" }).where(eq(tripsTable.id, trip.id));
+
+        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+        expect(rowsFor(work, trip.id)).toEqual([]);
+        expect(work.outTripIds).not.toContain(trip.id);
+      });
+    });
   });
 
   describe("the dock count, which is paperwork", () => {
@@ -2887,5 +3061,350 @@ describe("unanswered messages", () => {
 
     // Nothing waiting, no row — the queue never carries a zero.
     expect(await unansweredRow()).toHaveLength(0);
+  });
+});
+
+/**
+ * **A crew clash on the surface a shop starts its morning on** (H-80, issues
+ * #1776 and #1814).
+ *
+ * A clash is the one crew fault invisible on both boats: each shows a full crew
+ * list. Before the boat sails it is a `crew_clash` row on each departure, read
+ * through `crewClashesByTrip` in one batch. After it sails and until it is home
+ * it is a `crew_clash_sailed` row — the narrow version H-80 chose, read from the
+ * roster rather than from roll-call events, so a shop that never taps a crew
+ * roll call still raises no crew roll-call row.
+ *
+ * Every setup reaches the state the way a shop does: the roster refuses to
+ * write an overlap, so the crew go on while the windows are clear and a move
+ * lands one boat on the other. A person of the test's own, so a seeded
+ * departure cannot clash with them by accident.
+ */
+describe("crew clashes on Today (H-80)", () => {
+  const HOUR = 60 * 60 * 1000;
+
+  async function divemaster(name: string) {
+    const { db, shop } = ctx;
+    const [person] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: name })
+      .returning({ id: people.id });
+    if (!person) throw new Error("fixture insert failed");
+    await db.insert(personRolesTable).values({ personId: person.id, role: "divemaster" });
+    return person.id;
+  }
+
+  /**
+   * The 09:00-style host (`hostStartsAt` for four hours) and a mover that ties
+   * up an hour and a half before it sails, both crewed by one person; then the
+   * mover slides to `moveTo`.
+   */
+  async function movedOnto(hostStartsAt: Date, moveTo: Date) {
+    const { db, shop } = ctx;
+    const personId = await divemaster("Kai Clashwell");
+    const host = await createTrip(db, {
+      shopId: shop.id,
+      title: "Clash host reef",
+      startsAt: hostStartsAt,
+      endsAt: new Date(hostStartsAt.getTime() + 4 * HOUR),
+      capacity: 6,
+    });
+    const mover = await createTrip(db, {
+      shopId: shop.id,
+      title: "Clash mover charter",
+      startsAt: new Date(hostStartsAt.getTime() - 3 * HOUR),
+      endsAt: new Date(hostStartsAt.getTime() - 1.5 * HOUR),
+      capacity: 6,
+    });
+    if (!host || !mover) throw new Error("departures not created");
+    expect(await setTripCrew(db, shop.id, host.id, [personId])).toBe(true);
+    expect(await setTripCrew(db, shop.id, mover.id, [personId])).toBe(true);
+    expect((await moveTrip(db, shop.id, mover.id, moveTo)).ok).toBe(true);
+    return { host, mover, personId };
+  }
+
+  /** The shop home's spine for `now`, with no second day to file onto. */
+  async function spineAt(now: Date) {
+    const { db, shop } = ctx;
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    return assembleDaySpine(work, { departures: [], actions: [] });
+  }
+
+  /** The one Needs you list, ranked the way DaySpine ranks it. */
+  function needsYou(spine: Awaited<ReturnType<typeof spineAt>>) {
+    return sortStationRows([...spine.stations.flatMap((station) => station.rows), ...spine.desk]);
+  }
+
+  async function clashRows(now: Date, tripIds: readonly string[]) {
+    const { db, shop } = ctx;
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    return work.actions.filter(
+      (action) =>
+        (action.kind === "crew_clash" || action.kind === "crew_clash_sailed") &&
+        tripIds.includes(action.departure?.tripId ?? ""),
+    );
+  }
+
+  it("raises crew_clash on both departures, naming the person and the other boat", async () => {
+    const now = nowDate();
+    const hostStartsAt = new Date(now.getTime() + 2 * 24 * HOUR);
+    const { host, mover } = await movedOnto(hostStartsAt, hostStartsAt);
+
+    const rows = await clashRows(now, [host.id, mover.id]);
+    expect(rows.map((row) => [row.id, row.kind]).sort()).toEqual(
+      [
+        [`crew-clash:${host.id}`, "crew_clash"],
+        [`crew-clash:${mover.id}`, "crew_clash"],
+      ].sort(),
+    );
+    const onMover = rows.find((row) => row.id === `crew-clash:${mover.id}`);
+    expect(onMover).toMatchObject({
+      aboutDeparture: true,
+      urgency: "soon",
+      detail: "Kai Clashwell is also rostered on Clash host reef at these hours.",
+      href: `/shop/${ctx.shop.slug}/trips/${mover.id}?view=details#crew`,
+    });
+  });
+
+  it("leaves a crew member handed from one boat to the next alone", async () => {
+    const now = nowDate();
+    const hostStartsAt = new Date(now.getTime() + 2 * 24 * HOUR);
+    // The mover lands so it ties up the minute the host sails: nose to tail.
+    const { host, mover } = await movedOnto(
+      hostStartsAt,
+      new Date(hostStartsAt.getTime() - 1.5 * HOUR),
+    );
+    expect(await clashRows(now, [host.id, mover.id])).toEqual([]);
+  });
+
+  it("ignores a called-off departure on either side", async () => {
+    const now = nowDate();
+    const hostStartsAt = new Date(now.getTime() + 2 * 24 * HOUR);
+    const { host, mover } = await movedOnto(hostStartsAt, hostStartsAt);
+    await setTripStatus(ctx.db, ctx.shop.id, host.id, "cancelled");
+    expect(await clashRows(now, [host.id, mover.id])).toEqual([]);
+  });
+
+  it("says nothing once the clash is cleared", async () => {
+    const now = nowDate();
+    const hostStartsAt = new Date(now.getTime() + 2 * 24 * HOUR);
+    const { host, mover } = await movedOnto(hostStartsAt, hostStartsAt);
+    expect(await setTripCrew(ctx.db, ctx.shop.id, mover.id, [])).toBe(true);
+    expect(await clashRows(now, [host.id, mover.id])).toEqual([]);
+  });
+
+  /**
+   * #1814's narrow version: the boat is out with somebody also rostered on
+   * another hull. One row, named, pointing at the roll call — and the
+   * pre-sailing kind is gone, because there is no "before it sails" left.
+   */
+  it("raises crew_clash_sailed on a departure underway, and only while it is out", async () => {
+    const now = nowDate();
+    // Host sailed an hour ago and is out for three more; the mover is slid
+    // onto it.
+    const hostStartsAt = new Date(now.getTime() - HOUR);
+    const { host, mover } = await movedOnto(hostStartsAt, hostStartsAt);
+
+    const rows = await clashRows(now, [host.id, mover.id]);
+    expect(rows.map((row) => row.kind)).toEqual(["crew_clash_sailed", "crew_clash_sailed"]);
+    const onHost = rows.find((row) => row.departure?.tripId === host.id);
+    expect(onHost).toMatchObject({
+      id: `crew-clash-sailed:${host.id}`,
+      urgency: "imminent",
+      aboutDeparture: true,
+      detail:
+        "Kai Clashwell is out aboard while also rostered on Clash mover charter at these hours. Confirm who is aboard.",
+      href: `/shop/${ctx.shop.slug}/trips/${host.id}/manifest`,
+    });
+
+    // The mover is a ninety-minute boat: home (a buffered hour past its
+    // return) while the host is still out, so only the host still speaks.
+    const moverHome = new Date(hostStartsAt.getTime() + 2.6 * HOUR);
+    expect((await clashRows(moverHome, [host.id, mover.id])).map((row) => row.id)).toEqual([
+      `crew-clash-sailed:${host.id}`,
+    ]);
+    // Both home: silent. The clash on a returned boat is permanent and
+    // unfixable, which is the warning a shop learns to scroll past.
+    const bothHome = new Date(hostStartsAt.getTime() + 5.1 * HOUR);
+    expect(await clashRows(bothHome, [host.id, mover.id])).toEqual([]);
+  });
+
+  /**
+   * A clash is decided per leg, not per departure (dive-domain-expert review):
+   * a two-day course clashing on its second morning still has the clash to fix
+   * while day one is out, a boat out with it on day two, and nothing after.
+   */
+  it("classifies a multi-day course's clash by the leg it falls on", async () => {
+    const { db, shop } = ctx;
+    const base = new Date(nowDate().getTime() + 2 * 24 * HOUR);
+    const at = (hours: number) => new Date(base.getTime() + hours * HOUR);
+    const personId = await divemaster("Rua Twoday");
+    const course = await createTrip(db, {
+      shopId: shop.id,
+      title: "Two-day course",
+      startsAt: at(0),
+      endsAt: at(28),
+      capacity: 4,
+      scheduleDays: [
+        { dayNumber: 1, startsAt: at(0), endsAt: at(4) },
+        { dayNumber: 2, startsAt: at(24), endsAt: at(28) },
+      ],
+    });
+    const charter = await createTrip(db, {
+      shopId: shop.id,
+      title: "Second-morning charter",
+      startsAt: at(10),
+      endsAt: at(12),
+      capacity: 6,
+    });
+    if (!course || !charter) throw new Error("departures not created");
+    expect(await setTripCrew(db, shop.id, course.id, [personId])).toBe(true);
+    expect(await setTripCrew(db, shop.id, charter.id, [personId])).toBe(true);
+    expect((await moveTrip(db, shop.id, charter.id, at(25))).ok).toBe(true);
+
+    const onCourse = async (now: Date) =>
+      (await clashRows(now, [course.id])).map((row) => [row.kind, row.dueAt?.getTime()]);
+
+    // Day one is out; the clash is on day two, still to sail and still fixable.
+    expect(await onCourse(at(1.5))).toEqual([["crew_clash", at(24).getTime()]]);
+    // The course started more than an hour ago, so it is no station: the row
+    // files at the desk, where Needs you reads it, never into the week's count.
+    const dayOne = await spineAt(at(1.5));
+    expect(dayOne.stations.map((station) => station.tripId)).not.toContain(course.id);
+    expect(needsYou(dayOne).map((row) => row.id)).toContain(`crew-clash:${course.id}`);
+    // Day two is out with it.
+    expect(await onCourse(at(26))).toEqual([["crew_clash_sailed", at(28).getTime()]]);
+    expect(needsYou(await spineAt(at(26))).map((row) => row.id)).toContain(
+      `crew-clash-sailed:${course.id}`,
+    );
+    // Day two is home: permanent, said nowhere.
+    expect(await onCourse(at(29.5))).toEqual([]);
+  });
+
+  /**
+   * A1 of the dive-domain-expert review: a missing diver on the same boat
+   * always leads the sailed clash, though both are imminent and the clash's
+   * boat may come home first.
+   */
+  it("dates the sailed clash so a missing diver on a later boat still leads it", async () => {
+    const { db, shop } = ctx;
+    const now = nowDate();
+    const hostStartsAt = new Date(now.getTime() - HOUR);
+    const { host } = await movedOnto(hostStartsAt, hostStartsAt);
+
+    // Another boat, out until two hours after the clash boat is home, with a
+    // diver counted not back aboard after dive one. Inserted directly: the
+    // booking path refuses a seat on a boat that has sailed.
+    const [later] = await db
+      .insert(tripsTable)
+      .values({
+        shopId: shop.id,
+        title: "Long drift, diver not back",
+        startsAt: new Date(now.getTime() - 2 * HOUR),
+        endsAt: new Date(host.endsAt.getTime() + 2 * HOUR),
+        capacity: 6,
+        plannedDives: 2,
+        priceCents: 13000,
+      })
+      .returning();
+    if (!later) throw new Error("fixture trip not created");
+    const [diver] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(eq(people.shopId, shop.id))
+      .limit(1);
+    const [staff] = await listStaff(db, shop.id);
+    if (!diver || !staff) throw new Error("seed people missing");
+    const [booking] = await db
+      .insert(bookingsTable)
+      .values({ shopId: shop.id, tripId: later.id, personId: diver.id, status: "checked_in" })
+      .returning();
+    if (!booking) throw new Error("fixture booking not created");
+    await db.insert(rollCallEventsTable).values({
+      shopId: shop.id,
+      tripId: later.id,
+      bookingId: booking.id,
+      recordedByPersonId: staff.person.id,
+      status: "boarded",
+      checkpoint: "departure",
+      source: "live",
+      occurredAt: new Date(now.getTime() - 2 * HOUR),
+    });
+    const counted = await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: later.id,
+      bookingId: booking.id,
+      recordedByPersonId: staff.person.id,
+      status: "not_boarded",
+      checkpoint: "after_dive_1",
+    });
+    expect(counted.ok).toBe(true);
+
+    const ids = needsYou(await spineAt(now)).map((action) => action.id);
+    const missing = ids.findIndex((id) => id.startsWith(`roll-call:${later.id}:missing_diver:`));
+    const clash = ids.indexOf(`crew-clash-sailed:${host.id}`);
+    expect(missing).toBeGreaterThanOrEqual(0);
+    expect(clash).toBeGreaterThan(missing);
+  });
+
+  /**
+   * B1 of the re-review: a boat that left more than an hour ago is no longer a
+   * station, and its sailed clash used to fall into the week's count behind a
+   * link. It files at the desk, still naming its boat.
+   */
+  it("files a sailed clash two hours out at the desk, not into the week's count", async () => {
+    const now = nowDate();
+    const hostStartsAt = new Date(now.getTime() - 2 * HOUR);
+    const { host, mover } = await movedOnto(hostStartsAt, hostStartsAt);
+    const { db, shop } = ctx;
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    expect(work.outTripIds).toEqual(expect.arrayContaining([host.id, mover.id]));
+    const clashIds = [`crew-clash-sailed:${host.id}`, `crew-clash-sailed:${mover.id}`];
+    const spine = assembleDaySpine(
+      { ...work, actions: work.actions.filter((action) => clashIds.includes(action.id)) },
+      { departures: [], actions: [] },
+    );
+    expect(spine.desk.map((row) => row.id).sort()).toEqual([...clashIds].sort());
+    expect(spine.desk.find((row) => row.id === clashIds[0])?.departure?.tripId).toBe(host.id);
+    expect(spine.week.jobs).toBe(0);
+  });
+
+  /**
+   * N2: "Confirm who is aboard" is answered for a person once they have a
+   * result at this departure's own checkpoint, so the row stops naming them.
+   */
+  it("drops a crew member from the sailed row once the departure roll call has them", async () => {
+    const now = nowDate();
+    const hostStartsAt = new Date(now.getTime() - 2 * HOUR);
+    const { host, mover, personId } = await movedOnto(hostStartsAt, hostStartsAt);
+    const { db, shop } = ctx;
+    const [staff] = await listStaff(db, shop.id);
+    if (!staff) throw new Error("seed staff missing");
+    await recordCrewRollCall(db, {
+      shopId: shop.id,
+      tripId: host.id,
+      personId,
+      recordedByPersonId: staff.person.id,
+      status: "not_boarded",
+      checkpoint: "departure",
+    });
+    // Answered on the host only: the mover still asks.
+    expect((await clashRows(now, [host.id, mover.id])).map((row) => row.id)).toEqual([
+      `crew-clash-sailed:${mover.id}`,
+    ]);
+  });
+
+  it("leaves the roll-call subject rule alone: no crew roll-call row for an untapped crew", async () => {
+    const now = nowDate();
+    const hostStartsAt = new Date(now.getTime() - HOUR);
+    const { host, mover } = await movedOnto(hostStartsAt, hostStartsAt);
+    const { db, shop } = ctx;
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    const rollCallCrew = work.actions.filter(
+      (action) =>
+        (action.kind === "roll_call_missing_crew" || action.kind === "roll_call_crew_unfinished") &&
+        [host.id, mover.id].includes(action.departure?.tripId ?? ""),
+    );
+    expect(rollCallCrew).toEqual([]);
   });
 });

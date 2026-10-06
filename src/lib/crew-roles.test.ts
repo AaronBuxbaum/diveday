@@ -4,6 +4,7 @@ import {
   effectiveCrewRoles,
   groupCrewAssignments,
   inWaterCrewRole,
+  standingRatingsBesideJob,
   TRIP_CREW_ROLES,
 } from "./crew-roles";
 
@@ -238,5 +239,47 @@ describe("effectiveCrewRoles", () => {
       "divemaster",
       "captain",
     ]);
+  });
+});
+
+/**
+ * Issue #1852. The documents read after something went wrong ask what rating
+ * each professional held, not only what job they did, and an Assistant
+ * Instructor rostered as the day's divemaster lost the rating from all of them.
+ */
+describe("standingRatingsBesideJob", () => {
+  it("names the rating the day's job does not already say", () => {
+    expect(
+      standingRatingsBesideJob({
+        tripRole: "divemaster",
+        shopRoles: ["divemaster", "assistant_instructor"],
+      }),
+    ).toEqual(["assistant_instructor"]);
+  });
+
+  it("says nothing twice: a divemaster rostered as divemaster carries no rating beside it", () => {
+    expect(standingRatingsBesideJob({ tripRole: "divemaster", shopRoles: ["divemaster"] })).toEqual(
+      [],
+    );
+  });
+
+  it("carries nothing when no job is set, since the standing roles already print", () => {
+    expect(
+      standingRatingsBesideJob({ tripRole: null, shopRoles: ["divemaster", "instructor"] }),
+    ).toEqual([]);
+  });
+
+  it("prints nothing for somebody whose roles were stripped after they sailed", () => {
+    // Never an empty bracket on the document an insurer reads.
+    expect(standingRatingsBesideJob({ tripRole: "divemaster", shopRoles: [] })).toEqual([]);
+  });
+
+  it("names dive and vessel ratings only, most senior first, never an office", () => {
+    expect(
+      standingRatingsBesideJob({
+        tripRole: "crew",
+        shopRoles: ["owner", "captain", "divemaster", "manager", "instructor"],
+      }),
+    ).toEqual(["instructor", "divemaster", "captain"]);
   });
 });

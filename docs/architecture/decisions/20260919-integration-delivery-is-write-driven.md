@@ -100,3 +100,18 @@ The row is already durable and already due the moment it is written — `next_at
 - **Escape hatch.** If the after-phase proves unreliable on the platform, or a provider's latency
   starts eating webhook budget, delete the four call sites: the cron alone is exactly the behaviour
   before this ADR, and nothing else has to be unwound.
+
+## Amendment — 2026-10-06: the cron is hourly
+
+The product owner moved `/api/cron/integrations` from `0,30` to `0 * * * *`, overriding the
+"keeps its `0,30` cadence" bullet above, for cost. The database scales to zero after five idle
+minutes and bills for time awake; the three other hourly passes already wake it at `:00`, so the
+`:30` tick was a wake-up nothing else shared, and roughly half of the compute DiveDay pays for while
+nobody is using it.
+
+The recovery regression that bullet warns about is real and accepted. The cron is the floor under
+every rung of the backoff ladder, so a failed delivery now retries at the next hour (or at the next
+write that drains), and the dead-letter horizon stretches from about two hours to about eight. The
+first attempt is unchanged, because it is dispatched on write. No shop has an integration connected
+yet; if a pilot shop's integration needs faster recovery, putting `:30` back is a one-line change to
+`INTEGRATIONS_CRON_CRONTAB` and `vercel.json`, which `dispatcher.test.ts` keeps in lockstep.

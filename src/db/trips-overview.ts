@@ -19,6 +19,7 @@ import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "
 import { listTripPrepDivers } from "./rental-fit";
 import { crewShiftCoverage } from "./staffing";
 import {
+  boatClashes,
   bookedDiverLanguages,
   crewClashes,
   getTripCrewAssignments,
@@ -221,10 +222,16 @@ export async function getTripOverview(
   // refuse — so it arrives from a write that moves the boat without reading the
   // roster, and there are three of those rather than the one `moveTrip` this
   // comment used to name (`crewClashes`' own docblock, "Three doors, not one").
-  const [shiftCoverage, clashes] = await Promise.all([
+  //
+  // And the hull's own (H-80, issue #1780): one boat, one departure at a time,
+  // asked by the same overlap predicate. The Details form writes `boat_id` and
+  // the window with no read of either, so this is the only place that door
+  // gets an answer.
+  const [shiftCoverage, clashes, hullClashes] = await Promise.all([
     // No shifts exist to cover anybody while the crew schedule is off.
     shop.crewScheduleEnabled ? crewShiftCoverage(db, shop.id, trip, crewIds) : null,
     crewClashes(db, shop.id, trip.id),
+    boatClashes(db, shop.id, trip.id),
   ]);
 
   return {
@@ -245,6 +252,7 @@ export async function getTripOverview(
     startWall,
     endWall,
     pulse,
+    boatClashes: hullClashes,
     crew: {
       crewIds,
       tripRoleByPerson,

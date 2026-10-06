@@ -29,6 +29,7 @@ import {
   DEFAULT_TIMEZONE,
 } from "@/lib/timezones";
 import { ClosedDoor } from "./_components/ClosedDoor";
+import { OnboardDemoDoor } from "./_components/OnboardDemoDoor";
 import { onboardAction } from "./actions";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
@@ -282,12 +283,7 @@ export default async function OnboardPage({
         title={t("account.onboard.title")}
         footer={
           <>
-            <p>
-              {t("account.onboard.demoNote")}{" "}
-              <Link href="/" className="font-medium text-primary hover:underline">
-                {t("account.onboard.tryLiveDemo")}
-              </Link>
-            </p>
+            <OnboardDemoDoor t={t} />
             <p>
               {t("account.onboard.alreadyHaveShop")}{" "}
               <Link href="/sign-in" className="font-medium text-primary hover:underline">

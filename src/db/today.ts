@@ -1,8 +1,10 @@
-import { and, asc, desc, eq, gte, inArray, lte, ne } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, lte, ne } from "drizzle-orm";
 import { gearServiceKindLabel } from "@/i18n/gear-labels";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
   crewBelowTargetDetailText,
+  crewClashDetailText,
+  crewClashSailedDetailText,
   failedPhotoDeletionDetailText,
   gearDueBackDetailText,
   gearNeverPickedUpDetailText,
@@ -89,6 +91,7 @@ import {
   collapseDiverActions,
   collapseEmailDeliveries,
   collapseOwedRefunds,
+  crewClashPhase,
   filterActionsForRoles,
   ROLL_CALL_GAP_KINDS,
   type RollCallGapReason,
@@ -98,7 +101,7 @@ import {
 } from "@/lib/today";
 import { type TripPhase, tripPhaseOf } from "@/lib/trip-phase";
 import { liveStageOf, type TripStageReading } from "@/lib/trip-stages";
-import { hasReturned, hasSailed } from "@/lib/trips";
+import { DEPARTURE_BUFFER_MS, hasReturned, hasSailed } from "@/lib/trips";
 import { welcomeCueFor } from "@/lib/welcome-cue";
 import { shopDayBounds, toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { type HorizonReadinessEvidence, inHorizonReadiness } from "./blockers";
@@ -119,6 +122,7 @@ import { authorizesNitroxFill } from "./nitrox";
 import { listNotificationDeliveryIssues } from "./notifications";
 import { openOrdersForBookings } from "./orders";
 import { listStuckPaymentOperations, STALE_AFTER_MS } from "./payment-operations";
+import { listTripsReadiness } from "./readiness";
 import { listOwedShopCancellationRefunds, OWED_REFUND_STALE_AFTER_MS } from "./refunds";
 import { readReviewsAwaitingModeration } from "./reviews";
 import {
@@ -139,7 +143,7 @@ import { listStaffCredentials } from "./staff-credentials";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { latestTripStagesByTrip } from "./trip-stages";
-import { countShopTrips, listStaff } from "./trips";
+import { type CrewClash, countShopTrips, crewClashesByTrip, listStaff } from "./trips";
 import { liveTrip } from "./trips-live";
 import { sharedWelcomeSeatsByTrip } from "./welcome-cues";
 
@@ -298,6 +302,14 @@ export type CrewedSessionSummary = {
 export type TodayWork = {
   departures: DepartureSummary[];
   actions: TodayAction[];
+  /**
+   * Departures that have started and are not home: every started departure
+   * the crew-clash read saw (issue #1814), plus every boat still out by its
+   * roll call or clock, cancelled-after-boarding included (issue #2064). A
+   * row about one that is no longer a station files at the desk rather than
+   * into the week's count (`assembleDaySpine`).
+   */
+  outTripIds: string[];
   /** How many actions were filtered out for the reader's role lens (issue #715). */
   withheldCount: number;
   /** Shown only when nothing sails today, so the page still orients the crew. */
@@ -794,6 +806,102 @@ export async function listRollCallGaps(
 }
 
 /**
+ * **Who is standing in a crew clash on the queue's boats** (H-80, issues #1776
+ * and #1814) — one batched read of `crewClashesByTrip` across every departure
+ * the queue cares about, never one query per boat.
+ *
+ * The departures asked about are the queue's own window (`inWindow`) and every
+ * one that has started and is not yet home, because a boat out on the water
+ * has already fallen out of that forward-looking window — the same reason
+ * `listRollCallGaps` runs its own query. The `startsAt`/`endsAt` comparisons
+ * below are only the scan's bounds; whether a clash is still ahead, out on the
+ * water, or over is decided per leg by `crewClashPhase` (src/lib/today.ts),
+ * through `hasSailed` and `hasReturned`.
+ *
+ * A departure already **home** reports nothing (`crewClashesByTrip` and
+ * `crewClashPhase` both ask `hasReturned`). That is a deliberate silence, not
+ * coverage elsewhere: a crew member nobody tapped is not a roll-call subject,
+ * so neither the roll call nor the close-out will name them afterwards. It is
+ * said while the boat is out (#1814) because that is the last moment it can
+ * change who is counted aboard.
+ */
+async function standingCrewClashes(
+  db: AppDb,
+  shopId: string,
+  inWindow: readonly { id: string; title: string; startsAt: Date; endsAt: Date }[],
+  now: Date,
+  timeZone: string,
+) {
+  const started = await db
+    .select({
+      id: trips.id,
+      title: trips.title,
+      startsAt: trips.startsAt,
+      endsAt: trips.endsAt,
+    })
+    .from(trips)
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        lte(trips.startsAt, now),
+        // Scan bound only: a buffered hour past its return is `hasReturned`.
+        gt(trips.endsAt, new Date(now.getTime() - DEPARTURE_BUFFER_MS)),
+      ),
+    )
+    .orderBy(asc(trips.startsAt), asc(trips.id));
+  const departures = new Map<string, { id: string; title: string; startsAt: Date; endsAt: Date }>();
+  for (const trip of [...started, ...inWindow]) {
+    if (!departures.has(trip.id)) {
+      departures.set(trip.id, {
+        id: trip.id,
+        title: trip.title,
+        startsAt: trip.startsAt,
+        endsAt: trip.endsAt,
+      });
+    }
+  }
+  const ids = [...departures.keys()];
+  // The departure roll call is read here for every one of these departures,
+  // not borrowed from the station reader: a boat that left more than an hour
+  // ago is no longer a station, and it is the boat this question is about.
+  const [clashes, divers, crew, stages] = await Promise.all([
+    crewClashesByTrip(db, shopId, ids, now),
+    listDepartureRollCallByTrip(db, shopId, ids),
+    listDepartureCrewRollCallByTrip(db, shopId, ids),
+    latestTripStagesByTrip(
+      db,
+      shopId,
+      started.map((trip) => trip.id),
+    ),
+  ]);
+  // The crew's "home" tap beats the clock, as in `tripPhaseOf`, but only a tap
+  // from the departure's last shop day: a course whose crew said home after
+  // day one is still out on day two.
+  const saidHome = (trip: { id: string; endsAt: Date }) => {
+    const tap = stages.get(trip.id);
+    return (
+      tap?.stage === "home" &&
+      tap.recordedAt.getTime() >= shopDayBounds(trip.endsAt, timeZone).from.getTime()
+    );
+  };
+  return {
+    clashes,
+    divers,
+    crew,
+    departures: [...departures.values()],
+    // Every departure that has started and is not home, which is what files a
+    // row about it at the desk once it has dropped out of the stations
+    // (`assembleDaySpine`). Started is the departure's own `startsAt`, so a
+    // course between two of its days still counts as out.
+    outTripIds: started
+      .filter((trip) => !hasReturned(trip.endsAt, now) && !saidHome(trip))
+      .map((trip) => trip.id),
+  };
+}
+
+/**
  * The after-dive subset, for the schedule board's per-trip badge — it links
  * straight at `after_dive_${diveNumber}`, so a departure-count or
  * no-roll-call gap has no checkpoint for it to point at. Residue rows are
@@ -1074,6 +1182,169 @@ export async function courseCrewCountsByTrip(
  * source-of-truth model, so this never becomes a second place where operational
  * state is decided.
  */
+/**
+ * How far back a departure may have started and still be out. Two weeks is
+ * past any boat day or liveaboard this product schedules; the bound is what
+ * lets the read use the `(shop_id, starts_at)` index instead of every past
+ * departure the shop has run.
+ */
+const OUT_LOOKBACK_MS = 14 * 24 * HOUR_MS;
+
+/**
+ * The bookings whose standing result at their departure's **last** after-dive
+ * checkpoint is `boarded`: counted back aboard with no dive left to make. The
+ * newest result per booking wins, so a later `cleared` or `not_boarded`
+ * takes the booking back out (the supersession every roll-call reader here
+ * applies).
+ */
+async function boardedAfterLastDive(
+  db: AppDb,
+  shopId: string,
+  departures: readonly { id: string; plannedDives: number }[],
+): Promise<Set<string>> {
+  const counted = new Set<string>();
+  if (departures.length === 0) return counted;
+  const lastCheckpoint = new Map(
+    departures.map((trip) => [trip.id, `after_dive_${Math.max(1, trip.plannedDives)}`]),
+  );
+  const rows = await db
+    .select({
+      tripId: rollCallEvents.tripId,
+      bookingId: rollCallEvents.bookingId,
+      checkpoint: rollCallEvents.checkpoint,
+      status: rollCallEvents.status,
+    })
+    .from(rollCallEvents)
+    .where(
+      and(
+        eq(rollCallEvents.shopId, shopId),
+        inArray(
+          rollCallEvents.tripId,
+          departures.map((trip) => trip.id),
+        ),
+      ),
+    )
+    .orderBy(
+      desc(rollCallEvents.occurredAt),
+      desc(rollCallEvents.createdAt),
+      desc(rollCallEvents.seq),
+    );
+  const seen = new Set<string>();
+  for (const row of rows) {
+    if (row.checkpoint !== lastCheckpoint.get(row.tripId)) continue;
+    if (seen.has(row.bookingId)) continue;
+    seen.add(row.bookingId);
+    if (row.status === "boarded") counted.add(row.bookingId);
+  }
+  return counted;
+}
+
+/**
+ * **Blocked divers aboard a boat that is still out** (issue #2064).
+ *
+ * Every other readiness row on Today comes from the forward-looking horizon
+ * (`inHorizonReadiness`), which drops a departure an hour after it sails. That
+ * is right for an ashore blocker, which nobody can act on once the boat has
+ * gone, and wrong for a diver who boarded on a medical hold or with no
+ * release: they may be in the water now, which is when their "Aboard" row
+ * matters most. So this reads the departures that have left that window and
+ * are not back yet, by the departure stage pill's own rule (`tripPhaseOf`: the
+ * crew's tap beats the clock, so a late boat stays out and one that tied up
+ * early is home), and keeps only divers whose standing departure result is
+ * `boarded`.
+ *
+ * **A boarding outranks a later desk cancel**, as it does for the fly-safe
+ * reader (issue #1836). Both roll-call writers refuse a cancelled departure, so
+ * a standing `boarded` at the dock is older than the cancel and was true when
+ * it was made: the people it names are on that boat. A cancelled departure
+ * nobody boarded is not out at all, so its rows never leave the week count.
+ *
+ * Bounded: one trips read on the `(shop_id, starts_at)` index, then the stage,
+ * departure roll call and readiness reads keyed on the handful of departures
+ * that are out, and nothing at all on a day with no boat out.
+ */
+async function blockedAboardOnBoatsOut(
+  db: AppDb,
+  shopId: string,
+  timeZone: string,
+  now: Date,
+  inWindowTripIds: ReadonlySet<string>,
+) {
+  const sailed = await db
+    .select({
+      id: trips.id,
+      title: trips.title,
+      startsAt: trips.startsAt,
+      endsAt: trips.endsAt,
+      status: trips.status,
+      plannedDives: trips.plannedDives,
+    })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        // No status filter: a desk cancel written after the boat left does
+        // not bring anybody ashore. A cancelled departure stays only when its
+        // dock roll call says somebody boarded (below).
+        liveTrip(),
+        gte(trips.startsAt, new Date(now.getTime() - OUT_LOOKBACK_MS)),
+        lte(trips.startsAt, now),
+      ),
+    )
+    .orderBy(asc(trips.startsAt), asc(trips.id));
+  // A departure still inside the horizon is a live station already, and its
+  // blocked divers come through the ordinary path with `aboard` set there.
+  const candidates = sailed.filter((trip) => !inWindowTripIds.has(trip.id));
+  if (candidates.length === 0) return { out: [], blocked: [] };
+  const stages = await latestTripStagesByTrip(
+    db,
+    shopId,
+    candidates.map((trip) => trip.id),
+  );
+  const byClock = candidates.filter(
+    (trip) =>
+      tripPhaseOf({
+        startsAt: trip.startsAt,
+        endsAt: trip.endsAt,
+        now,
+        timeZone,
+        stage: stages.get(trip.id) ?? null,
+        // Deliberately the scheduled reading even for a cancelled row: the
+        // question is whether the boat is on the water, and the roll call
+        // below decides whether a cancelled one ever left.
+        cancelled: false,
+      }) === "aboard",
+  );
+  if (byClock.length === 0) return { out: [], blocked: [] };
+  const departureRollCall = await listDepartureRollCallByTrip(
+    db,
+    shopId,
+    byClock.map((trip) => trip.id),
+  );
+  const out = byClock.filter(
+    (trip) =>
+      trip.status === "scheduled" ||
+      [...(departureRollCall.get(trip.id)?.values() ?? [])].includes("boarded"),
+  );
+  if (out.length === 0) return { out: [], blocked: [] };
+  const outIds = out.map((trip) => trip.id);
+  const [readiness, countedBackAfterLastDive] = await Promise.all([
+    listTripsReadiness(db, shopId, outIds, now),
+    boardedAfterLastDive(db, shopId, out),
+  ]);
+  // The row is about somebody who may be in the water. A diver the crew
+  // counted back aboard after the boat's last dive is not, however long the
+  // ride home: the evening's "All boats are home" line is drawn from exactly
+  // that count, and the two must not disagree.
+  const blocked = readiness.filter(
+    (row) =>
+      row.readiness.status === "blocked" &&
+      departureRollCall.get(row.booking.tripId)?.get(row.booking.id) === "boarded" &&
+      !countedBackAfterLastDive.has(row.booking.id),
+  );
+  return { out, blocked };
+}
+
 export async function getTodayWork(
   db: AppDb,
   shopId: string,
@@ -1159,6 +1430,7 @@ export async function getTodayWork(
     lastMinuteWindows,
     rollCallGaps,
     stagesByTrip,
+    crewClashState,
   ] = await Promise.all([
     // Each booking's latest departure result, not just a head count. The card
     // needs to tell "already aboard" from "still ashore" from "never left the
@@ -1219,6 +1491,9 @@ export async function getTodayWork(
       shopId,
       todayTrips.map((trip) => trip.id),
     ),
+    // Who is on two boats at once, on every departure the queue holds and on
+    // every boat still out (H-80) — one batched read.
+    standingCrewClashes(db, shopId, inWindow, now, timeZone),
   ]);
 
   // Who on today's boats said the crew may know it is their first trip, or
@@ -1332,6 +1607,40 @@ export async function getTodayWork(
 
   const actions: TodayAction[] = [];
 
+  // Blocked divers aboard a boat that has left the horizon but is not back
+  // (issue #2064). Only the boarded ones, and only as `blocked_aboard` rows:
+  // an ashore blocker on a boat that has gone is noise.
+  const boatsOut = await blockedAboardOnBoatsOut(
+    db,
+    shopId,
+    timeZone,
+    now,
+    new Set(inWindow.map((trip) => trip.id)),
+  );
+  for (const trip of boatsOut.out) {
+    const label = `${trip.title} · ${at(trip.startsAt, timeZone, locale)}`;
+    const aboard = boatsOut.blocked
+      .filter((row) => row.booking.tripId === trip.id)
+      .map((row) => ({
+        bookingId: row.booking.id,
+        personId: row.person.id,
+        fullName: row.person.fullName,
+        tripId: trip.id,
+        tripTitle: label,
+        startsAt: trip.startsAt,
+        blockers: row.readiness.blockers,
+        aboard: true,
+      }));
+    // A diver whose only open blocker is money keeps no row here: that is the
+    // one blocker that changes nothing in the water, and `collapseDiverActions`
+    // would file it as an ordinary payment row for a boat nobody can reach.
+    actions.push(
+      ...collapseDiverActions(aboard, shopSlug, now, t).filter(
+        (action) => action.kind === "blocked_aboard",
+      ),
+    );
+  }
+
   // Somebody on a boat's list is not accounted for (DOM-H3). The after-dive
   // rows are the only ones on this queue that can mean a diver is still in the
   // water, so they lead: top `KIND_SEVERITY`, pinned to the top urgency band,
@@ -1371,6 +1680,98 @@ export async function getTodayWork(
       href: `/shop/${shopSlug}/trips/${gap.tripId}/manifest?checkpoint=${checkpoint}`,
       dueAt: gap.endsAt,
     });
+  }
+
+  // **Crew rostered on two departures at once** (H-80, issues #1776 and
+  // #1814). A clash is the one crew fault invisible on both boats — each shows
+  // a full crew list — so Today says it, on each of the two departures, in one
+  // of two rows decided per leg by `crewClashPhase`:
+  //
+  // - `crew_clash` while the clashing leg is still to sail: there are hours
+  //   left to ring somebody, and the fix is on the crew editor.
+  // - `crew_clash_sailed` while it is out: the question from ashore is who is
+  //   actually aboard, so it points at the roll call.
+  //
+  // Information, never a gate (#1345).
+  //
+  // **A missing diver always leads the sailed row** (dive-domain-expert review,
+  // 2026-10-06). Needs you ranks tone first (`sortStationRows`), and every
+  // after-dive roll-call row is danger where this row is a warning. The row is
+  // also dated no earlier than the latest open after-dive count, so the
+  // ordering holds on dates alone, should a tone ever move.
+  const latestOpenAfterDiveCount = Math.max(
+    0,
+    ...rollCallGaps
+      .filter((gap) => gap.diveNumber >= 1 && !gap.stale)
+      .map((gap) => gap.endsAt.getTime()),
+  );
+  for (const trip of crewClashState.departures) {
+    const clashes = crewClashState.clashes.get(trip.id) ?? [];
+    if (clashes.length === 0) continue;
+    const crewAnswered = crewClashState.crew.get(trip.id) ?? new Map<string, string>();
+    const recorded =
+      [...(crewClashState.divers.get(trip.id)?.values() ?? [])].some(
+        (state) => state === "boarded",
+      ) || [...crewAnswered.values()].some((state) => state === "boarded");
+    const ahead: { clash: CrewClash; startsAt: Date }[] = [];
+    const out: { clash: CrewClash; endsAt: Date }[] = [];
+    for (const clash of clashes) {
+      const standing = crewClashPhase({
+        legs: clash.legs,
+        departureStartsAt: trip.startsAt,
+        departureRollCallRecorded: recorded,
+        now,
+      });
+      // Once this person has a result at this departure's own checkpoint,
+      // "confirm who is aboard" is answered for them (review N2), so the
+      // sailed row stops naming them.
+      if (standing?.phase === "out" && !crewAnswered.has(clash.personId)) {
+        out.push({ clash, endsAt: standing.leg.endsAt });
+      }
+      if (standing?.phase === "ahead") ahead.push({ clash, startsAt: standing.leg.startsAt });
+    }
+    const when = at(trip.startsAt, timeZone, locale);
+    const departure = { tripId: trip.id, label: `${trip.title} · ${when}` };
+    if (out.length > 0) {
+      const returns = Math.max(...out.map((entry) => entry.endsAt.getTime()));
+      actions.push({
+        id: `crew-clash-sailed:${trip.id}`,
+        kind: "crew_clash_sailed",
+        urgency: "imminent",
+        subject: trip.title,
+        context: when,
+        departure,
+        aboutDeparture: true,
+        detail: crewClashSailedDetailText(
+          t,
+          locale,
+          out.map((entry) => entry.clash),
+        ),
+        actionLabel: openRollCallActionText(t),
+        href: `/shop/${shopSlug}/trips/${trip.id}/manifest`,
+        dueAt: new Date(Math.max(returns, latestOpenAfterDiveCount)),
+      });
+    }
+    if (ahead.length > 0) {
+      const sails = new Date(Math.min(...ahead.map((entry) => entry.startsAt.getTime())));
+      actions.push({
+        id: `crew-clash:${trip.id}`,
+        kind: "crew_clash",
+        urgency: urgencyFor(sails, now),
+        subject: trip.title,
+        context: when,
+        departure,
+        aboutDeparture: true,
+        detail: crewClashDetailText(
+          t,
+          locale,
+          ahead.map((entry) => entry.clash),
+        ),
+        actionLabel: openCrewActionText(t),
+        href: `/shop/${shopSlug}/trips/${trip.id}?view=details#crew`,
+        dueAt: sails,
+      });
+    }
   }
 
   for (const trip of inWindow) {
@@ -2272,6 +2673,9 @@ export async function getTodayWork(
   return {
     departures,
     actions: visibleActions,
+    outTripIds: [
+      ...new Set([...crewClashState.outTripIds, ...boatsOut.out.map((trip) => trip.id)]),
+    ],
     withheldCount,
     nextDeparture: next
       ? {

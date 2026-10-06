@@ -159,6 +159,9 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["diver.json common.certification.agencies.raid", "agency acronym"],
   ["diver.json common.certification.agencies.gue", "agency acronym"],
   ["diver.json common.certification.agencies.bsac", "agency acronym"],
+  ["diver.json common.certification.agencies.nss_cds", "agency acronym"],
+  ["diver.json common.certification.agencies.nacd", "agency acronym"],
+  ["diver.json common.certification.agencies.iantd", "agency acronym"],
   // The ladder a Spanish-speaking shop names in English, in the diver bundle
   // and again in the staff one (the two never share a string, by design).
   ["diver.json course.certificationLevels.openWater", "course name, used untranslated"],
@@ -187,6 +190,9 @@ export const DELIBERATELY_IDENTICAL = new Map([
     "a competitor's own product name",
   ],
   ["staff/divers.json shared.agencies.bsac", "agency acronym"],
+  ["staff/divers.json shared.agencies.iantd", "agency acronym"],
+  ["staff/divers.json shared.agencies.nacd", "agency acronym"],
+  ["staff/divers.json shared.agencies.nss_cds", "agency acronym"],
   ["staff/divers.json shared.agencies.cmas", "agency acronym"],
   ["staff/divers.json shared.agencies.gue", "agency acronym"],
   ["staff/divers.json shared.agencies.naui", "agency acronym"],

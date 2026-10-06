@@ -44,6 +44,7 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import type { ArrivalStatus } from "@/lib/arrival";
 import { counterIsDone, isSettledAtCounter } from "@/lib/check-in";
 import { EMPTY_EMERGENCY_REFERENCE } from "@/lib/emergency-reference";
+import { isHeldSeat } from "@/lib/held-seat";
 import { cachedFormatter, cachedListFormat } from "@/lib/intl-cache";
 import {
   isNotBackAboard,
@@ -2078,9 +2079,7 @@ export function OfflineManifestView() {
                                   ? `${OFFLINE_BOAT_TARGET_CLASS} border border-danger bg-danger/15 text-danger`
                                   : crewRecordedNotBoarded
                                     ? `${OFFLINE_BOAT_TARGET_CLASS} border border-border-strong bg-surface-sunken`
-                                    : isDeparture
-                                      ? `${OFFLINE_BOAT_TARGET_CLASS} hover:bg-surface-sunken`
-                                      : `${OFFLINE_BOAT_TARGET_CLASS} text-danger hover:bg-danger-tint`
+                                    : `${OFFLINE_BOAT_TARGET_CLASS} hover:bg-surface-sunken`
                               }
                             >
                               {busyBooking === crewPersonId ? (
@@ -2359,27 +2358,38 @@ export function OfflineManifestView() {
                           </span>
                         </summary>
                         <div className="mb-1 grid gap-2 rounded-inset border border-border/70 bg-surface-sunken/50 p-3 text-base">
-                          <p>
-                            <span className="font-bold">
-                              {t("shared.offlineManifest.single.emergencyContact")}
-                            </span>
-                            <span className="mt-0.5 block text-muted">
-                              {diver.emergencyContactName && diver.emergencyContactPhone
-                                ? `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
-                                : t("shared.offlineManifest.single.notOnFile")}
-                            </span>
-                          </p>
-                          <p>
-                            <span className="font-bold">
-                              {t("shared.offlineManifest.single.rentalFit")}
-                            </span>
-                            <span className="mt-0.5 block text-muted">
-                              {rentalFitLineText(t, locale, diver.rentalFit)}
-                              {diver.nitroxRequested
-                                ? ` ${t("shared.offlineManifest.single.nitroxRequestedSuffix")}`
-                                : ""}
-                            </span>
-                          </p>
+                          {/* A held seat was saved with the matched person's
+                            particulars already cleared (`serializeManifests`),
+                            so it says why rather than "Not on file" (issue
+                            #1690). Either signal withholds: the saved flag, or
+                            the identity blocker on the row, failing closed. */}
+                          {diver.identityWithheld || isHeldSeat(diver) ? (
+                            <p className="text-muted">{t("manifest.identityWithheldDetails")}</p>
+                          ) : (
+                            <>
+                              <p>
+                                <span className="font-bold">
+                                  {t("shared.offlineManifest.single.emergencyContact")}
+                                </span>
+                                <span className="mt-0.5 block text-muted">
+                                  {diver.emergencyContactName && diver.emergencyContactPhone
+                                    ? `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
+                                    : t("shared.offlineManifest.single.notOnFile")}
+                                </span>
+                              </p>
+                              <p>
+                                <span className="font-bold">
+                                  {t("shared.offlineManifest.single.rentalFit")}
+                                </span>
+                                <span className="mt-0.5 block text-muted">
+                                  {rentalFitLineText(t, locale, diver.rentalFit)}
+                                  {diver.nitroxRequested
+                                    ? ` ${t("shared.offlineManifest.single.nitroxRequestedSuffix")}`
+                                    : ""}
+                                </span>
+                              </p>
+                            </>
+                          )}
                         </div>
                       </details>
                       {!ready ? (
@@ -2515,10 +2525,12 @@ export function OfflineManifestView() {
                             // conditions. It takes the box back the moment it
                             // matters: when it is the row's only control (a
                             // blocked diver at the dock), or when it carries the
-                            // recorded state. After a dive the unrecorded label
-                            // keeps danger ink — it is the control that reports a
-                            // person missing, and it must be findable at the rail
-                            // without reading every word.
+                            // recorded state. After a dive it stays neutral too
+                            // until somebody records a person not back aboard:
+                            // an alarm is earned by a recorded fact, never by the
+                            // absence of one (decision 4 of ADR
+                            // 20260827-the-departure-is-two-working-surfaces), and
+                            // the live page draws it the same way (issue #2107).
                             //
                             // Only the departure settled state gets the undo-bearing
                             // accessible name — after a dive, "not back aboard"
@@ -2535,9 +2547,7 @@ export function OfflineManifestView() {
                                 : recordedNotBoarded
                                   ? `${OFFLINE_BOAT_TARGET_CLASS} border border-border-strong bg-surface-sunken`
                                   : showBoardControl
-                                    ? isDeparture
-                                      ? `${OFFLINE_BOAT_TARGET_CLASS} hover:bg-surface-sunken`
-                                      : `${OFFLINE_BOAT_TARGET_CLASS} text-danger hover:bg-danger-tint`
+                                    ? `${OFFLINE_BOAT_TARGET_CLASS} hover:bg-surface-sunken`
                                     : `${OFFLINE_BOAT_TARGET_CLASS} border border-border hover:bg-surface-sunken`
                             }
                           >

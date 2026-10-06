@@ -13,18 +13,15 @@ import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { buddyAlertText } from "@/i18n/buddy-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
-import { identityReasonText } from "@/i18n/identity-check-labels";
+import { crewBlockerText } from "@/i18n/identity-check-labels";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
-import {
-  readinessBlockerText,
-  readinessStatusText,
-  readinessStatusTone,
-} from "@/i18n/readiness-labels";
+import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { welcomeCueText } from "@/i18n/welcome-cue-labels";
 import { diverRowId, scopedId } from "@/lib/element-id";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
+import { withholdHeldSeatParticulars } from "@/lib/held-seat";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
   type ManifestBuddyTeam,
@@ -53,19 +50,18 @@ import {
 } from "./RollCallControls";
 
 /**
- * A blocker's sentence on this diver's row. A held seat's names both people
- * the guess was between (`identityReasonText`), the same sentence the Divers
- * tab prints, so the dock is not left with "might be someone else" and nothing
- * to compare it to (Aaron, 2026-10-06).
+ * A blocker's sentence on this diver's row: the crew's (`crewBlockerText`).
+ * A held seat says the desk must settle it, and that other holds may still
+ * apply when withholding dropped any, without naming the matched person or
+ * which hold it was (dive-domain review 2026-10-06). "Confirm who this is"
+ * stays on the Divers tab, beside the control that does it.
  */
 function diverBlockerText(
   t: StaffTranslator,
   diver: TripManifest["divers"][number],
   blocker: ReadinessBlocker,
 ): string {
-  const text = readinessBlockerText(t, blocker);
-  if (blocker.code !== "identity_unconfirmed" || !diver.identityClaim) return text;
-  return identityReasonText(t, diver.identityClaim, diver.fullName, text);
+  return crewBlockerText(t, diver, blocker);
 }
 
 /**
@@ -77,6 +73,11 @@ function diverBlockerText(
  * screen-only person sheet, and in a print-only block — the sheet contributes
  * nothing to print, and the printed manifest is the document a coastguard
  * reads, so it keeps every fact without asking paper to disclose.
+ *
+ * The one exception is a held seat (`identityWithheld`, issue #1690): the
+ * facts on file belong to the matched person, not provably to whoever is
+ * aboard, so paper says they wait for confirmation, exactly as the screen does.
+ * A wrong next of kin on the coastguard's sheet is worse than none.
  */
 function DiverFacts({
   diver,
@@ -103,6 +104,28 @@ function DiverFacts({
   columns: 1 | 2;
   t: StaffTranslator;
 }) {
+  // The pickup belongs to the booking, not to the matched person, so a held
+  // seat keeps it.
+  const pickup = diver.hotelPickupLocation ? (
+    <p>
+      <span className="font-bold">{t("manifest.hotelPickupLabel")}</span>
+      <span className="mt-0.5 block text-muted">
+        {diver.hotelPickupLocation}
+        {diver.pickupTime ? ` · ${diver.pickupTime}` : ""}
+      </span>
+    </p>
+  ) : null;
+  if (diver.identityWithheld) {
+    // Said, on screen and on paper alike, rather than "Not on file": a held
+    // seat with no contact reads as a diver who has none, which is a wrong
+    // fact. The confirm control is ashore, on the Divers tab (issue #1690).
+    return (
+      <div className={`grid gap-2 text-base${columns === 2 ? " sm:grid-cols-2" : ""}`}>
+        <p className="text-muted">{t("manifest.identityWithheldDetails")}</p>
+        {pickup}
+      </div>
+    );
+  }
   return (
     <div className={`grid gap-2 text-base${columns === 2 ? " sm:grid-cols-2" : ""}`}>
       <p>
@@ -153,15 +176,7 @@ function DiverFacts({
           </span>
         </p>
       ) : null}
-      {diver.hotelPickupLocation ? (
-        <p>
-          <span className="font-bold">{t("manifest.hotelPickupLabel")}</span>
-          <span className="mt-0.5 block text-muted">
-            {diver.hotelPickupLocation}
-            {diver.pickupTime ? ` · ${diver.pickupTime}` : ""}
-          </span>
-        </p>
-      ) : null}
+      {pickup}
       {diver.medicalWaiver ? (
         <p>
           <span className="font-bold">
@@ -267,7 +282,7 @@ export type ManifestNote = {
 /** The diver half of the head count — every active booking, one row each. */
 export function DiverRollCall({
   idPrefix,
-  divers,
+  divers: rosterDivers,
   crew,
   checkpoint,
   isDeparture,
@@ -310,6 +325,10 @@ export function DiverRollCall({
   buddyTeamLabel: (teams: ReadonlyArray<ManifestBuddyTeam>) => string | null;
   t: StaffTranslator;
 }) {
+  // **A held seat shows the seat, not the matched person** (issue #1690,
+  // H-79): everything below, on screen and on paper, reads the withheld row,
+  // so no capsule, fact block or shared advisory can reach past it.
+  const divers = rosterDivers.map(withholdHeldSeatParticulars);
   // The same depth advisory resolving identically for much of the roster is
   // one fact about the plan, not nine facts about nine divers (principle 9) —
   // on the seeded wreck trip the identical 40-word paragraph rendered inside
@@ -552,9 +571,13 @@ export function DiverRollCall({
                 <PersonSheet
                   name={diver.fullName}
                   triggerLabel={t("manifest.openPersonDetails", { name: diver.fullName })}
-                  subtitle={t("manifest.personSheetDiverSubtitle", {
-                    rental: rentalFitLineText(t, locale, diver.rentalFit),
-                  })}
+                  subtitle={
+                    diver.identityWithheld
+                      ? t("manifest.personSheetHeldDiverSubtitle")
+                      : t("manifest.personSheetDiverSubtitle", {
+                          rental: rentalFitLineText(t, locale, diver.rentalFit),
+                        })
+                  }
                   status={
                     <Badge
                       tone={

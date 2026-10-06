@@ -3,8 +3,9 @@ import { StoredPhoto } from "@/components/StoredPhoto";
 import { SectionCard } from "@/components/ui/card";
 import { FactSource } from "@/components/ui/FactSource";
 import { DIVER_FACT_SOURCE_KEYS } from "@/i18n/fact-source-labels";
-import { diverTranslator } from "@/i18n/messages";
-import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
+import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
+import { dockCallAt } from "@/lib/dock-call";
+import { formatShortDate, formatTime, formatTimeRangeTz } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { googleMapEmbedUrl, googleMapsUrl } from "@/lib/maps";
 import { type ShopAddressParts, shopAddressLines, shopMapQuery } from "@/lib/shop-address";
@@ -64,6 +65,32 @@ export function arrivalCardFacts(shop: ArrivalCardShop, trip: ArrivalCardTrip) {
   };
 }
 
+/**
+ * "Aim to be at the dock by 7:30 AM EDT, 30 minutes before we sail." — the
+ * same sentence and the same minute `/ready`'s masthead gives (`ready.dockCallLine`),
+ * for the card a diver keeps offline at the dock (issue #2034). A diver
+ * reading only the departure range would arrive as the boat leaves.
+ *
+ * `null` when there is no dock call to state: the shop asks for no lead time,
+ * or the caller passed none because this diver is collected from their hotel
+ * (the masthead names the pickup instead, and so does nothing here).
+ */
+export function arrivalDockCallLine(
+  t: DiverTranslator,
+  startsAt: Date,
+  dockCallMinutes: number | null | undefined,
+  locale: string,
+  timeZone: string,
+): string | null {
+  if (dockCallMinutes == null) return null;
+  const at = dockCallAt(startsAt, dockCallMinutes);
+  if (!at) return null;
+  return t("ready.dockCallLine", {
+    time: formatTime(at, locale, timeZone),
+    dock: t("notifications.common.dockCallMinutes", { minutes: dockCallMinutes }),
+  });
+}
+
 function ArrivalFact({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -79,6 +106,7 @@ export function TripArrivalCard({
   trip,
   locale,
   sites,
+  dockCallMinutes,
   downloadHref,
   showMap = false,
 }: {
@@ -95,6 +123,12 @@ export function TripArrivalCard({
    * order and the provenance appear together.
    */
   sites?: readonly string[];
+  /**
+   * The shop's dock-call lead time, for the "be at the dock by" line under
+   * the departure range. Omit it (or pass `null`) for a diver who is being
+   * collected from their hotel; `0` draws no line.
+   */
+  dockCallMinutes?: number | null;
   /** A post-booking download URL carrying the Ready capability. */
   downloadHref?: string | null;
   /**
@@ -115,6 +149,13 @@ export function TripArrivalCard({
 }) {
   const t = diverTranslator(locale);
   const facts = arrivalCardFacts(shop, trip);
+  const dockCallLine = arrivalDockCallLine(
+    t,
+    trip.startsAt,
+    dockCallMinutes,
+    locale,
+    shop.timezone,
+  );
   return (
     <SectionCard
       title={t("trip.arrivalHeading")}
@@ -179,10 +220,13 @@ export function TripArrivalCard({
             </a>
           ) : null}
         </div>
-        <p className="text-sm text-muted">
-          {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
-          {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
-        </p>
+        <div>
+          <p className="text-sm text-muted">
+            {formatShortDate(trip.startsAt, locale, shop.timezone)} ·{" "}
+            {formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)}
+          </p>
+          {dockCallLine ? <p className="mt-1 text-sm font-medium">{dockCallLine}</p> : null}
+        </div>
         <dl className="grid gap-4 border-t border-border pt-3 sm:grid-cols-2">
           {sites && sites.length > 0 ? (
             <div>

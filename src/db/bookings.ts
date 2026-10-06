@@ -1,7 +1,7 @@
-import { and, count, eq, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import type { ActivityCode } from "@/lib/activity";
-import { checkMinimumAge } from "@/lib/age";
-import { calendarDateInTimezone } from "@/lib/calendar-date";
+import { checkMinimumAge, isPlausibleDateOfBirth } from "@/lib/age";
+import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { courseSeatCapacity } from "@/lib/course-ratios";
 import { countInWaterCrew, groupCrewAssignments } from "@/lib/crew-roles";
@@ -22,7 +22,7 @@ import { hasSailed } from "@/lib/trips";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
 import { inTrainingBefore, listCourseSeatsInTraining } from "./certifications-in-training";
-import { type AppDb, type DbExecutor, queryAll } from "./client";
+import { type AppDb, type DbExecutor, isUniqueConstraintViolation, queryAll } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { consumeEntitlementsForBooking, releaseEntitlementsForBooking } from "./dive-packages";
 import { releaseUnclaimedGearReservations } from "./gear";
@@ -38,7 +38,6 @@ import {
   certifications,
   courses,
   gearReservations,
-  internalNotes,
   notificationSendQueue,
   people,
   personRoles,
@@ -291,6 +290,8 @@ export type BookingPartyOutcome =
         bookingId: string;
         personId: string;
         personName: string;
+        /** {@link BookingSuccess.identityUnconfirmed}, per seat. */
+        identityUnconfirmed: boolean;
         admissionAdvisory?: BookingAdmissionAdvisory;
       }>;
     }
@@ -335,6 +336,7 @@ export async function createBookingParty(
         bookingId: string;
         personId: string;
         personName: string;
+        identityUnconfirmed: boolean;
         admissionAdvisory?: BookingAdmissionAdvisory;
       }> = [];
       const pending: PendingDeclaration[] = [];
@@ -1624,6 +1626,24 @@ export async function setBookingHotelPickup(
   return true;
 }
 
+/**
+ * The hotel pickup time staff set on one seat, or `null` when the diver makes
+ * their own way to the dock. Read by the saved arrival card, which states the
+ * dock call only to a diver who is not being collected (issue #2034).
+ */
+export async function getBookingPickupTime(
+  db: DbExecutor,
+  shopId: string,
+  bookingId: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ pickupTime: bookings.pickupTime })
+    .from(bookings)
+    .where(and(eq(bookings.id, bookingId), eq(bookings.shopId, shopId)))
+    .limit(1);
+  return row?.pickupTime?.trim() || null;
+}
+
 export async function setBookingPickupDetails(
   db: AppDb,
   input: {
@@ -1805,11 +1825,153 @@ export async function confirmBookingIdentity(
 
 /** What a split refused, as a code (`splitBookingIdentity`). */
 export type SplitBookingIdentityResult =
-  | { ok: true; personId: string; tripId: string }
-  | { ok: false; reason: "not_held" | "name_required" | "medical_hold" };
+  | {
+      ok: true;
+      personId: string;
+      tripId: string;
+      /** How many held seats moved onto the new record, this one included. */
+      seats: number;
+    }
+  | {
+      ok: false;
+      reason:
+        | "not_held"
+        | "name_required"
+        | "medical_hold"
+        | "date_of_birth_required"
+        | "date_of_birth_invalid"
+        | "email_in_use";
+    };
+
+/** What the staffer told a split about the new diver, beyond a name (issue #2081). */
+export type SplitBookingIdentityInput = {
+  shopId: string;
+  bookingId: string;
+  actorPersonId: string;
+  fullName: string;
+  /**
+   * `YYYY-MM-DD`, or blank. Required when any seat moving is on a course with
+   * a minimum age, because the age check and the guardian co-signature rule
+   * both fail open on a record with no date, and a minor split off a parent's
+   * booking would otherwise read as an adult (issue #2081).
+   */
+  dateOfBirth?: string | null;
+  /** Optional, so the shop can send the new diver their own waiver link. */
+  email?: string | null;
+  phone?: string | null;
+  /**
+   * Other held seats to move onto the same new record: the ones the form
+   * named (`sameNameHeldSeats`), and only those of them that are still
+   * movable when the split runs (`movableSameNameSeats`). One person who
+   * booked three dives with someone else's email is one record, not three.
+   */
+  sameNameSeatIds?: ReadonlyArray<string>;
+};
 
 /** The longest name a split accepts. */
 export const SPLIT_NAME_MAX = 200;
+
+/** The comparable form of a booked-as name: what the same-name seats match on. */
+function bookedAsKey(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+/** Another held seat a split could move along with this one (issue #2081). */
+export type SameNameHeldSeat = {
+  bookingId: string;
+  tripId: string;
+  tripTitle: string;
+  startsAt: Date;
+  /** Its departure is a course with a minimum age: moving it needs a date of birth. */
+  asksDateOfBirth: boolean;
+};
+
+/**
+ * **One person is never on one departure twice** (dive-domain review,
+ * 2026-10-06). Of the same-name held seats found beside a seat on
+ * `primaryTripId`, the ones a split may move: none on the seat's own
+ * departure, and none on a departure holding two or more of them, since two
+ * seats on one boat under one name are two people and the split cannot tell
+ * which one is standing at the counter. Those are split one at a time.
+ */
+export function movableSameNameSeats<T extends { tripId: string }>(
+  primaryTripId: string,
+  candidates: ReadonlyArray<T>,
+): T[] {
+  const perTrip = new Map<string, number>();
+  for (const seat of candidates) perTrip.set(seat.tripId, (perTrip.get(seat.tripId) ?? 0) + 1);
+  return candidates.filter(
+    (seat) => seat.tripId !== primaryTripId && perTrip.get(seat.tripId) === 1,
+  );
+}
+
+/**
+ * For each held seat given, the *other* held seats the same matched diver
+ * carries under the same booked-as name on a live departure that a split may
+ * move with it (`movableSameNameSeats`), soonest first: what "Different
+ * person" offers to move, named by departure (issue #2081). Seats with no
+ * booked-as name, or nothing to move, are absent from the map.
+ */
+export async function sameNameHeldSeats(
+  db: DbExecutor,
+  shopId: string,
+  seats: ReadonlyArray<{
+    bookingId: string;
+    personId: string;
+    tripId: string;
+    bookedAs: string | null;
+  }>,
+): Promise<Map<string, SameNameHeldSeat[]>> {
+  const named = seats.filter((seat): seat is typeof seat & { bookedAs: string } =>
+    Boolean(seat.bookedAs?.trim()),
+  );
+  const result = new Map<string, SameNameHeldSeat[]>();
+  if (named.length === 0) return result;
+  const held = await db
+    .select({
+      bookingId: bookings.id,
+      personId: bookings.personId,
+      bookedAs: bookings.identityBookedAs,
+      tripId: trips.id,
+      tripTitle: trips.title,
+      startsAt: trips.startsAt,
+      minimumAge: courses.minimumAge,
+    })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .leftJoin(courses, and(eq(courses.id, trips.courseId), eq(courses.shopId, shopId)))
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        inArray(bookings.personId, [...new Set(named.map((seat) => seat.personId))]),
+        isNotNull(bookings.identityUnconfirmedAt),
+        ne(bookings.status, "cancelled"),
+        eq(trips.shopId, shopId),
+        liveTrip(),
+      ),
+    )
+    .orderBy(asc(trips.startsAt));
+  for (const seat of named) {
+    const candidates = held
+      .filter(
+        (row) =>
+          row.bookingId !== seat.bookingId &&
+          row.personId === seat.personId &&
+          row.bookedAs !== null &&
+          bookedAsKey(row.bookedAs) === bookedAsKey(seat.bookedAs),
+      )
+      .map((row) => ({
+        bookingId: row.bookingId,
+        tripId: row.tripId,
+        tripTitle: row.tripTitle,
+        startsAt: row.startsAt,
+        asksDateOfBirth: row.minimumAge !== null,
+      }));
+    const movable = movableSameNameSeats(seat.tripId, candidates);
+    if (movable.length > 0) result.set(seat.bookingId, movable);
+  }
+  return result;
+}
 
 /**
  * Staff answer "not the same person" to a booking flagged
@@ -1818,17 +1980,31 @@ export const SPLIT_NAME_MAX = 200;
  * the name it was booked under).
  *
  * **It hands over nothing**, which is why it needs no blocking confirm while
- * the opposite answer does. The new record starts empty: no email (the shared
- * address stays with the record that owns it, and `people_shop_email_unique`
- * would refuse a second), no cards, no clean release. Readiness then blocks on
- * what the new diver has not given yet, which is the honest state. A wrong
- * split is undone by merging the two records (owner and manager), the same as
- * any duplicate.
+ * the opposite answer does. The new record starts with only what the staffer
+ * typed about the person in front of them (issue #2081): a name, a date of
+ * birth (required when a moving seat is on a course with a minimum age, since
+ * the age check and the guardian rule fail open without one), and an optional
+ * email or phone so the shop can send their own waiver. Never the matched
+ * record's: an address another live record holds is refused (`email_in_use`),
+ * and the shared address stays with the record that owns it. No cards, no
+ * clean release. Readiness then blocks on what the new diver has not given
+ * yet, which is the honest state. A wrong split is undone by merging the two
+ * records (owner and manager), the same as any duplicate.
+ *
+ * **With `sameNameSeatIds`, other held seats booked under the same name and
+ * matched to the same diver move too**, onto the one new record: someone who
+ * booked three dives with a friend's email is one person, and three splits
+ * would make three. A booking does not record who made it, so two strangers
+ * who share a name are told apart only by the staffer: the box is unticked by
+ * default and names each departure it would move. Never two seats on one
+ * departure (`movableSameNameSeats`), the seat's own included. All of them or
+ * none: a medical hold on any of them refuses the lot.
  *
  * What moves is what was about this seat rather than about the matched person:
- * the booking itself, the gear held for it, the staff notes written on it, and
- * the seat's unsigned release links, with any half-filled answers on them
- * cleared, since nobody knows who typed them (issue #2080).
+ * the booking itself, the gear held for it, and the seat's unsigned release
+ * links, with any half-filled answers and any delivery outcome on them
+ * cleared, since nobody knows who typed them (issue #2080) and the outcome was
+ * about the matched diver's address. Staff notes stay with the matched person.
  *
  * **A signed release stays where it is filed.** `completeWaiver` refuses a
  * signature unless the typed name matches the record's diver, and on a held
@@ -1836,9 +2012,10 @@ export const SPLIT_NAME_MAX = 200;
  * names them. It is their paper, in their record, export and erasure; moving
  * it would file another person's medical answers under the new diver (dive
  * domain review, 2026-10-05). It is superseded all the same: it names someone
- * other than the seat's diver, so the seat asks for its own. A seat with an
- * unanswered medical referral is refused (`medical_hold`) until the referral
- * is answered, since superseding it would lift the hold; the seat's releases
+ * other than the seat's diver, so the seat asks for its own. A seat on a
+ * medical hold, a referral unanswered or one the physician did not clear
+ * (`isUnresolvedMedicalHold`), is refused (`medical_hold`) until a physician
+ * clears it, since superseding it would lift the hold; the seat's releases
  * are locked first, so a questionnaire submitted mid-split cannot slip one in.
  *
  * The seat's order stays with the person it billed. An order is an invoice to
@@ -1860,150 +2037,265 @@ export const SPLIT_NAME_MAX = 200;
  */
 export async function splitBookingIdentity(
   db: AppDb,
-  input: { shopId: string; bookingId: string; actorPersonId: string; fullName: string },
+  input: SplitBookingIdentityInput,
 ): Promise<SplitBookingIdentityResult> {
   const fullName = input.fullName.trim().slice(0, SPLIT_NAME_MAX);
   if (!fullName) return { ok: false, reason: "name_required" };
+  const dateOfBirth = input.dateOfBirth?.trim() || null;
+  if (dateOfBirth && !(isValidCalendarDate(dateOfBirth) && isPlausibleDateOfBirth(dateOfBirth))) {
+    return { ok: false, reason: "date_of_birth_invalid" };
+  }
+  const email = input.email?.trim().toLowerCase() || null;
+  type Refusal = "not_held" | "medical_hold" | "date_of_birth_required" | "email_in_use";
   type Split =
-    | { refused: "not_held" | "medical_hold" }
-    | { refused: null; tripId: string; matchedPersonId: string; personId: string };
-  const split = await db.transaction(async (tx): Promise<Split> => {
-    const now = nowDate();
-    const [booking] = await tx
-      .select({ tripId: bookings.tripId, personId: bookings.personId })
-      .from(bookings)
-      .where(
-        and(
-          eq(bookings.id, input.bookingId),
-          eq(bookings.shopId, input.shopId),
-          isNotNull(bookings.identityUnconfirmedAt),
-          ne(bookings.status, "cancelled"),
-        ),
-      )
-      .limit(1)
-      .for("update");
-    if (!booking) return { refused: "not_held" as const };
-    // Superseding a referral nobody has answered would lift the hold, and the
-    // person at the counter would face a fresh questionnaire they have
-    // already learned the answer to (issue #1282). The referral is answered
-    // first; then the seat can go.
-    // Every live release on the seat, locked: a questionnaire that parks a
-    // referral commits before this read or waits until the split is done.
-    const live = await tx
-      .select({
-        status: waiverRecords.status,
-        medicalClearedAt: waiverRecords.medicalClearedAt,
-      })
-      .from(waiverRecords)
-      .where(
-        and(
-          eq(waiverRecords.shopId, input.shopId),
-          eq(waiverRecords.bookingId, input.bookingId),
-          isNull(waiverRecords.supersededAt),
-        ),
-      )
-      .for("update");
-    if (live.some((row) => row.status === "medical_review" && !row.medicalClearedAt)) {
-      return { refused: "medical_hold" as const };
-    }
-    const [person] = await tx
-      .insert(people)
-      .values({ shopId: input.shopId, fullName, email: null })
-      .returning({ id: people.id });
-    if (!person) throw new Error("splitBookingIdentity: person insert returned no row");
-    await tx.insert(personRoles).values({ personId: person.id, role: "diver" });
-    await tx
-      .update(bookings)
-      .set({
+    | { refused: Refusal }
+    | {
+        refused: null;
+        tripId: string;
+        matchedPersonId: string;
+        personId: string;
+        seats: Array<{ bookingId: string; tripId: string }>;
+      };
+  let split: Split;
+  try {
+    split = await db.transaction(async (tx): Promise<Split> => {
+      const now = nowDate();
+      const [booking] = await tx
+        .select({
+          tripId: bookings.tripId,
+          personId: bookings.personId,
+          bookedAs: bookings.identityBookedAs,
+        })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.id, input.bookingId),
+            eq(bookings.shopId, input.shopId),
+            isNotNull(bookings.identityUnconfirmedAt),
+            ne(bookings.status, "cancelled"),
+          ),
+        )
+        .limit(1)
+        .for("update");
+      if (!booking) return { refused: "not_held" as const };
+
+      // The other held seats booked under the same name and guessed onto the
+      // same diver: the same guess, repeated. Only on a departure that
+      // still exists (a deleted one has nobody to move), only those the form
+      // named, and only those still movable now: never a second seat on one
+      // departure (`movableSameNameSeats`), whatever the form posted.
+      const requested = new Set(input.sameNameSeatIds ?? []);
+      requested.delete(input.bookingId);
+      const candidates =
+        requested.size > 0 && booking.bookedAs
+          ? await tx
+              .select({ bookingId: bookings.id, tripId: bookings.tripId })
+              .from(bookings)
+              .innerJoin(trips, eq(trips.id, bookings.tripId))
+              .where(
+                and(
+                  eq(bookings.shopId, input.shopId),
+                  eq(bookings.personId, booking.personId),
+                  ne(bookings.id, input.bookingId),
+                  isNotNull(bookings.identityUnconfirmedAt),
+                  ne(bookings.status, "cancelled"),
+                  sql`lower(trim(${bookings.identityBookedAs})) = lower(trim(${booking.bookedAs}))`,
+                  eq(trips.shopId, input.shopId),
+                  liveTrip(),
+                ),
+              )
+              .for("update", { of: bookings })
+          : [];
+      const siblings = movableSameNameSeats(booking.tripId, candidates).filter((seat) =>
+        requested.has(seat.bookingId),
+      );
+      const seats = [{ bookingId: input.bookingId, tripId: booking.tripId }, ...siblings];
+      const seatIds = seats.map((seat) => seat.bookingId);
+
+      // A course with a minimum age measures it against this record, and so
+      // does the guardian rule: a record with no date reads as an adult and
+      // both fail open (H-08). The new diver is a stranger to the shop, so the
+      // date is asked for here rather than left for the dock (issue #2081).
+      if (!dateOfBirth) {
+        const gated = await tx
+          .select({ minimumAge: courses.minimumAge })
+          .from(trips)
+          .innerJoin(courses, eq(courses.id, trips.courseId))
+          .where(
+            and(
+              inArray(
+                trips.id,
+                seats.map((seat) => seat.tripId),
+              ),
+              eq(trips.shopId, input.shopId),
+              eq(courses.shopId, input.shopId),
+              isNotNull(courses.minimumAge),
+              liveTrip(),
+            ),
+          )
+          .limit(1);
+        if (gated.length > 0) return { refused: "date_of_birth_required" as const };
+      }
+
+      // Superseding a referral nobody has answered would lift the hold, and the
+      // person at the counter would face a fresh questionnaire they have
+      // already learned the answer to (issue #1282). The referral is answered
+      // first; then the seat can go.
+      // Every live release on every moving seat, locked: a questionnaire that
+      // parks a referral commits before this read or waits until the split is
+      // done.
+      const live = await tx
+        .select({
+          status: waiverRecords.status,
+          medicalClearedAt: waiverRecords.medicalClearedAt,
+        })
+        .from(waiverRecords)
+        .where(
+          and(
+            eq(waiverRecords.shopId, input.shopId),
+            inArray(waiverRecords.bookingId, seatIds),
+            isNull(waiverRecords.supersededAt),
+          ),
+        )
+        .for("update");
+      if (live.some((row) => row.status === "medical_review" && !row.medicalClearedAt)) {
+        return { refused: "medical_hold" as const };
+      }
+
+      // An address another live record holds stays with it: the shared inbox is
+      // usually exactly that, and `people_shop_email_unique` would refuse it.
+      if (email) {
+        const [taken] = await tx
+          .select({ id: people.id })
+          .from(people)
+          .where(
+            and(eq(people.shopId, input.shopId), eq(people.email, email), isNull(people.deletedAt)),
+          )
+          .limit(1);
+        if (taken) return { refused: "email_in_use" as const };
+      }
+
+      const [person] = await tx
+        .insert(people)
+        .values({
+          shopId: input.shopId,
+          fullName,
+          email,
+          phone: await storedPhone(tx, input.shopId, input.phone?.trim() || null),
+          dateOfBirth,
+        })
+        .returning({ id: people.id });
+      if (!person) throw new Error("splitBookingIdentity: person insert returned no row");
+      await tx.insert(personRoles).values({ personId: person.id, role: "diver" });
+      await tx
+        .update(bookings)
+        .set({
+          personId: person.id,
+          identityUnconfirmedAt: null,
+          identityBookedAs: null,
+          identityMatchedBy: null,
+        })
+        .where(and(inArray(bookings.id, seatIds), eq(bookings.shopId, input.shopId)));
+
+      // Any link or release on these seats may be the matched diver's: each
+      // seat asks for its own. The token goes too, so a link already sent is
+      // dead.
+      await tx
+        .update(waiverRecords)
+        .set({ supersededAt: now, tokenSealed: null })
+        .where(
+          and(
+            eq(waiverRecords.shopId, input.shopId),
+            inArray(waiverRecords.bookingId, seatIds),
+            isNull(waiverRecords.supersededAt),
+          ),
+        );
+      // Unsigned links follow the seat; nothing on them is sealed. Only what is
+      // filed under the matched diver: a placeholder's (`claimSeat`) stays put.
+      await tx
+        .update(waiverRecords)
+        .set({
+          personId: person.id,
+          draftSignerName: null,
+          draftMedicalAnswers: null,
+          draftAcknowledged: false,
+          draftGuardian: null,
+          // How the link last reached the matched diver's inbox or phone: a
+          // bounce or a provider id about *their* address, not the new diver's.
+          deliveryError: null,
+          deliveryProviderMessageId: null,
+          deliveryProviderStatus: null,
+          deliveryProviderStatusAt: null,
+          movedFromPersonId: booking.personId,
+          movedAt: now,
+          movedByPersonId: input.actorPersonId,
+        })
+        .where(
+          and(
+            eq(waiverRecords.shopId, input.shopId),
+            inArray(waiverRecords.bookingId, seatIds),
+            eq(waiverRecords.personId, booking.personId),
+            isNull(waiverRecords.signedAt),
+            isNull(waiverRecords.integrityHash),
+            isNull(waiverRecords.anonymizedAt),
+          ),
+        );
+
+      for (const bookingId of seatIds) {
+        await revokeBookingCapabilities(tx, { shopId: input.shopId, bookingId, now });
+      }
+      await tx
+        .delete(notificationSendQueue)
+        .where(
+          and(
+            eq(notificationSendQueue.shopId, input.shopId),
+            inArray(notificationSendQueue.bookingId, seatIds),
+            eq(notificationSendQueue.status, "queued"),
+          ),
+        );
+
+      await tx
+        .update(gearReservations)
+        .set({ personId: person.id })
+        .where(
+          and(
+            eq(gearReservations.shopId, input.shopId),
+            inArray(gearReservations.bookingId, seatIds),
+          ),
+        );
+      // Staff notes stay filed under the matched person (security review,
+      // 2026-10-06): a note was written while the seat read as theirs, and may
+      // be about them, so it is theirs to keep, export and erase.
+      return {
+        refused: null,
+        tripId: booking.tripId,
+        matchedPersonId: booking.personId,
         personId: person.id,
-        identityUnconfirmedAt: null,
-        identityBookedAs: null,
-        identityMatchedBy: null,
-      })
-      .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)));
-
-    // Any link or release on this seat may be the matched diver's: the seat
-    // asks for its own. The token goes too, so a link already sent is dead.
-    await tx
-      .update(waiverRecords)
-      .set({ supersededAt: now, tokenSealed: null })
-      .where(
-        and(
-          eq(waiverRecords.shopId, input.shopId),
-          eq(waiverRecords.bookingId, input.bookingId),
-          isNull(waiverRecords.supersededAt),
-        ),
-      );
-    // Unsigned links follow the seat; nothing on them is sealed. Only what is
-    // filed under the matched diver: a placeholder's (`claimSeat`) stays put.
-    await tx
-      .update(waiverRecords)
-      .set({
-        personId: person.id,
-        draftSignerName: null,
-        draftMedicalAnswers: null,
-        draftAcknowledged: false,
-        draftGuardian: null,
-        movedFromPersonId: booking.personId,
-        movedAt: now,
-        movedByPersonId: input.actorPersonId,
-      })
-      .where(
-        and(
-          eq(waiverRecords.shopId, input.shopId),
-          eq(waiverRecords.bookingId, input.bookingId),
-          eq(waiverRecords.personId, booking.personId),
-          isNull(waiverRecords.signedAt),
-          isNull(waiverRecords.integrityHash),
-          isNull(waiverRecords.anonymizedAt),
-        ),
-      );
-
-    await revokeBookingCapabilities(tx, { shopId: input.shopId, bookingId: input.bookingId, now });
-    await tx
-      .delete(notificationSendQueue)
-      .where(
-        and(
-          eq(notificationSendQueue.shopId, input.shopId),
-          eq(notificationSendQueue.bookingId, input.bookingId),
-          eq(notificationSendQueue.status, "queued"),
-        ),
-      );
-
-    await tx
-      .update(gearReservations)
-      .set({ personId: person.id })
-      .where(
-        and(
-          eq(gearReservations.shopId, input.shopId),
-          eq(gearReservations.bookingId, input.bookingId),
-        ),
-      );
-    await tx
-      .update(internalNotes)
-      .set({ personId: person.id })
-      .where(
-        and(eq(internalNotes.shopId, input.shopId), eq(internalNotes.bookingId, input.bookingId)),
-      );
-    return {
-      refused: null,
-      tripId: booking.tripId,
-      matchedPersonId: booking.personId,
-      personId: person.id,
-    };
-  });
+        seats,
+      };
+    });
+  } catch (error) {
+    // Two splits racing for the same address: the loser is told it is taken,
+    // the same as if it had lost the read above.
+    if (email && isUniqueConstraintViolation(error)) return { ok: false, reason: "email_in_use" };
+    throw error;
+  }
   if (split.refused) return { ok: false, reason: split.refused };
-  await recordTripActivity(db, {
-    shopId: input.shopId,
-    tripId: split.tripId,
-    actorPersonId: input.actorPersonId,
-    entry: { code: "identity_split", diver: fullName },
-  });
+  // One line per departure a seat moved off, so each departure's trail says
+  // what happened to its own roster.
+  for (const tripId of new Set(split.seats.map((seat) => seat.tripId))) {
+    await recordTripActivity(db, {
+      shopId: input.shopId,
+      tripId,
+      actorPersonId: input.actorPersonId,
+      entry: { code: "identity_split", diver: fullName },
+    });
+  }
   await recordDiverActivity(db, {
     shopId: input.shopId,
     personId: split.matchedPersonId,
     actorPersonId: input.actorPersonId,
     code: "identity_split_off",
   });
-  return { ok: true, personId: split.personId, tripId: split.tripId };
+  return { ok: true, personId: split.personId, tripId: split.tripId, seats: split.seats.length };
 }

@@ -25,10 +25,12 @@ import { getTripRoster, upcomingTripsWithCounts } from "./trips";
  *
  * BSAC arrived a change later, on the `dive-domain-expert` review of the first
  * widening: a national governing body with a full ISO-aligned ladder, and the
- * most common non-listed card on a Florida or Caribbean boat. It is still not
- * an exhaustive list — IANTD, SEI, ANDI, ACUC, PSAI and NASE remain `other`,
- * and the honest fix for those is a free-text companion to `other`, not an
- * ever-longer enum (glossary, "Other agency").
+ * most common non-listed card on a Florida or Caribbean boat. NSS-CDS, NACD and
+ * IANTD followed once Cavern became a gating specialty, since they issue most
+ * Florida cavern cards (issue #2091). It is still not an exhaustive list — SEI,
+ * ANDI, ACUC, PSAI and NASE remain `other`, and the honest fix for those is a
+ * free-text companion to `other`, not an ever-longer enum (glossary, "Other
+ * agency").
  */
 async function agencyContext() {
   const { db, shop } = await seededShopContext();
@@ -45,6 +47,10 @@ const ADDED_AGENCIES = [
   "raid",
   "gue",
   "bsac",
+  // The three that issue most Florida Cavern cards (issue #2091).
+  "nss_cds",
+  "nacd",
+  "iantd",
 ] as const satisfies readonly CertificationAgency[];
 
 describe("certification agencies (DOM-L1)", () => {
@@ -105,6 +111,23 @@ describe("certification agencies (DOM-L1)", () => {
     expect(specialty?.agency).toBe(agency);
     expect(nitrox?.agency).toBe(agency);
   });
+
+  it.each(["nss_cds", "nacd", "iantd"] as const)(
+    "records a Cavern card issued by %s under its own agency (#2091)",
+    async (agency) => {
+      const { db, shop, rosterEntry } = await agencyContext();
+
+      const cavern = await createSpecialtyCertification(db, {
+        shopId: shop.id,
+        personId: rosterEntry.person.id,
+        agency,
+        specialty: "cavern",
+        identifier: `${agency.toUpperCase()}-CAVERN-1`,
+      });
+
+      expect(cavern).toMatchObject({ agency, specialty: "cavern" });
+    },
+  );
 
   it("clears a cert gate on the level, never on whose logo is on the card", async () => {
     const { db, shop, reef, rosterEntry } = await agencyContext();

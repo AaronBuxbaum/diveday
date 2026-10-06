@@ -214,7 +214,7 @@ const routes: SeedRoute[] = [
     // Body first past the guard. It names one trip and slides its departure
     // into the past, so a route answering on a misconfigured deployment would
     // be telling a real shop's counter that a boat it can still see on the
-    // board has already sailed — which is what opens "Not here?" against a
+    // board has already sailed — which is what opens "Not here" against a
     // diver who is standing there.
     expectPastTheGuard: expectInvalidBody,
   },

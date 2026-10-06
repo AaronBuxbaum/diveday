@@ -21,4 +21,15 @@ describe("heldSeatBlockers", () => {
       ]).map((blocker) => blocker.code),
     ).toEqual(["identity_unconfirmed", "payment_due"]);
   });
+
+  it("keeps the blockers about the system, which no identity answer clears", () => {
+    expect(
+      heldSeatBlockers([
+        { code: "identity_unconfirmed" },
+        { code: "readiness_unavailable" },
+        { code: "requirements_not_configured" },
+        { code: "under_minimum_age" },
+      ]).map((blocker) => blocker.code),
+    ).toEqual(["identity_unconfirmed", "readiness_unavailable", "requirements_not_configured"]);
+  });
 });

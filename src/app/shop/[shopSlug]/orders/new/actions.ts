@@ -175,7 +175,7 @@ export async function createOrderAction(formData: FormData) {
   }
   // `createOrder` enqueued an `order.created` event for every connected
   // integration. Drain it after this response rather than waiting for the
-  // half-hourly cron (ADR 20260919-integration-delivery-is-write-driven).
+  // hourly cron (ADR 20260919-integration-delivery-is-write-driven).
   // `after` still runs when the redirect below throws, which is how a Server
   // Function ends.
   dispatchIntegrationsAfterResponse();

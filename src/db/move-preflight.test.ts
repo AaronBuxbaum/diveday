@@ -1,6 +1,7 @@
 import { and, asc, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { fileScopedShopContext } from "@/test/db";
+import { createBoat } from "./boats";
 import { recordRollCall } from "./manifests";
 import { DELIVERY_KIND_CLASSIFICATION, getMovePreflight } from "./move-preflight";
 import { countTripOrders } from "./orders";
@@ -306,5 +307,44 @@ describe("getMovePreflight", () => {
       timeZone,
     });
     expect(afterIt?.sections.some((section) => section.kind === "crew")).toBe(false);
+  });
+
+  /**
+   * **One hull, one departure at a time** (H-80, issue #1780). The boat line
+   * crosses the same seam the crew lines do, and leads them.
+   */
+  it("carries the boat clash for the hours it is being moved into, ahead of the crew", async () => {
+    const timeZone = "Pacific/Honolulu";
+    await ctx.db.update(shops).set({ timezone: timeZone }).where(eq(shops.id, ctx.shop.id));
+    const hull = await createBoat(ctx.db, ctx.shop.id, "Preflight Hull", 20);
+    const moving = await createTrip(ctx.db, {
+      shopId: ctx.shop.id,
+      title: "The hull being moved",
+      startsAt: new Date("2030-08-01T18:00:00Z"),
+      endsAt: new Date("2030-08-01T22:00:00Z"),
+      capacity: 6,
+      boatId: hull.id,
+    });
+    const other = await createTrip(ctx.db, {
+      shopId: ctx.shop.id,
+      title: "Thursday's charter",
+      startsAt: new Date("2030-08-05T18:00:00Z"),
+      endsAt: new Date("2030-08-05T22:00:00Z"),
+      capacity: 6,
+      boatId: hull.id,
+    });
+    if (!moving || !other) throw new Error("departures not created");
+
+    const onOpen = await getMovePreflight(ctx.db, ctx.shop.id, moving.id);
+    expect(onOpen?.sections.some((section) => section.kind === "boat")).toBe(false);
+
+    const intoIt = await getMovePreflight(ctx.db, ctx.shop.id, moving.id, {
+      startsAt: new Date("2030-08-05T18:00:00Z"),
+      timeZone,
+    });
+    expect(intoIt?.sections[0]).toEqual({
+      kind: "boat",
+      clashes: [{ boat: "Preflight Hull", departure: "Thursday's charter" }],
+    });
   });
 });

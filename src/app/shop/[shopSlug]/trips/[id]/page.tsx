@@ -10,6 +10,7 @@ import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import {
+  canPersonManageOrders,
   canPersonManagePaymentSettings,
   canPersonRefund,
   canPersonRetireMedicalRefusal,
@@ -190,6 +191,7 @@ export default async function ManageTripPage({
     mayWriteOffPayment,
     stageReading,
     mayRetireRefusal,
+    canManageOrders,
   ] = await Promise.all([
     getTripOverview(db, shop, tripId, session.user.personId),
     getTripGuests(db, shop, tripId, { diverQuery: diverq, confirmName }),
@@ -205,6 +207,9 @@ export default async function ManageTripPage({
     latestTripStage(db, shop.id, tripId),
     // Who may give a refused seat a fresh release; the action re-checks.
     canPersonRetireMedicalRefusal(db, shop.id, session.user.personId),
+    // The per-seat "Create order" door (issue #1925): read for itself, not
+    // borrowed from `mayDiscount`, though both are owner/manager today.
+    canPersonManageOrders(db, shop.id, session.user.personId),
   ]);
   if (!overview || !guests) notFound();
   const {
@@ -225,8 +230,14 @@ export default async function ManageTripPage({
     startWall,
     endWall,
     pulse,
+    boatClashes,
     crew,
   } = overview;
+  // One hull, one departure at a time (H-80, issue #1780). A called-off
+  // departure holds no hull, and `boatClashes` answers nothing for one anyway.
+  const liveBoatClashes = cancelled ? [] : boatClashes;
+  const boatClashText = (clash: (typeof boatClashes)[number]) =>
+    t("trips.pulse.boatClash", { boat: clash.boatName, departure: clash.otherTitle });
   const { crewIds, tripRoleByPerson, crewGap, ratioGap, languageGap, onShiftIds, clashes } = crew;
   // Same tone as underTargetNote below: informs, refuses nothing (issue
   // #708). Each missing language is named in the reader's own locale
@@ -345,6 +356,14 @@ export default async function ManageTripPage({
               },
             ]
           : []),
+        // The hull is on another departure at these hours. It holds the boat
+        // up as squarely as a missing instructor does, and the fix is on one
+        // of the two departures, so the door opens the other one.
+        ...liveBoatClashes.map((clash) => ({
+          text: boatClashText(clash),
+          href: shopPath(shopSlug, "trips", clash.otherTripId),
+          tone: "danger" as const,
+        })),
         ...(crewGap.code === "over_ratio"
           ? [
               {
@@ -872,7 +891,26 @@ export default async function ManageTripPage({
                 {
                   id: "about-crew",
                   label: t("trips.about.boatAndCrew"),
-                  value: boatCrewSummary,
+                  // The Details form is the door that changes the boat, and it
+                  // redirects here, so the hull's clash rides on this row as
+                  // well as on the Divers tab's pulse.
+                  value:
+                    liveBoatClashes.length > 0 ? (
+                      <>
+                        {boatCrewSummary}
+                        {liveBoatClashes.map((clash) => (
+                          <Link
+                            key={clash.otherTripId}
+                            href={shopPath(shopSlug, "trips", clash.otherTripId)}
+                            className="mt-0.5 block font-medium text-danger hover:underline"
+                          >
+                            {boatClashText(clash)}
+                          </Link>
+                        ))}
+                      </>
+                    ) : (
+                      boatCrewSummary
+                    ),
                   editLabel: t("trips.crew.edit"),
                   // **A row with open work stays open** (principles.md §9's
                   // "collapse the settled row", read the other way). A boat with
@@ -1144,6 +1182,7 @@ export default async function ManageTripPage({
               namesakeRefusedBookingId={notice === "waiver-guardian-name" ? bid : undefined}
               mayDiscount={mayDiscount}
               mayWriteOffPayment={mayWriteOffPayment}
+              canManageOrders={canManageOrders}
               compact
               actions={rosterActions}
             />

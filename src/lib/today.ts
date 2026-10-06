@@ -20,6 +20,7 @@ import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 import type { SeasonStart } from "./season";
 import type { TripPhase } from "./trip-phase";
 import type { TripStageReading } from "./trip-stages";
+import { hasReturned, hasSailed } from "./trips";
 import { utcToWallTime } from "./zoned";
 
 /**
@@ -51,8 +52,6 @@ import { utcToWallTime } from "./zoned";
 /** How soon the work has to be done, derived from the departure it belongs to. */
 export type TodayUrgency = "imminent" | "now" | "soon" | "later";
 
-const URGENCY_RANK: Record<TodayUrgency, number> = { imminent: 0, now: 1, soon: 2, later: 3 };
-
 /** The next boat out — close enough that "later today" isn't precise enough. */
 const IMMINENT_WINDOW_MS = 3 * HOUR_MS;
 /** Anything departing inside a day is "get it done today" work. */
@@ -82,6 +81,8 @@ export type TodayActionKind =
   | "instructor_missing"
   | "uncrewed_course"
   | "uncrewed_departure"
+  | "crew_clash"
+  | "crew_clash_sailed"
   | "crew_below_target"
   | "waitlist_seat"
   | "last_minute_fill"
@@ -131,6 +132,18 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // you row that told the same diver's blocker as if they were still ashore.
   // Its own step under the crew count, never a tie a sort could reverse.
   blocked_aboard: 3.5,
+  // **A boat that left with somebody also rostered on another departure at
+  // those hours** (H-80, issue #1814). Nobody has said anyone is missing, so it
+  // sits under every roll-call row and under a blocked diver already aboard,
+  // which is a named person with a known problem; but the manifest may name a
+  // crew member who is on the other boat, and souls-on-board is read over the
+  // radio, so it sits above every boarding-time blocker. Severity only breaks
+  // ties: Needs you ranks tone first (`sortStationRows`), and every after-dive
+  // roll-call row is danger where this is a warning, so a missing diver always
+  // leads it (dive-domain-expert review, 2026-10-06). Read from the roster
+  // (`crewClashesByTrip`), never from roll-call events: the subject rule above
+  // is untouched.
+  crew_clash_sailed: 3.7,
   medical_review: 4,
   // Tied with the hold it settles, deliberately. This table ranks by how long a
   // fix takes to land, and both answers put the same diver off the same boat —
@@ -166,6 +179,11 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // `instructor_missing` is a session whose divers **are** supervised and
   // which cannot certify or enrol them — a sale and a signature, not a boat.
   uncrewed_departure: 11,
+  // **One person rostered on two departures at once** (H-80, issue #1776). One
+  // of the two boats will sail without them, so it sits beside the zero-crew
+  // row rather than with the advisory ones; it ranks just under it because the
+  // boat it names does have somebody rostered, and the fix is one call.
+  crew_clash: 11.5,
   // A course session short of its instructor with somebody else in the water.
   // It refuses a sale (`course_unstaffed`, src/db/bookings.ts) and no
   // certification can be issued from it, which is why it is not merely
@@ -361,6 +379,17 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
     "divemaster",
     "captain",
   ],
+  // The crew rows' audience: the divemaster and captain at the rail are as
+  // likely to notice they are on two boats as the office is to fix it.
+  crew_clash: ["owner", "manager", "instructor", "assistant_instructor", "divemaster", "captain"],
+  crew_clash_sailed: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+  ],
   // The wider of its two parents' audiences. `instructor_missing` is
   // owner/manager/instructor because only they can close it; this row says the
   // boat has nobody in the water, which the divemaster and captain reading the
@@ -393,7 +422,19 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   readiness_unavailable: ["owner", "manager"],
   waitlist_seat: ["owner", "manager"],
   last_minute_fill: ["owner", "manager"],
-  email_delivery: ["owner", "manager"],
+  // Every staff role (issue #2066, decided 2026-10-05). The resend retries only
+  // mail already on the failed-delivery list, so it puts nothing new in front of
+  // anyone — the same reasoning that leaves the invoice and waiver resends open
+  // to all staff (ADR 20260803-invoicing-role-gate). The desk fixes a bounce.
+  email_delivery: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+    "crew",
+  ],
   stuck_payment_operation: ["owner", "manager"],
   failed_photo_deletion: ["owner", "manager"],
   owed_refund: ["owner", "manager"],
@@ -526,6 +567,10 @@ export const ACTION_KIND_META = {
   // water yet, but it is not paperwork either.
   uncrewed_departure: { tone: "warning" },
   uncrewed_course: { tone: "warning" },
+  // Warning both: a clash is a roster that contradicts itself, not a person
+  // somebody has said is missing — that is `roll_call_missing_crew`'s danger.
+  crew_clash: { tone: "warning" },
+  crew_clash_sailed: { tone: "warning" },
   nitrox_gate: { tone: "warning" },
   high_wind_alert: { tone: "warning" },
   dive_prep: { tone: "neutral" },
@@ -627,6 +672,44 @@ export const ROLL_CALL_GAP_KINDS: Record<RollCallGapReason, TodayActionKind> = {
 export function rollCallGapUrgency(reason: RollCallGapReason, stale: boolean): TodayUrgency {
   if (reason === "departure_uncounted" || reason === "no_roll_call") return "now";
   return stale ? "soon" : "imminent";
+}
+
+/**
+ * **Where a crew clash stands, for Today** (H-80, issues #1776 and #1814).
+ *
+ * Asked of the subject departure's own legs the clash falls on, not of the
+ * departure: a three-day course clashing on its third morning has a clash to
+ * fix on days one and two and a boat out with it on day three.
+ *
+ * - `"out"` — some clashing leg has left and is not home. "Left" is
+ *   `hasSailed` (the buffered hour every "has the boat gone" question
+ *   shares, `.claude/rules/domain.md`), or earlier when the crew have already
+ *   recorded the departure roll call: their tap beats the clock, as in
+ *   `tripPhaseOf`. The roll call is the departure's, so it only speaks for its
+ *   first leg.
+ * - `"ahead"` — no clashing leg is out, and one is still to sail.
+ * - `null` — every clashing leg is home (`hasReturned`): permanent and
+ *   unfixable, said nowhere.
+ */
+export type CrewClashPhase = "ahead" | "out";
+
+export function crewClashPhase(input: {
+  legs: readonly { startsAt: Date; endsAt: Date }[];
+  /** The departure's own `startsAt`, which names its first leg. */
+  departureStartsAt: Date;
+  /** Somebody has been recorded at this departure's `departure` checkpoint. */
+  departureRollCallRecorded: boolean;
+  now: Date;
+}): { phase: CrewClashPhase; leg: { startsAt: Date; endsAt: Date } } | null {
+  const { legs, departureStartsAt, departureRollCallRecorded, now } = input;
+  const live = legs.filter((leg) => !hasReturned(leg.endsAt, now));
+  const left = (leg: { startsAt: Date }) =>
+    hasSailed(leg.startsAt, now) ||
+    (departureRollCallRecorded && leg.startsAt.getTime() === departureStartsAt.getTime());
+  const out = live.find(left);
+  if (out) return { phase: "out", leg: out };
+  const ahead = live[0];
+  return ahead ? { phase: "ahead", leg: ahead } : null;
 }
 
 export type TodayAction = {
@@ -1236,24 +1319,6 @@ export function collapseOwedRefunds(
   return actions;
 }
 
-/**
- * Chronological first: the 7 a.m. boat's problems outrank the 2 p.m. boat's,
- * whatever they are. Severity only decides order inside one departure.
- */
-export function sortActions(actions: readonly TodayAction[]): TodayAction[] {
-  return [...actions].sort((a, b) => {
-    const urgency = URGENCY_RANK[a.urgency] - URGENCY_RANK[b.urgency];
-    if (urgency !== 0) return urgency;
-    const due =
-      (a.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER) -
-      (b.dueAt?.getTime() ?? Number.MAX_SAFE_INTEGER);
-    if (due !== 0) return due;
-    const severity = KIND_SEVERITY[a.kind] - KIND_SEVERITY[b.kind];
-    if (severity !== 0) return severity;
-    return a.subject.localeCompare(b.subject);
-  });
-}
-
 export type RoleLens = "boat" | "sessions" | null;
 
 /**
@@ -1405,7 +1470,12 @@ export type DayStation = SpineDeparture & {
 export type DaySpine = {
   /** Today's departures, clock order. Never re-ordered by the role lens. */
   stations: DayStation[];
-  /** Rows bound to no departure — the "At the desk" group. */
+  /**
+   * Rows with no station to hang on: those bound to no departure, those about
+   * a boat that is out past the spine's window (`SpineWork.outTripIds`), and
+   * every open after-dive head count whose boat has no station, whatever its
+   * phase or day. All of them rank in Needs you.
+   */
   desk: TodayAction[];
   /** The collapsed Tomorrow disclosure's body and count. */
   tomorrow: { stations: DayStation[]; jobs: number };
@@ -1448,7 +1518,34 @@ export function sortStationRows(actions: readonly TodayAction[]): TodayAction[] 
 export type SpineWork = {
   departures: readonly SpineDeparture[];
   actions: readonly TodayAction[];
+  /**
+   * Departures that have started and are not home (`TodayWork.outTripIds`),
+   * cancelled-after-boarding included. Every row about one of them that has no
+   * station is today's work, not the week's: a blocked diver aboard or a crew
+   * clash on a boat that sailed must not become a number behind a link to the
+   * board (issues #2064, #1814). An after-dive head count that is still open
+   * goes to Needs you whether or not its boat is listed here — a boat that is
+   * already back, last night's included, is
+   * {@link AFTER_DIVE_ROLL_CALL_KINDS}' case (issue #2131). Optional so a
+   * hand-built spine in a test can leave it out.
+   */
+  outTripIds?: readonly string[];
 };
+
+/**
+ * The open after-dive head counts — somebody recorded not back, or somebody
+ * who boarded with no result yet, diver or crew. A person may be in the water,
+ * so with no live station to hang on they rank in Needs you whatever the
+ * boat's phase or day, never in the week count (issue #2131). The dock-count
+ * kinds (`roll_call_departure_open`, `roll_call_not_started`) are paperwork and
+ * stay out: thirty days of them would bury the rows that matter.
+ */
+const AFTER_DIVE_ROLL_CALL_KINDS: ReadonlySet<TodayActionKind> = new Set([
+  ROLL_CALL_GAP_KINDS.missing_diver,
+  ROLL_CALL_GAP_KINDS.missing_crew,
+  ROLL_CALL_GAP_KINDS.after_dive_uncounted,
+  ROLL_CALL_GAP_KINDS.crew_uncounted,
+]);
 
 function stationFor(departure: SpineDeparture, rows: readonly TodayAction[]): DayStation {
   return {
@@ -1467,21 +1564,44 @@ function stationFor(departure: SpineDeparture, rows: readonly TodayAction[]): Da
  * the horizon is one queue and a job is counted exactly once, wherever its boat
  * happens to sail.
  *
+ * **A boat that is out but no longer a station still speaks at the desk.**
+ * Stations come from a forward-looking reader, so a departure that left more
+ * than an hour ago, or a multi-day course past its first morning, has none. A
+ * row about one of those (`today.outTripIds`) files under the desk, where it
+ * still names its own boat, rather than into the week's count behind a link:
+ * a boat on the water with a question about who is aboard is today's work
+ * (dive-domain-expert review of H-80, 2026-10-06).
+ *
  * Stations arrive in clock order, and nothing re-orders them: the crew-first
  * ordering the departure board used is deliberately gone,
  * because a spine that puts 1:00 PM above 7:00 AM for one reader is no longer
  * a clock.
  */
 export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpine {
+  // Two boats at the same minute read by title before id: ids are minted
+  // fresh by every seed, so an id tiebreak alone swaps the two cards from one
+  // run to the next.
   const byClock = (a: SpineDeparture, b: SpineDeparture) =>
-    a.startsAt.getTime() - b.startsAt.getTime() || a.tripId.localeCompare(b.tripId);
+    a.startsAt.getTime() - b.startsAt.getTime() ||
+    a.title.localeCompare(b.title) ||
+    a.tripId.localeCompare(b.tripId);
   const todayDepartures = [...today.departures].sort(byClock);
   const tomorrowDepartures = [...tomorrow.departures].sort(byClock);
 
+  const stationed = new Set([
+    ...todayDepartures.map((departure) => departure.tripId),
+    ...tomorrowDepartures.map((departure) => departure.tripId),
+  ]);
+  const out = new Set(today.outTripIds ?? []);
   const rowsByTrip = new Map<string, TodayAction[]>();
   const desk: TodayAction[] = [];
+  const liveTripIds = new Set(todayDepartures.map((departure) => departure.tripId));
   for (const action of today.actions) {
-    if (!action.departure) {
+    if (
+      !action.departure ||
+      (out.has(action.departure.tripId) && !stationed.has(action.departure.tripId)) ||
+      (!liveTripIds.has(action.departure.tripId) && AFTER_DIVE_ROLL_CALL_KINDS.has(action.kind))
+    ) {
       desk.push(action);
       continue;
     }
@@ -1497,12 +1617,12 @@ export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpin
     stationFor(departure, rowsByTrip.get(departure.tripId) ?? []),
   );
 
-  const placed = new Set([
-    ...todayDepartures.map((departure) => departure.tripId),
-    ...tomorrowDepartures.map((departure) => departure.tripId),
-  ]);
   const weekJobs = today.actions.filter(
-    (action) => action.departure && !placed.has(action.departure.tripId),
+    (action) =>
+      action.departure &&
+      !stationed.has(action.departure.tripId) &&
+      !out.has(action.departure.tripId) &&
+      !AFTER_DIVE_ROLL_CALL_KINDS.has(action.kind),
   ).length;
 
   return {

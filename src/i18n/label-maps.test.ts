@@ -23,6 +23,7 @@ import {
   type ReadinessBlockerParams,
 } from "@/lib/readiness";
 import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
+import { SUIT_CHOICES } from "@/lib/rentals";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { ROLL_CALL_GAP_KINDS, type TodaySeason } from "@/lib/today";
 import { buddyAlertText } from "./buddy-labels";
@@ -83,6 +84,7 @@ import { rentalItemLabel } from "./rental-labels";
 import { DEFAULT_DIVER_LOCALE, DIVER_LOCALES, type DiverLocale } from "./settings";
 import { staffTranslator } from "./staff-messages";
 import { STAFF_ROLE_LABEL_KEYS, staffRoleLabel } from "./staff-role-labels";
+import { suitChoiceLabel } from "./suit-choice-labels";
 import { THREAD_STEP_STATE_KEYS, THREAD_STEP_TITLE_KEYS } from "./thread-labels";
 import {
   ACTION_KIND_KEYS,
@@ -665,6 +667,13 @@ const CASES: readonly LabelMapCase[] = [
     ),
   },
   {
+    module: "suit-choice-labels.ts",
+    map: "SUIT_CHOICE_KEYS",
+    rows: codeRows(SUIT_CHOICES, (locale, choice) =>
+      suitChoiceLabel(staffTranslator(locale), choice),
+    ),
+  },
+  {
     module: "staff-role-labels.ts",
     map: "STAFF_ROLE_LABEL_KEYS",
     rows: codeRows(keysOf(STAFF_ROLE_LABEL_KEYS), (locale, role) =>
@@ -850,6 +859,9 @@ const SAME_IN_BOTH_LOCALES = new Map<string, string>([
   ["DIVER_CERTIFICATION_AGENCY_KEYS.raid", "agency acronym"],
   ["DIVER_CERTIFICATION_AGENCY_KEYS.gue", "agency acronym"],
   ["DIVER_CERTIFICATION_AGENCY_KEYS.bsac", "agency acronym"],
+  ["DIVER_CERTIFICATION_AGENCY_KEYS.nss_cds", "agency acronym"],
+  ["DIVER_CERTIFICATION_AGENCY_KEYS.nacd", "agency acronym"],
+  ["DIVER_CERTIFICATION_AGENCY_KEYS.iantd", "agency acronym"],
   // The five compass points Spanish spells with the same letter. The three it
   // does not — O, SO, NO — are the whole reason `compass-labels.ts` exists, so
   // they are deliberately absent from this list and asserted as different.

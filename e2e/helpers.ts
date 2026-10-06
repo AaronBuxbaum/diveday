@@ -416,6 +416,8 @@ export async function createTrip(
     cancellationWindowHours?: number;
     minimumBookings?: number;
     minimumDecisionHours?: number;
+    /** A boat from the shop's fleet, by name (the option reads "<name> (<seats> seats)"). */
+    boat?: string;
   },
 ): Promise<void> {
   // Always the full depth (`?add=full`), even for a caller that only fills the
@@ -433,6 +435,16 @@ export async function createTrip(
   await page.getByLabel("Date").fill(options.date);
   await page.getByLabel("Departs").fill(options.departsAt);
   await page.getByLabel("Returns").fill(options.returnsAt);
+  if (options.boat !== undefined) {
+    // Before the seats: picking a boat sets the seat count to its capacity.
+    const select = page.locator('select[name="boatId"]');
+    const value = await select
+      .locator("option", { hasText: `${options.boat} (` })
+      .first()
+      .getAttribute("value");
+    if (!value) throw new Error(`createTrip: no boat named ${options.boat}`);
+    await select.selectOption(value);
+  }
   if (options.capacity !== undefined) {
     await page.getByLabel("Seats").fill(String(options.capacity));
   }
@@ -743,7 +755,7 @@ export async function openSettingsRow(page: Page, heading: string) {
  * exactly like `openPrivateNotes` in add-diver.spec.ts.
  */
 export async function openRosterDetails(row: Locator): Promise<void> {
-  // The row's own disclosure, named by its mark — not the desk's "Not here?"
+  // The row's own disclosure, named by its mark — not the desk's "Not here"
   // door, which is also a direct `<details>` of the row once arrivals open.
   await openIfClosed(
     row

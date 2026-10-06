@@ -19,6 +19,7 @@ import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { GroupLabel } from "@/components/ui/ledger";
 import { StatusMark, StatusMarkColumn } from "@/components/ui/StatusMark";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import type { SameNameHeldSeat } from "@/db/bookings";
 import type { listBookingNotes } from "@/db/operations";
 import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
@@ -35,7 +36,7 @@ import {
 } from "@/i18n/readiness-labels";
 import { drysuitCardWarningText, rentalFitLineText } from "@/i18n/rental-labels";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
+import { ageOnDate, birthdayCallout, isMinorOnDate, maxPlausibleBirthDate } from "@/lib/age";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { mailtoHref, telHref } from "@/lib/contact-links";
@@ -44,9 +45,10 @@ import { rentalFitLine } from "@/lib/dive-prep";
 import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import { checkDrysuitCard } from "@/lib/drysuit-card";
 import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
-import { formatDateTimeTz } from "@/lib/format";
+import { formatDateTimeTz, formatShortDate, formatTimeTz } from "@/lib/format";
 import { guardianSignatureOf, guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { heldSeatBlockers } from "@/lib/identity-match";
+import { cachedListFormat } from "@/lib/intl-cache";
 import { flaggedMedicalPrompts } from "@/lib/medical";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { paymentSourceLine } from "@/lib/payment-source";
@@ -226,10 +228,13 @@ export function RosterSection({
   markWaiverInPersonAction,
   markPaymentAction,
   mayWriteOffPayment,
+  canManageOrders,
   removeBookingAction,
   confirmIdentityAction,
   splitIdentityAction,
   sendNewWaiverAction,
+  sameNameHeldSeats,
+  splitAsksDateOfBirth = false,
   notesByBooking,
   addNoteAction,
   deleteNoteAction,
@@ -281,11 +286,10 @@ export function RosterSection({
    * a diver's fit the way the packing list does.
    *
    * A stored `rents_*` flag outlives the shop dropping that item, deliberately
-   * (issue #1755) — but the two things this row derives *from* the drysuit flag
-   * are conditioned on a suit actually coming off the wall: the card advisory,
-   * and "size up over the boot" on the fit line. Omitted, both are raised as
-   * before; over-warning is the safe direction for something that gates
-   * nothing (`checkDrysuitCard`, `src/lib/dive-prep.ts`'s `inShopDrysuit`).
+   * (issue #1755), and the fit line marks such a piece as no longer rented.
+   * Omitted, every piece reads as offered. The drysuit consequences (weight
+   * check, fin sizing, the card advisory) do not read it: they follow
+   * `dives_dry`, what the diver wears (H-78).
    */
   shopRentalItems?: readonly string[];
   nitroxByBooking: NitroxByBooking;
@@ -308,6 +312,13 @@ export function RosterSection({
    * (issue #714). Recording counter cash stays open to the whole crew.
    */
   mayWriteOffPayment: boolean;
+  /**
+   * Whether this staffer may raise an invoice (`canPersonManageOrders`). The
+   * per-seat "Create order" needs this *and* `paymentsConnected`: without it
+   * `orders/new` bounces the reader to the Orders index (issue #1925). Hiding
+   * the link is a courtesy; the route and its action refuse on their own.
+   */
+  canManageOrders: boolean;
   removeBookingAction: (formData: FormData) => void;
   confirmIdentityAction: (formData: FormData) => void;
   /** "Different person": the held seat becomes a new diver (`splitBookingIdentity`). */
@@ -318,6 +329,10 @@ export function RosterSection({
    * (`canRetireMedicalRefusal`), and then the row offers no such door.
    */
   sendNewWaiverAction?: (formData: FormData) => void;
+  /** Per held seat, the other held seats a split may move with it (`sameNameHeldSeats`). */
+  sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
+  /** This seat's departure is a course with a minimum age, so a split must take a date of birth. */
+  splitAsksDateOfBirth?: boolean;
   notesByBooking: Map<string, RosterPrivateNote[]>;
   addNoteAction: (formData: FormData) => void;
   deleteNoteAction: (formData: FormData) => void;
@@ -368,6 +383,9 @@ export function RosterSection({
   showSummaryHeading?: boolean;
 }) {
   const t = staffTranslator(locale);
+  // One answer for the seat's foot row: the link and the flush of the control
+  // after it read the same thing, so they cannot disagree.
+  const offersCreateOrder = paymentsConnected && canManageOrders;
   const WAIVER_CONTROLS = Object.fromEntries(
     Object.entries(WAIVER_CONTROL_KEYS).map(([status, entry]) => [
       status,
@@ -404,11 +422,23 @@ export function RosterSection({
   // shared with other divers, listed above" told a staffer neither what was
   // wrong nor what to do, and a blocker is fixed diver by diver, so there is
   // no batched action a shared line could stand for. Each row says its own.
+  //
+  // The advisory is measured against the record the seat is attached to, so
+  // on a held seat it is a fact about the matched person — `junior_age` says
+  // they are a minor, `no_card` or a ceiling says what card they hold — and is
+  // withheld wherever it would show or count (security re-review, issue #1690).
+  const seatDepthAdvisory = (booking: RosterEntry["booking"]) => {
+    const row = readinessByBooking.get(booking.id);
+    const held =
+      Boolean(booking.identityUnconfirmedAt) ||
+      Boolean(row?.readiness?.blockers.some((blocker) => blocker.code === "identity_unconfirmed"));
+    return held ? undefined : row?.depthAdvisory;
+  };
   const advisorySentenceCounts = new Map<string, number>();
   for (const { booking } of roster) {
-    const row = readinessByBooking.get(booking.id);
-    if (row?.depthAdvisory?.status === "exceeds") {
-      const text = depthWarningText(t, row.depthAdvisory);
+    const depthAdvisory = seatDepthAdvisory(booking);
+    if (depthAdvisory?.status === "exceeds") {
+      const text = depthWarningText(t, depthAdvisory);
       advisorySentenceCounts.set(text, (advisorySentenceCounts.get(text) ?? 0) + 1);
     }
   }
@@ -434,9 +464,9 @@ export function RosterSection({
     const currentWaiver = waiverByBooking.get(booking.id)?.waiver ?? null;
     const status = waiverState(currentWaiver);
     const control = WAIVER_CONTROLS[status];
-    const identityUnconfirmed = Boolean(
-      readiness?.blockers.some((blocker) => blocker.code === "identity_unconfirmed"),
-    );
+    const identityUnconfirmed =
+      Boolean(booking.identityUnconfirmedAt) ||
+      Boolean(readiness?.blockers.some((blocker) => blocker.code === "identity_unconfirmed"));
     // A name with no number reads as "on file" but is unreachable in an
     // incident — same both-fields rule Today's nudge uses (src/db/today.ts).
     const hasEmergencyContact = Boolean(
@@ -468,7 +498,7 @@ export function RosterSection({
    */
   const isSettled = (entry: RosterEntry): boolean => {
     const { booking } = entry;
-    const depth = readinessByBooking.get(booking.id)?.depthAdvisory;
+    const depth = seatDepthAdvisory(booking);
     const depthText = depth?.status === "exceeds" ? depthWarningText(t, depth) : null;
     const depthShared = depthText !== null && sharedAdvisoryTexts.has(depthText);
     return (
@@ -556,9 +586,12 @@ export function RosterSection({
     const ownWaiver = readinessByBooking.get(booking.id)?.bookingWaiver ?? null;
     const waiverControl = WAIVER_CONTROLS[refusalRetired ? waiverState(ownWaiver) : waiverStatus];
     const nitrox = nitroxByBooking.get(booking.id);
-    const identityUnconfirmed = Boolean(
-      readiness?.blockers.some((blocker) => blocker.code === "identity_unconfirmed"),
-    );
+    // Either signal holds the seat, so a readiness read that failed closed
+    // (and so raised no identity blocker) still withholds (security review
+    // 2026-10-06).
+    const identityUnconfirmed =
+      Boolean(booking.identityUnconfirmedAt) ||
+      Boolean(readiness?.blockers.some((blocker) => blocker.code === "identity_unconfirmed"));
     /**
      * **The flag gates disclosure as well as boarding** (security review
      * 2026-09-11). This seat attached itself to an existing person on a guess
@@ -601,8 +634,9 @@ export function RosterSection({
     );
     // A warning, never a gate: the site goes deeper than this diver's
     // training, which an instructor may well have already planned around
-    // (H-08). It sits apart from the blocker list for that reason.
-    const depth = readinessByBooking.get(booking.id)?.depthAdvisory;
+    // (H-08). It sits apart from the blocker list for that reason. Withheld
+    // on a held seat, as everything measured against the matched person is.
+    const depth = showsPersonDetail ? readinessByBooking.get(booking.id)?.depthAdvisory : undefined;
     const notes = notesByBooking.get(booking.id) ?? [];
     // This row's blockers, each in its own sentence. The held-identity one
     // names both people the guess was between (`identityReasonText`), so the
@@ -626,14 +660,14 @@ export function RosterSection({
         : [];
     const depthText = depth?.status === "exceeds" ? depthWarningText(t, depth) : null;
     const depthShared = depthText !== null && sharedAdvisoryTexts.has(depthText);
-    // The suit goes out to a diver the shop has no drysuit card for. Behind
-    // the same confirmation as the sizes and the nitrox word below, because
-    // both halves of the question are the matched person's own record.
+    // A diver in a drysuit, theirs or ours, with no drysuit card on file
+    // (H-78). Behind the same confirmation as the sizes and the nitrox word
+    // below, because both halves of the question are the matched person's own
+    // record.
     const drysuitCard = showsPersonDetail
       ? checkDrysuitCard(
-          rentalFitByBooking.get(booking.id)?.rentsDrysuit ?? false,
+          rentalFitByBooking.get(booking.id)?.divesDry ?? false,
           readinessByBooking.get(booking.id)?.specialtyCertifications ?? [],
-          shopRentalItems,
         )
       : ({ status: "ok" } as const);
     // The namesake refusal (issue #1573) holds its row open for the same
@@ -900,6 +934,13 @@ export function RosterSection({
           ) : null}
         </>
       ) : null;
+    // What withholding dropped is still said to exist, never which: the
+    // manifest's rule (dive-domain review 2026-10-06).
+    const moreHoldsBehindConfirmation =
+      identityUnconfirmed &&
+      readiness !== undefined &&
+      readiness.status !== "ready" &&
+      heldSeatBlockers(readiness.blockers).length < readiness.blockers.length;
     const reasonLines: {
       key: string;
       text: string;
@@ -915,6 +956,15 @@ export function RosterSection({
             ? medicalActions
             : undefined,
       })),
+      ...(moreHoldsBehindConfirmation
+        ? [
+            {
+              key: "more-holds",
+              text: t("trips.roster.heldSeatMoreHolds"),
+              tone: "danger" as const,
+            },
+          ]
+        : []),
       ...(depthText !== null && !depthShared
         ? [{ key: "depth", text: depthText, tone: "warning" as const }]
         : []),
@@ -934,8 +984,9 @@ export function RosterSection({
       // clear" by its paperwork or its money, and a row in that group with no
       // stated reason trains a crew to stop reading the group (dive-domain
       // review 2026-10-05). A waiver blocker already says the first; this is
-      // for the seat no blocker speaks for.
-      ...(waiverControl.action !== null && blockerTexts.length === 0
+      // for the seat no blocker speaks for. Not on a held seat: the waiver
+      // read is the matched person's, so its state is theirs to state.
+      ...(waiverControl.action !== null && blockerTexts.length === 0 && showsPersonDetail
         ? [
             {
               key: "waiver",
@@ -1029,12 +1080,37 @@ export function RosterSection({
      * seat into its own record. Like the medical hold, it is a decision about
      * who may board, so it does not wait behind the row's mark.
      */
+    const sameNameSeats = sameNameHeldSeats?.get(booking.id) ?? [];
     const identityCheck = identityUnconfirmed ? (
       <IdentityCheck
         bookingId={booking.id}
         bookedAs={booking.identityBookedAs}
         words={identityCheckWords(t, person.fullName)}
         splitAction={splitIdentityAction}
+        asksDateOfBirth={splitAsksDateOfBirth || sameNameSeats.some((seat) => seat.asksDateOfBirth)}
+        maxDateOfBirth={maxPlausibleBirthDate()}
+        sameNameSeats={
+          sameNameSeats.length > 0 && booking.identityBookedAs
+            ? {
+                label: t("shared.identityCheck.sameNameSeats", {
+                  count: sameNameSeats.length,
+                  bookedAs: booking.identityBookedAs,
+                  departures: cachedListFormat(locale, { type: "conjunction" }).format(
+                    sameNameSeats.map((seat) =>
+                      t("shared.identityCheck.sameNameDeparture", {
+                        date: formatShortDate(seat.startsAt, locale, shopTimezone),
+                        // The time too, so a same-day morning and afternoon
+                        // run can be told apart (dive-domain re-review).
+                        time: formatTimeTz(seat.startsAt, locale, shopTimezone),
+                        trip: seat.tripTitle,
+                      }),
+                    ),
+                  ),
+                }),
+                bookingIds: sameNameSeats.map((seat) => seat.bookingId),
+              }
+            : undefined
+        }
         className="pb-3"
         confirm={
           <form action={confirmIdentityAction}>
@@ -1570,7 +1646,7 @@ export function RosterSection({
             {/* One orders door per row, and only when the shop can take money
                 at all (principle 9 — Settings and the Orders index own the
                 "Connect payments" door). */}
-            {paymentsConnected ? (
+            {offersCreateOrder ? (
               <Link
                 href={`/shop/${shopSlug}/orders/new?personId=${person.id}&bookingId=${booking.id}`}
                 className={buttonClass({ variant: "link", size: "sm", flush: true })}
@@ -1599,7 +1675,7 @@ export function RosterSection({
                 triggerClassName={buttonClass({
                   variant: "danger-ghost",
                   size: "sm",
-                  flush: !paymentsConnected,
+                  flush: !offersCreateOrder,
                 })}
                 confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
               />

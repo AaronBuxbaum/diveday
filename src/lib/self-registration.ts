@@ -1,3 +1,5 @@
+import { CALLING_CODES, toE164 } from "./phone";
+
 /**
  * **The shop's QR door: a diver puts themselves on file before any booking
  * exists** (issue #1236).
@@ -73,4 +75,35 @@ export type SelfRegistrationFormState =
  */
 export function hasContactPath(input: { email?: string; phone?: string }): boolean {
   return Boolean(input.email?.trim() || input.phone?.trim());
+}
+
+/**
+ * Why an anonymous registrant's release will not go out by text, or null when
+ * it may.
+ */
+export type AnonymousTextRefusal = "demo_shop" | "unreadable_number" | "foreign_number";
+
+/**
+ * **The one number the counter QR will text, or why not** (issue #2092,
+ * security review 2026-10-06).
+ *
+ * The QR is anonymous, and a text costs the shop money per message, more for a
+ * premium international route. Without a gate the form is an SMS-pumping
+ * endpoint: type any number, and the shop's sender texts it. So the anonymous
+ * path texts only a number in the shop's **own** country (its calling code),
+ * read the way the row stores it (`toE164`), and never from a demo shop. A
+ * refused number is still stored; the shop can send the release itself.
+ */
+export function anonymousTextRecipient(
+  phone: string | null | undefined,
+  shop: { addressCountry: string | null; isDemo: boolean },
+):
+  | { recipient: string; refused?: undefined }
+  | { recipient?: undefined; refused: AnonymousTextRefusal } {
+  if (shop.isDemo) return { refused: "demo_shop" };
+  const e164 = toE164(phone, shop.addressCountry);
+  if (!e164) return { refused: "unreadable_number" };
+  const home = CALLING_CODES[(shop.addressCountry ?? "").toUpperCase()];
+  if (!home || !e164.startsWith(`+${home}`)) return { refused: "foreign_number" };
+  return { recipient: e164 };
 }

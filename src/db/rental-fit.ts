@@ -40,6 +40,13 @@ export type RentalFitInput = {
   bootSize?: string;
   finSize?: string;
   weightPreference?: string;
+  /**
+   * The diver is in a drysuit, theirs or ours (H-78). Optional like the
+   * flags: a caller that did not ask the suit question omits it, and the
+   * stored answer stands. Read together with the two suit flags by
+   * {@link suitUpdates}, never written on its own.
+   */
+  divesDry?: boolean;
   note?: string;
 };
 
@@ -85,6 +92,42 @@ function flagUpdates(
     if (value !== undefined && offered.has(item.field)) flags[item.field] = value;
   }
   return flags;
+}
+
+/**
+ * **One diver, one suit** (H-78, issues #1752 and #1800) — held here, in the
+ * writer, rather than on the forms, because four surfaces write these columns
+ * and a form-only rule is the one the next caller forgets. The table's two
+ * check constraints refuse what this does not resolve.
+ *
+ * - **A rented drysuit is a dry diver, and a dry diver rents no wetsuit.**
+ *   Ticking the drysuit clears the wetsuit; saying "I dive dry" clears it too.
+ * - **A rented wetsuit is a wet diver.** Ticking the wetsuit clears the
+ *   drysuit and the dry answer; so does saying "I dive wet". This one reaches
+ *   a drysuit flag the catalog no longer offers, deliberately: the diver
+ *   answered the suit question, which is the opposite of the silence
+ *   {@link flagUpdates} protects.
+ * - **A post asking for both keeps the drysuit.** No form can send it now
+ *   (each asks one choice, `SuitChoice` in `src/lib/rentals.ts`), but a hand
+ *   post or a half-hydrated form can. The drysuit is the more demanding suit:
+ *   its weight check says "settle the lead in the water", which is never a
+ *   wrong instruction, where the wetsuit's number is short for a dry diver,
+ *   and short is the diver who cannot hold a safety stop.
+ * - **Saying nothing about the suit changes nothing.** The booking-time picker
+ *   is a priced list with no "own drysuit" answer, so a diver who rents no
+ *   suit there keeps whatever they last said they wear.
+ */
+function suitUpdates(
+  input: RentalFitInput,
+  flags: Partial<Record<RentalFitField, boolean>>,
+): { rentsWetsuit?: boolean; rentsDrysuit?: boolean; divesDry?: boolean } {
+  if (flags.rentsDrysuit === true || input.divesDry === true) {
+    return { rentsWetsuit: false, divesDry: true };
+  }
+  if (flags.rentsWetsuit === true || input.divesDry === false) {
+    return { rentsDrysuit: false, divesDry: false };
+  }
+  return {};
 }
 
 /**
@@ -149,6 +192,7 @@ export async function saveRentalFit(db: AppDb, input: RentalFitInput) {
   const context = await fitWritingContext(db, input.shopId);
   if (!context) return null;
   const { offered } = context;
+  const flags = flagUpdates(input, offered);
   const values = {
     // Only the pieces this shop currently rents are written; an item its
     // catalog has dropped keeps whatever the diver last said (`flagUpdates`,
@@ -160,7 +204,10 @@ export async function saveRentalFit(db: AppDb, input: RentalFitInput) {
     // insert naming no flag already lands `false` and a note-only row was
     // already eleven explicit `false`s from its own writer -- the base could
     // not change a single column, in either path.
-    ...flagUpdates(input, offered),
+    ...flags,
+    // After the flags, so the one-suit rule overrides a post that asked for
+    // two (`suitUpdates`).
+    ...suitUpdates(input, flags),
     // Each size is written only when the caller actually carried it -- the
     // same rule as `note` below, and for the same reason. The diver record's
     // form renders a size box only for an item the shop's catalog currently
@@ -438,6 +485,8 @@ export type DiverRentalFit = {
   bootSize: string | null;
   finSize: string | null;
   weightPreference: string | null;
+  /** Their own answer about what they wear (H-78), read back into the suit choice. */
+  divesDry: boolean;
   /** The diver's own words to the crew — theirs to read and rewrite. */
   note: string | null;
   /**
@@ -470,6 +519,7 @@ export function toDiverRentalFit(
     bootSize: profile.bootSize,
     finSize: profile.finSize,
     weightPreference: profile.weightPreference,
+    divesDry: profile.divesDry,
     note: profile.note,
     fitStatedAt: profile.fitStatedAt,
   };

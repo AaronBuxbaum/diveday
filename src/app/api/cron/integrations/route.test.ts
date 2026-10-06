@@ -59,7 +59,7 @@ describe("GET /api/cron/integrations", () => {
     expect(Sentry.captureCheckIn).not.toHaveBeenCalled();
   });
 
-  it("drains the outbox and records its own half-hourly check-in", async () => {
+  it("drains the outbox and records its own hourly check-in", async () => {
     const response = await GET(cronRequest(`Bearer ${secret}`));
 
     expect(response.status).toBe(200);
@@ -68,7 +68,7 @@ describe("GET /api/cron/integrations", () => {
     expect(Sentry.captureCheckIn).toHaveBeenNthCalledWith(
       1,
       { monitorSlug: "diveday-integrations", status: "in_progress" },
-      expect.objectContaining({ schedule: { type: "crontab", value: "0,30 * * * *" } }),
+      expect.objectContaining({ schedule: { type: "crontab", value: "0 * * * *" } }),
     );
     expect(Sentry.captureCheckIn).toHaveBeenNthCalledWith(2, {
       checkInId: "check-in-id",

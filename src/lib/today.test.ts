@@ -6,6 +6,7 @@ import {
   collapseDiverActions,
   collapseEmailDeliveries,
   collapseOwedRefunds,
+  crewClashPhase,
   diverBlockerAction,
   factOfScaleFor,
   filterActionsForRoles,
@@ -16,7 +17,6 @@ import {
   roleLensFor,
   rollCallGapUrgency,
   type SpineDeparture,
-  sortActions,
   sortStationRows,
   spineIsQuiet,
   spineJobCount,
@@ -358,80 +358,16 @@ describe("collapseDiverActions", () => {
   });
 });
 
-describe("sortActions", () => {
-  it("puts the earlier boat's problems first, whatever they are", () => {
-    const sorted = sortActions([
-      action({ id: "late", kind: "medical_review", dueAt: hoursFromNow(6) }),
-      action({ id: "early", kind: "payment", dueAt: hoursFromNow(2) }),
-    ]);
-    expect(sorted.map((entry) => entry.id)).toEqual(["early", "late"]);
-  });
-
-  it("falls back to severity inside a single departure", () => {
-    const at = hoursFromNow(2);
-    const sorted = sortActions([
-      action({ id: "pay", kind: "payment", dueAt: at }),
-      action({ id: "med", kind: "medical_review", dueAt: at }),
-      action({ id: "card", kind: "certification", dueAt: at }),
-    ]);
-    expect(sorted.map((entry) => entry.id)).toEqual(["med", "card", "pay"]);
-  });
-
-  it("orders urgent work ahead of everything else even when it is later in the day", () => {
-    const sorted = sortActions([
-      action({ id: "week", urgency: "later", dueAt: hoursFromNow(100) }),
-      action({ id: "today", urgency: "now", dueAt: hoursFromNow(20) }),
-    ]);
-    expect(sorted[0]?.id).toBe("today");
-  });
-
-  it("leads the whole queue with an unfinished after-dive roll call (DOM-H3)", () => {
-    // The boat is back; `dueAt` is when it tied up, so it is always earlier
-    // than any departure still ahead of the shop. Both halves of the sort have
-    // to agree for this to lead — the top urgency band, then the earliest
-    // `dueAt` — and a medical review on the very next boat is the strongest
-    // thing it has to beat.
-    const sorted = sortActions([
-      action({
-        id: "medical",
-        kind: "medical_review",
-        urgency: "imminent",
-        dueAt: hoursFromNow(1),
-      }),
-      action({ id: "waiver", kind: "waiver", urgency: "imminent", dueAt: hoursFromNow(0.5) }),
-      action({
-        id: "roll-call",
-        kind: "roll_call_unfinished",
-        urgency: "imminent",
-        dueAt: hoursFromNow(-2),
-      }),
-    ]);
-    expect(sorted.map((entry) => entry.id)).toEqual(["roll-call", "waiver", "medical"]);
-  });
-
+describe("Needs you ordering of the roll call (sortStationRows)", () => {
   it("puts an unfinished roll call ahead of a medical review on the same boat", () => {
-    // Severity is what breaks the tie once two rows share a `dueAt`, and
+    // Both are danger and share a `dueAt`, so severity breaks the tie, and
     // nothing outranks the count that says whether everyone came back.
     const at = hoursFromNow(-1);
-    const sorted = sortActions([
+    const sorted = sortStationRows([
       action({ id: "med", kind: "medical_review", urgency: "imminent", dueAt: at }),
       action({ id: "roll", kind: "roll_call_unfinished", urgency: "imminent", dueAt: at }),
     ]);
     expect(sorted.map((entry) => entry.id)).toEqual(["roll", "med"]);
-  });
-
-  it("sorts undated work last within its group", () => {
-    const sorted = sortActions([
-      action({ id: "undated", urgency: "now", dueAt: null }),
-      action({ id: "dated", urgency: "now", dueAt: hoursFromNow(5) }),
-    ]);
-    expect(sorted.map((entry) => entry.id)).toEqual(["dated", "undated"]);
-  });
-
-  it("does not mutate its input", () => {
-    const input = [action({ id: "b", dueAt: hoursFromNow(9) }), action({ id: "a" })];
-    sortActions(input);
-    expect(input.map((entry) => entry.id)).toEqual(["b", "a"]);
   });
 });
 
@@ -507,7 +443,7 @@ describe("roll-call gap ranking (DOM-H3)", () => {
     // member said a diver is not back aboard; nothing on this queue outranks
     // that, and the unfinished-count row is the strongest thing it has to beat.
     const at = hoursFromNow(-1);
-    const sorted = sortActions([
+    const sorted = sortStationRows([
       action({ id: "dock", kind: "roll_call_departure_open", urgency: "imminent", dueAt: at }),
       action({ id: "none", kind: "roll_call_not_started", urgency: "imminent", dueAt: at }),
       action({ id: "open", kind: "roll_call_unfinished", urgency: "imminent", dueAt: at }),
@@ -681,6 +617,41 @@ describe("assembleDaySpine", () => {
     expect(spine.stations.map((station) => station.tripId)).toEqual(["morning", "afternoon"]);
   });
 
+  it("reads two boats at the same minute by title, whatever ids the seed minted", () => {
+    // An id-only tiebreak swapped two 7:30 cards between two CI runs: ids are
+    // fresh per seed, so the same board came out in two orders.
+    const at = hoursFromNow(1);
+    for (const [first, second] of [
+      ["a-id", "z-id"],
+      ["z-id", "a-id"],
+    ]) {
+      const spine = assembleDaySpine(
+        {
+          departures: [
+            departure({
+              tripId: first,
+              title: "Two-Tank Reef",
+              startsAt: at,
+              endsAt: hoursFromNow(4),
+            }),
+            departure({
+              tripId: second,
+              title: "Morning Two-Tank",
+              startsAt: at,
+              endsAt: hoursFromNow(4),
+            }),
+          ],
+          actions: [],
+        },
+        { departures: [], actions: [] },
+      );
+      expect(spine.stations.map((station) => station.title)).toEqual([
+        "Morning Two-Tank",
+        "Two-Tank Reef",
+      ]);
+    }
+  });
+
   it("ranks a station's rows danger, then warning, then quiet", () => {
     const spine = assembleDaySpine(
       {
@@ -728,6 +699,107 @@ describe("assembleDaySpine", () => {
     expect(spine.tomorrow.stations[0]?.rows.map((row) => row.id)).toEqual(["tomorrow"]);
     expect(spine.tomorrow.jobs).toBe(1);
     expect(spine.week.jobs).toBe(1);
+  });
+
+  it("lists a boat that is out in Needs you, not under the week's count", () => {
+    // A departure an hour past sailing has no live station any more, and its
+    // rows used to fall through to the week's count: a blocked diver aboard,
+    // or a diver recorded not back, was a number behind a link (issue #2064).
+    const spine = assembleDaySpine(
+      {
+        departures: [departure()],
+        actions: [
+          action({ id: "aboard", kind: "blocked_aboard", departure: boat("out") }),
+          action({ id: "friday", departure: boat("t9") }),
+        ],
+        outTripIds: ["out"],
+      },
+      { departures: [], actions: [] },
+    );
+    expect(spine.desk.map((row) => row.id)).toEqual(["aboard"]);
+    expect(spine.week.jobs).toBe(1);
+    expect(spineJobCount(spine)).toBe(2);
+  });
+
+  it("lists an open after-dive count on a boat that is back in Needs you, not the week", () => {
+    // Crew tapped home with a diver still recorded not back, or last night's
+    // boat inside the residue window: no station, not out, and still a person
+    // who may be in the water (issue #2131).
+    const spine = assembleDaySpine(
+      {
+        departures: [departure()],
+        actions: [
+          action({
+            id: "roll-call:back:missing_diver:after_dive_1",
+            kind: "roll_call_missing_diver",
+            departure: boat("back"),
+          }),
+          action({
+            id: "roll-call:back:missing_crew:after_dive_1",
+            kind: "roll_call_missing_crew",
+            departure: boat("back"),
+          }),
+          action({
+            id: "roll-call:back:after_dive_uncounted:after_dive_1",
+            kind: "roll_call_unfinished",
+            departure: boat("back"),
+          }),
+        ],
+      },
+      { departures: [], actions: [] },
+    );
+    expect(spine.desk.map((row) => row.id).sort()).toEqual([
+      "roll-call:back:after_dive_uncounted:after_dive_1",
+      "roll-call:back:missing_crew:after_dive_1",
+      "roll-call:back:missing_diver:after_dive_1",
+    ]);
+    expect(spine.week.jobs).toBe(0);
+    expect(spineJobCount(spine)).toBe(3);
+  });
+
+  it("leaves a returned boat's dock paperwork in the week's count", () => {
+    const spine = assembleDaySpine(
+      {
+        departures: [departure()],
+        actions: [
+          action({
+            id: "roll-call:back:departure_uncounted:departure",
+            kind: "roll_call_departure_open",
+            departure: boat("back"),
+          }),
+        ],
+      },
+      { departures: [], actions: [] },
+    );
+    expect(spine.desk).toEqual([]);
+    expect(spine.week.jobs).toBe(1);
+  });
+
+  it("keeps an after-dive count on its station while the boat still has one", () => {
+    const spine = assembleDaySpine(
+      {
+        departures: [departure()],
+        actions: [
+          action({ id: "missing", kind: "roll_call_missing_diver", departure: boat("t1") }),
+        ],
+      },
+      { departures: [], actions: [] },
+    );
+    expect(spine.stations[0]?.rows.map((row) => row.id)).toEqual(["missing"]);
+    expect(spine.desk).toEqual([]);
+  });
+
+  it("keeps a boat's rows on its station while it still has one", () => {
+    const spine = assembleDaySpine(
+      {
+        departures: [departure()],
+        actions: [action({ id: "on-boat", departure: boat("t1") })],
+        outTripIds: ["t1"],
+      },
+      { departures: [], actions: [] },
+    );
+    expect(spine.stations[0]?.rows.map((row) => row.id)).toEqual(["on-boat"]);
+    expect(spine.desk).toEqual([]);
   });
 
   it("counts every row exactly once, wherever its boat sails", () => {
@@ -830,6 +902,30 @@ describe("the unanswered-messages row", () => {
     ] as const) {
       expect(
         filterActionsForRoles([action({ kind: "unanswered_messages" })], [role]).withheldCount,
+      ).toBe(0);
+    }
+  });
+});
+
+/**
+ * **The desk fixes a bounce** (issue #2066). `resendConfirmationAction` is
+ * open to every staff role, like the invoice and waiver resends, so the row
+ * that offers it is too. A row narrower than its action hides a fixable bounce
+ * from the person standing at the counter.
+ */
+describe("the failed-email row", () => {
+  it("reaches every staff role, because every staff role may resend it", () => {
+    for (const role of [
+      "owner",
+      "manager",
+      "instructor",
+      "assistant_instructor",
+      "divemaster",
+      "captain",
+      "crew",
+    ] as const) {
+      expect(
+        filterActionsForRoles([action({ kind: "email_delivery" })], [role]).withheldCount,
       ).toBe(0);
     }
   });
@@ -1255,5 +1351,104 @@ describe("collapseEmailDeliveries", () => {
     expect(rows[1]?.waiver).toEqual({ bookingIds: ["b-Cara", "b-Dev"] });
     expect(rows[1]?.actionLabel).toBe("Resend waivers");
     expect(rows[2]?.detail).toBe("Confirmation email never sent. Email isn’t set up.");
+  });
+});
+
+describe("crew_clash_sailed against the roll call (H-80, #1814)", () => {
+  it("never leads a missing diver or a blocked diver aboard, even due earlier", () => {
+    // Needs you ranks tone first: every after-dive roll-call row and a blocked
+    // diver aboard are danger, the clash a warning, so no date lifts it over
+    // them. Among warnings it leads the boarding-time blockers.
+    const sorted = sortStationRows([
+      action({ id: "nitrox", kind: "nitrox_gate", urgency: "imminent", dueAt: hoursFromNow(1) }),
+      action({
+        id: "clash",
+        kind: "crew_clash_sailed",
+        urgency: "imminent",
+        dueAt: hoursFromNow(1),
+      }),
+      action({ id: "aboard", kind: "blocked_aboard", urgency: "imminent", dueAt: hoursFromNow(3) }),
+      action({
+        id: "missing",
+        kind: "roll_call_missing_diver",
+        urgency: "imminent",
+        dueAt: hoursFromNow(4),
+      }),
+    ]);
+    expect(sorted.map((row) => row.id)).toEqual(["aboard", "missing", "clash", "nitrox"]);
+  });
+
+  it("is a warning, like the clash before the boat sails", () => {
+    expect(ACTION_KIND_META.crew_clash_sailed.tone).toBe("warning");
+    expect(ACTION_KIND_META.crew_clash.tone).toBe("warning");
+  });
+});
+
+describe("crewClashPhase", () => {
+  const dayOne = { startsAt: hoursFromNow(-30), endsAt: hoursFromNow(-26) };
+  const dayTwo = { startsAt: hoursFromNow(2), endsAt: hoursFromNow(6) };
+  const phaseAt = (
+    legs: { startsAt: Date; endsAt: Date }[],
+    now: Date,
+    departureRollCallRecorded = false,
+  ) =>
+    crewClashPhase({
+      legs,
+      departureStartsAt: legs[0]?.startsAt ?? now,
+      departureRollCallRecorded,
+      now,
+    });
+
+  it("is ahead while the clashing leg is still to sail, even when an earlier leg is home", () => {
+    expect(phaseAt([dayOne, dayTwo], NOW)).toEqual({ phase: "ahead", leg: dayTwo });
+  });
+
+  it("turns out an hour after the leg's start, and silent once it is home", () => {
+    const fromStart = (hours: number) => new Date(dayTwo.startsAt.getTime() + hours * 3_600_000);
+    expect(phaseAt([dayTwo], fromStart(0.5))?.phase).toBe("ahead");
+    expect(phaseAt([dayTwo], fromStart(1))?.phase).toBe("out");
+    expect(phaseAt([dayTwo], fromStart(4.9))?.phase).toBe("out");
+    expect(phaseAt([dayTwo], fromStart(5))).toBeNull();
+  });
+
+  it("takes the crew's departure roll call over the clock, for the first leg only", () => {
+    const leg = { startsAt: hoursFromNow(-0.25), endsAt: hoursFromNow(3) };
+    expect(phaseAt([leg], NOW, true)?.phase).toBe("out");
+    expect(phaseAt([leg], NOW, false)?.phase).toBe("ahead");
+    const later = { startsAt: hoursFromNow(-0.25), endsAt: hoursFromNow(3) };
+    expect(
+      crewClashPhase({
+        legs: [later],
+        departureStartsAt: hoursFromNow(-24),
+        departureRollCallRecorded: true,
+        now: NOW,
+      })?.phase,
+    ).toBe("ahead");
+  });
+
+  it("says nothing once every clashing leg is home", () => {
+    expect(phaseAt([dayOne], NOW)).toBeNull();
+  });
+});
+
+describe("assembleDaySpine and a boat that is out but no station", () => {
+  it("files its rows at the desk, never into the week's count", () => {
+    const spine = assembleDaySpine(
+      {
+        departures: [departure()],
+        outTripIds: ["gone", "t1"],
+        actions: [
+          action({ id: "out", kind: "crew_clash_sailed", departure: boat("gone", "Wreck") }),
+          action({ id: "station", departure: boat("t1") }),
+          action({ id: "friday", departure: boat("t9") }),
+        ],
+      },
+      { departures: [], actions: [] },
+    );
+    expect(spine.desk.map((row) => row.id)).toEqual(["out"]);
+    expect(spine.desk[0]?.departure?.label).toBe("Wreck");
+    // A boat still out and still a station keeps its row on the station.
+    expect(spine.stations[0]?.rows.map((row) => row.id)).toEqual(["station"]);
+    expect(spine.week.jobs).toBe(1);
   });
 });

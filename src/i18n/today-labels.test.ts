@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { staffTranslator } from "./staff-messages";
-import { daySpineSummaryText } from "./today-labels";
+import {
+  crewClashDetailText,
+  crewClashSailedDetailText,
+  daySpineSummaryText,
+} from "./today-labels";
 
 /**
  * **The two sentences the shop home is required to say, word for word.**
@@ -81,5 +85,32 @@ describe("the shop home's pinned sentences", () => {
     ] as const) {
       expect(t.raw(key), key).not.toMatch(/\p{Extended_Pictographic}/u);
     }
+  });
+});
+
+describe("a crew clash, said once per other departure", () => {
+  const t = staffTranslator("en-US");
+  const clashes = [
+    { fullName: "Keiko Tanaka", otherTitle: "Dawn Two-Tank" },
+    { fullName: "Sal Moretti", otherTitle: "Dawn Two-Tank" },
+    { fullName: "Keiko Tanaka", otherTitle: "Night Dive" },
+  ];
+
+  it("names everyone a departure shares in one sentence", () => {
+    expect(crewClashDetailText(t, "en-US", clashes)).toBe(
+      "Keiko Tanaka and Sal Moretti are also rostered on Dawn Two-Tank at these hours. Keiko Tanaka is also rostered on Night Dive at these hours.",
+    );
+  });
+
+  it("says the same once the boat has left, then the one thing to do", () => {
+    expect(crewClashSailedDetailText(t, "en-US", clashes.slice(0, 2))).toBe(
+      "Keiko Tanaka and Sal Moretti are out aboard while also rostered on Dawn Two-Tank at these hours. Confirm who is aboard.",
+    );
+  });
+
+  it("names a person once however many times the read lists them", () => {
+    expect(crewClashDetailText(t, "en-US", [clashes[0]!, clashes[0]!])).toBe(
+      "Keiko Tanaka is also rostered on Dawn Two-Tank at these hours.",
+    );
   });
 });

@@ -45,7 +45,7 @@ describe("the daily tick", () => {
   });
 
   /**
-   * The reason the three hourly passes share `:00` rather than being spread
+   * The reason the four hourly passes share `:00` rather than being spread
    * across the hour. A serverless Postgres compute sleeps after five idle
    * minutes and bills for the time it is awake, so what the bill tracks is the
    * number of distinct minutes something wakes it, not the number of passes:
@@ -53,13 +53,14 @@ describe("the daily tick", () => {
    * `:10` and `:20` is three. This is the assertion that stops a future
    * "stagger them so they don't collide" from quietly restoring a duty cycle
    * set by the clock instead of by use. A pass that genuinely needs its own
-   * minute may have one — it just has to say so here.
+   * minute may have one — it just has to say so here. The integrations drain
+   * had `:30` until 2026-10-06, when it joined `:00` to halve the idle wake-ups.
    */
   it("wakes the database on as few distinct minutes an hour as the passes allow", () => {
     const hourlyMinutes = vercelCrons()
       .filter((cron) => cron.schedule.split(" ")[1] === "*")
       .flatMap((cron) => cron.schedule.split(" ")[0].split(","));
-    expect(new Set(hourlyMinutes)).toEqual(new Set(["0", "30"]));
+    expect(new Set(hourlyMinutes)).toEqual(new Set(["0"]));
   });
 
   it("wakes no *queue-draining* pass more often than daily, so a day is the floor on retry latency", () => {

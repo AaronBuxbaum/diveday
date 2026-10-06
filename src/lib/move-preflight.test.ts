@@ -9,6 +9,7 @@ const quiet: MovePreflightFacts = {
   cancellationWindowHours: null,
   rollCallEvidence: 0,
   scheduled: true,
+  boatClashes: [],
   crewClashes: [],
   crewAway: [],
 };
@@ -41,7 +42,7 @@ describe("composeMovePreflight", () => {
     ]);
   });
 
-  it("orders the sections crew, people, kit, money", () => {
+  it("orders the sections boat, crew, people, kit, money", () => {
     const full = composeMovePreflight({
       toldSeats: 4,
       gearReserved: 3,
@@ -49,10 +50,17 @@ describe("composeMovePreflight", () => {
       cancellationWindowHours: 48,
       rollCallEvidence: 0,
       scheduled: true,
+      boatClashes: [{ boat: "Mantis I", departure: "Night Dive" }],
       crewClashes: [{ name: "Marcus Webb", departure: "Night Dive" }],
       crewAway: [],
     });
-    expect(full.sections.map((section) => section.kind)).toEqual(["crew", "told", "gear", "money"]);
+    expect(full.sections.map((section) => section.kind)).toEqual([
+      "boat",
+      "crew",
+      "told",
+      "gear",
+      "money",
+    ]);
     expect(full.sections.at(-1)).toEqual({
       kind: "money",
       paid: 5,
@@ -189,6 +197,36 @@ describe("composeMovePreflight", () => {
     expect(blocked.blocked).toBe("already_sailed");
     expect(blocked.sections).toEqual([
       { kind: "crew", clashes: [{ name: "Marcus Webb", departure: "Night Dive" }] },
+    ]);
+  });
+
+  /**
+   * **One hull, one departure at a time** (H-80, issue #1780). A move that
+   * lands the boat on top of another departure on the same hull is said before
+   * it happens, above the crew: a hull double-booked is the bigger fact, and
+   * fixing it usually moves the crew question with it.
+   */
+  it("names the departure the hull would be on at the same time, first", () => {
+    const both = composeMovePreflight({
+      ...quiet,
+      boatClashes: [{ boat: "Mantis I", departure: "Night Dive" }],
+      crewClashes: [{ name: "Marcus Webb", departure: "Night Dive" }],
+    });
+    expect(both.sections).toEqual([
+      { kind: "boat", clashes: [{ boat: "Mantis I", departure: "Night Dive" }] },
+      { kind: "crew", clashes: [{ name: "Marcus Webb", departure: "Night Dive" }] },
+    ]);
+  });
+
+  it("reports a boat clash on a departure the move would be refused for", () => {
+    const blocked = composeMovePreflight({
+      ...quiet,
+      scheduled: false,
+      boatClashes: [{ boat: "Mantis I", departure: "Night Dive" }],
+    });
+    expect(blocked.blocked).toBe("not_scheduled");
+    expect(blocked.sections).toEqual([
+      { kind: "boat", clashes: [{ boat: "Mantis I", departure: "Night Dive" }] },
     ]);
   });
 });

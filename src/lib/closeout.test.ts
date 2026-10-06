@@ -698,6 +698,28 @@ describe("assembleEveningClose", () => {
       "afternoon",
     ]);
   });
+
+  it("reads two boats at the same minute by title, whatever ids the seed minted", () => {
+    const at = new Date("2026-08-04T11:30:00Z");
+    for (const ids of [
+      ["a-id", "z-id"],
+      ["z-id", "a-id"],
+    ]) {
+      const departures = assembleDayCloseout({
+        trips: [
+          trip({ tripId: ids[0], title: "Two-Tank Reef", startsAt: at }),
+          trip({ tripId: ids[1], title: "Morning Two-Tank", startsAt: at }),
+        ],
+        gaps: [],
+        timeZone: TZ,
+        now,
+      }).departures;
+      expect(assembleEveningClose(departures, now).stations.map((s) => s.title)).toEqual([
+        "Morning Two-Tank",
+        "Two-Tank Reef",
+      ]);
+    }
+  });
 });
 
 /**

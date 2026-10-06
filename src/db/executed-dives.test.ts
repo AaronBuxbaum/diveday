@@ -12,6 +12,7 @@ import {
   peopleWhoDivedBefore,
   upsertExecutedDive,
 } from "./executed-dives";
+import { recordCrewRollCall, recordRollCall } from "./manifests";
 import { MARINE_LIFE_CATALOG } from "./marine-life-catalog";
 import { markBookingNoShow } from "./no-show";
 import {
@@ -23,7 +24,9 @@ import {
   executedDives,
   people,
   personRoles,
+  rollCallEvents,
   shops,
+  tripAssignments,
   tripDeskEvents,
   tripDives,
   trips,
@@ -890,6 +893,143 @@ describe("peopleWhoDivedBefore", () => {
       shop.timezone,
     );
     expect(found.size).toBe(0);
+  });
+
+  /**
+   * **The roll call outranks a status word written later at a desk** (issue
+   * #1836). Both cancel doors check neither the clock nor the roll call, and
+   * the no-show tap expires, so "Remove from trip" is what tidies yesterday's
+   * boat. A crew member's standing statement at the rail is the better
+   * evidence; being wrong this way costs six hours ashore, the other way hands
+   * a two-day diver the single-day figure.
+   */
+  describe("when the desk writes a status word after the boat ran", () => {
+    async function staffer(ctx: Awaited<ReturnType<typeof twoDays>>) {
+      const [member] = await listStaff(ctx.db, ctx.shop.id);
+      if (!member) throw new Error("the seeded shop has to have staff to call the roll");
+      return member.person.id;
+    }
+
+    async function callRoll(
+      ctx: Awaited<ReturnType<typeof twoDays>>,
+      status: "boarded" | "not_boarded" | "cleared",
+      checkpoint: "departure" | "after_dive_1" = "after_dive_1",
+      minutesAfterStart = 90,
+    ) {
+      // After a numbered dive a boarding is a pure headcount and is never
+      // refused on readiness, so the seat needs no waiver for this fixture.
+      const outcome = await recordRollCall(ctx.db, {
+        shopId: ctx.shop.id,
+        tripId: ctx.before.id,
+        bookingId: ctx.earlierBooking.bookingId,
+        recordedByPersonId: await staffer(ctx),
+        status,
+        checkpoint,
+        occurredAt: new Date(ctx.before.startsAt.getTime() + minutesAfterStart * MINUTE_MS),
+      });
+      expect(outcome, `the ${status} roll call has to land`).toMatchObject({ ok: true });
+    }
+
+    const cancelSeat = (ctx: Awaited<ReturnType<typeof twoDays>>) =>
+      ctx.db
+        .update(bookings)
+        .set({ status: "cancelled" })
+        .where(eq(bookings.id, ctx.earlierBooking.bookingId));
+    const cancelDeparture = (ctx: Awaited<ReturnType<typeof twoDays>>) =>
+      ctx.db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, ctx.before.id));
+
+    it("counts a seat cancelled after a standing boarding", async () => {
+      const ctx = await twoDays(24, { logDive: false });
+      await callRoll(ctx, "boarded");
+      await cancelSeat(ctx);
+      expect([...(await ctx.ask())]).toEqual([ctx.personId]);
+    });
+
+    it("counts a departure marked cancelled after it ran with a roll call on it", async () => {
+      // No dive logged: the roll call alone is what says the boat went.
+      const ctx = await twoDays(24, { logDive: false });
+      await callRoll(ctx, "boarded");
+      await cancelDeparture(ctx);
+      expect([...(await ctx.ask())]).toEqual([ctx.personId]);
+    });
+
+    it("counts a diver recorded not back aboard after the dive", async () => {
+      // An after-dive `not_boarded` is the missing-diver row: they sailed.
+      const ctx = await twoDays(24, { logDive: false });
+      await callRoll(ctx, "not_boarded");
+      await cancelSeat(ctx);
+      expect((await ctx.ask()).size).toBe(1);
+    });
+
+    it("counts a staffer's seat on a departure they also crewed", async () => {
+      // The other half of the head count: their result lives on the crew trail.
+      const ctx = await twoDays(24, { logDive: false });
+      await ctx.db.insert(personRoles).values({ personId: ctx.personId, role: "divemaster" });
+      await ctx.db
+        .insert(tripAssignments)
+        .values({ tripId: ctx.before.id, personId: ctx.personId });
+      const outcome = await recordCrewRollCall(ctx.db, {
+        shopId: ctx.shop.id,
+        tripId: ctx.before.id,
+        personId: ctx.personId,
+        recordedByPersonId: await staffer(ctx),
+        status: "boarded",
+        checkpoint: "departure",
+        occurredAt: new Date(ctx.before.startsAt.getTime() + 5 * MINUTE_MS),
+      });
+      expect(outcome).toMatchObject({ ok: true });
+      await cancelSeat(ctx);
+      expect((await ctx.ask()).size).toBe(1);
+    });
+
+    it("still excludes a cancelled seat nobody called on the roll", async () => {
+      // The negative the change could quietly lose: without it, a rule written
+      // only to the cases above could credit every cancellation.
+      const ctx = await twoDays(24);
+      await cancelSeat(ctx);
+      expect((await ctx.ask()).size).toBe(0);
+    });
+
+    it("does not count a dock not-boarded, which means never left", async () => {
+      const ctx = await twoDays(24, { logDive: false });
+      await callRoll(ctx, "not_boarded", "departure", 5);
+      await cancelSeat(ctx);
+      expect((await ctx.ask()).size).toBe(0);
+    });
+
+    it("does not count a boarding the rail retracted", async () => {
+      // A newest `cleared` drops the checkpoint out; it never falls back to the
+      // older boarding it undid.
+      const ctx = await twoDays(24, { logDive: false });
+      await callRoll(ctx, "boarded", "after_dive_1", 90);
+      await callRoll(ctx, "cleared", "after_dive_1", 95);
+      await cancelDeparture(ctx);
+      expect((await ctx.ask()).size).toBe(0);
+    });
+
+    it("does not let another shop's roll call vouch for a cancelled seat", async () => {
+      const ctx = await twoDays(24, { logDive: false });
+      await callRoll(ctx, "boarded");
+      await cancelSeat(ctx);
+      const [other] = await otherShop(ctx.db);
+      await ctx.db
+        .update(rollCallEvents)
+        .set({ shopId: other.id })
+        .where(eq(rollCallEvents.bookingId, ctx.earlierBooking.bookingId));
+      expect((await ctx.ask()).size).toBe(0);
+    });
+
+    it("leaves a no-show excluded, whatever the roll call says", async () => {
+      // Issue #1558: a boarding reclaims a no-show seat to `booked`, so a
+      // standing `no_show` is always the newer human statement.
+      const ctx = await twoDays(24, { logDive: false });
+      await callRoll(ctx, "boarded");
+      await ctx.db
+        .update(bookings)
+        .set({ status: "no_show" })
+        .where(eq(bookings.id, ctx.earlierBooking.bookingId));
+      expect((await ctx.ask()).size).toBe(0);
+    });
   });
 
   it("answers an empty roster with an empty set", async () => {

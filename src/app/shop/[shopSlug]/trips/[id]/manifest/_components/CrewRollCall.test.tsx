@@ -33,6 +33,7 @@ function crew(overrides: Partial<TripManifest["crew"][number]> = {}): TripManife
     id: "00000000-0000-4000-8000-0000000000c1",
     fullName: "Keiko Tanaka",
     roles: ["divemaster"],
+    standingRatings: [],
     emergencyContactName: "Haru Tanaka",
     emergencyContactPhone: "+81-3-555-0103",
     buddyTeams: [],
@@ -119,6 +120,25 @@ describe("a departure with no crew", () => {
     renderCrew({ members: [crew()] });
     expect(screen.queryByText(t("manifest.noCrew"))).toBeNull();
     expect(screen.queryByRole("link", { name: t("manifest.addCrewToTrip") })).toBeNull();
+  });
+});
+
+/**
+ * Issue #1852: a set job narrows what the row says the person is doing, never
+ * what rating they hold.
+ */
+describe("a crew row's rating beside the day's job", () => {
+  it("prints the rating the job does not already say", () => {
+    renderCrew({ members: [crew({ standingRatings: ["assistant_instructor"] })] });
+    const row = screen.getByRole("listitem");
+    expect(within(row).getAllByText("Divemaster (Assistant Instructor)").length).toBeGreaterThan(0);
+  });
+
+  it("prints exactly the job, never an empty bracket, with no rating to add", () => {
+    renderCrew({ members: [crew()] });
+    const row = screen.getByRole("listitem");
+    expect(within(row).getAllByText("Divemaster").length).toBeGreaterThan(0);
+    expect(row.textContent).not.toContain("()");
   });
 });
 

@@ -4,6 +4,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { buttonClass } from "@/components/ui/button";
+import type { SameNameHeldSeat } from "@/db/bookings";
 import { emptyMedicalAnswers, flaggedMedicalPrompts, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { PAPER_WAIVER_IDLE } from "@/lib/paper-waiver-form";
 import { rendersFlush } from "@/test/button-flush";
@@ -110,8 +111,11 @@ function renderRoster({
   compact = false,
   addDiverGroup,
   paymentsConnected = false,
+  canManageOrders = true,
   requiresPayment = false,
   arrival,
+  sameNameHeldSeats,
+  splitAsksDateOfBirth,
 }: {
   roster: RosterEntry[];
   readiness: ReadinessByBooking;
@@ -120,8 +124,11 @@ function renderRoster({
   compact?: boolean;
   addDiverGroup?: ReactNode;
   paymentsConnected?: boolean;
+  canManageOrders?: boolean;
   requiresPayment?: boolean;
   arrival?: RosterArrival;
+  sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
+  splitAsksDateOfBirth?: boolean;
 }) {
   return render(
     <RosterSection
@@ -142,9 +149,12 @@ function renderRoster({
       markWaiverInPersonAction={noRefusal}
       markPaymentAction={noop}
       mayWriteOffPayment={false}
+      canManageOrders={canManageOrders}
       removeBookingAction={noop}
       confirmIdentityAction={noop}
       splitIdentityAction={noop}
+      sameNameHeldSeats={sameNameHeldSeats}
+      splitAsksDateOfBirth={splitAsksDateOfBirth}
       notesByBooking={new Map()}
       addNoteAction={noop}
       deleteNoteAction={noop}
@@ -427,8 +437,84 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
       rentalFit,
     });
-    expect(screen.queryByText("Held for a physician’s sign-off.")).toBeNull();
+    expect(
+      screen.queryByText("A medical answer needs a doctor’s sign-off before this diver dives."),
+    ).toBeNull();
     expect(screen.getAllByText("Payment is outstanding for this trip.").length).toBeGreaterThan(0);
+    // The medical hold on the matched person's release is theirs: no status
+    // block, no follow-up line, only that other holds may still apply.
+    expect(screen.getAllByText("Other holds may still apply.").length).toBeGreaterThan(0);
+  });
+
+  it("withholds on the booking's own flag when readiness could not be read", () => {
+    // Fails closed: the read raised no identity blocker, but the booking
+    // still says it is held (security review 2026-10-06).
+    const heldRow = entry("u", "Marisol Vega", {
+      dateOfBirth: "2012-05-04",
+      emergencyContactName: "Pilar Vega",
+      emergencyContactPhone: "+34 600 111 222",
+    });
+    (heldRow.booking as { identityUnconfirmedAt: Date | null }).identityUnconfirmedAt = new Date(
+      "2026-10-01T12:00:00Z",
+    );
+    renderRoster({
+      roster: [heldRow],
+      readiness: new Map([
+        ["u", readinessRow("blocked", [{ code: "readiness_unavailable", params: undefined }])],
+      ]) as ReadinessByBooking,
+      waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+      rentalFit,
+    });
+    expect(screen.queryByText(/Pilar Vega/)).toBeNull();
+    expect(screen.queryByText(flaggedPrompt)).toBeNull();
+  });
+
+  it("measures no depth advisory against the matched person, alone or shared with the boat", () => {
+    // `junior_age` would say the matched person is a minor, and a ceiling or
+    // `no_card` what card they hold (security re-review, issue #1690). Two
+    // confirmed seats share the same sentence, so the held seat must neither
+    // wear the capsule nor be counted into the shared line.
+    const juniorDeep = {
+      ...readinessRow("blocked", [{ code: "identity_unconfirmed", params: undefined }]),
+      depthAdvisory: {
+        status: "exceeds",
+        limitDepth: 12,
+        siteDepth: 30,
+        unit: "meters",
+        basis: "junior_age",
+        level: "open_water",
+      },
+    } as unknown as ReadinessByBooking extends Map<string, infer V> ? V : never;
+    renderRoster({
+      roster: [matched],
+      readiness: new Map([["u", juniorDeep]]) as ReadinessByBooking,
+      waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+    });
+    expect(screen.queryByText(/allowed at their age/)).toBeNull();
+    expect(screen.queryByText("Depth advisory")).toBeNull();
+  });
+
+  it("leaves a held seat out of a shared depth advisory's count", () => {
+    const seats = [entry("a", "Asha Osei"), entry("b", "Rene Marsh"), matched];
+    const heldDeep = {
+      ...deepRow(),
+      readiness: { status: "blocked", blockers: [{ code: "identity_unconfirmed" }] },
+    } as unknown as ReadinessByBooking extends Map<string, infer V> ? V : never;
+    const { container } = renderRoster({
+      roster: seats,
+      readiness: new Map([
+        ["a", deepRow()],
+        ["b", deepRow()],
+        ["u", heldDeep],
+      ]) as ReadinessByBooking,
+      waivers: new Map([
+        ["a", signedWaiver],
+        ["b", signedWaiver],
+        ["u", heldWaiver],
+      ]) as WaiverByBooking,
+    });
+    const text = container.textContent ?? "";
+    expect(text).not.toMatch(/\b3 divers\b/);
   });
 
   it("prints none of the matched person's medical answers, age, emergency contact or sizes", () => {
@@ -472,6 +558,132 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     expect(same).toBeVisible();
     expect(same.closest("details")).toBeNull();
     expect(screen.getByText("Different person")).toBeVisible();
+  });
+
+  /**
+   * **"Different person" asks who the new diver is** (issue #2081): a date of
+   * birth, required on a course with a minimum age, and an optional email or
+   * phone. Every box but the name starts empty: nothing of the matched
+   * record's is offered as the new diver's.
+   */
+  describe("the split form", () => {
+    const heldSeat = () =>
+      entry("u", "Marisol Vega", {
+        identityBookedAs: "Lucia Vega",
+        identityMatchedBy: "shared_email",
+      });
+
+    it("asks for a date of birth, optional unless the course has a minimum age", () => {
+      const { unmount } = renderRoster({
+        roster: [heldSeat()],
+        readiness: unconfirmed,
+        waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+        rentalFit,
+      });
+      const optionalDate = document.querySelector<HTMLInputElement>('input[name="dateOfBirth"]');
+      expect(optionalDate).not.toBeNull();
+      expect(optionalDate?.required).toBe(false);
+      unmount();
+
+      renderRoster({
+        roster: [heldSeat()],
+        readiness: unconfirmed,
+        waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+        rentalFit,
+        splitAsksDateOfBirth: true,
+      });
+      const requiredDate = document.querySelector<HTMLInputElement>('input[name="dateOfBirth"]');
+      expect(requiredDate?.required).toBe(true);
+      // A future date is refused by the browser before the round trip.
+      expect(requiredDate?.max).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+
+    it("offers an empty email and phone, never the matched record's", () => {
+      renderRoster({
+        roster: [heldSeat()],
+        readiness: unconfirmed,
+        waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+        rentalFit,
+      });
+      const form = document.querySelector<HTMLInputElement>('input[name="email"]')?.form;
+      expect(form?.querySelector<HTMLInputElement>('input[name="email"]')?.value).toBe("");
+      expect(form?.querySelector<HTMLInputElement>('input[name="phone"]')?.value).toBe("");
+      expect(form?.querySelector<HTMLInputElement>('input[name="dateOfBirth"]')?.value).toBe("");
+    });
+
+    it("offers to move other held seats under that name only when there are some", () => {
+      const { unmount } = renderRoster({
+        roster: [heldSeat()],
+        readiness: unconfirmed,
+        waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+        rentalFit,
+      });
+      expect(document.querySelector('input[name="sameNameSeatIds"]')).toBeNull();
+      unmount();
+
+      const others: SameNameHeldSeat[] = [
+        {
+          bookingId: "s1",
+          tripId: "t1",
+          tripTitle: "Reef Morning",
+          startsAt: new Date("2026-10-10T12:00:00Z"),
+          asksDateOfBirth: false,
+        },
+        {
+          bookingId: "s2",
+          tripId: "t2",
+          tripTitle: "Wreck Afternoon",
+          startsAt: new Date("2026-10-11T18:00:00Z"),
+          asksDateOfBirth: false,
+        },
+      ];
+      renderRoster({
+        roster: [heldSeat()],
+        readiness: unconfirmed,
+        waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+        rentalFit,
+        sameNameHeldSeats: new Map([["u", others]]),
+      });
+      // Named by departure rather than counted, and unticked: two strangers
+      // can share a name, and only the staffer can tell.
+      const box = screen.getByRole<HTMLInputElement>("checkbox", {
+        // `\s`: a date keeps its units whole with U+00A0 (`keepUnitsWhole`).
+        // The time as well, so a same-day morning and afternoon run differ.
+        name: /^Also move the held seats booked as Lucia Vega on Reef Morning \(Sat, Oct\s10, 8:00\sAM\sEDT\) and Wreck Afternoon \(Sun, Oct\s11, 2:00\sPM\sEDT\)$/,
+        hidden: true,
+      });
+      expect(box).not.toBeChecked();
+      expect(box.value).toBe("s1,s2");
+      expect(document.querySelector<HTMLInputElement>('input[name="dateOfBirth"]')?.required).toBe(
+        false,
+      );
+    });
+
+    it("asks for a date of birth when a seat it would move is on an age-gated course", () => {
+      renderRoster({
+        roster: [heldSeat()],
+        readiness: unconfirmed,
+        waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+        rentalFit,
+        sameNameHeldSeats: new Map([
+          [
+            "u",
+            [
+              {
+                bookingId: "s1",
+                tripId: "t1",
+                tripTitle: "Junior Open Water",
+                startsAt: new Date("2026-10-10T12:00:00Z"),
+                asksDateOfBirth: true,
+              },
+            ],
+          ],
+        ]),
+      });
+      expect(document.querySelector<HTMLInputElement>('input[name="dateOfBirth"]')?.required).toBe(
+        true,
+      );
+    });
   });
 
   it("names both people when it knows the name the seat was booked under", () => {
@@ -565,7 +777,23 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     expect(screen.queryByTestId("identity-contact")).toBeNull();
   });
 
-  // The row's Blocked reason says a medical answer needs follow-up (Aaron,
+  // A medical hold is cleared by a doctor in writing, never by a word on the
+  // boat (issue #2065): the sentence names who clears it.
+  it("says a medical hold needs a doctor's sign-off", () => {
+    renderRoster({
+      roster: [matched],
+      readiness: confirmed,
+      waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+      rentalFit,
+    });
+
+    expect(
+      screen.getAllByText("A medical answer needs a doctor’s sign-off before this diver dives.")
+        .length,
+    ).toBeGreaterThan(0);
+  });
+
+  // The row's Blocked reason says a doctor must sign off (Aaron,
   // 2026-10-06: no separate alert panel); the answer itself waits in the fold
   // and on the signed record.
   it("keeps the flagged medical answer in the row's fold", () => {
@@ -618,14 +846,15 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
  * Never a gate: the sentence is warning tone beside the depth advisory, and
  * `src/lib/drysuit-card.test.ts` pins that readiness cannot see it.
  */
-describe("a drysuit going out with no drysuit card", () => {
+describe("a diver in a drysuit with no drysuit card", () => {
   const diver = entry("d", "Ines Kowalski");
-  const drysuitFit = (rentsDrysuit: boolean) =>
+  const drysuitFit = (rentsDrysuit: boolean, divesDry = rentsDrysuit) =>
     new Map([
       [
         "d",
         {
           rentsDrysuit,
+          divesDry,
           drysuitSize: rentsDrysuit ? "ML" : null,
           rentsBcd: false,
           rentsRegulator: false,
@@ -671,11 +900,25 @@ describe("a drysuit going out with no drysuit card", () => {
 
     expect(
       screen.getByText(
-        "Renting a drysuit with no drysuit certification on file. This is not a block: check what they hold, or plan an orientation before the first dive.",
+        "In a drysuit with no drysuit certification on file. This is not a block: check what they hold, or plan an orientation before the first dive.",
       ),
     ).toBeInTheDocument();
     // The advisory is not a blocker, so the seat is still cleared.
     expect(screen.queryByText("Blocked")).toBeNull();
+  });
+
+  it("names it for a diver in their own suit, who rents none from us (H-78)", () => {
+    // Most drysuit divers own the suit. The advisory used to ask whether the
+    // shop was renting one, which left silent exactly the divers it is about
+    // (issue #1752).
+    renderRoster({
+      roster: [diver],
+      readiness: withCards([]),
+      waivers,
+      rentalFit: drysuitFit(false, true),
+    });
+
+    expect(screen.getByText(/^In a drysuit with no drysuit certification on file/)).toBeVisible();
   });
 
   it("says nothing when the diver holds the card", () => {
@@ -691,7 +934,7 @@ describe("a drysuit going out with no drysuit card", () => {
     expect(screen.queryByText(/drysuit certification/)).toBeNull();
   });
 
-  it("says nothing about a diver who is not renting one", () => {
+  it("says nothing about a diver who is not in one", () => {
     renderRoster({
       roster: [diver],
       readiness: withCards([]),
@@ -743,6 +986,16 @@ describe("the seat's foot row sits on the text column through flush", () => {
     for (const control of [order, remove]) {
       expect(control).not.toHaveClass("focus-visible:focus-ring-inset");
     }
+  });
+
+  it("withholds Create order from a reader who may not raise an invoice (issue #1925)", () => {
+    // Payments connected, so the only thing hiding the link is the permission:
+    // `orders/new` would bounce this reader to the Orders index.
+    renderRoster({ ...fixtures, roster: [ready], paymentsConnected: true, canManageOrders: false });
+
+    expect(screen.queryByRole("link", { name: "Create order" })).toBeNull();
+    const remove = screen.getByRole("button", { name: "Remove booking" });
+    expect(rendersFlush(remove, "danger-ghost", "sm")).toBe(true);
   });
 
   it("flushes Remove booking when it is the only control on the row", () => {
@@ -1052,5 +1305,18 @@ describe("the one-line row", () => {
     expect(screen.getByRole("heading", { name: "Still to clear · 1" })).toBeVisible();
     expect(screen.getByText("Waiver not signed yet")).toBeVisible();
     expect(screen.getByText("Not paid yet")).toBeVisible();
+  });
+
+  it("states no waiver reason for a held seat: that waiver is the matched diver's", () => {
+    const held = entry("w", "Wen Ito");
+    (held.booking as { identityUnconfirmedAt: Date | null }).identityUnconfirmedAt = new Date(
+      "2026-10-01T12:00:00Z",
+    );
+    renderRoster({
+      roster: [held],
+      readiness: new Map([["w", readinessRow("ready")]]) as ReadinessByBooking,
+      waivers: new Map() as WaiverByBooking,
+    });
+    expect(screen.queryByText("Waiver not signed yet")).toBeNull();
   });
 });
