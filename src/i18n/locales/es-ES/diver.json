@@ -1056,6 +1056,7 @@
     "bcdSize": "Talla de chaleco",
     "finSizePlaceholder": "US 9 / EU 42",
     "weightPlaceholder": "p. ej. 7 kg con un neopreno de 3 mm",
+    "weightPlaceholderDry": "p. ej. 10 kg con traje seco y forro",
     "saveFit": "Guardar equipo de alquiler",
     "bcdIconLabel": "Chaleco",
     "finIconLabel": "Aleta",

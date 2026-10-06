@@ -147,6 +147,14 @@ describe("GearAndSizes", () => {
     expect(screen.getByLabelText("Wetsuit size")).toBeInTheDocument();
   });
 
+  it("gives a drysuit example for the weighting while the suit is a drysuit", () => {
+    renderGear(makeRentalFit({ rentsWeights: true }), ["weights", "drysuit"]);
+    const weighting = () => screen.getByRole("textbox", { name: "Weight preference" });
+    expect(weighting()).toHaveAttribute("placeholder", "Usually 12 lb with 3 mm suit");
+    fireEvent.click(screen.getByRole("radio", { name: "Own drysuit" }));
+    expect(weighting()).toHaveAttribute("placeholder", "Usually 22 lb in a drysuit");
+  });
+
   it("hangs no hint on a size box that has nothing extra to say", () => {
     renderGear(makeRentalFit({ rentsBcd: true, bcdSize: "M" }), ["bcd"]);
     expect(screen.queryByRole("button", { name: /^About / })).not.toBeInTheDocument();

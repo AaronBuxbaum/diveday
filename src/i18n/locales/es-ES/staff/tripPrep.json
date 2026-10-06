@@ -38,7 +38,7 @@
   "fitAtCheckIn": "Ajustar en el check-in",
   "drysuitWeightCheck": "Traje seco: verificar el lastre en el agua",
   "drysuitFins": "Prepara aletas que entren sobre la bota del traje seco",
-  "drysuitFinsWithSize": "Calzado {size}: prepara aletas que entren sobre la bota del traje seco",
+  "drysuitFinsWithSize": "Pie {size}: prepara aletas que entren sobre la bota del traje seco",
   "noLongerRented": "Ya no alquilas esto",
   "notRecorded": "No registrado",
   "emptyHeading": "Todavía no hay nada que preparar",

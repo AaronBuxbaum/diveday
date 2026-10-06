@@ -134,6 +134,7 @@ export function GearAndSizes({
       name: "weightPreference",
       label: t("divers.rentalFit.weightPreferenceLabel"),
       placeholder: t("divers.rentalFit.weightPreferencePlaceholder"),
+      drysuitPlaceholder: t("divers.rentalFit.weightPreferencePlaceholderDry"),
       defaultValue: profile?.weightPreference ?? "",
       requires: ["weights"],
     },

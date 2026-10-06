@@ -1183,9 +1183,18 @@ function normalizeAgency(raw: string | undefined): { agency: ImportAgency; recog
  * issue is about.
  */
 const LONG_AGENCY_SPELLINGS: Partial<Record<ImportAgency, readonly (readonly string[])[]>> = {
-  nss_cds: [["nss", "cds"], ["nsscds"], ["nss", "cave", "diving", "section"]],
+  nss_cds: [
+    ["nss", "cds"],
+    ["nsscds"],
+    ["nss", "cave", "diving", "section"],
+    ["national", "speleological", "society", "cave", "diving", "section"],
+  ],
   nacd: [["national", "association", "for", "cave", "diving"]],
-  iantd: [["international", "association", "of", "nitrox", "and", "technical", "divers"]],
+  iantd: [
+    ["international", "association", "of", "nitrox", "and", "technical", "divers"],
+    // "Nitrox & Technical": the splitter drops the ampersand with the spaces.
+    ["international", "association", "of", "nitrox", "technical", "divers"],
+  ],
 };
 
 function agencySpellings(agency: ImportAgency): readonly (readonly string[])[] {

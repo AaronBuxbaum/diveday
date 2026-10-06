@@ -655,7 +655,13 @@ export function RentalFitForm({
                   name="weightPreference"
                   maxLength={RENTAL_FIT_TEXT_LIMITS.weightPreference}
                   defaultValue={rentalFit?.weightPreference ?? ""}
-                  placeholder={t("rental.weightPlaceholder")}
+                  // The example follows the suit: a wetsuit number is short for
+                  // a diver in a drysuit (H-78).
+                  placeholder={
+                    suit === "own_drysuit" || suit === "rents_drysuit"
+                      ? t("rental.weightPlaceholderDry")
+                      : t("rental.weightPlaceholder")
+                  }
                   className={controlClass}
                 />
               </Field>

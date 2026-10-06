@@ -850,6 +850,16 @@ describe("RentalFitForm suit choice", () => {
     expect(new FormData(form ?? undefined).getAll("suit")).toEqual(["own_drysuit"]);
   });
 
+  it("gives a drysuit example for the weighting once the diver picks a drysuit", () => {
+    // A wetsuit number is short for a dry diver, and the example is the one
+    // sentence on the form that suggests a number (H-78).
+    renderSuit({ ...emptyFit, rentsWeights: true }, ["weights", "wetsuit"]);
+    const weighting = () => screen.getByRole("textbox", { name: /^Usual weight setup/ });
+    expect(weighting()).toHaveAttribute("placeholder", "e.g. 16 lb with a 3 mm suit");
+    fireEvent.click(screen.getByRole("radio", { name: "My own drysuit" }));
+    expect(weighting()).toHaveAttribute("placeholder", "e.g. 22 lb with a drysuit and undersuit");
+  });
+
   it("starts a diver with no fit on the wetsuit the shop rents", () => {
     renderSuit(null, ["bcd", "wetsuit"]);
     expect(screen.getByRole("radio", { name: /^Rent a wetsuit/ })).toBeChecked();

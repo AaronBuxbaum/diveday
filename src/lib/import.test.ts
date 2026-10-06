@@ -402,6 +402,14 @@ describe("prepareContactImport — safety rules", () => {
     expect(cavernFrom("International Association of Nitrox and Technical Divers")).toMatchObject({
       agency: "iantd",
     });
+    expect(cavernFrom("International Association of Nitrox & Technical Divers")).toMatchObject({
+      agency: "iantd",
+    });
+    expect(cavernFrom("National Speleological Society Cave Diving Section")).toMatchObject({
+      agency: "nss_cds",
+    });
+    // The society alone is still not the section that issues the card.
+    expect(cavernFrom("National Speleological Society")).toMatchObject({ agency: "other" });
   });
 
   it("does not read NSS-CDS out of a bare NSS or out of half its name (#2091)", () => {

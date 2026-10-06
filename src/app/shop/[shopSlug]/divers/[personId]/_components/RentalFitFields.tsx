@@ -38,6 +38,12 @@ export type RentalFitSize = {
   name: string;
   label: string;
   placeholder: string;
+  /**
+   * The example to show instead while the suit choice is a drysuit. The
+   * weighting box has one: its usual example is a wetsuit number, and a
+   * drysuit diver carries two to four kilos more (H-78).
+   */
+  drysuitPlaceholder?: string;
   defaultValue: string;
   /**
    * Checkbox names that put this size on the packing list. More than one for
@@ -154,7 +160,12 @@ export function RentalFitFields({
               onChange={(event) =>
                 setValues((previous) => ({ ...previous, [size.name]: event.target.value }))
               }
-              placeholder={size.placeholder}
+              placeholder={
+                size.drysuitPlaceholder &&
+                (suitChoice === "own_drysuit" || suitChoice === "rents_drysuit")
+                  ? size.drysuitPlaceholder
+                  : size.placeholder
+              }
               className={controlClass}
             />
           </Field>
