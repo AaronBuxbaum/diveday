@@ -5,7 +5,7 @@ import { ANONYMIZED_PERSON_NAME } from "@/lib/anonymization";
 import { STAFF_ROLES } from "@/lib/authz";
 import { emptyMedicalAnswers, findQuestionnaireVersion, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { operationalWindow } from "@/lib/operational-window";
-import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
+import { verifyWaiverIntegrity, WAIVER_INTEGRITY_VERSION_ERASED } from "@/lib/waiver-integrity";
 import {
   DEFAULT_WAIVER_TITLE,
   isCleanCompletion,
@@ -1426,7 +1426,7 @@ describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () =
  * do, once a diver has been erased.
  */
 describe("signed waivers after a diver is erased", () => {
-  async function erasedContext(options: { completeIt: boolean }) {
+  async function erasedContext(options: { completeIt: boolean; tamperBeforeErasure?: boolean }) {
     const { db, person, shop, trip, booking, template } = await waiverContext();
     const [owner] = await db
       .select({ id: people.id })
@@ -1444,6 +1444,13 @@ describe("signed waivers after a diver is erased", () => {
         now,
       });
       if (!done.ok) throw new Error("completion failed");
+    }
+    if (options.tamperBeforeErasure) {
+      // An edit made straight in the database, on a field erasure keeps.
+      await db
+        .update(waiverRecords)
+        .set({ templateBody: "A release nobody agreed to." })
+        .where(eq(waiverRecords.id, issued.recordId));
     }
 
     const erased = await anonymizeDiver(db, {
@@ -1478,6 +1485,24 @@ describe("signed waivers after a diver is erased", () => {
     expect(audited.find((row) => row.id === issued.recordId)).toMatchObject({
       integrity: "valid",
     });
+  });
+
+  it("leaves a release whose seal already failed reading as tampered, never re-sealed", async () => {
+    const { db, shop, issued } = await erasedContext({
+      completeIt: true,
+      tamperBeforeErasure: true,
+    });
+
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, issued.recordId));
+    if (!record) throw new Error("record missing");
+    // Erasure must not launder the edit by handing the row a fresh seal.
+    expect(record.integrityVersion).not.toBe(WAIVER_INTEGRITY_VERSION_ERASED);
+    expect(verifyWaiverIntegrity(record)).toBe("invalid");
+    const entry = await getSignedWaiverRecordForShop(db, shop.id, issued.recordId);
+    expect(entry?.integrity).toBe("invalid");
   });
 
   it("strips the signature and the medical questionnaire from the stored record", async () => {
