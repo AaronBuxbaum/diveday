@@ -44,6 +44,7 @@ import { DEFAULT_DIVER_LOCALE, type DiverLocale } from "@/i18n/settings";
 import type { ArrivalStatus } from "@/lib/arrival";
 import { counterIsDone, isSettledAtCounter } from "@/lib/check-in";
 import { EMPTY_EMERGENCY_REFERENCE } from "@/lib/emergency-reference";
+import { isHeldSeat } from "@/lib/held-seat";
 import { cachedFormatter, cachedListFormat } from "@/lib/intl-cache";
 import {
   isNotBackAboard,
@@ -2357,27 +2358,37 @@ export function OfflineManifestView() {
                           </span>
                         </summary>
                         <div className="mb-1 grid gap-2 rounded-inset border border-border/70 bg-surface-sunken/50 p-3 text-base">
-                          <p>
-                            <span className="font-bold">
-                              {t("shared.offlineManifest.single.emergencyContact")}
-                            </span>
-                            <span className="mt-0.5 block text-muted">
-                              {diver.emergencyContactName && diver.emergencyContactPhone
-                                ? `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
-                                : t("shared.offlineManifest.single.notOnFile")}
-                            </span>
-                          </p>
-                          <p>
-                            <span className="font-bold">
-                              {t("shared.offlineManifest.single.rentalFit")}
-                            </span>
-                            <span className="mt-0.5 block text-muted">
-                              {rentalFitLineText(t, locale, diver.rentalFit)}
-                              {diver.nitroxRequested
-                                ? ` ${t("shared.offlineManifest.single.nitroxRequestedSuffix")}`
-                                : ""}
-                            </span>
-                          </p>
+                          {/* A held seat was saved with the matched person's
+                            particulars already cleared (`serializeManifests`),
+                            so it says why rather than "Not on file" (issue
+                            #1690). Its blockers still carry the identity code. */}
+                          {isHeldSeat(diver) ? (
+                            <p className="text-muted">{t("manifest.identityWithheldDetails")}</p>
+                          ) : (
+                            <>
+                              <p>
+                                <span className="font-bold">
+                                  {t("shared.offlineManifest.single.emergencyContact")}
+                                </span>
+                                <span className="mt-0.5 block text-muted">
+                                  {diver.emergencyContactName && diver.emergencyContactPhone
+                                    ? `${diver.emergencyContactName} · ${diver.emergencyContactPhone}`
+                                    : t("shared.offlineManifest.single.notOnFile")}
+                                </span>
+                              </p>
+                              <p>
+                                <span className="font-bold">
+                                  {t("shared.offlineManifest.single.rentalFit")}
+                                </span>
+                                <span className="mt-0.5 block text-muted">
+                                  {rentalFitLineText(t, locale, diver.rentalFit)}
+                                  {diver.nitroxRequested
+                                    ? ` ${t("shared.offlineManifest.single.nitroxRequestedSuffix")}`
+                                    : ""}
+                                </span>
+                              </p>
+                            </>
+                          )}
                         </div>
                       </details>
                       {!ready ? (

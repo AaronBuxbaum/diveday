@@ -127,6 +127,12 @@ export type ManifestDiverInput = {
    * nothing to compare. Absent on a seat that was never held.
    */
   identityClaim?: { bookedAs: string | null; matchedBy: IdentityMatchKind | null };
+  /**
+   * Set only by `withholdHeldSeatParticulars` (`src/lib/held-seat.ts`): this
+   * row is a held seat and the matched person's particulars were cleared, so a
+   * surface says they wait for confirmation instead of "Not on file".
+   */
+  identityWithheld?: boolean;
   /** Rental kit line, including whether a fit was ever recorded at all. */
   rentalFit: RentalFitLine;
   /**

@@ -1040,6 +1040,74 @@ describe("offline manifest policy", () => {
     } as TripManifest;
   }
 
+  it("saves a held seat without the matched person's particulars (issue #1690)", () => {
+    // The copy that lives longest on a crew phone is the last one that should
+    // carry a stranger's next of kin, sizes or medical hold. The seat stays,
+    // blocked, with its identity code, which is how the saved copy says why.
+    const base = baseManifest();
+    const shop = {
+      slug: "blue-mantis",
+      name: "Blue Mantis",
+      timezone: "America/New_York",
+      emergencyReference: EMPTY_EMERGENCY_REFERENCE,
+    };
+    const heldDiver = {
+      ...base.divers[0],
+      emergencyContactName: "Luis Santos",
+      emergencyContactPhone: "+1-305-555-0199",
+      rentalFit: { state: "own_kit" },
+      nitroxRequested: true,
+      checkedIn: true,
+      identityClaim: { bookedAs: "Maria", matchedBy: "picked_name" },
+      readiness: {
+        status: "blocked",
+        blockers: [{ code: "identity_unconfirmed" }, { code: "medical_review" }],
+      },
+    } as TripManifest["divers"][number];
+    const payload = serializeManifests(
+      [{ ...base, divers: [heldDiver] }],
+      shop,
+      (blocker) => blocker.code,
+    );
+    expect(payload.manifests[0]?.divers[0]).toMatchObject({
+      bookingId: "booking-1",
+      fullName: "Nobody Asked",
+      emergencyContactName: null,
+      emergencyContactPhone: null,
+      rentalFit: { state: "not_recorded" },
+      nitroxRequested: false,
+      checkedIn: true,
+      readiness: {
+        status: "blocked",
+        blockers: [{ code: "identity_unconfirmed", text: "identity_unconfirmed" }],
+      },
+    });
+
+    // Confirmed, the same diver's contact rides as it always has.
+    const confirmed = serializeManifests(
+      [
+        {
+          ...base,
+          divers: [
+            {
+              ...heldDiver,
+              identityClaim: undefined,
+              readiness: { status: "blocked", blockers: [{ code: "medical_review" }] },
+            },
+          ],
+        },
+      ],
+      shop,
+      (blocker) => blocker.code,
+    );
+    expect(confirmed.manifests[0]?.divers[0]).toMatchObject({
+      emergencyContactName: "Luis Santos",
+      emergencyContactPhone: "+1-305-555-0199",
+      nitroxRequested: true,
+      readiness: { blockers: [{ code: "medical_review", text: "medical_review" }] },
+    });
+  });
+
   it("carries the counter's write-off to the dock, so a released seat is not a late diver", () => {
     // #1209. The dock copy is the only copy at the rail, and without this
     // field a name the counter settled at 07:20 reads on it exactly like a

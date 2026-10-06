@@ -3,6 +3,8 @@ import { MINUTE_MS } from "@/lib/clock";
 import { type ArrivalStatus, latestArrival } from "./arrival";
 import { nowDate } from "./clock";
 import type { EmergencyReference } from "./emergency-reference";
+// Dependency-free too (type-only imports), for the same reason.
+import { withholdHeldSeatParticulars } from "./held-seat";
 import type { TripManifest } from "./manifests";
 // Same reasoning as the roll-call import above: dependency-free, so a value
 // import here is safe for the service worker to carry.
@@ -829,7 +831,13 @@ export function serializeManifests(
       // above: what the dock needs, and nothing else. Age, minor status, and
       // birthdays (H-21) are deliberately absent — they are staff-screen facts,
       // not something to persist on a deckhand's phone for a fortnight.
-      divers: manifest.divers.map((diver) => ({
+      //
+      // A held seat goes through `withholdHeldSeatParticulars` first (issue
+      // #1690, H-79): the copy that lives longest on a crew phone is the last
+      // one that should carry the matched person's next of kin, sizes or
+      // medical hold under a name nobody has confirmed. Its blockers keep the
+      // `identity_unconfirmed` code, which is how the saved copy knows to say so.
+      divers: manifest.divers.map(withholdHeldSeatParticulars).map((diver) => ({
         bookingId: diver.bookingId,
         fullName: diver.fullName,
         emergencyContactName: diver.emergencyContactName,

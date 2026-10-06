@@ -25,6 +25,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 import { welcomeCueText } from "@/i18n/welcome-cue-labels";
 import { diverRowId, scopedId } from "@/lib/element-id";
 import { formatDateTimeTz, formatShortDate } from "@/lib/format";
+import { withholdHeldSeatParticulars } from "@/lib/held-seat";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
   type ManifestBuddyTeam,
@@ -77,6 +78,11 @@ function diverBlockerText(
  * screen-only person sheet, and in a print-only block — the sheet contributes
  * nothing to print, and the printed manifest is the document a coastguard
  * reads, so it keeps every fact without asking paper to disclose.
+ *
+ * The one exception is a held seat (`identityWithheld`, issue #1690): the
+ * facts on file belong to the matched person, not provably to whoever is
+ * aboard, so paper says they wait for confirmation, exactly as the screen does.
+ * A wrong next of kin on the coastguard's sheet is worse than none.
  */
 function DiverFacts({
   diver,
@@ -103,6 +109,28 @@ function DiverFacts({
   columns: 1 | 2;
   t: StaffTranslator;
 }) {
+  // The pickup belongs to the booking, not to the matched person, so a held
+  // seat keeps it.
+  const pickup = diver.hotelPickupLocation ? (
+    <p>
+      <span className="font-bold">{t("manifest.hotelPickupLabel")}</span>
+      <span className="mt-0.5 block text-muted">
+        {diver.hotelPickupLocation}
+        {diver.pickupTime ? ` · ${diver.pickupTime}` : ""}
+      </span>
+    </p>
+  ) : null;
+  if (diver.identityWithheld) {
+    // Said, on screen and on paper alike, rather than "Not on file": a held
+    // seat with no contact reads as a diver who has none, which is a wrong
+    // fact. The confirm control is ashore, on the Divers tab (issue #1690).
+    return (
+      <div className={`grid gap-2 text-base${columns === 2 ? " sm:grid-cols-2" : ""}`}>
+        <p className="text-muted">{t("manifest.identityWithheldDetails")}</p>
+        {pickup}
+      </div>
+    );
+  }
   return (
     <div className={`grid gap-2 text-base${columns === 2 ? " sm:grid-cols-2" : ""}`}>
       <p>
@@ -153,15 +181,7 @@ function DiverFacts({
           </span>
         </p>
       ) : null}
-      {diver.hotelPickupLocation ? (
-        <p>
-          <span className="font-bold">{t("manifest.hotelPickupLabel")}</span>
-          <span className="mt-0.5 block text-muted">
-            {diver.hotelPickupLocation}
-            {diver.pickupTime ? ` · ${diver.pickupTime}` : ""}
-          </span>
-        </p>
-      ) : null}
+      {pickup}
       {diver.medicalWaiver ? (
         <p>
           <span className="font-bold">
@@ -267,7 +287,7 @@ export type ManifestNote = {
 /** The diver half of the head count — every active booking, one row each. */
 export function DiverRollCall({
   idPrefix,
-  divers,
+  divers: rosterDivers,
   crew,
   checkpoint,
   isDeparture,
@@ -310,6 +330,10 @@ export function DiverRollCall({
   buddyTeamLabel: (teams: ReadonlyArray<ManifestBuddyTeam>) => string | null;
   t: StaffTranslator;
 }) {
+  // **A held seat shows the seat, not the matched person** (issue #1690,
+  // H-79): everything below, on screen and on paper, reads the withheld row,
+  // so no capsule, fact block or shared advisory can reach past it.
+  const divers = rosterDivers.map(withholdHeldSeatParticulars);
   // The same depth advisory resolving identically for much of the roster is
   // one fact about the plan, not nine facts about nine divers (principle 9) —
   // on the seeded wreck trip the identical 40-word paragraph rendered inside
@@ -552,9 +576,13 @@ export function DiverRollCall({
                 <PersonSheet
                   name={diver.fullName}
                   triggerLabel={t("manifest.openPersonDetails", { name: diver.fullName })}
-                  subtitle={t("manifest.personSheetDiverSubtitle", {
-                    rental: rentalFitLineText(t, locale, diver.rentalFit),
-                  })}
+                  subtitle={
+                    diver.identityWithheld
+                      ? t("manifest.personSheetHeldDiverSubtitle")
+                      : t("manifest.personSheetDiverSubtitle", {
+                          rental: rentalFitLineText(t, locale, diver.rentalFit),
+                        })
+                  }
                   status={
                     <Badge
                       tone={

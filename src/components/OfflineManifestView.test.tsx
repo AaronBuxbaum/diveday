@@ -2376,6 +2376,45 @@ describe("the row grammar the live manifest already reads", () => {
     expect(within(details as HTMLElement).getByText("Anil Shah · +1-305-555-0177")).toBeTruthy();
   });
 
+  it("says a held seat's details wait for confirmation, rather than 'Not on file' (issue #1690)", async () => {
+    // `serializeManifests` saved this seat with the matched person's contact
+    // cleared; the identity code on its blockers is how the copy knows why.
+    const envelope = richEnvelope("trip-1", { readiness: "blocked" });
+    for (const manifest of envelope.snapshot.manifests) {
+      manifest.divers = manifest.divers.map((diver) =>
+        diver.bookingId === "diver-priya"
+          ? {
+              ...diver,
+              emergencyContactName: null,
+              emergencyContactPhone: null,
+              readiness: {
+                status: "blocked",
+                blockers: [
+                  {
+                    code: "identity_unconfirmed",
+                    text: "Might be someone else. Confirm who this is before boarding.",
+                  },
+                ],
+              },
+            }
+          : diver,
+      );
+    }
+    vi.mocked(loadOfflineManifest).mockResolvedValue(envelope);
+
+    render(<OfflineManifestView />);
+    await screen.findByRole("heading", { name: "Two-Tank Reef" });
+
+    const summary = screen.getAllByText("Contact & gear")[0];
+    const details = summary?.closest("details") as HTMLElement;
+    expect(
+      within(details).getByText(
+        "Contact, age, gear and medical details wait until the desk confirms who this is.",
+      ),
+    ).toBeTruthy();
+    expect(within(details).queryByText("Not on file")).toBeNull();
+  });
+
   it("drops the box off the exception control while boarding is still on offer", async () => {
     // Most people board, so an unrecorded "Mark not boarded" beside a live
     // "Mark boarded" is the exception at less than equal weight — no border,

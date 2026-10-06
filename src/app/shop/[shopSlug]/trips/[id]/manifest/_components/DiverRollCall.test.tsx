@@ -784,3 +784,98 @@ describe("the mark beside a name that wraps", () => {
     expect(row).toContainElement(mark);
   });
 });
+
+/**
+ * **A held seat prints the seat, not the matched person** (issue #1690,
+ * H-79). A walk-in tapped onto last season's "Maria Santos" must not carry her
+ * next of kin, her daughter's age or her medical hold onto the boat under a
+ * name nobody has confirmed: not on screen, and not on the printed sheet,
+ * which is the half a screen-only test would miss.
+ */
+describe("a held seat on the manifest", () => {
+  const heldSeat = (checkpoint: RollCallCheckpoint = "departure") =>
+    renderList({
+      checkpoint,
+      divers: [
+        diver({
+          age: 13,
+          minor: true,
+          identityClaim: { bookedAs: "Maria", matchedBy: "picked_name" },
+          readiness: {
+            status: "blocked",
+            blockers: [{ code: "identity_unconfirmed" }, { code: "medical_review" }],
+          },
+          nitroxRequested: true,
+          hotelPickupLocation: "Casa Marina",
+        }),
+      ],
+    });
+
+  it("withholds the contact, the age and the matched person's blockers, on paper too", () => {
+    const { container } = heldSeat();
+    const everything = container.textContent ?? "";
+    expect(everything).not.toContain("Asha Iyer");
+    expect(everything).not.toContain("+1-305-555-0231");
+    expect(everything).not.toMatch(/age 13/);
+    expect(everything).not.toContain("A medical answer needs staff follow-up.");
+    // The print-only block says why, rather than "Not on file".
+    const printed = container.querySelector<HTMLElement>(".print\\:block");
+    expect(printed).not.toBeNull();
+    expect(printed).toHaveTextContent(
+      "Contact, age, gear and medical details wait until the desk confirms who this is.",
+    );
+    expect(printed).not.toHaveTextContent("Not on file");
+  });
+
+  it("keeps the seat's own state: the blocked word, the identity question and the pickup", () => {
+    const { container } = heldSeat();
+    expect(screen.getAllByText("Blocked").length).toBeGreaterThan(0);
+    expect(container.textContent).toContain("Booked as Maria, then matched to Meera Iyer");
+    expect(container.textContent).toContain("Casa Marina");
+  });
+
+  it("says the same in the person's own panel", () => {
+    heldSeat("after_dive_1");
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Meera Iyer" }));
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveTextContent(
+      "Contact, age, gear and medical details wait until the desk confirms who this is.",
+    );
+    expect(dialog).not.toHaveTextContent("Asha Iyer");
+    expect(dialog).toHaveTextContent("Diver · not yet confirmed");
+  });
+
+  it("shows everything again once the desk has confirmed who this is", () => {
+    const { container } = renderList({
+      checkpoint: "departure",
+      divers: [
+        diver({
+          age: 13,
+          minor: true,
+          readiness: { status: "blocked", blockers: [{ code: "medical_review" }] },
+        }),
+      ],
+    });
+    const everything = container.textContent ?? "";
+    expect(everything).toContain("Asha Iyer");
+    expect(everything).toContain("+1-305-555-0231");
+    expect(everything).toContain("Minor · age 13");
+    expect(everything).toContain("A medical answer needs staff follow-up.");
+    expect(everything).not.toContain("wait until the desk confirms");
+  });
+
+  it("says it in Spanish too", () => {
+    const { container } = renderList({
+      locale: "es-ES",
+      checkpoint: "departure",
+      divers: [
+        diver({
+          readiness: { status: "blocked", blockers: [{ code: "identity_unconfirmed" }] },
+        }),
+      ],
+    });
+    expect(container.textContent).toContain(
+      "Los datos de contacto, edad, equipo y ficha médica esperan a que el mostrador confirme de quién se trata.",
+    );
+  });
+});
