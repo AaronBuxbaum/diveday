@@ -45,7 +45,7 @@ import { rentalFitLine } from "@/lib/dive-prep";
 import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import { checkDrysuitCard } from "@/lib/drysuit-card";
 import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
-import { formatDateTimeTz, formatShortDate } from "@/lib/format";
+import { formatDateTimeTz, formatShortDate, formatTimeTz } from "@/lib/format";
 import { guardianSignatureOf, guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { heldSeatBlockers } from "@/lib/identity-match";
 import { cachedListFormat } from "@/lib/intl-cache";
@@ -323,7 +323,7 @@ export function RosterSection({
   splitIdentityAction: (formData: FormData) => void;
   /** Per held seat, the other held seats a split may move with it (`sameNameHeldSeats`). */
   sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
-  /** This departure is a course with a minimum age, so a split must take a date of birth. */
+  /** This seat's departure is a course with a minimum age, so a split must take a date of birth. */
   splitAsksDateOfBirth?: boolean;
   notesByBooking: Map<string, RosterPrivateNote[]>;
   addNoteAction: (formData: FormData) => void;
@@ -414,11 +414,23 @@ export function RosterSection({
   // shared with other divers, listed above" told a staffer neither what was
   // wrong nor what to do, and a blocker is fixed diver by diver, so there is
   // no batched action a shared line could stand for. Each row says its own.
+  //
+  // The advisory is measured against the record the seat is attached to, so
+  // on a held seat it is a fact about the matched person — `junior_age` says
+  // they are a minor, `no_card` or a ceiling says what card they hold — and is
+  // withheld wherever it would show or count (security re-review, issue #1690).
+  const seatDepthAdvisory = (booking: RosterEntry["booking"]) => {
+    const row = readinessByBooking.get(booking.id);
+    const held =
+      Boolean(booking.identityUnconfirmedAt) ||
+      Boolean(row?.readiness?.blockers.some((blocker) => blocker.code === "identity_unconfirmed"));
+    return held ? undefined : row?.depthAdvisory;
+  };
   const advisorySentenceCounts = new Map<string, number>();
   for (const { booking } of roster) {
-    const row = readinessByBooking.get(booking.id);
-    if (row?.depthAdvisory?.status === "exceeds") {
-      const text = depthWarningText(t, row.depthAdvisory);
+    const depthAdvisory = seatDepthAdvisory(booking);
+    if (depthAdvisory?.status === "exceeds") {
+      const text = depthWarningText(t, depthAdvisory);
       advisorySentenceCounts.set(text, (advisorySentenceCounts.get(text) ?? 0) + 1);
     }
   }
@@ -478,7 +490,7 @@ export function RosterSection({
    */
   const isSettled = (entry: RosterEntry): boolean => {
     const { booking } = entry;
-    const depth = readinessByBooking.get(booking.id)?.depthAdvisory;
+    const depth = seatDepthAdvisory(booking);
     const depthText = depth?.status === "exceeds" ? depthWarningText(t, depth) : null;
     const depthShared = depthText !== null && sharedAdvisoryTexts.has(depthText);
     return (
@@ -607,8 +619,9 @@ export function RosterSection({
     );
     // A warning, never a gate: the site goes deeper than this diver's
     // training, which an instructor may well have already planned around
-    // (H-08). It sits apart from the blocker list for that reason.
-    const depth = readinessByBooking.get(booking.id)?.depthAdvisory;
+    // (H-08). It sits apart from the blocker list for that reason. Withheld
+    // on a held seat, as everything measured against the matched person is.
+    const depth = showsPersonDetail ? readinessByBooking.get(booking.id)?.depthAdvisory : undefined;
     const notes = notesByBooking.get(booking.id) ?? [];
     // This row's blockers, each in its own sentence. The held-identity one
     // names both people the guess was between (`identityReasonText`), so the
@@ -976,8 +989,9 @@ export function RosterSection({
       // clear" by its paperwork or its money, and a row in that group with no
       // stated reason trains a crew to stop reading the group (dive-domain
       // review 2026-10-05). A waiver blocker already says the first; this is
-      // for the seat no blocker speaks for.
-      ...(waiverControl.action !== null && blockerTexts.length === 0
+      // for the seat no blocker speaks for. Not on a held seat: the waiver
+      // read is the matched person's, so its state is theirs to state.
+      ...(waiverControl.action !== null && blockerTexts.length === 0 && showsPersonDetail
         ? [
             {
               key: "waiver",
@@ -1090,6 +1104,9 @@ export function RosterSection({
                     sameNameSeats.map((seat) =>
                       t("shared.identityCheck.sameNameDeparture", {
                         date: formatShortDate(seat.startsAt, locale, shopTimezone),
+                        // The time too, so a same-day morning and afternoon
+                        // run can be told apart (dive-domain re-review).
+                        time: formatTimeTz(seat.startsAt, locale, shopTimezone),
                         trip: seat.tripTitle,
                       }),
                     ),

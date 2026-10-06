@@ -539,7 +539,7 @@
     "phoneLabel": "Teléfono",
     "optional": "(opcional)",
     "sameNameSeats": "{count, plural, one {Pasar también la plaza retenida reservada como {bookedAs} en {departures}} other {Pasar también las plazas retenidas reservadas como {bookedAs} en {departures}}}",
-    "sameNameDeparture": "{trip} ({date})",
+    "sameNameDeparture": "{trip} ({date}, {time})",
     "split": "Crear su propia ficha",
     "splitting": "Creando…"
   }

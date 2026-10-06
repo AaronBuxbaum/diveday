@@ -471,6 +471,54 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     expect(screen.queryByText("Follow up before boarding")).toBeNull();
   });
 
+  it("measures no depth advisory against the matched person, alone or shared with the boat", () => {
+    // `junior_age` would say the matched person is a minor, and a ceiling or
+    // `no_card` what card they hold (security re-review, issue #1690). Two
+    // confirmed seats share the same sentence, so the held seat must neither
+    // wear the capsule nor be counted into the shared line.
+    const juniorDeep = {
+      ...readinessRow("blocked", [{ code: "identity_unconfirmed", params: undefined }]),
+      depthAdvisory: {
+        status: "exceeds",
+        limitDepth: 12,
+        siteDepth: 30,
+        unit: "meters",
+        basis: "junior_age",
+        level: "open_water",
+      },
+    } as unknown as ReadinessByBooking extends Map<string, infer V> ? V : never;
+    renderRoster({
+      roster: [matched],
+      readiness: new Map([["u", juniorDeep]]) as ReadinessByBooking,
+      waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+    });
+    expect(screen.queryByText(/allowed at their age/)).toBeNull();
+    expect(screen.queryByText("Depth advisory")).toBeNull();
+  });
+
+  it("leaves a held seat out of a shared depth advisory's count", () => {
+    const seats = [entry("a", "Asha Osei"), entry("b", "Rene Marsh"), matched];
+    const heldDeep = {
+      ...deepRow(),
+      readiness: { status: "blocked", blockers: [{ code: "identity_unconfirmed" }] },
+    } as unknown as ReadinessByBooking extends Map<string, infer V> ? V : never;
+    const { container } = renderRoster({
+      roster: seats,
+      readiness: new Map([
+        ["a", deepRow()],
+        ["b", deepRow()],
+        ["u", heldDeep],
+      ]) as ReadinessByBooking,
+      waivers: new Map([
+        ["a", signedWaiver],
+        ["b", signedWaiver],
+        ["u", heldWaiver],
+      ]) as WaiverByBooking,
+    });
+    const text = container.textContent ?? "";
+    expect(text).not.toMatch(/\b3 divers\b/);
+  });
+
   it("prints none of the matched person's medical answers, age, emergency contact or sizes", () => {
     renderRoster({
       roster: [matched],
@@ -602,7 +650,8 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       // can share a name, and only the staffer can tell.
       const box = screen.getByRole<HTMLInputElement>("checkbox", {
         // `\s`: a date keeps its units whole with U+00A0 (`keepUnitsWhole`).
-        name: /^Also move the held seats booked as Lucia Vega on Reef Morning \(Sat, Oct\s10\) and Wreck Afternoon \(Sun, Oct\s11\)$/,
+        // The time as well, so a same-day morning and afternoon run differ.
+        name: /^Also move the held seats booked as Lucia Vega on Reef Morning \(Sat, Oct\s10, 8:00\sAM\sEDT\) and Wreck Afternoon \(Sun, Oct\s11, 2:00\sPM\sEDT\)$/,
         hidden: true,
       });
       expect(box).not.toBeChecked();
@@ -1257,5 +1306,18 @@ describe("the one-line row", () => {
     expect(screen.getByRole("heading", { name: "Still to clear · 1" })).toBeVisible();
     expect(screen.getByText("Waiver not signed yet")).toBeVisible();
     expect(screen.getByText("Not paid yet")).toBeVisible();
+  });
+
+  it("states no waiver reason for a held seat: that waiver is the matched diver's", () => {
+    const held = entry("w", "Wen Ito");
+    (held.booking as { identityUnconfirmedAt: Date | null }).identityUnconfirmedAt = new Date(
+      "2026-10-01T12:00:00Z",
+    );
+    renderRoster({
+      roster: [held],
+      readiness: new Map([["w", readinessRow("ready")]]) as ReadinessByBooking,
+      waivers: new Map() as WaiverByBooking,
+    });
+    expect(screen.queryByText("Waiver not signed yet")).toBeNull();
   });
 });
