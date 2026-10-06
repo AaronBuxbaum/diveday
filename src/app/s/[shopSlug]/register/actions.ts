@@ -8,6 +8,7 @@ import { deliverSelfRegistrationWaiver, registerDiverAtShop } from "@/db/self-re
 import { getShopBySlug } from "@/db/shops";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
+import { phoneDigits } from "@/lib/person-fields";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { clientIp } from "@/lib/request-ip";
@@ -119,15 +120,26 @@ export async function registerAtShopAction(
   // can point the shop's own sender at strangers. An empty bucket drops the
   // send and keeps the registration: a mail-bombing bucket must never become
   // a registration-blocking one.
+  // A phone-only registrant's release goes by text (issue #2092), so the
+  // number gets the same bucket an address does: one per recipient, whichever
+  // channel the release will take.
   const email = parsed.data.email?.trim().toLowerCase() ?? null;
+  const phone = parsed.data.phone ? phoneDigits(parsed.data.phone) : "";
   const mayDeliverWaiver =
-    email === null ||
-    (
-      await checkRateLimit(
-        rateLimitKey("self-register-email", shop.id, email),
-        RATE_LIMITS.selfRegisterEmailByRecipient,
-      )
-    ).allowed;
+    email !== null
+      ? (
+          await checkRateLimit(
+            rateLimitKey("self-register-email", shop.id, email),
+            RATE_LIMITS.selfRegisterEmailByRecipient,
+          )
+        ).allowed
+      : phone === "" ||
+        (
+          await checkRateLimit(
+            rateLimitKey("self-register-phone", shop.id, phone),
+            RATE_LIMITS.selfRegisterTextByRecipient,
+          )
+        ).allowed;
 
   const { personId } = await registerDiverAtShop(db, {
     shopId: shop.id,

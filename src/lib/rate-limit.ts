@@ -434,6 +434,14 @@ export const RATE_LIMITS = {
    */
   selfRegisterEmailByRecipient: perHour(3),
   /**
+   * Self-registration, per **recipient phone**: the text twin of the bucket
+   * above. A phone-only registrant gets their release by text (issue #2092),
+   * so without it ten submissions an hour aimed at one number is ten texts
+   * an hour in the shop's name, each one billed to the shop. Same shape: an
+   * empty bucket drops the send, never the registration.
+   */
+  selfRegisterTextByRecipient: perHour(3),
+  /**
    * Contact-email confirmation links (issue #1288), per **shop** and per
    * **recipient address**. The settings form takes any address and the resend
    * control mints a fresh link each tap, and a demo shop's owner login is one
