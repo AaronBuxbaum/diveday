@@ -617,14 +617,15 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
  * Never a gate: the sentence is warning tone beside the depth advisory, and
  * `src/lib/drysuit-card.test.ts` pins that readiness cannot see it.
  */
-describe("a drysuit going out with no drysuit card", () => {
+describe("a diver in a drysuit with no drysuit card", () => {
   const diver = entry("d", "Ines Kowalski");
-  const drysuitFit = (rentsDrysuit: boolean) =>
+  const drysuitFit = (rentsDrysuit: boolean, divesDry = rentsDrysuit) =>
     new Map([
       [
         "d",
         {
           rentsDrysuit,
+          divesDry,
           drysuitSize: rentsDrysuit ? "ML" : null,
           rentsBcd: false,
           rentsRegulator: false,
@@ -670,11 +671,25 @@ describe("a drysuit going out with no drysuit card", () => {
 
     expect(
       screen.getByText(
-        "Renting a drysuit with no drysuit certification on file. This is not a block: check what they hold, or plan an orientation before the first dive.",
+        "In a drysuit with no drysuit certification on file. This is not a block: check what they hold, or plan an orientation before the first dive.",
       ),
     ).toBeInTheDocument();
     // The advisory is not a blocker, so the seat is still cleared.
     expect(screen.queryByText("Blocked")).toBeNull();
+  });
+
+  it("names it for a diver in their own suit, who rents none from us (H-78)", () => {
+    // Most drysuit divers own the suit. The advisory used to ask whether the
+    // shop was renting one, which left silent exactly the divers it is about
+    // (issue #1752).
+    renderRoster({
+      roster: [diver],
+      readiness: withCards([]),
+      waivers,
+      rentalFit: drysuitFit(false, true),
+    });
+
+    expect(screen.getByText(/^In a drysuit with no drysuit certification on file/)).toBeVisible();
   });
 
   it("says nothing when the diver holds the card", () => {
@@ -690,7 +705,7 @@ describe("a drysuit going out with no drysuit card", () => {
     expect(screen.queryByText(/drysuit certification/)).toBeNull();
   });
 
-  it("says nothing about a diver who is not renting one", () => {
+  it("says nothing about a diver who is not in one", () => {
     renderRoster({
       roster: [diver],
       readiness: withCards([]),

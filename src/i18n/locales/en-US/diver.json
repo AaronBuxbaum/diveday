@@ -1026,6 +1026,13 @@
     "sizesLocked": "Your sizes are ready for the crew to check at the dock.",
     "addSizes": "Add sizes for all selected items.",
     "whatToPlan": "What should we plan to have ready?",
+    "suitLegend": "Your suit",
+    "suitChoices": {
+      "own_wetsuit": "My own wetsuit, or none",
+      "rents_wetsuit": "Rent a wetsuit",
+      "own_drysuit": "My own drysuit",
+      "rents_drysuit": "Rent a drysuit"
+    },
     "askWhatsIncluded": "Ask the shop what’s included in the trip price.",
     "notSure": "Not sure — help me fit it",
     "sizeOnFile": "{size} — on file from the shop",

@@ -190,8 +190,9 @@ export function PrepBody({
    * here would be the same silence one layer down — the packer would see
    * nothing while the fit behind it still records a suit. The size stays too,
    * because it is what the conversation with the diver is about. What comes
-   * off is everything this flag was making the *other* lines say
-   * (`inShopDrysuit`, `src/lib/dive-prep.ts`).
+   * off is what this flag was making the fin line say (`inShopDrysuit`,
+   * `src/lib/dive-prep.ts`); the weight check follows `divesDry`, not the
+   * catalog.
    */
   const pieceSize = (piece: PrepPiece) => {
     const detail = pieceDetail(piece);

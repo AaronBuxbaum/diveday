@@ -1757,11 +1757,13 @@ new domain concept, define it here in the same PR.
   either sentence. The offline snapshot freezes that fact with everything else it holds, so a shop
   that re-adds the piece after a snapshot is taken carries the old mark onto the boat until the
   next one. What
-  comes off is everything that piece was making *other* lines say. So a diver whose shop stopped
-  renting drysuits gets their stated weighting back on the weights line, ordinary fin sizing, and
-  no drysuit-card advisory — none of those three is about the suit itself; each is a claim about
-  what changes *because a rental suit is going out*, which a contradicted flag does not say
-  (`src/lib/dive-prep.ts`'s `inShopDrysuit`, `src/lib/drysuit-card.ts`). Completeness stops
+  comes off is everything that piece was making *other* lines say *about the rental suit*. So a
+  diver whose shop stopped renting drysuits gets ordinary fin sizing back, because a rental suit's
+  vulcanised boot is what changes the fin and a contradicted flag does not say one is going out
+  (`src/lib/dive-prep.ts`'s `inShopDrysuit`). The weighting and the drysuit-card advisory are not
+  about the rental at all: they follow **Dives dry** below, which the catalog never touches, so a
+  diver in a drysuit keeps "weight check in the water" and the card question whoever owns the suit
+  (issue #1810). Completeness stops
   chasing that piece's size at the same time (**Complete rental fit** below), so the list neither
   nags for a size nobody can hand over nor pretends the piece was never asked for. The catalog is
   only **half** the nitrox answer — see **Nitrox-compatible course** below.
@@ -1815,7 +1817,7 @@ new domain concept, define it here in the same PR.
   while a size DiveDay does not hold is a gap completeness already chases and the diver's own form
   asks for again. It is the tightest constraint on the drysuit's second fact above: a fleet
   writing its rock-boot size into `drysuit_size` has 40 characters for both.
-  A drysuit ticked here with no **Drysuit** specialty on the diver's record raises a roster advisory
+  A diver who **dives dry** with no **Drysuit** specialty on their record raises a roster advisory
   (`src/lib/drysuit-card.ts`) and nothing more: air in the suit expands on the way up and the
   specialty exists for exactly that, but a shop runs its own orientations, so this is a
   conversation before the first dive and never a boarding refusal (H-08's instrument, not readiness').
@@ -1823,6 +1825,20 @@ new domain concept, define it here in the same PR.
   dock-side fit check. It is the single input to the trip prep list. Reserving a particular unit is
   the **gear register**'s separate act (below) — a shop that keeps no register still has fits, and a
   fit alone still reserves nothing.
+- **Dives dry** — the diver-level fact that this diver dives in a drysuit, whoever owns it
+  (`rental_fit_profiles.dives_dry`, H-78, issue #1752). It is not a rental: most drysuit divers own
+  their suit, and before this column a diver in their own drysuit looked exactly like a diver in
+  their own wetsuit. Two readers key on it: the packing list's weights line, which says "weight
+  check in the water" instead of the stated weighting because a drysuit's undergarments and trapped
+  air change what a diver needs, and the drysuit-card roster advisory. The rental flag
+  (`rents_drysuit`) still answers "does a suit come off our wall", and only that question drives the
+  fin line. Every fit form asks the **suit** as one choice of four — own wetsuit (or none), rented
+  wetsuit, own drysuit, rented drysuit — so a diver can never record two suits, and the database
+  holds the same rule: a rented drysuit implies dives dry, and a diver who dives dry rents no
+  wetsuit (two checks on `rental_fit_profiles`). `saveRentalFit` settles a post that names both
+  suits for the drysuit, the conservative answer for weighting; a post that says nothing about the
+  suit changes nothing. It defaults false with no separate "unknown": every fit form opens on the
+  stored answer, and a diver nobody has asked is shown no weight check either way.
 - **Gear register** — the shop's own rental fleet as physical units (`gear_items`), opt-in **by
   presence**: a shop with zero units sees no gear UI anywhere and its prep flow is untouched, and
   adding the first unit is what turns it on — never a settings flag
@@ -1908,8 +1924,9 @@ new domain concept, define it here in the same PR.
   all, which is the judgement call.
 - **Trip prep list** — the derived packing list for one departure: tanks (one per diver per planned
   dive, split air/nitrox) plus rental kit grouped by item and size, with the divers each line is
-  for. Purely derived — nothing on it is an allocation. A diver in a **drysuit** is the one piece of
-  kit whose line deliberately carries no number: both fit forms ask usual weighting against a
+  for. Purely derived — nothing on it is an allocation. A diver who **dives dry** (above, rented
+  suit or their own) is the one diver whose weights line deliberately carries no number: every fit
+  form asks usual weighting against a
   wetsuit ("Usually 12 lb with 3 mm suit"), and a drysuit needs two to four kilos more, so their
   weights line reads "weight check in the water" on the prep list and carries no size on a manifest
   or roster line. Under-weighted is the direction a drysuit diver cannot hold a safety stop in; the
@@ -1918,11 +1935,14 @@ new domain concept, define it here in the same PR.
   42"), a vulcanised drysuit boot is two to three fin sizes bigger than the foot in it, and a pair
   packed to the stated number does not go on at the bench. That size stays on the line as the
   number the packer sizes up from, and the line says the pair has to clear the boot.
-  **Both of those hold only while the shop actually rents drysuits.** A piece the shop has since
-  dropped from its **rental catalog** is the one line here that carries a reason rather than only
-  a size: it stays on the list and on every other surface that reads the fit, says the shop no
-  longer rents it, and stops changing any other line — so a diver at a shop that stopped renting suits is packed lead to their stated number
-  and fins to their stated size, like anyone else. Rules in `src/lib/dive-prep.ts`.
+  **The fin line holds only while the shop actually rents drysuits**, because only a suit off the
+  shop's wall puts a boot on the diver that the packer has to size around; the weight check follows
+  the diver and never the catalog (issue #1810). A piece the shop has since dropped from its
+  **rental catalog** is the one line here that carries a reason rather than only a size: it stays
+  on the list and on every other surface that reads the fit, says the shop no longer rents it, and
+  stops changing the fin line — so a diver at a shop that stopped renting suits is packed fins to
+  their stated size, while their weights still read "weight check in the water". Rules in
+  `src/lib/dive-prep.ts`.
 - **Diver profile** — the shop's person-first operational record. A diver profile gathers contact
   details, certification evidence, rental fit, and bookings; cards are not managed as an unrelated
   certification inbox.

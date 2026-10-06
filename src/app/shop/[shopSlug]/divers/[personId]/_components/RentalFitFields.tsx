@@ -4,6 +4,7 @@
 import { useState } from "react";
 import { ChoiceFieldset, ChoicePill, controlClass, Field } from "@/components/ui/form";
 import { InfoHint } from "@/components/ui/InfoHint";
+import type { SuitChoice } from "@/lib/rentals";
 
 /** One "rents from the shop" tick — the shop's catalog, not the diver's answer. */
 export type RentalFitToggle = {
@@ -12,6 +13,25 @@ export type RentalFitToggle = {
   label: string;
   defaultChecked: boolean;
 };
+
+/**
+ * **The suit, as one choice** (H-78): own wetsuit, ours, own drysuit, ours.
+ * Its own question rather than two of the ticks, because a diver dives one
+ * suit and the fit has to be able to say a drysuit is their own.
+ */
+export type RentalFitSuit = {
+  legend: string;
+  defaultValue: SuitChoice;
+  options: readonly { value: SuitChoice; label: string }[];
+};
+
+/**
+ * The tick names a suit choice stands in for, so a size box's `requires` can
+ * keep naming `wetsuit` and `drysuit` as it always did.
+ */
+function suitTicks(choice: SuitChoice | undefined): Record<string, boolean> {
+  return { wetsuit: choice === "rents_wetsuit", drysuit: choice === "rents_drysuit" };
+}
 
 /** One size box, and the ticks that make it worth asking for. */
 export type RentalFitSize = {
@@ -56,21 +76,45 @@ export type RentalFitSize = {
 export function RentalFitFields({
   legend,
   toggles,
+  suit,
   sizes,
 }: {
   legend: string;
   toggles: readonly RentalFitToggle[];
+  suit?: RentalFitSuit;
   sizes: readonly RentalFitSize[];
 }) {
   const [rented, setRented] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(toggles.map((toggle) => [toggle.name, toggle.defaultChecked])),
   );
+  const [suitChoice, setSuitChoice] = useState<SuitChoice | undefined>(suit?.defaultValue);
+  const asked = { ...rented, ...(suit ? suitTicks(suitChoice) : {}) };
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(sizes.map((size) => [size.name, size.defaultValue])),
   );
 
   return (
     <>
+      {suit ? (
+        <ChoiceFieldset
+          legend={suit.legend}
+          className="sm:col-span-2"
+          bodyClassName="grid grid-cols-1 gap-2 sm:grid-cols-2"
+        >
+          {suit.options.map((option) => (
+            <ChoicePill
+              key={option.value}
+              type="radio"
+              name="suit"
+              value={option.value}
+              checked={suitChoice === option.value}
+              onChange={() => setSuitChoice(option.value)}
+            >
+              {option.label}
+            </ChoicePill>
+          ))}
+        </ChoiceFieldset>
+      ) : null}
       {toggles.length > 0 ? (
         <ChoiceFieldset
           legend={legend}
@@ -96,7 +140,7 @@ export function RentalFitFields({
         </ChoiceFieldset>
       ) : null}
       {sizes.map((size) =>
-        size.requires.some((name) => rented[name]) ? (
+        size.requires.some((name) => asked[name]) ? (
           <Field
             key={size.name}
             label={size.label}

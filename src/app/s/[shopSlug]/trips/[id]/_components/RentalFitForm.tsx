@@ -11,13 +11,18 @@ import type { DiverMessageKey } from "@/i18n/messages";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
 import {
+  defaultSuitChoice,
   hasAnyRentalPricing,
   nitroxAvailableOn,
   offeredRentableItems,
+  offeredSuitChoices,
   quoteRentalFit,
   RENTAL_FIT_TEXT_LIMITS,
   type RentableItemKind,
   type RentalPricing,
+  SUIT_KINDS,
+  type SuitChoice,
+  suitFlags,
 } from "@/lib/rentals";
 import type { RentalFit } from "./types";
 
@@ -129,6 +134,21 @@ export const RENTABLE_ITEM_LABEL_KEYS: Record<RentableItemKind, DiverMessageKey>
  * turns up expecting to be handed a pair, finds out at the dock. Saying it on
  * the tick is the only place a diver ever reads it.
  */
+const SUIT_CHOICE_KEYS: Record<SuitChoice, DiverMessageKey> = {
+  own_wetsuit: "rental.suitChoices.own_wetsuit",
+  rents_wetsuit: "rental.suitChoices.rents_wetsuit",
+  own_drysuit: "rental.suitChoices.own_drysuit",
+  rents_drysuit: "rental.suitChoices.rents_drysuit",
+};
+
+/** The catalog item a rented suit choice is priced and hinted as; none for the diver's own. */
+const SUIT_CHOICE_KIND: Record<SuitChoice, RentableItemKind | null> = {
+  own_wetsuit: null,
+  rents_wetsuit: "wetsuit",
+  own_drysuit: null,
+  rents_drysuit: "drysuit",
+};
+
 export const RENTABLE_ITEM_HINT_KEYS: Partial<Record<RentableItemKind, DiverMessageKey>> = {
   bcd: "rental.jargonHints.bcd",
   regulator: "rental.jargonHints.regulator",
@@ -253,17 +273,30 @@ export function RentalFitForm({
   const locale = useLocale();
   const offered = offeredRentableItems(rentalItems);
   const offers = new Set(offered.map((item) => item.kind));
+  // The suit is one choice of four rather than two of the ticks (H-78): a
+  // diver dives one suit, and has to be able to say a drysuit is their own.
+  // The stored choice stays on offer after the shop drops that suit, so a save
+  // does not quietly rewrite the diver's answer (issue #1755).
+  const storedSuit = defaultSuitChoice(rentalFit, rentalItems);
+  const suitOptions = offeredSuitChoices(rentalItems, storedSuit);
+  const [suit, setSuit] = useState<SuitChoice>(storedSuit);
+  const ticked = offered.filter((item) => !SUIT_KINDS.has(item.kind));
   const nitroxOffered = nitroxAvailableOn(rentalItems, course);
   const showPricing = hasAnyRentalPricing(pricing);
   const widestPrice = widestItemPrice(offered, pricing, currency, locale);
-  const [rentedKinds, setRentedKinds] = useState(
+  const [tickedKinds, setTickedKinds] = useState(
     () =>
       new Set(
-        offered
+        ticked
           .filter((item) => rentalFit?.[item.field] ?? item.defaultRented)
           .map((item) => item.kind),
       ),
   );
+  // Everything the diver is renting: the ticks, plus the suit when it is ours.
+  const suitRented = suitFlags(suit);
+  const rentedKinds = new Set<RentableItemKind>(tickedKinds);
+  if (suitRented.rentsWetsuit) rentedKinds.add("wetsuit");
+  if (suitRented.rentsDrysuit) rentedKinds.add("drysuit");
   // Trimmed to match `optionsWithStored`, which compares a trimmed value
   // against the grid. Untrimmed here, a stored `" MT "` would be offered as
   // clean `MT` and then bind to a value matching no option — the blank box over
@@ -370,13 +403,57 @@ export function RentalFitForm({
         </p>
       ) : null}
       <form action={action} className="mt-4 flex flex-col gap-4">
-        {offered.length > 0 ? (
+        <ChoiceFieldset legend={t("rental.suitLegend")}>
+          <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
+            {suitOptions.map((choice) => {
+              const kind = SUIT_CHOICE_KIND[choice];
+              const priceCents = kind ? pricing.perItemCents[kind] : undefined;
+              const hintKey = kind ? RENTABLE_ITEM_HINT_KEYS[kind] : undefined;
+              const label = t(SUIT_CHOICE_KEYS[choice]);
+              return (
+                <ChoicePill
+                  key={choice}
+                  type="radio"
+                  name="suit"
+                  value={choice}
+                  checked={suit === choice}
+                  onChange={() => setSuit(choice)}
+                  aside={
+                    hintKey || (showPricing && priceCents !== undefined) ? (
+                      <>
+                        {hintKey ? (
+                          <InfoHint
+                            // Named for the piece, not the answer: "What is
+                            // Drysuit?" is the question the hint answers.
+                            label={t("rental.jargonHintLabel", {
+                              item: t(RENTABLE_ITEM_LABEL_KEYS[kind ?? "drysuit"]),
+                            })}
+                            detail={t(hintKey)}
+                          />
+                        ) : null}
+                        {showPricing && priceCents !== undefined ? (
+                          <ItemPrice
+                            price={formatMoneyCents(priceCents, currency, locale)}
+                            widest={widestPrice}
+                          />
+                        ) : null}
+                      </>
+                    ) : undefined
+                  }
+                >
+                  {label}
+                </ChoicePill>
+              );
+            })}
+          </div>
+        </ChoiceFieldset>
+        {ticked.length > 0 ? (
           <ChoiceFieldset legend={t("rental.whatToPlan")}>
             {/* `gap-x-4`: `FieldGrid`'s gutter, so this grid's columns stand
                 on the size fields' edges below it (K-475: an 8px gutter here
                 put them 4px off either side). The rows keep their 8px. */}
             <div className="grid grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
-              {offered.map(({ kind, name }) => {
+              {ticked.map(({ kind, name }) => {
                 const priceCents = pricing.perItemCents[kind];
                 const hintKey = RENTABLE_ITEM_HINT_KEYS[kind];
                 const itemLabel = t(RENTABLE_ITEM_LABEL_KEYS[kind]);
@@ -389,9 +466,9 @@ export function RentalFitForm({
                     key={name}
                     type="checkbox"
                     name={name}
-                    checked={rentedKinds.has(kind)}
+                    checked={tickedKinds.has(kind)}
                     onChange={(event) => {
-                      setRentedKinds((current) => {
+                      setTickedKinds((current) => {
                         const next = new Set(current);
                         if (event.target.checked) next.add(kind);
                         else next.delete(kind);

@@ -1026,6 +1026,13 @@
     "sizesLocked": "Tus tallas están listas para que la tripulación las revise en el muelle.",
     "addSizes": "Añade tallas para todo lo que has marcado.",
     "whatToPlan": "¿Qué preparamos para ti?",
+    "suitLegend": "Tu traje",
+    "suitChoices": {
+      "own_wetsuit": "Mi propio neopreno, o ninguno",
+      "rents_wetsuit": "Alquilar neopreno",
+      "own_drysuit": "Mi propio traje seco",
+      "rents_drysuit": "Alquilar traje seco"
+    },
     "askWhatsIncluded": "Pregunta al centro qué incluye el precio de la salida.",
     "notSure": "No lo tengo claro: ayúdame a elegir",
     "sizeOnFile": "{size}: registrada por el centro",

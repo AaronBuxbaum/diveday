@@ -187,6 +187,7 @@ function fit(overrides: Partial<RentalFit> = {}): RentalFit {
     bootSize: null,
     finSize: null,
     weightPreference: null,
+    divesDry: false,
     needsStaffFitAt: null,
     needsStaffFitNote: null,
     fitStatedAt: STATED,

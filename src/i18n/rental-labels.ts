@@ -1,7 +1,7 @@
 import type { RentalFitLine, RentalItemKind } from "@/lib/dive-prep";
 import type { DrysuitCardCheck } from "@/lib/drysuit-card";
 import { cachedListFormat } from "@/lib/intl-cache";
-import type { RentableItemKind, ShopCatalogKind } from "@/lib/rentals";
+import type { RentableItemKind, ShopCatalogKind, SuitChoice } from "@/lib/rentals";
 import type { StaffMessageKey, StaffTranslator } from "./staff-messages";
 
 /**
@@ -46,6 +46,18 @@ export function rentableItemLabel(t: StaffTranslator, kind: RentableItemKind): s
 export function catalogItemLabel(t: StaffTranslator, kind: ShopCatalogKind): string {
   if (kind === "nitrox") return t("shared.rentalFit.nitroxFillsLabel");
   return rentableItemLabel(t, kind);
+}
+
+const SUIT_CHOICE_KEYS: Record<SuitChoice, StaffMessageKey> = {
+  own_wetsuit: "divers.rentalFit.suitChoices.own_wetsuit",
+  rents_wetsuit: "divers.rentalFit.suitChoices.rents_wetsuit",
+  own_drysuit: "divers.rentalFit.suitChoices.own_drysuit",
+  rents_drysuit: "divers.rentalFit.suitChoices.rents_drysuit",
+};
+
+/** One answer to the staff fit editor's suit question (H-78). */
+export function suitChoiceLabel(t: StaffTranslator, choice: SuitChoice): string {
+  return t(SUIT_CHOICE_KEYS[choice]);
 }
 
 const NBSP = "\u00A0";
@@ -142,16 +154,22 @@ export function rentalFitLineText(t: StaffTranslator, locale: string, line: Rent
         // three sizes bigger, so the rail reads the job rather than a number
         // to hand over (src/lib/dive-prep.ts's `rentedItems`). A sentence, so
         // the words around the size can still wrap.
-        const piece = item.drysuitFinFit
-          ? item.size
-            ? t("shared.rentalFit.itemOverDrysuitBootWithSize", {
-                item: label,
-                size: sizeText(item.size),
-              })
-            : t("shared.rentalFit.itemOverDrysuitBoot", { item: label })
-          : item.size
-            ? sizedPiece(t, label, item.size)
-            : oneUnit(label);
+        //
+        // A drysuit diver's weights carry no number, because the stated one is
+        // a wetsuit answer: the rail says so, rather than reading like a size
+        // nobody wrote down (H-78).
+        const piece = item.drysuitWeightCheck
+          ? t("shared.rentalFit.itemDrysuitWeightCheck", { item: label })
+          : item.drysuitFinFit
+            ? item.size
+              ? t("shared.rentalFit.itemOverDrysuitBootWithSize", {
+                  item: label,
+                  size: sizeText(item.size),
+                })
+              : t("shared.rentalFit.itemOverDrysuitBoot", { item: label })
+            : item.size
+              ? sizedPiece(t, label, item.size)
+              : oneUnit(label);
         // Wrapped rather than substituted, so the piece keeps whatever it
         // already said and gains the contradiction. A staffer reading the rail
         // is about to go and fetch this: "Drysuit ML" with nothing on it sends

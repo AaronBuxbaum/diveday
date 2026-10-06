@@ -219,6 +219,13 @@
     "description": "What the trip prep list is built from. It is never a reservation, and never a substitute for a dock-side fit check.",
     "changeRestricted": "Changing what this diver asked for is limited to owners, managers, instructors, and divemasters.",
     "rentsFromShop": "Rents from the shop",
+    "suitLegend": "Suit",
+    "suitChoices": {
+      "own_wetsuit": "Own wetsuit, or none",
+      "rents_wetsuit": "Rents a wetsuit",
+      "own_drysuit": "Own drysuit",
+      "rents_drysuit": "Rents a drysuit"
+    },
     "bcdSizeLabel": "BCD size",
     "bcdSizePlaceholder": "M",
     "wetsuitSizeLabel": "Wetsuit size",

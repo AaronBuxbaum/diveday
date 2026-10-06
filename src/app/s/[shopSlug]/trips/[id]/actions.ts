@@ -57,6 +57,7 @@ import {
   quoteRentalFit,
   type RentableItemKind,
   type RentalFitField,
+  withOneSuit,
 } from "@/lib/rentals";
 import { clientIp } from "@/lib/request-ip";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
@@ -247,9 +248,13 @@ export async function bookSpot(
   if (offersGearAtCheckout && (offeredGearItems.length > 0 || nitroxOfferedAtCheckout)) {
     for (let index = 0; index < partySize.data; index++) {
       gearSelections.push({
-        rentedKinds: offeredGearItems
-          .filter((item) => formData.get(`gear-${index}-${item.name}`) === "on")
-          .map((item) => item.kind),
+        // One suit, held here as well as in `saveRentalFit`, so a post that
+        // ticks both is charged for the suit that gets packed (H-78).
+        rentedKinds: withOneSuit(
+          offeredGearItems
+            .filter((item) => formData.get(`gear-${index}-${item.name}`) === "on")
+            .map((item) => item.kind),
+        ),
         wantsNitrox: nitroxOfferedAtCheckout && formData.get(`nitrox-${index}`) === "on",
       });
     }

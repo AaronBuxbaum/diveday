@@ -436,13 +436,14 @@
     "itemWithSize": "{item} {size}",
     "itemOverDrysuitBoot": "{item} sobre la bota del traje seco",
     "itemOverDrysuitBootWithSize": "{item} sobre la bota del traje seco, calzado {size}",
+    "itemDrysuitWeightCheck": "{item}: traje seco, verificar el lastre en el agua",
     "itemNoLongerRented": "{item} (el centro ya no alquila esto)",
     "notRecorded": "No hay equipo registrado, aún no se ha preguntado",
     "ownKit": "Trae su propio equipo",
     "needsStaffFit": "Necesita ajuste del personal en el check-in",
     "needsStaffFitWithNote": "Necesita ajuste del personal — {note}",
-    "drysuitCardMissing": "Alquila traje seco y no hay certificación de traje seco en su ficha. No es un bloqueo: verifica qué titulación consta o programa una orientación antes de la primera inmersión.",
-    "drysuitCardUnconfirmed": "Alquila traje seco y su certificación de traje seco está sin confirmar. No es un bloqueo: confirma la certificación en su ficha o programa una orientación antes de la primera inmersión."
+    "drysuitCardMissing": "Bucea con traje seco y no hay certificación de traje seco en su ficha. No es un bloqueo: verifica qué titulación consta o programa una orientación antes de la primera inmersión.",
+    "drysuitCardUnconfirmed": "Bucea con traje seco y su certificación de traje seco está sin confirmar. No es un bloqueo: confirma la certificación en su ficha o programa una orientación antes de la primera inmersión."
   },
   "rollCallCheckpoint": {
     "departure": "Antes de zarpar",

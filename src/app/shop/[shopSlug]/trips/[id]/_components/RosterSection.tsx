@@ -279,11 +279,11 @@ export function RosterSection({
    * a diver's fit the way the packing list does.
    *
    * A stored `rents_*` flag outlives the shop dropping that item, deliberately
-   * (issue #1755) — but the two things this row derives *from* the drysuit flag
-   * are conditioned on a suit actually coming off the wall: the card advisory,
-   * and "size up over the boot" on the fit line. Omitted, both are raised as
-   * before; over-warning is the safe direction for something that gates
-   * nothing (`checkDrysuitCard`, `src/lib/dive-prep.ts`'s `inShopDrysuit`).
+   * (issue #1755) — but "size up over the boot" on the fit line is
+   * conditioned on a suit actually coming off the wall. Omitted, it is raised
+   * as before; over-warning is the safe direction for something that gates
+   * nothing (`src/lib/dive-prep.ts`'s `inShopDrysuit`). The card advisory does
+   * not read it: it follows `dives_dry`, what the diver wears (H-78).
    */
   shopRentalItems?: readonly string[];
   nitroxByBooking: NitroxByBooking;
@@ -611,14 +611,14 @@ export function RosterSection({
         : [];
     const depthText = depth?.status === "exceeds" ? depthWarningText(t, depth) : null;
     const depthShared = depthText !== null && sharedAdvisoryTexts.has(depthText);
-    // The suit goes out to a diver the shop has no drysuit card for. Behind
-    // the same confirmation as the sizes and the nitrox word below, because
-    // both halves of the question are the matched person's own record.
+    // A diver in a drysuit, theirs or ours, with no drysuit card on file
+    // (H-78). Behind the same confirmation as the sizes and the nitrox word
+    // below, because both halves of the question are the matched person's own
+    // record.
     const drysuitCard = showsPersonDetail
       ? checkDrysuitCard(
-          rentalFitByBooking.get(booking.id)?.rentsDrysuit ?? false,
+          rentalFitByBooking.get(booking.id)?.divesDry ?? false,
           readinessByBooking.get(booking.id)?.specialtyCertifications ?? [],
-          shopRentalItems,
         )
       : ({ status: "ok" } as const);
     // The namesake refusal (issue #1573) holds its row open for the same

@@ -40,7 +40,7 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { RE_ENTRY_ASKS, reEntryOffersFor } from "@/lib/re-entry";
-import { nitroxAvailableOn, RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
+import { nitroxAvailableOn, RENTAL_FIT_TEXT_LIMITS, suitFlagsFromPost } from "@/lib/rentals";
 import { clientIp } from "@/lib/request-ip";
 
 /**
@@ -230,12 +230,13 @@ export async function saveWelcomeConsentFromReady(token: string, formData: FormD
 const fitSchema = z.object({
   bcd: z.string().optional(),
   regulator: z.string().optional(),
-  wetsuit: z.string().optional(),
+  // The suit is one choice, not two checkboxes (H-78): `RentalFitForm` posts
+  // `suit`, and `suitFlagsFromPost` turns it into the three suit columns.
+  suit: z.string().optional(),
   maskFins: z.string().optional(),
   weights: z.string().optional(),
   diveComputer: z.string().optional(),
   gopro: z.string().optional(),
-  drysuit: z.string().optional(),
   hoodGloves: z.string().optional(),
   torch: z.string().optional(),
   smb: z.string().optional(),
@@ -273,12 +274,13 @@ export async function saveFitFromReady(token: string, formData: FormData) {
     // the nitrox request takes below, and the mirror of the absent-size rule.
     rentsBcd: parsed.data.bcd === "on",
     rentsRegulator: parsed.data.regulator === "on",
-    rentsWetsuit: parsed.data.wetsuit === "on",
+    // Wetsuit, drysuit and "I dive dry" as one answer, so a diver can say they
+    // are in their own drysuit and can never be packed two suits (H-78).
+    ...suitFlagsFromPost(parsed.data.suit),
     rentsMaskFins: parsed.data.maskFins === "on",
     rentsWeights: parsed.data.weights === "on",
     rentsDiveComputer: parsed.data.diveComputer === "on",
     rentsGopro: parsed.data.gopro === "on",
-    rentsDrysuit: parsed.data.drysuit === "on",
     rentsHoodGloves: parsed.data.hoodGloves === "on",
     rentsTorch: parsed.data.torch === "on",
     rentsSmb: parsed.data.smb === "on",

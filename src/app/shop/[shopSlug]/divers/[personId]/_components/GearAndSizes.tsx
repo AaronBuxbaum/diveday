@@ -4,15 +4,25 @@ import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
-import { rentableItemLabel, rentalFitLineText, rentalItemLabel } from "@/i18n/rental-labels";
+import {
+  rentableItemLabel,
+  rentalFitLineText,
+  rentalItemLabel,
+  suitChoiceLabel,
+} from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { cachedListFormat } from "@/lib/intl-cache";
-import { offeredRentableItems } from "@/lib/rentals";
+import {
+  defaultSuitChoice,
+  offeredRentableItems,
+  offeredSuitChoices,
+  SUIT_KINDS,
+} from "@/lib/rentals";
 import { saveProfileAction, setNeedsStaffFitAction } from "../actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
-import { RentalFitFields, type RentalFitSize } from "./RentalFitFields";
+import { RentalFitFields, type RentalFitSize, type RentalFitSuit } from "./RentalFitFields";
 import type { DiverProfile } from "./shared";
 
 /**
@@ -129,6 +139,21 @@ export function GearAndSizes({
     },
   ].filter((size) => size !== false);
 
+  // The suit is its own question, one choice of four (H-78), so the wetsuit
+  // and drysuit leave the ticks. The diver's stored choice stays on offer even
+  // after the shop drops that suit, so a save does not rewrite it (issue #1755).
+  // A diver with no fit on file starts where the ticks always started them:
+  // on the shop's wetsuit when it rents one.
+  const storedSuit = defaultSuitChoice(profile, rentalItems);
+  const suit: RentalFitSuit = {
+    legend: t("divers.rentalFit.suitLegend"),
+    defaultValue: storedSuit,
+    options: offeredSuitChoices(rentalItems, storedSuit).map((value) => ({
+      value,
+      label: suitChoiceLabel(t, value),
+    })),
+  };
+
   const sized = line.state === "rents" ? line.items.filter((item) => item.size) : [];
   // Keep the door a status, not a packing list. The domain line still carries
   // every item and size for the expanded facts below; the short state is enough
@@ -203,11 +228,14 @@ export function GearAndSizes({
             >
               <RentalFitFields
                 legend={t("divers.rentalFit.rentsFromShop")}
-                toggles={offered.map(({ kind, name, field, defaultRented }) => ({
-                  name,
-                  label: rentableItemLabel(t, kind),
-                  defaultChecked: profile?.[field] ?? defaultRented,
-                }))}
+                suit={suit}
+                toggles={offered
+                  .filter(({ kind }) => !SUIT_KINDS.has(kind))
+                  .map(({ kind, name, field, defaultRented }) => ({
+                    name,
+                    label: rentableItemLabel(t, kind),
+                    defaultChecked: profile?.[field] ?? defaultRented,
+                  }))}
                 /* The shop's catalog decides which sizes exist at all; the
                    ticks above decide which of them are asked for. */
                 sizes={sizes}
