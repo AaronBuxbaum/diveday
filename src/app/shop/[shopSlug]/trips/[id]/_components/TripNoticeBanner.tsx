@@ -133,6 +133,12 @@ const NOTICE_KEYS: Record<
   },
   "identity-confirmed": { form: "roster", tone: "success", key: "trips.notices.identityConfirmed" },
   "identity-split": { form: "roster", tone: "success", key: "trips.notices.identitySplit" },
+  // A refused seat freed for a fresh release (`sendNewWaiverAction`). Success
+  // when the email went; warning when the seat is ready but the link still has
+  // to reach the diver from their row.
+  "new-waiver-sent": { form: "roster", tone: "success", key: "trips.notices.newWaiverSent" },
+  "new-waiver-ready": { form: "roster", tone: "warning", key: "trips.notices.newWaiverReady" },
+  "new-waiver-failed": { form: "roster", tone: "danger", key: "trips.notices.newWaiverFailed" },
   "identity-medical-hold": {
     form: "roster",
     tone: "warning",

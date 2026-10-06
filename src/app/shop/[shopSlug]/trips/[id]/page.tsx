@@ -9,7 +9,12 @@ import { buttonClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import { canPersonManageOrders, canPersonManagePaymentSettings, canPersonRefund } from "@/db/authz";
+import {
+  canPersonManageOrders,
+  canPersonManagePaymentSettings,
+  canPersonRefund,
+  canPersonRetireMedicalRefusal,
+} from "@/db/authz";
 import { listBoats } from "@/db/boats";
 import { listTripLenses } from "@/db/trip-lenses";
 import { latestTripStage } from "@/db/trip-stages";
@@ -88,6 +93,7 @@ import {
   saveDetails,
   saveRequirementsAction,
   saveRosterEmergencyContactAction,
+  sendNewWaiverAction,
   setSeriesRepeatAction,
   splitDiverIdentityAction,
   undoRemoveBookingAction,
@@ -184,6 +190,7 @@ export default async function ManageTripPage({
     mayDiscount,
     mayWriteOffPayment,
     stageReading,
+    mayRetireRefusal,
     canManageOrders,
   ] = await Promise.all([
     getTripOverview(db, shop, tripId, session.user.personId),
@@ -198,6 +205,8 @@ export default async function ManageTripPage({
     canPersonManagePaymentSettings(db, shop.id, session.user.personId),
     canPersonRefund(db, shop.id, session.user.personId),
     latestTripStage(db, shop.id, tripId),
+    // Who may give a refused seat a fresh release; the action re-checks.
+    canPersonRetireMedicalRefusal(db, shop.id, session.user.personId),
     // The per-seat "Create order" door (issue #1925): read for itself, not
     // borrowed from `mayDiscount`, though both are owner/manager today.
     canPersonManageOrders(db, shop.id, session.user.personId),
@@ -611,6 +620,9 @@ export default async function ManageTripPage({
     // at the counter (dive-domain review 2026-10-05).
     confirmDiverIdentityAction: confirmDiverIdentityAction.bind(null, shopSlug, tripId),
     splitDiverIdentityAction: splitDiverIdentityAction.bind(null, shopSlug, tripId),
+    sendNewWaiverAction: mayRetireRefusal
+      ? sendNewWaiverAction.bind(null, shopSlug, tripId)
+      : undefined,
     certifyDiverAction: trip.course
       ? certifyDiverFromRosterAction.bind(null, shopSlug, tripId)
       : undefined,

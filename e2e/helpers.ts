@@ -755,7 +755,7 @@ export async function openSettingsRow(page: Page, heading: string) {
  * exactly like `openPrivateNotes` in add-diver.spec.ts.
  */
 export async function openRosterDetails(row: Locator): Promise<void> {
-  // The row's own disclosure, named by its mark — not the desk's "Not here?"
+  // The row's own disclosure, named by its mark — not the desk's "Not here"
   // door, which is also a direct `<details>` of the row once arrivals open.
   await openIfClosed(
     row

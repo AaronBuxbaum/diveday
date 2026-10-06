@@ -39,6 +39,8 @@ export type TripRosterActions = {
   removeBookingAction: FormAction;
   confirmDiverIdentityAction: FormAction;
   splitDiverIdentityAction: FormAction;
+  /** Drawn only for an owner or manager (`canRetireMedicalRefusal`). */
+  sendNewWaiverAction?: FormAction;
   certifyDiverAction?: FormAction;
   saveCourseNextStepAction?: FormAction;
   addInternalNoteAction: FormAction;
@@ -220,6 +222,7 @@ export function TripRosterContent({
         removeBookingAction={actions.removeBookingAction}
         confirmIdentityAction={actions.confirmDiverIdentityAction}
         splitIdentityAction={actions.splitDiverIdentityAction}
+        sendNewWaiverAction={actions.sendNewWaiverAction}
         sameNameHeldSeats={guests.sameNameHeldSeats}
         splitAsksDateOfBirth={guests.splitAsksDateOfBirth}
         certifyDiverAction={actions.certifyDiverAction}

@@ -478,6 +478,12 @@ describe("who may run each action on the trip page", () => {
   const MONEY = ["markPaymentAction"];
 
   /**
+   * Moving a physician's "no" off a seat so it can take a fresh release — the
+   * business's call, owner or manager (`canRetireMedicalRefusal`).
+   */
+  const MEDICAL = ["sendNewWaiverAction"];
+
+  /**
    * The day's work, and deliberately open. Running the boat, the roster, the
    * notes, the wait list and the head count is what the crew are for, and
    * `src/lib/authz.ts` is explicit that these stay open. `removeBookingAction`
@@ -592,6 +598,7 @@ describe("who may run each action on the trip page", () => {
     const refuses = body.includes('"not-authorized"');
     const weighsMoney = /canPerson(?:Refund|ManagePaymentSettings)\b/.test(body);
     if (refuses && weighsMoney) return "MONEY";
+    if (refuses && /canPersonRetireMedicalRefusal\b/.test(body)) return "MEDICAL";
     if (refuses) return "REFUSES_SOMEBODY_UNACCOUNTED_FOR";
     return "OPEN_TO_ALL_STAFF";
   }
@@ -600,6 +607,7 @@ describe("who may run each action on the trip page", () => {
     const recorded = new Map<string, string>([
       ...TRIP_CONFIG.map((name) => [name, "TRIP_CONFIG"] as const),
       ...MONEY.map((name) => [name, "MONEY"] as const),
+      ...MEDICAL.map((name) => [name, "MEDICAL"] as const),
       ...OPEN_TO_ALL_STAFF.map((name) => [name, "OPEN_TO_ALL_STAFF"] as const),
     ]);
     const bodies = actionBodies();

@@ -12,9 +12,11 @@ import {
   canManageWaiverTemplates,
   canMergeDiver,
   canOverrideGearRequest,
+  canReadMedicalAnswers,
   canReadMedicalClearanceDocument,
   canReadPrivateRecapPulse,
   canRefund,
+  canRetireMedicalRefusal,
   type Role,
 } from "@/lib/authz";
 import type { DbExecutor } from "./client";
@@ -170,6 +172,14 @@ export const canPersonReadMedicalClearanceDocument = (
   shopId: string,
   personId: string,
 ) => canPerson(db, shopId, personId, canReadMedicalClearanceDocument);
+
+/** The live check behind a signed record's whole questionnaire (`canReadMedicalAnswers`). */
+export const canPersonReadMedicalAnswers = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canReadMedicalAnswers);
+
+/** The live check behind "Send a new waiver" on a refused seat (`retireMedicalRefusal`). */
+export const canPersonRetireMedicalRefusal = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canRetireMedicalRefusal);
 
 /**
  * The live check behind the private pulse panel and its "Mark addressed"

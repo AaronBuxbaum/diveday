@@ -13,7 +13,7 @@ import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
  * **Send one named departure out without its divers**, by moving its times
  * back rather than moving the clock.
  *
- * The counter's "Not here?" door opens when the boat leaves without the diver
+ * The counter's "Not here" door opens when the boat leaves without the diver
  * and says a different thing once it is really gone (`noShowGate` and
  * `noShowClaim`, src/lib/no-show.ts). Neither state can be built inside a spec
  * as things stand: the fleet's clock is frozen at one instant and is

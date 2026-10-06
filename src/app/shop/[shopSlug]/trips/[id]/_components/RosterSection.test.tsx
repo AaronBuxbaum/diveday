@@ -443,7 +443,6 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     expect(screen.getAllByText("Payment is outstanding for this trip.").length).toBeGreaterThan(0);
     // The medical hold on the matched person's release is theirs: no status
     // block, no follow-up line, only that other holds may still apply.
-    expect(screen.queryByText("Follow up before boarding")).toBeNull();
     expect(screen.getAllByText("Other holds may still apply.").length).toBeGreaterThan(0);
   });
 
@@ -468,7 +467,6 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     });
     expect(screen.queryByText(/Pilar Vega/)).toBeNull();
     expect(screen.queryByText(flaggedPrompt)).toBeNull();
-    expect(screen.queryByText("Follow up before boarding")).toBeNull();
   });
 
   it("measures no depth advisory against the matched person, alone or shared with the boat", () => {
@@ -795,7 +793,10 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     ).toBeGreaterThan(0);
   });
 
-  it("keeps the flagged medical answer outside the row's fold", () => {
+  // The row's Blocked reason says a doctor must sign off (Aaron,
+  // 2026-10-06: no separate alert panel); the answer itself waits in the fold
+  // and on the signed record.
+  it("keeps the flagged medical answer in the row's fold", () => {
     renderRoster({
       roster: [matched],
       readiness: confirmed,
@@ -803,9 +804,7 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       rentalFit,
     });
 
-    const prompt = screen.getByText(flaggedPrompt);
-    expect(prompt).toBeVisible();
-    expect(prompt.closest("details")).toBeNull();
+    expect(screen.getByText(flaggedPrompt).closest("details")).not.toBeNull();
   });
 
   it("keeps the identity sentence outside the row's fold", () => {
@@ -827,7 +826,7 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       rentalFit,
     });
 
-    expect(screen.getByText(flaggedPrompt)).toBeVisible();
+    expect(screen.getByText(flaggedPrompt)).toBeInTheDocument();
     expect(screen.getByText("Minor · age 14")).toBeVisible();
     // The last three live in the row's collapsed reference panel, which jsdom
     // reports as hidden — being in the document is the whole claim.

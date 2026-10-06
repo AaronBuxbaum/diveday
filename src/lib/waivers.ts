@@ -98,6 +98,50 @@ export function isUnresolvedMedicalHold(record: WaiverRecord): boolean {
 }
 
 /**
+ * **A physician's "no" outranks every signature older than it, even once its
+ * seat has been given a new link** (Aaron, 2026-10-06: "a way for people who
+ * don't clear a waiver to be able to supply a new waiver").
+ *
+ * Retiring a refusal (`retireMedicalRefusal`) supersedes the refused record so
+ * the seat can carry a fresh release, and a superseded record is no longer an
+ * {@link isUnresolvedMedicalHold}. Left there, sign-once would fall straight
+ * back to whatever clean signature the diver gave *before* the disclosure, and
+ * a seat would read Ready on a release the physician's answer already
+ * overruled. So a refusal keeps counting as a hold by **time**, superseded or
+ * not: only a signature newer than it — the fresh release, answered on its own
+ * terms — stands over it.
+ */
+export function isStandingRefusal(record: WaiverRecord): boolean {
+  return (
+    record.status === "medical_review" &&
+    Boolean(record.medicalClearanceDeclinedAt) &&
+    !record.medicalClearedAt
+  );
+}
+
+/**
+ * **Whether a physician's "no" still governs what this diver signs next.** The
+ * newest refusal on file stands until a release signed after it has been
+ * cleared by a physician in its own right. While it stands, a new online
+ * release parks for review whatever its answers, and a paper attestation is
+ * refused: a self-declared clean questionnaire is not the way back from a
+ * physician's "no" (dive-domain review 2026-10-06).
+ */
+export function physicianRefusalStands(records: readonly WaiverRecord[]): boolean {
+  const refusal = records
+    .filter(isStandingRefusal)
+    .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
+  if (!refusal) return false;
+  const refusedAt = signatureTime(refusal);
+  return !records.some((record) => record.medicalClearedAt && signatureTime(record) > refusedAt);
+}
+
+/** What outranks an older clean signature: an open hold, or a refusal. */
+function outranksOlderSignatures(record: WaiverRecord): boolean {
+  return isUnresolvedMedicalHold(record) || isStandingRefusal(record);
+}
+
+/**
  * A release the diver actually completed, with nothing outstanding on it.
  *
  * Two shapes qualify and they are the same evidence: a questionnaire that
@@ -175,7 +219,9 @@ export function clearanceEvaluatedAt(record: WaiverRecord): number | null {
  * completed record never reads as complete.
  *
  * `personSignedWaivers` is the diver's signed evidence at the shop — completed
- * and medical-review records, superseded ones excluded.
+ * and medical-review records, superseded ones excluded except a retired
+ * refusal, which still outranks the signatures older than it
+ * ({@link isStandingRefusal}).
  */
 export function effectiveWaiverForBooking(input: {
   bookingWaiver: WaiverRecord | null;
@@ -196,7 +242,7 @@ export function effectiveWaiverForBooking(input: {
 
   const cleanTime = clean ? signatureTime(clean) : Number.NEGATIVE_INFINITY;
   const hold = input.personSignedWaivers
-    .filter(isUnresolvedMedicalHold)
+    .filter(outranksOlderSignatures)
     .filter((record) => signatureTime(record) >= cleanTime)
     .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
   if (hold) return hold;
@@ -268,7 +314,8 @@ export type ShopWaiverStatus =
  * longer be trusted. Fails closed on anything missing.
  *
  * `personSignedWaivers` is the diver's completed and medical-review records at
- * this shop, superseded ones excluded (`listSignedWaiversByPerson`).
+ * this shop, superseded ones excluded but for a retired refusal
+ * (`listSignedWaiversByPerson`).
  */
 export function shopWaiverStatus(input: {
   personSignedWaivers: readonly WaiverRecord[];
@@ -289,7 +336,7 @@ export function shopWaiverStatus(input: {
 
   const cleanTime = clean ? signatureTime(clean) : Number.NEGATIVE_INFINITY;
   const hold = input.personSignedWaivers
-    .filter(isUnresolvedMedicalHold)
+    .filter(outranksOlderSignatures)
     .filter((record) => signatureTime(record) >= cleanTime)
     .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
   if (hold) {

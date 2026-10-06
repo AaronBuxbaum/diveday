@@ -15,7 +15,7 @@ import {
   or,
   sql,
 } from "drizzle-orm";
-import { isStaff } from "@/lib/authz";
+import { canRetireMedicalRefusal, isStaff } from "@/lib/authz";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { readEmergencyContact } from "@/lib/contact";
@@ -45,6 +45,7 @@ import {
   isCompletedWaiverCurrent,
   isUnresolvedMedicalHold,
   needsMedicalReview,
+  physicianRefusalStands,
   WAIVER_LINK_TTL_MS,
   WAIVER_SIGNATURE_VALIDITY_MS,
 } from "@/lib/waivers";
@@ -258,8 +259,14 @@ export async function getSignedWaiverRecordForShop(
       tripStartsAt: trips.startsAt,
     })
     .from(waiverRecords)
-    .innerJoin(people, eq(people.id, waiverRecords.personId))
-    .leftJoin(bookings, eq(bookings.id, waiverRecords.bookingId))
+    .innerJoin(
+      people,
+      and(eq(people.id, waiverRecords.personId), eq(people.shopId, waiverRecords.shopId)),
+    )
+    .leftJoin(
+      bookings,
+      and(eq(bookings.id, waiverRecords.bookingId), eq(bookings.shopId, waiverRecords.shopId)),
+    )
     .leftJoin(trips, eq(trips.id, bookings.tripId))
     .where(
       and(
@@ -271,6 +278,100 @@ export async function getSignedWaiverRecordForShop(
     .limit(1);
   return row ? toSignedWaiverEntry(row) : null;
 }
+
+/**
+ * **One signed release, whole** — what "View signed record" opens (Aaron,
+ * 2026-10-06: "you actually can't even view the signed record!").
+ *
+ * The signature log's row says a release exists; this is the release: what
+ * the diver signed, how, when, the questionnaire they answered, and what a
+ * physician said about it. Scoped by shop *and* by the diver whose record the
+ * URL names, so a record id from one diver's page never opens another's.
+ * Superseded records are included on purpose — a refusal retired off its seat
+ * is still evidence — and pending ones are not: an unsigned link has nothing
+ * to show and its token must never reach a staff page.
+ */
+export async function getSignedWaiverForDiver(
+  db: DbExecutor,
+  input: {
+    shopId: string;
+    personId: string;
+    recordId: string;
+    /** `canReadMedicalAnswers`: every answer and the physician's name, or only the prompts that flagged. */
+    readsMedicalAnswers: boolean;
+  },
+) {
+  if (!isUuid(input.recordId) || !isUuid(input.personId)) return null;
+  const [row] = await db
+    .select({
+      record: waiverRecords,
+      personName: people.fullName,
+      tripId: trips.id,
+      tripTitle: trips.title,
+      tripStartsAt: trips.startsAt,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+    })
+    .from(waiverRecords)
+    .innerJoin(
+      people,
+      and(eq(people.id, waiverRecords.personId), eq(people.shopId, waiverRecords.shopId)),
+    )
+    .leftJoin(
+      bookings,
+      and(eq(bookings.id, waiverRecords.bookingId), eq(bookings.shopId, waiverRecords.shopId)),
+    )
+    .leftJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        eq(waiverRecords.id, input.recordId),
+        eq(waiverRecords.shopId, input.shopId),
+        eq(waiverRecords.personId, input.personId),
+        inArray(waiverRecords.status, ["completed", "medical_review"]),
+      ),
+    )
+    .limit(1);
+  if (!row) return null;
+  const { record } = row;
+  // A release on a seat still held over who is in it (H-13) may not be this
+  // diver's: what it says about them waits for that confirmation, as it does
+  // on the roster.
+  const identityHeld = Boolean(row.identityUnconfirmedAt);
+  const answers = identityHeld ? null : record.medicalAnswers;
+  return {
+    id: record.id,
+    personId: record.personId,
+    personName: row.personName,
+    identityHeld,
+    trip:
+      row.tripId && row.tripTitle
+        ? { id: row.tripId, title: row.tripTitle, startsAt: row.tripStartsAt }
+        : null,
+    status: record.status,
+    signedAt: record.signedAt ?? record.completedAt,
+    signedName: identityHeld ? null : record.signedName,
+    signatureMethod: record.signatureMethod,
+    templateTitle: record.templateTitle,
+    templateVersion: record.templateVersion,
+    templateBody: record.templateBody,
+    guardian: identityHeld ? null : guardianSignatureOf(record),
+    integrity: verifyWaiverIntegrity(record),
+    /** Every answer, for an owner or manager; null for anyone else. */
+    medicalAnswers: input.readsMedicalAnswers ? answers : null,
+    /** What the roster shows every staff role: the prompts that flagged, on a record held for them. */
+    flaggedPrompts:
+      answers && record.status === "medical_review" ? flaggedMedicalPrompts(answers) : [],
+    medicalClearedAt: record.medicalClearedAt,
+    medicalClearanceDeclinedAt: record.medicalClearanceDeclinedAt,
+    medicalClearanceEvaluatedOn: record.medicalClearanceEvaluatedOn,
+    medicalClearancePhysicianName: input.readsMedicalAnswers
+      ? record.medicalClearancePhysicianName
+      : null,
+    medicalClearanceDocumentOnFile: Boolean(record.medicalClearanceDocumentUrl),
+    supersededAt: record.supersededAt,
+  };
+}
+
+export type SignedWaiverForDiver = NonNullable<Awaited<ReturnType<typeof getSignedWaiverForDiver>>>;
 
 export type SaveWaiverTemplateResult = {
   template: typeof waiverTemplates.$inferSelect;
@@ -1240,7 +1341,14 @@ export async function completeWaiver(
   if (!medicalValidation.ok) {
     return { ok: false, reason: "invalid_medical" };
   }
-  const medicalReviewRequired = needsMedicalReview(input.medicalAnswers);
+  // After a physician's "no", the next release goes back to a physician
+  // whatever it answers: a clean self-declaration is not the way back.
+  const medicalReviewRequired =
+    needsMedicalReview(input.medicalAnswers) ||
+    (await physicianRefusalStandsFor(db, {
+      shopId: state.record.shopId,
+      personId: state.record.personId,
+    }));
   const status = medicalReviewRequired ? ("medical_review" as const) : ("completed" as const);
   const [saved] = await db
     .update(waiverRecords)
@@ -1317,7 +1425,8 @@ export async function completeWaiver(
 /**
  * Every *signed* release on file for a set of divers at a shop, grouped by
  * person — the evidence the sign-once rule draws on. Includes both `completed`
- * and `medical_review` records (superseded ones excluded): the caller needs the
+ * and `medical_review` records (superseded ones excluded, but for a retired
+ * refusal — see the query): the caller needs the
  * medical holds too, so a stale clean signature can never carry a diver past a
  * newer, unresolved medical review. Currency (template version, age) is decided
  * per booking by `effectiveWaiverForBooking`.
@@ -1341,7 +1450,17 @@ export async function listSignedWaiversByPerson(
         eq(waiverRecords.shopId, shopId),
         inArray(waiverRecords.personId, personIds),
         inArray(waiverRecords.status, ["completed", "medical_review"]),
-        isNull(waiverRecords.supersededAt),
+        // A retired refusal stays in the evidence: superseded so its seat can
+        // carry a fresh release, it still outranks every signature older than
+        // it (`isStandingRefusal`), or sign-once would fall back past it.
+        or(
+          isNull(waiverRecords.supersededAt),
+          and(
+            eq(waiverRecords.status, "medical_review"),
+            isNotNull(waiverRecords.medicalClearanceDeclinedAt),
+            isNull(waiverRecords.medicalClearedAt),
+          ),
+        ),
         // **A clean release signed on a held seat does not carry** (#2082).
         // Until staff confirm who took the seat, whoever held its link may
         // not be this diver, and their "no" to every medical question must
@@ -1669,7 +1788,13 @@ export type InPersonWaiverOutcome =
          * paper in hand is one tap away on both surfaces: confirm the identity,
          * then record the release.
          */
-        | "identity_unconfirmed";
+        | "identity_unconfirmed"
+        /**
+         * A physician did not clear this diver, and no release signed since
+         * has been cleared. Paper cannot follow that answer: the diver signs
+         * online, and a physician clears the new release.
+         */
+        | "physician_refused";
     };
 
 /**
@@ -2025,6 +2150,11 @@ export async function recordInPersonWaiver(
       now,
     });
     if (standing) return { ok: true, recordId: standing.id, alreadySigned: true };
+    // Paper carries no questionnaire a physician could clear, so it can never
+    // be the release that follows a physician's "no".
+    if (await physicianRefusalStandsFor(tx, { shopId: input.shopId, personId: signer.personId })) {
+      return { ok: false, reason: "physician_refused" };
+    }
 
     const evidence = inPersonAttestationProvider.capture({
       signerName: signer.fullName,
@@ -2359,6 +2489,86 @@ export async function recordMedicalEvaluation(
         : { ok: false, reason: "answer_already_recorded" };
     }
     return { ok: true, recordId: written.id, outcome: input.outcome, alreadyRecorded: false };
+  });
+}
+
+/**
+ * Whether a physician's refusal still governs this diver's next release
+ * (`physicianRefusalStands`): read over every medical record the person has at
+ * the shop, superseded ones included, because retiring a refusal off a seat is
+ * exactly what must not end it.
+ */
+async function physicianRefusalStandsFor(
+  db: DbExecutor,
+  input: { shopId: string; personId: string },
+): Promise<boolean> {
+  const records = await db
+    .select()
+    .from(waiverRecords)
+    .where(
+      and(
+        eq(waiverRecords.shopId, input.shopId),
+        eq(waiverRecords.personId, input.personId),
+        inArray(waiverRecords.status, ["completed", "medical_review"]),
+        or(
+          isNotNull(waiverRecords.medicalClearanceDeclinedAt),
+          isNotNull(waiverRecords.medicalClearedAt),
+        ),
+      ),
+    );
+  return physicianRefusalStands(records);
+}
+
+export type RetireMedicalRefusalResult =
+  | { ok: true; personId: string }
+  | { ok: false; reason: "not_authorized" | "no_refusal" };
+
+/**
+ * **A seat whose physician said no is given a fresh release** — the supersede
+ * act the glossary's *Physician clearance* entry describes (Aaron, 2026-10-06:
+ * "a way for people who don't clear a waiver to be able to supply a new
+ * waiver").
+ *
+ * A recorded answer stays final for its record: nothing here writes either
+ * stamp, and the refused record keeps its evaluation, its document and its
+ * seal. What moves is the record's hold on *this seat*: it is superseded, so
+ * the seat's next `issueWaiverRequest` mints a new link instead of answering
+ * `already_completed` forever.
+ *
+ * **Nothing is lifted.** The refusal keeps outranking every signature older
+ * than it (`isStandingRefusal`, read through `listSignedWaiversByPerson`), so
+ * the seat stays blocked — "A physician did not clear this diver to dive" —
+ * until the diver signs the new release and a physician clears it: the new
+ * release parks for review whatever it answers (`physicianRefusalStands`).
+ *
+ * Owner or manager, checked here against live roles as well as by the action,
+ * because it is the one act that moves a physician's answer off a seat.
+ */
+export async function retireMedicalRefusal(
+  db: AppDb,
+  input: { shopId: string; bookingId: string; actorPersonId: string; now?: Date },
+): Promise<RetireMedicalRefusalResult> {
+  const now = input.now ?? nowDate();
+  return db.transaction(async (tx): Promise<RetireMedicalRefusalResult> => {
+    const roles = await loadActiveStaffRoles(tx, input.shopId, input.actorPersonId);
+    if (!canRetireMedicalRefusal(roles ?? undefined))
+      return { ok: false, reason: "not_authorized" };
+    const [retired] = await tx
+      .update(waiverRecords)
+      .set({ supersededAt: now, tokenSealed: null })
+      .where(
+        and(
+          eq(waiverRecords.shopId, input.shopId),
+          eq(waiverRecords.bookingId, input.bookingId),
+          eq(waiverRecords.status, "medical_review"),
+          isNotNull(waiverRecords.medicalClearanceDeclinedAt),
+          isNull(waiverRecords.medicalClearedAt),
+          isNull(waiverRecords.supersededAt),
+        ),
+      )
+      .returning({ personId: waiverRecords.personId });
+    if (!retired) return { ok: false, reason: "no_refusal" };
+    return { ok: true, personId: retired.personId };
   });
 }
 

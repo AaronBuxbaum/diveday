@@ -238,6 +238,33 @@ export function canReadMedicalClearanceDocument(roles: readonly Role[] | undefin
 }
 
 /**
+ * Who reads a diver's **whole** medical questionnaire on their signed record
+ * (`divers/[personId]/waivers/[recordId]`), every answer and the physician's
+ * name. Owner or manager: the same wall as {@link canExportShopData}, which
+ * hands over the complete answers in bulk. Every other staff role sees what the
+ * trip roster already shows them, the prompts that flagged, so whoever records
+ * a clearance can still read what they are clearing.
+ */
+export function canReadMedicalAnswers(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
+/**
+ * **Retire a physician's refusal so the seat can take a fresh release** — the
+ * supersede act the glossary's *Physician clearance* entry named as the thing
+ * to build once a shop hit it (Aaron, 2026-10-06).
+ *
+ * Owner or manager. It lifts nothing by itself — the refusal keeps outranking
+ * every older signature (`isStandingRefusal`) and the diver stays blocked until
+ * the new release is signed and, if it refers them again, cleared — but it is
+ * the one act that moves a physician's "no" off the seat it was recorded on,
+ * and that is the business's call rather than whoever is at the desk.
+ */
+export function canRetireMedicalRefusal(roles: readonly Role[] | undefined): boolean {
+  return isOwnerOrManager(roles);
+}
+
+/**
  * **Read what a diver privately asked the shop to fix** — the recap pulse
  * (D40, issue #1200; the owner/manager narrowing is issue #1410).
  *

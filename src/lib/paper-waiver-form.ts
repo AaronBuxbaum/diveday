@@ -47,6 +47,8 @@
  *   other refusal an *honest* submission produces, and the only one whose way
  *   through is a different control: confirm the identity on the row, then record
  *   the release.
+ * - `physician_refused` — a physician did not clear this diver and no release
+ *   signed since has been cleared, so paper cannot be the way back.
  * - `error` — everything else. The form marks every field required, so
  *   reaching one of these means the request did not come from it.
  */
@@ -54,6 +56,7 @@ export type PaperWaiverRefusal =
   | "medical_attestation"
   | "guardian_name"
   | "identity_unconfirmed"
+  | "physician_refused"
   | "error";
 
 /**

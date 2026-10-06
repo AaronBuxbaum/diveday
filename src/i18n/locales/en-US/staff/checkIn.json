@@ -10,15 +10,12 @@
     "arrived": "Checked in"
   },
   "noShow": {
-    "door": "Not here?",
+    "door": "Not here",
     "consequence": "Records that they did not arrive and frees the seat. You can put them back while the seat is still free.",
     "confirm": "Mark not here",
     "confirming": "Marking…",
     "confirmAriaLabel": "Mark {name} as not here",
-    "sailedDoor": "Did not dive?",
-    "sailedConsequence": "The boat has gone, so this records that they did not dive. They get no recap and the day will not count for them. You can put them back.",
-    "sailedConfirm": "Mark that they did not dive",
-    "sailedConfirmAriaLabel": "Mark that {name} did not dive",
+    "sailedConsequence": "The boat left without them. They get no recap and the day will not count for them. You can put them back.",
     "badge": "Not here",
     "undo": "Put back on the list",
     "undoing": "Putting back…",

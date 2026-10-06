@@ -46,12 +46,12 @@ export function deskIsOpen(trip: { status: string; startsAt: Date }, now: Date):
  * used to be a tab of its own that listed the same divers as the roster, with
  * the same blockers and the same fixes; arrival is a state of the roster now,
  * and this is the part of the old counter that the roster does not already
- * have: the count, the check-in tap and its undo, "Not here?" and the released
+ * have: the count, the check-in tap and its undo, "Not here" and the released
  * seat's next step, the paper pass, and the walk-in door.
  *
  * Every fix for a blocked diver — the waiver, the paper release, the identity
  * confirm, payment — is the roster row's own, so a blocked row gets no
- * check-in tap: readiness is the gate. It still gets "Not here?" and, once
+ * check-in tap: readiness is the gate. It still gets "Not here" and, once
  * arrived, its undo.
  *
  * Returns `null` outside the arrivals window (`deskIsOpen`).
@@ -85,7 +85,7 @@ export async function buildArrivalDesk({
   const markNoShow = markNoShowAction.bind(null, shopSlug, tripId);
   const undoNoShow = undoNoShowAction.bind(null, shopSlug, tripId);
 
-  // **"Not here?" opens when the boat leaves without them**, and says something
+  // **"Not here" opens when the boat leaves without them**, and says something
   // different once it is gone. `markBookingNoShow` runs the same gate again
   // against locked rows, so this decides only whether the door is drawn and
   // which script it carries (#1209).
@@ -193,7 +193,7 @@ export async function buildArrivalDesk({
     }
     const claim = noShowClaimFor(row);
     if (claim) {
-      // **"Not here?" on a blocked row too** (dive-domain review 2026-10-05):
+      // **"Not here" on a blocked row too** (dive-domain review 2026-10-05):
       // the diver who never signed is the commonest no-show, and a door that
       // opened only once the release was on file would invite somebody to
       // record a release for a person who is not there just to free the seat.
@@ -206,27 +206,21 @@ export async function buildArrivalDesk({
         <NoShowScript
           action={markNoShow}
           bookingId={row.bookingId}
-          copy={
-            claim === "did_not_dive"
-              ? {
-                  door: t("checkIn.noShow.sailedDoor"),
-                  consequence: t("checkIn.noShow.sailedConsequence"),
-                  confirm: t("checkIn.noShow.sailedConfirm"),
-                  confirming: t("checkIn.noShow.confirming"),
-                  confirmAriaLabel: t("checkIn.noShow.sailedConfirmAriaLabel", {
-                    name: row.personName,
-                  }),
-                  sendFailed: t("checkIn.sendFailedButton"),
-                }
-              : {
-                  door: t("checkIn.noShow.door"),
-                  consequence: t("checkIn.noShow.consequence"),
-                  confirm: t("checkIn.noShow.confirm"),
-                  confirming: t("checkIn.noShow.confirming"),
-                  confirmAriaLabel: t("checkIn.noShow.confirmAriaLabel", { name: row.personName }),
-                  sendFailed: t("checkIn.sendFailedButton"),
-                }
-          }
+          // One door and one confirm either side of the departure ("Not
+          // here"): "did not dive" also describes a diver who sat a dive out
+          // aboard, whom this tap refuses (dive-domain review 2026-10-06).
+          // What differs is the sentence saying what the tap records.
+          copy={{
+            door: t("checkIn.noShow.door"),
+            consequence:
+              claim === "did_not_dive"
+                ? t("checkIn.noShow.sailedConsequence")
+                : t("checkIn.noShow.consequence"),
+            confirm: t("checkIn.noShow.confirm"),
+            confirming: t("checkIn.noShow.confirming"),
+            confirmAriaLabel: t("checkIn.noShow.confirmAriaLabel", { name: row.personName }),
+            sendFailed: t("checkIn.sendFailedButton"),
+          }}
         />,
       );
     }

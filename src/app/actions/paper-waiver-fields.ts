@@ -92,6 +92,7 @@ const REFUSAL: Record<Extract<InPersonWaiverOutcome, { ok: false }>["reason"], P
     medical_attestation_required: "medical_attestation",
     guardian_name_matches_diver: "guardian_name",
     identity_unconfirmed: "identity_unconfirmed",
+    physician_refused: "physician_refused",
     booking_not_found: "error",
     booking_unavailable: "error",
     person_not_found: "error",

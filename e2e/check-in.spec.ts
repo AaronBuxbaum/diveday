@@ -506,7 +506,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
   test.setTimeout(120_000);
 
   // **A boat that is still ahead while it is being filled, and has left by the
-  // time the desk writes anybody off.** "Not here?" opens at the departure
+  // time the desk writes anybody off.** "Not here" opens at the departure
   // rather than at the shop's dock call (`noShowGate`), because a diver late
   // for the arrival time the shop asked for has not missed anything yet — and
   // the two halves of this flow need opposite sides of that line: a wait list
@@ -594,7 +594,7 @@ test("the counter releases a no-show's seat, offers it to the wait list, and the
 
   // **The door, and one tap inside it.** Closed it is two words under the
   // check-in tap; open it says what the tap does before it does it.
-  await odile.getByText("Not here?").click();
+  await odile.getByText("Not here", { exact: true }).click();
   await expect(
     odile.getByText("Records that they did not arrive and frees the seat.", { exact: false }),
   ).toBeVisible();
