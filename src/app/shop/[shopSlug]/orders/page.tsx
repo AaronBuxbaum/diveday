@@ -238,6 +238,13 @@ export default async function OrdersIndexPage({
   // (ADR 20260813-shop-cancellation-refunds-itself's own consequence).
   //
   // Same gate and same query-only-if-visible as the stuck operations above.
+  // The one "New order" door, drawn in the header and the empty state alike:
+  // absent for a reader `orders/new` would refuse (issue #1925).
+  const newOrderDoor = canManageOrders ? (
+    <Link href={`/shop/${shopSlug}/orders/new`} className={buttonClass()}>
+      {t("orders.index.newOrder")}
+    </Link>
+  ) : null;
   const stuckPaymentOperations = canReconcilePayments
     ? await listStuckPaymentOperations(db, shop.id)
     : [];
@@ -466,11 +473,7 @@ export default async function OrdersIndexPage({
             {orderPage.total === 0 &&
             !hasImportedHistory &&
             !hasFilters ? null : paymentsConnected ? (
-              canManageOrders ? (
-                <Link href={`/shop/${shopSlug}/orders/new`} className={buttonClass()}>
-                  {t("orders.index.newOrder")}
-                </Link>
-              ) : null
+              newOrderDoor
             ) : (
               <PaymentsConnectCta shopSlug={shopSlug} label={t("shared.payments.connect")} />
             )}
@@ -700,11 +703,7 @@ export default async function OrdersIndexPage({
                 {t("orders.index.filters.clear")}
               </Link>
             ) : paymentsConnected ? (
-              canManageOrders ? (
-                <Link href={`/shop/${shopSlug}/orders/new`} className={buttonClass()}>
-                  {t("orders.index.newOrder")}
-                </Link>
-              ) : null
+              newOrderDoor
             ) : (
               <PaymentsConnectCta shopSlug={shopSlug} label={t("shared.payments.connect")} />
             )
