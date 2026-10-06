@@ -362,8 +362,8 @@ describe("setting what a trip admits", () => {
   });
 });
 
-describe("putting a cancelled trip back on the board", () => {
-  it("refuses a captain — cancelling today's charter is the crew's call, un-cancelling is not", async () => {
+describe("putting a canceled trip back on the board", () => {
+  it("refuses a captain — canceling today's charter is the crew's call, un-canceling is not", async () => {
     const { db, shop, tripId, captain } = await context();
     await db.update(trips).set({ status: "cancelled" }).where(eq(trips.id, tripId));
     signIn(shop, captain);

@@ -22,7 +22,7 @@ test.describe("account security settings", () => {
   // The mint plus the sign-in are inside the test's own budget.
   test.setTimeout(60_000);
 
-  test("enrols in two-factor, reveals the recovery codes, and revokes a session", async ({
+  test("enrolls in two-factor, reveals the recovery codes, and revokes a session", async ({
     page,
     privateShop,
   }) => {

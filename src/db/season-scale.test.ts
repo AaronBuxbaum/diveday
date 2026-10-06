@@ -91,7 +91,7 @@ describe("seasonScale", () => {
     ]);
   });
 
-  it("leaves out a seat that was cancelled or never showed", async () => {
+  it("leaves out a seat that was canceled or never showed", async () => {
     const { db, shopId } = await freshShop("season-cancelled");
     const earlier = await aDeparture(db, shopId, new Date("2026-06-10T14:00:00.000Z"));
     await aSeat(db, shopId, earlier.id, "Ada Lindqvist", "cancelled");
@@ -203,7 +203,7 @@ describe("seasonScale", () => {
       .insert(shops)
       .values({ name: "Neighbour", slug: "season-neighbour", timezone: ZONE })
       .returning();
-    if (!neighbour) throw new Error("neighbour insert failed");
+    if (!neighbour) throw new Error("neighbor insert failed");
     const theirs = await aDeparture(db, neighbour.id, new Date("2026-06-10T14:00:00.000Z"));
     await aSeat(db, neighbour.id, theirs.id, "Someone Else");
     await aDeparture(db, shopId, new Date("2026-07-21T15:00:00.000Z"));

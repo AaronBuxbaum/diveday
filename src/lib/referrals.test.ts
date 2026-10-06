@@ -80,7 +80,7 @@ describe("partnerFromSearchParams", () => {
     ).toBeNull();
   });
 
-  it("normalises a hand-typed campaign rather than storing it as given", () => {
+  it("normalizes a hand-typed campaign rather than storing it as given", () => {
     expect(partnerFromSearchParams(params("utm_source=partner&utm_campaign=Coral%20Sands"))).toBe(
       "coral-sands",
     );
@@ -110,7 +110,7 @@ describe("partnerFromReferralCookie", () => {
     expect(partnerFromReferralCookie(undefined, "blue-mantis")).toBeNull();
   });
 
-  it("normalises the partner half rather than trusting a hand-set cookie", () => {
+  it("normalizes the partner half rather than trusting a hand-set cookie", () => {
     expect(partnerFromReferralCookie("blue-mantis:<script>", "blue-mantis")).toBe("script");
     expect(partnerFromReferralCookie(`blue-mantis:${"a".repeat(500)}`, "blue-mantis")).toBe(
       "a".repeat(64),

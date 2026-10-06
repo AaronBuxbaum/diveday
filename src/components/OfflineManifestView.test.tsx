@@ -1844,7 +1844,7 @@ describe("OfflineManifestView — crew are part of the head count offline too", 
  * ids rode along — and even that stays calm-toned.
  */
 describe("OfflineManifestView — the crew panel tells apart 'still to call' from 'missing'", () => {
-  it("does not apologise on a current copy: an uncalled crew member is work, and untoned", async () => {
+  it("does not apologize on a current copy: an uncalled crew member is work, and untoned", async () => {
     searchParams = new URLSearchParams({ trip: "trip-1", checkpoint: "after_dive_1" });
     const saved = richEnvelope("trip-1", {
       withCarriedNotBoarded: true,
@@ -2584,7 +2584,7 @@ describe("OfflineManifestView — the counter's harder readings", () => {
     const counter = screen.getByRole("region", { name: "At the counter" });
     expect(within(counter).getByText(/no longer on the boat’s list/)).toBeInTheDocument();
     expect(
-      within(counter).getByText(/cancelled or marked not here at the desk/),
+      within(counter).getByText(/canceled or marked not here at the desk/),
     ).toBeInTheDocument();
     // Still told apart from a readiness hold, which is the distinction this
     // row's sentence has always carried.

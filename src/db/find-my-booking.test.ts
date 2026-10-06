@@ -157,7 +157,7 @@ describe("sendFindMyBookingLinks", () => {
     expect(sent).not.toHaveBeenCalled();
   });
 
-  it("does not reissue a cancelled booking", async () => {
+  it("does not reissue a canceled booking", async () => {
     const { db, shop } = await seededShopContext();
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("expected a seeded trip");
@@ -172,7 +172,7 @@ describe("sendFindMyBookingLinks", () => {
     expect(sent).not.toHaveBeenCalled();
   });
 
-  it("does not reissue a booking on a cancelled trip", async () => {
+  it("does not reissue a booking on a canceled trip", async () => {
     const { db, shop } = await seededShopContext();
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("expected a seeded trip");

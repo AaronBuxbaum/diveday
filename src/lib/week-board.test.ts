@@ -43,7 +43,7 @@ describe("the ?week= grammar", () => {
     ]);
   });
 
-  it("normalises any day of a week to that week, so two URLs are one board", () => {
+  it("normalizes any day of a week to that week, so two URLs are one board", () => {
     expect(resolveWeekStart("2026-07-23", "2026-07-21")).toBe("2026-07-20");
     expect(resolveWeekStart("2026-07-20", "2026-07-21")).toBe("2026-07-20");
   });

@@ -42,6 +42,12 @@ import { pathToFileURL } from "node:url";
  *   (`'{depth18}'`), which must stay straight or the marker stops being a
  *   literal.
  *
+ * - **A British spelling** (2026-10-06): *colour*, *centre*, *cancelled*,
+ *   *grey*, *enrol*. DiveDay's English is American, in the bundles and in
+ *   every prose literal under `src/` (the course and site templates, the demo
+ *   seeds, export descriptions). The list and what it leaves alone are above
+ *   `BRITISH_SPELLINGS` below.
+ *
  * - **Four shapes**, on the public pages' strings only (2026-09-24): the
  *   mirrored pair, the anaphoric triplet, the tag sentence, and the house
  *   phrase repeated across pages. Each is defined, with what it leaves alone,
@@ -99,6 +105,301 @@ const CLAUSE_WORDS = 3;
 const ICU_QUOTED = /'[{}#][^']*'/g;
 
 /**
+ * **American spelling** (H-95, 2026-10-06). DiveDay's English is US English:
+ * *color*, *center*, *canceled*, *enroll*, *gray*. The bundles had drifted
+ * into British spelling a word at a time (37 *cancelled*, 22 *colour*, 10
+ * *grey* by the day it was swept), and a reader who meets *colour* on one
+ * screen and *color* on the next reads two writers.
+ *
+ * Every British form below is listed whole, inflections and all, rather than
+ * matched by a suffix pattern: an `-ise` rule would refuse *advise*, *exercise*
+ * and *promise*, and an `-our` rule *four*, *your* and *hour*. What the list
+ * leaves alone on purpose: *cancellation* (the US spelling too), *dialogue*
+ * and *glamour* (both standard in US writing), *enrolled* and *enrolling*
+ * (the same in both), and an identifier — the `cancelled` booking status and
+ * the `photoCancelled` key are names, not prose, and never reach this scan.
+ */
+function britishSpellings() {
+  const map = new Map();
+  const add = (british, american) => map.set(british, american);
+  // -our → -or, with the inflections and compounds the copy reaches for.
+  const our = {
+    colour: ["s", "ed", "ing", "ful", "fully", "less", "way", "ways"],
+    discolour: ["", "s", "ed", "ing", "ation"],
+    recolour: ["", "s", "ed", "ing"],
+    multicolour: ["", "ed"],
+    watercolour: ["", "s"],
+    favour: ["s", "ed", "ing", "able", "ably", "ite", "ites", "itism"],
+    unfavour: ["able", "ably"],
+    behaviour: ["s", "al", "ally"],
+    misbehaviour: [""],
+    honour: ["s", "ed", "ing", "able", "ably"],
+    dishonour: ["", "s", "ed", "able"],
+    neighbour: ["s", "ing", "hood", "hoods", "ly"],
+    harbour: ["s", "ed", "ing", "master", "masters", "side", "front"],
+    flavour: ["s", "ed", "ing", "ful", "less"],
+    labour: ["s", "ed", "ing", "er", "ers"],
+    rumour: ["s", "ed"],
+    humour: ["s", "ed", "less"],
+    endeavour: ["s", "ed", "ing"],
+    armour: ["s", "ed", "y"],
+    odour: ["s", "less"],
+    vapour: ["s"],
+    parlour: ["s"],
+    rigour: [""],
+    vigour: [""],
+    savour: ["s", "ed", "ing", "y"],
+    clamour: ["s", "ed", "ing"],
+    candour: [""],
+    splendour: ["s"],
+    saviour: ["s"],
+  };
+  for (const [root, suffixes] of Object.entries(our)) {
+    const american = root.replace(/our$/, "or");
+    for (const suffix of ["", ...suffixes]) add(root + suffix, american + suffix);
+  }
+  // -re → -er.
+  for (const root of [
+    "centre",
+    "metre",
+    "kilometre",
+    "centimetre",
+    "millimetre",
+    "litre",
+    "millilitre",
+    "theatre",
+    "fibre",
+    "calibre",
+    "sombre",
+    "lustre",
+    "meagre",
+    "spectre",
+    "sabre",
+    "manoeuvre",
+  ]) {
+    const american = root === "manoeuvre" ? "maneuver" : `${root.slice(0, -2)}er`;
+    add(root, american);
+    add(`${root}s`, `${american}s`);
+  }
+  for (const [british, american] of [
+    ["centred", "centered"],
+    ["centring", "centering"],
+    ["centrepiece", "centerpiece"],
+    ["centrepieces", "centerpieces"],
+    ["off-centre", "off-center"],
+    ["fibreglass", "fiberglass"],
+    ["manoeuvred", "maneuvered"],
+    ["manoeuvring", "maneuvering"],
+    ["manoeuvrable", "maneuverable"],
+  ])
+    add(british, american);
+  // -ise / -isation → -ize / -ization, for verbs that take -ize in US English.
+  // Never a word that is -ise in both (advise, exercise, promise, revise…).
+  const ize =
+    "agon anonym apolog author capital categor central character colon critic crystall custom digit emphas energ equal familiar fantas final fossil general global harmon hospital ideal immun incentiv industrial initial item jeopard legal local maxim memor minim mobil modern monet moral natural neutral normal optim organ patron penal personal polar popular priorit public random rational real recogn regular revolution sanit satir scrutin sensit serial social special stabil standard steril subsid summar symbol sympath synchron tantal terror theor trivial util vandal visual vulcan weather canonical computer".split(
+      " ",
+    );
+  for (const stem of ize) {
+    for (const [b, a] of [
+      ["ise", "ize"],
+      ["ised", "ized"],
+      ["ises", "izes"],
+      ["ising", "izing"],
+      ["isation", "ization"],
+      ["isations", "izations"],
+      ["iser", "izer"],
+      ["isers", "izers"],
+      ["isable", "izable"],
+    ]) {
+      add(stem + b, stem + a);
+    }
+  }
+  for (const stem of [
+    "unrecogn",
+    "unorgan",
+    "reorgan",
+    "decentral",
+    "desensit",
+    "unauthor",
+    "unreal",
+    "reprior",
+    "uncategor",
+    "unstandard",
+    "unoptim",
+    "uncustom",
+    "unsanit",
+  ]) {
+    for (const [b, a] of [
+      ["ised", "ized"],
+      ["isable", "izable"],
+      ["ise", "ize"],
+      ["ises", "izes"],
+      ["ising", "izing"],
+      ["isation", "ization"],
+    ]) {
+      add(stem + b, stem + a);
+    }
+  }
+  // -yse → -yze.
+  for (const stem of ["analy", "paraly", "cataly", "dialy"]) {
+    for (const [b, a] of [
+      ["se", "ze"],
+      ["sed", "zed"],
+      ["ses", "zes"],
+      ["sing", "zing"],
+      ["ser", "zer"],
+      ["sers", "zers"],
+    ]) {
+      add(stem + b, stem + a);
+    }
+  }
+  // A doubled l before -ed/-ing/-er where US English keeps it single.
+  for (const root of [
+    "cancel",
+    "travel",
+    "label",
+    "model",
+    "level",
+    "signal",
+    "fuel",
+    "dial",
+    "channel",
+    "tunnel",
+    "counsel",
+    "total",
+    "equal",
+    "rival",
+    "marshal",
+    "pedal",
+    "jewel",
+    "shovel",
+    "snorkel",
+    "panel",
+    "quarrel",
+    "marvel",
+    "initial",
+    "unlabel",
+    "unrival",
+    "relabel",
+    "remodel",
+  ]) {
+    for (const suffix of ["ed", "ing", "er", "ers", "ings"])
+      add(`${root}l${suffix}`, `${root}${suffix}`);
+  }
+  for (const [british, american] of [
+    ["counsellor", "counselor"],
+    ["counsellors", "counselors"],
+    ["marvellous", "marvelous"],
+    ["marvellously", "marvelously"],
+    ["jewellery", "jewelry"],
+    ["woollen", "woolen"],
+    // A single l where US English doubles it.
+    ["enrol", "enroll"],
+    ["enrols", "enrolls"],
+    ["enrolment", "enrollment"],
+    ["enrolments", "enrollments"],
+    ["fulfil", "fulfill"],
+    ["fulfils", "fulfills"],
+    ["fulfilment", "fulfillment"],
+    ["fulfilments", "fulfillments"],
+    ["instalment", "installment"],
+    ["instalments", "installments"],
+    ["skilful", "skillful"],
+    ["skilfully", "skillfully"],
+    ["wilful", "willful"],
+    ["wilfully", "willfully"],
+    ["distil", "distill"],
+    ["distils", "distills"],
+    ["instil", "instill"],
+    ["instils", "instills"],
+    // -ce → -se, and the noun/verb pair US English spells one way.
+    ["licence", "license"],
+    ["licences", "licenses"],
+    ["licenced", "licensed"],
+    ["defence", "defense"],
+    ["defences", "defenses"],
+    ["offence", "offense"],
+    ["offences", "offenses"],
+    ["pretence", "pretense"],
+    ["practise", "practice"],
+    ["practised", "practiced"],
+    ["practises", "practices"],
+    ["practising", "practicing"],
+    // -ogue → -og.
+    ["catalogue", "catalog"],
+    ["catalogues", "catalogs"],
+    ["catalogued", "cataloged"],
+    ["cataloguing", "cataloging"],
+    ["analogue", "analog"],
+    ["analogues", "analogs"],
+    // Single words.
+    ["grey", "gray"],
+    ["greys", "grays"],
+    ["greyed", "grayed"],
+    ["greying", "graying"],
+    ["greyish", "grayish"],
+    ["greyer", "grayer"],
+    ["judgement", "judgment"],
+    ["judgements", "judgments"],
+    ["acknowledgement", "acknowledgment"],
+    ["acknowledgements", "acknowledgments"],
+    ["ageing", "aging"],
+    ["sceptic", "skeptic"],
+    ["sceptical", "skeptical"],
+    ["scepticism", "skepticism"],
+    ["mould", "mold"],
+    ["moulds", "molds"],
+    ["mouldy", "moldy"],
+    ["moulded", "molded"],
+    ["aluminium", "aluminum"],
+    ["cheque", "check"],
+    ["cheques", "checks"],
+    ["tyre", "tire"],
+    ["tyres", "tires"],
+    ["plough", "plow"],
+    ["cosy", "cozy"],
+    ["aeroplane", "airplane"],
+    ["aeroplanes", "airplanes"],
+    ["programme", "program"],
+    ["programmes", "programs"],
+    ["artefact", "artifact"],
+    ["artefacts", "artifacts"],
+    ["whilst", "while"],
+    ["amongst", "among"],
+    ["learnt", "learned"],
+    ["spelt", "spelled"],
+    ["spilt", "spilled"],
+    ["towards", "toward"],
+    ["focussed", "focused"],
+    ["focussing", "focusing"],
+    ["orientated", "oriented"],
+    ["storey", "story"],
+    ["storeys", "stories"],
+    ["kerb", "curb"],
+    ["pyjamas", "pajamas"],
+    ["moustache", "mustache"],
+    ["enquire", "inquire"],
+    ["enquired", "inquired"],
+    ["enquires", "inquires"],
+    ["enquiring", "inquiring"],
+    ["enquiry", "inquiry"],
+    ["enquiries", "inquiries"],
+    ["maths", "math"],
+  ])
+    add(british, american);
+  return map;
+}
+
+export const BRITISH_SPELLINGS = britishSpellings();
+
+export const BRITISH_PATTERN = new RegExp(
+  `(?<![\\p{L}\\p{N}_])(?:${[...BRITISH_SPELLINGS.keys()]
+    .sort((a, b) => b.length - a.length)
+    .join("|")})(?![\\p{L}\\p{N}_])`,
+  "giu",
+);
+
+/**
  * Per-locale word rules. Each is a regex over the whole value; a locale that
  * appears in `src/i18n/locales/` and not here fails the check.
  *
@@ -117,6 +418,7 @@ export const RULES = {
     notJust:
       /\b(?:isn['’]t just|is not just|aren['’]t just|not just\b|more than just|isn['’]t about|is not about|it['’]s not (?:a|an|about) [^.]{0,40}, it['’]s)\b/gi,
     staccato: /\b(?:No|Nothing|Never) [^.!?]{1,24}[.!?] (?:No|Nothing|Never)\b/g,
+    spelling: BRITISH_PATTERN,
   },
   "es-ES": {
     filler:
@@ -683,6 +985,146 @@ export async function scanMetadata() {
   return { counts, details };
 }
 
+/** Where the rest of the English lives: course and site templates, seeds, exports. */
+export const SOURCE_DIR = "src";
+
+/**
+ * The string literals in a TypeScript source, with comments skipped.
+ *
+ * A small tokenizer rather than a regex over the file: a comment is where a
+ * developer's British spelling is fine (`// centre the chip`), and a `//`
+ * inside `"https://…"` is not a comment. A regex literal is stepped over so a
+ * `/['’]/` does not open a string. Template literals are read up to their
+ * first `${`, which is the half that is prose.
+ */
+export function stringLiterals(source) {
+  const found = [];
+  let index = 0;
+  let previous = "";
+  const regexMayStart = () =>
+    previous === "" ||
+    /[(,=:[!&|?{};+\-*%<>~^]$/.test(previous) ||
+    /\b(?:return|typeof|case|in|of)$/.test(previous);
+  while (index < source.length) {
+    const char = source[index];
+    const next = source[index + 1];
+    if (char === "/" && next === "/") {
+      index = source.indexOf("\n", index);
+      if (index === -1) break;
+      continue;
+    }
+    if (char === "/" && next === "*") {
+      index = source.indexOf("*/", index + 2);
+      if (index === -1) break;
+      index += 2;
+      continue;
+    }
+    if (char === "/" && regexMayStart()) {
+      let inClass = false;
+      index += 1;
+      while (index < source.length && source[index] !== "\n") {
+        const c = source[index];
+        if (c === "\\") index += 1;
+        else if (c === "[") inClass = true;
+        else if (c === "]") inClass = false;
+        else if (c === "/" && !inClass) break;
+        index += 1;
+      }
+      index += 1;
+      previous = "/";
+      continue;
+    }
+    if (char === '"' || char === "'" || char === "`") {
+      let end = index + 1;
+      let value = "";
+      while (end < source.length && source[end] !== char) {
+        if (source[end] === "\\") {
+          value += source[end + 1];
+          end += 2;
+          continue;
+        }
+        if (char !== "`" && source[end] === "\n") break;
+        if (char === "`" && source[end] === "$" && source[end + 1] === "{") {
+          // Skip the interpolation, braces balanced, and keep reading the template.
+          let depth = 0;
+          for (end += 1; end < source.length; end += 1) {
+            if (source[end] === "{") depth += 1;
+            else if (source[end] === "}") {
+              depth -= 1;
+              if (depth === 0) break;
+            }
+          }
+          value += " ";
+          end += 1;
+          continue;
+        }
+        value += source[end];
+        end += 1;
+      }
+      // A tagged template (`sql\`…\``) is a query or a class list, not prose.
+      if (!(char === "`" && /[A-Za-z0-9_$]$/.test(previous))) found.push(value);
+      index = end + 1;
+      previous = "x";
+      continue;
+    }
+    if (!/\s/.test(char)) {
+      previous = /[A-Za-z0-9_$]/.test(char)
+        ? (previous.match(/[A-Za-z0-9_$]*$/)?.[0] ?? "") + char
+        : char;
+    }
+    index += 1;
+  }
+  return found;
+}
+
+/**
+ * British spellings in the prose literals of every non-test source file under
+ * `src/` — the course and dive-site templates, the seeds a demo shows, export
+ * descriptions — per file. Spelling only: the other tells hold the bundles and
+ * metadata, where the voice is written. A literal with no whitespace is a name
+ * (`"cancelled"`, the booking status) and is left alone; a route's metadata
+ * block is skipped because `scanMetadata` already reads it with every rule.
+ */
+export async function scanSourceSpelling() {
+  const counts = new Map();
+  const details = new Map();
+  for (const file of await sourceFiles(SOURCE_DIR)) {
+    let source = await readFile(path.join(ROOT, file), "utf8");
+    for (const block of metadataBlocks(source)) source = source.replace(block, "");
+    const hits = [];
+    for (const value of stringLiterals(source)) {
+      if (!/\s/.test(value.trim())) continue;
+      for (const match of value.matchAll(BRITISH_PATTERN)) {
+        hits.push({ key: "literal", rule: "spelling", text: match[0] });
+      }
+    }
+    if (hits.length > 0) {
+      counts.set(file, hits.length);
+      details.set(file, hits);
+    }
+  }
+  return { counts, details };
+}
+
+/** Every non-test `.ts`/`.tsx` under a directory, bundles excluded. */
+async function sourceFiles(relativeDirectory) {
+  const entries = await readdir(path.join(ROOT, relativeDirectory), { withFileTypes: true });
+  const files = [];
+  for (const entry of entries) {
+    const relativePath = path.join(relativeDirectory, entry.name);
+    if (entry.isDirectory()) {
+      if (relativePath !== LOCALES_DIR) files.push(...(await sourceFiles(relativePath)));
+    } else if (
+      /\.tsx?$/.test(entry.name) &&
+      !/\.test\.tsx?$/.test(entry.name) &&
+      !entry.name.endsWith(".d.ts")
+    ) {
+      files.push(relativePath);
+    }
+  }
+  return files.sort();
+}
+
 async function bundleFiles(relativeDirectory) {
   let entries;
   try {
@@ -734,11 +1176,19 @@ export async function scanBundles() {
 async function main() {
   const bundles = await scanBundles();
   const metadata = await scanMetadata();
+  const literals = await scanSourceSpelling();
   // One map, so the baseline, the ratchet and the report treat a route file
-  // exactly as they treat a bundle. Neither scan can produce the other's
-  // paths, so nothing collides.
-  const counts = new Map([...bundles.counts, ...metadata.counts]);
-  const details = new Map([...bundles.details, ...metadata.details]);
+  // exactly as they treat a bundle. A route file can carry both metadata tells
+  // and a British spelling in a literal outside that block, so its two counts
+  // add up rather than one replacing the other.
+  const counts = new Map(bundles.counts);
+  const details = new Map(bundles.details);
+  for (const scan of [metadata, literals]) {
+    for (const [file, count] of scan.counts) {
+      counts.set(file, (counts.get(file) ?? 0) + count);
+      details.set(file, [...(details.get(file) ?? []), ...scan.details.get(file)]);
+    }
+  }
 
   const reportIndex = process.argv.indexOf("--report");
   if (reportIndex !== -1) {
@@ -750,7 +1200,9 @@ async function main() {
       for (const hit of hits) console.log(`  ${hit.key}\t${hit.rule}\t${hit.text}`);
       shown += hits.length;
     }
-    console.log(`\n${shown} voice tells under "${prefix || `${LOCALES_DIR} and ${APP_DIR}`}"`);
+    console.log(
+      `\n${shown} voice tells under "${prefix || `${LOCALES_DIR}, ${APP_DIR} metadata and ${SOURCE_DIR} literals`}"`,
+    );
     process.exit(0);
   }
 
@@ -845,14 +1297,14 @@ async function main() {
   if (violations.length > 0) {
     console.error(`Voice violations:\n${violations.map((v) => `- ${v}`).join("\n")}`);
     console.error(
-      "A prose em-dash becomes a full stop, a comma or a colon; an intensifier is deleted; a lead-in is deleted; a 'not just X' contrast states the thing; an apostrophe is ’ (U+2019), never ' — the ICU-quoted `'{depth18}'` markers are the only exception; quotation marks are “ ”, never \", with no exception, since \" means nothing to ICU. A mirrored pair keeps one of its halves; an anaphoric triplet becomes a list of however many things are true; a tag sentence joins the sentence before it or goes; a house phrase on three pages is reworded on two of them, or joins HOUSE_PHRASE_ALLOWLIST only when it is the name of a thing. The full list and the reasoning: docs/design/brand.md, \"What gives us away\". `node scripts/check-voice.mjs --report <file>` lists every hit.",
+      "A prose em-dash becomes a full stop, a comma or a colon; an intensifier is deleted; a lead-in is deleted; a 'not just X' contrast states the thing; an apostrophe is ’ (U+2019), never ' — the ICU-quoted `'{depth18}'` markers are the only exception; quotation marks are “ ”, never \", with no exception, since \" means nothing to ICU. A British spelling takes its American form (colour → color, cancelled → canceled, grey → gray). A mirrored pair keeps one of its halves; an anaphoric triplet becomes a list of however many things are true; a tag sentence joins the sentence before it or goes; a house phrase on three pages is reworded on two of them, or joins HOUSE_PHRASE_ALLOWLIST only when it is the name of a thing. The full list and the reasoning: docs/design/brand.md, \"What gives us away\". `node scripts/check-voice.mjs --report <file>` lists every hit.",
     );
     process.exit(1);
   }
 
   const remaining = [...counts.values()].reduce((sum, n) => sum + n, 0);
   console.log(
-    `voice: ${remaining} tell${remaining === 1 ? "" : "s"} across ${counts.size} file${counts.size === 1 ? "" : "s"} (message bundles and route metadata)`,
+    `voice: ${remaining} tell${remaining === 1 ? "" : "s"} across ${counts.size} file${counts.size === 1 ? "" : "s"} (message bundles, route metadata and source literals)`,
   );
 }
 

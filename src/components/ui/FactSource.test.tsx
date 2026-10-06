@@ -65,7 +65,7 @@ describe("FactSource", () => {
    * thread-high-contrast at 1280 and 390). Aligning the chip's items on their
    * baselines makes the word the item that sets it; the dot centres itself.
    */
-  it("hands its row the word's baseline, with the dot centred beside it", () => {
+  it("hands its row the word's baseline, with the dot centered beside it", () => {
     const { container } = render(<FactSource kind="plan" label="Plan" />);
     const chip = container.firstElementChild;
     expect(chip).toHaveClass("inline-flex", "items-baseline");
@@ -83,7 +83,7 @@ describe("FactSource", () => {
     expect(timed.textContent).toBe("Crew · Sep 4, 7:40 AM");
   });
 
-  it("holds no copy and no raw colour of its own", () => {
+  it("holds no copy and no raw color of its own", () => {
     // Semantic tokens only (ADR-0004), and the words come from the caller's
     // bundle — this file names no language.
     const source = readFileSync(join(__dirname, "FactSource.tsx"), "utf8");

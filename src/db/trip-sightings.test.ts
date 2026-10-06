@@ -175,7 +175,7 @@ describe("recordTripSighting", () => {
 
   it("refuses a departure the shop deleted", async () => {
     const { db, shop, owner, site } = await reefFixture();
-    const trip = await departure(db, shop.id, "Cancelled and taken off", 1);
+    const trip = await departure(db, shop.id, "Canceled and taken off", 1);
     await db.update(trips).set({ deletedAt: NOW }).where(eq(trips.id, trip.id));
     expect(
       await recordTripSighting(db, {

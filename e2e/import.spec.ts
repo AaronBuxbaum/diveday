@@ -242,7 +242,7 @@ test.describe("contact import — specialty cards", () => {
 const BOOKINGS_CSV = [
   "Customer Name,Email,Booking Date,Tour Name,Booking Status,Total,Booking ID",
   "Regular Rosa,regular.rosa@example.com,2024-06-12,Two-tank Molasses Reef,Completed,$165.00,FH-9001",
-  "Regular Rosa,regular.rosa@example.com,2025-01-20,Night dive Benwood,Cancelled,$95.00,FH-9002",
+  "Regular Rosa,regular.rosa@example.com,2025-01-20,Night dive Benwood,Canceled,$95.00,FH-9002",
   "Regular Rosa,regular.rosa@example.com,2025-08-03,Drift the Wall,Completed,$180.00,FH-9003",
 ].join("\n");
 

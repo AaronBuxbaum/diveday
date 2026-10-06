@@ -343,7 +343,7 @@ test.describe("trip print packet", () => {
  * screen: remove, cancel the trip in another window, then press the undo that
  * is still sitting there.
  */
-test.describe("undoing a removal after the trip is cancelled", () => {
+test.describe("undoing a removal after the trip is canceled", () => {
   signedInAsOwner();
 
   test("the stale undo refuses with the reinstate-first banner instead of re-seating a diver", async ({
@@ -396,8 +396,8 @@ test.describe("undoing a removal after the trip is cancelled", () => {
       });
     }).toPass();
     await row.getByRole("button", { name: "Yes, remove booking" }).click();
-    const removedNotice = page.getByRole("status").filter({ hasText: "Booking cancelled" });
-    await expect(removedNotice).toContainText("Booking cancelled. The spot is open again.");
+    const removedNotice = page.getByRole("status").filter({ hasText: "Booking canceled" });
+    await expect(removedNotice).toContainText("Booking canceled. The spot is open again.");
     const undo = removedNotice.getByRole("button", { name: "Undo" });
     await expect(undo).toBeVisible();
 
@@ -422,7 +422,7 @@ test.describe("undoing a removal after the trip is cancelled", () => {
 
     await undo.click();
     await expect(page.getByRole("alert").filter({ hasText: "Couldn’t undo" })).toContainText(
-      "Couldn’t undo. This trip has been cancelled. Reinstate the trip first, then add them back.",
+      "Couldn’t undo. This trip has been canceled. Reinstate the trip first, then add them back.",
     );
     // Refused, not partially applied: the diver is still off the roster.
     await expect(page.getByRole("link", { name: diver })).toHaveCount(0);

@@ -176,7 +176,7 @@ describe("booking capabilities (in-memory PGlite)", () => {
     ).not.toBeNull();
   });
 
-  it("cancellation: cancelling the booking fails a previously-issued, unexpired token closed", async () => {
+  it("cancellation: canceling the booking fails a previously-issued, unexpired token closed", async () => {
     const { db, shop, open } = await seededContext();
     const bookingId = await bookVisitor(db, shop.id, open.id);
     const issued = await issueBookingCapability(db, {
@@ -192,7 +192,7 @@ describe("booking capabilities (in-memory PGlite)", () => {
     expect(ctx).toBeNull();
   });
 
-  it("cancellation: cancelling the TRIP (not the booking) also fails a previously-issued token closed (security review finding)", async () => {
+  it("cancellation: canceling the TRIP (not the booking) also fails a previously-issued token closed (security review finding)", async () => {
     // Trip cancellation doesn't cascade into cancelling its bookings — a
     // separate, pre-existing gap outside CR-002/CR-003's scope — so the
     // booking itself still reads "booked" after the trip is called off. A
@@ -214,7 +214,7 @@ describe("booking capabilities (in-memory PGlite)", () => {
     expect(ctx).toBeNull();
   });
 
-  it("cancellation: refuses to issue a fresh capability for an already-cancelled booking", async () => {
+  it("cancellation: refuses to issue a fresh capability for an already-canceled booking", async () => {
     const { db, shop, open } = await seededContext();
     const bookingId = await bookVisitor(db, shop.id, open.id);
     await cancelBooking(db, shop.id, bookingId);
@@ -446,7 +446,7 @@ describe("live-capability cap (security review: unbounded minting on page GETs)"
 });
 
 describe("resolveRevokedBookingCapability (self-cancel confirmation, docs ADR 20260727-diver-self-service-cancel)", () => {
-  it("still resolves a token that cancelling the booking just revoked", async () => {
+  it("still resolves a token that canceling the booking just revoked", async () => {
     const { db, shop, open } = await seededContext();
     const bookingId = await bookVisitor(db, shop.id, open.id);
     const issued = await issueBookingCapability(db, {

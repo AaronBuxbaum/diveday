@@ -253,7 +253,7 @@ describe("where the faces sit", () => {
     expect(row).not.toHaveClass("gap-4");
   });
 
-  it("keeps the blocked chip's own lines centred inside its pill", () => {
+  it("keeps the blocked chip's own lines centered inside its pill", () => {
     // The tile's words start at its edge; a wrapped chip's lines are the chip's
     // business, and a pill reads as one when its lines sit on its middle.
     render(<MissingDiversGrid divers={MIXED} copy={LONG_COPY} />);
@@ -355,7 +355,7 @@ describe("tapping a diver jumps to their manifest row", () => {
   });
 });
 
-describe("the avatar colour is decoration, never status", () => {
+describe("the avatar color is decoration, never status", () => {
   beforeEach(() => {
     cleanup();
   });
@@ -380,7 +380,7 @@ describe("the avatar colour is decoration, never status", () => {
     }
   });
 
-  it("gives the same diver the same colour every render", () => {
+  it("gives the same diver the same color every render", () => {
     // The colour is a hash of the name, so a re-render must not reshuffle the
     // grid under a crew member's finger.
     const first = render(<MissingDiversGrid divers={DIVERS} copy={COPY} />);

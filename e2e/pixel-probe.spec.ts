@@ -227,7 +227,7 @@ test.describe("off-centre", () => {
       `<button class="btn" type="button">Save</button>`,
     );
 
-  test("flags a centred button whose side paddings differ", async ({ page }) => {
+  test("flags a centered button whose side paddings differ", async ({ page }) => {
     const flag = await flagsStatic(page, "off-centre", button("0 16px 0 12px"), "btn");
     // 12px left, 16px right: the label sits 2px left of the painted box's centre.
     expect(flag.measure.x).toBe(-2);
@@ -299,7 +299,7 @@ test.describe("text-beside-control", () => {
     expect(flag.msg).toContain("above");
   });
 
-  test("leaves a heading centred beside the button alone", async ({ page }) => {
+  test("leaves a heading centered beside the button alone", async ({ page }) => {
     await leavesStatic(page, "text-beside-control", row("center"), "title");
   });
 });

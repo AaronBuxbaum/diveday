@@ -98,7 +98,7 @@ describe("the star row", () => {
     expect(ringTop).toBeGreaterThanOrEqual(-1);
   });
 
-  it("draws each star in a box exactly as wide as its ink, centred on it", () => {
+  it("draws each star in a box exactly as wide as its ink, centered on it", () => {
     const { container } = render(<StarRatingInput legend="Your rating" optionLabels={LABELS} />);
     const ink = starInk();
     const [x, y, width, height] = STAR_INK_VIEWBOX.split(" ").map(Number);

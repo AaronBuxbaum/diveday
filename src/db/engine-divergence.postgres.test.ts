@@ -207,7 +207,7 @@ const PROBES: readonly Probe[] = [
     matters:
       "**the ledger's headline.** PGlite tracks Postgres far ahead of what this app deploys " +
       "on, so the fast suite runs on a *newer major* than production — every planner change, " +
-      "every behavioural fix and every deprecation between the two is untested in one " +
+      "every behavioral fix and every deprecation between the two is untested in one " +
       "direction and unavailable in the other. Nothing else in the tree said so.",
     query: sql`select split_part(current_setting('server_version'), '.', 1) as v`,
     pglite: "18",

@@ -81,7 +81,7 @@ const MARKED: BadgeTone[] = ["success", "warning", "danger"];
  */
 describe("Badge", () => {
   it.each(MARKED.flatMap((tone) => SIZES.map((size) => [tone, size] as const)))(
-    "hands a %s %s pill's row the word's baseline, with its mark centred",
+    "hands a %s %s pill's row the word's baseline, with its mark centered",
     (tone, size) => {
       render(
         <Badge tone={tone} size={size}>
@@ -128,7 +128,7 @@ describe("a drawn mark inside a Badge", () => {
 
   const MARK_TAG = /<(svg|SiteMark|StatusMark|[A-Z]\w*Icon)\b[^>]*>/g;
 
-  it("centres itself", () => {
+  it("centers itself", () => {
     const offenders: string[] = [];
     for (const file of files(SRC_DIR)) {
       const text = readFileSync(file, "utf8");

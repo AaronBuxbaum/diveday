@@ -187,7 +187,7 @@ const ORDER_PLANS: SeedOrderPlan[] = [
     totalCents: 7_500,
     paidCents: 0,
     daysAgo: 21,
-    description: "Duplicate invoice, cancelled",
+    description: "Duplicate invoice, canceled",
     lines: [
       {
         kind: "trip_fee",

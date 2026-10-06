@@ -74,7 +74,7 @@
     "noShowAlreadyMissingAfterDive": "The crew recorded that diver as not back aboard after a dive. Call the boat and open the trip’s manifest.",
     "noShowAlreadyMarked": "That diver is already marked not here.",
     "noShowNotBooked": "That seat was given up, so there is nothing to mark.",
-    "noShowTripCancelled": "That departure is cancelled, so its guest list can’t change.",
+    "noShowTripCancelled": "That departure is canceled, so its guest list can’t change.",
     "noShowBeforeDeparture": "That boat has not left yet, so nobody has missed it. Try again once it departs.",
     "noShowWindowClosed": "That departure is too far past to mark anyone not here. Change the booking from their row instead.",
     "noShowNotMarked": "That diver is not marked not here.",

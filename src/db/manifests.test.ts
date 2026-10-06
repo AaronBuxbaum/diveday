@@ -972,7 +972,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
    * does, so the two halves cannot disagree about whether the seat is still
    * this person's to hold.
    */
-  it("leaves a cancelled seat cancelled when the crew board its holder", async () => {
+  it("leaves a canceled seat canceled when the crew board its holder", async () => {
     const { db, shop, reef, staff } = await manifestContext();
     await db
       .insert(tripAssignments)
@@ -982,7 +982,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       .insert(bookings)
       .values({ shopId: shop.id, tripId: reef.id, personId: staff.id, status: "cancelled" })
       .returning({ id: bookings.id });
-    if (!seat) throw new Error("expected the crew member's cancelled seat");
+    if (!seat) throw new Error("expected the crew member's canceled seat");
 
     await expect(
       recordCrewRollCall(db, {
@@ -1686,7 +1686,7 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
  * the writer's existing `staff_not_found`, because it is the same answer to the
  * same question: whoever is claiming to record this is not this shop's staff.
  */
-describe("the roll-call recorder must be live staff (defence in depth)", () => {
+describe("the roll-call recorder must be live staff (defense in depth)", () => {
   /** Rows written against this booking, whatever the checkpoint or status. */
   async function eventsFor(
     db: Awaited<ReturnType<typeof manifestContext>>["db"],

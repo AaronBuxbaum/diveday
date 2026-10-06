@@ -37,7 +37,7 @@ describe("reEntryWindowOpen", () => {
 });
 
 describe("isRefresherCourse", () => {
-  it("recognises the three published refreshers a shop can copy", () => {
+  it("recognizes the three published refreshers a shop can copy", () => {
     expect(isRefresherCourse({ sourceTemplateSlug: "scuba-refresher", isActive: true })).toBe(true);
     expect(
       isRefresherCourse({ sourceTemplateSlug: "ssi-scuba-skills-update", isActive: true }),
@@ -51,7 +51,7 @@ describe("isRefresherCourse", () => {
     );
   });
 
-  it("refuses a shop-written course DiveDay cannot recognise", () => {
+  it("refuses a shop-written course DiveDay cannot recognize", () => {
     // A shop that wrote its own refresher under its own name simply loses the
     // third offer. Guessing from its title would be the invented fact D18's
     // "no invented facts" line rules out.

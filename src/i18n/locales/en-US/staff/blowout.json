@@ -42,9 +42,9 @@
     "empty": "No divers were booked when the blow-out was called."
   },
   "notices": {
-    "called": "Blow-out called. The trip is cancelled and every diver’s message is on its way.",
+    "called": "Blow-out called. The trip is canceled and every diver’s message is on its way.",
     "resumed": "Retried the unsent messages.",
-    "departed": "This departure has already left, so nothing was cancelled.",
+    "departed": "This departure has already left, so nothing was canceled.",
     "error": "That didn’t work. Try again."
   }
 }

@@ -74,7 +74,7 @@ async function addDiver(
 }
 
 describe("attribution by address", () => {
-  it("matches an email to the diver who holds it, however the header spelt it", async () => {
+  it("matches an email to the diver who holds it, however the header spelled it", async () => {
     const { db, shop } = await seededShopContext();
     const diver = await firstDiver(db, shop.id);
     const result = await recordInboundMessage(db, {

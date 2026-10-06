@@ -128,7 +128,7 @@ describe("commitContactImport", () => {
     expect(again).toMatchObject({ cardsAdded: 0, cardsSkippedExisting: 1, peopleUpdated: 1 });
   });
 
-  it("normalises the phone on the update branch too, not only on insert", async () => {
+  it("normalizes the phone on the update branch too, not only on insert", async () => {
     const { db, shop } = await seededShopContext();
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     // First file has no phone, so the second one lands through `applyUpdate`
@@ -730,7 +730,7 @@ describe("commitContactImport — prior visits and imported payment history", ()
   const bookingsExport = [
     "customer_name,email,booking_date,tour_name,booking_status,total,booking_id,prior_shop",
     "Ines Vela,ines.visits@example.com,2024-05-11,Two-tank Molasses Reef,Completed,$165.00,CCD-1,Coral Coast Divers",
-    "Ines Vela,ines.visits@example.com,2025-02-02,Night dive Benwood,Cancelled,$95.00,CCD-2,Coral Coast Divers",
+    "Ines Vela,ines.visits@example.com,2025-02-02,Night dive Benwood,Canceled,$95.00,CCD-2,Coral Coast Divers",
   ].join("\n");
 
   async function visitsFor(

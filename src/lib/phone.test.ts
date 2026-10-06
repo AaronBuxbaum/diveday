@@ -67,7 +67,7 @@ describe("toE164", () => {
  */
 describe("isE164", () => {
   it.each(["+13055550110", "+34612345678", "+442079460018", "+1234567", "+123456789012345"])(
-    "recognises %j as the stored shape",
+    "recognizes %j as the stored shape",
     (value) => {
       expect(isE164(value)).toBe(true);
     },

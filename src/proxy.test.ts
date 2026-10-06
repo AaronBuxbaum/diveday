@@ -203,7 +203,7 @@ describe("proxy embed handling", () => {
     expect(res.headers.get("Content-Security-Policy") ?? "").not.toContain("frame-ancestors");
   });
 
-  it("forwards only a well-formed host colour and face, and drops anything else", async () => {
+  it("forwards only a well-formed host color and face, and drops anything else", async () => {
     const good = await run(
       request("/s/blue-mantis/embed/courses?brand=%23B45309&font=Georgia%2C%20serif"),
     );

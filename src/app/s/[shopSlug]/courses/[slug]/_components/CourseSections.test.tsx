@@ -114,7 +114,7 @@ describe("CourseGallery captions (DATA-L4)", () => {
     expect(screen.getByAltText("Surfacing at the mooring line")).toBeInTheDocument();
   });
 
-  it("falls back to a generated caption for an uncaptioned photo without borrowing its neighbour's", () => {
+  it("falls back to a generated caption for an uncaptioned photo without borrowing its neighbor's", () => {
     // The old shape's failure mode: an early blank pulled every later caption
     // up a slot, so this photo would have read "Surfacing at the mooring line".
     render(
@@ -211,7 +211,7 @@ describe("CourseSessions featured date", () => {
     expect(featured).toHaveAttribute("href", "/s/blue-mantis/trips/trip-1");
   });
 
-  it("skips past a full soonest session to feature the first open one, honestly labelled", () => {
+  it("skips past a full soonest session to feature the first open one, honestly labeled", () => {
     render(
       <CourseSessions
         sessions={[

@@ -391,7 +391,7 @@ describe("POST /api/test/seed-stripe-account — the caller-supplied slug", () =
     });
   }
 
-  it("refuses a malformed slug rather than sanitising it", async () => {
+  it("refuses a malformed slug rather than sanitizing it", async () => {
     const response = await seedStripeAccount.POST(connectRequest("?slug=Not%20A%20Slug"));
 
     expect(response.status).toBe(400);

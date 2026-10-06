@@ -112,7 +112,7 @@ describe("controlClassFor", () => {
     expect(controlClass.split(/\s+/)).not.toContain("min-h-12");
   });
 
-  it("grows the padding with the height, so a control that does not centre itself still sits centred", () => {
+  it("grows the padding with the height, so a control that does not center itself still sits centered", () => {
     // A text box centres its line at any height; a native file picker lays its
     // button at the top of the content box. The same content box at every size
     // puts the extra height equally above and below either one.
@@ -409,7 +409,7 @@ describe("DateField", () => {
     expect(calls).toEqual([box]);
   });
 
-  it("paints an empty box's mask in the placeholder's colour", () => {
+  it("paints an empty box's mask in the placeholder's color", () => {
     const css = readFileSync(path.join(process.cwd(), "src/app/globals.css"), "utf8").replace(
       /\/\*[\s\S]*?\*\//g,
       "",
@@ -822,14 +822,14 @@ describe("Field error", () => {
 
   it("keeps the helper description alongside the refusal", () => {
     render(
-      <Field label="Depth" description="Metres, to the nearest metre." error="Too deep.">
+      <Field label="Depth" description="Meters, to the nearest meter." error="Too deep.">
         <input name="depth" className={controlClass} />
       </Field>,
     );
     const input = screen.getByLabelText("Depth");
     const described = input.getAttribute("aria-describedby")?.split(" ") ?? [];
     expect(described).toHaveLength(2);
-    expect(screen.getByText("Metres, to the nearest metre.").id).toBe(described[0]);
+    expect(screen.getByText("Meters, to the nearest meter.").id).toBe(described[0]);
     expect(screen.getByRole("alert").id).toBe(described[1]);
   });
 
@@ -914,7 +914,7 @@ describe("Field around a child that labels itself", () => {
    * any subgrid, so it cannot keep the row's caption line; `group` names the
    * body by id instead and wraps nothing.
    */
-  it("names a group of self-labelled controls by id, keeping the field's two rows", () => {
+  it("names a group of self-labeled controls by id, keeping the field's two rows", () => {
     const { container } = render(
       <Field label="Look" hint="Reads your page" group>
         <div>
@@ -941,7 +941,7 @@ describe("Field around a child that labels itself", () => {
 
   it("describes a group by its description and its refusal", () => {
     render(
-      <Field label="Look" group description="How the embed is coloured" error="Pick one">
+      <Field label="Look" group description="How the embed is colored" error="Pick one">
         <div>
           <label>
             <input type="radio" name="look" value="site" />
@@ -951,7 +951,7 @@ describe("Field around a child that labels itself", () => {
       </Field>,
     );
     const group = screen.getByRole("group", { name: "Look" });
-    expect(group).toHaveAccessibleDescription("How the embed is coloured Pick one");
+    expect(group).toHaveAccessibleDescription("How the embed is colored Pick one");
   });
 });
 
@@ -1028,7 +1028,7 @@ describe("FormStatus", () => {
    * one-line box around the mark, centred, puts it on the line's middle
    * whatever the message wraps to.
    */
-  it("centres its mark on the message's first line", () => {
+  it("centers its mark on the message's first line", () => {
     render(<FormStatus tone="danger">That code is already in use.</FormStatus>);
     const status = screen.getByRole("alert");
     expect(status).not.toHaveClass("items-baseline");

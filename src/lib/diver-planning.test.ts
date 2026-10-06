@@ -305,7 +305,7 @@ describe("a departure's own legs", () => {
     expect(diveAt(timeline, 2)).toBe("2026-07-18T14:35:00.000Z");
   });
 
-  it("honours a stated zero, which a bottom time deliberately does not", () => {
+  it("honors a stated zero, which a bottom time deliberately does not", () => {
     // Same site twice, or a walk-in entry: `0` is an answer here, so the ride
     // out drops rather than falling back to the shop's twenty minutes.
     const timeline = dockDayTimeline(start, rhythm(), end, 2, undefined, [0]);

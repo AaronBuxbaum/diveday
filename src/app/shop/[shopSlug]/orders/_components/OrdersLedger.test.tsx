@@ -77,7 +77,7 @@ describe("a day owns its date", () => {
     }
   });
 
-  it("gives each day its own labelled group", () => {
+  it("gives each day its own labeled group", () => {
     render(
       <OrdersLedger
         days={[

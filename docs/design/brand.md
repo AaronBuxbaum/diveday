@@ -84,9 +84,9 @@ the implementation. Do not send a screenshot of the website as the artwork.
 
 > **Direction change, 2026-10-01 (H-91, ADR 20261001-logbook).** The staff app and the default
 > storefront move to **Logbook**: paper with a faint sea-green cast, slate ink, one sea-teal action
-> colour and a rare marine-amber accent, with a designed deep-slate dark scheme. The roll call wears
+> color and a rare marine-amber accent, with a designed deep-slate dark scheme. The roll call wears
 > **Boat mode** (Night Dive): navy and marine safety yellow in both schemes. Diver-facing surfaces
-> still wear the **shop's** brand colour, with these tokens as the default for a shop that has set
+> still wear the **shop's** brand color, with these tokens as the default for a shop that has set
 > none. The values below are the tree.
 
 The product's source of truth is the semantic token set in `src/app/globals.css`, governed by
@@ -100,11 +100,11 @@ embroidery, and vendor conversations.
 | --- | --- | --- | --- | --- |
 | Paper | `#F4F6F4` | — | Light background; the page a logbook is written on. | Best garment or paper ground for a light application. |
 | Deep slate | — | `#0F171C` | Dark background; quiet and dependable. | Best dark garment, hat, tote, or sticker ground. |
-| Slate ink | `#16232C` | `#E4EBEF` | Primary reading colour. | Use the contrasting value for the wordmark and longer copy. |
-| Sea teal | `#0B6E8A` | `#4FBCD8` | Action colour and primary brand signal. | Main imprint colour on paper or slate. |
+| Slate ink | `#16232C` | `#E4EBEF` | Primary reading color. | Use the contrasting value for the wordmark and longer copy. |
+| Sea teal | `#0B6E8A` | `#4FBCD8` | Action color and primary brand signal. | Main imprint color on paper or slate. |
 | Sea teal, deep | `#08566C` | `#7FD0E4` | Hover and depth. | Use sparingly for a two-tone mark. |
 | Marine amber | `#D97A1E` | `#F0A24A` | Rare warm accent; the smallest bubble. Its wash (`#FBEFE0` / `#33240F`) is the bed it sits on; its deep (`#8A4A0C` / `#F6C27F`) is ink on that wash. Never a status. | One small accent only. |
-| Safety yellow (Boat mode) | `#FFD23F` on navy `#0A141C` | same | The roll call's one action colour, in both schemes. | Not a merch colour. |
+| Safety yellow (Boat mode) | `#FFD23F` on navy `#0A141C` | same | The roll call's one action color, in both schemes. | Not a merch color. |
 
 ### Supporting colors
 
@@ -136,7 +136,7 @@ Color rules:
   — deep slate, slate ink's dark value, dark sea teal — in the single `@media
   (prefers-color-scheme: dark)` block in its `<head>`. Both halves move together: the document
   declares `color-scheme: light dark`, which is a promise that it renders correctly in both and stops
-  Apple Mail and Outlook inverting it themselves, so a colour added to an email in light only lands
+  Apple Mail and Outlook inverting it themselves, so a color added to an email in light only lands
   as unread dark-on-dark in somebody's inbox rather than merely off-brand (issue #771).
 
 ## Typography
@@ -196,7 +196,7 @@ Interface icons come from the one drawn `DiveDayIcon` family in
 `src/components/StaffDestinationIcon.tsx`: a 24px grid, shared stroke language, and
 `aria-hidden` artwork beside words that carry the meaning. Do not add an icon library or a text
 codepoint as a one-off substitute. The status tones are the exception and stay exactly as the
-emoji vocabulary in `src/components/ui/tone.ts` — emoji carry their own two-colour artwork,
+emoji vocabulary in `src/components/ui/tone.ts` — emoji carry their own two-color artwork,
 whereas text dingbats such as `✓`, `▲`, and `✕` inherit the surrounding font and read like stray
 glyphs at badge size.
 
@@ -239,6 +239,15 @@ Copy rules:
 - Keep errors calm and actionable: say what happened and what the person can do next.
 - Teach an empty state instead of apologizing for it.
 - Use real dive terms correctly; see [product/glossary.md](../product/glossary.md).
+- Spell in American English, everywhere a shop or a diver reads: *color*, *center*, *meter*,
+  *gray*, *canceled*, *enroll*, *enrollment*, *judgment*, *catalog*, *license*, *organize*,
+  *recognize*, *toward* (Aaron, 2026-10-06; H-95). One reader meeting *colour* on one screen and
+  *color* on the next hears two writers. `pnpm check:voice` refuses a British spelling in an
+  English bundle, in a route's metadata and in any prose literal under `src/` (the course and site
+  templates, the demo seeds); the list is `BRITISH_SPELLINGS` in `scripts/check-voice.mjs`. Two
+  things keep their spelling: a proper name (the demo's Harbour Lantern Dive Co, an address) and
+  another system's own words carried in verbatim (an imported booking's "Cancelled" status).
+  Code comments and internal docs are not copy and are not swept.
 - Keep implementation language out of customer-facing copy. Say “saved on this phone” instead of
   “encrypted local snapshot,” and “checked again when you're back in service” instead of
   “reconciled.” The one page that may name the protection is `/privacy`, where what guards a
@@ -408,7 +417,7 @@ briefing is plain sentences in the order the day happens, and the confidence is 
   elevated, empowered, frictionless.* Show the thing instead; the reader decides what to call it.
 - **No "the whole" for scale.** "The whole shop", "the whole list", "the whole path", "the whole
   day". Once per site is a phrase; eleven times is a verbal tic.
-- **No "worth".** "Worth sharing", "worth the room", "worth having". A value judgement pretending to
+- **No "worth".** "Worth sharing", "worth the room", "worth having". A value judgment pretending to
   be a fact.
 - **No knowing asides.** "(and it's in the price)", "which is what makes it usable by someone with
   one hand free". A parenthetical that winks is a parenthetical that goes.
@@ -434,7 +443,7 @@ consequence has fixed the wrong thing.
 message bundle: the prose em-dash, the intensifiers, the lead-ins, the "not just" contrast, and the
 staccato run, per locale, and on the public pages' strings (`marketing.*`, `switching.*`,
 `account.onboard.*`, every route's `metadata`) the four shapes: the mirrored pair, the anaphoric
-triplet, the tag sentence and the house phrase. The rest is judgement, and the
+triplet, the tag sentence and the house phrase. The rest is judgment, and the
 [brand-voice](../../.claude/skills/brand-voice/SKILL.md) skill's checklist is where it is applied.
 
 ### Marketing boundary

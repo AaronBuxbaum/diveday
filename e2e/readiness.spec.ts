@@ -204,7 +204,7 @@ test.describe("staff-prepared trip", () => {
     // above needs a live seat.
     await page.getByRole("button", { name: "Cancel my spot" }).click();
     await page.getByRole("button", { name: "Yes, cancel my spot" }).click();
-    await expect(page.getByRole("heading", { name: "This booking was cancelled" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "This booking was canceled" })).toBeVisible();
 
     // **And the same dead token, opened again later, names the shop.**
     //

@@ -9,7 +9,7 @@ import {
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
 
 describe("day-of help requests", () => {
-  it("moves one request from diver choice to acknowledgement to handled", async () => {
+  it("moves one request from diver choice to acknowledgment to handled", async () => {
     const { db, shop } = await seededShopContext();
     const trip = (await upcomingTripsWithCounts(db, shop.id)).find(
       (row) => row.title === "Two-Tank Reef — Molasses & French",
@@ -57,7 +57,7 @@ describe("day-of help requests", () => {
       now,
     });
     expect(acknowledged.ok).toBe(true);
-    if (!acknowledged.ok) throw new Error("expected acknowledgement to save");
+    if (!acknowledged.ok) throw new Error("expected acknowledgment to save");
     expect(acknowledged.request.acknowledgedAt).toEqual(now);
 
     const handled = await updateHelpRequestStatus(db, {

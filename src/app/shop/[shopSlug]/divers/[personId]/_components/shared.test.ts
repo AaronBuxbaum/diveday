@@ -44,7 +44,7 @@ describe("money status vocabulary", () => {
    * grey on the order detail page, and grey again in two hand-rolled pills on
    * the diver record. One refund, four readings.
    */
-  it("colours a refund the same whichever record carries it", () => {
+  it("colors a refund the same whichever record carries it", () => {
     expect(ORDER_STATUS_TONES.refunded).toBe("warning");
     expect(PAYMENT_STATUS_TONES.refunded).toBe(ORDER_STATUS_TONES.refunded);
   });
@@ -183,7 +183,7 @@ describe("unpaidBookingCount", () => {
     expect(unpaidBookingCount(profile({ bookings: [{ id: "b1" }] }))).toBe(0);
   });
 
-  it("ignores cancelled seats — a void or a refund is not somebody owing money", () => {
+  it("ignores canceled seats — a void or a refund is not somebody owing money", () => {
     expect(
       unpaidBookingCount(
         profile({

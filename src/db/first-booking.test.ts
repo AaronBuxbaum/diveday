@@ -135,7 +135,7 @@ describe("shopFirstBooking", () => {
     }
   });
 
-  it("counts a cancelled booking against the history but never celebrates one", async () => {
+  it("counts a canceled booking against the history but never celebrates one", async () => {
     // **Why the count is over every row rather than the live ones.** A shop on
     // its second diver after one cancellation has exactly one *live* booking
     // and nothing to celebrate — and its own first booking, cancelled, is not

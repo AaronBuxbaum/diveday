@@ -43,7 +43,7 @@ describe("a shop's brand", () => {
     expect(cleared?.brandBadges).toEqual([]);
   });
 
-  it("refuses a colour that is not #rrggbb lowercase", async () => {
+  it("refuses a color that is not #rrggbb lowercase", async () => {
     const { db, shop } = await seededShopContext();
     const shopId = shop.id;
     await expect(

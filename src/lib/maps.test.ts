@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { googleMapEmbedUrl, googleMapsUrl, googleTerrainEmbedUrl } from "./maps";
 
 describe("googleTerrainEmbedUrl", () => {
-  it("centres on the coordinates instead of searching for them", () => {
+  it("centers on the coordinates instead of searching for them", () => {
     // `ll=` is load-bearing rather than stylistic: `q=` makes the embed a
     // *search*, and Google answers a search by dropping its pin dead centre of
     // the frame — which is exactly where the shop's route is drawn. This test

@@ -349,7 +349,7 @@ describe("a register row's line", () => {
     }
   });
 
-  it("sets the overdue fact on its words' baseline, its mark centred on the first line", () => {
+  it("sets the overdue fact on its words' baseline, its mark centered on the first line", () => {
     const { container } = renderLedger({
       overdue: [unit("REG-03", { reservation: reservation({ reservedUntil: "2026-08-18" }) })],
     });

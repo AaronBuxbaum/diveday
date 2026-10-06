@@ -209,7 +209,7 @@ describe("GET /api/trips/[id]/manifest-events", () => {
     expect(await readOneChunk(response)).toBe(STREAM_CLOSED);
   });
 
-  it("unsubscribes when the stream is cancelled directly, without aborting the request", async () => {
+  it("unsubscribes when the stream is canceled directly, without aborting the request", async () => {
     const { db, shop, trip, personId } = await seededContext();
     vi.mocked(getDb).mockResolvedValue(db);
     vi.mocked(auth).mockResolvedValue(staffSession(shop.id, personId));

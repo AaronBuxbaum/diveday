@@ -63,7 +63,7 @@ test("a short departure cancels itself at its deadline, and reinstating it overr
   // Nothing has happened yet. The sweep is the only thing that cancels for a
   // minimum, so until it runs the departure is still on the board.
   await page.goto(tripUrl);
-  await expect(page.getByText("Cancelled")).toHaveCount(0);
+  await expect(page.getByText("Canceled")).toHaveCount(0);
 
   // The scheduled routes fail closed: no bearer token, no pass, no writes.
   const unauthorized = await request.get("/api/cron/minimum-seats", {
@@ -79,7 +79,7 @@ test("a short departure cancels itself at its deadline, and reinstating it overr
 
   await page.goto(tripUrl);
   await openTripAbout(page);
-  await expect(page.getByText("Cancelled").first()).toBeVisible();
+  await expect(page.getByText("Canceled").first()).toBeVisible();
 
   // The shop always gets the last word. Reinstating *is* "run it anyway", so it
   // clears the minimum — otherwise the next hourly pass would cancel the same
@@ -97,7 +97,7 @@ test("a short departure cancels itself at its deadline, and reinstating it overr
   // reinstating clears the minimum in the same statement that sets the status),
   // so there is no product race here to hide. Failed exactly once this way on
   // 2026-08-14 and never reproduced, which is what a vacuous barrier looks like.
-  await expect(page.getByText("Cancelled")).toHaveCount(0);
+  await expect(page.getByText("Canceled")).toHaveCount(0);
   await expect(page.getByText("Minimum head count")).toHaveCount(0);
 
   const again = await request.get("/api/cron/minimum-seats", {
@@ -106,7 +106,7 @@ test("a short departure cancels itself at its deadline, and reinstating it overr
   expect(again.ok()).toBe(true);
 
   await page.goto(tripUrl);
-  await expect(page.getByText("Cancelled")).toHaveCount(0);
+  await expect(page.getByText("Canceled")).toHaveCount(0);
 });
 
 /**
@@ -151,5 +151,5 @@ test("a departure that filled is left alone, and stops mentioning its minimum", 
     headers: { authorization: `Bearer ${E2E_CRON_SECRET}` },
   });
   await page.goto(tripUrl);
-  await expect(page.getByText("Cancelled")).toHaveCount(0);
+  await expect(page.getByText("Canceled")).toHaveCount(0);
 });

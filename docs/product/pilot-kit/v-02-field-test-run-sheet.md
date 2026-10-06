@@ -78,7 +78,7 @@ and every five minutes; the one manual control is **Refresh now** (H-05, revised
 Outdoors, in the worst light of the day. Phone at arm's length, as a captain holds it.
 
 - [ ] Can you read a diver's name at arm's length without shading the screen? Y / N
-- [ ] Can you tell a **blocked** row from a **boarded** row *by its words*, not by colour alone?
+- [ ] Can you tell a **blocked** row from a **boarded** row *by its words*, not by color alone?
       (Rows carry a **Ready to board** / **Blocked** badge as well as the red/green fill.) Y / N
 - [ ] If the phone has an accessibility "increase contrast" setting, turn it on. Better or worse in
       sun? __________

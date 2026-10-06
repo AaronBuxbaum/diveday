@@ -164,7 +164,7 @@ describe("whatsAppReplyWindowOpen", () => {
 });
 
 describe("truncateInboundBody", () => {
-  it("normalises line endings, trims, and marks a cut", () => {
+  it("normalizes line endings, trims, and marks a cut", () => {
     expect(truncateInboundBody("  hi\r\nthere \n")).toBe("hi\nthere");
     const long = "x".repeat(INBOUND_BODY_MAX_LENGTH + 50);
     const kept = truncateInboundBody(long);

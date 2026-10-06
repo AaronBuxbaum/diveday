@@ -156,7 +156,7 @@ Six free months is authorized (H-12, amended 2026-08-12) and it is deliberately 
 
 A discount is the most advertising-shaped thing an email can contain. Arriving unasked, in the same
 paragraph as "nobody uses this yet", it invites the reader to price the risk of being first — which
-is arithmetic that never comes out in our favour and which the email never needed them to do. It
+is arithmetic that never comes out in our favor and which the email never needed them to do. It
 also manufactures the question *what's the catch* at the exact moment the letter should be closing,
 and it converts a discovery conversation into a price negotiation before the founder has learned
 anything.

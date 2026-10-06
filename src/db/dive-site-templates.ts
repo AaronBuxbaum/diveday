@@ -164,7 +164,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
         "Arc from the mooring through the sand channels, spend the time you want at the statue, then return across the coral garden — most of the dive is above 6 m, so it is a long one.",
       fitTone: "welcoming",
       fitNote:
-        "Shallow, sheltered and busy. Snorkellers share the site, so this is a good day to stay low and let the surface belong to them.",
+        "Shallow, sheltered and busy. Snorkelers share the site, so this is a good day to stay low and let the surface belong to them.",
       landmarks: [
         {
           name: "Christ of the Abyss",
@@ -310,7 +310,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
         {
           name: "Wheelhouse",
           kind: "wreckFeature",
-          note: "Open, recognisable, and usually holding the resident grouper. Approach along the deck, not from above.",
+          note: "Open, recognizable, and usually holding the resident grouper. Approach along the deck, not from above.",
         },
         {
           name: "Forward gun mount",
@@ -583,7 +583,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
         {
           name: "The mounding heads",
           kind: "reefFormation",
-          note: "Boulder corals metres across, each one its own small city.",
+          note: "Boulder corals meters across, each one its own small city.",
         },
       ],
       creatureSlugs: [
@@ -670,7 +670,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
         {
           name: "The cable spool",
           kind: "wreckFeature",
-          note: "A drum three metres across standing on the bow — the picture everyone takes.",
+          note: "A drum three meters across standing on the bow — the picture everyone takes.",
         },
         {
           name: "Wheelhouse",
@@ -849,7 +849,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
         {
           name: "The satellite dishes",
           kind: "wreckFeature",
-          note: "Ten metres across and mounted fore and aft. The reason this wreck looks like nothing else.",
+          note: "Ten meters across and mounted fore and aft. The reason this wreck looks like nothing else.",
         },
         {
           name: "The crow's nest",
@@ -964,7 +964,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
         "A shore dive in a shallow lagoon under a road bridge, and one of the best muck-diving sites in the world. Nothing here is big. Everything here is strange.",
       marineLife: "Frogfish · seahorses · octopus · batfish · nudibranchs",
       marineLifeDescription:
-        "Sand, rubble, pilings and snorkel trail. The find of the dive is usually two centimetres long and pretending to be a leaf.",
+        "Sand, rubble, pilings and snorkel trail. The find of the dive is usually two centimeters long and pretending to be a leaf.",
       difficultyLevel: "beginner",
       depthRange: "1–6 m (4–20 ft)",
       maxDepthMeters: 6,
@@ -1151,7 +1151,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
         {
           name: "The boilers",
           kind: "wreckFeature",
-          note: "The most recognisable ironwork left, standing proud of the reef.",
+          note: "The most recognizable ironwork left, standing proud of the reef.",
         },
         {
           name: "Hull plating",
@@ -1178,7 +1178,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       forecastLatitude: 25.6902,
       forecastLongitude: -80.0908,
       description:
-        "An underwater columned city in 12 m of sand off Miami — a cremation memorial built as an artificial reef, with gates, lions and columns colonising fast.",
+        "An underwater columned city in 12 m of sand off Miami — a cremation memorial built as an artificial reef, with gates, lions and columns colonizing fast.",
       marineLife: "Angelfish · barracuda · sponges · sea fans",
       marineLifeDescription:
         "Purpose-built structure on open sand, which means everything that lives here chose to come.",
@@ -1396,7 +1396,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
       depthRange: "4–16 m (12–54 ft)",
       maxDepthMeters: 16,
       currentNote:
-        "Spring outflow pushes against you on the way in and carries you out. The river outside can be a different colour entirely.",
+        "Spring outflow pushes against you on the way in and carries you out. The river outside can be a different color entirely.",
       divePlan:
         "Into the Ballroom against the flow, one circuit inside the daylight zone, and let the spring run push you back out to the basin.",
       fitTone: "welcoming",
@@ -1411,7 +1411,7 @@ export const DIVE_SITE_TEMPLATES: DiveSiteTemplate[] = [
         {
           name: "The halocline at the river",
           kind: "pointOfInterest",
-          note: "Where the clear spring run meets tea-coloured river water. Swim through it slowly.",
+          note: "Where the clear spring run meets tea-colored river water. Swim through it slowly.",
         },
       ],
       creatureSlugs: [],

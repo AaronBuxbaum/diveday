@@ -36,7 +36,7 @@ describe("TripPageHeader", () => {
    * there, 4px above the title's line. The title and the actions are one row
    * now, centred on each other, and the eyebrow keeps a line of its own.
    */
-  it("centres the actions on the title's line, and leaves the eyebrow a line of its own", () => {
+  it("centers the actions on the title's line, and leaves the eyebrow a line of its own", () => {
     renderHeader(<button type="button">More</button>);
 
     const title = screen.getByRole("heading", { level: 1 });

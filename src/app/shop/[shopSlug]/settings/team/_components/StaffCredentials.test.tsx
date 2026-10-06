@@ -17,8 +17,8 @@ const WORDS = { saving: "Saving…", remove: "Remove", removing: "Removing…" }
 
 const EXPIRED: CredentialRow = {
   id: "cred-1",
-  title: "Sal Moretti · Captain’s licence",
-  detail: "Reviewed · Captain’s licence · USCG",
+  title: "Sal Moretti · Captain’s license",
+  detail: "Reviewed · Captain’s license · USCG",
   renewalWord: "Expired",
   renewal: "overdue",
   reviewed: true,

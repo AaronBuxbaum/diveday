@@ -70,7 +70,7 @@ describe("diveIntentTallyForTrip", () => {
     expect(await diveIntentTallyForTrip(db, shop.id, trip)).toEqual([]);
   });
 
-  it("does not count a cancelled seat", async () => {
+  it("does not count a canceled seat", async () => {
     const { db, shop } = await seededShopContext();
     const [trip] = await twoTrips(db, shop.id);
     await db.insert(bookings).values({

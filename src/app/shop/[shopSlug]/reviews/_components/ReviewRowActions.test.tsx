@@ -128,7 +128,7 @@ describe("the review row's outcome", () => {
     expect(screen.getByText(copy.published)).toBeInTheDocument();
   });
 
-  it("belongs to the row that was tapped, never to its neighbours", async () => {
+  it("belongs to the row that was tapped, never to its neighbors", async () => {
     render(page({ waiting: [A, B], published: [] }));
     const buttons = screen.getAllByRole("button", { name: copy.publish });
     expect(buttons).toHaveLength(2);

@@ -1625,7 +1625,7 @@ describe("checkout completion", () => {
     expect(amounts.every(Number.isInteger)).toBe(true);
   });
 
-  it("never marks a cancelled booking paid from a checkout completed after the cancel (security review finding)", async () => {
+  it("never marks a canceled booking paid from a checkout completed after the cancel (security review finding)", async () => {
     // A diver can cancel/reschedule their own booking (docs ADR
     // 20260727-diver-self-service-cancel) while a Stripe Checkout for that
     // same booking is still open in another tab; completing it afterward

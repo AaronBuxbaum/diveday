@@ -213,7 +213,7 @@ describe("cardSummaryClass", () => {
  * their words started 4px right of every card above and below them.
  */
 describe("TONE_PANEL_CLASS", () => {
-  it("is the card's radius, bed and padding, and no colour", () => {
+  it("is the card's radius, bed and padding, and no color", () => {
     expect(TONE_PANEL_CLASS).toBe("rounded-panel border p-4 shadow-bed sm:p-5");
     // The same inset as SectionCard's default, so a tone panel's words start
     // where a card's do at every width.
@@ -231,7 +231,7 @@ describe("TONE_PANEL_CLASS", () => {
    * the tone panels beside them hand-rolled that inset with no bed, or at
    * `p-5` with no step, 4px inside the card's words from `sm` up.
    */
-  it("has an lg twin on the lg card's inset, and no colour", () => {
+  it("has an lg twin on the lg card's inset, and no color", () => {
     const geometry = (classes: string) =>
       classes
         .split(" ")
@@ -251,7 +251,7 @@ describe("TONE_PANEL_CLASS", () => {
    * it, the bed's 26px blur smeared across the popover's bottom padding and,
    * in dark mode, past its edge.
    */
-  it("has an overlay twin: the same geometry with no bed, and no colour", () => {
+  it("has an overlay twin: the same geometry with no bed, and no color", () => {
     expect(TONE_PANEL_IN_OVERLAY_CLASS.split(" ").sort()).toEqual(
       TONE_PANEL_CLASS.split(" ")
         .filter((token) => token !== "shadow-bed")

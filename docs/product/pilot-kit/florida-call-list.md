@@ -3,7 +3,7 @@
 **This file contains no shops.** It is the frame for building the list: why Florida, what makes a
 shop worth an hour, what makes one a bad first pilot, where to look them up, and the columns to
 fill. The rows are the founder's to research — a list of invented names and numbers would get
-dialled, and inventing one is worse than having none.
+dialed, and inventing one is worse than having none.
 
 Target: **ten qualified shops**, enough to open the five conversations
 [the 30-day list](../rollout.md#the-next-30-days-in-order) asks for and absorb the shops that say
@@ -54,7 +54,7 @@ call on a true objection.
 
 ## Qualification criteria — what earns a call
 
-Score each candidate before dialling. A shop worth an hour has most of these:
+Score each candidate before dialing. A shop worth an hour has most of these:
 
 1. **Runs its own boat, or books onto a partner boat on a fixed daily schedule.** The manifest and
    roll call are the differentiators; a shop that never assembles a boarding list can't test them.
@@ -74,10 +74,10 @@ Score each candidate before dialling. A shop worth an hour has most of these:
 
 ## Disqualifiers — do not open a Phase 1 conversation with these
 
-These are not judgements about the shop; they are places where DiveDay would fail them, and finding
+These are not judgments about the shop; they are places where DiveDay would fail them, and finding
 that out in week two of a pilot is the expensive way.
 
-- **Retail POS is the centre of the business.** DiveDay concedes retail POS, agency (PADI) sync, and
+- **Retail POS is the center of the business.** DiveDay concedes retail POS, agency (PADI) sync, and
   gear inventory outright ([marketing.md](../marketing.md)). A shop whose day is the till will be
   disappointed, honestly and correctly.
 - **Multi-location operation.** Out of scope and explicitly unclaimable under the claims policy.
@@ -99,7 +99,7 @@ and V-05/V-06 close; a parked list without reasons is a deleted afternoon.
 
 Work top to bottom; the first two give near-complete coverage and the rest add context.
 
-1. **The PADI dive-shop locator and the SSI dive-centre locator**, filtered to Florida. Between them
+1. **The PADI dive-shop locator and the SSI dive-center locator**, filtered to Florida. Between them
    this is close to a complete public list of affiliated shops, with the shop's own published
    contact details. NAUI and SDI/TDI locators catch shops the first two miss.
 2. **The shop's own website.** This is where the profile is decided: a published daily two-tank
@@ -130,7 +130,7 @@ contact details the shop has published for business use.
 | --- | --- |
 | Shop | Legal/trading name as they write it |
 | Region | Which of the Florida regions above — for coverage, not geography trivia |
-| Profile | `boat` / `course` / `defector` — the pitch changes, so decide before dialling |
+| Profile | `boat` / `course` / `defector` — the pitch changes, so decide before dialing |
 | Why this shop | One line. If you can't write it, it isn't qualified yet |
 | Current system | Named incumbent, booking channel, paper, or unknown — and how you know |
 | Boat? | Own boat / partner boat / none, and typical divers per departure if published |

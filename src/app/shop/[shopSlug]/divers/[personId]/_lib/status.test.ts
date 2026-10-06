@@ -275,7 +275,7 @@ describe("the late-arrival buffer", () => {
     expect(nextBookingAhead(record, NOW)?.booking.id).toBe("b1");
   });
 
-  it("ignores a cancelled seat and a cancelled departure", () => {
+  it("ignores a canceled seat and a canceled departure", () => {
     const record = diver({
       bookings: [
         booking("cancelled-seat", TOMORROW, { status: "cancelled" }),
