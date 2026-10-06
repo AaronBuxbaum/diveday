@@ -966,17 +966,6 @@ export function RosterSection({
     // Each line's mark is its first column, one line of the words tall, so it
     // centres on their first line whatever wraps below it (K-494).
     /**
-     * **A held seat's two answers stand in the open, under its reason line**
-     * (Aaron, 2026-10-05). The seat attached itself to an existing diver on
-     * something short of proof — a reused email under a different name
-     * (H-13), or a name tapped off the counter's prompt (issue #1556) — and
-     * the reason line names both people. "Same person" is a blocking confirm,
-     * not an undo banner: it hands the matched diver's cards and waiver to
-     * this seat (docs/design/principles.md §7). "Different person" splits the
-     * seat into its own record. Like the medical hold, it is a decision about
-     * who may board, so it does not wait behind the row's mark.
-     */
-    /**
      * **The matched record's contact stands beside the question** (Aaron,
      * 2026-10-06: "needs to show some information so you know what you're
      * comparing … show the contact info still so you can contact them and
@@ -986,10 +975,14 @@ export function RosterSection({
      * staffer anyway, and for a shared-inbox match the email is the one the
      * booker typed. Medical answers, date of birth, emergency contact and
      * sizes still wait for "Same person" (security review 2026-09-11).
+     *
+     * While arrivals are open the screen faces the queue, so the line moves
+     * behind the row's mark with the desk's other private lines rather than
+     * printing a stranger's email and phone to whoever is next in line.
      */
     const identityContact = identityUnconfirmed ? (
       <div
-        className="-mt-1 flex flex-wrap items-center gap-x-3 pb-2 text-sm"
+        className={`flex flex-wrap items-center gap-x-3 text-sm ${arrival ? "mt-2" : "-mt-1 pb-2"}`}
         data-testid="identity-contact"
       >
         {person.email || person.phone ? (
@@ -1026,6 +1019,17 @@ export function RosterSection({
         )}
       </div>
     ) : null;
+    /**
+     * **A held seat's two answers stand in the open, under its reason line**
+     * (Aaron, 2026-10-05). The seat attached itself to an existing diver on
+     * something short of proof — a reused email under a different name
+     * (H-13), or a name tapped off the counter's prompt (issue #1556) — and
+     * the reason line names both people. "Same person" is a blocking confirm,
+     * not an undo banner: it hands the matched diver's cards and waiver to
+     * this seat (docs/design/principles.md §7). "Different person" splits the
+     * seat into its own record. Like the medical hold, it is a decision about
+     * who may board, so it does not wait behind the row's mark.
+     */
     const identityCheck = identityUnconfirmed ? (
       <IdentityCheck
         bookingId={booking.id}
@@ -1079,6 +1083,7 @@ export function RosterSection({
      */
     const outstanding = (
       <>
+        {arrival ? identityContact : null}
         {deskPrivateLines.length > 0 ? (
           <ul className="mt-2 grid gap-1 text-sm">
             {deskPrivateLines.map(({ key, text }) => (
@@ -1311,6 +1316,7 @@ export function RosterSection({
       ({ blocker }) => BLOCKER_CATEGORY[blocker.code] === "certification",
     );
     const hasWork =
+      Boolean(arrival && identityContact) ||
       deskPrivateLines.length > 0 ||
       Boolean(arrival && booking.reEntryAsk) ||
       Boolean(arrival && flaggedPrompts.length > 0) ||
@@ -1669,7 +1675,7 @@ export function RosterSection({
             swallow what a link promised, and `holdOpen` keeps open the row a
             form on it just answered. */}
         {reasonList}
-        {identityContact}
+        {arrival ? null : identityContact}
         {identityCheck}
         {medicalHold}
         {arrivalBelow}

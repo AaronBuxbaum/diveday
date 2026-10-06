@@ -7,7 +7,7 @@ import { buttonClass } from "@/components/ui/button";
 import { emptyMedicalAnswers, flaggedMedicalPrompts, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { PAPER_WAIVER_IDLE } from "@/lib/paper-waiver-form";
 import { rendersFlush } from "@/test/button-flush";
-import { RosterSection } from "./RosterSection";
+import { type RosterArrival, RosterSection } from "./RosterSection";
 import type {
   NitroxByBooking,
   ReadinessByBooking,
@@ -111,6 +111,7 @@ function renderRoster({
   addDiverGroup,
   paymentsConnected = false,
   requiresPayment = false,
+  arrival,
 }: {
   roster: RosterEntry[];
   readiness: ReadinessByBooking;
@@ -120,6 +121,7 @@ function renderRoster({
   addDiverGroup?: ReactNode;
   paymentsConnected?: boolean;
   requiresPayment?: boolean;
+  arrival?: RosterArrival;
 }) {
   return render(
     <RosterSection
@@ -151,6 +153,7 @@ function renderRoster({
       tripDate="2026-08-28"
       compact={compact}
       addDiverGroup={addDiverGroup}
+      arrival={arrival}
     />,
   );
 }
@@ -535,6 +538,20 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     expect(screen.getByTestId("identity-contact")).toHaveTextContent(
       "No email or phone on file for Marisol Vega.",
     );
+  });
+
+  // While arrivals are open the screen faces the queue (dive-domain review
+  // 2026-10-05), so the record's email and phone wait behind the row's mark.
+  it("keeps the record's contact behind the fold while the desk is open", () => {
+    renderRoster({
+      roster: [matched],
+      readiness: unconfirmed,
+      waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+      rentalFit,
+      arrival: { controls: new Map(), below: new Map(), boarded: new Set() },
+    });
+
+    expect(screen.getByTestId("identity-contact").closest("details")).not.toBeNull();
   });
 
   it("asks nothing of a confirmed seat", () => {
