@@ -82,6 +82,8 @@ export type TodayActionKind =
   | "instructor_missing"
   | "uncrewed_course"
   | "uncrewed_departure"
+  | "crew_clash"
+  | "crew_clash_sailed"
   | "crew_below_target"
   | "waitlist_seat"
   | "last_minute_fill"
@@ -124,6 +126,13 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   roll_call_unfinished: 2,
   /** The same, for a crew member who boarded and has no result after a dive. */
   roll_call_crew_unfinished: 3,
+  // **A boat that sailed with somebody also rostered on another hull at those
+  // hours** (H-80, issue #1814). Nobody has said anyone is missing, so it sits
+  // under the four roll-call rows; but the manifest may name a person who is on
+  // the other boat, and souls-on-board is read over the radio, so it sits
+  // above every boarding-time blocker. Read from the roster (`crewClashes`),
+  // never from roll-call events: the subject rule above is untouched.
+  crew_clash_sailed: 3.2,
   // **A blocked diver who is already on the boat** (issue #791). The gate is
   // behind them, not in front: whatever the blocker is, it is now a question
   // about somebody aboard, so it outranks every boarding-time blocker below.
@@ -166,6 +175,11 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // `instructor_missing` is a session whose divers **are** supervised and
   // which cannot certify or enrol them — a sale and a signature, not a boat.
   uncrewed_departure: 11,
+  // **One person rostered on two departures at once** (H-80, issue #1776). One
+  // of the two boats will sail without them, so it sits beside the zero-crew
+  // row rather than with the advisory ones; it ranks just under it because the
+  // boat it names does have somebody rostered, and the fix is one call.
+  crew_clash: 11.5,
   // A course session short of its instructor with somebody else in the water.
   // It refuses a sale (`course_unstaffed`, src/db/bookings.ts) and no
   // certification can be issued from it, which is why it is not merely
@@ -361,6 +375,17 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
     "divemaster",
     "captain",
   ],
+  // The crew rows' audience: the divemaster and captain at the rail are as
+  // likely to notice they are on two boats as the office is to fix it.
+  crew_clash: ["owner", "manager", "instructor", "assistant_instructor", "divemaster", "captain"],
+  crew_clash_sailed: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+  ],
   // The wider of its two parents' audiences. `instructor_missing` is
   // owner/manager/instructor because only they can close it; this row says the
   // boat has nobody in the water, which the divemaster and captain reading the
@@ -538,6 +563,10 @@ export const ACTION_KIND_META = {
   // water yet, but it is not paperwork either.
   uncrewed_departure: { tone: "warning" },
   uncrewed_course: { tone: "warning" },
+  // Warning both: a clash is a roster that contradicts itself, not a person
+  // somebody has said is missing — that is `roll_call_missing_crew`'s danger.
+  crew_clash: { tone: "warning" },
+  crew_clash_sailed: { tone: "warning" },
   nitrox_gate: { tone: "warning" },
   high_wind_alert: { tone: "warning" },
   dive_prep: { tone: "neutral" },

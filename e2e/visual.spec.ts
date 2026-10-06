@@ -3863,6 +3863,25 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "today-crew-uncounted", scheme);
       });
 
+      /**
+       * **A crew member on two of today's boats** (H-80, issue #1776). Each
+       * boat shows a full crew list, so the clash is invisible on both until
+       * the queue says so. `?crewClash=1` slides a seeded departure onto
+       * today's through `moveTrip`, the one door into the state, and both
+       * stations carry the row.
+       */
+      test(`today names a crew member on two boats at once (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?crewClash=1");
+        expect(seeded.ok()).toBe(true);
+        await page.goto("/shop/blue-mantis");
+        // The destination's own words, not a timing guess.
+        await page.getByText("Crew on two boats").first().waitFor();
+        await capture(page, "today-crew-clash", scheme);
+      });
+
       // The phone's More menu: the sections the tab bar's four leave out (ADR
       // 20261001-logbook). Opened at the phone viewport because it only exists
       // below `lg`; the 1280 image is the plain page with its sidebar.

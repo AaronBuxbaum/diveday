@@ -48,6 +48,9 @@ describe("crew-clash copy, on every surface that says it", () => {
       ["the roster's refusal", messages.trips.crew.assignClash, ["{name}"]],
       // The boat manifest, which ends in an instruction for the captain.
       ["the boat manifest", messages.manifest.crewClashDetail, ["{departures}"]],
+      // Today's queue, before the boat sails and after (issues #1776, #1814).
+      ["Today, before it sails", messages.today.detail.crewClash, ["{name}", "{departure}"]],
+      ["Today, once it sails", messages.today.detail.crewClashSailed, ["{name}", "{departure}"]],
     ];
 
     for (const [surface, sentence, placeholders] of surfaces) {

@@ -795,6 +795,10 @@ new domain concept, define it here in the same PR.
   redirect with a `?notice=` whose form re-opens About, so the read speaks on the next paint. A
   clash already **home** is reported nowhere: it is permanent, unfixable and true, which is the
   shape of a warning a shop learns to scroll past.
+  **Today names it on both boats** (H-80): `crew_clash` while the departure has yet to sail (issue
+  #1776), and `crew_clash_sailed` while it is out, pointing at the roll call (issue #1814) — both
+  read through one batched `crewClashesByTrip`, never from roll-call events, so a crew member nobody
+  tapped is still not a roll-call subject.
   **The boat manifest reads it too, and it is the loudest of the five** (issue #1779): a crew member
   on two overlapping departures prints aboard both, and the sheet said nothing — so the second boat's
   deck met a crew member missing at the count with no reason, and souls-on-board named a body that

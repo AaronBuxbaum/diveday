@@ -1,8 +1,10 @@
-import { and, asc, desc, eq, gte, inArray, lte, ne } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, lte, ne } from "drizzle-orm";
 import { gearServiceKindLabel } from "@/i18n/gear-labels";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import {
   crewBelowTargetDetailText,
+  crewClashDetailText,
+  crewClashSailedDetailText,
   failedPhotoDeletionDetailText,
   gearDueBackDetailText,
   gearNeverPickedUpDetailText,
@@ -98,7 +100,7 @@ import {
 } from "@/lib/today";
 import { type TripPhase, tripPhaseOf } from "@/lib/trip-phase";
 import { liveStageOf, type TripStageReading } from "@/lib/trip-stages";
-import { hasReturned, hasSailed } from "@/lib/trips";
+import { DEPARTURE_BUFFER_MS, hasReturned, hasSailed } from "@/lib/trips";
 import { welcomeCueFor } from "@/lib/welcome-cue";
 import { shopDayBounds, toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { type HorizonReadinessEvidence, inHorizonReadiness } from "./blockers";
@@ -140,7 +142,7 @@ import { listStaffCredentials } from "./staff-credentials";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { latestTripStagesByTrip } from "./trip-stages";
-import { countShopTrips, listStaff } from "./trips";
+import { type CrewClash, countShopTrips, crewClashesByTrip, listStaff } from "./trips";
 import { liveTrip } from "./trips-live";
 import { sharedWelcomeSeatsByTrip } from "./welcome-cues";
 
@@ -802,6 +804,62 @@ export async function listRollCallGaps(
 }
 
 /**
+ * **Who is standing in a crew clash on the queue's boats** (H-80, issues #1776
+ * and #1814) — one batched read of `crewClashesByTrip` across every departure
+ * the queue cares about, never one query per boat.
+ *
+ * Two populations, because a clash means two different things on either side
+ * of the boat leaving:
+ *
+ * - **Not yet sailed** (`upcomingTripIds`, the queue's own window from
+ *   `startsAt > now`): one of two boats will sail without somebody, and there
+ *   are hours left to ring them.
+ * - **Underway** (read here: live, scheduled, `startsAt <= now`, not yet home):
+ *   the boat left with the roster contradicting itself, and its manifest may
+ *   name a person who is on the other hull. The narrow version H-80 chose for
+ *   #1814 — read from the roster, never from roll-call events, so a crew
+ *   member nobody tapped still never becomes a roll-call subject.
+ *
+ * A departure already **home** reports nothing, by `crewClashesByTrip`'s own
+ * `hasReturned` rule: a clash on a boat that is back is permanent and
+ * unfixable, and it is the close-out's roll call that already accounts for it.
+ */
+async function standingCrewClashes(
+  db: AppDb,
+  shopId: string,
+  upcomingTripIds: readonly string[],
+  now: Date,
+) {
+  const underway = await db
+    .select({
+      id: trips.id,
+      title: trips.title,
+      startsAt: trips.startsAt,
+      endsAt: trips.endsAt,
+    })
+    .from(trips)
+    .where(
+      and(
+        liveTrip(),
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        lte(trips.startsAt, now),
+        // A bound, not the rule: `crewClashesByTrip` drops the ones `hasReturned`
+        // calls home, so this only keeps last month out of the read.
+        gt(trips.endsAt, new Date(now.getTime() - DEPARTURE_BUFFER_MS)),
+      ),
+    )
+    .orderBy(asc(trips.startsAt), asc(trips.id));
+  const clashes = await crewClashesByTrip(
+    db,
+    shopId,
+    [...upcomingTripIds, ...underway.map((trip) => trip.id)],
+    now,
+  );
+  return { clashes, underway };
+}
+
+/**
  * The after-dive subset, for the schedule board's per-trip badge — it links
  * straight at `after_dive_${diveNumber}`, so a departure-count or
  * no-roll-call gap has no checkpoint for it to point at. Residue rows are
@@ -1272,6 +1330,7 @@ export async function getTodayWork(
     lastMinuteWindows,
     rollCallGaps,
     stagesByTrip,
+    crewClashState,
   ] = await Promise.all([
     // Each booking's latest departure result, not just a head count. The card
     // needs to tell "already aboard" from "still ashore" from "never left the
@@ -1331,6 +1390,14 @@ export async function getTodayWork(
       db,
       shopId,
       todayTrips.map((trip) => trip.id),
+    ),
+    // Who is on two boats at once, on every departure the queue holds and on
+    // every boat still out (H-80) — one batched read.
+    standingCrewClashes(
+      db,
+      shopId,
+      inWindow.filter((trip) => trip.startsAt.getTime() > now.getTime()).map((trip) => trip.id),
+      now,
     ),
   ]);
 
@@ -1517,6 +1584,30 @@ export async function getTodayWork(
       // departure tab — one tap from the queue to the count that closes it.
       href: `/shop/${shopSlug}/trips/${gap.tripId}/manifest?checkpoint=${checkpoint}`,
       dueAt: gap.endsAt,
+    });
+  }
+
+  // **A boat out with somebody also rostered on another hull** (H-80, issue
+  // #1814). One row per departure, naming each person and the other boat, and
+  // pointing at the roll call: the question from ashore is who is actually
+  // aboard. Its own header, like the roll-call rows above: the boat may have
+  // left the forward-looking window already.
+  for (const trip of crewClashState.underway) {
+    const clashes: readonly CrewClash[] = crewClashState.clashes.get(trip.id) ?? [];
+    if (clashes.length === 0) continue;
+    const when = at(trip.startsAt, timeZone, locale);
+    actions.push({
+      id: `crew-clash-sailed:${trip.id}`,
+      kind: "crew_clash_sailed",
+      urgency: "imminent",
+      subject: trip.title,
+      context: when,
+      departure: { tripId: trip.id, label: `${trip.title} · ${when}` },
+      aboutDeparture: true,
+      detail: crewClashSailedDetailText(t, clashes),
+      actionLabel: openRollCallActionText(t),
+      href: `/shop/${shopSlug}/trips/${trip.id}/manifest`,
+      dueAt: trip.startsAt,
     });
   }
 
@@ -1778,6 +1869,30 @@ export async function getTodayWork(
           dueAt: trip.startsAt,
         });
       }
+    }
+
+    // **One person rostered on this boat and another at the same hours**
+    // (H-80, issue #1776). A clash is the one crew fault invisible on both
+    // boats — each shows a full crew list — so it is said here, on the surface
+    // a shop starts its morning on, while there are hours left to fix it. Both
+    // departures carry a row: whichever one a staffer opens is where they fix
+    // it. Information, never a gate (#1345). A departure already sailing is
+    // the `crew_clash_sailed` row above, not this one.
+    const crewClashList = crewClashState.clashes.get(trip.id) ?? [];
+    if (crewClashList.length > 0 && trip.startsAt.getTime() > now.getTime()) {
+      actions.push({
+        id: `crew-clash:${trip.id}`,
+        kind: "crew_clash",
+        urgency: urgencyFor(trip.startsAt, now),
+        subject: trip.title,
+        context: when,
+        departure,
+        aboutDeparture: true,
+        detail: crewClashDetailText(t, crewClashList),
+        actionLabel: openCrewActionText(t),
+        href: `${tripHref}?view=details#crew`,
+        dueAt: trip.startsAt,
+      });
     }
 
     const forecastPoint =

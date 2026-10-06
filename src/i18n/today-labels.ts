@@ -30,6 +30,8 @@ export const ACTION_KIND_KEYS: Record<TodayActionKind, StaffMessageKey> = {
   instructor_missing: "today.actionKind.instructorMissing",
   uncrewed_course: "today.actionKind.uncrewedCourse",
   uncrewed_departure: "today.actionKind.uncrewedDeparture",
+  crew_clash: "today.actionKind.crewClash",
+  crew_clash_sailed: "today.actionKind.crewClashSailed",
   nitrox_gate: "today.actionKind.nitroxGate",
   high_wind_alert: "today.actionKind.highWindAlert",
   dive_prep: "today.actionKind.divePrep",
@@ -273,6 +275,37 @@ export function instructorMissingDetailText(t: StaffTranslator): string {
  */
 export function uncrewedDepartureDetailText(t: StaffTranslator, divers: number): string {
   return t("today.detail.uncrewedDeparture", { divers });
+}
+
+/**
+ * One sentence per person per other departure (H-80, issue #1776), joined —
+ * the same "also rostered on" the Crew panel and the staffing week say, so a
+ * staffer reads one fact in one set of words wherever they meet it.
+ */
+export function crewClashDetailText(
+  t: StaffTranslator,
+  clashes: readonly { fullName: string; otherTitle: string }[],
+): string {
+  return clashes
+    .map((clash) =>
+      t("today.detail.crewClash", { name: clash.fullName, departure: clash.otherTitle }),
+    )
+    .join(" ");
+}
+
+/**
+ * The same fact once the boat has left (H-80, issue #1814): it says the boat
+ * sailed with the clash standing, and what to do about it from ashore.
+ */
+export function crewClashSailedDetailText(
+  t: StaffTranslator,
+  clashes: readonly { fullName: string; otherTitle: string }[],
+): string {
+  return clashes
+    .map((clash) =>
+      t("today.detail.crewClashSailed", { name: clash.fullName, departure: clash.otherTitle }),
+    )
+    .join(" ");
 }
 
 /**
