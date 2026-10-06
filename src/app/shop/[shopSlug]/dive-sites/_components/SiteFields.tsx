@@ -437,7 +437,7 @@ export function SiteFields({
               hint={t("diveSites.form.optionalHint")}
               htmlFor="site-satellite-image"
             >
-              <div className="grid grid-cols-1 gap-3">
+              <div className="flex flex-col gap-3">
                 {values?.satelliteImageUrl ? (
                   <RemovablePhoto
                     url={values.satelliteImageUrl}
@@ -457,7 +457,7 @@ export function SiteFields({
               hint={t("diveSites.form.optionalHint")}
               htmlFor="site-route-image"
             >
-              <div className="grid grid-cols-1 gap-3">
+              <div className="flex flex-col gap-3">
                 {values?.routeImageUrl ? (
                   <RemovablePhoto
                     url={values.routeImageUrl}
