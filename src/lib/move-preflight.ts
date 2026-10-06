@@ -96,6 +96,13 @@ export type MovePreflightFacts = {
   /** False for a cancelled departure, which `moveTrip` refuses too. */
   scheduled: boolean;
   /**
+   * Other departures on **the same hull** whose windows overlap where the move
+   * proposes to put this one (`boatMoveClashes`, H-80: one hull, one departure
+   * at a time). Empty when no new time has been chosen yet, for a departure
+   * with no boat, and — most of the time — because the boat is free.
+   */
+  boatClashes: readonly { boat: string; departure: string }[];
+  /**
    * Assigned crew the move would put in two places at once, and the departure
    * it would collide with (`crewMoveConflicts`). Empty when no new time has
    * been chosen yet, when the chosen one is where the departure already sits —
@@ -118,6 +125,7 @@ export type MovePreflightFacts = {
  * report, so an untouched departure composes to none.
  */
 export type MovePreflightSection =
+  | { kind: "boat"; clashes: readonly { boat: string; departure: string }[] }
   | { kind: "crew"; clashes: readonly { name: string; departure: string }[] }
   | { kind: "crewAway"; names: readonly string[] }
   | {
@@ -139,8 +147,8 @@ export type MovePreflight = {
 };
 
 /**
- * The preview for one departure. Pure, total, and ordered: the crew who
- * cannot be there, then the crew who said they would not be, then the divers
+ * The preview for one departure. Pure, total, and ordered: the hull that is
+ * already out then, the crew rostered elsewhere then, then the crew who said they would not be, then the divers
  * already written to, then the kit, then the money — the reasons to stop, and
  * after them the costs of going ahead, widest to narrowest.
  *
@@ -156,8 +164,12 @@ export function composeMovePreflight(facts: MovePreflightFacts): MovePreflight {
   // re-reserve, money to explain. These two can mean the move should not
   // happen, and a reason to stop belongs above the costs of going ahead.
   //
-  // The clash outranks the blackout because it is a physical impossibility
-  // rather than a preference the owner may decide to override.
+  // The boat leads them both (H-80): one hull cannot be on two departures, and
+  // a move that fixes the hull usually settles the crew question with it.
+  //
+  // The crew clash outranks the blackout because it is the roster contradicting
+  // itself rather than a preference the owner may decide to override.
+  if (facts.boatClashes.length > 0) sections.push({ kind: "boat", clashes: facts.boatClashes });
   if (facts.crewClashes.length > 0) sections.push({ kind: "crew", clashes: facts.crewClashes });
   if (facts.crewAway.length > 0) sections.push({ kind: "crewAway", names: facts.crewAway });
 

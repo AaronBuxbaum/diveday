@@ -17,6 +17,7 @@ describe("parsing a violation report", () => {
         directive: "connect-src",
         blocked: "https://tracker.example",
         route: "/s/blue-mantis",
+        source: "unknown",
         disposition: "report",
       },
     ]);
@@ -43,6 +44,7 @@ describe("parsing a violation report", () => {
         directive: "img-src",
         blocked: "https://cdn.example",
         route: "/shop/blue-mantis/orders",
+        source: "unknown",
         disposition: "enforce",
       },
     ]);
@@ -101,6 +103,138 @@ describe("parsing a violation report", () => {
         "csp-report": { "effective-directive": "script-src" },
       });
       expect(asMissing?.disposition).toBe("report");
+    });
+  });
+
+  describe("where the violating code came from", () => {
+    it("keeps the origin of the script that made the call", () => {
+      // An `eval` report names no URL at all, so without the source a line
+      // cannot say whether the page's own bundle or someone else's script
+      // tripped it.
+      const [legacy] = parseCspReports({
+        "csp-report": {
+          "document-uri": "https://dive.day/s/blue-mantis/trips/72c6a3fe",
+          "effective-directive": "script-src",
+          "blocked-uri": "eval",
+          "source-file": "https://dive.day/_next/static/chunks/0abc.js?v=1",
+        },
+      });
+      expect(legacy?.source).toBe("https://dive.day");
+
+      const [modern] = parseCspReports([
+        {
+          type: "csp-violation",
+          body: {
+            effectiveDirective: "script-src",
+            blockedURL: "eval",
+            sourceFile: "https://va.vercel-scripts.com/v1/script.js",
+          },
+        },
+      ]);
+      expect(modern?.source).toBe("https://va.vercel-scripts.com");
+    });
+
+    it("reads unknown when the browser names no source, or names something that is not a URL", () => {
+      const [missing] = parseCspReports({
+        "csp-report": { "effective-directive": "script-src", "blocked-uri": "eval" },
+      });
+      expect(missing?.source).toBe("unknown");
+
+      const [garbage] = parseCspReports({
+        "csp-report": { "effective-directive": "script-src", "source-file": "not a url" },
+      });
+      expect(garbage?.source).toBe("unknown");
+    });
+
+    it("drops a violation a browser extension caused", () => {
+      // An extension that injects a script into the page runs under the
+      // page's policy, so its `eval` is reported against this app's route.
+      // Nothing in this repository can fix it, and it is not a thing the
+      // policy would break for anyone but that extension.
+      for (const sourceFile of [
+        "chrome-extension://abcdefghijklmnop/inject.js",
+        "moz-extension://1b2c3d4e/content.js",
+        "safari-web-extension://5F6A7B8C/script.js",
+        "chrome-extension",
+      ]) {
+        expect(
+          parseCspReports({
+            "csp-report": {
+              "document-uri": "https://dive.day/s/blue-mantis",
+              "effective-directive": "script-src",
+              "blocked-uri": "eval",
+              "source-file": sourceFile,
+            },
+          }),
+        ).toEqual([]);
+      }
+      expect(
+        parseCspReports([
+          {
+            type: "csp-violation",
+            body: {
+              effectiveDirective: "script-src",
+              blockedURL: "eval",
+              sourceFile: "chrome-extension://abcdefghijklmnop/inject.js",
+            },
+          },
+          {
+            type: "csp-violation",
+            body: { effectiveDirective: "img-src", blockedURL: "https://cdn.example/p.gif" },
+          },
+        ]).map((violation) => violation.directive),
+      ).toEqual(["img-src"]);
+    });
+
+    it("keeps a violation whose blocked resource is an extension's, without naming the extension", () => {
+      // The app's own page loading an extension resource is the shape of a
+      // script-gadget attack, so this one is not noise to drop.
+      const [violation] = parseCspReports({
+        "csp-report": {
+          "effective-directive": "script-src",
+          "blocked-uri": "chrome-extension://abcdefghijklmnop/inject.js",
+          "source-file": "https://dive.day/_next/static/chunks/0abc.js",
+        },
+      });
+      expect(violation?.blocked).toBe("extension");
+      expect(violation?.source).toBe("https://dive.day");
+      expect(JSON.stringify(violation)).not.toContain("abcdefghijklmnop");
+    });
+
+    it("strips userinfo and refuses a hostname no DNS name could have", () => {
+      const [withUserinfo] = parseCspReports({
+        "csp-report": {
+          "effective-directive": "script-src",
+          "source-file": "https://u:p@dive.day/x",
+        },
+      });
+      expect(withUserinfo?.source).toBe("https://dive.day");
+
+      const longHost = `https://${"a".repeat(300)}.example/x.js`;
+      const [tooLong] = parseCspReports({
+        "csp-report": {
+          "effective-directive": "img-src",
+          "source-file": longHost,
+          "blocked-uri": longHost,
+        },
+      });
+      expect(tooLong?.source).toBe("unknown");
+      expect(tooLong?.blocked).toBe("unknown");
+    });
+
+    it("never carries the source's path, which can be the page's own capability URL", () => {
+      // An inline script's `source-file` is the document itself, and on
+      // /waivers/<token> that path is the credential.
+      const [violation] = parseCspReports({
+        "csp-report": {
+          "document-uri": "https://dive.day/waivers/f3c1a9b7-secret-token",
+          "effective-directive": "script-src",
+          "blocked-uri": "eval",
+          "source-file": "https://dive.day/waivers/f3c1a9b7-secret-token",
+        },
+      });
+      expect(violation?.source).toBe("https://dive.day");
+      expect(JSON.stringify(violation)).not.toContain("secret-token");
     });
   });
 

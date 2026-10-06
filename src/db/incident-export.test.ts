@@ -84,7 +84,7 @@ describe("incident-ready export assembly (in-memory PGlite)", () => {
       label: "boarded",
       recordedByName: staff.fullName,
     });
-    expect(boardedEntry?.waiver.state).toBe("complete");
+    expect(boardedEntry?.waiver?.state).toBe("complete");
 
     // The timeline carries the diver event.
     expect(doc.timeline.some((entry) => entry.kind === "diver" && entry.action === "boarded")).toBe(

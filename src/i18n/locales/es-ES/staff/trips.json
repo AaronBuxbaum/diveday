@@ -67,9 +67,14 @@
     "diverAddedWaiverUndelivered": "Buceador añadido a la salida, pero no se envió su exención por correo. Envíala o comparte el enlace desde su fila de abajo.",
     "diverAddedIdentityUnconfirmed": "Buceador añadido a la salida, pero la plaza queda retenida hasta que confirmes que es la misma persona. Confírmalo en su fila de abajo.",
     "diverWaitlisted": "Buceador añadido a la lista de espera.",
+    "invitationOptedOut": "Invitación registrada, pero no enviada por correo: este buceador desactivó los correos opcionales del centro.",
     "identityConfirmed": "Identidad confirmada. Este buceador puede autorizarse a embarcar.",
-    "identitySplit": "Ya tiene su propia ficha, aún sin exención ni certificaciones registradas.",
-    "identityMedicalHold": "Esta plaza tiene una derivación médica sin responder. Respóndela antes de crearle su propia ficha.",
+    "identitySplit": "Ya tiene su propia ficha, aún sin exención ni certificaciones registradas. Antes de que embarque, envíale la exención desde su ficha o registra una exención en papel en su fila.",
+    "identityMedicalHold": "Esta plaza, o una plaza retenida que se pasa con ella, tiene una retención médica: una derivación sin responder, o una que el médico no autorizó. Para darle a esta persona su propia ficha, cancela esta plaza y dale una plaza nueva.",
+    "identitySplitDobRequired": "Una salida que pasa a su ficha es un curso con edad mínima. Añade su fecha de nacimiento para crearle su propia ficha.",
+    "identitySplitDobInvalid": "Esa fecha de nacimiento no puede ser correcta. Revísala e inténtalo de nuevo.",
+    "identitySplitEmailInvalid": "Ese correo no parece correcto. Revísalo o déjalo en blanco.",
+    "identitySplitEmailInUse": "Otro buceador ya tiene ese correo. Usa el suyo propio o déjalo en blanco.",
     "certified": "Certificado. Puede reservar el siguiente nivel sin más revisión.",
     "certifiedAwaitingCard": "Registrado. No abrirá ninguna puerta hasta que alguien lo confirme con la tarjeta delante.",
     "certifyFailed": "Eso no se guardó. Verifica que sigue en esta salida y que elegiste el nivel, luego inténtalo de nuevo.",
@@ -134,7 +139,8 @@
     "overIntroRatio": "Ratio de bautismo excedida",
     "prepGaps": "{count, plural, one {A # buceador le faltan tallas de alquiler} other {A # buceadores les faltan tallas de alquiler}}",
     "awaitingPayment": "{count, plural, one {# pedido pendiente de pago} other {# pedidos pendientes de pago}}",
-    "noRequirements": "Define los requisitos para que alguien pueda embarcar"
+    "noRequirements": "Define los requisitos para que alguien pueda embarcar",
+    "boatClash": "{boat} también está asignado a {departure}"
   },
   "detail": {
     "viewBookingPage": "Ver página de reserva",
@@ -251,8 +257,8 @@
     "assignLabel": "Asignar tripulante",
     "assignOption": "Asignar tripulante…",
     "unassignAria": "Quitar a {name}",
-    "clash": "También está en la tripulación de {departure} a esas horas y no puede estar en ambas salidas.",
-    "assignClash": "{name} ya está en la tripulación de otra salida a esas horas y no puede estar en ambas salidas.",
+    "clash": "También figura en la tripulación de {departure} a esas horas.",
+    "assignClash": "{name} ya figura en la tripulación de otra salida a esas horas.",
     "assignFailed": "No se ha guardado. Verifica tu conexión o inténtalo de nuevo."
   },
   "recapNote": {
@@ -427,6 +433,7 @@
     "emergencyContactOnFile": "{name} · {phone}",
     "emergencyContactPhoneLabel": "Teléfono del contacto",
     "followUpBeforeBoarding": "Seguimiento antes de embarcar",
+    "heldSeatMoreHolds": "Puede haber otras retenciones.",
     "notClearedBeforeBoarding": "La retención sigue en pie. Esta persona no embarca.",
     "groupInvited": "Invitados",
     "groupReady": "Listos",

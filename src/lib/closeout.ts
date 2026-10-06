@@ -731,6 +731,9 @@ export function assembleEveningClose(
       (a, b) =>
         a.startsAt.getTime() - b.startsAt.getTime() ||
         a.endsAt.getTime() - b.endsAt.getTime() ||
+        // Title before id: ids are minted fresh by every seed, so an id
+        // tiebreak alone swaps two same-minute boats from one load to the next.
+        a.title.localeCompare(b.title) ||
         a.tripId.localeCompare(b.tripId),
     );
   const divers = stations.reduce((total, station) => total + station.sailed, 0);

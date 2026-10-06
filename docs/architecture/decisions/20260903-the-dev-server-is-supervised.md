@@ -133,6 +133,21 @@ next page is a warm compile, and that nothing the reader was doing caused it. Tu
 than losing the whole server to a kill nobody can see. A restart waits for the old child to exit
 before starting the new one, because two processes on one file-backed `.pglite` diverge silently.
 
+**Amended 2026-10-06 (issue #1882): a killed server's build state is not kept.** "The filesystem
+cache survives" holds only for a server that shut down by itself. One killed mid-compile can leave
+`.next/dev` describing a route it never finished, and every later server answers that route 404 in
+about 50 ms without entering the page — reproduced by SIGKILLing the group four seconds into the
+board's first compile, and survived by a full stop and start. Two things were making that common:
+`next dev` passes a SIGTERM on and then SIGKILLs `next-server` after **100 ms** (its
+`NEXT_EXIT_TIMEOUT_MS` default), so every restart here was a kill; and a restart started the next
+child when `next dev` exited rather than when its whole process group had. The supervisor now sets
+`NEXT_EXIT_TIMEOUT_MS` above its own grace period, so a SIGTERM lets Turbopack shut down (measured
+at about two seconds); waits for the old group to be gone; and marks `.next/dev` in use while a
+child owns it, clearing the mark only on a clean exit. A mark still present at a start — after our
+SIGKILL, the kernel's, or a supervisor that was itself killed — throws `.next/dev` away except
+Next's logs, and says so. The database was ruled out the same day: `.pglite` came through repeated
+SIGKILLs during writes, migrate and the first seed with every row intact.
+
 `DIVEDAY_DEV_MEMORY_BUDGET_MB` overrides the budget; `0` turns supervision off.
 
 `scripts/screenshot.mjs` takes the other half of that trade. It now retries a capture once when the

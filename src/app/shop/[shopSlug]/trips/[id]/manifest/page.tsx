@@ -26,10 +26,10 @@ import { latestTripStage } from "@/db/trip-stages";
 import { listTripDives } from "@/db/trips";
 import { catchUpSentences } from "@/i18n/desk-event-labels";
 import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
+import { crewBlockerText } from "@/i18n/identity-check-labels";
 import { rollCallCheckpointShortText, rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { fieldGuideCards, marineLifeCatalogCards } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
-import { readinessBlockerText } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -37,6 +37,7 @@ import { type DepthUnit, depthInUnit } from "@/lib/depth-units";
 import { groupCatchUp } from "@/lib/desk-events";
 import { scopedHash, scopedId } from "@/lib/element-id";
 import { formatDateTimeTz, formatTime, formatTimeRange } from "@/lib/format";
+import { withholdHeldSeatParticulars } from "@/lib/held-seat";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
   isRollCallCheckpoint,
@@ -67,6 +68,11 @@ import { type ExecutedDiveLabels, ExecutedDiveLog } from "./_components/Executed
 import { ManifestMoreMenu } from "./_components/ManifestMoreMenu";
 import type { PersonTrailEntry } from "./_components/PersonSheet";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
+import {
+  PrintedKitBlanks,
+  PrintedMissingProcedure,
+  printedBoatProcedureCopy,
+} from "./_components/PrintedBoatProcedure";
 import { SeenGroup } from "./_components/SeenGroup";
 import { StageStrip } from "./_components/StageStrip";
 import { SummaryPanel } from "./_components/SummaryPanel";
@@ -392,8 +398,15 @@ export default async function TripManifestPage({
     requestedCheckpoint && isRollCallCheckpoint(requestedCheckpoint, plannedDiveCount)
       ? requestedCheckpoint
       : "departure";
-  const manifest = completeManifests.find((entry) => entry.checkpoint === checkpoint);
-  if (!manifest) notFound();
+  const checkpointManifest = completeManifests.find((entry) => entry.checkpoint === checkpoint);
+  if (!checkpointManifest) notFound();
+  // Held seats are settled once, here, so every reader below — the
+  // not-back-aboard alarm, the buddy builder, both roll calls — sees the seat
+  // and never the matched person's particulars (issue #1690).
+  const manifest = {
+    ...checkpointManifest,
+    divers: checkpointManifest.divers.map(withholdHeldSeatParticulars),
+  };
   const todayTrailBySubject = personTrailIndex(completeManifests, locale, shop.timezone, t);
   // One definition, shared with the offline copy: divers *and* crew (DOM-H1,
   // ADR 20260804-crew-roll-call-is-per-person). This used to be written inline
@@ -643,6 +656,7 @@ export default async function TripManifestPage({
     shoreContactLabel: t("manifest.emergency.shoreContactLabel"),
     planLabel: t("manifest.emergency.planLabel"),
   };
+  const printedProcedureCopy = printedBoatProcedureCopy(t);
 
   return (
     <div className="boat-mode">
@@ -984,10 +998,21 @@ export default async function TripManifestPage({
             printed manifest is the fallback under the fallback, so its complete
             copy is rendered outside either interactive disclosure below. */}
         <div className="hidden print:block">
+          {/* The boat card's two parts that printed nowhere once it was cut
+              (issue #2035): the missing-diver procedure above the numbers it
+              sends the crew to, and the kit blanks under them. */}
+          <PrintedMissingProcedure
+            copy={printedProcedureCopy}
+            headingId={scopedId(idPrefix, "missing-procedure-print-heading")}
+          />
           <EmergencyReferenceCard
             headingId={scopedId(idPrefix, "emergency-reference-print-heading")}
             reference={shop.emergencyReference}
             copy={emergencyCopy}
+          />
+          <PrintedKitBlanks
+            copy={printedProcedureCopy}
+            headingId={scopedId(idPrefix, "kit-blanks-print-heading")}
           />
         </div>
         {/* Buddy teams are dock/desk prep, not mid-roll-call work: grouping
@@ -1036,7 +1061,7 @@ export default async function TripManifestPage({
               timezone: shop.timezone,
               emergencyReference: shop.emergencyReference,
             },
-            (blocker) => readinessBlockerText(t, blocker),
+            (blocker, diver) => crewBlockerText(t, diver, blocker),
             checklistItems.map((item) => ({
               id: item.id,
               label: item.label,

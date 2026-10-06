@@ -215,16 +215,19 @@ describe("saveRentalFit / getRentalFit", () => {
 
       await saveRentalFit(db, {
         ...baseFitInput(shopId, personId),
+        rentsWetsuit: false,
         rentsDrysuit: true,
         drysuitSize: "MT",
       });
       await setShopRentalItems(db, shopId, withoutDrysuit(shop.rentalItems));
 
-      // What both fit forms post once the checkbox is gone: an unchecked HTML
-      // checkbox and an absent one are the same empty post, so every caller
-      // derives `false` from a question the form never put to the diver.
+      // What a caller derives once the shop stops offering the suit: `false`
+      // from a question the form never put to the diver. (A full fit form posts
+      // the diver's stored suit choice instead, which `offeredSuitChoices`
+      // keeps on the list for exactly this case.)
       await saveRentalFit(db, {
         ...baseFitInput(shopId, personId),
+        rentsWetsuit: false,
         rentsDrysuit: false,
         bcdSize: "L",
       });
@@ -242,11 +245,16 @@ describe("saveRentalFit / getRentalFit", () => {
 
       await saveRentalFit(db, {
         ...baseFitInput(shopId, personId),
+        rentsWetsuit: false,
         rentsDrysuit: true,
         drysuitSize: "MT",
       });
       await setShopRentalItems(db, shopId, withoutDrysuit(shop.rentalItems));
-      await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsDrysuit: false });
+      await saveRentalFit(db, {
+        ...baseFitInput(shopId, personId),
+        rentsWetsuit: false,
+        rentsDrysuit: false,
+      });
       await setShopRentalItems(db, shopId, withDrysuit(shop.rentalItems));
 
       // Deliberate: it is still the diver's answer, nobody retracted it, and
@@ -360,6 +368,154 @@ describe("saveRentalFit / getRentalFit", () => {
         .where(eq(rentalFitProfiles.personId, personId));
       expect(profile).toBeUndefined();
     });
+  });
+});
+
+/**
+ * **One diver, one suit** (H-78, issues #1752 and #1800). Held in the writer,
+ * because four surfaces write these columns and a rule only the forms keep is
+ * the one the next caller forgets; the table's check constraints refuse what
+ * the writer does not resolve.
+ */
+describe("saveRentalFit: one suit", () => {
+  const withDrysuit = (items: readonly string[]) => [
+    ...items.filter((k) => k !== "drysuit"),
+    "drysuit",
+  ];
+
+  it("keeps the drysuit when a post asks for both suits, and records the diver as dry", async () => {
+    const { db, shop, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+    await setShopRentalItems(db, shopId, withDrysuit(shop.rentalItems));
+
+    // No form sends this any more, but a hand post or a half-hydrated form can.
+    // Two suits came off the wall for one departure, and the drysuit's
+    // consequences won silently on the packing list.
+    await saveRentalFit(db, {
+      ...baseFitInput(shopId, personId),
+      rentsWetsuit: true,
+      rentsDrysuit: true,
+    });
+
+    const fetched = await getRentalFit(db, shopId, personId);
+    expect(fetched).toMatchObject({ rentsWetsuit: false, rentsDrysuit: true, divesDry: true });
+  });
+
+  it("clears the drysuit and the dry answer when the diver ticks a wetsuit", async () => {
+    const { db, shop, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+    await setShopRentalItems(db, shopId, withDrysuit(shop.rentalItems));
+    await saveRentalFit(db, {
+      ...baseFitInput(shopId, personId),
+      rentsWetsuit: false,
+      rentsDrysuit: true,
+    });
+
+    // The booking-time picker: a priced list with no suit question of its own.
+    await saveRentalFit(db, {
+      ...baseFitInput(shopId, personId),
+      rentsWetsuit: true,
+      rentsDrysuit: false,
+    });
+
+    const fetched = await getRentalFit(db, shopId, personId);
+    expect(fetched).toMatchObject({ rentsWetsuit: true, rentsDrysuit: false, divesDry: false });
+  });
+
+  it("records a diver in their own drysuit, renting no suit from us", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+
+    await saveRentalFit(db, {
+      ...baseFitInput(shopId, personId),
+      rentsWetsuit: false,
+      rentsDrysuit: false,
+      divesDry: true,
+    });
+
+    const fetched = await getRentalFit(db, shopId, personId);
+    expect(fetched).toMatchObject({ rentsWetsuit: false, rentsDrysuit: false, divesDry: true });
+    // And the packing list stops printing their wetsuit number (the base fit
+    // rents weights at "12 lbs").
+    const line = rentalFitLine(fetched);
+    const weights = line.state === "rents" ? line.items.find((i) => i.kind === "weights") : null;
+    expect(weights).toEqual({ kind: "weights", size: null, drysuitWeightCheck: true });
+  });
+
+  it("clears a rented wetsuit when the diver says they dive dry", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+
+    await saveRentalFit(db, { ...baseFitInput(shopId, personId), divesDry: true });
+
+    const fetched = await getRentalFit(db, shopId, personId);
+    expect(fetched).toMatchObject({ rentsWetsuit: false, divesDry: true });
+  });
+
+  it("lets a wet answer clear a drysuit the shop no longer rents", async () => {
+    const { db, shop, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+    await setShopRentalItems(db, shopId, withDrysuit(shop.rentalItems));
+    await saveRentalFit(db, {
+      ...baseFitInput(shopId, personId),
+      rentsWetsuit: false,
+      rentsDrysuit: true,
+    });
+    await setShopRentalItems(
+      db,
+      shopId,
+      shop.rentalItems.filter((k) => k !== "drysuit"),
+    );
+
+    // The diver answered the suit question, which is not the silence the
+    // catalog rule protects: a stale drysuit flag must not outlive it.
+    await saveRentalFit(db, {
+      ...baseFitInput(shopId, personId),
+      rentsWetsuit: false,
+      rentsDrysuit: false,
+      divesDry: false,
+    });
+
+    const fetched = await getRentalFit(db, shopId, personId);
+    expect(fetched).toMatchObject({ rentsDrysuit: false, divesDry: false });
+  });
+
+  it("leaves the dry answer alone when a save says nothing about the suit", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+    await saveRentalFit(db, {
+      ...baseFitInput(shopId, personId),
+      rentsWetsuit: false,
+      divesDry: true,
+    });
+
+    // A booking-time pick of weights alone: no suit rented, nothing said.
+    await saveRentalFit(db, {
+      shopId,
+      personId,
+      rentsWetsuit: false,
+      rentsDrysuit: false,
+      rentsWeights: true,
+    });
+
+    expect((await getRentalFit(db, shopId, personId))?.divesDry).toBe(true);
+  });
+
+  it("refuses two suits at the table, whatever writer tries it", async () => {
+    const { db, shopId, tripId } = await context();
+    const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+
+    // A writer that bypasses `saveRentalFit` meets the check constraints.
+    await expect(
+      db
+        .insert(rentalFitProfiles)
+        .values({ shopId, personId, ...NOTHING_RENTED, rentsWetsuit: true, rentsDrysuit: true }),
+    ).rejects.toThrow();
+    await expect(
+      db
+        .insert(rentalFitProfiles)
+        .values({ shopId, personId, ...NOTHING_RENTED, rentsWetsuit: true, divesDry: true }),
+    ).rejects.toThrow();
   });
 });
 

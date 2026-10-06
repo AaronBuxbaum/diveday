@@ -15,11 +15,17 @@ import {
 
 /** A manifest crew member with no emergency contact on file — the ordinary state. */
 const manifestCrew = (
-  member: Omit<ManifestCrewMember, "emergencyContactName" | "emergencyContactPhone"> &
-    Partial<Pick<ManifestCrewMember, "emergencyContactName" | "emergencyContactPhone">>,
+  member: Omit<
+    ManifestCrewMember,
+    "emergencyContactName" | "emergencyContactPhone" | "standingRatings"
+  > &
+    Partial<
+      Pick<ManifestCrewMember, "emergencyContactName" | "emergencyContactPhone" | "standingRatings">
+    >,
 ): ManifestCrewMember => ({
   emergencyContactName: null,
   emergencyContactPhone: null,
+  standingRatings: [],
   ...member,
 });
 
@@ -329,7 +335,62 @@ describe("buildIncidentExport", () => {
       }),
     );
 
-    expect(doc.roster.find((entry) => entry.bookingId === "b1")?.waiver.recordedByName).toBeNull();
+    expect(doc.roster.find((entry) => entry.bookingId === "b1")?.waiver?.recordedByName).toBeNull();
+  });
+
+  /**
+   * **A held seat is on the document as the seat** (issue #2128). The
+   * booking was matched to an existing diver by a guess, so that diver's next
+   * of kin, cards and release are facts about somebody else: an investigator
+   * phoning the number on this page would reach the wrong family.
+   */
+  it("withholds a held seat's matched particulars and says so, keeping its roll call", () => {
+    const boarded = {
+      state: "boarded" as const,
+      occurredAt: new Date("2026-08-04T12:45:00.000Z"),
+      recordedByName: "Captain Sol",
+      note: null,
+    };
+    const doc = buildIncidentExport(
+      baseInput({
+        manifests: manifestsFor([
+          {
+            ...diver("b1", "Ana Diaz", boarded),
+            identityClaim: { bookedAs: "Ana Duarte", matchedBy: "shared_email" },
+          },
+          diver("b2", "Ben Cho"),
+        ]),
+        diverEvidence: [
+          {
+            bookingId: "b1",
+            certifications: [verifiedCard()],
+            specialtyCertifications: [],
+            nitroxCertifications: [],
+            waiver: completedWaiver({ status: "medical_review", signedAt: null }),
+          },
+        ],
+      }),
+    );
+
+    const held = doc.roster.find((entry) => entry.bookingId === "b1");
+    expect(held).toMatchObject({
+      fullName: "Ana Duarte",
+      identityWithheld: true,
+      emergencyContactName: null,
+      emergencyContactPhone: null,
+      certifications: [],
+    });
+    expect(held?.waiver).toBeNull();
+    expect(held?.rollCall[0]?.label).toBeDefined();
+    const serialized = JSON.stringify(doc.roster);
+    expect(serialized).not.toContain("Ana Diaz");
+    expect(serialized).not.toContain("AB-1234");
+    // Everyone else is exactly as before.
+    expect(doc.roster.find((entry) => entry.bookingId === "b2")).toMatchObject({
+      fullName: "Ben Cho",
+      emergencyContactName: "Pat Reyes",
+    });
+    expect(doc.roster.find((entry) => entry.bookingId === "b2")?.identityWithheld).toBeUndefined();
   });
 
   it("reports a medical hold as a status only — answers and template body never appear", () => {
@@ -347,7 +408,7 @@ describe("buildIncidentExport", () => {
       }),
     );
 
-    expect(doc.roster[0]?.waiver.state).toBe("medical_review");
+    expect(doc.roster[0]?.waiver?.state).toBe("medical_review");
     const serialized = JSON.stringify(doc);
     expect(serialized).not.toContain("MEDICAL-ANSWER-NEVER-EXPORTED");
     expect(serialized).not.toContain("TEMPLATE-BODY-NEVER-EXPORTED");
@@ -867,6 +928,62 @@ describe("buildIncidentExport", () => {
  * document a coastguard, an insurer or DAN actually reads, and until this it
  * could say a diver did not come back and nothing about what happened next.
  */
+/**
+ * Issue #1852: the incident export answers "what rating did each professional
+ * hold", not only "what job did they do". The job stays in `roles`; the
+ * standing rating the job does not already say rides beside it.
+ */
+describe("a crew member's rating on the incident export", () => {
+  it("carries the rating beside the day's job", () => {
+    const doc = buildIncidentExport(
+      baseInput({
+        manifests: manifestsFor(
+          [diver("b1", "Ana Diaz")],
+          [
+            manifestCrew({
+              id: "p7",
+              fullName: "Keiko Tanaka",
+              roles: ["divemaster"],
+              standingRatings: ["assistant_instructor"],
+            }),
+          ],
+        ),
+      }),
+    );
+    expect(doc.crew[0]).toMatchObject({
+      fullName: "Keiko Tanaka",
+      roles: ["divemaster"],
+      currentRatings: ["assistant_instructor"],
+    });
+  });
+
+  it("carries an empty list, never a placeholder, for somebody with no rating to add", () => {
+    const doc = buildIncidentExport(baseInput());
+    expect(doc.crew[0]?.currentRatings).toEqual([]);
+  });
+
+  it("leaves the rating out of the integrity code, so a later promotion keeps old printouts matching", () => {
+    const crewWith = (standingRatings: string[]) =>
+      buildIncidentExport(
+        baseInput({
+          manifests: manifestsFor(
+            [diver("b1", "Ana Diaz")],
+            [
+              manifestCrew({
+                id: "p7",
+                fullName: "Keiko Tanaka",
+                roles: ["divemaster"],
+                standingRatings,
+              }),
+            ],
+          ),
+        }),
+      );
+    expect(crewWith(["assistant_instructor"]).contentHash).toBe(crewWith([]).contentHash);
+    expect(crewWith(["instructor"]).contentHash).toBe(crewWith([]).contentHash);
+  });
+});
+
 describe("the timeline carries what the crew observed", () => {
   it("prints the sentence beside the mark it belongs to", () => {
     const doc = buildIncidentExport(

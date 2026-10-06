@@ -400,6 +400,7 @@ export default async function ScheduleBoardPage({
     moving: st("schedule.builder.moving"),
     moveIt: st("schedule.builder.moveIt"),
     impactTitle: st("schedule.builder.impactTitle"),
+    impactBoatClash: st.raw("schedule.builder.impactBoatClash"),
     impactCrewClash: st.raw("schedule.builder.impactCrewClash"),
     impactCrewAway: st.raw("schedule.builder.impactCrewAway"),
     impactToldOne: st.raw("schedule.builder.impactToldOne"),

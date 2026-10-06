@@ -90,11 +90,13 @@ worth knowing before you point that script at thirty paths:
   and `screenshot.mjs` shoots that path again by itself; a kill it cannot come back from is now
   reported as one, naming how many captures landed, rather than as
   "Nothing answering — start `pnpm dev` first" (issue #1321). Capture in smaller batches.
-- **`rm -rf .next` before restarting.** A server started over the directory a killed process left
-  behind serves the not-found page for **every `/shop/**` route**, in ~50ms of application code,
-  until a file change forces Turbopack to recompile. That reads exactly like the change you just
-  made breaking every staff route — one session spent most of an hour on it, and a `git checkout`
-  that "fixed" it made a correct change look like the cause.
+- **Restart with `pnpm dev`, never a bare `next dev`.** A server started over the build state a
+  killed one left serves 404 for the routes that one was compiling, in ~50ms of application code
+  and before any page code runs, until a file change forces Turbopack to recompile. That reads
+  exactly like the change you just made breaking those routes — one session spent most of an hour
+  on it, and a `git checkout` that "fixed" it made a correct change look like the cause. The
+  supervisor now throws that state away before it starts and prints a `dev:` line saying so (issue
+  #1882); a server started any other way needs `rm -rf .next/dev` first.
 
 ## 4. Behavior changed: exercise it
 

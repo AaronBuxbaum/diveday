@@ -350,6 +350,11 @@ function perHour(capacity: number): RateLimitConfig {
   return { capacity, refillPerMs: capacity / (60 * 60 * 1000) };
 }
 
+/** Requests per day. */
+function perDay(capacity: number): RateLimitConfig {
+  return { capacity, refillPerMs: capacity / (24 * 60 * 60 * 1000) };
+}
+
 /** Requests per 15 minutes. */
 function per15Min(capacity: number): RateLimitConfig {
   return { capacity, refillPerMs: capacity / (15 * 60 * 1000) };
@@ -433,6 +438,25 @@ export const RATE_LIMITS = {
    * release itself.
    */
   selfRegisterEmailByRecipient: perHour(3),
+  /**
+   * Self-registration, per **recipient phone**: the text twin of the bucket
+   * above. A phone-only registrant gets their release by text (issue #2092),
+   * so without it ten submissions an hour aimed at one number is ten texts
+   * an hour in the shop's name, each one billed to the shop. Keyed on the
+   * E.164 form and **across every shop**, so neither punctuation nor a second
+   * shop's QR buys another three. Same shape: an empty bucket drops the send,
+   * never the registration.
+   */
+  selfRegisterTextByRecipient: perHour(3),
+  /**
+   * Anonymous self-registration texts, per **shop per day**. The per-recipient
+   * bucket stops one number being flooded; this one stops many numbers being
+   * texted once each (SMS pumping), which the per-IP bucket alone allows from a
+   * rotating pool. Well under the registration ceiling: a real counter
+   * morning is mostly divers who give an email, and a refused text still
+   * leaves the diver on file for the shop to send the release itself.
+   */
+  selfRegisterTextByShop: perDay(40),
   /**
    * Contact-email confirmation links (issue #1288), per **shop** and per
    * **recipient address**. The settings form takes any address and the resend

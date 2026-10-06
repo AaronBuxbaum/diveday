@@ -1,4 +1,6 @@
+import type { Page } from "@playwright/test";
 import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
+import { counterPath, openRosterDetails, seededTripId } from "./helpers";
 
 /**
  * Staff invoicing — `/shop/[shopSlug]/orders/new`, the front desk's "bill this
@@ -34,6 +36,16 @@ import { expect, signedInAs, signedInAsOwner, test } from "./fixtures";
 const NEW_ORDER = "/shop/blue-mantis/orders/new";
 // `${fullName} — ${email}`, both deterministic in the seed (src/db/seed.ts).
 const CUSTOMER = "Priya Sharma — success+priya.sharma@simulator.amazonses.com";
+// A seeded departure with divers on it, so the roster has a seat to open.
+const ROSTER_TRIP = "Two-Tank Reef — Molasses & French";
+
+/** The first seat on a seeded departure's roster, opened to its foot row. */
+async function openFirstSeat(page: Page) {
+  await page.goto(counterPath("blue-mantis", await seededTripId(page, "blue-mantis", ROSTER_TRIP)));
+  const row = page.locator('#roster li[id^="booking-"]').first();
+  await openRosterDetails(row);
+  return row;
+}
 
 test("the order form is not reachable signed out", async ({ page }) => {
   await page.goto(NEW_ORDER);
@@ -129,6 +141,31 @@ test.describe("as owner", () => {
     );
   });
 
+  /**
+   * The positive half of the captain's absences below (issue #1925): an owner
+   * at a shop that can take money is offered both doors, so the names the
+   * captain's test looks for still match something.
+   */
+  test("an owner is offered New order on Orders and Create order on a seat", async ({
+    page,
+    request,
+  }) => {
+    await request.post("/api/test/seed-stripe-account");
+
+    await page.goto("/shop/blue-mantis/orders");
+    await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
+    await expect(page.getByRole("link", { name: "New order" }).first()).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/orders/new",
+    );
+
+    const seat = await openFirstSeat(page);
+    await expect(seat.getByRole("link", { name: "Create order" })).toHaveAttribute(
+      "href",
+      /\/shop\/blue-mantis\/orders\/new\?personId=[0-9a-f-]+&bookingId=[0-9a-f-]+$/,
+    );
+  });
+
   test("an invoice with no priced line, or an out-of-bounds one, is refused before Stripe", async ({
     page,
     request,
@@ -220,5 +257,30 @@ test.describe("as captain", () => {
     // refused the one act, so an empty page would prove nothing.
     await expect(page.getByRole("heading", { name: "The story" })).toBeVisible();
     await expect(page.getByRole("link", { name: "New invoice" })).toHaveCount(0);
+  });
+
+  /**
+   * **The other three doors** (issue #1925): the Orders index's "New order"
+   * (header and empty state share one gate) and the per-seat "Create order"
+   * on a roster. Each would land a captain back on the Orders index with the
+   * refusal above, which then offered "New order" again — a loop between a
+   * button and its own refusal. Stripe seeded first for the reason the test
+   * above gives; the owner's test pins both names positively.
+   */
+  test("a captain is offered no New order or Create order, at a shop that can take money", async ({
+    page,
+    request,
+  }) => {
+    await request.post("/api/test/seed-stripe-account");
+
+    await page.goto("/shop/blue-mantis/orders");
+    await page.getByRole("heading", { level: 1, name: "Money" }).waitFor();
+    await expect(page.getByRole("link", { name: "New order" })).toHaveCount(0);
+
+    const seat = await openFirstSeat(page);
+    // The seat's foot row is open — its other control is there — so the
+    // missing link is the permission, not a closed disclosure.
+    await expect(seat.getByRole("button", { name: "Remove booking" })).toBeVisible();
+    await expect(seat.getByRole("link", { name: "Create order" })).toHaveCount(0);
   });
 });

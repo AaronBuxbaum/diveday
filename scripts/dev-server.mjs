@@ -45,8 +45,9 @@
  *
  * So the budget is enforced from outside, against the ceiling that actually
  * applies, and a restart is announced. A restart is cheap — Turbopack's
- * filesystem cache survives it, so the server is back in under a second and the
- * next page costs a warm compile, not a cold one — and `.pglite` is on disk, so
+ * filesystem cache survives a clean one, so the server is back in under a second
+ * and the next page costs a warm compile, not a cold one (a *killed* server's
+ * build state is thrown away instead; see DEV_STATE_IN_USE_MARKER) — and `.pglite` is on disk, so
  * no data is lost. Losing an in-flight request to a planned restart is strictly
  * better than losing the whole server to an unplanned kill.
  *
@@ -83,7 +84,7 @@
  */
 
 import { spawn } from "node:child_process";
-import { readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -216,6 +217,131 @@ const GENERATED_TYPES_DIR = ".next/dev/types";
 
 /** How long a child gets to exit on SIGTERM before it is killed outright. */
 const SIGTERM_GRACE_MS = 5_000;
+
+/**
+ * How long `next dev` itself waits for its `next-server` child after passing on
+ * a SIGTERM, before it SIGKILLs it. Next's own default is **100 ms**
+ * (`NEXT_EXIT_TIMEOUT_MS` in `next/dist/cli/next-dev.js`), which is far too
+ * short for `next-server` to run Turbopack's `project.onExit()` — so without
+ * this every "graceful" restart, and every Ctrl-C, was a SIGKILL of the
+ * compiler one tenth of a second in. Set above {@link SIGTERM_GRACE_MS} on
+ * purpose: `next dev` then never kills its child first, so a child that exits
+ * inside our grace period exited by itself, and one that does not is killed by
+ * *us* — the only kill this script can see and account for.
+ */
+const NEXT_EXIT_TIMEOUT_MS = 10_000;
+
+/**
+ * What a `next dev` that was killed rather than stopped leaves behind, and the
+ * marker that says one was.
+ *
+ * **The failure** (issue #1882): a `next-server` killed mid-compile — by the
+ * kernel for memory, by our SIGKILL after the grace period, or by `next dev`'s
+ * own 100 ms one (see {@link NEXT_EXIT_TIMEOUT_MS}) — can leave Turbopack's
+ * persisted state under `.next/dev` describing a route it never finished. The
+ * next server restores it and answers that route **404 before any page code
+ * runs**: no `requireShopSurface`, no database read, about 50 ms of
+ * application code rendering the not-found page. Reproduced on 2026-10-06 by
+ * SIGKILLing the process group four seconds into the board's first compile:
+ * after the restart `/shop/<slug>/schedule/board` and a departure page both
+ * answered 404 while the shop home and Settings answered 200, a log line in
+ * the board page proved it was never entered, and editing that one file
+ * (which forces Turbopack to recompile it) brought it back in the same process.
+ * The state survives a full stop and start, which is why a clean `pnpm dev`
+ * did not fix it. The database was ruled out the same day: `.pglite` came
+ * through repeated SIGKILLs during writes, during migrate and during the first
+ * seed with every row intact.
+ *
+ * **The remedy** is the one a killed process makes necessary anyway: throw the
+ * dev build state away and compile cold. The supervisor writes
+ * {@link DEV_STATE_IN_USE_MARKER} as it starts a child and removes it only when
+ * that child exits by itself inside the grace period. A marker still present
+ * at the next start — this supervisor's restart after a kill, or a later
+ * `pnpm dev` after the supervisor itself was killed — means the state was left
+ * by a killed server, and everything in `.next/dev` except Next's logs is
+ * removed before Next starts. A clean restart keeps its warm cache.
+ */
+export const DEV_STATE_DIR = ".next/dev";
+export const DEV_STATE_IN_USE_MARKER = ".next/dev/diveday-server-running";
+/** Kept through a discard: the record of why the last server died. */
+const DEV_STATE_KEPT = new Set(["logs"]);
+
+/**
+ * Whether the dev state on disk was left by a killed server and must go.
+ *
+ * Never while a live process holds Next's dev lock: deleting `.next/dev` under
+ * a running server is a broken server, and that server is not ours to judge.
+ */
+export function devStateIsAbandoned({ markerPresent, lockHolderAlive }) {
+  return markerPresent && !lockHolderAlive;
+}
+
+function isAlive(pid) {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    // EPERM: it exists and belongs to someone else, which still means alive.
+    return error?.code === "EPERM";
+  }
+}
+
+/**
+ * Remove the dev state a killed server left in `root`, if it left any.
+ * Returns whether anything was discarded.
+ */
+export function discardAbandonedDevState(root, { alive = isAlive } = {}) {
+  const marker = path.join(root, DEV_STATE_IN_USE_MARKER);
+  if (!existsSync(marker)) return false;
+  let lockPid = null;
+  try {
+    lockPid = devLockPid(readFileSync(path.join(root, DEV_STATE_DIR, "lock"), "utf8"));
+  } catch {
+    // No lock file is no holder.
+  }
+  const lockHolderAlive = lockPid !== null && alive(lockPid);
+  if (!devStateIsAbandoned({ markerPresent: true, lockHolderAlive })) return false;
+  const dir = path.join(root, DEV_STATE_DIR);
+  for (const entry of readdirSync(dir)) {
+    if (DEV_STATE_KEPT.has(entry)) continue;
+    rmSync(path.join(dir, entry), { recursive: true, force: true });
+  }
+  return true;
+}
+
+/** Say that a child is about to own `.next/dev`. */
+export function markDevStateInUse(root) {
+  mkdirSync(path.join(root, DEV_STATE_DIR), { recursive: true });
+  writeFileSync(path.join(root, DEV_STATE_IN_USE_MARKER), `${process.pid}\n`);
+}
+
+/** Say that the child owning `.next/dev` exited by itself. */
+export function markDevStateClean(root) {
+  rmSync(path.join(root, DEV_STATE_IN_USE_MARKER), { force: true });
+}
+
+/** How long a restart waits for the old process group to be gone. */
+const GROUP_EXIT_WAIT_MS = 15_000;
+
+/**
+ * Resolve once no process is left in group `pgid`, or after `timeoutMs`.
+ *
+ * `next dev`'s `exit` is not the end of the server: a SIGKILLed `next-server`
+ * holding gigabytes takes the kernel a second or two to tear down, and a
+ * restart that starts the next child inside that window has two compilers on
+ * one `.next/dev` — and reads the dying one's dev lock as a live server.
+ */
+async function waitForGroupExit(pgid, timeoutMs = GROUP_EXIT_WAIT_MS) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    try {
+      process.kill(-pgid, 0);
+    } catch {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+}
 
 /**
  * How long a child must have run for its death to count as a crash worth
@@ -689,6 +815,9 @@ function applyDevDefaults(env = process.env) {
   // `_events_<pid>.json` behind on every exit. `playwright.config.ts` sets this
   // too.
   env.NEXT_TELEMETRY_DISABLED ??= "1";
+  // Lets `next-server` finish Turbopack's own shutdown on a SIGTERM instead of
+  // being SIGKILLed by `next dev` 100 ms in — see NEXT_EXIT_TIMEOUT_MS above.
+  env.NEXT_EXIT_TIMEOUT_MS ??= String(NEXT_EXIT_TIMEOUT_MS);
 }
 
 /**
@@ -768,6 +897,14 @@ async function main(argv = process.argv.slice(2)) {
     }
   };
 
+  // A restart waits for the whole old process group, not just `next dev`: see
+  // waitForGroupExit.
+  const startOnceGone = (pgid) => {
+    waitForGroupExit(pgid).then(() => {
+      if (!stopping) start();
+    });
+  };
+
   const start = () => {
     let overBudget = 0;
     let port = requestedPort;
@@ -775,6 +912,17 @@ async function main(argv = process.argv.slice(2)) {
     let lastRss = 0;
     const startedAt = Date.now();
     let lastRequestAt = 0;
+
+    try {
+      if (discardAbandonedDevState(ROOT)) {
+        say(
+          "the last dev server in this checkout was killed rather than stopped, so its build state in .next/dev was thrown away — a killed compile can leave routes answering 404 until a clean build. This start compiles cold.",
+        );
+      }
+      markDevStateInUse(ROOT);
+    } catch {
+      // Best effort, like dropGeneratedTypes: a cache question never stops a start.
+    }
 
     child = spawn(process.execPath, [nextBin, "dev", ...argv], {
       cwd: ROOT,
@@ -870,10 +1018,13 @@ async function main(argv = process.argv.slice(2)) {
       clearInterval(poll);
       child.removeAllListeners("exit");
       const dying = child;
+      let killedOutright = false;
       const forced = setTimeout(() => {
         try {
+          killedOutright = true;
           process.kill(-dying.pid, "SIGKILL");
           // Killed outright rather than asked, so it may have been mid-write.
+          // The in-use marker stays, so the next start discards the rest.
           dropGeneratedTypes();
         } catch {
           // Already gone.
@@ -881,13 +1032,17 @@ async function main(argv = process.argv.slice(2)) {
       }, SIGTERM_GRACE_MS);
       dying.on("exit", () => {
         clearTimeout(forced);
-        if (!stopping) start();
+        // Out inside the grace period, and `next dev` never kills its child
+        // first (NEXT_EXIT_TIMEOUT_MS), so `next-server` shut Turbopack down
+        // itself: the state it left is sound, and the next start stays warm.
+        if (!killedOutright) markDevStateClean(ROOT);
+        if (!stopping) startOnceGone(dying.pid);
       });
       try {
         process.kill(-dying.pid, "SIGTERM");
       } catch {
         clearTimeout(forced);
-        if (!stopping) start();
+        if (!stopping) startOnceGone(dying.pid);
       }
     };
 
@@ -898,7 +1053,12 @@ async function main(argv = process.argv.slice(2)) {
       // and on this child that last thing is the reason it died — including the
       // refusal that decides whether any of this is worth retrying.
       for (const line of [...stdoutLines.flush(), ...stderrLines.flush()]) readLine(line);
-      if (stopping) return;
+      if (stopping) {
+        // Out before stop()'s SIGKILL, which exits this process in the same
+        // tick it fires, so this child shut down by itself.
+        markDevStateClean(ROOT);
+        return;
+      }
 
       // `next dev` runs until it is stopped, so *any* exit we did not ask for
       // is a failure — including `code 0`, which is what it reports when the
@@ -926,14 +1086,14 @@ async function main(argv = process.argv.slice(2)) {
         say(
           `the dev server died ${how} after ${Math.round(ranMs / 1000)}s of running.${held} Next prints nothing when the kernel takes it for memory, and that is far and away the usual cause. Restarting — nothing you were doing caused it.`,
         );
-        start();
+        startOnceGone(child.pid);
         return;
       }
 
       fastExits += 1;
       if (fastExits < MAX_FAST_EXITS) {
         say(`next dev exited ${how} after ${Math.round(ranMs / 1000)}s — retrying`);
-        start();
+        startOnceGone(child.pid);
         return;
       }
       say(

@@ -351,7 +351,7 @@ export async function createCertification(db: AppDb, input: NewCertification) {
  * src/lib/course-ratios.ts is its lowercase/trim twin for ratio matching);
  * `certifications.agency` is the fixed enum every readiness gate reads. A
  * shop that typed "PADI ", a typo, or an agency DiveDay's enum does not carry
- * (IANTD, for one) must still get a real row rather than an uncaught cast
+ * (SEI, for one) must still get a real row rather than an uncaught cast
  * failure — `other` is the enum's own bucket for exactly this (see its
  * "Other agency" glossary entry), and the roster still shows the shop's own
  * spelling in `courses.agency` itself.

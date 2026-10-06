@@ -163,8 +163,8 @@ try {
           "own output rather than re-running this."
       : `Nothing answering at ${base} — start \`pnpm dev\` first (or pass --base). If one *was* ` +
           "running, it died: a Turbopack dev server is OOM-killed at roughly thirty page renders in " +
-          "a 16 GB container, and a restart over the `.next` a killed process left behind serves the " +
-          "not-found page for every /shop/** route. `rm -rf .next && pnpm dev`.",
+          "a 16 GB container. Start it again with `pnpm dev`, which throws away the build state a " +
+          "killed server leaves (issue #1882).",
   );
   process.exit(1);
 }
@@ -432,11 +432,10 @@ function serverGoneMessage(target, captured) {
     "OOM-killed outright — measured at roughly thirty page renders in a 16 GB container, which is " +
     'well inside one capture matrix. `dmesg` says so: "Memory cgroup out of memory: Killed process ' +
     '… next-server".\n\n' +
-    "**Delete `.next` before restarting.** A server started over the directory a killed process " +
-    "left behind serves the not-found page for every `/shop/**` route, in ~50ms of application " +
-    "code, until a file change forces Turbopack to recompile — which reads as though whatever you " +
-    "changed broke every staff route:\n\n" +
-    "    rm -rf .next && pnpm dev\n\n" +
+    "**Restart with `pnpm dev`.** A server started over the build state a killed one left serves " +
+    "404 for routes that one was compiling, in ~50ms of application code, which reads as though " +
+    "whatever you changed broke them. `pnpm dev` throws that state away before it starts and " +
+    "says so (issue #1882); a server started any other way needs `rm -rf .next/dev` first.\n\n" +
     "Then capture fewer paths per run."
   );
 }

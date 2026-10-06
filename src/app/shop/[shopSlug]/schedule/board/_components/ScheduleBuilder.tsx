@@ -183,6 +183,12 @@ export type BuilderCopy = {
    */
   impactCrewClash: string;
   impactCrewAway: string;
+  /**
+   * The hull already out on another departure at those hours (H-80: one hull,
+   * one departure at a time). Takes `{boat}` and `{departure}`; one line per
+   * other departure, so no plural pair.
+   */
+  impactBoatClash: string;
   impactToldOne: string;
   impactToldOther: string;
   impactGearOne: string;
@@ -1456,11 +1462,16 @@ function MoveImpact({
   //
   // `crewAway` deliberately stays in the muted list: a blackout is the crew
   // member's own note and informs, and the owner's answer named the clash.
+  //
+  // The boat clash (H-80, issue #1780) wears the same weight for the same
+  // reason, and leads: one hull on two departures at once is the bigger fact.
+  const isAlert = (section: MovePreflightSection) =>
+    section.kind === "boat" || section.kind === "crew";
   const alertLines = preflight.sections.flatMap((section) =>
-    section.kind === "crew" ? impactLines(section, copy) : [],
+    isAlert(section) ? impactLines(section, copy) : [],
   );
   const lines = preflight.sections.flatMap((section) =>
-    section.kind === "crew" ? [] : impactLines(section, copy),
+    isAlert(section) ? [] : impactLines(section, copy),
   );
   if (lines.length === 0 && alertLines.length === 0 && !preflight.blocked) return null;
 
@@ -1513,6 +1524,10 @@ function impactLines(section: MovePreflightSection, copy: BuilderCopy): string[]
     // The clash names the other departure too. Without it the reader has to
     // leave the panel to find out whether "another departure" is the 07:00 or
     // the 15:00, which is the question they opened the panel to settle.
+    case "boat":
+      return section.clashes.map((clash) =>
+        fill(copy.impactBoatClash, { boat: clash.boat, departure: clash.departure }),
+      );
     case "crew":
       return section.clashes.map((clash) =>
         fill(copy.impactCrewClash, { name: clash.name, departure: clash.departure }),

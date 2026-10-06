@@ -11,7 +11,7 @@ import { getIncidentExport } from "@/db/incident-export";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { staffRoleLabels } from "@/i18n/staff-role-labels";
+import { staffJobWithRatings } from "@/i18n/staff-role-labels";
 import { depthInUnit } from "@/lib/depth-units";
 import {
   formatDateTimeTz,
@@ -230,7 +230,11 @@ export default async function IncidentExportPage({
                     before it is glued to the name by a no-break space, so a
                     narrow cell never starts a line with "·". */}
                 <Td muted>
-                  {diver.emergencyContactName && diver.emergencyContactPhone ? (
+                  {/* A held seat's contact would be the matched person's next
+                      of kin (issue #2128): said, never "Not on file". */}
+                  {diver.identityWithheld ? (
+                    t("incidentExport.identityWithheld")
+                  ) : diver.emergencyContactName && diver.emergencyContactPhone ? (
                     <>
                       {diver.emergencyContactName}
                       {"\u00a0"}·{" "}
@@ -310,7 +314,7 @@ export default async function IncidentExportPage({
                   key={index}
                 >
                   <Td className="font-semibold">{member.fullName}</Td>
-                  <Td muted>{staffRoleLabels(t, member.roles).join(", ")}</Td>
+                  <Td muted>{staffJobWithRatings(t, member.roles, member.currentRatings)}</Td>
                   {/* Plural on purpose: one divemaster commonly leads
                       several groups on one boat, and this document must
                       print all of them (ADR 20260804-buddy-teams). */}
@@ -390,10 +394,17 @@ export default async function IncidentExportPage({
           {doc.roster.map((diver) => (
             <li key={diver.bookingId} className="break-inside-avoid px-4 py-3 sm:px-5">
               <p className="font-semibold">{diver.fullName}</p>
-              <p className="mt-1 text-sm">
-                <WaiverLine t={t} waiver={diver.waiver} dateTime={dateTime} />
-              </p>
-              {diver.certifications.length === 0 ? (
+              {/* A held seat's release and cards would be the matched
+                  person's (issue #2128): one sentence, never "not sent" or
+                  "no cards", which would be wrong facts on this document. */}
+              {diver.identityWithheld || !diver.waiver ? (
+                <p className="mt-1 text-sm text-muted">{t("incidentExport.identityWithheld")}</p>
+              ) : (
+                <p className="mt-1 text-sm">
+                  <WaiverLine t={t} waiver={diver.waiver} dateTime={dateTime} />
+                </p>
+              )}
+              {diver.identityWithheld ? null : diver.certifications.length === 0 ? (
                 <p className="mt-1 text-sm text-muted">{t("incidentExport.certNone")}</p>
               ) : (
                 <ul className="mt-1 flex flex-col gap-1 text-sm text-muted">

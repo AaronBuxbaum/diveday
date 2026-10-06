@@ -8,6 +8,7 @@ import {
 import { combineCertRequirements } from "@/lib/readiness";
 import { isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
+import { sameNameHeldSeats as findSameNameHeldSeats } from "./bookings";
 import type { AppDb } from "./client";
 import { courseNextStepsByBooking } from "./course-next-step";
 import { findSimilarDivers, listBookableDivers } from "./divers";
@@ -104,6 +105,22 @@ export async function getTripGuests(
     // (issues #1196, #1205), so the roster's box opens holding it.
     courseNextStepsByBooking(db, shop.id, tripId),
   ]);
+
+  // What "Different person" on a held seat can offer to move along with it:
+  // other held seats under the same name on the same matched diver, on other
+  // departures, named by departure (issue #2081).
+  const sameNameHeldSeats = await findSameNameHeldSeats(
+    db,
+    shop.id,
+    roster
+      .filter(({ booking }) => booking.identityUnconfirmedAt)
+      .map(({ booking }) => ({
+        bookingId: booking.id,
+        personId: booking.personId,
+        tripId,
+        bookedAs: booking.identityBookedAs,
+      })),
+  );
 
   // Keep the three staff-note entry points one system: a diver-record note is
   // visible on Guests for the same booking, just as it is on Manifest. It is
@@ -206,6 +223,14 @@ export async function getTripGuests(
     diverCandidates,
     notesByBooking,
     courseNextStepByBooking,
+    sameNameHeldSeats,
+    /**
+     * A split on this departure must take a date of birth: it is a course
+     * with a minimum age, which reads the new record's date (issue #2081). A
+     * seat whose same-name seats include such a course asks too
+     * (`SameNameHeldSeat.asksDateOfBirth`).
+     */
+    splitAsksDateOfBirth: Boolean(trip.course?.minimumAge),
     // `orders/new` refuses without a payable account, so each seat's "Create
     // order" link points at connecting one instead of at a door that bounces.
     paymentsConnected: canAcceptPayments(stripeAccount),

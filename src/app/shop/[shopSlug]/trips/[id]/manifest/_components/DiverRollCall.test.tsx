@@ -784,3 +784,138 @@ describe("the mark beside a name that wraps", () => {
     expect(row).toContainElement(mark);
   });
 });
+
+/**
+ * **A held seat prints the seat, not the matched person** (issue #1690,
+ * H-79). A walk-in tapped onto last season's "Maria Santos" must not carry her
+ * next of kin, her daughter's age or her medical hold onto the boat under a
+ * name nobody has confirmed: not on screen, and not on the printed sheet,
+ * which is the half a screen-only test would miss.
+ */
+describe("a held seat on the manifest", () => {
+  const heldSeat = (checkpoint: RollCallCheckpoint = "departure") =>
+    renderList({
+      checkpoint,
+      divers: [
+        diver({
+          age: 13,
+          minor: true,
+          identityClaim: { bookedAs: "Maria", matchedBy: "picked_name" },
+          readiness: {
+            status: "blocked",
+            blockers: [{ code: "identity_unconfirmed" }, { code: "medical_review" }],
+          },
+          nitroxRequested: true,
+          hotelPickupLocation: "Casa Marina",
+        }),
+      ],
+    });
+
+  it("withholds the contact, the age and the matched person's blockers, on paper too", () => {
+    const { container } = heldSeat();
+    const everything = container.textContent ?? "";
+    expect(everything).not.toContain("Asha Iyer");
+    expect(everything).not.toContain("+1-305-555-0231");
+    expect(everything).not.toMatch(/age 13/);
+    expect(everything).not.toContain(
+      "A medical answer needs a doctor’s sign-off before this diver dives.",
+    );
+    // The print-only block says why, rather than "Not on file".
+    const printed = container.querySelector<HTMLElement>(".print\\:block");
+    expect(printed).not.toBeNull();
+    expect(printed).toHaveTextContent(
+      "Their contact, age and other details wait until the desk confirms who this is.",
+    );
+    expect(printed).not.toHaveTextContent("Not on file");
+  });
+
+  it("keeps the seat's own state: its name as booked, the blocked word and the pickup", () => {
+    const { container } = heldSeat();
+    expect(screen.getAllByText("Blocked").length).toBeGreaterThan(0);
+    // Named as booked; the matched person is not named at the rail.
+    expect(container.textContent).toContain("Maria");
+    expect(container.textContent).not.toContain("Meera Iyer");
+    expect(container.textContent).toContain("Casa Marina");
+  });
+
+  /**
+   * **A hold behind the identity question still reaches the rail** (dive-domain
+   * review 2026-10-06). The crew line says the desk settles it and that other
+   * holds may apply, never which: "medical" would be a fact about the matched
+   * person, and "confirm who this is" on paper tells the crew to settle it.
+   */
+  it("flags other holds on a held seat with a medical hold, and never says medical", () => {
+    const { container } = heldSeat();
+    const crewLine =
+      "Not confirmed. The desk must settle who this is before boarding. Other holds may still apply.";
+    expect(container.textContent).toContain(crewLine);
+    const printed = container.querySelector<HTMLElement>(".print\\:block");
+    expect(printed).toHaveTextContent(crewLine);
+    expect(container.textContent?.toLowerCase()).not.toContain("medical");
+    expect(printed?.textContent?.toLowerCase()).not.toContain("medical");
+    expect(container.textContent).not.toContain("Confirm who this is");
+  });
+
+  it("says nothing of other holds when the identity question is the only one", () => {
+    const { container } = renderList({
+      checkpoint: "departure",
+      divers: [
+        diver({
+          identityClaim: { bookedAs: "Maria", matchedBy: "picked_name" },
+          readiness: { status: "blocked", blockers: [{ code: "identity_unconfirmed" }] },
+        }),
+      ],
+    });
+    expect(container.textContent).toContain(
+      "Not confirmed. The desk must settle who this is before boarding.",
+    );
+    expect(container.textContent).not.toContain("Other holds may still apply.");
+  });
+
+  it("says the same in the person's own panel", () => {
+    heldSeat("after_dive_1");
+    fireEvent.click(screen.getByRole("button", { name: "Open details for Maria" }));
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveTextContent(
+      "Their contact, age and other details wait until the desk confirms who this is.",
+    );
+    expect(dialog).not.toHaveTextContent("Asha Iyer");
+    expect(dialog).toHaveTextContent("Diver · not yet confirmed");
+  });
+
+  it("shows everything again once the desk has confirmed who this is", () => {
+    const { container } = renderList({
+      checkpoint: "departure",
+      divers: [
+        diver({
+          age: 13,
+          minor: true,
+          readiness: { status: "blocked", blockers: [{ code: "medical_review" }] },
+        }),
+      ],
+    });
+    const everything = container.textContent ?? "";
+    expect(everything).toContain("Asha Iyer");
+    expect(everything).toContain("+1-305-555-0231");
+    expect(everything).toContain("Minor · age 13");
+    expect(everything).toContain(
+      "A medical answer needs a doctor’s sign-off before this diver dives.",
+    );
+    expect(everything).not.toContain("wait until the desk confirms");
+  });
+
+  it("says it in Spanish too", () => {
+    const { container } = renderList({
+      locale: "es-ES",
+      checkpoint: "departure",
+      divers: [
+        diver({
+          readiness: { status: "blocked", blockers: [{ code: "identity_unconfirmed" }] },
+        }),
+      ],
+    });
+    expect(container.textContent).toContain(
+      "Su contacto, su edad y sus demás datos esperan a que el mostrador confirme de quién se trata.",
+    );
+  });
+});

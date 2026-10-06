@@ -389,7 +389,7 @@ All mail is branded as the dive shop and sent from noreply@ses.dive.day. Every m
 2. Links a person asked for: a replacement trip-prep link when theirs expired; a booking link with their saved details when they type their address into a shop's booking form; their own diver page when shop staff send it from the diver's record.
 3. Account mail to shop staff: welcome, email verification, password reset, password-changed notice, staff invitation; and to the shop itself, a course inquiry from its public page and a confirmation of its front-desk address.
 4. Optional messages the diver opted into (these carry unsubscribe; see below): a wait-list seat opening, for a trip they joined the wait list for; a last-minute discount, if they joined the shop's last-minute list; one reminder about an unfinished checkout; a post-trip recap.
-5. Written by staff, one person at a time: a reply to a diver who wrote to the shop, and an invitation to one named diver for one departure (a diver who asked the shop for that date, or who already dives with that shop). One click sends one message; there is no select-all.
+5. Written by staff, one person at a time: a reply to a diver who wrote to the shop, and an invitation to one named diver for one departure (a diver who asked the shop for that date, or who already dives with that shop). One click sends one message; there is no select-all. An invitation to a diver who did not ask for that date is treated as an optional message: it carries the same one-click unsubscribe and the shop's postal address, and it is not sent to anyone who has unsubscribed.
 
 Sample: booking confirmation (full text)
 Subject: You're on the boat - Two-Tank Reef

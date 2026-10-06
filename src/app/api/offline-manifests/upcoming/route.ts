@@ -4,7 +4,7 @@ import { getTripManifests } from "@/db/manifests";
 import { latestPreDepartureChecksForTrip, listChecklistItems } from "@/db/pre-departure-check";
 import { getShopById } from "@/db/shops";
 import { listTripIdsInOfflineManifestWindow } from "@/db/trips";
-import { readinessBlockerText } from "@/i18n/readiness-labels";
+import { crewBlockerText } from "@/i18n/identity-check-labels";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { auth } from "@/lib/auth";
@@ -113,7 +113,7 @@ export async function GET() {
       return serializeManifests(
         manifests,
         shopIdentity,
-        (blocker) => readinessBlockerText(t, blocker),
+        (blocker, diver) => crewBlockerText(t, diver, blocker),
         checklistItems.map((item) => ({
           id: item.id,
           label: item.label,

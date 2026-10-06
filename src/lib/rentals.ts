@@ -220,6 +220,125 @@ export const NOTHING_RENTED = Object.fromEntries(
   RENTABLE_ITEMS.map((item) => [item.field, false]),
 ) as Record<RentalFitField, boolean>;
 
+/**
+ * **What the diver wears, and whether it is ours** — one answer for the three
+ * suit columns (H-78, issues #1752 and #1800).
+ *
+ * A diver dives one suit. The fit used to ask two independent questions, rent
+ * a wetsuit? rent a drysuit?, and could hold both; the drysuit then won
+ * silently, and a diver in their own drysuit could not say so at all. Every
+ * full fit form now asks this as one choice, so the four combinations that are
+ * real are the only ones a form can post:
+ *
+ * - `own_wetsuit` — their own wetsuit, or none: nothing to pack, and their
+ *   stated weighting is a number to pack to.
+ * - `rents_wetsuit` — one of ours, with boots beside it.
+ * - `own_drysuit` — their own drysuit: nothing to pack, and the weighting is
+ *   settled in the water.
+ * - `rents_drysuit` — one of ours, boots on.
+ */
+export const SUIT_CHOICES = [
+  "own_wetsuit",
+  "rents_wetsuit",
+  "own_drysuit",
+  "rents_drysuit",
+] as const;
+export type SuitChoice = (typeof SUIT_CHOICES)[number];
+
+/** The catalog kinds the suit choice answers for, and so no longer ticks of their own. */
+export const SUIT_KINDS: ReadonlySet<RentableItemKind> = new Set(["wetsuit", "drysuit"]);
+
+/**
+ * A rental pick holding at most one suit: the drysuit when both arrive, which
+ * is the answer `saveRentalFit` gives the same post, so what a diver is
+ * charged for at checkout is what goes on their packing list.
+ */
+export function withOneSuit<K extends string>(kinds: readonly K[]): K[] {
+  return kinds.includes("drysuit" as K) ? kinds.filter((kind) => kind !== "wetsuit") : [...kinds];
+}
+
+/** The three suit columns, as one choice states them. */
+export type SuitFlags = { rentsWetsuit: boolean; rentsDrysuit: boolean; divesDry: boolean };
+
+/** The stored columns a choice writes. */
+export function suitFlags(choice: SuitChoice): SuitFlags {
+  return {
+    rentsWetsuit: choice === "rents_wetsuit",
+    rentsDrysuit: choice === "rents_drysuit",
+    divesDry: choice === "own_drysuit" || choice === "rents_drysuit",
+  };
+}
+
+/**
+ * The choice a stored fit reads as, or `own_wetsuit` for a diver with no fit.
+ * A rented suit is read first and the drysuit before the wetsuit, the same
+ * order `saveRentalFit` resolves a post asking for both: a drysuit is the more
+ * demanding suit, and its consequences are the safer default.
+ */
+export function suitChoiceOf(fit: Partial<SuitFlags> | null | undefined): SuitChoice {
+  if (fit?.rentsDrysuit) return "rents_drysuit";
+  if (fit?.divesDry) return "own_drysuit";
+  if (fit?.rentsWetsuit) return "rents_wetsuit";
+  return "own_wetsuit";
+}
+
+/**
+ * The choice a fit form opens on: the stored one, or — for a diver with no fit
+ * on file — the wetsuit the shop rents, which is the default the two ticks it
+ * replaced started from (`defaultRented`). A shop that rents no wetsuit opens
+ * on the diver's own.
+ */
+export function defaultSuitChoice(
+  fit: Partial<SuitFlags> | null | undefined,
+  rentalItems: readonly string[],
+): SuitChoice {
+  if (fit) return suitChoiceOf(fit);
+  return toRentableKinds(rentalItems).includes("wetsuit") ? "rents_wetsuit" : "own_wetsuit";
+}
+
+/** Narrows an untrusted form value; anything else is no answer at all. */
+export function parseSuitChoice(value: unknown): SuitChoice | undefined {
+  return SUIT_CHOICES.find((choice) => choice === value);
+}
+
+/**
+ * The suit columns a fit form's posted `suit` states, or **nothing** for a
+ * post that carries no valid choice — never three `false`s, which would be a
+ * claim ("own wetsuit") the diver did not make. `saveRentalFit` leaves an
+ * absent column as it is.
+ */
+export function suitFlagsFromPost(value: unknown): Partial<SuitFlags> {
+  const choice = parseSuitChoice(value);
+  return choice ? suitFlags(choice) : {};
+}
+
+/**
+ * The suit choices a fit form offers this diver: the two "own" answers always,
+ * a rental only while the shop's catalog offers that suit — **and the diver's
+ * stored choice whatever the catalog says**.
+ *
+ * That last clause is issue #1755's rule applied to a radio. A shop that drops
+ * drysuits keeps every diver's `rents_drysuit` (a catalog edit is not the diver
+ * speaking), so a form that left the option out would post the diver's answer
+ * as a different one on their next save. Kept on the list, it stays selected and
+ * saves unchanged; the packing list already marks the piece as no longer
+ * rented (`PrepPiece.notOffered`).
+ */
+export function offeredSuitChoices(
+  rentalItems: readonly string[],
+  stored: SuitChoice,
+): SuitChoice[] {
+  const offered = new Set(toRentableKinds(rentalItems));
+  return SUIT_CHOICES.filter(
+    (choice) =>
+      choice === stored ||
+      choice === "own_wetsuit" ||
+      choice === "own_drysuit" ||
+      (choice === "rents_wetsuit" && offered.has("wetsuit")) ||
+      (choice === "rents_drysuit" && offered.has("drysuit")),
+  );
+}
+
 /** Whether this shop fills nitrox tanks at all — the first of the two gates below. */
 export function shopOffersNitrox(rentalItems: readonly string[]): boolean {
   return toRentableKinds(rentalItems).includes("nitrox");

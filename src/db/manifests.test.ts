@@ -1908,6 +1908,52 @@ describe("crew emergency contacts (in-memory PGlite)", () => {
     });
   });
 
+  /**
+   * **The day's job narrows; it does not erase the rating** (issue #1852). An
+   * Assistant Instructor rostered as the day's divemaster read "Divemaster" on
+   * the manifest, the departure log and the incident export, the documents an
+   * insurer reads. `roles` stays the job; the rating rides beside it.
+   */
+  it("keeps a professional's standing rating beside the job the roster recorded", async () => {
+    const { db, shop, reef, staff } = await manifestContext();
+    await db
+      .delete(personRoles)
+      .where(and(eq(personRoles.personId, staff.id), inArray(personRoles.role, [...STAFF_ROLES])));
+    await db.insert(personRoles).values([
+      { personId: staff.id, role: "divemaster" },
+      { personId: staff.id, role: "assistant_instructor" },
+    ]);
+    await db.delete(tripAssignments).where(eq(tripAssignments.tripId, reef.id));
+    await db
+      .insert(tripAssignments)
+      .values({ tripId: reef.id, personId: staff.id, tripRole: "divemaster" });
+
+    const manifest = await getTripManifest(db, shop.id, reef.id);
+    const member = manifest?.crew.find((crew) => crew.id === staff.id);
+    // The narrowed job is what the boat reads, unchanged.
+    expect(member?.roles).toEqual(["divemaster"]);
+    // The rating the job does not already say, and only that one.
+    expect(member?.standingRatings).toEqual(["assistant_instructor"]);
+  });
+
+  it("carries no rating for a job left unset, which already prints the standing roles", async () => {
+    const { db, shop, reef, staff } = await manifestContext();
+    await db
+      .delete(personRoles)
+      .where(and(eq(personRoles.personId, staff.id), inArray(personRoles.role, [...STAFF_ROLES])));
+    await db.insert(personRoles).values([
+      { personId: staff.id, role: "divemaster" },
+      { personId: staff.id, role: "assistant_instructor" },
+    ]);
+    await db.delete(tripAssignments).where(eq(tripAssignments.tripId, reef.id));
+    await db.insert(tripAssignments).values({ tripId: reef.id, personId: staff.id });
+
+    const manifest = await getTripManifest(db, shop.id, reef.id);
+    const member = manifest?.crew.find((crew) => crew.id === staff.id);
+    expect(member?.roles).toEqual(expect.arrayContaining(["divemaster", "assistant_instructor"]));
+    expect(member?.standingRatings).toEqual([]);
+  });
+
   it("reads null for a crew member nobody has been asked about", async () => {
     // The ordinary state, and it must stay expressible: nobody is asked for a
     // crew contact at hire, and the row says "Not on file" in words rather

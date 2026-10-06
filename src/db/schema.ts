@@ -959,8 +959,15 @@ export const tripSeriesSkips = pgTable(
  * traffic alone — it was the omission the first widening still left in place
  * (`dive-domain-expert` review of DOM-L1).
  *
- * Still absent, ranked by how often a shop meets one: IANTD, SEI, ANDI, ACUC,
- * PSAI, NASE. The list is deliberately not exhaustive — see
+ * The cave-diving bodies `nss_cds` and `nacd`, and the technical agency
+ * `iantd`, are common issuers of Florida Cavern cards, and Cavern is a gating
+ * specialty (issue #2091). Recording them
+ * under their own name is still recording only: no cave rating is a tier here,
+ * and a cave card is never read as a Cavern card (ADR
+ * 20260718-specialty-site-cert-requirements, 2026-10-05 amendment).
+ *
+ * Still absent, ranked by how often a shop meets one: SEI, ANDI, ACUC, PSAI,
+ * NASE. The list is deliberately not exhaustive — see
  * docs/product/glossary.md, "Other agency", for why the honest fix is a
  * free-text companion to `other` rather than an ever-longer enum.
  *
@@ -7139,6 +7146,30 @@ export const rentalFitProfiles = pgTable(
     bootSize: text("boot_size"),
     finSize: text("fin_size"),
     weightPreference: text("weight_preference"),
+    /**
+     * **The diver is in a drysuit** — their own or one of ours (H-78, issue
+     * #1752). The one fact on this row about what the diver *wears* rather
+     * than what the shop hands over, and the one the drysuit's safety signals
+     * key on: the in-water weight check (`weightPreference` is a wetsuit
+     * answer, short by the two to four kilos a drysuit adds, and short is the
+     * direction that cannot hold a safety stop), fins sized up over the
+     * drysuit boot, and the drysuit-card advisory (`src/lib/drysuit-card.ts`).
+     * `rents_drysuit` used to stand in for it, which left every diver in their
+     * own suit — most drysuit divers — with a wetsuit number on the rail, fins
+     * packed to the bare foot and no advisory at all.
+     *
+     * A standing answer, not a per-trip one: the diver who dives dry in winter
+     * and wet in summer will sometimes be wrong for one trip, which is the cost
+     * H-78 accepted. Every fit form asks it as one choice with the wetsuit
+     * columns (`SuitChoice`, `src/lib/rentals.ts`), so a stated fit always
+     * carries an answer; `false` on a row nobody has stated is the same
+     * "claims nothing" every `rents_*` column defaults to.
+     *
+     * The two checks below hold the suit columns to one suit (issue #1800): a
+     * rented drysuit is a dry diver, and a dry diver is not renting a wetsuit.
+     * `saveRentalFit` resolves a post that asks for both before it reaches them.
+     */
+    divesDry: boolean("dives_dry").notNull().default(false),
     note: text("note"),
     /**
      * When a **fit** was last stated — by the diver's own gear form or by staff
@@ -7219,6 +7250,14 @@ export const rentalFitProfiles = pgTable(
   (table) => [
     uniqueIndex("rental_fit_profiles_shop_person_unique").on(table.shopId, table.personId),
     index("rental_fit_profiles_shop_person_idx").on(table.shopId, table.personId),
+    check(
+      "rental_fit_profiles_rented_drysuit_is_dry",
+      sql`not ${table.rentsDrysuit} or ${table.divesDry}`,
+    ),
+    check(
+      "rental_fit_profiles_dry_rents_no_wetsuit",
+      sql`not (${table.divesDry} and ${table.rentsWetsuit})`,
+    ),
   ],
 );
 

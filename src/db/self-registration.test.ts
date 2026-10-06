@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, isNull } from "drizzle-orm";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { seededShopContext } from "@/test/db";
 import { getRentalFit, saveRentalFit } from "./rental-fit";
-import { certifications, people, waiverRecords } from "./schema";
+import { certifications, people, waiverDeliveries, waiverRecords } from "./schema";
 import { deliverSelfRegistrationWaiver, registerDiverAtShop } from "./self-registration";
 import { completeWaiver, getWaiverForToken, issueWaiverRequest } from "./waivers";
 
@@ -49,6 +49,66 @@ describe("self-registration", () => {
       .from(waiverRecords)
       .where(and(eq(waiverRecords.personId, personId), isNull(waiverRecords.bookingId)));
     expect(record).toMatchObject({ status: "pending", shopId: shop.id });
+  });
+
+  /**
+   * **A phone is enough to get the release** (issue #2092). The form asks for
+   * an email *or* a phone and promises the release either way; before this the
+   * send always took the email channel and a phone-only diver got nothing.
+   */
+  describe("which channel the release goes out on", () => {
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    const sentTo = async (
+      db: Awaited<ReturnType<typeof seededShopContext>>["db"],
+      personId: string,
+    ) =>
+      db
+        .select({ channel: waiverDeliveries.channel, status: waiverDeliveries.status })
+        .from(waiverDeliveries)
+        .innerJoin(waiverRecords, eq(waiverRecords.id, waiverDeliveries.waiverRecordId))
+        .where(eq(waiverRecords.personId, personId));
+
+    it("texts the link to a diver who gave only a phone", async () => {
+      vi.stubEnv("APP_HOST", "https://diveday.example");
+      const { db, shop } = await seededShopContext();
+      const { personId } = await registerDiverAtShop(db, {
+        shopId: shop.id,
+        ...walkIn({ email: null, phone: "+13055550188" }),
+      });
+      const sms = { send: vi.fn().mockResolvedValue({ status: "sent", providerMessageId: "sns" }) };
+      await deliverSelfRegistrationWaiver(db, {
+        shopId: shop.id,
+        personId,
+        now,
+        textProviders: { whatsapp: null, sms },
+      });
+
+      expect(sms.send).toHaveBeenCalledOnce();
+      expect(sms.send.mock.calls[0]?.[0]?.body ?? "").toContain("https://diveday.example/waivers/");
+      expect(await sentTo(db, personId)).toEqual([{ channel: "text", status: "sent" }]);
+    });
+
+    it("keeps email for a diver who gave both, and texts nothing", async () => {
+      vi.stubEnv("APP_HOST", "https://diveday.example");
+      const { db, shop } = await seededShopContext();
+      const { personId } = await registerDiverAtShop(db, {
+        shopId: shop.id,
+        ...walkIn({ phone: "+13055550189" }),
+      });
+      const sms = { send: vi.fn() };
+      await deliverSelfRegistrationWaiver(db, {
+        shopId: shop.id,
+        personId,
+        now,
+        textProviders: { whatsapp: null, sms },
+      });
+
+      expect(sms.send).not.toHaveBeenCalled();
+      expect((await sentTo(db, personId)).map((row) => row.channel)).toEqual(["email"]);
+    });
   });
 
   it("files the certification as the diver's own word, never as evidence", async () => {

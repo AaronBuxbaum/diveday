@@ -16,13 +16,20 @@ export type IdentityMatchKind = "shared_email" | "picked_name";
  * under the held row they disclose the matched diver's state (a medical hold
  * under a stranger's booking), or, when the matched record is clean, make
  * "Same person" look like the only thing left. So a held seat says only the
- * identity question and what belongs to the seat itself, its payment. The
- * readiness result is untouched: the seat is still blocked on all of it.
+ * identity question, what belongs to the seat itself (its payment), and the
+ * two blockers about the *system* rather than any person: readiness could not
+ * be worked out (`readiness_unavailable`) or the trip has no requirements set
+ * (`requirements_not_configured`), which no answer to the identity question
+ * would clear (security review 2026-10-06). The readiness result is
+ * untouched: the seat is still blocked on all of it.
  */
 export function heldSeatBlockers<T extends ReadinessBlocker>(blockers: readonly T[]): T[] {
   if (!blockers.some((blocker) => blocker.code === "identity_unconfirmed")) return [...blockers];
   return blockers.filter(
     (blocker) =>
-      blocker.code === "identity_unconfirmed" || BLOCKER_CATEGORY[blocker.code] === "payment",
+      blocker.code === "identity_unconfirmed" ||
+      blocker.code === "readiness_unavailable" ||
+      blocker.code === "requirements_not_configured" ||
+      BLOCKER_CATEGORY[blocker.code] === "payment",
   );
 }

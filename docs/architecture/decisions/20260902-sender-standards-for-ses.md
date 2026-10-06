@@ -102,3 +102,24 @@ Two more sender standards landed with it: every send carries `Auto-Submitted: au
 longer forwards bounce and complaint feedback as email to `noreply@ses.dive.day` -- the SNS event
 destination is the one record -- while the configuration set publishes its own reputation metrics
 beside the account-level ones the alarms read.
+
+## Amended 2026-10-06: what makes a message commercial, and the staff trip invitation
+
+This ADR described the commercial kinds as "the ones carrying an `unsubscribeUrl`", which is
+circular: it names the field, not the test, and so a kind could be commercial and carry no field
+without breaking anything written here. That is how the staff trip invitation went unnoticed until
+every kind was rendered for the production-access case (issue #1953).
+
+- **The test.** A message is commercial when the shop sends it to promote a seat, a deal or itself to
+  someone who did not ask for that message (CAN-SPAM, 16 CFR 316.2). It is service mail when it
+  confirms, protects or answers something the recipient did or asked for. A commercial kind carries
+  a required `unsubscribeUrl`, and through it the postal footer; the field follows from the test.
+- **The trip invitation splits by sender** (Aaron Buxbaum, 2026-10-06, H-96). A staffer answering a
+  diver's own date request sends `trip_invitation`, service mail: no unsubscribe, and it reaches a
+  diver who turned off courtesy email, because they asked. A staffer inviting a diver on the shop's
+  records who asked for nothing sends `direct_trip_invitation`, commercial: the courtesy unsubscribe
+  link, the postal footer, and no send at all to a person whose `people.courtesy_email_opt_out_at`
+  is set (`deliverTripInvitation`, `src/db/trip-invitations.ts`). The staffer is told the invitation
+  was recorded but not emailed.
+- The courtesy unsubscribe line on every courtesy kind now reads "Stop optional emails from
+  {shop}", since it already stopped more than wait-list and recap mail.

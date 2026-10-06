@@ -190,3 +190,42 @@ export function countInWaterCrew(members: Iterable<TripCrewAssignment>): InWater
 export function effectiveCrewRoles(member: TripCrewAssignment): string[] {
   return member.tripRole ? [member.tripRole] : [...member.shopRoles];
 }
+
+/**
+ * The standing roles that are a professional rating — a dive teaching or
+ * leadership rung, or a vessel licence — most senior first. Owner, manager and
+ * crew are offices or a general hand, not a rating anybody reading an incident
+ * document is asking about.
+ */
+export const PROFESSIONAL_RATINGS = [
+  "instructor",
+  "assistant_instructor",
+  "divemaster",
+  "captain",
+] as const;
+
+/**
+ * **The rating beside the job, on the documents read after something went
+ * wrong** (issue #1852).
+ *
+ * `effectiveCrewRoles` answers "who is doing what today" and is right for the
+ * boat. The departure log and the incident export are also asked "what rating
+ * did each professional hold", and the narrowed job cannot answer it: an
+ * Assistant Instructor rostered as the day's divemaster read "Divemaster", and
+ * the only way to keep the rating on the sheet was to leave the job unset,
+ * which also turns off narrowing.
+ *
+ * Only what the job does not already say: a divemaster rostered as divemaster
+ * carries nothing beside it, and a job left unset already prints the standing
+ * roles, so it carries nothing either. Somebody whose roles were stripped after
+ * they sailed carries nothing at all, never an empty bracket. A rating is never
+ * added to `trip_assignment_role`: a rating in a list of jobs has nothing to
+ * narrow (the glossary's "Per-trip crew role").
+ */
+export function standingRatingsBesideJob(member: TripCrewAssignment): string[] {
+  if (!member.tripRole) return [];
+  const job = member.tripRole;
+  return PROFESSIONAL_RATINGS.filter(
+    (rating) => rating !== job && member.shopRoles.includes(rating),
+  );
+}

@@ -148,8 +148,15 @@ export function BookingGearFields({
                       onChange={(event) => {
                         setRentedKinds((current) => {
                           const next = new Set(current);
-                          if (event.target.checked) next.add(kind);
-                          else next.delete(kind);
+                          if (event.target.checked) {
+                            next.add(kind);
+                            // One diver, one suit (H-78): ticking one suit
+                            // unticks the other, so the quote never charges
+                            // for two. `saveRentalFit` holds the same rule
+                            // for a post that arrives with both.
+                            if (kind === "wetsuit") next.delete("drysuit");
+                            if (kind === "drysuit") next.delete("wetsuit");
+                          } else next.delete(kind);
                           return next;
                         });
                       }}

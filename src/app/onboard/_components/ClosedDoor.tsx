@@ -5,6 +5,7 @@ import { MarketingFooter } from "@/components/MarketingFooter";
 import { buttonClass } from "@/components/ui/button";
 import type { DiverTranslator } from "@/i18n/messages";
 import { ONBOARDING_EMAIL, setUpMailto } from "@/lib/platform-mail";
+import { OnboardDemoDoor } from "./OnboardDemoDoor";
 
 /**
  * The page everyone without the key sees: one sentence on how a shop gets
@@ -20,12 +21,7 @@ export function ClosedDoor({ t }: { t: DiverTranslator }) {
         title={t("account.onboard.closed.title")}
         footer={
           <>
-            <p>
-              {t("account.onboard.demoNote")}{" "}
-              <Link href="/" className="font-medium text-primary hover:underline">
-                {t("account.onboard.tryLiveDemo")}
-              </Link>
-            </p>
+            <OnboardDemoDoor t={t} />
             <p>
               {t("account.onboard.alreadyHaveShop")}{" "}
               <Link href="/sign-in" className="font-medium text-primary hover:underline">

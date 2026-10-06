@@ -341,6 +341,10 @@ export async function listDiverRecordNotes(db: AppDb, shopId: string, personId: 
  * Resolve diver-scoped notes onto the booking that represents that diver on a
  * trip. This is the bridge that lets the Diver page and boat manifest share
  * one source of truth without making a diver note belong to a single booking.
+ *
+ * **Never onto a held seat** (issue #1690, security re-review B3): a note about
+ * the person is a note about the matched diver, who may not be the one aboard.
+ * The seat's own booking-scoped notes are a different read and still show.
  */
 export async function listDiverNotesForTrip(db: AppDb, shopId: string, tripId: string) {
   return db
@@ -354,6 +358,7 @@ export async function listDiverNotesForTrip(db: AppDb, shopId: string, tripId: s
         isNull(internalNotes.bookingId),
         eq(bookings.shopId, shopId),
         eq(bookings.tripId, tripId),
+        isNull(bookings.identityUnconfirmedAt),
       ),
     )
     .orderBy(asc(internalNotes.createdAt));

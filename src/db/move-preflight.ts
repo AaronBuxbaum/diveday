@@ -4,6 +4,7 @@ import type { AppDb } from "./client";
 import { countOpenTripGearReservations } from "./gear";
 import { countTripOrders } from "./orders";
 import { bookings, notificationDeliveries, type notificationKind, trips } from "./schema";
+import { boatMoveClashes } from "./trips-clashes";
 import { crewMoveConflicts } from "./trips-crew";
 import { liveTrip } from "./trips-live";
 import { countRollCallEvidence } from "./trips-schedule";
@@ -33,7 +34,7 @@ export async function getMovePreflight(
    *
    * **The one time-dependent fact here** (issue #1310). Every other
    * consequence is a property of the departure and is the same wherever it
-   * lands, so the panel could fetch them once on mount; a crew clash has to be
+   * lands, so the panel could fetch them once on mount; a crew or boat clash has to be
    * re-read for each time a staff member picks, and the *time* matters as much
    * as the date — a morning boat and an afternoon boat on one day are an
    * ordinary double shift, and only the overlap is a problem. Passing the
@@ -52,7 +53,7 @@ export async function getMovePreflight(
   // no preview — the panel simply shows its fields, exactly as it does today.
   if (!trip) return null;
 
-  const [toldSeats, gearReserved, paidOrders, rollCallEvidence, crew] = await Promise.all([
+  const [toldSeats, gearReserved, paidOrders, rollCallEvidence, crew, boat] = await Promise.all([
     countToldSeats(db, shopId, tripId),
     countOpenTripGearReservations(db, shopId, tripId),
     countTripOrders(db, shopId, tripId, "paid"),
@@ -60,6 +61,9 @@ export async function getMovePreflight(
     target
       ? crewMoveConflicts(db, shopId, tripId, target.startsAt, target.timeZone)
       : { clashes: [], away: [] },
+    // The hull's own overlap (H-80, issue #1780), asked of the same proposed
+    // windows by the same predicate the crew clash uses.
+    target ? boatMoveClashes(db, shopId, tripId, target.startsAt, target.timeZone) : [],
   ]);
 
   return composeMovePreflight({
@@ -69,6 +73,7 @@ export async function getMovePreflight(
     cancellationWindowHours: trip.cancellationWindowHours,
     rollCallEvidence,
     scheduled: trip.status === "scheduled",
+    boatClashes: boat.map((row) => ({ boat: row.boatName, departure: row.otherTitle })),
     crewClashes: crew.clashes.map((row) => ({
       name: row.fullName,
       departure: row.otherTitle ?? "",

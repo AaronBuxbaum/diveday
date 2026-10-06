@@ -200,7 +200,7 @@
       "waiverNotSent": "Exención sin firmar. Aún no se ha enviado.",
       "waiverPending": "Exención sin firmar. Enlace enviado.",
       "waiverExpired": "El enlace de la exención caducó; emite uno nuevo.",
-      "medicalReview": "Una respuesta médica necesita seguimiento del personal.",
+      "medicalReview": "Una respuesta médica necesita el visto bueno de un médico antes de bucear.",
       "medicalNotCleared": "Un médico no autorizó a esta persona a bucear.",
       "guardianSignatureMissing": "Firmada por un menor sin acompañante. Falta la firma de su madre, padre o tutor legal; envía un enlace nuevo de la exención.",
       "certificationMissing": "No hay ninguna certificación registrada para esta salida.",
@@ -435,14 +435,15 @@
     "nitroxFillsLabel": "Llenados de nitrox",
     "itemWithSize": "{item} {size}",
     "itemOverDrysuitBoot": "{item} sobre la bota del traje seco",
-    "itemOverDrysuitBootWithSize": "{item} sobre la bota del traje seco, calzado {size}",
+    "itemOverDrysuitBootWithSize": "{item} sobre la bota del traje seco, pie {size}",
+    "itemDrysuitWeightCheck": "{item}: traje seco, verificar el lastre en el agua",
     "itemNoLongerRented": "{item} (el centro ya no alquila esto)",
     "notRecorded": "No hay equipo registrado, aún no se ha preguntado",
     "ownKit": "Trae su propio equipo",
     "needsStaffFit": "Necesita ajuste del personal en el check-in",
     "needsStaffFitWithNote": "Necesita ajuste del personal — {note}",
-    "drysuitCardMissing": "Alquila traje seco y no hay certificación de traje seco en su ficha. No es un bloqueo: verifica qué titulación consta o programa una orientación antes de la primera inmersión.",
-    "drysuitCardUnconfirmed": "Alquila traje seco y su certificación de traje seco está sin confirmar. No es un bloqueo: confirma la certificación en su ficha o programa una orientación antes de la primera inmersión."
+    "drysuitCardMissing": "Bucea con traje seco y no hay certificación de traje seco en su ficha. No es un bloqueo: verifica qué titulación consta o programa una orientación antes de la primera inmersión.",
+    "drysuitCardUnconfirmed": "Bucea con traje seco y su certificación de traje seco está sin confirmar. No es un bloqueo: confirma la certificación en su ficha o programa una orientación antes de la primera inmersión."
   },
   "rollCallCheckpoint": {
     "departure": "Antes de zarpar",
@@ -533,6 +534,12 @@
     "sameAria": "Misma persona que {name}",
     "different": "Otra persona",
     "newNameLabel": "Nombre para su propia ficha",
+    "dateOfBirthLabel": "Fecha de nacimiento",
+    "emailLabel": "Correo electrónico",
+    "phoneLabel": "Teléfono",
+    "optional": "(opcional)",
+    "sameNameSeats": "{count, plural, one {Pasar también la plaza retenida reservada como {bookedAs} en {departures}} other {Pasar también las plazas retenidas reservadas como {bookedAs} en {departures}}}",
+    "sameNameDeparture": "{trip} ({date}, {time})",
     "split": "Crear su propia ficha",
     "splitting": "Creando…"
   }

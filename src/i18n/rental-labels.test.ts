@@ -151,6 +151,26 @@ describe("rentalFitLineText", () => {
       }),
     ).toBe("Mask & fins over a drysuit boot");
   });
+
+  it("says why a drysuit diver's weights carry no number (H-78)", () => {
+    // A bare "Weights" reads as nobody having written a number down. This one
+    // is a different job at the ladder: the stated number is a wetsuit answer.
+    expect(
+      rentalFitLineText(t, "en-US", {
+        state: "rents",
+        items: [
+          { kind: "bcd", size: "M" },
+          { kind: "weights", size: null, drysuitWeightCheck: true },
+        ],
+      }),
+    ).toBe(`BCD${NBSP}M, Weights: drysuit, weight check in the water`);
+    expect(
+      rentalFitLineText(staffTranslator("es-ES"), "es-ES", {
+        state: "rents",
+        items: [{ kind: "weights", size: null, drysuitWeightCheck: true }],
+      }),
+    ).toContain("verificar el lastre en el agua");
+  });
 });
 
 describe("statedSizesText", () => {

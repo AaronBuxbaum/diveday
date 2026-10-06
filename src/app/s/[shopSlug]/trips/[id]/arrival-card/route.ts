@@ -1,5 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { arrivalDockCallLine } from "@/components/TripArrivalCard";
 import { verifyBookingCapability } from "@/db/booking-capabilities";
+import { getBookingPickupTime } from "@/db/bookings";
 import { getDb } from "@/db/client";
 import { getShopBySlug } from "@/db/shops";
 import { getTripWithBooked } from "@/db/trips";
@@ -112,6 +114,13 @@ export async function GET(
   // deployment whose `APP_HOST` does not validate.
   const tripUrl = new URL(publicTripPath(shopSlug, id), publicAppUrl() ?? request.url).toString();
   const support = [shop.contactPhone, shop.contactEmail].filter(Boolean).join(" · ");
+  // The "be at the dock by" line `/ready` gives, on the paper a diver has at
+  // the dock (issue #2034) — omitted, as there, for a diver being collected
+  // from their hotel, and when the shop asks for no lead time.
+  const pickupTime = await getBookingPickupTime(db, shop.id, capability.bookingId);
+  const dockCallLine = pickupTime
+    ? null
+    : arrivalDockCallLine(t, trip.startsAt, shop.dockCallMinutes, locale, shop.timezone);
   const filename = `${shopSlug.replace(/[^a-z0-9_-]/gi, "-")}-arrival-card.html`;
   const html = [
     "<!doctype html>",
@@ -133,6 +142,7 @@ export async function GET(
     " · ",
     escapeHtml(formatTimeRangeTz(trip.startsAt, trip.endsAt, locale, shop.timezone)),
     "</p>",
+    dockCallLine ? `<p><strong>${escapeHtml(dockCallLine)}</strong></p>` : "",
     field(t("trip.arrivalAtShop"), label),
     field(t("trip.arrivalAddress"), addressText),
     field(t("trip.arrivalLandmark"), trip.arrivalLandmark),
