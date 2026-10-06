@@ -48,7 +48,8 @@ Four clocks start ticking on contact, not on need — start all four in the same
 3. **AWS SNS SMS carrier compliance registration** ([privacy-and-communications.md](privacy-and-communications.md))
    — US carrier registration takes days to weeks; no legal SMS sending without it.
 4. **A boat day for V-02** ([dive-operations.md](dive-operations.md)) — needs weather, a captain,
-   and a hull; the offline-manifest claim stays off every surface until it passes.
+   and a hull; the pilot waits on it, and a failure takes the no-signal roll-call claim off every
+   page ([H-94](../human-decisions.md#decision-register)).
 
 Two dependencies cut across disciplines and should be resolved first because other stakeholders
 ask for their outputs:
