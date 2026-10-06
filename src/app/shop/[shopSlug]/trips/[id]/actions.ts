@@ -36,9 +36,9 @@ import { getShopById } from "@/db/shops";
 import { getShopCurrency } from "@/db/stripe-accounts";
 import {
   createDirectTripInvitation,
-  getTripInvitation,
+  deliverTripInvitation,
   listTripInvitations,
-  recordTripInvitation,
+  type TripInvitationDelivery,
 } from "@/db/trip-invitations";
 import { getTripLens } from "@/db/trip-lenses";
 import {
@@ -68,7 +68,7 @@ import { depthToMeters, maxEnteredVisibility } from "@/lib/depth-units";
 import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { revalidateAndRedirect } from "@/lib/navigation";
-import { publicAppUrl, recipientLocale } from "@/lib/notifications";
+import { publicAppUrl } from "@/lib/notifications";
 import { PAPER_WAIVER_IDLE, type PaperWaiverFormState } from "@/lib/paper-waiver-form";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
@@ -893,10 +893,11 @@ export async function addToWaitlistAction(shopSlug: string, tripId: string, form
 }
 
 /**
- * Records a staff outreach attempt for a request-origin invitation. The
- * browser then opens the same safe composer fallback used by the wait-list
- * invite; this deliberately does not turn a lead into a booking or consume a
- * seat.
+ * Records a staff outreach attempt for an invitation and emails it when it
+ * can (`deliverTripInvitation`). Anything but `sent` opens the same safe
+ * composer fallback the wait-list invite uses — including a cold invitation
+ * to a diver who turned off courtesy email, whom staff may still write to by
+ * hand. This never turns a lead into a booking or consumes a seat.
  */
 export async function recordTripInvitationAction(
   shopSlug: string,
@@ -905,17 +906,22 @@ export async function recordTripInvitationAction(
 ): Promise<"sent" | "fallback"> {
   const s = (await requireShopSurface(shopSlug)).session;
   const db = await getDb();
-  const result = await sendTripInvitation(db, {
+  const result = await deliverTripInvitation(db, {
     shopId: s.user.shopId,
     shopSlug,
     tripId,
     invitationId,
   });
   revalidatePath(tripPath(shopSlug, tripId));
-  return result;
+  return result === "sent" ? "sent" : "fallback";
 }
 
-/** Invites an existing diver without seating them on the departure. */
+/**
+ * Invites an existing diver without seating them on the departure. A cold
+ * invitation is commercial mail (issue #1953), so a diver who turned off
+ * courtesy email is not emailed — and the staffer is told so, rather than
+ * landing on an "Invited" row that looks like a sent message.
+ */
 export async function createDirectTripInvitationAction(
   shopSlug: string,
   tripId: string,
@@ -932,13 +938,14 @@ export async function createDirectTripInvitationAction(
     personId: parsed.data.personId,
     createdByPersonId: s.user.personId,
   });
+  let delivery: TripInvitationDelivery | null = null;
   if (created) {
     const invitation = (await listTripInvitations(db, s.user.shopId, tripId)).find(
       ({ invitation }) =>
         invitation.source === "direct" && invitation.personId === parsed.data.personId,
     );
     if (invitation) {
-      await sendTripInvitation(db, {
+      delivery = await deliverTripInvitation(db, {
         shopId: s.user.shopId,
         shopSlug,
         tripId,
@@ -947,44 +954,11 @@ export async function createDirectTripInvitationAction(
     }
   }
   revalidatePath(guests);
-  redirect(`${guests}#invitations`);
-}
-
-type TripInvitationDelivery = "sent" | "fallback";
-
-async function sendTripInvitation(
-  db: Awaited<ReturnType<typeof getDb>>,
-  input: { shopId: string; shopSlug: string; tripId: string; invitationId: string },
-): Promise<TripInvitationDelivery> {
-  const context = await getTripInvitation(db, input.shopId, input.tripId, input.invitationId);
-  if (!context) return "fallback";
-  const invitedAt = nowDate();
-  const recorded = await recordTripInvitation(db, {
-    shopId: input.shopId,
-    tripId: input.tripId,
-    invitationId: input.invitationId,
-    now: invitedAt,
-  });
-  if (!recorded) return "fallback";
-  const email = context.person?.email ?? context.request?.email ?? null;
-  const origin = publicAppUrl();
-  if (!email || !origin) return "fallback";
-  const delivery = await sendNotification(db, {
-    kind: "trip_invitation",
-    invitationId: context.invitation.id,
-    shopId: input.shopId,
-    to: email,
-    locale: recipientLocale(context.person?.locale, context.shop.defaultLocale),
-    diverName: context.person?.fullName ?? context.request?.name ?? "Diver",
-    shopName: context.shop.name,
-    tripTitle: context.trip.title,
-    startsAt: context.trip.startsAt,
-    endsAt: context.trip.endsAt,
-    timezone: context.shop.timezone,
-    bookingUrl: new URL(publicTripPath(input.shopSlug, context.trip.id), `${origin}/`).toString(),
-    invitedAt,
-  });
-  return delivery.status === "sent" ? "sent" : "fallback";
+  redirect(
+    delivery === "opted_out"
+      ? noticeUrl(`${guests}#invitations`, "invitation-opted-out")
+      : `${guests}#invitations`,
+  );
 }
 
 /**

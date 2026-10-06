@@ -1,6 +1,10 @@
 import { and, asc, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { publicAppUrl, recipientLocale } from "@/lib/notifications";
+import { publicTripPath } from "@/lib/public-routes";
 import type { AppDb } from "./client";
+import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
+import { sendNotification } from "./notifications";
 import {
   bookings,
   courseInquiries,
@@ -224,4 +228,93 @@ export async function recordTripInvitation(
     )
     .returning({ id: tripInvitations.id });
   return Boolean(updated);
+}
+
+/**
+ * How one invitation reached (or did not reach) the diver. Anything but `sent`
+ * hands staff the composer fallback rather than pretending mail went out — the
+ * mirror of `WaitlistInviteDelivery`. `opted_out` is a cold invitation to a
+ * diver who has turned off courtesy email: no automated send, though staff may
+ * still reach them by hand.
+ */
+export type TripInvitationDelivery = "sent" | "fallback" | "opted_out";
+
+/**
+ * Stamp one invitation as contacted and email it — as service mail or as
+ * commercial mail, by where the invitation came from (Aaron, 2026-10-06, issue
+ * #1953):
+ *
+ * - **A reply to a diver's own date request** (`date_request`) is
+ *   `trip_invitation`: the diver asked, so it reaches them whatever their
+ *   courtesy-email setting, with no unsubscribe.
+ * - **A cold invitation** (`direct`) is `direct_trip_invitation`: commercial,
+ *   so it carries a fresh courtesy unsubscribe link (and with it the shop's
+ *   postal footer) and is not sent to a person whose
+ *   `people.courtesyEmailOptOutAt` is set. A direct invitation always names a
+ *   person (`trip_invitations_source_reference_check`), which is what lets the
+ *   unsubscribe link be required: the token is keyed to that person.
+ *
+ * The stamp is written first in every case, as it always was: "Contacted" is
+ * the record that staff reached out, by email or by hand.
+ */
+export async function deliverTripInvitation(
+  db: AppDb,
+  input: { shopId: string; shopSlug: string; tripId: string; invitationId: string },
+): Promise<TripInvitationDelivery> {
+  const context = await getTripInvitation(db, input.shopId, input.tripId, input.invitationId);
+  if (!context) return "fallback";
+  const invitedAt = nowDate();
+  const recorded = await recordTripInvitation(db, {
+    shopId: input.shopId,
+    tripId: input.tripId,
+    invitationId: input.invitationId,
+    now: invitedAt,
+  });
+  if (!recorded) return "fallback";
+  const origin = publicAppUrl();
+  const shared = {
+    invitationId: context.invitation.id,
+    shopId: input.shopId,
+    shopName: context.shop.name,
+    tripTitle: context.trip.title,
+    startsAt: context.trip.startsAt,
+    endsAt: context.trip.endsAt,
+    timezone: context.shop.timezone,
+    invitedAt,
+  };
+
+  if (context.invitation.source === "direct") {
+    const person = context.person;
+    if (!person?.email) return "fallback";
+    // Before anything about the send itself: a diver who opted out is
+    // `opted_out` whether or not this deployment could have emailed them.
+    if (person.courtesyEmailOptOutAt) return "opted_out";
+    if (!origin) return "fallback";
+    const unsubscribeToken = await issuePersonCourtesyEmailUnsubscribeToken(db, {
+      shopId: input.shopId,
+      personId: person.id,
+    });
+    const delivery = await sendNotification(db, {
+      ...shared,
+      kind: "direct_trip_invitation",
+      to: person.email,
+      locale: recipientLocale(person.locale, context.shop.defaultLocale),
+      diverName: person.fullName,
+      bookingUrl: new URL(publicTripPath(input.shopSlug, context.trip.id), `${origin}/`).toString(),
+      unsubscribeUrl: new URL(`/unsubscribe/${unsubscribeToken}`, `${origin}/`).toString(),
+    });
+    return delivery.status === "sent" ? "sent" : "fallback";
+  }
+
+  const email = context.person?.email ?? context.request?.email ?? null;
+  if (!email || !origin) return "fallback";
+  const delivery = await sendNotification(db, {
+    ...shared,
+    kind: "trip_invitation",
+    to: email,
+    locale: recipientLocale(context.person?.locale, context.shop.defaultLocale),
+    diverName: context.person?.fullName ?? context.request?.name ?? "Diver",
+    bookingUrl: new URL(publicTripPath(input.shopSlug, context.trip.id), `${origin}/`).toString(),
+  });
+  return delivery.status === "sent" ? "sent" : "fallback";
 }

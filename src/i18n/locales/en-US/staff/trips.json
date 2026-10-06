@@ -67,6 +67,7 @@
     "diverAddedWaiverUndelivered": "Diver added to the trip, but their waiver wasn’t emailed. Send it or share the link from their row below.",
     "diverAddedIdentityUnconfirmed": "Diver added to the trip, but the seat is held until you confirm it’s the same person. Confirm it on their row below.",
     "diverWaitlisted": "Diver added to the wait list.",
+    "invitationOptedOut": "Invitation recorded but not emailed: this diver turned off optional emails from the shop.",
     "identityConfirmed": "Identity confirmed. This diver can be cleared to board.",
     "identitySplit": "They have their own diver record now, with no waiver or certifications on file yet.",
     "identityMedicalHold": "This seat has a physician referral nobody has answered. Answer it before giving them their own record.",

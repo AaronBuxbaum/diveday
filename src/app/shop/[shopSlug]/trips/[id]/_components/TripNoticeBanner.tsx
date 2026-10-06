@@ -122,6 +122,15 @@ const NOTICE_KEYS: Record<
     key: "trips.notices.diverAddedIdentityUnconfirmed",
   },
   "diver-waitlisted": { form: "add-diver", tone: "success", key: "trips.notices.diverWaitlisted" },
+  // A cold invitation is commercial mail, so a diver who turned off optional
+  // email is not sent one (issue #1953). Warning, not danger: the invitation
+  // is recorded and nothing needs undoing, but the staffer must not read
+  // "Invited" as "emailed".
+  "invitation-opted-out": {
+    form: "add-diver",
+    tone: "warning",
+    key: "trips.notices.invitationOptedOut",
+  },
   "identity-confirmed": { form: "roster", tone: "success", key: "trips.notices.identityConfirmed" },
   "identity-split": { form: "roster", tone: "success", key: "trips.notices.identitySplit" },
   "identity-medical-hold": {

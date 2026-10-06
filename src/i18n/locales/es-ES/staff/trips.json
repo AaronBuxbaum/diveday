@@ -67,6 +67,7 @@
     "diverAddedWaiverUndelivered": "Buceador añadido a la salida, pero no se envió su exención por correo. Envíala o comparte el enlace desde su fila de abajo.",
     "diverAddedIdentityUnconfirmed": "Buceador añadido a la salida, pero la plaza queda retenida hasta que confirmes que es la misma persona. Confírmalo en su fila de abajo.",
     "diverWaitlisted": "Buceador añadido a la lista de espera.",
+    "invitationOptedOut": "Invitación registrada, pero no enviada por correo: este buceador desactivó los correos opcionales del centro.",
     "identityConfirmed": "Identidad confirmada. Este buceador puede autorizarse a embarcar.",
     "identitySplit": "Ya tiene su propia ficha, aún sin exención ni certificaciones registradas.",
     "identityMedicalHold": "Esta plaza tiene una derivación médica sin responder. Respóndela antes de crearle su propia ficha.",

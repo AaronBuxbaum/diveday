@@ -465,11 +465,11 @@
   },
   "courtesyEmailUnsubscribe": {
     "title": "¿Dejar de recibir estos correos?",
-    "description": "Estás en la lista de {shopName} para avisos de lista de espera y resúmenes tras la inmersión. Seguirás recibiendo correos sobre tus propias reservas, exenciones y actualizaciones de viaje.",
+    "description": "Recibes correos opcionales de {shopName}, como avisos de lista de espera, invitaciones a salidas y resúmenes tras la inmersión. Seguirás recibiendo correos sobre tus propias reservas, exenciones y actualizaciones de viaje.",
     "submit": "Dejar de recibir estos correos",
     "submitting": "Cancelando…",
     "confirmedTitle": "Te has dado de baja",
-    "confirmedText": "Ya no recibirás correos de lista de espera ni de resúmenes de {shopName}. Seguirás recibiendo correos sobre tus propias reservas, exenciones y actualizaciones de viaje."
+    "confirmedText": "Ya no recibirás correos opcionales de {shopName}. Seguirás recibiendo correos sobre tus propias reservas, exenciones y actualizaciones de viaje."
   },
   "contactConfirm": {
     "title": "¿Confirmar esta dirección para {shopName}?",
@@ -3966,7 +3966,7 @@
       "seeWhatsLeft": "Consulta lo que te falta antes de salir",
       "outstandingHeading": "Aún por resolver antes de embarcar:",
       "medicalReviewNote": "Revisa si una respuesta médica necesita el visto bueno de un médico antes de viajar",
-      "courtesyUnsubscribe": "Dejar de recibir correos de lista de espera y resúmenes de {shopName}"
+      "courtesyUnsubscribe": "Dejar de recibir correos opcionales de {shopName}"
     },
     "tripConditionsHold": {
       "subject": "Salida en espera por condiciones — {tripTitle}",
