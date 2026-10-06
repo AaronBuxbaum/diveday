@@ -108,6 +108,10 @@ export async function getTripRoster(db: AppDb, shopId: string, tripId: string) {
       and(
         eq(bookings.tripId, tripId),
         eq(bookings.shopId, shopId),
+        // The person's own shop too, not only the booking's: a held seat
+        // prints the matched person's email and phone, so a booking whose
+        // person_id ever pointed across tenants must not carry them here.
+        eq(people.shopId, shopId),
         ne(bookings.status, "cancelled"),
       ),
     )

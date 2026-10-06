@@ -526,6 +526,8 @@
     "reasonSharedEmail": "Booked as {bookedAs} with {name}’s email. Confirm who this is.",
     "reasonPickedName": "Booked as {bookedAs}, then matched to {name} from the name list. Confirm who this is.",
     "reasonSameName": "More than one diver is named {name}. Confirm this is the right record.",
+    "contactOnFile": "On file for {name}:",
+    "noContactOnFile": "No email or phone on file for {name}.",
     "same": "Same person",
     "sameAria": "Same person as {name}",
     "different": "Different person",

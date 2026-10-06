@@ -7,7 +7,7 @@ import { buttonClass } from "@/components/ui/button";
 import { emptyMedicalAnswers, flaggedMedicalPrompts, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { PAPER_WAIVER_IDLE } from "@/lib/paper-waiver-form";
 import { rendersFlush } from "@/test/button-flush";
-import { RosterSection } from "./RosterSection";
+import { type RosterArrival, RosterSection } from "./RosterSection";
 import type {
   NitroxByBooking,
   ReadinessByBooking,
@@ -111,6 +111,7 @@ function renderRoster({
   addDiverGroup,
   paymentsConnected = false,
   requiresPayment = false,
+  arrival,
 }: {
   roster: RosterEntry[];
   readiness: ReadinessByBooking;
@@ -120,6 +121,7 @@ function renderRoster({
   addDiverGroup?: ReactNode;
   paymentsConnected?: boolean;
   requiresPayment?: boolean;
+  arrival?: RosterArrival;
 }) {
   return render(
     <RosterSection
@@ -151,6 +153,7 @@ function renderRoster({
       tripDate="2026-08-28"
       compact={compact}
       addDiverGroup={addDiverGroup}
+      arrival={arrival}
     />,
   );
 }
@@ -428,7 +431,7 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     expect(screen.getAllByText("Payment is outstanding for this trip.").length).toBeGreaterThan(0);
   });
 
-  it("prints none of the matched person's medical answers, age, contact or sizes", () => {
+  it("prints none of the matched person's medical answers, age, emergency contact or sizes", () => {
     renderRoster({
       roster: [matched],
       readiness: unconfirmed,
@@ -442,13 +445,10 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     expect(screen.queryByText(/Pilar Vega/)).toBeNull();
     expect(screen.queryByDisplayValue("Pilar Vega")).toBeNull();
     expect(screen.queryByText(/5 mm \/ M/)).toBeNull();
-    expect(screen.queryByText("u@example.com")).toBeNull();
     // Said, never silently blank — an empty panel reads as a diver with no
     // contact and no sizes, which is a wrong fact rather than an absent one.
     expect(
-      screen.getByText(
-        "Contact, medical and gear details stay hidden until you confirm who this is.",
-      ),
+      screen.getByText("Medical and gear details stay hidden until you confirm who this is."),
       // `toBeInTheDocument`, not `toBeVisible`: the reference panel is a
       // collapsed `<details>`, which jsdom reports as hidden.
     ).toBeInTheDocument();
@@ -496,6 +496,75 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     ).toHaveValue("Lucia Vega");
   });
 
+  // Aaron, 2026-10-06: the question needs something to compare, and a way to
+  // ask. The record's own email and phone stand beside it, tappable, outside
+  // the fold; nothing else of the record's comes out.
+  it("shows the record's email and phone beside the question, as links", () => {
+    renderRoster({
+      roster: [
+        {
+          ...matched,
+          person: { ...matched.person, phone: "+13055550114" },
+        } as RosterEntry,
+      ],
+      readiness: unconfirmed,
+      waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+      rentalFit,
+    });
+
+    const contact = screen.getByTestId("identity-contact");
+    expect(contact).toBeVisible();
+    expect(contact.closest("details")).toBeNull();
+    expect(contact).toHaveTextContent("On file for Marisol Vega:");
+    expect(screen.getByRole("link", { name: "u@example.com" })).toHaveAttribute(
+      "href",
+      "mailto:u@example.com",
+    );
+    const phone = screen
+      .getAllByRole("link")
+      .find((link) => link.getAttribute("href")?.startsWith("tel:"));
+    expect(phone).toHaveAttribute("href", "tel:+13055550114");
+    expect(screen.queryByText(/Pilar Vega/)).toBeNull();
+  });
+
+  it("says so when the record has no email or phone to ask", () => {
+    renderRoster({
+      roster: [{ ...matched, person: { ...matched.person, email: null } } as RosterEntry],
+      readiness: unconfirmed,
+      waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+      rentalFit,
+    });
+
+    expect(screen.getByTestId("identity-contact")).toHaveTextContent(
+      "No email or phone on file for Marisol Vega.",
+    );
+  });
+
+  // While arrivals are open the screen faces the queue (dive-domain review
+  // 2026-10-05), so the record's email and phone wait behind the row's mark.
+  it("keeps the record's contact behind the fold while the desk is open", () => {
+    renderRoster({
+      roster: [matched],
+      readiness: unconfirmed,
+      waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+      rentalFit,
+      arrival: { controls: new Map(), below: new Map(), boarded: new Set() },
+    });
+
+    expect(screen.getByTestId("identity-contact").closest("details")).not.toBeNull();
+  });
+
+  it("asks nothing of a confirmed seat", () => {
+    renderRoster({
+      roster: [matched],
+      readiness: confirmed,
+      waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+      rentalFit,
+    });
+
+    expect(screen.queryByTestId("identity-contact")).toBeNull();
+  });
+
   it("keeps the flagged medical answer outside the row's fold", () => {
     renderRoster({
       roster: [matched],
@@ -536,9 +605,7 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     expect(screen.getByText(/Pilar Vega/)).toBeInTheDocument();
     expect(screen.getByText(/5 mm \/ M/)).toBeInTheDocument();
     expect(
-      screen.queryByText(
-        "Contact, medical and gear details stay hidden until you confirm who this is.",
-      ),
+      screen.queryByText("Medical and gear details stay hidden until you confirm who this is."),
     ).toBeNull();
   });
 });

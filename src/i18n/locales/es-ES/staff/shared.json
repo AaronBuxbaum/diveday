@@ -526,6 +526,8 @@
     "reasonSharedEmail": "Reservó como {bookedAs} con el correo de {name}. Confirma quién es.",
     "reasonPickedName": "Reservó como {bookedAs} y se asoció a {name} desde la lista de nombres. Confirma quién es.",
     "reasonSameName": "Hay más de un buceador llamado {name}. Confirma que es la ficha correcta.",
+    "contactOnFile": "En la ficha de {name}:",
+    "noContactOnFile": "No consta correo ni teléfono de {name}.",
     "same": "Misma persona",
     "sameAria": "Misma persona que {name}",
     "different": "Otra persona",
