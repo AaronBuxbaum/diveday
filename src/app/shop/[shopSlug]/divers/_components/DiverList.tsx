@@ -168,6 +168,15 @@ export function DiverList({
   // searching is the first thing they do. Focused through a ref rather than the
   // `autoFocus` attribute because biome's `noAutofocus` rule forbids that JSX
   // prop outright — every focus-on-mount in this repo goes the same way.
+  //
+  // **`preventScroll`, because this runs at hydration, not at first paint.**
+  // The roster is server-rendered and readable (and scrollable) before React
+  // owns it; a plain `focus()` scrolls the box into view, so a staffer who had
+  // already scrolled down to the pager was thrown back to the top as the page
+  // hydrated, and the tap they aimed at "Next" landed on whatever slid under
+  // it. That is how `divers.spec.ts`'s pager tests failed on CI: the click hit
+  // the roster's `<div>`, and no request of any kind left the page. On a fresh
+  // load the box is already on screen, so nothing is lost.
   const searchRef = useRef<HTMLInputElement>(null);
   const quickAddFormRef = useRef<HTMLFormElement>(null);
   const rosterRef = useRef<HTMLDivElement>(null);
@@ -183,7 +192,7 @@ export function DiverList({
     setTyped(query);
   }, [query]);
   useEffect(() => {
-    searchRef.current?.focus();
+    searchRef.current?.focus({ preventScroll: true });
   }, []);
   useEffect(() => () => clearTimeout(debounce.current ?? undefined), []);
   /**
