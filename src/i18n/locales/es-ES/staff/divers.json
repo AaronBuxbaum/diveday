@@ -219,7 +219,7 @@
     "description": "La base de la lista de preparación: nunca una reserva ni un sustituto de la prueba de equipo en el muelle.",
     "changeRestricted": "Cambiar lo que este buceador pidió está limitado a propietarios, gerentes, instructores y divemasters.",
     "rentsFromShop": "Alquila del centro",
-    "suitLegend": "Traje",
+    "suitLegend": "Neopreno o traje seco",
     "suitChoices": {
       "own_wetsuit": "Neopreno propio, o ninguno",
       "rents_wetsuit": "Alquila neopreno",
