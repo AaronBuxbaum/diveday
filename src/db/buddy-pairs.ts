@@ -2,6 +2,7 @@ import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import { seatName } from "@/lib/held-seat";
 import { isUuid } from "@/lib/uuid";
 import { loadActiveStaffRoles } from "./authz";
 import { type AppDb, type DbExecutor, isUniqueConstraintViolation } from "./client";
@@ -175,7 +176,12 @@ async function resolveMembers(
   const seatRows =
     bookingIds.length > 0
       ? await tx
-          .select({ id: bookings.id, fullName: people.fullName })
+          .select({
+            id: bookings.id,
+            fullName: people.fullName,
+            identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+            identityBookedAs: bookings.identityBookedAs,
+          })
           .from(bookings)
           .innerJoin(people, eq(people.id, bookings.personId))
           .where(
@@ -223,7 +229,9 @@ async function resolveMembers(
     if (member.kind === "diver") {
       const row = seatRowsById.get(member.bookingId.toLowerCase());
       if (!row) return { ok: false, reason: "booking_unavailable" };
-      resolved.push({ kind: "diver", bookingId: row.id, fullName: row.fullName });
+      // A held seat goes on the trail as booked: `memberNames` is frozen, and
+      // reaches the incident timeline (issue #1690).
+      resolved.push({ kind: "diver", bookingId: row.id, fullName: seatName(row.fullName, row) });
     } else {
       const row = crewRowsById.get(member.personId.toLowerCase());
       if (!row) return { ok: false, reason: "crew_unavailable" };
@@ -254,6 +262,8 @@ async function readTeamMembers(
       bookingId: buddyPairMembers.bookingId,
       crewPersonId: buddyPairMembers.crewPersonId,
       diverName: people.fullName,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      identityBookedAs: bookings.identityBookedAs,
       crewName: crewPeople.fullName,
     })
     .from(buddyPairMembers)
@@ -269,7 +279,7 @@ async function readTeamMembers(
     );
   const members: ResolvedMember[] = rows.map((row) =>
     row.bookingId
-      ? { kind: "diver", bookingId: row.bookingId, fullName: row.diverName ?? "" }
+      ? { kind: "diver", bookingId: row.bookingId, fullName: seatName(row.diverName ?? "", row) }
       : { kind: "crew", personId: row.crewPersonId as string, fullName: row.crewName ?? "" },
   );
   return sortMembers(members, memberKey);
@@ -685,6 +695,8 @@ export async function listTripBuddyTeams(
       bookingId: buddyPairMembers.bookingId,
       bookingStatus: bookings.status,
       diverName: people.fullName,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
+      identityBookedAs: bookings.identityBookedAs,
       crewPersonId: buddyPairMembers.crewPersonId,
       crewName: crewPeople.fullName,
       recordedByName: recordedBy.fullName,
@@ -753,7 +765,7 @@ export async function listTripBuddyTeams(
       team.members.push({
         kind: "diver",
         bookingId: row.bookingId,
-        fullName: row.diverName ?? "",
+        fullName: seatName(row.diverName ?? "", row),
         cancelled: row.bookingStatus === "cancelled",
       });
     } else if (row.crewPersonId) {

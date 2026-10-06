@@ -5,6 +5,7 @@ import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { effectiveCrewRoles, standingRatingsBesideJob } from "@/lib/crew-roles";
 import { rentalFitLine } from "@/lib/dive-prep";
+import { seatName } from "@/lib/held-seat";
 import { log } from "@/lib/log";
 import {
   type BuddyTeammate,
@@ -882,7 +883,9 @@ export async function getTripManifests(
   const diverInputs = roster.map(({ booking, person }) => {
     return {
       bookingId: booking.id,
-      fullName: person.fullName,
+      // A held seat is named as booked here, once, so the alarm, the buddy
+      // builder and every copy downstream inherit it (issue #1690).
+      fullName: seatName(person.fullName, booking),
       email: person.email,
       emergencyContactName: person.emergencyContactName,
       emergencyContactPhone: person.emergencyContactPhone,

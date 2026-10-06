@@ -65,6 +65,22 @@ export function isHeldSeat(diver: {
   );
 }
 
+/**
+ * The name a seat goes by: the name it was booked under while the seat is
+ * held, the person's own name otherwise. Settled once where a reader joins
+ * the booking to its person (the manifest assembly, every buddy-team read and
+ * the trail's frozen `memberNames`), so no later surface — the not-back-aboard
+ * alarm, a teammate label, the incident export — can print the matched
+ * person's name for somebody who may not be them.
+ */
+export function seatName(
+  fullName: string,
+  seat: { identityUnconfirmedAt: Date | null; identityBookedAs: string | null },
+): string {
+  if (!seat.identityUnconfirmedAt) return fullName;
+  return seat.identityBookedAs?.trim() || fullName;
+}
+
 type ManifestDiver = TripManifest["divers"][number];
 
 /**
@@ -84,17 +100,27 @@ type ManifestDiver = TripManifest["divers"][number];
  * it: that is who will walk up the gangway, and the matched person's name on
  * a crew phone or a printed sheet is itself a fact about somebody else.
  * `minor` is null, not false: unknown, never "an adult".
+ *
+ * A held seat is **blocked, whatever readiness said**: the status is forced
+ * and the identity blocker is put back if the readiness read left it out, so
+ * a claim with no matching blocker can never read as ready to board. Safe to
+ * apply twice: a row already withheld comes back unchanged, so the page can
+ * settle its rows once at the top and a component can still guard its own.
  */
 export function withholdHeldSeatParticulars(diver: ManifestDiver): ManifestDiver {
-  if (!isHeldSeat(diver)) return diver;
-  const kept = diver.readiness.blockers.filter((blocker) =>
+  if (diver.identityWithheld || !isHeldSeat(diver)) return diver;
+  const own = diver.readiness.blockers.filter((blocker) =>
     SEAT_OWN_BLOCKER_CODES.has(blocker.code),
   );
+  const kept = own.some((blocker) => blocker.code === "identity_unconfirmed")
+    ? own
+    : [{ code: "identity_unconfirmed" as const }, ...own];
+  const dropped = diver.readiness.blockers.length - own.length;
   return {
     ...diver,
     fullName: diver.identityClaim?.bookedAs?.trim() || diver.fullName,
     identityWithheld: true,
-    moreHoldsBehindConfirmation: kept.length < diver.readiness.blockers.length,
+    moreHoldsBehindConfirmation: dropped > 0,
     email: null,
     emergencyContactName: null,
     emergencyContactPhone: null,
@@ -106,6 +132,6 @@ export function withholdHeldSeatParticulars(diver: ManifestDiver): ManifestDiver
     welcomeCue: null,
     depthAdvisory: undefined,
     medicalWaiver: null,
-    readiness: { ...diver.readiness, blockers: kept },
+    readiness: { status: "blocked", blockers: kept },
   };
 }

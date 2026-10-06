@@ -37,6 +37,7 @@ import { type DepthUnit, depthInUnit } from "@/lib/depth-units";
 import { groupCatchUp } from "@/lib/desk-events";
 import { scopedHash, scopedId } from "@/lib/element-id";
 import { formatDateTimeTz, formatTime, formatTimeRange } from "@/lib/format";
+import { withholdHeldSeatParticulars } from "@/lib/held-seat";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
   isRollCallCheckpoint,
@@ -397,8 +398,15 @@ export default async function TripManifestPage({
     requestedCheckpoint && isRollCallCheckpoint(requestedCheckpoint, plannedDiveCount)
       ? requestedCheckpoint
       : "departure";
-  const manifest = completeManifests.find((entry) => entry.checkpoint === checkpoint);
-  if (!manifest) notFound();
+  const checkpointManifest = completeManifests.find((entry) => entry.checkpoint === checkpoint);
+  if (!checkpointManifest) notFound();
+  // Held seats are settled once, here, so every reader below — the
+  // not-back-aboard alarm, the buddy builder, both roll calls — sees the seat
+  // and never the matched person's particulars (issue #1690).
+  const manifest = {
+    ...checkpointManifest,
+    divers: checkpointManifest.divers.map(withholdHeldSeatParticulars),
+  };
   const todayTrailBySubject = personTrailIndex(completeManifests, locale, shop.timezone, t);
   // One definition, shared with the offline copy: divers *and* crew (DOM-H1,
   // ADR 20260804-crew-roll-call-is-per-person). This used to be written inline

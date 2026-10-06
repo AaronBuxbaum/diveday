@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { isHeldSeat, SEAT_OWN_BLOCKER_CODES, withholdHeldSeatParticulars } from "./held-seat";
+import {
+  isHeldSeat,
+  SEAT_OWN_BLOCKER_CODES,
+  seatName,
+  withholdHeldSeatParticulars,
+} from "./held-seat";
 import { heldSeatBlockers } from "./identity-match";
 import type { TripManifest } from "./manifests";
 import { BLOCKER_CATEGORY, type ReadinessBlocker, type ReadinessBlockerCode } from "./readiness";
@@ -45,6 +50,20 @@ const held = (blockers: ReadinessBlocker[]): ManifestDiver => ({
   ...matchedPerson,
   identityClaim: { bookedAs: "Maria", matchedBy: "picked_name" },
   readiness: { status: "blocked", blockers },
+});
+
+describe("the name a seat goes by (issue #1690)", () => {
+  const at = new Date("2026-10-01T12:00:00.000Z");
+  it("is the booked-as name while the seat is held", () => {
+    expect(seatName("Maria Santos", { identityUnconfirmedAt: at, identityBookedAs: " Mia " })).toBe(
+      "Mia",
+    );
+  });
+  it("is the person's own name once confirmed, whatever was booked", () => {
+    expect(seatName("Maria Santos", { identityUnconfirmedAt: null, identityBookedAs: "Mia" })).toBe(
+      "Maria Santos",
+    );
+  });
 });
 
 describe("withholding a held seat's particulars (issue #1690)", () => {
@@ -145,6 +164,29 @@ describe("withholding a held seat's particulars (issue #1690)", () => {
     const shown = withholdHeldSeatParticulars(held([{ code: "readiness_unavailable" }]));
     expect(shown.identityWithheld).toBe(true);
     expect(shown.emergencyContactPhone).toBeNull();
+  });
+
+  it("blocks a held seat, and says why, even when readiness read it as ready", () => {
+    // A claim with no identity blocker must never reach a crew phone as
+    // ready to board (dive-domain re-review).
+    const shown = withholdHeldSeatParticulars({
+      ...matchedPerson,
+      identityClaim: { bookedAs: "Maria", matchedBy: "picked_name" },
+      readiness: { status: "ready", blockers: [] },
+    });
+    expect(shown.readiness).toEqual({
+      status: "blocked",
+      blockers: [{ code: "identity_unconfirmed" }],
+    });
+    expect(shown.moreHoldsBehindConfirmation).toBe(false);
+  });
+
+  it("is unchanged by a second pass, so a page and its component can both apply it", () => {
+    const once = withholdHeldSeatParticulars(
+      held([{ code: "identity_unconfirmed" }, { code: "medical_review" }]),
+    );
+    expect(once.moreHoldsBehindConfirmation).toBe(true);
+    expect(withholdHeldSeatParticulars(once)).toBe(once);
   });
 
   it("withholds on the blocker alone when no claim was assembled", () => {
