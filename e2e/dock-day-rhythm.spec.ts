@@ -183,15 +183,15 @@ test("the demo shop's long-range run reads its own legs", async ({ page }) => {
   const tripId = await seededTripId(
     page,
     "blue-mantis",
-    "Tortugas Run — 3 days out, 6 divers to sail",
+    "Long-Range Day — Duane & Outer Reef",
   );
 
   await page.goto(`/s/blue-mantis/trips/${tripId}`);
-  await bookASeatAndOpenThread(page, "Tortugas Reader");
+  await bookASeatAndOpenThread(page, "Long-Range Reader");
   await expect(page.getByRole("heading", { name: "Pack with confidence" })).toBeVisible();
   const rhythm = page.getByRole("list").filter({ hasText: "Arrive and check in" }).last();
 
-  // Departs 6:30 AM. Two hours out to the Tortugas rather than the shop's
+  // Departs 6:30 AM. Two hours out to the outer wrecks rather than the shop's
   // twenty minutes, which would have put dive one at 6:50.
   await expect(rhythm.getByRole("listitem").filter({ hasText: "Dive 1" })).toContainText("8:30 AM");
   // Then a 75-minute run between sites, which is longer than the 60-minute

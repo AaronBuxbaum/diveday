@@ -99,6 +99,7 @@ export async function seedTrips(
       {
         shopId,
         boatId: boatByName.get("Mantis I"),
+        diveSiteId: siteByName.get("City of Washington")?.id,
         title: "Night Dive — City of Washington",
         description: "Torches, tarpon, and bioluminescence.",
         // A twilight double: depart ~7:30 PM Eastern, dive 1 at dusk (matching
@@ -352,10 +353,12 @@ export async function seedTrips(
     "Night Dive — City of Washington": [
       {
         title: "Wreck site at dusk",
+        site: "City of Washington",
         description: "In the water before the light goes, so the descent is on a familiar bottom.",
       },
       {
         title: "Full dark",
+        site: "City of Washington",
         description: "Torches off for a minute at the safety stop, for the bioluminescence.",
       },
     ],

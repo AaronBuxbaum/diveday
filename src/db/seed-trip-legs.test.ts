@@ -37,7 +37,7 @@ describe("seeded per-leg travel", () => {
     // is an answer here, not an absence, and this is the only seeded row saying
     // it, so a reader that started treating 0 as "unstated" would be caught.
     expect(await legsOf(db, shop.id, "Wreck Trip — Spiegel Grove")).toEqual([40, 0]);
-    expect(await legsOf(db, shop.id, "Tortugas Run — 3 days out, 6 divers to sail")).toEqual([
+    expect(await legsOf(db, shop.id, "Long-Range Day — Duane & Outer Reef")).toEqual([
       120, 75, 25,
     ]);
   });
@@ -67,11 +67,11 @@ describe("seeded per-leg travel", () => {
   it("gives the demo the one departure whose beat a leg actually renames", async () => {
     // The whole reason a seeded leg is worth having: between two dives the gap
     // is max(surfaceInterval, travel), so a leg *under* the shop's 60-minute
-    // interval changes nothing a diver reads. Only the Tortugas run's second
+    // interval changes nothing a diver reads. Only the long-range day's second
     // leg is over it, and this asserts the consequence rather than the number —
     // the window is named a ride rather than a rest.
     const { db, shop } = await seededShopContext({ history: true });
-    const legs = await legsOf(db, shop.id, "Tortugas Run — 3 days out, 6 divers to sail");
+    const legs = await legsOf(db, shop.id, "Long-Range Day — Duane & Outer Reef");
     const offsets = dockDayOffsets(DEFAULT_DOCK_DAY_RHYTHM, legs.length, undefined, legs);
     const betweenDives = offsets.filter(
       (offset) => offset.step === "boatRide" && (offset.number ?? 1) > 1,
