@@ -16,5 +16,13 @@
   },
   "counter": {
     "passDoor": "Print a pass"
+  },
+  "packet": {
+    "missingHeading": "If someone is missing",
+    "missing": "Note the time and mark the position. Do not leave the site. Call the roll again by name. Then call for help on the numbers below, and call the shop.",
+    "kitHeading": "Oxygen and first aid",
+    "oxygenWhere": "Oxygen, where",
+    "firstAidWhere": "First aid kit, where",
+    "lastChecked": "Last checked"
   }
 }

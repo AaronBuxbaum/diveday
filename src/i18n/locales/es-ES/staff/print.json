@@ -16,5 +16,13 @@
   },
   "counter": {
     "passDoor": "Imprimir un pase"
+  },
+  "packet": {
+    "missingHeading": "Si falta alguien",
+    "missing": "Anota la hora y marca la posición. No te vayas del sitio. Vuelve a pasar lista por nombre. Después pide ayuda con los números de abajo y llama al centro.",
+    "kitHeading": "Oxígeno y primeros auxilios",
+    "oxygenWhere": "Oxígeno, dónde",
+    "firstAidWhere": "Botiquín, dónde",
+    "lastChecked": "Última revisión"
   }
 }

@@ -67,6 +67,11 @@ import { type ExecutedDiveLabels, ExecutedDiveLog } from "./_components/Executed
 import { ManifestMoreMenu } from "./_components/ManifestMoreMenu";
 import type { PersonTrailEntry } from "./_components/PersonSheet";
 import { PreDepartureCheckList } from "./_components/PreDepartureCheckList";
+import {
+  PrintedKitBlanks,
+  PrintedMissingProcedure,
+  printedBoatProcedureCopy,
+} from "./_components/PrintedBoatProcedure";
 import { SeenGroup } from "./_components/SeenGroup";
 import { StageStrip } from "./_components/StageStrip";
 import { SummaryPanel } from "./_components/SummaryPanel";
@@ -643,6 +648,7 @@ export default async function TripManifestPage({
     shoreContactLabel: t("manifest.emergency.shoreContactLabel"),
     planLabel: t("manifest.emergency.planLabel"),
   };
+  const printedProcedureCopy = printedBoatProcedureCopy(t);
 
   return (
     <div className="boat-mode">
@@ -984,10 +990,21 @@ export default async function TripManifestPage({
             printed manifest is the fallback under the fallback, so its complete
             copy is rendered outside either interactive disclosure below. */}
         <div className="hidden print:block">
+          {/* The boat card's two parts that printed nowhere once it was cut
+              (issue #2035): the missing-diver procedure above the numbers it
+              sends the crew to, and the kit blanks under them. */}
+          <PrintedMissingProcedure
+            copy={printedProcedureCopy}
+            headingId={scopedId(idPrefix, "missing-procedure-print-heading")}
+          />
           <EmergencyReferenceCard
             headingId={scopedId(idPrefix, "emergency-reference-print-heading")}
             reference={shop.emergencyReference}
             copy={emergencyCopy}
+          />
+          <PrintedKitBlanks
+            copy={printedProcedureCopy}
+            headingId={scopedId(idPrefix, "kit-blanks-print-heading")}
           />
         </div>
         {/* Buddy teams are dock/desk prep, not mid-roll-call work: grouping

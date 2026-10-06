@@ -647,6 +647,11 @@ test.describe("the printed trip packet", () => {
     await expect(page.getByRole("heading", { name: title }).first()).toBeVisible();
     await expect(page.getByText(/Dive 1 ·/)).toBeVisible();
     await expect(page.getByText(/Souls on board/)).toBeVisible();
+    // What the cut boat card used to carry (issue #2035): the missing-diver
+    // procedure, and the kit blanks the crew fills in by hand.
+    await expect(page.getByRole("heading", { name: "If someone is missing" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Oxygen and first aid" })).toBeVisible();
+    await expect(page.getByText("First aid kit, where")).toBeVisible();
   });
 
   /**
