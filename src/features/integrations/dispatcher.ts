@@ -23,20 +23,23 @@ import { deliverZapierEvent } from "./zapier";
  * with no shop connected yet, every one of those 144 daily passes drained an
  * empty outbox.
  *
- * Half-hourly rather than hourly because the retry ladder in
- * `markIntegrationDeliveryFailed` (`src/db/integration-events.ts`) is
- * `min(60, 2 ** (attempt - 1))` minutes. A cron cadence is the real floor on
- * every rung below it, so hourly would flatten the first six of eight attempts
- * into "next tick" and stretch the dead-letter horizon from roughly two hours
- * to eight. `:00`/`:30` keeps the top of the ladder meaningful and still cuts
- * the wake-ups by two thirds, and `:00` is shared with the three hourly passes
- * so the cheaper of the two ticks costs nothing extra.
+ * Hourly, on the `:00` the three other hourly passes already wake the database
+ * for, so this drain costs no wake-up of its own. It was `0,30` until
+ * 2026-10-06, and the `:30` tick was a wake-up nothing else shared: about half
+ * of the compute DiveDay pays for while nobody is using it (ADR
+ * 20260919-integration-delivery-is-write-driven's amendment). The price is
+ * the retry ladder in `markIntegrationDeliveryFailed`
+ * (`src/db/integration-events.ts`), `min(60, 2 ** (attempt - 1))` minutes:
+ * the cron is the real floor under every rung, so a failed delivery now
+ * retries at the next hour (or the next write that drains), and the
+ * dead-letter horizon stretches from roughly two hours to eight. A first
+ * attempt is unaffected, because it is dispatched on write.
  *
  * Mirrors `vercel.json`, and `src/lib/cron-schedule.test.ts` fails if the two
  * drift. The cadence stops mattering entirely once delivery is dispatched on
  * write instead of polled for.
  */
-export const INTEGRATIONS_CRON_CRONTAB = "0,30 * * * *";
+export const INTEGRATIONS_CRON_CRONTAB = "0 * * * *";
 
 export type IntegrationDispatchSummary = {
   scanned: number;

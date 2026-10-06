@@ -36,8 +36,8 @@ const CRON_MONITOR_SLUG =
  * restated here, and `src/features/integrations/dispatcher.test.ts` asserts it
  * against the deployed schedule.
  *
- * `checkinMargin` matches the other sub-daily passes: twenty minutes late on a
- * half-hourly drain is worth a look, and anything tighter would page on a slow
+ * `checkinMargin` matches the other sub-daily passes: twenty minutes late on an
+ * hourly drain is worth a look, and anything tighter would page on a slow
  * provider rather than on a cron that stopped. `maxRuntime` sits above
  * `maxDuration` so a run the platform killed reads as timed-out rather than as
  * still running.
