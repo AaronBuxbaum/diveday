@@ -72,6 +72,7 @@ export function TripRosterContent({
   namesakeRefusedBookingId,
   mayDiscount,
   mayWriteOffPayment,
+  canManageOrders,
   compact = false,
   afterRoster = null,
   arrival,
@@ -99,6 +100,8 @@ export function TripRosterContent({
   namesakeRefusedBookingId?: string;
   mayDiscount: boolean;
   mayWriteOffPayment: boolean;
+  /** Whether this staffer may raise an invoice — see `RosterSection`. */
+  canManageOrders: boolean;
   /** The canonical Trip surface already owns the masthead capacity read. */
   compact?: boolean;
   /**
@@ -213,6 +216,7 @@ export function TripRosterContent({
         markWaiverInPersonAction={actions.markWaiverInPersonAction}
         markPaymentAction={actions.markPaymentAction}
         mayWriteOffPayment={mayWriteOffPayment}
+        canManageOrders={canManageOrders}
         removeBookingAction={actions.removeBookingAction}
         confirmIdentityAction={actions.confirmDiverIdentityAction}
         splitIdentityAction={actions.splitDiverIdentityAction}

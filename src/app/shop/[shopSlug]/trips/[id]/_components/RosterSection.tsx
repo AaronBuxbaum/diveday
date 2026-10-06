@@ -225,6 +225,7 @@ export function RosterSection({
   markWaiverInPersonAction,
   markPaymentAction,
   mayWriteOffPayment,
+  canManageOrders,
   removeBookingAction,
   confirmIdentityAction,
   splitIdentityAction,
@@ -305,6 +306,13 @@ export function RosterSection({
    * (issue #714). Recording counter cash stays open to the whole crew.
    */
   mayWriteOffPayment: boolean;
+  /**
+   * Whether this staffer may raise an invoice (`canPersonManageOrders`). The
+   * per-seat "Create order" needs this *and* `paymentsConnected`: without it
+   * `orders/new` bounces the reader to the Orders index (issue #1925). Hiding
+   * the link is a courtesy; the route and its action refuse on their own.
+   */
+  canManageOrders: boolean;
   removeBookingAction: (formData: FormData) => void;
   confirmIdentityAction: (formData: FormData) => void;
   /** "Different person": the held seat becomes a new diver (`splitBookingIdentity`). */
@@ -359,6 +367,9 @@ export function RosterSection({
   showSummaryHeading?: boolean;
 }) {
   const t = staffTranslator(locale);
+  // One answer for the seat's foot row: the link and the flush of the control
+  // after it read the same thing, so they cannot disagree.
+  const offersCreateOrder = paymentsConnected && canManageOrders;
   const WAIVER_CONTROLS = Object.fromEntries(
     Object.entries(WAIVER_CONTROL_KEYS).map(([status, entry]) => [
       status,
@@ -1555,7 +1566,7 @@ export function RosterSection({
             {/* One orders door per row, and only when the shop can take money
                 at all (principle 9 — Settings and the Orders index own the
                 "Connect payments" door). */}
-            {paymentsConnected ? (
+            {offersCreateOrder ? (
               <Link
                 href={`/shop/${shopSlug}/orders/new?personId=${person.id}&bookingId=${booking.id}`}
                 className={buttonClass({ variant: "link", size: "sm", flush: true })}
@@ -1584,7 +1595,7 @@ export function RosterSection({
                 triggerClassName={buttonClass({
                   variant: "danger-ghost",
                   size: "sm",
-                  flush: !paymentsConnected,
+                  flush: !offersCreateOrder,
                 })}
                 confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
               />

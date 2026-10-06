@@ -9,7 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import { TONE_PANEL_CLASS } from "@/components/ui/card";
 import { FormStatus } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
-import { canPersonManagePaymentSettings, canPersonRefund } from "@/db/authz";
+import { canPersonManageOrders, canPersonManagePaymentSettings, canPersonRefund } from "@/db/authz";
 import { listBoats } from "@/db/boats";
 import { listTripLenses } from "@/db/trip-lenses";
 import { latestTripStage } from "@/db/trip-stages";
@@ -176,21 +176,32 @@ export default async function ManageTripPage({
   // Locale and the trip row both depend on `shop` but not on each other.
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
-  const [overview, guests, shopBoats, shopLenses, mayDiscount, mayWriteOffPayment, stageReading] =
-    await Promise.all([
-      getTripOverview(db, shop, tripId, session.user.personId),
-      getTripGuests(db, shop, tripId, { diverQuery: diverq, confirmName }),
-      // The fleet, for the Details form's hull select. Live hulls only: this is
-      // a picker for what the departure will sail on, not a record of what it
-      // did (`listBoatsForHistory` is the other one).
-      shop.hasBoatDiving ? listBoats(db, shop.id) : [],
-      // The shop's trip tags, for the select beside the
-      // hull (ADR 20260904-reef-all-the-way-down, decision 2).
-      listTripLenses(db, shop.id),
-      canPersonManagePaymentSettings(db, shop.id, session.user.personId),
-      canPersonRefund(db, shop.id, session.user.personId),
-      latestTripStage(db, shop.id, tripId),
-    ]);
+  const [
+    overview,
+    guests,
+    shopBoats,
+    shopLenses,
+    mayDiscount,
+    mayWriteOffPayment,
+    stageReading,
+    canManageOrders,
+  ] = await Promise.all([
+    getTripOverview(db, shop, tripId, session.user.personId),
+    getTripGuests(db, shop, tripId, { diverQuery: diverq, confirmName }),
+    // The fleet, for the Details form's hull select. Live hulls only: this is
+    // a picker for what the departure will sail on, not a record of what it
+    // did (`listBoatsForHistory` is the other one).
+    shop.hasBoatDiving ? listBoats(db, shop.id) : [],
+    // The shop's trip tags, for the select beside the
+    // hull (ADR 20260904-reef-all-the-way-down, decision 2).
+    listTripLenses(db, shop.id),
+    canPersonManagePaymentSettings(db, shop.id, session.user.personId),
+    canPersonRefund(db, shop.id, session.user.personId),
+    latestTripStage(db, shop.id, tripId),
+    // The per-seat "Create order" door (issue #1925): read for itself, not
+    // borrowed from `mayDiscount`, though both are owner/manager today.
+    canPersonManageOrders(db, shop.id, session.user.personId),
+  ]);
   if (!overview || !guests) notFound();
   const {
     trip,
@@ -1126,6 +1137,7 @@ export default async function ManageTripPage({
               namesakeRefusedBookingId={notice === "waiver-guardian-name" ? bid : undefined}
               mayDiscount={mayDiscount}
               mayWriteOffPayment={mayWriteOffPayment}
+              canManageOrders={canManageOrders}
               compact
               actions={rosterActions}
             />

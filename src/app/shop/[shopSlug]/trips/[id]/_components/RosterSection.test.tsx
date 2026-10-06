@@ -110,6 +110,7 @@ function renderRoster({
   compact = false,
   addDiverGroup,
   paymentsConnected = false,
+  canManageOrders = true,
   requiresPayment = false,
   arrival,
 }: {
@@ -120,6 +121,7 @@ function renderRoster({
   compact?: boolean;
   addDiverGroup?: ReactNode;
   paymentsConnected?: boolean;
+  canManageOrders?: boolean;
   requiresPayment?: boolean;
   arrival?: RosterArrival;
 }) {
@@ -142,6 +144,7 @@ function renderRoster({
       markWaiverInPersonAction={noRefusal}
       markPaymentAction={noop}
       mayWriteOffPayment={false}
+      canManageOrders={canManageOrders}
       removeBookingAction={noop}
       confirmIdentityAction={noop}
       splitIdentityAction={noop}
@@ -757,6 +760,16 @@ describe("the seat's foot row sits on the text column through flush", () => {
     for (const control of [order, remove]) {
       expect(control).not.toHaveClass("focus-visible:focus-ring-inset");
     }
+  });
+
+  it("withholds Create order from a reader who may not raise an invoice (issue #1925)", () => {
+    // Payments connected, so the only thing hiding the link is the permission:
+    // `orders/new` would bounce this reader to the Orders index.
+    renderRoster({ ...fixtures, roster: [ready], paymentsConnected: true, canManageOrders: false });
+
+    expect(screen.queryByRole("link", { name: "Create order" })).toBeNull();
+    const remove = screen.getByRole("button", { name: "Remove booking" });
+    expect(rendersFlush(remove, "danger-ghost", "sm")).toBe(true);
   });
 
   it("flushes Remove booking when it is the only control on the row", () => {

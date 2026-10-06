@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { LedgerGroup } from "@/components/ui/ledger";
 import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
-import { canPersonManagePaymentSettings } from "@/db/authz";
+import { canPersonManageOrders, canPersonManagePaymentSettings } from "@/db/authz";
 import { listImportedPaymentHistory } from "@/db/imported-payment-history";
 import { ORDER_DEFAULT_RANGE_DAYS, pagedOrdersByDay } from "@/db/orders";
 import { listStuckPaymentOperations } from "@/db/payment-operations";
@@ -219,11 +219,17 @@ export default async function OrdersIndexPage({
   // so exactly the same people see it, checked against the database rather than
   // the JWT. Reading orders itself stays open to every staff role; this panel
   // does not, and the query does not even run for the roles that can't see it.
-  const canReconcilePayments = await canPersonManagePaymentSettings(
-    db,
-    session.user.shopId,
-    session.user.personId,
-  );
+  //
+  // `canManageOrders` is read for itself, never borrowed from the line above:
+  // the two predicates agree today and are separate on purpose (ADR
+  // 20260803-invoicing-role-gate). It hides the two "New order" doors from a
+  // reader `orders/new` would only bounce back here (issue #1925) — a
+  // courtesy, never the gate; the route, its action and `createOrder` each
+  // refuse on their own.
+  const [canReconcilePayments, canManageOrders] = await Promise.all([
+    canPersonManagePaymentSettings(db, session.user.shopId, session.user.personId),
+    canPersonManageOrders(db, session.user.shopId, session.user.personId),
+  ]);
   // Money the shop owes divers for departures it cancelled and could not refund
   // by card — a counter payment, a disconnected Stripe account, a refund Stripe
   // refused. The sweep that creates most of these runs hourly from a cron with
@@ -460,9 +466,11 @@ export default async function OrdersIndexPage({
             {orderPage.total === 0 &&
             !hasImportedHistory &&
             !hasFilters ? null : paymentsConnected ? (
-              <Link href={`/shop/${shopSlug}/orders/new`} className={buttonClass()}>
-                {t("orders.index.newOrder")}
-              </Link>
+              canManageOrders ? (
+                <Link href={`/shop/${shopSlug}/orders/new`} className={buttonClass()}>
+                  {t("orders.index.newOrder")}
+                </Link>
+              ) : null
             ) : (
               <PaymentsConnectCta shopSlug={shopSlug} label={t("shared.payments.connect")} />
             )}
@@ -692,9 +700,11 @@ export default async function OrdersIndexPage({
                 {t("orders.index.filters.clear")}
               </Link>
             ) : paymentsConnected ? (
-              <Link href={`/shop/${shopSlug}/orders/new`} className={buttonClass()}>
-                {t("orders.index.newOrder")}
-              </Link>
+              canManageOrders ? (
+                <Link href={`/shop/${shopSlug}/orders/new`} className={buttonClass()}>
+                  {t("orders.index.newOrder")}
+                </Link>
+              ) : null
             ) : (
               <PaymentsConnectCta shopSlug={shopSlug} label={t("shared.payments.connect")} />
             )
