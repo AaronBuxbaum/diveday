@@ -35,7 +35,7 @@ import {
 } from "@/i18n/readiness-labels";
 import { drysuitCardWarningText, rentalFitLineText } from "@/i18n/rental-labels";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
-import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
+import { ageOnDate, birthdayCallout, isMinorOnDate, maxPlausibleBirthDate } from "@/lib/age";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { mailtoHref, telHref } from "@/lib/contact-links";
@@ -229,6 +229,8 @@ export function RosterSection({
   removeBookingAction,
   confirmIdentityAction,
   splitIdentityAction,
+  sameNameHeldSeats,
+  splitAsksDateOfBirth = false,
   notesByBooking,
   addNoteAction,
   deleteNoteAction,
@@ -317,6 +319,10 @@ export function RosterSection({
   confirmIdentityAction: (formData: FormData) => void;
   /** "Different person": the held seat becomes a new diver (`splitBookingIdentity`). */
   splitIdentityAction: (formData: FormData) => void;
+  /** Per held seat, the same booker's other held seats under that name (`sameNameHeldSeatCounts`). */
+  sameNameHeldSeats?: ReadonlyMap<string, number>;
+  /** This departure is a course with a minimum age, so a split must take a date of birth. */
+  splitAsksDateOfBirth?: boolean;
   notesByBooking: Map<string, RosterPrivateNote[]>;
   addNoteAction: (formData: FormData) => void;
   deleteNoteAction: (formData: FormData) => void;
@@ -1046,6 +1052,16 @@ export function RosterSection({
         bookedAs={booking.identityBookedAs}
         words={identityCheckWords(t, person.fullName)}
         splitAction={splitIdentityAction}
+        asksDateOfBirth={splitAsksDateOfBirth}
+        maxDateOfBirth={maxPlausibleBirthDate()}
+        sameNameSeatsLabel={
+          sameNameHeldSeats?.get(booking.id) && booking.identityBookedAs
+            ? t("shared.identityCheck.sameNameSeats", {
+                count: sameNameHeldSeats.get(booking.id) ?? 0,
+                bookedAs: booking.identityBookedAs,
+              })
+            : undefined
+        }
         className="pb-3"
         confirm={
           <form action={confirmIdentityAction}>

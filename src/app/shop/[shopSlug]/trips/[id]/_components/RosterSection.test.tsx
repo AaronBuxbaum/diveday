@@ -113,6 +113,8 @@ function renderRoster({
   canManageOrders = true,
   requiresPayment = false,
   arrival,
+  sameNameHeldSeats,
+  splitAsksDateOfBirth,
 }: {
   roster: RosterEntry[];
   readiness: ReadinessByBooking;
@@ -124,6 +126,8 @@ function renderRoster({
   canManageOrders?: boolean;
   requiresPayment?: boolean;
   arrival?: RosterArrival;
+  sameNameHeldSeats?: ReadonlyMap<string, number>;
+  splitAsksDateOfBirth?: boolean;
 }) {
   return render(
     <RosterSection
@@ -148,6 +152,8 @@ function renderRoster({
       removeBookingAction={noop}
       confirmIdentityAction={noop}
       splitIdentityAction={noop}
+      sameNameHeldSeats={sameNameHeldSeats}
+      splitAsksDateOfBirth={splitAsksDateOfBirth}
       notesByBooking={new Map()}
       addNoteAction={noop}
       deleteNoteAction={noop}
@@ -477,6 +483,82 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
     expect(same).toBeVisible();
     expect(same.closest("details")).toBeNull();
     expect(screen.getByText("Different person")).toBeVisible();
+  });
+
+  /**
+   * **"Different person" asks who the new diver is** (issue #2081): a date of
+   * birth, required on a course with a minimum age, and an optional email or
+   * phone. Every box but the name starts empty: nothing of the matched
+   * record's is offered as the new diver's.
+   */
+  describe("the split form", () => {
+    const heldSeat = () =>
+      entry("u", "Marisol Vega", {
+        identityBookedAs: "Lucia Vega",
+        identityMatchedBy: "shared_email",
+      });
+
+    it("asks for a date of birth, optional unless the course has a minimum age", () => {
+      const { unmount } = renderRoster({
+        roster: [heldSeat()],
+        readiness: unconfirmed,
+        waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+        rentalFit,
+      });
+      const optionalDate = document.querySelector<HTMLInputElement>('input[name="dateOfBirth"]');
+      expect(optionalDate).not.toBeNull();
+      expect(optionalDate?.required).toBe(false);
+      unmount();
+
+      renderRoster({
+        roster: [heldSeat()],
+        readiness: unconfirmed,
+        waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+        rentalFit,
+        splitAsksDateOfBirth: true,
+      });
+      const requiredDate = document.querySelector<HTMLInputElement>('input[name="dateOfBirth"]');
+      expect(requiredDate?.required).toBe(true);
+      // A future date is refused by the browser before the round trip.
+      expect(requiredDate?.max).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+
+    it("offers an empty email and phone, never the matched record's", () => {
+      renderRoster({
+        roster: [heldSeat()],
+        readiness: unconfirmed,
+        waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+        rentalFit,
+      });
+      const form = document.querySelector<HTMLInputElement>('input[name="email"]')?.form;
+      expect(form?.querySelector<HTMLInputElement>('input[name="email"]')?.value).toBe("");
+      expect(form?.querySelector<HTMLInputElement>('input[name="phone"]')?.value).toBe("");
+      expect(form?.querySelector<HTMLInputElement>('input[name="dateOfBirth"]')?.value).toBe("");
+    });
+
+    it("offers to move the same booker's other held seats only when there are some", () => {
+      const { unmount } = renderRoster({
+        roster: [heldSeat()],
+        readiness: unconfirmed,
+        waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+        rentalFit,
+      });
+      expect(document.querySelector('input[name="includeSameNameSeats"]')).toBeNull();
+      unmount();
+
+      renderRoster({
+        roster: [heldSeat()],
+        readiness: unconfirmed,
+        waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+        rentalFit,
+        sameNameHeldSeats: new Map([["u", 2]]),
+      });
+      const box = screen.getByRole("checkbox", {
+        name: "Also move their 2 other held seats booked as Lucia Vega",
+        hidden: true,
+      });
+      expect(box).toBeChecked();
+    });
   });
 
   it("names both people when it knows the name the seat was booked under", () => {

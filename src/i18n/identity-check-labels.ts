@@ -11,6 +11,10 @@ export function identityCheckWords(t: StaffTranslator, recordName: string) {
     sameAria: t("shared.identityCheck.sameAria", { name: recordName }),
     different: t("shared.identityCheck.different"),
     newNameLabel: t("shared.identityCheck.newNameLabel"),
+    dateOfBirthLabel: t("shared.identityCheck.dateOfBirthLabel"),
+    emailLabel: t("shared.identityCheck.emailLabel"),
+    phoneLabel: t("shared.identityCheck.phoneLabel"),
+    optional: t("shared.identityCheck.optional"),
     split: t("shared.identityCheck.split"),
     splitting: t("shared.identityCheck.splitting"),
   };

@@ -534,6 +534,11 @@
     "sameAria": "Misma persona que {name}",
     "different": "Otra persona",
     "newNameLabel": "Nombre para su propia ficha",
+    "dateOfBirthLabel": "Fecha de nacimiento",
+    "emailLabel": "Correo electrónico",
+    "phoneLabel": "Teléfono",
+    "optional": "(opcional)",
+    "sameNameSeats": "{count, plural, one {Pasar también su otra plaza retenida, reservada como {bookedAs}} other {Pasar también sus otras # plazas retenidas, reservadas como {bookedAs}}}",
     "split": "Crear su propia ficha",
     "splitting": "Creando…"
   }

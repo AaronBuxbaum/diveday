@@ -138,6 +138,28 @@ const NOTICE_KEYS: Record<
     tone: "warning",
     key: "trips.notices.identityMedicalHold",
   },
+  // A split refused for what the staffer typed about the new diver (issue
+  // #2081). The seat stays held under the matched diver; nothing was written.
+  "identity-split-dob-required": {
+    form: "roster",
+    tone: "warning",
+    key: "trips.notices.identitySplitDobRequired",
+  },
+  "identity-split-dob-invalid": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identitySplitDobInvalid",
+  },
+  "identity-split-email-invalid": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identitySplitEmailInvalid",
+  },
+  "identity-split-email-in-use": {
+    form: "roster",
+    tone: "danger",
+    key: "trips.notices.identitySplitEmailInUse",
+  },
   certified: { form: "roster", tone: "success", key: "trips.notices.certified" },
   // Success, not a warning: the record landed. The tone is the same as its
   // level-card sibling and only the words differ, because what changed is what

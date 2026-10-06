@@ -487,9 +487,16 @@ test("a held seat that is someone else gets its own diver record", async ({ page
 
   await row.getByText("Different person").click();
   await expect(row.getByLabel("Name for their own record")).toHaveValue("Hana Park");
+  // Who she is, beyond a name (issue #2081): nothing of June's is offered,
+  // and what the staffer types lands on Hana's own record.
+  await expect(row.getByLabel(/^Email/)).toHaveValue("");
+  await row.getByLabel(/^Date of birth/).fill("2011-04-09");
+  await row.getByLabel(/^Email/).fill(`hana-${e2eNow().getTime()}@example.com`);
   await row.getByRole("button", { name: "Give them their own record" }).click();
 
+  // The notice names how her waiver gets signed, since she has none.
   await expect(page.getByRole("status")).toContainText("They have their own diver record now");
+  await expect(page.getByRole("status")).toContainText("send their waiver from their record");
   const hana = rosterRow(page, "Hana Park").filter({ visible: true }).first();
   await expect(hana).toBeVisible();
   await expect(hana.getByRole("button", { name: /^Same person as / })).toHaveCount(0);

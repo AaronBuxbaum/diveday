@@ -71,7 +71,12 @@ import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { PAPER_WAIVER_IDLE, type PaperWaiverFormState } from "@/lib/paper-waiver-form";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
-import { diverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
+import {
+  blankableDiverEmailSchema,
+  diverEmailSchema,
+  diverNameSchema,
+  diverPhoneSchema,
+} from "@/lib/person-fields";
 import { publicTripPath } from "@/lib/public-routes";
 import { paymentGateIsUnclearable, REQUIRABLE_CERTIFICATION_LEVELS } from "@/lib/readiness";
 import {
@@ -1147,25 +1152,48 @@ export async function splitDiverIdentityAction(
   const s = (await requireShopSurface(shopSlug)).session;
   const bookingId = String(formData.get("bookingId") ?? "");
   if (!uuidParam(bookingId)) redirect(back);
+  // Who the new diver is, beyond a name (issue #2081). The email is checked
+  // for shape here; whether another record holds it is the writer's call.
+  const email = blankableDiverEmailSchema.safeParse(String(formData.get("email") ?? "").trim());
+  const phone = diverPhoneSchema.safeParse(String(formData.get("phone") ?? ""));
+  if (!email.success || !phone.success) {
+    revalidateAndRedirect(
+      back,
+      noticeUrl(back, email.success ? "invalid" : "identity-split-email-invalid", {
+        bid: bookingId,
+      }),
+    );
+  }
   const split = await splitBookingIdentity(await getDb(), {
     shopId: s.user.shopId,
     bookingId,
     actorPersonId: s.user.personId,
     fullName: String(formData.get("fullName") ?? ""),
+    dateOfBirth: String(formData.get("dateOfBirth") ?? ""),
+    email: email.data,
+    phone: phone.data,
+    includeSameNameSeats: formData.get("includeSameNameSeats") === "on",
   });
   revalidateAndRedirect(
     back,
-    noticeUrl(
-      back,
-      split.ok
-        ? "identity-split"
-        : split.reason === "medical_hold"
-          ? "identity-medical-hold"
-          : "invalid",
-      { bid: bookingId },
-    ),
+    noticeUrl(back, split.ok ? "identity-split" : SPLIT_REFUSAL_NOTICE[split.reason], {
+      bid: bookingId,
+    }),
   );
 }
+
+/** Which notice each refused split lands on (`splitBookingIdentity`). */
+const SPLIT_REFUSAL_NOTICE = {
+  not_held: "invalid",
+  name_required: "invalid",
+  medical_hold: "identity-medical-hold",
+  date_of_birth_required: "identity-split-dob-required",
+  date_of_birth_invalid: "identity-split-dob-invalid",
+  email_in_use: "identity-split-email-in-use",
+} as const satisfies Record<
+  Extract<Awaited<ReturnType<typeof splitBookingIdentity>>, { ok: false }>["reason"],
+  string
+>;
 
 /**
  * The one path from "this shop's own instructor taught and ran this course"

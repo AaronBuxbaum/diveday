@@ -2257,7 +2257,14 @@ new domain concept, define it here in the same PR.
   (`bookings.identity_booked_as`), and moves onto it what was about the seat: the booking, the gear
   held for it, and the staff notes written on it. It **carries nothing** of the matched diver's:
   no cards, sizes, date of birth, contact or email (the shared address stays with the record that
-  owns it). Every release and link on the seat is **superseded** and every bearer link minted over
+  owns it, and is refused if typed). What the staffer types about the person in front of them
+  lands on the new record (issue #2081): a **date of birth**, required when a moving seat is on a
+  course with a minimum age, because the age check and the guardian co-signature rule both read it
+  and fail open without one, and an optional **email or phone** for sending their own waiver. When
+  the same booker holds **other held seats under the same name** on the same matched diver, one
+  box (ticked by default) moves them all onto the one new record, so three dives booked with a
+  friend's email make one person rather than three; a medical hold on any of them refuses the
+  lot. Every release and link on the seat is **superseded** and every bearer link minted over
   the booking **revoked**, because any signature on it names the matched diver, so the seat asks
   for its own release and is blocked until it has one. A seat with an **unanswered medical
   referral** is refused until the referral is answered, since superseding it would lift the hold.

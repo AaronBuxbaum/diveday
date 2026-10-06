@@ -534,6 +534,11 @@
     "sameAria": "Same person as {name}",
     "different": "Different person",
     "newNameLabel": "Name for their own record",
+    "dateOfBirthLabel": "Date of birth",
+    "emailLabel": "Email",
+    "phoneLabel": "Phone",
+    "optional": "(optional)",
+    "sameNameSeats": "{count, plural, one {Also move their other held seat booked as {bookedAs}} other {Also move their # other held seats booked as {bookedAs}}}",
     "split": "Give them their own record",
     "splitting": "Creating…"
   }

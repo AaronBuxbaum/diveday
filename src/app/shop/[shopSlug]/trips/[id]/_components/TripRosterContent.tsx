@@ -220,6 +220,8 @@ export function TripRosterContent({
         removeBookingAction={actions.removeBookingAction}
         confirmIdentityAction={actions.confirmDiverIdentityAction}
         splitIdentityAction={actions.splitDiverIdentityAction}
+        sameNameHeldSeats={guests.sameNameHeldSeats}
+        splitAsksDateOfBirth={guests.splitAsksDateOfBirth}
         certifyDiverAction={actions.certifyDiverAction}
         saveCourseNextStepAction={actions.saveCourseNextStepAction}
         courseNextStepByBooking={courseNextStepByBooking}
