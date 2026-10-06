@@ -80,10 +80,11 @@ import {
 } from "./readiness-labels";
 import { CHECKLIST_DETAIL_KEYS } from "./readiness-summary-labels";
 import { reminderActionText } from "./reminder-labels";
-import { rentalItemLabel, suitChoiceLabel } from "./rental-labels";
+import { rentalItemLabel } from "./rental-labels";
 import { DEFAULT_DIVER_LOCALE, DIVER_LOCALES, type DiverLocale } from "./settings";
 import { staffTranslator } from "./staff-messages";
 import { STAFF_ROLE_LABEL_KEYS, staffRoleLabel } from "./staff-role-labels";
+import { suitChoiceLabel } from "./suit-choice-labels";
 import { THREAD_STEP_STATE_KEYS, THREAD_STEP_TITLE_KEYS } from "./thread-labels";
 import {
   ACTION_KIND_KEYS,
@@ -666,7 +667,7 @@ const CASES: readonly LabelMapCase[] = [
     ),
   },
   {
-    module: "rental-labels.ts",
+    module: "suit-choice-labels.ts",
     map: "SUIT_CHOICE_KEYS",
     rows: codeRows(SUIT_CHOICES, (locale, choice) =>
       suitChoiceLabel(staffTranslator(locale), choice),

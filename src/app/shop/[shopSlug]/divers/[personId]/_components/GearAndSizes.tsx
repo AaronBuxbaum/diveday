@@ -4,13 +4,9 @@ import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import { InsetGroup } from "@/components/ui/ledger";
-import {
-  rentableItemLabel,
-  rentalFitLineText,
-  rentalItemLabel,
-  suitChoiceLabel,
-} from "@/i18n/rental-labels";
+import { rentableItemLabel, rentalFitLineText, rentalItemLabel } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { suitChoiceLabel } from "@/i18n/suit-choice-labels";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
