@@ -25,7 +25,7 @@ import { getTripDiveSitesPeek } from "@/db/trips";
 import { sendGuardianReleaseCopy } from "@/db/waiver-guardian-copy";
 import {
   completeWaiver,
-  getEmergencyContactForBooking,
+  getEmergencyContactForBearer,
   getEmergencyContactForPerson,
   getWaiverForToken,
   saveBookingEmergencyContact,
@@ -587,8 +587,13 @@ export default async function WaiverPage({
   const { record } = state;
   const recordBookingId = record.bookingId;
   const emergencyContact = recordBookingId
-    ? await getEmergencyContactForBooking(db, recordBookingId)
+    ? await getEmergencyContactForBearer(db, recordBookingId)
     : await getEmergencyContactForPerson(db, record.shopId, record.personId);
+  // A held seat (#2082): the link may not be the matched diver's, so the page
+  // neither shows nor asks for anything that lives on that record. Staff take
+  // the contact at the counter once they confirm who it is.
+  const identityHeld =
+    emergencyContact !== null && "held" in emergencyContact && emergencyContact.held;
   // The name this release has to be signed under (`completeWaiver` refuses
   // anything else). Shown as the field's hint so the rule is guidance before
   // it is ever a refusal — and it discloses nothing this booking-scoped
@@ -703,11 +708,13 @@ export default async function WaiverPage({
     // 20260731-per-person-notification-locale). Captured on submit and not on
     // the page render above, because a chat app unfurling this URL for a link
     // preview also GETs the page, and that bot's `Accept-Language` is nobody's.
-    await recordDiverOwnLocale(db, {
-      shopId: record.shopId,
-      personId: record.personId,
-      locale: await requestFirstHandLocale(),
-    });
+    if (!identityHeld) {
+      await recordDiverOwnLocale(db, {
+        shopId: record.shopId,
+        personId: record.personId,
+        locale: await requestFirstHandLocale(),
+      });
+    }
     const savedDraft = await saveWaiverDraft(db, token, {
       signerName: parsed.data.signerName,
       acknowledged: parsed.data.acknowledged === "on",
@@ -733,6 +740,7 @@ export default async function WaiverPage({
           bookingId: recordBookingId,
           name: submittedContact.name,
           phone: submittedContact.phone,
+          actor: "bearer",
         });
       } else {
         await savePersonEmergencyContact(db, {
@@ -806,11 +814,13 @@ export default async function WaiverPage({
     // Same first-hand signal as the draft save above (docs ADR
     // 20260731-per-person-notification-locale) — signing is the strongest
     // version of it, since the diver read and agreed to the whole page.
-    await recordDiverOwnLocale(await getDb(), {
-      shopId: record.shopId,
-      personId: record.personId,
-      locale: await requestFirstHandLocale(),
-    });
+    if (!identityHeld) {
+      await recordDiverOwnLocale(await getDb(), {
+        shopId: record.shopId,
+        personId: record.personId,
+        locale: await requestFirstHandLocale(),
+      });
+    }
     const outcome = await completeWaiver(await getDb(), token, {
       signerName: parsed.data.signerName,
       agreed: true,
@@ -854,6 +864,7 @@ export default async function WaiverPage({
             bookingId: recordBookingId,
             name: submittedContact.name,
             phone: submittedContact.phone,
+            actor: "bearer",
           });
         } else {
           await savePersonEmergencyContact(db, {
@@ -1135,73 +1146,75 @@ export default async function WaiverPage({
           {/* No card here: the heading, helper line, and the two fields carry
               the section by themselves (principle 10 — type and space before
               boxes). The one card left in the form is the signature block. */}
-          <section>
-            <SectionHeading>{t("waiver.emergencyContact")}</SectionHeading>
-            {/* Editable whether or not something is on file. It used to go
+          {identityHeld ? null : (
+            <section>
+              <SectionHeading>{t("waiver.emergencyContact")}</SectionHeading>
+              {/* Editable whether or not something is on file. It used to go
                 read-only the moment a contact existed, on the reasoning that a
                 correction was staff work — but this is the one screen a diver
                 fills in the week before a trip, and the person they'd name has
                 often changed since they booked. `saveBookingEmergencyContact`
                 never lets a blank overwrite a stored value, so re-showing the
                 fields can only ever improve what the crew has. */}
-            {emergencyContact?.name && emergencyContact?.phone ? (
-              <p className="mt-2 text-sm text-muted">
-                {/* The number is set whole: it broke after "+1-305-555-" at 390
+              {emergencyContact?.name && emergencyContact?.phone ? (
+                <p className="mt-2 text-sm text-muted">
+                  {/* The number is set whole: it broke after "+1-305-555-" at 390
                     (K-257). A `nowrap` span, never non-breaking hyphens, so a
                     number copied off the page still dials; the bundle glues the
                     dot before it to both sides. */}
-                {t.rich("waiver.emergencyOnFile", {
-                  name: emergencyContact.name,
-                  phone: emergencyContact.phone,
-                  nowrap: (chunks) => <span className="whitespace-nowrap">{chunks}</span>,
-                })}{" "}
-                {t("waiver.emergencyContactChangeHint")}
-              </p>
-            ) : (
-              <p className="mt-2 text-sm text-muted">{t("waiver.emergencyContactDescription")}</p>
-            )}
-            {/* A half-filled pair is refused on the empty box, in the same
+                  {t.rich("waiver.emergencyOnFile", {
+                    name: emergencyContact.name,
+                    phone: emergencyContact.phone,
+                    nowrap: (chunks) => <span className="whitespace-nowrap">{chunks}</span>,
+                  })}{" "}
+                  {t("waiver.emergencyContactChangeHint")}
+                </p>
+              ) : (
+                <p className="mt-2 text-sm text-muted">{t("waiver.emergencyContactDescription")}</p>
+              )}
+              {/* A half-filled pair is refused on the empty box, in the same
                 shape as every other refusal on this page: the words under the
                 control the reader was just sent to, not a banner at the top. */}
-            <FieldGrid columns={2} className="mt-4">
-              <Field
-                label={t("waiver.contactName")}
-                error={
-                  namedFieldError?.anchor === "emergencyContactName"
-                    ? t(namedFieldError.textKey)
-                    : undefined
-                }
-              >
-                <input
-                  id="emergencyContactName"
-                  name="emergencyContactName"
-                  autoComplete="name"
-                  maxLength={120}
-                  defaultValue={emergencyContact?.name ?? ""}
-                  className={controlClass}
-                />
-              </Field>
-              <Field
-                label={t("waiver.contactPhone")}
-                error={
-                  namedFieldError?.anchor === "emergencyContactPhone"
-                    ? t(namedFieldError.textKey)
-                    : undefined
-                }
-              >
-                <input
-                  id="emergencyContactPhone"
-                  name="emergencyContactPhone"
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  maxLength={40}
-                  defaultValue={emergencyContact?.phone ?? ""}
-                  className={controlClass}
-                />
-              </Field>
-            </FieldGrid>
-          </section>
+              <FieldGrid columns={2} className="mt-4">
+                <Field
+                  label={t("waiver.contactName")}
+                  error={
+                    namedFieldError?.anchor === "emergencyContactName"
+                      ? t(namedFieldError.textKey)
+                      : undefined
+                  }
+                >
+                  <input
+                    id="emergencyContactName"
+                    name="emergencyContactName"
+                    autoComplete="name"
+                    maxLength={120}
+                    defaultValue={emergencyContact?.name ?? ""}
+                    className={controlClass}
+                  />
+                </Field>
+                <Field
+                  label={t("waiver.contactPhone")}
+                  error={
+                    namedFieldError?.anchor === "emergencyContactPhone"
+                      ? t(namedFieldError.textKey)
+                      : undefined
+                  }
+                >
+                  <input
+                    id="emergencyContactPhone"
+                    name="emergencyContactPhone"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    maxLength={40}
+                    defaultValue={emergencyContact?.phone ?? ""}
+                    className={controlClass}
+                  />
+                </Field>
+              </FieldGrid>
+            </section>
+          )}
 
           {/* The signature block is the one card in the form — the formal act at
               the end of a paper release gets the same visual weight here. The

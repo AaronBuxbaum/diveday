@@ -29,7 +29,7 @@ import { maySendNow } from "@/lib/send-window";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { loadActiveStaffRoles } from "./authz";
 import { getBoatForHistory } from "./boats";
-import type { AppDb, DbExecutor } from "./client";
+import { type AppDb, type DbExecutor, queryAll } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { listSiteFieldGuides } from "./dive-sites";
 import { listExecutedDives, peopleWhoDivedBefore } from "./executed-dives";
@@ -358,8 +358,10 @@ export async function getRecapPageState(
 
 /**
  * **The bookings the crew left at the dock**, out of a set of candidates: the
- * standing departure result is `not_boarded` and no after-dive result says the
- * diver sailed after all (a diver who joined the boat at the second site).
+ * standing departure result is `not_boarded` and no after-dive `boarded` says
+ * the diver sailed after all (a diver who joined the boat at the second site).
+ * `/ready` asks the same question through this function, so the readiness link
+ * and the recap link never disagree about whether there was a day.
  *
  * At the dock `not_boarded` means "never left" (`src/lib/roll-call.ts`), so
  * there was no day to look back on and the recap would thank them for one
@@ -372,7 +374,7 @@ export async function getRecapPageState(
  * Grouped by shop because the cron's scan spans every shop, and the readers
  * are tenant-scoped.
  */
-async function bookingsLeftAtTheDock(
+export async function bookingsLeftAtTheDock(
   db: DbExecutor,
   candidates: readonly {
     booking: { id: string };
@@ -387,21 +389,25 @@ async function bookingsLeftAtTheDock(
     tripIdsByShop.set(shop.id, tripIds);
   }
   const ashore = new Set<string>();
-  await Promise.all(
-    [...tripIdsByShop].map(async ([shopId, tripIdSet]) => {
-      const tripIds = [...tripIdSet];
-      const [departure, afterDive] = await Promise.all([
-        listDepartureRollCallByTrip(db, shopId, tripIds),
-        listAfterDiveRollCallByTrip(db, shopId, tripIds),
-      ]);
-      for (const [tripId, states] of departure) {
-        const sailed = afterDive.get(tripId);
-        for (const [bookingId, state] of states) {
-          if (state === "not_boarded" && !sailed?.has(bookingId)) ashore.add(bookingId);
+  // One shop at a time: the readers may share a transaction's single client.
+  for (const [shopId, tripIdSet] of tripIdsByShop) {
+    const tripIds = [...tripIdSet];
+    const [departure, afterDive] = await queryAll(db, [
+      () => listDepartureRollCallByTrip(db, shopId, tripIds),
+      () => listAfterDiveRollCallByTrip(db, shopId, tripIds),
+    ]);
+    for (const [tripId, states] of departure) {
+      const sailed = afterDive.get(tripId);
+      for (const [bookingId, state] of states) {
+        // Only a `boarded` tap is evidence they sailed. A "not back aboard"
+        // after a dock `not_boarded` contradicts the dock, it does not
+        // overrule it (dive-domain review of #2105).
+        if (state === "not_boarded" && sailed?.get(bookingId) !== "boarded") {
+          ashore.add(bookingId);
         }
       }
-    }),
-  );
+    }
+  }
   return ashore;
 }
 
@@ -443,6 +449,7 @@ export async function getRecapPageData(
       tripId: bookings.tripId,
       personId: bookings.personId,
       status: bookings.status,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
       diverName: people.fullName,
       diverEmail: people.email,
       shopName: shops.name,
@@ -475,6 +482,10 @@ export async function getRecapPageData(
   // itself discloses which of the two happened (Codex finding: the earlier
   // no-show fix only gated canTip/reviewUrl here, not the page itself).
   if (!row || row.status === "cancelled" || row.status === "no_show") return null;
+  // A held seat (#2082): everything below is about the diver record the seat
+  // was matched to, and whoever holds this link may not be them. Staff confirm
+  // who it is, and the recap comes back with the same link.
+  if (row.identityUnconfirmedAt) return null;
 
   const trip = await getTripWithBooked(db, row.shopId, row.tripId);
   if (!trip) return null;
@@ -1074,6 +1085,8 @@ export async function hasSentTripRecap(db: DbExecutor, shopId: string, tripId: s
         eq(bookings.tripId, tripId),
         ne(bookings.status, "cancelled"),
         ne(bookings.status, "no_show"),
+        // Never sent one while held (#2082), so not owed one either.
+        isNull(bookings.identityUnconfirmedAt),
       ),
     );
   // A diver left at the dock is never sent one, so counting them would hold
@@ -1278,6 +1291,9 @@ async function sendRecaps(
         // tip/review asks that ride the same page) would be dishonest
         // (Codex finding).
         ne(bookings.status, "no_show"),
+        // A held seat waits for staff to confirm who took it (#2082): the
+        // recap is about the matched diver record, sent to its address.
+        isNull(bookings.identityUnconfirmedAt),
         eq(trips.status, "scheduled"),
         ...(scope.shopId ? [eq(trips.shopId, scope.shopId)] : []),
         ...(scope.tripId

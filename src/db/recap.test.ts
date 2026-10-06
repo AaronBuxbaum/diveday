@@ -12,6 +12,7 @@ import { issueShopCertification } from "./readiness";
 import {
   addCrewRecapPhoto,
   addRecapPhoto,
+  bookingsLeftAtTheDock,
   canAddCrewRecapPhoto,
   canAddRecapPhoto,
   deleteCrewRecapPhoto,
@@ -639,6 +640,22 @@ describe("a diver who never left the dock", () => {
     expect(recapsTo(email, ashore)).toHaveLength(1);
   });
 
+  it("keeps them ashore when a later checkpoint only says they were not aboard", async () => {
+    const { db, shop, reef, ashore, record, afterTrip } = await dockContext();
+    // A "not back aboard" after a dock `not_boarded` contradicts the dock; only
+    // a `boarded` tap is evidence they sailed.
+    await record(ashore, "not_boarded", "after_dive_1");
+    expect(await getRecapPageData(db, ashore)).toBeNull();
+    const email = fakeEmail();
+    await sendDueRecaps(db, sendOptions(afterTrip, email));
+    expect(recapsTo(email, ashore)).toHaveLength(0);
+    const one = [{ booking: { id: ashore }, shop: { id: shop.id }, trip: { id: reef.id } }];
+    expect(await bookingsLeftAtTheDock(db, one)).toEqual(new Set([ashore]));
+    // The question `/ready` asks: the same answer once they joined later.
+    await record(ashore, "boarded", "after_dive_1");
+    expect(await bookingsLeftAtTheDock(db, one)).toEqual(new Set());
+  });
+
   it("still sends to a diver who boarded at departure and sat out a later dive", async () => {
     const { db, boarded, record, afterTrip } = await dockContext();
     await record(boarded, "not_boarded", "after_dive_2");
@@ -646,6 +663,37 @@ describe("a diver who never left the dock", () => {
     const email = fakeEmail();
     await sendDueRecaps(db, sendOptions(afterTrip, email));
     expect(recapsTo(email, boarded)).toHaveLength(1);
+  });
+});
+
+describe("a held seat's recap", () => {
+  // Issue #2082: the recap is about the matched diver record and goes to its
+  // address, and whoever took the seat may be someone else.
+  it("waits for staff to confirm who it is, and is not owed meanwhile", async () => {
+    const { db, shop, reef, bookingId, afterTrip } = await recapContext();
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: afterTrip })
+      .where(eq(bookings.id, bookingId));
+    expect(await getRecapPageData(db, bookingId)).toBeNull();
+    const email = fakeEmail();
+    await sendDueRecaps(db, {
+      now: afterTrip,
+      emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: ORIGIN,
+    });
+    expect(
+      email.sent.filter((n) => n.kind === "trip_recap" && n.bookingId === bookingId),
+    ).toHaveLength(0);
+    expect(await rowsFor(db, bookingId)).toHaveLength(0);
+
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: null })
+      .where(eq(bookings.id, bookingId));
+    expect(await getRecapPageData(db, bookingId)).not.toBeNull();
+    expect(await hasSentTripRecap(db, shop.id, reef.id)).toBe(false);
   });
 });
 

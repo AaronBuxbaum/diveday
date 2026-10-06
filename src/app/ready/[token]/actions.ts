@@ -58,6 +58,15 @@ function bounceTarget(token: string, reason: "rate_limited" | "invalid"): string
   return reason === "rate_limited" ? `${base(token)}?error=rate` : base(token);
 }
 
+/**
+ * Refuse a write onto the diver record while the seat is held (#2082). The page
+ * draws none of these forms for a held seat; this is the server's half, for a
+ * hand-made post. Staff confirm who it is, and the forms come back.
+ */
+function refuseWhileHeld(token: string, data: ReadyPageData): void {
+  if (data.identityHeld) redirect(base(token));
+}
+
 type ReadyContext = {
   db: AwaitedDb;
   bookingId: string;
@@ -106,11 +115,15 @@ async function contextFor(token: string): Promise<ReadyContextResult> {
   // so no individual action below has to remember to, and so it can never be
   // reached from a staff surface, whose header belongs to staff.
   const ownLocale = await requestFirstHandLocale();
-  await recordDiverOwnLocale(db, {
-    shopId: data.shop.id,
-    personId: data.person.id,
-    locale: ownLocale,
-  });
+  // Not on a held seat: the request's language is the link holder's, who may
+  // not be the diver record the seat was matched to (#2082).
+  if (!data.identityHeld) {
+    await recordDiverOwnLocale(db, {
+      shopId: data.shop.id,
+      personId: data.person.id,
+      locale: ownLocale,
+    });
+  }
   return { ok: true, db, bookingId: capability.bookingId, data, ownLocale };
 }
 
@@ -123,6 +136,7 @@ async function contextFor(token: string): Promise<ReadyContextResult> {
 export async function signWaiverFromReady(token: string) {
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  refuseWhileHeld(token, ctx.data);
   const issued = await issueWaiverRequest(ctx.db, {
     shopId: ctx.data.shop.id,
     bookingId: ctx.bookingId,
@@ -144,6 +158,7 @@ const noteSchema = z.object({ note: z.string().trim().max(300) });
 export async function saveNoteFromReady(token: string, formData: FormData) {
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  refuseWhileHeld(token, ctx.data);
   const parsed = noteSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${base(token)}?error=note`);
   const saved = await saveRentalFitNote(ctx.db, {
@@ -210,6 +225,7 @@ const welcomeConsentSchema = z.object({ share: z.enum(["on", "off"]) });
 export async function saveWelcomeConsentFromReady(token: string, formData: FormData) {
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  refuseWhileHeld(token, ctx.data);
   const parsed = welcomeConsentSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${base(token)}?error=welcome`);
   const result = await setWelcomeConsent(ctx.db, {
@@ -261,6 +277,7 @@ const fitSchema = z.object({
 export async function saveFitFromReady(token: string, formData: FormData) {
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  refuseWhileHeld(token, ctx.data);
   const parsed = fitSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${base(token)}?error=fit`);
   const saved = await saveRentalFit(ctx.db, {
@@ -336,6 +353,7 @@ export async function saveFitFromReady(token: string, formData: FormData) {
 export async function confirmCarriedFactsFromReady(token: string) {
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  refuseWhileHeld(token, ctx.data);
   const saved = await confirmCarriedFacts(ctx.db, {
     shopId: ctx.data.shop.id,
     bookingId: ctx.bookingId,
@@ -363,6 +381,7 @@ const tanksSchema = z.object({ nitrox: z.string().optional() });
 export async function saveTanksFromReady(token: string, formData: FormData) {
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  refuseWhileHeld(token, ctx.data);
   const parsed = tanksSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${base(token)}?error=tanks`);
   if (!nitroxAvailableOn(ctx.data.shop.rentalItems, ctx.data.trip.course)) {
@@ -401,6 +420,7 @@ export async function saveTanksFromReady(token: string, formData: FormData) {
 export async function saveEmergencyContactFromReady(token: string, formData: FormData) {
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  refuseWhileHeld(token, ctx.data);
   const parsed = emergencyContactSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${base(token)}?error=contact`);
   const submitted = readEmergencyContact({
@@ -413,6 +433,7 @@ export async function saveEmergencyContactFromReady(token: string, formData: For
     bookingId: ctx.bookingId,
     name: parsed.data.emergencyContactName,
     phone: parsed.data.emergencyContactPhone,
+    actor: "bearer",
   });
   if (!saved) redirect(`${base(token)}?error=contact`);
   await confirmCarriedFacts(ctx.db, { shopId: ctx.data.shop.id, bookingId: ctx.bookingId });
@@ -653,6 +674,7 @@ const certificationSchema = z.object({
 export async function saveCertificationFromReady(token: string, formData: FormData) {
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  refuseWhileHeld(token, ctx.data);
   const parsed = certificationSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${base(token)}?error=cert`);
 
@@ -704,6 +726,7 @@ const specialtySchema = z.object({
 export async function saveSpecialtyFromReady(token: string, formData: FormData) {
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  refuseWhileHeld(token, ctx.data);
   const parsed = specialtySchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${base(token)}?error=cert`);
 
@@ -734,6 +757,7 @@ const nitroxCertSchema = z.object({
 export async function saveNitroxCertificationFromReady(token: string, formData: FormData) {
   const ctx = await contextFor(token);
   if (!ctx.ok) redirect(bounceTarget(token, ctx.reason));
+  refuseWhileHeld(token, ctx.data);
   const parsed = nitroxCertSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${base(token)}?error=cert`);
 

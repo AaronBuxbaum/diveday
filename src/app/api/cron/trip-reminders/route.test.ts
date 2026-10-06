@@ -33,9 +33,15 @@ beforeEach(() => {
   vi.mocked(getDb)
     .mockReset()
     .mockResolvedValue(FAKE_DB as never);
-  vi.mocked(sendDueReminders)
-    .mockReset()
-    .mockResolvedValue({ scanned: 6, sent: 2, skipped: 1, held: 2, settled: 1, failed: 0 });
+  vi.mocked(sendDueReminders).mockReset().mockResolvedValue({
+    scanned: 6,
+    sent: 2,
+    skipped: 1,
+    held: 2,
+    identityHeld: 0,
+    settled: 1,
+    failed: 0,
+  });
   vi.mocked(Sentry.captureCheckIn).mockClear().mockReturnValue("check-in-id");
   vi.mocked(Sentry.captureException).mockClear();
 });
@@ -70,6 +76,7 @@ describe("GET /api/cron/trip-reminders", () => {
       sent: 2,
       skipped: 1,
       held: 2,
+      identityHeld: 0,
       settled: 1,
       failed: 0,
     });

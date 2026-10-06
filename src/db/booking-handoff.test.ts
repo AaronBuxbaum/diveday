@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HANDOFF_TTL_MS } from "@/lib/booking-handoff";
 import { nowDate } from "@/lib/clock";
@@ -11,7 +12,7 @@ import {
 } from "./booking-handoff";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
-import { shops } from "./schema";
+import { bookings, shops } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
 /**
@@ -92,6 +93,22 @@ describe("booking handoff", () => {
     expect(await readKnownDiver(db, { shopId: shop.id, token: issued.token, now: NOW })).toBeNull();
     // Consuming again, or consuming nothing, is a no-op.
     await consumeBookingHandoff(db, { shopId: shop.id, token: "nope", now: NOW });
+  });
+
+  it("reads nothing behind a held seat's handoff until staff confirm who it is", async () => {
+    // Issue #2082: the matched diver record may not be whoever holds the link.
+    const { db, shop, bookingId } = await fixture();
+    const issued = await issueBookingHandoff(db, { shopId: shop.id, bookingId, now: NOW });
+    if (!issued) throw new Error("expected a handoff");
+    await db.update(bookings).set({ identityUnconfirmedAt: NOW }).where(eq(bookings.id, bookingId));
+    expect(await readKnownDiver(db, { shopId: shop.id, token: issued.token, now: NOW })).toBeNull();
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: null })
+      .where(eq(bookings.id, bookingId));
+    expect(
+      await readKnownDiver(db, { shopId: shop.id, token: issued.token, now: NOW }),
+    ).toMatchObject({ bookingId });
   });
 
   it("answers only for its own shop", async () => {

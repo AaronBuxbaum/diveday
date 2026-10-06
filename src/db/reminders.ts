@@ -84,6 +84,13 @@ export type ReminderRunSummary = {
    */
   held: number;
   /**
+   * Reminders that were due on a seat staff have not yet matched to a diver
+   * (`identity_unconfirmed_at`, #2082). The address on the matched record may
+   * be somebody else's, so nothing goes until staff confirm who it is; no
+   * delivery row is written, so the cadence re-arms when they do.
+   */
+  identityHeld: number;
+  /**
    * Reminders that were due, were sendable, and were not sent because the diver
    * had nothing left undone (`reminderEarnsItsSend`, issue #1177). A third
    * meaning again: `skipped` is "no cadence was due", `held` is "one was and it
@@ -232,6 +239,7 @@ export async function sendDueReminders(
     sent: 0,
     skipped: 0,
     held: 0,
+    identityHeld: 0,
     settled: 0,
     failed: 0,
   };
@@ -304,6 +312,15 @@ export async function sendDueReminders(
     });
     if (!cadence) {
       summary.skipped += 1;
+      continue;
+    }
+    // **A held seat waits for staff** (#2082). Until someone confirms the
+    // booker is the diver record the seat was matched to, the address on that
+    // record may be somebody else's, and a reminder would hand them this
+    // seat's link. The cadence re-arms the moment the hold clears, because no
+    // delivery row is written for it.
+    if (row.booking.identityUnconfirmedAt) {
+      summary.identityHeld += 1;
       continue;
     }
     // **Due is not the same as sendable.** A fixed 14:00 UTC batch reached
