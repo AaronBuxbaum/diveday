@@ -10,7 +10,7 @@ import { dispatchDueIntegrationDeliveries } from "./dispatcher";
  * request — a staffer who just took a payment, or Stripe's webhook — and the
  * job here is "get the event I just enqueued out of the door", not "work the
  * whole backlog". A shop that has accumulated a queue gets it drained by the
- * half-hourly pass, whose whole purpose is bulk; a request that wandered into
+ * hourly pass, whose whole purpose is bulk; a request that wandered into
  * draining fifty deliveries would be holding a function open on somebody
  * else's arrears.
  */
@@ -45,8 +45,9 @@ export const WRITE_PATH_DISPATCH_LIMIT = 10;
  * `markIntegrationDeliveryFailed` runs 1, 2, 4, 8, 16, 32, 60 minutes, and
  * nothing re-reads a failed row until something drains again; a write-path
  * drain only happens when a shop happens to write. So `/api/cron/integrations`
- * keeps its `0,30` cadence exactly as it is — this shortens the *first*
- * attempt, not the recovery path.
+ * stays — this shortens the *first* attempt, not the recovery path. (Its
+ * cadence moved from `0,30` to hourly on 2026-10-06 for cost; see the ADR's
+ * amendment.)
  *
  * **Never throws into its caller.** An order that was written is written; a
  * failure to tell Xero about it must not surface as a failed action, and the
