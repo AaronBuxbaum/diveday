@@ -231,7 +231,7 @@ export function DetailsSection({
                 field is a half column from `sm` up, so the photo takes the
                 column, as the dive-site editor's map and route stills do: in
                 the gallery's three-across grid it was a third of a half. */}
-            <div className="grid grid-cols-1 gap-3">
+            <div className="flex flex-col gap-3">
               {trip.arrivalPhotoUrl ? (
                 <RemovablePhoto
                   url={trip.arrivalPhotoUrl}
