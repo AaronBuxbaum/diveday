@@ -250,7 +250,7 @@
     "dueBackDetail": "{units} {count, plural, one {debe devolverse} other {deben devolverse}} hoy.",
     "serviceDueDetail": "{clockLabel} vence el {dueOn}.",
     "serviceOverdueDetail": "{clockLabel} venció el {dueOn}.",
-    "neverPickedUpDetail": "{units} {count, plural, one {estaba reservado hasta el {dueOn} y nunca se recogió} other {estaban reservados hasta el {dueOn} y nunca se recogieron}}.",
+    "neverPickedUpDetail": "{units} {count, plural, one {estaba reservado} other {estaban reservados}} hasta el {dueOn}, sin recoger.",
     "fitConfirmDetail": "El {unitLabel} de {name} salió en talla {size}. ¿La guardamos como su talla?",
     "fitConfirmKeep": "Guardarla",
     "fitConfirmSaving": "Guardando"
