@@ -1,6 +1,7 @@
 import type { MediaDeletionKind, PaymentOperationKind } from "@/db/schema";
 import { DSD_RATIO } from "@/lib/course-ratios";
 import type { DepthUnit } from "@/lib/depth-units";
+import { cachedListFormat } from "@/lib/intl-cache";
 import { firstNameOf } from "@/lib/person-name";
 import type { ReadinessBlocker, ReadinessBlockerCode } from "@/lib/readiness";
 import type {
@@ -278,34 +279,56 @@ export function uncrewedDepartureDetailText(t: StaffTranslator, divers: number):
 }
 
 /**
- * One sentence per person per other departure (H-80, issue #1776), joined —
- * the same "also rostered on" the Crew panel and the staffing week say, so a
- * staffer reads one fact in one set of words wherever they meet it.
+ * The people a departure shares with each other departure, one group per
+ * other departure in the order first met, names joined the locale's way.
+ * Per person per departure, a boat moved onto a busy morning read four
+ * sentences of the same "also rostered on" — ten lines on a phone.
+ */
+function clashGroups(
+  locale: string,
+  clashes: readonly { fullName: string; otherTitle: string }[],
+): { names: string; count: number; departure: string }[] {
+  const byDeparture = new Map<string, string[]>();
+  for (const clash of clashes) {
+    const names = byDeparture.get(clash.otherTitle) ?? [];
+    if (!names.includes(clash.fullName)) names.push(clash.fullName);
+    byDeparture.set(clash.otherTitle, names);
+  }
+  const list = cachedListFormat(locale, { style: "long", type: "conjunction" });
+  return [...byDeparture].map(([departure, names]) => ({
+    names: list.format(names),
+    count: names.length,
+    departure,
+  }));
+}
+
+/**
+ * One sentence per other departure (H-80, issue #1776), naming everyone it
+ * shares — the same "also rostered on" the Crew panel and the staffing week
+ * say, so a staffer reads one fact in one set of words wherever they meet it.
  */
 export function crewClashDetailText(
   t: StaffTranslator,
+  locale: string,
   clashes: readonly { fullName: string; otherTitle: string }[],
 ): string {
-  return clashes
-    .map((clash) =>
-      t("today.detail.crewClash", { name: clash.fullName, departure: clash.otherTitle }),
-    )
+  return clashGroups(locale, clashes)
+    .map((group) => t("today.detail.crewClash", group))
     .join(" ");
 }
 
 /**
  * The same fact once the boat has left (H-80, issue #1814): one sentence per
- * person saying the boat left with them also rostered elsewhere, then the one
- * thing to do about it from ashore, said once however many names precede it.
+ * other departure saying who went out aboard while also rostered there, then
+ * the one thing to do about it from ashore, said once.
  */
 export function crewClashSailedDetailText(
   t: StaffTranslator,
+  locale: string,
   clashes: readonly { fullName: string; otherTitle: string }[],
 ): string {
   return [
-    ...clashes.map((clash) =>
-      t("today.detail.crewClashSailed", { name: clash.fullName, departure: clash.otherTitle }),
-    ),
+    ...clashGroups(locale, clashes).map((group) => t("today.detail.crewClashSailed", group)),
     t("today.detail.crewClashSailedConfirm"),
   ].join(" ");
 }
