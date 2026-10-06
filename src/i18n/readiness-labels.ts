@@ -532,5 +532,8 @@ export const DIVER_CERTIFICATION_AGENCY_KEYS: Record<CertificationAgency, DiverM
   raid: "common.certification.agencies.raid",
   gue: "common.certification.agencies.gue",
   bsac: "common.certification.agencies.bsac",
+  nss_cds: "common.certification.agencies.nss_cds",
+  nacd: "common.certification.agencies.nacd",
+  iantd: "common.certification.agencies.iantd",
   other: "common.certification.agencies.other",
 };

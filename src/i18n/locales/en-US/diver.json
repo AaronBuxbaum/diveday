@@ -33,6 +33,9 @@
         "raid": "RAID",
         "gue": "GUE",
         "bsac": "BSAC",
+        "nss_cds": "NSS-CDS",
+        "nacd": "NACD",
+        "iantd": "IANTD",
         "other": "Another agency"
       },
       "cardNumber": "Certification number",
@@ -2684,7 +2687,7 @@
       "certifications": {
         "item1": "Ready or Blocked for every diver on every departure, with the reason beside it",
         "item2": "Certification cards recorded by agency, level and number. A card a diver enters counts only once a person has checked it, and imported cards are marked imported",
-        "item3": "Cards from PADI, SSI, NAUI, SDI, TDI, CMAS, RAID, GUE and BSAC, and from any other agency as Other agency",
+        "item3": "Cards from PADI, SSI, NAUI, SDI, TDI, CMAS, RAID, GUE, BSAC, NSS-CDS, NACD and IANTD, and from any other agency as Other agency",
         "item4": "Level, Deep, Wreck, Night, Drysuit, nitrox and site gates in one readiness answer, plus a course’s minimum age where a date of birth is on file",
         "item5": "Nitrox as a per-booking request, re-checked against the card every time it’s read",
         "item6": "Nitrox and specialty cards brought in from another system, held until a staff member confirms each one",

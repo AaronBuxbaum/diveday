@@ -45,8 +45,9 @@ new domain concept, define it here in the same PR.
 ## Certification
 
 - **Agency** — organization that trains and certifies divers. Major ones: **PADI**, **SSI**,
-  **NAUI**, **SDI/TDI**, **RAID**, **CMAS**, **GUE**, **BSAC**. A diver's card is agency-specific but
-  levels are broadly equivalent across agencies. Two different fields carry an agency name and they
+  **NAUI**, **SDI/TDI**, **RAID**, **CMAS**, **GUE**, **BSAC**, and the cave-diving bodies
+  **NSS-CDS**, **NACD** and **IANTD**, which issue most Florida Cavern cards. A diver's card is
+  agency-specific but levels are broadly equivalent across agencies. Two different fields carry an agency name and they
   must not be confused: `certification_agency` is a **pg enum** — the agencies a diver's *card* may
   be recorded under — while `courses.agency` is **free text a shop types** for a course it teaches,
   and is the one `src/lib/course-ratios.ts` reads. Nothing in readiness, trip admission, or the
@@ -387,10 +388,11 @@ new domain concept, define it here in the same PR.
   the two things a staffer does instead — refuse a fill to a properly trained diver, or hand the
   tank over off-system — are both worse than an entry that looks odd.
 - **Other agency** — the enum's escape hatch (`certification_agency = 'other'`), and **a lossy one**:
-  there is no free-text companion column anywhere in the schema, so a diver holding an **IANTD**,
-  **SEI**, **ANDI**, **ACUC**, **PSAI** or **NASE** card is recorded as "Other agency" with nowhere
+  there is no free-text companion column anywhere in the schema, so a diver holding an **SEI**,
+  **ANDI**, **ACUC**, **PSAI** or **NASE** card is recorded as "Other agency" with nowhere
   to write *which* one — and the staffer who later has to look that number up has no idea whose
-  portal to open. Widening the enum (CMAS/RAID/GUE, then BSAC) narrows the problem for the next shop
+  portal to open. Widening the enum (CMAS/RAID/GUE, then BSAC, then NSS-CDS/NACD/IANTD for Cavern
+  cards) narrows the problem for the next shop
   and never closes it; the closing fix is the companion field, not a longer list. **BSAC** —
   British Sub-Aqua Club, the UK national governing body, ISO-aligned ladder **Ocean Diver ≈ Open
   Water → Sports Diver ≈ Advanced Open Water → Dive Leader ≈ Divemaster → Advanced Diver → First

@@ -15,6 +15,9 @@
       "raid": "RAID",
       "gue": "GUE",
       "bsac": "BSAC",
+      "nss_cds": "NSS-CDS",
+      "nacd": "NACD",
+      "iantd": "IANTD",
       "other": "Otra agencia"
     },
     "paymentStatus": {

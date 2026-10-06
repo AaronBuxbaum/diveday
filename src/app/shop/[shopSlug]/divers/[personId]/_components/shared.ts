@@ -33,6 +33,9 @@ export const AGENCY_KEYS: Record<CertificationAgency, StaffMessageKey> = {
   raid: "divers.shared.agencies.raid",
   gue: "divers.shared.agencies.gue",
   bsac: "divers.shared.agencies.bsac",
+  nss_cds: "divers.shared.agencies.nss_cds",
+  nacd: "divers.shared.agencies.nacd",
+  iantd: "divers.shared.agencies.iantd",
   other: "divers.shared.agencies.other",
 };
 

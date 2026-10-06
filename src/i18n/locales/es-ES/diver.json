@@ -33,6 +33,9 @@
         "raid": "RAID",
         "gue": "GUE",
         "bsac": "BSAC",
+        "nss_cds": "NSS-CDS",
+        "nacd": "NACD",
+        "iantd": "IANTD",
         "other": "Otra agencia"
       },
       "cardNumber": "Número de certificación",
@@ -2684,7 +2687,7 @@
       "certifications": {
         "item1": "Listo o Bloqueado para cada buceador en cada salida, con el motivo al lado",
         "item2": "Tarjetas de certificación registradas por agencia, nivel y número. Una tarjeta que ingresa el buceador cuenta solo cuando una persona la verificó, y las importadas quedan marcadas como importadas",
-        "item3": "Tarjetas de PADI, SSI, NAUI, SDI, TDI, CMAS, RAID, GUE y BSAC, y de cualquier otra agencia como Otra agencia",
+        "item3": "Tarjetas de PADI, SSI, NAUI, SDI, TDI, CMAS, RAID, GUE, BSAC, NSS-CDS, NACD e IANTD, y de cualquier otra agencia como Otra agencia",
         "item4": "Nivel, buceo profundo, naufragios, nocturno, traje seco, nitrox y sitio en una sola respuesta de preparación, más la edad mínima del curso cuando hay una fecha de nacimiento archivada",
         "item5": "Nitrox como solicitud por reserva, comparado con la tarjeta cada vez que se lee",
         "item6": "Tarjetas de nitrox y de especialidad traídas de otro sistema, retenidas hasta que alguien del personal confirme cada una",

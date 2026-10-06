@@ -850,6 +850,9 @@ const SAME_IN_BOTH_LOCALES = new Map<string, string>([
   ["DIVER_CERTIFICATION_AGENCY_KEYS.raid", "agency acronym"],
   ["DIVER_CERTIFICATION_AGENCY_KEYS.gue", "agency acronym"],
   ["DIVER_CERTIFICATION_AGENCY_KEYS.bsac", "agency acronym"],
+  ["DIVER_CERTIFICATION_AGENCY_KEYS.nss_cds", "agency acronym"],
+  ["DIVER_CERTIFICATION_AGENCY_KEYS.nacd", "agency acronym"],
+  ["DIVER_CERTIFICATION_AGENCY_KEYS.iantd", "agency acronym"],
   // The five compass points Spanish spells with the same letter. The three it
   // does not — O, SO, NO — are the whole reason `compass-labels.ts` exists, so
   // they are deliberately absent from this list and asserted as different.
