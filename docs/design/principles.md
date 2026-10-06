@@ -552,7 +552,7 @@ cast under white groups (light) / deep slate (dark); **sea teal** (`--primary`) 
 colour; **amber** (`--accent`) is rationed for earned moments under the
 [20260827-clearwater-surface-language](../architecture/decisions/20260827-clearwater-surface-language.md)
 decision 11 budget; feedback colours (`--success`, `--warning`, `--danger`) never carry meaning alone.
-`.boat-mode` is Night Dive (navy, white ink, safety yellow) in both schemes.
+`.boat-mode` is the roll call's high-contrast skin: by day white ground, navy ink and navy actions labeled in safety yellow; in the dark scheme Night Dive (navy, white ink, safety yellow). Light by day because sun on a screen washes a dark ground out (H-97).
 
 **Where the palette actually stands.** AA is the bar, and the light palette does not clear it
 everywhere yet — so do not describe the app as WCAG AA conformant, in docs, in a page, or in a

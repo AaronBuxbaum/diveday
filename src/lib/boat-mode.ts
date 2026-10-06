@@ -1,7 +1,7 @@
 /**
  * **Boat mode, switched on by hand** (ADR 20261001-logbook, decision 6). The
- * roll call always wears the Night Dive palette; anyone can put the rest of
- * the app in it too, from the staff identity menu. It is a choice about this
+ * roll call always wears the Boat palette (light by day, Night Dive navy in
+ * the device's dark scheme, H-97); anyone can put the rest of the app in it, from the staff identity menu. It is a choice about this
  * device, so it lives in the browser rather than on the person, and it is
  * the whole replacement for the ambient-light switch and the glare skin:
  * there is no sensor and no automatic mode.
