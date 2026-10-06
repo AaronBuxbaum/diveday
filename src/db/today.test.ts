@@ -2484,13 +2484,33 @@ describe("unclosed roll call (DOM-H3)", () => {
         expect(work.outTripIds).not.toContain(trip.id);
       });
 
-      it("says nothing about a cancelled departure", async () => {
+      it("keeps the Aboard row when the desk cancels the departure after it boarded", async () => {
+        // The roll call outranks a later desk word, as for the fly-safe reader
+        // (#1836): the boarding was recorded before the cancel and the diver is
+        // on that boat whatever the status column now says.
         const { db, shop } = ctx;
-        const { trip } = await sailedNinetyMinutesAgo();
+        const { trip, boarded } = await sailedNinetyMinutesAgo();
+        await db.update(tripsTable).set({ status: "cancelled" }).where(eq(tripsTable.id, trip.id));
+
+        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+        const rows = rowsFor(work, trip.id);
+        expect(rows.map((row) => row.kind)).toEqual(["blocked_aboard"]);
+        expect(rows[0]?.id).toContain(boarded);
+        expect(work.outTripIds).toContain(trip.id);
+      });
+
+      it("says nothing about a cancelled departure nobody boarded", async () => {
+        const { db, shop } = ctx;
+        const { trip } = await returnedTrip(db, shop.id, {
+          endedHoursAgo: -2.5,
+          divers: 2,
+          title: "Blown out — Molasses",
+        });
         await db.update(tripsTable).set({ status: "cancelled" }).where(eq(tripsTable.id, trip.id));
 
         const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
         expect(rowsFor(work, trip.id)).toEqual([]);
+        expect(work.outTripIds).not.toContain(trip.id);
       });
     });
   });

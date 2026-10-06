@@ -1418,9 +1418,10 @@ export type DaySpine = {
   /** Today's departures, clock order. Never re-ordered by the role lens. */
   stations: DayStation[];
   /**
-   * Rows with no station to hang on: those bound to no departure, and those
-   * about a boat that is out past the spine's window (`SpineWork.outTripIds`).
-   * All of them rank in Needs you.
+   * Rows with no station to hang on: those bound to no departure, those about
+   * a boat that is out past the spine's window (`SpineWork.outTripIds`), and
+   * every open after-dive head count whose boat has no station, whatever its
+   * phase or day. All of them rank in Needs you.
    */
   desk: TodayAction[];
   /** The collapsed Tomorrow disclosure's body and count. */
@@ -1466,12 +1467,30 @@ export type SpineWork = {
   actions: readonly TodayAction[];
   /**
    * Departures that sailed past the spine's window and are not back yet
-   * (`TodayWork.outTripIds`). Their rows are today's work, not the week's: a
-   * blocked diver aboard, or a diver recorded not back, must not become a
-   * number behind a link to the board (issue #2064).
+   * (`TodayWork.outTripIds`). Every row about one of them is today's work, not
+   * the week's: a blocked diver aboard must not become a number behind a link
+   * to the board (issue #2064). An after-dive head count that is still open
+   * goes to Needs you whether or not its boat is listed here — a boat that is
+   * already back, last night's included, is
+   * {@link AFTER_DIVE_ROLL_CALL_KINDS}' case (issue #2131).
    */
   outTripIds?: readonly string[];
 };
+
+/**
+ * The open after-dive head counts — somebody recorded not back, or somebody
+ * who boarded with no result yet, diver or crew. A person may be in the water,
+ * so with no live station to hang on they rank in Needs you whatever the
+ * boat's phase or day, never in the week count (issue #2131). The dock-count
+ * kinds (`roll_call_departure_open`, `roll_call_not_started`) are paperwork and
+ * stay out: thirty days of them would bury the rows that matter.
+ */
+const AFTER_DIVE_ROLL_CALL_KINDS: ReadonlySet<TodayActionKind> = new Set([
+  ROLL_CALL_GAP_KINDS.missing_diver,
+  ROLL_CALL_GAP_KINDS.missing_crew,
+  ROLL_CALL_GAP_KINDS.after_dive_uncounted,
+  ROLL_CALL_GAP_KINDS.crew_uncounted,
+]);
 
 function stationFor(departure: SpineDeparture, rows: readonly TodayAction[]): DayStation {
   return {
@@ -1510,7 +1529,10 @@ export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpin
       desk.push(action);
       continue;
     }
-    if (outTripIds.has(action.departure.tripId) && !liveTripIds.has(action.departure.tripId)) {
+    if (
+      !liveTripIds.has(action.departure.tripId) &&
+      (outTripIds.has(action.departure.tripId) || AFTER_DIVE_ROLL_CALL_KINDS.has(action.kind))
+    ) {
       desk.push(action);
       continue;
     }
@@ -1532,7 +1554,10 @@ export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpin
     ...outTripIds,
   ]);
   const weekJobs = today.actions.filter(
-    (action) => action.departure && !placed.has(action.departure.tripId),
+    (action) =>
+      action.departure &&
+      !placed.has(action.departure.tripId) &&
+      !AFTER_DIVE_ROLL_CALL_KINDS.has(action.kind),
   ).length;
 
   return {

@@ -7,7 +7,8 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
  * ADR 20261001-logbook cut the boat card, and the packet kept the shop's own
  * emergency reference (`EmergencyReferenceCard`). Two things the card printed
  * then printed nowhere: DiveDay's missing-diver procedure, and ruled blanks
- * for where the oxygen and first aid kits are and when they were last checked.
+ * for where the oxygen and first aid kits are kept, when they were last
+ * checked, and the oxygen cylinder's pressure at that check.
  * Both sit beside the reference on the paper copy of the manifest, which is
  * what the trip packet and the day's paper compose, so either printout carries
  * them.
@@ -21,9 +22,10 @@ export type PrintedBoatProcedureCopy = {
   missingHeading: string;
   missing: string;
   kitHeading: string;
-  oxygenWhere: string;
-  firstAidWhere: string;
+  oxygenKept: string;
+  firstAidKept: string;
   lastChecked: string;
+  oxygenPressure: string;
 };
 
 export function printedBoatProcedureCopy(t: StaffTranslator): PrintedBoatProcedureCopy {
@@ -31,15 +33,18 @@ export function printedBoatProcedureCopy(t: StaffTranslator): PrintedBoatProcedu
     missingHeading: t("print.packet.missingHeading"),
     missing: t("print.packet.missing"),
     kitHeading: t("print.packet.kitHeading"),
-    oxygenWhere: t("print.packet.oxygenWhere"),
-    firstAidWhere: t("print.packet.firstAidWhere"),
+    oxygenKept: t("print.packet.oxygenKept"),
+    firstAidKept: t("print.packet.firstAidKept"),
     lastChecked: t("print.packet.lastChecked"),
+    oxygenPressure: t("print.packet.oxygenPressure"),
   };
 }
 
 /**
- * The procedure, above the shop's numbers: it ends "call for help on the
- * numbers below", so it is placed where that is true.
+ * The procedure, above the shop's numbers. It does not depend on them: the
+ * radio call comes first and needs no number, because the shop's own numbers
+ * may not be printed (dive-domain review). It then says "the numbers below",
+ * so it is placed where that is true when they are.
  */
 export function PrintedMissingProcedure({
   copy,
@@ -59,7 +64,11 @@ export function PrintedMissingProcedure({
   );
 }
 
-/** Three ruled lines to fill in by hand, under the shop's numbers. */
+/**
+ * Ruled blanks to fill in by hand, under the shop's numbers. The oxygen
+ * pressure sits beside the date of the check it was read at: one line, one
+ * check.
+ */
 export function PrintedKitBlanks({
   copy,
   headingId,
@@ -68,19 +77,25 @@ export function PrintedKitBlanks({
   /** Unique per departure: the day's paper prints several manifests. */
   headingId: string;
 }) {
-  const lines = [copy.oxygenWhere, copy.firstAidWhere, copy.lastChecked];
+  const lines = [[copy.oxygenKept], [copy.firstAidKept], [copy.lastChecked, copy.oxygenPressure]];
   return (
     <section aria-labelledby={headingId} className="mt-4">
       <h2 id={headingId} className="text-base font-semibold">
         {copy.kitHeading}
       </h2>
       <dl className="mt-2 space-y-3 text-sm">
-        {lines.map((label) => (
-          <div key={label} className="flex items-end gap-2">
-            <dt className="shrink-0">{label}</dt>
-            <dd className="min-w-0 flex-1">
-              <span data-print-blank className="block h-5 border-b border-border-strong" />
-            </dd>
+        {lines.map((labels) => (
+          // A `dl` row may hold several term and blank pairs, and no deeper
+          // wrapper: each pair is a `dt` and its own growing `dd`.
+          <div key={labels.join("|")} className="flex items-end gap-2">
+            {labels.flatMap((label, index) => [
+              <dt key={`${label}-term`} className={index > 0 ? "shrink-0 ps-2" : "shrink-0"}>
+                {label}
+              </dt>,
+              <dd key={`${label}-blank`} className="min-w-0 flex-1">
+                <span data-print-blank className="block h-5 border-b border-border-strong" />
+              </dd>,
+            ])}
           </div>
         ))}
       </dl>

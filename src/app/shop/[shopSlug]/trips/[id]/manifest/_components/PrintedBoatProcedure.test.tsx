@@ -13,8 +13,8 @@ const copy = printedBoatProcedureCopy(staffTranslator("en-US"));
 /**
  * What the laminated boat card used to carry and nothing else printed once it
  * was cut (issue #2035, Aaron's yes on 2026-10-05): the missing-diver
- * procedure, and ruled blanks for where the oxygen and first aid kits are and
- * when they were last checked.
+ * procedure, and ruled blanks for where the oxygen and first aid kits are
+ * kept, when they were last checked, and the oxygen pressure at that check.
  */
 describe("the printed boat procedure", () => {
   afterEach(cleanup);
@@ -24,9 +24,22 @@ describe("the printed boat procedure", () => {
     expect(screen.getByRole("heading", { name: "If someone is missing" })).toBeInTheDocument();
     expect(
       screen.getByText(
-        "Note the time and mark the position. Do not leave the site. Call the roll again by name. Then call for help on the numbers below, and call the shop.",
+        "Note the time and mark the position. Do not leave the site. Call the roll again by name. Sound the recall and search the surface, downcurrent first. Call for help on VHF channel 16 without waiting, then on the numbers below, and call the shop.",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("puts the surface search and the radio before any printed number", () => {
+    // The shop's own numbers may not be printed at all (dive-domain review):
+    // the steps that need no number come first, in both languages.
+    for (const locale of ["en-US", "es-ES"] as const) {
+      const text = printedBoatProcedureCopy(staffTranslator(locale)).missing;
+      const radio = text.indexOf("16");
+      const numbersBelow =
+        locale === "en-US" ? text.indexOf("numbers below") : text.indexOf("números de abajo");
+      expect([locale, radio]).not.toEqual([locale, -1]);
+      expect([locale, radio < numbersBelow]).toEqual([locale, true]);
+    }
   });
 
   it("prints the oxygen and first aid lines as blanks to fill by hand, never a value", () => {
@@ -38,7 +51,12 @@ describe("the printed boat procedure", () => {
     const terms = within(section)
       .getAllByRole("term")
       .map((term) => term.textContent);
-    expect(terms).toEqual(["Oxygen, where", "First aid kit, where", "Last checked"]);
+    expect(terms).toEqual([
+      "Oxygen kit is kept",
+      "First aid kit is kept",
+      "Last checked",
+      "O2 pressure",
+    ]);
     for (const value of within(section).getAllByRole("definition")) {
       expect(value.textContent).toBe("");
       expect(value.querySelector("[data-print-blank]")).not.toBeNull();
@@ -57,6 +75,7 @@ describe("the printed boat procedure", () => {
     expect(
       screen.getByRole("heading", { name: "Oxígeno y primeros auxilios" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Botiquín, dónde")).toBeInTheDocument();
+    expect(screen.getByText("El botiquín se guarda en")).toBeInTheDocument();
+    expect(screen.getByText("Presión del O2")).toBeInTheDocument();
   });
 });

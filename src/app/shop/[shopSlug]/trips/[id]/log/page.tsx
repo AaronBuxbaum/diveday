@@ -310,7 +310,7 @@ export default async function IncidentExportPage({
                   key={index}
                 >
                   <Td className="font-semibold">{member.fullName}</Td>
-                  <Td muted>{staffJobWithRatings(t, member.roles, member.ratings)}</Td>
+                  <Td muted>{staffJobWithRatings(t, member.roles, member.currentRatings)}</Td>
                   {/* Plural on purpose: one divemaster commonly leads
                       several groups on one boat, and this document must
                       print all of them (ADR 20260804-buddy-teams). */}

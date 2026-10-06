@@ -1104,6 +1104,12 @@ const OUT_LOOKBACK_MS = 14 * 24 * HOUR_MS;
  * early is home), and keeps only divers whose standing departure result is
  * `boarded`.
  *
+ * **A boarding outranks a later desk cancel**, as it does for the fly-safe
+ * reader (issue #1836). Both roll-call writers refuse a cancelled departure, so
+ * a standing `boarded` at the dock is older than the cancel and was true when
+ * it was made: the people it names are on that boat. A cancelled departure
+ * nobody boarded is not out at all, so its rows never leave the week count.
+ *
  * Bounded: one trips read on the `(shop_id, starts_at)` index, then the stage,
  * departure roll call and readiness reads keyed on the handful of departures
  * that are out, and nothing at all on a day with no boat out.
@@ -1116,12 +1122,20 @@ async function blockedAboardOnBoatsOut(
   inWindowTripIds: ReadonlySet<string>,
 ) {
   const sailed = await db
-    .select({ id: trips.id, title: trips.title, startsAt: trips.startsAt, endsAt: trips.endsAt })
+    .select({
+      id: trips.id,
+      title: trips.title,
+      startsAt: trips.startsAt,
+      endsAt: trips.endsAt,
+      status: trips.status,
+    })
     .from(trips)
     .where(
       and(
         eq(trips.shopId, shopId),
-        eq(trips.status, "scheduled"),
+        // No status filter: a desk cancel written after the boat left does
+        // not bring anybody ashore. A cancelled departure stays only when its
+        // dock roll call says somebody boarded (below).
         liveTrip(),
         gte(trips.startsAt, new Date(now.getTime() - OUT_LOOKBACK_MS)),
         lte(trips.startsAt, now),
@@ -1137,7 +1151,7 @@ async function blockedAboardOnBoatsOut(
     shopId,
     candidates.map((trip) => trip.id),
   );
-  const out = candidates.filter(
+  const byClock = candidates.filter(
     (trip) =>
       tripPhaseOf({
         startsAt: trip.startsAt,
@@ -1145,15 +1159,26 @@ async function blockedAboardOnBoatsOut(
         now,
         timeZone,
         stage: stages.get(trip.id) ?? null,
+        // Deliberately the scheduled reading even for a cancelled row: the
+        // question is whether the boat is on the water, and the roll call
+        // below decides whether a cancelled one ever left.
         cancelled: false,
       }) === "aboard",
   );
+  if (byClock.length === 0) return { out: [], blocked: [] };
+  const departureRollCall = await listDepartureRollCallByTrip(
+    db,
+    shopId,
+    byClock.map((trip) => trip.id),
+  );
+  const out = byClock.filter(
+    (trip) =>
+      trip.status === "scheduled" ||
+      [...(departureRollCall.get(trip.id)?.values() ?? [])].includes("boarded"),
+  );
   if (out.length === 0) return { out: [], blocked: [] };
   const outIds = out.map((trip) => trip.id);
-  const [departureRollCall, readiness] = await Promise.all([
-    listDepartureRollCallByTrip(db, shopId, outIds),
-    listTripsReadiness(db, shopId, outIds, now),
-  ]);
+  const readiness = await listTripsReadiness(db, shopId, outIds, now);
   const blocked = readiness.filter(
     (row) =>
       row.readiness.status === "blocked" &&

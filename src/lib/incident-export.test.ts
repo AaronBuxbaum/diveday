@@ -898,13 +898,34 @@ describe("a crew member's rating on the incident export", () => {
     expect(doc.crew[0]).toMatchObject({
       fullName: "Keiko Tanaka",
       roles: ["divemaster"],
-      ratings: ["assistant_instructor"],
+      currentRatings: ["assistant_instructor"],
     });
   });
 
   it("carries an empty list, never a placeholder, for somebody with no rating to add", () => {
     const doc = buildIncidentExport(baseInput());
-    expect(doc.crew[0]?.ratings).toEqual([]);
+    expect(doc.crew[0]?.currentRatings).toEqual([]);
+  });
+
+  it("leaves the rating out of the integrity code, so a later promotion keeps old printouts matching", () => {
+    const crewWith = (standingRatings: string[]) =>
+      buildIncidentExport(
+        baseInput({
+          manifests: manifestsFor(
+            [diver("b1", "Ana Diaz")],
+            [
+              manifestCrew({
+                id: "p7",
+                fullName: "Keiko Tanaka",
+                roles: ["divemaster"],
+                standingRatings,
+              }),
+            ],
+          ),
+        }),
+      );
+    expect(crewWith(["assistant_instructor"]).contentHash).toBe(crewWith([]).contentHash);
+    expect(crewWith(["instructor"]).contentHash).toBe(crewWith([]).contentHash);
   });
 });
 

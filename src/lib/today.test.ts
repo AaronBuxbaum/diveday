@@ -750,6 +750,74 @@ describe("assembleDaySpine", () => {
     expect(spineJobCount(spine)).toBe(2);
   });
 
+  it("lists an open after-dive count on a boat that is back in Needs you, not the week", () => {
+    // Crew tapped home with a diver still recorded not back, or last night's
+    // boat inside the residue window: no station, not out, and still a person
+    // who may be in the water (issue #2131).
+    const spine = assembleDaySpine(
+      {
+        departures: [departure()],
+        actions: [
+          action({
+            id: "roll-call:back:missing_diver:after_dive_1",
+            kind: "roll_call_missing_diver",
+            departure: boat("back"),
+          }),
+          action({
+            id: "roll-call:back:missing_crew:after_dive_1",
+            kind: "roll_call_missing_crew",
+            departure: boat("back"),
+          }),
+          action({
+            id: "roll-call:back:after_dive_uncounted:after_dive_1",
+            kind: "roll_call_unfinished",
+            departure: boat("back"),
+          }),
+        ],
+      },
+      { departures: [], actions: [] },
+    );
+    expect(spine.desk.map((row) => row.id).sort()).toEqual([
+      "roll-call:back:after_dive_uncounted:after_dive_1",
+      "roll-call:back:missing_crew:after_dive_1",
+      "roll-call:back:missing_diver:after_dive_1",
+    ]);
+    expect(spine.week.jobs).toBe(0);
+    expect(spineJobCount(spine)).toBe(3);
+  });
+
+  it("leaves a returned boat's dock paperwork in the week's count", () => {
+    const spine = assembleDaySpine(
+      {
+        departures: [departure()],
+        actions: [
+          action({
+            id: "roll-call:back:departure_uncounted:departure",
+            kind: "roll_call_departure_open",
+            departure: boat("back"),
+          }),
+        ],
+      },
+      { departures: [], actions: [] },
+    );
+    expect(spine.desk).toEqual([]);
+    expect(spine.week.jobs).toBe(1);
+  });
+
+  it("keeps an after-dive count on its station while the boat still has one", () => {
+    const spine = assembleDaySpine(
+      {
+        departures: [departure()],
+        actions: [
+          action({ id: "missing", kind: "roll_call_missing_diver", departure: boat("t1") }),
+        ],
+      },
+      { departures: [], actions: [] },
+    );
+    expect(spine.stations[0]?.rows.map((row) => row.id)).toEqual(["missing"]);
+    expect(spine.desk).toEqual([]);
+  });
+
   it("keeps a boat's rows on its station while it still has one", () => {
     const spine = assembleDaySpine(
       {

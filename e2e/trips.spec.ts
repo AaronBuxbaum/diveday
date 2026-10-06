@@ -651,7 +651,7 @@ test.describe("the printed trip packet", () => {
     // procedure, and the kit blanks the crew fills in by hand.
     await expect(page.getByRole("heading", { name: "If someone is missing" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Oxygen and first aid" })).toBeVisible();
-    await expect(page.getByText("First aid kit, where")).toBeVisible();
+    await expect(page.getByText("First aid kit is kept")).toBeVisible();
   });
 
   /**

@@ -235,12 +235,17 @@ export type IncidentCrewEntry = {
   /** Role codes as the roster holds them (effectiveCrewRoles). */
   roles: string[];
   /**
-   * Standing professional ratings the job in `roles` does not already say
-   * (`standingRatingsBesideJob`; issue #1852). An investigator's question is
-   * what rating each professional in the water held, and the day's job alone
-   * cannot answer it. Empty when there is nothing to add.
+   * The professional ratings this person holds **when the export is made**
+   * that the job in `roles` does not already say (`standingRatingsBesideJob`;
+   * issue #1852). Not the ratings held on the day: DiveDay keeps no history of
+   * a person's roles, so somebody promoted since the dive prints their new
+   * rung here. Empty when there is nothing to add.
+   *
+   * **Outside the integrity code** (`incidentExportContentHash`): a later
+   * promotion is not a change to the day's records, and must not make an
+   * earlier printout stop matching a fresh export of them.
    */
-  ratings: string[];
+  currentRatings: string[];
   rollCall: IncidentRollCallResult[];
   /**
    * The teams this crew member was recorded on, by number — plural, because one
@@ -667,7 +672,7 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
   const crew: IncidentCrewEntry[] = departure.crew.map((member) => ({
     fullName: member.fullName,
     roles: member.roles,
-    ratings: member.standingRatings,
+    currentRatings: member.standingRatings,
     rollCall: rollCallResults(
       input.manifests,
       (manifest) => manifest.crew.find((entry) => entry.id === member.id) ?? null,
@@ -796,6 +801,11 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
  * printouts "differ" — and a re-seeded or re-imported database would change
  * the code under a document whose every printed fact is unchanged. The hash
  * commits to exactly what a human can compare.
+ *
+ * A crew member's `currentRatings` are projected out too: they are read from
+ * the person as they stand today, not from the day's records, so a promotion
+ * after the dive would otherwise change the code under a printout of the same
+ * day, and every log printed before the field existed would stop matching.
  */
 export function incidentExportContentHash(
   body: Omit<IncidentExportDocument, "contentHash">,
@@ -805,7 +815,7 @@ export function incidentExportContentHash(
     meta,
     departureSummary: body.departureSummary,
     roster: body.roster.map(({ bookingId: _bookingId, ...entry }) => entry),
-    crew: body.crew,
+    crew: body.crew.map(({ currentRatings: _currentRatings, ...entry }) => entry),
     executedDives: body.executedDives,
     preDepartureCheck: body.preDepartureCheck,
     timeline: body.timeline,
