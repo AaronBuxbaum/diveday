@@ -44,7 +44,9 @@ export function ShopContactLinks({
       ) : null}
       {phone && email ? <span aria-hidden="true">·</span> : null}
       {email ? (
-        <a href={mailtoHref(email)} className={linkClass}>
+        // `wrap-anywhere`: a tap-target link is a flex box, whose narrowest
+        // width is the whole address unless it may break inside it.
+        <a href={mailtoHref(email)} className={`${linkClass} min-w-0 wrap-anywhere`}>
           {email}
         </a>
       ) : null}

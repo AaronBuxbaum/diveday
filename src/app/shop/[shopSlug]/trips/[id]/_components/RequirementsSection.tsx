@@ -199,9 +199,6 @@ export function RequirementsSection({
                 {t("trips.requirements.nitrox")}
               </ChoiceRow>
             </ChoiceFieldset>
-            {/* A guided cavern tour sells to divers who hold no card (ADR
-                20260718-specialty-site-cert-requirements, 2026-10-05). */}
-            <p className="mt-2 text-sm text-muted">{t("shared.readiness.cavernHint")}</p>
             <div className="mt-5 flex flex-wrap items-center gap-3">
               {/* One weight for a section's Save — the default primary the
                     other Overview forms share (DetailsSection's comment states

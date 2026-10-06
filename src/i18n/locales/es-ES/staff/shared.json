@@ -189,7 +189,6 @@
       "drysuit": "Traje seco",
       "cavern": "Cavernas"
     },
-    "cavernHint": "Marca Cavernas solo si cada buceador debe tener la tarjeta. Una visita guiada a cavernas para buceadores Open Water no la necesita.",
     "status": {
       "ready": "Listo",
       "blocked": "Bloqueado"

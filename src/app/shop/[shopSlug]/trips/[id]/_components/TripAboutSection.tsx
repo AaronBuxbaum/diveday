@@ -112,12 +112,8 @@ export type TripAboutRow = {
  * summary, the editor opens in place beneath it, and there is no second copy of
  * anything — the grammar `SettingsRows` and `DisclosureRowList` use.
  *
- * The rare and destructive acts — apply to every date, stop repeating, cancel
- * every upcoming date, the weather blow-out, cancelling this departure — sit in
- * one closed disclosure at the foot (`more`), as a single column of quiet
- * items with no standing captions: each one's consequence sentence lives in the
- * confirm or the page it opens (docs/design/principles.md §8, "collapse the
- * rare path").
+ * The rare and destructive acts live below the card, in `TripMoreDisclosure`,
+ * one of the tab's closed rows beside Promote and Activity.
  *
  * A row's `<summary>` carries no focusable descendants — an interactive element
  * nested in a `<summary>` fails axe's nested-interactive rule, which is why the
@@ -126,9 +122,6 @@ export type TripAboutRow = {
 export function TripAboutSection({
   rows,
   actions,
-  more,
-  moreLabel,
-  moreOpen = false,
 }: {
   rows: TripAboutRow[];
   /**
@@ -137,11 +130,6 @@ export function TripAboutSection({
    * is the padding they gave up: words 32px apart, fills 16px.
    */
   actions?: ReactNode;
-  /** The rare and destructive acts, as a column of quiet items. */
-  more?: ReactNode;
-  moreLabel?: string;
-  /** One of the acts in `more` just ran and its outcome is inside. */
-  moreOpen?: boolean;
 }) {
   return (
     <section
@@ -155,17 +143,39 @@ export function TripAboutSection({
             <AboutRow key={row.id} row={row} />
           ))}
         </div>
-        {more ? (
-          <details id="about-more" open={moreOpen} className="group/more mt-4">
-            <summary className="-mx-2 flex min-h-11 w-fit cursor-pointer list-none items-center gap-1 rounded-lg px-2 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-foreground">
-              {moreLabel}
-              <DisclosureCaret direction="down" className="size-4 group-open/more:rotate-180" />
-            </summary>
-            {/* One column, one item per line, no captions. */}
-            <div className="mt-1 flex flex-col items-start">{more}</div>
-          </details>
-        ) : null}
       </div>
     </section>
+  );
+}
+
+/**
+ * **More for this departure** — the rare and destructive acts: apply to every
+ * date, stop repeating, cancel every upcoming date, the weather blow-out,
+ * cancelling this departure. One closed row on the Details tab, the same kind
+ * of row as Promote and Activity beside it (owner, 2026-10-06: they are one
+ * category, things done *to* the departure rather than facts *about* it). A
+ * single column of quiet items with no standing captions: each one's
+ * consequence sentence lives in the confirm or the page it opens
+ * (docs/design/principles.md §8, "collapse the rare path").
+ */
+export function TripMoreDisclosure({
+  label,
+  open = false,
+  children,
+}: {
+  label: string;
+  /** One of the acts just ran and its outcome is inside. */
+  open?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <details id="about-more" open={open} className="group/more border-t border-border">
+      <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-2 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-foreground">
+        <span>{label}</span>
+        <DisclosureCaret direction="down" className="size-4 group-open/more:rotate-180" />
+      </summary>
+      {/* One column, one item per line, no captions. */}
+      <div className="flex flex-col items-start pb-5">{children}</div>
+    </details>
   );
 }

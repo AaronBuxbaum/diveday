@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { TripAboutSection } from "./TripAboutSection";
+import { TripAboutSection, TripMoreDisclosure } from "./TripAboutSection";
 
 afterEach(cleanup);
 
@@ -120,29 +120,35 @@ describe("Trip About panel", () => {
     expect(container.querySelector("details#details")).toHaveAttribute("open");
     expect(screen.getByText("Details editor")).toBeVisible();
   });
+});
 
-  it("keeps the rare and destructive acts behind one closed list", () => {
+describe("TripMoreDisclosure", () => {
+  it("keeps the rare and destructive acts behind one closed row", () => {
     render(
-      <TripAboutSection
-        {...props}
-        actions={<button type="button">View public page</button>}
-        moreLabel="More for this departure"
-        more={<button type="button">Cancel this departure</button>}
-      />,
+      <TripMoreDisclosure label="More for this departure">
+        <button type="button">Cancel this departure</button>
+      </TripMoreDisclosure>,
     );
 
-    expect(screen.getByRole("button", { name: "View public page" })).toBeVisible();
     expect(screen.getByText("More for this departure")).toBeVisible();
     expect(screen.getByRole("button", { name: "Cancel this departure" })).not.toBeVisible();
   });
 
-  it("gives the 'more' summary no ring utility, so it keeps the global ring", () => {
+  it("opens itself when one of its acts has an outcome to show", () => {
     const { container } = render(
-      <TripAboutSection
-        {...props}
-        moreLabel="More for this departure"
-        more={<button type="button">Cancel this departure</button>}
-      />,
+      <TripMoreDisclosure label="More for this departure" open>
+        <button type="button">Cancel this departure</button>
+      </TripMoreDisclosure>,
+    );
+
+    expect(container.querySelector("details#about-more")).toHaveAttribute("open");
+  });
+
+  it("gives the summary no ring utility, so it keeps the global ring", () => {
+    const { container } = render(
+      <TripMoreDisclosure label="More for this departure">
+        <button type="button">Cancel this departure</button>
+      </TripMoreDisclosure>,
     );
 
     const more = container.querySelector("details#about-more > summary");

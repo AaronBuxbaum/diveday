@@ -766,6 +766,17 @@ summary {
   :where(p, li, dd, figcaption) {
     text-wrap-style: pretty;
   }
+
+  /* A word longer than its box breaks rather than running out of it. An
+     email address or a long surname has no break opportunity, so in a row
+     that keeps its controls beside the words it ran on under them: the trip
+     roster's "Invite" and "Add to trip" sat over the end of a candidate's
+     address (owner, 2026-10-06). `break-word` only acts on a word that would
+     otherwise overflow, so ordinary text wraps exactly as before; `truncate`
+     and `wrap-*` utilities still win from the utilities layer. */
+  body {
+    overflow-wrap: break-word;
+  }
 }
 
 /*

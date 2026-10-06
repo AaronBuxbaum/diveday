@@ -76,6 +76,9 @@ export function PersonCandidateList({
           <LedgerRow
             key={person.id}
             pad="lg"
+            // On a phone the two buttons drop beneath the name and address
+            // instead of squeezing an email into a column a few letters wide.
+            stacked
             className={rowClassName}
             trailing={
               <div className="flex flex-wrap items-center gap-2">
