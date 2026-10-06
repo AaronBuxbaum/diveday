@@ -29,15 +29,15 @@ import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 export const instant = true;
 
 export const metadata: Metadata = {
-  title: "Who you’d be dealing with — DiveDay",
+  title: "Why DiveDay exists — DiveDay",
   description:
-    "Two divers, one of them writing the code, and a product that doesn’t need either of us at eight in the morning. Who’s behind DiveDay, what it won’t do, and how your records get back out.",
+    "Two divers, one of them writing the code, and the 1998 Great Barrier Reef story behind DiveDay’s roll call. Who’s behind it, what you can check in the demo, and how your records come back out.",
   alternates: { canonical: "/about" },
   openGraph: {
     ...sharedLinkCard,
-    title: "Who you’d be dealing with — DiveDay",
+    title: "Why DiveDay exists — DiveDay",
     description:
-      "Two divers, one writing the code. Who’s behind DiveDay, what it won’t do, and how your records get back out.",
+      "Two divers, one writing the code, and the story behind DiveDay’s roll call. Who’s behind it and how your records come back out.",
     url: "/about",
   },
   // `summary_large_image`: the OG block above names the shared link card
@@ -45,9 +45,9 @@ export const metadata: Metadata = {
   // image to fill it — docs/product/marketing.md, Twitter-card policy.
   twitter: {
     card: "summary_large_image",
-    title: "Who you’d be dealing with — DiveDay",
+    title: "Why DiveDay exists — DiveDay",
     description:
-      "Two divers, one writing the code. Who’s behind DiveDay, what it won’t do, and how your records get back out.",
+      "Two divers, one writing the code, and the story behind DiveDay’s roll call. Who’s behind it and how your records come back out.",
   },
 };
 
@@ -96,7 +96,9 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
    * The honest-no block, in the register docs/product/marketing.md asks for:
    * concede loudly, because an honest no buys trust the claims can't. These are
    * facts about the company (how new it is, how much it is still moving) rather
-   * than product scope — the product's own honest-no lives on /product.
+   * than product scope. The scope card ("It doesn't do everything.") left with
+   * the 2026-10-06 rewrite, the day the "What it doesn't do" sections were cut
+   * from the public pages.
    *
    * The whole page is written as speech (docs/design/brand.md, "The spoken
    * register on /about"): every h2 is the shop owner's question, repeated back
@@ -105,10 +107,6 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
    */
   const plainTruths = [
     { title: t("marketing.about.truths.new.title"), body: t("marketing.about.truths.new.body") },
-    {
-      title: t("marketing.about.truths.notEverything.title"),
-      body: t("marketing.about.truths.notEverything.body"),
-    },
     {
       title: t("marketing.about.truths.stillMoving.title"),
       body: t("marketing.about.truths.stillMoving.body"),
@@ -146,9 +144,13 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
 
   return (
     <main className="flex-1">
-      {/* The hero claims "check us", so the right column is the artifact rule 1
-          sends a reader to go check: a captain's roll call, running from the
-          phone's own offline copy. */}
+      {/* The hero is why DiveDay exists: the Lonergans, left behind on the
+          Great Barrier Reef in 1998 when nobody noticed two divers missing
+          (docs/product/marketing.md, "Biography is a claim like any other",
+          holds the sourcing). The right column is the thing that story built,
+          a captain's roll call by name, running from the phone's saved copy.
+          Told flat, in the order it happened, with no adjective on it: the
+          story carries its own weight and the page does not sell with it. */}
       <section className="border-b border-border">
         <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1fr_0.8fr] lg:items-center lg:py-24">
           <div className="max-w-2xl">
@@ -159,6 +161,9 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
             <p className="mt-6 max-w-2xl text-lg leading-8 text-muted sm:text-xl">
               {t("marketing.about.heroDescription")}
             </p>
+            <p className="mt-4 max-w-2xl text-lg leading-8 text-muted sm:text-xl">
+              {t("marketing.about.heroP2")}
+            </p>
           </div>
           <CaptainPhoneFrame
             label={t("marketing.about.phoneFrameLabel")}
@@ -168,9 +173,35 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
         </div>
       </section>
 
-      {/* The proof comes before the concessions. This page used to open with
-          two sections of prose and reach the checkable rules fourth, which put
-          its only verifiable content far below the fold on every screen. */}
+      {/* Who is behind it comes straight after why, because the hero's last
+          paragraph is the founder's own ("That story is why I built
+          DiveDay"). The reassurance that a shop's season does not rest on two
+          people closes this band, with its proof, before the rules invite
+          anyone to check it. */}
+      <section className="border-b border-border bg-surface">
+        <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
+          {/* Two grid items, so below `lg` the row gap is the heading-to-body
+              gap: `gap-5`, the `mt-5` every other band sets its body at, and
+              the 40px column gap only once there are columns (K-577). */}
+          <div className="grid gap-5 lg:grid-cols-[0.9fr_1fr] lg:items-start lg:gap-10">
+            <div>
+              <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.founderEyebrow")}</p>
+              <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
+                {t("marketing.about.founderTitle")}
+              </h2>
+            </div>
+            <div className="max-w-2xl space-y-5 text-lg leading-8 text-muted">
+              <p>{t("marketing.about.founderP1")}</p>
+              <p>{t("marketing.about.founderP2")}</p>
+              <p>{t("marketing.about.founderP3")}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* The proof comes before the concessions. Since the 2026-10-06 rewrite
+          it follows the story and the people, which is the order a reader
+          asks in: why, who, then how would I know. */}
       <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
         <div className="max-w-2xl">
           <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.rulesEyebrow")}</p>
@@ -227,27 +258,6 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
             moment of the dare. The closing band repeats the door, not the
             note. */}
         <p className="mt-3 text-sm font-medium text-muted">{t("marketing.common.demoNote")}</p>
-      </section>
-
-      <section className="border-y border-border bg-surface">
-        <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
-          {/* Two grid items, so below `lg` the row gap is the heading-to-body
-              gap: `gap-5`, the `mt-5` every other band sets its body at, and
-              the 40px column gap only once there are columns (K-577). */}
-          <div className="grid gap-5 lg:grid-cols-[0.9fr_1fr] lg:items-start lg:gap-10">
-            <div>
-              <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.founderEyebrow")}</p>
-              <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
-                {t("marketing.about.founderTitle")}
-              </h2>
-            </div>
-            <div className="max-w-2xl space-y-5 text-lg leading-8 text-muted">
-              <p>{t("marketing.about.founderP1")}</p>
-              <p>{t("marketing.about.founderP2")}</p>
-              <p>{t("marketing.about.founderP3")}</p>
-            </div>
-          </div>
-        </div>
       </section>
 
       <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
@@ -330,7 +340,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
               and the page's only *proof* the tightest — inverting the hierarchy
               the section order was rearranged to get (docs/product/marketing.md,
               "concede the facts; never apologize for them"). */}
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
+          <div className="mt-12 grid gap-5 md:grid-cols-2">
             {plainTruths.map((truth) => (
               <article
                 key={truth.title}

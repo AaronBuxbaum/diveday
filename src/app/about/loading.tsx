@@ -1,6 +1,5 @@
 import { MarketingNavFallback } from "@/app/_components/MarketingNav";
 import { MarketingFooterFallback } from "@/components/MarketingFooter";
-import { sectionCardClass } from "@/components/ui/card";
 
 /**
  * The `/about` segment's `<Suspense>` boundary, and what a client navigation
@@ -17,9 +16,10 @@ import { sectionCardClass } from "@/components/ui/card";
  * nothing to tap, so there is nothing to lose. Anything interactive added to
  * this file reopens that bug.
  *
- * Shaped like the body above the fold — the hero beside the captain's phone,
- * then the four checkable operating rules and the demo/trial pair that closes
- * them — so the streamed page lands where the bars stood.
+ * Shaped like the body above the fold (the hero's two paragraphs beside the
+ * captain's phone, then the band on who is behind DiveDay) so the streamed
+ * page lands where the bars stood. The four rules and their demo/trial pair
+ * sat second until the 2026-10-06 rewrite and are below the fold now.
  */
 export default function AboutLoading() {
   return (
@@ -35,7 +35,11 @@ export default function AboutLoading() {
               <div className="mt-5 h-12 w-full rounded bg-surface-sunken sm:h-14 lg:h-16" />
               <div className="mt-3 h-12 w-3/4 rounded bg-surface-sunken sm:h-14 lg:h-16" />
               <div className="mt-6 h-6 w-full max-w-xl rounded bg-surface-sunken" />
+              <div className="mt-2 h-6 w-full max-w-xl rounded bg-surface-sunken" />
               <div className="mt-2 h-6 w-2/3 max-w-lg rounded bg-surface-sunken" />
+              <div className="mt-4 h-6 w-full max-w-xl rounded bg-surface-sunken" />
+              <div className="mt-2 h-6 w-full max-w-xl rounded bg-surface-sunken" />
+              <div className="mt-2 h-6 w-1/2 max-w-lg rounded bg-surface-sunken" />
             </div>
             {/* The phone at the height `CaptainPhoneFrame` renders it, which
                 is its mockup's, not a ratio: 468px in the 320px `max-w-xs`
@@ -49,37 +53,28 @@ export default function AboutLoading() {
           </div>
         </section>
 
-        {/* The four operating rules, each in the card it lands in — the shell
-            taken from `sectionCardClass()` with the same `padding` the page
-            passes `SectionCard`, so the skeleton and what replaces it can no
-            longer drift into a layout jump on every navigation here. */}
-        <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
-          <div className="max-w-2xl">
-            <div className="h-4 w-40 rounded bg-surface-sunken" />
-            <div className="mt-4 h-9 w-full max-w-md rounded bg-surface-sunken sm:h-10" />
-            <div className="mt-4 h-5 w-full rounded bg-surface-sunken" />
-            <div className="mt-2 h-5 w-5/6 rounded bg-surface-sunken" />
-          </div>
-          <div className="mt-12 grid gap-5 sm:grid-cols-2">
-            {[0, 1, 2, 3].map((rule) => (
-              <div key={rule} className={sectionCardClass({ padding: "lg" })}>
-                <div className="h-6 w-2/3 max-w-xs rounded bg-surface-sunken" />
-                <div className="mt-4 h-4 w-full rounded bg-surface-sunken" />
-                <div className="mt-2 h-4 w-5/6 rounded bg-surface-sunken" />
-                <div className="mt-4 h-4 w-3/4 rounded bg-surface-sunken" />
+        {/* The band that follows the hero since the 2026-10-06 rewrite: who
+            is behind DiveDay, heading beside three paragraphs on the surface
+            fill, with the same grid and gaps the page uses so the streamed
+            band lands where the bars stood. */}
+        <section className="border-b border-border bg-surface">
+          <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
+            <div className="grid gap-5 lg:grid-cols-[0.9fr_1fr] lg:items-start lg:gap-10">
+              <div>
+                <div className="h-4 w-28 rounded bg-surface-sunken" />
+                <div className="mt-4 h-9 w-full max-w-sm rounded bg-surface-sunken sm:h-10" />
               </div>
-            ))}
+              <div className="max-w-2xl space-y-5">
+                {[0, 1, 2].map((paragraph) => (
+                  <div key={paragraph}>
+                    <div className="h-6 w-full rounded bg-surface-sunken" />
+                    <div className="mt-2 h-6 w-full rounded bg-surface-sunken" />
+                    <div className="mt-2 h-6 w-2/3 rounded bg-surface-sunken" />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-          {/* The demo/trial pair that closes the rules band — bars at
-              `buttonClass`'s `md` height, stacking the way the pair itself
-              does, so the streamed page lands where they stood on a phone as
-              well as at desktop — and the demo note beneath them, at the one
-              bar `/product`'s hero skeleton gives the same sentence. */}
-          <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-            <div className="h-12 w-full rounded-lg bg-surface-sunken sm:w-44" />
-            <div className="h-12 w-full rounded-lg bg-surface-sunken sm:w-36" />
-          </div>
-          <div className="mt-3 h-4 w-72 max-w-full rounded bg-surface-sunken" />
         </section>
       </main>
       <MarketingFooterFallback />

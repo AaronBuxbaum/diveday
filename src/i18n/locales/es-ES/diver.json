@@ -3215,77 +3215,74 @@
       }
     },
     "about": {
-      "eyebrow": "Quiénes están detrás",
-      "heroTitle": "Con quién estoy tratando",
-      "phoneFrameLabel": "Un capitán haciendo el pase de lista en DiveDay desde la copia sin conexión del teléfono.",
-      "heroDescription": "Somos dos, los dos buceadores, y yo escribo el código. Antes de que sigas leyendo: las partes de las que dependería tu temporada no dependen de nosotros. Los pagos van por tu propia cuenta de Stripe, tus registros salen en un ZIP el día que quieras, y el pase de lista funciona en un teléfono sin señal. Todo lo que dice esta página lo puedes verificar en la demo antes de escribirle a nadie.",
-      "founderEyebrow": "Del fundador",
-      "founderTitle": "Por qué construiste esto",
-      "founderP1": "El dueño de un centro de buceo me contó cómo era un día cualquiera. Una pizarra, una tablilla, una hoja de cálculo que alguien actualiza a mano y un puñado de aplicaciones que no se hablan entre sí. Pagaba por todo eso dos veces: una en software y otra en las horas que le comía del día a su tripulación.",
-      "founderP2": "Soy ingeniero de software. Trabajé en Google Maps, ayudé a construir una empresa de biotecnología que salió a bolsa y hoy trabajo en autos que se conducen solos, y nunca había visto un negocio funcionar con tanto software que nadie construyó para él. Lo que esos centros pagan se hizo para una oficina, y el muelle está mojado, con sol y con prisa. La pizarra se queda porque no se ha colgado nunca. Esa es la vara. Si la tripulación prefiere seguir tomando el marcador, la pantalla todavía no es lo bastante buena.",
-      "founderP3": "La otra persona aquí, también buceadora, lleva lo legal y la difusión, y yo hago el resto. DiveDay es lo que salió de mirar cómo transcurre un día de barco y construir para la versión de las ocho de la mañana, no para la de la oficina.",
-      "runEyebrow": "Cómo se lleva",
-      "runTitle": "Qué pasa cuando algo se rompe a las siete de la mañana",
-      "runP1": "Nos escribes y lo lee una persona real. No hay formulario que te pida una captura antes de que alguien mire, y nadie te va a preguntar si probaste apagarlo y encenderlo. Cuéntanos cómo se veía el mostrador.",
-      "runP2": "Los precios funcionan igual. Están enteros en una sola página, y puedes leer cada línea sin hablar antes con nadie de aquí.",
+      "eyebrow": "Por qué existe DiveDay",
+      "heroTitle": "Por qué lo construiste",
+      "phoneFrameLabel": "Un capitán pasando lista en DiveDay, nombre por nombre, desde la copia que guarda el teléfono.",
+      "heroDescription": "En enero de 1998, Tom y Eileen Lonergan salieron en un barco de buceo al arrecife St. Crispin, en la Gran Barrera de Coral. El barco volvió a puerto sin ellos, y nadie notó que faltaban hasta dos días después, cuando apareció a bordo la bolsa con sus pertenencias. Nunca se encontró a ninguno de los dos.",
+      "heroP2": "Por esa historia construí DiveDay. Un conteo es un número, y un número puede cuadrar con alguien todavía en el agua, así que en DiveDay el pase de lista nombra a cada buceador y tripulante cuando el barco sale y después de cada inmersión, y no termina hasta que cada uno esté confirmado.",
+      "founderEyebrow": "Las personas",
+      "founderTitle": "Con quién estoy tratando",
+      "founderP1": "Somos dos, los dos buceadores. Soy ingeniero de software. Trabajé en Google Maps, ayudé a construir una empresa de biotecnología que salió a bolsa y hoy trabajo en autos que se conducen solos. Yo escribo el código de DiveDay, y la otra persona se encarga de la parte legal y de hablar con los centros.",
+      "founderP2": "Lo demás salió de un dueño de centro de buceo que me mostró un día normal suyo: una pizarra, un portapapeles, una hoja de cálculo que alguien actualiza a mano y un puñado de aplicaciones que no se hablan entre sí. Pagaba todo eso dos veces, una en software y otra en las horas que le quitaba a su tripulación.",
+      "founderP3": "Tu temporada no depende de nosotros dos. Los pagos van por tu propia cuenta de Stripe, tus registros se descargan en un ZIP el día que quieras, y el pase de lista funciona con la copia que quedó en el teléfono mientras tenía señal.",
+      "runEyebrow": "Soporte",
+      "runTitle": "Quién responde cuando algo se rompe",
+      "runP1": "Nos escribes y uno de nosotros dos lo lee. Cuéntanos qué decía la pantalla y qué intentabas hacer. Nadie te va a preguntar si probaste apagarlo y volver a encenderlo.",
+      "runP2": "Con el precio pasa lo mismo. Está todo en una página, y puedes leer cada línea antes de hablar con alguien de aquí.",
       "emailCta": "Escribe a {email}",
       "seeCost": "Un precio único de {price} {cadence}. Mira la lista completa",
       "seeProduct": "Ver qué hace →",
-      "rulesEyebrow": "Las reglas",
-      "rulesTitle": "Cómo sé que algo de eso es cierto",
-      "rulesDescription": "Mira, no tienes que creerme. Estas son las cuatro reglas con las que construimos, y debajo de cada una está lo que puedes ir a hacer en la demo. Diez minutos alcanzan para las cuatro.",
+      "rulesEyebrow": "Lo que nos exigimos",
+      "rulesTitle": "Cómo sé que todo eso es cierto",
+      "rulesDescription": "No tienes que creerme. DiveDay cumple cuatro reglas, y cada una trae algo que puedes ir a hacer en la demo. Las cuatro llevan unos diez minutos.",
       "rules": {
         "survivesDock": {
-          "title": "Tiene que sobrevivir al muelle.",
-          "body": "Manos mojadas, sol fuerte, una barra de señal y un barco que ya va tarde. Si una pantalla solo funciona sentado en una oficina, no está terminada, y he tirado unas cuantas que no lo estaban.",
-          "check": "guarda un manifiesto en tu teléfono, apaga la red y haz el pase de lista igualmente."
+          "title": "Tiene que funcionar en el barco.",
+          "body": "Manos mojadas, sol fuerte y nada de señal al salir del puerto. Cualquier teléfono de la tripulación que abra DiveDay con señal guarda una copia de los próximos manifiestos, y sin señal cada teléfono muestra solo sus propios toques hasta que vuelve a tener cobertura.",
+          "check": "abre un manifiesto en tu teléfono, apaga la red y pasa lista igualmente."
         },
         "noSilentPasses": {
-          "title": "Sin pases silenciosos.",
-          "body": "Un software que deja pasar a un buceador porque un campo estaba vacío es peor que el papel. Cuando nada de lo que hay en el registro deja pasar a un buceador, DiveDay se detiene y te dice qué falta, y prefiere molestar a tu recepción antes que subir al barco a alguien por quien no puede responder.",
+          "title": "Un campo vacío nunca es un sí.",
+          "body": "Si nada de lo que hay en el registro habilita a un buceador, DiveDay lo marca como Bloqueado y dice qué falta. Prefiere frenar tu mostrador antes que dar por listo a alguien con un campo vacío.",
           "check": "abre Hoy y lee por qué está cada nombre en Pendiente."
         },
         "onePrice": {
-          "title": "Un precio, sin plazas.",
-          "body": "Todo lo que hace está en el precio. No hay un nivel que esconda justo lo que necesitas, y aquí a nadie le pagan por venderte más.",
+          "title": "Un precio, con todo adentro.",
+          "body": "Todo DiveDay está en el plan. No hay un nivel que se guarde la parte que necesitas, y no pagas por usuario.",
           "check": "lee la página de precios. Es un número y una lista."
         },
         "yourRecords": {
-          "title": "Tus registros son tuyos.",
-          "body": "El botón de exportar funciona el primer día de la prueba, antes de que hayas cargado un solo buceador. Te da archivos documentados que puedes abrir en cualquier sitio, y nadie tiene que aprobarlo antes.",
+          "title": "Tus registros se van contigo.",
+          "body": "Puedes exportar el primer día de la prueba, antes de que cargues un solo buceador. Es un ZIP de archivos documentados que abres donde quieras, y nadie tiene que aprobarlo.",
           "check": "abre la demo como propietario, ve a Ajustes y descarga el ZIP."
         }
       },
-      "plainlyEyebrow": "La trampa",
+      "plainlyEyebrow": "Antes de cambiarte",
       "plainlyTitle": "Cuál es la trampa",
-      "plainlyDescription": "Tres cosas, y las descubrirías igual en menos de un mes. Mejor que te las diga yo ahora y no tu tripulación en agosto.",
+      "plainlyDescription": "Son dos cosas, y las descubrirías en menos de un mes de todos modos, así que aquí van ahora.",
       "truths": {
         "new": {
           "title": "DiveDay es nuevo.",
-          "body": "Serías uno de los primeros centros en usarlo. Por eso la demo es un centro entero funcionando y no una llamada de ventas, y por eso el botón de exportar funciona desde tu primer día: si no es para ti, te vas con tus hojas de cálculo y te hicimos perder una tarde."
-        },
-        "notEverything": {
-          "title": "No lo hace todo.",
-          "body": "Sin caja registradora y sin sincronización con agencias. Quédate con la caja que tienes. Aquí una verificación de certificación es tu personal mirando la tarjeta y tocando confirmar, y DiveDay se queda en el lado del agua del centro."
+          "body": "Serías uno de los primeros centros en usarlo. Por eso la demo es un centro que funciona y que abres tú mismo, y por eso puedes sacar tus registros desde tu primer día. Si DiveDay resulta no ser para ti, te vas con tus registros y te costó una tarde."
         },
         "stillMoving": {
-          "title": "Todavía está en marcha.",
-          "body": "Los centros que se unen ahora orientan lo que se construye después, y aquello con lo que se topa tu tripulación esta temporada es en lo que trabajo. El trato es un producto que se adapta a tu centro mientras todavía cambia bajo tus pies, y no voy a fingir que esa segunda parte sale gratis."
+          "title": "Todavía está cambiando.",
+          "body": "Lo que tu tripulación encuentre esta temporada es en lo que trabajo después, así que DiveDay se acomoda a cómo funciona tu centro. El costo es que una pantalla que tu tripulación aprendió en mayo puede verse distinta en agosto, y no voy a fingir que eso es gratis."
         }
       },
-      "leaveEyebrow": "Si te vas",
+      "leaveEyebrow": "Irse",
       "leaveTitle": "Qué pasa con mis registros si me voy",
-      "leaveP1": "Son tuyos, y son los que suben a tus buceadores a un barco, así que nada del plan está hecho para retenerlos. Los términos completos caben en tres líneas, y la versión corta es que puedes irte cualquier día del mes y llevarte tus registros.",
-      "leaveP2": "{terms} Y si traes una exportación o una hoja de cálculo de otro sitio, una persona de aquí se sienta con ella y trae a tus buceadores contigo.",
+      "leaveP1": "Tus registros se van contigo, cualquier día del mes. Son lo que sube a tus buceadores al barco, así que nada del plan está hecho para quedárselos.",
+      "leaveP2": "{terms} Y si vienes en la otra dirección, con una exportación o una hoja de cálculo de otro lado, alguien de aquí se sienta con ella y trae a tus buceadores contigo.",
       "switchingLink": "Cómo funciona el cambio, en ambas direcciones →",
       "whereLiveLabel": "Dónde viven tus registros",
       "whereLiveValue": "En servidores en Estados Unidos, en una descarga que puedes obtener cuando quieras y, si la activas, en una copia semanal entregada al almacenamiento que tu centro controla.",
       "committingLabel": "Cómo funciona el plan",
       "committingValue": "Mes a mes, por ubicación. Sin cuota de alta y sin contrato anual.",
       "whoAnswersLabel": "Quién te responde",
-      "whoAnswersValue": "Una persona real del equipo de DiveDay. Escribe a {email} cuando quieras.",
-      "closingTitle": "Bueno, y cómo lo pruebo",
-      "closingDescription": "Sin llamada y sin formulario. Abre el centro de muestra como propietario, capitán o buceador, recorre un día entero y decide si tu tripulación lo tomaría una mañana ajetreada."
+      "whoAnswersValue": "Uno de nosotros dos. Escribe a {email} cuando quieras.",
+      "closingTitle": "Cómo lo pruebo",
+      "closingDescription": "Abre la demo como propietario, capitán o buceador y haz un día de barco completo. No hay llamada que agendar ni formulario que llenar antes."
     },
     "product": {
       "eyebrow": "Funciones",
