@@ -11,7 +11,7 @@ import { getIncidentExport } from "@/db/incident-export";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
-import { staffRoleLabels } from "@/i18n/staff-role-labels";
+import { staffJobWithRatings } from "@/i18n/staff-role-labels";
 import { depthInUnit } from "@/lib/depth-units";
 import {
   formatDateTimeTz,
@@ -310,7 +310,7 @@ export default async function IncidentExportPage({
                   key={index}
                 >
                   <Td className="font-semibold">{member.fullName}</Td>
-                  <Td muted>{staffRoleLabels(t, member.roles).join(", ")}</Td>
+                  <Td muted>{staffJobWithRatings(t, member.roles, member.ratings)}</Td>
                   {/* Plural on purpose: one divemaster commonly leads
                       several groups on one boat, and this document must
                       print all of them (ADR 20260804-buddy-teams). */}

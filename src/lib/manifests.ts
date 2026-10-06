@@ -245,6 +245,15 @@ export type ManifestCrewMember = {
    */
   roles: string[];
   /**
+   * The standing professional ratings the job in `roles` does not already say
+   * (`standingRatingsBesideJob`, src/lib/crew-roles.ts; issue #1852): an
+   * Assistant Instructor rostered as the day's divemaster carries
+   * `["assistant_instructor"]` here. Empty is the ordinary state. Read by the
+   * departure log and the incident export, which are asked what rating each
+   * professional held; never by the supervision ratio.
+   */
+  standingRatings: string[];
+  /**
    * Who to call for **this crew member**, carried for exactly the reason a
    * diver's is: the glossary defines a manifest as every person on the boat
    * with their emergency contacts, and the printed sheet is what a coastguard

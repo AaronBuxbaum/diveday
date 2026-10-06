@@ -5,6 +5,7 @@ import { staffTranslator } from "./staff-messages";
 import {
   isRole,
   STAFF_ROLE_LABEL_KEYS,
+  staffJobWithRatings,
   staffRoleLabel,
   staffRoleLabels,
 } from "./staff-role-labels";
@@ -46,5 +47,28 @@ describe("staff role labels", () => {
       t(STAFF_ROLE_LABEL_KEYS.captain),
       t(STAFF_ROLE_LABEL_KEYS.assistant_instructor),
     ]);
+  });
+});
+
+/**
+ * Issue #1852: the departure log and the boat's crew rows answer "what rating
+ * did each professional hold" beside "what job did they do".
+ */
+describe("a job with the rating beside it", () => {
+  it("puts the rating the job does not say beside it", () => {
+    const t = staffTranslator("en-US");
+    expect(staffJobWithRatings(t, ["divemaster"], ["assistant_instructor"])).toBe(
+      "Divemaster (Assistant Instructor)",
+    );
+  });
+
+  it("is exactly the job, never an empty bracket, with no rating to add", () => {
+    const t = staffTranslator("en-US");
+    expect(staffJobWithRatings(t, ["captain"], [])).toBe("Captain");
+  });
+
+  it("speaks the reader's language", () => {
+    const t = staffTranslator("es-ES");
+    expect(staffJobWithRatings(t, ["captain"], ["instructor"])).toBe("Patrón (Instructor)");
   });
 });

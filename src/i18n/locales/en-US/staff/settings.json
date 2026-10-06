@@ -530,6 +530,7 @@
       "crew": "Crew",
       "diver": "Diver"
     },
+    "jobWithRatings": "{job} ({ratings})",
     "languagesLegend": "Languages",
     "languagesLabel": "Languages",
     "languagesSave": "Save",

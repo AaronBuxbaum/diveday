@@ -1260,7 +1260,10 @@ new domain concept, define it here in the same PR.
   paths refuse to leave a course session with nobody on the ratio, so rostering the session's only
   instructor onto the deck is refused exactly as removing them is — the two say the same thing about
   the session. Unassign-then-reassign does not preserve it: the row and its role go together, and
-  the picker is how it is set again.
+  the picker is how it is set again. The manifest's crew rows, the departure log and the incident
+  export print the professional rating beside a set job when the job does not already say it
+  ("Divemaster (Assistant Instructor)", `standingRatingsBesideJob` in `src/lib/crew-roles.ts`), so
+  narrowing the job never takes the rating off the record (#1852).
 - **In-water certified assistant** — a Divemaster **or an Assistant Instructor** actually
   supervising students in the water on this trip; each one extends the **entry-level in-water
   ratio** by two students per instructor. A person holding both instructor and divemaster roles is

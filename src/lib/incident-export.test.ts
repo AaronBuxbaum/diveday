@@ -15,11 +15,17 @@ import {
 
 /** A manifest crew member with no emergency contact on file — the ordinary state. */
 const manifestCrew = (
-  member: Omit<ManifestCrewMember, "emergencyContactName" | "emergencyContactPhone"> &
-    Partial<Pick<ManifestCrewMember, "emergencyContactName" | "emergencyContactPhone">>,
+  member: Omit<
+    ManifestCrewMember,
+    "emergencyContactName" | "emergencyContactPhone" | "standingRatings"
+  > &
+    Partial<
+      Pick<ManifestCrewMember, "emergencyContactName" | "emergencyContactPhone" | "standingRatings">
+    >,
 ): ManifestCrewMember => ({
   emergencyContactName: null,
   emergencyContactPhone: null,
+  standingRatings: [],
   ...member,
 });
 
@@ -867,6 +873,41 @@ describe("buildIncidentExport", () => {
  * document a coastguard, an insurer or DAN actually reads, and until this it
  * could say a diver did not come back and nothing about what happened next.
  */
+/**
+ * Issue #1852: the incident export answers "what rating did each professional
+ * hold", not only "what job did they do". The job stays in `roles`; the
+ * standing rating the job does not already say rides beside it.
+ */
+describe("a crew member's rating on the incident export", () => {
+  it("carries the rating beside the day's job", () => {
+    const doc = buildIncidentExport(
+      baseInput({
+        manifests: manifestsFor(
+          [diver("b1", "Ana Diaz")],
+          [
+            manifestCrew({
+              id: "p7",
+              fullName: "Keiko Tanaka",
+              roles: ["divemaster"],
+              standingRatings: ["assistant_instructor"],
+            }),
+          ],
+        ),
+      }),
+    );
+    expect(doc.crew[0]).toMatchObject({
+      fullName: "Keiko Tanaka",
+      roles: ["divemaster"],
+      ratings: ["assistant_instructor"],
+    });
+  });
+
+  it("carries an empty list, never a placeholder, for somebody with no rating to add", () => {
+    const doc = buildIncidentExport(baseInput());
+    expect(doc.crew[0]?.ratings).toEqual([]);
+  });
+});
+
 describe("the timeline carries what the crew observed", () => {
   it("prints the sentence beside the mark it belongs to", () => {
     const doc = buildIncidentExport(

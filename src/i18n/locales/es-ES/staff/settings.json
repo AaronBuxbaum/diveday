@@ -530,6 +530,7 @@
       "crew": "Tripulación",
       "diver": "Buceador"
     },
+    "jobWithRatings": "{job} ({ratings})",
     "languagesLegend": "Idiomas",
     "languagesLabel": "Idiomas",
     "languagesSave": "Guardar",

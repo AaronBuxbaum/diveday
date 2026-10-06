@@ -11,7 +11,7 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { buddyAlertText } from "@/i18n/buddy-labels";
 import { rollCallLabelText } from "@/i18n/manifest-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
-import { staffRoleLabels } from "@/i18n/staff-role-labels";
+import { staffJobWithRatings } from "@/i18n/staff-role-labels";
 import { crewRowId, scopedId } from "@/lib/element-id";
 import { formatDateTimeTz } from "@/lib/format";
 import { cachedListFormat } from "@/lib/intl-cache";
@@ -265,7 +265,7 @@ export function CrewRollCall({
                       name={member.fullName}
                       triggerLabel={t("manifest.openPersonDetails", { name: member.fullName })}
                       subtitle={t("manifest.personSheetCrewSubtitle", {
-                        roles: staffRoleLabels(t, member.roles).join(", "),
+                        roles: staffJobWithRatings(t, member.roles, member.standingRatings),
                       })}
                       status={
                         <Badge
@@ -329,7 +329,7 @@ export function CrewRollCall({
                                 underscore in it is a database value on a safety
                                 document (issue #1680, dive-domain review). */}
                             <span className="text-sm text-muted">
-                              {staffRoleLabels(t, member.roles).join(", ")}
+                              {staffJobWithRatings(t, member.roles, member.standingRatings)}
                             </span>
                             {capsule}
                           </span>

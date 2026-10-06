@@ -62,3 +62,21 @@ export function staffRoleLabelRecord(t: StaffTranslator): Record<Role, string> {
 export function staffRoleLabels(t: StaffTranslator, roles: readonly string[]): string[] {
   return roles.map((role) => staffRoleLabel(t, role));
 }
+
+/**
+ * The day's job with the professional rating it does not already say beside
+ * it: "Divemaster (Assistant Instructor)" (issue #1852). With no rating to add
+ * it is exactly the job, never an empty bracket.
+ */
+export function staffJobWithRatings(
+  t: StaffTranslator,
+  roles: readonly string[],
+  ratings: readonly string[],
+): string {
+  const job = staffRoleLabels(t, roles).join(", ");
+  if (ratings.length === 0) return job;
+  return t("settings.team.jobWithRatings", {
+    job,
+    ratings: staffRoleLabels(t, ratings).join(", "),
+  });
+}

@@ -234,6 +234,13 @@ export type IncidentCrewEntry = {
   fullName: string;
   /** Role codes as the roster holds them (effectiveCrewRoles). */
   roles: string[];
+  /**
+   * Standing professional ratings the job in `roles` does not already say
+   * (`standingRatingsBesideJob`; issue #1852). An investigator's question is
+   * what rating each professional in the water held, and the day's job alone
+   * cannot answer it. Empty when there is nothing to add.
+   */
+  ratings: string[];
   rollCall: IncidentRollCallResult[];
   /**
    * The teams this crew member was recorded on, by number — plural, because one
@@ -660,6 +667,7 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
   const crew: IncidentCrewEntry[] = departure.crew.map((member) => ({
     fullName: member.fullName,
     roles: member.roles,
+    ratings: member.standingRatings,
     rollCall: rollCallResults(
       input.manifests,
       (manifest) => manifest.crew.find((entry) => entry.id === member.id) ?? null,

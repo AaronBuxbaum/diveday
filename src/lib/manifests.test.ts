@@ -43,11 +43,17 @@ const notBoardedAt = (recordedByName = "Dana Reyes"): RollCallRecord => ({
  * explicitly; everything else says nothing and gets the common case.
  */
 const crewMember = (
-  member: Omit<ManifestCrewMember, "emergencyContactName" | "emergencyContactPhone"> &
-    Partial<Pick<ManifestCrewMember, "emergencyContactName" | "emergencyContactPhone">>,
+  member: Omit<
+    ManifestCrewMember,
+    "emergencyContactName" | "emergencyContactPhone" | "standingRatings"
+  > &
+    Partial<
+      Pick<ManifestCrewMember, "emergencyContactName" | "emergencyContactPhone" | "standingRatings">
+    >,
 ): ManifestCrewMember => ({
   emergencyContactName: null,
   emergencyContactPhone: null,
+  standingRatings: [],
   ...member,
 });
 

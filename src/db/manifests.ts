@@ -3,7 +3,7 @@ import { ageOnDate, birthdayCallout, isMinorOnDate } from "@/lib/age";
 import { isStaff, STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
-import { effectiveCrewRoles } from "@/lib/crew-roles";
+import { effectiveCrewRoles, standingRatingsBesideJob } from "@/lib/crew-roles";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { log } from "@/lib/log";
 import {
@@ -189,6 +189,7 @@ async function listTripCrew(db: DbExecutor, shopId: string, tripId: string) {
       emergencyContactName: person.emergencyContactName,
       emergencyContactPhone: person.emergencyContactPhone,
       roles: [],
+      standingRatings: [],
       shopRoles: [],
     };
     // Null for a former staff member kept on the list by their roll-call
@@ -198,6 +199,10 @@ async function listTripCrew(db: DbExecutor, shopId: string, tripId: string) {
     // The job on *this* boat when the roster says so, otherwise the standing
     // roles — one definition, src/lib/crew-roles.ts.
     crew.roles = effectiveCrewRoles({ tripRole, shopRoles: crew.shopRoles });
+    // And the rating the job does not already say, beside it rather than
+    // instead of it: the log and the incident export are asked what rating
+    // each professional held (issue #1852).
+    crew.standingRatings = standingRatingsBesideJob({ tripRole, shopRoles: crew.shopRoles });
     byId.set(person.id, crew);
   }
   return [...byId.values()].map(({ shopRoles: _shopRoles, ...crew }) => crew);
