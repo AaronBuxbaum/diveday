@@ -3451,7 +3451,7 @@
         "trailsTerm": "Operational trails",
         "trailsBody": "who moved a booking, who marked a diver aboard, whether a confirmation arrived. Short who-did-what-when rows, in the shop’s own tenant.",
         "devicesTerm": "The copy on a boat phone",
-        "devicesBody": "So that a roll call still works with no signal, a crew phone holds its own copy of the next two days of manifests. For each diver it keeps their name and emergency contact; their rental sizes and whether they asked for nitrox; who is on their buddy team; whether they checked in or the desk marked them as not coming; whether they are cleared to board and, if not, why, which can be a medical hold; and each roll-call mark, with the name of the crew member who made it and any note they wrote.It is stored encrypted on that phone, under a key the browser will not hand back out, so it cannot be read off the device’s storage. Anyone holding the unlocked phone can open it, the same as the paper manifest it replaces. It is removed when a different shop signs in on that phone, and it deletes itself at the earlier of fourteen days after it was saved or seven days after the trip ended."
+        "devicesBody": "So that a roll call still works with no signal, a crew phone holds its own copy of the next two days of manifests. For each diver it keeps their name and emergency contact; their rental sizes and whether they asked for nitrox; who is on their buddy team; whether they checked in or the desk marked them as not coming; whether they are cleared to board and, if not, why, which can be a medical hold; and each roll-call mark, with the name of the crew member who made it and any note they wrote. It is stored encrypted on that phone, under a key the browser will not hand back out, so it cannot be read off the device’s storage. Anyone holding the unlocked phone can open it, the same as the paper manifest it replaces. It is removed when a different shop signs in on that phone, and it deletes itself at the earlier of fourteen days after it was saved or seven days after the trip ended."
       },
       "where": {
         "heading": "Where it is processed",
@@ -3745,7 +3745,7 @@
         "faq1Q": "What if a diver can’t remember which boat they’re on?",
         "faq1A": "Search by name, phone or email from DiveDay’s opening screen, or scan the code on their confirmation. It looks across every departure from six hours ago to a day and a half ahead.",
         "faq2Q": "Can a walk-in fill in their own details?",
-        "faq2A": "Yes. The code on your counter card opens a form on their phone for their name, contact details, certification and rental sizes, and a walk-in who gives an email is sent the release. Then seat them from the Divers tab.",
+        "faq2A": "Yes. The code on your counter card opens a form on their phone for their name, contact details, certification and rental sizes, and a walk-in is sent the release, by text if they gave only a local phone number. Then seat them from the Divers tab.",
         "faq3Q": "What happens when someone doesn’t show?",
         "faq3A": "Once the boat’s time has passed, mark them Not here. Their seat opens, the wait list shows beside it, and nothing is charged or refunded by that tap.",
         "closeTitle": "Check in the divers on the next demo boat.",
