@@ -98,7 +98,7 @@ describe("rentalFitLineText", () => {
 
   it("wraps a weights answer as long as the field allows between its words", () => {
     const size =
-      "Usually 12 lb with my 3 mm suit and 16 lb in the 7 mm; add 2 lb with an aluminum tank, less in fresh water at the lakes";
+      "Usually 12 lb with my 3 mm suit and 16 lb in the 7 mm; add 2 lb with an aluminum tank, less in fresh water at the lakes.";
     expect(size).toHaveLength(RENTAL_FIT_TEXT_LIMITS.weightPreference);
     const text = rentalFitLineText(t, "en-US", {
       state: "rents",

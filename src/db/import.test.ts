@@ -730,7 +730,7 @@ describe("commitContactImport — prior visits and imported payment history", ()
   const bookingsExport = [
     "customer_name,email,booking_date,tour_name,booking_status,total,booking_id,prior_shop",
     "Ines Vela,ines.visits@example.com,2024-05-11,Two-tank Molasses Reef,Completed,$165.00,CCD-1,Coral Coast Divers",
-    "Ines Vela,ines.visits@example.com,2025-02-02,Night dive Benwood,Canceled,$95.00,CCD-2,Coral Coast Divers",
+    "Ines Vela,ines.visits@example.com,2025-02-02,Night dive Benwood,Cancelled,$95.00,CCD-2,Coral Coast Divers",
   ].join("\n");
 
   async function visitsFor(

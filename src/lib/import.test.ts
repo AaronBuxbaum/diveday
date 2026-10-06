@@ -774,7 +774,7 @@ describe("prepareContactImport — prior visits", () => {
   const bookingsExport = [
     "customer_name,email,booking_date,tour_name,booking_status,total,booking_id",
     "Hana Kobayashi,hana@example.com,2024-05-11,Two-tank Molasses Reef,Completed,$165.00,CCD-1",
-    "Hana Kobayashi,hana@example.com,2025-02-02,Night dive Benwood,Canceled,$95.00,CCD-2",
+    "Hana Kobayashi,hana@example.com,2025-02-02,Night dive Benwood,Cancelled,$95.00,CCD-2",
     "Sam Reed,sam@example.com,2025-06-30,Discover Scuba,Completed,$120.00,CCD-3",
   ].join("\n");
 
