@@ -107,6 +107,13 @@ const FIXED_SOURCES = [
   "about-closing",
   "about-switching",
   "sign-in",
+  // `/onboard`'s footer line, on both of the page's faces (issue #1956). The
+  // page exists to start a shop, so a door back out of it is the one place
+  // the funnel runs in reverse — a reader who came to set up and chose to look
+  // first. That is a question worth its own bucket, and folded into `nav` or a
+  // page tag it could never be asked. Until 2026-10-06 the line linked to `/`
+  // and carried no tag at all.
+  "onboard-demo",
   "switching-hub",
   // The hub's annotated import-preview screen ends in one door into the demo
   // as the owner, the role that runs the import (docs/design/brand.md, "The

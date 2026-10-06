@@ -583,17 +583,38 @@ test("a visitor who wants a shop is sent to a person, not a sign-up form", async
     "href",
     SET_UP_HREF,
   );
-  await expect(page.getByRole("main").locator("form")).toHaveCount(0);
   await expect(page.locator('input[name="ownerPassword"]')).toHaveCount(0);
+  // The one form left on the closed door is the demo, at link weight under the
+  // mail that is the page's primary, with its own funnel tag (issue #1956). It
+  // linked to `/` until 2026-10-06, sending a reader to find the demo again.
+  const mainForms = page.getByRole("main").locator("form");
+  await expect(mainForms).toHaveCount(1);
+  const demoDoor = page.getByRole("main").getByRole("button", { name: "Try the live demo" });
+  await expect(demoDoor).toBeVisible();
+  await expect(demoDoor).not.toHaveClass(/bg-primary/);
+  await expect(mainForms.locator('input[name="source"]')).toHaveValue("onboard-demo");
   // A wrong key is no key.
   await page.goto("/onboard?setup=not-the-key-not-the-key-not-the-key");
   await expect(page.locator('input[name="ownerPassword"]')).toHaveCount(0);
+  // And the demo door opens the demo, not the homepage.
+  await page.getByRole("main").getByRole("button", { name: "Try the live demo" }).click();
+  await expect(page).toHaveURL(/\/shop\//);
 });
 
 test("the setup link opens the form, which answers the hesitation it creates", async ({ page }) => {
   await page.goto(`${ONBOARD_FORM_PATH}&from=pricing`);
-  // The tag still reaches the form when the link carries one.
-  await expect(page.getByRole("main").locator('input[name="source"]')).toHaveValue("pricing");
+  // The tag still reaches the form when the link carries one. Scoped to the
+  // sign-up form: the footer's demo door carries a `source` of its own.
+  const signUpForm = page.locator('form:has(input[name="ownerPassword"])');
+  await expect(signUpForm.locator('input[name="source"]')).toHaveValue("pricing");
+  // The footer's demo door stays link weight, so "Create shop & start trial"
+  // is still the page's one primary (issue #1956).
+  const demoDoor = page.getByRole("main").getByRole("button", { name: "Try the live demo" });
+  await expect(demoDoor).toBeVisible();
+  await expect(demoDoor).not.toHaveClass(/bg-primary/);
+  await expect(
+    page.locator('form:has(button:text-is("Try the live demo")) input[name="source"]'),
+  ).toHaveValue("onboard-demo");
 
   // Asking for a password is the moment of maximum hesitation, so the door
   // answers it — in one sentence, not the four claims this line used to join
@@ -611,7 +632,7 @@ test("the setup link opens the form, which answers the hesitation it creates", a
 
   // An unrecognized tag is bucketed rather than echoed into the funnel.
   await page.goto(`${ONBOARD_FORM_PATH}&from=Not%20A%20Real%20Source`);
-  await expect(page.getByRole("main").locator('input[name="source"]')).toHaveValue("unknown");
+  await expect(signUpForm.locator('input[name="source"]')).toHaveValue("unknown");
 });
 
 test("the about page says who is behind DiveDay and what it won't pretend", async ({ page }) => {

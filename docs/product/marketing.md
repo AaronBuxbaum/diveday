@@ -148,8 +148,10 @@ one tag across all of it would answer no question anyway (see the chrome note un
 story converts"). It carried the trial until 2026-08-23 (issue #934): a single door reads as *the*
 funnel's opinion of which one leads, so leaving it on the trial was the pair's own rule contradicted
 in the one place a reader can see from anywhere on the page. The **`/onboard` footer** offers the demo
-alone as a plain link, because the reader is already standing in the trial — and the nav is hidden
-entirely on that page (`hideCta`) for the same reason, so the demo is not pitched twice.
+alone as a link-weight submit of the demo action, tagged `onboard-demo` (issue #1956; until
+2026-10-06 it was a link to `/` under the demo's own label), because the reader is already standing
+in the trial — and the nav is hidden entirely on that page (`hideCta`) for the same reason, so the
+demo is not pitched twice.
 
 This was recorded because nothing held the funnel's shape and it had already drifted: `/` led with
 the demo, `/pricing` swapped the weights under the same two labels, and `/pricing`'s closing band
@@ -496,7 +498,9 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   until 2026-08-27, a leftover from before that decision); `/pricing`'s trial door is simply
   measured at two positions (the price hero, and the closing band tagged `pricing-close`). The
   nav's single door stays secondary weight so it never competes, and the CTA hides entirely on
-  `/onboard`, where it would link to the page it's on. A screen's role door (above) is a
+  `/onboard`, where it would link to the page it's on. The one exception there is the footer's demo
+  door (`onboard-demo`), a link-weight submit that spends none of the page's budget; the sign-up
+  spec asserts it carries no primary fill. A screen's role door (above) is a
   link-weight submit and spends none of the screen's budget; the spec asserts it carries no primary
   fill, the way it asserts `/about`'s support door does not.
   `/product` is where the budget is easiest to lose — the longest page on the site, offering the
