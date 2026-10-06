@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, ne, or } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
@@ -234,8 +234,18 @@ export async function crewClashes(
   tripId: string,
   now: Date = nowDate(),
 ): Promise<CrewClash[]> {
-  return (await crewClashesByTrip(db, shopId, [tripId], now)).get(tripId) ?? [];
+  const clashes = (await crewClashesByTrip(db, shopId, [tripId], now)).get(tripId) ?? [];
+  return clashes.map(({ legs: _legs, ...clash }) => clash);
 }
+
+/**
+ * A {@link CrewClash} with **which of the subject's own legs** it falls on —
+ * the windows of this departure that overlap the other one. A multi-day course
+ * clashing on its third morning is a clash still to fix on the first two and a
+ * boat out with it on the third, so a reader that splits "before it sails" from
+ * "once it has" (Today, H-80) needs the leg rather than the departure.
+ */
+export type CrewClashOnLegs = CrewClash & { legs: DepartureWindow[] };
 
 /**
  * {@link crewClashes} for many departures in **one query** (H-80, issue
@@ -252,15 +262,16 @@ export async function crewClashes(
  * while the other boat in it is still out.
  *
  * A subject id gets an entry only when it has a clash; an absent key is the
- * ordinary "nobody is double-booked".
+ * ordinary "nobody is double-booked". Each clash carries the subject's legs it
+ * falls on ({@link CrewClashOnLegs}), earliest first.
  */
 export async function crewClashesByTrip(
   db: AppDb,
   shopId: string,
   tripIds: readonly string[],
   now: Date = nowDate(),
-): Promise<Map<string, CrewClash[]>> {
-  const byTrip = new Map<string, CrewClash[]>();
+): Promise<Map<string, CrewClashOnLegs[]>> {
+  const byTrip = new Map<string, CrewClashOnLegs[]>();
   if (tripIds.length === 0) return byTrip;
 
   const subject = alias(trips, "subject_trip");
@@ -269,7 +280,10 @@ export async function crewClashesByTrip(
   const rows = await db
     .select({
       tripId: subject.id,
+      subjectStartsAt: subject.startsAt,
       subjectEndsAt: subject.endsAt,
+      legStartsAt: subjectDay.startsAt,
+      legEndsAt: subjectDay.endsAt,
       personId: tripAssignments.personId,
       fullName: people.fullName,
       otherTripId: trips.id,
@@ -303,25 +317,46 @@ export async function crewClashesByTrip(
         windowsOverlap(legWindow(tripScheduleDays, trips), legWindow(subjectDay, subject)),
       ),
     )
-    .orderBy(asc(people.fullName), asc(trips.startsAt), asc(trips.id));
+    .orderBy(
+      asc(people.fullName),
+      asc(trips.startsAt),
+      asc(trips.id),
+      asc(sql`coalesce(${subjectDay.startsAt}, ${subject.startsAt})`),
+    );
 
   // **One line per person per other departure, per subject**, and the id is
   // what dedupes — never the name. Two crew members who share a name are two
-  // people to ring, and the left joins repeat a row per pair of legs.
-  const seen = new Set<string>();
+  // people to ring. The left joins repeat a row per pair of legs, which is
+  // what collects the subject's legs the clash falls on.
+  const byKey = new Map<string, CrewClashOnLegs>();
   for (const row of rows) {
     if (hasReturned(row.subjectEndsAt, now)) continue;
+    const leg = {
+      startsAt: row.legStartsAt ?? row.subjectStartsAt,
+      endsAt: row.legEndsAt ?? row.subjectEndsAt,
+    };
     const key = `${row.tripId}:${row.personId}:${row.otherTripId}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    const list = byTrip.get(row.tripId) ?? [];
-    list.push({
+    const found = byKey.get(key);
+    if (found) {
+      if (!found.legs.some((known) => known.startsAt.getTime() === leg.startsAt.getTime())) {
+        found.legs.push(leg);
+      }
+      continue;
+    }
+    const clash: CrewClashOnLegs = {
       personId: row.personId,
       fullName: row.fullName,
       otherTripId: row.otherTripId,
       otherTitle: row.title,
-    });
+      legs: [leg],
+    };
+    byKey.set(key, clash);
+    const list = byTrip.get(row.tripId) ?? [];
+    list.push(clash);
     byTrip.set(row.tripId, list);
+  }
+  for (const clash of byKey.values()) {
+    clash.legs.sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
   }
   return byTrip;
 }

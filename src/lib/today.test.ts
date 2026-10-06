@@ -6,6 +6,7 @@ import {
   collapseDiverActions,
   collapseEmailDeliveries,
   collapseOwedRefunds,
+  crewClashPhase,
   diverBlockerAction,
   factOfScaleFor,
   filterActionsForRoles,
@@ -1380,5 +1381,70 @@ describe("collapseEmailDeliveries", () => {
     expect(rows[1]?.waiver).toEqual({ bookingIds: ["b-Cara", "b-Dev"] });
     expect(rows[1]?.actionLabel).toBe("Resend waivers");
     expect(rows[2]?.detail).toBe("Confirmation email never sent. Email isn’t set up.");
+  });
+});
+
+describe("crew_clash_sailed against the roll call (H-80, #1814)", () => {
+  it("never leads a missing diver or a blocked diver aboard, and leads every boarding blocker", () => {
+    const at = hoursFromNow(1);
+    const sorted = sortActions([
+      action({ id: "clash", kind: "crew_clash_sailed", urgency: "imminent", dueAt: at }),
+      action({ id: "waiver", kind: "medical_review", urgency: "imminent", dueAt: at }),
+      action({ id: "aboard", kind: "blocked_aboard", urgency: "imminent", dueAt: at }),
+      action({ id: "missing", kind: "roll_call_missing_diver", urgency: "imminent", dueAt: at }),
+    ]);
+    expect(sorted.map((row) => row.id)).toEqual(["missing", "aboard", "clash", "waiver"]);
+  });
+
+  it("is a warning, like the clash before the boat sails", () => {
+    expect(ACTION_KIND_META.crew_clash_sailed.tone).toBe("warning");
+    expect(ACTION_KIND_META.crew_clash.tone).toBe("warning");
+  });
+});
+
+describe("crewClashPhase", () => {
+  const dayOne = { startsAt: hoursFromNow(-30), endsAt: hoursFromNow(-26) };
+  const dayTwo = { startsAt: hoursFromNow(2), endsAt: hoursFromNow(6) };
+  const phaseAt = (
+    legs: { startsAt: Date; endsAt: Date }[],
+    now: Date,
+    departureRollCallRecorded = false,
+  ) =>
+    crewClashPhase({
+      legs,
+      departureStartsAt: legs[0]?.startsAt ?? now,
+      departureRollCallRecorded,
+      now,
+    });
+
+  it("is ahead while the clashing leg is still to sail, even when an earlier leg is home", () => {
+    expect(phaseAt([dayOne, dayTwo], NOW)).toEqual({ phase: "ahead", leg: dayTwo });
+  });
+
+  it("turns out an hour after the leg's start, and silent once it is home", () => {
+    const fromStart = (hours: number) => new Date(dayTwo.startsAt.getTime() + hours * 3_600_000);
+    expect(phaseAt([dayTwo], fromStart(0.5))?.phase).toBe("ahead");
+    expect(phaseAt([dayTwo], fromStart(1))?.phase).toBe("out");
+    expect(phaseAt([dayTwo], fromStart(4.9))?.phase).toBe("out");
+    expect(phaseAt([dayTwo], fromStart(5))).toBeNull();
+  });
+
+  it("takes the crew's departure roll call over the clock, for the first leg only", () => {
+    const leg = { startsAt: hoursFromNow(-0.25), endsAt: hoursFromNow(3) };
+    expect(phaseAt([leg], NOW, true)?.phase).toBe("out");
+    expect(phaseAt([leg], NOW, false)?.phase).toBe("ahead");
+    const later = { startsAt: hoursFromNow(-0.25), endsAt: hoursFromNow(3) };
+    expect(
+      crewClashPhase({
+        legs: [later],
+        departureStartsAt: hoursFromNow(-24),
+        departureRollCallRecorded: true,
+        now: NOW,
+      })?.phase,
+    ).toBe("ahead");
+  });
+
+  it("says nothing once every clashing leg is home", () => {
+    expect(phaseAt([dayOne], NOW)).toBeNull();
   });
 });

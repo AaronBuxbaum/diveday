@@ -117,18 +117,31 @@ describe("boatClashes (H-80: one hull, one departure at a time)", () => {
     expect(await boatClashes(ctx.db, ctx.shop.id, charter.id)).toEqual([]);
   });
 
-  it("stops reporting once the departure it is about has come home", async () => {
+  /**
+   * A hull is one object: once it has left on either departure the other is
+   * not going on it, and there is nothing left to move (dive-domain-expert
+   * review). Both sides go quiet at the buffered hour, never earlier.
+   */
+  it("goes quiet on both sides once either departure has sailed", async () => {
     const { drift, charter } = await oneHullTwice();
-    // The moved charter runs 19:00–20:30Z; home a buffered hour later.
+    // Both now leave at 19:00Z; sailed a buffered hour later.
+    const beforeSailing = new Date("2030-08-03T19:59:00Z");
+    const sailed = new Date("2030-08-03T20:00:00Z");
+    expect(await boatClashes(ctx.db, ctx.shop.id, charter.id, beforeSailing)).toHaveLength(1);
+    expect(await boatClashes(ctx.db, ctx.shop.id, drift.id, beforeSailing)).toHaveLength(1);
+    expect(await boatClashes(ctx.db, ctx.shop.id, charter.id, sailed)).toEqual([]);
+    expect(await boatClashes(ctx.db, ctx.shop.id, drift.id, sailed)).toEqual([]);
+  });
+
+  it("goes quiet when only the other departure has sailed", async () => {
+    const hull = await createBoat(ctx.db, ctx.shop.id, "Early Leaver", 20);
+    const early = await departure("Early", "2030-09-04T18:00:00Z", "2030-09-04T23:00:00Z", hull.id);
+    const late = await departure("Late", "2030-09-04T21:00:00Z", "2030-09-05T01:00:00Z", hull.id);
+    const earlyGone = new Date("2030-09-04T19:30:00Z");
+    expect(await boatClashes(ctx.db, ctx.shop.id, late.id, earlyGone)).toEqual([]);
+    expect(await boatClashes(ctx.db, ctx.shop.id, early.id, earlyGone)).toEqual([]);
     expect(
-      await boatClashes(ctx.db, ctx.shop.id, charter.id, new Date("2030-08-03T21:29:00Z")),
-    ).toHaveLength(1);
-    expect(
-      await boatClashes(ctx.db, ctx.shop.id, charter.id, new Date("2030-08-03T21:31:00Z")),
-    ).toEqual([]);
-    // The drift is still out at that instant, and still says so.
-    expect(
-      await boatClashes(ctx.db, ctx.shop.id, drift.id, new Date("2030-08-03T21:31:00Z")),
+      await boatClashes(ctx.db, ctx.shop.id, late.id, new Date("2030-09-04T18:30:00Z")),
     ).toHaveLength(1);
   });
 

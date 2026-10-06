@@ -769,7 +769,9 @@ new domain concept, define it here in the same PR.
   group and a fun-dive group on one charter models it as one departure with two groups. Said on the
   Move panel before a move lands one (`boatMoveClashes`), and on both departures' pages while it
   stands — the Divers tab's pulse and the Details tab's Boat and crew row (`boatClashes`). Like the
-  crew clash it is information, never a gate, and silent once the departure is home.
+  crew clash it is information, never a gate; unlike it, it goes silent once **either** departure
+  has sailed, because a hull that has left on one is not going on the other and nothing is left to
+  move.
 - **Crew clash** — one person on two departures whose windows **overlap**. It is a time overlap and
   never a shared day: a divemaster on the 08:00 and the 14:00 is how a shop runs a Saturday, and
   `setTripCrew`/`changeTripCrew` allow it deliberately while refusing the overlap outright. The

@@ -294,18 +294,20 @@ export function crewClashDetailText(
 }
 
 /**
- * The same fact once the boat has left (H-80, issue #1814): it says the boat
- * sailed with the clash standing, and what to do about it from ashore.
+ * The same fact once the boat has left (H-80, issue #1814): one sentence per
+ * person saying the boat left with them also rostered elsewhere, then the one
+ * thing to do about it from ashore, said once however many names precede it.
  */
 export function crewClashSailedDetailText(
   t: StaffTranslator,
   clashes: readonly { fullName: string; otherTitle: string }[],
 ): string {
-  return clashes
-    .map((clash) =>
+  return [
+    ...clashes.map((clash) =>
       t("today.detail.crewClashSailed", { name: clash.fullName, departure: clash.otherTitle }),
-    )
-    .join(" ");
+    ),
+    t("today.detail.crewClashSailedConfirm"),
+  ].join(" ");
 }
 
 /**

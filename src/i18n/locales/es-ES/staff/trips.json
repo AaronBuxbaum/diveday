@@ -136,7 +136,7 @@
     "prepGaps": "{count, plural, one {A # buceador le faltan tallas de alquiler} other {A # buceadores les faltan tallas de alquiler}}",
     "awaitingPayment": "{count, plural, one {# pedido pendiente de pago} other {# pedidos pendientes de pago}}",
     "noRequirements": "Define los requisitos para que alguien pueda embarcar",
-    "boatClash": "{boat} también sale en {departure}"
+    "boatClash": "{boat} también está asignado a {departure}"
   },
   "detail": {
     "viewBookingPage": "Ver página de reserva",

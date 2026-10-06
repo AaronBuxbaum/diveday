@@ -20,6 +20,7 @@ import type { ReadinessBlocker, ReadinessBlockerCode } from "./readiness";
 import type { SeasonStart } from "./season";
 import type { TripPhase } from "./trip-phase";
 import type { TripStageReading } from "./trip-stages";
+import { hasReturned, hasSailed } from "./trips";
 import { utcToWallTime } from "./zoned";
 
 /**
@@ -126,13 +127,6 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   roll_call_unfinished: 2,
   /** The same, for a crew member who boarded and has no result after a dive. */
   roll_call_crew_unfinished: 3,
-  // **A boat that sailed with somebody also rostered on another hull at those
-  // hours** (H-80, issue #1814). Nobody has said anyone is missing, so it sits
-  // under the four roll-call rows; but the manifest may name a person who is on
-  // the other boat, and souls-on-board is read over the radio, so it sits
-  // above every boarding-time blocker. Read from the roster (`crewClashes`),
-  // never from roll-call events: the subject rule above is untouched.
-  crew_clash_sailed: 3.2,
   // **A blocked diver who is already on the boat** (issue #791). The gate is
   // behind them, not in front: whatever the blocker is, it is now a question
   // about somebody aboard, so it outranks every boarding-time blocker below.
@@ -140,6 +134,18 @@ const KIND_SEVERITY: Record<TodayActionKind, number> = {
   // you row that told the same diver's blocker as if they were still ashore.
   // Its own step under the crew count, never a tie a sort could reverse.
   blocked_aboard: 3.5,
+  // **A boat that left with somebody also rostered on another departure at
+  // those hours** (H-80, issue #1814). Nobody has said anyone is missing, so it
+  // sits under every roll-call row and under a blocked diver already aboard,
+  // which is a named person with a known problem; but the manifest may name a
+  // crew member who is on the other boat, and souls-on-board is read over the
+  // radio, so it sits above every boarding-time blocker. Severity only breaks
+  // ties: inside the top urgency band the row is dated so that every open
+  // after-dive roll-call row is due no later than it (`getTodayWork`), so a
+  // missing diver always leads it (dive-domain-expert review, 2026-10-06).
+  // Read from the roster (`crewClashes`), never from roll-call events: the
+  // subject rule above is untouched.
+  crew_clash_sailed: 3.7,
   medical_review: 4,
   // Tied with the hold it settles, deliberately. This table ranks by how long a
   // fix takes to land, and both answers put the same diver off the same boat —
@@ -668,6 +674,44 @@ export const ROLL_CALL_GAP_KINDS: Record<RollCallGapReason, TodayActionKind> = {
 export function rollCallGapUrgency(reason: RollCallGapReason, stale: boolean): TodayUrgency {
   if (reason === "departure_uncounted" || reason === "no_roll_call") return "now";
   return stale ? "soon" : "imminent";
+}
+
+/**
+ * **Where a crew clash stands, for Today** (H-80, issues #1776 and #1814).
+ *
+ * Asked of the subject departure's own legs the clash falls on, not of the
+ * departure: a three-day course clashing on its third morning has a clash to
+ * fix on days one and two and a boat out with it on day three.
+ *
+ * - `"out"` — some clashing leg has left and is not home. "Left" is
+ *   `hasSailed` (the buffered hour every "has the boat gone" question
+ *   shares, `.claude/rules/domain.md`), or earlier when the crew have already
+ *   recorded the departure roll call: their tap beats the clock, as in
+ *   `tripPhaseOf`. The roll call is the departure's, so it only speaks for its
+ *   first leg.
+ * - `"ahead"` — no clashing leg is out, and one is still to sail.
+ * - `null` — every clashing leg is home (`hasReturned`): permanent and
+ *   unfixable, said nowhere.
+ */
+export type CrewClashPhase = "ahead" | "out";
+
+export function crewClashPhase(input: {
+  legs: readonly { startsAt: Date; endsAt: Date }[];
+  /** The departure's own `startsAt`, which names its first leg. */
+  departureStartsAt: Date;
+  /** Somebody has been recorded at this departure's `departure` checkpoint. */
+  departureRollCallRecorded: boolean;
+  now: Date;
+}): { phase: CrewClashPhase; leg: { startsAt: Date; endsAt: Date } } | null {
+  const { legs, departureStartsAt, departureRollCallRecorded, now } = input;
+  const live = legs.filter((leg) => !hasReturned(leg.endsAt, now));
+  const left = (leg: { startsAt: Date }) =>
+    hasSailed(leg.startsAt, now) ||
+    (departureRollCallRecorded && leg.startsAt.getTime() === departureStartsAt.getTime());
+  const out = live.find(left);
+  if (out) return { phase: "out", leg: out };
+  const ahead = live[0];
+  return ahead ? { phase: "ahead", leg: ahead } : null;
 }
 
 export type TodayAction = {

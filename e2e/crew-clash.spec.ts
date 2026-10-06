@@ -109,7 +109,7 @@ test.describe("a standing crew clash", () => {
     // Divers tab's pulse names the hull's other departure (H-80).
     const twoTankPath = await tripPathByTitle(page, SHOP, twoTank);
     await page.goto(twoTankPath);
-    await expect(page.getByRole("link", { name: `${HULL} is also out on ${drift}` })).toBeVisible();
+    await expect(page.getByRole("link", { name: `${HULL} is also on ${drift}` })).toBeVisible();
     await page.goto(twoTankPath);
     await openTripAbout(page);
     await expect(page.locator("#crew").getByRole("status")).toContainText(

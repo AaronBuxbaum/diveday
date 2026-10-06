@@ -14,7 +14,7 @@ import {
 } from "drizzle-orm";
 import { type AnyPgColumn, alias } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
-import { hasReturned } from "@/lib/trips";
+import { hasSailed } from "@/lib/trips";
 import type { AppDb } from "./client";
 import { boats, tripScheduleDays, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -138,10 +138,12 @@ export type BoatClash = {
  * that lists a day asks for its boats at once rather than once per boat.
  *
  * Both sides must be live and `scheduled` (a called-off departure holds no
- * hull), and a subject departure already **home** reports nothing: a clash on
- * last month's charter is permanent, unfixable and true, which is the warning a
- * shop learns to scroll past (`hasReturned`, the one "has the boat come back"
- * rule the crew clash shares).
+ * hull), and a clash goes quiet once **either** of its two overlapping legs
+ * has sailed (`hasSailed`, the buffered "has the boat gone" rule). A hull is
+ * one physical object: once it has left on one of them, the other is not
+ * going on it whatever the board says, the dock already knows, and there is
+ * nothing left to move. A clash on last month's charter is permanent,
+ * unfixable and true, which is the warning a shop learns to scroll past.
  *
  * One entry per other departure, however many legs either side has. Tenancy is
  * proved on both sides through `trips.shop_id`, and on the boat through
@@ -161,7 +163,10 @@ export async function boatClashesByTrip(
   const rows = await db
     .select({
       tripId: subject.id,
-      subjectEndsAt: subject.endsAt,
+      subjectStartsAt: subject.startsAt,
+      subjectLegStartsAt: subjectDay.startsAt,
+      otherStartsAt: trips.startsAt,
+      otherLegStartsAt: tripScheduleDays.startsAt,
       otherTripId: trips.id,
       otherTitle: trips.title,
       boatName: boats.name,
@@ -190,9 +195,10 @@ export async function boatClashesByTrip(
 
   const seen = new Set<string>();
   for (const row of rows) {
-    if (hasReturned(row.subjectEndsAt, now)) continue;
-    // The left joins repeat a row per pair of legs; the pair of departures is
-    // the fact.
+    // The left joins repeat a row per overlapping pair of legs: a pair where
+    // either hull has left says nothing, and the pair of departures is the fact.
+    if (hasSailed(row.subjectLegStartsAt ?? row.subjectStartsAt, now)) continue;
+    if (hasSailed(row.otherLegStartsAt ?? row.otherStartsAt, now)) continue;
     const key = `${row.tripId}:${row.otherTripId}`;
     if (seen.has(key)) continue;
     seen.add(key);

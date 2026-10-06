@@ -39,6 +39,7 @@ export {
 } from "./trips-create";
 export {
   type CrewClash,
+  type CrewClashOnLegs,
   type CrewMoveConflicts,
   changeTripCrew,
   changeTripCrewOutcome,

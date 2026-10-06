@@ -4,7 +4,7 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate, nowMs } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
-import { sortStationRows } from "@/lib/today";
+import { sortActions, sortStationRows } from "@/lib/today";
 import { dbNowPlus, fileScopedShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { cancelBooking, createBookingParty } from "./bookings";
@@ -3161,6 +3161,117 @@ describe("crew clashes on Today (H-80)", () => {
     // unfixable, which is the warning a shop learns to scroll past.
     const bothHome = new Date(hostStartsAt.getTime() + 5.1 * HOUR);
     expect(await clashRows(bothHome, [host.id, mover.id])).toEqual([]);
+  });
+
+  /**
+   * A clash is decided per leg, not per departure (dive-domain-expert review):
+   * a two-day course clashing on its second morning still has the clash to fix
+   * while day one is out, a boat out with it on day two, and nothing after.
+   */
+  it("classifies a multi-day course's clash by the leg it falls on", async () => {
+    const { db, shop } = ctx;
+    const base = new Date(nowDate().getTime() + 2 * 24 * HOUR);
+    const at = (hours: number) => new Date(base.getTime() + hours * HOUR);
+    const personId = await divemaster("Rua Twoday");
+    const course = await createTrip(db, {
+      shopId: shop.id,
+      title: "Two-day course",
+      startsAt: at(0),
+      endsAt: at(28),
+      capacity: 4,
+      scheduleDays: [
+        { dayNumber: 1, startsAt: at(0), endsAt: at(4) },
+        { dayNumber: 2, startsAt: at(24), endsAt: at(28) },
+      ],
+    });
+    const charter = await createTrip(db, {
+      shopId: shop.id,
+      title: "Second-morning charter",
+      startsAt: at(10),
+      endsAt: at(12),
+      capacity: 6,
+    });
+    if (!course || !charter) throw new Error("departures not created");
+    expect(await setTripCrew(db, shop.id, course.id, [personId])).toBe(true);
+    expect(await setTripCrew(db, shop.id, charter.id, [personId])).toBe(true);
+    expect((await moveTrip(db, shop.id, charter.id, at(25))).ok).toBe(true);
+
+    const onCourse = async (now: Date) =>
+      (await clashRows(now, [course.id])).map((row) => [row.kind, row.dueAt?.getTime()]);
+
+    // Day one is out; the clash is on day two, still to sail and still fixable.
+    expect(await onCourse(at(1.5))).toEqual([["crew_clash", at(24).getTime()]]);
+    // Day two is out with it.
+    expect(await onCourse(at(26))).toEqual([["crew_clash_sailed", at(28).getTime()]]);
+    // Day two is home: permanent, said nowhere.
+    expect(await onCourse(at(29.5))).toEqual([]);
+  });
+
+  /**
+   * A1 of the dive-domain-expert review: a missing diver on the same boat
+   * always leads the sailed clash, though both are imminent and the clash's
+   * boat may come home first.
+   */
+  it("dates the sailed clash so a missing diver on a later boat still leads it", async () => {
+    const { db, shop } = ctx;
+    const now = nowDate();
+    const hostStartsAt = new Date(now.getTime() - HOUR);
+    const { host } = await movedOnto(hostStartsAt, hostStartsAt);
+
+    // Another boat, out until two hours after the clash boat is home, with a
+    // diver counted not back aboard after dive one. Inserted directly: the
+    // booking path refuses a seat on a boat that has sailed.
+    const [later] = await db
+      .insert(tripsTable)
+      .values({
+        shopId: shop.id,
+        title: "Long drift, diver not back",
+        startsAt: new Date(now.getTime() - 2 * HOUR),
+        endsAt: new Date(host.endsAt.getTime() + 2 * HOUR),
+        capacity: 6,
+        plannedDives: 2,
+        priceCents: 13000,
+      })
+      .returning();
+    if (!later) throw new Error("fixture trip not created");
+    const [diver] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(eq(people.shopId, shop.id))
+      .limit(1);
+    const [staff] = await listStaff(db, shop.id);
+    if (!diver || !staff) throw new Error("seed people missing");
+    const [booking] = await db
+      .insert(bookingsTable)
+      .values({ shopId: shop.id, tripId: later.id, personId: diver.id, status: "checked_in" })
+      .returning();
+    if (!booking) throw new Error("fixture booking not created");
+    await db.insert(rollCallEventsTable).values({
+      shopId: shop.id,
+      tripId: later.id,
+      bookingId: booking.id,
+      recordedByPersonId: staff.person.id,
+      status: "boarded",
+      checkpoint: "departure",
+      source: "live",
+      occurredAt: new Date(now.getTime() - 2 * HOUR),
+    });
+    const counted = await recordRollCall(db, {
+      shopId: shop.id,
+      tripId: later.id,
+      bookingId: booking.id,
+      recordedByPersonId: staff.person.id,
+      status: "not_boarded",
+      checkpoint: "after_dive_1",
+    });
+    expect(counted.ok).toBe(true);
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone, now);
+    const ids = sortActions(work.actions).map((action) => action.id);
+    const missing = ids.findIndex((id) => id.startsWith(`roll-call:${later.id}:missing_diver:`));
+    const clash = ids.indexOf(`crew-clash-sailed:${host.id}`);
+    expect(missing).toBeGreaterThanOrEqual(0);
+    expect(clash).toBeGreaterThan(missing);
   });
 
   it("leaves the roll-call subject rule alone: no crew roll-call row for an untapped crew", async () => {

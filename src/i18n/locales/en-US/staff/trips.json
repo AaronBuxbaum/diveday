@@ -136,7 +136,7 @@
     "prepGaps": "{count, plural, one {# diver is missing rental sizes} other {# divers are missing rental sizes}}",
     "awaitingPayment": "{count, plural, one {# order is awaiting payment} other {# orders are awaiting payment}}",
     "noRequirements": "Set the requirements before anyone can board",
-    "boatClash": "{boat} is also out on {departure}"
+    "boatClash": "{boat} is also on {departure}"
   },
   "detail": {
     "viewBookingPage": "View booking page",

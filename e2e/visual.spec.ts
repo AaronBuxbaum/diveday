@@ -3878,7 +3878,7 @@ for (const scheme of ["light", "dark"] as const) {
         expect(seeded.ok()).toBe(true);
         await page.goto("/shop/blue-mantis");
         // The destination's own words, not a timing guess.
-        await page.getByText("Crew on two boats").first().waitFor();
+        await page.getByText("Crew on two departures").first().waitFor();
         await capture(page, "today-crew-clash", scheme);
       });
 
