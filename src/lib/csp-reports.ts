@@ -12,14 +12,31 @@ import { redactCapabilityUrl } from "./capability-urls";
  *
  * ## What is deliberately not kept
  *
- * `script-sample`, `source-file`, `line-number` and `column-number` are
- * dropped. They are the fields a violation report leaks through: `script-sample`
- * is the first 40 characters of the offending inline script, which on this app
- * would be a slice of the flight payload — a serialized render of whatever the
- * page was showing, up to and including a diver's name. The report exists to
- * say *which directive* a *which host* tripped, and those two survive.
+ * `script-sample`, `line-number` and `column-number` are dropped, and
+ * `source-file` keeps only its origin. They are the fields a violation report
+ * leaks through: `script-sample` is the first 40 characters of the offending
+ * inline script, which on this app would be a slice of the flight payload — a
+ * serialized render of whatever the page was showing, up to and including a
+ * diver's name. The report exists to say *which directive* a *which host*
+ * tripped, and *whose script* tripped it, and those three survive.
  *
- * Both retained URLs are reduced to an origin (or a path, same-origin), never
+ * ## Browser extensions are not this app's violations
+ *
+ * An extension that injects a script into the page runs under the page's
+ * policy, so its `eval` arrives here as a `script-src` violation on whatever
+ * route the visitor had open — with `blocked: "eval"` and nothing else to tell
+ * it from the app's own bundle. A report whose *source* is an extension URL is
+ * dropped: nothing in this repository can fix it, and it is not a thing the
+ * policy would break for anyone but that extension. A browser fills the source
+ * from where the script really came from, so the app's own code cannot be
+ * made to look like an extension. The *blocked* side is different — the app's
+ * own page loading an extension's resource is the shape of a script-gadget
+ * attack — so that report is kept, as `blocked: "extension"`, never the
+ * extension's id. Every
+ * other report now carries its `source` origin, so the next unexplained
+ * `eval` says whether it came from `/_next/static` or somewhere else.
+ *
+ * All three retained URLs are reduced to an origin (or a path, same-origin), never
  * carried whole: a `document-uri` on this app is routinely a capability URL
  * whose path segment **is** the bearer token (waivers, ready, recap, claim), and
  * a log group is exactly where one must not land
@@ -43,6 +60,7 @@ const legacyReportSchema = z.object({
     "effective-directive": z.string().optional(),
     "violated-directive": z.string().optional(),
     "blocked-uri": z.string().optional(),
+    "source-file": z.string().optional(),
     disposition: z.string().optional(),
   }),
 });
@@ -56,6 +74,7 @@ const reportingApiSchema = z.array(
         documentURL: z.string().optional(),
         effectiveDirective: z.string().optional(),
         blockedURL: z.string().optional(),
+        sourceFile: z.string().optional(),
         disposition: z.string().optional(),
       })
       .optional(),
@@ -72,6 +91,12 @@ export type CspViolation = {
   blocked: string;
   /** Which route the violating document was, with any capability segment gone. */
   route: string;
+  /**
+   * The origin of the script that made the call, or `unknown` when the browser
+   * names none. The one field that tells an `eval` from the app's own bundle
+   * apart from one in a third-party script.
+   */
+  source: string;
   /** `report` for the report-only header, `enforce` for the enforced one. */
   disposition: "enforce" | "report";
 };
@@ -149,7 +174,8 @@ function normalizeDirective(value: string | undefined): string {
 }
 
 /**
- * An origin for an absolute URL, the keyword itself for the handful a browser
+ * An origin for an absolute http(s) URL, `extension` for a browser extension's
+ * own resource, the keyword itself for the handful a browser
  * sends instead (`inline`, `eval`, `data`, `blob`, …), and `unknown` for
  * anything else — including a non-URL value outside that closed set, which is
  * a forged report rather than a browser one. Never a path: a blocked URL can
@@ -160,8 +186,51 @@ export function blockedOrigin(value: string | undefined): string {
   if (!value.includes("://")) {
     return KNOWN_BLOCKED_KEYWORDS.has(value) ? value : "unknown";
   }
+  if (isExtensionUrl(value)) return "extension";
+  return httpOrigin(value);
+}
+
+/**
+ * The schemes a browser gives an extension's own scripts. Firefox sometimes
+ * sends the bare scheme (`moz-extension`) as the whole `source-file`, so the
+ * match is on the leading word rather than on a parsed URL.
+ */
+const EXTENSION_SCHEMES = new Set([
+  "chrome-extension",
+  "moz-extension",
+  "safari-extension",
+  "safari-web-extension",
+  "ms-browser-extension",
+]);
+
+function isExtensionUrl(value: string | undefined): boolean {
+  if (!value) return false;
+  const scheme = value.trim().split(":", 1)[0]?.toLowerCase() ?? "";
+  return EXTENSION_SCHEMES.has(scheme);
+}
+
+/**
+ * The origin of the script a violation was raised from, and `unknown` for
+ * anything that is not an http(s) URL. Never a path: an inline script's
+ * `source-file` is the document itself, which on `/waivers/<token>` is the
+ * credential.
+ */
+export function sourceOrigin(value: string | undefined): string {
+  if (!value?.includes("://")) return "unknown";
+  return httpOrigin(value);
+}
+
+/**
+ * An http(s) URL's origin, or `unknown`. The URL parser enforces no DNS
+ * length limit, so a forged report's 16 KB hostname is refused here rather
+ * than becoming a fresh value on a dashboard that groups by it.
+ */
+function httpOrigin(value: string): string {
   try {
-    return new URL(value).origin;
+    const url = new URL(value);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return "unknown";
+    if (url.hostname.length > 253) return "unknown";
+    return url.origin;
   } catch {
     return "unknown";
   }
@@ -193,11 +262,13 @@ export function parseCspReports(json: unknown): CspViolation[] {
   const legacy = legacyReportSchema.safeParse(json);
   if (legacy.success) {
     const body = legacy.data["csp-report"];
+    if (isExtensionUrl(body["source-file"])) return [];
     return [
       {
         directive: normalizeDirective(body["effective-directive"] || body["violated-directive"]),
         blocked: blockedOrigin(body["blocked-uri"]),
         route: reportRoute(body["document-uri"]),
+        source: sourceOrigin(body["source-file"]),
         disposition: normalizeDisposition(body.disposition),
       },
     ];
@@ -207,10 +278,12 @@ export function parseCspReports(json: unknown): CspViolation[] {
   if (!modern.success) return [];
   return modern.data
     .filter((entry) => entry.type === "csp-violation" && entry.body)
+    .filter((entry) => !isExtensionUrl(entry.body?.sourceFile))
     .map((entry) => ({
       directive: normalizeDirective(entry.body?.effectiveDirective),
       blocked: blockedOrigin(entry.body?.blockedURL),
       route: reportRoute(entry.body?.documentURL),
+      source: sourceOrigin(entry.body?.sourceFile),
       disposition: normalizeDisposition(entry.body?.disposition),
     }));
 }
