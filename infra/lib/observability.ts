@@ -303,7 +303,7 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
     // on a report means the enforced policy blocked something real.
     alarm: false,
     response:
-      "Read the directive and blocked origin off the lines, decide whether the host belongs in the policy, then either add it or fix what is loading it.",
+      "Read the directive, blocked origin and source origin off the lines, decide whether the host belongs in the policy, then either add it or fix what is loading it. A source that is not this app's origin is someone else's script; a report raised by a browser extension's own script is already dropped.",
   },
 ];
 

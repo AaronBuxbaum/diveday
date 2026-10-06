@@ -109,6 +109,13 @@ where the path segment **is** the credential, and `script-sample` is the first 4
 offending inline script — which here is the flight payload, a serialization of whatever the page was
 showing, up to and including a diver's name.
 
+`source-file` is kept as an origin only (2026-10-06): an `eval` report names no URL, so without
+it a line cannot say whether the app's own bundle or someone else's script made the call. A report
+whose source is a browser-extension URL is dropped at parse — an extension's injected script runs
+under the page's policy, and nothing in this repository can fix it. One whose *blocked* resource is
+an extension's is kept as `blocked: "extension"`, because the app's own page loading one is the
+shape of a script-gadget attack.
+
 ## What the first report-only pass found
 
 Run locally against a production build (`next build` + `next start`), driving `/`,
