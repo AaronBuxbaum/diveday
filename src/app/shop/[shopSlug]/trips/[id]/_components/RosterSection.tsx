@@ -19,6 +19,7 @@ import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { GroupLabel } from "@/components/ui/ledger";
 import { StatusMark, StatusMarkColumn } from "@/components/ui/StatusMark";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import type { SameNameHeldSeat } from "@/db/bookings";
 import type { listBookingNotes } from "@/db/operations";
 import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
@@ -44,9 +45,10 @@ import { rentalFitLine } from "@/lib/dive-prep";
 import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import { checkDrysuitCard } from "@/lib/drysuit-card";
 import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
-import { formatDateTimeTz } from "@/lib/format";
+import { formatDateTimeTz, formatShortDate } from "@/lib/format";
 import { guardianSignatureOf, guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { heldSeatBlockers } from "@/lib/identity-match";
+import { cachedListFormat } from "@/lib/intl-cache";
 import { flaggedMedicalPrompts } from "@/lib/medical";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { paymentSourceLine } from "@/lib/payment-source";
@@ -319,8 +321,8 @@ export function RosterSection({
   confirmIdentityAction: (formData: FormData) => void;
   /** "Different person": the held seat becomes a new diver (`splitBookingIdentity`). */
   splitIdentityAction: (formData: FormData) => void;
-  /** Per held seat, the same booker's other held seats under that name (`sameNameHeldSeatCounts`). */
-  sameNameHeldSeats?: ReadonlyMap<string, number>;
+  /** Per held seat, the other held seats a split may move with it (`sameNameHeldSeats`). */
+  sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
   /** This departure is a course with a minimum age, so a split must take a date of birth. */
   splitAsksDateOfBirth?: boolean;
   notesByBooking: Map<string, RosterPrivateNote[]>;
@@ -1046,20 +1048,32 @@ export function RosterSection({
      * seat into its own record. Like the medical hold, it is a decision about
      * who may board, so it does not wait behind the row's mark.
      */
+    const sameNameSeats = sameNameHeldSeats?.get(booking.id) ?? [];
     const identityCheck = identityUnconfirmed ? (
       <IdentityCheck
         bookingId={booking.id}
         bookedAs={booking.identityBookedAs}
         words={identityCheckWords(t, person.fullName)}
         splitAction={splitIdentityAction}
-        asksDateOfBirth={splitAsksDateOfBirth}
+        asksDateOfBirth={splitAsksDateOfBirth || sameNameSeats.some((seat) => seat.asksDateOfBirth)}
         maxDateOfBirth={maxPlausibleBirthDate()}
-        sameNameSeatsLabel={
-          sameNameHeldSeats?.get(booking.id) && booking.identityBookedAs
-            ? t("shared.identityCheck.sameNameSeats", {
-                count: sameNameHeldSeats.get(booking.id) ?? 0,
-                bookedAs: booking.identityBookedAs,
-              })
+        sameNameSeats={
+          sameNameSeats.length > 0 && booking.identityBookedAs
+            ? {
+                label: t("shared.identityCheck.sameNameSeats", {
+                  count: sameNameSeats.length,
+                  bookedAs: booking.identityBookedAs,
+                  departures: cachedListFormat(locale, { type: "conjunction" }).format(
+                    sameNameSeats.map((seat) =>
+                      t("shared.identityCheck.sameNameDeparture", {
+                        date: formatShortDate(seat.startsAt, locale, shopTimezone),
+                        trip: seat.tripTitle,
+                      }),
+                    ),
+                  ),
+                }),
+                bookingIds: sameNameSeats.map((seat) => seat.bookingId),
+              }
             : undefined
         }
         className="pb-3"

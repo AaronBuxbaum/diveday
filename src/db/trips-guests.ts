@@ -8,7 +8,7 @@ import {
 import { combineCertRequirements } from "@/lib/readiness";
 import { isFull } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
-import { sameNameHeldSeatCounts } from "./bookings";
+import { sameNameHeldSeats as findSameNameHeldSeats } from "./bookings";
 import type { AppDb } from "./client";
 import { courseNextStepsByBooking } from "./course-next-step";
 import { findSimilarDivers, listBookableDivers } from "./divers";
@@ -106,9 +106,10 @@ export async function getTripGuests(
     courseNextStepsByBooking(db, shop.id, tripId),
   ]);
 
-  // What "Different person" on a held seat can move along with it: the same
-  // booker's other held seats under the same name (issue #2081).
-  const sameNameHeldSeats = await sameNameHeldSeatCounts(
+  // What "Different person" on a held seat can offer to move along with it:
+  // other held seats under the same name on the same matched diver, on other
+  // departures, named by departure (issue #2081).
+  const sameNameHeldSeats = await findSameNameHeldSeats(
     db,
     shop.id,
     roster
@@ -116,6 +117,7 @@ export async function getTripGuests(
       .map(({ booking }) => ({
         bookingId: booking.id,
         personId: booking.personId,
+        tripId,
         bookedAs: booking.identityBookedAs,
       })),
   );
@@ -224,7 +226,9 @@ export async function getTripGuests(
     sameNameHeldSeats,
     /**
      * A split on this departure must take a date of birth: it is a course
-     * with a minimum age, which reads the new record's date (issue #2081).
+     * with a minimum age, which reads the new record's date (issue #2081). A
+     * seat whose same-name seats include such a course asks too
+     * (`SameNameHeldSeat.asksDateOfBirth`).
      */
     splitAsksDateOfBirth: Boolean(trip.course?.minimumAge),
     // `orders/new` refuses without a payable account, so each seat's "Create

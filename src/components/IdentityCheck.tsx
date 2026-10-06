@@ -31,8 +31,10 @@ export type IdentityCheckWords = {
  * required on a course with a minimum age because the age check and the
  * guardian rule both read it and fail open without it, and an optional email
  * or phone so the shop can send their own waiver. When other held seats were
- * booked under the same name and matched to the same diver, one box moves
- * them all onto the one new record.
+ * booked under the same name and matched to the same diver, on other
+ * departures, one box names those departures and moves them onto the one new
+ * record. It starts unticked: two strangers can share a name, and only the
+ * staffer can tell.
  *
  * Nothing from the matched record is printed here: the flag gates disclosure
  * as well as boarding (security review 2026-09-11). Every field starts empty
@@ -46,7 +48,7 @@ export function IdentityCheck({
   splitAction,
   asksDateOfBirth,
   maxDateOfBirth,
-  sameNameSeatsLabel,
+  sameNameSeats,
   className = "",
 }: {
   bookingId: string;
@@ -60,10 +62,11 @@ export function IdentityCheck({
   /** `maxPlausibleBirthDate()`, so the browser refuses a future date first. */
   maxDateOfBirth: string;
   /**
-   * "Also move their 2 other held seats booked as …", when there are any.
-   * Absent, no box is drawn: there is nothing else to move.
+   * Other held seats under the same name that a split may move along with
+   * this one: the box's words, which name each departure, and the bookings it
+   * posts. Absent, no box is drawn: there is nothing else to move.
    */
-  sameNameSeatsLabel?: string;
+  sameNameSeats?: { label: string; bookingIds: ReadonlyArray<string> };
   className?: string;
 }) {
   return (
@@ -113,9 +116,13 @@ export function IdentityCheck({
               />
             </Field>
           </FieldGrid>
-          {sameNameSeatsLabel ? (
-            <ChoiceRow type="checkbox" name="includeSameNameSeats" value="on" defaultChecked>
-              {sameNameSeatsLabel}
+          {sameNameSeats ? (
+            <ChoiceRow
+              type="checkbox"
+              name="sameNameSeatIds"
+              value={sameNameSeats.bookingIds.join(",")}
+            >
+              {sameNameSeats.label}
             </ChoiceRow>
           ) : null}
           <SubmitButton

@@ -1,4 +1,4 @@
-import { and, count, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
 import type { ActivityCode } from "@/lib/activity";
 import { checkMinimumAge, isPlausibleDateOfBirth } from "@/lib/age";
 import { calendarDateInTimezone, isValidCalendarDate } from "@/lib/calendar-date";
@@ -38,7 +38,6 @@ import {
   certifications,
   courses,
   gearReservations,
-  internalNotes,
   notificationSendQueue,
   people,
   personRoles,
@@ -1861,45 +1860,86 @@ export type SplitBookingIdentityInput = {
   email?: string | null;
   phone?: string | null;
   /**
-   * Also move every other held seat on the same matched diver booked under
-   * the same name, onto the same new record: one person who booked three dives
-   * with someone else's email is one record, not three.
+   * Other held seats to move onto the same new record: the ones the form
+   * named (`sameNameHeldSeats`), and only those of them that are still
+   * movable when the split runs (`movableSameNameSeats`). One person who
+   * booked three dives with someone else's email is one record, not three.
    */
-  includeSameNameSeats?: boolean;
+  sameNameSeatIds?: ReadonlyArray<string>;
 };
 
 /** The longest name a split accepts. */
 export const SPLIT_NAME_MAX = 200;
 
-/** The comparable form of a booked-as name: what `includeSameNameSeats` matches on. */
+/** The comparable form of a booked-as name: what the same-name seats match on. */
 function bookedAsKey(name: string): string {
   return name.trim().toLowerCase();
 }
 
+/** Another held seat a split could move along with this one (issue #2081). */
+export type SameNameHeldSeat = {
+  bookingId: string;
+  tripId: string;
+  tripTitle: string;
+  startsAt: Date;
+  /** Its departure is a course with a minimum age: moving it needs a date of birth. */
+  asksDateOfBirth: boolean;
+};
+
 /**
- * For each held seat given, how many *other* held seats the same matched
- * diver carries under the same booked-as name on a live departure: what
- * "Different person" can offer to move along with it (issue #2081). Seats
- * with no booked-as name, or none to move, are absent from the map.
+ * **One person is never on one departure twice** (dive-domain review,
+ * 2026-10-06). Of the same-name held seats found beside a seat on
+ * `primaryTripId`, the ones a split may move: none on the seat's own
+ * departure, and none on a departure holding two or more of them, since two
+ * seats on one boat under one name are two people and the split cannot tell
+ * which one is standing at the counter. Those are split one at a time.
  */
-export async function sameNameHeldSeatCounts(
+export function movableSameNameSeats<T extends { tripId: string }>(
+  primaryTripId: string,
+  candidates: ReadonlyArray<T>,
+): T[] {
+  const perTrip = new Map<string, number>();
+  for (const seat of candidates) perTrip.set(seat.tripId, (perTrip.get(seat.tripId) ?? 0) + 1);
+  return candidates.filter(
+    (seat) => seat.tripId !== primaryTripId && perTrip.get(seat.tripId) === 1,
+  );
+}
+
+/**
+ * For each held seat given, the *other* held seats the same matched diver
+ * carries under the same booked-as name on a live departure that a split may
+ * move with it (`movableSameNameSeats`), soonest first: what "Different
+ * person" offers to move, named by departure (issue #2081). Seats with no
+ * booked-as name, or nothing to move, are absent from the map.
+ */
+export async function sameNameHeldSeats(
   db: DbExecutor,
   shopId: string,
-  seats: ReadonlyArray<{ bookingId: string; personId: string; bookedAs: string | null }>,
-): Promise<Map<string, number>> {
+  seats: ReadonlyArray<{
+    bookingId: string;
+    personId: string;
+    tripId: string;
+    bookedAs: string | null;
+  }>,
+): Promise<Map<string, SameNameHeldSeat[]>> {
   const named = seats.filter((seat): seat is typeof seat & { bookedAs: string } =>
     Boolean(seat.bookedAs?.trim()),
   );
-  const counts = new Map<string, number>();
-  if (named.length === 0) return counts;
+  const result = new Map<string, SameNameHeldSeat[]>();
+  if (named.length === 0) return result;
   const held = await db
     .select({
       bookingId: bookings.id,
       personId: bookings.personId,
       bookedAs: bookings.identityBookedAs,
+      tripId: trips.id,
+      tripTitle: trips.title,
+      startsAt: trips.startsAt,
+      minimumAge: courses.minimumAge,
     })
     .from(bookings)
     .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .leftJoin(courses, and(eq(courses.id, trips.courseId), eq(courses.shopId, shopId)))
     .where(
       and(
         eq(bookings.shopId, shopId),
@@ -1909,18 +1949,28 @@ export async function sameNameHeldSeatCounts(
         eq(trips.shopId, shopId),
         liveTrip(),
       ),
-    );
+    )
+    .orderBy(asc(trips.startsAt));
   for (const seat of named) {
-    const others = held.filter(
-      (row) =>
-        row.bookingId !== seat.bookingId &&
-        row.personId === seat.personId &&
-        row.bookedAs !== null &&
-        bookedAsKey(row.bookedAs) === bookedAsKey(seat.bookedAs),
-    ).length;
-    if (others > 0) counts.set(seat.bookingId, others);
+    const candidates = held
+      .filter(
+        (row) =>
+          row.bookingId !== seat.bookingId &&
+          row.personId === seat.personId &&
+          row.bookedAs !== null &&
+          bookedAsKey(row.bookedAs) === bookedAsKey(seat.bookedAs),
+      )
+      .map((row) => ({
+        bookingId: row.bookingId,
+        tripId: row.tripId,
+        tripTitle: row.tripTitle,
+        startsAt: row.startsAt,
+        asksDateOfBirth: row.minimumAge !== null,
+      }));
+    const movable = movableSameNameSeats(seat.tripId, candidates);
+    if (movable.length > 0) result.set(seat.bookingId, movable);
   }
-  return counts;
+  return result;
 }
 
 /**
@@ -1941,18 +1991,20 @@ export async function sameNameHeldSeatCounts(
  * yet, which is the honest state. A wrong split is undone by merging the two
  * records (owner and manager), the same as any duplicate.
  *
- * **With `includeSameNameSeats`, every other held seat booked under the same
- * name and matched to the same diver moves too**, onto the one new record:
- * someone who booked three dives with a friend's email is one person, and
- * three splits would make three. A booking does not record who made it, so
- * two strangers who share a name are told apart only by the staffer leaving
- * the box unticked; the box names the count so they can. All of them or
+ * **With `sameNameSeatIds`, other held seats booked under the same name and
+ * matched to the same diver move too**, onto the one new record: someone who
+ * booked three dives with a friend's email is one person, and three splits
+ * would make three. A booking does not record who made it, so two strangers
+ * who share a name are told apart only by the staffer: the box is unticked by
+ * default and names each departure it would move. Never two seats on one
+ * departure (`movableSameNameSeats`), the seat's own included. All of them or
  * none: a medical hold on any of them refuses the lot.
  *
  * What moves is what was about this seat rather than about the matched person:
- * the booking itself, the gear held for it, the staff notes written on it, and
- * the seat's unsigned release links, with any half-filled answers on them
- * cleared, since nobody knows who typed them (issue #2080).
+ * the booking itself, the gear held for it, and the seat's unsigned release
+ * links, with any half-filled answers and any delivery outcome on them
+ * cleared, since nobody knows who typed them (issue #2080) and the outcome was
+ * about the matched diver's address. Staff notes stay with the matched person.
  *
  * **A signed release stays where it is filed.** `completeWaiver` refuses a
  * signature unless the typed name matches the record's diver, and on a held
@@ -1960,9 +2012,10 @@ export async function sameNameHeldSeatCounts(
  * names them. It is their paper, in their record, export and erasure; moving
  * it would file another person's medical answers under the new diver (dive
  * domain review, 2026-10-05). It is superseded all the same: it names someone
- * other than the seat's diver, so the seat asks for its own. A seat with an
- * unanswered medical referral is refused (`medical_hold`) until the referral
- * is answered, since superseding it would lift the hold; the seat's releases
+ * other than the seat's diver, so the seat asks for its own. A seat on a
+ * medical hold, a referral unanswered or one the physician did not clear
+ * (`isUnresolvedMedicalHold`), is refused (`medical_hold`) until a physician
+ * clears it, since superseding it would lift the hold; the seat's releases
  * are locked first, so a questionnaire submitted mid-split cannot slip one in.
  *
  * The seat's order stays with the person it billed. An order is an invoice to
@@ -2028,9 +2081,13 @@ export async function splitBookingIdentity(
 
       // The other held seats booked under the same name and guessed onto the
       // same diver: the same guess, repeated. Only on a departure that
-      // still exists; a deleted one has nobody to move.
-      const siblings =
-        input.includeSameNameSeats && booking.bookedAs
+      // still exists (a deleted one has nobody to move), only those the form
+      // named, and only those still movable now: never a second seat on one
+      // departure (`movableSameNameSeats`), whatever the form posted.
+      const requested = new Set(input.sameNameSeatIds ?? []);
+      requested.delete(input.bookingId);
+      const candidates =
+        requested.size > 0 && booking.bookedAs
           ? await tx
               .select({ bookingId: bookings.id, tripId: bookings.tripId })
               .from(bookings)
@@ -2049,6 +2106,9 @@ export async function splitBookingIdentity(
               )
               .for("update", { of: bookings })
           : [];
+      const siblings = movableSameNameSeats(booking.tripId, candidates).filter((seat) =>
+        requested.has(seat.bookingId),
+      );
       const seats = [{ bookingId: input.bookingId, tripId: booking.tripId }, ...siblings];
       const seatIds = seats.map((seat) => seat.bookingId);
 
@@ -2160,6 +2220,12 @@ export async function splitBookingIdentity(
           draftMedicalAnswers: null,
           draftAcknowledged: false,
           draftGuardian: null,
+          // How the link last reached the matched diver's inbox or phone: a
+          // bounce or a provider id about *their* address, not the new diver's.
+          deliveryError: null,
+          deliveryProviderMessageId: null,
+          deliveryProviderStatus: null,
+          deliveryProviderStatusAt: null,
           movedFromPersonId: booking.personId,
           movedAt: now,
           movedByPersonId: input.actorPersonId,
@@ -2197,12 +2263,9 @@ export async function splitBookingIdentity(
             inArray(gearReservations.bookingId, seatIds),
           ),
         );
-      await tx
-        .update(internalNotes)
-        .set({ personId: person.id })
-        .where(
-          and(eq(internalNotes.shopId, input.shopId), inArray(internalNotes.bookingId, seatIds)),
-        );
+      // Staff notes stay filed under the matched person (security review,
+      // 2026-10-06): a note was written while the seat read as theirs, and may
+      // be about them, so it is theirs to keep, export and erase.
       return {
         refused: null,
         tripId: booking.tripId,

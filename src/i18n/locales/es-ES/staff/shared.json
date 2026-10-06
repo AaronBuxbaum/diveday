@@ -538,7 +538,8 @@
     "emailLabel": "Correo electrónico",
     "phoneLabel": "Teléfono",
     "optional": "(opcional)",
-    "sameNameSeats": "{count, plural, one {Pasar también su otra plaza retenida, reservada como {bookedAs}} other {Pasar también sus otras # plazas retenidas, reservadas como {bookedAs}}}",
+    "sameNameSeats": "{count, plural, one {Pasar también la plaza retenida reservada como {bookedAs} en {departures}} other {Pasar también las plazas retenidas reservadas como {bookedAs} en {departures}}}",
+    "sameNameDeparture": "{trip} ({date})",
     "split": "Crear su propia ficha",
     "splitting": "Creando…"
   }

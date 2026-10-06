@@ -2231,6 +2231,17 @@ new domain concept, define it here in the same PR.
   unrelated person (that soft-delete window is accepted as-is; it fails closed to a blank record). See H-13 in
   [human-decisions.md](human-decisions.md) and
   [20260723-person-email-uniqueness](../architecture/decisions/20260723-person-email-uniqueness.md).
+- **Held seat** — a booking attached to an existing diver on a guess: it carries
+  `bookings.identity_unconfirmed_at` (with `identity_booked_as` and `identity_matched_by`) and the
+  `identity_unconfirmed` readiness blocker, raised by the **Identity match key** above. The seat is
+  real and counts against the boat; the *person* is not settled. It boards on nothing of the
+  matched diver's, and the flag gates **disclosure** as well as boarding (security review
+  2026-09-11): the roster, the boat manifest, its printed sheet, the crew phone's offline copy and
+  the departure log show the seat's own state (its name as booked, readiness, payment, roll-call
+  marks) and withhold the matched person's particulars (contact, emergency contact, age, sizes,
+  nitrox, medical answers), saying only that other holds may apply (`withholdHeldSeatParticulars`,
+  `src/lib/held-seat.ts`; issue #1690). It ends one of two ways, both on the roster: **Confirm
+  identity** or **Split off a held seat**. Crew never settle it at the rail.
 - **Confirm identity** — the staff tap that clears `bookings.identity_unconfirmed_at`, and the
   most consequential one in the product: it says *this person is the diver this seat was attached
   to*. Clearing the flag hands the seat the matched diver's **certifications** (readiness stops
@@ -2254,20 +2265,26 @@ new domain concept, define it here in the same PR.
 - **Split off a held seat** ("Different person") — the other answer to a held seat: this booking is
   *not* the diver it was attached to. `splitBookingIdentity` (`src/db/bookings.ts`) creates a new
   diver record, named by the staffer and prefilled with the name the seat was booked under
-  (`bookings.identity_booked_as`), and moves onto it what was about the seat: the booking, the gear
-  held for it, and the staff notes written on it. It **carries nothing** of the matched diver's:
+  (`bookings.identity_booked_as`), and moves onto it what was about the seat: the booking and the
+  gear held for it. Staff notes stay with the matched person, since they were written while the
+  seat read as theirs. It **carries nothing** of the matched diver's:
   no cards, sizes, date of birth, contact or email (the shared address stays with the record that
   owns it, and is refused if typed). What the staffer types about the person in front of them
   lands on the new record (issue #2081): a **date of birth**, required when a moving seat is on a
   course with a minimum age, because the age check and the guardian co-signature rule both read it
   and fail open without one, and an optional **email or phone** for sending their own waiver. When
-  there are **other held seats under the same name** matched to the same diver, one
-  box (ticked by default) moves them all onto the one new record, so three dives booked with a
-  friend's email make one person rather than three; a medical hold on any of them refuses the
-  lot. Every release and link on the seat is **superseded** and every bearer link minted over
-  the booking **revoked**, because any signature on it names the matched diver, so the seat asks
-  for its own release and is blocked until it has one. A seat with an **unanswered medical
-  referral** is refused until the referral is answered, since superseding it would lift the hold.
+  there are **other held seats under the same name** matched to the same diver on *other*
+  departures, one box names each of those departures and, when ticked (it starts unticked: two
+  strangers can share a name), moves them onto the one new record, so three dives booked with a
+  friend's email make one person rather than three. It never moves a seat on the split seat's own
+  departure, nor on a departure carrying two such seats: one person is never on one boat twice. A
+  medical hold on any of them refuses the lot, and an age-gated course among them makes the date
+  of birth required. Every release and link on the seat is **superseded** and every bearer link
+  minted over the booking **revoked**, because any signature on it names the matched diver, so the
+  seat asks for its own release and is blocked until it has one; the moved links lose the
+  delivery outcome they recorded for the matched diver's address. A seat on a **medical hold**,
+  whether the physician referral is unanswered or the physician did not clear the diver, is
+  refused until a physician clears it, since superseding it would lift the hold.
   A **signed release stays with the matched diver** (issue #2080): a signature is refused unless
   the typed name matches the record's diver, so every signed release on a held seat names the
   matched person and is their paper. The seat's **unsigned links** follow it, with any half-typed

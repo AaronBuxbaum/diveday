@@ -1172,7 +1172,11 @@ export async function splitDiverIdentityAction(
     dateOfBirth: String(formData.get("dateOfBirth") ?? ""),
     email: email.data,
     phone: phone.data,
-    includeSameNameSeats: formData.get("includeSameNameSeats") === "on",
+    // The bookings the ticked box named. Only ids; the writer moves only those
+    // that are still the same guess and still movable.
+    sameNameSeatIds: String(formData.get("sameNameSeatIds") ?? "")
+      .split(",")
+      .filter((id) => uuidParam(id)),
   });
   revalidateAndRedirect(
     back,

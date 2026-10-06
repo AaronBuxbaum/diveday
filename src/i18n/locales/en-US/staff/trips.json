@@ -70,7 +70,7 @@
     "invitationOptedOut": "Invitation recorded but not emailed: this diver turned off optional emails from the shop.",
     "identityConfirmed": "Identity confirmed. This diver can be cleared to board.",
     "identitySplit": "They have their own diver record now, with no waiver or certifications on file yet. Before they board, send their waiver from their record or record a paper release on their row.",
-    "identityMedicalHold": "This seat, or a held seat moving with it, has a physician referral nobody has answered. Answer it before giving them their own record.",
+    "identityMedicalHold": "This seat, or a held seat moving with it, is on a medical hold: a physician referral nobody has answered, or one the physician did not clear. It cannot get its own record until a physician clears it.",
     "identitySplitDobRequired": "This departure is a course with a minimum age. Add their date of birth to give them their own record.",
     "identitySplitDobInvalid": "That date of birth can’t be right. Check it and try again.",
     "identitySplitEmailInvalid": "That email doesn’t look right. Check it, or leave it blank.",

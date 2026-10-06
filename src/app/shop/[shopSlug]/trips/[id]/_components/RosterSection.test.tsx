@@ -4,6 +4,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { buttonClass } from "@/components/ui/button";
+import type { SameNameHeldSeat } from "@/db/bookings";
 import { emptyMedicalAnswers, flaggedMedicalPrompts, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { PAPER_WAIVER_IDLE } from "@/lib/paper-waiver-form";
 import { rendersFlush } from "@/test/button-flush";
@@ -126,7 +127,7 @@ function renderRoster({
   canManageOrders?: boolean;
   requiresPayment?: boolean;
   arrival?: RosterArrival;
-  sameNameHeldSeats?: ReadonlyMap<string, number>;
+  sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
   splitAsksDateOfBirth?: boolean;
 }) {
   return render(
@@ -536,28 +537,77 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       expect(form?.querySelector<HTMLInputElement>('input[name="dateOfBirth"]')?.value).toBe("");
     });
 
-    it("offers to move the same booker's other held seats only when there are some", () => {
+    it("offers to move other held seats under that name only when there are some", () => {
       const { unmount } = renderRoster({
         roster: [heldSeat()],
         readiness: unconfirmed,
         waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
         rentalFit,
       });
-      expect(document.querySelector('input[name="includeSameNameSeats"]')).toBeNull();
+      expect(document.querySelector('input[name="sameNameSeatIds"]')).toBeNull();
       unmount();
 
+      const others: SameNameHeldSeat[] = [
+        {
+          bookingId: "s1",
+          tripId: "t1",
+          tripTitle: "Reef Morning",
+          startsAt: new Date("2026-10-10T12:00:00Z"),
+          asksDateOfBirth: false,
+        },
+        {
+          bookingId: "s2",
+          tripId: "t2",
+          tripTitle: "Wreck Afternoon",
+          startsAt: new Date("2026-10-11T18:00:00Z"),
+          asksDateOfBirth: false,
+        },
+      ];
       renderRoster({
         roster: [heldSeat()],
         readiness: unconfirmed,
         waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
         rentalFit,
-        sameNameHeldSeats: new Map([["u", 2]]),
+        sameNameHeldSeats: new Map([["u", others]]),
       });
-      const box = screen.getByRole("checkbox", {
-        name: "Also move their 2 other held seats booked as Lucia Vega",
+      // Named by departure rather than counted, and unticked: two strangers
+      // can share a name, and only the staffer can tell.
+      const box = screen.getByRole<HTMLInputElement>("checkbox", {
+        // `\s`: a date keeps its units whole with U+00A0 (`keepUnitsWhole`).
+        name: /^Also move the held seats booked as Lucia Vega on Reef Morning \(Sat, Oct\s10\) and Wreck Afternoon \(Sun, Oct\s11\)$/,
         hidden: true,
       });
-      expect(box).toBeChecked();
+      expect(box).not.toBeChecked();
+      expect(box.value).toBe("s1,s2");
+      expect(document.querySelector<HTMLInputElement>('input[name="dateOfBirth"]')?.required).toBe(
+        false,
+      );
+    });
+
+    it("asks for a date of birth when a seat it would move is on an age-gated course", () => {
+      renderRoster({
+        roster: [heldSeat()],
+        readiness: unconfirmed,
+        waivers: new Map([["u", heldWaiver]]) as WaiverByBooking,
+        rentalFit,
+        sameNameHeldSeats: new Map([
+          [
+            "u",
+            [
+              {
+                bookingId: "s1",
+                tripId: "t1",
+                tripTitle: "Junior Open Water",
+                startsAt: new Date("2026-10-10T12:00:00Z"),
+                asksDateOfBirth: true,
+              },
+            ],
+          ],
+        ]),
+      });
+      expect(document.querySelector<HTMLInputElement>('input[name="dateOfBirth"]')?.required).toBe(
+        true,
+      );
     });
   });
 
