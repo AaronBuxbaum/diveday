@@ -86,7 +86,14 @@ export function DiverHeader({
             {diver.person.email ? (
               <a
                 href={mailtoHref(diver.person.email)}
-                className={buttonClass({ variant: "link", size: "sm", flush: true })}
+                // `wrap-anywhere`: a button box keeps the whole address as its
+                // narrowest width, so a long one ran off a phone's edge.
+                className={buttonClass({
+                  variant: "link",
+                  size: "sm",
+                  flush: true,
+                  className: "min-w-0 wrap-anywhere",
+                })}
               >
                 {diver.person.email}
               </a>

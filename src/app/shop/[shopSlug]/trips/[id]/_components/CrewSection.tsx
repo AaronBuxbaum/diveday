@@ -364,8 +364,8 @@ export function CrewSection({
                   key={entry.id}
                   className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm"
                 >
-                  <span className="flex flex-col gap-1">
-                    <span className="flex flex-wrap items-center gap-2">
+                  <span className="flex min-w-0 flex-col gap-1">
+                    <span className="flex min-w-0 flex-wrap items-center gap-2">
                       <span className="font-medium">{entry.fullName}</span>
                       {/* No shop-role echo beside the name: the trip-role select
                         on the same row is the operative fact once someone is

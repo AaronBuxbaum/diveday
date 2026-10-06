@@ -819,10 +819,6 @@ export function SiteFields({
           ) : (
             <div className={SPECIALTY_GRID}>{specialtyBoxes}</div>
           )}
-          {/* The one box a shop answers wrongly by describing the dive: a
-              guided cavern tour sells to divers who hold no card (ADR
-              20260718-specialty-site-cert-requirements, 2026-10-05). */}
-          <p className="-mt-2 text-sm text-muted">{t("shared.readiness.cavernHint")}</p>
         </>
       ),
     },

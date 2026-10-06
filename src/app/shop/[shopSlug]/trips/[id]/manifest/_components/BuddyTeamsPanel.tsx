@@ -231,7 +231,7 @@ export function BuddyTeamsPanel({
                           data-buddy-member=""
                           className={`${MEMBER_CHIP_CLASS} ${removable ? "pe-1" : "pe-4"}`}
                         >
-                          <span>{name}</span>
+                          <span className="min-w-0">{name}</span>
                           {removable ? (
                             <form action={removeBuddyTeamMemberAction} className="flex">
                               <input type="hidden" name="teamId" value={team.teamId} />
