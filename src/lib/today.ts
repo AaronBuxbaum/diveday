@@ -393,7 +393,19 @@ export const KIND_AUDIENCE: Record<TodayActionKind, readonly Role[]> = {
   readiness_unavailable: ["owner", "manager"],
   waitlist_seat: ["owner", "manager"],
   last_minute_fill: ["owner", "manager"],
-  email_delivery: ["owner", "manager"],
+  // Every staff role (issue #2066, decided 2026-10-05). The resend retries only
+  // mail already on the failed-delivery list, so it puts nothing new in front of
+  // anyone — the same reasoning that leaves the invoice and waiver resends open
+  // to all staff (ADR 20260803-invoicing-role-gate). The desk fixes a bounce.
+  email_delivery: [
+    "owner",
+    "manager",
+    "instructor",
+    "assistant_instructor",
+    "divemaster",
+    "captain",
+    "crew",
+  ],
   stuck_payment_operation: ["owner", "manager"],
   failed_photo_deletion: ["owner", "manager"],
   owed_refund: ["owner", "manager"],

@@ -836,6 +836,30 @@ describe("the unanswered-messages row", () => {
 });
 
 /**
+ * **The desk fixes a bounce** (issue #2066). `resendConfirmationAction` is
+ * open to every staff role, like the invoice and waiver resends, so the row
+ * that offers it is too. A row narrower than its action hides a fixable bounce
+ * from the person standing at the counter.
+ */
+describe("the failed-email row", () => {
+  it("reaches every staff role, because every staff role may resend it", () => {
+    for (const role of [
+      "owner",
+      "manager",
+      "instructor",
+      "assistant_instructor",
+      "divemaster",
+      "captain",
+      "crew",
+    ] as const) {
+      expect(
+        filterActionsForRoles([action({ kind: "email_delivery" })], [role]).withheldCount,
+      ).toBe(0);
+    }
+  });
+});
+
+/**
  * **The quiet day** — the composition's other silence, and the one that decides
  * whether the spine renders at all (SPEC 6c's pinned pair, "A quiet day at the
  * dock." over "No boats today, and nothing is waiting on you.").
