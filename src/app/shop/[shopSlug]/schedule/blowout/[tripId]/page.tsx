@@ -162,7 +162,7 @@ export default async function BlowoutPage({
               <ul className="mt-2 flex flex-col gap-1 text-sm">
                 {roster.map((row) => (
                   <li key={row.booking.id} className="flex flex-wrap items-center gap-2">
-                    <span>{row.person.fullName}</span>
+                    <span className="min-w-0">{row.person.fullName}</span>
                     {row.person.email ? null : (
                       <Badge tone="neutral" size="sm">
                         {t("blowout.confirm.noEmail")}

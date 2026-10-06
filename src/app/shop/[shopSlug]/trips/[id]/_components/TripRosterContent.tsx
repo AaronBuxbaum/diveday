@@ -76,6 +76,7 @@ export function TripRosterContent({
   afterRoster = null,
   arrival,
   walkIn = null,
+  acceptsDivers,
   actions,
 }: {
   guests: TripGuests;
@@ -114,12 +115,17 @@ export function TripRosterContent({
    * not.
    */
   walkIn?: ReactNode;
+  /**
+   * `acceptsNewDivers`, read by the page against its clock: false on a
+   * departure that has sailed, is held or is cancelled, and then no add or
+   * invite control is drawn at all (owner, 2026-10-06).
+   */
+  acceptsDivers: boolean;
   actions: TripRosterActions;
 }) {
   const t = staffTranslator(locale);
   const {
     trip,
-    cancelled,
     roster,
     requirement,
     waitlist,
@@ -235,6 +241,7 @@ export function TripRosterContent({
               departureRequirement={dealRequirement}
               locale={locale}
               timezone={timezone}
+              canInvite={acceptsDivers}
             />
           ) : null
         }
@@ -250,12 +257,13 @@ export function TripRosterContent({
               timezone={timezone}
               inviteAction={actions.recordTripInvitationAction}
               locale={locale}
+              canInvite={acceptsDivers}
             />
           ) : null
         }
         arrival={arrival}
         addDiverGroup={
-          cancelled ? null : (
+          !acceptsDivers ? null : (
             <>
               <AddDiverSection
                 shopSlug={shopSlug}
@@ -294,7 +302,8 @@ export function TripRosterContent({
  * the Divers tab, under the roster. Neither is about the people coming: one
  * sells the departure's empty seats to people who are not on it, the other is
  * the departure's audit trail. Details is the tab about the departure itself,
- * beside its booking link and its public page.
+ * beside its booking link and its public page. "More for this departure" sits
+ * between them, the same kind of row (owner, 2026-10-06).
  */
 export function TripPromoteAndActivity({
   guests,
@@ -303,6 +312,7 @@ export function TripPromoteAndActivity({
   timezone,
   tripNotice,
   mayDiscount,
+  more,
 }: {
   guests: TripGuests;
   shopSlug: string;
@@ -310,6 +320,8 @@ export function TripPromoteAndActivity({
   timezone: string;
   tripNotice?: FormNotice;
   mayDiscount: boolean;
+  /** "More for this departure" (`TripMoreDisclosure`), between the two. */
+  more?: ReactNode;
 }) {
   const t = staffTranslator(locale);
   const {
@@ -366,6 +378,8 @@ export function TripPromoteAndActivity({
           </div>
         </AutoOpenDetails>
       ) : null}
+
+      {more}
 
       <details className="group/activity border-y border-border">
         <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 rounded-lg px-2 text-sm font-medium text-muted transition-colors [&::-webkit-details-marker]:hidden hover:bg-surface-sunken hover:text-foreground">

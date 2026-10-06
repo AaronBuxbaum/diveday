@@ -41,6 +41,7 @@ import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
 import { type FormNotice, noticeForForm, noticeFromParam, shopPath } from "@/lib/staff-notices";
 import { temperatureUnitFor } from "@/lib/temperature-units";
 import { tripPhaseOf } from "@/lib/trip-phase";
+import { acceptsNewDivers, isFull } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
 import { buildArrivalDesk } from "./_arrivals/arrival-desk";
 import { CheckInQueueRefresh } from "./_arrivals/CheckInQueueRefresh";
@@ -57,7 +58,7 @@ import {
   SeriesCadenceEditor,
   SeriesMoreActions,
 } from "./_components/SeriesSection";
-import { TripAboutSection } from "./_components/TripAboutSection";
+import { TripAboutSection, TripMoreDisclosure } from "./_components/TripAboutSection";
 import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBanner";
 import { TripAddDiverLink, TripCapacityBadge, TripPageHeader } from "./_components/TripPageHeader";
 import { TripPromoteAndActivity, TripRosterContent } from "./_components/TripRosterContent";
@@ -439,6 +440,7 @@ export default async function ManageTripPage({
   // know which tab the answer belongs to, so no action needs to know the tab.
   const showDetails = view === "details" || Boolean(tripNotice && aboutForms.has(tripNotice.form));
   const now = nowDate();
+  const acceptsDivers = acceptsNewDivers(trip, now);
   const phase = tripPhaseOf({
     startsAt: trip.startsAt,
     endsAt: trip.endsAt,
@@ -674,8 +676,11 @@ export default async function ManageTripPage({
               ? undefined
               : `${formatMoneyCents(trip.priceCents, toShopCurrency(shop.currency), locale)} ${t("trips.about.perSeat")}`
           }
+          // Only while the boat can take a seat: full, sailed, held or
+          // cancelled, and the header offers nothing (owner, 2026-10-06). A
+          // full boat's wait list stays in the roster's own Add band.
           actions={
-            cancelled ? undefined : (
+            !acceptsDivers || isFull(trip) ? undefined : (
               <TripAddDiverLink
                 // The roster's own band, on the Divers tab: from Details the
                 // anchor is not on the page.
@@ -985,11 +990,17 @@ export default async function ManageTripPage({
                   />
                 </>
               }
-              moreLabel={t("trips.about.more")}
-              moreOpen={Boolean(lifecycleStatus)}
+            />
+            <TripPromoteAndActivity
+              guests={guests}
+              shopSlug={shopSlug}
+              locale={locale}
+              timezone={shop.timezone}
+              tripNotice={tripNotice}
+              mayDiscount={mayDiscount}
               more={
                 cancelled ? undefined : (
-                  <>
+                  <TripMoreDisclosure label={t("trips.about.more")} open={Boolean(lifecycleStatus)}>
                     <FormStatus tone={lifecycleStatus?.tone} className="mb-2">
                       {lifecycleStatus?.text}
                     </FormStatus>
@@ -1033,17 +1044,9 @@ export default async function ManageTripPage({
                         confirmClassName={buttonClass({ variant: "danger", size: "sm" })}
                       />
                     </form>
-                  </>
+                  </TripMoreDisclosure>
                 )
               }
-            />
-            <TripPromoteAndActivity
-              guests={guests}
-              shopSlug={shopSlug}
-              locale={locale}
-              timezone={shop.timezone}
-              tripNotice={tripNotice}
-              mayDiscount={mayDiscount}
             />
           </>
         ) : (
@@ -1091,6 +1094,7 @@ export default async function ManageTripPage({
             <TripRosterContent
               arrival={desk?.arrival}
               walkIn={desk?.walkIn}
+              acceptsDivers={acceptsDivers}
               guests={guests}
               shopSlug={shopSlug}
               shopName={shop.name}
