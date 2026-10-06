@@ -119,6 +119,7 @@ import { authorizesNitroxFill } from "./nitrox";
 import { listNotificationDeliveryIssues } from "./notifications";
 import { openOrdersForBookings } from "./orders";
 import { listStuckPaymentOperations, STALE_AFTER_MS } from "./payment-operations";
+import { listTripsReadiness } from "./readiness";
 import { listOwedShopCancellationRefunds, OWED_REFUND_STALE_AFTER_MS } from "./refunds";
 import { readReviewsAwaitingModeration } from "./reviews";
 import {
@@ -317,6 +318,13 @@ export type TodayWork = {
   crewedTripIds: string[];
   crewedSessions: CrewedSessionSummary[];
   availableStaff: { id: string; fullName: string; roles: string[] }[];
+  /**
+   * Departures that have sailed past the morning spine's window and are not
+   * back yet (phase `aboard`, `tripPhaseOf`), in clock order. They have no live
+   * station, so `assembleDaySpine` files their rows into Needs you by this list
+   * rather than counting them under the week (issue #2064).
+   */
+  outTripIds: string[];
 };
 
 function shopDay(date: Date, timeZone: string): string {
@@ -1074,6 +1082,86 @@ export async function courseCrewCountsByTrip(
  * source-of-truth model, so this never becomes a second place where operational
  * state is decided.
  */
+/**
+ * How far back a departure may have started and still be out. Two weeks is
+ * past any boat day or liveaboard this product schedules; the bound is what
+ * lets the read use the `(shop_id, starts_at)` index instead of every past
+ * departure the shop has run.
+ */
+const OUT_LOOKBACK_MS = 14 * 24 * HOUR_MS;
+
+/**
+ * **Blocked divers aboard a boat that is still out** (issue #2064).
+ *
+ * Every other readiness row on Today comes from the forward-looking horizon
+ * (`inHorizonReadiness`), which drops a departure an hour after it sails. That
+ * is right for an ashore blocker, which nobody can act on once the boat has
+ * gone, and wrong for a diver who boarded on a medical hold or with no
+ * release: they may be in the water now, which is when their "Aboard" row
+ * matters most. So this reads the departures that have left that window and
+ * are not back yet, by the departure stage pill's own rule (`tripPhaseOf`: the
+ * crew's tap beats the clock, so a late boat stays out and one that tied up
+ * early is home), and keeps only divers whose standing departure result is
+ * `boarded`.
+ *
+ * Bounded: one trips read on the `(shop_id, starts_at)` index, then the stage,
+ * departure roll call and readiness reads keyed on the handful of departures
+ * that are out, and nothing at all on a day with no boat out.
+ */
+async function blockedAboardOnBoatsOut(
+  db: AppDb,
+  shopId: string,
+  timeZone: string,
+  now: Date,
+  inWindowTripIds: ReadonlySet<string>,
+) {
+  const sailed = await db
+    .select({ id: trips.id, title: trips.title, startsAt: trips.startsAt, endsAt: trips.endsAt })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        liveTrip(),
+        gte(trips.startsAt, new Date(now.getTime() - OUT_LOOKBACK_MS)),
+        lte(trips.startsAt, now),
+      ),
+    )
+    .orderBy(asc(trips.startsAt), asc(trips.id));
+  // A departure still inside the horizon is a live station already, and its
+  // blocked divers come through the ordinary path with `aboard` set there.
+  const candidates = sailed.filter((trip) => !inWindowTripIds.has(trip.id));
+  if (candidates.length === 0) return { out: [], blocked: [] };
+  const stages = await latestTripStagesByTrip(
+    db,
+    shopId,
+    candidates.map((trip) => trip.id),
+  );
+  const out = candidates.filter(
+    (trip) =>
+      tripPhaseOf({
+        startsAt: trip.startsAt,
+        endsAt: trip.endsAt,
+        now,
+        timeZone,
+        stage: stages.get(trip.id) ?? null,
+        cancelled: false,
+      }) === "aboard",
+  );
+  if (out.length === 0) return { out: [], blocked: [] };
+  const outIds = out.map((trip) => trip.id);
+  const [departureRollCall, readiness] = await Promise.all([
+    listDepartureRollCallByTrip(db, shopId, outIds),
+    listTripsReadiness(db, shopId, outIds, now),
+  ]);
+  const blocked = readiness.filter(
+    (row) =>
+      row.readiness.status === "blocked" &&
+      departureRollCall.get(row.booking.tripId)?.get(row.booking.id) === "boarded",
+  );
+  return { out, blocked };
+}
+
 export async function getTodayWork(
   db: AppDb,
   shopId: string,
@@ -1331,6 +1419,40 @@ export async function getTodayWork(
   }
 
   const actions: TodayAction[] = [];
+
+  // Blocked divers aboard a boat that has left the horizon but is not back
+  // (issue #2064). Only the boarded ones, and only as `blocked_aboard` rows:
+  // an ashore blocker on a boat that has gone is noise.
+  const boatsOut = await blockedAboardOnBoatsOut(
+    db,
+    shopId,
+    timeZone,
+    now,
+    new Set(inWindow.map((trip) => trip.id)),
+  );
+  for (const trip of boatsOut.out) {
+    const label = `${trip.title} · ${at(trip.startsAt, timeZone, locale)}`;
+    const aboard = boatsOut.blocked
+      .filter((row) => row.booking.tripId === trip.id)
+      .map((row) => ({
+        bookingId: row.booking.id,
+        personId: row.person.id,
+        fullName: row.person.fullName,
+        tripId: trip.id,
+        tripTitle: label,
+        startsAt: trip.startsAt,
+        blockers: row.readiness.blockers,
+        aboard: true,
+      }));
+    // A diver whose only open blocker is money keeps no row here: that is the
+    // one blocker that changes nothing in the water, and `collapseDiverActions`
+    // would file it as an ordinary payment row for a boat nobody can reach.
+    actions.push(
+      ...collapseDiverActions(aboard, shopSlug, now, t).filter(
+        (action) => action.kind === "blocked_aboard",
+      ),
+    );
+  }
 
   // Somebody on a boat's list is not accounted for (DOM-H3). The after-dive
   // rows are the only ones on this queue that can mean a diver is still in the
@@ -2285,5 +2407,6 @@ export async function getTodayWork(
     crewedTripIds,
     crewedSessions,
     availableStaff,
+    outTripIds: boatsOut.out.map((trip) => trip.id),
   };
 }

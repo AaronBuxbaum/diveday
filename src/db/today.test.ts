@@ -2395,6 +2395,104 @@ describe("unclosed roll call (DOM-H3)", () => {
       const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
       expect(rollCallRow(work, trip.id, "missing_diver")?.urgency).toBe("imminent");
     });
+
+    /**
+     * **A blocked diver aboard stays on the list until the boat is home**
+     * (issue #2064). The readiness rows behind the "Aboard" row come from the
+     * forward-looking horizon, which drops a departure an hour after it sails,
+     * so a diver who boarded on a medical hold vanished while the boat was
+     * still out and they may have been in the water. Ashore blockers for a boat
+     * that has gone stay gone: nothing is left to stop.
+     */
+    describe("a blocked diver who boarded", () => {
+      async function sailedNinetyMinutesAgo() {
+        const { db, shop } = ctx;
+        // Four hours long, so it sailed ninety minutes ago and is out for two
+        // and a half more: well past the horizon's one-hour buffer.
+        const fixture = await returnedTrip(db, shop.id, {
+          endedHoursAgo: -2.5,
+          divers: 2,
+          title: "Blocked Aboard — Molasses",
+        });
+        const [boarded, ashore] = fixture.bookingIds;
+        if (!boarded || !ashore) throw new Error("fixture bookings missing");
+        await boardAtDeparture(
+          db,
+          {
+            shopId: shop.id,
+            tripId: fixture.trip.id,
+            staffId: fixture.staffId,
+            bookingIds: [boarded],
+          },
+          new Date(fixture.trip.startsAt.getTime() + 5 * 60 * 1000),
+        );
+        return { ...fixture, boarded, ashore };
+      }
+
+      const rowsFor = (work: Awaited<ReturnType<typeof getTodayWork>>, tripId: string) =>
+        work.actions.filter(
+          (action) => action.departure?.tripId === tripId && !action.id.startsWith("roll-call:"),
+        );
+
+      it("keeps the Aboard row while the boat is still out, and only that row", async () => {
+        const { db, shop } = ctx;
+        const { trip, boarded } = await sailedNinetyMinutesAgo();
+        // The fixture trip has no requirements row, so both seats read blocked:
+        // the premise, checked rather than assumed.
+        const readiness = await listTripReadiness(db, shop.id, trip.id);
+        expect(readiness.every((row) => row.readiness.status === "blocked")).toBe(true);
+
+        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+        const rows = rowsFor(work, trip.id);
+        expect(rows.map((row) => row.kind)).toEqual(["blocked_aboard"]);
+        expect(rows[0]?.id).toContain(boarded);
+        // The home files it into Needs you rather than under the week's count.
+        expect(work.outTripIds).toContain(trip.id);
+        // The departure is not a live station again: the closing state owns it.
+        expect(work.departures.some((departure) => departure.tripId === trip.id)).toBe(false);
+      });
+
+      it("drops the row once the crew says the boat is home", async () => {
+        const { db, shop } = ctx;
+        const { trip, staffId } = await sailedNinetyMinutesAgo();
+        const recorded = await recordTripStage(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          stage: "home",
+          recordedByPersonId: staffId,
+          recordedAt: nowDate(),
+        });
+        expect(recorded.ok).toBe(true);
+
+        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+        expect(rowsFor(work, trip.id)).toEqual([]);
+        expect(work.outTripIds).not.toContain(trip.id);
+      });
+
+      it("drops the row once the boat is back by the clock", async () => {
+        const { db, shop } = ctx;
+        // Tied up two hours ago, past the return buffer, with nobody tapping.
+        const { trip, bookingIds, staffId } = await returnedTrip(db, shop.id, {
+          endedHoursAgo: 2,
+          divers: 1,
+          title: "Blocked Aboard, home — Molasses",
+        });
+        await boardAtDeparture(db, { shopId: shop.id, tripId: trip.id, staffId, bookingIds });
+
+        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+        expect(rowsFor(work, trip.id)).toEqual([]);
+        expect(work.outTripIds).not.toContain(trip.id);
+      });
+
+      it("says nothing about a cancelled departure", async () => {
+        const { db, shop } = ctx;
+        const { trip } = await sailedNinetyMinutesAgo();
+        await db.update(tripsTable).set({ status: "cancelled" }).where(eq(tripsTable.id, trip.id));
+
+        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+        expect(rowsFor(work, trip.id)).toEqual([]);
+      });
+    });
   });
 
   describe("the dock count, which is paperwork", () => {

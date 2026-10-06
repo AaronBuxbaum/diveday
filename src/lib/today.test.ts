@@ -730,6 +730,39 @@ describe("assembleDaySpine", () => {
     expect(spine.week.jobs).toBe(1);
   });
 
+  it("lists a boat that is out in Needs you, not under the week's count", () => {
+    // A departure an hour past sailing has no live station any more, and its
+    // rows used to fall through to the week's count: a blocked diver aboard,
+    // or a diver recorded not back, was a number behind a link (issue #2064).
+    const spine = assembleDaySpine(
+      {
+        departures: [departure()],
+        actions: [
+          action({ id: "aboard", kind: "blocked_aboard", departure: boat("out") }),
+          action({ id: "friday", departure: boat("t9") }),
+        ],
+        outTripIds: ["out"],
+      },
+      { departures: [], actions: [] },
+    );
+    expect(spine.desk.map((row) => row.id)).toEqual(["aboard"]);
+    expect(spine.week.jobs).toBe(1);
+    expect(spineJobCount(spine)).toBe(2);
+  });
+
+  it("keeps a boat's rows on its station while it still has one", () => {
+    const spine = assembleDaySpine(
+      {
+        departures: [departure()],
+        actions: [action({ id: "on-boat", departure: boat("t1") })],
+        outTripIds: ["t1"],
+      },
+      { departures: [], actions: [] },
+    );
+    expect(spine.stations[0]?.rows.map((row) => row.id)).toEqual(["on-boat"]);
+    expect(spine.desk).toEqual([]);
+  });
+
   it("counts every row exactly once, wherever its boat sails", () => {
     const spine = assembleDaySpine(
       {

@@ -1417,7 +1417,11 @@ export type DayStation = SpineDeparture & {
 export type DaySpine = {
   /** Today's departures, clock order. Never re-ordered by the role lens. */
   stations: DayStation[];
-  /** Rows bound to no departure — the "At the desk" group. */
+  /**
+   * Rows with no station to hang on: those bound to no departure, and those
+   * about a boat that is out past the spine's window (`SpineWork.outTripIds`).
+   * All of them rank in Needs you.
+   */
   desk: TodayAction[];
   /** The collapsed Tomorrow disclosure's body and count. */
   tomorrow: { stations: DayStation[]; jobs: number };
@@ -1460,6 +1464,13 @@ export function sortStationRows(actions: readonly TodayAction[]): TodayAction[] 
 export type SpineWork = {
   departures: readonly SpineDeparture[];
   actions: readonly TodayAction[];
+  /**
+   * Departures that sailed past the spine's window and are not back yet
+   * (`TodayWork.outTripIds`). Their rows are today's work, not the week's: a
+   * blocked diver aboard, or a diver recorded not back, must not become a
+   * number behind a link to the board (issue #2064).
+   */
+  outTripIds?: readonly string[];
 };
 
 function stationFor(departure: SpineDeparture, rows: readonly TodayAction[]): DayStation {
@@ -1492,8 +1503,14 @@ export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpin
 
   const rowsByTrip = new Map<string, TodayAction[]>();
   const desk: TodayAction[] = [];
+  const liveTripIds = new Set(todayDepartures.map((departure) => departure.tripId));
+  const outTripIds = new Set(today.outTripIds ?? []);
   for (const action of today.actions) {
     if (!action.departure) {
+      desk.push(action);
+      continue;
+    }
+    if (outTripIds.has(action.departure.tripId) && !liveTripIds.has(action.departure.tripId)) {
       desk.push(action);
       continue;
     }
@@ -1512,6 +1529,7 @@ export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpin
   const placed = new Set([
     ...todayDepartures.map((departure) => departure.tripId),
     ...tomorrowDepartures.map((departure) => departure.tripId),
+    ...outTripIds,
   ]);
   const weekJobs = today.actions.filter(
     (action) => action.departure && !placed.has(action.departure.tripId),
