@@ -14,6 +14,7 @@
  * | `./trips-schedule.ts` | the schedule builder's move / copy / remove and their refusals |
  * | `./trips-minimum.ts` | the minimum-head-count sweep: cancel what did not fill by its own deadline |
  * | `./trips-crew.ts` | who is working it, and the guards on changing that |
+| `./trips-clashes.ts` | two departures in each other's way: the overlap rule, and one hull on two at once |
  * | `./trips-roster.ts` | who is on it: bookings, wait list, contacts |
  * | `./trips-queries.ts` | reading the board: schedule lists, aggregates, calendar feeds |
  *
@@ -24,6 +25,12 @@
  * trip without the rows that make it readable as a safety document.
  */
 
+export {
+  type BoatClash,
+  boatClashes,
+  boatClashesByTrip,
+  boatMoveClashes,
+} from "./trips-clashes";
 export {
   createTrip,
   type NewTrip,
@@ -36,6 +43,7 @@ export {
   changeTripCrew,
   changeTripCrewOutcome,
   crewClashes,
+  crewClashesByTrip,
   crewMoveConflicts,
   getTripCrewAssignments,
   getTripCrewIds,

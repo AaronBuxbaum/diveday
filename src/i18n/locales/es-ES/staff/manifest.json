@@ -100,7 +100,7 @@
   "age": "{age} años",
   "minorAge": "Menor · {age} años",
   "emergencyContactLabel": "Contacto de emergencia",
-  "crewClashDetail": "También está en {departures} a la misma hora y no puede estar en los dos. Confirma quién va a bordo antes de zarpar.",
+  "crewClashDetail": "También figura en {departures} a la misma hora. Confirma quién va a bordo antes de zarpar.",
   "notOnFile": "No registrado",
   "rentalFitLabel": "Equipo de alquiler",
   "nitroxRequestedSuffix": " · Nitrox solicitado",

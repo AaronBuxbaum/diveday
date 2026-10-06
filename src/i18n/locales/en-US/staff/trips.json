@@ -135,7 +135,8 @@
     "overIntroRatio": "Over intro ratio",
     "prepGaps": "{count, plural, one {# diver is missing rental sizes} other {# divers are missing rental sizes}}",
     "awaitingPayment": "{count, plural, one {# order is awaiting payment} other {# orders are awaiting payment}}",
-    "noRequirements": "Set the requirements before anyone can board"
+    "noRequirements": "Set the requirements before anyone can board",
+    "boatClash": "{boat} is also out on {departure}"
   },
   "detail": {
     "viewBookingPage": "View booking page",
@@ -252,8 +253,8 @@
     "assignLabel": "Assign crew",
     "assignOption": "Assign crew…",
     "unassignAria": "Unassign {name}",
-    "clash": "Also crewing {departure} at these hours and cannot be on both.",
-    "assignClash": "{name} is already crewing another departure at these hours and cannot be on both.",
+    "clash": "Also rostered on {departure} at these hours.",
+    "assignClash": "{name} is already rostered on another departure at these hours.",
     "assignFailed": "That didn’t save. Recheck your connection or try again."
   },
   "recapNote": {

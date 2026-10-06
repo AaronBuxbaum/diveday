@@ -100,7 +100,7 @@
   "age": "Age {age}",
   "minorAge": "Minor · age {age}",
   "emergencyContactLabel": "Emergency contact",
-  "crewClashDetail": "Also on {departures} at the same time and cannot be on both. Confirm who is aboard before you sail.",
+  "crewClashDetail": "Also rostered on {departures} at the same time. Confirm who is aboard before you sail.",
   "notOnFile": "Not on file",
   "rentalFitLabel": "Rental fit",
   "nitroxRequestedSuffix": " · Nitrox requested",

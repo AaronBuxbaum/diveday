@@ -4264,7 +4264,7 @@ for (const scheme of ["light", "dark"] as const) {
         await page.goto(`/shop/blue-mantis/staffing?week=${crewClash.date}`);
         // The destination's own words, not a timing guess.
         await page
-          .getByText(/cannot be on both/)
+          .getByText(/^Also rostered on /)
           .first()
           .waitFor();
         await capture(page, "staffing-week-crew-clash", scheme);
@@ -4599,7 +4599,7 @@ for (const scheme of ["light", "dark"] as const) {
         // the muted list is still under them, which is the stack worth a
         // baseline.
         await expect(
-          page.getByText(new RegExp(`is already crewing ${host} at that time`)),
+          page.getByText(new RegExp(`is already rostered on ${host} at that time`)),
         ).toHaveCount(2);
         await expect(page.getByText("If you move it")).toBeVisible();
         await capture(page, "schedule-builder-move-clash", scheme);
@@ -5181,7 +5181,7 @@ for (const scheme of ["light", "dark"] as const) {
         await openTripAbout(page);
         await page
           .locator("#crew")
-          .getByText(/cannot be on both/)
+          .getByText(/^Also rostered on /)
           .first()
           .waitFor();
         await capture(page, "trip-crew-clash", scheme);

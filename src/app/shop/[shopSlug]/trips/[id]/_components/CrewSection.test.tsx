@@ -84,8 +84,8 @@ const COPY: CrewSectionCopy = {
   assignOption: "Choose someone…",
   unassignAria: "Remove {name} from crew",
   assignFailed: "Couldn’t save that change.",
-  assignClash: "{name} is already crewing another departure at these hours and cannot be on both.",
-  clash: "Also crewing {departure} at these hours and cannot be on both.",
+  assignClash: "{name} is already rostered on another departure at these hours.",
+  clash: "Also rostered on {departure} at these hours.",
   onShift: "On shift",
   notOnShift: "Not on shift",
   manageShifts: "Manage shifts",
@@ -443,9 +443,7 @@ describe("CrewSection standing crew clash", () => {
     );
     const marks = screen.getAllByRole("status");
     expect(marks).toHaveLength(1);
-    expect(marks[0]).toHaveTextContent(
-      "Also crewing The 09:00 reef drift at these hours and cannot be on both.",
-    );
+    expect(marks[0]).toHaveTextContent("Also rostered on The 09:00 reef drift at these hours.");
     // Never `alert`: a statically rendered live region announces on a soft
     // navigation and stays silent on a cold load, which is the wrong half of
     // the time either way.
@@ -505,7 +503,7 @@ describe("CrewSection standing crew clash", () => {
       <CrewSection {...props} updateCrewAction={vi.fn(async () => ({ ok: true }))} copy={COPY} />,
     );
     expect(screen.queryByRole("status")).toBeNull();
-    expect(screen.queryByText(/cannot be on both/)).toBeNull();
+    expect(screen.queryByText(/rostered on/)).toBeNull();
   });
 
   /**
@@ -534,9 +532,7 @@ describe("CrewSection standing crew clash", () => {
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "Assign crew" }), "staff-2");
 
     expect(
-      await screen.findByText(
-        "Ana Cruz is already crewing another departure at these hours and cannot be on both.",
-      ),
+      await screen.findByText("Ana Cruz is already rostered on another departure at these hours."),
     ).toBeInTheDocument();
     expect(screen.queryByText("Couldn’t save that change.")).toBeNull();
     // Refused, so nothing was added to the roster on screen either.
@@ -562,7 +558,7 @@ describe("CrewSection standing crew clash", () => {
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "Assign crew" }), "staff-2");
 
     expect(await screen.findByText("Couldn’t save that change.")).toBeInTheDocument();
-    expect(screen.queryByText(/cannot be on both/)).toBeNull();
+    expect(screen.queryByText(/rostered on/)).toBeNull();
   });
 });
 

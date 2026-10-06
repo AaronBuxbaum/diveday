@@ -221,7 +221,7 @@ export function CrewRollCall({
                * `dive-domain-expert` review of this change:
                *
                * 1. A result on this boat is the authority. Once somebody has
-               *    said "aboard", a sheet still reading "cannot be on both"
+               *    said "aboard", a sheet still reading "also rostered on"
                *    contradicts its own roll call.
                * 2. **After a dive it would be an excuse.** An unaccounted-for
                *    crew member at an after-dive count is a body in the water

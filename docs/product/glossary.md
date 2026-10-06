@@ -762,6 +762,14 @@ new domain concept, define it here in the same PR.
 - **Working shift** — a dated availability window for a staff member. It is not a crew assignment:
   the shift says who is available, while the trip assignment says who is actually on that
   manifest. Overlapping shifts for one person are rejected.
+- **Boat clash** — one hull on two departures whose windows **overlap** (H-80: one hull, one
+  departure at a time). Same half-open predicate as the **Crew clash** below
+  (`src/db/trips-clashes.ts`), so a hull that ties up at 12:00 and takes the 12:00 out is the plan
+  rather than a defect, and a departure with no boat clashes with nothing. A shop wanting a course
+  group and a fun-dive group on one charter models it as one departure with two groups. Said on the
+  Move panel before a move lands one (`boatMoveClashes`), and on both departures' pages while it
+  stands — the Divers tab's pulse and the Details tab's Boat and crew row (`boatClashes`). Like the
+  crew clash it is information, never a gate, and silent once the departure is home.
 - **Crew clash** — one person on two departures whose windows **overlap**. It is a time overlap and
   never a shared day: a divemaster on the 08:00 and the 14:00 is how a shop runs a Saturday, and
   `setTripCrew`/`changeTripCrew` allow it deliberately while refusing the overlap outright. The
@@ -772,7 +780,9 @@ new domain concept, define it here in the same PR.
   can answer are this one and the **Working shift** blackout above, reported as its own separate
   line because one is an inference from the roster and the other is the crew member's own
   statement. The third — over her hours — is unmodelled, and nothing says otherwise. `moveTrip`
-  does not refuse a clash; the preview informs and the owner decides. **And the preview is no longer
+  does not refuse a clash; the preview informs and the owner decides. **The words state the fact,
+  "also rostered on", never an impossibility** (H-80): "cannot be on both" was false of a
+  split charter, and the sentence has to stay true of every state a shop can reach. **And the preview is no longer
   the only reader** (issue #1695): the panel that warned about a move closes with the move, so the
   clash a departure is *standing* in is read back on its own Crew panel, on its About summary row,
   and in the staffing week on the day the overlap falls (`crewClashes`, the same overlap query the

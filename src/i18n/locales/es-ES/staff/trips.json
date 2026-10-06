@@ -135,7 +135,8 @@
     "overIntroRatio": "Ratio de bautismo excedida",
     "prepGaps": "{count, plural, one {A # buceador le faltan tallas de alquiler} other {A # buceadores les faltan tallas de alquiler}}",
     "awaitingPayment": "{count, plural, one {# pedido pendiente de pago} other {# pedidos pendientes de pago}}",
-    "noRequirements": "Define los requisitos para que alguien pueda embarcar"
+    "noRequirements": "Define los requisitos para que alguien pueda embarcar",
+    "boatClash": "{boat} también sale en {departure}"
   },
   "detail": {
     "viewBookingPage": "Ver página de reserva",
@@ -252,8 +253,8 @@
     "assignLabel": "Asignar tripulante",
     "assignOption": "Asignar tripulante…",
     "unassignAria": "Quitar a {name}",
-    "clash": "También está en la tripulación de {departure} a esas horas y no puede estar en ambas salidas.",
-    "assignClash": "{name} ya está en la tripulación de otra salida a esas horas y no puede estar en ambas salidas.",
+    "clash": "También figura en la tripulación de {departure} a esas horas.",
+    "assignClash": "{name} ya figura en la tripulación de otra salida a esas horas.",
     "assignFailed": "No se ha guardado. Verifica tu conexión o inténtalo de nuevo."
   },
   "recapNote": {
