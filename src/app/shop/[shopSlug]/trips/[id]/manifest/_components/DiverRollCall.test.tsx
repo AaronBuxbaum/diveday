@@ -817,7 +817,7 @@ describe("a held seat on the manifest", () => {
     expect(everything).not.toContain("Asha Iyer");
     expect(everything).not.toContain("+1-305-555-0231");
     expect(everything).not.toMatch(/age 13/);
-    expect(everything).not.toContain("A medical answer needs staff follow-up.");
+    expect(everything).not.toContain("A medical answer needs a doctor’s sign-off before this diver dives.");
     // The print-only block says why, rather than "Not on file".
     const printed = container.querySelector<HTMLElement>(".print\\:block");
     expect(printed).not.toBeNull();
@@ -896,7 +896,7 @@ describe("a held seat on the manifest", () => {
     expect(everything).toContain("Asha Iyer");
     expect(everything).toContain("+1-305-555-0231");
     expect(everything).toContain("Minor · age 13");
-    expect(everything).toContain("A medical answer needs staff follow-up.");
+    expect(everything).toContain("A medical answer needs a doctor’s sign-off before this diver dives.");
     expect(everything).not.toContain("wait until the desk confirms");
   });
 
