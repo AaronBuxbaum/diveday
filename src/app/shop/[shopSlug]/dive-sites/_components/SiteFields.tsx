@@ -426,63 +426,64 @@ export function SiteFields({
       description: t("diveSites.form.photosDescription"),
       body: (
         <>
-          {/* Each stored photo sits *under* its own `Field`, never inside it. A
-              `Field` whose children are not one native control wraps everything
-              in the caption `<label>` (see `src/components/ui/form.tsx`), and
-              each remove box is a `<label>` of its own — nesting the two would
-              be invalid markup and would hand the caption a name made of every
-              word in the block. Under rather than over, because a photo above
-              its own caption reads as belonging to whatever field precedes it:
-              the first visual-regression run of this form showed the gallery
-              hanging off the map/route row it merely happened to sit below. */}
+          {/* Each field is one grid: the photos it holds, then the tile that
+              adds the next, so a picked photo lands where it will live. The
+              `Field`s carry `htmlFor`, so the caption names the tile rather
+              than wrapping the cells, each of which is a `<label>` of its own
+              (see `src/components/ui/form.tsx`). */}
           <div className="grid grid-cols-1 gap-x-4 gap-y-5 sm:grid-cols-2">
-            <div>
-              <Field
-                label={t("diveSites.form.mapImageLabel")}
-                hint={t("diveSites.form.optionalHint")}
-                htmlFor="site-satellite-image"
-              >
-                <ImageFileInput
-                  id="site-satellite-image"
-                  name="satelliteImageFile"
-                  copy={imageInputCopy}
-                />
-              </Field>
-              {values?.satelliteImageUrl ? (
-                <div className="mt-2">
+            <Field
+              label={t("diveSites.form.mapImageLabel")}
+              hint={t("diveSites.form.optionalHint")}
+              htmlFor="site-satellite-image"
+            >
+              <div className="flex flex-col gap-3">
+                {values?.satelliteImageUrl ? (
                   <RemovablePhoto
                     url={values.satelliteImageUrl}
                     name="removeSatelliteImage"
                     label={t("diveSites.form.removeCurrentPhoto")}
                   />
-                </div>
-              ) : null}
-            </div>
-            <div>
-              <Field
-                label={t("diveSites.form.routeImageLabel")}
-                hint={t("diveSites.form.optionalHint")}
-                htmlFor="site-route-image"
-              >
-                <ImageFileInput id="site-route-image" name="routeImageFile" copy={imageInputCopy} />
-              </Field>
-              {values?.routeImageUrl ? (
-                <div className="mt-2">
+                ) : null}
+                <ImageFileInput
+                  id="site-satellite-image"
+                  name="satelliteImageFile"
+                  copy={imageInputCopy}
+                />
+              </div>
+            </Field>
+            <Field
+              label={t("diveSites.form.routeImageLabel")}
+              hint={t("diveSites.form.optionalHint")}
+              htmlFor="site-route-image"
+            >
+              <div className="flex flex-col gap-3">
+                {values?.routeImageUrl ? (
                   <RemovablePhoto
                     url={values.routeImageUrl}
                     name="removeRouteImage"
                     label={t("diveSites.form.removeCurrentPhoto")}
                   />
-                </div>
-              ) : null}
-            </div>
+                ) : null}
+                <ImageFileInput id="site-route-image" name="routeImageFile" copy={imageInputCopy} />
+              </div>
+            </Field>
           </div>
-          <div>
-            <Field
-              label={t("diveSites.form.sitePhotosLabel")}
-              hint={t("diveSites.form.sitePhotosHint", { max: MAX_SITE_IMAGES })}
-              htmlFor="site-photos"
-            >
+          <Field
+            label={t("diveSites.form.sitePhotosLabel")}
+            hint={t("diveSites.form.sitePhotosHint", { max: MAX_SITE_IMAGES })}
+            htmlFor="site-photos"
+          >
+            <div className={removablePhotoGridClass}>
+              {values?.imageUrls.map((url) => (
+                <RemovablePhoto
+                  key={url}
+                  url={url}
+                  name="removeSiteImageUrls"
+                  value={url}
+                  label={t("diveSites.form.removeLabel")}
+                />
+              ))}
               <ImageFileInput
                 id="site-photos"
                 name="siteImageFiles"
@@ -490,24 +491,12 @@ export function SiteFields({
                 maxFiles={MAX_SITE_IMAGES}
                 copy={{
                   ...imageInputCopy,
+                  chooseAnother: t("shared.imageInput.chooseOthers"),
                   tooMany: t("diveSites.form.tooManyPhotos", { max: MAX_SITE_IMAGES }),
                 }}
               />
-            </Field>
-            {values && values.imageUrls.length > 0 ? (
-              <div className={`mt-3 ${removablePhotoGridClass}`}>
-                {values.imageUrls.map((url) => (
-                  <RemovablePhoto
-                    key={url}
-                    url={url}
-                    name="removeSiteImageUrls"
-                    value={url}
-                    label={t("diveSites.form.removeLabel")}
-                  />
-                ))}
-              </div>
-            ) : null}
-          </div>
+            </div>
+          </Field>
         </>
       ),
     },

@@ -1,5 +1,5 @@
 import type { DbExecutor } from "./client";
-import { isMarineLifeSlug } from "./marine-life-catalog";
+import { isMarineLifeSlug, marineLifeImage } from "./marine-life-catalog";
 import { type DiveSpecialty, diveSiteCreatures, diveSiteMoments, diveSites } from "./schema";
 import { publishedTemplateId } from "./seed-dive-site-catalog";
 import { commonsImage } from "./seed-images";
@@ -55,20 +55,21 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
           {
             name: "Molasses Reef Light",
             kind: "navigationMark" as const,
-            note: "The steel tower is the easiest above-water reference on the reef, and the way to stay oriented all dive.",
+            note: "The steel tower is the easiest above-water reference on the reef, and the way to stay oriented all dive. Elkhorn grows almost to its legs.",
+            photoUrl: marineLifeImage("elkhorn-coral"),
           },
           {
             name: "Historic ship's winch",
             kind: "reefHistory" as const,
-            note: "A ship's winch on the bottom in about 12 m, worn smooth and grown over.",
+            note: "A ship's winch on the bottom in about 12 m, worn smooth and grown over. A spotted moray usually has its head out of the drum.",
+            photoUrl: marineLifeImage("spotted-moray"),
           },
           {
             name: "Spanish anchor",
             kind: "reefHistory" as const,
-            note: "An old anchor among the coral. Let the crew point it out — it disappears into the reef remarkably well.",
+            note: "An old anchor among the coral, with sea fans growing off the stock. Let the crew point it out — it disappears into the reef remarkably well.",
+            photoUrl: marineLifeImage("common-sea-fan"),
           },
-          // The two the shop photographed: a landmark with a picture is the
-          // shape the briefing draws as a photo card.
           {
             name: "The big brain coral",
             kind: "reefFormation" as const,
@@ -132,12 +133,14 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
           {
             name: "Flight deck and cranes",
             kind: "wreckFeature" as const,
-            note: "The broad deck and paired cranes make the ship's scale click into place. Stay outside the structure and follow the guide's line.",
+            note: "The broad deck and paired cranes make the ship's scale click into place, and a barracuda or two hangs off the crane tops. Stay outside the structure and follow the guide's line.",
+            photoUrl: marineLifeImage("great-barracuda"),
           },
           {
             name: "Well deck",
             kind: "wreckFeature" as const,
-            note: "The open stern space is the most dramatic exterior room on the wreck, with big schools working through it.",
+            note: "The open stern space is the most dramatic exterior room on the wreck, with big schools of jacks working through it.",
+            photoUrl: marineLifeImage("horse-eye-jack"),
           },
         ],
         fitTone: "demanding" as const,
@@ -177,12 +180,14 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
           {
             name: "Christ of the Abyss",
             kind: "underwaterMonument" as const,
-            note: "Cast in 1954 and placed here in 1965 — the reason most people are on the boat.",
+            note: "Cast in 1954 and placed here in 1965 — the reason most people are on the boat. Sergeant majors crowd the statue's raised hands.",
+            photoUrl: marineLifeImage("sergeant-major"),
           },
           {
             name: "Dry Rocks sand channels",
             kind: "reefFormation" as const,
             note: "Bright channels weaving between the coral, and a good place to look for rays and grouper.",
+            photoUrl: marineLifeImage("southern-stingray"),
           },
         ],
         fitTone: "welcoming" as const,
@@ -224,12 +229,14 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
           {
             name: "Bow section",
             kind: "wreckFeature" as const,
-            note: "The most intact piece, standing proud of the sand and the easiest place to get your bearings.",
+            note: "The most intact piece, standing proud of the sand and the easiest place to get your bearings. Sweepers fill the shade under the bow.",
+            photoUrl: marineLifeImage("glassy-sweeper"),
           },
           {
             name: "Collapsed midships plates",
             kind: "wreckFeature" as const,
-            note: "Where the hull opened up. Swim over it rather than into it — the gaps are fish holes, not doorways.",
+            note: "Where the hull opened up. Swim over it rather than into it — the gaps are fish holes, not doorways, and a green moray has the biggest one.",
+            photoUrl: marineLifeImage("green-moray"),
           },
         ],
         imageUrls: [
@@ -258,17 +265,20 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
           {
             name: "Christmas Tree Cave",
             kind: "reefFormation" as const,
-            note: "A short swim-through with two exits; the coral over the entrance is where it gets its name.",
+            note: "A short swim-through with two exits; the Christmas tree worms on the coral over the entrance are where it gets its name.",
+            photoUrl: marineLifeImage("christmas-tree-worm"),
           },
           {
             name: "Hourglass Cave",
             kind: "reefFormation" as const,
-            note: "Narrow in the middle and open at both ends — a good look at what lives on a ceiling.",
+            note: "Narrow in the middle and open at both ends — a good look at what lives on a ceiling, soldierfish mostly.",
+            photoUrl: marineLifeImage("blackbar-soldierfish"),
           },
           {
             name: "White Sand Bottom Cave",
             kind: "reefFormation" as const,
             note: "The brightest of the tunnels, and usually the one with a nurse shark parked in it.",
+            photoUrl: marineLifeImage("nurse-shark"),
           },
         ],
         fieldGuideTipsHeading: "Look up, not just down",
@@ -303,16 +313,19 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
             name: "Wheelhouse",
             kind: "wreckFeature" as const,
             note: "Open, recognizable, and usually holding the resident grouper. Approach along the deck, not from above.",
+            photoUrl: marineLifeImage("goliath-grouper"),
           },
           {
             name: "Forward gun mount",
             kind: "wreckFeature" as const,
-            note: "Still trained out over the bow, and the picture everybody comes up with.",
+            note: "Still trained out over the bow, and the picture everybody comes up with, usually with a school of spadefish around the barrel.",
+            photoUrl: marineLifeImage("atlantic-spadefish"),
           },
           {
             name: "Crow's nest",
             kind: "wreckFeature" as const,
-            note: "The shallowest point at about 18 m — where the safety stop happens on a good day.",
+            note: "The shallowest point at about 18 m — where the safety stop happens on a good day, with bar jacks circling the mast.",
+            photoUrl: marineLifeImage("bar-jack"),
           },
         ],
         fitTone: "demanding" as const,
@@ -342,12 +355,14 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
           {
             name: "Barrel coral heads",
             kind: "reefFormation" as const,
-            note: "The fossilized cement casks the reef is named for, grown into the coral.",
+            note: "The fossilized cement casks the reef is named for, grown over by star coral.",
+            photoUrl: marineLifeImage("boulder-star-coral"),
           },
           {
             name: "Anchor chain remnant",
             kind: "reefHistory" as const,
-            note: "A length of chain grown into the reef, running off toward the sand.",
+            note: "A length of chain grown into the reef, running off toward the sand. Lobsters back into the links.",
+            photoUrl: marineLifeImage("spiny-lobster"),
           },
         ],
         imageUrls: [
@@ -355,6 +370,63 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
           commonsImage("Blue Tang Pickles 20080310.jpg"),
           commonsImage("French Angelfish Pickles Reef 20230713.jpg"),
         ],
+      },
+      // The night dive's wreck. The departure named it for years with no site
+      // behind it, so the one trip a diver books in the dark was the one with
+      // no briefing, no landmarks and no field guide.
+      {
+        shopId,
+        name: "City of Washington",
+        slug: "city-of-washington",
+        locationName: "Elbow Reef, Key Largo National Marine Sanctuary",
+        forecastLatitude: 25.1439,
+        forecastLongitude: -80.2575,
+        description:
+          "An 1870s steamer that ran onto Elbow Reef in 1917, flattened into a long field of ribs and plates in shallow water.",
+        marineLife: "Tarpon · octopus · squirrelfish · glassy sweepers · moray eels",
+        marineLifeDescription:
+          "By day it is a quiet scatter of steel; after dark the ribs fill with soldierfish and squirrelfish, octopus come out to hunt, and tarpon work the edge of your light.",
+        difficultyLevel: "beginner",
+        depthRange: "5–8 m",
+        maxDepthMeters: 8,
+        currentNote: "Usually gentle on the inside of the reef; it can run along the outer edge.",
+        divePlan:
+          "Drop on the mooring at dusk, follow the keel line from the stern to the bow, then turn back over the ribs with your light low so the reef wakes up around you.",
+        landmarks: [
+          {
+            name: "Elbow mooring",
+            kind: "navigationMark" as const,
+            note: "The descent and the way home. A pair of tarpon usually hangs under the boat once the lights go on.",
+            photoUrl: marineLifeImage("tarpon"),
+          },
+          {
+            name: "Keel and ribs",
+            kind: "wreckFeature" as const,
+            note: "The spine of the wreck, the easiest line to follow in the dark. Squirrelfish tuck into every rib.",
+            photoUrl: marineLifeImage("squirrelfish"),
+          },
+          {
+            name: "Stern plates",
+            kind: "wreckFeature" as const,
+            note: "Where the hull lies open. Sweep your light slowly along the plates: this is where the octopus hunt.",
+            photoUrl: marineLifeImage("caribbean-reef-octopus"),
+          },
+        ],
+        fitTone: "welcoming" as const,
+        fitNote:
+          "Shallow and easy to navigate, which is why it is the shop's first night dive for anyone who has never been in the dark.",
+        imageUrls: [
+          commonsImage("Yellowtail Snappers Molasses Reef 1999.jpg"),
+          commonsImage("Grouper 2 Molasses Reef 1999.jpg"),
+        ],
+        routePoints: [
+          { x: 22, y: 70 },
+          { x: 40, y: 52 },
+          { x: 62, y: 40 },
+          { x: 80, y: 28 },
+        ],
+        routeLabel: "Keel line at dusk",
+        routeNote: "Stern to bow along the keel, then back over the ribs to the mooring.",
       },
     ])
     .returning();
@@ -366,6 +438,7 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
   const french = siteByName.get("French Reef");
   const duane = siteByName.get("USCGC Duane");
   const pickles = siteByName.get("Pickles Reef");
+  const washington = siteByName.get("City of Washington");
 
   /**
    * Each site's field guide, as catalog slugs.
@@ -407,6 +480,16 @@ export async function seedDiveSites(db: DbExecutor, shopId: string) {
     { site: french, slugs: ["nurse-shark", "stoplight-parrotfish", "green-moray", "squirrelfish"] },
     { site: duane, slugs: ["goliath-grouper", "horse-eye-jack", "bluestriped-grunt"] },
     { site: pickles, slugs: [] },
+    {
+      site: washington,
+      slugs: [
+        "tarpon",
+        "caribbean-reef-octopus",
+        "squirrelfish",
+        "glassy-sweeper",
+        "spotted-moray",
+      ],
+    },
   ];
   const creatureRows = fieldGuides.flatMap(({ site, slugs }) =>
     site

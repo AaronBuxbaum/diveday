@@ -12,7 +12,7 @@ import { tripDives, trips } from "./schema";
  * so every departure in the demo fell back to `shops.boat_ride_minutes` (20) and
  * the diver's "Your dock-day rhythm" list rendered the exact shape it rendered
  * before the column existed. A shop owner clicking through the demo — or a
- * screenshot in a pitch — saw the house reef and a long-range Tortugas run
+ * screenshot in a pitch — saw the house reef and a long-range day out past the Duane
  * described as the same morning, which is the uniform wrongness the feature was
  * built to end.
  *
@@ -69,7 +69,7 @@ import { tripDives, trips } from "./schema";
  *   then `0` for the second leg, because both dives are on the same mooring.
  *   Zero is a real answer here rather than "unstated" (`LegTravelTimes`), and
  *   this is the one departure in the demo that says so.
- * - **the Tortugas run** — the long-range day, and the only seeded departure
+ * - **the long-range day** — and the only seeded departure
  *   whose *second* leg is longer than the shop's surface interval. That is the
  *   one shape that changes which beat a diver reads: the gap between two dives
  *   is `max(surfaceInterval, travel)`, so at 75 minutes the window is named
@@ -79,7 +79,7 @@ import { tripDives, trips } from "./schema";
 const LEG_TRAVEL_MINUTES: Record<string, readonly number[]> = {
   "Two-Tank Reef — Molasses & French": [15, 10],
   "Wreck Trip — Spiegel Grove": [40, 0],
-  "Tortugas Run — 3 days out, 6 divers to sail": [120, 75, 25],
+  "Long-Range Day — Duane & Outer Reef": [120, 75, 25],
 };
 
 export async function seedTripLegs(

@@ -638,7 +638,7 @@ const REEF_TRIP = "Two-Tank Reef — Molasses & French";
 const EASING_BACK_TRIP = "Two-Tank Reef — French Reef";
 
 /** The seeded long-range run that only sails with six (src/db/seed-minimum-seats.ts). */
-const MINIMUM_SEATS_TRIP = "Tortugas Run — 3 days out, 6 divers to sail";
+const MINIMUM_SEATS_TRIP = "Long-Range Day — Duane & Outer Reef";
 
 /**
  * The three cert-gate departures from `src/db/seed-cert-gates.ts`. Each one can

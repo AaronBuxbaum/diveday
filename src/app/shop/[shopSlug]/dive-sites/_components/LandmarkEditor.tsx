@@ -157,9 +157,10 @@ export function LandmarkEditor({
                   className={textareaClassFor(2)}
                 />
               </Field>
-              {/* The photo divers see beside the note. A stored one shows as
-                  itself with a way to take it off; otherwise the picker, whose
-                  file posts under this row's index. */}
+              {/* The photo divers see beside the note: a stored one with its
+                  way off, or the tile whose file posts under this row's index.
+                  The tile is the stored photo's size, so the row looks the same
+                  before and after the save. */}
               <Field
                 label={copy.photoLabel}
                 className="mt-4"
@@ -185,11 +186,13 @@ export function LandmarkEditor({
                     </button>
                   </div>
                 ) : (
-                  <ImageFileInput
-                    id={`${idPrefix}-photo-${keys[index]}`}
-                    name={landmarkPhotoField(index)}
-                    copy={copy.imageInput}
-                  />
+                  <div className="w-36">
+                    <ImageFileInput
+                      id={`${idPrefix}-photo-${keys[index]}`}
+                      name={landmarkPhotoField(index)}
+                      copy={copy.imageInput}
+                    />
+                  </div>
                 )}
               </Field>
             </RepeatingItemCard>

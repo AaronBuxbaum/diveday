@@ -596,15 +596,16 @@ export function AfterState({
               {/* No separate caption: the control's own button *is* "Add a
                   photo", so a label above it saying the same thing was a second
                   reading of one instruction. */}
-              <div className="peer">
+              <div className="peer grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <ImageFileInput
                   name="photo"
                   required
                   multiple
+                  shape="square"
                   maxFiles={Math.max(0, maxPhotos - photos.length)}
                   copy={{
                     choose: t("recap.addAPhoto"),
-                    chooseAnother: t("recap.addAnotherPhoto"),
+                    chooseAnother: t("recap.chooseDifferentPhotos"),
                     wrongTypeSuffix: t("recap.photoWrongTypeSuffix"),
                     tooBigSuffix: t("recap.photoTooBigSuffix", { maxMb: MAX_IMAGE_MB }),
                     tooMany: t("recap.photoTooMany", {
