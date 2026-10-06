@@ -57,6 +57,7 @@ import { log } from "@/lib/log";
 import { type CustomerProvider, customerProviderFromEnvironment } from "@/lib/payments/customers";
 import {
   computeWaiverIntegrityHash,
+  verifyWaiverIntegrity,
   WAIVER_INTEGRITY_VERSION_ERASED,
 } from "@/lib/waiver-integrity";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
@@ -698,10 +699,13 @@ async function scrub(tx: AppTransaction, ctx: ScrubContext): Promise<ScrubResult
       .returning();
     if (!stripped) throw new Error("anonymizeDiver: waiver strip returned no row");
 
-    // Only a sealed record is re-sealed. A record that was never sealed (a
-    // pending link, or a legacy row) stays unsealed: minting a seal here would
-    // manufacture assurance the original signing never had.
-    if (record.integrityHash && record.integrityVersion) {
+    // Only a record whose seal verified before the strip is re-sealed. A record
+    // that was never sealed (a pending link) stays unsealed: minting a seal here
+    // would manufacture assurance the original signing never had. A record whose
+    // seal already fails keeps its hash and version, so it goes on reading as
+    // tampered rather than having the edit laundered by a fresh seal — the same
+    // rule `refileWaiverRecords` follows.
+    if (verifyWaiverIntegrity(record) === "valid") {
       await tx
         .update(waiverRecords)
         .set({

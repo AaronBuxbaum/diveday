@@ -56,7 +56,7 @@ import { getDb } from "@/db/client";
 import { departureRollCallForBooking } from "@/db/manifests";
 import { getBookingPayment } from "@/db/payments";
 import { carriedPreparationForDiver, getReadyPageData, type ReadyPageData } from "@/db/ready";
-import { getRecapPageData } from "@/db/recap";
+import { bookingsLeftAtTheDock, getRecapPageData } from "@/db/recap";
 import {
   certificationAgency,
   certificationLevel,
@@ -773,6 +773,9 @@ async function CarriedPreparation({
   data: ReadyPageData;
   t: DiverTranslator;
 }) {
+  // What the shop holds belongs to the matched diver record, and a held seat's
+  // link may be someone else's (#2082).
+  if (data.identityHeld) return null;
   const carried = await carriedPreparationForDiver(db, {
     shopId: data.shop.id,
     personId: data.person.id,
@@ -1429,9 +1432,20 @@ export default async function DiverReadinessPage({
    * booking. The cost is that acting on one of them lands the diver on the
    * `/recap` URL, which renders this same surface.
    */
-  const boarded = theBoatIsHome({ endsAt: detail.trip.endsAt })
+  const departure = theBoatIsHome({ endsAt: detail.trip.endsAt })
     ? await departureRollCallForBooking(db, shop.id, detail.trip.id, bookingId)
     : null;
+  // A dock `not_boarded` stands only while no after-dive `boarded` says they
+  // joined the boat later; the recap asks the same question the same way.
+  const boarded =
+    departure === "not_boarded" &&
+    !(
+      await bookingsLeftAtTheDock(db, [
+        { booking: { id: bookingId }, shop: { id: shop.id }, trip: { id: detail.trip.id } },
+      ])
+    ).has(bookingId)
+      ? "boarded"
+      : departure;
   if (isAfterTheDive({ endsAt: detail.trip.endsAt, boarded })) {
     const recap = await getRecapPageData(db, bookingId);
     if (!recap) {

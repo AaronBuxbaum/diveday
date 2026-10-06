@@ -12,7 +12,7 @@ import {
   reviewCertification,
 } from "./readiness";
 import { sendDueReminders } from "./reminders";
-import { notificationDeliveries, people, shops, waiverRecords } from "./schema";
+import { bookings, notificationDeliveries, people, shops, waiverRecords } from "./schema";
 import { setShopDockDayRhythm } from "./shops";
 import { upcomingTripsWithCounts, updateTripConditions } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
@@ -82,6 +82,34 @@ describe("sendDueReminders", () => {
     await sendDueReminders(db, opts);
     expect(emailsFor(email, bookingId)).toHaveLength(1);
     expect(await rowsFor(db, bookingId)).toHaveLength(1);
+  });
+
+  it("holds a held seat's reminder until staff confirm who it is", async () => {
+    // Issue #2082: the reminder carries the readiness link, and it goes to the
+    // matched person's address — who may not be the human who took the seat.
+    const { db, bookingId, inWeekBucket } = await reminderContext();
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: inWeekBucket })
+      .where(eq(bookings.id, bookingId));
+    const email = fakeEmail();
+    const opts = {
+      now: inWeekBucket,
+      emailProvider: email.provider,
+      smsProvider: fakeSms().provider,
+      appOrigin: ORIGIN,
+    };
+    const held = await sendDueReminders(db, opts);
+    expect(held.identityHeld).toBeGreaterThan(0);
+    expect(emailsFor(email, bookingId)).toHaveLength(0);
+    expect(await rowsFor(db, bookingId)).toHaveLength(0);
+
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: null })
+      .where(eq(bookings.id, bookingId));
+    await sendDueReminders(db, opts);
+    expect(emailsFor(email, bookingId)).toHaveLength(1);
   });
 
   it("sends nothing for a booking before any cadence opens", async () => {

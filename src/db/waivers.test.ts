@@ -5,7 +5,7 @@ import { ANONYMIZED_PERSON_NAME } from "@/lib/anonymization";
 import { STAFF_ROLES } from "@/lib/authz";
 import { emptyMedicalAnswers, findQuestionnaireVersion, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { operationalWindow } from "@/lib/operational-window";
-import { verifyWaiverIntegrity } from "@/lib/waiver-integrity";
+import { verifyWaiverIntegrity, WAIVER_INTEGRITY_VERSION_ERASED } from "@/lib/waiver-integrity";
 import {
   DEFAULT_WAIVER_TITLE,
   isCleanCompletion,
@@ -39,7 +39,7 @@ import { setTripCrew } from "./trips-crew";
 import {
   completeWaiver,
   getCurrentWaiverTemplate,
-  getEmergencyContactForBooking,
+  getEmergencyContactForBearer,
   getMedicalClearanceDocument,
   getSignedWaiverRecordForShop,
   getWaiverForToken,
@@ -1210,7 +1210,7 @@ describe("emergency contact captured with the waiver", () => {
     });
     expect(outcome.ok).toBe(true);
 
-    await expect(getEmergencyContactForBooking(db, booking.id)).resolves.toEqual({
+    await expect(getEmergencyContactForBearer(db, booking.id)).resolves.toMatchObject({
       name: "Sam Quinn",
       phone: "+1 305 555 0114",
     });
@@ -1236,7 +1236,7 @@ describe("emergency contact captured with the waiver", () => {
     });
 
     expect(outcome.ok).toBe(true);
-    await expect(getEmergencyContactForBooking(db, booking.id)).resolves.toEqual({
+    await expect(getEmergencyContactForBearer(db, booking.id)).resolves.toMatchObject({
       name: "Old Contact",
       phone: "555-0000",
     });
@@ -1259,7 +1259,7 @@ describe("emergency contact captured with the waiver", () => {
       now,
     });
 
-    await expect(getEmergencyContactForBooking(db, booking.id)).resolves.toEqual({
+    await expect(getEmergencyContactForBearer(db, booking.id)).resolves.toMatchObject({
       name: "Existing Contact",
       phone: "555-0000",
     });
@@ -1278,9 +1278,10 @@ describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () =
       bookingId: booking.id,
       name: "Alex Rivera",
       phone: "+1 305 555 0133",
+      actor: "staff",
     });
     expect(saved).toBe(true);
-    await expect(getEmergencyContactForBooking(db, booking.id)).resolves.toEqual({
+    await expect(getEmergencyContactForBearer(db, booking.id)).resolves.toMatchObject({
       name: "Alex Rivera",
       phone: "+1 305 555 0133",
     });
@@ -1296,16 +1297,17 @@ describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () =
     // The seeded demo diver may already carry a contact — capture whatever it
     // actually is rather than assume null, so this asserts nothing changed,
     // not a specific starting value.
-    const before = await getEmergencyContactForBooking(db, booking.id);
+    const before = await getEmergencyContactForBearer(db, booking.id);
 
     const saved = await saveBookingEmergencyContact(db, {
       shopId: otherShop.id,
       bookingId: booking.id,
       name: "Should Not Land",
       phone: "+1 000 000 0000",
+      actor: "staff",
     });
     expect(saved).toBe(false);
-    await expect(getEmergencyContactForBooking(db, booking.id)).resolves.toEqual(before);
+    await expect(getEmergencyContactForBearer(db, booking.id)).resolves.toEqual(before);
   });
 
   // The splice these two refuse is written out over
@@ -1324,10 +1326,11 @@ describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () =
       bookingId: booking.id,
       name: "New Person",
       phone: "   ",
+      actor: "staff",
     });
 
     expect(saved).toBe(false);
-    await expect(getEmergencyContactForBooking(db, booking.id)).resolves.toEqual({
+    await expect(getEmergencyContactForBearer(db, booking.id)).resolves.toMatchObject({
       name: "Old Contact",
       phone: "555-0000",
     });
@@ -1345,10 +1348,11 @@ describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () =
       bookingId: booking.id,
       name: "",
       phone: "555-0111",
+      actor: "staff",
     });
 
     expect(saved).toBe(false);
-    await expect(getEmergencyContactForBooking(db, booking.id)).resolves.toEqual({
+    await expect(getEmergencyContactForBearer(db, booking.id)).resolves.toMatchObject({
       name: "Old Contact",
       phone: "555-0000",
     });
@@ -1385,6 +1389,7 @@ describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () =
       bookingId: booking.id,
       name: "Should Not Land",
       phone: "+1 000 000 0000",
+      actor: "staff",
     });
 
     expect(saved).toBe(false);
@@ -1410,9 +1415,139 @@ describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () =
       bookingId: booking.id,
       name: "   ",
       phone: "",
+      actor: "staff",
     });
     expect(saved).toBe(false);
-    await expect(getEmergencyContactForBooking(db, booking.id)).resolves.toEqual({
+    await expect(getEmergencyContactForBearer(db, booking.id)).resolves.toMatchObject({
+      name: "Kept Contact",
+      phone: "555-0099",
+    });
+  });
+});
+
+describe("an emergency contact on a held seat", () => {
+  // Issue #2082: a held seat may be a different human from the matched person,
+  // so its bearer links must neither read nor overwrite that person's contact.
+  // Staff, who can see who is standing at the counter, still can.
+  async function heldSeat() {
+    const ctx = await waiverContext();
+    await ctx.db
+      .update(people)
+      .set({ emergencyContactName: "Kept Contact", emergencyContactPhone: "555-0099" })
+      .where(eq(people.id, ctx.booking.personId));
+    await ctx.db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: now })
+      .where(eq(bookings.id, ctx.booking.id));
+    return ctx;
+  }
+  async function contactOnFile(db: Awaited<ReturnType<typeof heldSeat>>["db"], personId: string) {
+    const [row] = await db
+      .select({ name: people.emergencyContactName, phone: people.emergencyContactPhone })
+      .from(people)
+      .where(eq(people.id, personId));
+    return row;
+  }
+
+  it("reads back blank to the bearer page", async () => {
+    const { db, booking } = await heldSeat();
+    await expect(getEmergencyContactForBearer(db, booking.id)).resolves.toMatchObject({
+      name: null,
+      phone: null,
+      held: true,
+    });
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: null })
+      .where(eq(bookings.id, booking.id));
+    await expect(getEmergencyContactForBearer(db, booking.id)).resolves.toMatchObject({
+      name: "Kept Contact",
+      phone: "555-0099",
+      held: false,
+    });
+  });
+
+  it("refuses the bearer and leaves the matched person's contact alone", async () => {
+    const { db, shop, booking } = await heldSeat();
+    const saved = await saveBookingEmergencyContact(db, {
+      shopId: shop.id,
+      bookingId: booking.id,
+      name: "Someone Else",
+      phone: "555-0123",
+      actor: "bearer",
+    });
+    expect(saved).toBe(false);
+    await expect(contactOnFile(db, booking.personId)).resolves.toEqual({
+      name: "Kept Contact",
+      phone: "555-0099",
+    });
+
+    expect(
+      await saveBookingEmergencyContact(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        name: "Staff Entered",
+        phone: "555-0124",
+        actor: "staff",
+      }),
+    ).toBe(true);
+    await expect(contactOnFile(db, booking.personId)).resolves.toEqual({
+      name: "Staff Entered",
+      phone: "555-0124",
+    });
+  });
+
+  it("does not let a clean release signed there carry to the diver's other bookings", async () => {
+    const { db, person, shop, booking } = await heldSeat();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
+    await completeWaiver(db, issued.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+      now,
+    });
+    const carried = async () =>
+      (
+        (await listSignedWaiversByPerson(db, shop.id, [booking.personId])).get(booking.personId) ??
+        []
+      ).map((record) => record.id);
+    expect(await carried()).not.toContain(issued.recordId);
+
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: null })
+      .where(eq(bookings.id, booking.id));
+    expect(await carried()).toContain(issued.recordId);
+  });
+
+  it("still carries a medical hold signed there, failing toward the hold", async () => {
+    const { db, person, shop, booking } = await heldSeat();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
+    await completeWaiver(db, issued.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: medicalReferralAnswers,
+      now,
+    });
+    const signed =
+      (await listSignedWaiversByPerson(db, shop.id, [booking.personId])).get(booking.personId) ??
+      [];
+    expect(signed.map((record) => record.id)).toContain(issued.recordId);
+  });
+
+  it("does not land a contact typed into the waiver onto the matched person", async () => {
+    const { db, person, shop, booking } = await heldSeat();
+    const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
+    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
+    await completeWaiver(db, issued.token, {
+      signerName: person.fullName,
+      agreed: true,
+      medicalAnswers: clearAnswers,
+      emergencyContact: { name: "Someone Else", phone: "555-0123" },
+    });
+    await expect(contactOnFile(db, booking.personId)).resolves.toEqual({
       name: "Kept Contact",
       phone: "555-0099",
     });
@@ -1426,7 +1561,7 @@ describe("saveBookingEmergencyContact (staff-facing write path, task 144)", () =
  * do, once a diver has been erased.
  */
 describe("signed waivers after a diver is erased", () => {
-  async function erasedContext(options: { completeIt: boolean }) {
+  async function erasedContext(options: { completeIt: boolean; tamperBeforeErasure?: boolean }) {
     const { db, person, shop, trip, booking, template } = await waiverContext();
     const [owner] = await db
       .select({ id: people.id })
@@ -1444,6 +1579,13 @@ describe("signed waivers after a diver is erased", () => {
         now,
       });
       if (!done.ok) throw new Error("completion failed");
+    }
+    if (options.tamperBeforeErasure) {
+      // An edit made straight in the database, on a field erasure keeps.
+      await db
+        .update(waiverRecords)
+        .set({ templateBody: "A release nobody agreed to." })
+        .where(eq(waiverRecords.id, issued.recordId));
     }
 
     const erased = await anonymizeDiver(db, {
@@ -1478,6 +1620,24 @@ describe("signed waivers after a diver is erased", () => {
     expect(audited.find((row) => row.id === issued.recordId)).toMatchObject({
       integrity: "valid",
     });
+  });
+
+  it("leaves a release whose seal already failed reading as tampered, never re-sealed", async () => {
+    const { db, shop, issued } = await erasedContext({
+      completeIt: true,
+      tamperBeforeErasure: true,
+    });
+
+    const [record] = await db
+      .select()
+      .from(waiverRecords)
+      .where(eq(waiverRecords.id, issued.recordId));
+    if (!record) throw new Error("record missing");
+    // Erasure must not launder the edit by handing the row a fresh seal.
+    expect(record.integrityVersion).not.toBe(WAIVER_INTEGRITY_VERSION_ERASED);
+    expect(verifyWaiverIntegrity(record)).toBe("invalid");
+    const entry = await getSignedWaiverRecordForShop(db, shop.id, issued.recordId);
+    expect(entry?.integrity).toBe("invalid");
   });
 
   it("strips the signature and the medical questionnaire from the stored record", async () => {

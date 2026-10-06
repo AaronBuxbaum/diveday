@@ -29,10 +29,11 @@ import { maySendNow } from "@/lib/send-window";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { loadActiveStaffRoles } from "./authz";
 import { getBoatForHistory } from "./boats";
-import type { AppDb, DbExecutor } from "./client";
+import { type AppDb, type DbExecutor, queryAll } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { listSiteFieldGuides } from "./dive-sites";
 import { listExecutedDives, peopleWhoDivedBefore } from "./executed-dives";
+import { listAfterDiveRollCallByTrip, listDepartureRollCallByTrip } from "./manifests";
 import {
   notificationProviderForDb,
   recordNotificationDelivery,
@@ -349,9 +350,65 @@ export async function getRecapPageState(
   if (bookingStatus === "cancelled" || bookingStatus === "no_show") return { kind: "dead", shop };
   if (tripStatus === "cancelled") return { kind: "departure-cancelled", shop };
   // An active booking on a live departure that `getRecapPageData` still nulled
-  // — no path reaches it today. The booking tier is the honest fallback: it
-  // says the least of the three.
+  // — a diver the crew left at the dock (`bookingsLeftAtTheDock`). The booking
+  // tier is the honest answer: it is the no-show's own sentence, and it says
+  // the least of the three.
   return { kind: "dead", shop };
+}
+
+/**
+ * **The bookings the crew left at the dock**, out of a set of candidates: the
+ * standing departure result is `not_boarded` and no after-dive `boarded` says
+ * the diver sailed after all (a diver who joined the boat at the second site).
+ * `/ready` asks the same question through this function, so the readiness link
+ * and the recap link never disagree about whether there was a day.
+ *
+ * At the dock `not_boarded` means "never left" (`src/lib/roll-call.ts`), so
+ * there was no day to look back on and the recap would thank them for one
+ * (issue #2105). It is read through the manifest's own readers rather than a
+ * query of its own, so "the latest result" means here what it means on the
+ * boat: newest event wins and a `cleared` undo drops out. A booking with no
+ * roll call at all is never in the set — a shop that does not take one still
+ * sends every recap.
+ *
+ * Grouped by shop because the cron's scan spans every shop, and the readers
+ * are tenant-scoped.
+ */
+export async function bookingsLeftAtTheDock(
+  db: DbExecutor,
+  candidates: readonly {
+    booking: { id: string };
+    shop: { id: string };
+    trip: { id: string };
+  }[],
+): Promise<Set<string>> {
+  const tripIdsByShop = new Map<string, Set<string>>();
+  for (const { shop, trip } of candidates) {
+    const tripIds = tripIdsByShop.get(shop.id) ?? new Set<string>();
+    tripIds.add(trip.id);
+    tripIdsByShop.set(shop.id, tripIds);
+  }
+  const ashore = new Set<string>();
+  // One shop at a time: the readers may share a transaction's single client.
+  for (const [shopId, tripIdSet] of tripIdsByShop) {
+    const tripIds = [...tripIdSet];
+    const [departure, afterDive] = await queryAll(db, [
+      () => listDepartureRollCallByTrip(db, shopId, tripIds),
+      () => listAfterDiveRollCallByTrip(db, shopId, tripIds),
+    ]);
+    for (const [tripId, states] of departure) {
+      const sailed = afterDive.get(tripId);
+      for (const [bookingId, state] of states) {
+        // Only a `boarded` tap is evidence they sailed. A "not back aboard"
+        // after a dock `not_boarded` contradicts the dock, it does not
+        // overrule it (dive-domain review of #2105).
+        if (state === "not_boarded" && sailed?.get(bookingId) !== "boarded") {
+          ashore.add(bookingId);
+        }
+      }
+    }
+  }
+  return ashore;
 }
 
 /**
@@ -376,6 +433,10 @@ export async function getRecapPageState(
  * `eq(trips.status, "scheduled")`. Folding the surface onto the readiness link
  * removed the only guard, so the guard moves here — one answer to "was there a
  * day" for the send path and both reading paths alike.
+ *
+ * A fourth arrived with issue #2105: a diver the crew **left at the dock**
+ * (`bookingsLeftAtTheDock`), whose booking stays active because they turned up.
+ * The send path and this reader ask the same helper.
  */
 export async function getRecapPageData(
   db: AppDb,
@@ -388,6 +449,7 @@ export async function getRecapPageData(
       tripId: bookings.tripId,
       personId: bookings.personId,
       status: bookings.status,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
       diverName: people.fullName,
       diverEmail: people.email,
       shopName: shops.name,
@@ -420,6 +482,10 @@ export async function getRecapPageData(
   // itself discloses which of the two happened (Codex finding: the earlier
   // no-show fix only gated canTip/reviewUrl here, not the page itself).
   if (!row || row.status === "cancelled" || row.status === "no_show") return null;
+  // A held seat (#2082): everything below is about the diver record the seat
+  // was matched to, and whoever holds this link may not be them. Staff confirm
+  // who it is, and the recap comes back with the same link.
+  if (row.identityUnconfirmedAt) return null;
 
   const trip = await getTripWithBooked(db, row.shopId, row.tripId);
   if (!trip) return null;
@@ -427,6 +493,11 @@ export async function getRecapPageData(
   // relaxing this: an active booking on a cancelled trip is the *normal*
   // shape of a blow-out, not an inconsistency to tolerate.
   if (trip.status !== "scheduled") return null;
+  // The crew left this diver at the dock: the same answer the email gets.
+  const ashore = await bookingsLeftAtTheDock(db, [
+    { booking: { id: bookingId }, shop: { id: row.shopId }, trip: { id: row.tripId } },
+  ]);
+  if (ashore.has(bookingId)) return null;
 
   const [
     dives,
@@ -1014,9 +1085,22 @@ export async function hasSentTripRecap(db: DbExecutor, shopId: string, tripId: s
         eq(bookings.tripId, tripId),
         ne(bookings.status, "cancelled"),
         ne(bookings.status, "no_show"),
+        // Never sent one while held (#2082), so not owed one either.
+        isNull(bookings.identityUnconfirmedAt),
       ),
     );
-  return rows.length > 0 && rows.every((row) => row.deliveryStatus === "sent");
+  // A diver left at the dock is never sent one, so counting them would hold
+  // the departure at "not sent" forever.
+  const ashore = await bookingsLeftAtTheDock(
+    db,
+    rows.map((row) => ({
+      booking: { id: row.bookingId },
+      shop: { id: shopId },
+      trip: { id: tripId },
+    })),
+  );
+  const owed = rows.filter((row) => !ashore.has(row.bookingId));
+  return owed.length > 0 && owed.every((row) => row.deliveryStatus === "sent");
 }
 
 /** Set (or clear, with an empty string) a trip's crew-authored recap shout-out. */
@@ -1194,7 +1278,7 @@ async function sendRecaps(
   const since = new Date(now.getTime() - RECAP_LOOKBACK_HOURS * HOUR_MS);
   const eligibleBefore = new Date(now.getTime() - RECAP_AUTOMATIC_DELAY_HOURS * HOUR_MS);
 
-  const rows = await db
+  const candidates = await db
     .select({ booking: bookings, person: people, trip: trips, shop: shops })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
@@ -1207,6 +1291,9 @@ async function sendRecaps(
         // tip/review asks that ride the same page) would be dishonest
         // (Codex finding).
         ne(bookings.status, "no_show"),
+        // A held seat waits for staff to confirm who took it (#2082): the
+        // recap is about the matched diver record, sent to its address.
+        isNull(bookings.identityUnconfirmedAt),
         eq(trips.status, "scheduled"),
         ...(scope.shopId ? [eq(trips.shopId, scope.shopId)] : []),
         ...(scope.tripId
@@ -1222,6 +1309,11 @@ async function sendRecaps(
             ]),
       ),
     );
+  // A diver the crew left at the dock never dived, for the same reason a
+  // no-show never did — but nobody marks a no-show for someone who turned up,
+  // so the roll call is the only place that fact is written (issue #2105).
+  const ashore = await bookingsLeftAtTheDock(db, candidates);
+  const rows = candidates.filter((row) => !ashore.has(row.booking.id));
   const summary: RecapRunSummary = {
     scanned: rows.length,
     sent: 0,

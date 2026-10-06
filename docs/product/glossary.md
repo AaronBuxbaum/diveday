@@ -1566,13 +1566,17 @@ new domain concept, define it here in the same PR.
   renders the **after-state**, and so does the diver's own readiness link once their day is over. No
   redirect between the two, because a recap token may not mint a readiness capability — and no
   share-this-page control on either, because one of the two URLs rendering that surface can also
-  cancel the booking and move its refund. See
+  cancel the booking and move its refund. **No recap for a diver left at the dock**: a booking whose
+  standing departure roll call is `not_boarded` gets neither the email nor the page, unless an
+  after-dive `boarded` shows they joined the boat at a later site (`bookingsLeftAtTheDock`,
+  `src/db/recap.ts`, issue #2105). A held seat gets none until staff **Confirm identity**. See
   [20260723-post-trip-recap](../architecture/decisions/20260723-post-trip-recap.md) and
   [20260827-the-divers-thread](../architecture/decisions/20260827-the-divers-thread.md).
 - **After-state** — the third and last state of the diver's thread, after *prep* and *the dive day*:
   the welcome-home greeting, the **dive record**, the crew's word, one review ask, and the quiet
   doors for photos and a tip. **When it opens is a domain question, not a clock reading.** Where the
-  crew kept a departure roll call it follows that: `not_boarded` never sees it at all, and `boarded`
+  crew kept a departure roll call it follows that: `not_boarded` never sees it unless an after-dive
+  `boarded` shows they joined the boat later (the recap's own rule), and `boarded`
   opens it once the boat is scheduled home plus the standing one-hour late-arrival buffer. Where a
   shop recorded no roll call it waits four hours after the scheduled return — the floor the recap
   *send* already uses, because nothing else in the product knows whether this person dived
@@ -2204,7 +2208,11 @@ new domain concept, define it here in the same PR.
   same row, **Split off a held seat** below. Nothing else may be attested onto a held seat in the meantime —
   recording a paper release on one is refused at the writer (`recordInPersonWaiver`), because a
   staff-attested signature with a medical tick would land on the very record the flag says the
-  shop is unsure of. See H-13 in [human-decisions.md](human-decisions.md).
+  shop is unsure of. **The seat's bearer links know nothing of the matched diver either** (issue
+  #2082): `/ready` and `/waivers` neither show nor write the record's emergency contact, rental
+  fit, cards or language, a clean release signed on the seat does not carry to the diver's other
+  bookings (a medical hold signed there still does), and no readiness reminder or recap is sent
+  until the flag clears. See H-13 in [human-decisions.md](human-decisions.md).
 - **Split off a held seat** ("Different person") — the other answer to a held seat: this booking is
   *not* the diver it was attached to. `splitBookingIdentity` (`src/db/bookings.ts`) creates a new
   diver record, named by the staffer and prefilled with the name the seat was booked under

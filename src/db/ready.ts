@@ -99,6 +99,14 @@ export type ReadyPageData = {
    */
   emergencyContact: { name: string | null; phone: string | null };
   /**
+   * Staff have not yet confirmed that this seat's diver is the diver record it
+   * was matched to (`bookings.identity_unconfirmed_at`). Until they do, the
+   * link may be in someone else's hands, so nothing read off that record —
+   * emergency contact, rental fit, the kept-fit recall, nitrox cards — comes
+   * back, and the actions refuse to write onto it (#2082).
+   */
+  identityHeld: boolean;
+  /**
    * When this seat was booked. Read for one question and one only: whether the
    * shop was already holding this diver's stated fit *before* the booking
    * existed, which is what makes the "Anything changed?" step a question about
@@ -230,6 +238,7 @@ export async function getReadyPageData(
       status: bookings.status,
       bookingCreatedAt: bookings.createdAt,
       carriedFactsConfirmedAt: bookings.carriedFactsConfirmedAt,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
       slug: shops.slug,
       defaultLocale: shops.defaultLocale,
       currency: shops.currency,
@@ -319,6 +328,7 @@ export async function getReadyPageData(
       : "no_policy";
 
   const canCancelBooking = row.status === "booked" && !hasSailed(trip.startsAt, now);
+  const identityHeld = row.identityUnconfirmedAt !== null;
 
   return {
     detail,
@@ -350,19 +360,22 @@ export async function getReadyPageData(
       email: row.personEmail,
       locale: row.personLocale,
     },
-    emergencyContact: { name: row.emergencyContactName, phone: row.emergencyContactPhone },
+    emergencyContact: identityHeld
+      ? { name: null, phone: null }
+      : { name: row.emergencyContactName, phone: row.emergencyContactPhone },
+    identityHeld,
     bookingCreatedAt: row.bookingCreatedAt,
     carriedFactsConfirmedAt: row.carriedFactsConfirmedAt,
-    fitConfirmation,
+    fitConfirmation: identityHeld ? null : fitConfirmation,
     wantsNitrox: row.wantsNitrox,
     lastDivedBand: row.lastDivedBand,
     diveIntent: row.diveIntent,
     reEntryAsk: row.reEntryAsk,
     reEntryOffersOpen,
     refresherCourseOffered,
-    nitroxCardVerified: nitroxVerified.has(row.personId),
-    nitroxCardOnFile: nitroxOnFile.has(row.personId),
-    rentalFit: toDiverRentalFit(rentalFit),
+    nitroxCardVerified: !identityHeld && nitroxVerified.has(row.personId),
+    nitroxCardOnFile: !identityHeld && nitroxOnFile.has(row.personId),
+    rentalFit: identityHeld ? null : toDiverRentalFit(rentalFit),
     helpRequest,
     hotelPickupLocation: row.hotelPickupLocation,
     pickupTime: row.pickupTime,

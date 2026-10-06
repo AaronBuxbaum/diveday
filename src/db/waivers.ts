@@ -1036,29 +1036,39 @@ async function saveEmergencyContact(
     emergencyContactPhone: submitted.phone,
   };
   const [booking] = await db
-    .select({ personId: bookings.personId })
+    .select({ personId: bookings.personId, identityUnconfirmedAt: bookings.identityUnconfirmedAt })
     .from(bookings)
     .where(eq(bookings.id, bookingId))
     .limit(1);
-  if (!booking) return;
+  // A held seat's link may be in someone else's hands: never write onto the
+  // diver record it was matched to until staff confirm who it is (#2082).
+  if (!booking || booking.identityUnconfirmedAt) return;
   await db.update(people).set(patch).where(eq(people.id, booking.personId));
 }
 
-/** The diver's emergency contact on file, reached through their booking. */
-export async function getEmergencyContactForBooking(
+/**
+ * The diver's emergency contact on file as the bearer waiver page may show it,
+ * reached through their booking. Blank and `held` on a held seat (`identity_unconfirmed_at`): the bearer link that
+ * reads it may not belong to the diver record the seat was matched to, so the
+ * page asks for nothing it could not save (#2082).
+ */
+export async function getEmergencyContactForBearer(
   db: AppDb,
   bookingId: string,
-): Promise<{ name: string | null; phone: string | null } | null> {
+): Promise<{ name: string | null; phone: string | null; held: boolean } | null> {
   const [row] = await db
     .select({
       name: people.emergencyContactName,
       phone: people.emergencyContactPhone,
+      identityUnconfirmedAt: bookings.identityUnconfirmedAt,
     })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .where(eq(bookings.id, bookingId))
     .limit(1);
-  return row ?? null;
+  if (!row) return null;
+  if (row.identityUnconfirmedAt) return { name: null, phone: null, held: true };
+  return { name: row.name, phone: row.phone, held: false };
 }
 
 /** The same person-level contact read used by a waiver with no booking. */
@@ -1086,7 +1096,18 @@ export async function getEmergencyContactForPerson(
  */
 export async function saveBookingEmergencyContact(
   db: AppDb,
-  input: { shopId: string; bookingId: string; name?: string; phone?: string },
+  input: {
+    shopId: string;
+    bookingId: string;
+    name?: string;
+    phone?: string;
+    /**
+     * Who is writing. A bearer link on a held seat (`identity_unconfirmed_at`)
+     * may belong to someone other than the diver record it was matched to, so
+     * it never writes onto that record until staff confirm who it is (#2082).
+     */
+    actor: "bearer" | "staff";
+  },
 ): Promise<boolean> {
   const submitted = readEmergencyContact(input);
   if (submitted.kind !== "pair") return false;
@@ -1095,11 +1116,12 @@ export async function saveBookingEmergencyContact(
     emergencyContactPhone: submitted.phone,
   };
   const [booking] = await db
-    .select({ personId: bookings.personId })
+    .select({ personId: bookings.personId, identityUnconfirmedAt: bookings.identityUnconfirmedAt })
     .from(bookings)
     .where(and(eq(bookings.id, input.bookingId), eq(bookings.shopId, input.shopId)))
     .limit(1);
   if (!booking) return false;
+  if (input.actor === "bearer" && booking.identityUnconfirmedAt) return false;
   const [updated] = await db
     .update(people)
     .set(patch)
@@ -1308,16 +1330,32 @@ export async function listSignedWaiversByPerson(
   const byPerson = new Map<string, (typeof waiverRecords.$inferSelect)[]>();
   if (personIds.length === 0) return byPerson;
   const rows = await db
-    .select()
+    .select({ record: waiverRecords })
     .from(waiverRecords)
+    .leftJoin(
+      bookings,
+      and(eq(bookings.id, waiverRecords.bookingId), eq(bookings.shopId, waiverRecords.shopId)),
+    )
     .where(
       and(
         eq(waiverRecords.shopId, shopId),
         inArray(waiverRecords.personId, personIds),
         inArray(waiverRecords.status, ["completed", "medical_review"]),
         isNull(waiverRecords.supersededAt),
+        // **A clean release signed on a held seat does not carry** (#2082).
+        // Until staff confirm who took the seat, whoever held its link may
+        // not be this diver, and their "no" to every medical question must
+        // not clear the diver's other bookings or outrank a real hold. The
+        // seat's own release still reaches it as `bookingWaiver`. A medical
+        // hold signed there still carries: failing toward the hold is safe.
+        or(
+          isNull(waiverRecords.bookingId),
+          isNull(bookings.identityUnconfirmedAt),
+          eq(waiverRecords.status, "medical_review"),
+        ),
       ),
-    );
+    )
+    .then((joined) => joined.map((row) => row.record));
   for (const row of rows) {
     const list = byPerson.get(row.personId) ?? [];
     list.push(row);

@@ -1366,6 +1366,7 @@ export async function saveRosterEmergencyContactAction(
     bookingId,
     name,
     phone,
+    actor: "staff",
   });
   // A contact is only usable with a reachable number, and the writer holds
   // that line for every surface (`readEmergencyContact`): a name without a

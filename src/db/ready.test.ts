@@ -1,9 +1,11 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { cancelBooking, confirmCarriedFacts, createBooking, setBookingLastDived } from "./bookings";
 import { setBookingPayment } from "./payments";
 import { carriedPreparationForDiver, getReadyPageData } from "./ready";
+import { getRentalFit, toDiverRentalFit } from "./rental-fit";
 import { bookings, people, shops } from "./schema";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
 import { getTripRoster, setTripStatus, upcomingTripsWithCounts } from "./trips";
@@ -236,6 +238,43 @@ describe("getReadyPageData", () => {
   it("claims no fit confirmation for a fit nobody kept", async () => {
     const { db, bookingId } = await unpaidBooking();
     expect((await getReadyPageData(db, bookingId))?.fitConfirmation).toBeNull();
+  });
+});
+
+/**
+ * **A held seat's link** (issue #2082). A booking that attached itself to an
+ * existing person on something short of proof (`identity_unconfirmed_at`) may
+ * not be that person at all — a shared family email is the ordinary case — so
+ * until staff confirm it, the link must not read back the matched person's
+ * particulars. The flag gates disclosure (H-13, 2026-09-11).
+ */
+describe("a held seat's ready page", () => {
+  it("withholds the matched person's contact and sizes until staff confirm who it is", async () => {
+    const { db, shop, booking } = await seededBooking();
+    await db
+      .update(people)
+      .set({ emergencyContactName: "Held Contact", emergencyContactPhone: "555-0101" })
+      .where(eq(people.id, booking.personId));
+    const onFile = toDiverRentalFit(await getRentalFit(db, shop.id, booking.personId));
+
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: nowDate() })
+      .where(eq(bookings.id, booking.id));
+    const held = await getReadyPageData(db, booking.id);
+    expect(held?.identityHeld).toBe(true);
+    expect(held?.emergencyContact).toEqual({ name: null, phone: null });
+    expect(held?.rentalFit).toBeNull();
+    expect(held?.fitConfirmation).toBeNull();
+
+    await db
+      .update(bookings)
+      .set({ identityUnconfirmedAt: null })
+      .where(eq(bookings.id, booking.id));
+    const confirmed = await getReadyPageData(db, booking.id);
+    expect(confirmed?.identityHeld).toBe(false);
+    expect(confirmed?.emergencyContact).toEqual({ name: "Held Contact", phone: "555-0101" });
+    expect(confirmed?.rentalFit).toEqual(onFile);
   });
 });
 

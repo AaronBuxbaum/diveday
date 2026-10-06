@@ -83,6 +83,14 @@ export async function readKnownDiver(
     now,
   });
   if (!capability || capability.shopId !== input.shopId) return null;
+  // A handoff minted from a held seat (#2082) speaks for a diver record staff
+  // have not yet matched to whoever holds the link: nothing is pre-filled.
+  const [seat] = await db
+    .select({ identityUnconfirmedAt: bookings.identityUnconfirmedAt })
+    .from(bookings)
+    .where(and(eq(bookings.id, capability.bookingId), eq(bookings.shopId, input.shopId)))
+    .limit(1);
+  if (!seat || seat.identityUnconfirmedAt) return null;
   const [person] = await db
     .select({
       id: people.id,
