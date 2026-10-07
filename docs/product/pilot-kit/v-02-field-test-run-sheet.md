@@ -155,9 +155,8 @@ same way a diver is.
       Y / N
 
 **a. A rostered crew member still to call.** With every diver counted and nobody having tapped the
-crew, expect the crew panel (**Crew aboard**) to read *"{n} crew members still to call. Every person
-on the crew list needs a result of their own."*, to name each of them, and the checkpoint **not** to
-read complete.
+crew, expect the crew panel (**Crew aboard**) to read *"{n} crew members still to call."*, to name
+each of them, and the checkpoint **not** to read complete.
 
 - [ ] As described. Otherwise: ______________________________________________
 - [ ] Each crew member's row carries **Mark aboard** and **Mark not back aboard**, at the same size
