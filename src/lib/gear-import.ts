@@ -1,6 +1,12 @@
 import { isValidCalendarDate } from "./calendar-date";
 import { GEAR_KIND_ORDER, type GearItemKind, type GearServiceKind } from "./gear";
-import { parseCsv } from "./import";
+import {
+  MAX_IMPORT_BYTES,
+  MAX_IMPORT_CELL_LENGTH,
+  MAX_IMPORT_COLUMNS,
+  MAX_IMPORT_ROWS,
+  parseCsv,
+} from "./import";
 
 export type PreparedGearImportRow = {
   rowNumber: number;
@@ -28,8 +34,17 @@ export type PreparedGearImportRow = {
 export type PreparedGearImport = {
   rows: PreparedGearImportRow[];
   unmappedColumns: string[];
-  fatal: string | null;
+  fatal: GearImportFatal | null;
 };
+
+/** Why a whole file was refused; each one has a notice of its own on the Import page. */
+export type GearImportFatal =
+  | "file_empty"
+  | "no_gear_column"
+  | "file_too_large"
+  | "too_many_columns"
+  | "too_many_rows"
+  | "cell_too_long";
 
 const aliases = {
   label: ["gear_label", "gear_tag", "tag", "unit", "unit_label", "equipment", "asset"],
@@ -102,8 +117,21 @@ function serviceKind(value: string | null): GearServiceKind {
 }
 
 export function prepareGearImport(csv: string): PreparedGearImport {
+  // **The same four caps the contacts importer enforces** (issue #1846). The
+  // server action's body limit is 16 MB, and every row is a gear write; an
+  // unbounded file is an unbounded request against a database every tenant
+  // shares. Checked before the grid is walked, so nothing is read from a file
+  // that is refused.
+  if (new TextEncoder().encode(csv).length > MAX_IMPORT_BYTES)
+    return { rows: [], unmappedColumns: [], fatal: "file_too_large" };
   const grid = parseCsv(csv).filter((row) => row.some((cell) => cell.trim() !== ""));
   if (grid.length === 0) return { rows: [], unmappedColumns: [], fatal: "file_empty" };
+  if (grid[0].length > MAX_IMPORT_COLUMNS)
+    return { rows: [], unmappedColumns: [], fatal: "too_many_columns" };
+  if (grid.length - 1 > MAX_IMPORT_ROWS)
+    return { rows: [], unmappedColumns: [], fatal: "too_many_rows" };
+  if (grid.some((row) => row.some((cell) => cell.length > MAX_IMPORT_CELL_LENGTH)))
+    return { rows: [], unmappedColumns: [], fatal: "cell_too_long" };
   const headers = grid[0].map(normalize);
   const indexes = new Map<string, number>();
   const unmappedColumns: string[] = [];
