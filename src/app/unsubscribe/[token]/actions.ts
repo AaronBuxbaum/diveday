@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getDb } from "@/db/client";
 import { optOutPersonFromCourtesyEmailByToken } from "@/db/courtesy-email";
 import { unsubscribeLastMinuteListEntryByToken } from "@/db/last-minute-list";
+import { turnOffWeeklyDigestByToken } from "@/db/weekly-digest";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 
@@ -27,7 +28,9 @@ export async function confirmUnsubscribe(token: string) {
   const db = await getDb();
   const lastMinute = await unsubscribeLastMinuteListEntryByToken(db, { token });
   if (!lastMinute) {
-    await optOutPersonFromCourtesyEmailByToken(db, { token });
+    const courtesy = await optOutPersonFromCourtesyEmailByToken(db, { token });
+    // The third kind, tried last: a staffer's own Monday email.
+    if (!courtesy) await turnOffWeeklyDigestByToken(db, { token });
   }
   redirect(`/unsubscribe/${token}`);
 }

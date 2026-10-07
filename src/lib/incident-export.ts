@@ -13,6 +13,7 @@ import {
   rollCallLabel,
   type TripManifest,
 } from "./manifests";
+import { countParticipants, type ParticipantCounts } from "./participant-types";
 import { isUnsightedSelfDeclaration } from "./readiness";
 import { type WaiverState, waiverState } from "./waivers";
 
@@ -350,7 +351,10 @@ export type IncidentExportDocument = {
   };
   /** Counts of records, not judgments: how many results of each kind stand at departure. */
   departureSummary: {
+    /** Everyone on the manifest, divers or not (ADR 20261007-participant-types). */
     totalDivers: number;
+    /** The same people by what they were doing aboard. */
+    byType: ParticipantCounts;
     boarded: number;
     notBoarded: number;
     awaiting: number;
@@ -808,6 +812,7 @@ export function buildIncidentExport(input: IncidentExportInput): IncidentExportD
     },
     departureSummary: {
       totalDivers: departure.summary.totalDivers,
+      byType: departure.summary.byType ?? countParticipants(departure.divers),
       boarded: departure.summary.boarded,
       notBoarded: departure.summary.notBoarded,
       awaiting: departure.summary.awaiting,

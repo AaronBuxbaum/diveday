@@ -298,6 +298,7 @@ describe("one diver's own record export (issue #726)", () => {
       await db
         .insert(bookings)
         .values({
+          bookedAs: "diver",
           id,
           shopId: shop.id,
           tripId,

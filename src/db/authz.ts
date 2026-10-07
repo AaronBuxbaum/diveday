@@ -13,6 +13,7 @@ import {
   canManageStaffAccounts,
   canManageWaiverTemplates,
   canMergeDiver,
+  canOverrideCertBlock,
   canOverrideGearRequest,
   canReadMedicalAnswers,
   canReadMedicalClearanceDocument,
@@ -222,6 +223,10 @@ export const canPersonConfigureTrips = (db: DbExecutor, shopId: string, personId
  */
 export const canPersonExportIncidentRecord = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canExportIncidentRecord);
+
+/** Live DB-checked companion of the "Change anyway" card-check override (src/lib/authz.ts). */
+export const canPersonOverrideCertBlock = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canOverrideCertBlock);
 
 /** Live DB-checked companion of the H-06 gear-override gate (src/lib/authz.ts). */
 export const canPersonOverrideGearRequest = (db: DbExecutor, shopId: string, personId: string) =>

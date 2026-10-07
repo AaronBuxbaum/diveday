@@ -1185,3 +1185,67 @@ describe("the identity-unconfirmed docblock", () => {
     expect(block).toContain("nameMatchLeavesIdentityInDoubt");
   });
 });
+
+describe("calculateReadiness — participant types (ADR 20261007-participant-types)", () => {
+  it("asks a rider or a snorkeler for no card, but still for the waiver", () => {
+    for (const participantType of ["rider", "snorkeler"] as const) {
+      const unsigned = calculateReadiness({
+        requirement: nitroxRequirement,
+        waiver: null,
+        certifications: [],
+        participantType,
+        now,
+      });
+      const codes = unsigned.blockers.map((blocker) => blocker.code);
+      expect(codes).toContain("waiver_not_sent");
+      expect(codes.filter((code) => /^(certification|nitrox|specialty)_/.test(code))).toEqual([]);
+
+      expect(
+        calculateReadiness({
+          requirement: deepRequirement,
+          waiver: signedWaiver,
+          certifications: [],
+          participantType,
+          now,
+        }).status,
+      ).toBe("ready");
+    }
+  });
+
+  it("still asks a diver for the card", () => {
+    expect(
+      calculateReadiness({
+        requirement,
+        waiver: signedWaiver,
+        certifications: [],
+        participantType: "diver",
+        now,
+      }).blockers.map((blocker) => blocker.code),
+    ).toContain("certification_missing");
+  });
+
+  it("clears the payment gate for a non-diver seat the shop priced at nothing, and only that", () => {
+    const base = { requirement: paymentRequirement, waiver: signedWaiver, now };
+    const free = calculateReadiness({
+      ...base,
+      certifications: [],
+      participantType: "rider",
+      statedFree: true,
+    });
+    expect(free.status).toBe("ready");
+    const unpriced = calculateReadiness({
+      ...base,
+      certifications: [],
+      participantType: "rider",
+    });
+    expect(unpriced.status).toBe("blocked");
+    // A diver is never waved through on a stated-free flag.
+    const diverSeat = calculateReadiness({
+      ...base,
+      certifications: [certification()],
+      participantType: "diver",
+      statedFree: true,
+    });
+    expect(diverSeat.status).toBe("blocked");
+  });
+});

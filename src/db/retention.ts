@@ -25,6 +25,7 @@ import {
   stripeWebhookEvents,
   tripDeskEvents,
   tripReadMarks,
+  weeklyDigestSends,
 } from "./schema";
 
 /**
@@ -285,6 +286,21 @@ export async function pruneExpiredRecords(
           .where(lt(pushSubscriptions.createdAt, cutoff("push_subscriptions")))
           .limit(PRUNE_BATCH_LIMIT),
       (ids) => db.delete(pushSubscriptions).where(inArray(pushSubscriptions.id, ids)),
+    ),
+  );
+
+  // The Monday email's per-week claims and their opt-out link hashes. Pruned
+  // on their own age: the claim is spent once its week is over.
+  outcomes.push(
+    await pruneBatch(
+      "weekly_digest_sends",
+      () =>
+        db
+          .select({ id: weeklyDigestSends.id })
+          .from(weeklyDigestSends)
+          .where(lt(weeklyDigestSends.createdAt, cutoff("weekly_digest_sends")))
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(weeklyDigestSends).where(inArray(weeklyDigestSends.id, ids)),
     ),
   );
 

@@ -859,6 +859,88 @@ const staffReplySchema = z.object({
   inReplyTo: threadableMessageIdSchema.optional(),
 });
 
+/**
+ * **The Monday email** (market audit item 51): one shop's week, sent to its
+ * owner — and to any other staffer who asked for it — as service mail. H-09's
+ * transactional basis covers it: the recipient is the shop's own staff, the
+ * content is the shop's own operation, and nothing in it sells anything.
+ *
+ * Every section is a count plus the staff page it opens, decided by
+ * `weeklyDigestSections` (`src/lib/weekly-digest.ts`); a section with nothing
+ * to say never reaches this payload, and an empty list never sends.
+ *
+ * `turnOffUrl` is the one-click way out (`/unsubscribe/<token>`), and is
+ * deliberately **not** named `unsubscribeUrl`: that field is what marks a kind
+ * as commercial (`withPostalFooter`, `src/lib/notifications/render.ts`), and
+ * this one is not. The SES adapter still lifts it into the RFC 8058
+ * `List-Unsubscribe` pair, because a mail client's own "stop these" button is
+ * the cheapest way out of any recurring message.
+ */
+const weeklyDigestSectionSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("last_week"),
+    bookingsMade: z.number().int().min(0),
+    departures: z.number().int().min(0),
+    seatsFilled: z.number().int().min(0),
+    seats: z.number().int().min(0),
+    url: z.url().max(2_000),
+  }),
+  z.object({
+    kind: z.literal("this_week"),
+    departures: z.number().int().min(1),
+    seatsFilled: z.number().int().min(0),
+    seats: z.number().int().min(0),
+    url: z.url().max(2_000),
+  }),
+  z.object({
+    kind: z.literal("waivers"),
+    divers: z.number().int().min(1),
+    departures: z.number().int().min(1),
+    url: z.url().max(2_000),
+  }),
+  z.object({
+    kind: z.literal("reviews"),
+    received: z.number().int().min(0),
+    awaitingModeration: z.number().int().min(0),
+    url: z.url().max(2_000),
+  }),
+  z.object({
+    kind: z.literal("date_requests"),
+    waiting: z.number().int().min(1),
+    url: z.url().max(2_000),
+  }),
+  z.object({
+    kind: z.literal("overdue"),
+    count: z.number().int().min(1),
+    url: z.url().max(2_000),
+  }),
+]);
+
+export type WeeklyDigestEmailSection = z.infer<typeof weeklyDigestSectionSchema>;
+
+const weeklyDigestSchema = z.object({
+  kind: z.literal("weekly_digest"),
+  shopId: z.uuid(),
+  /** The recipient — what keys one email per person per week. */
+  personId: z.uuid(),
+  to: emailAddressSchema,
+  locale: localeSchema,
+  recipientName: z.string().trim().min(1).max(120),
+  shopName: z.string().trim().min(1).max(120),
+  timezone: z.string().trim().min(1).max(100),
+  /** This week's shop-local Monday. */
+  weekOf: calendarDateSchema,
+  lastWeekFrom: calendarDateSchema,
+  lastWeekTo: calendarDateSchema,
+  thisWeekFrom: calendarDateSchema,
+  thisWeekTo: calendarDateSchema,
+  sections: z.array(weeklyDigestSectionSchema).min(1).max(6),
+  /** The recipient's own email settings, where the toggle lives. */
+  settingsUrl: z.url().max(2_000),
+  /** The one-click opt-out — see the docblock above for why it is not `unsubscribeUrl`. */
+  turnOffUrl: z.url().max(2_000),
+});
+
 export const notificationSenderSchema = z.object({
   replyTo: emailAddressSchema.optional(),
   /** One line, already in postal order (`shopAddressLines(...).join(", ")`). */
@@ -898,6 +980,7 @@ export const notificationSchema = z
     founderDigestSchema,
     courseInquirySchema,
     staffReplySchema,
+    weeklyDigestSchema,
   ])
   .and(z.object({ sender: notificationSenderSchema.optional() }));
 
@@ -1126,5 +1209,10 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // One send per reply row; the row exists before the send does.
     case "staff_reply":
       return `staff-reply/${notification.replyId}`;
+    // One Monday email per person per shop-local week — the same pair
+    // `weekly_digest_sends` holds unique, so a queued retry and the claim
+    // agree on what "this week's email" means.
+    case "weekly_digest":
+      return `weekly-digest/${notification.personId}/${notification.weekOf}`;
   }
 }

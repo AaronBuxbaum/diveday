@@ -1,3 +1,4 @@
+import { isDiver, type ParticipantType, rentsGear } from "@/lib/participant-types";
 import { hasReturned } from "@/lib/trips";
 import { calendarDateInTimezone } from "./calendar-date";
 import { nowDate } from "./clock";
@@ -143,6 +144,13 @@ export type ThreadStepsInput = {
    * changing one of the facts it covers.
    */
   carriedFactsConfirmed: boolean;
+  /**
+   * What the seat is (ADR 20261007-participant-types); absent means diver. A
+   * rider rents nothing, so has no gear step; a seat that is not diving is
+   * asked nothing that day-of settles on, so its day-of step is already done
+   * and holds only the optional pickup, note and help questions.
+   */
+  participantType?: ParticipantType;
 };
 
 export function buildThreadSteps(input: ThreadStepsInput): ThreadSpine {
@@ -197,12 +205,14 @@ export function buildThreadSteps(input: ThreadStepsInput): ThreadSpine {
   // draws "3 of 4 done" over five rows, which would need the fourth `upcoming`
   // state this module refused above; the ADR is what code obeys ("the thread
   // gains one step"), so the shipped figure counts five.
-  if (input.carriedFacts) {
+  // A rider stays aboard: no sizes to give, and nothing carried to confirm.
+  if (rentsGear(input.participantType) && input.carriedFacts) {
     steps.push({ id: "changes", state: input.carriedFactsConfirmed ? "done" : "your_turn" });
-  } else {
+  } else if (rentsGear(input.participantType)) {
     steps.push({ id: "gear", state: input.rentalFitComplete ? "done" : "your_turn" });
   }
-  steps.push({ id: "dayof", state: input.dayOfComplete ? "done" : "your_turn" });
+  const dayOfSettled = input.dayOfComplete || !isDiver(input.participantType ?? "diver");
+  steps.push({ id: "dayof", state: dayOfSettled ? "done" : "your_turn" });
 
   return {
     steps,

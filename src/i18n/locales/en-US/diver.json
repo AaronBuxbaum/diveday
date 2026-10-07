@@ -330,7 +330,9 @@
       "taxAtCheckout": "added at checkout",
       "dueNow": "Due now",
       "dueAtShop": "Due at the shop",
-      "balanceAtDock": "{balance} at the dock on {when}"
+      "balanceAtDock": "{balance} at the dock on {when}",
+      "snorkelerFare": "{price} × {count, plural, one {# snorkeler} other {# snorkelers}}",
+      "riderFare": "{price} × {count, plural, one {# rider} other {# riders}}"
     },
     "promoLabel": "Promo code",
     "promoHint": "(if you have one)",
@@ -384,14 +386,17 @@
       "courseRatioFull": "This session is at its instructor-to-student ratio limit. Call the shop: they may be able to add another instructor.",
       "fit": "That rental fit didn’t save. Check the details and try again.",
       "pay": "We couldn’t open the payment page just now. Your spot is safe. Try again in a moment, or pay at the shop.",
-      "checkFields": "Check the highlighted fields and try again."
+      "checkFields": "Check the highlighted fields and try again.",
+      "diversFull": "The diver spots on this trip are taken, so we couldn’t book a diver.",
+      "typeUnavailable": "That option isn’t offered on this trip. Pick another and try again."
     },
     "fieldErrors": {
       "nameRequired": "Enter a name.",
       "nameTooLong": "That name is too long.",
       "emailInvalid": "Enter a valid email address.",
       "phoneTooLong": "That phone number is too long.",
-      "promoInvalid": "That code isn’t active."
+      "promoInvalid": "That code isn’t active.",
+      "participantTypeInvalid": "Pick one of the options listed."
     },
     "emailsOnTheWay": "Two emails are on their way: your booking confirmation, and the link to sign your waiver.",
     "embedPayNext": "Your seat’s held. Paying opens on DiveDay’s secure page, outside this window.",
@@ -471,6 +476,14 @@
     "submitting": "Stopping…",
     "confirmedTitle": "You’re unsubscribed",
     "confirmedText": "You won’t get optional emails from {shopName} anymore. You’ll still get emails about your own bookings, waivers, and trip updates."
+  },
+  "weeklyDigestUnsubscribe": {
+    "title": "Stop the Monday email?",
+    "description": "Every Monday you get a summary of the week at {shopName}. You can turn it back on from your email settings.",
+    "submit": "Stop the Monday email",
+    "submitting": "Stopping…",
+    "confirmedTitle": "The Monday email is off",
+    "confirmedText": "You won’t get the weekly summary from {shopName} anymore. Turn it back on from your email settings."
   },
   "contactConfirm": {
     "title": "Confirm this address for {shopName}?",
@@ -980,7 +993,9 @@
     "full": "{tripTitle}",
     "gear": "Rental gear",
     "gearForDiver": "Rental gear — {name}",
-    "tip": "Tip for the crew"
+    "tip": "Tip for the crew",
+    "seatFull": "{tripTitle} ({type})",
+    "seatDeposit": "Deposit — {tripTitle} ({type})"
   },
   "capability": {
     "waiverReceived": "Waiver received",
@@ -4077,6 +4092,46 @@
       "confirm": "Confirm this address",
       "expiry": "This link expires {expiresAt}. If nobody at {shopName} asked for this, you can ignore it."
     },
+    "weeklyDigest": {
+      "subject": "Your week at {shopName}",
+      "lastWeek": {
+        "heading": "Last week, {range}",
+        "bookings": "{count, plural, =0 {No new bookings.} one {# new booking.} other {# new bookings.}}",
+        "sailed": "{departures, plural, one {# departure} other {# departures}} sailed with {filled} of {seats} seats filled ({percent}%).",
+        "link": "Open Reports"
+      },
+      "thisWeek": {
+        "heading": "This week, {range}",
+        "board": "{departures, plural, one {# departure} other {# departures}} on the board, {filled} of {seats} seats booked ({percent}%).",
+        "link": "Open the schedule"
+      },
+      "waivers": {
+        "heading": "Waivers",
+        "body": "{divers, plural, one {# diver still needs} other {# divers still need}} a signed waiver, across {departures, plural, one {# departure} other {# departures}} this week.",
+        "link": "Open Today"
+      },
+      "reviews": {
+        "heading": "Reviews",
+        "received": "{count, plural, one {# new review} other {# new reviews}} last week.",
+        "waiting": "{count, plural, one {# review is waiting on you.} other {# reviews are waiting on you.}}",
+        "link": "Moderate reviews"
+      },
+      "dateRequests": {
+        "heading": "Date requests",
+        "body": "{count, plural, one {# request for a day that is not on the board.} other {# requests for days that are not on the board.}}",
+        "link": "Open requests"
+      },
+      "overdue": {
+        "heading": "Overdue",
+        "body": "{count, plural, one {# thing on Today is past due.} other {# things on Today are past due.}}",
+        "link": "Open Today"
+      },
+      "zoneNote": "Weeks run Monday to Sunday, {zone}.",
+      "why": "You get this every Monday as staff at {shopName}.",
+      "settings": "Email settings",
+      "turnOff": "Stop these emails",
+      "quietWeek": "Nothing happened last week and nothing is on the board this week, so no email goes out this Monday."
+    },
     "staffInvite": {
       "subject": "{inviterName} invited you to {shopName} on DiveDay",
       "body": "{inviterName} added you to {shopName} on DiveDay as {roles}.",
@@ -4187,5 +4242,25 @@
       "mostDived": "Most dived · {times, number}",
       "divers": "Divers"
     }
+  },
+  "participants": {
+    "type": {
+      "diver": "Diver",
+      "snorkeler": "Snorkeler",
+      "rider": "Rider"
+    },
+    "joiningAs": "Joining as",
+    "free": "free",
+    "choice": {
+      "diver": "Diving, {price}",
+      "snorkeler": "Snorkeling, {price}",
+      "rider": "Riding along, {price}"
+    },
+    "choiceUnpriced": {
+      "diver": "Diving",
+      "snorkeler": "Snorkeling",
+      "rider": "Riding along"
+    },
+    "priceLine": "{type} {price}"
   }
 }

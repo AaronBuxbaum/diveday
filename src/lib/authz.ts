@@ -349,6 +349,20 @@ export function canConfigureTrips(roles: readonly Role[] | undefined): boolean {
 }
 
 /**
+ * **Seat someone in the water past a missing card**: "Change anyway" when a
+ * snorkeler or rider is changed to a diver and the booking-time card check
+ * would refuse them (ADR 20261007-participant-types). It is the certification
+ * call a trip's own gate is, so it takes the roles that may set that gate:
+ * owner, manager and instructor. A divemaster or captain gets the refusal and
+ * no way past it. The boarding gate still asks for the card either way.
+ */
+export function canOverrideCertBlock(roles: readonly Role[] | undefined): boolean {
+  return (roles ?? []).some(
+    (role) => role === "owner" || role === "manager" || role === "instructor",
+  );
+}
+
+/**
  * Rewrite what a diver themselves asked for in their rental fit — sizes, and
  * which pieces they want (H-06). Deliberately *not* the same thing as packing
  * the boat: any staff member may substitute a real available item and flag a

@@ -389,8 +389,8 @@ describe("recurring trip series (in-memory PGlite)", () => {
     const [p1, p2] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(2);
     if (!p1 || !p2) throw new Error("seed people missing");
     await db.insert(bookings).values([
-      { shopId: shop.id, tripId: crowded.id, personId: p1.id },
-      { shopId: shop.id, tripId: crowded.id, personId: p2.id },
+      { bookedAs: "diver", shopId: shop.id, tripId: crowded.id, personId: p1.id },
+      { bookedAs: "diver", shopId: shop.id, tripId: crowded.id, personId: p2.id },
     ]);
 
     await updateTrip(db, shop.id, source.id, {
@@ -500,7 +500,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
     if (!p1 || !staff) throw new Error("seed people/staff missing");
     const [booked] = await db
       .insert(bookings)
-      .values({ shopId: shop.id, tripId: sailed.id, personId: p1.id })
+      .values({ bookedAs: "diver", shopId: shop.id, tripId: sailed.id, personId: p1.id })
       .returning();
     if (!booked) throw new Error("booking insert failed");
     await db.insert(rollCallEvents).values({
@@ -657,7 +657,9 @@ describe("recurring trip series (in-memory PGlite)", () => {
     if (!wednesday) throw new Error("expected a Wednesday instance");
     const [diver] = await db.select().from(people).where(eq(people.shopId, shop.id)).limit(1);
     if (!diver) throw new Error("seed people missing");
-    await db.insert(bookings).values({ shopId: shop.id, tripId: wednesday.id, personId: diver.id });
+    await db
+      .insert(bookings)
+      .values({ bookedAs: "diver", shopId: shop.id, tripId: wednesday.id, personId: diver.id });
 
     await updateSeriesCadence(
       db,

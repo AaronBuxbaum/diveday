@@ -353,6 +353,11 @@ export async function duplicateTrip(
       plannedDives: source.plannedDives,
       priceCents: source.priceCents,
       depositCents: source.depositCents,
+      // A copy carries the same snorkel and ride-along seats; it holds no
+      // bookings yet, so no limit can fall below the divers aboard.
+      snorkelerPriceCents: source.snorkelerPriceCents,
+      riderPriceCents: source.riderPriceCents,
+      diverCapacity: source.diverCapacity,
       cancellationWindowHours: source.cancellationWindowHours,
       isPrivate: source.isPrivate,
       // Copied like every other stated fact about the departure. A shop that

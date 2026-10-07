@@ -17,7 +17,7 @@ import {
 } from "./checkouts";
 import { joinLastMinuteList } from "./last-minute-list";
 import { getBookingPayment, setBookingPayment } from "./payments";
-import { bookingCheckoutBookings, bookingCheckouts } from "./schema";
+import { bookingCheckoutBookings, bookingCheckouts, trips } from "./schema";
 import { createShopPromoCode } from "./shop-promos";
 import { setShopCurrency, setShopPassThroughFee, setShopTaxEnabled } from "./shops";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
@@ -2204,5 +2204,144 @@ describe("recordCheckoutStripeCustomer", () => {
         stripeCustomerId: "cus_nobody",
       }),
     ).toBe(false);
+  });
+});
+
+/**
+ * **Each seat charged for what it is** (ADR 20261007-participant-types): a
+ * diver the trip's fare, a snorkeler and a rider their own prices, and never
+ * the diver's fare by default.
+ */
+describe("startBookingCheckout across participant types", () => {
+  async function mixedParty(prices: {
+    snorkelerPriceCents: number | null;
+    riderPriceCents: number | null;
+    depositCents?: number | null;
+  }) {
+    const { db, shop } = await seededShopContext();
+    await upsertShopStripeAccount(db, shop.id, "acct_test");
+    await setShopStripeAccountStatus(db, "acct_test", {
+      chargesEnabled: true,
+      payoutsEnabled: true,
+      detailsSubmitted: true,
+    });
+    const reef = await pricedReefTrip(db, shop.id);
+    await db
+      .update(trips)
+      .set({
+        snorkelerPriceCents: prices.snorkelerPriceCents,
+        riderPriceCents: prices.riderPriceCents,
+        depositCents: prices.depositCents ?? null,
+        capacity: 20,
+      })
+      .where(eq(trips.id, reef.id));
+    const base = { actor: "staff" as const, shopId: shop.id, tripId: reef.id };
+    const party = await createBookingParty(db, [
+      { ...base, fullName: "Dee Diver", email: "dee@example.com", participantType: "diver" },
+      { ...base, fullName: "Sol Snorkel", email: "sol@example.com", participantType: "snorkeler" },
+      { ...base, fullName: "Ray Rider", email: "ray@example.com", participantType: "rider" },
+    ]);
+    if (!party.ok) throw new Error(`party booking failed: ${party.reason}`);
+    return { db, shop, reef, bookingIds: party.bookings.map((b) => b.bookingId) };
+  }
+
+  const typedInput = (shopId: string, tripId: string, bookingIds: string[]) => ({
+    ...startInput(shopId, tripId, bookingIds),
+    describeLine: ({
+      isDeposit,
+      tripTitle,
+      participantType,
+    }: {
+      isDeposit: boolean;
+      tripTitle: string;
+      participantType?: string;
+    }) => `${isDeposit ? "DEPOSIT" : "FULL"}:${tripTitle}:${participantType ?? "diver"}`,
+  });
+
+  it("charges each seat its own price, one line per kind of seat, and a free rider nothing", async () => {
+    const { db, shop, reef, bookingIds } = await mixedParty({
+      snorkelerPriceCents: 4_500,
+      riderPriceCents: 0,
+    });
+    const seen = recordingCheckout();
+    const outcome = await startBookingCheckout(
+      db,
+      typedInput(shop.id, reef.id, bookingIds),
+      seen.provider,
+    );
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(outcome.checkout.totalCents).toBe(REEF_PRICE_CENTS + 4_500);
+    // The stored per-diver figure is still the diver's fare.
+    expect(outcome.checkout.amountPerDiverCents).toBe(REEF_PRICE_CENTS);
+    expect(seen.requests[0]?.lineItems).toEqual(
+      expect.arrayContaining([
+        { description: `FULL:${reef.title}:diver`, unitAmountCents: REEF_PRICE_CENTS, quantity: 1 },
+        { description: `FULL:${reef.title}:snorkeler`, unitAmountCents: 4_500, quantity: 1 },
+      ]),
+    );
+    expect(seen.requests[0]?.lineItems).toHaveLength(2);
+
+    const seats = await db
+      .select()
+      .from(bookingCheckoutBookings)
+      .where(eq(bookingCheckoutBookings.checkoutId, outcome.checkout.id));
+    const cents = new Map(seats.map((seat) => [seat.bookingId, seat.tripCents]));
+    expect(bookingIds.map((id) => cents.get(id))).toEqual([REEF_PRICE_CENTS, 4_500, 0]);
+  });
+
+  it("takes the deposit only where it is below that seat's own price", async () => {
+    const { db, shop, reef, bookingIds } = await mixedParty({
+      snorkelerPriceCents: 4_500,
+      riderPriceCents: null,
+      depositCents: 5_000,
+    });
+    const seen = recordingCheckout();
+    const outcome = await startBookingCheckout(
+      db,
+      typedInput(shop.id, reef.id, bookingIds),
+      seen.provider,
+    );
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+    expect(seen.requests[0]?.lineItems).toEqual(
+      expect.arrayContaining([
+        { description: `DEPOSIT:${reef.title}:diver`, unitAmountCents: 5_000, quantity: 1 },
+        // A $50 deposit on a $45 snorkel is no deposit: the seat pays in full.
+        { description: `FULL:${reef.title}:snorkeler`, unitAmountCents: 4_500, quantity: 1 },
+      ]),
+    );
+    expect(outcome.checkout.totalCents).toBe(9_500);
+  });
+
+  it("refuses to open a checkout for seats the departure names no price for", async () => {
+    const { db, shop, reef, bookingIds } = await mixedParty({
+      snorkelerPriceCents: null,
+      riderPriceCents: null,
+    });
+    const riderOnly = bookingIds.slice(2);
+    expect(
+      await startBookingCheckout(db, typedInput(shop.id, reef.id, riderOnly), fakeCheckout()),
+    ).toEqual({ ok: false, reason: "unpriced" });
+  });
+
+  it("retires a pending session once a snorkeler's price moves", async () => {
+    const { db, shop, reef, bookingIds } = await mixedParty({
+      snorkelerPriceCents: 4_500,
+      riderPriceCents: null,
+    });
+    const outcome = await startBookingCheckout(
+      db,
+      typedInput(shop.id, reef.id, bookingIds),
+      fakeCheckout(),
+    );
+    if (!outcome.ok) throw new Error("checkout not started");
+    expect((await retirePendingCheckoutIfRepriced(db, shop.id, outcome.checkout)).status).toBe(
+      "pending",
+    );
+    await db.update(trips).set({ snorkelerPriceCents: 5_500 }).where(eq(trips.id, reef.id));
+    expect((await retirePendingCheckoutIfRepriced(db, shop.id, outcome.checkout)).status).toBe(
+      "expired",
+    );
   });
 });

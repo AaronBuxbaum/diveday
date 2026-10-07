@@ -263,6 +263,22 @@ export type OfflineManifestPayload = {
           | "emergencyContactPhone"
           | "rentalFit"
           | "nitroxRequested"
+          /**
+           * Diver, snorkeler or rider (ADR 20261007-participant-types). It
+           * rides because the rail needs it: a snorkeler is called back from
+           * the surface and a rider never left the deck, and the crew reading
+           * a saved copy with no signal has no other way to know which.
+           * Optional and additive like the fields below (no record-version
+           * bump — a bump purges unsynced roll calls); a copy saved before it
+           * has none, which reads as a diver, and nobody is dropped either way.
+           */
+          | "participantType"
+          /**
+           * What the seat was sold as, so a saved copy says "booked as diver"
+           * beside a seat that left the water (`leftDiving`). Optional and
+           * additive like `participantType`; absent says nothing.
+           */
+          | "bookedAs"
         > & {
           /**
            * **The counter's own answer, and the reason the dock copy can take
@@ -858,6 +874,8 @@ export function serializeManifests(
         emergencyContactPhone: diver.emergencyContactPhone,
         rentalFit: diver.rentalFit,
         nitroxRequested: diver.nitroxRequested,
+        participantType: diver.participantType,
+        bookedAs: diver.bookedAs,
         checkedIn: diver.checkedIn,
         notHere: diver.notHere,
         // Names only, never a teammate's booking or person id — the dock copy

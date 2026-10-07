@@ -22,6 +22,7 @@ import { depthWarningText } from "@/i18n/depth-labels";
 import { STAFF_RE_ENTRY_KEYS } from "@/i18n/dive-intent-labels";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import { identityCheckWords, identityReasonText } from "@/i18n/identity-check-labels";
+import { staffParticipantTypeLabel, staffSeatTypeNote } from "@/i18n/participant-labels";
 import {
   CERTIFICATION_LEVEL_KEYS,
   diveRecencyText,
@@ -44,6 +45,7 @@ import { guardianSignatureOf, guardianSignatureRequired } from "@/lib/guardian";
 import { heldSeatBlockers } from "@/lib/identity-match";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { flaggedMedicalPrompts } from "@/lib/medical";
+import { isDiver, PARTICIPANT_TYPES } from "@/lib/participant-types";
 import { paymentSourceLine } from "@/lib/payment-source";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { shopPath } from "@/lib/staff-notices";
@@ -142,11 +144,13 @@ export function RosterRow({
     sameNameHeldSeats,
     keepOpenBookingId,
     namesakeRefusedBookingId,
+    participantTypeCertBookingId,
   } = rows;
   const {
     markWaiverInPersonAction,
     markPaymentAction,
     removeBookingAction,
+    setParticipantTypeAction,
     confirmIdentityAction,
     splitIdentityAction,
     sendNewWaiverAction,
@@ -273,7 +277,10 @@ export function RosterRow({
   const namesakeRefused = namesakeRefusedBookingId === booking.id;
   const arrivalControl = arrival?.controls.get(booking.id);
   const arrivalBelow = arrival?.below.get(booking.id);
-  const holdOpen = keepOpenBookingId === booking.id || namesakeRefused;
+  const holdOpen =
+    keepOpenBookingId === booking.id ||
+    namesakeRefused ||
+    participantTypeCertBookingId === booking.id;
 
   const headerLeft = (
     <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
@@ -290,6 +297,22 @@ export function RosterRow({
       >
         {person.fullName}
       </Link>
+      {/* What this person is doing aboard, in words, when it is not diving
+          (ADR 20261007-participant-types). A diver carries no capsule: the
+          roster is a dive roster, and the exception is what the crew is
+          told. Never a filter: a rider is on this list like everyone. A seat
+          whose type moved since it was sold is said in warning tone: the type
+          change is the one door that clears a card check without a card,
+          and the crew should see it was used. */}
+      {staffSeatTypeNote(t, booking) ? (
+        <Badge tone="warning" size="sm" toneMark={false}>
+          {staffSeatTypeNote(t, booking)}
+        </Badge>
+      ) : !isDiver(booking.participantType) && booking.participantType ? (
+        <Badge tone="neutral" size="sm" toneMark={false}>
+          {staffParticipantTypeLabel(t, booking.participantType)}
+        </Badge>
+      ) : null}
       {/* Text, never colour alone — this is read in sunlight on a moving
           boat (design/principles.md #2). A minor is the exception the crew
           is being told about, and how old the minor is changes what the
@@ -413,9 +436,11 @@ export function RosterRow({
    * warning for an advisory. Membership is by kind, never by value, so the
    * panel below never repeats a sentence said here.
    */
-  const recencyText = diveRecencyIsNotable(booking.lastDivedBand)
-    ? diveRecencyText(t, booking.lastDivedBand)
-    : null;
+  // Currency is a diver's question (ADR 20261007-participant-types).
+  const recencyText =
+    isDiver(booking.participantType) && diveRecencyIsNotable(booking.lastDivedBand)
+      ? diveRecencyText(t, booking.lastDivedBand)
+      : null;
   /**
    * **A medical hold is a reason line with its doors under it** (Aaron,
    * 2026-10-06: "just having them in Blocked with a reason provided after
@@ -954,7 +979,11 @@ export function RosterRow({
               {rentalFitLineText(
                 t,
                 locale,
-                rentalFitLine(rentalFitByBooking.get(booking.id) ?? null, shopRentalItems),
+                rentalFitLine(
+                  rentalFitByBooking.get(booking.id) ?? null,
+                  shopRentalItems,
+                  booking.participantType,
+                ),
               )}
             </p>
             {nitrox ? (
@@ -983,6 +1012,15 @@ export function RosterRow({
 
         <SeatPickup booking={booking} t={t} updatePickupAction={updatePickupAction} />
       </div>
+
+      {setParticipantTypeAction ? (
+        <SeatComingAs
+          booking={booking}
+          t={t}
+          certRefused={participantTypeCertBookingId === booking.id}
+          setParticipantTypeAction={setParticipantTypeAction}
+        />
+      ) : null}
 
       <SeatNotes
         bookingId={booking.id}
@@ -1402,6 +1440,76 @@ function SeatPickup({
 }
 
 /** The seat's private staff notes, and the form that adds one. */
+/**
+ * "Coming as": what this seat is for, and the door to change it (ADR
+ * 20261007-participant-types). `certRefused` is the one row the card check
+ * just refused on joining the dive; only it offers "Change anyway".
+ */
+function SeatComingAs({
+  booking,
+  t,
+  certRefused,
+  setParticipantTypeAction,
+}: {
+  booking: RosterEntry["booking"];
+  t: StaffTranslator;
+  certRefused: boolean;
+  setParticipantTypeAction: (formData: FormData) => void;
+}) {
+  return (
+    <div className="mt-5 border-t border-border pt-3">
+      <CompactDisclosureRow
+        bodyClassName="mt-2"
+        open={certRefused ? true : undefined}
+        label={t("participants.roster.comingAs", {
+          type: staffParticipantTypeLabel(t, booking.participantType ?? "diver"),
+        })}
+      >
+        <form action={setParticipantTypeAction} className="flex max-w-md flex-wrap items-end gap-2">
+          <input type="hidden" name="bookingId" value={booking.id} />
+          <Field label={t("participants.roster.typeLabel")}>
+            <select
+              name="participantType"
+              defaultValue={booking.participantType ?? "diver"}
+              className={controlClass}
+            >
+              {PARTICIPANT_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {staffParticipantTypeLabel(t, type)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <SubmitButton
+            pendingLabel={t("trips.roster.saving")}
+            className={buttonClass({ variant: "secondary", size: "sm" })}
+          >
+            {t("participants.roster.save")}
+          </SubmitButton>
+        </form>
+        {/* The card check refused joining the dive; the notice above names
+            the card. Only this row offers the way past it, only to a staffer
+            who may make that call, and it only skips the booking-time check:
+            the rail still asks for the card, and a seat already boarded is
+            re-checked as a diver and refused. */}
+        {certRefused ? (
+          <form action={setParticipantTypeAction} className="mt-3">
+            <input type="hidden" name="bookingId" value={booking.id} />
+            <input type="hidden" name="participantType" value="diver" />
+            <input type="hidden" name="confirmCertBlock" value="1" />
+            <SubmitButton
+              pendingLabel={t("trips.roster.saving")}
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              {t("participants.roster.changeAnyway")}
+            </SubmitButton>
+          </form>
+        ) : null}
+      </CompactDisclosureRow>
+    </div>
+  );
+}
+
 function SeatNotes({
   bookingId,
   notes,

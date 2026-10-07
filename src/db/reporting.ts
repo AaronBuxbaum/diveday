@@ -20,6 +20,7 @@ import {
 import { canViewShopReports, type Role } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { emptyParticipantCounts } from "@/lib/participant-types";
 import type { MonthlyReportInput, ReportTrip } from "@/lib/reporting";
 import type { ShopYearDay, ShopYearInput } from "@/lib/shop-year";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
@@ -224,6 +225,10 @@ export async function getMonthlyReport(
   // since gone fully `paid`. A booking still `deposit_paid` keeps its deposit in
   // the base and is excluded here, so nothing is double-counted.
   //
+  // This seat's own trip ask (`trip_cents`) where the row has one, the same
+  // basis `markCheckoutPaidBySessionId` allocates on: a snorkeler's deposit is
+  // not the diver's (ADR 20261007-participant-types).
+  //
   // The share is the money that *settled*, on the same basis as the per-booking
   // payment rows the base sums: this diver's asked amount (deposit + their own
   // gear) scaled by what Stripe actually collected against what was asked
@@ -233,7 +238,7 @@ export async function getMonthlyReport(
   // where the payment ledger cannot, and `nullif` keeps a zero-total checkout
   // (nothing to recover) out of the sum instead of dividing by zero.
   const recoveredDepositCents = sql<string>`coalesce(sum(round(
-    (${bookingCheckouts.amountPerDiverCents} + ${bookingCheckoutBookings.gearCents} + ${bookingCheckoutBookings.passThroughCents})
+    (coalesce(${bookingCheckoutBookings.tripCents}, ${bookingCheckouts.amountPerDiverCents}) + ${bookingCheckoutBookings.gearCents} + ${bookingCheckoutBookings.passThroughCents})
       * coalesce(${bookingCheckouts.settledTotalCents}, ${bookingCheckouts.totalCents})::numeric
       / nullif(${bookingCheckouts.totalCents}, 0)
   )), 0)`;
@@ -516,6 +521,25 @@ export async function getMonthlyReport(
   // fact.
   const buddyReferredSeats = await buddyReferredSeatsForWindow(db, shopId, startUtc, endUtc);
 
+  // **The same seats, by what each person did aboard** (ADR
+  // 20261007-participant-types). Same basis as `seatsBooked` — active bookings
+  // on this month's live trips — so the split always sums to it.
+  const typeRows = await db
+    .select({ participantType: bookings.participantType, seats: count(bookings.id) })
+    .from(bookings)
+    .innerJoin(trips, eq(trips.id, bookings.tripId))
+    .where(
+      and(
+        inWindow,
+        liveTrip(),
+        eq(bookings.shopId, shopId),
+        inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
+      ),
+    )
+    .groupBy(bookings.participantType);
+  const seatsByType = emptyParticipantCounts();
+  for (const row of typeRows) seatsByType[row.participantType] += Number(row.seats);
+
   const waiverByTrip = new Map(waiverRows.map((row) => [row.tripId, Number(row.waiverComplete)]));
 
   const reportTrips: ReportTrip[] = tripRows.map((row) => ({
@@ -561,6 +585,7 @@ export async function getMonthlyReport(
     tipCount: Number(tipTotals?.tipCount ?? 0),
     partnerReferredSeats: Number(referredTotals?.seats ?? 0),
     buddyReferredSeats,
+    seatsByType,
   };
 }
 

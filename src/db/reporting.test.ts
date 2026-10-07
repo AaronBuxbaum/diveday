@@ -106,7 +106,10 @@ async function makeBooking(
   personId: string,
   status: BookingStatus = "booked",
 ): Promise<string> {
-  const [row] = await db.insert(bookings).values({ shopId, tripId, personId, status }).returning();
+  const [row] = await db
+    .insert(bookings)
+    .values({ bookedAs: "diver", shopId, tripId, personId, status })
+    .returning();
   if (!row) throw new Error("failed to insert booking");
   return row.id;
 }
@@ -730,7 +733,7 @@ describe("getMonthlyReport partner referrals (issue #1285)", () => {
     const personId = await makePerson(db, shopId, name);
     const [row] = await db
       .insert(bookings)
-      .values({ shopId, tripId, personId, status, referralSource: partner })
+      .values({ bookedAs: "diver", shopId, tripId, personId, status, referralSource: partner })
       .returning();
     if (!row) throw new Error("failed to insert booking");
     return row.id;

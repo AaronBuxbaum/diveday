@@ -71,7 +71,7 @@ async function tipOn(
   const person = await crewMember(db, shopId, "Tipping Diver");
   const [booking] = await db
     .insert(bookings)
-    .values({ shopId, tripId, personId: person.id })
+    .values({ bookedAs: "diver", shopId, tripId, personId: person.id })
     .returning();
   if (!booking) throw new Error("booking insert failed");
   await db.insert(tips).values({

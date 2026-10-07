@@ -22,7 +22,12 @@
   "summaryNotBackAboard": "Not back aboard",
   "summaryAshore": "Ashore",
   "summaryAwaiting": "Awaiting",
-  "soulsOnBoardLine": "Divers {divers} · Crew {crew} · Souls on board {souls}",
+  "soulsOnBoardLine": "Passengers {passengers} · Crew {crew} · Souls on board {souls}",
+  "soulsOnBoardLineSplit": "Passengers {passengers} ({split}) · Crew {crew} · Souls on board {souls}",
+  "passengerDivers": "{count, plural, one {# diver} other {# divers}}",
+  "passengerSnorkelers": "{count, plural, one {# snorkeler} other {# snorkelers}}",
+  "passengerRiders": "{count, plural, one {# rider} other {# riders}}",
+  "passengersWithSplit": "{passengers} ({split})",
   "soulsOnBoardCrewToConfirm": "({count, plural, one {# of the crew is also on another boat at these hours} other {# of the crew are also on other boats at these hours}}, so confirm who sails.)",
   "checkpointNavAriaLabel": "Roll-call checkpoint",
   "activeCheckpoint": "Active checkpoint",
@@ -32,8 +37,8 @@
   "ofTotalAboard": "of {total, plural, one {# diver} other {# divers}} aboard",
   "allAccountedFor": "Everyone’s accounted for, divers and crew. Ready for the next check.",
   "notBackAboardOpen": "{count, plural, one {# diver is not back aboard.} other {# divers are not back aboard.}} This checkpoint stays open until they’re counted.",
-  "crewNoneAssignedYet": "Every diver is counted. Nobody is on this trip’s crew yet. Add the people who sailed to close this checkpoint.",
-  "crewNoneAboard": "Every diver is counted, and every crew member on this trip is marked ashore, so nobody aboard is on the crew list. Add whoever sailed.",
+  "crewNoneAssignedYet": "Nobody is on this trip’s crew yet. Add the people who sailed to close this checkpoint.",
+  "crewNoneAboard": "Everyone aboard is counted, and every crew member on this trip is marked ashore, so nobody aboard is on the crew list. Add whoever sailed.",
   "crewNotBackAboard": "{count, plural, one {# crew member is not back aboard.} other {# crew members are not back aboard.}} This checkpoint stays open.",
   "crewAwaiting": "{count, plural, one {# crew member still to call.} other {# crew members still to call.}} Every person on the crew list needs a result of their own.",
   "blockedDeparture": "{count, plural, one {# diver is blocked.} other {# divers are blocked.}}",
@@ -137,7 +142,7 @@
   "buddyFormSubmit": "Form buddy team",
   "buddyUnteamedOne": "{name} has no buddy team, which is normal on an odd roster.",
   "buddyEveryoneTeamed": "Everyone on this departure is already on a buddy team.",
-  "overCapacityLine": "{count, plural, one {# diver is aboard beyond the seats this boat has.} other {# divers are aboard beyond the seats this boat has.}} Nothing here refuses a person the crew has counted.",
+  "overCapacityLine": "{count, plural, one {# person is aboard beyond the seats this boat has.} other {# people are aboard beyond the seats this boat has.}} Nothing here refuses a person the crew has counted.",
   "buddySeparatedLine": "{count, plural, one {# buddy team is split.} other {# buddy teams are split.}} Someone is back aboard, someone is not.",
   "buddyErrorDuplicate": "Pick different people. Nobody is their own buddy.",
   "buddyErrorAlreadyTeamed": "One of those divers is already on a buddy team. Dissolve it first.",
@@ -198,6 +203,10 @@
     "arrival": "{count, plural, one {{names} has checked in.} other {{names} have checked in.}}",
     "seatTaken": "{count, plural, one {{names} took a seat.} other {{names} took seats.}}",
     "seatReleased": "{count, plural, one {{names} gave up a seat.} other {{names} gave up seats.}}",
+    "nowDiving": "{count, plural, one {{names} is diving now.} other {{names} are diving now.}}",
+    "nowSnorkeling": "{count, plural, one {{names} is snorkeling now.} other {{names} are snorkeling now.}}",
+    "nowRiding": "{count, plural, one {{names} is riding along now.} other {{names} are riding along now.}}",
+    "balanceOwed": "{count, plural, one {{names} owes the difference for a seat that costs more now.} other {{names} owe the difference for seats that cost more now.}}",
     "gearChanged": "{count, plural, one {{names} has different gear now.} other {{names} have different gear now.}}",
     "pickupSet": "{count, plural, one {{names} has a hotel pickup.} other {{names} have hotel pickups.}}",
     "helpRequest": "{count, plural, one {{names} wants a hand from the crew.} other {{names} want a hand from the crew.}}",
@@ -219,5 +228,19 @@
     },
     "noteLabel": "Note for the shop",
     "noteHint": "Divers never see this."
+  },
+  "buddyErrorNotDiver": "A buddy team is divers only. Snorkelers and riders aren’t on one.",
+  "participantType": {
+    "diver": "Diver",
+    "snorkeler": "Snorkeler",
+    "rider": "Rider",
+    "bookedAsDiver": {
+      "snorkeler": "Snorkeling, booked as diver",
+      "rider": "Riding along, booked as diver"
+    },
+    "bookedAsNonDiver": {
+      "snorkeler": "Diving, booked as snorkeler",
+      "rider": "Diving, booked as rider"
+    }
   }
 }

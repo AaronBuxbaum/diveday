@@ -404,6 +404,20 @@ they were not coming is not a no-show.
 
 `src/i18n/no-show-copy.test.ts` fails if either sentence takes the other's verb, in either locale.
 
+## Who is aboard: **buceador**, **snorkel**, **acompañante**
+
+Settled 2026-10-07 with participant types (ADR 20261007-participant-types). A booking is a diver, a
+snorkeler or a rider, and the badge beside a name on the roster, the manifest and the offline
+manifest reads the type in one word.
+
+| English | Spanish |
+| --- | --- |
+| diver | buceador |
+| snorkeler | snorkel *(the activity names the person, as dive shops in the Caribbean say it)* |
+| rider (stays on the boat) | acompañante *(never "pasajero", which every person aboard is)* |
+| joining as | participa como |
+| diver seats (the divers-only cap) | plazas de buceo |
+
 ## How names sort: nothing to do here
 
 `Ángel` lands between `Ana` and `Bea`, and `Ñuria` after `Nuria`, on every screen that lists people

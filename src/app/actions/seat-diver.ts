@@ -5,6 +5,7 @@ import { getDb } from "@/db/client";
 import { findSimilarDivers } from "@/db/divers";
 import { type SeatDiverPerson, seatDiver } from "@/db/seat-diver";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { PARTICIPANT_TYPES, type ParticipantType } from "@/lib/participant-types";
 import { blankableDiverEmailSchema, diverNameSchema, diverPhoneSchema } from "@/lib/person-fields";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl } from "@/lib/staff-notices";
@@ -51,6 +52,8 @@ const existingDiverSchema = z.object({
    * never stored.
    */
   nameMatchQuery: z.string().optional(),
+  /** What the seat is for (ADR 20261007-participant-types); absent is a diver's. */
+  participantType: z.enum(PARTICIPANT_TYPES).optional(),
 });
 
 /**
@@ -64,6 +67,7 @@ const newDiverSchema = z.object({
   fullName: diverNameSchema,
   email: blankableDiverEmailSchema.optional(),
   phone: diverPhoneSchema.optional(),
+  participantType: z.enum(PARTICIPANT_TYPES).optional(),
 });
 
 function surfaceFor(surfaceId: SeatSurfaceId): SeatSurface {
@@ -125,6 +129,7 @@ async function seat(
   landing: SeatLanding,
   diver: SeatDiverPerson,
   actor: { shopId: string; personId: string },
+  participantType?: ParticipantType,
 ): Promise<void> {
   const result = await seatDiver(await getDb(), {
     shopId: actor.shopId,
@@ -133,6 +138,7 @@ async function seat(
     diver,
     entry: surface.entry,
     refusals: surface.refusals,
+    participantType,
   });
   if (!result.ok) refuse(surface, landing, surface.refusalNotice[result.reason], result.refusal);
   const settled: SeatLanding = { ...landing, personId: result.personId };
@@ -188,6 +194,7 @@ export async function seatExistingDiverAction(
     personId: formData.get("personId"),
     fromNameMatch: formData.get("fromNameMatch") ?? undefined,
     nameMatchQuery: formData.get("nameMatchQuery") ?? undefined,
+    participantType: formData.get("participantType") || undefined,
   });
   // A landing built from the raw fields: the staffer must get back to the page
   // they submitted from even when what they submitted was unusable.
@@ -213,6 +220,7 @@ export async function seatExistingDiverAction(
           : undefined,
     },
     { shopId: session.user.shopId, personId: session.user.personId },
+    parsed.data.participantType,
   );
 }
 
@@ -233,6 +241,7 @@ export async function seatNewDiverAction(
     fullName: formData.get("fullName"),
     email: formData.get("email") || undefined,
     phone: formData.get("phone") || undefined,
+    participantType: formData.get("participantType") || undefined,
   });
   const email = parsed.success ? parsed.data.email || undefined : undefined;
   const landing: SeatLanding = {
@@ -269,5 +278,6 @@ export async function seatNewDiverAction(
     landing,
     { fullName: parsed.data.fullName, email, phone: parsed.data.phone },
     { shopId: session.user.shopId, personId: session.user.personId },
+    parsed.data.participantType,
   );
 }

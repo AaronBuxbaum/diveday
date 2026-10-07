@@ -12,6 +12,7 @@ import {
   gearServiceState,
   tripReservationWindow,
 } from "@/lib/gear";
+import { rentsKind } from "@/lib/participant-types";
 import type { AppDb } from "./client";
 import {
   countGearItemsByKind,
@@ -145,6 +146,10 @@ export async function getTripPrep(
               .flatMap(gearAssignmentNeeds)
               .filter(
                 (item) =>
+                  // A rider takes nothing; a snorkeler only surface kit
+                  // (ADR 20261007-participant-types). Units already held
+                  // stay on the row whatever the type, so nothing is lost.
+                  rentsKind(diver.participantType, item.kind) &&
                   item.kind !== "weights" &&
                   (fleetByKind.get(item.kind) ?? 0) > 0 &&
                   !assigned.some((assignment) => assignment.kind === item.kind),

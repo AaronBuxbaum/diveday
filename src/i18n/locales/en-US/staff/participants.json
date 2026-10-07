@@ -1,0 +1,45 @@
+{
+  "notices": {
+    "diversFull": "Every diver’s seat on this boat is taken. There’s still room for a snorkeler or a rider.",
+    "typeUnavailable": "A course session only takes divers.",
+    "restoreDiversFull": "Couldn’t undo. Every diver’s seat has been taken since.",
+    "noShowDiversFull": "Couldn’t put them back. Every diver’s seat has been taken since.",
+    "typeSet": "Saved.",
+    "onBuddyTeam": "Take them off their buddy team first. A buddy team is divers only.",
+    "certBlocked": "Their card for this trip isn’t on file. Check it first, or change anyway.",
+    "closed": "Too late for that change. Nobody joins the dive after the boat’s departure time, and nothing changes once it’s home.",
+    "boardedNotReady": "They’re boarded, and not ready to dive. Clear what’s blocking them first.",
+    "owed": "Saved. Their seat costs more now, so they owe the difference."
+  },
+  "terms": {
+    "saved": "Saved.",
+    "invalid": "Check the prices and the diver seats. Diver seats can’t be more than the boat holds.",
+    "heading": "Snorkelers and riders",
+    "description": "Leave a price blank to keep that seat off the public booking form. Staff can still seat anyone from the trip page.",
+    "snorkelerPrice": "Snorkeler price",
+    "riderPrice": "Rider price",
+    "diverSeats": "Diver seats",
+    "diverSeatsHint": "Leave blank when every seat can dive.",
+    "save": "Save",
+    "saving": "Saving…",
+    "belowBooked": "{count, plural, one {# diver is} other {# divers are}} already booked, so diver seats can’t go lower than that.",
+    "edit": "Edit",
+    "divesOnly": "Divers only",
+    "priceLine": "{type} {price}",
+    "free": "free",
+    "diverSeatsLine": "{count, plural, one {# diver seat} other {# diver seats}}"
+  },
+  "roster": {
+    "comingAs": "Coming as: {type}",
+    "typeLabel": "Coming as",
+    "save": "Save",
+    "changeAnyway": "Change anyway"
+  },
+  "headCount": {
+    "aboardOfTotalPeople": "{aboard} of {total, plural, one {# person} other {# people}} aboard",
+    "ofTotalAboardPeople": "of {total, plural, one {# person} other {# people}} aboard"
+  },
+  "reports": {
+    "bookingsDetailSplit": "{detail}: {split}"
+  }
+}

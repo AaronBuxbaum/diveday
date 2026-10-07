@@ -247,7 +247,8 @@
     "promoCodes": "Descuentos",
     "settings": "Ajustes",
     "team": "Equipo",
-    "calendarFeed": "Suscripción al calendario"
+    "calendarFeed": "Suscripción al calendario",
+    "emailSettings": "Ajustes de correo"
   },
   "shopSections": {
     "navAriaLabel": "Principal",
@@ -343,7 +344,7 @@
       "freshnessBanner": "{freshnessNote}. La disponibilidad refleja ese momento, y lo verificamos todo de nuevo en cuanto tengas señal.",
       "pendingRejectedCounts": "{pending} esperando para enviarse · {rejected} necesitan revisión",
       "checkpointNavAria": "Punto del pase de lista",
-      "statsDivers": "Buceadores",
+      "statsDivers": "Pasajeros",
       "statsBoarded": "Embarcados",
       "statsAwaiting": "Pendientes",
       "rollCallCompleteHeading": "Pase de lista completo",

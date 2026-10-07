@@ -406,6 +406,12 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     target: { kind: "route", path: "/settings/calendar" },
   },
   {
+    id: "email",
+    labelKey: "emailSettings.title",
+    group: "account",
+    target: { kind: "route", path: "/settings/email" },
+  },
+  {
     id: "billing",
     labelKey: "billing.title",
     group: "account",

@@ -155,6 +155,7 @@ export async function seedCounterBlockers(
   // The seat and nothing else: no waiver row, certification, specialty, nitrox
   // card, or paid order. That absence is the fixture — five blockers on one card.
   await db.insert(bookings).values({
+    bookedAs: "diver",
     shopId,
     tripId: trip.id,
     personId: diver.id,

@@ -1,4 +1,4 @@
-import { and, count, eq, gt, inArray, isNull, lte, ne } from "drizzle-orm";
+import { and, count, eq, gt, inArray, isNull, lte, ne, sql } from "drizzle-orm";
 import {
   BLOWOUT_OFFER_HORIZON_DAYS,
   type BlowoutCandidateTrip,
@@ -259,7 +259,12 @@ async function blowoutCandidates(
 ): Promise<BlowoutCandidateTrip[]> {
   const horizonEnd = new Date(now.getTime() + BLOWOUT_OFFER_HORIZON_DAYS * 24 * 60 * 60 * 1_000);
   const rows = await db
-    .select({ trip: trips, activeBookings: count(bookings.id) })
+    .select({
+      trip: trips,
+      activeBookings: count(bookings.id),
+      activeDivers:
+        sql<number>`count(*) filter (where ${bookings.participantType} = 'diver')`.mapWith(Number),
+    })
     .from(trips)
     .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
     .where(
@@ -285,6 +290,10 @@ async function blowoutCandidates(
         status: row.trip.status,
         capacity: row.trip.capacity,
         activeBookings: row.activeBookings,
+        activeDivers: row.activeDivers,
+        diverCapacity: row.trip.diverCapacity,
+        snorkelerPriceCents: row.trip.snorkelerPriceCents,
+        riderPriceCents: row.trip.riderPriceCents,
         courseSession: Boolean(row.trip.courseId),
         requirement,
         siteRequirement,
@@ -399,6 +408,7 @@ async function sendPendingBlowoutMessages(
           evidence,
           identityUnconfirmed: row.booking.identityUnconfirmedAt !== null,
           bookedTripIds: activeSeats.map((seat) => seat.tripId),
+          participantType: row.booking.participantType,
         },
       });
 

@@ -554,7 +554,7 @@ describe("anonymizeDiver — what the coverage sweep found (issue #1607)", () =>
     if (!trip) throw new Error("expected a seeded departure");
     const [booking] = await db
       .insert(bookings)
-      .values({ shopId: shop.id, tripId: trip.id, personId: diver.id })
+      .values({ bookedAs: "diver", shopId: shop.id, tripId: trip.id, personId: diver.id })
       .returning({ id: bookings.id });
     if (!booking) throw new Error("fixture insert failed");
 
@@ -1211,7 +1211,12 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
     await db.insert(personRoles).values({ personId: diver.id, role: "diver" });
     const [booking] = await db
       .insert(bookings)
-      .values({ shopId: shop.id, tripId: await seededTripId(db, shop.id), personId: diver.id })
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: await seededTripId(db, shop.id),
+        personId: diver.id,
+      })
       .returning({ id: bookings.id });
     if (!booking) throw new Error("fixture insert failed");
     await db.insert(tips).values({
@@ -1260,7 +1265,12 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
     await db.insert(personRoles).values({ personId: diver.id, role: "diver" });
     const [booking] = await db
       .insert(bookings)
-      .values({ shopId: shop.id, tripId: await seededTripId(db, shop.id), personId: diver.id })
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: await seededTripId(db, shop.id),
+        personId: diver.id,
+      })
       .returning({ id: bookings.id });
     if (!booking) throw new Error("fixture insert failed");
     await db.insert(tips).values({
@@ -1304,7 +1314,7 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
     const tripId = await seededTripId(db, shop.id);
     const [booking] = await db
       .insert(bookings)
-      .values({ shopId: shop.id, tripId, personId: diver.id })
+      .values({ bookedAs: "diver", shopId: shop.id, tripId, personId: diver.id })
       .returning({ id: bookings.id });
     if (!booking) throw new Error("fixture insert failed");
     const [checkout] = await db
@@ -1368,7 +1378,7 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
     const tripId = await seededTripId(db, shop.id);
     const [theirSeat] = await db
       .insert(bookings)
-      .values({ shopId: shop.id, tripId, personId: traveller.id })
+      .values({ bookedAs: "diver", shopId: shop.id, tripId, personId: traveller.id })
       .returning({ id: bookings.id });
     if (!theirSeat) throw new Error("fixture insert failed");
     const [checkout] = await db
@@ -1422,7 +1432,7 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
     const tripId = await seededTripId(db, shop.id);
     const [theirSeat] = await db
       .insert(bookings)
-      .values({ shopId: shop.id, tripId, personId: traveller.id })
+      .values({ bookedAs: "diver", shopId: shop.id, tripId, personId: traveller.id })
       .returning({ id: bookings.id });
     if (!theirSeat) throw new Error("fixture insert failed");
     // Her address, nobody's seat but Theo's. The sole-occupant sweep cannot see
@@ -1485,7 +1495,7 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
     const tripId = await seededTripId(db, shop.id);
     const [booking] = await db
       .insert(bookings)
-      .values({ shopId: shop.id, tripId, personId: diver.id })
+      .values({ bookedAs: "diver", shopId: shop.id, tripId, personId: diver.id })
       .returning({ id: bookings.id });
     if (!booking) throw new Error("fixture insert failed");
     await db.insert(orders).values({
@@ -1561,7 +1571,7 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
     const tripId = await seededTripId(db, shop.id);
     const [booking] = await db
       .insert(bookings)
-      .values({ shopId: shop.id, tripId, personId: diver.id })
+      .values({ bookedAs: "diver", shopId: shop.id, tripId, personId: diver.id })
       .returning({ id: bookings.id });
     if (!booking) throw new Error("fixture insert failed");
     // The ordinary self-booked checkout: her own address on her own seat. The
@@ -1618,7 +1628,7 @@ describe("anonymizeDiver — the Stripe objects that live outside orders (issue 
     const tripId = await seededTripId(db, shop.id);
     const [booking] = await db
       .insert(bookings)
-      .values({ shopId: shop.id, tripId, personId: diver.id })
+      .values({ bookedAs: "diver", shopId: shop.id, tripId, personId: diver.id })
       .returning({ id: bookings.id });
     if (!booking) throw new Error("fixture insert failed");
     // `startBookingCheckout` takes a non-null address, so nothing writes this

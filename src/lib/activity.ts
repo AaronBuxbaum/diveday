@@ -100,7 +100,20 @@ type ActivityParamShapes = {
   booking_no_show_undo_refused: {
     actor: string;
     diver: string;
-    reason: "trip_full" | "course_ratio_full";
+    reason: "trip_full" | "divers_full" | "course_ratio_full";
+  };
+  /**
+   * A staffer changed what a seated person is doing aboard (ADR
+   * 20261007-participant-types): diving, snorkeling or riding along. Recorded
+   * because the answer decides which gates the seat is asked to clear.
+   */
+  participant_type_changed: {
+    actor: string;
+    diver: string;
+    from: "diver" | "snorkeler" | "rider";
+    type: "diver" | "snorkeler" | "rider";
+    certCheck: "none" | "cleared" | "overridden";
+    cleared: string;
   };
   /**
    * …or the crew boarded them anyway, which takes it back at the rail. Its own
@@ -198,6 +211,7 @@ export const ACTIVITY_CODES = [
   "booking_no_show",
   "booking_no_show_undone",
   "booking_no_show_undo_refused",
+  "participant_type_changed",
   "booking_no_show_boarded",
   "booking_no_show_missing_after_dive",
   "identity_confirmed",

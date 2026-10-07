@@ -28,3 +28,4 @@ export * from "./payments";
 export * from "./reviews";
 export * from "./trips";
 export * from "./waivers";
+export * from "./weekly-digest";

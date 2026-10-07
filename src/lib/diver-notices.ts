@@ -417,6 +417,12 @@ const NOTICE_KEYS: DiverNoticeMap = {
     key: "divers.notices.bookedIdentityUnconfirmed",
   },
   "trip-full": { form: "book", tone: "danger", key: "divers.notices.tripFull" },
+  "divers-full": { form: "book", tone: "danger", key: "participants.notices.diversFull" },
+  "type-unavailable": {
+    form: "book",
+    tone: "danger",
+    key: "participants.notices.typeUnavailable",
+  },
   "already-booked": { form: "book", tone: "danger", key: "divers.notices.alreadyBooked" },
   "course-unstaffed": {
     form: "book",

@@ -592,6 +592,11 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "planned_dives",
       "price_cents",
       "deposit_cents",
+      // The snorkeler and rider seats and the divers-only limit (ADR
+      // 20261007-participant-types). Null means not stated.
+      "snorkeler_price_cents",
+      "rider_price_cents",
+      "diver_capacity",
       "cancellation_window_hours",
       "minimum_bookings",
       "minimum_decision_hours",
@@ -646,6 +651,9 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
         row.plannedDives,
         row.priceCents,
         row.depositCents,
+        row.snorkelerPriceCents,
+        row.riderPriceCents,
+        row.diverCapacity,
         row.cancellationWindowHours,
         row.minimumBookings,
         row.minimumDecisionHours,
@@ -1026,6 +1034,11 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
       "person_id",
       "person_name",
       "status",
+      // Diver, snorkeler or rider (ADR 20261007-participant-types): what
+      // this seat was for, and which gates it was asked to clear; and
+      // what it was sold as, which differs when staff changed it.
+      "participant_type",
+      "booked_as",
       "wants_nitrox",
       "conditions_briefed_at",
       // What the diver said this dive was for, and the one support they
@@ -1113,6 +1126,8 @@ export const SHOP_EXPORT_FILES: ExportFileSpec<ShopExportContext>[] = [
           row.personId,
           personName.get(row.personId),
           row.status,
+          row.participantType,
+          row.bookedAs,
           row.wantsNitrox,
           row.conditionsBriefedAt,
           row.diveIntent,

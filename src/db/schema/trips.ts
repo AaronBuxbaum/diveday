@@ -293,11 +293,35 @@ export const trips = pgTable(
     arrivalPhotoUrl: text("arrival_photo_url"),
     startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
     endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    /**
+     * **The people this departure carries** — divers, snorkelers and riders
+     * alike (ADR 20261007-participant-types). A boat's legal limit is bodies,
+     * so every seat counts here whatever its holder does in the water.
+     */
     capacity: integer("capacity").notNull(),
+    /**
+     * **How many of those people may dive** — the second limit a boat has:
+     * the tanks, BCDs and in-water supervision it can put out. Null (the
+     * default) means no separate limit, so every seat may be a diver's. A value
+     * at or above `capacity` binds nothing, read through `diverSeatLimit`
+     * (src/lib/participant-types.ts) rather than refused here, for the reason
+     * `minimum_bookings` gives above: a later capacity cut must not be refused
+     * by a constraint about something else.
+     */
+    diverCapacity: integer("diver_capacity"),
     /** Drives the after-dive roll-call checkpoints; recreational charters are commonly two-tank. */
     plannedDives: integer("planned_dives").notNull().default(2),
     /** Per-diver price; null means unpriced — an order made from this trip needs a manual amount. */
     priceCents: integer("price_cents"),
+    /**
+     * **What a snorkeler and a rider pay on this departure**, in minor units
+     * (ADR 20261007-participant-types). Null means the shop does not sell that
+     * kind of seat here: the public form does not offer it, and staff who seat
+     * one anyway settle the money by hand, the same as an unpriced trip. Zero
+     * is a real answer — a rider who comes along free — and is offered.
+     */
+    snorkelerPriceCents: integer("snorkeler_price_cents"),
+    riderPriceCents: integer("rider_price_cents"),
     /**
      * Optional per-diver deposit taken at pay-at-booking checkout, in minor
      * units. Null (the default) charges the full fare, exactly as before. A
@@ -502,6 +526,18 @@ export const trips = pgTable(
       sql`${table.minimumDecisionHours} is null or ${table.minimumDecisionHours} between 1 and 336`,
     ),
     check("trips_price_nonnegative", sql`${table.priceCents} is null or ${table.priceCents} >= 0`),
+    check(
+      "trips_snorkeler_price_nonnegative",
+      sql`${table.snorkelerPriceCents} is null or ${table.snorkelerPriceCents} >= 0`,
+    ),
+    check(
+      "trips_rider_price_nonnegative",
+      sql`${table.riderPriceCents} is null or ${table.riderPriceCents} >= 0`,
+    ),
+    check(
+      "trips_diver_capacity_range",
+      sql`${table.diverCapacity} is null or ${table.diverCapacity} between 1 and 60`,
+    ),
     check(
       "trips_deposit_nonnegative",
       sql`${table.depositCents} is null or ${table.depositCents} >= 0`,

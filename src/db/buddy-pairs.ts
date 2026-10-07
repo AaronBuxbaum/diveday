@@ -3,6 +3,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { seatName } from "@/lib/held-seat";
+import { isDiver } from "@/lib/participant-types";
 import { isUuid } from "@/lib/uuid";
 import { loadActiveStaffRoles } from "./authz";
 import type { AppDb, DbExecutor } from "./client";
@@ -60,7 +61,13 @@ export type BuddyTeamRefusal =
   | "too_few_members"
   | "already_teamed"
   | "team_not_found"
-  | "not_a_member";
+  | "not_a_member"
+  /**
+   * The seat is a snorkeler's or a rider's (ADR 20261007-participant-types). A
+   * buddy team is divers who look after each other underwater; somebody who is
+   * not going under is not a teammate, however close they are to one.
+   */
+  | "not_a_diver";
 
 export type FormBuddyTeamOutcome =
   | { ok: true; teamId: string }
@@ -126,6 +133,11 @@ async function requireStaff(tx: Tx, shopId: string, personId: string): Promise<s
 
 /** Same tenancy and trip-status gate `recordRollCall` applies. */
 async function requireScheduledTrip(tx: Tx, shopId: string, tripId: string): Promise<boolean> {
+  // **Locked**, the same trip row every seat write locks first: a seat's type
+  // change (`setBookingParticipantType`) refuses a teamed diver leaving the
+  // water, and a team forming refuses a seat that is not a diver's. Without a
+  // shared lock each could read the other's "before" and both commit, leaving
+  // a snorkeler on a buddy team (ADR 20261007-participant-types).
   const [trip] = await tx
     .select({ id: trips.id })
     .from(trips)
@@ -137,7 +149,8 @@ async function requireScheduledTrip(tx: Tx, shopId: string, tripId: string): Pro
         liveTrip(),
       ),
     )
-    .limit(1);
+    .limit(1)
+    .for("update");
   return Boolean(trip);
 }
 
@@ -180,6 +193,7 @@ async function resolveMembers(
           .select({
             id: bookings.id,
             fullName: people.fullName,
+            participantType: bookings.participantType,
             identityUnconfirmedAt: bookings.identityUnconfirmedAt,
             identityBookedAs: bookings.identityBookedAs,
           })
@@ -230,6 +244,7 @@ async function resolveMembers(
     if (member.kind === "diver") {
       const row = seatRowsById.get(member.bookingId.toLowerCase());
       if (!row) return { ok: false, reason: "booking_unavailable" };
+      if (!isDiver(row.participantType)) return { ok: false, reason: "not_a_diver" };
       // A held seat goes on the trail as booked: `memberNames` is frozen, and
       // reaches the incident timeline (issue #1690).
       resolved.push({ kind: "diver", bookingId: row.id, fullName: seatName(row.fullName, row) });

@@ -472,7 +472,9 @@ describe("tripOverIntroRatio", () => {
       })
       .returning();
     if (!extraDiver) throw new Error("failed to insert extra diver");
-    await db.insert(bookings).values({ shopId: shop.id, tripId: trip.id, personId: extraDiver.id });
+    await db
+      .insert(bookings)
+      .values({ bookedAs: "diver", shopId: shop.id, tripId: trip.id, personId: extraDiver.id });
     return { db, shop, trip };
   }
 
