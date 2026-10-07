@@ -33,14 +33,15 @@ function blockFor(
   input: WeeklyDigestEmailInput,
   t: ReturnType<typeof diverTranslator>,
 ): Block {
-  const k = "notifications.weeklyDigest";
   switch (section.kind) {
     case "last_week": {
       const range = formatCalendarDateRange(input.lastWeekFrom, input.lastWeekTo, input.locale);
-      const lines = [t(`${k}.lastWeek.bookings`, { count: section.bookingsMade })];
+      const lines = [
+        t("notifications.weeklyDigest.lastWeek.bookings", { count: section.bookingsMade }),
+      ];
       if (section.departures > 0) {
         lines.push(
-          t(`${k}.lastWeek.sailed`, {
+          t("notifications.weeklyDigest.lastWeek.sailed", {
             departures: section.departures,
             filled: section.seatsFilled,
             seats: section.seats,
@@ -49,18 +50,18 @@ function blockFor(
         );
       }
       return {
-        heading: t(`${k}.lastWeek.heading`, { range }),
+        heading: t("notifications.weeklyDigest.lastWeek.heading", { range }),
         lines,
         url: section.url,
-        linkLabel: t(`${k}.lastWeek.link`),
+        linkLabel: t("notifications.weeklyDigest.lastWeek.link"),
       };
     }
     case "this_week": {
       const range = formatCalendarDateRange(input.thisWeekFrom, input.thisWeekTo, input.locale);
       return {
-        heading: t(`${k}.thisWeek.heading`, { range }),
+        heading: t("notifications.weeklyDigest.thisWeek.heading", { range }),
         lines: [
-          t(`${k}.thisWeek.board`, {
+          t("notifications.weeklyDigest.thisWeek.board", {
             departures: section.departures,
             filled: section.seatsFilled,
             seats: section.seats,
@@ -68,44 +69,51 @@ function blockFor(
           }),
         ],
         url: section.url,
-        linkLabel: t(`${k}.thisWeek.link`),
+        linkLabel: t("notifications.weeklyDigest.thisWeek.link"),
       };
     }
     case "waivers":
       return {
-        heading: t(`${k}.waivers.heading`),
-        lines: [t(`${k}.waivers.body`, { divers: section.divers, departures: section.departures })],
+        heading: t("notifications.weeklyDigest.waivers.heading"),
+        lines: [
+          t("notifications.weeklyDigest.waivers.body", {
+            divers: section.divers,
+            departures: section.departures,
+          }),
+        ],
         url: section.url,
-        linkLabel: t(`${k}.waivers.link`),
+        linkLabel: t("notifications.weeklyDigest.waivers.link"),
       };
     case "reviews": {
       const lines: string[] = [];
       if (section.received > 0) {
-        lines.push(t(`${k}.reviews.received`, { count: section.received }));
+        lines.push(t("notifications.weeklyDigest.reviews.received", { count: section.received }));
       }
       if (section.awaitingModeration > 0) {
-        lines.push(t(`${k}.reviews.waiting`, { count: section.awaitingModeration }));
+        lines.push(
+          t("notifications.weeklyDigest.reviews.waiting", { count: section.awaitingModeration }),
+        );
       }
       return {
-        heading: t(`${k}.reviews.heading`),
+        heading: t("notifications.weeklyDigest.reviews.heading"),
         lines,
         url: section.url,
-        linkLabel: t(`${k}.reviews.link`),
+        linkLabel: t("notifications.weeklyDigest.reviews.link"),
       };
     }
     case "date_requests":
       return {
-        heading: t(`${k}.dateRequests.heading`),
-        lines: [t(`${k}.dateRequests.body`, { count: section.waiting })],
+        heading: t("notifications.weeklyDigest.dateRequests.heading"),
+        lines: [t("notifications.weeklyDigest.dateRequests.body", { count: section.waiting })],
         url: section.url,
-        linkLabel: t(`${k}.dateRequests.link`),
+        linkLabel: t("notifications.weeklyDigest.dateRequests.link"),
       };
     case "overdue":
       return {
-        heading: t(`${k}.overdue.heading`),
-        lines: [t(`${k}.overdue.body`, { count: section.count })],
+        heading: t("notifications.weeklyDigest.overdue.heading"),
+        lines: [t("notifications.weeklyDigest.overdue.body", { count: section.count })],
         url: section.url,
-        linkLabel: t(`${k}.overdue.link`),
+        linkLabel: t("notifications.weeklyDigest.overdue.link"),
       };
   }
 }
