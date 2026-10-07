@@ -130,6 +130,26 @@ describe("getTripOverview", () => {
       if (after.crew.ratioGap.code === "none") throw new Error("expected an unmet target");
       expect(after.crew.ratioGap.divers).toBe(before.trip.bookedDivers);
     });
+
+    // Regression (PR #2224 follow-up): a rider has nothing to rent, so a rider
+    // with no fit on file is not one more person missing rental sizes.
+    it("never counts a rider as a rental-size gap", async () => {
+      const ctx = await context();
+      await ctx.db.update(trips).set({ capacity: 40 }).where(eq(trips.id, ctx.tripId));
+      const before = await overviewFor(ctx);
+      const seated = await createBooking(ctx.db, {
+        actor: "staff",
+        shopId: ctx.shop.id,
+        tripId: ctx.tripId,
+        participantType: "rider",
+        fullName: "Gap Rider",
+        email: "gap-rider@example.com",
+      });
+      if (!seated.ok) throw new Error("could not seat a rider");
+      const after = await overviewFor(ctx);
+      expect(after.trip.booked).toBe(before.trip.booked + 1);
+      expect(after.pulse.prepGaps).toBe(before.pulse.prepGaps);
+    });
   });
 
   describe("the pulse", () => {

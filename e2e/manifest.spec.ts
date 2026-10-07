@@ -76,7 +76,7 @@ test("live manifest retains blocked divers and records an explicit not-boarded r
   // panel's own count is gone, and so is the clause explaining what blocked
   // means, which every row already carries. The count itself is asserted
   // below, on the panel's count row.
-  await expect(page.getByText(/^\d+ divers? (is|are) blocked\.$/)).toBeVisible();
+  await expect(page.getByText(/^\d+ (person is|people are) blocked\.$/)).toBeVisible();
   // Scoped to the roster list, not a bare text match: every unteamed diver's
   // name also appears on the buddy-team builder's checkbox below (ADR
   // 20260804-buddy-teams), so `getByText` is a strict-mode violation here.

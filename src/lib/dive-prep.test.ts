@@ -1543,4 +1543,32 @@ describe("participant types on the packing list (ADR 20261007-participant-types)
     expect(kinds).not.toContain("regulator");
     expect(kinds).not.toContain("weights");
   });
+
+  it("chases a mixed boat's fits by seat: scuba for divers, surface kit for snorkelers", () => {
+    // Regression (PR #2224 follow-up): the prep list skipped every snorkeler's
+    // fit while the trip pulse counted a rider with none as a gap.
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({ bookingId: "b1", fullName: "Dee Diver", fit: { ...fullFit, bcdSize: null } }),
+        diver({
+          bookingId: "b2",
+          fullName: "Sol Snorkel",
+          participantType: "snorkeler",
+          fit: { ...fullFit, bcdSize: null },
+        }),
+        diver({
+          bookingId: "b3",
+          fullName: "Sam Snorkel",
+          participantType: "snorkeler",
+          fit: { ...fullFit, wetsuitSize: null },
+        }),
+        diver({ bookingId: "b4", fullName: "Ray Rider", participantType: "rider", fit: null }),
+      ],
+      plannedDives: 2,
+    });
+    expect(checklist.diversWithIncompleteFit.map((row) => [row.fullName, row.missing])).toEqual([
+      ["Dee Diver", ["bcd"]],
+      ["Sam Snorkel", ["wetsuit"]],
+    ]);
+  });
 });

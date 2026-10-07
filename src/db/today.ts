@@ -956,7 +956,12 @@ async function missingFitByTrip(
   if (bookingIds.length === 0) return missing;
   const [rows, [shop]] = await Promise.all([
     db
-      .select({ bookingId: bookings.id, fullName: people.fullName, fit: rentalFitProfiles })
+      .select({
+        bookingId: bookings.id,
+        fullName: people.fullName,
+        participantType: bookings.participantType,
+        fit: rentalFitProfiles,
+      })
       .from(bookings)
       .innerJoin(people, eq(people.id, bookings.personId))
       .leftJoin(
@@ -971,7 +976,11 @@ async function missingFitByTrip(
   ]);
   const withoutFit = new Map(
     rows
-      .filter((row) => rentalFitCompleteness(row.fit, shop?.rentalItems).state !== "complete")
+      .filter(
+        (row) =>
+          rentalFitCompleteness(row.fit, shop?.rentalItems, row.participantType).state !==
+          "complete",
+      )
       .map((row) => [row.bookingId, row.fullName]),
   );
   for (const [tripId, ids] of bookingIdsByTrip) {

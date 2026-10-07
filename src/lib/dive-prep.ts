@@ -745,10 +745,10 @@ export function buildDivePrepChecklist(input: {
     // ones who *have* a row. A partial fit is named here and still packed
     // below: the sizes they did give are real, and dropping their pieces to
     // punish the gap would send the boat out short.
-    // Only a diver is chased for a complete scuba fit; a snorkeler who
-    // stated a mask size has said all the rack needs.
-    const fit = rentalFitCompleteness(diver.fit, input.offeredKinds);
-    if (diving && fit.state !== "complete") {
+    // Read for the seat: a diver is chased for the whole fit, a snorkeler for
+    // the surface kit only, the same rule the trip pulse and Today count by.
+    const fit = rentalFitCompleteness(diver.fit, input.offeredKinds, diver.participantType);
+    if (fit.state !== "complete") {
       diversWithIncompleteFit.push({
         fullName: diver.fullName,
         personId: diver.personId,
