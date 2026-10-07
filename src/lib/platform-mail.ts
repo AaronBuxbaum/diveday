@@ -10,7 +10,7 @@
  * General contact, offered anywhere the product promises "reach a person"
  * (docs/product/marketing.md). Deliberately not a named individual's address
  * — see the product-owner decision retiring the founder-direct-support claim
- * in docs/product/human-decisions.md.
+ * in docs/product/human-decisions/.
  */
 export const SUPPORT_EMAIL = "support@dive.day";
 

@@ -92,7 +92,7 @@ const BLOCKER_STATE: Record<ReadinessBlockerCode, "action" | "waiting"> = {
   // still gets the generic line above. The known-name case does not. The
   // product owner chose this trade for the common case's clarity, with the
   // gap written down rather than silently accepted. See H-22,
-  // docs/product/human-decisions.md.
+  // docs/product/human-decisions/.
   under_minimum_age: "waiting",
   // A waiver goes out the moment a diver joins, so this state is the rare
   // leftover — a link that never issued (a delivery hiccup, or a waiver turned

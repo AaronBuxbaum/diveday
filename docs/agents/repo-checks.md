@@ -996,7 +996,8 @@ For `scripts/`, `.claude/` and `.github/`; the rules themselves are in `.claude/
   `scripts/check-<name>.test.mjs`, and a hook with `scripts/<name>.test.mjs`; `pnpm agent:health`
   lists the ones without. The "leaves alone" cases carry at least as much weight as the refusals.
 - **A guard is spawned by `scripts/check-repo.mjs`** or it never runs; `pnpm check:agents` fails on
-  one that is not in the table, and on the `check:repo` row in `AGENTS.md` naming the wrong count.
+  one that is not in the table, and on any of `AGENTS.md`, `docs/agents/working-rules.md` or this
+  file's opening line naming a different count than the table holds (`scripts/agent-layer.mjs`).
 - **Ratchets turn one way.** `--write` banks a fall and refuses a rise; `--absorb "<why>"` records a
   deliberate rise with its reason in the baseline diff. `copy`, `domain-strings`, `tokens`,
   `architecture`, `type-ramp`, `voice`, `logical-properties`, `bundle-reach`, `route-coverage`,
@@ -1008,8 +1009,9 @@ For `scripts/`, `.claude/` and `.github/`; the rules themselves are in `.claude/
   "unexamined" and name a deliberate one in `DELIBERATELY_IDENTICAL`
   ([docs/agents/repo-checks.md](repo-checks.md)).
 - **The agent layer is checked** (`scripts/check-agents.mjs`): every skill has frontmatter whose
-  `name` matches its directory and a `description` (the only part every session pays for); every
-  skill is in `.claude/skills/README.md` and mentioned in `AGENTS.md`; every reviewer agent is in
+  `name` matches its directory and a `description` (the only part every session pays for), a skill
+  linked in from `.agents/skills/` included; every local skill is in `.claude/skills/README.md` and
+  mentioned in `AGENTS.md`, and every linked one has a `skills-lock.json` entry; every reviewer agent is in
   the index; every `task:context` path exists; every backticked repo path in `AGENTS.md` and in
   `.claude/rules/*.md` exists; every allowlist entry and every hook command in
   `.claude/settings.json` names a real script or package script; nothing in `.mcp.json` launches

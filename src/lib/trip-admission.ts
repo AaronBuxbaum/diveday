@@ -34,7 +34,7 @@ import {
  * diver knows nothing about them, and refusing there would lock out every new
  * customer and every diver whose cards predate this rule shipping. That is the
  * same trade-off the product owner already settled for the course minimum-age
- * gate (docs/product/human-decisions.md H-08: "collect a date of birth, fail
+ * gate (docs/product/human-decisions/ H-08: "collect a date of birth, fail
  * open"; the fail-closed option was declined for exactly this blast radius),
  * and this rule follows it rather than inventing a second policy. Readiness and
  * the dock still hold that line — nothing here weakens them.

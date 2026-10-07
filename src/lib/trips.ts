@@ -128,7 +128,7 @@ export function hasReturned(endsAt: Date, now: Date): boolean {
  *
  * What this does **not** answer is what a group *is* — one payer for everyone
  * is usually wrong for a club, which splits. That is H-61 in
- * docs/product/human-decisions.md, and it is an owner's call.
+ * docs/product/human-decisions/, and it is an owner's call.
  */
 export const MAX_PUBLIC_PARTY_SIZE = 20;
 
