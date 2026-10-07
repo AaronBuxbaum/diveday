@@ -934,6 +934,16 @@ export function RosterSection({
           ) : null}
         </>
       ) : null;
+    /**
+     * **A new release can clear a diver a physician refused, and the row says
+     * so** (Aaron, 2026-10-07, issue #2158: "allow a waiver without, but show
+     * a warning that a previous waiver had a physician say no (with link)").
+     * A warning, not a blocker, on Ready rows too, with the refused record one
+     * tap away. Withheld on a held seat: it is the matched person's history.
+     */
+    const earlierRefusal = showsPersonDetail
+      ? (readinessByBooking.get(booking.id)?.overriddenRefusal ?? null)
+      : null;
     // What withholding dropped is still said to exist, never which: the
     // manifest's rule (dive-domain review 2026-10-06).
     const moreHoldsBehindConfirmation =
@@ -956,6 +966,25 @@ export function RosterSection({
             ? medicalActions
             : undefined,
       })),
+      ...(earlierRefusal
+        ? [
+            {
+              key: "earlier-refusal",
+              text: t("trips.roster.earlierRefusal", {
+                date: formatShortDate(earlierRefusal.at, locale, shopTimezone),
+              }),
+              tone: "warning" as const,
+              actions: (
+                <Link
+                  href={shopPath(shopSlug, "divers", person.id, "waivers", earlierRefusal.recordId)}
+                  className={linkAction}
+                >
+                  {t("trips.roster.viewSignedRecord")}
+                </Link>
+              ),
+            },
+          ]
+        : []),
       ...(moreHoldsBehindConfirmation
         ? [
             {
@@ -1343,32 +1372,28 @@ export function RosterSection({
             />
             {/* A diver who signed on paper or on shore: let a non-diver
                 record it so the waiver gate isn't held up by a signature the
-                app never sees. Never after a physician's "no": paper has no
-                questionnaire a physician could clear (the writer refuses it
-                too, `physician_refused`). */}
-            {refusalRetired ? null : (
-              <PaperWaiverControl
-                action={markWaiverInPersonAction}
-                bookingId={booking.id}
-                copy={paperWaiverCopy(t, "roster")}
-                requiresGuardian={requiresGuardian}
-                // A diver is standing at this departure, so the staffer here can
-                // truthfully say they watched both a namesake parent and child
-                // sign — the counter is the other such door, the diver's record
-                // deliberately not one.
-                offersNamesake
-                // Drawn on this row's own refusal, or on a page notice that
-                // named this booking, and on no other minor on the boat.
-                noticedNamesake={namesakeRefused}
-                // A page-level notice that landed the staffer back here reopens
-                // the form; a refusal of this form no longer navigates at all.
-                defaultOpen={namesakeRefused}
-                // The fallback under the row's leading action reads in quiet
-                // ink — a teal link out-shouted the bordered send pill above it
-                // (design review 2026-08-29).
-                variant="ghost"
-              />
-            )}
+                app never sees. */}
+            <PaperWaiverControl
+              action={markWaiverInPersonAction}
+              bookingId={booking.id}
+              copy={paperWaiverCopy(t, "roster")}
+              requiresGuardian={requiresGuardian}
+              // A diver is standing at this departure, so the staffer here can
+              // truthfully say they watched both a namesake parent and child
+              // sign — the counter is the other such door, the diver's record
+              // deliberately not one.
+              offersNamesake
+              // Drawn on this row's own refusal, or on a page notice that
+              // named this booking, and on no other minor on the boat.
+              noticedNamesake={namesakeRefused}
+              // A page-level notice that landed the staffer back here reopens
+              // the form; a refusal of this form no longer navigates at all.
+              defaultOpen={namesakeRefused}
+              // The fallback under the row's leading action reads in quiet
+              // ink — a teal link out-shouted the bordered send pill above it
+              // (design review 2026-08-29).
+              variant="ghost"
+            />
           </div>
         ) : null}
 

@@ -48,7 +48,7 @@ const COPY: PaperWaiverCopy = {
       text: "This seat is held until somebody confirms who this diver is.",
       tone: "danger",
     },
-    physician_refused: { text: "A physician did not clear this diver.", tone: "danger" },
+    refusal_needs_manager: { text: "Ask an owner or manager.", tone: "danger" },
     error: { text: "That paper waiver couldn’t be recorded.", tone: "danger" },
   },
 };
