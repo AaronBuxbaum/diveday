@@ -227,6 +227,17 @@ describe("the merge preview", () => {
     expect(radio.closest("label")?.querySelector(".whitespace-nowrap")).not.toBeNull();
   });
 
+  it("gives a row's label its own line on a phone, so each choice gets half the card", () => {
+    renderPreview(preview());
+    const label = screen.getByRole("rowheader", { name: "Email" });
+    const row = label.closest("tr");
+    expect(row).toHaveClass("grid", "grid-cols-2", "sm:table-row");
+    expect(label).toHaveClass("col-span-2");
+    expect(row?.querySelectorAll("td")).toHaveLength(2);
+    const corner = screen.getAllByRole("columnheader")[0];
+    expect(corner).toHaveClass("hidden", "sm:table-cell");
+  });
+
   it("refuses with the boat still out", () => {
     renderPreview(preview({ refusal: "departure_underway" }));
     expect(screen.getByText(/Merge after the boat is back\./)).toBeVisible();

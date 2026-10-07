@@ -249,8 +249,11 @@ export function MergePreview({
     ) : null;
 
   const header = (
-    <tr>
-      <th scope="col" className="w-1/4 pb-2 text-start font-normal text-muted">
+    <tr className="grid grid-cols-2 gap-x-3 sm:table-row">
+      <th
+        scope="col"
+        className="hidden pb-2 text-start font-normal text-muted sm:table-cell sm:w-1/4"
+      >
         <span className="sr-only">{t("divers.mergePreview.detailsHeading")}</span>
       </th>
       <th scope="col" className="pb-2 text-start font-semibold">
@@ -302,22 +305,30 @@ export function MergePreview({
         {conflicts.size > 0 && !preview.refusal ? (
           <p className="-mt-2 mb-4 text-sm text-muted">{t("divers.mergePreview.chooseHint")}</p>
         ) : null}
-        <table className="w-full table-fixed border-collapse text-sm [overflow-wrap:anywhere]">
-          <thead>{header}</thead>
-          <tbody>
+        {/* Below sm each row's label takes its own line, so the two choices
+            split the card's width instead of a third of it each. */}
+        <table className="block w-full border-collapse text-sm [overflow-wrap:anywhere] sm:table sm:table-fixed">
+          <thead className="block sm:table-header-group">{header}</thead>
+          <tbody className="block sm:table-row-group">
             {DIVER_MERGE_FIELDS.map((field) => (
               <Fragment key={field}>
-                <tr className="border-t border-border align-top">
-                  <th scope="row" className="py-3 pe-3 text-start font-normal text-muted">
+                <tr className="grid grid-cols-2 gap-x-3 border-t border-border align-top sm:table-row">
+                  <th
+                    scope="row"
+                    className="col-span-2 pt-3 pb-1 text-start font-normal text-muted sm:py-3 sm:pe-3"
+                  >
                     {t(FIELD_KEYS[field])}
                   </th>
-                  <td className="py-3 pe-3">{cell(field, source, "source")}</td>
-                  <td className="py-3">{cell(field, survivor, "survivor")}</td>
+                  <td className="pb-3 sm:py-3 sm:pe-3">{cell(field, source, "source")}</td>
+                  <td className="pb-3 sm:py-3">{cell(field, survivor, "survivor")}</td>
                 </tr>
                 {field === "dateOfBirth" && minorDateInPlay ? (
-                  <tr>
-                    <td />
-                    <td colSpan={2} className="pb-3 text-sm text-warning-strong">
+                  <tr className="block sm:table-row">
+                    <td className="hidden sm:table-cell" />
+                    <td
+                      colSpan={2}
+                      className="block pb-3 text-sm text-warning-strong sm:table-cell"
+                    >
                       {t("divers.mergePreview.birthDateMinorHint")}
                     </td>
                   </tr>
