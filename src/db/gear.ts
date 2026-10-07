@@ -1460,15 +1460,6 @@ export async function listDeletedGearItems(
   });
 }
 
-/** How many units are deleted — the register's Deleted chip appears on it. */
-export async function countDeletedGearItems(db: AppDb, shopId: string): Promise<number> {
-  const [row] = await db
-    .select({ value: count() })
-    .from(gearItems)
-    .where(and(eq(gearItems.shopId, shopId), isNotNull(gearItems.deletedAt)));
-  return row?.value ?? 0;
-}
-
 export type GearItemDetail = {
   item: GearItem;
   clocks: GearServiceClock[];

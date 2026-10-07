@@ -774,7 +774,7 @@ export async function listDiveSiteCreatures(db: DbExecutor, shopId: string, site
  * A row is a slug and a position. The words are DiveDay's and are resolved per
  * reader at render (ADR 20260813-marine-life-is-diveday-copy).
  */
-export async function replaceDiveSiteCreatures(
+async function replaceDiveSiteCreatures(
   db: DbExecutor,
   shopId: string,
   siteId: string,

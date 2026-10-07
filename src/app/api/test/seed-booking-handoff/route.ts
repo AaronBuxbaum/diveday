@@ -5,7 +5,7 @@ import { issueBookingHandoff } from "@/db/booking-handoff";
 import { getDb } from "@/db/client";
 import { bookings, people, trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
-import { liveTrip } from "@/db/trips-live";
+import { liveTrip } from "@/db/trips";
 import { handoffHref } from "@/lib/booking-handoff";
 import { nowDate } from "@/lib/clock";
 import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";

@@ -169,12 +169,7 @@ export async function listTripInvitations(db: AppDb, shopId: string, tripId: str
 }
 
 /** The shop-scoped recipient and trip facts needed to send one invitation. */
-export async function getTripInvitation(
-  db: AppDb,
-  shopId: string,
-  tripId: string,
-  invitationId: string,
-) {
+async function getTripInvitation(db: AppDb, shopId: string, tripId: string, invitationId: string) {
   const [row] = await db
     .select({
       invitation: tripInvitations,

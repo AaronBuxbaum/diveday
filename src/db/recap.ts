@@ -777,7 +777,7 @@ export async function getRecapPageData(
 }
 
 /** A diver's recap photos, including staff-shared departure photos, newest first. */
-export async function listRecapPhotosForBooking(
+async function listRecapPhotosForBooking(
   db: AppDb,
   bookingId: string,
   tripId?: string,

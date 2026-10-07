@@ -18,9 +18,10 @@ import {
   createTripSeries,
   deleteTrip,
   duplicateTrip,
+  listStaff,
   moveTrip,
+  setTripCrew,
 } from "@/db/trips";
-import { listStaff, setTripCrew } from "@/db/trips-crew";
 import { weekdayPatternFor } from "@/db/weekday-pattern";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";

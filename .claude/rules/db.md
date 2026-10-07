@@ -18,7 +18,7 @@ never pays for them.
   drizzle configs read. A new table goes in its domain's module; Grep for a table to find it.
 - **Client / test db factory**: `src/db/client.ts` (`getDb()`, `createTestDb()`).
 - **Queries and seed data**: `src/db/shops.ts`, plus two barrels over sibling modules —
-  `src/db/trips.ts` re-exports `trips-create/-series/-record/-schedule/-crew/-roster.ts`, and
+  `src/db/trips.ts` re-exports `trips-create/-series/-record/-schedule/-crew/-roster/-live/-prep.ts`, and
   `src/db/seed.ts` orchestrates the `seed-*.ts` scenarios. Import from the barrel; edit the
   sibling.
 - **Demo/seed data**: a new `src/db/seed-<scenario>.ts` plus one line in `src/db/seed.ts`'s
