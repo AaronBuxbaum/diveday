@@ -443,7 +443,7 @@ describe("the continuity promise", () => {
   }
 
   it.each([
-    ["/pricing", "src/app/pricing/page.tsx"],
+    ["/pricing", "src/app/pricing/faq.ts"],
     ["/about", "src/app/about/page.tsx"],
   ])("is rendered on %s from the shared key", (_route, file) => {
     const source = readFileSync(join(process.cwd(), file), "utf8");

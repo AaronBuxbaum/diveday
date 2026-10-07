@@ -3,7 +3,7 @@
   "// absorbed": "merged the perf layer: the trip page passes its shared reads to both readers (7 lines)",
   "src/app/onboard/page.tsx": 494,
   "src/app/page.tsx": 592,
-  "src/app/pricing/page.tsx": 591,
+  "src/app/pricing/page.tsx": 504,
   "src/app/ready/[token]/page.tsx": 2217,
   "src/app/s/[shopSlug]/page.tsx": 1357,
   "src/app/s/[shopSlug]/trips/[id]/page.tsx": 918,
