@@ -2,7 +2,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { FIGURE_CLASS, LEAD_TITLE_CLASS } from "@/components/ui/typography";
-import type { TripPrep } from "@/db/trips-prep";
+import type { TripPrep } from "@/db/trips";
 import { diveRecencyText } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {

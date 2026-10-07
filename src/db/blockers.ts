@@ -1,4 +1,5 @@
-import { nowDate } from "@/lib/clock";
+import { cache } from "react";
+import { MINUTE_MS, nowDate } from "@/lib/clock";
 import { OPERATIONAL_MAX_TRIPS, operationalWindow } from "@/lib/operational-window";
 import type { AppDb } from "./client";
 import { listTripsReadiness } from "./readiness";
@@ -24,31 +25,25 @@ import { pagedUpcomingTripsWithCounts } from "./trips";
  * hands the same evidence to each call: the pass costs about ten queries, so
  * recomputing it per read doubles the page's whole database bill.
  *
- * **Do not reach for React's `cache()` here. It was tried and measured, and it
- * cannot work** (issue #1121). The duplicate worth removing crosses a boundary
- * a prop cannot: the staff shell's blocked-diver badge runs this in
- * `layout.tsx`, and the shop home and the roster each run it again in the
- * `page.tsx` underneath, so each of those two routes pays for the pass twice
- * — about 37ms and ten round trips a time on the seeded fixture.
+ * **Shared across the shell and the page by {@link sharedInHorizonReadiness}**
+ * (app audit 2026-10-07, item 2). The duplicate worth removing crosses a
+ * boundary a prop cannot: the staff shell's blocked-diver badge runs this in
+ * `ShopChrome`, and the shop home and the roster each run it again in the
+ * `page.tsx` beside it - about ten round trips a time on the seeded fixture.
  *
- * `cache()` is request-scoped, and **the layout and the page are not in the
- * same scope.** Measured against `pnpm dev` on 2026-09-02 by logging every
- * entry: over four loads of `/shop/blue-mantis` the badge and the page ran the
- * pipeline four times each, and a `cache()`d clock reading placed above both
- * was itself invoked eight times, once per caller, at eight different instants
- * — so the second call never even reached the same memo table as the first.
- * The shell and the page are rendered in separate passes under Cache
- * Components, which is ADR 20260804-instant-navigation working as designed and
- * not a bug to route around. That was true when the shell was `instant = false`
- * and it is still true now that it is a synchronous App Shell (issue 1446):
- * `ShopChrome` is a `<Suspense>` child streaming beside the page rather than a
- * layout blocking above it, which puts it further from the page's pass, not
- * nearer. The badge's read is measured and commented in `ShopChrome` itself.
+ * Issue #1121 measured on 2026-09-02 that React's `cache()` could not bridge
+ * that gap: the shell and the page rendered in separate passes, so a memo in
+ * one never reached the other. Re-measured on 2026-10-07 against `pnpm dev`
+ * (Next 16.4) with the `render.db_queries` line and a probe on the shared
+ * slot, it now does: one load of `/shop/blue-mantis` ran the pass **once**
+ * for the badge and the page together, and the whole render logged one line,
+ * not one per pass. If a later Next splits the passes again, the shared reader
+ * degrades to exactly the old cost - two passes, each correct - and the
+ * `render.db_queries` lines will say so by arriving in pairs.
  *
- * Two things that would work, and neither is a one-line cache: hoisting the
- * badge's own read into the same pass as the page's, or a cache keyed outside
- * React's request scope — which is a second, staler answer to "who is blocked",
- * the thing this file exists to prevent.
+ * What would still be wrong is a cache keyed *outside* React's request scope:
+ * a second, staler answer to "who is blocked", the thing this file exists to
+ * prevent.
  */
 export async function inHorizonReadiness(db: AppDb, shopId: string, now: Date) {
   const { to: horizon } = operationalWindow(now);
@@ -84,6 +79,48 @@ export async function inHorizonReadiness(db: AppDb, shopId: string, now: Date) {
 export type HorizonReadinessEvidence = Awaited<ReturnType<typeof inHorizonReadiness>>;
 
 /**
+ * One slot per (connection, shop, clock minute) per render. React's `cache()`
+ * memoizes the slot, not the pass, so the pass can be started by whichever
+ * caller asks first with its own `now` - see {@link sharedInHorizonReadiness}.
+ */
+const horizonSlot = cache(
+  (
+    _db: AppDb,
+    _shopId: string,
+    _minute: number,
+  ): { evidence?: Promise<HorizonReadinessEvidence> } => ({}),
+);
+
+/**
+ * {@link inHorizonReadiness}, run once per render for every caller asking about
+ * the same shop in the same clock minute (app audit 2026-10-07, item 2).
+ *
+ * The staff shell's badge (`countBlockedDivers`), the shop home and the roster
+ * each run the pass, about eleven statements a time. The first asker's pass is
+ * the one every later asker in the render receives, so the badge and the page
+ * it links to now read literally the same evidence - the property this file
+ * exists for, held more tightly than two passes a few milliseconds apart ever
+ * held it. Keyed on the clock *minute* rather than the exact instant because
+ * each caller reads the clock for itself; a second caller in a later minute
+ * gets a pass of its own rather than an answer from the previous minute.
+ *
+ * Outside a render (an action, a route handler, a test) `cache()` calls
+ * straight through, so every call runs its own pass, exactly as before. Where
+ * the shell and the page render in separate passes, they still read twice -
+ * see the note on {@link inHorizonReadiness}; the `render.db_queries` line
+ * (`src/lib/observability/query-timing.ts`) is how to tell which is happening.
+ */
+export function sharedInHorizonReadiness(
+  db: AppDb,
+  shopId: string,
+  now: Date,
+): Promise<HorizonReadinessEvidence> {
+  const slot = horizonSlot(db, shopId, Math.floor(now.getTime() / MINUTE_MS));
+  slot.evidence ??= inHorizonReadiness(db, shopId, now);
+  return slot.evidence;
+}
+
+/**
  * Distinct divers who can't board yet, across the same shared horizon
  * this file reads — for the nav badge (task 83, UX persona 11
  * "Kai"/12 "Maren"), which only needs the headline count, not each row's fix
@@ -97,7 +134,7 @@ export async function countBlockedDivers(
   shopId: string,
   now: Date = nowDate(),
 ): Promise<number> {
-  const { trips, readinessByTrip } = await inHorizonReadiness(db, shopId, now);
+  const { trips, readinessByTrip } = await sharedInHorizonReadiness(db, shopId, now);
   const blocked = new Set<string>();
   for (const trip of trips) {
     for (const row of readinessByTrip.get(trip.id) ?? []) {

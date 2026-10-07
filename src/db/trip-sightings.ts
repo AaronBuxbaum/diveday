@@ -7,8 +7,9 @@ import {
   sightingWindowStart,
 } from "@/lib/sightings";
 import { hasSailed } from "@/lib/trips";
-import { type AppDb, type DbExecutor, queryAll } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { isMarineLifeSlug } from "./marine-life-catalog";
+import { queryAll } from "./query-helpers";
 import {
   diveSiteCreatures,
   diveSites,

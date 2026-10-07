@@ -21,7 +21,7 @@ is the same, and it is the default rather than a special case for dependent chai
 **A dependent chain has no other honest shape.** Step 2 cannot compile, test, or be read without
 step 1:
 
-- `src/db/schema.ts` + migration → the `src/db` reader → the surface that renders it
+- `src/db/schema/` + migration → the `src/db` reader → the surface that renders it
 - a `src/lib` domain rule → the feature module that composes it → the route
 - a refactor that must land before the behaviour change that needs it
 

@@ -13,6 +13,6 @@ Approve dropping the two URL columns from the published export contract (a diver
 
 ## Unblocks / follow-up
 
-Once approved, dropping the columns is a small, contained change to `src/db/export.ts` and the export README's documented schema.
+Once approved, dropping the columns is a small, contained change to `src/db/export-shop-files.ts` and the export README's documented schema.
 
 Part of the [human decision log](README.md#decision-register).

@@ -22,7 +22,7 @@ import {
   listDiveSiteBriefingExtras,
   listUpcomingDeparturesForSite,
 } from "@/db/dive-sites";
-import { shopBySlugCached } from "@/db/shops";
+import { shopBySlugCached } from "@/db/shops-cached";
 import { fieldGuideCards } from "@/i18n/marine-life-labels";
 import { requestTranslator } from "@/i18n/request";
 import { depthText } from "@/i18n/unit-labels";

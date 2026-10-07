@@ -21,7 +21,7 @@ import { bookingConfirmationAndWaiverEmailsSent } from "@/db/notifications";
 import { getTripRequirements, getTripSiteRequirement } from "@/db/readiness";
 import { getShopReviewAggregate } from "@/db/reviews";
 import { tripMayTakeACode } from "@/db/shop-promos";
-import { shopBySlugCached } from "@/db/shops";
+import { shopBySlugCached } from "@/db/shops-cached";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
 import { listTripChangeEvents } from "@/db/trip-change-events";
 import { siteSightings } from "@/db/trip-sightings";

@@ -11,7 +11,7 @@ Each rule names what enforces it; the reasoning, incidents and the longer form o
 
 ## Where things are
 
-- **Schema**: `src/db/schema.ts`, by Grep and range (the Read guard refuses it whole); never read
+- **Schema**: `src/db/schema/`, by Grep and range (the Read guard refuses it whole); never read
   `drizzle/`. **Client and test db**: `src/db/client.ts`.
 - **Queries**: `src/db/shops.ts` and the barrels `src/db/trips.ts` and `src/db/seed.ts`; import
   from the barrel, edit the sibling.
@@ -29,8 +29,8 @@ Each rule names what enforces it; the reasoning, incidents and the longer form o
   (ADR 20260815-minimal-gear-register).
 - **Buddy teams**: `src/db/buddy-pairs.ts`; every act appends to `buddy_team_events`; informs,
   never gates (ADR 20260804-buddy-teams).
-- **Templates are copied, then the shop's**: `src/db/dive-site-templates.ts`,
-  `src/db/course-templates.ts`. **The catalog is DiveDay's words**: `src/db/marine-life-catalog.ts`,
+- **Templates are copied, then the shop's**: `src/content/dive-site-templates.ts`,
+  `src/content/course-templates.ts`. **The catalog is DiveDay's words**: `src/db/marine-life-catalog.ts`,
   a species without copy fails to compile (ADR 20260813-marine-life-is-diveday-copy).
 - **Course inquiries**: `src/db/course-inquiries.ts`; a row names a course or an interest
   (check constraint).

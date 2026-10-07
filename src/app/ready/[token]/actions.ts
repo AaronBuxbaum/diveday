@@ -36,6 +36,7 @@ import { nowDate } from "@/lib/clock";
 import { emergencyContactSchema, readEmergencyContact } from "@/lib/contact";
 import { DIVE_INTENTS } from "@/lib/dive-intent";
 import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";
+import { log } from "@/lib/log";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
@@ -527,8 +528,11 @@ export async function cancelMyBookingAction(token: string) {
     if (refund.status !== "no_policy" && refund.status !== "unpaid") {
       await trackEvent({ name: "refund_issued", auto: true, status: refund.status });
     }
-  } catch {
-    console.error("Self-cancel refund could not be processed", { bookingId: ctx.bookingId });
+  } catch (error) {
+    log("booking.self_cancel_refund_failed", "error", {
+      bookingId: ctx.bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
   }
   redirect(`${base(token)}?cancelled=1`);
 }

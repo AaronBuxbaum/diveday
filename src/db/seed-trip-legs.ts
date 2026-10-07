@@ -53,7 +53,7 @@ import { tripDives, trips } from "./schema";
 /**
  * Minutes per leg, dive 1 first: from the dock for dive one, from the previous
  * dive's site after that. Distances are the real Florida Keys ones the seeded
- * sites name (`src/db/dive-site-templates.ts`), not arithmetic on coordinates —
+ * sites name (`src/content/dive-site-templates.ts`), not arithmetic on coordinates —
  * the ADR declines that outright, because a shop's own figure includes the
  * captain's judgement about the run, not the distance.
  *

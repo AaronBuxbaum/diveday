@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Role } from "@/lib/authz";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   canPersonConfigureTrips,
   canPersonDeleteDiver,
@@ -48,9 +48,13 @@ async function makeStaff(
   return person.id;
 }
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
+
 describe("loadActiveStaffRoles", () => {
   it("returns the person's live roles for an active staff member", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const person = await makeStaff(db, shop.id, ["owner", "manager"]);
     const roles = await loadActiveStaffRoles(db, shop.id, person);
     expect(roles).not.toBeNull();
@@ -58,7 +62,7 @@ describe("loadActiveStaffRoles", () => {
   });
 
   it("returns null for a disabled account, a deleted person, or the wrong shop", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const disabled = await makeStaff(db, shop.id, ["owner"], { status: "disabled" });
     const deleted = await makeStaff(db, shop.id, ["owner"], { deleted: true });
     const owner = await makeStaff(db, shop.id, ["owner"]);
@@ -80,14 +84,14 @@ describe("loadActiveStaffRoles", () => {
  */
 describe("loadActiveStaffRolesByPerson", () => {
   it("returns the person's live roles for an active staff member", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const person = await makeStaff(db, shop.id, ["owner", "manager"]);
     const roles = await loadActiveStaffRolesByPerson(db, person);
     expect([...(roles ?? [])].sort()).toEqual(["manager", "owner"]);
   });
 
   it("returns null for a disabled account or a deleted person", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const disabled = await makeStaff(db, shop.id, ["owner"], { status: "disabled" });
     const deleted = await makeStaff(db, shop.id, ["owner"], { deleted: true });
 
@@ -96,7 +100,7 @@ describe("loadActiveStaffRolesByPerson", () => {
   });
 
   it("does not care which shop id the caller supplies — there isn't one to check", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const owner = await makeStaff(db, shop.id, ["owner"]);
     // Same person, still active — a wrong or stale shop claim is simply not
     // this function's question.
@@ -104,7 +108,7 @@ describe("loadActiveStaffRolesByPerson", () => {
   });
 
   it("returns null for a person id that does not exist", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     expect(
       await loadActiveStaffRolesByPerson(db, "00000000-0000-0000-0000-000000000000"),
     ).toBeNull();
@@ -113,7 +117,7 @@ describe("loadActiveStaffRolesByPerson", () => {
 
 describe("H-14 owner/manager surfaces", () => {
   it("admit an owner and a manager, refuse instructor and the daily crew", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const owner = await makeStaff(db, shop.id, ["owner"]);
     const manager = await makeStaff(db, shop.id, ["manager"]);
     const instructor = await makeStaff(db, shop.id, ["instructor"]);
@@ -141,7 +145,7 @@ describe("H-14 owner/manager surfaces", () => {
   });
 
   it("refuse a disabled or deleted owner immediately (closes the JWT window)", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const disabled = await makeStaff(db, shop.id, ["owner"], { status: "disabled" });
     const deleted = await makeStaff(db, shop.id, ["owner"], { deleted: true });
 
@@ -160,7 +164,7 @@ describe("H-14 owner/manager surfaces", () => {
    * the pure predicate's own test (security review 20260804).
    */
   it("admits only an owner to the incident-ready export", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const owner = await makeStaff(db, shop.id, ["owner"]);
     const manager = await makeStaff(db, shop.id, ["manager"]);
     const instructor = await makeStaff(db, shop.id, ["instructor"]);
@@ -179,7 +183,7 @@ describe("H-14 owner/manager surfaces", () => {
 
 describe("H-06 gear-request override", () => {
   it("admits owner, manager, instructor, and divemaster; refuses deck crew", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const owner = await makeStaff(db, shop.id, ["owner"]);
     const manager = await makeStaff(db, shop.id, ["manager"]);
     const instructor = await makeStaff(db, shop.id, ["instructor"]);
@@ -196,7 +200,7 @@ describe("H-06 gear-request override", () => {
   });
 
   it("refuses a disabled divemaster immediately", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const disabled = await makeStaff(db, shop.id, ["divemaster"], { status: "disabled" });
     expect(await canPersonOverrideGearRequest(db, shop.id, disabled)).toBe(false);
   });
@@ -204,7 +208,7 @@ describe("H-06 gear-request override", () => {
 
 describe("H-14 trip configuration", () => {
   it("admits owner, manager, and instructor; refuses captain, crew, and divemaster", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const owner = await makeStaff(db, shop.id, ["owner"]);
     const manager = await makeStaff(db, shop.id, ["manager"]);
     const instructor = await makeStaff(db, shop.id, ["instructor"]);

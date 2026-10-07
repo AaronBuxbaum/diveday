@@ -21,10 +21,10 @@ import { readFileSync } from "node:fs";
  * files that talk to a database get the longer rope.
  *
  * Applied from `src/test/setup.ts`, which runs per test file and therefore
- * knows which one it is. A second Vitest project would be the framework's own
- * answer, and it would have to restate `globalSetup`, the cost-weighted
- * sequencer, the `forks` pool and the whole `env` block — four things whose
- * reasoning lives in one place today and would then live in two.
+ * knows which one it is. The `db` Vitest project (src/test/projects.ts) is not
+ * the same set: it is "imports the fixture", while this rule also covers every
+ * file under `src/db/`, fixture or not. Raising a ceiling where it is not needed
+ * costs nothing, so the wider rule stays here rather than moving to the project.
  */
 export const DB_TEST_TIMEOUT_MS = 60_000;
 

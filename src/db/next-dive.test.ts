@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { readCertificationEvidence } from "./certification-evidence";
 import { nextDiveForBooking } from "./next-dive";
 import { createCertification, upsertTripRequirements } from "./readiness";
@@ -34,7 +34,7 @@ const NOW = new Date("2030-06-01T12:00:00Z");
 const AT = (hoursFromNow: number) => new Date(NOW.getTime() + hoursFromNow * 60 * 60 * 1000);
 
 async function boardContext() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const [diver] = await db
     .select({ id: people.id })
     .from(people)
@@ -79,6 +79,10 @@ const day = (justDivedTripId: string) => ({
   dayLensId: null as string | null,
   now: NOW,
 });
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 describe("nextDiveForBooking", () => {
   it("returns null when the board ahead is empty", async () => {

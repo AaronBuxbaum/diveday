@@ -8,8 +8,9 @@ import {
   type PreDepartureCheckStatus,
 } from "@/lib/pre-departure-check";
 import { canPersonManageShopSettings, loadActiveStaffRoles } from "./authz";
-import { type AppDb, type DbExecutor, violatesUniqueIndex } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
+import { violatesUniqueIndex } from "./query-helpers";
 import { people, preDepartureCheckEvents, preDepartureChecklistItems, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 

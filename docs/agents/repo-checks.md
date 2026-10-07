@@ -16,7 +16,7 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, type-ramp, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, soft-delete-vocabulary, shop-word, live-trip-read, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, infra-ASCII, CI-change-detection and Node-version safeguards.
+environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, soft-delete-vocabulary, shop-word, live-trip-read, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, infra-ASCII, CI-change-detection and Node-version safeguards.
 
 ## The guards worth reading about
 
@@ -50,7 +50,7 @@ The uuid-path-segment one (`scripts/check-uuid-segments.mjs`) requires every dyn
 
 ### transaction-concurrency
 
-The transaction-concurrency one (`scripts/check-db-concurrency.mjs`) refuses a `Promise.all`/`allSettled` inside any function in `src/db`/`src/features` whose parameter is typed `DbExecutor` or `AppTransaction` — a drizzle transaction is **one checked-out `pg` client**, so that fan-out is not parallel: `pg` queues it and warns it will refuse it in pg@9, which reached production twice (issue #517 in `trips-schedule.ts`, then the 2026-08-14 counter check-in through `checkInBooking` → `listTripReadiness`). The fix it names is `queryAll` (`src/db/client.ts`), which asks the executor which one it is, **never** hand-serializing a hot roster read — and the rule stops at functions that can receive a transaction, because a reader that only ever takes `AppDb` is on the pool where the fan-out is real. A fan-out that genuinely is not over queries says `diveday:allow-db-concurrency: <why>` on the line.
+The transaction-concurrency one (`scripts/check-db-concurrency.mjs`) refuses a `Promise.all`/`allSettled` inside any function in `src/db`/`src/features` whose parameter is typed `DbExecutor` or `AppTransaction` — a drizzle transaction is **one checked-out `pg` client**, so that fan-out is not parallel: `pg` queues it and warns it will refuse it in pg@9, which reached production twice (issue #517 in `trips-schedule.ts`, then the 2026-08-14 counter check-in through `checkInBooking` → `listTripReadiness`). The fix it names is `queryAll` (`src/db/query-helpers.ts`), which asks the executor which one it is, **never** hand-serializing a hot roster read — and the rule stops at functions that can receive a transaction, because a reader that only ever takes `AppDb` is on the pool where the fan-out is real. A fan-out that genuinely is not over queries says `diveday:allow-db-concurrency: <why>` on the line.
 
 ### notice-code
 
@@ -149,6 +149,10 @@ per-file table. It lands at zero, so it behaves as a full gate today; the ratche
 branch cut before the sweep, whose spellings are pre-existing debt rather than new drift. A heading
 that genuinely is not on the ramp — a rendered email, an `ImageResponse` card Tailwind never reaches
 — says `diveday:allow-type-ramp: <why>` on the line or the line above.
+
+### page-length
+
+The page-length one (`scripts/check-page-length.mjs`) refuses a `page.tsx` under `src/app` longer than 400 lines. AGENTS.md says routes stay thin and `check:architecture` enforces the dependency direction, but nothing measured thinness: the 2026-10-07 audit counted 37 of 83 pages over 300 lines and eight over 1,000, with domain rules, Drizzle queries and a dozen local components living in the route file where the architecture guard cannot see them — and a page over 600 lines is one `scripts/guard-read.mjs` will not hand an agent whole, so every edit to it starts from a range. Ratcheted per file in `scripts/page-length-baseline.json` exactly like `check:copy`: a page over the limit that is not in the baseline fails, a banked page that grew fails, and a banked page that shrank fails until `--write` banks the fall in the same change; `--absorb "<why>"` records a rise arriving from a merge, and `--report` prints the table. The fix for red is never to compress a page's formatting — move a section into a sibling `_components/` file, a query into `src/db`, a rule into `src/lib`.
 
 ### voice
 
@@ -407,6 +411,12 @@ Refuses `new Intl.DateTimeFormat(…)` and the three `toLocale*String` calls who
 ### redirectInTry
 
 Refuses a call that unwinds the render — `redirect`, `permanentRedirect`, `notFound`, `forbidden`, `unauthorized`, this repo's `revalidateAndRedirect`, `requireStaffSession` and `requireShopSurface`, and any function the same file declares `: never` or `: Promise<never>` — written inside a `try` body (callbacks nested in it included), or with `.catch(…)` chained straight onto it, anywhere in `src/` outside tests. These throw a sentinel the framework turns into a 307/404/403/401, so a `try` around one catches the refusal itself and the page below the gate renders for someone the gate said no to: a tenant-isolation bug, since `requireShopSurface`'s whole contract is that every refusal throws. `catch { redirect(…) }` is a refusal decided by the failure and is correct; so is a redirect after the `try`. Tests are exempt because asserting a helper throws means catching the sentinel. The guard this replaced was a 439-line lexical masker that had to fail loudly when it lost its footing; Biome parses the file, and one that does not parse fails lint. Not covered, stated rather than implied: a `return` inside `finally`, which lint already refuses.
+
+### Source-text guards written as tests (the `guards` Vitest project)
+
+Not a `check:repo` script, and listed here because it does the same job. About forty `*.test.ts` files under `src/` are guards in test clothing: they read the repository's own source (`readFileSync` over a page, a stylesheet, a directory of routes) and assert on its text — `instant-coverage.test.ts`, `tenant-gate-coverage.test.ts`, `provider-coverage.test.ts`, the `page.composition.test.ts` family, `import-cycles.test.ts`. They stay beside the code they guard and keep their names, because source comments, `.claude/rules/` and the design docs cite them by path; what changed (2026-10-07) is how they run. `src/test/projects.ts` puts a file in the `guards` project when it reads files and imports nothing but `vitest`, `node:*` and `@/test/stylesheet` — no app module, no `vi.*`, no dynamic `import()`, no child process — and that project runs them in one shared worker (`isolate: false`) instead of a fresh fork, transform and setup per file. Each was paying a second or two of process boot to run a few milliseconds of string matching. `pnpm test:guards` runs the set alone; `pnpm test <file>` still runs one.
+
+A file that reads source **and** renders, hydrates a database or imports the module it guards stays where it is (its project is decided by the render or the database, not the read): the render-and-read component tests, `src/db/shop-by-slug-cache.test.ts` (spawns a React server child), the two cron route tests that read their own route source beside a mocked handler, `src/features/integrations/dispatch-on-write.test.ts`, `src/test/db-template.test.ts`, `src/app/print-bundle.test.ts` (reads the print rules into jsdom), and the `src/lib` and `src/components/ui` files that check an exported table against the source that uses it. Adding an app import to a guard moves it out of `guards` automatically; nothing has to be re-listed.
 
 ## The path-scoped rules, in full
 

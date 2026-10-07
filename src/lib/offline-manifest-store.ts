@@ -1,6 +1,6 @@
 "use client";
 import { nowDate } from "./clock";
-
+import { log } from "./log";
 import {
   canRecordOfflineArrival,
   canRecordOfflineChecklistCheck,
@@ -317,7 +317,9 @@ async function noteDiscardedRecord(
     // Deliberately not rethrown — see the docblock above: the deletion must
     // win over its own footnote. But leave a trace, or a device that can
     // never write the notice looks identical to one with nothing to say.
-    console.error("Failed to record discarded offline-manifest notice", error);
+    log("offline_manifest.discard_notice_failed", "error", {
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
     return;
   }
 }

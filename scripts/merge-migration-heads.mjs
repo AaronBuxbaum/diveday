@@ -97,7 +97,7 @@ function migrationFolders() {
  * inside the build while the previous release is still serving.
  *
  * The repair is a plain `generate`. That one derives its snapshot from
- * `src/db/schema.ts`, which after both branches are on `main` *is* the merged
+ * `src/db/schema/`, which after both branches are on `main` *is* the merged
  * truth — so whatever it emits is exactly what the merge snapshot had lost, and
  * its own snapshot is the state the merge folder should have carried. Adopting
  * that is also correct for a column one branch **dropped**, which a naive union
@@ -152,7 +152,7 @@ function repairLostState(mergeFolder) {
   if (leftover) rmSync(path.join(MIGRATIONS_DIR, leftover), { recursive: true, force: true });
   if (confirm.status !== 0 || leftover) {
     console.error(
-      `\ndb:merge: repaired drizzle/${mergeFolder}'s snapshot and it still does not describe src/db/schema.ts. That means the schema has pending changes of its own, which need their own migration — commit or revert those first, delete drizzle/${mergeFolder}, and rerun.`,
+      `\ndb:merge: repaired drizzle/${mergeFolder}'s snapshot and it still does not describe src/db/schema/. That means the schema has pending changes of its own, which need their own migration — commit or revert those first, delete drizzle/${mergeFolder}, and rerun.`,
     );
     process.exit(1);
   }

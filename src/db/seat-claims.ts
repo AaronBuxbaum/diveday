@@ -1,6 +1,7 @@
 import { and, asc, eq, isNull, ne } from "drizzle-orm";
 import { trackEvent } from "@/lib/analytics";
 import { nowDate } from "@/lib/clock";
+import { log } from "@/lib/log";
 import { personNamesMatch } from "@/lib/person-name";
 import { hasVerifiedCertificationAtLeast } from "@/lib/readiness";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
@@ -13,10 +14,11 @@ import {
   verifyBookingCapability,
 } from "./booking-capabilities";
 import { tripAdmissionFor } from "./bookings";
-import { type AppDb, type DbExecutor, isUniqueConstraintViolation } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { recordTripActivity } from "./operations";
 import { findOrCreatePerson } from "./people";
 import { storedPhone } from "./person-phone";
+import { isUniqueConstraintViolation } from "./query-helpers";
 import {
   bookings,
   certifications,
@@ -465,8 +467,11 @@ export async function claimPartySeat(db: AppDb, input: ClaimSeatInput): Promise<
     // The claimant's own waiver, to their own address — idempotent, and a
     // sign-once diver with a current signature at this shop is skipped.
     await issueWaiverOnJoin(db, outcome.shopId, outcome.bookingId);
-  } catch {
-    console.error("Waiver-on-claim could not be issued", { bookingId: outcome.bookingId });
+  } catch (error) {
+    log("seat_claim.waiver_failed", "error", {
+      bookingId: outcome.bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
   }
   try {
     await recordTripActivity(db, {
@@ -475,8 +480,11 @@ export async function claimPartySeat(db: AppDb, input: ClaimSeatInput): Promise<
       actorPersonId: outcome.personId,
       entry: { code: "seat_claimed" },
     });
-  } catch {
-    console.error("Seat-claim activity could not be recorded", { bookingId: outcome.bookingId });
+  } catch (error) {
+    log("seat_claim.activity_record_failed", "error", {
+      bookingId: outcome.bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
   }
   return outcome;
 }

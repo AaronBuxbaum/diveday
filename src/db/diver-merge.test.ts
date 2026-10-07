@@ -7,7 +7,7 @@ import {
   WAIVER_INTEGRITY_VERSION_MOVED,
   WAIVER_INTEGRITY_VERSION_SIGNED,
 } from "@/lib/waiver-integrity";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   DIVER_HISTORY_TABLES,
   listDiverMergeCandidates,
@@ -38,7 +38,7 @@ import {
 } from "./schema";
 
 async function mergeFixtures() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const [owner] = await db
     .select({ id: people.id })
     .from(people)
@@ -66,6 +66,10 @@ async function mergeFixtures() {
   ]);
   return { db, shop, owner, trip, source, survivor };
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 describe("diver record merge", () => {
   it("moves a source-only email onto an email-less survivor", async () => {
@@ -271,7 +275,7 @@ describe("diver record merge", () => {
  */
 describe("every person_id column in the schema has a merge answer", () => {
   it("classifies each one as moved, refused, or deliberately left alone", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const result = await db.execute(sql`
       select table_name
       from information_schema.columns
@@ -305,7 +309,7 @@ describe("every person_id column in the schema has a merge answer", () => {
    * are almost all the same one: attribution belongs to the shop.
    */
   it("classifies the prefixed person columns too", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const result = await db.execute(sql`
       select table_name, column_name
       from information_schema.columns

@@ -3,7 +3,7 @@ import { and, eq, gt, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { CAPABILITY_MAX_TTL_MS, CAPABILITY_MIN_TTL_MS } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import {
   issueBookingCapability,
   MAX_LIVE_CAPABILITIES_PER_PURPOSE,
@@ -17,7 +17,7 @@ import { bookingCapabilities } from "./schema";
 import { setTripStatus, upcomingTripsWithCounts } from "./trips";
 
 async function seededContext() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = fileCtx;
   const trips = await upcomingTripsWithCounts(db, shop.id);
   const open = trips.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
   const other = trips.find((t) => t.title.startsWith("Night Dive"));
@@ -40,6 +40,10 @@ async function bookVisitor(
   if (!outcome.ok) throw new Error("expected booking to succeed");
   return outcome.bookingId;
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const fileCtx = fileScopedShopContext();
 
 describe("booking capabilities (in-memory PGlite)", () => {
   it("issues a token that verifies back to the same booking", async () => {

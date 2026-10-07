@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getDbPoolConfig } from "./db-pool-config";
+import { getDbPoolConfig, isPgBouncerUrl } from "./db-pool-config";
 
 describe("getDbPoolConfig", () => {
   it("defaults to a small pool sized for many concurrent serverless instances", () => {
@@ -36,5 +36,23 @@ describe("getDbPoolConfig", () => {
       idleTimeoutMillis: 10_000,
       connectionTimeoutMillis: 5_000,
     });
+  });
+
+  it("doubles the default on Neon's pooled endpoint, where a client connection is not a backend", () => {
+    const pooled =
+      "postgresql://u:p@ep-cool-name-123456-pooler.us-east-2.aws.neon.tech/db?sslmode=require";
+    expect(getDbPoolConfig({ DATABASE_URL: pooled }).max).toBe(10);
+    // An explicit override still wins.
+    expect(getDbPoolConfig({ DATABASE_URL: pooled, DATABASE_POOL_MAX: "4" }).max).toBe(4);
+  });
+
+  it("keeps five on a direct connection, or anything it cannot read", () => {
+    const direct =
+      "postgresql://u:p@ep-cool-name-123456.us-east-2.aws.neon.tech/db?sslmode=require";
+    expect(getDbPoolConfig({ DATABASE_URL: direct }).max).toBe(5);
+    expect(getDbPoolConfig({ DATABASE_URL: "not a url" }).max).toBe(5);
+    // A database *named* like a pooler is not a pooler host.
+    expect(isPgBouncerUrl("postgresql://u:p@db.internal/ep-x-pooler")).toBe(false);
+    expect(isPgBouncerUrl(undefined)).toBe(false);
   });
 });

@@ -14,7 +14,7 @@ import { describe, expect, it } from "vitest";
  * could hold the lot for a row that cannot have changed between the first read
  * and the last.
  *
- * They share one memoized read now — `shopBySlugCached` (`src/db/shops.ts`),
+ * They share one memoized read now — `shopBySlugCached` (`src/db/shops-cached.ts`),
  * whose scope is measured in `src/db/shop-by-slug-cache.test.ts`. What this
  * file stops is the sixth reader: none of these components can hand the row to
  * the next (separate boundaries, and a prop would need a read above
@@ -72,7 +72,7 @@ describe("the public storefront's shop read", () => {
     expect(
       offenders,
       "these read the shop with the unmemoized getShopBySlug, so this render pays for the row again — " +
-        "use shopBySlugCached from @/db/shops",
+        "use shopBySlugCached from @/db/shops-cached",
     ).toEqual([]);
   });
 

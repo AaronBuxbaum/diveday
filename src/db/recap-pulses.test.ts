@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import {
   getRecapPulseForBooking,
@@ -28,7 +28,7 @@ import { upcomingTripsWithCounts } from "./trips";
 const OTHER_SHOP_ID = "00000000-0000-0000-0000-000000000000";
 
 async function pulseContext(divers = ["Pulse Diver"]) {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id);
   const charter = trips.find(
     (trip) => !trip.course && trip.capacity - trip.booked >= divers.length,
@@ -61,6 +61,10 @@ async function pulseContext(divers = ["Pulse Diver"]) {
 
 const rowsFor = (db: Awaited<ReturnType<typeof pulseContext>>["db"], bookingId: string) =>
   db.select().from(recapPulses).where(eq(recapPulses.bookingId, bookingId));
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 describe("submitRecapPulse", () => {
   it("files one pulse and reads it back as codes, never as a sentence", async () => {

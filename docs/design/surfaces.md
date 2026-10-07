@@ -567,7 +567,7 @@ the card reader is not built and no photo capture is added; the certification fo
 [its canvas](canvases/20260827-people-not-lists/README.md), built as slice 8b. This entry replaces
 the "unanswered, and known to be" record that stood here since issue #780. Two rules are pinned in
 code: the status section renders nothing when `buildDiverStatus` is empty
-(`_lib/status.test.ts`, `_components/DiverStatusLedger.test.tsx`), and exactly one
+(`src/lib/diver-status.test.ts`, `_components/DiverStatusLedger.test.tsx`), and exactly one
 primary-weight control lives on the page (`_lib/record-primaries.test.ts`).
 
 - **One idea:** this diver, ready or not — and the one fix if not.

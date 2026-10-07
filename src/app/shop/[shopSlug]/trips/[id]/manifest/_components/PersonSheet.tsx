@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { groupLabelClass } from "@/components/ui/ledger";
 import { SHEET_PANEL_CLASS, SheetHeader } from "@/components/ui/sheet";
-import { useExitAnimation } from "@/components/useExitAnimation";
-import { useFocusTrap } from "@/components/useFocusTrap";
+import { useDialog } from "@/components/useDialog";
 import { motionMs } from "@/lib/motion";
 
 /**
@@ -106,32 +105,18 @@ export function PersonSheet({
   const titleId = useId();
   const descriptionId = useId();
   const sheetId = useId();
-  const { mounted, closing } = useExitAnimation(open, SHEET_DURATION_MS);
-
-  useFocusTrap(open, sheetRef);
-
   const close = useCallback(() => setOpen(false), []);
-
-  useEffect(() => {
-    if (!mounted) return;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [mounted]);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
+  const { mounted, closing } = useDialog({
+    open,
+    // Escape hands focus straight back to the name that opened the sheet.
+    onClose: () => {
       close();
       triggerRef.current?.focus();
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [close, open]);
+    },
+    containerRef: sheetRef,
+    exitMs: SHEET_DURATION_MS,
+    lockScroll: true,
+  });
 
   const overlay = mounted ? (
     // biome-ignore lint/a11y/noStaticElementInteractions: the backdrop is a presentational click-away surface

@@ -132,38 +132,42 @@ function renderRoster({
 }) {
   return render(
     <RosterSection
-      shopSlug="blue-mantis"
-      shopTimezone="America/New_York"
-      locale="en-US"
-      tripId="trip-1"
-      booked={roster.length}
-      capacity={12}
-      roster={roster}
-      readinessByBooking={readiness}
-      waiverByBooking={waivers}
-      rentalFitByBooking={rentalFit ?? (new Map() as RentalFitByBooking)}
-      nitroxByBooking={new Map() as NitroxByBooking}
-      requiresPayment={requiresPayment}
-      paymentsConnected={paymentsConnected}
-      cancellationDeadline={null}
-      markWaiverInPersonAction={noRefusal}
-      markPaymentAction={noop}
-      mayWriteOffPayment={false}
-      canManageOrders={canManageOrders}
-      removeBookingAction={noop}
-      confirmIdentityAction={noop}
-      splitIdentityAction={noop}
-      sameNameHeldSeats={sameNameHeldSeats}
-      splitAsksDateOfBirth={splitAsksDateOfBirth}
-      notesByBooking={new Map()}
-      addNoteAction={noop}
-      deleteNoteAction={noop}
-      saveEmergencyContactAction={noop}
-      depthUnit="meters"
-      tripDate="2026-08-28"
-      compact={compact}
-      addDiverGroup={addDiverGroup}
-      arrival={arrival}
+      trip={{
+        shopSlug: "blue-mantis",
+        shopTimezone: "America/New_York",
+        locale: "en-US",
+        tripId: "trip-1",
+        booked: roster.length,
+        capacity: 12,
+        tripDate: "2026-08-28",
+        requiresPayment,
+        paymentsConnected,
+        cancellationDeadline: null,
+        mayWriteOffPayment: false,
+        canManageOrders,
+        splitAsksDateOfBirth,
+        compact,
+      }}
+      rows={{
+        roster,
+        readinessByBooking: readiness,
+        waiverByBooking: waivers,
+        rentalFitByBooking: rentalFit ?? (new Map() as RentalFitByBooking),
+        nitroxByBooking: new Map() as NitroxByBooking,
+        notesByBooking: new Map(),
+        sameNameHeldSeats,
+      }}
+      actions={{
+        markWaiverInPersonAction: noRefusal,
+        markPaymentAction: noop,
+        removeBookingAction: noop,
+        confirmIdentityAction: noop,
+        splitIdentityAction: noop,
+        addNoteAction: noop,
+        deleteNoteAction: noop,
+        saveEmergencyContactAction: noop,
+      }}
+      slots={{ addDiverGroup, arrival }}
     />,
   );
 }

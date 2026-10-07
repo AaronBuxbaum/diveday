@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { upcomingTripsWithCounts } from "@/db/trips";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { people, pushSubscriptions, trips } from "./schema";
 
 // Mocked at the transport boundary: everything above it (claiming, coalescing,
@@ -17,7 +17,7 @@ const { pushManifestChanged, savePushSubscription } = await import("./push-subsc
 const ENDPOINT = "https://fcm.googleapis.com/fcm/send/device-a";
 
 async function subscribed() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id);
   const trip = trips.find((candidate) => candidate.title === "Two-Tank Reef — Molasses & French");
   if (!trip) throw new Error("expected seeded trip missing");
@@ -36,6 +36,10 @@ async function subscribed() {
   });
   return { db, shop, trip };
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 beforeEach(() => {
   vi.mocked(sendWebPush).mockReset();

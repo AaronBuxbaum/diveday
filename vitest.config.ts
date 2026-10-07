@@ -2,7 +2,16 @@ import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 import { TEST_FROZEN_CLOCK } from "./src/test/frozen-clock";
+import { literalGlob, partitionTestFiles } from "./src/test/projects";
 import { CostWeightedSequencer } from "./src/test/shard-sequencer";
+
+/**
+ * Every test file, sorted into the project that runs it by what the file needs
+ * (a database, a DOM, a module registry of its own), read from its source. The
+ * rules and their reasoning are in src/test/projects.ts.
+ */
+const groups = partitionTestFiles(__dirname);
+const only = (files: readonly string[]) => files.map(literalGlob);
 
 export default defineConfig({
   plugins: [react()],
@@ -23,8 +32,6 @@ export default defineConfig({
     // debugging one.
     silent: "passed-only",
     setupFiles: ["./src/test/setup.ts"],
-    // Builds the shared PGlite template snapshot the db tests hydrate from.
-    globalSetup: ["./src/test/global-setup.ts"],
     // `scripts/` is in scope too: a few repo scripts carry real parsing and
     // formatting logic that nothing else would exercise (scripts/visual-report-lib.mjs
     // decides whether a reg-suit run compared anything at all), and they belong
@@ -32,7 +39,10 @@ export default defineConfig({
     // `infra/` too: the CDK stack is the only place a credential can leak into a
     // stack output, and nothing else in `pnpm check` synthesizes it — lint and
     // tsc see TypeScript, not a CloudFormation template.
-    include: ["src/**/*.test.{ts,tsx}", "scripts/**/*.test.mjs", "infra/**/*.test.ts"],
+    // The globs live in src/test/projects.ts (`TEST_GLOBS`), which sorts every
+    // file they match into exactly one project below. No `include` here: a
+    // project extending the root *concatenates* arrays, so a root include
+    // would put every file back into every project.
     // The ceiling for pure logic, which is most of the suite. `src/db/**`
     // hydrates an embedded Postgres per test and gets its own, longer one from
     // `src/test/db-timeout.ts` — read that before changing this number, and do
@@ -83,9 +93,13 @@ export default defineConfig({
     // indistinguishable from a flake, and "just re-run it" is exactly the habit
     // this repo refuses everywhere else.
     //
-    // Do not reach for `isolate: false` to win the time back — module mocks are
-    // per-file here, and a shared registry across files is a different bug.
+    // Do not reach for `isolate: false` across the board to win the time back —
+    // module mocks are per-file here, and a shared registry across files is a
+    // different bug. Only the `lib` and `guards` projects below share a worker,
+    // and src/test/projects.ts keeps every file that mocks a module out of both.
     pool: "forks",
+    // The sequencer is a root-only option: Vitest hands it every project's
+    // files at once, so `--shard` deals the whole run across all projects.
     // `--shard=i/n` (CI's four unit shards) deals files by cost, not by count:
     // a db-backed file costs a PGlite hydration per test and a pure one costs
     // almost nothing, and an equal-count deal left the slowest shard a minute
@@ -143,6 +157,33 @@ export default defineConfig({
       DIVEDAY_CLOCK: TEST_FROZEN_CLOCK,
       TZ: "UTC",
     },
+    // Each project inherits everything above (`extends: true`) and changes only
+    // what its files differ in. `pnpm test <file>`, `pnpm test:changed` and
+    // `--shard` still see one run across all of them; `--project <name>` (the
+    // `test:lib` / `test:db` / `test:ui` scripts) runs one.
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "db",
+          include: only(groups.db),
+          // Builds the shared PGlite template snapshot the db tests hydrate
+          // from. Here rather than at the root so it runs only when a db file
+          // is in the run: `pnpm test:lib` and a focused component test no
+          // longer wait for it.
+          globalSetup: ["./src/test/global-setup.ts"],
+        },
+      },
+      { extends: true, test: { name: "ui", include: only(groups.ui), environment: "jsdom" } },
+      // Pure files share a worker: no fork and no re-import of the same modules
+      // per file. Proven safe by running the project twice shuffled
+      // (`pnpm test:lib --sequence.shuffle`); a file that leaks state belongs
+      // in `node` (src/test/projects.ts says how one gets there).
+      { extends: true, test: { name: "lib", include: only(groups.lib), isolate: false } },
+      { extends: true, test: { name: "guards", include: only(groups.guards), isolate: false } },
+      { extends: true, test: { name: "scripts", include: only(groups.scripts) } },
+      { extends: true, test: { name: "node", include: only(groups.node) } },
+    ],
   },
   resolve: {
     alias: {

@@ -1,6 +1,6 @@
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import type { DiverStatusRow } from "@/lib/diver-status";
 import { formatShortDate, formatTime } from "@/lib/format";
-import type { DiverStatusRow } from "../_lib/status";
 import { statusRowText } from "./DiverStatusLedger";
 
 /** What a file row wears when the status has a gap for its kind. */

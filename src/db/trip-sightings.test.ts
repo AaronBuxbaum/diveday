@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DAY_MS, HOUR_MS } from "@/lib/clock";
 import { SIGHTING_WINDOW_DAYS } from "@/lib/sightings";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { upsertExecutedDive } from "./executed-dives";
 import { diveSites, people, personRoles, shops, tripSightings, trips } from "./schema";
 import {
@@ -17,7 +17,7 @@ import { createTrip } from "./trips";
 const NOW = new Date("2026-09-10T15:00:00Z");
 
 async function reefFixture() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const [owner] = await db
     .select({ id: people.id })
     .from(people)
@@ -54,6 +54,10 @@ async function departure(
   if (!trip) throw new Error(`createTrip refused ${title}`);
   return trip;
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 describe("recordTripSighting", () => {
   it("writes the first tap at one and counts the second on the same row", async () => {

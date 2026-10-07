@@ -6,8 +6,8 @@
  * roughly forty database round trips: `getTripOverview`'s fifteen parallel
  * reads, the manifest page's twelve and its field-guide follow-up, and the prep
  * page's own. Started all at once, a twenty-boat day is about eight hundred
- * queries from one request — against a pool of five connections
- * (`DEFAULT_POOL_MAX` in src/lib/db-pool-config.ts). They do not run at once;
+ * queries from one request — against a pool of five to ten connections
+ * (`getDbPoolConfig` in src/lib/db-pool-config.ts). They do not run at once;
  * they queue, and while they queue that one document owns the instance's whole
  * pool. Any staff role can open the page and hold refresh.
  *

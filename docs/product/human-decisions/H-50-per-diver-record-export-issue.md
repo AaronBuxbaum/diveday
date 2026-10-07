@@ -13,6 +13,6 @@ A yes or a no, and if yes, whether it ships as part of `waiver_records.csv` or a
 
 ## Unblocks / follow-up
 
-No code is blocked on this — the export ships now with every other field of the diver's own signed evidence (status, signature, timestamps, template text) and the column absent, stated in the bundle's own README. Once answered, restoring the column is a one-line change to the `waiver_records.csv` block in `loadDiverExportBundleInput`.
+No code is blocked on this — the export ships now with every other field of the diver's own signed evidence (status, signature, timestamps, template text) and the column absent, stated in the bundle's own README. Once answered, restoring the column is a one-line change to the `waiver_records.csv` entry in `src/db/export-diver-files.ts`.
 
 Part of the [human decision log](README.md#decision-register).

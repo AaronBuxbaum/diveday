@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useId, useRef } from "react";
+import { useId, useRef } from "react";
 import { createPortal } from "react-dom";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import { useExitAnimation } from "@/components/useExitAnimation";
-import { useFocusTrap } from "@/components/useFocusTrap";
+import { useDialog } from "@/components/useDialog";
 import { motionMs } from "@/lib/motion";
 
 /**
@@ -17,7 +16,7 @@ import { motionMs } from "@/lib/motion";
  * or card ancestor with its own `backdrop-blur`/`transform` would otherwise
  * become the containing block for `position: fixed`, clipping the backdrop to
  * that ancestor's box instead of the viewport). Reuses the entrance/exit
- * timing and focus-trap primitives already used by `CommandPalette` rather
+ * timing, focus trap and Escape `CommandPalette` uses (`useDialog`) rather
  * than inventing a second.
  */
 export function Modal({
@@ -33,19 +32,14 @@ export function Modal({
   children: React.ReactNode;
   className?: string;
 }) {
-  const { mounted, closing } = useExitAnimation(open, motionMs("base"));
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
-  useFocusTrap(open, dialogRef);
-
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open, onClose]);
+  const { mounted, closing } = useDialog({
+    open,
+    onClose,
+    containerRef: dialogRef,
+    exitMs: motionMs("base"),
+  });
 
   if (!mounted) return null;
 

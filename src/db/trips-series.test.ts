@@ -2,7 +2,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { calendarDateWeekday } from "@/lib/calendar-date";
 import { EVERY_WEEKDAY, weekdaySetFrom } from "@/lib/recurrence";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { listDiveSites } from "./dive-sites";
 import {
   bookings,
@@ -93,9 +93,13 @@ async function occurrenceDatesOf(
     .sort();
 }
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
+
 describe("recurring trip series (in-memory PGlite)", () => {
   it("materializes a weekly run of identical, independent trips", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const result = await createTripSeries(
       db,
@@ -140,7 +144,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
   });
 
   it("materializes a private charter series, keeping all occurrences private", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const result = await createTripSeries(
       db,
@@ -158,7 +162,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
   });
 
   it("puts a run on more than one weekday a week — Monday and Thursday is one series", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const result = await createTripSeries(
       db,
       seriesInput({
@@ -183,7 +187,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
   });
 
   it("runs daily when every weekday is selected", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const result = await createTripSeries(
       db,
       seriesInput({
@@ -198,7 +202,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
   });
 
   it("has no limit: an open-ended run fills the horizon and keeps going", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     // The old model capped a series at 26 dates. A daily run across the
     // horizon is already four times that, and it does not stop there.
     const result = await createTripSeries(
@@ -236,7 +240,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
    * reaches by tapping the shop's own word.
    */
   it("carries the shop's trip tag onto the seed instance and every roll", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const lens = await createTripLens(db, shop.id, "After dark");
     if (!lens) throw new Error("lens not created");
 
@@ -270,7 +274,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
 
   it("leaves a series with no kind of day without one", async () => {
     // The inverse, so the fix above cannot be a blanket write.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const result = await createTripSeries(
       db,
       seriesInput({ shopId: shop.id, endsOn: "2030-09-21" }),
@@ -280,7 +284,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
   });
 
   it("rolling twice over the same window changes nothing the second time", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const result = await createTripSeries(db, seriesInput({ shopId: shop.id }));
     if (!result) throw new Error("series not created");
     const now = at("2030-10-07T12:00:00.000Z");
@@ -291,7 +295,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
   });
 
   it("never puts a deleted date back on the board", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const result = await createTripSeries(db, seriesInput({ shopId: shop.id }));
     if (!result) throw new Error("series not created");
     const [, second] = result.trips;
@@ -308,7 +312,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
   });
 
   it("never re-creates a date staff moved somewhere else", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const result = await createTripSeries(db, seriesInput({ shopId: shop.id }));
     if (!result) throw new Error("series not created");
     const [, second] = result.trips;
@@ -324,7 +328,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
   });
 
   it("edits and cancels one instance without touching its siblings", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const result = await createTripSeries(
       db,
       seriesInput({
@@ -360,7 +364,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
   });
 
   it("applies one date's details across the future series, skipping over-booked dates", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const now = at("2030-08-15T00:00:00.000Z");
     const result = await createTripSeries(
       db,
@@ -417,7 +421,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
     // Issue #1165: `trips.revision` ships as RFC 5545 SEQUENCE, so a bulk apply
     // that bumped every instance would re-alert every diver on a date whose day
     // did not change at all.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const now = at("2030-08-15T00:00:00.000Z");
     const result = await createTripSeries(
       db,
@@ -470,7 +474,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
   });
 
   it("skips a sibling whose recorded roll call would be orphaned by the new dive count", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const now = at("2030-08-15T00:00:00.000Z");
     const result = await createTripSeries(
       db,
@@ -525,7 +529,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
   });
 
   it("cancels every upcoming date at once, leaves past dates alone, and stops the repeat", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const now = at("2030-08-15T00:00:00.000Z");
     const result = await createTripSeries(
       db,
@@ -561,7 +565,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
   });
 
   it("stops and restarts a repeat without disturbing the dates already on the board", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const now = at("2030-09-07T12:00:00.000Z");
     const result = await createTripSeries(db, seriesInput({ shopId: shop.id }));
     if (!result) throw new Error("series not created");
@@ -592,7 +596,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
   });
 
   it("widens a cadence in place: a second weekday appears on the board", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const now = at("2030-09-07T12:00:00.000Z");
     const result = await createTripSeries(db, seriesInput({ shopId: shop.id }));
     if (!result) throw new Error("series not created");
@@ -615,7 +619,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
   });
 
   it("narrowing a cadence cancels nothing — it reports what no longer fits", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const now = at("2030-09-07T12:00:00.000Z");
     const result = await createTripSeries(
       db,
@@ -640,7 +644,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
   });
 
   it("reports how many of the orphaned dates carry divers before anything is canceled", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const now = at("2030-09-07T12:00:00.000Z");
     const result = await createTripSeries(
       db,
@@ -669,7 +673,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
   });
 
   it("cancels the orphaned dates only when asked, and leaves the ones that sailed", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const now = at("2030-09-30T12:00:00.000Z");
     const result = await createTripSeries(
       db,
@@ -704,7 +708,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
   });
 
   it("keeps the phase when the interval changes — the anchor never moves", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const now = at("2030-09-07T12:00:00.000Z");
     const result = await createTripSeries(
       db,
@@ -727,7 +731,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
   });
 
   it("refuses a cadence edit that would leave the run unable to generate", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const result = await createTripSeries(db, seriesInput({ shopId: shop.id }));
     if (!result) throw new Error("series not created");
     expect(
@@ -745,7 +749,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
   });
 
   it("leaves a deploy-window series inert instead of failing the sweep every night", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const result = await createTripSeries(db, seriesInput({ shopId: shop.id }));
     if (!result) throw new Error("series not created");
     // Exactly what the release *before* the cadence columns writes: a row on
@@ -763,7 +767,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
   });
 
   it("rolls least-recently-rolled first, so no run can be starved by another", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const now = at("2030-10-07T12:00:00.000Z");
     const first = await createTripSeries(db, seriesInput({ shopId: shop.id, title: "First" }));
     const second = await createTripSeries(
@@ -789,21 +793,21 @@ describe("recurring trip series (in-memory PGlite)", () => {
   });
 
   it("rejects a series with an invalid dive count", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     expect(
       await createTripSeries(db, seriesInput({ shopId: shop.id, plannedDives: 9 })),
     ).toBeNull();
   });
 
   it("rejects a cadence that names no weekday at all", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     // The refusal that matters: an empty set would create a series row with no
     // dates and no complaint.
     expect(await createTripSeries(db, seriesInput({ shopId: shop.id, weekdays: 0 }))).toBeNull();
   });
 
   it("gives every occurrence of a multi-day series its own meeting days", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const created = await createTripSeries(
       db,
       seriesInput({
@@ -847,7 +851,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
   });
 
   it("holds the shop's published hour across a daylight-saving change", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     // US DST ends 2030-11-03. A 07:00 New York departure is 11:00Z before it
     // and 12:00Z after — the *instant* moves so the clock on the wall doesn't.
     const created = await createTripSeries(
@@ -891,7 +895,7 @@ describe("recurring trip series (in-memory PGlite)", () => {
  */
 describe("the horizon roll never carries a self-guided mark onto a course session", () => {
   it("materializes course instances with the mark cleared", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [course] = await db
       .select({ id: courses.id })
       .from(courses)

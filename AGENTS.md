@@ -36,12 +36,12 @@ provider-specific folders are adapters and must not introduce unique requirement
 | `pnpm dev` | dev server at localhost:3000; wait for **`dev: serving … — warmed in Ns`**, not Next's `✓ Ready`. One per checkout (the **run** skill) |
 | `pnpm task:context <area>` | bounded paths, invariants, and validation for a task |
 | `pnpm test <file> --reporter=dot` | focused Vitest run |
-| `pnpm test:changed` | before you push: the tests your diff reaches. After a `src/db/schema.ts` edit, run the schema guards by path instead |
+| `pnpm test:changed` | before you push: the tests your diff reaches. After a `src/db/schema/` edit, run the schema guards by path instead |
 | `pnpm typecheck` | tsc |
 | `pnpm lint` / `pnpm lint:fix` | Biome check / autofix |
-| `pnpm check:repo` | 44 static guards, concurrently; each names itself and the offending line. The *why* of each: [docs/agents/repo-checks.md](docs/agents/repo-checks.md) |
+| `pnpm check:repo` | 45 static guards, concurrently; each names itself and the offending line. The *why* of each: [docs/agents/repo-checks.md](docs/agents/repo-checks.md) |
 | `pnpm e2e <spec> --reporter=line` | build, then one Playwright spec; `pnpm e2e:run <spec>` reuses a `pnpm e2e:build` |
-| `pnpm db:generate` | a Drizzle migration after editing `src/db/schema.ts` (the **schema-change** skill) |
+| `pnpm db:generate` | a Drizzle migration after editing `src/db/schema/` (the **schema-change** skill) |
 | `node scripts/screenshot.mjs <path…>` | phone and desktop PNGs of a page against a running `pnpm dev` |
 
 The rest (`pnpm check`, `check:context-budget`, `gates`, `agent:health`, `visual`, `build`,
@@ -64,7 +64,7 @@ when you open the file.
 | Where a diver can go on a shop's public pages | `src/components/PublicShopNav.tsx`, assembled in `src/app/s/[shopSlug]/layout.tsx` — never a per-page cross-link |
 | Bearer-token pages (waiver signing, trip-prep "ready", recap, email verify, password reset, staff calendar feed) | `src/app/waivers/[token]`, `src/app/ready/[token]`, `src/app/recap/[token]`, `src/app/verify/[token]`, `src/app/reset-password/[token]`, `src/app/calendar/[token]` — the URL *is* the capability |
 | Account lifecycle (sign-up welcome/verify, forgot/reset password) | `src/app/onboard/`, `src/app/forgot-password/`; tokens in `src/db/account-tokens.ts` / `src/lib/account-tokens.ts`; accounts in `src/db/user-accounts.ts` |
-| Course pages (public content / staff roster + editor) | `src/app/s/[shopSlug]/courses/**` and `src/app/shop/[shopSlug]/courses/**`; content shapes in `src/lib/courses.ts`; templates in `src/db/course-templates.ts`; progression order in `src/db/courses.ts` |
+| Course pages (public content / staff roster + editor) | `src/app/s/[shopSlug]/courses/**` and `src/app/shop/[shopSlug]/courses/**`; content shapes in `src/lib/courses.ts`; templates in `src/content/course-templates.ts`; progression order in `src/db/courses.ts` |
 | The staff schedule builder (add / move / copy / remove a departure) | `src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.tsx` + `schedule/board/actions.ts`; mutations in `src/db/trips-schedule.ts`, reached through the `@/db/trips` barrel. The one place a trip is created |
 | A repeating trip (every Saturday, Mon+Thu, daily) | `src/lib/recurrence.ts` (pure cadence math), `src/db/trips-series.ts` (materialization), nightly roll at `src/app/api/cron/trip-series/` |
 | Staff surfaces (all `/shop/**`, auth-gated) | `src/app/shop/` |
@@ -80,7 +80,7 @@ when you open the file.
 | The four lines every staff page opens with (session, shop, tenant, permission) | `requireShopSurface` in `src/lib/session.ts`; every refusal *throws* |
 | Telling a staffer what just happened (the `?notice=` redirect) | `src/lib/staff-notices.ts` — `noticeUrl`, `noticeFromParam`, `shopPath`; never hand-build the string |
 | Readiness words and tone ("Blocked" / "Ready", everywhere) | `src/i18n/readiness-labels.ts` |
-| DB schema (source of truth — never read `drizzle/`) | `src/db/schema.ts`, by Grep and range |
+| DB schema (source of truth — never read `drizzle/`) | `src/db/schema/`, by Grep and range |
 | DB client / test db factory | `src/db/client.ts` (`getDb()`, `createTestDb()`) |
 | Queries and seed data | `src/db/shops.ts`; barrels `src/db/trips.ts` and `src/db/seed.ts` — import from the barrel, edit the sibling; demo data is a new `src/db/seed-<scenario>.ts` |
 | Retention / pruning of append-only tables | `src/lib/retention.ts` (`RETENTION_DAYS`), `src/db/retention.ts`, `src/app/api/cron/retention/` |
@@ -98,7 +98,7 @@ when you open the file.
 | Data portability (CSV export/import), scheduled backups | `src/db/export.ts` / `src/db/import.ts`, `src/features/backup-export/`; staff UI under `src/app/shop/[shopSlug]/settings/` — security-sensitive, see hard rules |
 | Offline boat manifests | `src/lib/offline-manifests.ts` + `offline-manifest-store.ts`; viewer `src/app/offline-manifest/`; worker `src/worker/manifest-sw.ts` |
 | A dive site's briefing — what a diver reads, and which field writes it | `dive-sites/_components/SiteFields.tsx` writes it, `_components/TripDayPlan.tsx` reads it; the field guide is `src/lib/dive-site-field-guide.ts` + `src/i18n/marine-life-labels.ts` |
-| Starting content a shop copies, and species it picks | `src/db/dive-site-templates.ts`, `src/db/course-templates.ts` (copied, then the shop's); `src/db/marine-life-catalog.ts` (DiveDay's words, photos under `public/marine-life/`, added with `node scripts/fetch-marine-life-photo.mjs`) |
+| Starting content a shop copies, and species it picks | `src/content/dive-site-templates.ts`, `src/content/course-templates.ts` (copied, then the shop's); `src/db/marine-life-catalog.ts` (DiveDay's words, photos under `public/marine-life/`, added with `node scripts/fetch-marine-life-photo.mjs`) |
 | Domain logic (framework-free) | `src/lib/` — capacity in `trips.ts`, dates in `format.ts` |
 | Feature modules | `src/features/<feature>/` — `index.ts` is the whole public surface; `calendar-sync`, `backup-export`, `integrations` |
 | Outbound integrations a shop connects for itself (Shopify, QuickBooks, Xero, Zapier) | `src/features/integrations/`; rows in `src/db/integrations.ts` + `src/db/integration-events.ts`; staff at `src/app/shop/[shopSlug]/settings/integrations`; callbacks under `src/app/api/integrations/` |

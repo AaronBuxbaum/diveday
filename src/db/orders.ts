@@ -14,6 +14,7 @@ import {
 } from "drizzle-orm";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { log } from "@/lib/log";
 import { majorToMinor } from "@/lib/money";
 import {
   type InvoiceCustomerAddress,
@@ -22,7 +23,7 @@ import {
   isUsableInvoiceCustomerAddress,
 } from "@/lib/payments/invoicing";
 import { canPersonManageOrders } from "./authz";
-import { type AppDb, type DbExecutor, queryAll } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { grantPackageEntitlementsForPaidOrder } from "./dive-packages";
 import { enqueueOrderIntegrationEvent } from "./integration-events";
 import { type OffsetPage, offsetPage, PAGE_SIZE } from "./paging";
@@ -34,6 +35,7 @@ import {
   startPaymentOperation,
 } from "./payment-operations";
 import { setBookingPayment, setBookingPaymentIfNotFinal } from "./payments";
+import { queryAll } from "./query-helpers";
 import type { Order, OrderLineItemKind, OrderStatus, PaymentOperationIntent } from "./schema";
 import {
   bookings,
@@ -1012,7 +1014,7 @@ async function applyOrderUpdate(
           : 0;
 
     if (!ALLOWED_ORDER_TRANSITIONS[current.status].has(status)) {
-      console.error("applyOrderUpdate: refused an illegal order status transition", {
+      log("order.illegal_status_transition", "error", {
         orderId: current.id,
         shopId: current.shopId,
         from: current.status,
@@ -1151,7 +1153,7 @@ export async function markOrderPaidByInvoiceId(
     .limit(1);
   if (!order) return null;
   if (!accountMatches(expectedAccountId, order.stripeAccountId)) {
-    console.error("markOrderPaidByInvoiceId: refused an account mismatch", {
+    log("order.paid_account_mismatch", "error", {
       orderId: order.id,
       shopId: order.shopId,
       expectedAccountId,
@@ -1178,7 +1180,7 @@ export async function markOrderVoidedByInvoiceId(
     .limit(1);
   if (!order) return null;
   if (!accountMatches(expectedAccountId, order.stripeAccountId)) {
-    console.error("markOrderVoidedByInvoiceId: refused an account mismatch", {
+    log("order.voided_account_mismatch", "error", {
       orderId: order.id,
       shopId: order.shopId,
       expectedAccountId,

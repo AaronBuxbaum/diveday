@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { configuredValue } from "@/lib/configured";
+import { logStripeRequestThrew } from "./stripe-request-log";
 
 /**
  * The Stripe Connect seam: let a shop authorize its own Standard Stripe
@@ -122,7 +123,8 @@ export function stripeConnectProvider(
         const body = oauthTokenResponseSchema.safeParse(await response.json());
         if (!body.success) return { status: "failed" };
         return { status: "connected", stripeAccountId: body.data.stripe_user_id };
-      } catch {
+      } catch (error) {
+        logStripeRequestThrew("exchange_connect_code", error);
         return { status: "failed" };
       }
     },
@@ -145,7 +147,8 @@ export function stripeConnectProvider(
             defaultCurrency: body.data.default_currency ?? "usd",
           },
         };
-      } catch {
+      } catch (error) {
+        logStripeRequestThrew("retrieve_account_status", error);
         return { status: "failed" };
       }
     },
@@ -161,7 +164,8 @@ export function stripeConnectProvider(
           }).toString(),
         });
         return { status: response.ok ? "ok" : "failed" };
-      } catch {
+      } catch (error) {
+        logStripeRequestThrew("deauthorize_account", error);
         return { status: "failed" };
       }
     },

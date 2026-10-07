@@ -2,12 +2,16 @@ import { randomUUID } from "node:crypto";
 // @vitest-environment node
 import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import {
+  COURSE_TEMPLATES,
+  courseTemplateSnapshot,
+  getCourseTemplate,
+} from "@/content/course-templates";
 import { nowDate, nowMs } from "@/lib/clock";
 import { canonicalAgency, courseSlug } from "@/lib/courses";
 import { seededShopContext, unseededTestDb } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
-import { COURSE_TEMPLATES, courseTemplateSnapshot, getCourseTemplate } from "./course-templates";
 import {
   getCourseBySlug,
   getCourseTemplateUpdate,
@@ -64,7 +68,7 @@ async function courseContext() {
 
 /**
  * Test-local catalog fixture builder. Production creates catalog entries by
- * copying a DiveDay-published template (`src/db/course-templates.ts`); these
+ * copying a DiveDay-published template (`src/content/course-templates.ts`); these
  * tests need arbitrary shapes, so they insert directly.
  */
 async function createCourse(db: AppDb, input: NewCourse) {

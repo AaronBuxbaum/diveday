@@ -1,5 +1,5 @@
 // i18n-exempt-file: shop-editable starter briefing content, not app UI copy — see the doc comment
-import type { GlobalDiveSiteBriefing } from "./schema";
+import type { GlobalDiveSiteBriefing } from "@/db/schema";
 
 /**
  * DiveDay's published dive-site catalog: real places, written up as a briefing

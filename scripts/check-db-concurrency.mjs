@@ -31,7 +31,7 @@ import { createScanner, LanguageVariant, SyntaxKind } from "typescript/unstable/
  * a transaction, which in this codebase means a parameter typed `DbExecutor`
  * (the union) or `AppTransaction`.
  *
- * The fix is never "make it sequential" either. `queryAll` (`src/db/client.ts`)
+ * The fix is never "make it sequential" either. `queryAll` (`src/db/query-helpers.ts`)
  * asks the executor which one it is and fans out only when that is real, so a
  * reader shared between a page render and a transaction does not have to
  * choose. That is what this check points at.
@@ -91,8 +91,8 @@ const FAN_OUT_MEMBERS = new Set(["all", "allSettled"]);
  */
 const ESCAPE_HATCH = /diveday:allow-db-concurrency:\s*\S/;
 
-/** `src/db/client.ts` is where `queryAll` decides this, so it is where the fan-out lives. */
-const ALLOWED_FILES = new Set([path.normalize("src/db/client.ts")]);
+/** `src/db/query-helpers.ts` is where `queryAll` decides this, so it is where the fan-out lives. */
+const ALLOWED_FILES = new Set([path.normalize("src/db/query-helpers.ts")]);
 
 async function walk(relativeDirectory) {
   let entries;
@@ -304,7 +304,7 @@ async function main() {
       "A transaction is one checked-out pg client, so this fan-out is not parallel — pg queues it and warns that pg@9 will refuse it (issue #517, then the 2026-08-14 counter check-in).",
     );
     console.error(
-      "Use `queryAll(db, [...])` from src/db/client.ts, which fans out on the pool and runs sequentially in a transaction — do not serialize a hot roster read by hand.",
+      "Use `queryAll(db, [...])` from src/db/query-helpers.ts, which fans out on the pool and runs sequentially in a transaction — do not serialize a hot roster read by hand.",
     );
     console.error(
       "If the Promise.all is genuinely not over queries on that executor, say so on the line: `diveday:allow-db-concurrency: <why>`.",

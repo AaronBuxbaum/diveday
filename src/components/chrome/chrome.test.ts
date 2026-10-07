@@ -308,9 +308,7 @@ describe("the chrome bar", () => {
     expect(bar).not.toContain("ConnectivityStatus");
 
     // The two surfaces the ADR names by hand, reading the bar's own height.
-    const board = await read(
-      "src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.tsx",
-    );
+    const board = await read("src/app/shop/[shopSlug]/schedule/board/_components/AddPanel.tsx");
     expect(board).toContain("sticky top-(--chrome-h)");
     const publicSchedule = await read("src/app/s/[shopSlug]/page.tsx");
     expect(publicSchedule).toContain('"top-(--chrome-h)"');

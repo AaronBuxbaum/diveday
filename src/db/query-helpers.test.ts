@@ -1,35 +1,7 @@
 import { DrizzleQueryError } from "drizzle-orm/errors";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { unseededTestDb } from "@/test/db";
-
-vi.mock("./seed", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./seed")>();
-  return {
-    ...actual,
-    seedIfEmpty: vi.fn(actual.seedIfEmpty),
-  };
-});
-
-vi.mock("./demo-refresh", () => ({
-  refreshCanonicalDemoSchedule: vi.fn(async () => ({
-    found: true,
-    runwayDays: 30,
-    refreshed: false,
-    today: "already",
-  })),
-}));
-
-const {
-  isDemoShopSeeded,
-  isTransactionExecutor,
-  queryAll,
-  refreshPgliteDemo,
-  seedProductionDb,
-  sqlStateOf,
-  violatesUniqueIndex,
-} = await import("./client");
-const { seedIfEmpty } = await import("./seed");
-const { refreshCanonicalDemoSchedule } = await import("./demo-refresh");
+import { isTransactionExecutor, queryAll, sqlStateOf, violatesUniqueIndex } from "./query-helpers";
 
 /** A driver error as it actually arrives: wrapped, with the SQLSTATE one layer down. */
 function wrappedDriverError(fields: { code: string; constraint?: string }) {
@@ -118,45 +90,5 @@ describe("queryAll", () => {
     await db.transaction(async (tx) => {
       expect(isTransactionExecutor(tx)).toBe(true);
     });
-  });
-});
-
-describe("seedProductionDb (cold-start fast path)", () => {
-  it("runs the seed on a genuinely fresh database", async () => {
-    const db = await unseededTestDb();
-    await expect(isDemoShopSeeded(db)).resolves.toBe(false);
-
-    await seedProductionDb(db);
-
-    expect(seedIfEmpty).toHaveBeenCalledTimes(1);
-    await expect(isDemoShopSeeded(db)).resolves.toBe(true);
-  });
-
-  it("skips the lock and the seed once the demo-shop marker is present", async () => {
-    const db = await unseededTestDb();
-    // Seed once directly (bypassing the fast path under test) so the marker
-    // is present before we exercise seedProductionDb.
-    await seedIfEmpty(db);
-    await expect(isDemoShopSeeded(db)).resolves.toBe(true);
-    vi.mocked(seedIfEmpty).mockClear();
-
-    const lock = vi.fn(async () => undefined);
-    await seedProductionDb(db, { lock });
-
-    expect(lock).not.toHaveBeenCalled();
-    expect(seedIfEmpty).not.toHaveBeenCalled();
-  });
-});
-
-describe("refreshPgliteDemo", () => {
-  it("runs the demo keeper for local PGlite and refuses configured databases", async () => {
-    const db = await unseededTestDb();
-    vi.mocked(refreshCanonicalDemoSchedule).mockClear();
-
-    await refreshPgliteDemo(db, "");
-    expect(refreshCanonicalDemoSchedule).toHaveBeenCalledWith(db);
-
-    await refreshPgliteDemo(db, "postgres://configured.example/db");
-    expect(refreshCanonicalDemoSchedule).toHaveBeenCalledTimes(1);
   });
 });

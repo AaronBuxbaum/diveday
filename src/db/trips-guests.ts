@@ -21,6 +21,7 @@ import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { listTripInvitations } from "./trip-invitations";
 import { listTripLastMinutePromoRecipients, listTripLastMinutePromos } from "./trip-promos";
 import { getTripRoster, getTripWaitlist, getTripWithBooked } from "./trips";
+import type { TripSharedReads } from "./trips-shared-reads";
 
 /**
  * Everything the trip's Guests page is about, in one call — the last of the
@@ -56,8 +57,13 @@ export async function getTripGuests(
   shop: TripGuestsShop,
   tripId: string,
   filters: TripGuestsFilters = {},
+  /** The reads shared with `getTripOverview` (`./trips-shared-reads`); omitted, this reads its own. */
+  sharedReads?: TripSharedReads | null | Promise<TripSharedReads | null>,
 ) {
-  const trip = await getTripWithBooked(db, shop.id, tripId);
+  const shared = await sharedReads;
+  // Handed reads that found no departure: the answer is already in.
+  if (sharedReads !== undefined && shared === null) return null;
+  const trip = shared ? shared.trip : await getTripWithBooked(db, shop.id, tripId);
   if (!trip) return null;
 
   const diverQuery = filters.diverQuery?.trim() ?? "";
@@ -88,10 +94,10 @@ export async function getTripGuests(
     courseNextStepByBooking,
   ] = await Promise.all([
     getTripRoster(db, shop.id, tripId),
-    getTripRequirements(db, shop.id, tripId),
-    getTripSiteRequirement(db, shop.id, tripId),
-    listTripReadiness(db, shop.id, tripId),
-    listTripPrepDivers(db, shop.id, tripId),
+    shared ? shared.requirement : getTripRequirements(db, shop.id, tripId),
+    shared ? shared.siteRequirement : getTripSiteRequirement(db, shop.id, tripId),
+    shared ? shared.readiness : listTripReadiness(db, shop.id, tripId),
+    shared ? shared.prepDivers : listTripPrepDivers(db, shop.id, tripId),
     getTripWaitlist(db, shop.id, tripId),
     listTripInvitations(db, shop.id, tripId),
     listLastMinuteList(db, shop.id),

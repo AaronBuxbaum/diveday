@@ -22,7 +22,7 @@ import { hasSailed } from "@/lib/trips";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
 import { inTrainingBefore, listCourseSeatsInTraining } from "./certifications-in-training";
-import { type AppDb, type DbExecutor, isUniqueConstraintViolation, queryAll } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { consumeEntitlementsForBooking, releaseEntitlementsForBooking } from "./dive-packages";
 import { releaseUnclaimedGearReservations } from "./gear";
@@ -31,6 +31,7 @@ import { recordDiverActivity, recordTripActivity } from "./operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { findOrCreatePerson } from "./people";
 import { storedPhone } from "./person-phone";
+import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import {
   bookingPayments,
@@ -473,7 +474,7 @@ export async function tripAdmissionFor(
   }
   // `queryAll`, not `Promise.all`: every caller of this gate reaches it inside
   // `createBookingRecord`'s transaction, which is one pinned client. See
-  // `queryAll` in `src/db/client.ts`.
+  // `queryAll` in `src/db/query-helpers.ts`.
   const [requirement, siteRequirement] = await queryAll(tx, [
     () => getTripRequirements(tx, shopId, tripId),
     () => getTripSiteRequirement(tx, shopId, tripId),
