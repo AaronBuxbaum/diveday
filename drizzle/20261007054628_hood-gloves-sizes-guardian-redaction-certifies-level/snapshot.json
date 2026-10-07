@@ -1,9 +1,10 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "4eb078eb-aee7-4a52-acec-407d888352fe",
+  "id": "317d658a-9893-42d8-8aab-e14d06245d3f",
   "prevIds": [
-    "11a2da8e-6c05-4016-9e1f-a7a14c012da8"
+    "11a2da8e-6c05-4016-9e1f-a7a14c012da8",
+    "917e1e40-e546-4947-abc6-fd8d980a41ea"
   ],
   "ddl": [
     {
@@ -10284,6 +10285,32 @@
       "generated": null,
       "identity": null,
       "name": "date_of_birth",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "people"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "adult_attested_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "people"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "adult_attested_by_person_id",
       "entityType": "columns",
       "schema": "public",
       "table": "people"
