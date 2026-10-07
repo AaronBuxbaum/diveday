@@ -201,6 +201,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   soft expiry — see `src/lib/trial.ts`). Both addresses are hosted mailboxes reaching the same
   people as `aaron@dive.day` always did; see
   [docs/engineering/ses-email-runbook.md](../engineering/ses-email-runbook.md#divedays-own-addresses).
+- **A third service commitment was authorized 2026-10-07 (H-101): the continuity promise.** Aaron Buxbaum, in the project thread: "We can publish that exact promise." The sentence is "If DiveDay ever shuts down, you get 90 days' notice, your export, and your backups keep running until the last day." It answers the objection the demo cannot (a new vendor closing, market audit 2026-10-07 item 46), and it rests on things that ship: the one-ZIP export (`fullShopExport`) and the weekly scheduled backup to storage the shop owns (`src/features/backup-export/`). It is one shared key, `continuityPromise` in `src/lib/marketing.ts` (`marketing.export.continuity`), rendered on `/pricing` as the answer to the FAQ row "What happens to my shop if DiveDay shuts down?" (`faq.shutdown`, beside the records row) and on `/about` as the second paragraph of the "Download every record" card. Its words are the owner's: no rewording, no added timeline or refund, and no other page carries it without a new decision. `src/lib/marketing.test.ts` pins the English word for word and the three commitments in every locale.
 - **No fabricated proof.** No invented testimonials, user counts, logos, ratings, or "trusted by"
   language — ever. When real customers exist, their words go through the product owner first.
 - **Biography is a claim like any other.** `/about` names a real person and describes real history,
@@ -814,7 +815,8 @@ band's own copy is where the photos claim belongs.
 It sits between the fee anchor and the included list rather than in the FAQ, because that is where
 the objection lands: the fee anchor has just made switching look attractive, and the next thought a
 shop owner has is about being stuck again. The `faq.dataIfNotWorking` row still answers it in words
-for a reader who scans that far.
+for a reader who scans that far, and the `faq.shutdown` row beside it carries the continuity
+promise (H-101) for the reader whose worry is DiveDay leaving rather than the shop.
 
 **The homepage records band shows both halves, in the order the copy argues them**: the import
 preview (arriving) beside the export inventory (leaving). Arriving is a picture — the importer's
@@ -933,6 +935,7 @@ structure* live; none of them may contain an English sentence:
 | Every feature page's name and one-sentence summary, listed on `/` and `/product` | `src/lib/feature-pages.ts` (the registry and `FEATURE_PHASES`), rendered by `FeatureDirectory` in `src/components/MarketingSections.tsx` | `marketing.featurePages.<page>.name` / `.summary`, and `marketing.featureChrome.phases.*` |
 | Price, plan name, included list | `src/lib/marketing.ts` (`earlyAccessPrice`) — the `$99` figure is the only literal, and the only place it exists | `marketing.price.*` in the bundles |
 | Export claim shared by home + pricing | `src/lib/marketing.ts` (`fullShopExport`) | `marketing.export.*` in the bundles |
+| Continuity promise shared by pricing + about (H-101) | `src/lib/marketing.ts` (`continuityPromise`) | `marketing.export.continuity` in the bundles |
 | Mid-season cutover claim shared by home + the guides | `src/lib/marketing.ts` (`midSeasonCutover`) | `marketing.guides.shared.cutover.*` in the bundles |
 | Shared link-preview card fields every page's `openGraph` needs | `src/lib/marketing.ts` (`sharedLinkCard`) | none — URLs and dimensions, no words |
 | Capability index on `/product`, one group per feature page | `src/lib/marketing.ts` (`productCapabilityIndex`, `capabilityGroup()`) | `marketing.capabilities.*` in the bundles; a feature page's group is titled by its `name` |

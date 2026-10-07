@@ -2655,7 +2655,8 @@
     },
     "export": {
       "claim": "Settings → Data export downloads one ZIP of plain, documented CSVs (divers, bookings, waiver records, payment history), led by a contacts file shaped for another system’s import wizard. Every stored photo (certification evidence, dive-site pictures, trip recaps) is in it as a file.",
-      "terms": "No export fee, no support ticket, no minimum stay, and the same download works on the first day of a trial."
+      "terms": "No export fee, no support ticket, no minimum stay, and the same download works on the first day of a trial.",
+      "continuity": "If DiveDay ever shuts down, you get 90 days’ notice, your export, and your backups keep running until the last day."
     },
     "capabilities": {
       "onlineBooking": {
@@ -3373,6 +3374,9 @@
         "dataIfNotWorking": {
           "question": "How do I access my shop’s records?",
           "answer": "Any day, from Settings. {claim} {terms}"
+        },
+        "shutdown": {
+          "question": "What happens to my shop if DiveDay shuts down?"
         },
         "switching": {
           "question": "What does switching to DiveDay involve?",

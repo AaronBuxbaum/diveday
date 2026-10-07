@@ -18,7 +18,12 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import { switchingHref } from "@/lib/funnel";
-import { earlyAccessPrice, fullShopExport, sharedLinkCard } from "@/lib/marketing";
+import {
+  continuityPromise,
+  earlyAccessPrice,
+  fullShopExport,
+  sharedLinkCard,
+} from "@/lib/marketing";
 import { SUPPORT_EMAIL, setUpMailto } from "@/lib/platform-mail";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
@@ -132,6 +137,10 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
       body: t("marketing.about.rules.yourRecords.body", {
         terms: t(fullShopExport.termsKey),
       }),
+      // What happens to the records if DiveDay itself closes: the shared
+      // continuity promise (`continuityPromise`, H-101), on the card that is
+      // already about taking them away, rather than a band of its own.
+      note: t(continuityPromise.claimKey),
     },
   ] as const;
 
@@ -220,6 +229,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
             <SectionCard as="article" key={rule.title} padding="lg">
               <h3 className={SUB_TITLE_CLASS}>{rule.title}</h3>
               <p className="mt-3 leading-7 text-muted">{rule.body}</p>
+              {"note" in rule ? <p className="mt-3 leading-7 text-muted">{rule.note}</p> : null}
             </SectionCard>
           ))}
         </div>

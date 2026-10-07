@@ -158,6 +158,7 @@ A status change is made in the file and here; `pnpm gates` reads the files, not 
 | [H-98](H-98-after-physician-says-no-diver.md) | Implemented | 2026-10-07 | After a physician says no, does the diver need a physician to clear their… | Decided 2026-10-07 (Aaron Buxbaum, in the project thread): “we should allow a waiver without, but show a warning that a previous waiver had a physician say no (with… |
 | [H-99](H-99-about-say-whose-voice.md) | Implemented | 2026-10-07 | What does /about say, and in whose voice? | The hero keeps the Lonergan story within its limits, its tie to the product in the plural, and no heading over it (the eyebrow is the h1). |
 | [H-100](H-100-held-seat-split-into-new.md) | Implemented | 2026-10-07 | Must a held seat split into a new diver carry an age answer? | Decided 2026-10-07 (Aaron Buxbaum, on the decision card in the project thread): a date or an 18+ tick. splitBookingIdentity refuses (age_unstated) unless the staffer gives a date of… |
+| [H-101](H-101-continuity-promise.md) | Implemented | 2026-10-07 | May the public pages promise what happens if DiveDay shuts down? | Authorized 2026-10-07 (Aaron Buxbaum, in the project thread): the exact sentence ships on /pricing and /about in English and Spanish. |
 
 ## Human verification queue
 
@@ -448,3 +449,4 @@ ADR](../../architecture/decisions/20260718-vercel-neon-hosting.md).
 | 2026-10-06 | **H-97 implemented** (Aaron Buxbaum, on the decision card): Boat mode is light by day and Night Dive navy in the dark scheme; closes #2033. | Product owner |
 | 2026-10-07 | **H-98 implemented** (Aaron Buxbaum, in the project thread): a clean new release clears a diver a physician refused, with a warning that links to the refusal; closes #2158. | Product owner |
 | 2026-10-07 | **H-99 implemented** (Aaron Buxbaum, in the project thread): `/about` keeps only the Lonergan hero, in the company's plural and with no heading over it; the rest is rewritten as the company in plain statements, about people in a company rather than named people, with no concessions band. | Product owner |
+| 2026-10-07 | **H-101 implemented** (Aaron Buxbaum, in the project thread): the continuity promise, "If DiveDay ever shuts down, you get 90 days' notice, your export, and your backups keep running until the last day," is published word for word on `/pricing` and `/about`, in English and Spanish. | Product owner |

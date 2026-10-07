@@ -2655,7 +2655,8 @@
     },
     "export": {
       "claim": "Ajustes → Exportación de datos descarga un ZIP con CSV simples y documentados (buceadores, reservas, registros de exenciones, historial de pagos), encabezados por un archivo de contactos con la forma que espera el asistente de importación de otro sistema. Cada foto guardada (evidencia de certificación, fotos de sitios, recapitulaciones) va dentro como archivo.",
-      "terms": "Sin tarifa de exportación, sin ticket de soporte, sin permanencia mínima, y la misma descarga funciona el primer día de una prueba."
+      "terms": "Sin tarifa de exportación, sin ticket de soporte, sin permanencia mínima, y la misma descarga funciona el primer día de una prueba.",
+      "continuity": "Si DiveDay cierra algún día, te avisamos con 90 días de antelación, tienes tu exportación y tus copias de seguridad siguen en marcha hasta el último día."
     },
     "capabilities": {
       "onlineBooking": {
@@ -3373,6 +3374,9 @@
         "dataIfNotWorking": {
           "question": "¿Cómo accedo a los registros de mi centro?",
           "answer": "Cualquier día, desde Ajustes. {claim} {terms}"
+        },
+        "shutdown": {
+          "question": "¿Qué pasa con mi centro si DiveDay cierra?"
         },
         "switching": {
           "question": "¿Qué implica cambiarse a DiveDay?",

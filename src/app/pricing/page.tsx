@@ -19,7 +19,12 @@ import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import { cachedListFormat } from "@/lib/intl-cache";
-import { earlyAccessPrice, fullShopExport, sharedLinkCard } from "@/lib/marketing";
+import {
+  continuityPromise,
+  earlyAccessPrice,
+  fullShopExport,
+  sharedLinkCard,
+} from "@/lib/marketing";
 import { getMigrationGuide, MIGRATION_GUIDES } from "@/lib/migration-guides";
 import { ONBOARDING_EMAIL, SUPPORT_EMAIL } from "@/lib/platform-mail";
 
@@ -165,8 +170,8 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
       // answer still counted the six fields of a sign-up form no visitor can
       // reach. The spreadsheet is named as its own step because it is one —
       // but the importer's preview belongs to the `switching` row below, not
-      // here: in the row-major two-column grid this row and that one are
-      // vertically adjacent in the left column, and both used to close on the
+      // here: in the row-major two-column grid this row and that one used to
+      // sit one above the other in the left column, and both closed on the
       // same eight-word promise about seeing what will happen before anything
       // is saved. This is the time question, so it ends on time.
       question: t("marketing.pricing.faq.setupTime.question"),
@@ -183,6 +188,13 @@ async function PricingBody({ locale }: { locale: DiverLocale }) {
         claim: t(fullShopExport.claimKey),
         terms: t(fullShopExport.termsKey),
       }),
+    },
+    {
+      // The vendor-death objection, answered beside the export it rests on:
+      // the shared continuity promise (`continuityPromise`), an authorized
+      // service commitment whose words are the product owner's (H-101).
+      question: t("marketing.pricing.faq.shutdown.question"),
+      answer: t(continuityPromise.claimKey),
     },
     {
       question: t("marketing.pricing.faq.switching.question"),
