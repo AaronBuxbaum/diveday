@@ -259,9 +259,10 @@ export type SignupExchangeResult =
  *
  * Split from the rest (issues #1766 and #1769) because it is the one step that
  * changes nothing at Meta: no number is registered and no PIN is minted. So the
- * caller runs it *before* it takes a lock or opens a transaction, and only a
- * caller holding a valid code ever learns whether another DiveDay shop holds
- * the WABA; a junk code fails here, before that question is asked.
+ * caller runs it *before* it takes a lock or opens a transaction. A valid code
+ * alone does not tie the caller to the WABA it posted (the id is a separate
+ * form field), so {@link confirmWabaAccess} follows it: only a token that can
+ * read that WABA goes on to learn whether another DiveDay shop holds it.
  */
 export async function exchangeSignupCode(
   code: string,
@@ -278,6 +279,38 @@ export async function exchangeSignupCode(
   const token = tokenResponseSchema.safeParse(exchanged.body);
   if (!token.success) return { status: "failed", step: "exchange", errorCode: "invalid_response" };
   return { status: "exchanged", accessToken: token.data.access_token };
+}
+
+const wabaResponseSchema = z.object({ id: z.string().min(1) });
+
+/**
+ * **Step 1b: does the exchanged token actually reach the posted WABA?**
+ * (issue #1766, security re-review).
+ *
+ * The WABA id arrives as its own form field beside the code, so a staffer
+ * holding a valid code for *their* account could otherwise post any other
+ * WABA id and read off the refusal whether another DiveDay shop holds it.
+ * Reading the WABA with the token proves the token's business has access to
+ * it. A failure is reported as an exchange failure, word for word, so the
+ * answer to "is this WABA someone else's here?" never depends on a WABA the
+ * caller cannot see. Changes nothing at Meta; runs before any lock.
+ */
+export async function confirmWabaAccess(
+  wabaId: string,
+  accessToken: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<{ status: "visible" } | Extract<WhatsAppSignupResult, { status: "failed" }>> {
+  const url = new URL(graphUrl(encodeURIComponent(wabaId)));
+  url.searchParams.set("fields", "id");
+  const read = await graphRequest(fetchImpl, url.toString(), {
+    method: "GET",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!read.ok) return failed("exchange", read);
+  const body = wabaResponseSchema.safeParse(read.body);
+  if (!body.success || body.data.id !== wabaId)
+    return { status: "failed", step: "exchange", errorCode: "waba_not_visible" };
+  return { status: "visible" };
 }
 
 export type FinishSignupInput = Omit<CompleteSignupInput, "code"> & {

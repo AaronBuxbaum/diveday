@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   type CompleteSignupInput,
+  confirmWabaAccess,
   courtesyTemplateDefinition,
   exchangeSignupCode,
   finishEmbeddedSignup,
@@ -307,6 +308,45 @@ describe("completeEmbeddedSignup", () => {
       status: "failed",
       step: "exchange",
       errorCode: "invalid_response",
+    });
+  });
+});
+
+/**
+ * **The token has to reach the WABA it was posted with** (issue #1766). The
+ * WABA id is its own form field, so a valid code for one account must not let
+ * a caller ask about another account's DiveDay holder.
+ */
+describe("confirmWabaAccess", () => {
+  it("reads the WABA with the exchanged token, under the timeout", async () => {
+    const fetchImpl = vi.fn().mockImplementation(async () => json(200, { id: "waba-1" }));
+    expect(await confirmWabaAccess("waba-1", "EAAG-token", fetchImpl)).toEqual({
+      status: "visible",
+    });
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(String(url)).toContain("/waba-1?fields=id");
+    expect(init.headers.Authorization).toBe("Bearer EAAG-token");
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("refuses as an exchange failure when the token cannot see that WABA", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockImplementation(async () =>
+        json(400, { error: { message: "Unsupported get request", code: 100, error_subcode: 33 } }),
+      );
+    expect(await confirmWabaAccess("waba-other", "EAAG-token", fetchImpl)).toMatchObject({
+      status: "failed",
+      step: "exchange",
+    });
+  });
+
+  it("refuses when Meta answers for a different id", async () => {
+    const fetchImpl = vi.fn().mockImplementation(async () => json(200, { id: "waba-2" }));
+    expect(await confirmWabaAccess("waba-1", "EAAG-token", fetchImpl)).toMatchObject({
+      status: "failed",
+      step: "exchange",
+      errorCode: "waba_not_visible",
     });
   });
 });

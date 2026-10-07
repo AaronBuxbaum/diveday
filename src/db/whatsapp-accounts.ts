@@ -91,7 +91,46 @@ function resolveKey(options: WhatsAppSenderOptions): SecretKey | WhatsAppKeyRefu
   return result.status === "unset" ? "encryption_key_unset" : "encryption_key_invalid";
 }
 
+/**
+ * **The `template_name` of a row whose signup stopped after registering the
+ * number** (issue #1769, security re-review).
+ *
+ * Once Meta's register call has been made, the number may be bound to the PIN
+ * it carried, so that PIN must be kept even if subscribe or the template then
+ * fails — otherwise the next Connect mints a fresh one and Meta answers 133005.
+ * Such a row is *parked*: it holds the sealed PIN and claims the WABA, and every
+ * reader treats it as not connected (no sender, no account on the settings
+ * page). An empty template name is the marker because it is the honest state —
+ * no template has been provisioned — and nothing can send without one.
+ *
+ * A marker in an existing column rather than a column of its own, because this
+ * layer may not change the schema; a `setup_completed_at` column is the
+ * cleaner home for the same fact.
+ */
+export const SETUP_INCOMPLETE_TEMPLATE = "";
+
+/** Whether a stored row finished signup, rather than being parked to keep its PIN. */
+export function isWhatsAppSetupComplete(account: Pick<ShopWhatsappAccount, "templateName">) {
+  return account.templateName !== SETUP_INCOMPLETE_TEMPLATE;
+}
+
+/**
+ * The shop's connected WhatsApp account, or null — including for a row parked
+ * mid-signup ({@link SETUP_INCOMPLETE_TEMPLATE}), which is not connected.
+ */
 export async function getShopWhatsAppAccount(
+  db: DbExecutor,
+  shopId: string,
+): Promise<ShopWhatsappAccount | null> {
+  const row = await getShopWhatsAppRegistration(db, shopId);
+  return row && isWhatsAppSetupComplete(row) ? row : null;
+}
+
+/**
+ * The shop's stored row whether or not signup finished — for the signup flow
+ * alone, which needs a parked row's PIN back.
+ */
+export async function getShopWhatsAppRegistration(
   db: DbExecutor,
   shopId: string,
 ): Promise<ShopWhatsappAccount | null> {
@@ -101,6 +140,20 @@ export async function getShopWhatsAppAccount(
     .where(eq(shopWhatsappAccounts.shopId, shopId))
     .limit(1);
   return row ?? null;
+}
+
+/**
+ * The PIN a stored row's number was registered with, or null when there is
+ * none or it cannot be opened. Only the signup flow asks: re-registering a
+ * parked number must send Meta the PIN it already holds.
+ */
+export function openRegistrationPin(
+  account: Pick<ShopWhatsappAccount, "registrationPinSealed">,
+  options: WhatsAppSenderOptions = {},
+): string | null {
+  const key = resolveKey(options);
+  if (typeof key === "string" || !account.registrationPinSealed) return null;
+  return openSecret(account.registrationPinSealed, key);
 }
 
 /**
@@ -322,7 +375,8 @@ export async function markShopWhatsAppVerified(
 
 /**
  * A sender for one stored row, or null when the credential cannot be opened —
- * no key configured, or a key that no longer matches what sealed this row.
+ * no key configured, or a key that no longer matches what sealed this row — or
+ * the row is parked mid-signup ({@link SETUP_INCOMPLETE_TEMPLATE}).
  *
  * Null rather than a throw, because every caller's honest response is the same:
  * this shop has no usable WhatsApp, so use SMS. A key rotated without
@@ -333,6 +387,7 @@ export function whatsAppProviderForAccount(
   account: ShopWhatsappAccount,
   options: WhatsAppSenderOptions = {},
 ): CourtesyProvider | null {
+  if (!isWhatsAppSetupComplete(account)) return null;
   const key = resolveKey(options);
   if (typeof key === "string") return null;
   const accessToken = openSecret(account.accessTokenSealed, key);
@@ -355,6 +410,7 @@ export function whatsAppTextSenderForAccount(
   account: ShopWhatsappAccount,
   options: WhatsAppSenderOptions = {},
 ): WhatsAppTextSender | null {
+  if (!isWhatsAppSetupComplete(account)) return null;
   const key = resolveKey(options);
   if (typeof key === "string") return null;
   const accessToken = openSecret(account.accessTokenSealed, key);
