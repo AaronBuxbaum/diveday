@@ -15,9 +15,9 @@ import {
   isShopIssuedCard,
   needsImportConfirm,
 } from "@/lib/certification-cards";
+import type { DiverStatusRow } from "@/lib/diver-status";
 import { formatShortDate } from "@/lib/format";
 import { isUnsightedSelfDeclaration } from "@/lib/readiness";
-import type { DiverStatusRow } from "../_lib/status";
 import {
   addCardAction,
   clearNoCertificationAction,

@@ -16,7 +16,7 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, type-ramp, voice, logical-property, clock, transaction-concurrency, timezone, Intl-cache, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, soft-delete-vocabulary, shop-word, live-trip-read, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, follow-ups, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, infra-ASCII, CI-change-detection and Node-version safeguards.
+environment, architecture/feature-module, design-token, tinted-ink, type-ramp, page-length, voice, logical-property, clock, transaction-concurrency, timezone, Intl-cache, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, soft-delete-vocabulary, shop-word, live-trip-read, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, follow-ups, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, infra-ASCII, CI-change-detection and Node-version safeguards.
 
 ## The guards worth reading about
 
@@ -149,6 +149,10 @@ per-file table. It lands at zero, so it behaves as a full gate today; the ratche
 branch cut before the sweep, whose spellings are pre-existing debt rather than new drift. A heading
 that genuinely is not on the ramp — a rendered email, an `ImageResponse` card Tailwind never reaches
 — says `diveday:allow-type-ramp: <why>` on the line or the line above.
+
+### page-length
+
+The page-length one (`scripts/check-page-length.mjs`) refuses a `page.tsx` under `src/app` longer than 400 lines. AGENTS.md says routes stay thin and `check:architecture` enforces the dependency direction, but nothing measured thinness: the 2026-10-07 audit counted 37 of 83 pages over 300 lines and eight over 1,000, with domain rules, Drizzle queries and a dozen local components living in the route file where the architecture guard cannot see them — and a page over 600 lines is one `scripts/guard-read.mjs` will not hand an agent whole, so every edit to it starts from a range. Ratcheted per file in `scripts/page-length-baseline.json` exactly like `check:copy`: a page over the limit that is not in the baseline fails, a banked page that grew fails, and a banked page that shrank fails until `--write` banks the fall in the same change; `--absorb "<why>"` records a rise arriving from a merge, and `--report` prints the table. The fix for red is never to compress a page's formatting — move a section into a sibling `_components/` file, a query into `src/db`, a rule into `src/lib`.
 
 ### voice
 

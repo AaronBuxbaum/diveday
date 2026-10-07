@@ -7,7 +7,7 @@ import { forgivingCopy } from "@/components/ui/forgiving-copy";
 import { controlClass, DateField, Field, FieldActions, FieldGrid } from "@/components/ui/form";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { maxPlausibleBirthDate } from "@/lib/age";
-import type { DiverStatusRow } from "../_lib/status";
+import type { DiverStatusRow } from "@/lib/diver-status";
 import { savePersonAction } from "../actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { fileGap } from "./file-gap";

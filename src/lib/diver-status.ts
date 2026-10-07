@@ -2,19 +2,19 @@ import { identityReasonMessage } from "@/i18n/identity-check-labels";
 import type { StaffMessageKey } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
 import {
+  type CardAwaitingKind,
+  cardsNeedingLookCount,
+  type DiverProfile,
+  firstOpenOrderId,
+  unpaidBookingCount,
+} from "@/lib/diver-profile";
+import {
   BLOCKER_CATEGORY,
   type ReadinessBlocker,
   type ReadinessBlockerCode,
   type ReadinessResult,
 } from "@/lib/readiness";
 import { hasSailed } from "@/lib/trips";
-import {
-  type CardAwaitingKind,
-  cardsNeedingLookCount,
-  type DiverProfile,
-  firstOpenOrderId,
-  unpaidBookingCount,
-} from "../_components/shared";
 
 /**
  * **What is still open about this diver, and the one fix for each** — the

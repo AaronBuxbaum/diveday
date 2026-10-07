@@ -1,9 +1,13 @@
-import type { AfterStateProps } from "@/app/ready/[token]/_components/AfterState";
 import { issueBookingHandoff } from "@/db/booking-handoff";
 import type { AppDb } from "@/db/client";
 import { nextDiveForBooking } from "@/db/next-dive";
-import { MAX_RECAP_PHOTOS_PER_BOOKING, type RecapPageData } from "@/db/recap";
-import { getRecapPulseForBooking } from "@/db/recap-pulses";
+import {
+  MAX_RECAP_PHOTOS_PER_BOOKING,
+  type RecapPageData,
+  type RecapPhotoView,
+  type RecapSite,
+} from "@/db/recap";
+import { getRecapPulseForBooking, type RecapPulseCategory } from "@/db/recap-pulses";
 import { getReviewForBooking } from "@/db/reviews";
 import { tipPresetsMajor } from "@/db/tips";
 import { pagedUpcomingTripsWithCounts } from "@/db/trips";
@@ -11,14 +15,176 @@ import type { DiverTranslator } from "@/i18n/messages";
 import { DIVER_CERT_LEVEL_KEYS, NEXT_DIVE_REASON_KEYS } from "@/i18n/next-dive-labels";
 import { depthText, temperatureText } from "@/i18n/unit-labels";
 import { handoffHref } from "@/lib/booking-handoff";
+import type { BrandDisplayFontCode } from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
+import type { DepthUnit } from "@/lib/depth-units";
+import type { DiveRecordComparison } from "@/lib/dive-record";
+import type { FlySafeAnchor, FlySafeReason } from "@/lib/fly-safe";
 import { formatOrdinal, formatRelativeDay, formatShortDate, formatWeekdayTime } from "@/lib/format";
+import type { ShopCurrency } from "@/lib/money";
 import type { NextDivePick } from "@/lib/next-dive";
 import type { PostcardImage } from "@/lib/postcard-image";
 import { publicTripPath } from "@/lib/public-routes";
-import { siteMarkFor } from "@/lib/site-mark";
-import { temperatureUnitFor } from "@/lib/temperature-units";
+import { type SiteMarkCode, siteMarkFor } from "@/lib/site-mark";
+import { type TemperatureUnit, temperatureUnitFor } from "@/lib/temperature-units";
 import { visitMilestone } from "@/lib/visit-milestones";
+
+/**
+ * Everything `AfterState` (`src/app/ready/[token]/_components/AfterState.tsx`)
+ * renders, assembled by {@link buildAfterStateProps} below. It lives beside its
+ * one assembler so `src/lib` never reaches up into a route for its shape.
+ */
+export type AfterStateProps = {
+  t: DiverTranslator;
+  /** The negotiated request locale, for every figure and date on the page. */
+  locale: string;
+  shop: {
+    name: string;
+    slug: string;
+    depthUnit: DepthUnit;
+    temperatureUnit: TemperatureUnit;
+    /** Where "take it to Google" goes, or null when the shop has set none. */
+    reviewUrl: string | null;
+    /**
+     * The shop's brand, worn by this surface the way the storefront wears it
+     * (ADR 20260901-diveday-reimagined, slice 13i). Null renders DiveDay's own.
+     */
+    brandColor: string | null;
+    brandDisplayFont: BrandDisplayFontCode | null;
+  };
+  /** The day's site, drawn in the illustration hand on the record's face. */
+  siteMark: SiteMarkCode;
+  /**
+   * `plannedDives` is deliberately not here. It is what a shop typed on the
+   * trip row, not a count of dives this diver made, and the one place it was
+   * read printed it as "{n} dives logged" on a page built to be signed
+   * (see `DiveRecord`).
+   */
+  trip: Pick<
+    RecapPageData["trip"],
+    "title" | "waterTemperatureC" | "visibilityMeters" | "surfaceConditions" | "boatName" | "crew"
+  >;
+  /** The trip's date, already formatted in the shop's zone. */
+  when: string;
+  diverName: string;
+  sites: RecapSite[];
+  /**
+   * Where the day went against where it meant to go, or null when it went to
+   * plan — which is the ordinary answer and renders nothing extra at all
+   * (issue #1191).
+   */
+  diveRecord: DiveRecordComparison | null;
+  /**
+   * When this diver may fly, already worded in the shop's zone
+   * (`src/lib/fly-safe.ts`, issue #1425), or null when the record could not
+   * say. `anchor` picks the sentence: the clock started at the last recorded
+   * exit, or at the day's scheduled end. Informs, gates nothing.
+   */
+  flySafe: { when: string; hours: number; anchor: FlySafeAnchor; reason: FlySafeReason } | null;
+  /**
+   * Per site the day dived, the species that site's field guide names.
+   *
+   * **What the place may hold, never what this dive did.** The drawer this
+   * feeds is future-tense and scoped to the site by construction (issue #1192),
+   * and it stays that way now that a sighting can be recorded: `observedSpecies`
+   * below is the other field, deliberately, because merging them would let the
+   * shop's standing claim about a reef render as somebody's report of a day.
+   */
+  fieldGuide: { siteName: string; rows: { id: string; catalogSlug: string | null }[] }[];
+  /**
+   * **What the crew wrote down that they saw** — catalog slugs, in dive order,
+   * deduped (issue #1190, delight report D30).
+   *
+   * Present only when somebody recorded it. Empty is the ordinary state and
+   * renders nothing, which is the boundary: a species is never inferred from
+   * the guide above, and a day where nothing stood out is just a day. The words
+   * come from the same `marineLife.*` copy the guide uses, so this arrives in
+   * the diver's own language whatever the crew was reading when they picked it.
+   */
+  observedSpecies: string[];
+  /**
+   * The course this departure taught, with what the shop recorded for it
+   * (issues #1196, #1205). Null on an ordinary charter and then nothing about
+   * courses renders — see `CourseAfterState` for the overclaim rule.
+   */
+  course: RecapPageData["course"];
+  shoutout: string | null;
+  photos: RecapPhotoView[];
+  /** How many photos one booking may hold — `MAX_RECAP_PHOTOS_PER_BOOKING`. */
+  maxPhotos: number;
+  /** Dive days with this shop, native bookings and imported visits merged. */
+  visitCount: number;
+  currency: ShopCurrency;
+  /** A *new* tip may be started right now (the shop's Stripe account can take one). */
+  canTip: boolean;
+  tip: RecapPageData["tip"];
+  /** Tip presets in major units, scaled by the same table as the tip bounds. */
+  tipPresets: number[];
+  /**
+   * Whether the shop asks for a star rating at all (`shops.reviews_enabled`).
+   * Off, the page has no review card, and the private note to the shop stands
+   * on its own.
+   */
+  canReview: boolean;
+  /** The diver's own review, when they have left one. */
+  ownReview: { rating: number; comment: string | null } | null;
+  /**
+   * The diver's own private pulse, when they have left one — never a review and
+   * never public (D40, issue #1200). Its presence is also what puts the way back
+   * on screen.
+   */
+  ownPulse: { categories: RecapPulseCategory[]; note: string | null } | null;
+  /**
+   * `?review=`, `?photo=`, `?tip=` and `?pulse=`, straight off the URL. All four
+   * are attacker-supplied and every read below goes through `noticeFromParam`,
+   * never a bare lookup that walks the prototype.
+   */
+  params: { review?: string; photo?: string; tip?: string; pulse?: string };
+  /**
+   * The shop's next public departure, already worded ("Two-Tank Reef" ·
+   * "tomorrow"). Null when the board is empty, which renders the bare link.
+   */
+  nextDeparture: { title: string; when: string } | null;
+  /**
+   * **The day's record as a picture** (issue #1081): the same worded facts the
+   * card below renders, assembled in `buildAfterStateProps` so the export and
+   * the screen cannot disagree. It carries **no URL, token or slug** — that
+   * absence is the whole reason this surface exports an image rather than
+   * offering a share link (see this component's own note, and
+   * `src/lib/postcard-image.ts`).
+   */
+  postcard: PostcardImage;
+  /**
+   * The one departure this diver is pointed at, or null when the board has
+   * nothing for them (D35, issue #1195). Every candidate has already been
+   * through `decideTripAdmission`, so the card can never suggest a boat they
+   * could not board.
+   */
+  nextDive: NextDivePick | null;
+  /** That pick's sentences, worded where every other fact on this page is worded. */
+  nextDiveWorded: { when: string; reason: string; levelCovers: string | null } | null;
+  /** The pick's booking page carrying this diver's own handoff, or null. */
+  nextDiveHref?: string | null;
+  /**
+   * **The buddy seat** (ADR 20260908-one-hand, decision 6, lever W): this
+   * diver's own link to the shop, carrying a non-secret referral id, for them
+   * to hand to a friend.
+   *
+   * Absolute, because the errand is to put it on a clipboard and send it
+   * somewhere else — a path is not a link anybody can follow out of a message.
+   * Null everywhere it does not belong: the readiness page renders this whole
+   * component too, and "bring a buddy next time" is a thing to say after a dive
+   * rather than before one.
+   */
+  buddyLinkUrl?: string | null;
+  /** The four recap actions, already bound to a signed recap token. */
+  actions: {
+    submitReview: (formData: FormData) => void | Promise<void>;
+    uploadPhoto: (formData: FormData) => void | Promise<void>;
+    startTip: (formData: FormData) => void | Promise<void>;
+    submitPulse: (formData: FormData) => void | Promise<void>;
+  };
+};
 
 /**
  * **One reading of the day, for two URLs** — ADR 20260827-the-divers-thread,
