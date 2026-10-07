@@ -7,6 +7,7 @@ import { isDemoAccountEmail } from "@/lib/demo-identity";
 import { hashPassword } from "@/lib/password-hashing";
 import { isSpokenLanguageTag } from "@/lib/spoken-languages";
 import type { AppDb, DbExecutor } from "./client";
+import { selectActivePersonByEmail } from "./people";
 import { accountSessions, people, personRoles, pushSubscriptions, userAccounts } from "./schema";
 
 export type StaffMember = {
@@ -245,22 +246,6 @@ export async function setStaffLanguages(
     )
     .returning({ id: people.id });
   return updated.length > 0;
-}
-
-/** Case-insensitive, mirrors `people_shop_email_unique` (schema.ts). */
-async function selectActivePersonByEmail(tx: DbExecutor, shopId: string, email: string) {
-  const [row] = await tx
-    .select()
-    .from(people)
-    .where(
-      and(
-        eq(people.shopId, shopId),
-        sql`lower(${people.email}) = ${email}`,
-        isNull(people.deletedAt),
-      ),
-    )
-    .limit(1);
-  return row ?? null;
 }
 
 /**

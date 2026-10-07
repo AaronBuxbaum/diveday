@@ -229,8 +229,13 @@ export async function getShopPersonName(
   return row?.fullName ?? null;
 }
 
-/** Case-insensitive to mirror the `lower(email)` index this is meant to reflect. */
-async function selectActivePersonByEmail(tx: DbExecutor, shopId: string, email: string) {
+/**
+ * The shop's live person at this address, or null. Case-insensitive on both
+ * sides to mirror the `lower(email)` unique index (`people_shop_email_unique`),
+ * so a caller need not normalise first. The one copy: `inviteStaffMember`
+ * (staff-accounts.ts) reads through it too.
+ */
+export async function selectActivePersonByEmail(tx: DbExecutor, shopId: string, email: string) {
   const [row] = await tx
     .select()
     .from(people)
