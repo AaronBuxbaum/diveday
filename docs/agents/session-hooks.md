@@ -29,7 +29,7 @@ what is currently wired.
 
 | Event | Script | What it does |
 | --- | --- | --- |
-| `SessionStart` (all sources) | `scripts/session-context.mjs` | prints the checkout's state; after a compaction, the reminders a summary drops; in a cloud container, installs dependencies when `node_modules/` is missing |
+| `SessionStart` (all sources) | `scripts/session-context.mjs` | prints the checkout's state and one line asking for a papercut ([papercuts.md](papercuts.md)) when a guard or hook fights the session; after a compaction, the reminders a summary drops; in a cloud container, installs dependencies when `node_modules/` is missing |
 | `UserPromptSubmit` | `scripts/session-context.mjs --prompt` | one line: branch, uncommitted count, unpushed count |
 | `PreToolUse` on `Bash` | `scripts/guard-bash.mjs` | refuses six command shapes, each naming the correct form |
 | `PreToolUse` on `Read` | `scripts/guard-read.mjs` | refuses a generated artifact and a whole-file read of a large source file |
