@@ -111,8 +111,8 @@ What moving would and would not do:
   (issue #1241).
 
 The cost worth engineering against is therefore **CI wall-clock**, not dollars — see
-`.github/workflows/ci.yml`'s `changes` gate (a docs-only change skips the build, the Playwright
-shards, the visual shards and the compare) and `src/test/shard-sequencer.ts` (unit shards dealt by
+`.github/workflows/ci.yml`'s `changes` gate (a docs-only change skips the build, the unit, Playwright
+and visual shards and the compare) and `src/test/shard-sequencer.ts` (unit shards dealt by
 cost rather than by count).
 
 ## What actually happens when a ceiling is hit
