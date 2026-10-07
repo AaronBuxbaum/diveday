@@ -228,7 +228,7 @@ lines should have a destination or explain a change; they should not wiggle for 
 | Precise where safety or money is involved | Overconfident or vague |
 | Lightly playful when a real moment is complete | Loud, breathless, or celebratory all the time |
 | Helpful about the next action | A software vendor talking about “solutions” and “platforms” |
-| On the public pages, what a shop gets, proved on the product's own screen with the builder's notes beside it, and on `/about`, someone who dives answering a shop owner's questions out loud | A landing page describing the screen, or a brand talking about itself |
+| On the public pages, what a shop gets, proved on the product's own screen with the builder's notes beside it, and on `/about`, the company saying why it exists, who builds it and what it holds every screen to, in plain statements | A landing page describing the screen, or a brand talking about itself |
 
 Copy rules:
 
@@ -267,7 +267,15 @@ showed the screens and annotated them and never said why a shop would want any o
 headlines described the page ("Four screens from a dive shop's day, with notes from the person who
 made them") and the owner's brief was that the pages were not selling. A section now says **what
 the shop gets, then shows the screen that proves it, then opens the demo on that screen**. The
-builder's notes stay, as the proof's captions, and `/about` keeps its spoken register.
+builder's notes stay, as the proof's captions, and `/about` kept its spoken register until the
+amendment below.
+
+**Amended 2026-10-07** (H-99): `/about` left the spoken register. The owner's brief ("I really
+really don't like the copy on About. Let's redo it entirely") kept only the hero, the Lonergan
+story and its tie to the product, with the question heading over it removed and the tie made the
+company's ("That story is why we built DiveDay"); everything under it is written as the company,
+in plain statements, about people in a company rather than about named people. The register is
+described under "The about page" below.
 
 **The selling register** (every public page but `/about`).
 
@@ -310,28 +318,33 @@ screen, with short notes from the person who built it pointing at specific thing
   terms, the export claim, the FAQ answers) is the notice-board register: the fact, in the order a
   buyer asks for it, with no sentence spent on how to feel about it.
 
-**The spoken register** (`/about` only). Write the way the best diver in the shop explains the
-software to a mate after the boat is tied up.
+**The about page** (`/about`, since 2026-10-07; H-99). The company, saying why it exists, who
+builds it and what it holds every screen to.
 
-- Who talks: someone from DiveDay who dives, to a shop owner who asked. The founder's own parts
-  are first-person singular; what both people here share is "we"
-  ([product/marketing.md](../product/marketing.md)'s biography rules are unchanged).
-- Every heading is **the owner's question, repeated back** the way a person repeats a question
-  before answering it: no question mark, no full stop ("Why did you build this", "What's the
-  catch", "What happens to my records if I go"). The band under it is the answer, and the
-  headline test binds the first sentence of that answer rather than the question.
-  `src/app/about/copy.test.ts` holds the arithmetic for the exit band.
-- Contractions always. "Honestly" and "look" get a budget of one each on the page. Paragraphs run
-  from one line to eight and stop where the speaker stops caring. No bullet lists.
-- One joke on the page, about the work, never about the product. No "people love the…": with no
-  customers yet there are no people.
-- A fact is conceded flat, with no flinch and no flourish after it. "I don't know yet" is allowed.
-- Everything the page says is still shipped-only and checkable in the demo. The register changes
-  how a fact is said, never which facts are said.
+- Who talks: DiveDay, in the plural, throughout. The page names no individual, states no CV and
+  gives nobody a title; the people who build it are described in generalities that are true of
+  them (people who build software for a living and dive). The founder's confirmed facts in
+  [product/marketing.md](../product/marketing.md)'s biography rule stay confirmed and unused.
+- The hero is the Lonergan story, told flat and within its limits (no operator or skipper named,
+  no adjective on the account, no sentence saying DiveDay would have prevented it), and its tie to
+  the product: "That story is why we built DiveDay." Nothing stands over it; the eyebrow is the
+  page's `h1`.
+- Every heading under it is **a statement the band can be read against**, written as a sentence
+  with a full stop ("Divers who have shipped software to millions of people.", "The one job on a boat that can't
+  go wrong.", "We set your shop up with you."). Never a question, with or without its mark.
+- The page makes the case for the company rather than conceding its size or age: no "what's the
+  catch" band, no apology. What it says about the product is still shipped and checkable in the
+  demo, and what it says about the people is a generality that is true of them. It invents no
+  proof, no customer, no number.
+- Contractions, warmth and the occasional pointed sentence are fine; the tells below are not.
+  `src/app/about/copy.test.ts` holds the mechanical half: statement headings, no individual
+  named, no first-person singular, the Lonergan limits, and the retired question headings by
+  value.
 
-Both registers keep every rule under "What gives us away" below. The one they bend is the heading
-rule: a selling heading states what the shop gets, which the screen under it can be checked
-against, and a spoken heading is a question with the mark left off. Neither is an aphorism.
+Both pages keep every rule under "What gives us away" below. The one the selling register bends is
+the heading rule: a selling heading states what the shop gets, which the screen under it can be
+checked against, and an `/about` heading states something about the company or the product that
+the band under it can be read against. Neither is an aphorism.
 
 ### Before / after examples
 

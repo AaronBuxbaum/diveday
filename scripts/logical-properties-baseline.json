@@ -1,6 +1,5 @@
 {
   "//": "Physical directional utilities still in components, per file. Written by `node scripts/check-logical-properties.mjs --write`. This number may only go down — see scripts/check-logical-properties.mjs. Use ms-/me-/ps-/pe-/start-/end-/text-start/text-end instead.",
-  "src/app/about/page.tsx": 1,
   "src/app/page.tsx": 6,
   "src/app/pricing/page.tsx": 3,
   "src/app/product/page.tsx": 1,
