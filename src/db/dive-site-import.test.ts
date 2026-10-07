@@ -9,6 +9,7 @@ import { MAX_IMPORT_BYTES, MAX_IMPORT_CELL_LENGTH, MAX_IMPORT_ROWS } from "@/lib
 import { seededShopContext, unseededTestDb } from "@/test/db";
 import type { AppDb } from "./client";
 import { commitDiveSiteImport } from "./dive-site-import";
+import { diveSitePhotoUrlsHeldByShop } from "./dive-site-photos";
 import { listDiveSites } from "./dive-sites";
 import { loadShopExportBundleInput } from "./export";
 import { diveSites, people, shops } from "./schema";
@@ -80,7 +81,10 @@ describe("the dive-site importer", () => {
     const before = await listDiveSites(db, shop.id);
     expect(before.length).toBeGreaterThan(0);
 
-    const prepared = prepareDiveSiteImport(await exportedDiveSitesCsv(db, shop.id));
+    const prepared = prepareDiveSiteImport(
+      await exportedDiveSitesCsv(db, shop.id),
+      await diveSitePhotoUrlsHeldByShop(db, shop.id),
+    );
     expect(prepared.fatal).toBeNull();
     expect(prepared.unknownColumns).toEqual([]);
     expect(prepared.rows.flatMap((row) => row.issues)).toEqual([]);
@@ -331,6 +335,108 @@ describe("the dive-site importer", () => {
     expect(row?.issues).toContain("invalid_image_urls");
     // Protocol-relative is not root-relative, and it is the shape this refuses.
     expect(row?.imageUrls).toEqual(["/uploads/ours.png"]);
+  });
+
+  /**
+   * **Our media origin is not the same as this shop's photo** (issue #2078).
+   * Storage URLs are public and their keys carry no shop, so a file could name
+   * another shop's stored photo in any of the three image columns; the editor's
+   * next save that took it off would delete that shop's object. A stored URL is
+   * kept only when this shop already holds it, which is what its own bundle
+   * carries; a bundled `/dive-sites/...` path is always kept.
+   */
+  it("drops a stored photo this shop does not hold from every image column", () => {
+    vi.stubEnv("MEDIA_PUBLIC_URL_BASE", "https://media.example.com");
+    try {
+      const theirs = "https://media.example.com/dive-sites/theirs.jpg";
+      const ours = "https://media.example.com/dive-sites/ours.jpg";
+      const csv = buildCsv(
+        [...DIVE_SITE_IMPORT_COLUMNS],
+        [
+          DIVE_SITE_IMPORT_COLUMNS.map((column) =>
+            column === "name"
+              ? "Someone Else's Photos"
+              : column === "satellite_image_url" || column === "route_image_url"
+                ? theirs
+                : column === "image_urls"
+                  ? JSON.stringify([theirs, ours, "/dive-sites/brain-coral.jpg"])
+                  : column === "landmarks"
+                    ? JSON.stringify([
+                        { name: "Theirs", photoUrl: theirs },
+                        { name: "Ours", photoUrl: ours },
+                      ])
+                    : null,
+          ),
+        ],
+      );
+      const row = prepareDiveSiteImport(csv, new Set([ours])).rows[0];
+      expect(row?.satelliteImageUrl).toBeNull();
+      expect(row?.routeImageUrl).toBeNull();
+      expect(row?.issues).toContain("foreign_image_url");
+      expect(row?.issues).toContain("invalid_image_urls");
+      expect(row?.imageUrls).toEqual([ours, "/dive-sites/brain-coral.jpg"]);
+      const landmarks = (row?.landmarks ?? []) as DiveSiteLandmark[];
+      expect(landmarks[0]).not.toHaveProperty("photoUrl");
+      expect(landmarks[1]?.photoUrl).toBe(ours);
+
+      // With nothing held, no stored URL survives at all.
+      const bare = prepareDiveSiteImport(csv).rows[0];
+      expect(bare?.imageUrls).toEqual(["/dive-sites/brain-coral.jpg"]);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  /**
+   * The set the import action passes: every photo this shop's own sites hold,
+   * deleted ones included (a restore brings those back too), and nothing
+   * another shop holds.
+   */
+  it("reads every photo a shop's own sites hold, and none of another shop's", async () => {
+    vi.stubEnv("MEDIA_PUBLIC_URL_BASE", "https://media.example.com");
+    try {
+      const { db, shop } = await seededShopContext();
+      const [other] = await db
+        .insert(shops)
+        .values({ name: "Other Reef", slug: "other-reef-photos", timezone: "America/New_York" })
+        .returning();
+      if (!other) throw new Error("shop insert failed");
+      const [site] = await db
+        .select({ id: diveSites.id })
+        .from(diveSites)
+        .where(eq(diveSites.shopId, shop.id));
+      if (!site) throw new Error("expected a seeded site");
+      await db
+        .update(diveSites)
+        .set({
+          satelliteImageUrl: "https://media.example.com/a.jpg",
+          routeImageUrl: "https://media.example.com/b.jpg",
+          imageUrls: ["https://media.example.com/c.jpg"],
+          landmarks: [
+            {
+              name: "Arch",
+              kind: "pointOfInterest",
+              note: "",
+              photoUrl: "https://media.example.com/d.jpg",
+            },
+          ],
+          deletedAt: nowDate(),
+        })
+        .where(eq(diveSites.id, site.id));
+      await db.insert(diveSites).values({
+        shopId: other.id,
+        name: "Their Reef",
+        slug: "their-reef",
+        imageUrls: ["https://media.example.com/theirs.jpg"],
+      });
+
+      const held = await diveSitePhotoUrlsHeldByShop(db, shop.id);
+      for (const url of ["a", "b", "c", "d"])
+        expect(held.has(`https://media.example.com/${url}.jpg`)).toBe(true);
+      expect(held.has("https://media.example.com/theirs.jpg")).toBe(false);
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   /**

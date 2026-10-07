@@ -2,6 +2,7 @@
 
 import { getDb } from "@/db/client";
 import { commitDiveSiteImport } from "@/db/dive-site-import";
+import { diveSitePhotoUrlsHeldByShop } from "@/db/dive-site-photos";
 import { canPersonImportShopData } from "@/db/import";
 import { prepareDiveSiteImport } from "@/lib/dive-site-import";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -29,7 +30,12 @@ export async function restoreDiveSitesAction(formData: FormData) {
   const file = formData.get("file");
   if (!(file instanceof File) || file.size === 0)
     revalidateAndRedirect(page, noticeUrl(tab, "import-empty"));
-  const prepared = prepareDiveSiteImport(await file.text());
+  // A stored photo URL in the file is kept only when this shop already holds
+  // it: the URL alone does not say whose object it is (issue #2078).
+  const prepared = prepareDiveSiteImport(
+    await file.text(),
+    await diveSitePhotoUrlsHeldByShop(db, session.user.shopId),
+  );
   // A fatal is the whole file refused, and each one has words of its own —
   // "a column I do not recognise" and "no name column" want different fixes.
   if (prepared.fatal) revalidateAndRedirect(page, noticeUrl(tab, `import-${prepared.fatal}`));

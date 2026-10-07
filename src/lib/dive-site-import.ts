@@ -247,20 +247,24 @@ function shapedRoutePoints(raw: string | null): { points: RoutePoint[] | null; k
   return { points, kept: points.length === parsed.length };
 }
 
-function shapedLandmarks(raw: string | null): {
+function shapedLandmarks(
+  raw: string | null,
+  ownedPhotoUrls: ReadonlySet<string>,
+): {
   landmarks: DiveSiteLandmark[] | null;
   kept: boolean;
 } {
   if (raw === null) return { landmarks: null, kept: true };
   const parsed = jsonArray(raw);
   if (parsed === null) return { landmarks: null, kept: false };
-  // A landmark photo from a file is dropped unless it is root-relative. Our
-  // storage URLs are public and carry no shop, so a stored URL in a CSV could
-  // name another shop's object, and the editor's next save that took it off
-  // would queue that object for deletion. The editor's own post can only keep
-  // a photo the site already held; a file has no such history to check.
+  // A landmark photo from a file follows the rule every other photo column
+  // does (`managedImageUrl`): root-relative, or a stored photo this shop
+  // already holds. The editor's own post can only keep a photo the site
+  // already held; a file has no such history, so the shop's holdings stand in.
   const landmarks = parseDiveSiteLandmarks(parsed).map(({ photoUrl, ...landmark }) =>
-    photoUrl?.startsWith("/") ? { ...landmark, photoUrl } : landmark,
+    photoUrl && managedImageUrl(photoUrl, ownedPhotoUrls) !== null
+      ? { ...landmark, photoUrl }
+      : landmark,
   );
   return { landmarks, kept: landmarks.length === parsed.length };
 }
@@ -279,11 +283,19 @@ function shapedLandmarks(raw: string | null): {
  * A root-relative path is kept because that is what a local dev and e2e
  * deployment stores; `//host/x` is not root-relative, it is protocol-relative,
  * and it is exactly the shape this refuses.
+ *
+ * **A stored URL is kept only when this shop already holds it** (issue #2078).
+ * Our storage URLs are public and their keys carry no shop, so "on our media
+ * origin" says nothing about whose object it is: a file naming another shop's
+ * photo, imported here, would let this shop's next editor save that removed it
+ * delete the other shop's object. `ownedPhotoUrls` is every photo this shop's
+ * own dive sites hold (`diveSitePhotoUrlsHeldByShop`), which is exactly what
+ * the shop's own bundle carries, so a restore still round-trips.
  */
-function managedImageUrl(value: string | null): string | null {
+function managedImageUrl(value: string | null, ownedPhotoUrls: ReadonlySet<string>): string | null {
   if (!value) return null;
   if (value.startsWith("/") && !value.startsWith("//")) return value;
-  return isManagedStorageUrl(value) ? value : null;
+  return isManagedStorageUrl(value) && ownedPhotoUrls.has(value) ? value : null;
 }
 
 function stringArray(raw: unknown[] | null): string[] | null {
@@ -301,7 +313,15 @@ function specialties(value: string | null): string[] | null {
     .filter(Boolean);
 }
 
-export function prepareDiveSiteImport(csv: string): PreparedDiveSiteImport {
+/**
+ * `ownedPhotoUrls` is every photo URL this shop's own dive sites already hold;
+ * a stored URL outside it is dropped (`managedImageUrl`). Omitted, no stored
+ * URL survives at all.
+ */
+export function prepareDiveSiteImport(
+  csv: string,
+  ownedPhotoUrls: ReadonlySet<string> = new Set(),
+): PreparedDiveSiteImport {
   // **The same four caps the contacts importer enforces**, from the module this
   // one already borrows `parseCsv` from (security review, issue #1771).
   //
@@ -397,7 +417,7 @@ export function prepareDiveSiteImport(csv: string): PreparedDiveSiteImport {
     const points = route.points;
     if (points && points.length > 0 && routeZoom === null) issues.push("route_without_zoom");
 
-    const shaped = shapedLandmarks(read(cells, "landmarks"));
+    const shaped = shapedLandmarks(read(cells, "landmarks"), ownedPhotoUrls);
     if (!shaped.kept) issues.push("invalid_landmarks");
     const parsedLandmarks = shaped.landmarks;
 
@@ -406,7 +426,9 @@ export function prepareDiveSiteImport(csv: string): PreparedDiveSiteImport {
     // Every gallery entry has to be ours, and there is a limit on how many the
     // editor will hold — a restore that wrote seven would leave a site the form
     // cannot save.
-    const imageUrls = listed?.map(managedImageUrl).filter((url): url is string => url !== null);
+    const imageUrls = listed
+      ?.map((url) => managedImageUrl(url, ownedPhotoUrls))
+      .filter((url): url is string => url !== null);
     if (imagesRaw !== null && (listed === null || imageUrls?.length !== listed.length))
       issues.push("invalid_image_urls");
     if (imageUrls && imageUrls.length > MAX_SITE_IMAGES) issues.push("too_many_images");
@@ -423,9 +445,9 @@ export function prepareDiveSiteImport(csv: string): PreparedDiveSiteImport {
     // quietly restoring a briefing with a missing picture.
     const satelliteRaw = read(cells, "satellite_image_url");
     const routeImageRaw = read(cells, "route_image_url");
-    if (satelliteRaw !== null && managedImageUrl(satelliteRaw) === null)
+    if (satelliteRaw !== null && managedImageUrl(satelliteRaw, ownedPhotoUrls) === null)
       issues.push("foreign_image_url");
-    if (routeImageRaw !== null && managedImageUrl(routeImageRaw) === null)
+    if (routeImageRaw !== null && managedImageUrl(routeImageRaw, ownedPhotoUrls) === null)
       issues.push("foreign_image_url");
 
     const deletedAt = read(cells, "deleted_at");
@@ -460,8 +482,8 @@ export function prepareDiveSiteImport(csv: string): PreparedDiveSiteImport {
       tideStationId: read(cells, "tide_station_id"),
       tideStationConfirmed: flag(read(cells, "tide_station_confirmed")),
       tidePreference,
-      satelliteImageUrl: managedImageUrl(read(cells, "satellite_image_url")),
-      routeImageUrl: managedImageUrl(read(cells, "route_image_url")),
+      satelliteImageUrl: managedImageUrl(read(cells, "satellite_image_url"), ownedPhotoUrls),
+      routeImageUrl: managedImageUrl(read(cells, "route_image_url"), ownedPhotoUrls),
       routePoints: points,
       routeLabel: read(cells, "route_label"),
       routeNote: read(cells, "route_note"),
