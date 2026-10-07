@@ -1,6 +1,6 @@
 import type { CertificationAgency } from "@/db/schema";
-import type { StaffTranslator } from "@/i18n/staff-messages";
-import { agencyVerificationUrl } from "@/lib/agency-verification";
+import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
+import { type AgencyVerificationPage, agencyVerificationPage } from "@/lib/agency-verification";
 import { AGENCY_KEYS } from "./shared";
 
 /**
@@ -8,8 +8,16 @@ import { AGENCY_KEYS } from "./shared";
  * beside a card that is waiting for somebody to confirm it. A link and nothing
  * more (H-10): DiveDay never calls the agency, and the staffer still marks the
  * card certified here once the agency's page agrees. Renders nothing for an
- * agency with no public lookup (`src/lib/agency-verification.ts`).
+ * agency with no lookup (`src/lib/agency-verification.ts`). The words say what
+ * the far side is: a portal with gaps is "searched", and a member sign-in is
+ * named before the staffer meets the login form.
  */
+const LINK_KEYS: Record<AgencyVerificationPage["kind"], StaffMessageKey> = {
+  check: "divers.certifications.checkWithAgency",
+  search_portal: "divers.certifications.searchAgencyPortal",
+  member_sign_in: "divers.certifications.checkWithAgencyMemberSignIn",
+};
+
 export function AgencyCheckLink({
   agency,
   t,
@@ -17,16 +25,16 @@ export function AgencyCheckLink({
   agency: CertificationAgency;
   t: StaffTranslator;
 }) {
-  const url = agencyVerificationUrl(agency);
-  if (!url) return null;
+  const page = agencyVerificationPage(agency);
+  if (!page) return null;
   return (
     <a
-      href={url}
+      href={page.url}
       target="_blank"
       rel="noopener noreferrer"
       className="mt-1 block w-fit text-sm font-semibold text-primary hover:underline print:hidden"
     >
-      {t("divers.certifications.checkWithAgency", { agency: t(AGENCY_KEYS[agency]) })}
+      {t(LINK_KEYS[page.kind], { agency: t(AGENCY_KEYS[agency]) })}
     </a>
   );
 }

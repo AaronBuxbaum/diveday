@@ -445,11 +445,32 @@ describe("the agency check link", () => {
     expect(screen.queryByRole("link", { name: /Check with/ })).toBeNull();
   });
 
-  it("draws nothing for an agency with no public lookup", () => {
+  it("draws nothing for an agency with no lookup", () => {
+    renderGroup(
+      diver({ certifications: [card("raid", "pending")] } as unknown as Partial<DiverProfile>),
+    );
+    expect(screen.getByText("AB12345")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Check with|Search the/ })).toBeNull();
+  });
+
+  it("names PADI's member sign-in before the staffer meets it", () => {
     renderGroup(
       diver({ certifications: [card("padi", "pending")] } as unknown as Partial<DiverProfile>),
     );
-    expect(screen.getByText("AB12345")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Check with PADI (member sign-in)" })).toHaveAttribute(
+      "href",
+      "https://pro.padi.com/",
+    );
+  });
+
+  it("offers the CMAS portal as a search, not a verdict", () => {
+    renderGroup(
+      diver({ certifications: [card("cmas", "pending")] } as unknown as Partial<DiverProfile>),
+    );
+    expect(screen.getByRole("link", { name: "Search the CMAS portal" })).toHaveAttribute(
+      "href",
+      "https://portal.cmas.org/certifications",
+    );
     expect(screen.queryByRole("link", { name: /Check with/ })).toBeNull();
   });
 });

@@ -24,7 +24,7 @@ import { nowDate } from "@/lib/clock";
 import { resolveDiverNotice } from "@/lib/diver-notices";
 import { bookingIsAhead, splitDiverStatus } from "@/lib/diver-status";
 import { requireShopSurface } from "@/lib/session";
-import { noticeForForm } from "@/lib/staff-notices";
+import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { ActivitySection } from "./_components/ActivitySection";
 import { BookActivity } from "./_components/BookActivity";
@@ -144,7 +144,7 @@ export default async function DiverDetailPage({
   // profile. Follow it before loading any of the old record's sections so a
   // stale bookmark cannot make a staffer act on the source row again.
   if (diver.person.mergedIntoPersonId) {
-    redirect(`/shop/${shopSlug}/divers/${diver.person.mergedIntoPersonId}`);
+    redirect(shopPath(shopSlug, "divers", diver.person.mergedIntoPersonId));
   }
   const removed = Boolean(diver.person.deletedAt);
   const now = nowDate();

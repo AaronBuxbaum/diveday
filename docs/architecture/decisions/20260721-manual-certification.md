@@ -61,5 +61,7 @@ with <agency>** link that opens the agency's own public verification page in a n
 registry, `src/lib/agency-verification.ts` (market audit 2026-10-07, item 30). It is a link and
 nothing more: DiveDay never fetches, scrapes or posts to the agency, never prefills a diver's
 details into the URL (no agency documents a parameter for it), and the staffer still marks the card
-certified here. Only agencies with a confirmed public lookup are listed; PADI's diver lookup is
-member-only, so PADI cards carry no link. This stays inside the decision above.
+certified here. Agencies with a confirmed public lookup get "Check with <agency>"; the CMAS portal,
+which has gaps while federations fill it, gets "Search the CMAS portal"; PADI's DiveChek is behind
+the shop's PADI member login, so PADI cards get "Check with PADI (member sign-in)" pointing at the
+PADI Pros' Site. This stays inside the decision above.

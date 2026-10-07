@@ -515,6 +515,10 @@ export function CertificationsGroup({
         detail={
           <>
             {selfDeclared ? t("divers.certifications.selfDeclaredLabel") : card.identifier}
+            {/* A self-declared nitrox card is the diver's word with no card
+                sighted: its agency is often the "other" placeholder and its
+                title drops the agency, so a lookup link would send the staffer
+                to an agency nobody named. The sighted claim gets one. */}
             {awaiting && !selfDeclared ? <AgencyCheckLink agency={card.agency} t={t} /> : null}
           </>
         }

@@ -60,10 +60,18 @@ describe("diverDuplicateReasons", () => {
     ).toEqual(["same_name_and_birth_date"]);
   });
 
-  it("keeps a bare name match when either date is missing", () => {
-    expect(diverDuplicateReasons({ ...base, dateOfBirth: "1990-04-02" }, base)).toEqual([
-      "same_name",
-    ]);
+  it("never offers a name alone, with a date missing on one side", () => {
+    expect(diverDuplicateReasons({ ...base, dateOfBirth: "1990-04-02" }, base)).toEqual([]);
+    expect(diverDuplicateReasons(base, base)).toEqual([]);
+  });
+
+  it("offers a name with a date missing once the phone agrees too", () => {
+    expect(
+      diverDuplicateReasons(
+        { ...base, phone: "305 555 0142", dateOfBirth: "1990-04-02" },
+        { ...base, phone: "305-555-0142" },
+      ),
+    ).toEqual(["same_phone", "same_name"]);
   });
 
   it("never offers a namesake with a different birth date on the name", () => {

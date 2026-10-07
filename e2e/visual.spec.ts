@@ -5065,7 +5065,8 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Add a diver" }).waitFor();
         await page.getByLabel("Full name").fill("Priya Sharma");
         await page.getByLabel("Email").fill("priya.duplicate@example.com");
-        await page.getByLabel("Phone").fill("+1 305 555 0999");
+        // Seeded Priya's own number: a name alone is never offered as a duplicate.
+        await page.getByLabel("Phone").fill("+1 305 555 0110");
         await page.getByRole("button", { name: "Add diver", exact: true }).click();
         // The prompt asks the counter's question by name now (issue #1556), so
         // this waits on the half that is about this diver rather than on a
@@ -5090,7 +5091,8 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Add a diver" }).waitFor();
         await page.getByLabel("Full name").fill("Priya Sharma");
         await page.getByLabel("Email").fill("priya.duplicate@example.com");
-        await page.getByLabel("Phone").fill("+1 305 555 0999");
+        // Seeded Priya's own number: a name alone is never offered as a duplicate.
+        await page.getByLabel("Phone").fill("+1 305 555 0110");
         await page.getByRole("button", { name: "Add diver", exact: true }).click();
         await page.getByRole("heading", { name: /^Is this the same Priya Sharma\?/ }).waitFor();
         await page.getByRole("button", { name: "Create new diver anyway" }).click();

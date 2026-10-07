@@ -48,7 +48,14 @@ vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
 vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn() }));
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
-const { deletePersonAction, erasePersonAction, replyToDiverAction } = await import("./actions");
+const {
+  deletePersonAction,
+  erasePersonAction,
+  mergeDiverAction,
+  replyToDiverAction,
+  savePersonAction,
+} = await import("./actions");
+const { mergeDiverRecords } = await import("@/db/diver-merge");
 
 /**
  * A seeded diver — someone with no *staff* role. `anonymizeDiver` refuses to
@@ -340,5 +347,85 @@ describe("answering a diver from their record", () => {
     expect(
       await db.select().from(staffReplies).where(eq(staffReplies.inboundMessageId, messageId)),
     ).toHaveLength(0);
+  });
+});
+
+describe("merging two diver records", () => {
+  /** A live staffer in a role that may run the boats but not merge records. */
+  async function makeStaffer(db: AppDb, shopId: string, role: "divemaster" | "instructor") {
+    const email = `${role}.merge@demo.invalid`;
+    const [person] = await db
+      .insert(people)
+      .values({ shopId, fullName: `Merge ${role}`, email })
+      .returning();
+    if (!person) throw new Error(`failed to insert ${role}`);
+    await db.insert(personRoles).values({ personId: person.id, role });
+    await db
+      .insert(userAccounts)
+      .values({ personId: person.id, email, hashedPassword: "x", status: "active" });
+    return person.id;
+  }
+
+  for (const role of ["captain", "divemaster", "instructor"] as const) {
+    it(`refuses a ${role} posting the merge, and neither record changes`, async () => {
+      const { db, shop, diver, captain } = await context();
+      const actor = role === "captain" ? captain : await makeStaffer(db, shop.id, role);
+      const before = await personRow(db, diver);
+      const [twin] = await db
+        .insert(people)
+        .values({ shopId: shop.id, fullName: before.fullName, phone: before.phone })
+        .returning();
+      if (!twin) throw new Error("twin insert failed");
+      await db.insert(personRoles).values({ personId: twin.id, role: "diver" });
+      signIn(shop, actor);
+      const formData = new FormData();
+      formData.set("survivorId", twin.id);
+
+      const to = await redirectedTo(() => mergeDiverAction(shop.slug, diver, formData));
+
+      expect(to).toContain("notice=not-authorized-merge");
+      const after = await personRow(db, diver);
+      expect(after.deletedAt).toBeNull();
+      expect(after.mergedIntoPersonId).toBeNull();
+      expect((await personRow(db, twin.id)).fullName).toBe(before.fullName);
+    });
+  }
+});
+
+describe("a form posted on a record merged away while it was open", () => {
+  it("saves nothing and sends the staffer to the kept record", async () => {
+    const { db, shop, owner } = await context();
+    // Two fresh records with nothing that would make the merge pause.
+    const [gone, kept] = await db
+      .insert(people)
+      .values([
+        { shopId: shop.id, fullName: "Iris Lund", phone: "+1 305 555 0177" },
+        { shopId: shop.id, fullName: "Iris Lund", phone: "+1 305 555 0177" },
+      ])
+      .returning();
+    if (!gone || !kept) throw new Error("insert failed");
+    await db.insert(personRoles).values([
+      { personId: gone.id, role: "diver" },
+      { personId: kept.id, role: "diver" },
+    ]);
+    const diver = gone.id;
+    const before = gone;
+    const merged = await mergeDiverRecords({
+      db,
+      shopId: shop.id,
+      personId: diver,
+      survivorId: kept.id,
+      actorPersonId: owner,
+    });
+    expect(merged.ok).toBe(true);
+    signIn(shop, owner);
+    const formData = new FormData();
+    formData.set("fullName", "Written To The Wrong Record");
+
+    const to = await redirectedTo(() => savePersonAction(shop.slug, diver, formData));
+
+    expect(to).toBe(`/shop/${shop.slug}/divers/${kept.id}?notice=merged-record-moved`);
+    expect((await personRow(db, diver)).fullName).toBe(before.fullName);
+    expect((await personRow(db, kept.id)).fullName).toBe(before.fullName);
   });
 });

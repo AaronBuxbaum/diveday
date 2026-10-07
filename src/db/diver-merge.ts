@@ -1,4 +1,5 @@
-import { and, asc, eq, inArray, isNotNull, isNull, ne, sql } from "drizzle-orm";
+import { createHash } from "node:crypto";
+import { and, asc, eq, inArray, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { canPersonMergeDiver } from "@/db/authz";
 import type { AppDb, DbExecutor } from "@/db/client";
 import { isUniqueConstraintViolation } from "@/db/query-helpers";
@@ -16,9 +17,13 @@ import {
   type DiverDuplicateReason,
   diverDuplicateReasons,
   emailMatchKey,
+  matchRestsOnNameAlone,
   phoneMatchKey,
 } from "@/lib/diver-duplicates";
 import { normalizePersonName, personNamesMatch } from "@/lib/person-name";
+import { hasReturned } from "@/lib/trips";
+import { isStandingRefusal, isUnresolvedMedicalHold } from "@/lib/waivers";
+import { liveTrip } from "./trips-live";
 import { refileWaiverRecords } from "./waiver-refile";
 
 /**
@@ -28,7 +33,9 @@ import { refileWaiverRecords } from "./waiver-refile";
  * `same_name` when both records carry the same date. Two records under one
  * name with two *different* dates of birth are not offered on the name at all:
  * that is two people, and the parent booking a namesake child is exactly the
- * case a merge must not invite.
+ * case a merge must not invite. Nor is a name with a date missing on one side
+ * unless an email or phone agrees too: the child's record is the one that
+ * often has no date (`diverDuplicateReasons`).
  */
 export type DiverMergeCandidateReason = DiverDuplicateReason;
 
@@ -48,8 +55,10 @@ export type DiverMergeRefusal =
   | "already_removed"
   | "staff_record"
   | "booking_conflict"
+  | "departure_underway"
   | "record_conflict"
-  | "different_people_unacknowledged";
+  | "different_people_unacknowledged"
+  | "assessment_changed";
 
 /**
  * The fields a staffer picks a winner for when the two records disagree.
@@ -70,11 +79,21 @@ export type DiverMergeSideChoice = "survivor" | "source";
 export type DiverMergeChoices = Partial<Record<DiverMergeField, DiverMergeSideChoice>>;
 
 /**
- * Why the merge might be joining two *different* people's legal records.
- * Either one makes the merge ask for an explicit acknowledgement, in the
- * preview and again in the transaction (`different_people_unacknowledged`).
+ * Why the merge might be joining two *different* people's legal records, or
+ * hiding a medical answer under someone else's signature. Any one of them
+ * makes the merge ask for an explicit acknowledgement, in the preview and
+ * again in the transaction (`different_people_unacknowledged`), and the
+ * acknowledgement names exactly the set the staffer read
+ * ({@link diverMergeAcknowledgement}): a warning that appears between the
+ * preview and the click refuses as `assessment_changed`.
  *
  * - `different_birth_dates`: both records hold a date of birth and they differ.
+ * - `birth_date_unknown_on_one_record`: one record has a date of birth, the
+ *   other has none, and no email or phone agrees, so the pair rests on the
+ *   name alone. A parent and a child booked under one name is the case: the
+ *   child's record often has no date at all.
+ * - `both_hold_cards_or_releases`: each record holds a certification card or a
+ *   signed release. Merged, one person's cards and paper describe the other.
  * - `releases_under_different_names`: a signed release is on file, and the
  *   names it was signed under and the two records' own names do not all match.
  *   A signature is refused unless the typed name matches the record's diver
@@ -82,8 +101,19 @@ export type DiverMergeChoices = Partial<Record<DiverMergeField, DiverMergeSideCh
  *   moves it onto the kept record whatever that record is called: one
  *   "Maya Rivera" release moving onto a "Carmen Diaz" record is exactly the
  *   case, with no second release anywhere.
+ * - `open_medical_hold` / `declined_clearance`: a record holds a medical answer
+ *   still waiting on a physician, or one a physician declined to clear. On one
+ *   record, a newer clean release on the *other* record stands over it once
+ *   they are merged (`effectiveWaiverForBooking`), which is right for one
+ *   person and wrong for two.
  */
-export type DiverMergeWarning = "different_birth_dates" | "releases_under_different_names";
+export type DiverMergeWarning =
+  | "different_birth_dates"
+  | "birth_date_unknown_on_one_record"
+  | "both_hold_cards_or_releases"
+  | "releases_under_different_names"
+  | "open_medical_hold"
+  | "declined_clearance";
 
 export type DiverMergeResult =
   | { ok: true; survivorId: string; mergedPersonId: string }
@@ -471,6 +501,83 @@ type MergeAssessment =
       releaseNames: string[];
     };
 
+/** What a record's releases say about its medical answers, per side of the preview. */
+export type DiverMergeMedicalFlags = {
+  /** A medical answer still waiting on a physician (`isUnresolvedMedicalHold`). */
+  openMedicalHold: boolean;
+  /** A physician declined to clear it, and nothing newer has (`isStandingRefusal`). */
+  declinedClearance: boolean;
+};
+
+async function medicalFlags(
+  db: DbExecutor,
+  shopId: string,
+  personId: string,
+): Promise<DiverMergeMedicalFlags> {
+  const parked = await db
+    .select()
+    .from(waiverRecords)
+    .where(
+      and(
+        eq(waiverRecords.shopId, shopId),
+        eq(waiverRecords.personId, personId),
+        eq(waiverRecords.status, "medical_review"),
+        isNull(waiverRecords.anonymizedAt),
+      ),
+    );
+  return {
+    openMedicalHold: parked.some(isUnresolvedMedicalHold),
+    declinedClearance: parked.some(isStandingRefusal),
+  };
+}
+
+const CARD_TABLES = [
+  "certifications",
+  "specialty_certifications",
+  "nitrox_certifications",
+] as const satisfies readonly (typeof DIVER_HISTORY_TABLES)[number][];
+
+/** A live certification card or a signed, unerased release on this record. */
+async function holdsCardOrRelease(db: DbExecutor, shopId: string, personId: string) {
+  for (const tableName of CARD_TABLES) {
+    const result = await db.execute(
+      sql`select 1 from ${sql.raw(quotedTable(tableName))} where "shop_id" = ${shopId} and "person_id" = ${personId} and "deleted_at" is null limit 1`,
+    );
+    if (result.rows.length > 0) return true;
+  }
+  const [release] = await db
+    .select({ id: waiverRecords.id })
+    .from(waiverRecords)
+    .where(
+      and(
+        eq(waiverRecords.shopId, shopId),
+        eq(waiverRecords.personId, personId),
+        isNotNull(waiverRecords.signedAt),
+        isNull(waiverRecords.anonymizedAt),
+      ),
+    )
+    .limit(1);
+  return Boolean(release);
+}
+
+/**
+ * The acknowledgement a staffer gives is for the warnings they read, not for
+ * "whatever is true when the click lands". The preview posts this, and the
+ * transaction recomputes it from a fresh assessment and refuses on any
+ * difference (`assessment_changed`): a release signed, or a medical answer
+ * parked, between the two must be read before it is merged.
+ */
+export function diverMergeAcknowledgement(
+  warnings: readonly DiverMergeWarning[],
+  releaseNames: readonly string[],
+): string {
+  const canonical = JSON.stringify([
+    [...warnings].sort(),
+    releaseNames.map((name) => normalizePersonName(name)).sort(),
+  ]);
+  return createHash("sha256").update(canonical).digest("base64url").slice(0, 32);
+}
+
 /**
  * Everything that decides whether two records may become one, asked once for
  * the preview and again inside the merge's own transaction with both rows
@@ -531,6 +638,28 @@ async function assessMerge(
     return refuse("booking_conflict", sharedDepartures);
   }
 
+  // A seat on a departure that is out right now: the boat has been boarded and
+  // not everyone is home. Roll call, the manifest and the dock are all reading
+  // the seat's diver by record, and a merge mid-water repoints the seat under
+  // them. Started counts from the scheduled time or the first check-in,
+  // whichever says so first; home is `hasReturned`, the evening's own rule.
+  const now = nowDate();
+  const live = await db
+    .select({ startsAt: trips.startsAt, endsAt: trips.endsAt })
+    .from(bookings)
+    .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, bookings.shopId)))
+    .where(
+      and(
+        eq(bookings.shopId, shopId),
+        inArray(bookings.personId, ids),
+        ne(bookings.status, "cancelled"),
+        eq(trips.status, "scheduled"),
+        liveTrip(),
+        or(lte(trips.startsAt, now), eq(bookings.status, "checked_in")),
+      ),
+    );
+  if (live.some((trip) => !hasReturned(trip.endsAt, now))) return refuse("departure_underway");
+
   for (const tableName of STAFF_HISTORY_TABLES) {
     if (
       (await hasPersonRow(db, tableName, shopId, source.id)) ||
@@ -551,6 +680,23 @@ async function assessMerge(
   const warnings: DiverMergeWarning[] = [];
   if (source.dateOfBirth && survivor.dateOfBirth && source.dateOfBirth !== survivor.dateOfBirth) {
     warnings.push("different_birth_dates");
+  }
+  if (Boolean(source.dateOfBirth) !== Boolean(survivor.dateOfBirth)) {
+    if (matchRestsOnNameAlone(source, survivor)) warnings.push("birth_date_unknown_on_one_record");
+  }
+  if (
+    (await holdsCardOrRelease(db, shopId, source.id)) &&
+    (await holdsCardOrRelease(db, shopId, survivor.id))
+  ) {
+    warnings.push("both_hold_cards_or_releases");
+  }
+  const sourceMedical = await medicalFlags(db, shopId, source.id);
+  const survivorMedical = await medicalFlags(db, shopId, survivor.id);
+  if (sourceMedical.openMedicalHold || survivorMedical.openMedicalHold) {
+    warnings.push("open_medical_hold");
+  }
+  if (sourceMedical.declinedClearance || survivorMedical.declinedClearance) {
+    warnings.push("declined_clearance");
   }
   const signed = await db
     .select({ signedName: waiverRecords.signedName })
@@ -655,6 +801,7 @@ export type DiverMergeSide = {
   counts: Record<DiverMergeCountGroup, number>;
   /** Signed releases carrying medical answers: never dropped, always moved. */
   medicalAnswers: number;
+  medical: DiverMergeMedicalFlags;
 };
 
 export type DiverMergePreview = {
@@ -670,6 +817,8 @@ export type DiverMergePreview = {
   sharedDepartures: DiverMergeSharedDeparture[];
   warnings: DiverMergeWarning[];
   releaseNames: string[];
+  /** What the acknowledgement checkbox posts: {@link diverMergeAcknowledgement} of the above. */
+  acknowledgement: string;
 };
 
 async function countRows(
@@ -733,6 +882,7 @@ async function mergeSide(
       : null,
     counts,
     medicalAnswers: Number(medical?.n ?? 0),
+    medical: await medicalFlags(db, shopId, person.id),
   };
 }
 
@@ -771,7 +921,10 @@ function conflictingFields(source: DiverMergeSide, survivor: DiverMergeSide): Di
  *
  * Null when the pair is not two records of this shop (or is one record twice),
  * which the page answers with a 404 exactly like a stranger's id: it never
- * says whether another shop has that diver.
+ * says whether another shop has that diver. Null too when either record is not
+ * a plain diver (`staff_record`): the page would otherwise lay a staffer's
+ * date of birth, phone and emergency contact out beside a diver's, for a merge
+ * the transaction refuses anyway.
  */
 export async function getDiverMergePreview(
   db: AppDb,
@@ -789,6 +942,7 @@ export async function getDiverMergePreview(
   if (!source || !survivor) return null;
 
   const assessment = await assessMerge(db, shopId, source, survivor);
+  if (!assessment.ok && assessment.reason === "staff_record") return null;
   const sourceSide = await mergeSide(db, shopId, source);
   const survivorSide = await mergeSide(db, shopId, survivor);
   return {
@@ -799,6 +953,9 @@ export async function getDiverMergePreview(
     sharedDepartures: assessment.ok ? [] : assessment.sharedDepartures,
     warnings: assessment.ok ? assessment.warnings : [],
     releaseNames: assessment.ok ? assessment.releaseNames : [],
+    acknowledgement: assessment.ok
+      ? diverMergeAcknowledgement(assessment.warnings, assessment.releaseNames)
+      : "",
   };
 }
 
@@ -823,9 +980,11 @@ function chosen<T>(
  *
  * `choices` settles each field the two records disagree on; a field with no
  * choice keeps the kept record's value and falls back to the other's only when
- * the kept record has none. `acknowledgeDifferentPeople` is the staffer's
- * explicit "yes, still one person" when `assessMerge` found a reason to doubt
- * it, and without it such a merge is refused.
+ * the kept record has none. `acknowledged` is the staffer's explicit "yes,
+ * still one person" when `assessMerge` found a reason to doubt it, carried as
+ * the {@link diverMergeAcknowledgement} of the warnings they read: without it
+ * such a merge is refused, and with a stale one it is refused as
+ * `assessment_changed`.
  */
 export async function mergeDiverRecords(input: {
   db: DbExecutor;
@@ -834,7 +993,7 @@ export async function mergeDiverRecords(input: {
   survivorId: string;
   actorPersonId: string;
   choices?: DiverMergeChoices;
-  acknowledgeDifferentPeople?: boolean;
+  acknowledged?: string;
 }): Promise<DiverMergeResult> {
   const choices = input.choices ?? {};
   try {
@@ -850,7 +1009,7 @@ export async function mergeDiverRecords(input: {
       const locked = await tx
         .select()
         .from(people)
-        .where(inArray(people.id, lockedIds))
+        .where(and(eq(people.shopId, input.shopId), inArray(people.id, lockedIds)))
         .orderBy(asc(people.id))
         .for("update");
       const byId = new Map(locked.map((person) => [person.id, person]));
@@ -867,8 +1026,14 @@ export async function mergeDiverRecords(input: {
 
       const assessment = await assessMerge(tx, input.shopId, source, survivor);
       if (!assessment.ok) return { ok: false, reason: assessment.reason };
-      if (assessment.warnings.length > 0 && !input.acknowledgeDifferentPeople) {
-        return { ok: false, reason: "different_people_unacknowledged" };
+      if (assessment.warnings.length > 0) {
+        if (!input.acknowledged) return { ok: false, reason: "different_people_unacknowledged" };
+        if (
+          input.acknowledged !==
+          diverMergeAcknowledgement(assessment.warnings, assessment.releaseNames)
+        ) {
+          return { ok: false, reason: "assessment_changed" };
+        }
       }
 
       const mergedAt = nowDate();

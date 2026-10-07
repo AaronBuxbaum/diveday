@@ -14,10 +14,11 @@ const AGENCY_HOSTS: Record<string, string> = {
   tdi: "www.tdisdi.com",
   cmas: "portal.cmas.org",
   gue: "www.gue.com",
+  padi: "pro.padi.com",
 };
 
 describe("agency verification pages", () => {
-  it("lists exactly the agencies confirmed to publish a public lookup", () => {
+  it("lists exactly the agencies confirmed to publish a lookup", () => {
     expect(Object.keys(AGENCY_VERIFICATION_PAGES).sort()).toEqual(Object.keys(AGENCY_HOSTS).sort());
   });
 
@@ -43,8 +44,22 @@ describe("agency verification pages", () => {
     }
   });
 
-  it("answers null for an agency with no public lookup, and for other", () => {
-    expect(agencyVerificationUrl("padi")).toBeNull();
+  it("says which links need a sign-in and which search a portal with gaps", () => {
+    const kinds = Object.fromEntries(
+      Object.entries(AGENCY_VERIFICATION_PAGES).map(([agency, page]) => [agency, page?.kind]),
+    );
+    expect(kinds).toEqual({
+      ssi: "check",
+      naui: "check",
+      sdi: "check",
+      tdi: "check",
+      gue: "check",
+      cmas: "search_portal",
+      padi: "member_sign_in",
+    });
+  });
+
+  it("answers null for an agency with no lookup, and for other", () => {
     expect(agencyVerificationUrl("raid")).toBeNull();
     expect(agencyVerificationUrl("bsac")).toBeNull();
     expect(agencyVerificationUrl("other")).toBeNull();

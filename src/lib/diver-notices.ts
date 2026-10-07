@@ -381,6 +381,23 @@ const NOTICE_KEYS: DiverNoticeMap = {
     tone: "danger",
     key: "divers.notices.mergeDifferentPeopleUnacknowledged",
   },
+  "merge-departure-underway": {
+    form: "merge",
+    tone: "danger",
+    key: "divers.notices.mergeDepartureUnderway",
+  },
+  "merge-assessment-changed": {
+    form: "merge",
+    tone: "danger",
+    key: "divers.notices.mergeAssessmentChanged",
+  },
+  // A write posted against a record merged away while the form was open lands
+  // on the kept record with nothing saved (`requireDiverActionContext`).
+  "merged-record-moved": {
+    form: "page",
+    tone: "warning",
+    key: "divers.notices.mergedRecordMoved",
+  },
 
   // Book an activity. Every code below is emitted only by the seating path, so
   // none of them needs an explicit `?form=` to find its way home.

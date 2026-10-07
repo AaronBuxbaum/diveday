@@ -401,6 +401,19 @@ async function requireDiverActionContext(
   if (!(await isLiveStaff(db, staff.user.shopId, staff.user.personId))) {
     revalidateAndRedirect(base, backTo(base, unauthorizedNotice, form));
   }
+  // A form opened on a record that has since been merged away posts here with
+  // the old id. Every write below would land on a deleted pointer row the
+  // staffer can no longer see, so it lands nowhere: the staffer is sent to the
+  // kept record, told nothing was saved, and makes the change there.
+  const [row] = await db
+    .select({ mergedInto: people.mergedIntoPersonId })
+    .from(people)
+    .where(and(eq(people.id, personId), eq(people.shopId, staff.user.shopId)))
+    .limit(1);
+  if (row?.mergedInto) {
+    const kept = shopPath(shopSlug, "divers", row.mergedInto);
+    revalidateAndRedirect(kept, noticeUrl(kept, "merged-record-moved"));
+  }
   return { base, db, personId, staff };
 }
 
@@ -1259,14 +1272,16 @@ export async function mergeDiverAction(shopSlug: string, personId: string, formD
     survivorId,
     actorPersonId: staff.user.personId,
     choices,
-    acknowledgeDifferentPeople: formData.get("acknowledgeDifferentPeople") === "yes",
+    // The checkbox posts the acknowledgement the staffer read, and only when ticked.
+    acknowledged: String(formData.get("acknowledgement") ?? "") || undefined,
   });
   if (!result.ok) {
     if (result.reason === "not_authorized") {
       revalidateAndRedirect(base, backTo(base, "not-authorized-merge"));
       return;
     }
-    if (result.reason === "not_found") {
+    // A staff record has no preview to return to (the page answers it 404).
+    if (result.reason === "not_found" || result.reason === "staff_record") {
       revalidateAndRedirect(base, backTo(base, "merge-invalid", "merge"));
       return;
     }

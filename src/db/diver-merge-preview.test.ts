@@ -1,13 +1,17 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
+import { guardianSignatureMissing } from "@/lib/guardian";
 import { seededShopContext } from "@/test/db";
+import { createBooking } from "./bookings";
 import {
   getDiverMergePreview,
   listDiverMergeCandidates,
   listDiverMergeDuplicateIds,
   mergeDiverRecords,
 } from "./diver-merge";
+import { recordInboundMessage } from "./inbound-messages";
+import { listTripReadiness } from "./readiness";
 import {
   activityEvents,
   bookings,
@@ -77,6 +81,7 @@ async function signedRelease(
   personId: string,
   signedName: string,
   medical = false,
+  extra: Partial<typeof waiverRecords.$inferInsert> = {},
 ) {
   const [template] = await db
     .select()
@@ -105,11 +110,25 @@ async function signedRelease(
       medicalAnswers: medical
         ? { questionnaireId: "rstc", questionnaireVersion: 1, responses: { q1: false } }
         : null,
+      ...extra,
     })
     .returning({ id: waiverRecords.id });
   if (!row) throw new Error("release insert failed");
   return row.id;
 }
+
+/** What the preview's ticked box posts for this pair right now. */
+async function acknowledgement(
+  f: Awaited<ReturnType<typeof fixtures>>,
+  personId = f.source.id,
+  survivorId = f.survivor.id,
+) {
+  const preview = await getDiverMergePreview(f.db, f.shop.id, personId, survivorId);
+  if (!preview) throw new Error("expected a preview");
+  return preview.acknowledgement;
+}
+
+const HOUR = 60 * 60 * 1000;
 
 function merge(
   f: Awaited<ReturnType<typeof fixtures>>,
@@ -193,7 +212,7 @@ describe("the merge preview", () => {
     expect(preview?.warnings).toEqual([]);
   });
 
-  it("names every departure both records sit on, and refuses on it", async () => {
+  it("names every departure both records sit on, and refuses even when one seat is cancelled", async () => {
     const f = await fixtures();
     await f.db.insert(bookings).values([
       { shopId: f.shop.id, tripId: f.trip.id, personId: f.source.id },
@@ -218,7 +237,11 @@ describe("the merge preview", () => {
     await signedRelease(f.db, f.shop.id, f.survivor.id, "Carmen Diaz", true);
 
     const preview = await getDiverMergePreview(f.db, f.shop.id, f.source.id, f.survivor.id);
-    expect(preview?.warnings).toEqual(["different_birth_dates", "releases_under_different_names"]);
+    expect(preview?.warnings).toEqual([
+      "different_birth_dates",
+      "both_hold_cards_or_releases",
+      "releases_under_different_names",
+    ]);
     expect(preview?.releaseNames.sort()).toEqual(["Carmen Diaz", "Maya Rivera"]);
   });
 
@@ -237,6 +260,63 @@ describe("the merge preview", () => {
     await f.db.update(people).set({ fullName: "Carmen Diaz" }).where(eq(people.id, f.survivor.id));
     const preview = await getDiverMergePreview(f.db, f.shop.id, f.source.id, f.survivor.id);
     expect(preview?.warnings).toEqual([]);
+  });
+
+  it("flags an open medical hold and a declined clearance on the side that holds each", async () => {
+    const f = await fixtures();
+    await signedRelease(f.db, f.shop.id, f.source.id, "Maya Rivera", true, {
+      status: "medical_review",
+      medicalReviewRequired: true,
+    });
+    await signedRelease(f.db, f.shop.id, f.survivor.id, "Maya R. Rivera", true, {
+      status: "medical_review",
+      medicalReviewRequired: true,
+      medicalClearanceDeclinedAt: nowDate(),
+      medicalClearanceDeclinedByPersonId: f.owner.id,
+      medicalClearanceEvaluatedOn: "2026-07-20",
+      medicalClearancePhysicianName: "Dr. Imani Hale",
+    });
+    const preview = await getDiverMergePreview(f.db, f.shop.id, f.source.id, f.survivor.id);
+    expect(preview?.source.medical).toEqual({ openMedicalHold: true, declinedClearance: false });
+    expect(preview?.survivor.medical.declinedClearance).toBe(true);
+    expect(preview?.warnings).toEqual(
+      expect.arrayContaining(["open_medical_hold", "declined_clearance"]),
+    );
+    expect(await merge(f)).toEqual({ ok: false, reason: "different_people_unacknowledged" });
+  });
+
+  it("refuses while either record sits on a departure that is out now, and not once it is back", async () => {
+    const f = await fixtures();
+    const now = nowDate().getTime();
+    await f.db
+      .update(trips)
+      .set({ startsAt: new Date(now - HOUR), endsAt: new Date(now + 2 * HOUR) })
+      .where(eq(trips.id, f.trip.id));
+    await f.db
+      .insert(bookings)
+      .values({ shopId: f.shop.id, tripId: f.trip.id, personId: f.survivor.id });
+    const preview = await getDiverMergePreview(f.db, f.shop.id, f.source.id, f.survivor.id);
+    expect(preview?.refusal).toBe("departure_underway");
+    expect(await merge(f)).toEqual({ ok: false, reason: "departure_underway" });
+
+    await f.db
+      .update(trips)
+      .set({ startsAt: new Date(now - 6 * HOUR), endsAt: new Date(now - 2 * HOUR) })
+      .where(eq(trips.id, f.trip.id));
+    expect((await merge(f)).ok).toBe(true);
+  });
+
+  it("answers null rather than lay a staff record's details beside a diver's", async () => {
+    const f = await fixtures();
+    await f.db.insert(personRoles).values({ personId: f.survivor.id, role: "captain" });
+    expect(await getDiverMergePreview(f.db, f.shop.id, f.source.id, f.survivor.id)).toBeNull();
+    expect(await getDiverMergePreview(f.db, f.shop.id, f.survivor.id, f.source.id)).toBeNull();
+    const [roleless] = await f.db
+      .insert(people)
+      .values({ shopId: f.shop.id, fullName: "Maya Rivera" })
+      .returning({ id: people.id });
+    if (!roleless) throw new Error("insert failed");
+    expect(await getDiverMergePreview(f.db, f.shop.id, f.source.id, roleless.id)).toBeNull();
   });
 
   it("answers null for one record twice and for a record in another shop", async () => {
@@ -350,7 +430,7 @@ describe("two people's legal records", () => {
     const [untouched] = await f.db.select().from(people).where(eq(people.id, f.source.id));
     expect(untouched?.mergedIntoPersonId).toBeNull();
 
-    expect((await merge(f, { acknowledgeDifferentPeople: true })).ok).toBe(true);
+    expect((await merge(f, { acknowledged: await acknowledgement(f) })).ok).toBe(true);
     const releases = await f.db
       .select({ id: waiverRecords.id, answers: waiverRecords.medicalAnswers })
       .from(waiverRecords)
@@ -367,6 +447,128 @@ describe("two people's legal records", () => {
       .set({ dateOfBirth: "1992-11-20" })
       .where(eq(people.id, f.survivor.id));
     expect(await merge(f)).toEqual({ ok: false, reason: "different_people_unacknowledged" });
+  });
+
+  it("asks before merging a namesake with no date of birth, and the child's medical hold stands", async () => {
+    const f = await fixtures();
+    // A parent and a child under one name, nothing else in common, and only
+    // the parent's record carries a date: the case B1 of the domain review.
+    const [parent, child] = await f.db
+      .insert(people)
+      .values([
+        {
+          shopId: f.shop.id,
+          fullName: "Ana Sol",
+          email: "ana.sol@example.com",
+          dateOfBirth: "1980-02-02",
+        },
+        { shopId: f.shop.id, fullName: "Ana Sol", email: "anasol.kid@example.com" },
+      ])
+      .returning();
+    if (!parent || !child) throw new Error("insert failed");
+    await f.db.insert(personRoles).values([
+      { personId: parent.id, role: "diver" },
+      { personId: child.id, role: "diver" },
+    ]);
+    const now = nowDate().getTime();
+    await f.db
+      .update(trips)
+      .set({ startsAt: new Date(now + 48 * HOUR), endsAt: new Date(now + 52 * HOUR) })
+      .where(eq(trips.id, f.trip.id));
+    const [seat] = await f.db
+      .insert(bookings)
+      .values({ shopId: f.shop.id, tripId: f.trip.id, personId: child.id })
+      .returning({ id: bookings.id });
+    if (!seat) throw new Error("booking insert failed");
+    const yesterday = new Date(nowDate().getTime() - 24 * HOUR);
+    const hold = await signedRelease(f.db, f.shop.id, child.id, "Ana Sol", true, {
+      status: "medical_review",
+      medicalReviewRequired: true,
+      bookingId: seat.id,
+      signedAt: yesterday,
+      completedAt: yesterday,
+      consentedAt: yesterday,
+    });
+    await signedRelease(f.db, f.shop.id, parent.id, "Ana Sol");
+
+    const pair = { personId: child.id, survivorId: parent.id };
+    const preview = await getDiverMergePreview(f.db, f.shop.id, child.id, parent.id);
+    expect(preview?.warnings).toEqual(
+      expect.arrayContaining([
+        "birth_date_unknown_on_one_record",
+        "both_hold_cards_or_releases",
+        "open_medical_hold",
+      ]),
+    );
+    expect(await merge(f, pair)).toEqual({ ok: false, reason: "different_people_unacknowledged" });
+
+    const governing = async () =>
+      (await listTripReadiness(f.db, f.shop.id, f.trip.id)).find(
+        (row) => row.booking.id === seat.id,
+      )?.waiver?.id;
+    expect(await governing()).toBe(hold);
+    // Acknowledged, the hold on the seat it was signed for still governs it:
+    // the parent's newer clean release does not stand in for the child's.
+    expect(
+      (await merge(f, { ...pair, acknowledged: await acknowledgement(f, child.id, parent.id) })).ok,
+    ).toBe(true);
+    expect(await governing()).toBe(hold);
+  });
+
+  it("refuses an acknowledgement given for a different set of warnings", async () => {
+    const f = await fixtures();
+    await f.db.update(people).set({ dateOfBirth: "1990-04-02" }).where(eq(people.id, f.source.id));
+    await f.db
+      .update(people)
+      .set({ dateOfBirth: "1992-11-20" })
+      .where(eq(people.id, f.survivor.id));
+    const read = await acknowledgement(f);
+    // A release lands on each record after the staffer read the comparison.
+    await signedRelease(f.db, f.shop.id, f.source.id, "Maya Rivera");
+    await signedRelease(f.db, f.shop.id, f.survivor.id, "Carmen Diaz");
+    expect(await merge(f, { acknowledged: read })).toEqual({
+      ok: false,
+      reason: "assessment_changed",
+    });
+    expect(await merge(f, { acknowledged: "yes" })).toEqual({
+      ok: false,
+      reason: "assessment_changed",
+    });
+    const [untouched] = await f.db.select().from(people).where(eq(people.id, f.source.id));
+    expect(untouched?.mergedIntoPersonId).toBeNull();
+  });
+
+  it("lets the date kept decide whether a minor's release still needs a guardian", async () => {
+    for (const [choice, missing] of [
+      ["source", true],
+      ["survivor", false],
+    ] as const) {
+      const f = await fixtures();
+      await f.db
+        .update(people)
+        .set({ dateOfBirth: "2012-05-01" })
+        .where(eq(people.id, f.source.id));
+      await f.db
+        .update(people)
+        .set({ dateOfBirth: "1985-01-01" })
+        .where(eq(people.id, f.survivor.id));
+      const release = await signedRelease(f.db, f.shop.id, f.source.id, "Maya Rivera");
+      const result = await merge(f, {
+        choices: { dateOfBirth: choice },
+        acknowledged: await acknowledgement(f),
+      });
+      expect(result.ok).toBe(true);
+      const [kept] = await f.db.select().from(people).where(eq(people.id, f.survivor.id));
+      const [record] = await f.db.select().from(waiverRecords).where(eq(waiverRecords.id, release));
+      if (!kept || !record) throw new Error("expected the kept record and its release");
+      expect(
+        guardianSignatureMissing(record, {
+          dateOfBirth: kept.dateOfBirth,
+          timezone: f.shop.timezone,
+        }),
+        choice,
+      ).toBe(missing);
+    }
   });
 
   it("leaves an erased release on the record it was erased under", async () => {
@@ -434,5 +636,44 @@ describe("adversarial merges", () => {
       ok: false,
       reason: "not_authorized",
     });
+  });
+});
+
+describe("writes aimed at a record merged away", () => {
+  it("refuses a booking for the merged-away id", async () => {
+    const f = await fixtures();
+    expect((await merge(f)).ok).toBe(true);
+    const [future] = await f.db
+      .select({ id: trips.id })
+      .from(trips)
+      .where(and(eq(trips.shopId, f.shop.id), gt(trips.startsAt, nowDate())))
+      .limit(1);
+    if (!future) throw new Error("expected a seeded future departure");
+    const result = await createBooking(f.db, {
+      actor: "staff",
+      shopId: f.shop.id,
+      tripId: future.id,
+      personId: f.source.id,
+    });
+    expect(result).toMatchObject({ ok: false, reason: "person_not_found" });
+    expect(await f.db.select().from(bookings).where(eq(bookings.personId, f.source.id))).toEqual(
+      [],
+    );
+  });
+
+  it("files a message from the merged-away record's address on the kept record", async () => {
+    const f = await fixtures();
+    // The kept record takes the address, and the deleted row still holds it too.
+    expect((await merge(f, { choices: { email: "source" } })).ok).toBe(true);
+    const result = await recordInboundMessage(f.db, {
+      shopId: f.shop.id,
+      channel: "email",
+      fromAddress: "maya.rivera+dive@gmail.com",
+      subject: "Saturday",
+      body: "Running late",
+      receivedAt: nowDate(),
+      providerMessageId: `merge-${f.source.id}`,
+    });
+    expect(result).toMatchObject({ status: "recorded", personId: f.survivor.id });
   });
 });

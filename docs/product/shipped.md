@@ -20,14 +20,15 @@ A nightly cron (`/api/cron/founder-metrics`) records each real shop's activation
 ## Merging duplicate divers, and checking a card with its agency (delivered 2026-10-07)
 
 Market audit items 30 and 38. A diver record's likely duplicates (same mailbox, same phone, or same
-name without a disagreeing birth date) each open a side-by-side merge preview at
+name and birth date; a name alone is never offered) each open a side-by-side merge preview at
 `divers/[personId]/merge/[survivorId]`: both records, the fields they disagree on as choices, what
-moves, the departures that block it, and an acknowledgement when the two may be two people. One
+moves, the departures that block it (shared, or out on the water now), and an acknowledgement when
+the two may be two people or a medical answer is still open. One
 transaction moves everything, keeps every signed release and medical answer, and leaves a pointer
 so old links land on the kept record (glossary "Merge (two diver records)"; `diver-merge.test.ts`
 asks the catalog for every foreign key to `people`). A card waiting for a check carries **Check
-with <agency>**, a link to that agency's own public lookup (SSI, NAUI, SDI, TDI, CMAS, GUE), from
-`src/lib/agency-verification.ts`; PADI's lookup is member-only, so it has none (H-10 amendment in
+with <agency>**, a link to that agency's own lookup (SSI, NAUI, SDI, TDI, GUE; "Search the CMAS
+portal"; "Check with PADI (member sign-in)"), from `src/lib/agency-verification.ts` (H-10 amendment in
 [20260721-manual-certification](../architecture/decisions/20260721-manual-certification.md)).
 
 ## A page for every feature (delivered 2026-10-05)

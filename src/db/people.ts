@@ -254,6 +254,9 @@ export async function selectActivePersonByEmail(tx: DbExecutor, shopId: string, 
         isNull(people.deletedAt),
       ),
     )
-    .limit(1);
+    .limit(1)
+    // Waits on a merge holding the row `for update` and re-reads it, so a
+    // record merged away meanwhile is not the one a new booking attaches to.
+    .for("key share");
   return row ?? null;
 }

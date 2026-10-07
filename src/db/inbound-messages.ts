@@ -81,6 +81,12 @@ export type RecordInboundMessageResult =
  * `phoneMatches` is what decides, and it is strict. Among several matches — a
  * duplicate record the merge tool has not met yet — the oldest live diver wins,
  * so a message keeps landing on the record the shop has been using longest.
+ *
+ * Both reads lock what they match (`for key share`), which waits on a merge
+ * holding the row `for update` and then re-reads it: a record merged away while
+ * the message was arriving is no longer live, and the message is not filed on
+ * it. The lock lasts only as long as the caller's transaction, which is why
+ * `recordInboundMessage` runs the match and the insert in one.
  */
 export async function matchPersonByAddress(
   db: DbExecutor,
@@ -99,7 +105,8 @@ export async function matchPersonByAddress(
       .from(people)
       .where(and(live, sql`lower(${people.email}) = ${normalizedAddress}`))
       .orderBy(asc(people.createdAt))
-      .limit(1);
+      .limit(1)
+      .for("key share");
     return row?.id ?? null;
   }
   const [shop] = await db
@@ -117,7 +124,8 @@ export async function matchPersonByAddress(
         sql`right(regexp_replace(coalesce(${people.phone}, ''), '\\D', '', 'g'), 7) = ${tail}`,
       ),
     )
-    .orderBy(asc(people.createdAt));
+    .orderBy(asc(people.createdAt))
+    .for("key share");
   return (
     candidates.find((row) => phoneMatches(row.phone, normalizedAddress, shop?.country))?.id ?? null
   );
@@ -159,7 +167,16 @@ export async function recordInboundMessage(
 ): Promise<RecordInboundMessageResult> {
   const fromAddress = normalizeAddress(input.channel, input.fromAddress);
   if (!fromAddress) return { status: "invalid_address" };
+  // One transaction, so the match's row lock holds until the message is filed
+  // (`matchPersonByAddress`): a merge cannot land between the two.
+  return db.transaction((tx) => recordMatchedInboundMessage(tx, input, fromAddress));
+}
 
+async function recordMatchedInboundMessage(
+  db: DbExecutor,
+  input: RecordInboundMessageInput,
+  fromAddress: string,
+): Promise<RecordInboundMessageResult> {
   const personId =
     input.senderAuthenticated === false
       ? null

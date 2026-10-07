@@ -32,8 +32,8 @@ async function addDiver(
 }
 
 /**
- * The merge flow end to end (issue #1240): a duplicate made at the counter is
- * offered on its record, the preview lays both records side by side, the
+ * The merge flow end to end (issue #1240): a duplicate made at the counter
+ * under the same name and the same mailbox is offered on its record, the preview lays both records side by side, the
  * staffer keeps the merged-away record's phone, and the merged record's old
  * link lands on the record that was kept.
  */
@@ -48,7 +48,9 @@ test("staff merge a duplicate diver into the record they keep, choosing which ph
   });
   const duplicate = await addDiver(
     page,
-    { name, email: "quorrax.counter@example.com", phone: "+1 305 555 0172" },
+    // One mailbox written two ways: a name alone is never offered as a
+    // duplicate, so the counter's record shares the kept record's address.
+    { name, email: "quorrax.kept+counter@example.com", phone: "+1 305 555 0172" },
     true,
   );
   expect(duplicate).not.toBe(kept);
@@ -56,7 +58,7 @@ test("staff merge a duplicate diver into the record they keep, choosing which ph
   await page.goto(duplicate);
   const panel = page.locator("#merge");
   await expect(panel.getByRole("heading", { name: "Possible duplicate records" })).toBeVisible();
-  await expect(panel.getByText("Same name", { exact: true })).toBeVisible();
+  await expect(panel.getByText("Same email", { exact: true })).toBeVisible();
   await panel.getByRole("link", { name: `Compare with ${name}` }).click();
 
   await page.getByRole("heading", { level: 1, name: "Merge duplicate records" }).waitFor();
@@ -98,7 +100,7 @@ test("the preview refuses a pair already merged by sending the stale link to the
   });
   const duplicate = await addDiver(
     page,
-    { name, email: "stalelink.counter@example.com", phone: "+1 305 555 0182" },
+    { name, email: "stalelink.kept+counter@example.com", phone: "+1 305 555 0182" },
     true,
   );
   const keptId = kept.split("/").pop() ?? "";

@@ -72,7 +72,11 @@ new domain concept, define it here in the same PR.
   outside DiveDay) and clicks **Mark certified**; a card arrives already `verified` through the contact
   importer (see **Imported certification**); or this shop's own instructor certifies a diver directly
   from a course session's own roster (see **Shop-issued certification**). There is no automated agency
-  integration for the first path. Only a certified card at or above a trip's required level can
+  integration for the first path. A card awaiting a check carries a link to its agency's lookup page
+  ("Check with SSI"): a convenience that saves finding the page, never evidence — the card becomes
+  certified only when a staffer marks it so — and some agencies (RAID, BSAC, the cave-diving bodies)
+  get none because they publish no lookup to link to, while PADI's sits behind the shop's member
+  sign-in and its link says so. Only a certified card at or above a trip's required level can
   satisfy readiness. (The staff surface says "certified"; the stored status value is `verified`, which
   is what readiness reads.)
 - **Claimed certification** — a card recorded as evidence but not yet verified: the stored status is
@@ -355,8 +359,11 @@ new domain concept, define it here in the same PR.
   Diver deserves to be told the difference is ours and invited to ask.
 - **CMAS** — a **confederation, not an issuer**: the card is issued and numbered by a *national
   federation* (FFESSM in France, VDST in Germany, FIPSAS in Italy, LIFRAS in francophone Belgium…)
-  under CMAS standards, so there is no single CMAS registry a staffer can check a number against —
-  the lookup **Verified certification** describes has to go to the federation named on the card.
+  under CMAS standards. CMAS does run a central portal (portal.cmas.org) that searches by CMAS code,
+  or by name and birth date, but national federations are still filling it: a card it finds is
+  confirmed, and a card it does not find is **not** thereby invalid — the lookup **Verified
+  certification** describes then goes to the federation named on the card. That is why the staff
+  link reads "Search the CMAS portal" rather than "Check with CMAS".
   Its ladder is stars, and DiveDay's ladder holds it like this: **1★ ≈ Open Water** (ISO 24801-2
   *Autonomous Diver*, the same rung PADI Open Water maps to), **2★ ≈ Advanced Open Water**, **3★ ≈
   Divemaster** (ISO 24801-3 *Dive Leader*). Two traps live in that mapping. **The stars are also
@@ -2343,14 +2350,19 @@ new domain concept, define it here in the same PR.
   taking everything the other held (`mergeDiverRecords`, `src/db/diver-merge.ts`; issue #1240).
   Owner or manager only. A **likely duplicate** is offered on the record and flagged on the roster
   when two live records share one mailbox (a `+tag`, or Gmail's dots, folded away), one phone, or
-  one name with no disagreeing date of birth; two records under one name with *different* dates
-  are two people and are never offered on the name (`src/lib/diver-duplicates.ts`). Every merge
+  one name and one date of birth; a name with a date missing on one side is offered only when an
+  email or phone agrees too, and two records under one name with *different* dates are two people
+  and are never offered on the name (`src/lib/diver-duplicates.ts`). Every merge
   goes through a side-by-side **merge preview** (`divers/[personId]/merge/[survivorId]`): both
   records' particulars, what each holds, and a choice wherever they disagree (name, date of birth,
   email, phone, emergency contact as one pair, rental sizes as one profile), the kept record's value
-  preselected. A departure both records sit on refuses the merge until staff resolve the seat; two
-  different dates of birth, or signed releases signed under names that do not match, mean the two
-  may be **two people**, and the merge runs only after the staffer ticks that they checked. Every
+  preselected. A departure both records sit on refuses the merge until staff move the seat, and so
+  does a seat on a departure that is out right now ("Merge after the boat is back"). Two different
+  dates of birth, one date missing where only the name matches, cards or signed releases on both
+  records, releases signed under names that do not match, or a medical answer still waiting on (or
+  declined by) a physician mean the two may be **two people**, and the merge runs only after the
+  staffer ticks that they confirmed it with the diver; the tick names the exact warnings read, and a
+  new one appearing before the click refuses the merge. Every
   signed release and medical answer moves, re-sealed as integrity version 3; none is dropped. The
   record merged away is deleted with a pointer to the one kept (`people.merged_into_person_id`), so
   its old links land on the kept record, and the kept record's trail says who merged which name

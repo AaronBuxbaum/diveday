@@ -37,6 +37,7 @@ function side(overrides: Partial<DiverMergeSide>): DiverMergeSide {
     rentalFit: null,
     counts: zeroCounts,
     medicalAnswers: 0,
+    medical: { openMedicalHold: false, declinedClearance: false },
     ...overrides,
   };
 }
@@ -59,6 +60,7 @@ function preview(overrides: Partial<DiverMergePreview> = {}): DiverMergePreview 
     sharedDepartures: [],
     warnings: [],
     releaseNames: [],
+    acknowledgement: "",
     ...overrides,
   };
 }
@@ -134,16 +136,72 @@ describe("the merge preview", () => {
   it("asks for a required acknowledgement when the two may be two people", () => {
     renderPreview(
       preview({
-        warnings: ["different_birth_dates", "releases_under_different_names"],
+        warnings: [
+          "different_birth_dates",
+          "birth_date_unknown_on_one_record",
+          "releases_under_different_names",
+        ],
         releaseNames: ["Maya Rivera", "Carmen Diaz"],
+        acknowledgement: "read-these-three",
       }),
     );
     expect(screen.getByRole("heading", { name: "These may be two people" })).toBeVisible();
     expect(screen.getByText(/Maya Rivera · Carmen Diaz/)).toBeVisible();
+    expect(screen.getByText(/Only one record has a date of birth/)).toBeVisible();
     const box = screen.getByRole("checkbox", {
-      name: "I checked: these records are the same person",
+      name: "I confirmed with the diver (or their ID) that these records are one person.",
     });
     expect(box).toBeRequired();
-    expect(box).toHaveAttribute("name", "acknowledgeDifferentPeople");
+    // The box posts the exact warnings it was ticked for, never a bare "yes".
+    expect(box).toHaveAttribute("name", "acknowledgement");
+    expect(box).toHaveAttribute("value", "read-these-three");
+  });
+
+  it("says a medical answer still open on a side, in danger tone, and asks about it", () => {
+    renderPreview(
+      preview({
+        source: side({ medical: { openMedicalHold: true, declinedClearance: false } }),
+        warnings: ["open_medical_hold"],
+      }),
+    );
+    const flag = screen.getByText(
+      "A medical answer on this record still needs a physician’s sign-off.",
+    );
+    expect(flag).toHaveClass("text-danger");
+    expect(screen.getByText(/A medical answer is still waiting on a physician/)).toBeVisible();
+    expect(screen.getByRole("checkbox")).toBeRequired();
+  });
+
+  it("warns under the date choice that a minor's date decides who must co-sign", () => {
+    renderPreview(
+      preview({
+        source: side({ dateOfBirth: "2015-03-01" }),
+        survivor: side({ id: "22222222-2222-4222-8222-222222222222", dateOfBirth: "1984-06-12" }),
+        conflicts: ["dateOfBirth"],
+        warnings: ["different_birth_dates"],
+      }),
+    );
+    expect(
+      screen.getByText(
+        "The date you keep decides which releases need a parent or guardian’s signature.",
+      ),
+    ).toBeVisible();
+  });
+
+  it("says nothing about guardians when both dates are adults'", () => {
+    renderPreview(
+      preview({
+        source: side({ dateOfBirth: "1990-03-01" }),
+        survivor: side({ id: "22222222-2222-4222-8222-222222222222", dateOfBirth: "1984-06-12" }),
+        conflicts: ["dateOfBirth"],
+      }),
+    );
+    expect(screen.queryByText(/parent or guardian/)).toBeNull();
+  });
+
+  it("refuses with the boat still out", () => {
+    renderPreview(preview({ refusal: "departure_underway" }));
+    expect(screen.getByText(/Merge after the boat is back\./)).toBeVisible();
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });

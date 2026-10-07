@@ -95,11 +95,17 @@ describe("diver record merge", () => {
     expect(mergedSurvivor?.email).toBe("source@example.com");
   });
 
-  it("surfaces narrow same-name and same-phone candidates", async () => {
+  it("surfaces narrow same-name and same-phone candidates, never a name alone", async () => {
     const { db, shop, source, survivor } = await mergeFixtures();
+    // One name and nothing else in common: a parent and a namesake child look
+    // exactly like this, so the name alone is never offered.
+    const nameOnly = await listDiverMergeCandidates(db, shop.id, source.id);
+    expect(nameOnly.find((candidate) => candidate.id === survivor.id)).toBeUndefined();
+
+    await db.update(people).set({ phone: "+1 305 555 0142" }).where(eq(people.id, survivor.id));
     const candidates = await listDiverMergeCandidates(db, shop.id, source.id);
     expect(candidates.find((candidate) => candidate.id === survivor.id)).toEqual(
-      expect.objectContaining({ id: survivor.id, reasons: ["same_name"] }),
+      expect.objectContaining({ id: survivor.id, reasons: ["same_phone", "same_name"] }),
     );
     expect(await listDiverMergeDuplicateIds(db, shop.id)).toEqual(
       expect.arrayContaining([source.id, survivor.id]),

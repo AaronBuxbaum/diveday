@@ -54,14 +54,15 @@ export function phoneMatchKey(phone: string | null | undefined): string | null {
 /**
  * Why two records look like one diver, strongest first; empty when they do
  * not. Exact keys only: a likely duplicate is a hint a staffer reads before
- * choosing, never a merge, so a false positive costs a glance and a false
- * negative costs nothing a staffer cannot still do by hand.
+ * choosing, never a merge.
  *
- * A name match is downgraded or dropped by the dates of birth: the same name
- * and the same date is the strongest signal there is, the same name with one
- * date missing is still worth a look, and the same name with two different
- * dates is two people (a parent and the child named after them) and is not
- * offered on the name at all.
+ * **A name alone is never enough** (dive-domain review, 2026-10-07): a parent
+ * and the child named after them share a name, and a merge would hand the
+ * child the parent's card and releases. So the name counts only with a second
+ * signal beside it. The same name and the same date of birth is one; the same
+ * name with a date missing on either side is offered only when the email or
+ * the phone agrees too; and the same name with two different dates is two
+ * people and is not offered on the name at all.
  */
 export function diverDuplicateReasons(
   a: DuplicateSignals,
@@ -76,9 +77,15 @@ export function diverDuplicateReasons(
   if (nameA && nameA === normalizePersonName(b.fullName)) {
     if (a.dateOfBirth && b.dateOfBirth) {
       if (a.dateOfBirth === b.dateOfBirth) reasons.push("same_name_and_birth_date");
-    } else {
+    } else if (reasons.length > 0) {
       reasons.push("same_name");
     }
   }
   return reasons;
+}
+
+/** Whether a pair's likeness rests on the name alone, with no contact detail agreeing. */
+export function matchRestsOnNameAlone(a: DuplicateSignals, b: DuplicateSignals): boolean {
+  const reasons = diverDuplicateReasons(a, b);
+  return !reasons.includes("same_email") && !reasons.includes("same_phone");
 }

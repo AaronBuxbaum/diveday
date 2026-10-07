@@ -13,12 +13,11 @@ type CertificationAgency = (typeof CERTIFICATION_AGENCIES)[number];
  * these addresses, which is what keeps it inside H-10 (market audit
  * 2026-10-07, item 30).
  *
- * **Only public pages.** Every URL below was opened on 2026-10-07 and answers
- * without a login. Agencies left out, and why:
+ * **Public pages, and one sign-in said out loud.** Every URL below answers
+ * without a login except PADI's, and the link text says which kind each one
+ * is (`kind`), so a staffer is never surprised by a login form or by an empty
+ * result. Agencies left out, and why:
  *
- * - `padi`: PADI withdrew its public diver lookup "for privacy reasons". What
- *   remains is DiveChek on the PADI Pros' Site, behind a member login, and Pro
- *   Chek, which checks professionals rather than divers.
  * - `raid`: diveraid.com links a "Search RAID Divers" page, but its search
  *   renders client side and could not be confirmed as a public diver lookup.
  * - `bsac`: no public qualification lookup; a member's record lives in the
@@ -38,10 +37,19 @@ type CertificationAgency = (typeof CERTIFICATION_AGENCIES)[number];
  * reuses the agency's existing name (`divers.shared.agencies.*`).
  */
 export type AgencyVerificationPage = {
-  /** The agency's own public verification page. Always https, always the agency's domain. */
+  /** The agency's own verification page. Always https, always the agency's domain. */
   url: string;
   /** What the agency's form searches by; informs the reader, never the UI. */
   searchesBy: "card_number" | "name_and_birth_date" | "card_number_or_name_and_birth_date";
+  /**
+   * What the link promises, and so which words it carries:
+   * - `check`: a public lookup that answers for the agency ("Check with SSI").
+   * - `search_portal`: a public search with known gaps, where not found does
+   *   not mean invalid ("Search the CMAS portal").
+   * - `member_sign_in`: the lookup sits behind the shop's own agency member
+   *   login ("Check with PADI (member sign-in)").
+   */
+  kind: "check" | "search_portal" | "member_sign_in";
 };
 
 export const AGENCY_VERIFICATION_PAGES: Readonly<
@@ -51,28 +59,60 @@ export const AGENCY_VERIFICATION_PAGES: Readonly<
   // the card's QR code. robots.txt keeps crawlers off my.divessi.com, so this
   // one was confirmed from three shop guides that link it as public rather
   // than by fetching it directly.
-  ssi: { url: "https://my.divessi.com/online_diver_check", searchesBy: "card_number" },
+  ssi: {
+    url: "https://my.divessi.com/online_diver_check",
+    searchesBy: "card_number",
+    kind: "check",
+  },
   // NAUI "Verify Diver Certification": first name, last name, date of birth.
   naui: {
     url: "https://www.naui.org/services/verify-diver-certification/",
     searchesBy: "name_and_birth_date",
+    kind: "check",
   },
   // SDI, TDI, ERDI and PFI share one "Certification Search": date of birth,
   // first name, last name.
-  sdi: { url: "https://www.tdisdi.com/cert-search/", searchesBy: "name_and_birth_date" },
-  tdi: { url: "https://www.tdisdi.com/cert-search/", searchesBy: "name_and_birth_date" },
+  sdi: {
+    url: "https://www.tdisdi.com/cert-search/",
+    searchesBy: "name_and_birth_date",
+    kind: "check",
+  },
+  tdi: {
+    url: "https://www.tdisdi.com/cert-search/",
+    searchesBy: "name_and_birth_date",
+    kind: "check",
+  },
   // The CMAS central portal: a CMAS code, or given name, family name and birth
   // date. The portal says a missing result does not mean an invalid card,
-  // because national federations are still filling it.
+  // because national federations are still filling it, which is why the link
+  // says "search" rather than "check" (glossary, "CMAS").
   cmas: {
     url: "https://portal.cmas.org/certifications",
     searchesBy: "card_number_or_name_and_birth_date",
+    kind: "search_portal",
   },
   // GUE "Verify card": the number printed after the "#".
-  gue: { url: "https://www.gue.com/verifycard", searchesBy: "card_number" },
+  gue: { url: "https://www.gue.com/verifycard", searchesBy: "card_number", kind: "check" },
+  // PADI withdrew its public diver lookup "for privacy reasons". What remains
+  // is DiveChek, under "Online Services" on the PADI Pros' Site, behind the
+  // shop's PADI member login (PADI Pros' blog, "PADI ProChek and DiveChek
+  // tools"). The link is the Pros' Site itself: DiveChek's own path renders
+  // client side and could not be confirmed from outside a login, and a guessed
+  // deep link that moves fails silently where the site's front door does not.
+  // Pro Chek is a different tool and checks professionals, not divers.
+  padi: {
+    url: "https://pro.padi.com/",
+    searchesBy: "card_number_or_name_and_birth_date",
+    kind: "member_sign_in",
+  },
 };
 
-/** The agency's public verification page, or null when it publishes none. */
+/** The agency's verification page, or null when it publishes none. */
+export function agencyVerificationPage(agency: CertificationAgency): AgencyVerificationPage | null {
+  return AGENCY_VERIFICATION_PAGES[agency] ?? null;
+}
+
+/** The agency's verification page's address, or null when it publishes none. */
 export function agencyVerificationUrl(agency: CertificationAgency): string | null {
-  return AGENCY_VERIFICATION_PAGES[agency]?.url ?? null;
+  return agencyVerificationPage(agency)?.url ?? null;
 }

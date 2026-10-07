@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
@@ -12,9 +12,16 @@ import {
   type DiverMergePreview,
   type DiverMergeRefusal,
   type DiverMergeSide,
+  type DiverMergeWarning,
 } from "@/db/diver-merge";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
-import { formatCalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
+import { isMinorOnDate } from "@/lib/age";
+import {
+  calendarDateInTimezone,
+  formatCalendarDate,
+  isValidCalendarDate,
+} from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
 import { formatDateTimeTz } from "@/lib/format";
 import { shopPath } from "@/lib/staff-notices";
@@ -53,6 +60,20 @@ const REFUSAL_KEYS: Record<Exclude<DiverMergeRefusal, "booking_conflict">, Staff
   staff_record: "divers.notices.mergeStaffRecord",
   record_conflict: "divers.notices.mergeRecordConflict",
   different_people_unacknowledged: "divers.notices.mergeDifferentPeopleUnacknowledged",
+  departure_underway: "divers.notices.mergeDepartureUnderway",
+  assessment_changed: "divers.notices.mergeAssessmentChanged",
+};
+
+/** One line per reason to doubt the pair, in the order the transaction finds them. */
+const WARNING_KEYS: Record<
+  Exclude<DiverMergeWarning, "releases_under_different_names">,
+  StaffMessageKey
+> = {
+  different_birth_dates: "divers.mergePreview.differentBirthDates",
+  birth_date_unknown_on_one_record: "divers.mergePreview.birthDateUnknownOnOneRecord",
+  both_hold_cards_or_releases: "divers.mergePreview.bothHoldCardsOrReleases",
+  open_medical_hold: "divers.mergePreview.medicalAnswerWaiting",
+  declined_clearance: "divers.mergePreview.medicalAnswerDeclined",
 };
 
 function fieldValue(
@@ -103,9 +124,10 @@ function fieldValue(
  * is a choice (the kept record's value preselected), a field they agree on or
  * only one holds is shown and carried. Below it, what each record holds,
  * which is everything that moves. A shared departure refuses the merge with
- * the departures named, and two signs of two different people (birth dates,
- * or releases signed under different names) put a required acknowledgement in
- * front of the button. The transaction asks every one of those again.
+ * the departures named, as does a seat on a departure that is out now. Every
+ * sign of two different people (`DiverMergeWarning`) puts a required
+ * acknowledgement in front of the button, and the box posts the exact set it
+ * acknowledged. The transaction asks every one of those again.
  */
 export function MergePreview({
   preview,
@@ -125,6 +147,17 @@ export function MergePreview({
   const { source, survivor } = preview;
   const conflicts = new Set(preview.conflicts);
   const notOnFile = t("divers.mergePreview.notOnFile");
+  // Which date stays decides who must have co-signed: a minor's release
+  // without a guardian's signature blocks the seat (`guardianSignatureMissing`).
+  const today = calendarDateInTimezone(nowDate(), timeZone);
+  const isMinor = (side: DiverMergeSide) =>
+    Boolean(
+      side.dateOfBirth &&
+        isValidCalendarDate(side.dateOfBirth) &&
+        isMinorOnDate(side.dateOfBirth, today),
+    );
+  const minorDateInPlay =
+    conflicts.has("dateOfBirth") && (isMinor(source) || isMinor(survivor)) && !preview.refusal;
 
   const cell = (field: DiverMergeField, side: DiverMergeSide, choice: "source" | "survivor") => {
     const value = fieldValue(field, side, t, locale);
@@ -164,6 +197,18 @@ export function MergePreview({
   }
   const shownMoves = moveRows.filter((row) => row.source > 0 || row.survivor > 0);
 
+  // A medical answer still open on a side is said on that side, in danger tone:
+  // it is the one thing a newer release on the other record could quietly stand
+  // over once the two are one.
+  const medicalFlags = (side: DiverMergeSide) =>
+    side.medical.openMedicalHold || side.medical.declinedClearance ? (
+      <span className="mt-1 block text-xs font-medium text-danger">
+        {side.medical.declinedClearance
+          ? t("divers.mergePreview.declinedClearance")
+          : t("divers.mergePreview.openMedicalHold")}
+      </span>
+    ) : null;
+
   const header = (
     <tr>
       <th scope="col" className="w-1/4 pb-2 text-start font-normal text-muted">
@@ -174,12 +219,14 @@ export function MergePreview({
           {t("divers.mergePreview.mergedAway")}
         </span>
         {source.fullName}
+        {medicalFlags(source)}
       </th>
       <th scope="col" className="pb-2 text-start font-semibold">
         <span className="block text-xs font-normal text-muted">
           {t("divers.mergePreview.kept")}
         </span>
         {survivor.fullName}
+        {medicalFlags(survivor)}
       </th>
     </tr>
   );
@@ -218,13 +265,23 @@ export function MergePreview({
           <thead>{header}</thead>
           <tbody>
             {DIVER_MERGE_FIELDS.map((field) => (
-              <tr key={field} className="border-t border-border align-top">
-                <th scope="row" className="py-3 pe-3 text-start font-normal text-muted">
-                  {t(FIELD_KEYS[field])}
-                </th>
-                <td className="py-3 pe-3">{cell(field, source, "source")}</td>
-                <td className="py-3">{cell(field, survivor, "survivor")}</td>
-              </tr>
+              <Fragment key={field}>
+                <tr className="border-t border-border align-top">
+                  <th scope="row" className="py-3 pe-3 text-start font-normal text-muted">
+                    {t(FIELD_KEYS[field])}
+                  </th>
+                  <td className="py-3 pe-3">{cell(field, source, "source")}</td>
+                  <td className="py-3">{cell(field, survivor, "survivor")}</td>
+                </tr>
+                {field === "dateOfBirth" && minorDateInPlay ? (
+                  <tr>
+                    <td />
+                    <td colSpan={2} className="pb-3 text-sm text-warning-strong">
+                      {t("divers.mergePreview.birthDateMinorHint")}
+                    </td>
+                  </tr>
+                ) : null}
+              </Fragment>
             ))}
           </tbody>
         </table>
@@ -279,21 +336,20 @@ export function MergePreview({
               {t("divers.mergePreview.differentPeopleHeading")}
             </h2>
             <ul className="mt-2 grid gap-1">
-              {preview.warnings.includes("different_birth_dates") ? (
-                <li>{t("divers.mergePreview.differentBirthDates")}</li>
-              ) : null}
-              {preview.warnings.includes("releases_under_different_names") ? (
-                <li>
-                  {t("divers.mergePreview.releasesUnderDifferentNames", {
-                    names: preview.releaseNames.join(" · "),
-                  })}
+              {preview.warnings.map((warning) => (
+                <li key={warning}>
+                  {warning === "releases_under_different_names"
+                    ? t("divers.mergePreview.releasesUnderDifferentNames", {
+                        names: preview.releaseNames.join(" · "),
+                      })
+                    : t(WARNING_KEYS[warning])}
                 </li>
-              ) : null}
+              ))}
             </ul>
             <ChoiceRow
               type="checkbox"
-              name="acknowledgeDifferentPeople"
-              value="yes"
+              name="acknowledgement"
+              value={preview.acknowledgement}
               required
               className="mt-3 font-medium"
             >
