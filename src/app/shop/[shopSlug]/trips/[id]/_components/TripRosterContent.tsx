@@ -61,7 +61,9 @@ export function TripRosterContent({
   shopName,
   locale,
   timezone,
-  depthUnit,
+  // Kept on the interface for the page's own plumbing; the ledger's depth
+  // sentences carry their own unit (`depthWarningText`).
+  depthUnit: _depthUnit,
   shopRentalItems,
   tripNotice,
   pageNotice,
@@ -200,79 +202,84 @@ export function TripRosterContent({
       ) : null}
 
       <RosterSection
-        locale={locale}
-        shopSlug={shopSlug}
-        shopTimezone={timezone}
-        tripId={trip.id}
-        booked={trip.booked}
-        capacity={trip.capacity}
-        roster={roster}
-        readinessByBooking={readinessByBooking}
-        waiverByBooking={waiverByBooking}
-        rentalFitByBooking={rentalFitByBooking}
-        shopRentalItems={shopRentalItems}
-        nitroxByBooking={nitroxByBooking}
-        requiresPayment={Boolean(requirement?.requiresPayment)}
-        paymentsConnected={paymentsConnected}
-        cancellationDeadline={cancellationDeadline(trip)}
-        markWaiverInPersonAction={actions.markWaiverInPersonAction}
-        markPaymentAction={actions.markPaymentAction}
-        mayWriteOffPayment={mayWriteOffPayment}
-        canManageOrders={canManageOrders}
-        removeBookingAction={actions.removeBookingAction}
-        confirmIdentityAction={actions.confirmDiverIdentityAction}
-        splitIdentityAction={actions.splitDiverIdentityAction}
-        sendNewWaiverAction={actions.sendNewWaiverAction}
-        sameNameHeldSeats={guests.sameNameHeldSeats}
-        splitAsksDateOfBirth={guests.splitAsksDateOfBirth}
-        certifyDiverAction={actions.certifyDiverAction}
-        saveCourseNextStepAction={actions.saveCourseNextStepAction}
-        courseNextStepByBooking={courseNextStepByBooking}
-        notesByBooking={notesByBooking}
-        addNoteAction={actions.addInternalNoteAction}
-        deleteNoteAction={actions.deleteInternalNoteAction}
-        saveEmergencyContactAction={actions.saveRosterEmergencyContactAction}
-        updatePickupAction={actions.updateBookingPickupAction}
-        keepOpenBookingId={keepOpenBookingId}
-        namesakeRefusedBookingId={namesakeRefusedBookingId}
-        depthUnit={depthUnit}
-        tripDate={tripDateIso}
-        waitingGroup={
-          waitlist.length > 0 ? (
-            <WaitlistGroup
-              waitlist={waitlist}
-              shopSlug={shopSlug}
-              tripId={trip.id}
-              shopName={shopName}
-              tripTitle={trip.title}
-              tripWhen={formatShortDate(trip.startsAt, locale, timezone)}
-              certificationSummaries={certificationSummaries}
-              departureRequirement={dealRequirement}
-              locale={locale}
-              timezone={timezone}
-              canInvite={acceptsDivers}
-            />
-          ) : null
-        }
-        invitedGroup={
-          invitations.length > 0 ? (
-            <TripInvitationGroup
-              invitations={invitations}
-              shopSlug={shopSlug}
-              tripId={trip.id}
-              shopName={shopName}
-              tripTitle={trip.title}
-              tripStartsAt={trip.startsAt}
-              timezone={timezone}
-              inviteAction={actions.recordTripInvitationAction}
-              locale={locale}
-              canInvite={acceptsDivers}
-            />
-          ) : null
-        }
-        arrival={arrival}
-        addDiverGroup={
-          !acceptsDivers ? null : (
+        trip={{
+          shopSlug,
+          shopTimezone: timezone,
+          locale,
+          tripId: trip.id,
+          booked: trip.booked,
+          capacity: trip.capacity,
+          tripDate: tripDateIso,
+          requiresPayment: Boolean(requirement?.requiresPayment),
+          paymentsConnected,
+          cancellationDeadline: cancellationDeadline(trip),
+          mayWriteOffPayment,
+          canManageOrders,
+          shopRentalItems,
+          splitAsksDateOfBirth: guests.splitAsksDateOfBirth,
+          compact,
+          showSummaryHeading: !compact,
+        }}
+        rows={{
+          roster,
+          readinessByBooking,
+          waiverByBooking,
+          rentalFitByBooking,
+          nitroxByBooking,
+          notesByBooking,
+          courseNextStepByBooking,
+          sameNameHeldSeats: guests.sameNameHeldSeats,
+          keepOpenBookingId,
+          namesakeRefusedBookingId,
+        }}
+        actions={{
+          markWaiverInPersonAction: actions.markWaiverInPersonAction,
+          markPaymentAction: actions.markPaymentAction,
+          removeBookingAction: actions.removeBookingAction,
+          confirmIdentityAction: actions.confirmDiverIdentityAction,
+          splitIdentityAction: actions.splitDiverIdentityAction,
+          sendNewWaiverAction: actions.sendNewWaiverAction,
+          addNoteAction: actions.addInternalNoteAction,
+          deleteNoteAction: actions.deleteInternalNoteAction,
+          saveEmergencyContactAction: actions.saveRosterEmergencyContactAction,
+          certifyDiverAction: actions.certifyDiverAction,
+          saveCourseNextStepAction: actions.saveCourseNextStepAction,
+          updatePickupAction: actions.updateBookingPickupAction,
+        }}
+        slots={{
+          arrival,
+          waitingGroup:
+            waitlist.length > 0 ? (
+              <WaitlistGroup
+                waitlist={waitlist}
+                shopSlug={shopSlug}
+                tripId={trip.id}
+                shopName={shopName}
+                tripTitle={trip.title}
+                tripWhen={formatShortDate(trip.startsAt, locale, timezone)}
+                certificationSummaries={certificationSummaries}
+                departureRequirement={dealRequirement}
+                locale={locale}
+                timezone={timezone}
+                canInvite={acceptsDivers}
+              />
+            ) : null,
+          invitedGroup:
+            invitations.length > 0 ? (
+              <TripInvitationGroup
+                invitations={invitations}
+                shopSlug={shopSlug}
+                tripId={trip.id}
+                shopName={shopName}
+                tripTitle={trip.title}
+                tripStartsAt={trip.startsAt}
+                timezone={timezone}
+                inviteAction={actions.recordTripInvitationAction}
+                locale={locale}
+                canInvite={acceptsDivers}
+              />
+            ) : null,
+          addDiverGroup: !acceptsDivers ? null : (
             <>
               <AddDiverSection
                 shopSlug={shopSlug}
@@ -295,10 +302,8 @@ export function TripRosterContent({
               />
               {walkIn}
             </>
-          )
-        }
-        compact={compact}
-        showSummaryHeading={!compact}
+          ),
+        }}
       />
 
       {afterRoster}
