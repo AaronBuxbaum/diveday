@@ -3,6 +3,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
+import { canPersonConfigureTrips } from "@/db/authz";
 import { listBoats } from "@/db/boats";
 import { listDateRequestsForStaff } from "@/db/course-inquiries";
 import { requestLocale } from "@/i18n/request";
@@ -40,7 +41,8 @@ export const metadata: Metadata = {
  * What the redesign moved is where a day's facts live. **The group header owns
  * the count, the advice and the act** — "Mar 6, 2027 — 2 groups · 5 divers",
  * the hull and the crew the planner would put on it, and the one link into the
- * schedule builder, pre-dated and carrying these leads forward. The rows
+ * schedule builder, pre-dated and carrying these leads forward — drawn only
+ * for a reader who may create a departure (issue #1831). The rows
  * beneath are hairline ledger rows saying only who asked and what for; the
  * tinted "Planning suggestion" card and the per-row match badges went with it
  * (`RequestLedgerRow`).
@@ -87,11 +89,18 @@ export default async function RequestsPage({
 
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
   // range, so a bookmarked page past the end lands on the last real one.
-  const [requestPage, shopBoats] = await Promise.all([
+  const [requestPage, shopBoats, canAddDeparture] = await Promise.all([
     listDateRequestsForStaff(db, shop.id, {
       page: Number.parseInt(page ?? "", 10),
     }),
     listBoats(db, shop.id),
+    // **Reading a day is every role's; putting a boat on it is not** (issue
+    // #1831). The day's act lands on the schedule builder, whose add panel is
+    // `canConfigureTrips` — owner, manager, instructor (H-14). Asked here with
+    // the same live check the board asks, so the link and the panel cannot
+    // disagree; a captain sees the day and its leads, and no act they would
+    // be refused (ADR 20260724-role-gated-surfaces-hide-not-explain).
+    canPersonConfigureTrips(db, shop.id, session.user.personId),
   ]);
   // A boat shop plans a day against its hulls and is the only kind of shop
   // shown one; every shop, hull or not, crews it against its own target ratio.
@@ -171,18 +180,22 @@ export default async function RequestsPage({
                   divers: advice.estimatedDivers,
                 })}
                 advice={repeats ? [] : lines}
-                add={{
-                  href: addDepartureHref(
-                    shopSlug,
-                    group.date,
-                    group.entries.map(({ request }) => request.id),
-                  ),
-                  label: t("requests.addDeparture"),
-                  // One visible act on the page, at the first day a staffer
-                  // meets; every day after it offers the same act at link
-                  // weight.
-                  prominent: index === 0,
-                }}
+                add={
+                  canAddDeparture
+                    ? {
+                        href: addDepartureHref(
+                          shopSlug,
+                          group.date,
+                          group.entries.map(({ request }) => request.id),
+                        ),
+                        label: t("requests.addDeparture"),
+                        // One visible act on the page, at the first day a
+                        // staffer meets; every day after it offers the same
+                        // act at link weight.
+                        prominent: index === 0,
+                      }
+                    : undefined
+                }
               >
                 {group.entries.map((entry) =>
                   // The full record belongs to one group — the first date this
