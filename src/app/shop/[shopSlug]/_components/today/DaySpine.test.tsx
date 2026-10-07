@@ -1354,6 +1354,47 @@ describe("the evening reading", () => {
     expect(heading.parentElement).toHaveTextContent("2 things");
   });
 
+  it("leads a crew reader with their own boat's rows and folds the desk's into one line", () => {
+    // UX audit 2026-10-07, item 7: a captain's "what now" is the boat they
+    // crew, not the front desk's queue.
+    renderSpine({
+      departures: [
+        departure({ tripId: "mine", title: "Dawn Two-Tank" }),
+        departure({ tripId: "other", title: "Wreck Trip", startsAt: hoursFromNow(3) }),
+      ],
+      crewedTripIds: ["mine"],
+      actions: [
+        action({ id: "m", kind: "waiver", subject: "Priya Sharma", departure: boat("mine") }),
+        action({ id: "o", kind: "waiver", subject: "Sal Moretti", departure: boat("other") }),
+        action({
+          id: "d",
+          kind: "blocked_aboard",
+          subject: "Keiko Tanaka",
+          departure: boat("other"),
+        }),
+        action({ id: "r", kind: "reviews_pending", subject: "1 review", urgency: "later" }),
+      ],
+    });
+    const fold = screen.getByText("2 things for the desk").closest("details");
+    if (!fold) throw new Error("the desk rows did not fold");
+    expect(fold).not.toHaveAttribute("open");
+    expect(within(fold).getByText("Sal Moretti", { exact: false })).toBeInTheDocument();
+    expect(within(fold).getByText("1 review", { exact: false })).toBeInTheDocument();
+    // Their own boat's row and a danger row on any boat stay in full.
+    expect(within(fold).queryByText("Priya Sharma", { exact: false })).toBeNull();
+    expect(within(fold).queryByText("Keiko Tanaka", { exact: false })).toBeNull();
+    expect(screen.getByText("Priya Sharma", { exact: false })).toBeVisible();
+  });
+
+  it("folds nothing for a reader who crews none of today's boats", () => {
+    renderSpine({
+      departures: [departure({ tripId: "t1" })],
+      crewedTripIds: [],
+      actions: [action({ id: "o", subject: "Sal Moretti", departure: boat("t1") })],
+    });
+    expect(screen.queryByText(/for the desk/)).toBeNull();
+  });
+
   it("keeps the log off a live departure's card, which is the day's briefing", () => {
     // ADR 20260804-incident-export-owner-gate, amendment 2026-10-07: a live
     // departure's log is one tap away on its Details tab, which is where an

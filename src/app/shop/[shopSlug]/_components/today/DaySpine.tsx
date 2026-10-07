@@ -506,7 +506,10 @@ export function DaySpine({
   locale: string;
   timeZone: string;
   currency: string;
-  /** Trips the signed-in staffer crews — badged, never re-ordered. */
+  /**
+   * Trips the signed-in staffer crews — badged, never re-ordered, and the rows
+   * about them lead the Needs you list while every other row folds.
+   */
   crewedTripIds?: readonly string[];
   /** How many rows the reader's role lens withheld (issue #715). */
   withheldCount?: number;
@@ -644,6 +647,31 @@ export function DaySpine({
     ...spine.stations.flatMap((station) => station.rows),
     ...spine.desk,
   ]);
+  // **A crew reader's lens** (UX audit 2026-10-07, item 7): for a captain or
+  // divemaster who crews one of today's boats, the list leads with that boat's
+  // rows, and every other row folds into one line. A danger row about any boat
+  // never folds: a diver unaccounted for is everyone's to see.
+  const crewsToday = spine.stations.some((station) => crewed.has(station.tripId));
+  const leads = (action: TodayAction) =>
+    !crewsToday ||
+    ACTION_KIND_META[action.kind].tone === "danger" ||
+    (action.departure != null && crewed.has(action.departure.tripId));
+  const lead = needsYou.filter(leads);
+  const folded = needsYou.filter((action) => !leads(action));
+  const deskFold = crewsToday && (folded.length > 0 || showPaymentsRow) ? folded : null;
+  const paymentsRows = showPaymentsRow ? 1 : 0;
+  const paymentsRow = showPaymentsRow ? (
+    <SpineRow
+      tone="neutral"
+      kind={t("shopHome.spine.deskPaymentsKind")}
+      door={{
+        href: `/shop/${shopSlug}/settings#stripe`,
+        linkLabel: t("shopHome.spine.deskPaymentsAction"),
+      }}
+    >
+      <span className="text-muted">{t("shopHome.spine.deskPaymentsRow")}</span>
+    </SpineRow>
+  ) : null;
 
   return (
     <div className="flex flex-col gap-10">
@@ -824,11 +852,11 @@ export function DaySpine({
           // the badge counts blocked divers, so the list carries its own total
           // rather than leaving the reader to reconcile three numbers.
           meta={t("shopHome.spine.needsYouCount", {
-            count: needsYou.length + drafts.length + (showPaymentsRow ? 1 : 0),
+            count: lead.length + drafts.length + (deskFold ? 0 : paymentsRows),
           })}
         >
           <ul>
-            {needsYou.map((action) => (
+            {lead.map((action) => (
               <StationRow key={rowKey(action)} action={action} controls={controls} />
             ))}
             {/* What the reader started and did not finish — a draft is theirs
@@ -843,19 +871,27 @@ export function DaySpine({
                 <span className="text-muted">{t(FORM_DRAFT_LABEL_KEYS[draft.form])}</span>
               </SpineRow>
             ))}
-            {showPaymentsRow ? (
-              <SpineRow
-                tone="neutral"
-                kind={t("shopHome.spine.deskPaymentsKind")}
-                door={{
-                  href: `/shop/${shopSlug}/settings#stripe`,
-                  linkLabel: t("shopHome.spine.deskPaymentsAction"),
-                }}
-              >
-                <span className="text-muted">{t("shopHome.spine.deskPaymentsRow")}</span>
-              </SpineRow>
-            ) : null}
+            {deskFold ? null : paymentsRow}
           </ul>
+          {/* **The desk's rows, folded, for a reader who crews a boat** (UX
+              audit 2026-10-07, item 7). A captain's "what now" is the boats
+              they are on; the front desk's twenty jobs are one line they can
+              open, never gone. */}
+          {deskFold ? (
+            <LedgerGroup
+              as="h3"
+              folded
+              className="mt-4"
+              label={t("shopHome.spine.deskFoldLabel", { count: deskFold.length + paymentsRows })}
+            >
+              <ul>
+                {deskFold.map((action) => (
+                  <StationRow key={rowKey(action)} action={action} controls={controls} />
+                ))}
+                {paymentsRow}
+              </ul>
+            </LedgerGroup>
+          ) : null}
         </LedgerGroup>
       ) : null}
 

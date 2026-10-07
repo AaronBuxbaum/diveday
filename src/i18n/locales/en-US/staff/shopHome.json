@@ -178,6 +178,7 @@
     "blockedCount": "{count} blocked",
     "departuresLabel": "Departures",
     "needsYouCount": "{count, plural, one {# thing} other {# things}}",
+    "deskFoldLabel": "{count, plural, one {# thing for the desk} other {# things for the desk}}",
     "needsYouLabel": "Needs you"
   },
   "quietAddDeparture": "Add a departure",
