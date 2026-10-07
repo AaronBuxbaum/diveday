@@ -38,6 +38,7 @@ import { drysuitCardWarningText, rentalFitLineText } from "@/i18n/rental-labels"
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { ageOnDate, birthdayCallout, isMinorOnDate, maxPlausibleBirthDate } from "@/lib/age";
 import type { CalendarDate } from "@/lib/calendar-date";
+import type { CertificationLevel } from "@/lib/certification-levels";
 import { nowDate } from "@/lib/clock";
 import { mailtoHref, telHref } from "@/lib/contact-links";
 import type { DepthUnit } from "@/lib/depth-units";
@@ -52,7 +53,6 @@ import { cachedListFormat } from "@/lib/intl-cache";
 import { flaggedMedicalPrompts } from "@/lib/medical";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { paymentSourceLine } from "@/lib/payment-source";
-import type { CertificationLevel } from "@/lib/certification-levels";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import { shopPath } from "@/lib/staff-notices";

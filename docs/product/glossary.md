@@ -495,7 +495,9 @@ new domain concept, define it here in the same PR.
   the shop has no evidence a second person exists at all. The distinction is evidence and nothing
   else: no surface renders it, readiness treats the record as co-signed, and the only readers are
   the integrity seal and the export bundle. The guardian's email is **optional**, and the one thing
-  it is for is a copy of what was signed (see **Guardian's copy** below).
+  it is for is a copy of what was signed (see **Guardian's copy** below). **It can be erased on
+  its own** (H-101): an owner takes it off from the child's record, and the release is re-sealed as
+  **redacted** (integrity version 4), still verifying, with who erased it and when inside the seal.
   **Two codes, and only two** — `parent` and `legal_guardian`, confirmed by the owner on 2026-09-10
   (issue 1541) rather than widened. Free text was rejected in the ADR because the code renders to
   staff in their own language, and that reason still holds. **The paper path is not an escape hatch

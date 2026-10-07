@@ -14,6 +14,7 @@ import {
 import { listDiverMergeCandidates } from "@/db/diver-merge";
 import { getDiverProfile } from "@/db/divers";
 import { canPersonExportShopData } from "@/db/export";
+import { listGuardianEmails } from "@/db/guardian-erasure";
 import { personThread } from "@/db/inbound-messages";
 import { listDiverRecordNotes, pagedDiverActivity } from "@/db/operations";
 import { canAcceptPayments, getShopStripeAccount } from "@/db/stripe-accounts";
@@ -36,6 +37,7 @@ import { DiverStory } from "./_components/DiverStory";
 import { DownloadDiverExportButton } from "./_components/DownloadDiverExportButton";
 import { ErasePersonalData } from "./_components/ErasePersonalData";
 import { GearAndSizes } from "./_components/GearAndSizes";
+import { GuardianEmailErasure } from "./_components/GuardianEmailErasure";
 import { MergeDiver } from "./_components/MergeDiver";
 import { NoticeBanner } from "./_components/NoticeBanner";
 import { RemoveDiver } from "./_components/RemoveDiver";
@@ -219,13 +221,16 @@ export default async function DiverDetailPage({
   // Three reads that need the two gates above, so they could not ride the
   // `Promise.all` that produced them — concurrent with each other instead of
   // the serial pair they used to be.
-  const [mergeCandidates, status, { trips: scannedTrips }] = await Promise.all([
+  const [mergeCandidates, status, { trips: scannedTrips }, guardianEmails] = await Promise.all([
     canMerge && !removed ? listDiverMergeCandidates(db, shop.id, personId) : [],
     // The readiness of the departure this diver is next on, read through the
     // entry the Today queue and the manifest already use — never a second
     // detector (`_lib/status-load.ts`).
     diverStatusRows(db, shop.id, diver, now, { collectHasSomewhereToGo }),
     pagedUpcomingTripsWithCounts(db, shop.id, { limit: BOOK_ACTIVITY_TRIP_SCAN_LIMIT }),
+    // The co-signing guardians' addresses, for the owner's control that erases
+    // one on the guardian's request (H-101). Nobody else is shown them here.
+    canErase ? listGuardianEmails(db, shop.id, personId) : [],
   ]);
   const upcoming = scannedTrips.filter(
     (trip) =>
@@ -480,6 +485,15 @@ export default async function DiverDetailPage({
             personId={personId}
             t={t}
             status={noticeForForm(diverNotice, "merge")}
+          />
+        ) : null}
+        {canErase ? (
+          <GuardianEmailErasure
+            emails={guardianEmails}
+            shopSlug={shopSlug}
+            personId={personId}
+            locale={locale}
+            status={noticeForForm(diverNotice, "guardian-email")}
           />
         ) : null}
         <div className="flex flex-wrap items-start gap-x-6 gap-y-3">

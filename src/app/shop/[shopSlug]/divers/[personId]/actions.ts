@@ -22,6 +22,7 @@ import {
   restoreDiver,
   updateDiver,
 } from "@/db/divers";
+import { eraseGuardianEmail } from "@/db/guardian-erasure";
 import { queueAndAttemptMediaDeletion } from "@/db/media-deletions";
 import {
   createNitroxCertification,
@@ -200,6 +201,7 @@ const FORM_ANCHORS: Record<string, string> = {
   remove: "#remove",
   restore: "#removed-heading",
   erase: "#erase-heading",
+  "guardian-email": "#guardian-email-heading",
   merge: "#merge",
   // `details` sits under the header, which is where a redirect lands anyway.
 };
@@ -1401,6 +1403,55 @@ export async function erasePersonAction(shopSlug: string, personId: string, form
     roster,
     result.ok ? noticeUrl(roster, erasedNotice) : backTo(base, "erase-refused", "erase"),
   );
+}
+
+/**
+ * **Erase a co-signing guardian's email address, and nothing else** (H-101,
+ * issue #1673).
+ *
+ * The same owner-only gate as the diver's erasure, re-read here and again
+ * inside `eraseGuardianEmail`, because a server action is reachable without the
+ * page that draws its form. The staffer types the address to confirm, and it
+ * is compared with the one the form named — never trusted alone — while the
+ * domain call refuses any address that is not on this diver's releases in this
+ * shop. Unlike the diver's erasure it runs on a live record: the minor stays a
+ * diver, and only the parent's address goes.
+ */
+export async function eraseGuardianEmailAction(
+  shopSlug: string,
+  personId: string,
+  formData: FormData,
+) {
+  const context = await requireDiverActionContext(
+    shopSlug,
+    personId,
+    "not-authorized-guardian-email",
+    "guardian-email",
+  );
+  personId = context.personId;
+  const { base, db, staff } = context;
+  if (!(await canPersonErasePersonalData(db, staff.user.shopId, staff.user.personId))) {
+    revalidateAndRedirect(base, backTo(base, "not-authorized-guardian-email", "guardian-email"));
+    return;
+  }
+  const email = String(formData.get("email") ?? "").trim();
+  const typed = String(formData.get("confirmEmail") ?? "").trim();
+  if (!email || typed.toLowerCase() !== email.toLowerCase()) {
+    revalidateAndRedirect(base, backTo(base, "guardian-email-mismatch", "guardian-email"));
+    return;
+  }
+  const result = await eraseGuardianEmail(db, {
+    shopId: staff.user.shopId,
+    personId,
+    email,
+    actorPersonId: staff.user.personId,
+  });
+  const notice = result.ok
+    ? "guardian-email-erased"
+    : result.reason === "not_authorized"
+      ? "not-authorized-guardian-email"
+      : "guardian-email-not-found";
+  revalidateAndRedirect(base, backTo(base, notice, "guardian-email"));
 }
 
 /**

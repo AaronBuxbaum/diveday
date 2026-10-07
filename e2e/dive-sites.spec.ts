@@ -977,8 +977,7 @@ test("staff read a dive_sites.csv back into the library", async ({ page, private
       name: "dive_site_creatures.csv",
       mimeType: "text/csv",
       buffer: Buffer.from(
-        "dive_site_id,position,catalog_slug\n" +
-          `${siteId},0,green-moray\n${siteId},1,kraken\n`,
+        `dive_site_id,position,catalog_slug\n${siteId},0,green-moray\n${siteId},1,kraken\n`,
       ),
     },
   ]);

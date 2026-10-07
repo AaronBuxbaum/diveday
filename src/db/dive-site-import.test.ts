@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
+import { MAX_SITE_CREATURES } from "@/lib/dive-site-field-guide";
 import {
   DIVE_SITE_CREATURE_IMPORT_COLUMNS,
   DIVE_SITE_IMPORT_COLUMNS,
@@ -8,7 +9,6 @@ import {
   prepareDiveSiteCreaturesImport,
   prepareDiveSiteImport,
 } from "@/lib/dive-site-import";
-import { MAX_SITE_CREATURES } from "@/lib/dive-site-field-guide";
 import { DIVE_SITE_LANDMARK_KINDS, type DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import { MAX_ROUTE_POINTS } from "@/lib/dive-site-route";
 import { buildCsv } from "@/lib/export";
@@ -658,7 +658,10 @@ describe("restoring the field guide from dive_site_creatures.csv", () => {
       ),
     );
     expect(summary.creaturesSkipped).toEqual([{ rowNumber: 3, issues: ["unknown_species"] }]);
-    expect((await guidesByName(db, shop.id)).get("Kelp Wall")).toEqual(["green-moray", "nurse-shark"]);
+    expect((await guidesByName(db, shop.id)).get("Kelp Wall")).toEqual([
+      "green-moray",
+      "nurse-shark",
+    ]);
   });
 
   it("stores no repeat and nothing past the guide's limit", async () => {

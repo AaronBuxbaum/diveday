@@ -2,7 +2,9 @@ import { and, eq, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import {
   computeWaiverIntegrityHash,
+  signedIntegrityVersionFor,
   verifyWaiverIntegrity,
+  WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED,
   WAIVER_INTEGRITY_VERSION_MOVED,
   WAIVER_INTEGRITY_VERSION_SIGNED,
 } from "@/lib/waiver-integrity";
@@ -25,6 +27,9 @@ import { waiverRecords } from "./schema";
  * Called by `mergeDiverRecords` for every release of the record merged away,
  * which is also how a wrong split of a held seat is undone. A version 3
  * release verifies again after a second move, re-sealed over its newest owner.
+ * A version 4 release — its guardian's address erased on request (H-101) —
+ * moves under version 4 again: that seal covers the move fields too, and a
+ * re-seal under version 3 would put the erased address back inside the seal.
  */
 export async function refileWaiverRecords(
   tx: DbExecutor,
@@ -50,7 +55,8 @@ export async function refileWaiverRecords(
   for (const record of records) {
     const resealable =
       (record.integrityVersion === WAIVER_INTEGRITY_VERSION_SIGNED ||
-        record.integrityVersion === WAIVER_INTEGRITY_VERSION_MOVED) &&
+        record.integrityVersion === WAIVER_INTEGRITY_VERSION_MOVED ||
+        record.integrityVersion === WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED) &&
       verifyWaiverIntegrity(record) === "valid";
     const moved = {
       ...record,
@@ -68,8 +74,8 @@ export async function refileWaiverRecords(
         movedByPersonId: moved.movedByPersonId,
         ...(resealable
           ? {
-              integrityHash: computeWaiverIntegrityHash(moved, WAIVER_INTEGRITY_VERSION_MOVED),
-              integrityVersion: WAIVER_INTEGRITY_VERSION_MOVED,
+              integrityHash: computeWaiverIntegrityHash(moved, signedIntegrityVersionFor(moved)),
+              integrityVersion: signedIntegrityVersionFor(moved),
             }
           : {}),
       })

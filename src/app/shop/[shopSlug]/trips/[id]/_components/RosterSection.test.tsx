@@ -1387,6 +1387,8 @@ describe("certifying a student from a course session's roster (issue #2059)", ()
     renderRoster({ ...fixtures, certifyDefaultLevel: null });
     const [select] = awardSelects();
     expect(select?.value).toBe("open_water");
-    expect([...(select?.options ?? [])].map((option) => option.value)).toContain("advanced_open_water");
+    expect([...(select?.options ?? [])].map((option) => option.value)).toContain(
+      "advanced_open_water",
+    );
   });
 });

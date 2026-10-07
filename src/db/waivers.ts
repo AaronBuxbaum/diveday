@@ -354,6 +354,12 @@ export async function getSignedWaiverForDiver(
     templateBody: record.templateBody,
     guardian: identityHeld ? null : guardianSignatureOf(record),
     integrity: verifyWaiverIntegrity(record),
+    /**
+     * When the co-signing guardian's address was erased on request (H-101) —
+     * the note a redacted release carries, so its blank address reads as the
+     * shop's act rather than as a field nobody filled.
+     */
+    guardianEmailErasedAt: record.guardianEmailErasedAt,
     /** Every answer, for an owner or manager; null for anyone else. */
     medicalAnswers: input.readsMedicalAnswers ? answers : null,
     /** What the roster shows every staff role: the prompts that flagged, on a record held for them. */

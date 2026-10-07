@@ -63,7 +63,11 @@ export default async function SignedWaiverPage({
       : "";
   const seal =
     waiver.integrity === "valid"
-      ? t("waiversStaff.record.sealValid")
+      ? waiver.guardianEmailErasedAt
+        ? t("waiversStaff.record.sealValidGuardianRedacted", {
+            date: when(waiver.guardianEmailErasedAt),
+          })
+        : t("waiversStaff.record.sealValid")
       : waiver.integrity === "unsealed"
         ? t("waiversStaff.signatures.integrityUnsealed")
         : t("waiversStaff.signatures.integrityInvalid");

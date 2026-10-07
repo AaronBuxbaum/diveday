@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   type CourseTemplateSource,
+  courseTemplateDatabaseFields,
   courseTemplateDiff,
   courseTemplateSnapshot,
-  courseTemplateDatabaseFields,
   mergedCourseTemplateSnapshot,
 } from "./course-template-sync";
 
