@@ -675,6 +675,9 @@ export default async function TripManifestPage({
       <TripPageHeader
         boardHref={shopPath(shopSlug, "schedule", "board")}
         backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
+        // Boat mode hides the shell's tab bar, so the day gets a door of its
+        // own beside the schedule's (UX audit 2026-10-07, item 39).
+        today={{ href: shopPath(shopSlug), label: t(STAFF_DESTINATION_LABEL_KEYS.today) }}
         trip={manifest.trip}
         locale={locale}
         timeZone={shop.timezone}
@@ -844,7 +847,7 @@ export default async function TripManifestPage({
         {/* One line, under the checkpoint switch: the boat check happens once
             before the boat leaves rather than once per dive, so it is the last
             thing above the roll call and the first thing to step back once it is
-            done (ADR 20260827-the-departure-is-two-working-surfaces, decision 2 —
+            done — open until then at the dock (UX audit 2026-10-07, item 17) (ADR 20260827-the-departure-is-two-working-surfaces, decision 2 —
             the boat-check items are a "one tap away" concern). It used to stand
             fully expanded *above* the checkpoint switch, five full-width buttons
             between the masthead and the head count at every checkpoint. */}
@@ -852,6 +855,7 @@ export default async function TripManifestPage({
           idPrefix={idPrefix}
           action={boundPreDepartureCheckAction}
           items={checklistListItems}
+          atDeparture={isDeparture}
           copy={{
             heading: t("trips.preDepartureCheck.heading"),
             summary: t("trips.preDepartureCheck.summary", {
@@ -908,7 +912,7 @@ export default async function TripManifestPage({
           t={t}
         />
 
-        {/* **The plan, and the door to saying it changed** (issue #1184, D24).
+        {/* **The plan** (issue #1184, D24).
             At the dock only: after a dive the log below owns this ground, and a
             read-only copy of the plan beside it would be a second answer to the
             same question. */}
@@ -925,9 +929,6 @@ export default async function TripManifestPage({
                   })
                 : t("manifest.planChange.diveRowNoSite", { number: dive.diveNumber }),
             }))}
-            doorLabel={t("manifest.planChange.door")}
-            doorNote={t("manifest.planChange.doorNote")}
-            doorHref={`/shop/${shopSlug}/trips/${tripId}/manifest?checkpoint=after_dive_1`}
           />
         ) : null}
 

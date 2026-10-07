@@ -98,6 +98,14 @@ function PreDepartureCheckRow({
  * The state it carries is not hidden by collapsing it: the summary line states
  * how many of how many are checked, which is the fact a captain glances for.
  *
+ * **Open until it is done, at the dock** (UX audit 2026-10-07, item 17). The
+ * one line at rest was right for a finished check and wrong for an unfinished
+ * one: "0 of 5 checked" sat collapsed above the roll call of a boat about to
+ * leave, the one list that should not be a tap away then. So the caller opens
+ * it while an item is unchecked at the departure checkpoint, and it folds to
+ * its line the moment the last item is checked. After a dive it stays a line
+ * either way: the boat has left, and the count on the line is the record.
+ *
  * **Paper is unaffected.** A closed `<details>` contributes nothing to print,
  * so the printed lines are rendered outside it — the sheet the boat carries
  * still lists every item and who checked it, unconditionally.
@@ -107,20 +115,27 @@ export function PreDepartureCheckList({
   action,
   items,
   copy,
+  atDeparture,
 }: {
   /** Scopes this section's element ids to one departure — see `scopedId`. */
   idPrefix?: string;
   action: PreDepartureCheckAction;
   items: readonly PreDepartureCheckListItem[];
   copy: PreDepartureCheckListCopy;
+  /** The departure checkpoint is open: an unfinished list stands open. */
+  atDeparture: boolean;
 }) {
   if (items.length === 0) return null;
+  // Controlled by the facts, not remembered: React writes `open` only when
+  // this value changes, so a crew member who folds an unfinished list keeps
+  // it folded across a tap, and the last check folds it for everyone.
+  const open = atDeparture && items.some((item) => item.checkedByLine === undefined);
   return (
     <section
       aria-labelledby={scopedId(idPrefix, "pre-departure-check-heading")}
       className={sectionCardClass({ padding: "none" })}
     >
-      <details className="group/check print:hidden">
+      <details open={open} className="group/check print:hidden">
         <summary className={cardSummaryClass({ className: "group/summary min-h-14 px-4 py-4" })}>
           <SummaryCaret className="group-open/check:rotate-90" />
           <h2

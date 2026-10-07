@@ -265,6 +265,12 @@ export function SummaryPanel({
           <HeadCount
             aboard={summary.boarded}
             out={summary.totalDivers - ashore - summary.notHere}
+            // At the dock only: blocked is a boarding gate, so after a dive it
+            // has nothing left to say about this count — the follow-up is
+            // ashore, and the rows carry it, and a red line here would compete
+            // with the one red that means somebody is in the water (ADR
+            // 20260827-the-departure-is-two-working-surfaces, decision 4).
+            blocked={isDeparture ? summary.blocked : 0}
             t={t}
           />
         </div>
@@ -356,8 +362,8 @@ export function SummaryPanel({
       </PanelHeight>
       {/* The prose half, immediately below the pinned card and in the same
           visual language — it may scroll away. Nothing here is an emergency:
-          the closing line when it is calm, and what being blocked means at
-          *this* checkpoint.
+          the closing line when it is calm. The blocked count is not here: it
+          is pinned beside the head count it qualifies (`HeadCount`).
 
           `border-x border-transparent`: the card above is `border p-4`, so its
           content starts 17px in, and `px-4` alone started these lines a pixel
@@ -368,40 +374,10 @@ export function SummaryPanel({
             quiet at `awaiting === 0` — every diver counted, nothing said about
             the crew. Now it names what is still open. */}
         {/* Stays mounted whether or not it currently has anything to say, so a
-            change is announced when one arrives. Empty, it is 0px tall, so the
-            lines after it drop their margin off it (`[p:empty+&]:mt-0`): an
-            empty line adds no gap it does not fill (K-558, pixel-craft class
-            4). Not `flex gap-*` on this block, which lays its gap beside a
-            zero-height item as well. */}
+            change is announced when one arrives. Empty, it is 0px tall. */}
         <p className="text-base font-semibold text-muted" aria-live="polite">
           {mutedText}
         </p>
-        {/* What being blocked means at *this* checkpoint. This was a warning-
-            toned banner of its own under the panel, with a "Blocked divers"
-            heading restating the count the panel already showed. The count is
-            here in words — it is deliberately not an entry on the count row,
-            which sums to the boat (see `counts` above).
-
-            `text-danger`, because blocked is danger everywhere else in the app
-            and the diver rows below render the word "Blocked" in
-            `readinessStatusTone`'s danger. `readiness-labels.ts` and
-            `staff-destinations.ts` (the nav's blocked badge) both already say
-            danger; this is the third caller falling in behind them. Danger also
-            clears AA at this size on a plain surface, which is what
-            `text-warning-strong` was reaching for.
-
-            **At the dock only.** Blocked is a boarding gate, so after a dive
-            it has nothing left to say about this count — the follow-up is
-            ashore, and the rows carry it. Saying so here put a sentence on the
-            screen with no fact behind it, which is exactly what an alarm has to
-            be earned against (ADR
-            20260827-the-departure-is-two-working-surfaces, decision 4), and it
-            competed with the one red that means somebody is in the water. */}
-        {isDeparture && summary.blocked > 0 ? (
-          <p className="mt-1 text-base font-semibold text-danger [p:empty+&]:mt-0">
-            {t("manifest.blockedDeparture", { count: summary.blocked })}
-          </p>
-        ) : null}
       </div>
     </>
   );

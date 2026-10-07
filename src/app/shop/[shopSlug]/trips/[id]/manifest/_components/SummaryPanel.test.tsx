@@ -490,15 +490,11 @@ describe("uncalled crew while divers are still open", () => {
 });
 
 /**
- * **The prose under the pinned card starts on the card's content edge, and an
- * empty status line adds nothing** (K-554, K-558).
+ * **The prose under the pinned card starts on the card's content edge** (K-554).
  *
  * The card is `border p-4`, so its chips start 17px in; the prose block under
- * it was `px-4`, and its lines started a pixel left of the card's. And the
- * live status line stays mounted (it must exist before its words arrive), but
- * with divers still to call it has nothing to say, and the lines after it
- * still spaced themselves off it: 4px of margin above "1 diver is blocked."
- * against a 0px line.
+ * it was `px-4`, and its lines started a pixel left of the card's. The live
+ * status line stays mounted: it must exist before its words arrive.
  */
 describe("the prose under the pinned card", () => {
   function renderAwaiting() {
@@ -525,12 +521,55 @@ describe("the prose under the pinned card", () => {
     expect(prose).toHaveClass("border-x", "border-transparent", "px-4");
   });
 
-  it("spaces nothing off the live line while it is empty", () => {
+  it("keeps the live line mounted while it is empty", () => {
     renderAwaiting();
     const live = document.querySelector('[aria-live="polite"]');
     expect(live?.tagName).toBe("P");
     expect(live).toBeEmptyDOMElement();
-    const blocked = screen.getByText("1 diver is blocked.");
-    expect(blocked).toHaveClass("[p:empty+&]:mt-0");
+  });
+});
+
+/**
+ * **The headline never reassures over a blocked row** (UX audit 2026-10-07,
+ * item 16). "8 of 8 divers aboard" stood over three rows reading Blocked, and
+ * the count of them was a sentence in the half that scrolls away.
+ */
+describe("blocked divers at the head count", () => {
+  function renderBlocked(isDeparture: boolean) {
+    return renderPanel({
+      isDeparture,
+      checkpoint: isDeparture ? "departure" : "after_dive_1",
+      completeness: completeness({ reason: null, complete: true }),
+      summary: summary({
+        totalDivers: 8,
+        ready: 5,
+        blocked: 3,
+        boarded: 8,
+        notBoarded: 0,
+        notBackAboard: 0,
+        awaiting: 0,
+      }),
+      notBackAboardDivers: [],
+    });
+  }
+
+  it("carries the blocked count in the pinned card, beside the count it qualifies", () => {
+    renderBlocked(true);
+    const figure = screen.getByRole("progressbar", { name: "Roll-call progress" });
+    expect(figure).toHaveAttribute("aria-valuetext", "8 of 8 divers aboard, 3 blocked");
+    const line = screen.getByText("3 blocked");
+    expect(line).toHaveClass("text-danger");
+    // In the sticky card, not the prose that scrolls away under it.
+    expect(line.closest(".sticky")).not.toBeNull();
+    expect(screen.queryByText(/divers are blocked/)).toBeNull();
+  });
+
+  it("says nothing about blocked after a dive, where it gates nothing", () => {
+    renderBlocked(false);
+    expect(screen.queryByText(/blocked/)).toBeNull();
+    expect(screen.getByRole("progressbar")).toHaveAttribute(
+      "aria-valuetext",
+      expect.not.stringContaining("blocked"),
+    );
   });
 });

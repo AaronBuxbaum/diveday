@@ -1030,11 +1030,14 @@ test("the crew records why the plan changed, and the plan itself does not move",
   await openTripFromBoard(page, "Two-Tank Reef — Molasses & French");
   await openTripTab(page, "Manifest");
 
-  // At the dock the plan is read-only, with a quiet door to the log
-  // (issue #1184, D24).
+  // At the dock the plan is read-only (issue #1184, D24). A change is said in
+  // the dive log, at the checkpoint after the dive: the switch is the way
+  // there, with no sentence under the plan pointing at it (UX audit
+  // 2026-10-07, item 3).
   const planned = page.getByRole("heading", { name: "The plan" });
   await expect(planned).toBeVisible();
-  await page.getByRole("link", { name: "Changed the plan?" }).click();
+  await expect(page.getByText(/Changed the plan|Say why in the dive log/)).toHaveCount(0);
+  await page.getByRole("link", { name: "After dive 1" }).click();
   await expect(page).toHaveURL(/checkpoint=after_dive_1/);
 
   const summary = page.locator("summary").filter({ hasText: "Dive 1" });

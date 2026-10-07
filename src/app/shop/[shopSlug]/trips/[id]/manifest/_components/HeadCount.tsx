@@ -41,6 +41,7 @@ import type { StaffTranslator } from "@/i18n/staff-messages";
 export function HeadCount({
   aboard,
   out,
+  blocked = 0,
   t,
   className = "",
 }: {
@@ -48,6 +49,11 @@ export function HeadCount({
   aboard: number;
   /** The population the count is about: everyone at the dock, or everyone who went out. */
   out: number;
+  /**
+   * Divers readiness will not clear, said beside the count — the dock only;
+   * the caller passes 0 after a dive, where blocked gates nothing.
+   */
+  blocked?: number;
   t: StaffTranslator;
   className?: string;
 }) {
@@ -62,7 +68,11 @@ export function HeadCount({
         aria-valuemin={0}
         aria-valuemax={out}
         aria-valuenow={aboard}
-        aria-valuetext={t("manifest.aboardOfTotal", { aboard, total: out })}
+        aria-valuetext={
+          blocked > 0
+            ? t("manifest.aboardOfTotalBlocked", { aboard, total: out, blocked })
+            : t("manifest.aboardOfTotal", { aboard, total: out })
+        }
         className="relative size-20 shrink-0 overflow-hidden rounded-full border border-border bg-surface-sunken"
       >
         <div
@@ -81,9 +91,20 @@ export function HeadCount({
           count is critical text on a roll call (principles.md §1, 16px), and a
           caption that straddled the water line inside an 80px circle was
           neither. `aria-hidden`: the progressbar's own text already says it. */}
-      <p aria-hidden="true" className="text-base font-semibold tabular-nums">
-        {t("manifest.ofTotalAboard", { total: out })}
-      </p>
+      {/* **The headline never reassures over a blocked row** (UX audit
+          2026-10-07, item 16). "8 of 8 divers aboard" stood at the top of a
+          roster with three rows reading Blocked, and the count of them was a
+          sentence in the half of the panel that scrolls away. It is the
+          count's own second line now, in the danger the rows wear, pinned
+          with the figure it qualifies. */}
+      <div aria-hidden="true" className="text-base font-semibold tabular-nums">
+        <p>{t("manifest.ofTotalAboard", { total: out })}</p>
+        {blocked > 0 ? (
+          <p className="font-bold text-danger">
+            {t("manifest.headCountBlocked", { count: blocked })}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

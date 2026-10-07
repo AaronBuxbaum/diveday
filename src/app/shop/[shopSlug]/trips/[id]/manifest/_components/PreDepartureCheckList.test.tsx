@@ -41,7 +41,7 @@ const items = [
 describe("the printed pre-departure list", () => {
   function printedRows() {
     const { container } = render(
-      <PreDepartureCheckList action={async () => null} items={items} copy={copy} />,
+      <PreDepartureCheckList action={async () => null} items={items} copy={copy} atDeparture />,
     );
     const printed = container.querySelector(".print\\:block");
     if (!printed) throw new Error("no printed list");
@@ -79,10 +79,64 @@ describe("the printed pre-departure list", () => {
 describe("the checklist's summary line", () => {
   it("balances its heading's lines", () => {
     const { container } = render(
-      <PreDepartureCheckList action={async () => null} items={items} copy={copy} />,
+      <PreDepartureCheckList action={async () => null} items={items} copy={copy} atDeparture />,
     );
     const heading = container.querySelector("summary h2");
     expect(heading?.textContent).toBe(copy.summary);
     expect(heading).toHaveClass("text-balance");
+  });
+});
+
+/**
+ * **Open until it is done, at the dock** (UX audit 2026-10-07, item 17): "0 of
+ * 5 checked" sat collapsed above the roll call of a boat about to leave.
+ */
+describe("the boat check's disclosure", () => {
+  const checked = items.map((item) => ({
+    ...item,
+    checkedByLine: "Checked by the recorder · 7:12 AM",
+  }));
+
+  function details(container: HTMLElement) {
+    const element = container.querySelector("details");
+    if (!element) throw new Error("no disclosure");
+    return element;
+  }
+
+  it("stands open at the dock while an item is unchecked", () => {
+    const { container } = render(
+      <PreDepartureCheckList action={async () => null} items={items} copy={copy} atDeparture />,
+    );
+    expect(details(container).open).toBe(true);
+  });
+
+  it("folds to its line once every item is checked", () => {
+    const { container } = render(
+      <PreDepartureCheckList action={async () => null} items={checked} copy={copy} atDeparture />,
+    );
+    expect(details(container).open).toBe(false);
+  });
+
+  it("folds the moment the last item is checked", () => {
+    const { container, rerender } = render(
+      <PreDepartureCheckList action={async () => null} items={items} copy={copy} atDeparture />,
+    );
+    expect(details(container).open).toBe(true);
+    rerender(
+      <PreDepartureCheckList action={async () => null} items={checked} copy={copy} atDeparture />,
+    );
+    expect(details(container).open).toBe(false);
+  });
+
+  it("stays a line after a dive, finished or not", () => {
+    const { container } = render(
+      <PreDepartureCheckList
+        action={async () => null}
+        items={items}
+        copy={copy}
+        atDeparture={false}
+      />,
+    );
+    expect(details(container).open).toBe(false);
   });
 });

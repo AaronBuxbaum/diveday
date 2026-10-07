@@ -71,3 +71,19 @@ describe("HeadCount", () => {
     expect(container.querySelector(".text-xs")).toBeNull();
   });
 });
+
+/** UX audit 2026-10-07, item 16: the count never reads as all-clear over blocked rows. */
+describe("HeadCount with blocked divers", () => {
+  it("says the blocked count under the count, in words and in the progressbar's text", () => {
+    const { container } = render(<HeadCount aboard={8} out={8} blocked={3} t={t} />);
+    expect(screen.getByRole("progressbar").getAttribute("aria-valuetext")).toBe(
+      "8 of 8 divers aboard, 3 blocked",
+    );
+    expect(container.textContent).toBe("8of 8 divers aboard3 blocked");
+  });
+
+  it("adds nothing when nobody is blocked", () => {
+    const { container } = render(<HeadCount aboard={8} out={8} blocked={0} t={t} />);
+    expect(container.textContent).toBe("8of 8 divers aboard");
+  });
+});
