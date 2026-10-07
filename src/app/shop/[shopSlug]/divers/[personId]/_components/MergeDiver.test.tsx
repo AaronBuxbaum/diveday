@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import type { DiverMergeCandidate } from "@/db/diver-merge";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { MergeDiver } from "./MergeDiver";
 
@@ -24,7 +25,7 @@ const candidates = [
 ];
 const personId = "33333333-3333-4333-8333-333333333333";
 
-function renderPanel(list = candidates) {
+function renderPanel(list: DiverMergeCandidate[] = candidates) {
   return render(
     <MergeDiver
       candidates={list}
@@ -50,6 +51,27 @@ describe("the possible duplicates panel", () => {
     );
     expect(screen.queryAllByRole("radio")).toHaveLength(0);
     expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("lists the strongest five and counts the rest", () => {
+    const many = Array.from({ length: 8 }, (_, index) => ({
+      ...candidates[1],
+      id: `4444444${index}-4444-4444-8444-444444444444`,
+      fullName: `Diver ${index}`,
+    })) as DiverMergeCandidate[];
+    renderPanel(many);
+    expect(screen.getAllByRole("link", { name: /Compare with/ })).toHaveLength(5);
+    expect(screen.getByText("And 3 more")).toBeVisible();
+  });
+
+  it("lets a long address wrap rather than widen the page", () => {
+    renderPanel([
+      { ...candidates[0], email: "a.very.long.address.for.a.dive.club.booking@example.test" },
+    ]);
+    const line = screen.getByText(/a\.very\.long\.address/).parentElement;
+    expect(line?.className).toContain("[overflow-wrap:anywhere]");
+    expect(line?.className).toContain("min-w-0");
+    expect(screen.queryByText(/more$/)).toBeNull();
   });
 
   it("says why each record was offered", () => {

@@ -16,33 +16,27 @@ export type DiverDuplicateReason =
   | "same_name_and_birth_date"
   | "same_name";
 
-/** Mailbox providers known to ignore dots in the local part. */
-const DOTLESS_MAILBOX_DOMAINS = new Set(["gmail.com", "googlemail.com"]);
-
 /**
- * The mailbox an address delivers to, as a comparison key, or null when there
- * is nothing to compare.
+ * The address as a comparison key — trimmed and lowercased, nothing else — or
+ * null when there is nothing to compare.
  *
- * Two active records can never share an address outright (`people_shop_email_
- * unique` is case-insensitive), so an exact match is never the duplicate a
- * shop meets. The ones it does meet are one mailbox written two ways: a
- * `+dive` tag on one booking and not the other, or `maya.rivera@gmail.com`
- * beside `mayarivera@gmail.com`. So the key drops a `+tag` everywhere and the
- * dots only where the provider is known to ignore them. Nothing else is
- * guessed: a typo in the domain is a different mailbox, and only staff can say
- * otherwise.
+ * **No `+tag` stripping and no dot folding** (visual triage of #2218,
+ * 2026-10-07). Stripping a tag made every seeded `success+<name>@…` diver a
+ * "Same email" duplicate of every other, and a real shop meets the same shape
+ * whenever a parent books the family as `parent+kid@…`: a false "Same email"
+ * invites merging a parent and a child, the one merge this feature must never
+ * invite. A plus-variant is a different address as far as this hint goes;
+ * staff can still compare any two records by hand.
+ *
+ * Two live records cannot hold the identical address
+ * (`people_shop_email_unique`), so this reason mostly fires against a record
+ * whose address was typed with different case or spacing on import.
  */
 export function emailMatchKey(email: string | null | undefined): string | null {
-  const trimmed = (email ?? "").trim().toLowerCase();
-  const at = trimmed.lastIndexOf("@");
-  if (at <= 0 || at === trimmed.length - 1) return null;
-  let local = trimmed.slice(0, at);
-  let domain = trimmed.slice(at + 1);
-  if (domain === "googlemail.com") domain = "gmail.com";
-  const plus = local.indexOf("+");
-  if (plus > 0) local = local.slice(0, plus);
-  if (DOTLESS_MAILBOX_DOMAINS.has(domain)) local = local.replaceAll(".", "");
-  return local ? `${local}@${domain}` : null;
+  const key = (email ?? "").trim().toLowerCase();
+  const at = key.lastIndexOf("@");
+  if (at <= 0 || at === key.length - 1) return null;
+  return key;
 }
 
 /** Digits of a phone long enough to mean anything, or null. */
@@ -84,8 +78,14 @@ export function diverDuplicateReasons(
   return reasons;
 }
 
-/** Whether a pair's likeness rests on the name alone, with no contact detail agreeing. */
+/**
+ * Whether a pair's likeness rests on the name alone: one name, and no email or
+ * phone agreeing. False for two different names, where nothing ties the pair
+ * at all and there is no namesake to mistake.
+ */
 export function matchRestsOnNameAlone(a: DuplicateSignals, b: DuplicateSignals): boolean {
+  const name = normalizePersonName(a.fullName);
+  if (!name || name !== normalizePersonName(b.fullName)) return false;
   const reasons = diverDuplicateReasons(a, b);
   return !reasons.includes("same_email") && !reasons.includes("same_phone");
 }

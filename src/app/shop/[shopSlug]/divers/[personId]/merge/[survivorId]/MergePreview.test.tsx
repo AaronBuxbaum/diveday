@@ -38,6 +38,7 @@ function side(overrides: Partial<DiverMergeSide>): DiverMergeSide {
     counts: zeroCounts,
     medicalAnswers: 0,
     medical: { openMedicalHold: false, declinedClearance: false },
+    createdAt: new Date("2026-03-03T15:00:00.000Z"),
     ...overrides,
   };
 }
@@ -197,6 +198,33 @@ describe("the merge preview", () => {
       }),
     );
     expect(screen.queryByText(/parent or guardian/)).toBeNull();
+  });
+
+  it("tells two records under one name apart, in the headers and the swap link", () => {
+    renderPreview(
+      preview({
+        source: side({
+          createdAt: new Date("2026-03-03T15:00:00.000Z"),
+          counts: { ...zeroCounts, bookings: 4 },
+        }),
+        survivor: side({
+          id: "22222222-2222-4222-8222-222222222222",
+          createdAt: new Date("2026-10-07T15:00:00.000Z"),
+        }),
+        conflicts: [],
+      }),
+    );
+    expect(screen.getByText(/^Added .*Mar.* 4 bookings$/)).toBeVisible();
+    expect(screen.getByText(/^Added .*Oct.* 0 bookings$/)).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: /^Keep Maya Rivera \(Added .*4 bookings\) instead$/ }),
+    ).toBeVisible();
+  });
+
+  it("keeps a phone number in one piece", () => {
+    renderPreview(preview());
+    const radio = screen.getByRole("radio", { name: /^Keep \+1\s305\s555\s0142$/ });
+    expect(radio.closest("label")?.querySelector(".whitespace-nowrap")).not.toBeNull();
   });
 
   it("refuses with the boat still out", () => {

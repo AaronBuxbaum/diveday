@@ -24,6 +24,7 @@ import {
 import { nowDate } from "@/lib/clock";
 import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
 import { formatDateTimeTz } from "@/lib/format";
+import { normalizePersonName } from "@/lib/person-name";
 import { shopPath } from "@/lib/staff-notices";
 import { DiverFormStatus, type DiverNotice } from "../../_components/NoticeBanner";
 import { mergeDiverAction } from "../../actions";
@@ -119,6 +120,25 @@ function fieldValue(
 }
 
 /**
+ * How a value reads in its cell. A phone number never breaks inside itself:
+ * the table lets long emails wrap anywhere, which at 390px split a number as
+ * "+1 305 555 011 / 0", so each number is one unbreakable run.
+ */
+function fieldDisplay(field: DiverMergeField, side: DiverMergeSide, value: string): ReactNode {
+  if (field === "phone") return <span className="whitespace-nowrap">{value}</span>;
+  if (field === "emergencyContact" && side.emergencyContactPhone) {
+    const phone = displayStoredPhoneWhole(side.emergencyContactPhone);
+    return (
+      <>
+        {side.emergencyContactName ? `${side.emergencyContactName} · ` : null}
+        <span className="whitespace-nowrap">{phone}</span>
+      </>
+    );
+  }
+  return value;
+}
+
+/**
  * **Two records, side by side, before they become one.** The record merged
  * away on the left, the record kept on the right; a field the two disagree on
  * is a choice (the kept record's value preselected), a field they agree on or
@@ -170,11 +190,15 @@ export function MergePreview({
           defaultChecked={choice === "survivor"}
           aria-label={t("divers.mergePreview.keepValue", { value })}
         >
-          {value}
+          {fieldDisplay(field, side, value)}
         </ChoicePill>
       );
     }
-    return value ?? <span className="text-muted">{notOnFile}</span>;
+    return value ? (
+      fieldDisplay(field, side, value)
+    ) : (
+      <span className="text-muted">{notOnFile}</span>
+    );
   };
 
   const counted = (side: DiverMergeSide, group: DiverMergeCountGroup) => side.counts[group];
@@ -196,6 +220,21 @@ export function MergePreview({
     }
   }
   const shownMoves = moveRows.filter((row) => row.source > 0 || row.survivor > 0);
+
+  // Two records under one name read as one column twice. Where the names
+  // collide, each side carries when it was added and how many bookings it
+  // holds, in its header and in the swap link.
+  const namesCollide =
+    normalizePersonName(source.fullName) === normalizePersonName(survivor.fullName);
+  const detail = (side: DiverMergeSide) =>
+    t("divers.mergePreview.recordDetail", {
+      date: formatCalendarDate(calendarDateInTimezone(side.createdAt, timeZone), locale),
+      count: side.counts.bookings,
+    });
+  const distinguish = (side: DiverMergeSide) => {
+    if (!namesCollide) return null;
+    return <span className="block text-xs font-normal text-muted">{detail(side)}</span>;
+  };
 
   // A medical answer still open on a side is said on that side, in danger tone:
   // it is the one thing a newer release on the other record could quietly stand
@@ -219,6 +258,7 @@ export function MergePreview({
           {t("divers.mergePreview.mergedAway")}
         </span>
         {source.fullName}
+        {distinguish(source)}
         {medicalFlags(source)}
       </th>
       <th scope="col" className="pb-2 text-start font-semibold">
@@ -226,6 +266,7 @@ export function MergePreview({
           {t("divers.mergePreview.kept")}
         </span>
         {survivor.fullName}
+        {distinguish(survivor)}
         {medicalFlags(survivor)}
       </th>
     </tr>
@@ -290,7 +331,12 @@ export function MergePreview({
             href={shopPath(shopSlug, "divers", survivor.id, "merge", source.id)}
             className={buttonClass({ variant: "link", size: "sm", flush: true })}
           >
-            {t("divers.mergePreview.swap", { name: source.fullName })}
+            {namesCollide
+              ? t("divers.mergePreview.swapDistinct", {
+                  name: source.fullName,
+                  detail: detail(source),
+                })
+              : t("divers.mergePreview.swap", { name: source.fullName })}
           </Link>
         </p>
       </SectionCard>

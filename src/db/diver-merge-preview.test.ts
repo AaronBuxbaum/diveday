@@ -145,13 +145,38 @@ function merge(
 }
 
 describe("likely duplicates", () => {
-  it("offers one mailbox written two ways", async () => {
+  it("never reads plus-tagged addresses as one mailbox, so the seeded roster is not one family", async () => {
+    // Every seeded diver is `success+<name>@simulator.amazonses.com`. With the
+    // tag folded away every diver was a duplicate of every other (visual
+    // triage of #2218): ~140 candidates on one record, every roster row badged.
     const f = await fixtures();
+    const [priya] = await f.db
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.shopId, f.shop.id), eq(people.fullName, "Priya Sharma")))
+      .limit(1);
+    if (!priya) throw new Error("expected seeded Priya");
+    const candidates = await listDiverMergeCandidates(f.db, f.shop.id, priya.id);
+    expect(candidates.some((c) => c.reasons.includes("same_email"))).toBe(false);
+    expect(candidates.length).toBeLessThan(5);
+    expect((await listDiverMergeDuplicateIds(f.db, f.shop.id)).length).toBeLessThan(10);
+  });
+
+  it("offers a shared phone, strongest candidates first", async () => {
+    const f = await fixtures();
+    await f.db.update(people).set({ phone: "+1 305 555 0142" }).where(eq(people.id, f.survivor.id));
+    const [namesake] = await f.db
+      .insert(people)
+      .values({ shopId: f.shop.id, fullName: "Maya Rivera", phone: "+1 305 555 0142" })
+      .returning({ id: people.id });
+    if (!namesake) throw new Error("insert failed");
+    await f.db.insert(personRoles).values({ personId: namesake.id, role: "diver" });
     const candidates = await listDiverMergeCandidates(f.db, f.shop.id, f.source.id);
-    expect(candidates.find((c) => c.id === f.survivor.id)?.reasons).toEqual(["same_email"]);
-    expect(await listDiverMergeDuplicateIds(f.db, f.shop.id)).toEqual(
-      expect.arrayContaining([f.source.id, f.survivor.id]),
-    );
+    // Phone and name outrank phone alone, whatever the alphabet says.
+    expect(candidates.slice(0, 2).map((c) => [c.id, c.reasons])).toEqual([
+      [namesake.id, ["same_phone", "same_name"]],
+      [f.survivor.id, ["same_phone"]],
+    ]);
   });
 
   it("offers the same name and birth date, and never a namesake born on another day", async () => {

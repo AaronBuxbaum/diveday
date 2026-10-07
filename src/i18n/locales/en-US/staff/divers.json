@@ -202,13 +202,16 @@
     "sameName": "Same name",
     "noContact": "No contact details",
     "compare": "Compare",
-    "compareWith": "Compare with {name}"
+    "compareWith": "Compare with {name}",
+    "more": "And {count} more"
   },
   "mergePreview": {
     "title": "Merge duplicate records",
     "mergedAway": "Merged away",
     "kept": "Kept",
     "swap": "Keep {name} instead",
+    "swapDistinct": "Keep {name} ({detail}) instead",
+    "recordDetail": "Added {date}, {count, plural, one {# booking} other {# bookings}}",
     "detailsHeading": "Details",
     "chooseHint": "Where the two disagree, choose the one to keep.",
     "notOnFile": "Not on file",

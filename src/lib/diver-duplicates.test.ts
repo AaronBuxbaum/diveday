@@ -1,18 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { diverDuplicateReasons, emailMatchKey, phoneMatchKey } from "./diver-duplicates";
+import {
+  diverDuplicateReasons,
+  emailMatchKey,
+  matchRestsOnNameAlone,
+  phoneMatchKey,
+} from "./diver-duplicates";
 
 const base = { fullName: "Maya Rivera", email: null, phone: null, dateOfBirth: null };
 
 describe("emailMatchKey", () => {
-  it("folds case, a plus tag, and Gmail's ignored dots", () => {
-    expect(emailMatchKey(" Maya.Rivera+dive@Gmail.com ")).toBe("mayarivera@gmail.com");
-    expect(emailMatchKey("maya.rivera@googlemail.com")).toBe("mayarivera@gmail.com");
-  });
-
-  it("keeps dots where the provider does not promise to ignore them", () => {
-    expect(emailMatchKey("maya.rivera@example.com")).toBe("maya.rivera@example.com");
+  it("folds case and spacing, and nothing else", () => {
+    expect(emailMatchKey(" Maya.Rivera@Example.com ")).toBe("maya.rivera@example.com");
     expect(emailMatchKey("maya.rivera@example.com")).not.toBe(
       emailMatchKey("mayarivera@example.com"),
+    );
+  });
+
+  it("never folds a plus tag: a family booked as parent+kid@ is several people", () => {
+    expect(emailMatchKey("ana+kid@example.com")).not.toBe(emailMatchKey("ana@example.com"));
+    expect(emailMatchKey("success+priya@simulator.amazonses.com")).not.toBe(
+      emailMatchKey("success+tom@simulator.amazonses.com"),
     );
   });
 
@@ -33,13 +40,22 @@ describe("phoneMatchKey", () => {
 });
 
 describe("diverDuplicateReasons", () => {
-  it("names one mailbox written two ways", () => {
+  it("names one address written with different case", () => {
     expect(
       diverDuplicateReasons(
-        { ...base, fullName: "M Rivera", email: "maya.rivera+dive@gmail.com" },
-        { ...base, fullName: "Maya R", email: "mayarivera@gmail.com" },
+        { ...base, fullName: "M Rivera", email: "Maya.Rivera@Example.com" },
+        { ...base, fullName: "Maya R", email: "maya.rivera@example.com " },
       ),
     ).toEqual(["same_email"]);
+  });
+
+  it("does not call a parent and a child on plus-tagged addresses the same email", () => {
+    expect(
+      diverDuplicateReasons(
+        { ...base, fullName: "Ana Sol", email: "ana@example.com" },
+        { ...base, fullName: "Leo Sol", email: "ana+leo@example.com" },
+      ),
+    ).toEqual([]);
   });
 
   it("names a phone match", () => {
@@ -99,5 +115,26 @@ describe("diverDuplicateReasons", () => {
         { ...base, fullName: "Jules Other", email: "b@example.com" },
       ),
     ).toEqual([]);
+  });
+});
+
+describe("matchRestsOnNameAlone", () => {
+  it("is true for one name with no contact in common", () => {
+    expect(
+      matchRestsOnNameAlone(
+        { ...base, email: "ana@example.com" },
+        { ...base, email: "ana+kid@example.com" },
+      ),
+    ).toBe(true);
+  });
+
+  it("is false once a phone agrees, and for two different names", () => {
+    expect(
+      matchRestsOnNameAlone(
+        { ...base, phone: "+1 305 555 0142" },
+        { ...base, phone: "1 305 555 0142" },
+      ),
+    ).toBe(false);
+    expect(matchRestsOnNameAlone(base, { ...base, fullName: "Carmen Diaz" })).toBe(false);
   });
 });

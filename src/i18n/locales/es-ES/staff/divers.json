@@ -202,13 +202,16 @@
     "sameName": "Mismo nombre",
     "noContact": "Sin datos de contacto",
     "compare": "Comparar",
-    "compareWith": "Comparar con {name}"
+    "compareWith": "Comparar con {name}",
+    "more": "Y {count} más"
   },
   "mergePreview": {
     "title": "Fusionar registros duplicados",
     "mergedAway": "Se fusiona",
     "kept": "Se conserva",
     "swap": "Conservar a {name}",
+    "swapDistinct": "Conservar a {name} ({detail})",
+    "recordDetail": "Añadido el {date}, {count, plural, one {# reserva} other {# reservas}}",
     "detailsHeading": "Datos",
     "chooseHint": "Donde no coinciden, elige cuál conservar.",
     "notOnFile": "Sin registrar",

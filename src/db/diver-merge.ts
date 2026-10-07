@@ -398,7 +398,7 @@ export async function listDiverMergeCandidates(
     .where(and(ne(people.id, personId), activeDiverWhere(shopId)))
     .orderBy(asc(people.fullName), asc(people.id));
 
-  return candidates.flatMap((person) => {
+  const found = candidates.flatMap((person) => {
     const reasons = diverDuplicateReasons(source, person);
     return reasons.length === 0
       ? []
@@ -412,6 +412,21 @@ export async function listDiverMergeCandidates(
           },
         ];
   });
+  // Strongest first, so a capped panel shows the likeliest pairs: a stable
+  // sort keeps name order among equals.
+  return found.sort((a, b) => candidateStrength(b.reasons) - candidateStrength(a.reasons));
+}
+
+/** How much a set of reasons says, for ordering candidates: contact beats name. */
+const REASON_WEIGHT: Record<DiverDuplicateReason, number> = {
+  same_email: 4,
+  same_phone: 4,
+  same_name_and_birth_date: 2,
+  same_name: 1,
+};
+
+function candidateStrength(reasons: readonly DiverDuplicateReason[]): number {
+  return reasons.reduce((total, reason) => total + REASON_WEIGHT[reason], 0);
 }
 
 /**
@@ -802,6 +817,8 @@ export type DiverMergeSide = {
   /** Signed releases carrying medical answers: never dropped, always moved. */
   medicalAnswers: number;
   medical: DiverMergeMedicalFlags;
+  /** When the record was made: what tells two records under one name apart. */
+  createdAt: Date;
 };
 
 export type DiverMergePreview = {
@@ -883,6 +900,7 @@ async function mergeSide(
     counts,
     medicalAnswers: Number(medical?.n ?? 0),
     medical: await medicalFlags(db, shopId, person.id),
+    createdAt: person.createdAt,
   };
 }
 

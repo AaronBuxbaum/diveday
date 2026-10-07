@@ -16,6 +16,14 @@ export const MERGE_REASON_KEYS: Record<DiverMergeCandidateReason, StaffMessageKe
   same_name: "divers.merge.sameName",
 };
 
+/**
+ * How many candidates the panel lists, strongest first (`listDiverMergeCandidates`
+ * sorts them). A record that looks like a dozen others is a data problem the
+ * panel cannot solve by listing them all: on the seeded shop a too-loose email
+ * rule once made it list about 140 divers and run 14,000px down the page.
+ */
+export const MERGE_CANDIDATES_SHOWN = 5;
+
 function contactLine(email: string | null, phone: string | null, missing: string): string {
   return [email, displayStoredPhoneWhole(phone)].filter(Boolean).join(" · ") || missing;
 }
@@ -45,6 +53,8 @@ export function MergeDiver({
   if (candidates.length === 0) {
     return <DiverFormStatus status={status} className="mt-6" />;
   }
+  const shown = candidates.slice(0, MERGE_CANDIDATES_SHOWN);
+  const hidden = candidates.length - shown.length;
   return (
     /* Flat, per 20260827-clearwater-surface-language decision 1: the panel
        keeps its condition (it renders only when a candidate exists) and the
@@ -54,12 +64,12 @@ export function MergeDiver({
         {t("divers.merge.heading")}
       </h2>
       <ul className="mt-4 grid gap-2">
-        {candidates.map((candidate) => (
+        {shown.map((candidate) => (
           <li
             key={candidate.id}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3"
+            className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3"
           >
-            <span className="min-w-0">
+            <span className="min-w-0 [overflow-wrap:anywhere]">
               <span className="block font-medium">{candidate.fullName}</span>
               <span className="mt-0.5 block text-sm text-muted">
                 {contactLine(candidate.email, candidate.phone, t("divers.merge.noContact"))}
@@ -78,6 +88,9 @@ export function MergeDiver({
           </li>
         ))}
       </ul>
+      {hidden > 0 ? (
+        <p className="mt-2 text-sm text-muted">{t("divers.merge.more", { count: hidden })}</p>
+      ) : null}
       <DiverFormStatus status={status} className="mt-3" />
     </section>
   );

@@ -5099,9 +5099,33 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Priya Sharma" }).waitFor();
         await page.getByRole("link", { name: "Compare with Priya Sharma" }).first().click();
         await page.getByRole("heading", { level: 1, name: "Merge duplicate records" }).waitFor();
+        // Swap so the seeded Priya, with her bookings and releases, is the
+        // record merged away: "What moves" then shows real movement rather
+        // than a row of zeros from the record made a moment ago. The two
+        // share a name, so the link names which Priya it keeps.
+        await page.getByRole("link", { name: /^Keep Priya Sharma \(Added .*\) instead$/ }).click();
+        await page.getByRole("heading", { level: 1, name: "Merge duplicate records" }).waitFor();
         await page.getByRole("heading", { name: "What moves to the kept record" }).waitFor();
+        await page.getByRole("rowheader", { name: "Bookings" }).waitFor();
         await page.mouse.move(0, 0);
         await capture(page, "diver-merge-preview", scheme);
+      });
+
+      /**
+       * **A card waiting for a check, with its agency's lookup beside it**
+       * (market audit item 30). Mateo Duarte's seeded SSI card is pending, so
+       * the open Certification records group shows "Check with SSI": the one
+       * place the agency link renders, and behind a closed group in every
+       * other capture.
+       */
+      test(`a pending card's agency check link renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openDiverProfile(page, "Mateo", "Mateo Duarte");
+        const group = await openDiverFileGroup(page, "Certification records");
+        await group.getByRole("link", { name: "Check with SSI" }).waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "diver-profile-agency-check", scheme);
       });
 
       /**
