@@ -1,4 +1,5 @@
 import { and, eq, exists, gt, isNull, or, sql } from "drizzle-orm";
+import { cache } from "react";
 import type { BrandBadgeCode, BrandDisplayFontCode } from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
@@ -90,6 +91,21 @@ export async function getShopById(db: AppDb, id: string) {
   const [shop] = await db.select().from(shops).where(eq(shops.id, id)).limit(1);
   return shop ?? null;
 }
+
+/**
+ * {@link getShopById}, once per render per executor: for the staff gate
+ * (`requireShopSurface`) and the shop home, which resolve the session's shop
+ * by id in the same render (app audit 2026-10-07, item 2).
+ *
+ * Unlike {@link shopBySlugCached} this keeps the executor argument, and keys on
+ * its identity: the pool is one object for the life of the process, so every
+ * caller on it shares one read, while a transaction handle is a different key
+ * and always reads its own snapshot rather than the pool's row. It takes the
+ * executor because its callers already hold one - and because a reader that
+ * reaches for `getDb()` itself is invisible to a test that hands its caller a
+ * database.
+ */
+export const shopByIdCached = cache((db: AppDb, id: string) => getShopById(db, id));
 
 /** Replaces the shop-wide diver packing checklist after route-level validation. */
 export async function setShopPackingList(db: AppDb, shopId: string, packingList: string[]) {

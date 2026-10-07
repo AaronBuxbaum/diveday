@@ -21,7 +21,6 @@
  * `scripts/check-architecture.mjs` bans `src/components` → `src/app`.
  */
 
-import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { switchDemoRoleAction } from "@/app/actions/demo";
@@ -37,7 +36,7 @@ import { tapTargetLinkClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { hasActiveCourses } from "@/db/courses";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
-import { people, personRoles } from "@/db/schema";
+import { listShopRolesPresent } from "@/db/shop-roles";
 import { shopBySlugCached } from "@/db/shops-cached";
 import { listShopSpokenLanguages } from "@/db/staff-accounts";
 import { languageEndonym, localeEndonym } from "@/i18n/language-labels";
@@ -91,15 +90,7 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
   // captain only appear when this shop actually seeded someone in that role.
   let availableRoles: string[] = ["owner", "diver"];
   if (showBanner && shop) {
-    const present = new Set(
-      (
-        await db
-          .selectDistinct({ role: personRoles.role })
-          .from(personRoles)
-          .innerJoin(people, eq(people.id, personRoles.personId))
-          .where(eq(people.shopId, shop.id))
-      ).map((row) => row.role),
-    );
+    const present = await listShopRolesPresent(db, shop.id);
     availableRoles = [
       "owner",
       ...(["instructor", "divemaster", "captain"] as const).filter((role) => present.has(role)),

@@ -35,7 +35,7 @@ time a second device has changed the row.
 
 **1. The queued event names its target, by the target's `clientEventId`.**
 `OfflineRollCallEvent.retractsClientEventId` (optional), set by the four re-tap controls in
-`OfflineManifestView` through one `reTap` helper, carried by `appendOfflineRollCall`, accepted by
+`OfflineManifestView` (now `offline-manifest/shared.tsx`) through one `reTap` helper, carried by `appendOfflineRollCall`, accepted by
 the sync route's schema, and read by both writers.
 
 The client event id and not a row id or a `seq`: the device mints it locally at queue time, which is

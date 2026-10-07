@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { after } from "next/server";
 import { createDiverFromSearchAction } from "@/app/actions/divers";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager, staffPagerWords } from "@/components/Pager";
@@ -15,6 +16,7 @@ import { canDeleteDiver, canImportShopData, canMergeDiver } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { formatShortDate, formatTime } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
+import { reportRenderQueries } from "@/lib/observability/query-timing";
 import type { AboardBlockerKind } from "@/lib/readiness";
 import { rosterLetter, rosterRowFact } from "@/lib/roster-rows";
 import { requireShopSurface, requireStaffSession } from "@/lib/session";
@@ -73,6 +75,7 @@ export default async function DiversPage({
   const { shopSlug } = await params;
   const { notice, deleted, q, page, filter: filterParam } = await searchParams;
   const { session, db, shop } = await requireShopSurface(shopSlug);
+  reportRenderQueries("/shop/[shopSlug]/divers", after);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const query = q?.trim() ?? "";

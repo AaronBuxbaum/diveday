@@ -6,6 +6,7 @@ import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { Pool } from "pg";
 import { getDbPoolConfig } from "@/lib/db-pool-config";
+import { queryTimingLogger } from "@/lib/observability/query-timing";
 import { withExplicitSslMode } from "./connection-string";
 import { acquireDataDirLock } from "./data-dir-lock";
 import { refreshPgliteDemo, seedProductionDb, takeSeedLock } from "./dev-bootstrap";
@@ -76,7 +77,7 @@ async function init(): Promise<AppDb> {
     });
     // Same schema, same query-builder surface as the PGlite driver below;
     // the driver classes differ only in how they execute over the wire.
-    const db = drizzleNodePostgres({ client: pool }) as unknown as AppDb;
+    const db = drizzleNodePostgres({ client: pool, logger: queryTimingLogger }) as unknown as AppDb;
     try {
       await seedProductionDb(db, {
         lock: async (tx) => {
@@ -137,7 +138,7 @@ export async function openLocalDb(
       dataDir === "memory"
         ? new PGlite({ extensions: { pg_trgm, btree_gist } })
         : new PGlite(dataDir, { extensions: { pg_trgm, btree_gist } });
-    const db = drizzle({ client });
+    const db = drizzle({ client, logger: queryTimingLogger });
     await runMigrate(db);
     // No advisory lock here, because a Postgres advisory lock is a *database*
     // lock and each opener of this directory has its own database — see

@@ -491,13 +491,18 @@ async function readWhere<K extends ExportTableKey>(
   where: (scope: ExportTableRead["scope"]) => SQL | undefined,
 ): Promise<ExportTableRows<K>> {
   const { table, order, scope } = EXPORT_TABLES[key] as ExportTableRead;
+  const filter = where(scope);
+  if (filter === undefined) {
+    // Drizzle drops an undefined WHERE and reads every tenant's rows.
+    throw new Error(`export: ${key} read without a tenant filter`);
+  }
   // The entry's table is a union of every table in the list, which drizzle's
   // builder cannot narrow from a key; the row type comes back through
   // `ExportTableRows<K>`, which the entry itself pins.
   const query = db
     .select()
     .from(table as never)
-    .where(where(scope));
+    .where(filter);
   const rows = order.length > 0 ? await query.orderBy(...order) : await query;
   return rows as ExportTableRows<K>;
 }

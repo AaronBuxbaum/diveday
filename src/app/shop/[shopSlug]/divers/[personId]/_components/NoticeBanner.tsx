@@ -2,10 +2,10 @@ import Link from "next/link";
 import { ShopNotice } from "@/components/ShopPageHeader";
 import { FormStatus } from "@/components/ui/form";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { DiverNotice } from "@/lib/diver-notices";
 import { noticeRole } from "@/lib/staff-notices";
-import type { DiverNotice } from "./record-notices";
 
-export type { DiverNotice } from "./record-notices";
+export type { DiverNotice } from "@/lib/diver-notices";
 
 /**
  * One section's own outcome, in that section's action row.

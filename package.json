@@ -39,6 +39,7 @@
     "check:tokens": "node scripts/check-tokens.mjs",
     "check:tinted-ink": "node scripts/check-tinted-ink.mjs",
     "check:type-ramp": "node scripts/check-type-ramp.mjs",
+    "check:page-length": "node scripts/check-page-length.mjs",
     "check:voice": "node scripts/check-voice.mjs",
     "check:logical-properties": "node scripts/check-logical-properties.mjs",
     "check:clock": "node scripts/check-clock.mjs",

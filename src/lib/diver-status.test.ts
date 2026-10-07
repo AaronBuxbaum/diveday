@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
+import type { DiverProfile } from "@/lib/diver-profile";
 import type { ReadinessResult } from "@/lib/readiness";
-import type { DiverProfile } from "../_components/shared";
-import { bookingIsAhead, buildDiverStatus, nextBookingAhead, splitDiverStatus } from "./status";
+import {
+  bookingIsAhead,
+  buildDiverStatus,
+  nextBookingAhead,
+  splitDiverStatus,
+} from "./diver-status";
 
 const NOW = new Date("2026-08-26T18:00:00.000Z");
 const TOMORROW = new Date("2026-08-27T11:00:00.000Z");

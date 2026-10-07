@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { z } from "zod";
 import { getDb } from "@/db/client";
 import {
   type FeedScope,
@@ -10,14 +11,22 @@ import {
   issueCalendarFeed,
   revokeCalendarFeeds,
 } from "@/features/calendar-sync";
+import { parseForm } from "@/lib/form-parse";
 import { requireStaffSession } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import type { FeedIssueState } from "./feed-panel-types";
 
-function scopeFromFormData(formData: FormData): FeedScope | null {
-  const scope = formData.get("scope");
-  return scope === "assignments" || scope === "shop_trips" ? scope : null;
-}
+/**
+ * The panel's form: the one scope it controls, and two flags read as exactly
+ * `"revoke"` and `"true"` — anything else, including an absent field, is the
+ * ordinary path. Both are optional because the revoke form sends no
+ * `rotating` at all, and zod refuses a missing key even for `unknown`.
+ */
+const feedForm = z.object({
+  scope: z.enum(["assignments", "shop_trips"]) satisfies z.ZodType<FeedScope>,
+  intent: z.unknown().optional(),
+  rotating: z.unknown().optional(),
+});
 
 /**
  * The origin this app is being served from, for building a subscribe URL the
@@ -56,13 +65,14 @@ export async function calendarFeedAction(
   formData: FormData,
 ): Promise<FeedIssueState> {
   const session = await requireStaffSession();
-  const scope = scopeFromFormData(formData);
-  if (!scope) return { status: "denied" };
+  const parsed = parseForm(feedForm, formData);
+  if (!parsed.ok) return { status: "denied" };
+  const { scope, intent, rotating } = parsed.data;
 
   const db = await getDb();
   const path = shopPath(session.user.shopSlug, "settings", "calendar");
 
-  if (formData.get("intent") === "revoke") {
+  if (intent === "revoke") {
     await revokeCalendarFeeds(db, {
       shopId: session.user.shopId,
       personId: session.user.personId,
@@ -86,6 +96,6 @@ export async function calendarFeedAction(
     scope,
     webcalUrl: feedSubscribeUrl(origin, issued.token),
     httpsUrl: `${origin}${feedPath(issued.token)}`,
-    rotated: formData.get("rotating") === "true",
+    rotated: rotating === "true",
   };
 }

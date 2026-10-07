@@ -4,6 +4,7 @@ import { getDb } from "@/db/client";
 import { commitDiveSiteImport } from "@/db/dive-site-import";
 import { canPersonImportShopData } from "@/db/import";
 import { prepareDiveSiteImport } from "@/lib/dive-site-import";
+import { csvUploadForm, parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -26,10 +27,9 @@ export async function restoreDiveSitesAction(formData: FormData) {
     revalidateAndRedirect(home, noticeUrl(home, "dive-site-import-not-authorized"));
   }
 
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0)
-    revalidateAndRedirect(page, noticeUrl(tab, "import-empty"));
-  const prepared = prepareDiveSiteImport(await file.text());
+  const parsed = parseForm(csvUploadForm, formData);
+  if (!parsed.ok) revalidateAndRedirect(page, noticeUrl(tab, "import-empty"));
+  const prepared = prepareDiveSiteImport(await parsed.data.file.text());
   // A fatal is the whole file refused, and each one has words of its own —
   // "a column I do not recognise" and "no name column" want different fixes.
   if (prepared.fatal) revalidateAndRedirect(page, noticeUrl(tab, `import-${prepared.fatal}`));

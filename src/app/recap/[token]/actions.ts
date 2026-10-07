@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { getDb } from "@/db/client";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
 import { addRecapPhoto, canAddRecapPhoto, MAX_RECAP_PHOTOS_PER_BOOKING } from "@/db/recap";
@@ -9,6 +10,7 @@ import { submitTripReview } from "@/db/reviews";
 import { getTipCurrencyForBooking, startTipCheckout, tipBoundsCents } from "@/db/tips";
 import { diverTranslator } from "@/i18n/messages";
 import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
+import { parseForm } from "@/lib/form-parse";
 import { majorToMinor } from "@/lib/money";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
@@ -17,6 +19,12 @@ import { verifyRecapToken } from "@/lib/recap-links";
 import { clientIp } from "@/lib/request-ip";
 import { parseReviewRating } from "@/lib/reviews";
 import { deleteStoredImage, storeRecapImage } from "@/lib/storage";
+
+/** The tip form: a preset radio, and an "Other" box that wins when filled. */
+const tipForm = z.object({
+  customAmount: z.string().default(""),
+  amount: z.string().optional(),
+});
 
 /**
  * A diver attaches one or more photos to their own recap in a single submit
@@ -159,8 +167,13 @@ export async function startTipAction(token: string, formData: FormData) {
   // the two fields are named separately (rather than sharing "amount") so a
   // custom value can never be shadowed by whichever preset happens to be
   // checked in DOM order.
-  const custom = String(formData.get("customAmount") ?? "").trim();
-  const typed = Number(custom || formData.get("amount"));
+  //
+  // A form that is not two strings reads as no amount at all, which the bounds
+  // check below refuses as `invalid` — exactly where a non-number lands.
+  const parsed = parseForm(tipForm, formData);
+  const typed = parsed.ok
+    ? Number(parsed.data.customAmount.trim() || parsed.data.amount)
+    : Number.NaN;
 
   const db = await getDb();
   // The diver types a major-unit amount ("20"); what gets charged is an integer

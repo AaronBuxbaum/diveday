@@ -9,7 +9,6 @@ import {
   type ThreadSpineStep,
   ThreadStatus,
 } from "@/app/ready/[token]/_components/ThreadSpine";
-import { buildAfterStateProps } from "@/app/ready/[token]/_lib/after-state-data";
 import {
   startTipAction,
   submitRecapPulseAction,
@@ -104,6 +103,7 @@ import {
 import { reEntryOffersFor } from "@/lib/re-entry";
 import { combineCertRequirements, type ReadinessBlockerCode } from "@/lib/readiness";
 import { buildDiverChecklist, type DiverChecklistItem } from "@/lib/readiness-summary";
+import { buildAfterStateProps } from "@/lib/recap-after-state";
 import { signRecapToken } from "@/lib/recap-links";
 import { nitroxAvailableOn, nitroxCardWanted, sizeForRentalItem } from "@/lib/rentals";
 import { noticeFromParam, noticeRole } from "@/lib/staff-notices";

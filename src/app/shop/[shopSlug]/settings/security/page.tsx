@@ -1,4 +1,3 @@
-import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { FlashParams } from "@/components/FlashParams";
@@ -10,7 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import { INSET_NOTE_BOX, SectionCard } from "@/components/ui/card";
 import { controlClass, Field } from "@/components/ui/form";
 import { getAccountSecurity, getTotpSecret, listAccountSessions } from "@/db/account-security";
-import { userAccounts } from "@/db/schema";
+import { getAccountIdForPerson } from "@/db/user-accounts";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { formatDateTimeTz } from "@/lib/format";
@@ -59,16 +58,12 @@ export default async function SecurityPage({
   const { shopSlug } = await params;
   const query = await searchParams;
   const { db, shop, session } = await requireShopSurface(shopSlug);
-  const [account] = await db
-    .select({ id: userAccounts.id })
-    .from(userAccounts)
-    .where(eq(userAccounts.personId, session.user.personId))
-    .limit(1);
+  const accountId = await getAccountIdForPerson(db, session.user.personId);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const purpose: StepUpPurpose | null = isStepUpPurpose(query.purpose) ? query.purpose : null;
   const returnTo = safeStepUpReturnPath(shopSlug, query.returnTo);
-  if (!account) return null;
+  if (!accountId) return null;
   const recoveryCodes = await (async () => {
     const value = (await cookies()).get("diveday_totp_recovery_codes")?.value;
     const key = secretKeyFromEnvironment();
@@ -79,7 +74,7 @@ export default async function SecurityPage({
       const parsed: unknown = JSON.parse(opened);
       if (!parsed || typeof parsed !== "object") return [] as string[];
       const record = parsed as { accountId?: unknown; codes?: unknown };
-      if (record.accountId !== account.id || !Array.isArray(record.codes)) return [] as string[];
+      if (record.accountId !== accountId || !Array.isArray(record.codes)) return [] as string[];
       return record.codes.filter(
         (code): code is string => typeof code === "string" && /^[A-Z2-7]{10}$/.test(code),
       );
@@ -88,9 +83,9 @@ export default async function SecurityPage({
     }
   })();
   const [security, sessions, secret] = await Promise.all([
-    getAccountSecurity(db, account.id),
-    listAccountSessions(db, account.id),
-    getTotpSecret(db, account.id),
+    getAccountSecurity(db, accountId),
+    listAccountSessions(db, accountId),
+    getTotpSecret(db, accountId),
   ]);
   const notice = noticeFromParam<{ tone: NoticeTone; text: string }>(query.notice, {
     "enrollment-started": {
