@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -6,7 +6,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   isPathScoped,
+  isUserOnly,
   LINE_WORD_CAP,
+  listDirs,
   measure,
   overlongLines,
   rules,
@@ -55,6 +57,42 @@ describe("what counts as always-loaded context", () => {
     const measured = await measure(root);
     expect(measured[".claude/skills/*/SKILL.md (description lines)"]).toBe(3);
     expect(measured[".claude/agents/*.md (description lines)"]).toBe(2);
+  });
+
+  /**
+   * Most of `.claude/skills/` is symlinks into `.agents/skills/`. A `Dirent` reports a link
+   * as a link, so an `isDirectory()` filter skipped every imported skill and the budget read
+   * about 500 words light.
+   */
+  it("counts a skill linked in from .agents/skills like one that lives in .claude/skills", async () => {
+    const root = await fixture({ skill: SKILL, agent: AGENT });
+    await mkdir(path.join(root, ".agents/skills/imported"), { recursive: true });
+    await writeFile(
+      path.join(root, ".agents/skills/imported/SKILL.md"),
+      "---\nname: imported\ndescription: four more words here\n---\n\nbody\n",
+    );
+    await symlink(
+      path.join("..", "..", ".agents/skills/imported"),
+      path.join(root, ".claude/skills/imported"),
+    );
+    // A dangling link is not a skill and must not throw.
+    await symlink(path.join(root, "nowhere"), path.join(root, ".claude/skills/broken"));
+
+    expect(await listDirs(root, ".claude/skills")).toEqual(["example", "imported"]);
+    const measured = await measure(root);
+    expect(measured[".claude/skills/*/SKILL.md (description lines)"]).toBe(7);
+  });
+
+  it("leaves out a user-only skill, whose description never reaches the model", async () => {
+    const root = await fixture({ skill: SKILL, agent: AGENT });
+    await mkdir(path.join(root, ".claude/skills/manual"), { recursive: true });
+    await writeFile(
+      path.join(root, ".claude/skills/manual/SKILL.md"),
+      "---\nname: manual\ndescription: many words a human reads in the slash menu\ndisable-model-invocation: true\n---\n",
+    );
+    expect(isUserOnly("---\ndisable-model-invocation: true\n---\n")).toBe(true);
+    expect(isUserOnly("---\nname: x\n---\ndisable-model-invocation: true\n")).toBe(false);
+    expect((await measure(root))[".claude/skills/*/SKILL.md (description lines)"]).toBe(3);
   });
 
   it("counts AGENTS.md and CLAUDE.md in full — a session gets both whether it wants them or not", async () => {
