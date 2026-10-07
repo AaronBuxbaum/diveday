@@ -35,6 +35,30 @@ with <agency>**, a link to that agency's own lookup (SSI, NAUI, SDI, TDI, GUE; "
 portal"; "Check with PADI (member sign-in)"), from `src/lib/agency-verification.ts` (H-10 amendment in
 [20260721-manual-certification](../architecture/decisions/20260721-manual-certification.md)).
 
+## Participants who are not divers (delivered 2026-10-07)
+
+Market audit item 32. A booking now has a **participant type**: diver, snorkeler or rider
+(`bookings.participant_type`, codes and every rule in `src/lib/participant-types.ts`). A departure
+can name a snorkeler price and a rider price (`trips.snorkeler_price_cents`,
+`trips.rider_price_cents`; no price means not sold publicly, zero means free) and an optional
+divers-only cap (`trips.diver_capacity`), all set in the trip's Details under "Snorkelers and
+riders". The boat's `capacity` counts **everyone aboard**; the diver cap refuses only a diver, both
+inside the booking transaction under the trip lock (`heldSeatCounts` + `seatRefusal`), and the same
+check guards restore, no-show undo, a type change and lowering the cap.
+
+The public form asks "Joining as" per person when the departure sells more than diving, and the
+money block and checkout lines price each seat by its type. Readiness and admission ask no card,
+nitrox or specialty of a non-diver; the waiver and medical form stay required for all three. Buddy
+teams are divers only. Rental fit and the gear list follow the type (a snorkeler rents surface kit,
+a rider rents nothing), and tanks count divers only. The roster, manifest, roll call and offline
+manifest list everyone with a type badge; the head count splits by type; staff change a booking's
+type from the roster ("Coming as"). Reports split booked seats by type, and both bookings exports
+carry the type. Course sessions sell divers only. One migration
+(`drizzle/20261007121659_participant-types`); ADR
+[20261007-participant-types](../architecture/decisions/20261007-participant-types.md); scope and
+the defaults chosen for its open questions in
+[features/participant-types.md](features/participant-types.md).
+
 ## A page for every feature (delivered 2026-10-05)
 
 H-93. Twelve feature pages under `/product/<feature>` (online booking, the shop's website, waivers

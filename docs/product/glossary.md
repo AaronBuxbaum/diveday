@@ -164,7 +164,7 @@ new domain concept, define it here in the same PR.
   staff-verified card as displaceable and let an anonymous post re-grade it
   ([20260814-self-declared-cards](../architecture/decisions/20260814-self-declared-cards.md)).
 - **Declared uncertified** — a joiner's answer of *"I'm not certified yet"* on one of those same two
-  opt-ins: Discover Scuba and Try Scuba customers, snorkellers, the non-diving half of a couple,
+  opt-ins: Discover Scuba and Try Scuba customers, snorkelers, the non-diving half of a couple,
   somebody booked onto a course they have not started. It is **not a Self-declared certification and
   not a level**: it lands as one nullable stamp on the person (`people.no_certification_declared_at`)
   and never as a `certifications` row, because a Discover Scuba experience is not a certification and
@@ -1117,13 +1117,14 @@ new domain concept, define it here in the same PR.
   **souls on board** line, whose crew half is the same idea: assigned crew less the ones a human
   recorded ashore at the dock.
 - **Souls on board** — the industry's (and the coast guard's) term for how many *people* a vessel
-  left with: divers plus crew, one number, no distinction between who paid and who works. It is
+  left with: passengers (divers, snorkelers and riders) plus crew, one number, no distinction
+  between who paid and who works. It is
   printed at the top of the paper manifest and nowhere on screen, deliberately. On paper it is a
   **static** fact about the departure — how many the trip carries, how many crew it names — never a
   live roll-call count, because a "Boarded 6" printed at 07:12 is wrong by 07:20 and paper cannot
   correct itself. The screen answers the live question, in the checkpoint panel. **One screen does
-  count this way**: the shop home's evening homecoming line, which since 2026-09-05 reads "8 divers
-  and 2 crew out, 10 back" (issue #1346). It counted bookings until then, which left the crew out
+  count this way**: the shop home's evening homecoming line, which since 2026-09-05 reads "8
+  passengers and 2 crew out, 10 back" (issue #1346). It counted bookings until then, which left the crew out
   of both numbers on the one sentence in the product about who came home — and it says the two
   halves rather than one total, because a shop reading its own evening wants to know which is which.
   **Both halves now count who was carried, not who was rostered** (issue #1689): the diver half is
@@ -1276,7 +1277,36 @@ new domain concept, define it here in the same PR.
   decision 4). At the dock the heads-up keeps its old reading: there the crew is *assembling* a
   boat, so anyone not yet aboard is genuinely still to gather. The offline manifest shows teams read-only by name and states that the split-team read
   belongs to the live roll call — a saved snapshot cannot know who came back.
+  Buddy teams are **divers only**: a snorkeler or a rider on a departure can be on no team, and a
+  booking that is on one cannot be changed away from diving until it leaves the team.
   See [ADR 20260804-buddy-teams](../architecture/decisions/20260804-buddy-teams.md).
+- **Participant type** — what a booked person is doing on a departure: a **diver**, a
+  **snorkeler**, or a **rider** (`bookings.participant_type`, codes in
+  `src/lib/participant-types.ts`). Every booking has exactly one, and it defaults to diver. All
+  three hold a seat, are counted at every roll-call checkpoint, appear on the manifest, and sign
+  the shop's waiver and medical form. Only a diver is asked for a certification, may request
+  nitrox, goes on a buddy team, is packed tanks for, uses a dive package, or counts against the
+  departure's **diver seats**. A course session sells divers only. Staff change a booking's type
+  from the roster ("Coming as"): joining the dive runs the card check and needs "Change anyway" (an
+  owner, manager or instructor) to pass a missing card, nothing changes once the departure is home,
+  and joining is refused from the departure time on. See
+  [ADR 20261007-participant-types](../architecture/decisions/20261007-participant-types.md).
+- **Booked as** — the participant type a booking was made with (`bookings.booked_as`), set once by
+  every writer and never changed. A seat whose type moved since shows a warning-tone
+  note on the roster, the roll call and the offline copy: "Snorkeling, booked as diver" when it
+  left the dive, "Diving, booked as snorkeler" when it joined. Leaving the dive clears card checks
+  only, never a medical one, and joining a seat already boarded re-asks the boarding gate.
+- **Snorkeler** — a participant who is in the water at the surface with no tank. Needs no card,
+  rents surface kit only (mask and fins, wetsuit, boots, hood and gloves, camera), and pays the
+  departure's snorkeler price (`trips.snorkeler_price_cents`). The public form offers a snorkeler
+  seat only where the shop has named that price; zero means free, and no price means not sold.
+- **Rider** — a participant who stays on the boat: a partner, a parent, a photographer. Needs no
+  card, rents nothing, and pays the departure's rider price (`trips.rider_price_cents`) under the
+  same rule as a snorkeler's. A rider is still a body aboard and is counted at roll call.
+- **Diver seats** — an optional cap on how many **divers** a departure carries
+  (`trips.diver_capacity`), for a boat whose tanks or guides run out before its deck does. The
+  boat's own capacity always counts everyone aboard; the diver cap only refuses a diver, and a cap
+  at or above the capacity binds nothing. Both are enforced inside the booking transaction.
 - **Per-trip crew role** — what a crew member is rostered to *do on one sailing*
   (`instructor`/`divemaster`/`captain`/`crew`), as opposed to the shop-wide roles they hold. There
   is deliberately no `assistant_instructor` here: that is a rung a person holds, and the job an AI
