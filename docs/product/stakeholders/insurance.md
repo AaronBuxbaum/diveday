@@ -2,7 +2,7 @@
 
 Two distinct workstreams that share a discipline but not a stakeholder: **(A)** DiveDay's own
 coverage, and **(B)** the shop-side underwriting answer that becomes a sales asset. Status of
-record: [human-decisions.md](../human-decisions.md) row **H-19** (DiveDay's own coverage); the
+record: [human-decisions/](../human-decisions/README.md) row **H-19** (DiveDay's own coverage); the
 shop-side one-pager is a Phase-0 deliverable named in the
 [rollout plan](../rollout.md#01-legal-and-policy-h-01-h-02-h-03-v-03--start-immediately-longest-lead).
 
@@ -81,7 +81,7 @@ rollout plan calls for. Outline:
    per the [claims policy](../marketing.md)).
 
 This asset is *marketing-adjacent*: it must obey the claims policy (the no-signal roll call only
-as [H-94](../human-decisions.md#decision-register) words it, never as tested on a boat before
+as [H-94](../human-decisions/README.md#decision-register) words it, never as tested on a boat before
 V-02 passes; no legal-sufficiency claims before H-03 is signed off).
 
 ## Where outcomes land

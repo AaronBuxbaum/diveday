@@ -185,7 +185,7 @@ export const areas = {
     docs: [
       "docs/product/features/roadmap.md",
       "docs/product/glossary.md",
-      "docs/product/human-decisions.md",
+      "docs/product/human-decisions/README.md",
       "docs/design/principles.md",
     ],
     code: [

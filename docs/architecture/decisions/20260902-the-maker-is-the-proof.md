@@ -94,7 +94,7 @@ Proposed, in five parts. Parts 1 and 3 are the owner's to confirm and are record
 
 The claims policy in [marketing.md](../../product/marketing.md) is amended in the code phase to
 record parts 3, 4 and 5 and to un-retire the biography block under part 1's shape; H-12's row in
-[human-decisions.md](../../product/human-decisions.md) is amended by H-66's outcome, never
+[human-decisions/](../../product/human-decisions/README.md) is amended by H-66's outcome, never
 rewritten.
 
 ## Alternatives considered

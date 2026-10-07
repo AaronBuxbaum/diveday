@@ -110,7 +110,7 @@ when you open the file.
 | Why a route paints instantly (or doesn't) | its `loading.tsx` and `export const instant = true` (ADR 20260804-instant-navigation; the **instant-navigation** skill) |
 | "What should this code do?" | Read `foo.test.ts` before `foo.ts` — tests are the contract |
 | A design for a surface that does not exist yet | [docs/design/design-artifacts.md](docs/design/design-artifacts.md) first; canvases in `docs/design/canvases/` |
-| An idea, question, risk, or cleanup you are **not** doing in this change | a GitHub issue labelled `needs-triage` ([docs/agents/issue-tracker.md](docs/agents/issue-tracker.md)'s "Filing a follow-up"), `waiting-on-external` when nobody here can move it. Committed work lives in `docs/product/features/`, human-owned calls in `docs/product/human-decisions.md` |
+| An idea, question, risk, or cleanup you are **not** doing in this change | a GitHub issue labelled `needs-triage` ([docs/agents/issue-tracker.md](docs/agents/issue-tracker.md)'s "Filing a follow-up"), `waiting-on-external` when nobody here can move it. Committed work lives in `docs/product/features/`, human-owned calls in `docs/product/human-decisions/README.md` |
 
 ## Skills and providers
 

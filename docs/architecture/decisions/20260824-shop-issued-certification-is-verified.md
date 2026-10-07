@@ -54,7 +54,7 @@ The shop-issued exception is not conditioned on status at all, because the row i
 numberless *and* `verified` from the moment it is created; that is the entire point.
 
 **Who may tap it: any active staff member of the shop, not instructor-only** — the same trust
-boundary H-48 already settled for card *sighting* (`docs/product/human-decisions.md`). A shop-issued
+boundary H-48 already settled for card *sighting* (`docs/product/human-decisions/README.md`). A shop-issued
 certification is a stronger act than sighting (it originates verified evidence rather than confirming
 a claim already on file against a physical card), and that distinction is deliberately not re-litigated
 here: extending H-48's answer to a stronger act is the position this decision takes, not an oversight.

@@ -22,6 +22,6 @@ gate is still open.
 **Left to do:** `course_min_age` is still not enforced for public actors in `src/db/bookings.ts`.
 Making it a hard gate means persisting a submitted birth date, which reopens the H-22 probing
 vector the attestation checkbox was chosen specifically to avoid — this needs its own
-`docs/product/human-decisions.md` entry (a policy call, not just an engineering change) before any
+`docs/product/human-decisions/README.md` entry (a policy call, not just an engineering change) before any
 implementation, and the persisted-birthdate path needs a `security-reviewer` pass alongside
 `dive-domain-expert` given its interaction with `findOrCreatePerson`'s email-match reuse (H-13).

@@ -1470,7 +1470,7 @@ new domain concept, define it here in the same PR.
   immutable completed record any signature produces, marked `signatureMethod: "imported"` so it is
   never confused with a release DiveDay itself watched a diver sign or a staff-attested paper copy.
   Unlike the paper path, **no staff attestation is required** — a deliberate, knowingly-made
-  product-owner decision (H-17 in human-decisions.md) that reverses the contact importer's original
+  product-owner decision (H-17 in human-decisions/) that reverses the contact importer's original
   fail-closed medical rule. It carries the diver's real acceptance date when the row gives one (still
   subject to the one-year signature-validity window), snapshots the shop's *current* template for
   reference only (the diver never agreed to that text), and is never fabricated from a source
@@ -1735,7 +1735,7 @@ new domain concept, define it here in the same PR.
   owner in Settings as days left / trial ended. Expiry is **soft** — the shop keeps working exactly
   as before past the window; there is no paid/trial entitlement flag in the schema to gate on.
   Moving to a paid plan is by writing to `onboarding@dive.day`, not a self-serve checkout
-  (product-owner decision, 2026-08-05, [human-decisions.md](human-decisions.md#decision-register)).
+  (product-owner decision, 2026-08-05, [human-decisions/](human-decisions/README.md#decision-register)).
 - **Owner reporting / monthly report** — the owner's "how's my month" view (`/shop/[slug]/reports`):
   net revenue, bookings, **fill rate**, and **waiver completion** for the trips that departed in a
   chosen month, plus a per-trip breakdown. Trip metrics remain anchored to trip-departure month in
@@ -2259,7 +2259,7 @@ new domain concept, define it here in the same PR.
   same **Confirm identity** tap. Staff-facing diver create/edit/restore still **refuse** on the
   same email collision rather than reuse, and a soft-deleted person's email frees up for a new,
   unrelated person (that soft-delete window is accepted as-is; it fails closed to a blank record). See H-13 in
-  [human-decisions.md](human-decisions.md) and
+  [human-decisions/](human-decisions/README.md) and
   [20260723-person-email-uniqueness](../architecture/decisions/20260723-person-email-uniqueness.md).
 - **Held seat** — a booking attached to an existing diver on a guess: it carries
   `bookings.identity_unconfirmed_at` (with `identity_booked_as` and `identity_matched_by`) and the
@@ -2295,7 +2295,7 @@ new domain concept, define it here in the same PR.
   #2082): `/ready` and `/waivers` neither show nor write the record's emergency contact, rental
   fit, cards or language, a clean release signed on the seat does not carry to the diver's other
   bookings (a medical hold signed there still does), and no readiness reminder or recap is sent
-  until the flag clears. See H-13 in [human-decisions.md](human-decisions.md).
+  until the flag clears. See H-13 in [human-decisions/](human-decisions/README.md).
 - **Split off a held seat** ("Different person") — the other answer to a held seat: this booking is
   *not* the diver it was attached to. `splitBookingIdentity` (`src/db/bookings.ts`) creates a new
   diver record, named by the staffer and prefilled with the name the seat was booked under

@@ -85,7 +85,7 @@ import { pathToFileURL } from "node:url";
  * Message-bundle coverage is scoped to the diver-facing surface. The waiver
  * body and the medical questionnaire are excluded from *translation* on
  * purpose — that wording is legally reviewed, and translating it is a sign-off
- * decision (H-01/H-03 in docs/product/human-decisions.md) — but their date
+ * decision (H-01/H-03 in docs/product/human-decisions/README.md) — but their date
  * formatting is still covered by rule 1 above, which is why `/waivers` and
  * `/ready` are inside the guarded roots.
  */

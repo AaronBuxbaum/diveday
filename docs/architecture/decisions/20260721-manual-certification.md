@@ -9,7 +9,7 @@
 seam (`src/lib/cert-verification/`) that POSTed a C-card to its issuing agency's gateway and, on a
 confirmed match, promoted the card pending→verified. That seam never had a real gateway to call: PADI,
 SSI, and NAUI expose no usable public C-card verification API, and standing one up was a per-agency,
-credential-gated human prerequisite ([H-10](../../product/human-decisions.md)) that never
+credential-gated human prerequisite ([H-10](../../product/human-decisions/README.md)) that never
 resolved. So the seam always fell through to its disabled provider and staff verified every card by
 hand anyway — the automated path was carrying configuration, docs, env vars, and a UI button for a
 capability that did not exist.

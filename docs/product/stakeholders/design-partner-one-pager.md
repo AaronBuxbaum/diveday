@@ -67,7 +67,7 @@ pilot agreement, not here).
 - State the live price from `src/lib/marketing.ts` / the pricing page in conversation — never read
   a number off this document, since it isn't the source of truth and can drift.
 - Everything above is already authorized (rollout.md, H-12 in
-  [human-decisions.md](../human-decisions.md)) — don't improvise a new commitment (a discount, a
+  [human-decisions/](../human-decisions/README.md)) — don't improvise a new commitment (a discount, a
   different lock period, a feature promise) in the room. If a shop asks for something not on this
   page, note it and take it back rather than agreeing on the spot.
 - The insurer one-pager ([insurance.md](insurance.md)) answers "does this affect my coverage?" —

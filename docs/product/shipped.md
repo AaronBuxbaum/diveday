@@ -2808,7 +2808,7 @@ is focus-ring only (HD-17 unchanged), and visual diffs warn loudly rather than b
   [20260802-visual-diff-pr-comment](../architecture/decisions/20260802-visual-diff-pr-comment.md),
   closing HD-18.
 - **`pnpm gates`** (PROD-C1's tooling only): a report — never a gate, never in `check` — of days since
-  each `human-decisions.md` H-/V- row last moved, reconciled against `rollout.md`'s "next 30 days"
+  each `human-decisions/` H-/V- row last moved, reconciled against `rollout.md`'s "next 30 days"
   list, with ages derived from dated outcomes and `git blame` and printed as `≥ N` when a shallow
   clone can only bound them (`scripts/gate-freshness.mjs`). With it, the
   [pilot-kit/](pilot-kit/README.md): design-partner one-pager, Florida call-list template, first-call
@@ -2933,7 +2933,7 @@ shipped, each with a `security-reviewer` pass per the repo's hard rules.
   Wired into the Playwright harness (`playwright.config.ts`, `e2e/global-setup.ts`).
 
 **"Close the revocation window on base staff surfaces" was not built** — it re-proposed exactly what
-[H-15](human-decisions.md#decision-register) already decided against on 2026-07-24; see
+[H-15](human-decisions/README.md#decision-register) already decided against on 2026-07-24; see
 [20260724-staff-session-and-capability-migration-policy](../architecture/decisions/20260724-staff-session-and-capability-migration-policy.md).
 **"Reduce what a stolen device can read from offline manifests" remains open by deliberate human
 decision**, kept in full in the archived audit's §5 for whoever eventually revisits it.
@@ -3159,7 +3159,7 @@ archived.
 - **Hosting** — Vercel selected and ADR'd; production builds run migrations
   ([Vercel](../architecture/decisions/20260718-vercel-hosting.md),
   [Neon](../architecture/decisions/20260718-vercel-neon-hosting.md)). Remaining owner/backup/incident
-  naming is H-04 in [human-decisions.md](human-decisions.md).
+  naming is H-04 in [human-decisions/](human-decisions/README.md).
 - **Demo mode / dynamic onboarding** — one-click trial into a per-visitor isolated shop, checked by
   the presence of a demo shop rather than a global flag
   ([dynamic-demo-onboarding](../architecture/decisions/20260718-dynamic-demo-onboarding.md),
@@ -3245,7 +3245,7 @@ archived.
   ([automated-cancellation-refund](../architecture/decisions/20260721-automated-cancellation-refund.md)).
 
 > The deposit/window **values**, percentage-vs-flat deposits, legal/accounting tax policy, and any
-> platform fee remain open policy — H-07 in [human-decisions.md](human-decisions.md). Stripe Tax
+> platform fee remain open policy — H-07 in [human-decisions/](human-decisions/README.md). Stripe Tax
 > collection now ships as an opt-in, provider-owned mechanism; the connected-account setup and
 > legal/accounting obligations still require their named owners.
 
@@ -3285,7 +3285,7 @@ archived.
   ([trip-dive-briefings](../architecture/decisions/20260719-trip-dive-briefings.md)).
 
 > **Not yet done:** human field validation of the offline manifest (V-02) — the one manifest item
-> still open. Tracked in [roadmap.md](features/roadmap.md) and [human-decisions.md](human-decisions.md).
+> still open. Tracked in [roadmap.md](features/roadmap.md) and [human-decisions/](human-decisions/README.md).
 
 ## Operational surfaces (M7)
 
@@ -3487,7 +3487,7 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   (`loadActiveStaffRoles` + `canPersonX`) so a demoted/disabled/deleted staff member loses the
   surface immediately. Enforced in both layers per ADR-0006 — each surface's page hides the control
   and its server action(s)/route re-check. Answers H-14 in
-  [human-decisions.md](human-decisions.md#decision-register).
+  [human-decisions/](human-decisions/README.md#decision-register).
   See [20260724-role-authorization](../architecture/decisions/20260724-role-authorization.md).
 
 ## Account lifecycle emails (delivered 2026-07-26)

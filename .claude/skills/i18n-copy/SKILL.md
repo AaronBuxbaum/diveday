@@ -141,7 +141,7 @@ convention and needing no marker:
 
 - **Static `metadata.title`** — Next resolves it before locale negotiation can run.
 - **The waiver body and medical questionnaire** — legally reviewed wording; translating it is a
-  sign-off decision (H-01/H-03 in [human-decisions.md](../../../docs/product/human-decisions.md)),
+  sign-off decision (H-01/H-03 in [human-decisions/](../../../docs/product/human-decisions/README.md)),
   not an engineering one.
 
 Not exempt: marketing pages under `src/app`/`src/components`. They go through `diver.json` like
