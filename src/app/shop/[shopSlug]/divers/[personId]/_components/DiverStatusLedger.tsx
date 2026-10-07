@@ -4,8 +4,8 @@ import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import { readinessBlockerText } from "@/i18n/readiness-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
+import type { DiverStatusKind, DiverStatusRow, DiverStatusTarget } from "@/lib/diver-status";
 import { formatShortDate, formatTime } from "@/lib/format";
-import type { DiverStatusKind, DiverStatusRow, DiverStatusTarget } from "../_lib/status";
 import { cardAwaitingAnchor } from "./shared";
 
 /**

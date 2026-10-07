@@ -21,8 +21,9 @@ import {
   trips,
 } from "./schema";
 import { courseCrewCountsByTrip, NO_SUPERVISION } from "./today";
-import { listStaff } from "./trips";
+import { listStaff, type StaffPerson } from "./trips";
 import { liveTrip } from "./trips-live";
+import { bookedDiversCount } from "./trips-queries";
 
 /*
  * `capabilitiesForRoles` used to live here, deriving "Can teach" / "Can crew" /
@@ -129,7 +130,7 @@ export type StaffingView = {
   from: Date;
   to: Date;
   staff: {
-    person: typeof people.$inferSelect;
+    person: StaffPerson;
     roles: string[];
     shifts: (typeof staffShifts.$inferSelect)[];
     /** Trips in this window this person is on the crew of — a shift with no
@@ -201,7 +202,12 @@ export async function getStaffingView(
     // minimumCertificationLevel) and the booked count on every trip in the
     // window, not just the ones with a crew gap.
     db
-      .select({ trip: trips, course: courses, booked: count(bookings.id) })
+      .select({
+        trip: trips,
+        course: courses,
+        booked: count(bookings.id),
+        bookedDivers: bookedDiversCount(),
+      })
       .from(trips)
       .leftJoin(courses, eq(courses.id, trips.courseId))
       .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
@@ -269,6 +275,8 @@ export async function getStaffingView(
     trip: typeof trips.$inferSelect;
     course: typeof courses.$inferSelect | null;
     booked: number;
+    /** The divers among them: what the divemaster ratio supervises. */
+    bookedDivers: number;
     /** Person ids rostered on this trip, in no particular order. */
     crew: Set<string>;
   };
@@ -278,6 +286,7 @@ export async function getStaffingView(
       trip: row.trip,
       course: row.course,
       booked: row.booked,
+      bookedDivers: row.bookedDivers,
       crew: new Set(),
     });
   }
@@ -361,7 +370,10 @@ export async function getStaffingView(
     // before the course gap is placed rather than after, because the zero-crew
     // case below outranks it and needs this answer to know whether it applies.
     const ratioGap = divemasterRatioGap({
-      divers: entry.booked,
+      // Divers only (ADR 20261007-participant-types): the ratio is a
+      // scuba-guiding ratio, and a snorkeler or a rider is not supervised
+      // underwater. Capacity and headcount still count everyone.
+      divers: entry.bookedDivers,
       divemasterCount: inWaterDivemasterCount(counts),
       diversPerDivemaster,
       selfGuided: entry.trip.selfGuided,

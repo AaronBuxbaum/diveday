@@ -12,7 +12,7 @@ import {
 } from "./check-domain-strings.mjs";
 
 /**
- * `scripts/domain-strings-baseline.json` is empty, so this check is a **full
+ * The `domain-strings` section of `scripts/ratchets.json` is empty, so this check is a **full
  * gate** over `src/lib`, `src/db` and `src/features`: any prose-named property
  * holding a sentence fails it. As with `check-copy.mjs`, that makes a too-broad
  * exclusion's failure mode a green run — nothing to notice, and ADR

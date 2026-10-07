@@ -3,12 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ReviewActionResult } from "../actions";
-import {
-  ReviewRowActions,
-  type ReviewRowCopy,
-  ReviewRowProvider,
-  ReviewRowUndoToast,
-} from "./ReviewRowActions";
+import { ReviewRowActions, type ReviewRowCopy, ReviewRowProvider } from "./ReviewRowActions";
 
 /**
  * The real action is a server action; what this file is about is which
@@ -87,8 +82,7 @@ function moderatedBar(isStandout = false) {
 /** The page's shape: three independent lists a review moves between. */
 function page({ waiting, published }: { waiting: string[]; published: string[] }) {
   return (
-    <ReviewRowProvider>
-      <ReviewRowUndoToast copy={copy} />
+    <ReviewRowProvider copy={copy}>
       <ul>
         {waiting.map((id) => (
           <li key={id}>{bar(id, false)}</li>

@@ -6,6 +6,7 @@ import { ChoicePill, ChoiceRow } from "@/components/ui/form";
 import { InfoHint } from "@/components/ui/InfoHint";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
+import { isDiver, type ParticipantType, rentsKind } from "@/lib/participant-types";
 import {
   hasAnyRentalPricing,
   nitroxAvailableOn,
@@ -55,6 +56,7 @@ export function BookingGearFields({
   plannedDives,
   currency,
   onSubtotalChange,
+  participantType = "diver",
 }: {
   /** This party member's slot, 0-based — drives the `gear-${index}-*` / `nitrox-${index}` field names `bookSpot` parses. */
   index: number;
@@ -73,11 +75,19 @@ export function BookingGearFields({
   currency: ShopCurrency;
   /** Told on every quote change (including on mount) so a caller can sum a running checkout total. */
   onSubtotalChange?: (index: number, cents: number) => void;
+  /**
+   * Whose seat this is (ADR 20261007-participant-types): a snorkeler is offered
+   * the surface kit only and never a nitrox fill. `bookSpot` drops anything
+   * else a hand-built post sends, so this is the honest form, not the gate.
+   */
+  participantType?: ParticipantType;
 }) {
   const t = useTranslations();
   const locale = useLocale();
-  const offered = offeredRentableItems(rentalItems);
-  const nitroxOffered = nitroxAvailableOn(rentalItems, course);
+  const offered = offeredRentableItems(rentalItems).filter((item) =>
+    rentsKind(participantType, item.kind),
+  );
+  const nitroxOffered = isDiver(participantType) && nitroxAvailableOn(rentalItems, course);
   // Opt-in, and empty until then — see the note above the component.
   const [wantsGear, setWantsGear] = useState(false);
   const [rentedKinds, setRentedKinds] = useState<Set<RentableItemKind>>(() => new Set());

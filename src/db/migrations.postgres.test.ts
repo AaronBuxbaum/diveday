@@ -52,7 +52,7 @@ import { extractPreviousReleaseMigrations } from "../../scripts/previous-release
  * column of every table in `public`, plus the constraints and indexes over
  * them.
  *
- * Read from the catalog rather than compared against `src/db/schema.ts`,
+ * Read from the catalog rather than compared against `src/db/schema/`,
  * deliberately — the point is what the *migrations* produced, and a comparison
  * against the TypeScript schema would answer drizzle's question ("is my model
  * in sync?") instead of the deploy's ("did the upgrade path land where the
@@ -88,7 +88,7 @@ async function schemaFingerprint(db: PostgresTestDatabase["db"]): Promise<string
   );
 }
 
-/** Table names the app owns, per `src/db/schema.ts` — not drizzle's own bookkeeping. */
+/** Table names the app owns, per `src/db/schema/` — not drizzle's own bookkeeping. */
 async function appTableCount(db: PostgresTestDatabase["db"]): Promise<number> {
   const result = await db.execute(sql`
     select count(*)::int as tables

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { eq, getTableName } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { RETENTION_DAYS, UNBOUNDED_BY_DECISION } from "@/lib/retention";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { setBookingPayment } from "./payments";
 import { pruneExpiredRecords } from "./retention";
 import * as schema from "./schema";
@@ -28,7 +28,7 @@ function daysAgo(days: number): Date {
 }
 
 async function retentionContext() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const reef = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
@@ -43,6 +43,10 @@ function outcomeFor(summary: Awaited<ReturnType<typeof pruneExpiredRecords>>, ta
   if (!outcome) throw new Error(`no prune outcome for ${table}`);
   return outcome;
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 describe("pruneExpiredRecords", () => {
   it("deletes stripe webhook events past the window and keeps everything inside it", async () => {
@@ -298,6 +302,18 @@ describe("pruneExpiredRecords", () => {
     expect(await db.select().from(tripReadMarks)).toHaveLength(0);
   });
 
+  it("prunes demo entries past their window and keeps the recent ones", async () => {
+    const { db } = await retentionContext();
+    await db.insert(schema.demoEntries).values([
+      { source: "home-hero", role: "owner", enteredAt: daysAgo(RETENTION_DAYS.demo_entries + 1) },
+      { source: "pricing", role: "owner", enteredAt: daysAgo(1) },
+    ]);
+    const summary = await pruneExpiredRecords(db, { now: NOW });
+    expect(outcomeFor(summary, "demo_entries").deleted).toBe(1);
+    const left = await db.select({ source: schema.demoEntries.source }).from(schema.demoEntries);
+    expect(left).toEqual([{ source: "pricing" }]);
+  });
+
   it("reports a per-table outcome for every retained table, with the window applied", async () => {
     const { db } = await retentionContext();
     const summary = await pruneExpiredRecords(db, { now: NOW });
@@ -393,6 +409,9 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "imported_payment_history",
   "last_minute_list_entries",
   "course_inquiries",
+  // A shop asking to be set up: a person's contact details, kept until they
+  // ask for them gone like every other lead (ADR 20261007-setup-request-form).
+  "setup_requests",
   "internal_notes",
   "staff_credentials",
   "staff_shifts",
@@ -463,9 +482,13 @@ const OUTSIDE_RETENTION: readonly string[] = [
   // Current state about DiveDay's own machinery: one row per object, replaced
   // in place rather than appended, so there is no history here to age out.
   "notification_rate_limit_state",
+  "shop_milestones",
   "integration_sync_records",
   "shop_integrations",
   "shop_stripe_accounts",
+  // One row per shop, updated in place by the billing webhook (ADR
+  // 20261007-subscription-billing): the subscription as it is now, not a trail.
+  "shop_subscriptions",
   "shop_whatsapp_accounts",
   "shop_backup_destinations",
   "shop_backup_deliveries",
@@ -490,7 +513,7 @@ const OUTSIDE_RETENTION: readonly string[] = [
 
 /** What the guard's failure says, so a session reads the rule and not the list. */
 const UNCLASSIFIED_HELP =
-  "a table in src/db/schema.ts that retention classifies as nothing. Give it a window " +
+  "a table in src/db/schema/ that retention classifies as nothing. Give it a window " +
   "in RETENTION_DAYS if it is a trail that should be pruned; add it to " +
   "UNBOUNDED_BY_DECISION *and write the paragraph in src/lib/retention.ts saying who " +
   "decided it is kept forever and when*, the way gear_service_events and " +

@@ -34,9 +34,10 @@ import {
 import type { DiveMode } from "@/lib/diver-planning";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { TidePreference } from "@/lib/tides";
-import { type AppDb, type DbExecutor, violatesUniqueIndex } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { isMarineLifeSlug, type MarineLifeSlug } from "./marine-life-catalog";
 import { offsetPage, PAGE_SIZE } from "./paging";
+import { violatesUniqueIndex } from "./query-helpers";
 import {
   bookings,
   type DiveSiteFitTone,
@@ -987,7 +988,7 @@ export async function countGlobalDiveSiteTemplates(db: AppDb): Promise<number> {
  *
  * By slug rather than id, because the slug is what a preview URL carries: it is
  * stable, human-readable in a shared link, and the same identifier
- * `./dive-site-templates.ts` publishes under. Null for a slug that names
+ * `src/content/dive-site-templates.ts` publishes under. Null for a slug that names
  * nothing, which the caller renders as the catalog rather than a 404 — a stale
  * link to a withdrawn template should land a staffer on the list, not on an
  * error.

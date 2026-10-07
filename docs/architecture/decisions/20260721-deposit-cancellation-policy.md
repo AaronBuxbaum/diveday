@@ -46,7 +46,7 @@ Deposits and cancellation windows are **off unless a shop sets them**. There is 
 no platform fee, and no automated refund. A shop's chosen deposit amount and cancellation window are
 that shop's commercial terms; DiveDay ships no default value for either. These defaults — and the
 choice to keep refunds manual — require H-07 sign-off before production money, recorded in
-[human-decisions.md](../../product/human-decisions.md#provisional-implementation-defaults--verify-before-production).
+[human-decisions/](../../product/human-decisions/README.md#provisional-implementation-defaults--verify-before-production).
 
 ## Alternatives considered
 

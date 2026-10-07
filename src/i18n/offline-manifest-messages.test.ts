@@ -29,6 +29,16 @@ import { offlineManifestTranslator } from "./offline-manifest-messages";
 
 const ROOT = process.cwd();
 const VIEW = "src/components/OfflineManifestView.tsx";
+/** The view's sections, split out of it, and every bit as much in the client graph. */
+const VIEW_SECTIONS = "src/components/offline-manifest";
+
+/** The view and each of its section modules — the files that render words. */
+function viewFiles(): string[] {
+  const sections = readdirSync(path.join(ROOT, VIEW_SECTIONS))
+    .filter((file) => /\.tsx?$/.test(file) && !file.includes(".test."))
+    .map((file) => `${VIEW_SECTIONS}/${file}`);
+  return [VIEW, ...sections];
+}
 
 /**
  * The two the narrow module ships. Was three until issue #1359 moved the
@@ -60,7 +70,9 @@ function staffNamespaces(): string[] {
  * here, and a false alarm costs a reader one look.
  */
 function reachableModules(): string[] {
-  const view = readFileSync(path.join(ROOT, VIEW), "utf8");
+  const view = viewFiles()
+    .map((file) => readFileSync(path.join(ROOT, file), "utf8"))
+    .join("\n");
   const imported = [...view.matchAll(/from "@\/i18n\/([a-z-]+)"/g)]
     .map((match) => `src/i18n/${match[1]}.ts`)
     .filter((file) => {
@@ -71,7 +83,7 @@ function reachableModules(): string[] {
         return false;
       }
     });
-  return [VIEW, ...new Set(imported)];
+  return [...viewFiles(), ...new Set(imported)];
 }
 
 /**
@@ -156,7 +168,8 @@ describe("the offline manifest's message bundle", () => {
   it("reads keys and not prose", () => {
     const known = staffNamespaces();
     expect(known).toContain("bookings");
-    expect(staffNamespacesIn(VIEW, known)).toEqual(["manifest", "shared"]);
+    const viewKeys = new Set(viewFiles().flatMap((file) => staffNamespacesIn(file, known)));
+    expect([...viewKeys].sort()).toEqual(["manifest", "shared"]);
 
     const withComments = stripComments(
       [
@@ -182,8 +195,10 @@ describe("the offline manifest's message bundle", () => {
    * bytes are absent because the import is, so the import is what to assert.
    */
   it("keeps the full staff bundle out of the client graph", () => {
-    const view = readFileSync(path.join(ROOT, VIEW), "utf8");
-    expect(view).not.toContain('from "@/i18n/staff-messages"');
+    for (const file of viewFiles()) {
+      const view = readFileSync(path.join(ROOT, file), "utf8");
+      expect(view, file).not.toContain('from "@/i18n/staff-messages"');
+    }
     const module = readFileSync(path.join(ROOT, "src/i18n/offline-manifest-messages.ts"), "utf8");
     expect(module).not.toContain("./staff-messages");
     expect([...module.matchAll(/from "\.\/locales\/[^"]+"/g)]).toHaveLength(4);

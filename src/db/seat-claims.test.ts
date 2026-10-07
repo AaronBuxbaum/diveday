@@ -578,6 +578,48 @@ describe("claimPartySeat", () => {
     expect(row?.personId).toBe(memberOne.personId);
   });
 
+  it("asks a rider's seat for no card: a claimant with a lower card on file still claims it", async () => {
+    // Regression (dive-domain review, PR #2224): the claim re-ran the trip's
+    // card gate as if every seat were a diver's, so a rider holding an Open
+    // Water card was refused an Advanced trip she was never going to dive.
+    const { db, shop, open } = await seededContext();
+    const { lead, memberOne } = await bookParty(db, shop.id, open.id);
+    await db
+      .update(bookings)
+      .set({ participantType: "rider", bookedAs: "rider" })
+      .where(eq(bookings.id, memberOne.bookingId));
+    await demandOf(db, shop.id, open.id, "advanced_open_water");
+    const carded = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Rita Deck",
+      email: "rita@example.com",
+    });
+    if (!carded) throw new Error("diver setup failed");
+    await db.insert(certifications).values({
+      shopId: shop.id,
+      personId: carded.id,
+      agency: "padi",
+      level: "open_water",
+      identifier: "C-claim-rider",
+      status: "verified",
+    });
+
+    const token = await claimTokenFor(db, shop.id, lead.bookingId, memberOne.bookingId);
+    const outcome = await claimPartySeat(db, {
+      token,
+      fullName: "Rita Deck",
+      email: "rita@example.com",
+    });
+    expect(outcome).toMatchObject({ ok: true });
+    const [row] = await db
+      .select()
+      .from(bookings)
+      .where(eq(bookings.id, memberOne.bookingId))
+      .limit(1);
+    expect(row?.personId).toBe(carded.id);
+    expect(row?.participantType).toBe("rider");
+  });
+
   it("holds a course session's fail-closed card gate against an uncarded claimant", async () => {
     const { db, shop } = await seededContext();
     // A card-gated course session with an instructor, exactly as the booking

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { ShopPageHeader } from "@/components/ShopPageHeader";
-import { shopBySlugCached } from "@/db/shops";
+import { shopBySlugCached } from "@/db/shops-cached";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { requestLocale, requestTranslator } from "@/i18n/request";
 import { publicShopRegisterPath } from "@/lib/public-routes";

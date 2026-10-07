@@ -2,6 +2,7 @@
 
 - **Status:** Accepted
 - **Date:** 2026-09-25
+- **Amended by:** [20261007-setup-request-form](20261007-setup-request-form.md) — "Get set up" is now a public form at `/get-set-up` rather than the mail described below, and `trial_started` is deleted.
 
 ## Context
 

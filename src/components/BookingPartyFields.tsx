@@ -7,6 +7,7 @@ import { ChoiceRow, controlClass, Field, FieldGrid } from "@/components/ui/form"
 import { segmentClass, segmentedTrackClass } from "@/components/ui/segmented";
 import { mailtoHref, telHref } from "@/lib/contact-links";
 import { suggestEmailTypo } from "@/lib/email-typo";
+import type { ParticipantType } from "@/lib/participant-types";
 import { loadReturningDiver, type ReturningDiver } from "@/lib/returning-diver";
 import { MAX_PUBLIC_PARTY_SIZE } from "@/lib/trips";
 
@@ -69,6 +70,8 @@ export function BookingPartyFields({
   contactPhone,
   lead,
   onLeadEmailSettled,
+  participantChoices,
+  onTypesChange,
 }: {
   maxPartySize: number;
   /** Show an optional phone field for the lead booker (diver 1). */
@@ -100,6 +103,20 @@ export function BookingPartyFields({
    * and nothing on the form changes either way.
    */
   onLeadEmailSettled?: (email: string) => void;
+  /**
+   * The kinds of seat this departure sells, each already worded (with its
+   * price) by the caller (ADR 20261007-participant-types). With more than one,
+   * every person in the party gets a "Joining as" choice posted as
+   * `participantType-N`; with one or none the form asks nothing and every seat
+   * books as a diver, exactly as before. The server checks the answer against
+   * the departure again, so this list is a convenience, not a gate.
+   */
+  participantChoices?: ReadonlyArray<{ type: ParticipantType; label: string }>;
+  /**
+   * Told the party's types whenever one changes or the party resizes, so the
+   * caller's money block can price each seat. Pass a stable reference.
+   */
+  onTypesChange?: (types: ParticipantType[]) => void;
 }) {
   const t = useTranslations();
   const [size, setSize] = useState(1);
@@ -124,9 +141,14 @@ export function BookingPartyFields({
   // member opted in — see src/db/bookings.ts and its "rolls back the whole
   // party" test).
   const [useLeadEmail, setUseLeadEmail] = useState<Record<number, boolean>>({});
+  const [types, setTypes] = useState<ParticipantType[]>(() =>
+    Array.from({ length: MAX_PUBLIC_PARTY_SIZE }, () => "diver" as const),
+  );
+  const asksType = (participantChoices?.length ?? 0) > 1;
   const limit = Math.max(1, Math.min(MAX_PUBLIC_PARTY_SIZE, maxPartySize));
   useEffect(() => setHydrated(true), []);
   useEffect(() => onSizeChange?.(size), [size, onSizeChange]);
+  useEffect(() => onTypesChange?.(types.slice(0, size)), [types, size, onTypesChange]);
 
   function updateMember(index: number, patch: Partial<PartyMember>) {
     setParty((current) => current.map((m, i) => (i === index ? { ...m, ...patch } : m)));
@@ -344,6 +366,34 @@ export function BookingPartyFields({
                       className={controlClass}
                     />
                   </Field>
+                  {asksType && participantChoices ? (
+                    <Field
+                      label={t("participants.joiningAs")}
+                      className="text-base"
+                      error={fieldErrors?.[`participantType-${index}`]}
+                    >
+                      <select
+                        name={`participantType-${index}`}
+                        value={types[index] ?? "diver"}
+                        onChange={(event) => {
+                          const next = participantChoices.find(
+                            (choice) => choice.type === event.target.value,
+                          );
+                          if (!next) return;
+                          setTypes((current) =>
+                            current.map((type, i) => (i === index ? next.type : type)),
+                          );
+                        }}
+                        className={controlClass}
+                      >
+                        {participantChoices.map((choice) => (
+                          <option key={choice.type} value={choice.type}>
+                            {choice.label}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                  ) : null}
                   {index === 0 || !useLeadEmail[index] ? (
                     <Field
                       label={

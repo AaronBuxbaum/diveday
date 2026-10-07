@@ -32,12 +32,16 @@ import { describe, expect, it } from "vitest";
 
 const REPO = path.join(__dirname, "..", "..");
 const PROBE = path.join(__dirname, "request-cache-scope.probe.mjs");
-const SHOPS = readFileSync(path.join(__dirname, "shops.ts"), "utf8");
+const SHOPS = [
+  readFileSync(path.join(__dirname, "shops.ts"), "utf8"),
+  readFileSync(path.join(__dirname, "shops-cached.ts"), "utf8"),
+].join("\n");
 
 /**
- * The lines of `shops.ts` that mention either reader or React, and nothing
- * else. Asserting over the whole 700-line module means a failure prints the
- * whole 700-line module, which buries the one line that moved.
+ * The lines of `shops.ts` and `shops-cached.ts` that mention either reader or
+ * React, and nothing else. Asserting over the whole 700-line module means a
+ * failure prints the whole 700-line module, which buries the one line that
+ * moved.
  */
 const READER_LINES = SHOPS.split("\n")
   .filter((line) => /getShopBySlug|shopBySlugCached|"react"/.test(line) && !line.startsWith(" *"))

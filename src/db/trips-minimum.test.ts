@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MINIMUM_SEATS_DECISION_HOURS_DEFAULT, minimumSeatsDecisionAt } from "@/lib/minimum-seats";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import { getTripWithBooked } from "./trips";
 import { createTrip } from "./trips-create";
@@ -64,9 +64,13 @@ async function seat(
   return outcome;
 }
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
+
 describe("listDeparturesAwaitingMinimumDecision", () => {
   it("ignores a departure that named no minimum", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await departure(db, shop.id, {
       startsAt: TOMORROW,
       minimumBookings: null,
@@ -78,7 +82,7 @@ describe("listDeparturesAwaitingMinimumDecision", () => {
   });
 
   it("ignores one whose decision moment is still ahead", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await departure(db, shop.id, {
       startsAt: new Date("2026-09-05T12:00:00Z"),
       minimumDecisionHours: 24,
@@ -95,7 +99,7 @@ describe("listDeparturesAwaitingMinimumDecision", () => {
    * returned, and one an hour later is not.
    */
   it("lists one at its decision moment, and not one an hour short of it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const at = await departure(db, shop.id, {
       startsAt: TOMORROW,
       minimumDecisionHours: 24,
@@ -116,7 +120,7 @@ describe("listDeparturesAwaitingMinimumDecision", () => {
   });
 
   it("uses the default window when the shop named a minimum but no window", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await departure(db, shop.id, {
       // Exactly the default window ahead of `NOW`, so the decision is due now.
       startsAt: new Date(NOW.getTime() + MINIMUM_SEATS_DECISION_HOURS_DEFAULT * 3_600_000),
@@ -130,7 +134,7 @@ describe("listDeparturesAwaitingMinimumDecision", () => {
   });
 
   it("drops one that reached its minimum", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await departure(db, shop.id, {
       startsAt: TOMORROW,
       minimumBookings: 2,
@@ -149,7 +153,7 @@ describe("listDeparturesAwaitingMinimumDecision", () => {
    * rewrite it — and after a boat sails the minimum is moot regardless.
    */
   it("never touches a departure that has already left", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await departure(db, shop.id, {
       startsAt: new Date("2026-08-30T12:00:00Z"),
       title: "Already sailed",
@@ -161,7 +165,7 @@ describe("listDeparturesAwaitingMinimumDecision", () => {
   });
 
   it("clamps a minimum above capacity rather than reporting an unreachable one", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await departure(db, shop.id, {
       startsAt: TOMORROW,
       capacity: 3,
@@ -182,7 +186,7 @@ describe("listDeparturesAwaitingMinimumDecision", () => {
 
 describe("cancelDeparturesBelowMinimum", () => {
   it("cancels the short departure and reports what it was short by", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await departure(db, shop.id, {
       startsAt: TOMORROW,
       minimumBookings: 4,
@@ -198,7 +202,7 @@ describe("cancelDeparturesBelowMinimum", () => {
   });
 
   it("leaves the bookings alone, so the shop still knows who to tell", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await departure(db, shop.id, { startsAt: TOMORROW, title: "Who was aboard" });
     await seat(db, shop.id, trip.id, "Hana Told");
 
@@ -215,7 +219,7 @@ describe("cancelDeparturesBelowMinimum", () => {
    * seat away over a count that was true a moment ago.
    */
   it("leaves a departure alone when the seat that saves it sells mid-pass", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await departure(db, shop.id, {
       startsAt: TOMORROW,
       minimumBookings: 2,
@@ -237,7 +241,7 @@ describe("cancelDeparturesBelowMinimum", () => {
 
   /** A second tick must not re-cancel, re-report, or re-email anybody. */
   it("is a no-op on a second pass", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await departure(db, shop.id, { startsAt: TOMORROW, title: "Swept once" });
     const first = await cancelDeparturesBelowMinimum(db, { now: NOW });
     expect(first.cancelled.map((row) => row.tripId)).toContain(trip.id);
@@ -252,7 +256,7 @@ describe("cancelDeparturesBelowMinimum", () => {
    * departure again and the shop would be arguing with a cron job.
    */
   it("does not re-cancel a departure whose minimum a human cleared", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await departure(db, shop.id, { startsAt: TOMORROW, title: "Run it anyway" });
     await cancelDeparturesBelowMinimum(db, { now: NOW });
 

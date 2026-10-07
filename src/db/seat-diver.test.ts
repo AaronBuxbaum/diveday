@@ -3,7 +3,7 @@ import { and, eq, inArray, ne } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import type { CertificationLevel } from "@/lib/readiness";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 
 const { sesSend } = vi.hoisted(() => ({ sesSend: vi.fn() }));
@@ -32,7 +32,7 @@ import { upcomingTripsWithCounts } from "./trips";
 
 /** The same two seeded departures `bookings.test.ts` works against. */
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id);
   const open = trips.find((trip) => trip.title === "Two-Tank Reef — Christ of the Abyss");
   const fullTrip = trips.find((trip) => trip.title === "Wreck Trip — Spiegel Grove");
@@ -107,6 +107,10 @@ function deliverableEmailEnv() {
   sesSend.mockReset().mockResolvedValue({ MessageId: "ses-id" });
   return sesSend;
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 afterEach(() => {
   vi.unstubAllEnvs();

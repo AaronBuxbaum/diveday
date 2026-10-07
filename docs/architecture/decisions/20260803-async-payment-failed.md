@@ -56,7 +56,7 @@ with nothing left to await. That is finding **PAY-L1**, "permanent pending desyn
   already-nudged checkout would still sit `pending` indefinitely, and the diver would still have
   been sent a dead link at least once.
 - **Cancel the covered bookings** — releasing seats on a failed payment is
-  [HD-15](../../product/human-decisions.md)'s question (abandoned checkout = seats held forever),
+  [HD-15](../../product/human-decisions/README.md)'s question (abandoned checkout = seats held forever),
   not this handler's.
 
 ## Consequences

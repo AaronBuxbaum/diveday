@@ -12,13 +12,12 @@ import { sendNotification } from "@/db/notifications";
 import { people, personRoles, shops, userAccounts, waiverTemplates } from "@/db/schema";
 import { toDiverLocale } from "@/i18n/settings";
 import { verifyAccountLinkPath } from "@/lib/account-tokens";
-import { trackEvent } from "@/lib/analytics";
 import { getAuth } from "@/lib/auth";
 import { nowDate } from "@/lib/clock";
 import { shopDefaultsForTimeZone } from "@/lib/curated-defaults";
 import { isDemoAccountEmail } from "@/lib/demo-identity";
 import { parseFirstDayFields } from "@/lib/first-day";
-import { eventSource } from "@/lib/funnel";
+import { log } from "@/lib/log";
 import { publicAppUrl } from "@/lib/notifications";
 import { isOnboardSetupKey, ONBOARD_SETUP_PARAM } from "@/lib/onboard-setup-key";
 import { onboardSchema } from "@/lib/onboarding";
@@ -29,10 +28,6 @@ import { clientIp } from "@/lib/request-ip";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 
 export async function onboardAction(formData: FormData) {
-  // Which page the setup link named with `?from=`, if any, carried by the form
-  // and preserved across every bounce back to it so a retry doesn't lose the
-  // attribution the funnel event reads.
-  const source = eventSource(formData.get("source"));
   // Non-secret fields only — never the password — echoed back so a bounce to
   // `?error=` doesn't wipe a form a shop owner just spent a minute filling in.
   const PRESERVED_FIELDS = ["shopName", "shopSlug", "timezone", "ownerName", "ownerEmail"] as const;
@@ -64,7 +59,6 @@ export async function onboardAction(formData: FormData) {
     // Without the key there is no form to go back to, and nothing to echo.
     if (!keyAccepted || typeof setupKey !== "string") redirect("/onboard");
     const params = new URLSearchParams({ [ONBOARD_SETUP_PARAM]: setupKey, error: message });
-    if (source !== "unknown") params.set("from", source);
     for (const field of PRESERVED_FIELDS) {
       const value = formData.get(field);
       if (typeof value === "string" && value) params.set(field, value);
@@ -237,7 +231,9 @@ export async function onboardAction(formData: FormData) {
     // carry internal detail (a DB driver error, a stack fragment). The real
     // cause goes to the server log, where the shop's technical owner can see
     // it; the visitor gets a generic, actionable message (CR-014).
-    console.error("onboardAction: failed to create shop", err);
+    log("onboard.create_shop_failed", "error", {
+      errorCode: err instanceof Error ? err.name : "unknown_error",
+    });
     backToForm("create_failed");
   }
 
@@ -258,7 +254,9 @@ export async function onboardAction(formData: FormData) {
         now: nowDate(),
       });
     } catch (error) {
-      console.error("onboardAction: first departure failed", error);
+      log("onboard.first_departure_failed", "error", {
+        errorCode: error instanceof Error ? error.name : "unknown_error",
+      });
     }
   }
 
@@ -273,12 +271,6 @@ export async function onboardAction(formData: FormData) {
     const accountId = newAccountId;
     const shopId = newShopId;
     const locale = toDiverLocale(newShopLocale);
-
-    // The trial half of the marketing funnel: `demo_entered` counts the skeptics
-    // who look, this counts the ones who committed to a shop, both tagged with
-    // the page that sent them. Deferred like the mail below — telemetry never
-    // delays the response the new owner is waiting on.
-    after(() => trackEvent({ name: "trial_started", source }));
 
     // The founder alert needs no link, so it doesn't wait on APP_HOST being
     // configured the way the owner-facing mail below does.
@@ -301,7 +293,9 @@ export async function onboardAction(formData: FormData) {
           shopSlug,
         });
       } catch (error) {
-        console.error("onboardAction: new-account alert failed", error);
+        log("onboard.new_account_alert_failed", "error", {
+          errorCode: error instanceof Error ? error.name : "unknown_error",
+        });
       }
     });
 
@@ -314,7 +308,9 @@ export async function onboardAction(formData: FormData) {
         }).catch((error: unknown) => {
           // Degrades to "welcome sent, verification never arrives" — say so,
           // or the only trace is a diver who cannot verify.
-          console.error("onboardAction: email-verification token failed", error);
+          log("onboard.verification_token_failed", "error", {
+            errorCode: error instanceof Error ? error.name : "unknown_error",
+          });
           return null;
         });
         await sendNotification(db, {

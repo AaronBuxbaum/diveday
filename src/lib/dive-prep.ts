@@ -21,6 +21,7 @@
 
 import { DAY_MS } from "@/lib/clock";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
+import { isDiver, type ParticipantType, rentsGear, rentsKind } from "@/lib/participant-types";
 import { nowDate } from "./clock";
 import {
   rentalFitCompleteness,
@@ -71,7 +72,7 @@ export type RentalFit = {
   wetsuitSize: string | null;
   /** On the drysuit scale, never the wetsuit's (issue 1414, schema.ts). */
   drysuitSize: string | null;
-  /** Free text, like the drysuit's (H-101): a hood and gloves both by size and thickness. */
+  /** Free text, like the drysuit's (H-102): a hood and gloves both by size and thickness. */
   hoodSize: string | null;
   gloveSize: string | null;
   bootSize: string | null;
@@ -134,6 +135,12 @@ export type PrepDiver = {
   hotelPickupLocation?: string | null;
   /** Staff-set pickup time for this booking (e.g. "07:15"). */
   pickupTime?: string | null;
+  /**
+   * What this seat is for (ADR 20261007-participant-types). Absent is a
+   * diver's. A rider is packed nothing and breathes no tank; a snorkeler is
+   * packed the surface kit they rent and no tank.
+   */
+  participantType?: ParticipantType;
 };
 
 export type HotelPickupRun = {
@@ -205,7 +212,7 @@ export type PrepPiece = {
    */
   drysuitFinFit: boolean;
   /**
-   * The gloves of a diver in a drysuit (H-101, dive-domain review). A drysuit
+   * The gloves of a diver in a drysuit (H-102, dive-domain review). A drysuit
    * diver may wear wet gloves or dry gloves on a ring system, and those are
    * different things off the rack, so the line asks rather than reading like
    * any other pair to pull.
@@ -420,7 +427,7 @@ const _everyKindHasAPackingPosition: Record<KindWithNoPackingPosition, never> = 
  * recorded" on the packing line, naming a gap that cannot be filled by
  * anybody. The complement of the sized kinds is the answer, and taking it from
  * the same constant is what stops the two lists disagreeing again: when a hood
- * and gloves gained a size each (H-101), they left this list by themselves.
+ * and gloves gained a size each (H-102), they left this list by themselves.
  */
 const SIZED = new Set<string>(SIZED_RENTAL_KINDS);
 export const UNSIZED_ITEM_KINDS: readonly RentalItemKind[] = KIND_ORDER.filter(
@@ -658,7 +665,7 @@ function rentedItems(fit: RentalFit, offered: CatalogScope = null): PrepPiece[] 
   // shoe size either, which is what `maskFins` above marks rather than what
   // this line handles.
   if (fit.rentsDrysuit) items.push(sized("drysuit", fit.drysuitSize));
-  // Two kinds with a free-text size each (H-101, issue #1816).
+  // Two kinds with a free-text size each (H-102, issue #1816).
   if (fit.rentsHood) items.push(sized("hood", fit.hoodSize));
   if (fit.rentsGloves) {
     items.push({ ...sized("gloves", fit.gloveSize), drysuitGloves: inDrysuit && !flagged });
@@ -756,8 +763,14 @@ export function buildDivePrepChecklist(input: {
   const diversNeedingStaffFit: DivePrepChecklist["diversNeedingStaffFit"] = [];
   let nitroxDivers = 0;
 
-  for (const diver of input.divers) {
-    if (nitroxTanksApproved(diver)) nitroxDivers += 1;
+  // Gear and tanks are for the people who get in the water. A rider takes
+  // nothing from the rack; a snorkeler takes surface kit and no cylinder.
+  // Neither is dropped from any head count: this is the packing list, and the
+  // manifest and roll call count everyone (ADR 20261007-participant-types).
+  const inWater = input.divers.filter((diver) => rentsGear(diver.participantType));
+  for (const diver of inWater) {
+    const diving = isDiver(diver.participantType);
+    if (diving && nitroxTanksApproved(diver)) nitroxDivers += 1;
     else if (diver.wantsNitrox) {
       nitroxBlockers.push({
         bookingId: diver.bookingId,
@@ -771,8 +784,10 @@ export function buildDivePrepChecklist(input: {
     // ones who *have* a row. A partial fit is named here and still packed
     // below: the sizes they did give are real, and dropping their pieces to
     // punish the gap would send the boat out short.
+    // Only a diver is chased for a complete scuba fit; a snorkeler who
+    // stated a mask size has said all the rack needs.
     const fit = rentalFitCompleteness(diver.fit, input.offeredKinds);
-    if (fit.state !== "complete") {
+    if (diving && fit.state !== "complete") {
       diversWithIncompleteFit.push({
         fullName: diver.fullName,
         personId: diver.personId,
@@ -790,7 +805,9 @@ export function buildDivePrepChecklist(input: {
         fullName: diver.fullName,
         items: [],
         state: "not_recorded",
-        lastDivedBand: diver.lastDivedBand,
+        // How long since they last dived is a diver's question; a snorkeler
+        // is not asked it (ADR 20261007-participant-types).
+        lastDivedBand: isDiver(diver.participantType) ? diver.lastDivedBand : null,
       });
       continue;
     }
@@ -813,14 +830,16 @@ export function buildDivePrepChecklist(input: {
     // it returns, so a diver's row reads down the rack in the same order the
     // by-item rows do — and neither grouping can hold a piece the other
     // doesn't.
-    const items = rentedItems(diver.fit, offered);
+    const items = rentedItems(diver.fit, offered).filter((item) =>
+      rentsKind(diver.participantType, item.kind),
+    );
     diverLines.push({
       bookingId: diver.bookingId,
       personId: diver.personId,
       fullName: diver.fullName,
       items,
       state: items.length > 0 ? "rents" : "own_kit",
-      lastDivedBand: diver.lastDivedBand,
+      lastDivedBand: isDiver(diver.participantType) ? diver.lastDivedBand : null,
     });
     for (const item of items) {
       const key = `${item.kind}:${prepLineKey(item)}`;
@@ -873,7 +892,8 @@ export function buildDivePrepChecklist(input: {
   });
   for (const line of lines) line.divers.sort((a, b) => a.localeCompare(b));
 
-  const diverCount = input.divers.length;
+  // Tanks are counted for divers alone.
+  const diverCount = inWater.filter((diver) => isDiver(diver.participantType)).length;
   const crewCount = input.divingCrew?.length ?? 0;
   return {
     diveCount,
@@ -960,6 +980,13 @@ export type RentalFitLine =
 export function rentalFitLine(
   fit: RentalFit | null,
   offeredKinds?: readonly string[],
+  /**
+   * The seat's type, when the line is for a seat: a snorkeler's line names the
+   * surface kit only, a rider's nothing (`rentsKind`, ADR
+   * 20261007-participant-types). A dive size on file stays on the diver's
+   * record; it is just not what this seat is handed on the dock.
+   */
+  participantType?: ParticipantType | null,
 ): RentalFitLine {
   // A row that exists only to hold the diver's note reads exactly as no row at
   // all: they have not answered the gear question, so there is nothing to pack
@@ -972,14 +999,16 @@ export function rentalFitLine(
   if (fit.needsStaffFitAt) {
     return { state: "needs_staff_fit", note: fit.needsStaffFitNote?.trim() || null };
   }
-  const items = rentedItems(fit, catalogScope(offeredKinds)).map((item) => ({
-    kind: item.kind,
-    size: item.size,
-    ...(item.drysuitFinFit ? { drysuitFinFit: true as const } : {}),
-    ...(item.drysuitWeightCheck ? { drysuitWeightCheck: true as const } : {}),
-    ...(item.drysuitGloves ? { drysuitGloves: true as const } : {}),
-    ...(item.notOffered ? { notOffered: true as const } : {}),
-  }));
+  const items = rentedItems(fit, catalogScope(offeredKinds))
+    .filter((item) => participantType === undefined || rentsKind(participantType, item.kind))
+    .map((item) => ({
+      kind: item.kind,
+      size: item.size,
+      ...(item.drysuitFinFit ? { drysuitFinFit: true as const } : {}),
+      ...(item.drysuitWeightCheck ? { drysuitWeightCheck: true as const } : {}),
+      ...(item.drysuitGloves ? { drysuitGloves: true as const } : {}),
+      ...(item.notOffered ? { notOffered: true as const } : {}),
+    }));
   if (items.length === 0) return { state: "own_kit" };
   return { state: "rents", items };
 }

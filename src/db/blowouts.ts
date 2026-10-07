@@ -1,10 +1,11 @@
-import { and, count, eq, gt, inArray, isNull, lte, ne } from "drizzle-orm";
+import { and, count, eq, gt, inArray, isNull, lte, ne, sql } from "drizzle-orm";
 import {
   BLOWOUT_OFFER_HORIZON_DAYS,
   type BlowoutCandidateTrip,
   qualifyingAlternatives,
 } from "@/lib/blowout";
 import { nowDate } from "@/lib/clock";
+import { log } from "@/lib/log";
 import {
   type Notification,
   type NotificationProvider,
@@ -15,10 +16,11 @@ import type { CheckoutProvider } from "@/lib/payments/checkout";
 import { publicSchedulePath, publicTripPath } from "@/lib/public-routes";
 import { hasSailed } from "@/lib/trips";
 import { releasePackageCoverageForBooking } from "./bookings";
-import { type AppDb, type DbExecutor, queryAll } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
 import { sendAndRecordNotification } from "./notifications";
 import { paymentsByBooking } from "./payments";
+import { queryAll } from "./query-helpers";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import { refundBookingOnShopCancellation, shopCancellationPaymentStory } from "./refunds";
 import type { BlowoutMessageStatus, PaymentStatus } from "./schema";
@@ -257,7 +259,12 @@ async function blowoutCandidates(
 ): Promise<BlowoutCandidateTrip[]> {
   const horizonEnd = new Date(now.getTime() + BLOWOUT_OFFER_HORIZON_DAYS * 24 * 60 * 60 * 1_000);
   const rows = await db
-    .select({ trip: trips, activeBookings: count(bookings.id) })
+    .select({
+      trip: trips,
+      activeBookings: count(bookings.id),
+      activeDivers:
+        sql<number>`count(*) filter (where ${bookings.participantType} = 'diver')`.mapWith(Number),
+    })
     .from(trips)
     .leftJoin(bookings, and(eq(bookings.tripId, trips.id), ne(bookings.status, "cancelled")))
     .where(
@@ -283,6 +290,10 @@ async function blowoutCandidates(
         status: row.trip.status,
         capacity: row.trip.capacity,
         activeBookings: row.activeBookings,
+        activeDivers: row.activeDivers,
+        diverCapacity: row.trip.diverCapacity,
+        snorkelerPriceCents: row.trip.snorkelerPriceCents,
+        riderPriceCents: row.trip.riderPriceCents,
         courseSession: Boolean(row.trip.courseId),
         requirement,
         siteRequirement,
@@ -397,6 +408,7 @@ async function sendPendingBlowoutMessages(
           evidence,
           identityUnconfirmed: row.booking.identityUnconfirmedAt !== null,
           bookedTripIds: activeSeats.map((seat) => seat.tripId),
+          participantType: row.booking.participantType,
         },
       });
 
@@ -470,9 +482,9 @@ async function sendPendingBlowoutMessages(
       // Settle the claimed row as failed so the surface shows it honestly and
       // "Retry unsent messages" picks it up. If even this write fails the row
       // stays `sending`, which resume also reclaims.
-      console.error("Blow-out message could not be processed", {
+      log("blowout.message_failed", "error", {
         blowoutDiverId: row.diver.id,
-        error: error instanceof Error ? error.message : "unknown_error",
+        errorCode: error instanceof Error ? error.name : "unknown_error",
       });
       try {
         await db

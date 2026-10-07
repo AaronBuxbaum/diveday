@@ -136,7 +136,8 @@ export type StaffDestinationId =
   | "promoCodes"
   | "settings"
   | "team"
-  | "calendarFeed";
+  | "calendarFeed"
+  | "emailSettings";
 
 /**
  * The word each destination goes by, resolved from the staff bundle by
@@ -192,6 +193,7 @@ export const STAFF_DESTINATION_LABEL_KEYS: Record<StaffDestinationId, StaffMessa
   settings: "shared.shopNavLinks.settings",
   team: "shared.shopNavLinks.team",
   calendarFeed: "shared.shopNavLinks.calendarFeed",
+  emailSettings: "shared.shopNavLinks.emailSettings",
 };
 
 /**
@@ -283,6 +285,9 @@ export const STAFF_DESTINATIONS: readonly StaffDestination[] = [
   // only. Ungated, so the roles that most want it keep a door when Settings
   // itself is gated away.
   { id: "calendarFeed", suffix: "/settings/calendar", section: "settings", inPalette: true },
+  // The staffer's own email (the Monday email, `src/lib/weekly-digest.ts`).
+  // Ungated for the calendar feed's reason: any staffer may ask for it.
+  { id: "emailSettings", suffix: "/settings/email", section: "settings", inPalette: true },
   // Last: Settings is where a shop goes when nothing else was the answer.
   // `/settings/*` sub-pages light it by prefix; Team and the calendar feed win
   // their own paths by being the longer match.

@@ -63,7 +63,7 @@ checkpoint from reading complete. Not a per-person crew roll call.
 
 6. **Offline: read-only in this slice, and it fails closed.** Crew attestation is not recordable
    from the offline manifest — that would need a new offline event kind, store, and sync-route
-   surface. The saved snapshot carries the attestation, `OfflineManifestView` recomputes
+   surface. The saved snapshot carries the attestation, `OfflineManifestView` (now `offlineTripView` in `offline-manifest/trip-view.ts`) recomputes
    `rollCallCompleteness` with it, and a checkpoint with every diver counted and no crew attested
    reads **open** offline exactly as it does online, saying why. The divergence that would be worse
    than the original bug — offline "done", online "not done" — cannot occur. The snapshot record
@@ -145,7 +145,7 @@ This ADR was already superseded (see the status line). Recording the last step f
 arrives here looking for the machinery: `roll_call_crew_attestations` no longer exists. The table,
 `recordCrewAttestation`, the departure log's attestation timeline, and the
 `roll_call_crew_attestations.csv` export file were all deleted on 2026-08-15 under
-[H-49](../../product/human-decisions.md) — pre-pilot, no users, no data worth retaining — after the
+[H-49](../../product/human-decisions/README.md) — pre-pilot, no users, no data worth retaining — after the
 writer was found to have no production caller at all, only its own tests. Migration
 `20260815221413_drop-roll-call-crew-attestations`. See
 [20260804-crew-roll-call-is-per-person](20260804-crew-roll-call-is-per-person.md)'s 2026-08-15

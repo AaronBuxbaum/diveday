@@ -595,6 +595,7 @@ export async function seedMoreTrips(
           .filter((person): person is { id: string } => person !== undefined)
           .map((person) => ({
             shopId,
+            bookedAs: "diver" as const,
             tripId: trip.id,
             personId: person.id,
             status: tripDefs[i].completedDemo ? ("checked_in" as const) : ("booked" as const),

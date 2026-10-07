@@ -3,6 +3,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
+import {
+  GUARD_COUNT_SITES,
+  guardCountProblems,
+  linkedSkillProblems,
+  spawnedGuardCount,
+} from "./agent-layer.mjs";
 import { findLaunchProblems, packageManagerIn } from "./mcp-launch-guard.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -120,5 +126,60 @@ describe("the package-manager launch guard", () => {
     );
     expect(problems).toHaveLength(1);
     expect(problems[0]).toMatch(/without a `port`/);
+  });
+});
+
+describe("the stated check:repo guard count", () => {
+  const texts = (n, m = n) => ({
+    "AGENTS.md": `| \`pnpm check:repo\` | ${n} static guards, concurrently |`,
+    "docs/agents/working-rules.md": `| \`pnpm check:repo\` | ${m} static guards over the repository |`,
+    "docs/agents/repo-checks.md": `\`scripts/check-repo.mjs\` runs ${n} guard scripts concurrently`,
+  });
+
+  it("passes the tree as it stands", () => {
+    const real = Object.fromEntries(
+      GUARD_COUNT_SITES.map(({ file }) => [file, readFileSync(path.join(ROOT, file), "utf8")]),
+    );
+    const spawned = spawnedGuardCount(
+      readFileSync(path.join(ROOT, "scripts/check-repo.mjs"), "utf8"),
+    );
+    expect(guardCountProblems(real, spawned)).toEqual([]);
+  });
+
+  it("leaves alone every site that names the spawned count", () => {
+    expect(guardCountProblems(texts(44), 44)).toEqual([]);
+  });
+
+  it("names the one site that went stale", () => {
+    expect(guardCountProblems(texts(44, 49), 44)).toEqual([
+      "docs/agents/working-rules.md: says `pnpm check:repo` runs 49 guards; scripts/check-repo.mjs spawns 44",
+    ]);
+  });
+
+  it("refuses a site reworded so the count can no longer be found", () => {
+    const problems = guardCountProblems(
+      { ...texts(44), "docs/agents/repo-checks.md": "runs a few dozen guards" },
+      44,
+    );
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toMatch(/^docs\/agents\/repo-checks\.md: no longer states/);
+  });
+
+  it("counts one table row per guard", () => {
+    const source = 'const checks = [\n  ["a", "check-a.mjs"],\n  ["b", "check-b.mjs"],\n];';
+    expect(spawnedGuardCount(source)).toBe(2);
+  });
+});
+
+describe("skills linked in from .agents/skills", () => {
+  it("leaves alone a link and a lock entry that agree", () => {
+    expect(linkedSkillProblems(["tdd", "triage"], ["triage", "tdd"])).toEqual([]);
+  });
+
+  it("refuses a link with no lock entry, and a lock entry with no link", () => {
+    const problems = linkedSkillProblems(["tdd", "stray"], ["tdd", "orphan"]);
+    expect(problems).toHaveLength(2);
+    expect(problems[0]).toContain(".claude/skills/stray is linked in");
+    expect(problems[1]).toContain('"orphan" is locked');
   });
 });

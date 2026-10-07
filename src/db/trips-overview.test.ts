@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
-import { people } from "./schema";
+import { people, trips } from "./schema";
 import { setStaffLanguages } from "./staff-accounts";
 import { upcomingTripsWithCounts } from "./trips";
 import { listStaff, setTripCrew } from "./trips-crew";
@@ -101,6 +101,34 @@ describe("getTripOverview", () => {
         if (crew.ratioGap.code === "none") throw new Error("expected an unmet target");
         expect(crew.ratioGap.divemasterCount).toBe(0);
       }
+    });
+  });
+
+  describe("the divemaster ratio counts divers only (ADR 20261007-participant-types)", () => {
+    // Regression (UX review, PR #2224): with a snorkeler and a rider aboard the
+    // crew panel read "11 divers with 2 supervisors". The ratio is a
+    // scuba-guiding ratio; the boat's headcount still counts everyone.
+    it("leaves a snorkeler and a rider out of the ratio, and in the headcount", async () => {
+      const ctx = await context();
+      await setTripCrew(ctx.db, ctx.shop.id, ctx.tripId, []);
+      await ctx.db.update(trips).set({ capacity: 40 }).where(eq(trips.id, ctx.tripId));
+      const before = await overviewFor(ctx);
+      for (const participantType of ["snorkeler", "rider"] as const) {
+        const seated = await createBooking(ctx.db, {
+          actor: "staff",
+          shopId: ctx.shop.id,
+          tripId: ctx.tripId,
+          participantType,
+          fullName: `Ratio ${participantType}`,
+          email: `ratio-${participantType}@example.com`,
+        });
+        if (!seated.ok) throw new Error(`could not seat a ${participantType}`);
+      }
+      const after = await overviewFor(ctx);
+      expect(after.trip.booked).toBe(before.trip.booked + 2);
+      expect(after.trip.bookedDivers).toBe(before.trip.bookedDivers);
+      if (after.crew.ratioGap.code === "none") throw new Error("expected an unmet target");
+      expect(after.crew.ratioGap.divers).toBe(before.trip.bookedDivers);
     });
   });
 

@@ -396,6 +396,39 @@ describe("sesNotificationProvider (ADR 20260802-ses-adapter-and-webhook)", () =>
     ]);
   });
 
+  it("lifts the Monday email's own way out into the one-click header pair", async () => {
+    const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-message-id" }) };
+    const provider = sesNotificationProvider(sesConfig, { client });
+
+    await notify(
+      {
+        kind: "weekly_digest",
+        shopId: "00000000-0000-4000-8000-000000000010",
+        personId: "00000000-0000-4000-8000-000000000011",
+        to: "delivered+digest@dive.day",
+        locale: "en-US",
+        recipientName: "Dana Reyes",
+        shopName: "Blue Mantis",
+        timezone: "America/New_York",
+        weekOf: "2026-10-05",
+        lastWeekFrom: "2026-09-28",
+        lastWeekTo: "2026-10-04",
+        thisWeekFrom: "2026-10-05",
+        thisWeekTo: "2026-10-11",
+        sections: [{ kind: "overdue", count: 2, url: "https://diveday.example/shop/blue-mantis" }],
+        settingsUrl: "https://diveday.example/shop/blue-mantis/settings/email",
+        turnOffUrl: "https://diveday.example/unsubscribe/tok_digest",
+      },
+      provider,
+    );
+
+    const command = client.send.mock.calls[0]?.[0] as SendEmailCommand;
+    expect(command.input.Content?.Simple?.Headers).toContainEqual({
+      Name: "List-Unsubscribe",
+      Value: "<https://diveday.example/unsubscribe/tok_digest/one-click>",
+    });
+  });
+
   it("sets Reply-To from the sender profile and tags every send with its kind and shop", async () => {
     const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-message-id" }) };
     const provider = sesNotificationProvider(sesConfig, { client });

@@ -6,7 +6,7 @@ import { buttonClass } from "@/components/ui/button";
 import { listBoats } from "@/db/boats";
 import { getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
-import { shopBySlugCached } from "@/db/shops";
+import { shopBySlugCached } from "@/db/shops-cached";
 import { getTripWithBooked, pagedUpcomingTripsWithCounts } from "@/db/trips";
 import type { DiverTranslator } from "@/i18n/messages";
 import { requestTranslator } from "@/i18n/request";

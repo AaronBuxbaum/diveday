@@ -51,7 +51,7 @@ export const SIGNATURES = [
   {
     match: /relation "[^"]+" does not exist|column "[^"]+" does not exist/,
     explain:
-      "The database was built from the committed migration chain and the schema change has no migration yet — `pnpm db:generate` after editing src/db/schema.ts (schema-change skill).",
+      "The database was built from the committed migration chain and the schema change has no migration yet — `pnpm db:generate` after editing src/db/schema/ (schema-change skill).",
   },
   {
     match: /Test timeout of \d+ms exceeded while setting up "[^"]+"/,

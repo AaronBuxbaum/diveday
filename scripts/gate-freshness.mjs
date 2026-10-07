@@ -1,4 +1,4 @@
-// Gate freshness — how long each human-owned gate in docs/product/human-decisions.md has sat
+// Gate freshness — how long each human-owned gate in docs/product/human-decisions/ has sat
 // without recorded movement, reconciled against rollout.md's "next 30 days" list, plus how
 // long each open follow-up issue (label:needs-triage — see docs/agents/issue-tracker.md's
 // Filing a follow-up section) has waited for a human's triage.
@@ -33,12 +33,19 @@
 // otherwise. Like `check-follow-ups.mjs`, this section degrades quietly (prints a note, ages
 // nothing) when `gh` cannot answer — a network hiccup is not evidence of anything.
 //
-// Time: `pnpm check:clock` guards src/lib, src/db, and src/features — not scripts/ — so
+// **Where the rows live.** Each decision is its own file, `docs/product/human-decisions/H-nn-*.md`
+// (status on a `**Status:**` line, every date anywhere in the file); the verification queue is
+// still a table in that directory's README. Until 2026-10-07 both were rows of one
+// `docs/product/human-decisions.md`, so a file whose only commit is the split that created it
+// takes its blame evidence from that row in the old file, at the commit before the split — the
+// split moved words, it did not move a decision.
+//
+// Time: Biome's `clock` rule guards src/lib, src/db, and src/features — not scripts/ — so
 // the bare `new Date()` in `main()` below is in bounds. Every function that reasons about
 // time still takes `now` as a parameter, because that is what makes the parsing testable
 // (`scripts/gate-freshness.test.mjs`) without a frozen wall clock.
 
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -55,7 +62,10 @@ import { ageClaims, IN_PROGRESS_LABEL, readGitFacts } from "./claims.mjs";
 import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const REGISTER = "docs/product/human-decisions.md";
+const REGISTER_DIR = "docs/product/human-decisions";
+const REGISTER = `${REGISTER_DIR}/README.md`;
+/** The single-file register the directory was split from, read only for pre-split history. */
+const LEGACY_REGISTER = "docs/product/human-decisions.md";
 const ROLLOUT = "docs/product/rollout.md";
 const DAY_MS = 86_400_000;
 
@@ -106,6 +116,23 @@ export function parseGateRows(markdown) {
     });
   });
   return rows;
+}
+
+/**
+ * One decision file: its id from the `# H-nn: …` heading, its status from the `**Status:**`
+ * line, and the newest date written anywhere in it. Null for a file that is not a decision.
+ */
+export function parseDecisionFile(markdown) {
+  const id = /^#\s+(H-\d+)\b/m.exec(markdown)?.[1];
+  const status = /^(?:- )?\*\*Status:\*\*\s*(.+?)\s*$/m.exec(markdown)?.[1];
+  if (!id || !status) return null;
+  return {
+    id,
+    status,
+    state: classifyStatus(status),
+    line: null,
+    datedOutcome: latestDateIn(markdown),
+  };
 }
 
 /**
@@ -278,9 +305,9 @@ function graftedShas() {
   }
 }
 
-/** line number -> { at: Date, bounded } for one tracked file, or null when git can't say. */
-function blameByLine(file, grafted) {
-  const output = git(["blame", "--line-porcelain", "--", file]);
+/** line number -> { at: Date, bounded, sha } for one tracked file, or null when git can't say. */
+function blameByLine(file, grafted, rev = null) {
+  const output = git(["blame", "--line-porcelain", ...(rev ? [rev] : []), "--", file]);
   if (!output) return null;
   const byLine = new Map();
   let sha = null;
@@ -295,11 +322,100 @@ function blameByLine(file, grafted) {
     } else if (line.startsWith("author-time ")) {
       authorTime = Number(line.slice("author-time ".length)) * 1000;
     } else if (line.startsWith("\t") && lineNumber !== null && authorTime !== null) {
-      byLine.set(lineNumber, { at: new Date(authorTime), bounded: grafted.has(sha) });
+      byLine.set(lineNumber, { at: new Date(authorTime), bounded: grafted.has(sha), sha });
       lineNumber = null;
     }
   }
   return byLine;
+}
+
+/** Newest first: `{ sha, at }` for every commit that touched `file`, or null. */
+function fileHistory(file) {
+  const output = git(["log", "--format=%H %at", "--", file]);
+  if (output === null) return null;
+  return output
+    .split("\n")
+    .filter(Boolean)
+    .map((line) => {
+      const [sha, seconds] = line.split(" ");
+      return { sha, at: new Date(Number(seconds) * 1000) };
+    });
+}
+
+/**
+ * Blame evidence for each gate id as the single-file register had it just before `splitSha`,
+ * the commit that created the per-decision files. Empty when that parent is outside a shallow
+ * clone; the caller then falls back to the split commit as a lower bound.
+ */
+function legacyBlame(splitSha, grafted) {
+  const parent = `${splitSha}^`;
+  const markdown = git(["show", `${parent}:${LEGACY_REGISTER}`]);
+  const byLine = markdown === null ? null : blameByLine(LEGACY_REGISTER, grafted, parent);
+  const byId = new Map();
+  if (byLine) {
+    for (const row of parseGateRows(markdown)) {
+      const entry = byLine.get(row.line);
+      if (entry) byId.set(row.id, entry);
+    }
+  }
+  return byId;
+}
+
+/**
+ * The register's blame, keyed by gate id: the last commit to each decision file, and per line
+ * for the verification queue in the README. A file or line last touched only by the split that
+ * created it reads through to the single-file register's own blame for that row.
+ */
+function registerBlame(decisionFiles, readmeRows, grafted) {
+  const byId = new Map();
+  const legacyBySplit = new Map();
+  const legacyFor = (splitSha, id) => {
+    if (!legacyBySplit.has(splitSha)) legacyBySplit.set(splitSha, legacyBlame(splitSha, grafted));
+    return legacyBySplit.get(splitSha).get(id) ?? null;
+  };
+  let answered = false;
+
+  for (const { id, file } of decisionFiles) {
+    const history = fileHistory(file);
+    if (!history || history.length === 0) continue;
+    answered = true;
+    const created = history[history.length - 1];
+    const newest = history[0];
+    byId.set(
+      id,
+      history.length > 1
+        ? { at: newest.at, bounded: grafted.has(newest.sha) }
+        : (legacyFor(created.sha, id) ?? { at: created.at, bounded: true }),
+    );
+  }
+
+  const readmeHistory = fileHistory(REGISTER);
+  const readmeCreated = readmeHistory?.[readmeHistory.length - 1]?.sha ?? null;
+  const readmeBlame = blameByLine(REGISTER, grafted);
+  if (readmeBlame) answered = true;
+  for (const row of readmeRows) {
+    const entry = readmeBlame?.get(row.line);
+    if (!entry) continue;
+    byId.set(
+      row.id,
+      entry.sha === readmeCreated
+        ? (legacyFor(entry.sha, row.id) ?? { ...entry, bounded: true })
+        : entry,
+    );
+  }
+  return answered ? byId : null;
+}
+
+/** Every `H-nn-*.md` in the register directory, parsed, with its repo-relative path. */
+function readDecisionFiles() {
+  return readdirSync(path.join(ROOT, REGISTER_DIR))
+    .filter((name) => /^H-\d+.*\.md$/.test(name))
+    .map((name) => {
+      const file = `${REGISTER_DIR}/${name}`;
+      const row = parseDecisionFile(readFileSync(path.join(ROOT, file), "utf8"));
+      return row ? { ...row, file } : null;
+    })
+    .filter(Boolean);
 }
 
 // ---------------------------------------------------------------------------
@@ -393,18 +509,24 @@ async function main() {
   const rollout = readFileSync(path.join(ROOT, ROLLOUT), "utf8");
 
   const grafted = graftedShas();
-  const blame = blameByLine(REGISTER, grafted);
-  const rows = parseGateRows(register).map((row) => ({
-    ...row,
-    movement: movementFor(row, blame?.get(row.line) ?? null, now),
-  }));
+  // The README's tables carry only the verification queue as bare `| V-nn |` rows; the
+  // decision index links each id, so it never parses as a gate row of its own.
+  const readmeRows = parseGateRows(register);
+  const decisionRows = readDecisionFiles();
+  const blame = registerBlame(decisionRows, readmeRows, grafted);
+  const rows = [...decisionRows, ...readmeRows]
+    .sort((a, b) => a.id.localeCompare(b.id, "en", { numeric: true }))
+    .map((row) => ({
+      ...row,
+      movement: movementFor(row, blame?.get(row.id) ?? null, now),
+    }));
   const rowsById = new Map(rows.map((row) => [row.id, row]));
 
   const open = rows.filter((row) => row.state === "open").sort(byAgeDescending);
   const parked = rows.filter((row) => row.state === "parked").sort(byAgeDescending);
   const closed = rows.filter((row) => row.state === "closed");
 
-  console.log(`Gate freshness — ${REGISTER}, read ${now.toISOString().slice(0, 10)}`);
+  console.log(`Gate freshness — ${REGISTER_DIR}/, read ${now.toISOString().slice(0, 10)}`);
   console.log(
     `${rows.length} gate rows: ${open.length} open, ${parked.length} deferred, ${closed.length} closed.`,
   );

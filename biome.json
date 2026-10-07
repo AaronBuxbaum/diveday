@@ -29,6 +29,72 @@
       "test": "recommended"
     }
   },
+  "overrides": [
+    {
+      "includes": ["**/*.test.ts", "**/*.test.tsx", "**/*.test.mjs", ".agents/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noTemplateCurlyInString": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "src/lib/**/*.ts",
+        "src/lib/**/*.tsx",
+        "src/db/**/*.ts",
+        "src/db/**/*.tsx",
+        "src/features/**/*.ts",
+        "src/features/**/*.tsx",
+        "!src/lib/clock.ts",
+        "!src/lib/clock.test.ts"
+      ],
+      "plugins": ["./scripts/lint-rules/clock.grit"]
+    },
+    {
+      "includes": [
+        "src/app/**/*.ts",
+        "src/app/**/*.tsx",
+        "src/components/**/*.ts",
+        "src/components/**/*.tsx",
+        "src/lib/**/*.ts",
+        "src/lib/**/*.tsx",
+        "src/db/**/*.ts",
+        "src/db/**/*.tsx",
+        "src/features/**/*.ts",
+        "src/features/**/*.tsx",
+        "src/i18n/**/*.ts",
+        "src/i18n/**/*.tsx",
+        "!**/*.test.ts",
+        "!**/*.test.tsx",
+        "!src/lib/intl-cache.ts"
+      ],
+      "plugins": ["./scripts/lint-rules/intlCache.grit"]
+    },
+    {
+      "includes": [
+        "src/app/**/*.ts",
+        "src/app/**/*.tsx",
+        "src/components/**/*.ts",
+        "src/components/**/*.tsx",
+        "src/lib/**/*.ts",
+        "src/lib/**/*.tsx",
+        "src/db/**/*.ts",
+        "src/db/**/*.tsx",
+        "src/features/**/*.ts",
+        "src/features/**/*.tsx",
+        "!**/*.test.ts",
+        "!**/*.test.tsx"
+      ],
+      "plugins": ["./scripts/lint-rules/timezone.grit"]
+    },
+    {
+      "includes": ["src/**/*.ts", "src/**/*.tsx", "!**/*.test.ts", "!**/*.test.tsx"],
+      "plugins": ["./scripts/lint-rules/redirectInTry.grit"]
+    }
+  ],
   "css": {
     "parser": {
       "tailwindDirectives": true

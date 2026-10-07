@@ -32,3 +32,14 @@ changes, so future upgrades must run the full repository checks and inspect gene
 If the beta causes incompatibilities or a stable v1 release changes the APIs again, pin the last
 known-good pair and migrate the folder format once more; reverting the package pins and restoring
 the previous generated layout would be the main rollback cost.
+
+## Update 2026-10-07: the pair is pinned to an exact version again
+
+Somewhere between this ADR and today both packages drifted from the exact `1.0.0-beta.22` pin to
+the floating `rc` dist-tag, which the lockfile resolved to `1.0.0-rc.4`. A dist-tag moves whenever
+Drizzle publishes, so the next `pnpm install` that refreshed the lock (or a fresh resolution in a
+new checkout without one) could change the ORM and the migration CLI under the production migration
+runner without any diff in `package.json` saying so. Both are now pinned to the exact version the
+lockfile already resolved, `1.0.0-rc.4`, with no version change. An upgrade is a deliberate edit of
+both pins together, followed by the full checks and a look at any regenerated migration, as the
+Consequences above already ask.

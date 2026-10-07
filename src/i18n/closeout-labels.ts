@@ -85,7 +85,7 @@ export function closeoutDepartureDetailText(
  * sentence that leads with the count. `cachedListFormat` rather than a bare
  * `new Intl.ListFormat`: a formatter costs about twelve times what reusing one
  * does, and this file formats on essentially every evening render
- * (`pnpm check:intl-cache`).
+ * (Biome's `intlCache` rule).
  *
  * Null when there is no clause to make, which is the ADR's standing rule that
  * a widening renders nothing when it is not true. `openSeatsDebrief` has

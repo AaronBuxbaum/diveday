@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ALERT_EMAIL, alertRecipient, setUpMailto } from "./platform-mail";
+import { ALERT_EMAIL, alertRecipient, founderDigestRecipient } from "./platform-mail";
 
 /**
  * `alertRecipient` is the one place both operational alerts — a trial start and
@@ -29,15 +29,15 @@ describe("alertRecipient", () => {
   });
 });
 
-describe("setUpMailto", () => {
-  it("writes to the onboarding inbox with the subject encoded", () => {
-    expect(setUpMailto("Set up my shop & more")).toBe(
-      "mailto:onboarding@dive.day?subject=Set%20up%20my%20shop%20%26%20more",
+describe("founderDigestRecipient", () => {
+  it("is whoever FOUNDER_DIGEST_EMAIL names, trimmed", () => {
+    expect(founderDigestRecipient({ FOUNDER_DIGEST_EMAIL: " founder@example.com " })).toBe(
+      "founder@example.com",
     );
   });
 
-  it("cannot be steered into a second header by the subject", () => {
-    // A subject is bundle copy today; this keeps it a subject if that changes.
-    expect(setUpMailto("hi&bcc=someone@example.com")).not.toContain("&bcc=");
+  it("is nobody when the variable is unset or blank, never a guessed mailbox", () => {
+    expect(founderDigestRecipient({})).toBeNull();
+    expect(founderDigestRecipient({ FOUNDER_DIGEST_EMAIL: "  " })).toBeNull();
   });
 });

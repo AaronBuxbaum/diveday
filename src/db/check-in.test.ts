@@ -178,6 +178,7 @@ describe("counter check-in", () => {
     const { db, shop, reef, booking } = await context();
     await expect(
       db.insert(bookings).values({
+        bookedAs: "diver",
         shopId: shop.id,
         tripId: reef.id,
         personId: booking.personId,

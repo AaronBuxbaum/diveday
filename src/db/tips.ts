@@ -1,5 +1,6 @@
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { log } from "@/lib/log";
 import { majorToMinor, type ShopCurrency, toShopCurrency } from "@/lib/money";
 import {
   type CheckoutProvider,
@@ -384,7 +385,7 @@ export async function markTipPaidBySessionId(
   // Defense-in-depth account cross-check (security review finding) — see
   // markCheckoutPaidBySessionId in src/db/checkouts.ts.
   if (expectedAccountId !== undefined && expectedAccountId !== tip.stripeAccountId) {
-    console.error("markTipPaidBySessionId: refused an account mismatch", {
+    log("tip.paid_account_mismatch", "error", {
       tipId: tip.id,
       shopId: tip.shopId,
       expectedAccountId,

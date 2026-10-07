@@ -1,5 +1,9 @@
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
+  DURATIONS_FILE,
   estimateCost,
   PER_FILE_DB_COST,
   PER_FILE_FILE_SCOPED_DB_COST,
@@ -8,6 +12,8 @@ import {
   PER_TEST_FILE_SCOPED_DB_COST,
   PER_TEST_PLAIN_COST,
   partition,
+  readDurations,
+  weigh,
 } from "./shard-sequencer";
 
 describe("estimateCost", () => {
@@ -169,5 +175,72 @@ describe("partition", () => {
   it("degrades to one bin holding everything", () => {
     const items = weighted([3, 1, 2]);
     expect(partition(items, 1, 1)).toEqual(["f0", "f2", "f1"]);
+  });
+});
+
+describe("weigh", () => {
+  const files = [
+    { item: "a", key: "src/a.test.ts", estimate: 100 },
+    { item: "b", key: "src/b.test.ts", estimate: 300 },
+    { item: "c", key: "src/c.test.ts", estimate: 50 },
+  ];
+
+  it("is exactly the estimate when nothing is recorded", () => {
+    expect(weigh(files, {})).toEqual([
+      { item: "a", weight: 100 },
+      { item: "b", weight: 300 },
+      { item: "c", weight: 50 },
+    ]);
+  });
+
+  it("uses a recorded duration over the estimate", () => {
+    // The estimate thinks b is the heaviest; the recording says a is.
+    const weights = weigh(files, {
+      "src/a.test.ts": 9_000,
+      "src/b.test.ts": 1_000,
+      "src/c.test.ts": 500,
+    });
+    expect(weights.map((w) => w.weight)).toEqual([9_000, 1_000, 500]);
+  });
+
+  it("scales an unrecorded file's estimate onto the recorded axis", () => {
+    // a and b: 10,000ms recorded against 400 estimated units, so 25ms a unit.
+    const weights = weigh(files, { "src/a.test.ts": 4_000, "src/b.test.ts": 6_000 });
+    expect(weights.find((w) => w.item === "c")?.weight).toBe(50 * 25);
+  });
+
+  it("ignores a recording that is not a duration", () => {
+    const weights = weigh(files, { "src/a.test.ts": -1, "src/b.test.ts": Number.NaN });
+    expect(weights.map((w) => w.weight)).toEqual([100, 300, 50]);
+  });
+
+  it("changes the deal when the recording disagrees with the estimate", () => {
+    const four = [
+      { item: "heavy-by-estimate", key: "h", estimate: 1_000 },
+      { item: "x", key: "x", estimate: 10 },
+      { item: "y", key: "y", estimate: 10 },
+      { item: "z", key: "z", estimate: 10 },
+    ];
+    const recorded = { h: 10, x: 1_000, y: 10, z: 10 };
+    expect(partition(weigh(four, {}), 1, 2)).toEqual(["heavy-by-estimate"]);
+    expect(partition(weigh(four, recorded), 1, 2)).toEqual(["x"]);
+  });
+});
+
+describe("readDurations", () => {
+  it("reads the committed file, and treats a missing or malformed one as empty", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "durations-"));
+    try {
+      expect(readDurations(root)).toEqual({});
+      await mkdir(path.join(root, path.dirname(DURATIONS_FILE)), { recursive: true });
+      await writeFile(path.join(root, DURATIONS_FILE), "not json");
+      expect(readDurations(root)).toEqual({});
+      await writeFile(path.join(root, DURATIONS_FILE), "[1, 2]");
+      expect(readDurations(root)).toEqual({});
+      await writeFile(path.join(root, DURATIONS_FILE), '{"src/a.test.ts": 1200}');
+      expect(readDurations(root)).toEqual({ "src/a.test.ts": 1200 });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });

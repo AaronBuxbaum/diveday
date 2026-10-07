@@ -1,7 +1,7 @@
 /**
  * The persona walk writes into a live issue tracker that one person reads, and
- * `pnpm check:follow-ups` reads that same tracker inside every pull request's
- * `pnpm check`. Two things therefore have to be provable without a network:
+ * `pnpm check:follow-ups` reads that same tracker on a daily schedule
+ * (.github/workflows/follow-ups.yml). Two things therefore have to be provable without a network:
  * that the volume ceiling holds, and that every body this generator can emit
  * passes the guard. Both are pinned here.
  */

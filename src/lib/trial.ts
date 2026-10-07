@@ -10,10 +10,10 @@
  * not a trial at all — callers gate on that themselves, the same way the demo
  * banner does, rather than this module knowing about shop rows.
  *
- * Soft expiry by product decision: nothing in the app reads `isTrialExpired`
- * to block a route or a mutation. A trial that runs past its window keeps
- * working exactly as before; expiry only changes what the owner is told in
- * settings.
+ * Soft expiry by product decision: nothing in the app blocks a route or a
+ * mutation when the window elapses. A trial that runs past it keeps working
+ * exactly as before; expiry only changes what the owner is told on Settings >
+ * Billing (`src/lib/billing/standing.ts`, ADR 20261007-subscription-billing).
  */
 
 import { DAY_MS } from "@/lib/clock";
@@ -34,9 +34,4 @@ export function trialEndsAt(createdAt: Date): Date {
 export function trialDaysRemaining(createdAt: Date, now: Date): number {
   const msRemaining = trialEndsAt(createdAt).getTime() - now.getTime();
   return Math.max(0, Math.ceil(msRemaining / DAY_MS));
-}
-
-/** True once the trial window has fully elapsed. */
-export function isTrialExpired(createdAt: Date, now: Date): boolean {
-  return now.getTime() >= trialEndsAt(createdAt).getTime();
 }

@@ -74,8 +74,8 @@ const ANCHOR = /\.update\(\s*trips\s*\)/;
 // `:\s*\S` and not a bare colon: the docblock, the failure message and
 // `.claude/rules/db.md` all promise `diveday:allow-flat-revision: <why>`, and
 // an exemption with nothing after the colon silences the guard while telling
-// the next reader nothing. `check-redirect-in-try.mjs` and
-// `check-db-concurrency.mjs` already spell theirs this way
+// the next reader nothing. `check-db-concurrency.mjs` already spells its own
+// this way, as a biome-ignore needs its reason after the colon
 // (`security-reviewer`, issue 1394).
 const ALLOW = /diveday:allow-flat-revision:\s*\S/;
 const CALENDAR_MOVE = /\bstartsAt\b/;

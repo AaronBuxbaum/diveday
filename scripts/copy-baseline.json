@@ -1,3 +1,0 @@
-{
-  "//": "Hard-coded user-facing strings still awaiting extraction, per file. Written by `node scripts/check-copy.mjs --write`. This number may only go down — see scripts/check-copy.mjs."
-}

@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { courseTemplateSnapshot, getCourseTemplate } from "@/content/course-templates";
 import {
   type CourseTemplateDiff,
   type CourseTemplateSnapshot,
@@ -13,7 +14,6 @@ import { type CourseContent, canonicalAgency } from "@/lib/courses";
 import { REFRESHER_TEMPLATE_SLUGS } from "@/lib/re-entry";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
-import { courseTemplateSnapshot, getCourseTemplate } from "./course-templates";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import type { Course } from "./schema";
 import { courses, shops } from "./schema";
@@ -483,7 +483,7 @@ export type CourseContentSave =
  * release sends no hidden field at all. Refusing those would break saves for as
  * long as the two releases overlap.
  *
- * See `courses.rowVersion` in `src/db/schema.ts` for why the generation is a
+ * See `courses.rowVersion` in `src/db/schema/` for why the generation is a
  * counter rather than the `updated_at` timestamp this started as — the short
  * version is that Postgres keeps microseconds a JS `Date` cannot hold, and
  * PGlite does not, so every test in this repository was blind to it.

@@ -564,7 +564,7 @@ forwards to the lawyer. `support@dive.day` (general contact) and `onboarding@div
 paid upgrades) are the two addresses the app itself renders on public and staff surfaces
 (`src/lib/platform-mail.ts`) — both route to the same small team as `aaron@`, just without a named
 individual's address attached to a support promise (see the product-owner decision retiring
-founder-direct support in docs/product/human-decisions.md). Attachments, threading, search,
+founder-direct support in docs/product/human-decisions/README.md). Attachments, threading, search,
 replying, and mobile all come from the mail provider rather than from us.
 
 **Three subdomains, three different MX answers.** `dive.day`'s MX names the mail provider and

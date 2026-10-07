@@ -4,6 +4,7 @@ import { APIError, createAuthEndpoint } from "better-auth/api";
 import { setSessionCookie } from "better-auth/cookies";
 import { nextCookies } from "better-auth/next-js";
 import { headers as nextHeaders } from "next/headers";
+import { cache } from "react";
 import { z } from "zod";
 import { getAccountSecurity, verifyAccountSecondFactor } from "@/db/account-security";
 import { type AppDb, getDb } from "@/db/client";
@@ -273,7 +274,7 @@ export type DiveDaySession = {
  * `@/lib/auth` need no changes — only where the fields come from changed
  * (a better-auth session row, not a JWT).
  */
-export async function auth(): Promise<DiveDaySession | null> {
+async function readSession(): Promise<DiveDaySession | null> {
   const instance = await getAuth();
   // The edge proxy may use the short-lived cookie cache for routing, but the
   // server-side security decision must consult the session row every time so
@@ -303,3 +304,12 @@ export async function auth(): Promise<DiveDaySession | null> {
     },
   };
 }
+
+/**
+ * One session read per render (app audit 2026-10-07, item 2). The staff shell
+ * and the page gate beside it both ask, and each ask was a session-row read;
+ * the row cannot change inside one render, and "sign out everywhere" still
+ * lands on the very next request because `cache()` is request-scoped. Outside
+ * a render it calls straight through.
+ */
+export const auth = cache(readSession);

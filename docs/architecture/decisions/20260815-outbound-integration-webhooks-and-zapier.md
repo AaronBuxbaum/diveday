@@ -39,7 +39,7 @@ Constraints a lower-context agent must not miss:
   never calls out to read or write another system's API. No DiveDay-built Shopify app, no
   DiveShop360 connector — a direct competitor has no reason to build the receiving end itself, the
   same dead end as PADI/SSI's absent C-card API (H-10,
-  [human-decisions.md](../../product/human-decisions.md)).
+  [human-decisions/](../../product/human-decisions/README.md)).
 - The export schema (`src/lib/export.ts`) is the closest existing analog to what a read API
   exposes — reuse its file/row shapes as the payload shapes rather than inventing a second schema.
 - H-26 bounds this to a lifestyle-scale, one-person-maintained build

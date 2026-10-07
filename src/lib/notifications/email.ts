@@ -13,9 +13,11 @@ import {
   formatTimeRangeTz,
   formatWeekdayTime,
 } from "@/lib/format";
+import type { ShopMilestone } from "@/lib/founder-metrics";
 import { escapeHtml } from "@/lib/html";
 import { firstNameOf } from "@/lib/person-name";
 import type { ReminderActionCode } from "@/lib/readiness-summary";
+import type { SetupCurrentSystem } from "@/lib/setup-requests";
 import { cachedListFormat } from "../intl-cache";
 
 // i18n-exempt-file: the terminal renderer for outbound email — no downstream
@@ -1016,6 +1018,142 @@ export function usageCeilingAlertEmail(input: UsageCeilingAlertEmailInput): Noti
     subject: `Usage ${headline}: ${input.ceilingId} at ${input.percent}% (${input.periodKey})`,
     text: `${input.ceilingId} is at ${reading} for ${input.periodKey}.\n\nProvider: ${input.provider} / ${input.metric}.\nAt the ceiling, ${input.provider} ${consequence}.\n\nAlert-only: nothing has been disabled, throttled, or turned off.\n`,
     html: `<p><strong>${ceilingId}</strong> is at ${readingHtml} for ${period}.</p><p>Provider: <code>${provider}</code> / <code>${metric}</code>. At the ceiling, ${provider} ${consequence}.</p><p>Alert-only: nothing has been disabled, throttled, or turned off.</p>`,
+  };
+}
+
+type SetupRequestAlertEmailInput = {
+  shopName: string;
+  region: string;
+  runsBoat: boolean;
+  currentSystem: SetupCurrentSystem;
+  contactName: string;
+  contactEmail: string;
+  contactPhone?: string;
+  source: string;
+  requestLocale: string;
+};
+
+/** What the shop runs on today, in the founder's words. */
+const currentSystemWords: Record<SetupCurrentSystem, string> = {
+  paper: "paper",
+  spreadsheet: "spreadsheets",
+  booking_system: "a booking system",
+  shop_software: "dive-shop software",
+  other: "something else",
+};
+
+/**
+ * A shop asked to be set up (ADR 20261007-setup-request-form). To the
+ * onboarding inbox, internal and English like the founder alerts above, laid
+ * out as the facts a first reply needs: who, where, boat or not, what they use
+ * now, and how to reach them. Every value the requester typed is escaped.
+ */
+export function setupRequestAlertEmail(input: SetupRequestAlertEmailInput): NotificationEmail {
+  const lines: Array<[string, string]> = [
+    ["Shop", input.shopName],
+    ["Where", input.region],
+    ["Runs a boat", input.runsBoat ? "yes" : "no"],
+    ["Uses today", currentSystemWords[input.currentSystem]],
+    ["Name", input.contactName],
+    // Typed by whoever filled the form; nothing has proved they own it.
+    ["Email (unverified)", input.contactEmail],
+    ...(input.contactPhone ? [["Phone", input.contactPhone] as [string, string]] : []),
+    ["Language", input.requestLocale],
+    ["From", input.source],
+  ];
+  return {
+    subject: `Set-up request: ${input.shopName} (${input.region})`,
+    text: `${lines.map(([label, value]) => `${label}: ${value}`).join("\n")}\n`,
+    html: `<p>${lines.map(([label, value]) => `${label}: <strong>${escapeHtml(value)}</strong>`).join("<br>")}</p>`,
+  };
+}
+
+type FounderDigestEmailInput = {
+  weekStart: CalendarDate;
+  weekEnd: CalendarDate;
+  diveDays: number;
+  diveDayShops: number;
+  demoEntries: Array<{ source: string; count: number }>;
+  setupRequests: Array<{ source: string; count: number }>;
+  unnotifiedSetupRequests: number;
+  stalls: Array<{
+    shopName: string;
+    shopSlug: string;
+    lastReached: ShopMilestone;
+    since: CalendarDate;
+    waitingFor: ShopMilestone;
+  }>;
+};
+
+/** Each activation step as the founder reads it. */
+const milestoneWords: Record<ShopMilestone, string> = {
+  shop_created: "shop created",
+  first_departure: "first departure",
+  first_public_booking: "first public booking",
+  first_signed_waiver: "first signed waiver",
+  first_roll_call: "first roll call",
+  first_paid_month: "first paid month",
+};
+
+/**
+ * The founder's Monday digest (ADR 20261007-founder-metrics). Internal and
+ * English. Four short sections in a fixed order — the north star, the demo,
+ * set-up requests, stalled shops — each saying "none" rather than vanishing,
+ * so a quiet week reads as quiet rather than as a broken mail. Dates are
+ * calendar dates printed as they are: no zone to name, because a week of
+ * shops' own local days has none.
+ */
+export function founderDigestEmail(input: FounderDigestEmailInput): NotificationEmail {
+  const total = (rows: Array<{ count: number }>) => rows.reduce((sum, row) => sum + row.count, 0);
+  const bySource = (rows: Array<{ source: string; count: number }>) =>
+    rows.map((row) => `${row.source}: ${row.count}`);
+
+  const sections: Array<{ title: string; lines: string[] }> = [
+    {
+      title: `North star: ${input.diveDays} dive ${input.diveDays === 1 ? "day" : "days"} run end to end`,
+      lines:
+        input.diveDays > 0
+          ? [`across ${input.diveDayShops} ${input.diveDayShops === 1 ? "shop" : "shops"}`]
+          : [],
+    },
+    {
+      title: `Demo entries: ${total(input.demoEntries)}`,
+      lines: bySource(input.demoEntries),
+    },
+    {
+      title: `Set-up requests: ${total(input.setupRequests)}`,
+      lines: [
+        ...bySource(input.setupRequests),
+        ...(input.unnotifiedSetupRequests > 0
+          ? [
+              `${input.unnotifiedSetupRequests} never reached the onboarding inbox; read setup_requests`,
+            ]
+          : []),
+      ],
+    },
+    {
+      title: `Stalled shops: ${input.stalls.length}`,
+      lines: input.stalls.map(
+        (stall) =>
+          `${stall.shopName} (/shop/${stall.shopSlug}): ${milestoneWords[stall.lastReached]} on ${stall.since}, waiting for ${milestoneWords[stall.waitingFor]}`,
+      ),
+    },
+  ];
+
+  const text = sections
+    .map(({ title, lines }) => [title, ...lines.map((line) => `  ${line}`)].join("\n"))
+    .join("\n\n");
+  const html = sections
+    .map(
+      ({ title, lines }) =>
+        `<p><strong>${escapeHtml(title)}</strong>${lines.map((line) => `<br>${escapeHtml(line)}`).join("")}</p>`,
+    )
+    .join("");
+
+  return {
+    subject: `DiveDay week of ${input.weekStart}: ${input.diveDays} dive ${input.diveDays === 1 ? "day" : "days"}`,
+    text: `Week of ${input.weekStart} to ${input.weekEnd}\n\n${text}\n`,
+    html: `<p>Week of ${escapeHtml(input.weekStart)} to ${escapeHtml(input.weekEnd)}</p>${html}`,
   };
 }
 

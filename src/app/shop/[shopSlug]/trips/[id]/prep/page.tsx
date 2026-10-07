@@ -5,7 +5,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { buttonClass } from "@/components/ui/button";
 import { latestTripStage } from "@/db/trip-stages";
-import { getTripPrep } from "@/db/trips-prep";
+import { getTripPrep } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";

@@ -15,6 +15,7 @@ import { depthWarningText } from "@/i18n/depth-labels";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import { crewBlockerText } from "@/i18n/identity-check-labels";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
+import { staffParticipantTypeLabel, staffSeatTypeNote } from "@/i18n/participant-labels";
 import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -167,7 +168,9 @@ function DiverFacts({
           is the absence of information formatted as information
           (principle 9), and Prep owns chasing the gap. A nitrox
           request always shows — that's an operational fact. */}
-      {diver.rentalFit.state !== "not_recorded" || diver.nitroxRequested ? (
+      {/* A rider takes nothing from the rack (ADR 20261007-participant-types). */}
+      {diver.participantType !== "rider" &&
+      (diver.rentalFit.state !== "not_recorded" || diver.nitroxRequested) ? (
         <p>
           <span className="font-bold">{t("manifest.rentalFitLabel")}</span>
           <span className="mt-0.5 block text-muted">
@@ -650,6 +653,18 @@ export function DiverRollCall({
                             {diver.fullName}
                           </span>
                           {capsule}
+                          {/* **Snorkeler or rider, in words** (ADR
+                            20261007-participant-types). Neutral and outside
+                            the one-capsule chain, like the not-here pill: it
+                            is not an exception to act on, it is who this
+                            body is. Every row is called whatever its type. */}
+                          {staffSeatTypeNote(t, diver) ? (
+                            <Badge tone="warning">{staffSeatTypeNote(t, diver)}</Badge>
+                          ) : diver.participantType && diver.participantType !== "diver" ? (
+                            <Badge tone="neutral">
+                              {staffParticipantTypeLabel(t, diver.participantType)}
+                            </Badge>
+                          ) : null}
                           {/* **The desk wrote this one off** (#1209). On the
                             row and not in the sheet, unlike "Checked in":
                             that one is routine and a tap away is fine, this

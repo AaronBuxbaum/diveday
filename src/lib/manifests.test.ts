@@ -121,6 +121,8 @@ describe("buildTripManifest", () => {
       unaccountedFor: 1,
       overCapacity: 0,
       notHere: 0,
+      // Rows with no type read as divers, and none is dropped.
+      byType: { diver: 2, snorkeler: 0, rider: 0 },
     });
     // Counter check-in and boat roll call are different questions (task 149):
     // a diver can be checked in at the counter without being boarded, or

@@ -355,7 +355,7 @@ export async function getSignedWaiverForDiver(
     guardian: identityHeld ? null : guardianSignatureOf(record),
     integrity: verifyWaiverIntegrity(record),
     /**
-     * When the co-signing guardian's address was erased on request (H-102) —
+     * When the co-signing guardian's address was erased on request (H-103) —
      * the note a redacted release carries, so its blank address reads as the
      * shop's act rather than as a field nobody filled.
      */

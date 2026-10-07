@@ -4,7 +4,12 @@ import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { people, shops, userAccounts } from "./schema";
-import { dismissOrientation, getAccountContact, isOrientationDismissed } from "./user-accounts";
+import {
+  dismissOrientation,
+  getAccountContact,
+  getAccountIdForPerson,
+  isOrientationDismissed,
+} from "./user-accounts";
 
 async function seededPersonId(db: AppDb, email: string): Promise<string> {
   const [account] = await db
@@ -46,6 +51,23 @@ describe("orientation dismissal (in-memory PGlite)", () => {
   it("an unknown person id reads as not dismissed rather than throwing", async () => {
     const { db } = await seededShopContext();
     expect(await isOrientationDismissed(db, "00000000-0000-0000-0000-000000000000")).toBe(false);
+  });
+});
+
+describe("the account a person signs in with (in-memory PGlite)", () => {
+  it("resolves a staff person to their one account", async () => {
+    const { db } = await seededShopContext();
+    const personId = await seededPersonId(db, DEV_STAFF_LOGINS.owner.email);
+    const [account] = await db
+      .select({ id: userAccounts.id })
+      .from(userAccounts)
+      .where(eq(userAccounts.personId, personId));
+    expect(await getAccountIdForPerson(db, personId)).toBe(account?.id);
+  });
+
+  it("is null for a person with no account", async () => {
+    const { db } = await seededShopContext();
+    expect(await getAccountIdForPerson(db, "00000000-0000-0000-0000-000000000000")).toBeNull();
   });
 });
 

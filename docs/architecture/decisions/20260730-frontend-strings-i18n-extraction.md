@@ -59,7 +59,7 @@ the waiver body / medical questionnaire (H-01/H-03 sign-off, not an engineering 
   deleted once every entry clears, per that check's own "revisit when" note.
 - Marketing copy is now real bundle content and gets a first-pass `es-ES` translation like the
   rest of the diver surface; it carries the same native-review caveat already recorded for the
-  rest of Spanish copy in `docs/product/human-decisions.md`.
+  rest of Spanish copy in `docs/product/human-decisions/README.md`.
 - Every touched page/component needs its visual regression baseline re-approved if wording pixels
   moved — none should, since English bundle values are copied verbatim from the source they
   replace.

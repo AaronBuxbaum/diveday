@@ -76,7 +76,7 @@ already established.
   namespace; `pnpm check:domain-strings` gains three file-level exemptions with this ADR as the
   stated reason.
 - Spanish transactional email/SMS carries the same native-review caveat already recorded for the
-  rest of Spanish copy in `docs/product/human-decisions.md`.
+  rest of Spanish copy in `docs/product/human-decisions/README.md`.
 - Revisit if DiveDay ever stores a per-person language preference — at that point a diver's own
   preference should outrank the shop's default, and this ADR's "shop locale is the only signal"
   premise no longer holds.

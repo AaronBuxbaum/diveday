@@ -63,6 +63,12 @@ type ActivityParamShapes = {
   identity_split: { actor: string; diver: string };
   /** The same split, on the record the seat left; `diver` is that record's name. */
   identity_split_off: { actor: string; diver: string };
+  /**
+   * Two records were merged into one, on the record kept: `diver` is its name
+   * after the merge, `merged` the name the other record carried
+   * (`mergeDiverRecords`). The merged record's own lines stay on it.
+   */
+  diver_merged: { actor: string; diver: string; merged: string };
   /** A seat was taken off a departure. */
   booking_removed: { actor: string; diver: string };
   /** …and put back. */
@@ -94,7 +100,20 @@ type ActivityParamShapes = {
   booking_no_show_undo_refused: {
     actor: string;
     diver: string;
-    reason: "trip_full" | "course_ratio_full";
+    reason: "trip_full" | "divers_full" | "course_ratio_full";
+  };
+  /**
+   * A staffer changed what a seated person is doing aboard (ADR
+   * 20261007-participant-types): diving, snorkeling or riding along. Recorded
+   * because the answer decides which gates the seat is asked to clear.
+   */
+  participant_type_changed: {
+    actor: string;
+    diver: string;
+    from: "diver" | "snorkeler" | "rider";
+    type: "diver" | "snorkeler" | "rider";
+    certCheck: "none" | "cleared" | "overridden";
+    cleared: string;
   };
   /**
    * …or the crew boarded them anyway, which takes it back at the rail. Its own
@@ -192,6 +211,7 @@ export const ACTIVITY_CODES = [
   "booking_no_show",
   "booking_no_show_undone",
   "booking_no_show_undo_refused",
+  "participant_type_changed",
   "booking_no_show_boarded",
   "booking_no_show_missing_after_dive",
   "identity_confirmed",

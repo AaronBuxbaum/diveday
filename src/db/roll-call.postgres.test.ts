@@ -187,7 +187,13 @@ async function crewMemberWithASeat(db: AppDb) {
     .onConflictDoNothing();
   const [seat] = await db
     .insert(bookings)
-    .values({ shopId: shop.id, tripId: reef.id, personId: crew.person.id, status: "booked" })
+    .values({
+      bookedAs: "diver",
+      shopId: shop.id,
+      tripId: reef.id,
+      personId: crew.person.id,
+      status: "booked",
+    })
     .returning({ id: bookings.id });
   if (!seat) throw new Error("expected the crew member's own seat");
   return {

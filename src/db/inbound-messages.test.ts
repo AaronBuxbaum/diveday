@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import {
   countUnansweredMessages,
   deleteStrangerInboundMessage,
@@ -73,9 +73,13 @@ async function addDiver(
   return row.id;
 }
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
+
 describe("attribution by address", () => {
   it("matches an email to the diver who holds it, however the header spelled it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const diver = await firstDiver(db, shop.id);
     const result = await recordInboundMessage(db, {
       shopId: shop.id,
@@ -90,7 +94,7 @@ describe("attribution by address", () => {
   });
 
   it("matches a WhatsApp number to the diver by digits alone", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const diver = await firstDiver(db, shop.id);
     const digits = diver.phone.replace(/\D/g, "");
     expect(await matchPersonByAddress(db, shop.id, "whatsapp", digits)).toBe(diver.id);
@@ -108,7 +112,7 @@ describe("attribution by address", () => {
    * coincidence across countries.
    */
   it("reads a bare national number against the shop's own country", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const spanish = await shopWithCountry(db, "ES", "mallorca-inbox");
     const florida = await shopWithCountry(db, "US", "florida-inbox");
     const bare = "612 345 678";
@@ -120,7 +124,7 @@ describe("attribution by address", () => {
   });
 
   it("leaves a stranger unmatched rather than guessing", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const result = await recordInboundMessage(db, {
       shopId: shop.id,
       channel: "email",
@@ -133,7 +137,7 @@ describe("attribution by address", () => {
   });
 
   it("refuses an address that is not one", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     expect(
       await recordInboundMessage(db, {
         shopId: shop.id,
@@ -147,7 +151,7 @@ describe("attribution by address", () => {
   });
 
   it("never matches a diver from another shop, even on the same address", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const diver = await firstDiver(db, shop.id);
     const [otherShop] = await db
       .insert(shops)
@@ -171,7 +175,7 @@ describe("attribution by address", () => {
 
 describe("idempotency", () => {
   it("records a redelivered provider message id once", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const input = {
       shopId: shop.id,
       channel: "whatsapp" as const,
@@ -193,7 +197,7 @@ describe("idempotency", () => {
 
 describe("the reply-to token", () => {
   it("resolves a shop from its token and nothing from a stranger's", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [row] = await db
       .select({ token: shops.inboundEmailToken })
       .from(shops)
@@ -206,7 +210,7 @@ describe("the reply-to token", () => {
 
 describe("the unanswered count and the inbox", () => {
   it("counts live unanswered messages, and a sent reply takes one off", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const diver = await firstDiver(db, shop.id);
     // The seed leaves three unanswered rows in the demo shop.
     const before = await countUnansweredMessages(db, shop.id);
@@ -267,7 +271,7 @@ describe("the unanswered count and the inbox", () => {
   });
 
   it("lists unanswered rows first, newest first, and never a deleted one", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const page = await pagedInboxMessages(db, shop.id, { page: 1 });
     expect(page.total).toBeGreaterThanOrEqual(4);
     const answeredFlags = page.rows.map((row) => row.message.answeredAt !== null);
@@ -294,7 +298,7 @@ describe("the unanswered count and the inbox", () => {
     // it into a hidden input on every diver record, and deleting one would
     // take what a diver wrote out of their conversation with no way back and
     // close the 24-hour window the shop has to answer them.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const page = await pagedInboxMessages(db, shop.id, { page: 1 });
     const linked = page.rows.find((row) => row.message.personId !== null)?.message;
     if (!linked) throw new Error("seeded shop has no diver-linked message");
@@ -307,7 +311,7 @@ describe("the unanswered count and the inbox", () => {
   });
 
   it("marks a message done and puts it back on the worklist", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const before = await countUnansweredMessages(db, shop.id);
     const page = await pagedInboxMessages(db, shop.id, { page: 1 });
     const waiting = page.rows.find((row) => row.message.answeredAt === null)?.message;
@@ -323,7 +327,7 @@ describe("the unanswered count and the inbox", () => {
   });
 
   it("refuses to answer or delete another shop's message", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const page = await pagedInboxMessages(db, shop.id, { page: 1 });
     const target = page.rows[0]?.message;
     if (!target) throw new Error("no rows");
@@ -342,7 +346,7 @@ describe("the unanswered count and the inbox", () => {
     // since the join is what a reader trusts. A left join with the shop
     // condition answers a null name; without it, it would answer the other
     // shop's staffer by name.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const diver = await firstDiver(db, shop.id);
     const [otherShop] = await db
       .insert(shops)
@@ -399,7 +403,7 @@ describe("the unanswered count and the inbox", () => {
  */
 describe("a subject with control characters in it", () => {
   it("keeps the words, loses the control characters, and does not glue them together", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const diver = await firstDiver(db, shop.id);
     const result = await recordInboundMessage(db, {
       shopId: shop.id,
@@ -420,7 +424,7 @@ describe("a subject with control characters in it", () => {
   });
 
   it("leaves accents and emoji alone", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const diver = await firstDiver(db, shop.id);
     const result = await recordInboundMessage(db, {
       shopId: shop.id,
@@ -440,7 +444,7 @@ describe("a subject with control characters in it", () => {
 
 describe("the WhatsApp window", () => {
   it("reports when a diver last wrote, per channel", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const diver = await firstDiver(db, shop.id);
     await recordInboundMessage(db, {
       shopId: shop.id,

@@ -24,9 +24,21 @@ import { BaseSequencer, type TestSpecification } from "vitest/node";
  * of 161 files, this packing put the four bins at 226-257s where a
  * round-robin deal put them at 176-326s.
  *
+ * **Recorded durations win over the estimate.** The estimate still left CI's
+ * four shards at 404-569s (a 40% spread), because a source heuristic cannot
+ * see import cost, jsdom boot or a slow body. So when
+ * `scripts/test-durations.json` exists, a file it names weighs what it last
+ * took on CI, and a file it does not name (new since the last refresh) weighs
+ * its estimate scaled into milliseconds by the ratio the recorded files show.
+ * The file is committed, so every shard still reads the identical input and
+ * computes the identical partition. CI uploads each shard's measurements as a
+ * `unit-durations-<n>` artifact (src/test/duration-reporter.ts), and
+ * `node scripts/merge-test-durations.mjs <files…>` folds them back into the
+ * committed file; refresh it whenever the spread creeps back up.
+ *
  * `sort` (the order within a shard) is inherited: Vitest still runs the
- * previously slowest files first when it has a cache, and this file's estimate
- * is only for the split.
+ * previously slowest files first when it has a cache, and this file's weights
+ * are only for the split.
  */
 
 /** Modules whose import marks a file as hydrating a PGlite per test. */
@@ -150,18 +162,72 @@ export function partition<T>(
   return bins[index - 1].items;
 }
 
+/** Where the recorded per-file durations live, relative to the repository root. */
+export const DURATIONS_FILE = "scripts/test-durations.json";
+
+/** Recorded milliseconds per test file, keyed by repo-relative POSIX path. */
+export type Durations = Readonly<Record<string, number>>;
+
+/**
+ * Weighs each file by its recorded duration when there is one, and by its
+ * scaled estimate when there is not.
+ *
+ * The scale is the ratio of recorded milliseconds to estimated units over the
+ * files that have both, so a file added since the last refresh lands on the
+ * same axis as its neighbours instead of being compared in incompatible units.
+ * With nothing recorded the scale is 1 and this is exactly the estimate.
+ */
+export function weigh<T>(
+  files: readonly { item: T; key: string; estimate: number }[],
+  durations: Durations,
+): { item: T; weight: number }[] {
+  let recorded = 0;
+  let estimated = 0;
+  for (const { key, estimate } of files) {
+    const ms = durations[key];
+    if (isDuration(ms)) {
+      recorded += ms;
+      estimated += estimate;
+    }
+  }
+  const scale = recorded > 0 && estimated > 0 ? recorded / estimated : 1;
+  return files.map(({ item, key, estimate }) => {
+    const ms = durations[key];
+    return { item, weight: isDuration(ms) ? ms : estimate * scale };
+  });
+}
+
+function isDuration(value: unknown): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0;
+}
+
+/**
+ * Reads the committed durations, or nothing. A missing or unreadable file is
+ * not an error: the estimate alone still produces a valid partition, just a
+ * less even one.
+ */
+export function readDurations(root: string): Durations {
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(path.join(root, DURATIONS_FILE), "utf8"));
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return parsed as Durations;
+  } catch {
+    return {};
+  }
+}
+
 export class CostWeightedSequencer extends BaseSequencer {
   override async shard(files: TestSpecification[]): Promise<TestSpecification[]> {
     const { config } = this.ctx;
     const { index, count } = config.shard ?? { index: 1, count: 1 };
-    const weighted = [...files]
+    const keyed = [...files]
       .map((spec) => ({
-        spec,
+        item: spec,
         key: path.relative(config.root, spec.moduleId).split(path.sep).join("/"),
       }))
       .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0))
-      .map(({ spec }) => ({ item: spec, weight: estimateCost(readSource(spec.moduleId)) }));
-    return partition(weighted, index, count);
+      .map((entry) => ({ ...entry, estimate: estimateCost(readSource(entry.item.moduleId)) }));
+    return partition(weigh(keyed, readDurations(config.root)), index, count);
   }
 }
 

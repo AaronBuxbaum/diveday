@@ -1,6 +1,6 @@
 ---
 name: stacked-prs
-description: Open work as stacked pull requests — the default shape for any branch cut while another of your own branches is still open, related or not, pixels or not. Chained base branches, GitHub stacks, cascading rebase, bottom-up merge. Use when cutting a branch or opening a pull request, when a scope has steps that cannot compile or review independently (schema → db reader → surface), or when asked to review, rebase, or land an existing stack.
+description: Open work as stacked pull requests — chained bases, GitHub stacks, cascading rebase, bottom-up merge. Use when cutting a branch or opening a PR while another of yours is open, related or not, or when reviewing, rebasing, or landing a stack.
 ---
 
 # Stacked pull requests
@@ -21,7 +21,7 @@ is the same, and it is the default rather than a special case for dependent chai
 **A dependent chain has no other honest shape.** Step 2 cannot compile, test, or be read without
 step 1:
 
-- `src/db/schema.ts` + migration → the `src/db` reader → the surface that renders it
+- `src/db/schema/` + migration → the `src/db` reader → the surface that renders it
 - a `src/lib` domain rule → the feature module that composes it → the route
 - a refactor that must land before the behaviour change that needs it
 
@@ -30,7 +30,7 @@ one merges.
 
 **Unrelated work stacks for a different reason: the conflicts.** A second branch cut from `main`
 re-edits the same shared files as the first — `AGENTS.md`'s `check:repo` row, a `docs/design/*.md`
-section, a `scripts/*-baseline.json`, a message bundle — and each one is a merge resolved later, by
+section, a section of `scripts/ratchets.json`, a message bundle — and each one is a merge resolved later, by
 hand, without the context that produced it. Thirteen branches cut from one `main` in a single
 session is the measured case, and every one of them conflicted with every other. On a stack each
 layer already contains the layers below, so those files merge **once, while the change is being

@@ -22,6 +22,7 @@ cannot see it.
 | Surface | File | Dimension(s) | Policy |
 | --- | --- | --- | --- |
 | Onboarding (account + shop creation) | `src/app/onboard/actions.ts` | IP | `RATE_LIMITS.onboard` (5/hour) |
+| "Get set up" request (the public set-up form; ADR 20261007-setup-request-form) | `src/app/get-set-up/actions.ts` | IP, checked first; then every IP together, checked only after the honeypot and validation pass | `RATE_LIMITS.setupRequestByIp` (5/hour) + `RATE_LIMITS.setupRequestGlobal` (30/hour). The global bucket is a per-instance first filter; the real cap is `SETUP_REQUESTS_PER_HOUR` (30), counted in `setup_requests` over the last hour before each insert, so it holds across instances |
 | "Try the live demo" (mints a seeded demo shop) | `src/app/actions/demo.ts` | IP | `RATE_LIMITS.demoCreate` (10/hour) |
 | Marking a browser as the founder's, so its demos send no alert | `src/app/api/demo/quiet/route.ts` | IP | `RATE_LIMITS.demoQuiet` (10/hour) |
 | Sign-in | `src/lib/auth.ts` `authorize()` | IP **and** attempted email | `RATE_LIMITS.signInByIp` (20/15min) + `RATE_LIMITS.signInByEmail` (8/15min) |
@@ -169,7 +170,10 @@ var unset (every environment until one is provisioned, and all of dev/e2e/CI)
 and it falls back to the original in-memory `Map`, scoped to one Node
 process — bounding abuse per function instance only, not globally (ADR
 20260724-rate-limiting's original, still-real gap when the distributed store
-isn't configured). There is currently no dashboard or query surface into
+isn't configured). In production that fallback is loud rather than silent: the
+first check on each instance logs `rate_limit.memory_store_in_production`
+(warn), and `pnpm check:env` fails when run with `VERCEL_ENV=production` and
+either var unset (both are rows in `config/env-registry.mjs`). There is currently no dashboard or query surface into
 live bucket state either way; if you suspect active abuse, look at Vercel's
 own request logs/analytics for the IP/path pattern first, and consider a
 platform-level (WAF/Vercel Firewall) block for anything the in-app limiter

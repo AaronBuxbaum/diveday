@@ -4,6 +4,7 @@ import { getDb } from "@/db/client";
 import { recordNotificationDelivery, shopSenderFor } from "@/db/notifications";
 import { refundBookingsForShopCancelledTrip, shopCancellationPaymentStory } from "@/db/refunds";
 import { cancelDeparturesBelowMinimum, listMinimumNotMetRecipients } from "@/db/trips";
+import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
 import { MINIMUM_SEATS_CRON_CRONTAB } from "@/lib/minimum-seats";
 import { notify, publicAppUrl } from "@/lib/notifications";
@@ -57,11 +58,8 @@ const CRON_MONITOR_CONFIG = {
  * (unconfigured) / 401 (wrong or missing token) and writes nothing.
  */
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return NextResponse.json({ error: "not_configured" }, { status: 503 });
-  if (request.headers.get("authorization") !== `Bearer ${secret}`) {
-    return new NextResponse(null, { status: 401 });
-  }
+  const refusal = requireCronSecret(request);
+  if (refusal) return refusal;
 
   const checkInId = Sentry.captureCheckIn(
     { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },

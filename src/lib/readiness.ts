@@ -11,6 +11,7 @@ import { checkMinimumAge } from "./age";
 import type { CalendarDate } from "./calendar-date";
 import { nowDate } from "./clock";
 import { guardianSignatureMissing } from "./guardian";
+import { isDiver, type ParticipantType } from "./participant-types";
 import { waiverState } from "./waivers";
 
 /**
@@ -435,6 +436,30 @@ export type ReadinessInput = {
    * the one production caller (`src/db/readiness.ts`) passes the shop's own.
    */
   timezone?: string;
+  /**
+   * What this person is doing on the boat (ADR 20261007-participant-types).
+   * Absent is a diver.
+   *
+   * A snorkeler or a rider is held to the trip's **waiver** — the release and
+   * its medical questions are the same for everyone aboard until H-01/H-03 say
+   * otherwise — and to its **payment** gate, and to the identity and minimum-age
+   * checks, which are about the person rather than the dive. They are held to
+   * **no** certification, specialty or nitrox requirement: there is no dive for
+   * a card to qualify, and the trip's or a site's gate composes to nothing for
+   * them, exactly as `decideTripAdmission` composes it at the sale.
+   */
+  participantType?: ParticipantType;
+  /**
+   * The departure states this seat's kind as free (a rider at no charge,
+   * `trips.rider_price_cents = 0`). Only ever set for a seat that is not a
+   * diver's, by the one production caller (`src/db/readiness.ts`).
+   *
+   * A payment gate then has nothing to ask of this seat. Deliberately narrower
+   * than "unpriced": `paymentGateIsUnclearable` explains why a price the shop
+   * forgot must never clear the gate, and a price the shop *stated* as nothing
+   * is the opposite case — a human decided.
+   */
+  statedFree?: boolean;
   now?: Date;
 };
 
@@ -800,7 +825,12 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
     }
   }
 
-  const effective = combineCertRequirements(input.requirement, input.siteRequirement);
+  // A snorkeler or a rider is asked for no card: the trip's and its sites'
+  // gates compose to nothing for a seat with no dive in it. Composed here, in
+  // the one place every requirement is composed, rather than checked beside it.
+  const effective = isDiver(input.participantType)
+    ? combineCertRequirements(input.requirement, input.siteRequirement)
+    : combineCertRequirements(NO_CERT_REQUIREMENT, null);
 
   if (effective.minimumCertificationLevel) {
     const certification = certificationBlocker(
@@ -822,7 +852,7 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
     if (blocker) blockers.push(blocker);
   }
 
-  if (input.requirement.requiresPayment) {
+  if (input.requirement.requiresPayment && !(input.statedFree && !isDiver(input.participantType))) {
     const status = input.paymentStatus ?? "unpaid";
     if (!PAYMENT_CLEARED.has(status)) {
       blockers.push({ code: status === "refunded" ? "payment_refunded" : "payment_due" });

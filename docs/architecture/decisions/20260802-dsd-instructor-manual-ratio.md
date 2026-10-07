@@ -14,7 +14,7 @@ Instructor Manual. That ADR's own confidence note, raised on `dive-domain-expert
 this as the single line item worth a direct PADI/manual check before leaning on it operationally:
 DSD participants have had zero prior water time, unlike an Open Water student who has already
 completed confined dives, and some operators run DSD tighter than the certification-course ratio as
-a matter of prudence. HD-6 (docs/product/human-decisions.md, H-08 reopened) asked for that check.
+a matter of prudence. HD-6 (docs/product/human-decisions/README.md, H-08 reopened) asked for that check.
 The product owner has now supplied the real Instructor Manual figures (2026-08-02): **4 students per
 instructor in confined/pool water, 2 students per instructor for the open-water dive** — both
 materially tighter than the 8→12:1 figure previously applied to DSD.

@@ -10,7 +10,7 @@
  * English-reading one reads in English (ADR
  * 20260813-marine-life-is-diveday-copy).
  *
- * That is the opposite of `./course-templates.ts` and `./dive-site-templates.ts`
+ * That is the opposite of `src/content/course-templates.ts` and `src/content/dive-site-templates.ts`
  * next door, which are still copy-at-pick-time starter text a shop rewrites in
  * its own voice, and it is deliberate: a shop's dive plan for Molasses Reef is
  * the shop's to write, and what a stoplight parrotfish looks like is not. A

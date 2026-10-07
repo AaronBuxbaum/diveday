@@ -1,0 +1,42 @@
+{
+  "title": "Billing",
+  "plan": {
+    "heading": "Your plan",
+    "price": "DiveDay, {price} a month",
+    "nextCharge": "Next charge",
+    "endsOn": "Ends"
+  },
+  "status": {
+    "trialing": "Free trial, {count, plural, one {# day} other {# days}} left",
+    "freeTerm": "Free through {date}",
+    "active": "Active",
+    "pastDue": "Payment failed",
+    "canceled": "Canceled",
+    "trialEnded": "Trial ended"
+  },
+  "notConfigured": "Billing isn’t turned on yet, so nothing is charged.",
+  "demo": "A demo shop is never billed.",
+  "pastDue": "Your last payment didn’t go through. Update the card under Manage billing.",
+  "invoices": "Stripe emails each invoice.",
+  "waiting": "Waiting for Stripe to confirm your card. Refresh in a minute.",
+  "addCard": {
+    "submit": "Add a card",
+    "pending": "Opening Stripe…",
+    "firstCharge": "Nothing is charged until {date}."
+  },
+  "manage": {
+    "submit": "Manage billing",
+    "pending": "Opening Stripe…"
+  },
+  "cancel": {
+    "submit": "Cancel plan",
+    "pending": "Opening Stripe…"
+  },
+  "notice": {
+    "cardAdded": "Card saved. It can take a minute to show here.",
+    "notConfigured": "Billing isn’t turned on yet.",
+    "unavailable": "Stripe didn’t answer. Try again in a minute.",
+    "demo": "A demo shop is never billed.",
+    "pending": "Stripe is still confirming the card you added. Try again in a minute."
+  }
+}

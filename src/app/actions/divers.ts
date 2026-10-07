@@ -1,20 +1,26 @@
 "use server";
 
 import { and, eq, isNull } from "drizzle-orm";
+import { z } from "zod";
 import { getDb } from "@/db/client";
 import { createDiver } from "@/db/divers";
 import { people } from "@/db/schema";
+import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { diverSearchPrefill } from "@/lib/person-fields";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
+
+/** What the staffer typed into the search: a name, an email or a phone. */
+const searchForm = z.object({ query: z.string().default("") });
 
 /** Create the person behind a staff search and land directly on their record. */
 export async function createDiverFromSearchAction(formData: FormData) {
   const staff = await requireStaffSession();
   const db = await getDb();
   const roster = shopPath(staff.user.shopSlug, "divers");
-  const query = String(formData.get("query") ?? "").trim();
+  const parsed = parseForm(searchForm, formData);
+  const query = parsed.ok ? parsed.data.query.trim() : "";
   const prefill = diverSearchPrefill(query);
   if (!query || Object.keys(prefill).length === 0) {
     revalidateAndRedirect(roster, noticeUrl(roster, "invalid"));

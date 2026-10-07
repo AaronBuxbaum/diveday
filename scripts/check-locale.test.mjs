@@ -148,7 +148,7 @@ describe("the ratchet", () => {
     expect(failures[0]).toContain("es-ES/staff/deleted.json");
   });
 
-  it("says nothing at all before the baseline file exists", () => {
+  it("says nothing at all before the ratchet file has a locale section", () => {
     // The first run writes it; a repo with no baseline is being set up, not
     // failing, and this is the branch every other ratchet here takes too.
     expect(auditIdenticalBaseline(counts, {}, false)).toEqual([]);

@@ -1,14 +1,17 @@
 import { getDb } from "@/db/client";
+import { recordDemoEntry } from "@/db/funnel";
 import { sendNotification } from "@/db/notifications";
 import { getShopBySlug } from "@/db/shops";
 import { trackEvent } from "@/lib/analytics";
 import type { DemoRoleId } from "@/lib/demo-roles";
 import type { FunnelSource } from "@/lib/funnel";
+import { log } from "@/lib/log";
 import { alertRecipient } from "@/lib/platform-mail";
 
 /**
  * What DiveDay records when somebody tries the live demo: the typed funnel
- * event, and the founder's alert mail (docs ADR 20260805-demo-try-alerts).
+ * event, a `demo_entries` row for the founder digest, and the founder's alert
+ * mail (docs ADR 20260805-demo-try-alerts, 20261007-founder-metrics).
  *
  * **This file has no `"use server"` directive, and must not gain one.** It sits
  * beside `demo.ts` rather than inside it for exactly that reason: every
@@ -54,7 +57,18 @@ export async function announceDemoEntry(input: {
   try {
     await trackEvent({ name: "demo_entered", source, role });
   } catch (error) {
-    console.error("announceDemoEntry: demo_entered event failed", error);
+    log("demo.entered_event_failed", "warn", {
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+  }
+
+  // The founder digest's count (ADR 20261007-founder-metrics): a row of
+  // DiveDay's own, unkeyed from the minted shop so the 7-day reaper does not
+  // take the count with it. Its own guard, for the reason above.
+  try {
+    await recordDemoEntry(await getDb(), { source, role });
+  } catch (error) {
+    console.error("announceDemoEntry: demo entry row failed", error);
   }
 
   try {
@@ -73,6 +87,8 @@ export async function announceDemoEntry(input: {
       source,
     });
   } catch (error) {
-    console.error("announceDemoEntry: demo alert failed", error);
+    log("demo.entry_alert_failed", "error", {
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
   }
 }
