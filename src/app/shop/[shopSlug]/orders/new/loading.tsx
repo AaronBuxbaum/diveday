@@ -11,7 +11,7 @@ export default function NewOrderLoading() {
           {["diver", "item", "amount", "note"].map((slot) => (
             <div key={slot} className="mt-4 first:mt-0">
               <div className="h-4 w-24 rounded bg-surface-sunken" />
-              <div className="mt-2 h-11 w-full rounded-lg bg-surface-sunken" />
+              <div className="mt-2 h-12 w-full rounded-lg bg-surface-sunken" />
             </div>
           ))}
           <div className="mt-6 h-11 w-44 rounded-lg bg-surface-sunken" />

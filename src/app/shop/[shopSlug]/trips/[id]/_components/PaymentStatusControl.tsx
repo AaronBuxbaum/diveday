@@ -3,7 +3,7 @@
 import { useOptimistic } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { controlClassFor } from "@/components/ui/form";
+import { controlClass } from "@/components/ui/form";
 
 /**
  * Every value the column can hold — which is not the same as every value this
@@ -100,12 +100,12 @@ export function PaymentStatusControl({
             and carried a no-op `items-center` on an element that is not a flex
             container.
 
-            `md`, select and button both: a row with a text control in it is an
-            `md` row. The select used to take an appended `text-sm` to match an
-            `sm` Update; a control's type is 16px at every size (K-45), and a
-            16px box beside a 14px label is the mismatch `controlSizes` names. */}
+            `md` Update beside the select: every text control is 48px with 16px
+            type. The select used to take an appended `text-sm` to match an
+            `sm` Update; a control's type is 16px (K-45), and a 16px box beside
+            a 14px label is the mismatch `controlClass` names. */}
         <span className="w-fit">
-          <select name="status" defaultValue={status} className={controlClassFor("md")}>
+          <select name="status" defaultValue={status} className={controlClass}>
             {/* The booking's current status is always among the options, even
                 when this staffer could not have set it. Without that, a captain
                 opening a booking an owner had waived would find the select

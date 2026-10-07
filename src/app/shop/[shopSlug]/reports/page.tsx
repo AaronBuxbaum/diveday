@@ -537,11 +537,11 @@ export default async function ReportsPage({
         would silently rewrite.
 
         One size across the row: the arrows are `icon`, 48px squares that sit
-        level with `md`, so the month box is `md` and so is "Go". They were the
+        level with `md`, as the 48px month box is, and so is "Go". They were the
         44px default and `sm` (14px), two heights and two type sizes in four
         controls (`reports`, `reports-figures`, 2026-09-25).
 
-        The box's width is on a wrapper, because `controlClassFor` carries
+        The box's width is on a wrapper, because `controlClass` carries
         `w-full` and a `w-40` beside it on the input lost to it: the box drew
         at its intrinsic 191px. An `md` "Go" is about 11px wider than an `sm`
         one, which at 390px pushed the next-month arrow onto a line of its own.
@@ -584,7 +584,6 @@ export default async function ReportsPage({
               name="month"
               defaultValue={monthKey(current)}
               min={monthKey(floorMonth)}
-              size="md"
               wrapperClassName="w-44"
             />
             <button type="submit" className={buttonClass({ variant: "secondary" })}>

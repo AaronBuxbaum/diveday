@@ -4,7 +4,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
-import { controlClassFor, Field, FormStatus } from "@/components/ui/form";
+import { controlClass, Field, FormStatus } from "@/components/ui/form";
 import { groupLabelClass } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripBuddyTeam } from "@/db/buddy-pairs";
@@ -311,12 +311,7 @@ export function BuddyTeamsPanel({
                       <Field label={t("manifest.buddyAddMemberLabel")} markRequired={false}>
                         {/* `md`, the height of the Add button this row
                             bottom-aligns it with. */}
-                        <select
-                          name="member"
-                          required
-                          defaultValue=""
-                          className={controlClassFor("md")}
-                        >
+                        <select name="member" required defaultValue="" className={controlClass}>
                           <option value="" disabled>
                             {t("manifest.buddySelectPlaceholder")}
                           </option>

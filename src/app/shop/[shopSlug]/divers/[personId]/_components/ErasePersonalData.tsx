@@ -2,7 +2,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { DangerDisclosure } from "@/components/ui/disclosure";
 import { FieldErrorFocus } from "@/components/ui/FieldErrorFocus";
-import { controlClassFor, Field } from "@/components/ui/form";
+import { controlClass, Field } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { erasePersonAction } from "../actions";
@@ -78,7 +78,7 @@ export function ErasePersonalData({
               name="confirmName"
               required
               autoComplete="off"
-              className={controlClassFor("md")}
+              className={controlClass}
               placeholder={diver.person.fullName}
             />
           </Field>

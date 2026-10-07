@@ -586,17 +586,17 @@ describe("rows of controls", () => {
 
   it("leaves a caption stacked over its field alone, though the label box sits beside a button", () => {
     // The dive-site field guide at 640–1280 (20 flags, all dismissed): the
-    // `<label>` wraps "Find a species" and the 44px input under it, so the
+    // `<label>` wraps "Find a species" and the 48px input under it, so the
     // label's box runs beside the Add button while its words sit above the
     // row the input and button share. A caption is not text beside a control.
     const label = { tag: "label", cls: "font-medium text-sm", lh: 20, asc: [15, 5] };
     const field = { tag: "input", type: "text", cls: "field", interactive: true, focusable: true };
     const snapshot = page([
-      [0, -1, { cls: "row", disp: "flex", ai: "flex-end", x: 300, y: 5407, w: 700, h: 68 }],
-      [1, 0, { ...label, x: 300, y: 5407, w: 635.61, h: 68, text: [[300, 5407, 100, 20]] }],
-      [2, 1, { ...field, bw: [1, 1, 1, 1], x: 300, y: 5431, w: 635.61, h: 44 }],
-      [3, 0, { ...BTN, cls: "btn", x: 947.61, y: 5431, w: 52.39, h: 44 }],
-      [4, 3, { tag: "span", x: 959, y: 5443, w: 28, h: 20, text: [[959, 5443, 28, 20]] }],
+      [0, -1, { cls: "row", disp: "flex", ai: "flex-end", x: 300, y: 5407, w: 700, h: 72 }],
+      [1, 0, { ...label, x: 300, y: 5407, w: 635.61, h: 72, text: [[300, 5407, 100, 20]] }],
+      [2, 1, { ...field, bw: [1, 1, 1, 1], x: 300, y: 5431, w: 635.61, h: 48 }],
+      [3, 0, { ...BTN, cls: "btn", x: 947.61, y: 5431, w: 52.39, h: 48 }],
+      [4, 3, { tag: "span", x: 959, y: 5445, w: 28, h: 20, text: [[959, 5445, 28, 20]] }],
     ]);
     expect(flagsOf(snapshot, "text-beside-control")).toEqual([]);
   });

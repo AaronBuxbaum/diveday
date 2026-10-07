@@ -36,7 +36,7 @@ export default function EditCourseLoading() {
             {[0, 1, 2].map((i) => (
               <div key={i} className="py-8 first:pt-0">
                 <div className="h-3 w-28 rounded bg-surface-sunken" />
-                <div className="mt-4 h-11 rounded-lg bg-surface-sunken" />
+                <div className="mt-4 h-12 rounded-lg bg-surface-sunken" />
                 <div className="mt-5 h-24 rounded-lg bg-surface-sunken" />
               </div>
             ))}

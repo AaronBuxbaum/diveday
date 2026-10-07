@@ -11,7 +11,6 @@ import {
   ChoiceRow,
   choiceClass,
   controlClass,
-  controlClassFor,
   DateField,
   Field,
   FieldActions,
@@ -66,18 +65,11 @@ describe("SearchField", () => {
     expect(box).toHaveAttribute("name", "q");
   });
 
-  it("stands at md's 48px beside an md button, and at the 44px floor anywhere else", () => {
-    render(
-      <>
-        <SearchField id="orders-search" label="Search orders" />
-        <SearchField id="diverq-search" label="Find a diver" size="md" />
-      </>,
-    );
-    const alone = screen.getByRole("searchbox", { name: "Search orders" });
-    const beside = screen.getByRole("searchbox", { name: "Find a diver" });
-    expect(alone).toHaveClass("min-h-11");
-    expect(beside).toHaveClass("min-h-12", "ps-9");
-    expect(beside).not.toHaveClass("min-h-11");
+  it("stands at the one 48px control height, level with an md button", () => {
+    render(<SearchField id="orders-search" label="Search orders" />);
+    const box = screen.getByRole("searchbox", { name: "Search orders" });
+    expect(box).toHaveClass("min-h-12", "ps-9");
+    expect(box).not.toHaveClass("min-h-11");
   });
 });
 
@@ -89,17 +81,17 @@ function stepPx(tokens: string[], prefix: string): number {
 }
 
 /**
- * **A text control on a line with buttons stands at their size** — the pixel
- * probe's `mismatched-controls` cluster on 2026-09-25: a 44px search box beside
- * a 48px "Add diver" on seventeen trip captures and the roster, and a 16px box
- * beside a 14px "Go" or "Save" wherever a row paired one with `sm`. A control's
- * type is 16px and stays there, so `md`, the one button rung with a 16px label,
- * is what it can stand level with, and `controlClassFor("md")` is how it
- * reaches that rung's height.
+ * **Every text control is 48px**, level with an `md` button wherever it
+ * stands (issue #1987). The pixel probe's `mismatched-controls` cluster on
+ * 2026-09-25 found a 44px search box beside a 48px "Add diver" on seventeen
+ * trip captures and the roster, and a 16px box beside a 14px "Go" or "Save"
+ * wherever a row paired one with `sm`. A control's type is 16px and stays
+ * there, so `md`, the one button rung with a 16px label, is what it can stand
+ * level with; one control height makes that hold on every row by construction.
  */
-describe("controlClassFor", () => {
-  it("stands an md control level with an md button, in height and in type", () => {
-    const control = controlClassFor("md").split(/\s+/);
+describe("controlClass", () => {
+  it("stands a control level with an md button, in height and in type", () => {
+    const control = controlClass.split(/\s+/);
     const button = buttonClass().split(/\s+/);
     expect(control).toContain("min-h-12");
     expect(button).toContain("min-h-12");
@@ -108,22 +100,12 @@ describe("controlClassFor", () => {
     expect(button).toContain("text-base");
   });
 
-  it("keeps the stacked field's control at the 44px floor, as `controlClass`", () => {
-    expect(controlClassFor("field")).toBe(controlClass);
-    expect(controlClass.split(/\s+/)).toContain("min-h-11");
-    expect(controlClass.split(/\s+/)).not.toContain("min-h-12");
-  });
-
-  it("grows the padding with the height, so a control that does not center itself still sits centered", () => {
+  it("pads a 26px content box, so a control that does not center itself still sits centered", () => {
     // A text box centres its line at any height; a native file picker lays its
-    // button at the top of the content box. The same content box at every size
-    // puts the extra height equally above and below either one.
-    const contentBox = (classes: string) => {
-      const tokens = classes.split(/\s+/);
-      const border = tokens.includes("border") ? 2 : 0;
-      return stepPx(tokens, "min-h-") - 2 * stepPx(tokens, "py-") - border;
-    };
-    expect(contentBox(controlClassFor("md"))).toBe(contentBox(controlClassFor("field")));
+    // button at the top of the content box, so the padding is what centres it.
+    const tokens = controlClass.split(/\s+/);
+    const border = tokens.includes("border") ? 2 : 0;
+    expect(stepPx(tokens, "min-h-") - 2 * stepPx(tokens, "py-") - border).toBe(26);
   });
 
   /**
@@ -131,24 +113,14 @@ describe("controlClassFor", () => {
    * "…along the c" at 390 on the dive-site editor (K-129). The ellipsis says
    * there is more; a cut says the box is broken.
    */
-  it("ends an overlong placeholder in an ellipsis at every size", () => {
-    for (const size of ["field", "md"] as const) {
-      expect(controlClassFor(size).split(/\s+/), size).toContain("placeholder-shown:text-ellipsis");
-    }
+  it("ends an overlong placeholder in an ellipsis", () => {
+    expect(controlClass.split(/\s+/)).toContain("placeholder-shown:text-ellipsis");
   });
 
-  it("spells each size's height and padding once, so nothing is left to stylesheet order", () => {
-    for (const size of ["field", "md"] as const) {
-      const tokens = controlClassFor(size).split(/\s+/);
-      expect(
-        tokens.filter((one) => one.startsWith("min-h-")),
-        size,
-      ).toHaveLength(1);
-      expect(
-        tokens.filter((one) => one.startsWith("py-")),
-        size,
-      ).toHaveLength(1);
-    }
+  it("spells its height and padding once, so nothing is left to stylesheet order", () => {
+    const tokens = controlClass.split(/\s+/);
+    expect(tokens.filter((one) => one.startsWith("min-h-"))).toHaveLength(1);
+    expect(tokens.filter((one) => one.startsWith("py-"))).toHaveLength(1);
   });
 });
 
@@ -189,8 +161,13 @@ describe("textareaClassFor", () => {
 
   it("is the control's body, and spells one minimum height and one padding", () => {
     const tokens = textareaClassFor(4).split(/\s+/);
-    for (const shared of controlClass.split(/\s+/).filter((token) => !token.startsWith("min-h-")))
-      expect(tokens).toContain(shared);
+    // Everything but the box's height and its padding: a textarea's height is
+    // its rows, and its `py-2` is what `textareaMinHeight` counts.
+    const body = controlClass
+      .split(/\s+/)
+      .filter((token) => !token.startsWith("min-h-") && !token.startsWith("py-"));
+    for (const shared of body) expect(tokens).toContain(shared);
+    expect(tokens).toContain("py-2");
     expect(tokens.filter((token) => token.startsWith("min-h-"))).toHaveLength(1);
     expect(tokens.filter((token) => token.startsWith("py-"))).toHaveLength(1);
   });
@@ -322,17 +299,17 @@ describe("DateField", () => {
     expect(screen.getByLabelText("A month box that exists")).not.toHaveAttribute("data-fallback");
   });
 
-  it("stands at md's 48px beside an md button, and at the field's 44px anywhere else", () => {
+  it("stands at the one 48px control height, whatever its type", () => {
     const { container } = render(
       <>
-        <DateField type="month" name="month" size="md" />
+        <DateField type="month" name="month" />
         <DateField name="on" />
       </>,
     );
-    const [beside, stacked] = container.querySelectorAll("input");
-    expect(beside).toHaveClass("min-h-12", "pe-9");
-    expect(beside).not.toHaveClass("min-h-11");
-    expect(stacked).toHaveClass("min-h-11");
+    for (const box of container.querySelectorAll("input")) {
+      expect(box).toHaveClass("min-h-12", "pe-9");
+      expect(box).not.toHaveClass("min-h-11");
+    }
   });
 
   /**
@@ -1615,8 +1592,8 @@ describe("source sweeps", () => {
    * over `controlClass`'s `text-base` by stylesheet order, so one field drew
    * at three sizes on one page — "Assign crew…" at a 10px cap beside "Every
    * week" at 12px (trip-repeating-cadence, trip-crew-clash; K-45) — and iOS
-   * Safari zooms the page when a box under 16px takes focus. A denser control
-   * is a `controlClassFor` size that keeps 16px, never an appended size. The
+   * Safari zooms the page when a box under 16px takes focus. There is no denser
+   * control: every text control is `controlClass`, at 16px. The
    * one exception is the embed page's read-only code snippet, which is a
    * block of code to copy, not a box anyone types in.
    */
@@ -1625,8 +1602,7 @@ describe("source sweeps", () => {
     const offenders: string[] = [];
     for (const { file, source } of sourceFiles()) {
       if (allowed.has(file)) continue;
-      const templates =
-        /`[^`]*\$\{(?:controlClass(?:For\([^)]*\))?|textareaClassFor\([^)]*\))\}[^`]*`/g;
+      const templates = /`[^`]*\$\{(?:controlClass|textareaClassFor\([^)]*\))\}[^`]*`/g;
       for (const match of source.matchAll(templates)) {
         if (/\btext-(xs|sm)\b/.test(match[0]))
           offenders.push(`${file}:${lineOf(source, match.index)} ${match[0]}`);

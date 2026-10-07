@@ -218,7 +218,7 @@ import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/fo
   knocks each later field half a row out of step and the grid renders as a staircase.
 - A control keeps its own height. The control row is one subgrid track shared across the row, so it
   is as tall as the longest neighbouring field's `description`; `Field` pins the control to the top
-  of that track (`content-start`) so a 44px input never renders as a 52px box beside its sibling.
+  of that track (`content-start`) so a 48px input never renders as a 56px box beside its sibling.
 - `FieldActions` spans every column, so the submit button never becomes a lopsided extra field.
 - Horizontal checkbox/radio rows are not stacked fields — they are `ChoiceRow`s or `ChoicePill`s
   (below), never a `Field`.
@@ -727,17 +727,17 @@ and a chip row take `sm`; and every button in one row takes the same size. A 16p
 is made by being the row's one primary, or by `w-full` on a phone, never by its own type size.
 `icon` is a 48px square so it sits level with `md` in a header or a pager.
 
-**A row with a text control in it is an `md` row.** A control's type is 16px at every size, because
-iOS Safari zooms the page when a box under 16px takes focus, so the only button it can stand level
-with is `md`, whose label is 16px too. `sm` beside a box matches its 44px and not its type. The
-control then takes md's height: `controlClassFor("md")` (48px) for an input or select, placed by hand
-or in a `Field` that shares its line with the button, and `size="md"` on `SearchField`.
-`controlClass` stays the 44px `field` size for a control stacked in a `Field` whose line holds no
-button, alone in a toolbar, or in a row of controls only. The pixel probe found the two sizes
-together on 2026-09-25: a 44px search box beside a 48px "Add diver" on the trip roster's seat-diver
-door and the diver roster, and a 16px box beside a 14px "Go" or "Save" wherever a row reached for
-`sm` to match the box's height. The probe groups a control inside a `Field` with its caption, not
-with the row, so it cannot see a `Field` beside a button: read those rows.
+**A row with a text control in it is an `md` row.** A control's type is 16px, because iOS Safari
+zooms the page when a box under 16px takes focus, so the only button it can stand level with is
+`md`, whose label is 16px too. **Every text control is 48px** — `controlClass`, and `SearchField`
+and `DateField`, which wear it — whether it is stacked in a `Field`, alone in a toolbar, or on a
+line with buttons, so it is level with an `md` button by construction and no call site picks a
+size (issue #1987). There used to be two: a 44px `field` size for a stacked control and a 48px `md`
+one for a control beside buttons. The pixel probe found them together on 2026-09-25 — a 44px search
+box beside a 48px "Add diver" on the trip roster's seat-diver door and the diver roster — and the
+review of that fix found seven more rows a call site had not moved, none of which the probe could
+see, since it groups a control inside a `Field` with its caption rather than with the row. `sm`
+beside a box still matches neither its height nor its type.
 
 **A `link` that must line up with the prose above it passes `flush: true`, never `className:
 "px-0"`.** Two utilities for one property resolve by **stylesheet** order, not by the order you
@@ -989,10 +989,9 @@ radii on 2026-09-19. They are these now:
 - **Buttons**: `md` is **48px tall with a 16px label**, the sheet's default; `sm` stays 44/14 for a
   table row or a chip row; `icon` is a 48px square; `boat` stays the 56px dock target. The base's
   `min-h-11` is still the floor every size clears.
-- **Text controls**: 16px type at every size. `field` is 44px (`controlClass`), for a stacked
-  field with no button on its line; `md` is 48px (`controlClassFor("md")`, `SearchField size="md"`),
-  for a control on one line with `md` buttons. Each size carries its own vertical padding, so the
-  content box is 26px at both.
+- **Text controls**: one size, **48px with 16px type** (`controlClass`, worn by `SearchField` and
+  `DateField`), the Counter canvas's single field and `md`'s height, wherever the control stands.
+  `py-2.5` leaves a 26px content box, so a native file picker's button sits centred in it.
 - **Rows**: a `LedgerRow` is never tighter than **52px** (`md`); `lg` is 56. Every row, door or
   not, keeps 8px of room each side of its words and runs its rules 8px past the column with it, so
   every ledger on a page draws its rules at one length; a skeleton or a hand-set line among ledger
@@ -1021,9 +1020,9 @@ A staff list that can be searched renders **one search box and nothing around it
 `SearchField` in `src/components/ui/form.tsx`: a `type="search"` control wearing `controlClass`, a
 magnifier in its leading inset, its label `sr-only`, no caption above it and no "Search" button
 beside it. A form with one text control submits on Enter; surfaces that want type-to-apply drive
-`requestSubmit()` from `onInput`, as the orders toolbar and the counter do. A box that shares its
-line with an `md` button, as the roster's and the seat-diver picker's do with "Add diver", passes
-`size="md"` and stands at the button's 48px.
+`requestSubmit()` from `onInput`, as the orders toolbar and the counter do. It is 48px like every
+text control, so beside an `md` button, as the roster's and the seat-diver picker's "Add diver", it
+stands level with no size to pass.
 
 ```tsx
 import { SearchField } from "@/components/ui/form";
@@ -1050,7 +1049,7 @@ and "Add diver" is the band's one primary again.
 
 A date is entered through **`DateField`** in `src/components/ui/form.tsx`, never a bare `<input type="date">`. It is a `type="date"` control wearing `controlClass` with a calendar glyph in its trailing inset, and it goes inside a `Field` like any other control.
 
-So are a month, a time and a date-and-time: `type="month" | "time" | "datetime-local"` (a time draws a clock). Spelled bare they kept the platform's solid black indicator beside a date box's muted outline, and iOS paints nothing in an empty one; `form.test.tsx` refuses a bare temporal `<input>` anywhere else. `size="md"` stands one on a line with `md` buttons, as `controlClassFor("md")` does.
+So are a month, a time and a date-and-time: `type="month" | "time" | "datetime-local"` (a time draws a clock). Spelled bare they kept the platform's solid black indicator beside a date box's muted outline, and iOS paints nothing in an empty one; `form.test.tsx` refuses a bare temporal `<input>` anywhere else. Like every text control it is 48px, level with an `md` button on its line.
 
 An empty one looks empty. No temporal box matches `::placeholder`, so its `mm/dd/yyyy` mask drew in the ink of a filled answer beside muted placeholders; the input `DateField` renders is `DateInput` (`src/components/ui/DateInput.tsx`), a client leaf that marks itself `data-empty` while it holds no value, and `globals.css` paints `input[data-empty]:not(:focus)::-webkit-datetime-edit` in the placeholder's colour. Not while it has focus: the value stays "" until every segment is filled, so the digits a person has typed would draw grey; and a box left half-typed (`validity.badInput`) stops saying it is empty.
 

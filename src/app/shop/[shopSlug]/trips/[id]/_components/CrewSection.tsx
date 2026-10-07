@@ -8,7 +8,7 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { INSET_NOTE_BOX, INSET_NOTE_CLASS } from "@/components/ui/card";
-import { controlClass, controlClassFor, FormStatus } from "@/components/ui/form";
+import { controlClass, FormStatus } from "@/components/ui/form";
 import type { TripCrewChange } from "@/db/trips";
 import { fill } from "@/i18n/fill";
 import { TRIP_CREW_ROLES, type TripCrewRole } from "@/lib/crew-roles";
@@ -451,7 +451,7 @@ export function CrewSection({
                         }}
                         // `md`, the height of the `icon` remove square beside
                         // it: a row with a text control in it is an `md` row.
-                        className={controlClassFor("md")}
+                        className={controlClass}
                       >
                         <option value="">{copy.roleUnspecified}</option>
                         {TRIP_CREW_ROLES.map((role) => (
