@@ -118,9 +118,12 @@
     "filteredByDiver": "Showing orders for {name}.",
     "filteredByTrip": "Showing orders for {title}.",
     "openFilteredTrip": "Open the departure",
+    "setupCard": {
+      "title": "Take payments with DiveDay",
+      "body": "Connect Stripe and the front desk can send orders from here."
+    },
     "emptyAll": "No DiveDay orders yet.",
     "emptyFiltered": "No DiveDay orders match these filters.",
-    "emptyNoPayments": "No DiveDay orders yet. Connect payments and the front desk can send its first order from here.",
     "ledger": {
       "today": "Today · {date}",
       "continued": "{day}, continued",

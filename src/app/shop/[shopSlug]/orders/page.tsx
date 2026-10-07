@@ -38,6 +38,7 @@ import { wallTimeToUtc } from "@/lib/zoned";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { type OrderLedgerDay, OrdersLedger } from "./_components/OrdersLedger";
 import { OrdersToolbar } from "./_components/OrdersToolbar";
+import { PaymentsSetupCard } from "./_components/PaymentsSetupCard";
 
 // `instant = true` asserts that navigating *into* this page paints
 // immediately — this segment's `loading.tsx`, with no request read above it.
@@ -470,13 +471,11 @@ export default async function OrdersIndexPage({
                 this same door — two identical primaries for one action is
                 triage work the layout should do (principle 8), so the header
                 stands down. */}
-            {orderPage.total === 0 &&
-            !hasImportedHistory &&
-            !hasFilters ? null : paymentsConnected ? (
-              newOrderDoor
-            ) : (
-              <PaymentsConnectCta shopSlug={shopSlug} label={t("shared.payments.connect")} />
-            )}
+            {/* Without an account there is no order to send, and connecting
+                one is the setup card's below, never this header's. */}
+            {!paymentsConnected || (orderPage.total === 0 && !hasImportedHistory && !hasFilters)
+              ? null
+              : newOrderDoor}
           </>
         }
       />
@@ -489,6 +488,15 @@ export default async function OrdersIndexPage({
       />
 
       {banner ? <StaffNoticeBanner tone={banner.tone}>{t(banner.key)}</StaffNoticeBanner> : null}
+
+      {!paymentsConnected && canReconcilePayments ? (
+        <PaymentsSetupCard
+          shopSlug={shopSlug}
+          title={t("orders.index.setupCard.title")}
+          body={t("orders.index.setupCard.body")}
+          connectLabel={t("shared.payments.connect")}
+        />
+      ) : null}
 
       {/* Above the toolbar because it is not something you filter for, and
           danger-toned rather than folded away: unconfirmed money is a financial
@@ -686,13 +694,7 @@ export default async function OrdersIndexPage({
         // or connecting the account that can. Filtered-to-nothing is a
         // different problem and gets the way back out instead.
         <EmptyState
-          title={
-            hasFilters
-              ? t("orders.index.emptyFiltered")
-              : paymentsConnected
-                ? t("orders.index.emptyAll")
-                : t("orders.index.emptyNoPayments")
-          }
+          title={hasFilters ? t("orders.index.emptyFiltered") : t("orders.index.emptyAll")}
           action={
             hasFilters ? (
               <Link
@@ -704,9 +706,7 @@ export default async function OrdersIndexPage({
               </Link>
             ) : paymentsConnected ? (
               newOrderDoor
-            ) : (
-              <PaymentsConnectCta shopSlug={shopSlug} label={t("shared.payments.connect")} />
-            )
+            ) : null
           }
           className="mt-8"
         />
