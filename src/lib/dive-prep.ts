@@ -936,6 +936,13 @@ export type RentalFitLine =
 export function rentalFitLine(
   fit: RentalFit | null,
   offeredKinds?: readonly string[],
+  /**
+   * The seat's type, when the line is for a seat: a snorkeler's line names the
+   * surface kit only, a rider's nothing (`rentsKind`, ADR
+   * 20261007-participant-types). A dive size on file stays on the diver's
+   * record; it is just not what this seat is handed on the dock.
+   */
+  participantType?: ParticipantType | null,
 ): RentalFitLine {
   // A row that exists only to hold the diver's note reads exactly as no row at
   // all: they have not answered the gear question, so there is nothing to pack
@@ -948,13 +955,15 @@ export function rentalFitLine(
   if (fit.needsStaffFitAt) {
     return { state: "needs_staff_fit", note: fit.needsStaffFitNote?.trim() || null };
   }
-  const items = rentedItems(fit, catalogScope(offeredKinds)).map((item) => ({
-    kind: item.kind,
-    size: item.size,
-    ...(item.drysuitFinFit ? { drysuitFinFit: true as const } : {}),
-    ...(item.drysuitWeightCheck ? { drysuitWeightCheck: true as const } : {}),
-    ...(item.notOffered ? { notOffered: true as const } : {}),
-  }));
+  const items = rentedItems(fit, catalogScope(offeredKinds))
+    .filter((item) => participantType === undefined || rentsKind(participantType, item.kind))
+    .map((item) => ({
+      kind: item.kind,
+      size: item.size,
+      ...(item.drysuitFinFit ? { drysuitFinFit: true as const } : {}),
+      ...(item.drysuitWeightCheck ? { drysuitWeightCheck: true as const } : {}),
+      ...(item.notOffered ? { notOffered: true as const } : {}),
+    }));
   if (items.length === 0) return { state: "own_kit" };
   return { state: "rents", items };
 }

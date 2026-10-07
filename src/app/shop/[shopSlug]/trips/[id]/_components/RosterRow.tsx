@@ -979,7 +979,11 @@ export function RosterRow({
               {rentalFitLineText(
                 t,
                 locale,
-                rentalFitLine(rentalFitByBooking.get(booking.id) ?? null, shopRentalItems),
+                rentalFitLine(
+                  rentalFitByBooking.get(booking.id) ?? null,
+                  shopRentalItems,
+                  booking.participantType,
+                ),
               )}
             </p>
             {nitrox ? (

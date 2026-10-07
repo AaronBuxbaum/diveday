@@ -888,6 +888,21 @@ describe("rentalFitLine", () => {
     });
   });
 
+  it("names a snorkeler's surface kit only, and nothing for a rider", () => {
+    // Regression (dive-domain review, PR #2224): the manifests listed a
+    // snorkeler's BCD and regulator, kit nobody hands someone staying on top.
+    expect(rentalFitLine(fullFit, undefined, "snorkeler")).toEqual({
+      state: "rents",
+      items: [
+        { kind: "wetsuit", size: "5mm M" },
+        { kind: "boots", size: "9" },
+        { kind: "mask_fins", size: "M" },
+      ],
+    });
+    expect(rentalFitLine(fullFit, undefined, "rider")).toEqual({ state: "own_kit" });
+    expect(rentalFitLine(fullFit, undefined, "diver")).toEqual(rentalFitLine(fullFit));
+  });
+
   it("distinguishes a diver who brings their own kit from one nobody asked", () => {
     // Collapsing these two reads as reassurance the shop has not earned.
     expect(rentalFitLine(null)).toEqual({ state: "not_recorded" });

@@ -18,6 +18,7 @@ import { setBookingNitrox } from "./nitrox";
 import { setBookingPayment } from "./payments";
 import { listTripReadiness } from "./readiness";
 import { getReadyPageData } from "./ready";
+import { saveRentalFit } from "./rental-fit";
 import {
   activityEvents,
   bookingCheckoutBookings,
@@ -883,6 +884,39 @@ describe("the manifest counts everyone", () => {
     );
     // A rider is a body the crew calls like any other: awaiting until called.
     expect(manifest?.summary.awaiting).toBe(5);
+  });
+});
+
+describe("the manifest packs each seat its own kit", () => {
+  it("names a snorkeler's surface kit only, never the dive kit on file", async () => {
+    // Regression (dive-domain review, PR #2224): every manifest copy read the
+    // rental line straight off the person's fit, so a snorkeler was packed a
+    // BCD and a regulator.
+    const { db, shop, trip } = await benwood();
+    await limits(db, trip.id, 8, null);
+    const snorkeler = await seat(db, shop.id, trip.id, "snorkeler");
+    if (!snorkeler.ok) throw new Error("setup failed");
+    const [row] = await db
+      .select({ personId: bookings.personId })
+      .from(bookings)
+      .where(eq(bookings.id, snorkeler.bookingId));
+    if (!row) throw new Error("booking missing");
+    await saveRentalFit(db, {
+      shopId: shop.id,
+      personId: row.personId,
+      rentsBcd: true,
+      rentsRegulator: true,
+      rentsMaskFins: true,
+      bcdSize: "M",
+      finSize: "M",
+    });
+
+    const manifest = await getTripManifest(db, shop.id, trip.id);
+    const fit = manifest?.divers.find((d) => d.bookingId === snorkeler.bookingId)?.rentalFit;
+    const kinds = fit?.state === "rents" ? fit.items.map((item) => item.kind) : [];
+    expect(kinds).toContain("mask_fins");
+    expect(kinds).not.toContain("bcd");
+    expect(kinds).not.toContain("regulator");
   });
 });
 
