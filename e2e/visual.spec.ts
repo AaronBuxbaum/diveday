@@ -2587,8 +2587,8 @@ for (const scheme of ["light", "dark"] as const) {
           ADVANCED_CHARTER,
         );
         await page.goto(`/s/blue-mantis/trips/${tripId}`);
-        // One unboxed line above the form, no heading over it (ADR
-        // 20260827-the-divers-thread, decision 2).
+        // One unboxed line, the form's first, no heading over it (ADR
+        // 20260827-the-divers-thread, decision 2; UX audit #25).
         await page.getByText(/^This charter is for divers with/).waitFor();
         // The booking form is a Client Component below the note; wait for it to
         // hydrate so the shot is of the settled page, not of the form mounting.

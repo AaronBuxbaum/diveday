@@ -184,3 +184,11 @@ down, the last thing a diver reached. From `lg` the trip page widens to `max-w-5
 runs down a left column in decision 2's order and the form, with the contact line, stands in a
 25rem right column level with the title; the left column keeps the 528px it always had. The source order is unchanged, so a phone and a screen
 reader still meet the form last. Requested in the "marketing and untouched pages" review.
+
+**Amended 2026-10-07: who it's for is the form's first line.** Decision 2's "who it's for (the
+requirement, one line, no box), then the form" stands, but the line moves *inside* the form card
+as its first line, above the party-size control it governs: as a line of the page above the card
+it read as detached from the choice it constrains (UX audit 2026-10-07, item 25). Still one
+sentence, still no box, and still nothing on a course session. The wait-list form carries it too.
+The phone's Book bar is now one component, `src/components/PhoneFootBar.tsx`, shared with the
+course page, whose dates panel sat four phone screens down with no persistent door (item 8).

@@ -53,8 +53,15 @@ export function AutoOpenDetails({
   // reason to patch `open` away; a later `true` opens it imperatively below.
   const [initialOpen] = useState(open);
 
+  // Only a later `true` opens it: the first render already drew the attribute,
+  // and re-asserting it on mount would undo a tap made before hydration. In a
+  // `name` accordion that tap closed this one to open its sibling, and opening
+  // this one again on mount shut the sibling the reader chose (/ready streams
+  // its thread in, so the tap can land first).
+  const wasOpen = useRef(open);
   useEffect(() => {
-    if (open && ref.current) ref.current.open = true;
+    if (open && !wasOpen.current && ref.current) ref.current.open = true;
+    wasOpen.current = open;
   }, [open]);
 
   useEffect(() => {

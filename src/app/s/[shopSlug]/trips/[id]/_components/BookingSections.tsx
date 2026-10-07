@@ -168,6 +168,7 @@ export function TripFullSection({
   alternatives = [],
   terms,
   offerLastMinuteList = true,
+  requirement = null,
 }: {
   shopSlug: string;
   trip: Trip;
@@ -186,6 +187,11 @@ export function TripFullSection({
   terms?: React.ReactNode;
   /** Whether the shop keeps a last-minute list to point a diver at. */
   offerLastMinuteList?: boolean;
+  /**
+   * Who this trip is for, already worded ("This charter is for divers with
+   * …"), or null. One unboxed line inside the form it governs (UX audit #25).
+   */
+  requirement?: string | null;
   /**
    * Up to two departures worth offering instead (issue #1166, D06), already
    * chosen by `similarDepartures` and dated in the shop's own zone. Empty
@@ -263,6 +269,7 @@ export function TripFullSection({
         <div>
           <h3 className="font-semibold">{t("waitlistHeading")}</h3>
           <p className="mt-1 text-sm text-muted">{t("waitlistBody")}</p>
+          {requirement ? <p className="mt-1 text-sm text-muted">{requirement}</p> : null}
           {/* The open form states the age with its attestation checkbox; the
               wait list has no such checkbox, so a course's minimum age is said
               here in plain words — a parent deciding whether to queue their
@@ -338,9 +345,10 @@ const GEAR_SLOTS = ["gear-one", "gear-two", "gear-three", "gear-four", "gear-fiv
  *   checkout total, the fee line and the tax line — the hero says the price
  *   once, this block says the total once, and nothing in between says it again.
  * - **Nothing under the button but fine print.** The free-cancellation sentence
- *   (`TripTerms`) is the only copy below the action. The requirement note that
- *   used to sit *inside* this card in a sunken box is the page's now, above the
- *   form, where a diver reads it before starting to type.
+ *   (`TripTerms`) is the only copy below the action. The requirement note is the
+ *   form's first line, one sentence with no box around it: a sunken box here
+ *   was a box inside a box, and a line above the card floated free of the
+ *   party-size control it governs (UX audit #25).
  */
 export function BookSpotSection({
   trip,
@@ -366,6 +374,7 @@ export function BookSpotSection({
   terms,
   knownDiver,
   offerHandoff,
+  requirement = null,
   otherSeatOffers = [],
 }: {
   trip: Trip;
@@ -444,6 +453,12 @@ export function BookSpotSection({
    * file. Fire-and-forget — the form never hears back.
    */
   offerHandoff?: (email: string) => void;
+  /**
+   * Who this trip is for, already worded ("This charter is for divers with
+   * …"), or null. The form's first line: one sentence, no box, read with the
+   * party-size control it governs rather than above the card (UX audit #25).
+   */
+  requirement?: string | null;
 }) {
   const t = useTranslations("booking");
   const tRoot = useTranslations();
@@ -548,6 +563,7 @@ export function BookSpotSection({
           heading — the second of the five places this card said the money, on a
           page whose hero had already said it at figure scale. */}
       <form action={formAction} className="flex flex-col gap-4">
+        {requirement ? <p className="text-sm text-muted">{requirement}</p> : null}
         {knownDiver ? (
           <KnownDiverPanel
             name={knownDiver.name}

@@ -6,6 +6,7 @@ import { submitInquiryAction } from "@/app/actions/inquiry";
 import { DateRequestForm } from "@/components/DateRequestForm";
 import { JsonLd } from "@/components/JsonLd";
 import { JumpNav } from "@/components/JumpNav";
+import { PhoneFootBar } from "@/components/PhoneFootBar";
 import { getDb } from "@/db/client";
 import { getCourseBySlug } from "@/db/courses";
 import { getShopReviewAggregate } from "@/db/reviews";
@@ -34,6 +35,7 @@ import {
   CourseOverview,
   CourseSchedule,
   CourseSessions,
+  courseFootBar,
 } from "./_components/CourseSections";
 
 // `instant = true`: this route has a real static shell. Every request-scoped
@@ -150,6 +152,9 @@ export default async function CoursePage({
     inquiryHref ? { id: "get-in-touch", label: t("course.jumpContact") } : null,
   ].filter((item) => item !== null);
 
+  // The phone's one persistent door (UX audit #8).
+  const footBar = courseFootBar(sessions, inquiryHref, t);
+
   // A hidden course is a staff preview, not a public document — emitting a
   // Course graph for a page divers cannot reach would advertise something that
   // isn't on sale (docs ADR 20260729-booking-page-structured-data).
@@ -232,6 +237,7 @@ export default async function CoursePage({
           />
         </DiverIntlProvider>
       ) : null}
+      {footBar ? <PhoneFootBar href={footBar.href}>{footBar.label}</PhoneFootBar> : null}
     </main>
   );
 }

@@ -1,3 +1,5 @@
+import { RollCallMark } from "@/components/RollCallMark";
+import { ROLL_CALL_ROW_TONE, rollCallRuleClass } from "@/components/row-tones";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { groupLabelClass } from "@/components/ui/ledger";
 import { FIGURE_INLINE_CLASS, ITEM_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
@@ -98,37 +100,27 @@ export function ChecklistRow({
 }
 
 /**
- * The after-dive row's two controls, as the saved copy draws them
- * (`OfflineManifestView`): "Boarded" in the success outline once recorded, and
- * "Mark not back aboard" in plain ink with no box while nothing says the
- * diver is missing: red is earned by a recorded fact (decision 4 of ADR
- * 20260827-the-departure-is-two-working-surfaces, issue #2107).
- */
-const MOCK_BOARDED_DONE =
-  "inline-flex min-h-11 items-center justify-center gap-1 rounded-lg border border-success bg-success-tint text-xs font-semibold text-success";
-const MOCK_NOT_BACK_ABOARD =
-  "inline-flex min-h-11 items-center justify-center rounded-lg text-xs font-semibold";
-
-/** One checkpoint button in the saved copy's switcher, drawn small. */
-const MOCK_CHECKPOINT =
-  "inline-flex min-h-8 grow items-center justify-center rounded-lg px-2.5 text-xs font-semibold whitespace-nowrap";
-
-/**
- * **The captain's saved copy, drawn small** — `OfflineManifestView`, the roll
- * call a phone keeps once the boat is out of signal. It wears Boat mode
- * (`.boat-mode`), as the real page does, and carries what that page carries:
- * the "Saved" time in the corner, three counts (Divers, Boarded, Awaiting),
- * the checkpoint's heading, and a row per diver with its "when saved" word
- * and the two verbs. The home and product notes quote these words, so a
- * change to the real page is a change here and to those notes.
+ * **The captain's roll call, drawn small** — the live Boat tab
+ * (`trips/[id]/manifest/`), light by day, as the crew uses it at the rail (UX
+ * audit #6: the selling screen is the shipped one). It carries what that page
+ * carries at a glance: the head count's round figure ("4 of 9 divers aboard"),
+ * the checkpoint switcher (Dock, Dive 1, Dive 2), the checkpoint's heading, and
+ * a row per diver with its seat number, the name, the door into their sheet,
+ * and the 56px circle the crew taps.
  *
- * **Two checkpoints of one copy.** `departure` is the dock, where the hero's
- * phone and the boat manifest page show it: nobody called yet, and each row
- * offers Mark boarded and Mark not boarded. `afterDive` is the same copy,
- * saved at the same 6:52 AM, after the first dive (the homepage's roll-call
- * step, which would otherwise repeat the hero): the switcher on "After dive
- * 1", eight of nine back aboard, one diver recorded "Boarded" and one still to
- * call, each with the after-dive pair, Mark boarded and Mark not back aboard.
+ * **Drawn from the real parts.** The circle is `RollCallMark` and the row's
+ * left rule and fill are `ROLL_CALL_ROW_TONE`, the same two pieces the live
+ * rows and the offline copy wear, so a retune of the roll call reaches this
+ * mock without anyone remembering it. The words are DiveDay's sample, not the
+ * staff bundle's: the page's own copy can move without a marketing claim
+ * moving under it.
+ *
+ * **Two checkpoints of one roll call.** `departure` is the dock, where the
+ * hero's phone and the boat manifest page show it: four of nine aboard, Priya
+ * tapped, Tom still to call. `afterDive` is the same list after the first dive
+ * (the homepage's roll-call step, which would otherwise repeat the hero): the
+ * switcher on Dive 1, eight of nine back aboard, Priya counted and Tom the one
+ * still open.
  */
 export function CaptainRollCallFallback({
   locale,
@@ -141,102 +133,92 @@ export function CaptainRollCallFallback({
   const afterDive = checkpoint === "afterDive";
   // i18n-exempt: sample diver names used only in marketing mockups
   const divers = ["Priya Sharma", "Tom Okafor"];
+  const aboard = afterDive ? 8 : 4;
   return (
-    <div className="boat-mode bg-background text-foreground">
-      <AppBar label={t("fallback.savedAt")} inset={PHONE_INSET_X} />
+    <div className="bg-background text-foreground">
+      <AppBar label={t("fallback.boatLabel")} inset={PHONE_INSET_X} />
       <div className={`space-y-4 ${PHONE_BODY}`}>
         <div>
-          <p className={groupLabelClass("primary")}>{t("fallback.offlineManifest")}</p>
-          <h3 className={`mt-1 ${ITEM_TITLE_CLASS}`}>{t("fallback.tripName")}</h3>
+          <h3 className={ITEM_TITLE_CLASS}>{t("fallback.tripName")}</h3>
           <p className="text-xs text-muted">{t("fallback.tripTime")}</p>
         </div>
-        {afterDive ? (
-          // The checkpoint switcher the real copy carries above its counts,
-          // on the first dive of a two-tank trip.
-          <div className="flex flex-wrap gap-1.5">
-            {[
-              [t("fallback.checkpointBefore"), false],
-              [t("fallback.checkpointDive1"), true],
-              [t("fallback.checkpointDive2"), false],
-            ].map(([label, current]) => (
-              <span
-                key={String(label)}
-                className={`${MOCK_CHECKPOINT} ${
-                  current
-                    ? "bg-primary text-primary-foreground"
-                    : "border border-border bg-surface text-foreground"
-                }`}
-              >
-                {label}
-              </span>
-            ))}
+        {/* The head count: the figure in its round glass, the water at its
+            level, and the rest of the sentence beside it. */}
+        <div className="flex items-center gap-3">
+          <div className="relative size-14 shrink-0 overflow-hidden rounded-full border border-border bg-surface-sunken">
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 origin-bottom bg-shallows"
+              style={{ transform: `scaleY(${aboard / 9})` }}
+            />
+            <span
+              className={`absolute inset-0 flex items-center justify-center ${FIGURE_INLINE_CLASS}`}
+            >
+              {aboard}
+            </span>
           </div>
-        ) : null}
-        <div className="grid grid-cols-3 gap-2">
+          <p className="text-sm font-semibold tabular-nums">
+            {t("fallback.ofTotalAboard", { total: 9 })}
+          </p>
+        </div>
+        {/* The checkpoint switcher: one segmented track, the current
+            checkpoint raised on it. */}
+        <div className="inline-flex rounded-lg border border-border bg-surface-sunken p-0.5">
           {[
-            [t("fallback.diversLabel"), "9"],
-            [t("fallback.boardedLabel"), afterDive ? "8" : "4"],
-            [t("fallback.awaitingLabel"), afterDive ? "1" : "5"],
-          ].map(([label, value]) => (
-            <div key={label} className="rounded-lg border border-border bg-surface p-2">
-              <p className="text-[11px] font-semibold text-muted hyphens-auto wrap-break-word">
-                {label}
-              </p>
-              <p className={`mt-0.5 ${FIGURE_INLINE_CLASS}`}>{value}</p>
-            </div>
+            [t("fallback.checkpointDock"), !afterDive],
+            [t("fallback.checkpointDive", { n: 1 }), afterDive],
+            [t("fallback.checkpointDive", { n: 2 }), false],
+          ].map(([label, current]) => (
+            <span
+              key={String(label)}
+              className={`inline-flex min-h-8 items-center justify-center rounded-md px-3 text-xs font-semibold whitespace-nowrap ${
+                current ? "bg-surface text-foreground shadow-sm" : "text-muted"
+              }`}
+            >
+              {label}
+            </span>
           ))}
         </div>
         <div>
           <h3 className="text-sm font-semibold">
             {afterDive ? t("fallback.afterDiveRollCallHeading") : t("fallback.rollCallHeading")}
           </h3>
-          <div className="mt-2 space-y-2">
+          <div className="mt-2 overflow-hidden rounded-lg border border-border">
             {divers.map((name, index) => {
-              // After the dive the first diver is already back aboard; at the
-              // dock nobody has been called.
-              const boarded = afterDive && index === 0;
+              // Priya has been tapped aboard at either checkpoint; Tom is the
+              // one the crew is still to call.
+              const isAboard = index === 0;
               return (
                 <div
                   key={name}
-                  className="marketing-roll-call-row rounded-lg border border-border bg-surface p-3"
+                  className={`marketing-roll-call-row border-l-4 ${
+                    isAboard ? ROLL_CALL_ROW_TONE.boarded : ROLL_CALL_ROW_TONE.awaiting
+                  }`}
                 >
-                  <p className="text-sm font-semibold">{name}</p>
-                  <p className="mt-0.5 text-xs text-success">{t("fallback.readyWhenSaved")}</p>
-                  {/* The primary takes the room the secondary leaves, and the
-                      pair stacks only where the two will not fit on one line:
-                      the Spanish pair needs 273px, and /about's phone and the
-                      boat manifest page at 390 give it 232 and 254. A grid
-                      with a fixed `1fr auto` overflowed there instead, and
-                      widened the page (design review, 2026-10-05). On one line
-                      `grow-[99]` hands nearly all the spare room to the
-                      primary; alone on a line, either button fills it. */}
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    <button
-                      type="button"
-                      disabled
-                      className={`${boarded ? MOCK_BOARDED_DONE : MOCK_PRIMARY_BUTTON} grow-[99] whitespace-nowrap`}
-                    >
-                      {boarded ? (
-                        <>
-                          <DiveDayIcon name="check" className="size-3.5" strokeWidth={2.2} />
-                          {t("fallback.boardedDone")}
-                        </>
-                      ) : (
-                        t("fallback.markBoarded")
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      disabled
-                      className={`${afterDive ? MOCK_NOT_BACK_ABOARD : MOCK_SECONDARY_BUTTON} grow whitespace-nowrap px-2`}
-                    >
-                      {afterDive ? t("fallback.markNotBackAboard") : t("fallback.markNotBoarded")}
-                    </button>
+                  {/* The rule between rows on the inner wrapper, as the live
+                      rows draw it: the tone owns the row's border colour. */}
+                  <div
+                    className={`flex items-center gap-2.5 py-2 ps-2.5 pe-2 ${rollCallRuleClass({
+                      firstOnScreen: index === 0,
+                      firstOnPaper: index === 0,
+                    })}`}
+                  >
+                    <span className="grid size-7 shrink-0 place-items-center rounded-md bg-surface text-xs font-semibold tabular-nums">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <p className="min-w-0 flex-1 text-sm font-semibold">{name}</p>
+                    <DiveDayIcon name="chevron-right" className="size-4 shrink-0 text-muted" />
+                    <RollCallMark state={isAboard ? "aboard" : "toCall"} />
                   </div>
                 </div>
               );
             })}
           </div>
+          {/* The list goes on below the frame: two rows drawn, nine on the
+              boat, so the head count and the rows read as one list. */}
+          <p className="mt-1.5 text-xs text-muted">
+            {t("fallback.moreOnTheList", { count: 9 - divers.length })}
+          </p>
         </div>
       </div>
     </div>

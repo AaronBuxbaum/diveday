@@ -3,7 +3,13 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { Course } from "@/db/schema";
 import { diverTranslator } from "@/i18n/messages";
-import { CourseGallery, CourseHero, CourseSchedule, CourseSessions } from "./CourseSections";
+import {
+  CourseGallery,
+  CourseHero,
+  CourseSchedule,
+  CourseSessions,
+  courseFootBar,
+} from "./CourseSections";
 
 /**
  * The course hero's price is a *list* price, so it follows `shops.currency` —
@@ -267,5 +273,37 @@ describe("CourseSessions featured date", () => {
     const panel = container.querySelector("#dates > div");
     expect(panel?.className).toMatch(/\brounded-panel\b/);
     expect(panel?.className).not.toMatch(/\brounded-3xl\b/);
+  });
+});
+
+/**
+ * The course page's phone foot bar (UX audit #8): the same persistent door the
+ * trip page keeps, pointing where the dates panel's own primary act does.
+ */
+describe("courseFootBar", () => {
+  const t = diverTranslator("en-US");
+  const open = { capacity: 8, booked: 3 };
+  const full = { capacity: 8, booked: 8 };
+
+  it("books when any date has room, even when the soonest is full", () => {
+    expect(courseFootBar([full, open], "#get-in-touch", t)).toEqual({
+      href: "#dates",
+      label: "Book",
+    });
+  });
+
+  it("offers the wait list when every date is full", () => {
+    expect(courseFootBar([full], null, t)).toEqual({
+      href: "#dates",
+      label: "Join the wait list",
+    });
+  });
+
+  it("asks for a date when none is on the board, and keeps no door without an address", () => {
+    expect(courseFootBar([], "#get-in-touch", t)).toEqual({
+      href: "#get-in-touch",
+      label: "Request a date",
+    });
+    expect(courseFootBar([], null, t)).toBeNull();
   });
 });

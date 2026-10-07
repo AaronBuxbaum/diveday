@@ -9,6 +9,7 @@ import { EntryShellSkeleton } from "@/components/account/EntryShellSkeleton";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { EYEBROW_CLASS } from "@/components/ShopPageHeader";
 import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
+import { diverTranslator } from "@/i18n/messages";
 import { THREAD_FOOT_SECTION_CLASS, THREAD_MEASURE_CLASS, ThreadShell } from "./ThreadShell";
 
 afterEach(cleanup);
@@ -309,6 +310,13 @@ describe("the terminal outcomes are flat", () => {
     expect(done.container.innerHTML).not.toMatch(/accent/);
     done.unmount();
     const expired = render(<ExpiredLinkCard title="Expired" text="Ask the shop." />);
+    // The one coral on a shopless dead link is the brand's own stop in the
+    // DiveDay lockup above it (UX audit #28), the same lockup the sign-in door
+    // wears: identity, not a moment spent on furniture. Nothing else carries it.
+    const main = expired.container.querySelector("main");
+    const lockup = main?.firstElementChild;
+    expect(lockup?.textContent).toBe("DiveDay.");
+    lockup?.remove();
     expect(expired.container.innerHTML).not.toMatch(/accent/);
   });
 
@@ -323,6 +331,32 @@ describe("the terminal outcomes are flat", () => {
       </ExpiredLinkCard>,
     );
     expect(screen.getByRole("button", { name: "Email me a fresh link" })).toBeTruthy();
+  });
+
+  /**
+   * UX audit #28: a dead link that resolves no shop was a blank page with a
+   * clock on it. DiveDay's wordmark says whose page it is; a link that names
+   * its shop is the shop's page, and wears no DiveDay lockup over it.
+   */
+  it("ExpiredLinkCard wears DiveDay's wordmark only when it has no shop to name", () => {
+    const { container, unmount } = render(
+      <ExpiredLinkCard
+        title="This link isn’t available"
+        text="Ask your dive shop for a fresh link."
+      />,
+    );
+    expect(container.textContent).toMatch(/^DiveDay\./);
+    unmount();
+    const named = render(
+      <ExpiredLinkCard
+        title="Expired"
+        text="Ask the shop."
+        shop={{ name: "Blue Mantis Divers", contactEmail: null, contactPhone: null }}
+        t={diverTranslator("en-US")}
+      />,
+    );
+    expect(named.container.textContent).not.toContain("DiveDay.");
+    expect(named.container.textContent).toContain("Blue Mantis Divers");
   });
 });
 

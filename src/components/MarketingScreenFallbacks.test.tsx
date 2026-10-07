@@ -103,10 +103,11 @@ describe("the mock family's inset", () => {
 });
 
 /**
- * "Mark boarded" and "Download" were 44px and the recap's "Leave my review"
+ * "Mark boarded" and "Download" were 44px and the recap 's "Leave my review"
  * 40px, off the button ladder, with the class string otherwise identical
  * (K-516). One drawn primary button, at the `sm` rung's 44px, and its bordered
- * twin ("Mark not boarded", "Send waiver") on the same rung.
+ * twin ("Send waiver") on the same rung. The roll call draws no button at all
+ * now: its tap is the circle (UX audit #6).
  */
 describe("the mocks' primary button", () => {
   const everyButton = () =>
@@ -130,7 +131,7 @@ describe("the mocks' primary button", () => {
     const buttons = everyButton().filter((className) =>
       className.split(/\s+/).includes("bg-primary"),
     );
-    expect(buttons.length).toBeGreaterThanOrEqual(4);
+    expect(buttons.length).toBeGreaterThanOrEqual(2);
     for (const className of buttons) {
       const tokens = className.split(/\s+/);
       expect(tokens).toEqual(
@@ -195,30 +196,32 @@ describe("MarketingScreenFallbacks", () => {
     });
   });
 
-  describe("CaptainRollCallFallback, the saved copy", () => {
-    it("wears Boat mode and carries the saved copy's counts and verbs", () => {
+  /**
+   * UX audit #6: the selling screen is the shipped roll call, light by day,
+   * one circle tap per name, never the side-by-side button pair of the boat
+   * mode's saved copy it used to draw.
+   */
+  describe("CaptainRollCallFallback, the live roll call", () => {
+    it("draws the dock checkpoint light, with the head count and a circle per name", () => {
       const { container } = render(<CaptainRollCallFallback locale="en-US" />);
-      expect(container.firstElementChild).toHaveClass("boat-mode");
-      expect(screen.getByText("Saved 6:52 AM")).toBeInTheDocument();
-      expect(screen.getByText("Awaiting")).toBeInTheDocument();
-      expect(screen.getAllByText("Ready when saved")).toHaveLength(2);
-      expect(screen.getAllByText("Mark boarded")).toHaveLength(2);
-      expect(screen.getAllByText("Mark not boarded")).toHaveLength(2);
+      expect(container.firstElementChild).not.toHaveClass("boat-mode");
+      expect(screen.getByText("of 9 divers aboard")).toBeInTheDocument();
+      expect(screen.getByText("Before departure roll call")).toBeInTheDocument();
+      expect(screen.getByText("Dock")).toBeInTheDocument();
+      // The real mark: 56px circles, one aboard (filled) and one still to call.
+      const marks = container.querySelectorAll("span.size-14.rounded-full");
+      expect(marks).toHaveLength(2);
+      expect(marks[0]).toHaveClass("bg-success");
+      expect(marks[1]).toHaveClass("bg-surface");
+      // No button pair: the tap is the circle.
+      expect(container.querySelectorAll("button")).toHaveLength(0);
+      expect(screen.queryByText(/Mark (not )?boarded/)).toBeNull();
     });
 
-    // The homepage's roll-call step draws the checkpoint the hero's phone does
-    // not: the same copy after the first dive, where the exception is "not back
-    // aboard" and never "not boarded", which after a dive would mark a diver
-    // still in the water as accounted for (DOM-H3).
-    it("draws the after-dive checkpoint with the after-dive verbs", () => {
+    it("draws the after-dive checkpoint with eight of nine back aboard", () => {
       render(<CaptainRollCallFallback locale="en-US" checkpoint="afterDive" />);
-      expect(screen.getByText("Saved 6:52 AM")).toBeInTheDocument();
+      expect(screen.getByText("8")).toBeInTheDocument();
       expect(screen.getByText("After dive 1 roll call")).toBeInTheDocument();
-      expect(screen.getByText("After dive 1")).toBeInTheDocument();
-      expect(screen.getByText("Boarded", { selector: "button" })).toBeInTheDocument();
-      expect(screen.getAllByText("Mark boarded")).toHaveLength(1);
-      expect(screen.getAllByText("Mark not back aboard")).toHaveLength(2);
-      expect(screen.queryByText("Mark not boarded")).toBeNull();
       expect(screen.queryByText("Before departure roll call")).toBeNull();
     });
 
@@ -226,8 +229,8 @@ describe("MarketingScreenFallbacks", () => {
       render(<CaptainRollCallFallback locale="es-ES" checkpoint="afterDive" />);
       // The live roll call's heading form, "Pase de lista · …" (es-ES README).
       expect(screen.getByText("Pase de lista · Después de la inmersión 1")).toBeInTheDocument();
-      expect(screen.getAllByText("Marcar sin regresar a bordo")).toHaveLength(2);
-      expect(screen.getByText("Embarcado", { selector: "button" })).toBeInTheDocument();
+      expect(screen.getByText("de 9 buceadores a bordo")).toBeInTheDocument();
+      expect(screen.getByText("Inm. 1")).toBeInTheDocument();
     });
   });
 
