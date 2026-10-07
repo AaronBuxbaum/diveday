@@ -39,6 +39,10 @@ describe("parseSmsReply", () => {
     });
   });
 
+  it("ignores a sender that is not a dialable E.164 number", () => {
+    expect(parseSmsReply(inbound("STOP", "12345"))).toEqual({ kind: "ignored" });
+  });
+
   it("ignores a delivery receipt on the same topic", () => {
     const receipt = JSON.stringify({
       notification: { messageId: "abc", timestamp: "2026-10-07 00:00:00.000" },

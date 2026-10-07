@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "73a03254-1cac-476e-a558-5e966edac90c",
+  "id": "11a2da8e-6c05-4016-9e1f-a7a14c012da8",
   "prevIds": [
     "ac0f9410-39ee-411b-b5df-98e1fa7a52a9"
   ],
@@ -14355,6 +14355,19 @@
       "table": "sms_opt_outs"
     },
     {
+      "type": "boolean",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "opted_out",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "sms_opt_outs"
+    },
+    {
       "type": "timestamp with time zone",
       "typeSchema": null,
       "notNull": true,
@@ -14362,7 +14375,7 @@
       "default": null,
       "generated": null,
       "identity": null,
-      "name": "opted_out_at",
+      "name": "keyword_at",
       "entityType": "columns",
       "schema": "public",
       "table": "sms_opt_outs"

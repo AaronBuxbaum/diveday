@@ -14,7 +14,7 @@ import {
 import { sendDueReminders } from "./reminders";
 import { bookings, notificationDeliveries, people, shops, waiverRecords } from "./schema";
 import { setShopDockDayRhythm } from "./shops";
-import { recordSmsOptOut } from "./sms-opt-outs";
+import { recordSmsKeyword } from "./sms-opt-outs";
 import { upcomingTripsWithCounts, updateTripConditions } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
@@ -218,7 +218,7 @@ describe("sendDueReminders", () => {
   it("never texts a phone-only diver who replied STOP, and records why", async () => {
     const { db, bookingId, personId, inWeekBucket } = await reminderContext();
     await db.update(people).set({ email: null, phone: PHONE }).where(eq(people.id, personId));
-    await recordSmsOptOut(db, PHONE);
+    await recordSmsKeyword(db, { phone: PHONE, optedOut: true, keywordAt: inWeekBucket });
     const sms = fakeSms();
 
     await sendDueReminders(db, {

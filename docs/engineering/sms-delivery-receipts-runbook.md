@@ -113,8 +113,8 @@ number's two-way setting forwards every inbound text to `diveday-sms-delivery-re
 | The diver sends | AWS replies (keyword on the number) | The app |
 | --- | --- | --- |
 | `HELP` | the HELP message | nothing |
-| `STOP`, `STOPALL`, `UNSUBSCRIBE`, `CANCEL`, `END`, `QUIT`, `OPTOUT`, `REVOKE` | the STOP message, and adds the number to its own opt-out list | adds the number to `sms_opt_outs` |
-| `START`, `UNSTOP` | AWS's opt-in confirmation | removes the number from `sms_opt_outs` |
+| `STOP`, `STOPALL`, `UNSUBSCRIBE`, `CANCEL`, `END`, `QUIT`, `OPTOUT`, `REVOKE` | the STOP message, and adds the number to its own opt-out list | records STOP for the number in `sms_opt_outs` |
+| `START`, `UNSTOP` | AWS's opt-in confirmation | records START, which lifts the STOP |
 | anything else | nothing | nothing |
 
 The word has to be the whole reply ("Stop by the shop at 7?" changes nothing). A number on the

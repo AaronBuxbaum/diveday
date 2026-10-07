@@ -868,6 +868,9 @@ export class InfraStack extends cdk.Stack {
       roleName: "diveday-sms-two-way",
       assumedBy: new iam.ServicePrincipal("sms-voice.amazonaws.com").withConditions({
         StringEquals: { "aws:SourceAccount": this.account },
+        ArnLike: {
+          "aws:SourceArn": `arn:${this.partition}:sms-voice:${this.region}:${this.account}:phone-number/*`,
+        },
       }),
       description: "Lets AWS End User Messaging forward texts sent to DiveDay's number.",
     });

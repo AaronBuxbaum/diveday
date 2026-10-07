@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { smsRecipient } from "./sms";
 
 /**
  * Replies to DiveDay's texting number (ADR 20261007-sms-stop-and-help).
@@ -57,7 +58,8 @@ export function parseSmsReply(raw: string): SmsReply {
   const inbound = inboundSchema.safeParse(parsedJson);
   if (!inbound.success) return { kind: "ignored" };
 
-  const phone = inbound.data.originationNumber.replace(/[\s().-]/g, "");
+  const phone = smsRecipient(inbound.data.originationNumber);
+  if (!phone) return { kind: "ignored" };
   const word = inbound.data.messageBody
     .trim()
     .replace(/[\s.!]+$/u, "")

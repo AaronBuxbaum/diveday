@@ -5,7 +5,7 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 vi.mock("@/db/notifications", () => ({ applyProviderEmailEvent: vi.fn() }));
-vi.mock("@/db/sms-opt-outs", () => ({ recordSmsOptOut: vi.fn(), clearSmsOptOut: vi.fn() }));
+vi.mock("@/db/sms-opt-outs", () => ({ recordSmsKeyword: vi.fn() }));
 vi.mock("@/lib/notifications/sns", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/notifications/sns")>();
   return { ...actual, verifySnsMessage: vi.fn(), confirmSnsSubscription: vi.fn() };
@@ -13,7 +13,7 @@ vi.mock("@/lib/notifications/sns", async (importOriginal) => {
 
 const { getDb } = await import("@/db/client");
 const { applyProviderEmailEvent } = await import("@/db/notifications");
-const { recordSmsOptOut, clearSmsOptOut } = await import("@/db/sms-opt-outs");
+const { recordSmsKeyword } = await import("@/db/sms-opt-outs");
 const { verifySnsMessage } = await import("@/lib/notifications/sns");
 const { POST } = await import("./route");
 
@@ -50,8 +50,7 @@ const inbound = (messageBody: string) => ({
 beforeEach(() => {
   vi.mocked(getDb).mockResolvedValue(FAKE_DB as never);
   vi.mocked(applyProviderEmailEvent).mockReset().mockResolvedValue("applied");
-  vi.mocked(recordSmsOptOut).mockReset();
-  vi.mocked(clearSmsOptOut).mockReset();
+  vi.mocked(recordSmsKeyword).mockReset();
   vi.mocked(verifySnsMessage).mockReset();
 });
 
@@ -60,7 +59,12 @@ describe("sms webhook route — replies to the texting number", () => {
     verified(inbound("Stop"));
     const response = await POST(webhookRequest());
     expect(response.status).toBe(200);
-    expect(recordSmsOptOut).toHaveBeenCalledWith(FAKE_DB, "+13055550134", expect.any(Date));
+    expect(recordSmsKeyword).toHaveBeenCalledWith(FAKE_DB, {
+      phone: "+13055550134",
+      optedOut: true,
+      // The time SNS signed, so a retried delivery keeps its place in line.
+      keywordAt: new Date("2026-10-07T00:00:00.000Z"),
+    });
     expect(applyProviderEmailEvent).not.toHaveBeenCalled();
   });
 
@@ -68,7 +72,11 @@ describe("sms webhook route — replies to the texting number", () => {
     verified(inbound("START"));
     const response = await POST(webhookRequest());
     expect(response.status).toBe(200);
-    expect(clearSmsOptOut).toHaveBeenCalledWith(FAKE_DB, "+13055550134");
+    expect(recordSmsKeyword).toHaveBeenCalledWith(FAKE_DB, {
+      phone: "+13055550134",
+      optedOut: false,
+      keywordAt: new Date("2026-10-07T00:00:00.000Z"),
+    });
   });
 
   it("acknowledges HELP and any other reply without changing anything", async () => {
@@ -77,8 +85,7 @@ describe("sms webhook route — replies to the texting number", () => {
       const response = await POST(webhookRequest());
       expect(response.status).toBe(200);
     }
-    expect(recordSmsOptOut).not.toHaveBeenCalled();
-    expect(clearSmsOptOut).not.toHaveBeenCalled();
+    expect(recordSmsKeyword).not.toHaveBeenCalled();
     expect(applyProviderEmailEvent).not.toHaveBeenCalled();
   });
 
@@ -86,7 +93,7 @@ describe("sms webhook route — replies to the texting number", () => {
     vi.mocked(verifySnsMessage).mockResolvedValue({ status: "invalid_signature" });
     const response = await POST(webhookRequest());
     expect(response.status).toBe(400);
-    expect(recordSmsOptOut).not.toHaveBeenCalled();
+    expect(recordSmsKeyword).not.toHaveBeenCalled();
   });
 
   it("still applies a delivery receipt arriving on the same topic", async () => {

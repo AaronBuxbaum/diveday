@@ -1,6 +1,6 @@
 import { getDb } from "@/db/client";
 import { applyProviderEmailEvent } from "@/db/notifications";
-import { clearSmsOptOut, recordSmsOptOut } from "@/db/sms-opt-outs";
+import { recordSmsKeyword } from "@/db/sms-opt-outs";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { parseSmsDeliveryEvent } from "@/lib/notifications/sms-events";
@@ -50,9 +50,13 @@ export async function POST(request: Request) {
 
   const reply = parseSmsReply(message.Message);
   if (reply.kind !== "ignored") {
-    const db = await getDb();
-    if (reply.kind === "stop") await recordSmsOptOut(db, reply.phone, nowDate());
-    else await clearSmsOptOut(db, reply.phone);
+    // The signed envelope's own time, not ours: a retried delivery must not
+    // read as newer than a reply the diver sent after it.
+    await recordSmsKeyword(await getDb(), {
+      phone: reply.phone,
+      optedOut: reply.kind === "stop",
+      keywordAt: new Date(message.Timestamp),
+    });
     // The number is personal data and stays out of the log line.
     log("sms_webhook.reply_applied", "info", { kind: reply.kind });
     return new Response(null, { status: 200 });

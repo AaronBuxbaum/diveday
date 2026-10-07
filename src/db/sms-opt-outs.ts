@@ -1,5 +1,4 @@
-import { eq } from "drizzle-orm";
-import { nowDate } from "@/lib/clock";
+import { and, eq, lt } from "drizzle-orm";
 import type { PlainTextProvider } from "@/lib/notifications/courtesy";
 import type { AppDb } from "./client";
 import { smsOptOuts } from "./schema";
@@ -10,21 +9,30 @@ import { smsOptOuts } from "./schema";
  * see the `sms_opt_outs` docblock in `schema.ts`.
  */
 
-/** Record a STOP. A second STOP keeps the first one's time. */
-export async function recordSmsOptOut(db: AppDb, phone: string, at: Date = nowDate()) {
-  await db.insert(smsOptOuts).values({ phone, optedOutAt: at }).onConflictDoNothing();
-}
-
-/** Undo a STOP: the diver replied START. */
-export async function clearSmsOptOut(db: AppDb, phone: string) {
-  await db.delete(smsOptOuts).where(eq(smsOptOuts.phone, phone));
+/**
+ * Record a STOP (`optedOut` true) or START (false) that the diver sent at
+ * `keywordAt`. A reply older than the one already recorded is ignored, so a
+ * redelivered or late START never undoes a newer STOP.
+ */
+export async function recordSmsKeyword(
+  db: AppDb,
+  input: { phone: string; optedOut: boolean; keywordAt: Date },
+) {
+  await db
+    .insert(smsOptOuts)
+    .values(input)
+    .onConflictDoUpdate({
+      target: smsOptOuts.phone,
+      set: { optedOut: input.optedOut, keywordAt: input.keywordAt },
+      setWhere: lt(smsOptOuts.keywordAt, input.keywordAt),
+    });
 }
 
 export async function isSmsOptedOut(db: AppDb, phone: string): Promise<boolean> {
   const rows = await db
     .select({ phone: smsOptOuts.phone })
     .from(smsOptOuts)
-    .where(eq(smsOptOuts.phone, phone))
+    .where(and(eq(smsOptOuts.phone, phone), eq(smsOptOuts.optedOut, true)))
     .limit(1);
   return rows.length > 0;
 }
