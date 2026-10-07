@@ -3,14 +3,14 @@
 The 0→1 go-to-market plan: the phases, the gates that must clear before each one, who has to be
 talked to, and the concrete channels and examples to use. Written 2026-07-24 against the shipped
 state in [shipped.md](shipped.md). This is a **living plan owned by the product owner**; when a
-phase completes or a gate clears, update this doc and [human-decisions.md](human-decisions.md) in
+phase completes or a gate clears, update this doc and [human-decisions/](human-decisions/README.md) in
 the same change.
 
 Companions: [vision.md](vision.md) (what winning looks like),
 [competitive-analysis.md](assessments/competitive-analysis.md) and
 [competitive-strategy.md](assessments/competitive-strategy.md) (who we're up against and the
 portability wedge), [marketing.md](marketing.md) (the public-page rulebook and claims policy),
-[human-decisions.md](human-decisions.md) (the gate register this plan sequences), and
+[human-decisions/](human-decisions/README.md) (the gate register this plan sequences), and
 [stakeholders/](stakeholders/README.md) (the per-discipline playbooks — exact contacts, briefing
 packets, and question lists for every conversation this plan schedules). This plan sequences and
 gates work; it does not describe features — for what a wedge item, punch-list fix, or pilot ask
@@ -45,7 +45,7 @@ sign-off, converts our best differentiators into liabilities.
 ## Phase 0 — get legally and operationally real (now → early Sept)
 
 Everything here is a human conversation or an account setup, keyed to the
-[decision register](human-decisions.md#decision-register). Work these in parallel; the critical
+[decision register](human-decisions/README.md#decision-register). Work these in parallel; the critical
 path is legal review (longest lead time) and the V-02 field test (needs a boat day).
 
 ### 0.1 Legal and policy (H-01, H-02, H-03, V-03) — start immediately, longest lead
@@ -64,7 +64,7 @@ path is legal review (longest lead time) and the V-02 field test (needs a boat d
   and a written opinion on whether typed-name + consent + timestamp suffices or a specialist
   e-signature provider is required (H-03). Budget expectation: this is a review of existing
   artifacts, not drafting from scratch — the provisional baselines in
-  [human-decisions.md](human-decisions.md#provisional-implementation-defaults--verify-before-production)
+  [human-decisions/](human-decisions/README.md#provisional-implementation-defaults--verify-before-production)
   exist precisely to make this a short engagement.
 - **Insurance conversation (same weeks):** pilot shops will ask whether using DiveDay affects
   their liability coverage. Have the answer ready: talk to at least one shop-side insurance broker
@@ -102,10 +102,10 @@ it down) for each of:
 - **V-02 is the single most important pre-pilot task.** The offline manifest is differentiator #2
   and it is unproven. Get on a boat — a friendly local charter or the first design-partner
   candidate — and run the full script in
-  [human-decisions.md](human-decisions.md#human-verification-queue): glare, wet hands,
+  [human-decisions/](human-decisions/README.md#human-verification-queue): glare, wet hands,
   airplane-mode reload, multi-checkpoint roll call, conflict reconciliation, print fallback.
   Record everything. **The no-signal roll-call claim may run before V-02 passes**
-  ([H-94](human-decisions.md#decision-register), 2026-10-06; until then this line held it back):
+  ([H-94](human-decisions/README.md#decision-register), 2026-10-06; until then this line held it back):
   it is shipped and the demo shows it, the [claims policy](marketing.md#claims-policy-hard-rules)
   sets its wording, and no page says the roll call has been tested on a boat until V-02 records
   that it was. If V-02 fails, the claim comes off every page.
@@ -128,11 +128,11 @@ it down) for each of:
   **H-26 (2026-08-02) confirms this pricing posture is deliberately lifestyle-scale, not
   venture-scale, and drops the explicit same-day SLA from the support promise** — see
   [vision.md](vision.md#what-kind-of-business-this-is) and
-  [human-decisions.md](human-decisions.md#decision-register). **Amended 2026-08-05 (Aaron
+  [human-decisions/](human-decisions/README.md#decision-register). **Amended 2026-08-05 (Aaron
   Buxbaum):** the founder-direct support promise itself is retired, not just the SLA — support is
   now a plain `support@dive.day` inbox with no personal-response commitment, and a trial's own
   upgrade path (3-week duration, soft expiry, `onboarding@dive.day`) is decided the same day — see
-  [human-decisions.md](human-decisions.md#decision-register)'s H-12 amendment.
+  [human-decisions/](human-decisions/README.md#decision-register)'s H-12 amendment.
 - **H-13 (email-identity reuse) needs a ruling before a real shop's data is live.** The
   domain-expert review flagged silent person-reuse on shared inboxes as unsafe; decide the
   safeguard (the light "is this you?" confirmation is the smallest honest fix) or explicitly
@@ -212,7 +212,7 @@ open safety-severity defects; a written case study draft with the shop's numbers
 Convert the pilot into a capped paid cohort. Cap it deliberately — **25 shops** — because scarcity
 is honest ("founding cohort" means something when it's actually bounded) and support capacity is
 finite (a plain `support@dive.day` inbox, not a founder-direct promise as of 2026-08-05 — see
-[human-decisions.md](human-decisions.md#decision-register)).
+[human-decisions/](human-decisions/README.md#decision-register)).
 
 - **Turn on the switching funnel.** The `/switching` guides are live SEO surfaces; now feed them:
   the EVE case study as a linked story, pointed at the guides — the documented Jane/anti-Mindbody
@@ -303,7 +303,7 @@ serves it.
 ## Risks and pre-decided responses
 
 - **V-02 fails on the boat** → pilot proceeds with live manifest + print backup; the no-signal
-  roll-call claim comes off every surface ([H-94](human-decisions.md#decision-register)); fix and
+  roll-call claim comes off every surface ([H-94](human-decisions/README.md#decision-register)); fix and
   re-test before Phase 2.
 - **Legal review demands a specialist e-signature provider (H-03)** → the `SignatureProvider`
   seam exists for exactly this; it becomes the one Phase-0 engineering task. Budget it, don't
@@ -338,6 +338,6 @@ serves it.
 ## Review cadence
 
 Revisit at each phase boundary, whenever a gate row in
-[human-decisions.md](human-decisions.md) changes state, and immediately if either named rival
+[human-decisions/](human-decisions/README.md) changes state, and immediately if either named rival
 ships a direct response (per the re-check rule in
 [competitive-strategy.md](assessments/competitive-strategy.md#implications-for-the-queue)).

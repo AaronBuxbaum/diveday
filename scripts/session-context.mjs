@@ -255,6 +255,8 @@ export function sessionBlock(
   }
   lines.push(
     "Path-scoped rules in .claude/rules/ load as you read matching files; the hooks in .claude/settings.json are described in docs/agents/session-hooks.md.",
+    // The papercuts log had one entry for a month of visible friction: nothing asked for them.
+    "If a guard or hook fights you this session, add a papercut: one file in docs/agents/papercuts/ (docs/agents/papercuts.md).",
   );
 
   if (source === "compact") {

@@ -1,0 +1,4 @@
+Date: 2026-10-03
+Project: tooling / stacked PRs
+Symptom: The same skill import vendored `.agents/skills/setup-ts-deep-modules/dependency-cruiser.config.cjs`, which Biome checks like any file in the repo and which was not formatted to this repo's rules, so CI's Lint job failed on every branch that merged main. "Format the dependency-cruiser config main brought in, so Lint passes" was committed three times on three stack layers (c07a3ea, cc81e7e, f6812f2): a merge tax paid once per layer for a file none of them touched. The skill was removed on 2026-10-07, but any other vendored file Biome can see can do the same.
+Fix: When main brings in a file that fails a check, fix it once, on main or at the bottom of the stack, and let the layers above inherit it through the rebase; do not fix it in each layer's merge. Before vendoring third-party files, run `pnpm lint` over them (or exclude the vendored tree in `biome.json`) in the same commit that adds them.

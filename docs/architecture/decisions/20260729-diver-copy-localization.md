@@ -56,7 +56,7 @@ English's two.
 **A second real locale, not just the machinery.** `es-ES` ships fully translated. A localization
 feature with exactly one locale is untested by construction, and Spanish is the language DiveDay's
 own target market (Caribbean, Mediterranean) most often needs. It is a first-pass translation and is
-recorded in [human-decisions.md](../../product/human-decisions.md) as needing native review before it
+recorded in [human-decisions/](../../product/human-decisions/README.md) as needing native review before it
 is offered to a shop as production-ready.
 
 **`pnpm check:locale` enforces both halves.** It fails on a hard-coded `"en-US"` anywhere under

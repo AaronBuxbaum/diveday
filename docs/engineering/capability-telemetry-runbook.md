@@ -495,7 +495,7 @@ Two questions here are access policy and spend, not code:
    and `cron_usage.scan_complete` ([manual-actions.md](manual-actions.md)), so
    the pull toward configuring one is already there.
 
-Both belong in the [decision register](../product/human-decisions.md#decision-register)
+Both belong in the [decision register](../product/human-decisions/README.md#decision-register)
 alongside H-04's incident-ownership items, not in this runbook. Until they are
 answered, treat the access log as a credential store: same care, same access
 list, same reason not to paste an excerpt into a ticket.

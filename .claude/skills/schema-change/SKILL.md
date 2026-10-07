@@ -1,6 +1,6 @@
 ---
 name: schema-change
-description: How to change the database schema (Drizzle/Postgres/PGlite) safely — new tables, columns, enums, constraints, indexes. Use whenever editing src/db/schema.ts or when a feature needs new persistent state.
+description: Change the database schema safely (Drizzle, PGlite) — tables, columns, enums, constraints, indexes. Use when editing src/db/schema.ts or when a feature needs new persistent state.
 ---
 
 # Change the schema
@@ -45,7 +45,7 @@ questions — read `schema.ts`.
 
 ## Removing something
 
-**There is no legacy data. Delete it** (H-49 in `docs/product/human-decisions.md`, extending H-47).
+**There is no legacy data. Delete it** (H-49 in `docs/product/human-decisions/README.md`, extending H-47).
 DiveDay is pre-pilot: no users, nothing anyone would miss. So when you find a table, column or enum
 value nothing writes any more:
 

@@ -114,7 +114,7 @@ what a failure here is about.
 
 Whether the surface looks right. Screenshots, phone and desktop, are yours — in light only, unless
 the work is itself about colour (then `screenshot.mjs --both`); that is the owner's rule,
-[H-90](../product/human-decisions.md#decision-register). CI's visual run keeps both schemes, so a
+[H-90](../product/human-decisions/README.md#decision-register). CI's visual run keeps both schemes, so a
 dark pixel that moved still shows up as a diff — but it tells you a pixel *moved*, never that the
 new one is better. See the **design-review** and **visual-triage** skills.
 

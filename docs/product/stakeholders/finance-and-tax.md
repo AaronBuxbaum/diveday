@@ -4,7 +4,7 @@ Money moves in two separate systems and only one is built: **shops' diver paymen
 Stripe Connect on shop-owned accounts (shipped), while **DiveDay's own $99/location/month
 subscription billing** has no mechanism yet. This playbook covers the Stripe platform
 application, the CPA engagement, and the open policy scraps. Status of record:
-[human-decisions.md](../human-decisions.md) rows **H-07** (remaining payment policy), **H-12**
+[human-decisions/](../human-decisions/README.md) rows **H-07** (remaining payment policy), **H-12**
 (remaining commercial terms), and **H-18** (entity — the CPA co-owns that decision with counsel,
 see [legal.md](legal.md#the-entity-decision-h-18)).
 

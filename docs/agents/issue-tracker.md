@@ -247,7 +247,7 @@ An issue has exactly two ends, and neither is "leave it open, marked done":
 - **Accept** — either relabel it (`ready-for-agent`/`ready-for-human`, see
   [triage-labels.md](triage-labels.md)) and let it run as an ordinary tracked issue, or move the
   decision into [features/roadmap.md](../product/features/README.md),
-  [human-decisions.md](../product/human-decisions.md), or an ADR, and close the issue with a
+  [human-decisions/](../product/human-decisions/README.md), or an ADR, and close the issue with a
   comment pointing at where it landed. Or just run the prompt: when the work lands, close the issue
   in that PR.
 - **Decline** — close it as not planned. If it is worth remembering that it was declined and why,

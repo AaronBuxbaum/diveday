@@ -145,7 +145,7 @@ Its authority is bounded on both sides:
 
 - **Below the ADR, always.** A spec detail that contradicts the ADR is a bug in the spec. The spec
   elaborates decisions; it never makes them — anything in it that would need an owner call belongs
-  in the ADR or `human-decisions.md` first.
+  in the ADR or `human-decisions/` first.
 - **Above the artboards.** Where a signature in the spec and a pixel in a drawing disagree, the
   spec wins — an artboard cannot name a type.
 - **Expiring per slice, exactly like the canvas.** Once a slice ships, its section of the spec is a

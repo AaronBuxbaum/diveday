@@ -1,6 +1,6 @@
 ---
 name: backlog-routine
-description: Work the ready-for-agent issue backlog continuously — ticket after ticket, never stopping at one, refetching main and re-reading CI between each. Use when asked to run the backlog, implement ready tickets, or keep building unattended.
+description: Work the ready-for-agent backlog unattended, ticket after ticket, refetching main and re-reading CI between each. Use when asked to run the backlog or keep building unattended.
 ---
 
 # Work the backlog, ticket after ticket

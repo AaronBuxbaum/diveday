@@ -5,7 +5,7 @@
 
 ## Context
 
-Two product-owner decisions landed together on 2026-07-30 (`docs/product/human-decisions.md`) and
+Two product-owner decisions landed together on 2026-07-30 (`docs/product/human-decisions/README.md`) and
 share one data spine — a diver's date of birth — so they ship as one change.
 
 **H-08 (depth ceilings).**

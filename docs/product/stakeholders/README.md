@@ -12,7 +12,7 @@ Three documents cooperate; each owns one thing, so updates land in exactly one p
 | Document | Owns | Never holds |
 | --- | --- | --- |
 | [rollout.md](../rollout.md) | **When** — phases, sequencing, the stakeholder register snapshot | prep material, agendas |
-| [human-decisions.md](../human-decisions.md) | **Status** — the decision register (H-rows) and verification queue (V-rows) of record | how to run the conversation |
+| [human-decisions/](../human-decisions/README.md) | **Status** — the decision register (H-rows) and verification queue (V-rows) of record | how to run the conversation |
 | These playbooks | **Who and how** — contacts, briefing packets, agendas, question lists | status. No "done" marks here, ever |
 
 When a conversation happens, record its outcome in the relevant H-/V-row (and, if it clears a
@@ -49,7 +49,7 @@ Four clocks start ticking on contact, not on need — start all four in the same
    — US carrier registration takes days to weeks; no legal SMS sending without it.
 4. **A boat day for V-02** ([dive-operations.md](dive-operations.md)) — needs weather, a captain,
    and a hull; the pilot waits on it, and a failure takes the no-signal roll-call claim off every
-   page ([H-94](../human-decisions.md#decision-register)).
+   page ([H-94](../human-decisions/README.md#decision-register)).
 
 Two dependencies cut across disciplines and should be resolved first because other stakeholders
 ask for their outputs:
@@ -80,7 +80,7 @@ this is the same work cut by discipline so each playbook can be executed indepen
 
 ## Maintenance
 
-- A gate changing state → update [human-decisions.md](../human-decisions.md) and, if it clears a
+- A gate changing state → update [human-decisions/](../human-decisions/README.md) and, if it clears a
   phase criterion, [rollout.md](../rollout.md) — in the same change, per the standing rule there.
 - A playbook that a real conversation proved wrong (missing question, wrong contact path) → fix
   the playbook in the same change that records the outcome.

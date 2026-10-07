@@ -524,7 +524,7 @@ export function straightDoubleQuotes(value) {
 
 /**
  * The four **shape** rules (2026-09-24, the voice decision — H-89 in
- * docs/product/human-decisions.md, "The builder's note" in docs/design/brand.md).
+ * docs/product/human-decisions/README.md, "The builder's note" in docs/design/brand.md).
  *
  * The 2026-09-03 sweep removed the words a model overuses and left the shapes:
  * measured over the five marketing pages afterwards, the mirrored pair

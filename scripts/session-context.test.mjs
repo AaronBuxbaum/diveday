@@ -115,6 +115,12 @@ describe("the session-start block", () => {
     expect(block).not.toContain("Checkout");
     expect(block).toContain(".claude/rules/");
   });
+
+  it("asks for a papercut when a guard or hook fights the session, on every start", () => {
+    for (const source of ["startup", "resume", "compact"]) {
+      expect(sessionBlock(null, { source })).toContain("docs/agents/papercuts/");
+    }
+  });
 });
 
 describe("selecting the pinned Node", () => {

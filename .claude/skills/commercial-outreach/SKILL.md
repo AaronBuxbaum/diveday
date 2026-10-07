@@ -1,6 +1,6 @@
 ---
 name: commercial-outreach
-description: Draft or update pilot/founding-shop outreach and sales collateral — the design-partner one-pager, case-study interview prep, DEMA/media pitch notes, or other prep material for a stakeholder conversation in the go-to-market plan. Use whenever a task touches docs/product/rollout.md's recruiting/outreach work, docs/product/stakeholders/commercial-and-industry.md, or asks for a pitch, pilot pitch, one-pager, cold-outreach message, or case-study prep.
+description: Draft pilot and founding-shop outreach — the design-partner one-pager, case-study prep, DEMA/media pitch notes, cold messages. Use when a task touches docs/product/rollout.md's recruiting or asks for a pitch.
 ---
 
 # Commercial outreach and sales collateral
@@ -28,7 +28,7 @@ output is always a draft artifact he reviews and sends himself.
 3. Read `docs/product/marketing.md`'s claims policy in full — it governs this collateral exactly
    as it governs the public pages. A pilot offer is a claims surface: "anything promised to a
    pilot in writing must already exist in the claims policy or get added there."
-4. Check [human-decisions.md](../../../docs/product/human-decisions.md) H-12 for what commercial
+4. Check [human-decisions/](../../../docs/product/human-decisions/README.md) H-12 for what commercial
    terms are actually authorized to promise today (founding price, two-year lock, founder-direct
    same-day support) versus still open (contract/intake flow, billing cadence, taxes/fees).
 
@@ -87,7 +87,7 @@ cross-linked from `commercial-and-industry.md`'s "what to have prepared" list fo
 
 ## Verify
 
-1. Every fact traces to `rollout.md`, `human-decisions.md`, or an authorized `marketing.md` claim —
+1. Every fact traces to `rollout.md`, `human-decisions/`, or an authorized `marketing.md` claim —
    if it doesn't, flag it as needing product-owner sign-off rather than drafting it as settled.
 2. `pnpm check:docs` — internal links resolve.
 3. For anything persuasion-shaped (the one-pager, a pitch note): launch `conversion-reviewer` —
@@ -97,5 +97,5 @@ cross-linked from `commercial-and-industry.md`'s "what to have prepared" list fo
    `dive-domain-expert` review, same as anywhere else.
 5. Never mark a `commercial-and-industry.md` "what to have prepared" item done from drafting alone
    — prep is done when the artifact exists; the conversation, the send, and the outcome are the
-   founder's to run and record in `human-decisions.md` / `rollout.md`, per the stakeholder
+   founder's to run and record in `human-decisions/` / `rollout.md`, per the stakeholder
    playbooks' division of responsibility.

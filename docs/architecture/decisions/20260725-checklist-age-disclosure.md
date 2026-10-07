@@ -17,7 +17,7 @@ reading their own confirmation page couldn't tell which of the two problems appl
 That closed the leak completely but at a UX cost the original H-08 decision never specified: a
 family who books their 10-year-old onto a 12+ course gets a vague "we're finishing a check up"
 message instead of anything they can act on. H-08's "fail open" choice didn't settle how much the
-*diver-facing* copy should say — that gap became **H-22** (`docs/product/human-decisions.md`).
+*diver-facing* copy should say — that gap became **H-22** (`docs/product/human-decisions/README.md`).
 The product owner reviewed the tradeoff, including the specific gap noted below, and chose to
 disclose more.
 
