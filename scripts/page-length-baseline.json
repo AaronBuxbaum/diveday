@@ -1,7 +1,7 @@
 {
   "//": "Line counts of the page.tsx files still over 400 lines. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
   "// absorbed": "merged the perf layer: the trip page passes its shared reads to both readers (7 lines)",
-  "src/app/onboard/page.tsx": 494,
+  "src/app/onboard/page.tsx": 479,
   "src/app/page.tsx": 592,
   "src/app/pricing/page.tsx": 504,
   "src/app/ready/[token]/page.tsx": 2217,
