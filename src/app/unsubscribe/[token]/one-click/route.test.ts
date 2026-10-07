@@ -15,6 +15,7 @@ vi.mock("@/db/client", async (importOriginal) => {
 });
 vi.mock("@/db/courtesy-email", () => ({ optOutPersonFromCourtesyEmailByToken: vi.fn() }));
 vi.mock("@/db/last-minute-list", () => ({ unsubscribeLastMinuteListEntryByToken: vi.fn() }));
+vi.mock("@/db/weekly-digest", () => ({ turnOffWeeklyDigestByToken: vi.fn() }));
 vi.mock("@/lib/request-ip", () => ({ clientIp: vi.fn(async () => "203.0.113.7") }));
 vi.mock("@/lib/rate-limit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
@@ -23,6 +24,7 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 
 const { optOutPersonFromCourtesyEmailByToken } = await import("@/db/courtesy-email");
 const { unsubscribeLastMinuteListEntryByToken } = await import("@/db/last-minute-list");
+const { turnOffWeeklyDigestByToken } = await import("@/db/weekly-digest");
 const { checkRateLimit, rateLimitKey, RATE_LIMITS } = await import("@/lib/rate-limit");
 const { POST } = await import("./route");
 
@@ -39,6 +41,7 @@ beforeEach(() => {
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true, retryAfterMs: 0 });
   vi.mocked(unsubscribeLastMinuteListEntryByToken).mockResolvedValue(null);
   vi.mocked(optOutPersonFromCourtesyEmailByToken).mockResolvedValue(null);
+  vi.mocked(turnOffWeeklyDigestByToken).mockResolvedValue(null);
 });
 
 afterEach(() => {
@@ -65,6 +68,21 @@ describe("POST /unsubscribe/[token]/one-click", () => {
 
     expect(response.status).toBe(200);
     expect(optOutPersonFromCourtesyEmailByToken).toHaveBeenCalledWith({}, { token: TOKEN });
+  });
+
+  it("turns off the Monday email when the token is neither of the diver kinds", async () => {
+    const response = await post();
+
+    expect(response.status).toBe(200);
+    expect(turnOffWeeklyDigestByToken).toHaveBeenCalledWith({}, { token: TOKEN });
+  });
+
+  it("leaves the Monday email alone when a courtesy-email token matched", async () => {
+    vi.mocked(optOutPersonFromCourtesyEmailByToken).mockResolvedValue({ personId: "p" } as never);
+
+    await post();
+
+    expect(turnOffWeeklyDigestByToken).not.toHaveBeenCalled();
   });
 
   it("still answers 200 for an unrecognized token, since a mail client never reads the body", async () => {

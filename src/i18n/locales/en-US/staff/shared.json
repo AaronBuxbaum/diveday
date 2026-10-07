@@ -247,7 +247,8 @@
     "promoCodes": "Discounts",
     "settings": "Settings",
     "team": "Team",
-    "calendarFeed": "Calendar subscription"
+    "calendarFeed": "Calendar subscription",
+    "emailSettings": "Email settings"
   },
   "shopSections": {
     "navAriaLabel": "Main",

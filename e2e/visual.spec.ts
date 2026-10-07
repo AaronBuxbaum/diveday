@@ -6494,6 +6494,22 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "settings-calendar", scheme);
       });
 
+      // The staffer's own Email settings: the Monday email's row, on for the
+      // owner by default, with its preview door.
+      test(`the email settings render true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/email");
+        await page.getByRole("button", { name: "Turn off" }).waitFor();
+        await capture(page, "settings-email", scheme);
+      });
+
+      // The Monday email itself, as the preview renders it from the frozen
+      // clock's week of the seeded demo shop: the one capture of an email body.
+      test(`the Monday email renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/email/preview");
+        await page.getByText(/Weeks run Monday to Sunday|no email goes out this Monday/).waitFor();
+        await capture(page, "weekly-digest-email", scheme);
+      });
+
       // The courses catalog as one ledger (slice 9g of ADR
       // 20260827-the-shops-shelves): agency as the group heading that replaced
       // the tab strip, the list in progression order rather than alphabetical,

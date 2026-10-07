@@ -247,7 +247,8 @@
     "promoCodes": "Descuentos",
     "settings": "Ajustes",
     "team": "Equipo",
-    "calendarFeed": "Suscripción al calendario"
+    "calendarFeed": "Suscripción al calendario",
+    "emailSettings": "Ajustes de correo"
   },
   "shopSections": {
     "navAriaLabel": "Principal",

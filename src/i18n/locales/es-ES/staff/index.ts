@@ -34,6 +34,7 @@ import closeout from "./closeout.json";
 import courses from "./courses.json";
 import divers from "./divers.json";
 import diveSites from "./diveSites.json";
+import emailSettings from "./emailSettings.json";
 import feed from "./feed.json";
 import gear from "./gear.json";
 import inbox from "./inbox.json";
@@ -63,6 +64,7 @@ import whatsapp from "./whatsapp.json";
 
 const staff = {
   calendar,
+  emailSettings,
   calls,
   staffing,
   feed,
