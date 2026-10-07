@@ -38,7 +38,7 @@ describe("the manifest's loading skeleton", () => {
         element.children.length === 5 &&
         [...element.children].every((child) => child.classList.contains("h-11")),
     );
-    expect(row).toHaveClass("flex", "flex-wrap");
+    expect(row).toHaveClass("grid", "grid-cols-3", "sm:grid-cols-5");
     expect(row?.children).toHaveLength(5);
     expect(row?.previousElementSibling).toHaveClass("h-4");
     const track = all(container).find((element) => element.className === trackClass());
