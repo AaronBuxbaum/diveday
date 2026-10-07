@@ -58,7 +58,8 @@ test("staff merge a duplicate diver into the record they keep, choosing which ph
   await page.goto(duplicate);
   const panel = page.locator("#merge");
   await expect(panel.getByRole("heading", { name: "Possible duplicate records" })).toBeVisible();
-  await expect(panel.getByText("Same email", { exact: true })).toBeVisible();
+  // The reasons render as one line, strongest first: the shared mailbox, then the name.
+  await expect(panel.getByText("Same email · Same name", { exact: true })).toBeVisible();
   await panel.getByRole("link", { name: `Compare with ${name}` }).click();
 
   await page.getByRole("heading", { level: 1, name: "Merge duplicate records" }).waitFor();
