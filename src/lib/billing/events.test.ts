@@ -114,6 +114,12 @@ describe("readBillingEvent", () => {
     expect(older).toMatchObject({ subscriptionId: "sub_1", paidAt: new Date(CREATED * 1000) });
   });
 
+  it("ignores a paid invoice that belongs to no subscription", () => {
+    expect(
+      readBillingEvent(event("invoice.paid", { customer: "cus_1", amount_paid: 5_000 }), NOW),
+    ).toEqual({ kind: "ignored", reason: "not_a_subscription_invoice" });
+  });
+
   it("ignores everything else", () => {
     expect(readBillingEvent(event("charge.refunded", {}), NOW)).toEqual({
       kind: "ignored",

@@ -144,7 +144,7 @@ describe("stripeBillingProvider", () => {
     expect(body.get("flow_data[subscription_cancel][subscription]")).toBe("sub_1");
   });
 
-  it("answers failed, never throws, on a refusal, a network error or a strange body", async () => {
+  it("answers failed, never throws, on a refusal, a network error, a non-https URL or a strange body", async () => {
     const refused = stripeBillingProvider(CONFIG, fakeFetch(402, { error: {} }) as never);
     expect(await refused.createCustomer({ shopId: "s", shopName: "n", email: null })).toEqual({
       status: "failed",
@@ -153,6 +153,13 @@ describe("stripeBillingProvider", () => {
       throw new Error("offline");
     }) as never);
     expect(await offline.createPortalSession({ customerId: "c", returnUrl: "https://x" })).toEqual({
+      status: "failed",
+    });
+    const plain = stripeBillingProvider(
+      CONFIG,
+      fakeFetch(200, { url: "http://billing.stripe.com/p/1" }) as never,
+    );
+    expect(await plain.createPortalSession({ customerId: "c", returnUrl: "https://x" })).toEqual({
       status: "failed",
     });
     const odd = stripeBillingProvider(CONFIG, fakeFetch(200, { url: "not a url" }) as never);

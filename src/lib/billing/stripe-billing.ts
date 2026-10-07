@@ -100,7 +100,18 @@ export type CheckoutRequest = {
 export type BillingCallResult<T> = { status: "ok"; value: T } | { status: "failed" };
 
 const idResponse = z.object({ id: z.string().min(1) });
-const urlResponse = z.object({ url: z.string().url() });
+/**
+ * The actions redirect the owner's browser to this URL, so only an https one
+ * is followed: Stripe's hosted pages (or a shop-branded custom domain Stripe
+ * serves) are never plain http, and a `javascript:` or `data:` value is never
+ * a page Stripe made.
+ */
+const urlResponse = z.object({
+  url: z
+    .string()
+    .url()
+    .refine((value) => URL.canParse(value) && new URL(value).protocol === "https:"),
+});
 
 /** The trial end Checkout should carry, in unix seconds, or null for none. */
 export function checkoutTrialEnd(firstChargeAt: Date | null, now: Date): number | null {

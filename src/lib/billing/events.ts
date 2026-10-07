@@ -40,11 +40,14 @@ export type BillingEventEffect =
   | {
       kind: "invoice_paid";
       customerId: string;
-      subscriptionId: string | null;
+      subscriptionId: string;
       amountPaid: number;
       paidAt: Date;
     }
-  | { kind: "ignored"; reason: "unhandled_event_type" | "not_a_subscription_checkout" }
+  | {
+      kind: "ignored";
+      reason: "unhandled_event_type" | "not_a_subscription_checkout" | "not_a_subscription_invoice";
+    }
   | { kind: "malformed" };
 
 const expandable = z.union([z.string().min(1), z.object({ id: z.string().min(1) })]);
@@ -150,10 +153,13 @@ export function readBillingEvent(event: StripeWebhookEvent, fallbackNow: Date): 
       if (!invoice.success) return { kind: "malformed" };
       const data = invoice.data;
       const subscription = data.parent?.subscription_details?.subscription ?? data.subscription;
+      // A one-off invoice someone raised by hand in the dashboard is not a
+      // month of the plan, so it never stamps the first paid month.
+      if (!subscription) return { kind: "ignored", reason: "not_a_subscription_invoice" };
       return {
         kind: "invoice_paid",
         customerId: idOf(data.customer),
-        subscriptionId: subscription ? idOf(subscription) : null,
+        subscriptionId: idOf(subscription),
         amountPaid: data.amount_paid,
         paidAt: fromUnix(data.status_transitions?.paid_at) ?? occurredAt,
       };
