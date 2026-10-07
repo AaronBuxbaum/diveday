@@ -110,8 +110,8 @@ export async function syncShopMilestones(db: AppDb): Promise<void> {
       milestone: "first_departure",
       rows: db
         .select({ shopId: trips.shopId, reachedAt: min(trips.createdAt) })
-        // diveday:allow-deleted-trips: a departure that was scheduled and later deleted was still the shop's first step onto the board
         .from(trips)
+        // diveday:allow-deleted-trips: a departure that was scheduled and later deleted was still the shop's first step onto the board
         .innerJoin(shops, eq(shops.id, trips.shopId))
         .where(realShop())
         .groupBy(trips.shopId),

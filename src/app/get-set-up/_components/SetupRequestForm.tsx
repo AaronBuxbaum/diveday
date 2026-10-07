@@ -72,7 +72,7 @@ export function SetupRequestForm({
     <form key={formKey} action={formAction} className="flex flex-col gap-5">
       {state.fieldErrors ? <FieldErrorFocus key={formKey} /> : null}
       <input type="hidden" name="source" value={source} />
-      <div aria-hidden="true" className="absolute -left-[10000px] h-px w-px overflow-hidden">
+      <div aria-hidden="true" className="absolute -start-[10000px] h-px w-px overflow-hidden">
         <label>
           {words.website}
           <input type="text" name={SETUP_HONEYPOT_FIELD} tabIndex={-1} autoComplete="off" />
