@@ -4,7 +4,7 @@ How a merge to `main` reaches production, what the database does while that happ
 rule — expand/contract — that keeps a bad migration from taking the app down. The pipeline is three
 files: `vercel.json` (`"buildCommand": "node scripts/vercel-build.mjs"`, an
 `"ignoreCommand"` — see [When a push produces no deployment](#when-a-push-produces-no-deployment) —
-plus the daily cron entry), `scripts/vercel-build.mjs` (18 lines), and `drizzle.config.prod.ts`
+plus the daily cron entry), `scripts/vercel-build.mjs`, and `drizzle.config.prod.ts`
 ([ADR 20260718-vercel-neon-hosting](../architecture/decisions/20260718-vercel-neon-hosting.md)).
 Restoring from a migration that has already destroyed data is a different document:
 [backup-and-restore-runbook.md](backup-and-restore-runbook.md).
@@ -15,8 +15,12 @@ this covers what happens to it after you merge.
 ## What actually happens on deploy
 
 `scripts/vercel-build.mjs` in full, in prose: if `VERCEL_ENV === "production"`, run
-`node scripts/check-migrations.mjs`, then `node scripts/check-migration-graph.mjs`, then
-`pnpm db:migrate`; then, always, run `pnpm build`.
+`node scripts/check-env.mjs`, then `node scripts/check-migrations.mjs`, then
+`node scripts/check-migration-graph.mjs`, then `pnpm db:migrate`; then, always, run `pnpm build`.
+The first step refuses the build when a `config/env-registry.mjs` row marked `requiredInProduction`
+is unset on the Vercel project (today the Upstash pair), naming the keys and what each one switches
+off, so a missing security-relevant value fails the deploy loudly instead of the feature failing
+quietly in production (decided 2026-10-07, issue #2244). Previews are not asked.
 `pnpm db:migrate` is `drizzle-kit migrate --config drizzle.config.prod.ts`, applying committed
 `drizzle/` SQL against `DATABASE_URL_UNPOOLED` (Neon's direct connection — DDL over a
 transaction-mode pooler is unreliable), falling back to `DATABASE_URL`.

@@ -86,7 +86,7 @@ described here as $22–24 until 2026-09-10.
 What moving would and would not do:
 
 - **Vercel → AWS (Lambda + CloudFront via OpenNext, or Amplify).** Saves the $20 and costs a
-  deploy pipeline this repo does not have: previews, the eleven `vercel.json` crons, Analytics and
+  deploy pipeline this repo does not have: previews, the twelve `vercel.json` crons, Analytics and
   Speed Insights all need replacing, `scripts/vercel-build.mjs` runs the production migration, and
   ADR 20260718-vercel-hosting chose Vercel for exactly those. Weeks of agent time to save the price
   of one lunch a month, before a single shop is paying. Not worth it pre-pilot; revisit when Vercel
@@ -134,6 +134,15 @@ and the registry encodes them as codes (`CeilingOverflow`) rather than prose.
   nothing tells you; error monitoring simply stops, usually on the busiest day of the month, which
   is the day you most need it. **This also disables the dead-man's switch on every cron**, because
   a dropped check-in and a missed run are indistinguishable from the outside.
+
+## Why the hourly crons share minute zero
+
+`trip-reminders`, `recaps`, `minimum-seats` and `integrations` all run at `0 * * * *` in
+`vercel.json`, and the daily jobs sit on round hours. That is deliberate: on a scale-to-zero plan
+one wake of Neon's compute per hour serves all of them, and staggering them to `:30` would buy a
+second wake each hour to halve the chance that one slow cron delays another. Decided 2026-10-07
+(issue #2245): keep one wake per hour until the CloudWatch dashboard shows a cron actually delaying
+another; that evidence, not a hunch, is what reopens it.
 
 ## What the monitor can see
 
