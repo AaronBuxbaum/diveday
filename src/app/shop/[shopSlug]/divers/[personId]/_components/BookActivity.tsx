@@ -3,7 +3,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
-import { controlClassFor, Field, FieldGrid } from "@/components/ui/form";
+import { controlClass, Field, FieldGrid } from "@/components/ui/form";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate, groupByLocalDay } from "@/lib/calendar-date";
 import { formatTime } from "@/lib/format";
@@ -74,7 +74,7 @@ export function BookActivity({
               {/* `md`: from `sm` up the picker shares a line with the `md` "Book
                   activity", bottom-aligned, and at the 44px default the
                   button stood 4px above its top edge. */}
-              <select name="tripId" required defaultValue="" className={controlClassFor("md")}>
+              <select name="tripId" required defaultValue="" className={controlClass}>
                 <option value="" disabled>
                   {t("divers.bookActivity.chooseActivity")}
                 </option>

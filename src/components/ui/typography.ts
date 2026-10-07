@@ -15,8 +15,8 @@
  *
  * ### The app ramp (ADR decision 3)
  *
- * `PAGE_TITLE_CLASS` → `SECTION_TITLE_CLASS`, with `SHELL_TITLE_CLASS` for the
- * pages a diver arrives at from a link. The ADR's other four levels are not
+ * `PAGE_TITLE_CLASS` → `SECTION_TITLE_CLASS` → `ITEM_TITLE_CLASS`, with
+ * `SHELL_TITLE_CLASS` for the pages a diver arrives at from a link. The ADR's other four levels are not
  * heading spellings and are not here: the page summary (`text-base text-muted`),
  * the eyebrow (`EYEBROW_CLASS` in `ShopPageHeader.tsx`), the group label
  * (`groupLabelClass`), the row title (`text-base`) and row meta.
@@ -106,10 +106,9 @@ export const BANNER_TITLE_CLASS = "text-3xl font-semibold tracking-[-0.035em] te
 
 /**
  * A section lead inside a reading page: a course page's `<h2>`, a modal-scale
- * title. It is also the app's section rung since Reef (#1286): `SectionCard`
- * draws its own `h2` at it, and a bare `h2` standing over a plural body (a list
- * of cards, an `EmptyState`) takes it too (`card.tsx`), so a page's sections
- * speak at one volume.
+ * title. Same size as the app's `SECTION_TITLE_CLASS` below, but a different
+ * rung: this one belongs to the reading ramp, and a staff page never reaches
+ * for it (`pnpm check:type-ramp` refuses it under `src/app/shop`).
  */
 export const LEAD_TITLE_CLASS = "text-2xl font-semibold tracking-tight";
 
@@ -117,17 +116,29 @@ export const LEAD_TITLE_CLASS = "text-2xl font-semibold tracking-tight";
 export const SUB_TITLE_CLASS = "text-xl font-semibold tracking-tight text-pretty";
 
 /**
- * **The hand-spelled section heading**, and the workhorse of the whole ramp — 76
- * of the call sites swept onto these constants were this one, in two spellings.
+ * **The section heading, one size everywhere: 24px.** `SectionCard` draws its
+ * own `h2` with it (`card.tsx` imports this constant), and every hand-spelled
+ * section heading takes it too — a bare group heading over a plural body, a
+ * `<summary>` heading, a `<form>` card's first child, a tone panel. A section
+ * speaks at one volume whether its heading sits inside one card or above five,
+ * and a tone never changes it (docs/design/forms-and-controls.md, "Where a
+ * heading goes").
  *
- * It is **not** what `SectionCard` draws: a card's own `h2` moved up to
- * `LEAD_TITLE_CLASS` with Reef (#1286), and so does a bare group heading over
- * a plural body (docs/design/forms-and-controls.md, "Where a heading goes").
- * This line used to say otherwise, and the team page's "Current team" trusted
- * it and stood 18px under its invite card's 24px (K-314). Which one size every
- * section heading should be is #1966's question.
+ * Until #1966 this was 18px while `SectionCard`'s own `h2` was 24px, so a
+ * page's sections came in two sizes depending on who drew the heading (the
+ * team page's "Current team" under its invite card, the prep page's warning
+ * panels beside its plain sections). Aaron picked 24px for all of them.
  */
-export const SECTION_TITLE_CLASS = "text-lg font-semibold";
+export const SECTION_TITLE_CLASS = "text-2xl font-semibold tracking-tight";
+
+/**
+ * **A named thing inside a section**, not the section itself: a diver's name on
+ * a roll-call row, a departure on the Today spine, a card in a marketing grid,
+ * a course day. 18px, one clear step under the section heading above it. Never
+ * an `<h2>` — a page section takes `SECTION_TITLE_CLASS`
+ * (`pnpm check:type-ramp`).
+ */
+export const ITEM_TITLE_CLASS = "text-lg font-semibold";
 
 /** The one number a surface exists to show — the counter's queue length. */
 export const FIGURE_HERO_CLASS = "text-4xl font-semibold tabular-nums";

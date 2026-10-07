@@ -20,7 +20,7 @@ export default function NewDiverLoading() {
             {["fullName", "email", "phone"].map((slot) => (
               <div key={slot}>
                 <div className="h-4 w-24 rounded bg-surface-sunken" />
-                <div className="mt-2 h-11 w-full rounded-lg bg-surface-sunken" />
+                <div className="mt-2 h-12 w-full rounded-lg bg-surface-sunken" />
               </div>
             ))}
             <FieldActions>

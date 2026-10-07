@@ -91,22 +91,29 @@ function MaterialityChoice({
   checked: boolean;
   onChoose: (value: Materiality) => void;
 }) {
+  // The rules are on a wrapper, not the row: a radio row is rounded for its
+  // focus ring and bleeds 8px either side (`ChoiceRow`), which would curl a
+  // rule's ends and push it past the column. The 12px between rule and words
+  // is split 6px either side of the row's edge, so the ring's 5px clears the
+  // rule.
   return (
-    <ChoiceRow
-      type="radio"
-      name="material"
-      value={value}
-      checked={checked}
-      onChange={() => onChoose(value)}
-      // The gate, in the platform: a radio group with nothing selected makes
-      // the form invalid, so Publish cannot post a materiality the staffer
-      // never stated. `saveWaiverAction` refuses the same shape again.
-      required
-      className="border-t border-border py-3 last:border-b"
-    >
-      <span className="block text-base font-medium">{title}</span>
-      <span className="mt-0.5 block text-sm text-muted">{detail}</span>
-    </ChoiceRow>
+    <div className="border-t border-border py-1.5 last:border-b">
+      <ChoiceRow
+        type="radio"
+        name="material"
+        value={value}
+        checked={checked}
+        onChange={() => onChoose(value)}
+        // The gate, in the platform: a radio group with nothing selected makes
+        // the form invalid, so Publish cannot post a materiality the staffer
+        // never stated. `saveWaiverAction` refuses the same shape again.
+        required
+        className="py-1.5"
+      >
+        <span className="block text-base font-medium">{title}</span>
+        <span className="mt-0.5 block text-sm text-muted">{detail}</span>
+      </ChoiceRow>
+    </div>
   );
 }
 

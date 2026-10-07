@@ -1,6 +1,7 @@
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
+import type { RatingCredential } from "@/lib/crew-roles";
 import { type DbExecutor, isUniqueConstraintViolation } from "./client";
 import { people, personRoles, staffCredentials } from "./schema";
 
@@ -27,6 +28,48 @@ export async function listStaffCredentials(db: DbExecutor, shopId: string) {
       ),
     )
     .orderBy(asc(people.fullName), asc(staffCredentials.renewsAt), asc(staffCredentials.name));
+}
+
+/**
+ * Each person's live ratings, as much of each as currency needs — the input
+ * `lapsedRungs` (src/lib/crew-roles.ts) reads to decide whether somebody on a
+ * crew is still worth what their role says to the supervision ratio
+ * (issue #1853).
+ *
+ * Every kind is returned and `lapsedRungs` picks the ratings out, so the one
+ * list of which kind evidences which rung lives beside the rule that uses it.
+ * A person absent from the map has nothing recorded, which is not a lapse.
+ *
+ * Read only by the supervision claim. The booking gate and the crew editor's
+ * refusals never call this (H-59, docs/product/human-decisions.md).
+ */
+export async function ratingCredentialsByPerson(
+  db: DbExecutor,
+  shopId: string,
+  personIds: readonly string[],
+): Promise<Map<string, RatingCredential[]>> {
+  const byPerson = new Map<string, RatingCredential[]>();
+  if (personIds.length === 0) return byPerson;
+  const rows = await db
+    .select({
+      personId: staffCredentials.personId,
+      kind: staffCredentials.kind,
+      renewsAt: staffCredentials.renewsAt,
+    })
+    .from(staffCredentials)
+    .where(
+      and(
+        eq(staffCredentials.shopId, shopId),
+        inArray(staffCredentials.personId, [...new Set(personIds)]),
+        isNull(staffCredentials.deletedAt),
+      ),
+    );
+  for (const row of rows) {
+    const list = byPerson.get(row.personId) ?? [];
+    list.push({ kind: row.kind, renewsAt: row.renewsAt });
+    byPerson.set(row.personId, list);
+  }
+  return byPerson;
 }
 
 export async function createStaffCredential(

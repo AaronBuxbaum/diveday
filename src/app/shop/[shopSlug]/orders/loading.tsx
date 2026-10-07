@@ -21,9 +21,9 @@ export default function OrdersIndexLoading() {
         <StaffSectionTabsSkeleton section="money" />
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <div className="h-11 w-full rounded-lg bg-surface-sunken sm:w-80" />
-          <div className="h-11 w-36 rounded-lg bg-surface-sunken" />
-          <div className="h-11 w-40 rounded-lg bg-surface-sunken" />
+          <div className="h-12 w-full rounded-lg bg-surface-sunken sm:w-80" />
+          <div className="h-12 w-36 rounded-lg bg-surface-sunken" />
+          <div className="h-12 w-40 rounded-lg bg-surface-sunken" />
         </div>
 
         <div className="mt-8 flex flex-col gap-9">

@@ -3,7 +3,7 @@ import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { cardSummaryClass, SectionCard } from "@/components/ui/card";
 import { SummaryCaret } from "@/components/ui/disclosure";
-import { controlClassFor, Field } from "@/components/ui/form";
+import { controlClass, Field } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonExportShopData, loadShopExportCounts } from "@/db/export";
 import { PAGE_SIZE } from "@/db/paging";
@@ -275,11 +275,7 @@ export default async function DataOutSettingsPage({
             className="mt-4 flex flex-wrap items-end gap-3"
           >
             <Field label={t("settings.crewSheet.monthLabel")} className="w-56">
-              <select
-                name="month"
-                defaultValue={monthKey(thisMonth)}
-                className={controlClassFor("md")}
-              >
+              <select name="month" defaultValue={monthKey(thisMonth)} className={controlClass}>
                 {crewSheetMonths.map((month) => (
                   <option key={monthKey(month)} value={monthKey(month)}>
                     {monthLabel(month, locale)}

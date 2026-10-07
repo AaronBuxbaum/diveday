@@ -2389,7 +2389,11 @@ export const staffCredentialKind = pgEnum("staff_credential_kind", [
 /**
  * Staff-owned evidence; warning-only and never an assignment/booking gate.
  * Decided permanently, not merely unbuilt — see H-59 in
- * docs/product/human-decisions.md.
+ * docs/product/human-decisions.md. Its 2026-10-07 amendment (issue #1853) lets
+ * a lapsed `instructor_rating` / `divemaster_rating` narrow the **supervision
+ * claim** — Today, the staffing week, the trip page — through `lapsedRungs`
+ * (src/lib/crew-roles.ts); the booking gate and the crew editor's refusals
+ * still never read this table.
  */
 export const staffCredentials = pgTable(
   "staff_credentials",

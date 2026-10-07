@@ -3,7 +3,7 @@ import { buttonClass, tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { LedgerRow, ledgerRowRoomClass } from "@/components/ui/ledger";
 import { SettledCheck } from "@/components/ui/SettledCheck";
-import { FIGURE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { FIGURE_CLASS, ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import {
   CLOSEOUT_STATUS_KEYS,
   closeoutDepartureDetailText,
@@ -136,7 +136,7 @@ export function ClosingStation({
           {formatTime(close.startsAt, locale, timeZone)}
         </time>
       </p>
-      <h3 className={`mt-1.5 ${SECTION_TITLE_CLASS} tracking-tight`}>
+      <h3 className={`mt-1.5 ${ITEM_TITLE_CLASS} tracking-tight`}>
         {/* A real tap target, like the live station's title: an inline link
             in an 18px heading is a 23px hit area, which the dock test
             (principle 2) and axe's target-size rule both refuse — and on a

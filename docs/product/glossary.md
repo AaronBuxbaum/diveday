@@ -315,8 +315,11 @@ new domain concept, define it here in the same PR.
   while `instructor` was the only rung available to file them under (issue #1680, ruled 2026-09-16).
   Adding the rung changed no ratio arithmetic: `inWaterCrewRole` maps it to the thing those rules
   already count. The credit assumes a rating **in teaching status** — a lapsed AI is out of teaching
-  status and uninsured, and is not a certified assistant — and DiveDay does not check that, because
-  H-59 made credential status inform-only, permanently.
+  status and uninsured, and is not a certified assistant. Since H-59's 2026-10-07 amendment (issue
+  #1853) the **supervision claim** checks it, so far as the shop has recorded it: an AI whose every
+  recorded `instructor_rating` / `divemaster_rating` renewed before the departure counts for nothing
+  on Today, the staffing week and the trip page (see **Supervision claim**). Booking and rostering
+  still give the credit, because H-59 kept those two gates closed.
   **It carries no permissions of its own** — DiveDay's authorization gates are
   unchanged by it, so a shop that wants their AI to hold a Divemaster's permissions files them as
   both, which the roles list has always allowed. The one that bites is
@@ -2128,6 +2131,16 @@ new domain concept, define it here in the same PR.
   first-aid, boat licence), with an optional renewal date that raises a Today row as it approaches
   (`staff_credentials`). Distinct from a **certification**, which is always a diver's. Renewal is
   a calendar date, so it is good through the end of its own shop-local day.
+- **Supervision claim** — what Today, the staffing week and the trip page tell a staffer about who
+  is supervising a departure in the water: the in-water crew count with each rostered
+  professional's recorded ratings read (`courseCrewCountsByTrip`, `getTripOverview`). A rung is
+  **lapsed** when at least one `instructor_rating` (for the instructor rung) or dive-professional
+  rating (for the certified-assistant rung) is on file and every one of them renewed before the
+  departure's last shop-local day (`lapsedRungs`, `src/lib/crew-roles.ts`); nothing on file, or no
+  date on file, is not a lapse. Distinct from the **roster's claim** — the same count with no
+  credential read — which the booking gate, the seat cap and the crew editor's refusals use, because
+  H-59 keeps a locally recorded renewal date from ever refusing a sale or an assignment (issue
+  #1853). A surface showing a gap the two claims disagree about names who lapsed.
 
 ## Security
 

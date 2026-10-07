@@ -72,7 +72,7 @@ and the only one whose missing data is treated as breaching rather than as quiet
 | --- | --- | --- | --- |
 | `diveday-app-errors` | 3 in 15 min | Handled errors — the ones the app caught and decided about. Sentry never sees these. | Open the "Errors, newest first" saved query and read the codes. |
 | `diveday-money-path-refusals` | 1 in 15 min | A payment arrived the booking record cannot accept: mismatched Connect account, disqualified checkout, settled total over the asked amount, a paid-for cancelled seat. | Find the checkout or order id in the line and reconcile against the Stripe dashboard by hand, before the shop notices. |
-| `diveday-notification-send-failures` | 1 in 1 h | Waiver links and reminders are not leaving. Invisible from inside DiveDay — the booking still looks fine. | Read the error code, then the matching provider runbook (SES / SMS / WhatsApp). |
+| `diveday-notification-send-failures` | 1 in 1 h | Waiver links, reminders, password resets or staff invites are not leaving. Invisible from inside DiveDay — the booking still looks fine, and no staff screen lists a lost account email. | Read the event code: a provider's `*_send_failed` goes to its runbook (SES / SMS / WhatsApp); the retry queue's own codes are in [When a notification is given up](#when-a-notification-is-given-up). |
 | `diveday-cron-pass-failures` | 1 in 24 h | A scheduled pass ran and did not do its work. Distinct from Sentry's cron monitors, which answer "did it run at all". | The line names the scan. Every pass is idempotent, so re-running the route by hand is safe. |
 | `diveday-database-unavailable` | 1 in 5 min | The health check could not reach Postgres. | Neon console first — an exhausted free-tier compute allowance suspends the endpoint, which looks exactly like this. Then [incident-response-runbook.md](incident-response-runbook.md). |
 | `diveday-rate-limit-store-failures` | 5 in 1 h | Rate limiting is failing open. It is *designed* to, but that trade is only safe while someone is told. | Every guarded public write boundary is currently unguarded — see [rate-limiting-runbook.md](rate-limiting-runbook.md). |
@@ -84,6 +84,36 @@ and the only one whose missing data is treated as breaching rather than as quiet
 
 Alarms treat missing data as **not breaching**. A quiet app is a healthy app, and paging on a slow
 Tuesday is how an alert channel gets muted.
+
+### When a notification is given up
+
+A retryable send failure goes onto `notification_send_queue` and is retried once a day by the
+reminders cron for three days. No staff screen lists what the queue gives up — a password reset, a
+staff invite or an email verification has no booking for the Today panel to hang it on, and a
+staffer could not act on it anyway (issue #1826). This alarm is the only place that loss is
+reported, through two codes in `src/db/notifications.ts`. Neither carries an address or a payload:
+the line names the shop, the notification `kind` where the payload could still be read, and the
+provider's error code.
+
+`notification.queue_payload_unreadable` means `SECRET_ENCRYPTION_KEY` is set but is not the key the
+queued rows were sealed under — a rotated or mis-set key. It fires on every daily pass, per row,
+with `recoveryAttemptsLeft`. Nothing is lost yet: each row is re-offered daily for a fortnight. Put
+the original key back and the next pass sends them. Its sibling `notification.queue_seal_unavailable`
+is the same fault with no usable key at all.
+
+`notification.send_abandoned` means a notification will never be sent, and `reason` says which way:
+
+| `reason` | What happened | First move |
+| --- | --- | --- |
+| `retries_exhausted` | Still failing retryably after three days of passes. | The earlier `notification.ses_send_failed` lines for the same window carry the provider's error code; follow [ses-email-runbook.md](ses-email-runbook.md). |
+| `rejected` | A retry failed and the provider said retrying would not help. | Same: read `errorCode`, then the provider runbook. |
+| `not_configured` | A retry found no provider credentials. | The deployment lost its SES configuration; see [ses-email-runbook.md](ses-email-runbook.md). |
+| `payload_unreadable` | The fortnight of unreadable parks above ran out and the row was cleared. | The message is gone. Restore the key so the next ones are not, and tell the shop if `shopId` is one you can reach. |
+| `missing_payload` | A queued row had no payload. | A bug, not an outage: no write path should produce one. File it. |
+| `queue_seal_unavailable`, `queue_write_failed`, `not_queueable`, `no_shop` | A first send failed retryably and could not be put on the queue at all. | For the first two, fix the key or the database; the provider failure that started it is the line just before. `not_queueable` is `guardian_release_copy`, kept off the queue on purpose. |
+
+The person waiting on the message can always ask again — a new reset link, a re-sent invite — so
+the job here is to stop the next loss, not to replay this one.
 
 ## How fast the app is for real people
 

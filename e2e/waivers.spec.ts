@@ -478,6 +478,54 @@ test("an incomplete sign submit is blocked client-side and focuses the missing f
   await expect(page.getByLabel("Type your full name")).toBeFocused();
 });
 
+/**
+ * **A radio's focus ring is drawn on its answer pill, not round the dot.**
+ * An outline follows `border-radius`, and a native radio's is 0 however it is
+ * asked for (Preflight's `input { border-radius: 0 }`, and Chromium resetting
+ * an `appearance: auto` radio's border), so the global ring was a square round
+ * a 16px circle (#2007). The ring moved to the label every radio sits in. A
+ * stylesheet-string test once passed while the ring stayed square, so this asks
+ * the browser what it paints.
+ */
+test("a keyboard-focused medical answer rings its pill, not its dot", async ({ page }) => {
+  // A held send counts eight seconds down before it leaves (ADR
+  // 20260906-before-you-ask, decision 2); this test sends one.
+  test.slow();
+  await page.goto("/shop/blue-mantis/schedule/board");
+  await openTripFromBoard(page, TRIP);
+  await openTripTab(page, "Trip");
+  const waiverHref = await sendWaiverForFirstDiver(page);
+
+  await page.goto(waiverHref ?? "/");
+  const radio = page.locator("#medical-questionnaire").getByRole("radio").first();
+  await radio.waitFor();
+  // From the keyboard, so `:focus-visible` is the browser's own verdict: back
+  // out of the group and Tab into it, which lands on its first answer while
+  // none is checked.
+  await radio.focus();
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  await expect(radio).toBeFocused();
+
+  const ring = await radio.evaluate((input) => {
+    const label = input.closest("label");
+    const own = getComputedStyle(input);
+    const pill = label ? getComputedStyle(label) : null;
+    return {
+      focusVisible: input.matches(":focus-visible"),
+      radioOutline: own.outlineStyle,
+      labelOutline: pill?.outlineStyle ?? "no label",
+      labelOutlineWidth: pill?.outlineWidth ?? "no label",
+      labelRadius: pill?.borderTopLeftRadius ?? "no label",
+    };
+  });
+  expect(ring.focusVisible).toBe(true);
+  expect(ring.radioOutline).toBe("none");
+  expect(ring.labelOutline).not.toBe("none");
+  expect(ring.labelOutlineWidth).toBe("3px");
+  expect(ring.labelRadius).not.toBe("0px");
+});
+
 test("a non-English visitor sees a notice that the waiver text itself stays in English", async ({
   page,
   workerBaseURL,

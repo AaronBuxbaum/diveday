@@ -275,8 +275,15 @@ export default async function ScheduleBoardPage({
   // got a builder with no requests block and no explanation. `shop.id` is
   // still the scope (`listDateRequestsByIds`), so a shareable URL still cannot
   // pull another tenant's lead.
+  //
+  // Read only for a reader the add panel renders for: the plan is drawn inside
+  // it and nowhere else, so for anyone else these rows were loaded and shown
+  // to nobody. `/requests` no longer offers them the link (issue #1831); a
+  // hand-typed `?requests=` from a captain now reads nothing either.
   const requestRows =
-    requestIds.length > 0 ? await listDateRequestsByIds(db, shop.id, requestIds) : [];
+    canConfigure && requestIds.length > 0
+      ? await listDateRequestsByIds(db, shop.id, requestIds)
+      : [];
   const requestAdvice = adviseRequests(
     requestRows.map((request) => ({
       id: request.id,

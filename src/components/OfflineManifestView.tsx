@@ -31,7 +31,7 @@ import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { textareaClassFor } from "@/components/ui/form";
 import { StatusMark, type StatusMarkVariant } from "@/components/ui/StatusMark";
-import { FIGURE_CLASS, SECTION_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
+import { FIGURE_CLASS, ITEM_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
 import { matchLocale } from "@/i18n/negotiate";
 import {
@@ -954,7 +954,7 @@ export function OfflineManifestView() {
                       className="flex min-h-14 flex-col gap-2 rounded-[inherit] p-4 transition-colors hover:bg-surface-sunken focus-visible:bg-surface-sunken focus-visible:focus-ring-inset sm:flex-row sm:items-center sm:justify-between sm:p-5"
                     >
                       <div>
-                        <p className={SECTION_TITLE_CLASS}>{tripManifest.trip.title}</p>
+                        <p className={ITEM_TITLE_CLASS}>{tripManifest.trip.title}</p>
                         <p className="mt-0.5 text-sm text-muted">
                           {oneShopName ? null : `${saved.snapshot.shop.name} · `}
                           {dateTime.format(new Date(tripManifest.trip.startsAt))} ·{" "}
@@ -2256,7 +2256,7 @@ export function OfflineManifestView() {
                             {String(index + 1).padStart(2, "0")}
                           </span>
                         </span>
-                        <h3 className={SECTION_TITLE_CLASS}>{diver.fullName}</h3>
+                        <h3 className={ITEM_TITLE_CLASS}>{diver.fullName}</h3>
                         {/* The shared pill, and the shared tone resolver. The
                           hand-rolled one this replaces paired `text-success`
                           with `bg-success/10`, the combination `Badge`

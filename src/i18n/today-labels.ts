@@ -367,6 +367,23 @@ export function crewBelowTargetDetailText(
 }
 
 /**
+ * Why a supervision row fired on a crew that looks complete (issue #1853):
+ * the people rostered on it whose recorded rating lapses before the departure,
+ * and so count for less than their role says. Without it the row read "No
+ * instructor assigned" beside an instructor's name on the crew list.
+ */
+export function ratingLapsedDetailText(
+  t: StaffTranslator,
+  locale: string,
+  lapsed: readonly { fullName: string }[],
+): string {
+  const names = cachedListFormat(locale, { style: "long", type: "conjunction" }).format(
+    lapsed.map((member) => member.fullName),
+  );
+  return t("today.detail.ratingLapsed", { names, count: lapsed.length });
+}
+
+/**
  * The `over_ratio` half of `courseCrewGap` (src/lib/course-ratios.ts) — an
  * instructor is on the crew, but not enough for the booked count.
  *

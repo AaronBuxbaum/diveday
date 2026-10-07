@@ -236,15 +236,15 @@ test.describe("H-14 role permissions", () => {
 
       // The rows themselves, not only the chrome — a page that renders its
       // heading and no leads would pass a URL assertion and help nobody.
-      await expect(page.getByRole("link", { name: "Add a departure" }).first()).toBeVisible();
+      await expect(page.getByRole("link", { name: "Create a booking" }).first()).toBeVisible();
 
-      // **Turning one into a departure is not this role's** — and that is
-      // `canConfigureTrips` (owner, manager, instructor), a different gate
-      // this change does not touch. The instructor lens below is where the
-      // hand-off is asserted, because an instructor is the role that can
-      // configure a trip *and* fails `canViewShopReports`, which is exactly
-      // who the removed downstream check was emptying the builder for. Filed
-      // as #1831: the link is drawn for a captain who cannot complete it.
+      // **Turning one into a departure is not this role's** — that is
+      // `canConfigureTrips` (owner, manager, instructor), and the board draws
+      // no add panel for a captain. So the day's act is not drawn either
+      // (issue #1831, ADR 20260724-role-gated-surfaces-hide-not-explain). The
+      // instructor lens below queries the same name positively, which is what
+      // keeps this absence honest.
+      await expect(page.getByRole("link", { name: "Add a departure" })).toHaveCount(0);
     });
   });
 

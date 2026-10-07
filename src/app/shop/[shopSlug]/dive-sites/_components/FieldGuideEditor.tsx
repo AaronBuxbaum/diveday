@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { RepeatingItemCard, repeatingItemRemoveClass } from "@/components/editor/RepeatingItemCard";
 import { StoredPhoto } from "@/components/StoredPhoto";
 import { buttonClass } from "@/components/ui/button";
-import { controlClassFor, Field } from "@/components/ui/form";
+import { controlClass, Field } from "@/components/ui/form";
 import { MAX_SITE_CREATURES } from "@/lib/dive-site-field-guide";
 
 /**
@@ -169,7 +169,7 @@ export function FieldGuideEditor({
             placeholder={copy.searchPlaceholder}
             disabled={full}
             aria-invalid={missed || undefined}
-            className={controlClassFor("md")}
+            className={controlClass}
           />
         </Field>
         <datalist id={listId}>

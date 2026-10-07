@@ -1,3 +1,10 @@
+import {
+  type CalendarDate,
+  calendarDateInTimezone,
+  isCalendarDateExpired,
+  isValidCalendarDate,
+} from "./calendar-date";
+
 /**
  * Who counts as what on **one trip's** crew list.
  *
@@ -39,6 +46,13 @@ export type TripCrewRole = (typeof TRIP_CREW_ROLES)[number];
  */
 export type InWaterCrewRole = "instructor" | "certified_assistant" | "none";
 
+/**
+ * The two rungs a recorded rating can stop someone standing on: what
+ * {@link lapsedRungs} hands back and {@link TripCrewAssignment.lapsedRungs}
+ * carries.
+ */
+export type LapsedRung = Exclude<InWaterCrewRole, "none">;
+
 export type TripCrewAssignment = {
   /**
    * What this person is rostered to do on **this** trip, or null/undefined for
@@ -52,7 +66,101 @@ export type TripCrewAssignment = {
   tripRole?: TripCrewRole | null;
   /** The standing roles this person holds in the shop (`person_roles`). */
   shopRoles: readonly string[];
+  /**
+   * The rungs this person's **recorded** ratings say they are off on the day
+   * being counted ({@link lapsedRungs}), or undefined for "the credentials
+   * were not read".
+   *
+   * Undefined is a deliberate answer, not a missing one. The supervision
+   * claim — Today, the staffing week, the trip page — reads the credentials
+   * and passes this. The money and roster paths — the booking gate's
+   * `course_unstaffed` refusal and seat cap, the no-show seat hand-back, the
+   * crew editor's "a course keeps an instructor" refusal — never do, because
+   * H-59 closed new-sale and new-assignment refusal on a locally recorded date
+   * and the 2026-09-16 ruling reopened only the ratio (issue #1853). One
+   * function, two answers, and which one a caller gets is written at the call.
+   */
+  lapsedRungs?: readonly LapsedRung[];
 };
+
+/**
+ * One recorded staff credential, as much of it as currency needs
+ * (`staff_credentials.kind` / `renews_at`).
+ */
+export type RatingCredential = { kind: string; renewsAt: string | null };
+
+/**
+ * The credential kinds that evidence each rung. An instructor stands on an
+ * instructor rating. A certified assistant stands on any dive-professional
+ * rating — a Divemaster's, or the instructor-track one an Assistant Instructor
+ * or an instructor working as an assistant holds — because a professional
+ * whose renewal has lapsed is out of status at every rung they hold with that
+ * agency, not only the top one.
+ */
+const RUNG_EVIDENCE: Record<LapsedRung, readonly string[]> = {
+  instructor: ["instructor_rating"],
+  certified_assistant: ["instructor_rating", "divemaster_rating"],
+};
+
+/**
+ * **Which rungs a person's recorded ratings have lapsed off on `divesOn`**
+ * (issue #1853, ruled 2026-09-16: "read the credential where the ratio is
+ * computed").
+ *
+ * A rung is lapsed only when the shop has recorded at least one rating that
+ * evidences it **and every one of them** renewed before `divesOn`:
+ *
+ * - **Nothing recorded is not a lapse.** Most shops record no credentials at
+ *   all; reading silence as "not current" would empty every course of its
+ *   instructor on the day this shipped.
+ * - **No renewal date is not a lapse.** A rating with no date recorded has
+ *   nothing to say about currency, so it counts as current — and so does a
+ *   date that is not a real calendar date.
+ * - **One current rating is enough.** An instructor holding two agencies'
+ *   ratings, one lapsed, is still an instructor.
+ * - **A renewal date is good through the end of its own day**
+ *   (`isCalendarDateExpired`, the glossary's "Staff credential"): a rating
+ *   that renews on the morning of the dive still counts for that dive.
+ *
+ * `divesOn` is the departure's **last** shop-local day
+ * ({@link lastDayOfDeparture}), not today: the question is whether the rating
+ * is current in the water, so a rating that lapses between the booking and
+ * the dive is lapsed for it, and one that lapses on day two of a three-day
+ * course is lapsed for the course.
+ *
+ * Review status is not read. "Pending" means nobody has checked the card yet,
+ * which says nothing about whether it renewed.
+ */
+export function lapsedRungs(
+  credentials: readonly RatingCredential[],
+  divesOn: CalendarDate,
+): LapsedRung[] {
+  const lapsed: LapsedRung[] = [];
+  for (const rung of ["instructor", "certified_assistant"] as const) {
+    const evidence = credentials.filter((credential) =>
+      RUNG_EVIDENCE[rung].includes(credential.kind),
+    );
+    const allLapsed =
+      evidence.length > 0 &&
+      evidence.every(
+        ({ renewsAt }) =>
+          renewsAt !== null &&
+          isValidCalendarDate(renewsAt) &&
+          isCalendarDateExpired(renewsAt, divesOn),
+      );
+    if (allLapsed) lapsed.push(rung);
+  }
+  return lapsed;
+}
+
+/**
+ * The shop-local calendar day a departure is last in the water on — the day
+ * {@link lapsedRungs} asks about. A millisecond is taken off the end so a
+ * departure ending exactly at local midnight belongs to the day it ran on.
+ */
+export function lastDayOfDeparture(endsAt: Date, timeZone: string): CalendarDate {
+  return calendarDateInTimezone(new Date(endsAt.getTime() - 1), timeZone);
+}
 
 /**
  * The single rule. Two properties hold, and both are load-bearing:
@@ -73,7 +181,12 @@ export type TripCrewAssignment = {
  * neither whatever the roster says.
  */
 export function inWaterCrewRole(member: TripCrewAssignment): InWaterCrewRole {
-  const holdsInstructor = member.shopRoles.includes("instructor");
+  // A rung whose every recorded rating has lapsed is a rung not held, and the
+  // rest of this function never learns otherwise — so a lapse narrows exactly
+  // the way a missing role does, and property 2 covers it for free: nothing
+  // here can make a lapsed rating worth *more*.
+  const lapsed = member.lapsedRungs ?? [];
+  const holdsInstructor = member.shopRoles.includes("instructor") && !lapsed.includes("instructor");
   /**
    * **The two rungs that are worth an assistant and not an instructor.**
    *
@@ -98,8 +211,16 @@ export function inWaterCrewRole(member: TripCrewAssignment): InWaterCrewRole {
    * unchanged, because an AI *is* the thing those rules already call an
    * assistant.
    */
+  //
+  // `instructor` is in the list for the lapse alone: without one, it changes
+  // nothing, because every branch below asks `holdsInstructor` first. With an
+  // instructor rating lapsed and a Divemaster rating still current, it is what
+  // lets the current card count for what it is.
   const holdsCertifiedAssistant =
-    member.shopRoles.includes("divemaster") || member.shopRoles.includes("assistant_instructor");
+    (member.shopRoles.includes("divemaster") ||
+      member.shopRoles.includes("assistant_instructor") ||
+      member.shopRoles.includes("instructor")) &&
+    !lapsed.includes("certified_assistant");
   // No per-trip role: exactly the shop-wide inference, unchanged.
   if (!member.tripRole) {
     if (holdsInstructor) return "instructor";
@@ -176,6 +297,49 @@ export function countInWaterCrew(members: Iterable<TripCrewAssignment>): InWater
     else if (role === "certified_assistant") assistantCount += 1;
   }
   return { instructorCount, assistantCount };
+}
+
+/**
+ * Whether a recorded lapse is what took this person down a rung — the count
+ * with their credentials read differs from the roster's claim. The surfaces
+ * that inherit the narrowed count name these people, so a gap that a lapse
+ * opened is explained rather than shown as one more shortfall.
+ */
+export function narrowedByLapse(member: TripCrewAssignment): boolean {
+  return rungLostToLapse(member) !== null;
+}
+
+/**
+ * The rung a recorded lapse took this person off — what the roster says they
+ * are worth, when the count with their credentials read is less — or null.
+ *
+ * Which rung matters to the sentence a surface may say: only somebody who lost
+ * the **instructor** rung can be why a session reads "no instructor". A
+ * divemaster's lapse beside a session nobody rostered an instructor on is a
+ * different fact, and saying it in place of "No instructor assigned" hid the
+ * real gap (dive-domain review of issue #1853).
+ */
+export function rungLostToLapse(member: TripCrewAssignment): LapsedRung | null {
+  if (!member.lapsedRungs || member.lapsedRungs.length === 0) return null;
+  const roster = inWaterCrewRole({ ...member, lapsedRungs: undefined });
+  if (roster === "none" || inWaterCrewRole(member) === roster) return null;
+  return roster;
+}
+
+/**
+ * The same count twice: the supervision claim (credentials read) and the
+ * roster's claim (none read). A surface flags a gap as a lapse's only when the
+ * two claims disagree about that gap, never merely because somebody aboard has
+ * a lapsed card.
+ */
+export function countBothClaims(members: readonly TripCrewAssignment[]): {
+  supervision: InWaterCrewCount;
+  roster: InWaterCrewCount;
+} {
+  return {
+    supervision: countInWaterCrew(members),
+    roster: countInWaterCrew(members.map((member) => ({ ...member, lapsedRungs: undefined }))),
+  };
 }
 
 /**

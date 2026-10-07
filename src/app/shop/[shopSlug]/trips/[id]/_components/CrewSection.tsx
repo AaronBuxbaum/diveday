@@ -8,7 +8,7 @@ import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { INSET_NOTE_BOX, INSET_NOTE_CLASS } from "@/components/ui/card";
-import { controlClass, controlClassFor, FormStatus } from "@/components/ui/form";
+import { controlClass, FormStatus } from "@/components/ui/form";
 import type { TripCrewChange } from "@/db/trips";
 import { fill } from "@/i18n/fill";
 import { TRIP_CREW_ROLES, type TripCrewRole } from "@/lib/crew-roles";
@@ -34,6 +34,13 @@ export type CrewSectionCopy = {
    * tone and reasoning as `underTargetNote` (issue #708).
    */
   languageGapNote: string | null;
+  /**
+   * Pre-rendered with the names in it, or null when no rostered professional's
+   * recorded rating lapses before this departure (issue #1853). It is why the
+   * gap above can fire on a crew list that names an instructor; said in the
+   * section's ordinary ink because the gap itself already carries the warning.
+   */
+  ratingLapsedNote: string | null;
   /** No staff exist in the shop at all yet, so there's nobody to assign. */
   noStaff: string;
   /** Staff exist, but nobody is on this trip's crew yet. */
@@ -300,6 +307,7 @@ export function CrewSection({
           {copy.overRatioWarning}
         </p>
       ) : null}
+      {copy.ratingLapsedNote ? <p className={INSET_NOTE_CLASS}>{copy.ratingLapsedNote}</p> : null}
       {copy.underTargetNote ? <p className={INSET_NOTE_CLASS}>{copy.underTargetNote}</p> : null}
       {copy.languageGapNote ? <p className={INSET_NOTE_CLASS}>{copy.languageGapNote}</p> : null}
 
@@ -451,7 +459,7 @@ export function CrewSection({
                         }}
                         // `md`, the height of the `icon` remove square beside
                         // it: a row with a text control in it is an `md` row.
-                        className={controlClassFor("md")}
+                        className={controlClass}
                       >
                         <option value="">{copy.roleUnspecified}</option>
                         {TRIP_CREW_ROLES.map((role) => (

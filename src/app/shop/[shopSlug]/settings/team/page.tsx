@@ -21,7 +21,7 @@ import {
   FormStatus,
 } from "@/components/ui/form";
 import { InsetGroup, ledgerRowBoxClass } from "@/components/ui/ledger";
-import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonManageStaffAccounts } from "@/db/authz";
 import type { staffCredentials } from "@/db/schema";
 import { listShopStaff, type StaffMember } from "@/db/staff-accounts";
@@ -771,12 +771,10 @@ export default async function TeamSettingsPage({
 
         <section>
           {/* Not a card — a heading over a list of them, so a bare `h2` at
-              `LEAD_TITLE_CLASS`, the rung `SectionCard` draws its own title at
-              and `card.tsx` prescribes for a heading over a plural body. The
-              two sections on this page read at one level; at
-              `SECTION_TITLE_CLASS` this one was 18px under the invite card's
-              24px (K-314). */}
-          <h2 className={LEAD_TITLE_CLASS}>{t("settings.team.current.heading")}</h2>
+              `SECTION_TITLE_CLASS`, the rung `SectionCard` draws its own title
+              at and `card.tsx` prescribes for a heading over a plural body. It
+              once stood 18px under the invite card's 24px (K-314, #1966). */}
+          <h2 className={SECTION_TITLE_CLASS}>{t("settings.team.current.heading")}</h2>
           {staff.length === 0 ? (
             <EmptyState
               title={t("settings.team.current.empty")}

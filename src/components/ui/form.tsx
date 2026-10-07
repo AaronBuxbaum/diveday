@@ -31,39 +31,27 @@ import { toneMark } from "./tone";
  */
 
 /**
- * **How tall a text control stands, named for what it stands beside.**
+ * **Every text control is 48px**, one height for an input, a select, a search
+ * or a date box, wherever it stands.
  *
- * A control's type is 16px at every size, because iOS Safari zooms the whole
- * page when a box under 16px takes focus. So the control can only ever be
- * level with a button whose label is 16px too, and `buttonClass`'s `md` is
- * that button: 48px with a 16px label. `sm` is 44px with a 14px label and
- * never matches a control, whatever its height.
+ * A control's type is 16px, because iOS Safari zooms the whole page when a
+ * box under 16px takes focus. So the control can only ever be level with a
+ * button whose label is 16px too, and `buttonClass`'s `md` is that button:
+ * 48px with a 16px label. `sm` is 44px with a 14px label and never matches a
+ * control, whatever its height.
  *
- * - `field`, the default: 44px, the target floor. A control stacked in a
- *   `Field` whose line holds no button, alone in a toolbar, or in a row of
- *   controls only (the orders toolbar's search and selects).
- * - `md`: 48px. A control that shares a line with `md` buttons or `icon`
- *   squares, inside a `Field` or not: a search beside its "Add diver", the
- *   reports month box between its arrows, a rename box beside its Save, a
- *   `Field`'s box beside its form's submit. **A row with a text control in
- *   it is an `md` row.**
+ * There used to be two sizes: `field` at 44px for a control stacked in a
+ * `Field` or alone in a toolbar, and `md` at 48px for one sharing a line with
+ * `md` buttons. Every call site had to know which it was, and the review that
+ * introduced the split found seven rows that had not been moved, none of which
+ * the pixel probe could see (issue #1987). One height makes "one size per
+ * row" hold by construction, and matches the Counter canvas's single 48px
+ * field with 16px type.
  *
- * The pixel probe found the two apart on 2026-09-25 (the `mismatched-controls`
- * cluster): a 44px search box beside a 48px "Add diver" on seventeen trip
- * captures and the roster, and a 16px box beside a 14px "Go" or "Save"
- * wherever a row reached for `sm` to match the box's height.
- *
- * Each size spells its own vertical padding with its height, so the content
- * box is 26px at both. A text box centres its line at any height, but a native
- * file picker lays its button at the top of the content box, and would sit
- * high in a 48px box still padded for 44.
+ * `py-2.5` with `min-h-12` leaves a 26px content box, so a native file picker,
+ * which lays its button at the top of the content box, sits centred.
  */
-const controlSizes = {
-  field: "min-h-11 py-2",
-  md: "min-h-12 py-2.5",
-} as const;
-
-export type ControlSize = keyof typeof controlSizes;
+const controlSize = "min-h-12 py-2.5";
 
 /**
  * `placeholder-shown:text-ellipsis`: a placeholder longer than its box ends
@@ -74,13 +62,8 @@ export type ControlSize = keyof typeof controlSizes;
 const controlBody =
   "w-full rounded-lg border border-border-strong bg-surface px-3 text-base font-normal transition-colors placeholder-shown:text-ellipsis focus:border-primary";
 
-/** Shared control styling at a size — see `controlSizes` for which size a row takes. */
-export function controlClassFor(size: ControlSize): string {
-  return `${controlSizes[size]} ${controlBody}`;
-}
-
-/** Shared control styling for inputs and selects, at the `field` size. */
-export const controlClass = controlClassFor("field");
+/** Shared control styling for inputs and selects: 48px, 16px type. */
+export const controlClass = `${controlSize} ${controlBody}`;
 
 /**
  * The fewest lines each textarea shows: its `rows`, as a minimum height of
@@ -156,23 +139,16 @@ export function textareaClassFor(rows: TextareaRows): string {
  * Every native input prop passes through — `ref`, `value`/`onChange` for a
  * controlled box, `defaultValue` for a form-owned one, `data-*` hooks the e2e
  * suite waits on — so a surface never has a reason to spell the box by hand.
- *
- * `size="md"` where the box shares a line with an `md` button, as the diver
- * roster's and the seat-diver picker's do with their "Add diver"; the default
- * everywhere else (`controlSizes` says why).
  */
 export function SearchField({
   id,
   label,
-  size = "field",
   className = "",
   ...input
 }: {
   id: string;
   /** The accessible name — "Search divers", "Scan or search diver". */
   label: string;
-  /** The row's size: `md` beside an `md` button, the default anywhere else. */
-  size?: ControlSize;
   /** Sizes the box. `controlClass` already sets `w-full`; the wrapper decides the width. */
   className?: string;
 } & Omit<ComponentPropsWithRef<"input">, "id" | "type" | "className" | "children" | "size">) {
@@ -207,7 +183,7 @@ export function SearchField({
         autoComplete="off"
         maxLength={120}
         {...input}
-        className={`${controlClassFor(size)} ps-9`}
+        className={`${controlClass} ps-9`}
       />
     </div>
   );
@@ -246,9 +222,7 @@ export function SearchField({
  * `datetime-local` too: spelled bare, those kept the platform's solid black
  * indicator, further in than a date box's muted outline on the same form,
  * and an empty one on iOS showed nothing at all (the pixel probe's state
- * atlas, K-54). A time draws a clock; the rest draw the calendar. `size` is
- * `controlClassFor`'s: `md` for a box on a line with `md` buttons, as the
- * reports month picker's is between its arrows.
+ * atlas, K-54). A time draws a clock; the rest draw the calendar.
  *
  * **An empty box looks empty.** The input is `DateInput`, a client leaf that
  * marks itself `data-empty` while it holds no value, and `globals.css` paints
@@ -257,15 +231,12 @@ export function SearchField({
  */
 export function DateField({
   type = "date",
-  size = "field",
   className = "",
   wrapperClassName = "",
   ...input
 }: {
   /** Which temporal control. Default `date`. */
   type?: TemporalType;
-  /** The row's size: `md` beside an `md` button, the default anywhere else. */
-  size?: ControlSize;
   /** Extra classes on the input itself, e.g. `tabular-nums`. */
   className?: string;
   /** Sizes the wrapper; `controlClass` already sets `w-full` on the input. */
@@ -276,7 +247,7 @@ export function DateField({
       <DateInput
         {...input}
         type={type}
-        className={`peer ${controlClassFor(size)} pe-9 data-[fallback]:pe-3 [&::-webkit-calendar-picker-indicator]:opacity-0 ${className}`.trim()}
+        className={`peer ${controlClass} pe-9 data-[fallback]:pe-3 [&::-webkit-calendar-picker-indicator]:opacity-0 ${className}`.trim()}
       />
       {/* Inert and aria-hidden, like SearchField's magnifier: the input's own
           accessible name says what it is, and a tap here must reach the
@@ -717,7 +688,7 @@ export function Field({
           other field on this row, so it is as tall as the *longest* neighbour's
           description. Without it the spare height stretches the control itself,
           and a field whose neighbour has a three-line description renders a
-          52px box next to its 44px sibling. Keep the control at its own height
+          56px box next to its 48px sibling. Keep the control at its own height
           and let the slack fall below the description. */}
       <span className="grid content-start gap-1">
         {control}
@@ -748,6 +719,28 @@ export function Field({
  */
 export const choiceClass = "size-4 shrink-0";
 
+/**
+ * **A radio's focus is drawn on the box it sits in, not round its dot.** An
+ * outline follows `border-radius`, and a native radio's is 0 whatever asks
+ * otherwise: Preflight's `input { border-radius: 0 }` outranks a `:where()`
+ * rule in the same layer, and Chromium resets the border of an
+ * `appearance: auto` radio in its layout theme. So the global ring drew a
+ * square round a 16px circle — the waiver's medical Yes / No, /ready's
+ * answers, a call's outcome (#2007). Drawing our own radio would have put it
+ * beside native checkboxes and risked the medical answers' only visible
+ * record under forced colours, so the radio stays native and its ring moves.
+ *
+ * `radioClass` is `choiceClass` with the radio's own outline switched off;
+ * `radioRingClass` goes on the rounded box round it — `ChoicePill`'s pill,
+ * `ChoiceRow`'s row, a hand-built card's label — and draws the global ring
+ * there, following that box's corner. `input:focus-visible` rather than any
+ * `:focus-visible`, so a button in the box (a pill's aside) rings itself and
+ * not the pill. The two travel together: `form.test.tsx` refuses a visible
+ * radio without `radioClass`, and a file that wears it without the ring.
+ */
+export const radioClass = `${choiceClass} focus-visible:outline-none`;
+export const radioRingClass = "has-[input:focus-visible]:focus-ring";
+
 type ChoiceProps = {
   type: "checkbox" | "radio";
   /** The words, which are the box's accessible name and part of its target. */
@@ -768,6 +761,18 @@ type ChoiceProps = {
  * its words and spills them over its border.
  */
 const CHOICE_BOX_LINE = "flex h-lh items-center";
+
+/** A checkbox keeps the global ring on itself; a radio's is on its row or pill (`radioClass`). */
+function boxClass(type: ChoiceProps["type"]): string {
+  return type === "radio" ? radioClass : choiceClass;
+}
+
+/**
+ * A radio row is ringed, so it gets a corner for the ring to follow and 8px
+ * of room either side of it, given back as a negative margin so neither the
+ * box nor the words move off the column every other row stands on.
+ */
+const CHOICE_ROW_RADIO = `-mx-2 rounded-lg px-2 ${radioRingClass}`;
 
 /** `ChoiceRow`'s `outdent="block-end"`: see `ChoiceRow`. `--spacing(11)` is the 44px floor. */
 const CHOICE_ROW_OUTDENT =
@@ -803,12 +808,13 @@ export function ChoiceRow({
   children,
   ...input
 }: ChoiceProps & { outdent?: "block-end" }) {
+  const radio = type === "radio" ? ` ${CHOICE_ROW_RADIO}` : "";
   return (
     <label
-      className={`grid min-h-11 cursor-pointer grid-cols-[auto_1fr] content-center items-start gap-x-3${outdent ? ` ${CHOICE_ROW_OUTDENT}` : ""} ${className}`.trim()}
+      className={`grid min-h-11 cursor-pointer grid-cols-[auto_1fr] content-center items-start gap-x-3${radio}${outdent ? ` ${CHOICE_ROW_OUTDENT}` : ""} ${className}`.trim()}
     >
       <span className={CHOICE_BOX_LINE}>
-        <input type={type} {...input} className={choiceClass} />
+        <input type={type} {...input} className={boxClass(type)} />
       </span>
       {/* A sentence, often: `text-pretty` so it never ends on one word (K-534). */}
       <span className="text-pretty">{children}</span>
@@ -851,11 +857,12 @@ export function ChoicePill({
 }: ChoiceProps & { size?: "sm" | "md"; aside?: ReactNode }) {
   const pill = `rounded-lg border border-border bg-surface transition-colors hover:bg-surface-sunken ${size === "md" ? "text-base" : "text-sm"}`;
   const row = "grid cursor-pointer grid-cols-[auto_1fr] content-center items-start gap-x-2 py-2";
+  const ring = type === "radio" ? ` ${radioRingClass}` : "";
   if (aside === undefined || aside === null || aside === false) {
     return (
-      <label className={`${row} min-h-11 ${pill} px-4 ${className}`.trim()}>
+      <label className={`${row} min-h-11 ${pill}${ring} px-4 ${className}`.trim()}>
         <span className={CHOICE_BOX_LINE}>
-          <input type={type} {...input} className={choiceClass} />
+          <input type={type} {...input} className={boxClass(type)} />
         </span>
         <span>{children}</span>
       </label>
@@ -873,10 +880,10 @@ export function ChoicePill({
   // and bottom makes its border box the pill's full 44px. Not across the start
   // border: that would move the box 1px off the plain pills' column.
   return (
-    <div className={`flex min-h-11 items-center gap-2 ${pill} pe-4 ${className}`.trim()}>
+    <div className={`flex min-h-11 items-center gap-2 ${pill}${ring} pe-4 ${className}`.trim()}>
       <label className={`${row} -my-px flex-1 self-stretch ps-4`}>
         <span className={CHOICE_BOX_LINE}>
-          <input type={type} {...input} className={choiceClass} />
+          <input type={type} {...input} className={boxClass(type)} />
         </span>
         <span>{children}</span>
       </label>

@@ -4,7 +4,7 @@ import { CaptainRollCallFallback } from "@/components/MarketingScreenFallbacks";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { groupLabelClass } from "@/components/ui/ledger";
-import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import { FEATURE_PHASES, featurePagePath, featurePagesIn } from "@/lib/feature-pages";
@@ -195,7 +195,7 @@ export function FeatureDirectory({
                   <span className="flex items-center justify-between gap-3">
                     <span
                       id={lines ? pageNameId(page.key) : undefined}
-                      className={`${SECTION_TITLE_CLASS} transition-colors group-hover:text-primary`}
+                      className={`${ITEM_TITLE_CLASS} transition-colors group-hover:text-primary`}
                     >
                       {t(`marketing.featurePages.${page.key}.name`)}
                     </span>
@@ -280,7 +280,7 @@ function CapabilityLines({
       >
         {titled ? (
           <>
-            <span className={`${SECTION_TITLE_CLASS} text-balance`}>{t(group.title)}</span>
+            <span className={`${ITEM_TITLE_CLASS} text-balance`}>{t(group.title)}</span>
             {count}
           </>
         ) : (
