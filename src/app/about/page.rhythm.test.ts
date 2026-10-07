@@ -10,7 +10,7 @@ import { describe, expect, it } from "vitest";
  */
 const PAGE = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "page.tsx"), "utf8");
 
-describe("/about's founder band", () => {
+describe("/about's who-we-are band", () => {
   /**
    * The heading and the paragraphs are two grid items, so when the grid
    * stacks below `lg` its column gap becomes the heading-to-body gap: 40px,
@@ -29,14 +29,15 @@ describe("/about's founder band", () => {
 describe("/about's start-of-line links", () => {
   /**
    * A link button keeps its size's `px-4` unless it passes `flush`, so a link
-   * that starts a line under text sits 16px inside the column. Both of these
-   * do: "See the product" wraps under the band's two outline doors, and the
-   * switching link sits under its paragraph. The landing's start-of-line
-   * doors already pass it (K-397).
+   * that starts a line under text sits 16px inside the column. The one link
+   * door left on the page does: the switching link wraps under the band's two
+   * outline doors onto a line of its own. "See the product" went with the
+   * 2026-10-07 rewrite. The landing's start-of-line doors already pass it
+   * (K-397).
    */
-  it("passes flush on both, so their words start on the column", () => {
+  it("passes flush, so its words start on the column", () => {
     const links = PAGE.match(/buttonClass\(\{[^}]*variant: "link"[^}]*\}\)/g) ?? [];
-    expect(links).toHaveLength(2);
+    expect(links).toHaveLength(1);
     for (const link of links) expect(link).toMatch(/flush: true/);
   });
 });

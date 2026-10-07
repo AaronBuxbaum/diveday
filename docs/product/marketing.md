@@ -79,7 +79,7 @@ and listed the rest in a closed index on `/product`.
   the sticky chapter strip and the payment band were deleted the same day; each chapter's screen
   and notes live on the feature page that owns them.
 - **What did not change:** the claims policy, the two doors and their order, the demo note once per
-  page, the price stated where the question arises, and `/about`'s spoken register.
+  page, the price stated where the question arises, and `/about`'s company voice (H-99).
 
 ## The homepage breadth band (decided 2026-08-20, replaced 2026-10-05)
 
@@ -193,9 +193,8 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   positioning DiveDay wants. **What replaces it:** a plain `support@dive.day` inbox, reaching the
   same small team without naming an individual or promising a response time — phrase it as "write in
   and a real person reads it," never "the founder personally answers" or any response-time
-  guarantee. It appears on `/about` (the "How it's run" section — the hero and founder-biography
-  sections stay, since who built DiveDay and why is a claim like any other, not a response-time
-  promise), the marketing footer, `/pricing`, the homepage's closing contact band, the sign-up
+  guarantee. It appears on `/about` (the "How we work with shops" band; since 2026-10-07 the page names no
+  individual at all, H-99), the marketing footer, `/pricing`, the homepage's closing contact band, the sign-up
   reassurance card, and the signed-in shop settings page. **Trial upgrades get their own address,**
   `onboarding@dive.day` — used only for "how do I move a trial shop to paid," on the pricing page's
   trial FAQ, the sign-up form's trial note, and the shop Settings trial-status card (3-week trial,
@@ -245,6 +244,15 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   legal and outreach" without new confirmation. **Confirmed by the product owner 2026-07-27:** the
   page no longer states a certification year for Aaron — do not reintroduce one without fresh
   confirmation.
+  **Amended 2026-10-07 (H-99; Aaron, in the project thread: "Don't talk about the specific people,
+  use generalities about people in a company").** `/about` names no individual and states no CV.
+  The confirmed facts above stay confirmed and unused; the page describes the people who build
+  DiveDay in generalities that are true of them and derived from those facts (people who have spent
+  their careers on software that millions of people rely on, and who dive), speaks in the company's
+  plural throughout, including the hero's tie to the product ("That story is why we built
+  DiveDay"), and no longer carries the concessions band. The Lonergan section and its limits are
+  unchanged. `src/app/about/copy.test.ts` refuses a named individual, a first-person singular, and
+  the prevention claim in both locales.
 - **Competitor statements must be documented fact** (their own pages, FAQs, pricing) and phrased
   factually. Prefer contrasting with the *buyer's fear* (setup fees, add-on stacks, export limits)
   over naming the rival. Switching guides may name incumbents; they cite sources and never
@@ -354,9 +362,21 @@ a lawyer or a mascot) applies, plus marketing-specific rules:
   each answer rather than the question, and the copy test's arithmetic moved with it: the exit
   heading names the thing its band publishes (a content word of the question appears in the band's
   own prose), carries no mark at either end, and is none of the three retired headings.
+  **Since the 2026-10-07 rewrite (H-99; Aaron: "I really really don't like the copy on About. Let's
+  redo it entirely")** the spoken register is retired. The owner kept the hero alone, with the
+  question heading over it removed and the tie made the company's; every heading under it is a
+  statement with a full stop ("Divers who have shipped software to millions of people.", "The one job on a boat
+  that can't go wrong.", "We set your shop up with you.", "The demo is a working shop, with divers
+  booked on today's boat."), the eyebrow "Why DiveDay exists" is the page's h1, and the copy test's
+  arithmetic moved again: statement headings, no individual named, no first-person singular, the
+  Lonergan limits, and the retired questions refused by value. The register is "The about page"
+  in [design/brand.md](../design/brand.md).
 - **Concede the facts; never apologize for them.** This is the rule the page-level version of the
   claims policy kept losing. "DiveDay is new" and "it's still changing" are honesty the policy
-  requires, and they stay on `/about`; its scope card ("it doesn't do everything") left in the
+  requires, and they stayed on `/about` until 2026-10-07, when the owner's rewrite dropped the
+  concessions band (H-99: "Don't get overly truthful, just make a compelling case"; the protection
+  they described, the export on the first day and the month-to-month plan, is stated on the page as
+  what the shop gets); its scope card ("it doesn't do everything") left in the
   2026-10-06 rewrite, the day the "What it doesn't do" sections came off the public pages. What is banned is the register that grew up around them — by
   2026-08-12 nine framings of *we're small, we're new, you've never heard of us, don't take us on
   faith* had accumulated across the five pages, including the `/about` H1, the lead-in to its four
@@ -919,7 +939,7 @@ structure* live; none of them may contain an English sentence:
 | The twelve feature pages | `src/lib/feature-pages.ts` (slugs, demo role and landing, related pages, screen); one template in `src/app/product/_components/FeaturePageBody.tsx` | `marketing.featurePages.<page>.*` for each page's words, `marketing.featureChrome.*` for the template's own |
 | Page-specific narrative copy | The page file (`src/app/{page,product/page,pricing/page}.tsx`) | `marketing.home/product/pricing.*` in the bundles |
 | Sign-up reassurance (no card, the exit, the founder line) | `src/app/onboard/page.tsx` | `account.onboard.*` in the bundles |
-| Who builds DiveDay, and what it concedes | `src/app/about/page.tsx` | `marketing.about.*` in the bundles |
+| Why DiveDay exists, who builds it, and how a shop gets set up | `src/app/about/page.tsx` | `marketing.about.*` in the bundles |
 | Mockup copy | `src/components/MarketingScreenFallbacks.tsx`, and the feature pages' screens in `src/components/MarketingFeatureScreens.tsx` | `fallback.*` in the bundles |
 | Nav / footer | `src/components/MarketingNav.tsx` / `MarketingFooter.tsx` | `nav.*` in the bundles |
 | Switching-guide content (per incumbent) | `src/lib/migration-guides.ts` (key registry; slugs, URLs, source citations); pages in `src/app/switching/` | `marketing.guides.*` in the bundles |

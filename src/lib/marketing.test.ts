@@ -56,6 +56,10 @@ describe("the price is interpolated, never spelled out in a bundle", () => {
     "marketing.home.heroPriceLine",
     "marketing.home.priceLine",
     "marketing.about.seeCost",
+    // The "One price covers the shop." standard on `/about` states the figure
+    // where the question is raised rather than a band away from it
+    // (2026-10-07; the pricing door below it still carries it too).
+    "marketing.about.rules.onePrice.body",
     "marketing.featureChrome.includedPrice",
     "marketing.featureChrome.closePrice",
   ] as const;

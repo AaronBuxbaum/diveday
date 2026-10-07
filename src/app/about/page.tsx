@@ -11,7 +11,6 @@ import { SectionCard } from "@/components/ui/card";
 import { groupLabelClass } from "@/components/ui/ledger";
 import {
   BANNER_TITLE_CLASS,
-  DISPLAY_TITLE_CLASS,
   MARKETING_EYEBROW_CLASS,
   SUB_TITLE_CLASS,
 } from "@/components/ui/typography";
@@ -20,7 +19,7 @@ import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import { switchingHref } from "@/lib/funnel";
 import { earlyAccessPrice, fullShopExport, sharedLinkCard } from "@/lib/marketing";
-import { SUPPORT_EMAIL } from "@/lib/platform-mail";
+import { SUPPORT_EMAIL, setUpMailto } from "@/lib/platform-mail";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
@@ -31,13 +30,13 @@ export const instant = true;
 export const metadata: Metadata = {
   title: "Why DiveDay exists — DiveDay",
   description:
-    "Two divers, one of them writing the code, and the 1998 Great Barrier Reef story behind DiveDay’s roll call. Who’s behind it, what you can check in the demo, and how your records come back out.",
+    "The 1998 Great Barrier Reef story behind DiveDay’s roll call, the divers who build it, what every screen is held to, and how a shop gets set up.",
   alternates: { canonical: "/about" },
   openGraph: {
     ...sharedLinkCard,
     title: "Why DiveDay exists — DiveDay",
     description:
-      "Two divers, one writing the code, and the story behind DiveDay’s roll call. Who’s behind it and how your records come back out.",
+      "The story behind DiveDay’s roll call, the divers who build it, and how a shop gets set up.",
     url: "/about",
   },
   // `summary_large_image`: the OG block above names the shared link card
@@ -47,7 +46,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Why DiveDay exists — DiveDay",
     description:
-      "Two divers, one writing the code, and the story behind DiveDay’s roll call. Who’s behind it and how your records come back out.",
+      "The story behind DiveDay’s roll call, the divers who build it, and how a shop gets set up.",
   },
 };
 
@@ -93,52 +92,46 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
   const t = diverTranslator(locale);
 
   /**
-   * The honest-no block, in the register docs/product/marketing.md asks for:
-   * concede loudly, because an honest no buys trust the claims can't. These are
-   * facts about the company (how new it is, how much it is still moving) rather
-   * than product scope. The scope card ("It doesn't do everything.") left with
-   * the 2026-10-06 rewrite, the day the "What it doesn't do" sections were cut
-   * from the public pages.
+   * The four things every screen is held to. Each is a shipped behavior a
+   * visitor can reproduce in the demo (docs/product/marketing.md,
+   * shipped-only). Until 2026-10-07 each card ended in a "Check it:" dare
+   * naming the demo action; the 2026-10-07 rewrite dropped the dares with the
+   * rest of the spoken register (H-99) and lets the demo door under the grid
+   * carry the invitation once.
    *
-   * The whole page is written as speech (docs/design/brand.md, "The spoken
-   * register on /about"): every h2 is the shop owner's question, repeated back
-   * without a mark, and the band under it is the answer. The founder's own
-   * parts stay first-person singular; what both people here share is "we".
+   * The page speaks as the company. It names no individual, states no CV, and
+   * describes the people who build DiveDay in generalities (docs/product/
+   * marketing.md, "Biography is a claim like any other", 2026-10-07 amendment);
+   * `copy.test.ts` holds the mechanical half of that in both locales.
    */
-  const plainTruths = [
-    { title: t("marketing.about.truths.new.title"), body: t("marketing.about.truths.new.body") },
-    {
-      title: t("marketing.about.truths.stillMoving.title"),
-      body: t("marketing.about.truths.stillMoving.body"),
-    },
-  ] as const;
-
-  /**
-   * Product commitments, each with the demo action that proves it. Every one is a
-   * shipped behaviour a visitor can reproduce (docs/product/marketing.md,
-   * shipped-only) — which is the point: a vendor with no install base earns trust
-   * by being checkable, not by asserting harder.
-   */
-  const operatingRules = [
+  const standards = [
     {
       title: t("marketing.about.rules.survivesDock.title"),
       body: t("marketing.about.rules.survivesDock.body"),
-      check: t("marketing.about.rules.survivesDock.check"),
     },
     {
       title: t("marketing.about.rules.noSilentPasses.title"),
       body: t("marketing.about.rules.noSilentPasses.body"),
-      check: t("marketing.about.rules.noSilentPasses.check"),
     },
     {
       title: t("marketing.about.rules.onePrice.title"),
-      body: t("marketing.about.rules.onePrice.body"),
-      check: t("marketing.about.rules.onePrice.check"),
+      // The figure where the question is raised, never a door away from it.
+      // Interpolated, never spelled: `earlyAccessPrice` is H-12's single
+      // source, and `src/lib/marketing.test.ts` counts this key among the
+      // sentences that must carry `{price}` and `{cadence}`.
+      body: t("marketing.about.rules.onePrice.body", {
+        price: earlyAccessPrice.price,
+        cadence: t(earlyAccessPrice.cadenceKey),
+      }),
     },
     {
       title: t("marketing.about.rules.yourRecords.title"),
-      body: t("marketing.about.rules.yourRecords.body"),
-      check: t("marketing.about.rules.yourRecords.check"),
+      // The export terms are the one shared claim (`fullShopExport`), composed
+      // here as on every other page that states them, so the card cannot drift
+      // from the pricing FAQ or the homepage's records band.
+      body: t("marketing.about.rules.yourRecords.body", {
+        terms: t(fullShopExport.termsKey),
+      }),
     },
   ] as const;
 
@@ -147,21 +140,26 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
       {/* The hero is why DiveDay exists: the Lonergans, left behind on the
           Great Barrier Reef in 1998 when nobody noticed two divers missing
           (docs/product/marketing.md, "Biography is a claim like any other",
-          holds the sourcing). The right column is the thing that story built,
-          a captain's roll call by name, running from the phone's saved copy.
-          Told flat, in the order it happened, with no adjective on it: the
+          holds the sourcing and the limits: no operator or skipper named, no
+          adjective on the account, no sentence saying DiveDay would have
+          prevented it). The right column is the thing that story built, a
+          captain's roll call by name, running from the phone's saved copy.
+
+          The eyebrow is the page's `h1`. The display heading over the story
+          ("Why did you build this") left on 2026-10-07 at the owner's call, so
+          the story is the first thing read and nothing stands over it; the
+          page's name stays on the one heading a screen reader lands on first,
+          and the story itself is set a step up from body text so the hero
+          still has a weight to it. Told flat, in the order it happened: the
           story carries its own weight and the page does not sell with it. */}
       <section className="border-b border-border">
         <div className="mx-auto grid w-full max-w-7xl gap-12 px-6 py-16 lg:grid-cols-[1fr_0.8fr] lg:items-center lg:py-24">
           <div className="max-w-2xl">
-            <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.eyebrow")}</p>
-            <h1 className={`mt-5 ${DISPLAY_TITLE_CLASS} sm:text-5xl lg:text-6xl`}>
-              {t("marketing.about.heroTitle")}
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-muted sm:text-xl">
+            <h1 className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.eyebrow")}</h1>
+            <p className="mt-6 max-w-2xl text-xl leading-8 sm:text-2xl sm:leading-9">
               {t("marketing.about.heroDescription")}
             </p>
-            <p className="mt-4 max-w-2xl text-lg leading-8 text-muted sm:text-xl">
+            <p className="mt-5 max-w-2xl text-lg leading-8 text-muted">
               {t("marketing.about.heroP2")}
             </p>
           </div>
@@ -173,11 +171,9 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
         </div>
       </section>
 
-      {/* Who is behind it comes straight after why, because the hero's last
-          paragraph is the founder's own ("That story is why I built
-          DiveDay"). The reassurance that a shop's season does not rest on two
-          people closes this band, with its proof, before the rules invite
-          anyone to check it. */}
+      {/* Who is behind it comes straight after why. The band speaks for the
+          company in generalities: people who build software for a living and
+          dive, and what each of those puts into the product. */}
       <section className="border-b border-border bg-surface">
         <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
           {/* Two grid items, so below `lg` the row gap is the heading-to-body
@@ -185,31 +181,30 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
               the 40px column gap only once there are columns (K-577). */}
           <div className="grid gap-5 lg:grid-cols-[0.9fr_1fr] lg:items-start lg:gap-10">
             <div>
-              <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.founderEyebrow")}</p>
+              <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.peopleEyebrow")}</p>
               <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
-                {t("marketing.about.founderTitle")}
+                {t("marketing.about.peopleTitle")}
               </h2>
             </div>
             <div className="max-w-2xl space-y-5 text-lg leading-8 text-muted">
-              <p>{t("marketing.about.founderP1")}</p>
-              <p>{t("marketing.about.founderP2")}</p>
-              <p>{t("marketing.about.founderP3")}</p>
+              <p>{t("marketing.about.peopleP1")}</p>
+              <p>{t("marketing.about.peopleP2")}</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* The proof comes before the concessions. Since the 2026-10-06 rewrite
-          it follows the story and the people, which is the order a reader
-          asks in: why, who, then how would I know. */}
+      {/* What the product is built around, then the four standards as cards,
+          then the page's first demo door. The order is why, who, what we hold
+          it to, which is the order a reader asks in. */}
       <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
         <div className="max-w-2xl">
-          <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.rulesEyebrow")}</p>
+          <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.buildEyebrow")}</p>
           <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
-            {t("marketing.about.rulesTitle")}
+            {t("marketing.about.buildTitle")}
           </h2>
           <p className="mt-4 text-lg leading-8 text-muted">
-            {t("marketing.about.rulesDescription")}
+            {t("marketing.about.buildDescription")}
           </p>
         </div>
         {/* `SectionCard`, so this panel is spelled the same as every other
@@ -217,176 +212,99 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
             fifth hand-typed variant. The heading stays a call-site `h3` at the
             marketing scale rather than going through `title`: the section above
             it is `text-4xl`, and `titleAs="h3"` renders `text-base`, which
-            would set the page's only checkable proof as fine print under a
-            36px heading. The card's *chrome* is shared; the marketing type
-            scale is not the staff one. */}
+            would set the page's standards as fine print under a 36px heading.
+            The card's *chrome* is shared; the marketing type scale is not the
+            staff one. */}
         <div className="mt-12 grid gap-5 sm:grid-cols-2">
-          {operatingRules.map((rule) => (
+          {standards.map((rule) => (
             <SectionCard as="article" key={rule.title} padding="lg">
               <h3 className={SUB_TITLE_CLASS}>{rule.title}</h3>
               <p className="mt-3 leading-7 text-muted">{rule.body}</p>
-              <p className="mt-3 text-sm leading-6 text-muted">
-                <span className="font-semibold text-primary">
-                  {t("marketing.common.checkItLabel")}
-                </span>
-                {rule.check}
-              </p>
             </SectionCard>
           ))}
         </div>
-        {/* The page's impulse is manufactured here and, until 2026-08-28, was
-            spent two bands down on a primary-weight mailto: four cards each
-            ending in "Check it: save a manifest to your phone, turn the network
-            off, and run roll call anyway" — and then nothing to do it with
-            until the closing band, past the founder story, the concessions and
-            the export terms (docs/product/marketing-review-20260827.md, "help
-            arrives after the homework"). The pair lands where the dare is made.
-
-            No words of its own, for the reason `/product`'s index door carries
-            none: the four "Check it" lines above are the caption, and a heading
-            here would restate the section it closes. This is the door for a
-            reader already convinced, not the page's own ask. Left-aligned on
+        {/* The first demo door sits under the standards, where a reader who
+            wants to see them for themselves is (docs/product/
+            marketing-review-20260827.md, "help arrives after the homework").
+            No words of its own: the four cards above are the caption, and a
+            heading here would restate the section it closes. Left-aligned on
             the section's rail, like the heading block and the grid. */}
         <FunnelCtas locale={locale} source="about-rules" className="mt-10" />
-        {/* The demo's cost, stated once on this page — here, because this is
-            now the first demo door a reader meets (docs/product/marketing.md,
-            "The demo's cost is stated once per page, at the first door"). The
-            pair above is wordless on purpose; this is not a caption for it but
-            the answer to the only question its button raises, and a page that
-            has just dared a burned buyer to go and check four things cannot
-            leave "does this cost me my email address?" unanswered at the
-            moment of the dare. The closing band repeats the door, not the
-            note. */}
+        {/* The demo's cost, stated once on this page, at its first door
+            (docs/product/marketing.md, "The demo's cost is stated once per
+            page, at the first door"). The closing band repeats the door, not
+            the note. */}
         <p className="mt-3 text-sm font-medium text-muted">{t("marketing.common.demoNote")}</p>
       </section>
 
-      <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
-        <div className="max-w-3xl">
-          <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.runEyebrow")}</p>
-          <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
-            {t("marketing.about.runTitle")}
-          </h2>
-          <p className="mt-5 text-lg leading-8 text-muted">{t("marketing.about.runP1")}</p>
-          <p className="mt-4 text-lg leading-8 text-muted">{t("marketing.about.runP2")}</p>
-          {/* Two peer doors for the section's two claims — write in, or read
-              the price — and no primary among them. The mailto carried primary
-              weight until 2026-08-28, which made "email a stranger" the
-              heaviest thing a convinced reader could do on this page: a real
-              offer, but a slower one than the demo, and it sat two bands below
-              the proof that had convinced them. The impulse is now spent under
-              the rules grid; this row stays available and stops shouting
-              (docs/product/marketing-review-20260827.md, `/about`).
-
-              The pricing door states the figure in its own words rather than
-              parking it behind itself. This band raises the cost question
-              three times — the "One price, no seats." rule sends a reader here
-              to *check it*, the heading promises straightforward pricing, and
-              the paragraph above says the whole of it is on one page — and
-              until 2026-08-28 the row answered none of them: "See what it
-              costs" is the unlabeled door a skeptic reads as "they won't say",
-              the same card wall `/product`'s money band gave up the same day
-              (docs/product/marketing-review-20260827.md, diagnosis 2). It
-              costs the page no control, because the door already existed:
-              the budget binds controls, not facts (docs/product/marketing.md).
-
-              Interpolated, never spelled: `earlyAccessPrice` is H-12's single
-              source, and `src/lib/marketing.test.ts` counts this key among the
-              sentences that must carry `{price}` and `{cadence}`. */}
-          <div className="mt-8 flex flex-wrap gap-3">
-            <a href={`mailto:${SUPPORT_EMAIL}`} className={buttonClass({ variant: "outline" })}>
-              {t("marketing.about.emailCta", { email: SUPPORT_EMAIL })}
-            </a>
-            <Link href="/pricing" className={buttonClass({ variant: "outline" })}>
-              {t("marketing.about.seeCost", {
-                price: earlyAccessPrice.price,
-                cadence: t(earlyAccessPrice.cadenceKey),
-              })}
-            </Link>
-            {/* `flush`: it wraps under the two doors onto a line of its own,
-                where the size's `px-4` set its words 16px inside the column
-                (K-397). */}
-            <Link href="/product" className={buttonClass({ variant: "link", flush: true })}>
-              {t("marketing.about.seeProduct")}
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <section className="border-y border-border bg-surface">
+      {/* How a shop gets set up and who answers afterwards, beside the
+          commercial facts a buyer scans for: where the records live, how the
+          plan works, who answers. The prose argues; the list is the same
+          facts at a glance. */}
+      <section className="border-t border-border">
         <div className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
-          <div className="max-w-2xl">
-            <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.plainlyEyebrow")}</p>
-            <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
-              {t("marketing.about.plainlyTitle")}
-            </h2>
-            <p className="mt-4 text-lg leading-8 text-muted">
-              {t("marketing.about.plainlyDescription")}
-            </p>
-          </div>
-          {/* `bg-background`, not `bg-surface`: these cards sit *on* a surface
-              band, and surface-on-surface left them a border with no card.
-              Which is also why these three are **not** `SectionCard` — it
-              hard-codes `bg-surface` on purpose and offers no way to invert a
-              card sitting on a band, and passing `bg-background` through
-              `className` would be two conflicting background utilities
-              resolved by stylesheet order rather than by intent. Converting
-              them needs a decision in `src/components/ui/card.tsx` about what a
-              card on a surface band is, not a call-site override here.
-
-              The padding is `SectionCard`'s `lg` spelled by hand in the
-              meantime, so it matches the four checkable rules above rather than
-              sitting a step roomier than them. Left at `p-6 sm:p-8` these
-              *concession* cards would be the most generous thing on the page
-              and the page's only *proof* the tightest — inverting the hierarchy
-              the section order was rearranged to get (docs/product/marketing.md,
-              "concede the facts; never apologize for them"). */}
-          <div className="mt-12 grid gap-5 md:grid-cols-2">
-            {plainTruths.map((truth) => (
-              <article
-                key={truth.title}
-                className="rounded-panel border border-border bg-background p-5 sm:p-6"
-              >
-                <h3 className={SUB_TITLE_CLASS}>{truth.title}</h3>
-                <p className="mt-3 leading-7 text-muted">{truth.body}</p>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto w-full max-w-7xl px-6 py-20 lg:py-24">
-        <div>
           <div className="grid gap-10 lg:grid-cols-[1fr_0.9fr] lg:items-center">
             <div className="max-w-2xl">
-              <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.leaveEyebrow")}</p>
+              <p className={MARKETING_EYEBROW_CLASS}>{t("marketing.about.workEyebrow")}</p>
               <h2 className={`mt-4 ${BANNER_TITLE_CLASS} sm:text-4xl`}>
-                {t("marketing.about.leaveTitle")}
+                {t("marketing.about.workTitle")}
               </h2>
-              <p className="mt-5 text-lg leading-8 text-muted">{t("marketing.about.leaveP1")}</p>
-              <p className="mt-4 text-lg leading-8 text-muted">
-                {t("marketing.about.leaveP2", { terms: t(fullShopExport.termsKey) })}
-              </p>
-              {/* Tagged like the homepage's doors onto the same surface — this
-                  is the one in-page switching door on `/about`, so it takes the
-                  page's own name. The nav and footer links stay bare on
-                  purpose: they render on every marketing page, so one tag
-                  across all of them would answer nothing. */}
-              <Link
-                href={switchingHref("/switching", "about-switching")}
-                className={buttonClass({
-                  variant: "link",
-                  flush: true,
-                  className: "mt-4 text-left",
-                })}
-              >
-                {t("marketing.about.switchingLink")}
-              </Link>
+              <p className="mt-5 text-lg leading-8 text-muted">{t("marketing.about.workP1")}</p>
+              <p className="mt-4 text-lg leading-8 text-muted">{t("marketing.about.workP2")}</p>
+              {/* Three peer doors for the band's three claims — get set up,
+                  read the price, see how records move — and no primary among
+                  them: the impulse is spent under the standards grid above, so
+                  this row stays available and stops shouting
+                  (docs/product/marketing-review-20260827.md, `/about`).
+
+                  The first door is the set-up mail, the same one the shared
+                  pair offers, because this band's first paragraph is the
+                  set-up offer ("Write to us, and someone here builds your shop
+                  with you"); a support mailto stood here until 2026-10-07 and
+                  sent a reader who had just decided to the wrong inbox. The
+                  support address keeps its one home in the list beside.
+
+                  The pricing door states the figure in its own words rather
+                  than parking it behind itself; "See what it costs" is the
+                  unlabeled door a skeptic reads as "they won't say"
+                  (docs/product/marketing-review-20260827.md, diagnosis 2).
+                  Interpolated, never spelled: `earlyAccessPrice` is H-12's
+                  single source, and `src/lib/marketing.test.ts` counts this key
+                  among the sentences that must carry `{price}` and `{cadence}`.
+
+                  The switching door is tagged like the homepage's doors onto
+                  the same surface — the one in-page switching door on `/about`
+                  takes the page's own name. The nav and footer links stay bare
+                  on purpose: they render on every marketing page, so one tag
+                  across all of them would answer nothing. `flush`: it wraps
+                  under the two outline doors onto a line of its own, where the
+                  size's `px-4` set its words 16px inside the column (K-397). */}
+              <div className="mt-8 flex flex-wrap gap-3">
+                <a
+                  href={setUpMailto(t("marketing.common.setUpSubject"))}
+                  className={buttonClass({ variant: "outline" })}
+                >
+                  {t("marketing.common.getSetUp")}
+                </a>
+                <Link href="/pricing" className={buttonClass({ variant: "outline" })}>
+                  {t("marketing.about.seeCost", {
+                    price: earlyAccessPrice.price,
+                    cadence: t(earlyAccessPrice.cadenceKey),
+                  })}
+                </Link>
+                <Link
+                  href={switchingHref("/switching", "about-switching")}
+                  className={buttonClass({ variant: "link", flush: true })}
+                >
+                  {t("marketing.about.switchingLink")}
+                </Link>
+              </div>
             </div>
-            {/* Same `bg-background` exemption as the honest-no cards above:
-                this list sits against the page and is deliberately the quieter
-                surface of the two columns. `SectionCard padding="none"` is
-                otherwise exactly its shape, and it converts the day the
-                component grows an answer for a card that is not `bg-surface`. */}
+            {/* `bg-background` by hand rather than `SectionCard`: this list
+                sits against the page and is deliberately the quieter surface
+                of the two columns. `SectionCard padding="none"` is otherwise
+                exactly its shape, and it converts the day the component grows
+                an answer for a card that is not `bg-surface`. */}
             <dl className="divide-y divide-border rounded-panel border border-border bg-background">
               <div className="p-6">
                 <dt className={groupLabelClass("primary")}>
@@ -413,14 +331,16 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-7xl px-6 py-20 text-center lg:py-28">
-        <h2 className={`mx-auto max-w-3xl ${BANNER_TITLE_CLASS} sm:text-4xl`}>
-          {t("marketing.about.closingTitle")}
-        </h2>
-        <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted">
-          {t("marketing.about.closingDescription")}
-        </p>
-        <FunnelCtas locale={locale} source="about-closing" className="mt-8 justify-center" />
+      <section className="border-t border-border bg-surface">
+        <div className="mx-auto w-full max-w-7xl px-6 py-20 text-center lg:py-28">
+          <h2 className={`mx-auto max-w-3xl ${BANNER_TITLE_CLASS} sm:text-4xl`}>
+            {t("marketing.about.closingTitle")}
+          </h2>
+          <p className="mx-auto mt-5 max-w-2xl text-lg leading-8 text-muted">
+            {t("marketing.about.closingDescription")}
+          </p>
+          <FunnelCtas locale={locale} source="about-closing" className="mt-8 justify-center" />
+        </div>
       </section>
     </main>
   );
