@@ -7,6 +7,10 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## A shop can pay DiveDay (delivered 2026-10-07)
+
+Market audit item 7, N-59. Settings > Billing (`/shop/[slug]/settings/billing`, owner only) shows the plan, the shop's billing standing (trialing, free term, active, past due, canceled, trial ended) and the next charge or end date. Its one button is **Add a card**, which opens Stripe Checkout with the first charge deferred to the end of the trial or free term. Once the shop pays, it becomes **Manage billing** and **Cancel plan**, both through Stripe's Customer Portal. Stripe emails the invoices. A webhook at `/api/webhooks/billing` is the only writer of `shop_subscriptions`: it checks the signature, ignores a replay, refuses an out-of-order event and refuses a cross-tenant one. Founding free months are granted by hand with `pnpm billing:free-term`. The first paid invoice stamps `first_paid_at`. Nothing is gated on standing; `isInGoodStanding` is the seam. Off until the `stripe-billing-setup` manual action sets three `BILLING_STRIPE_*` values, and until then the page says so. The trial card moved off the Settings hub onto this page. ADR [20261007-subscription-billing](../architecture/decisions/20261007-subscription-billing.md).
+
 ## A set-up request form, and the founder's numbers (delivered 2026-10-07)
 
 Every public "Get set up" door, which used to be a mail to `onboarding@dive.day`, now opens `/get-set-up?from=<tag>`. The form asks for shop name, town or region, whether the shop runs a boat, what it uses today, name, email and an optional phone. It checks a per-IP and a global rate limit and a honeypot, stores a `setup_requests` row with the funnel tag, mails onboarding@ (`setup_request_alert`), fires `setup_requested`, and lands on a thank-you page with the demo door. `trial_started` is deleted ([ADR 20261007-setup-request-form](../architecture/decisions/20261007-setup-request-form.md)).

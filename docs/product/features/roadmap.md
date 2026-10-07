@@ -1001,8 +1001,6 @@ alongside them moved several of these prerequisites.
 - **N-57 What's new.** An in-app page and a monthly note derived from
   [../shipped.md](../shipped.md), so a shop learns what changed under it. *Effort:* S. *Needs:* i18n for the frame; the notes land
   in both locales.
-- **N-59 Self-serve billing.** Stripe Billing for the $99: trial to subscription, invoices,
-  cancel-with-export. *Effort:* M. *Needs:* owner (H-12's open half).
 
 ### The reef itself
 
@@ -1152,7 +1150,8 @@ These block real operations regardless of code completeness; owners and evidence
   pricing and home pages. H-26 (2026-08-02) confirms the posture behind these terms is
   deliberately lifestyle-scale, not venture-scale (see [vision.md](../vision.md#what-kind-of-business-this-is)),
   and dropped the explicit same-day response-time SLA pending a real support-hour-capacity answer.
-  Billing cadence, taxes/fees, and the contract flow remain open. See
+  Billing is built and monthly (N-59, [shipped](../shipped.md#a-shop-can-pay-diveday-delivered-2026-10-07));
+  taxes/fees and the contract flow remain open. See
   [competitive-analysis.md](../assessments/competitive-analysis.md#pricing-posture).
 - **Legal / policy sign-off** for waivers, medical, retention, course rules, nitrox parameters, and
   notification consent — H-01…H-11.

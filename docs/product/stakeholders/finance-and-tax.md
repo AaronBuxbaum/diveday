@@ -1,8 +1,10 @@
 # Finance, payments & tax — stakeholder playbook
 
 Money moves in two separate systems and only one is built: **shops' diver payments** run through
-Stripe Connect on shop-owned accounts (shipped), while **DiveDay's own $99/location/month
-subscription billing** has no mechanism yet. This playbook covers the Stripe platform
+Stripe Connect on shop-owned accounts (shipped), and **DiveDay's own $99/location/month
+subscription billing** runs through Stripe Billing on DiveDay's own account (built, off until the
+`stripe-billing-setup` manual action is done; ADR
+[20261007-subscription-billing](../../architecture/decisions/20261007-subscription-billing.md)). This playbook covers the Stripe platform
 application, the CPA engagement, and the open policy scraps. Status of record:
 [human-decisions/](../human-decisions/README.md) rows **H-07** (remaining payment policy), **H-12**
 (remaining commercial terms), and **H-18** (entity — the CPA co-owns that decision with counsel,
@@ -13,9 +15,10 @@ see [legal.md](legal.md#the-entity-decision-h-18)).
 - The live Stripe Connect platform application (`STRIPE_CONNECT_CLIENT_ID`) is a Phase-0 gate
   with a review queue DiveDay doesn't control — an unsubmitted application is the classic
   self-inflicted pilot blocker ([rollout 0.2](../rollout.md#02-operational-ownership-h-04-h-09-credentials-h-07-credentials)).
-- Phase 2 charges real shops. No billing mechanism, cadence, or tax posture is decided (H-12's
-  open half), and the founding-cohort terms already published (price lock, support SLA) need
-  contract and invoice reality behind them.
+- Phase 2 charges real shops. The mechanism and cadence exist (monthly, card on file, Stripe
+  emails the invoices), but the tax posture on DiveDay's own invoices is not decided (H-12's open
+  half), and the founding-cohort terms already published (the price lock) need contract reality
+  behind them.
 
 ## Who to talk to
 
@@ -74,10 +77,11 @@ recording a choice, not building anything:
   accountant/legal confirmation of tax applicability, registrations, remittance, and the treatment
   of deposits and fares, whether a platform fee ever exists, whether unpaid bookings auto-expire,
   and percentage deposits (mechanism deferred by owner request).
-- **H-12 remainder:** billing cadence (monthly card on file is the obvious default), the
-  invoice/receipt mechanism for DiveDay's own subscription (likely Stripe Billing on DiveDay's
-  **own** account — a separate thing from Connect; if built, it needs an ADR and a roadmap
-  entry), taxes/fees presentation, and the public contract/contact intake flow
+- **H-12 remainder:** taxes/fees presentation on DiveDay's own invoices (Stripe Tax on the billing
+  price is a dashboard setting, not code, once the CPA says what applies), and the public
+  contract/contact intake flow. The cadence and invoice mechanism are built: monthly, card on file,
+  Stripe Billing on DiveDay's **own** account, Stripe-emailed invoices (ADR
+  [20261007-subscription-billing](../../architecture/decisions/20261007-subscription-billing.md))
   ([commercial-and-industry.md](commercial-and-industry.md) owns the intake conversation).
 
 ## Where outcomes land
@@ -85,6 +89,7 @@ recording a choice, not building anything:
 - H-07 and H-12 rows updated; pricing display changes go through the
   [pricing boundary](../marketing.md#claims-policy-hard-rules) (`src/lib/marketing.ts` is the source of
   truth — never edit a price in page copy).
-- A subscription-billing mechanism, if chosen, enters [roadmap.md](../features/roadmap.md) with an ADR
-  (new runtime dependency rule).
+- The subscription-billing mechanism is recorded in ADR
+  [20261007-subscription-billing](../../architecture/decisions/20261007-subscription-billing.md) and
+  [shipped.md](../shipped.md).
 - Entity/tax outcomes land in H-18 with [legal.md](legal.md).

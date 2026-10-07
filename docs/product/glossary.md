@@ -1735,10 +1735,10 @@ new domain concept, define it here in the same PR.
   **never seeded** — it starts empty, with no playground banner or destructive reset (ADR
   20260724-per-visitor-demo-shops, superseding 20260718-production-demo-seed). A trial runs
   **3 weeks** from `shops.created_at` (`TRIAL_DURATION_DAYS`, `src/lib/trial.ts`), shown to the
-  owner in Settings as days left / trial ended. Expiry is **soft** — the shop keeps working exactly
-  as before past the window; there is no paid/trial entitlement flag in the schema to gate on.
-  Moving to a paid plan is by writing to `onboarding@dive.day`, not a self-serve checkout
-  (product-owner decision, 2026-08-05, [human-decisions/](human-decisions/README.md#decision-register)).
+  owner on Settings > Billing as days left / trial ended. Expiry is **soft**: the shop keeps working
+  exactly as before past the window, and nothing gates on **billing standing**. Once billing is
+  turned on, the owner moves to paid by adding a card on that page (see **Subscription** under
+  Money; ADR [20261007-subscription-billing](../architecture/decisions/20261007-subscription-billing.md)).
 - **Owner reporting / monthly report** — the owner's "how's my month" view (`/shop/[slug]/reports`):
   net revenue, bookings, **fill rate**, and **waiver completion** for the trips that departed in a
   chosen month, plus a per-trip breakdown. Trip metrics remain anchored to trip-departure month in
@@ -2173,6 +2173,10 @@ new domain concept, define it here in the same PR.
   owns (ADR
   [20260826-stripe-tax-is-opt-in-and-provider-owned](../architecture/decisions/20260826-stripe-tax-is-opt-in-and-provider-owned.md)),
   and from a **deposit**, which is the shop's money held early.
+- **Subscription (DiveDay billing)** — what a *shop* pays *DiveDay*: one monthly price, billed by Stripe Billing on DiveDay's own Stripe account, never through the shop's connected account (that is the shop's money from divers). One row per shop in `shop_subscriptions`, written by the billing webhook; Settings > Billing is the owner's alone. ADR [20261007-subscription-billing](../architecture/decisions/20261007-subscription-billing.md).
+- **Billing standing** — the one word a shop's subscription reads as: *trialing*, *free term*, *active*, *past due*, *canceled* or *trial ended*. Derived, never stored, by `billingStanding` in `src/lib/billing/standing.ts` from the trial window, the free term and Stripe's own status. *In good standing* means trialing, free term or active; nothing gates on it.
+- **Free term** — free months DiveDay grants a shop by hand (the founding offer), set with `pnpm billing:free-term <shop-slug> <last-free-day>`. The date is the last free day, inclusive, in the shop's zone. Adding a card during the trial or a free term charges nothing until the free time ends.
+- **First paid month** — the instant the first non-zero invoice for a shop's subscription was paid: `shop_subscriptions.first_paid_at`, written once, also logged as `billing.first_paid_month`.
 
 ## What a shop says about itself
 
