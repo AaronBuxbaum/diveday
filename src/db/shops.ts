@@ -1,4 +1,5 @@
 import { and, eq, exists, gt, isNull, or, sql } from "drizzle-orm";
+import { cache } from "react";
 import type { BrandBadgeCode, BrandDisplayFontCode } from "@/lib/brand";
 import { nowDate } from "@/lib/clock";
 import type { DepthUnit } from "@/lib/depth-units";
