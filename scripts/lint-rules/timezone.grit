@@ -1,0 +1,26 @@
+// A rendered date names the zone it is rendered in. Intl.DateTimeFormat and the toLocale*String
+// family fall back to the host zone (UTC on every server) when no timeZone is given. The rule is
+// "name a zone", not "name the shop's zone": timeZone: "UTC" is a visible choice and passes.
+// Why: docs/agents/repo-checks.md ("Now Biome rules").
+language js
+
+file(body=$body) where {
+  $body <: r"(?s).*(?:Intl\s*\.|\.\s*toLocale).*",
+  $body <: contains bubble or {
+    `new Intl.DateTimeFormat($args)`,
+    JsCallExpression(callee=JsStaticMemberExpression(member=$method), arguments=$args) where {
+      $method <: or {
+        `toLocaleString`,
+        `toLocaleDateString`,
+        `toLocaleTimeString`
+      }
+    }
+  } as $call where {
+    $args <: not contains or {
+      `timeZone`,
+      r"\"timeZone\"",
+      r"'timeZone'"
+    },
+    register_diagnostic(span=$call, message="timezone: this date names no timeZone, so it renders in the host zone (UTC on every server). Use a src/lib/format.ts helper (timeZone is a required parameter there), or pass timeZone explicitly.", severity="error")
+  }
+}

@@ -26,7 +26,8 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
-import { measure, rules } from "./check-context-budget.mjs";
+import { listDirs, measure, rules } from "./check-context-budget.mjs";
+import { readRatchet } from "./ratchet.mjs";
 
 const ROOT = process.cwd();
 const TOKENS_PER_WORD = 1.35;
@@ -43,7 +44,7 @@ console.log("Agent environment\n=================\n");
 
 // ---------------------------------------------------------------- context
 const measured = await measure(ROOT);
-const { budgets } = await readJson("scripts/context-budget-baseline.json");
+const { budgets } = await readRatchet(ROOT, "context-budget");
 const total = Object.values(measured).reduce((sum, count) => sum + count, 0);
 
 console.log("Always-loaded context (every session, main loop and subagents alike)");
@@ -119,9 +120,8 @@ console.log();
 
 // -------------------------------------------------------------- the wiring
 const settings = await readJson(".claude/settings.json");
-const skills = (await readdir(path.join(ROOT, ".claude/skills"), { withFileTypes: true })).filter(
-  (entry) => entry.isDirectory(),
-);
+// Follows links: many skills are symlinked in from `.agents/skills/`.
+const skills = await listDirs(ROOT, ".claude/skills");
 const agents = (await readdir(path.join(ROOT, ".claude/agents"))).filter((f) => f.endsWith(".md"));
 
 console.log("Session wiring");

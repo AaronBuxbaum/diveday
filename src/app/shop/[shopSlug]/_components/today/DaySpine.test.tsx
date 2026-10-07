@@ -1391,14 +1391,14 @@ describe("the evening reading", () => {
     });
 
     expect(screen.getByText("All home")).toBeInTheDocument();
-    expect(screen.getByText(/10 divers and 2 crew out, 12 back by/)).toBeInTheDocument();
+    expect(screen.getByText(/10 passengers and 2 crew out, 12 back by/)).toBeInTheDocument();
     expect(screen.getByText("head count closed by Keiko Tanaka")).toBeInTheDocument();
   });
 
   it("marks the day's homecoming once, and only when every count closed clean", () => {
     renderSpine({ departures: [], evening: evening([closed({ tripId: "t1", booked: 10 })]) });
 
-    const line = screen.getAllByText("All boats are home: 10 divers and 2 crew out, 12 back.");
+    const line = screen.getAllByText("All boats are home: 10 passengers and 2 crew out, 12 back.");
     expect(line).toHaveLength(1);
     expect(line[0]).toHaveAttribute("role", "status");
   });
@@ -1428,7 +1428,7 @@ describe("the evening reading", () => {
       evening: evening([closed({ tripId: "t1", booked: 3 })], { firstEver: true }),
     });
     expect(
-      screen.getByText("Your first boat is home: 3 divers and 2 crew out, 5 back."),
+      screen.getByText("Your first boat is home: 3 passengers and 2 crew out, 5 back."),
     ).toBeInTheDocument();
     expect(screen.queryByText(/All boats are home/)).toBeNull();
   });

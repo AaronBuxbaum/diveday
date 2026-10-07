@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { calculateReadiness, isUnsightedSelfDeclaration } from "@/lib/readiness";
 import { decideTripAdmission } from "@/lib/trip-admission";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { createNitroxCertification, reviewNitroxCertification } from "./nitrox";
 import { findOrCreatePerson } from "./people";
 import {
@@ -27,7 +27,7 @@ import {
  */
 
 async function joiner(name = "Nora Quinn", email = "nora@example.com") {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const { person } = await findOrCreatePerson(db, {
     shopId: shop.id,
     fullName: name,
@@ -42,6 +42,10 @@ async function liveCards(db: Awaited<ReturnType<typeof joiner>>["db"], shopId: s
     .from(certifications)
     .where(and(eq(certifications.shopId, shopId), isNull(certifications.deletedAt)));
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 describe("recordSelfDeclaredCards", () => {
   it("records a declared level as a pending, self-declared card with no card number", async () => {

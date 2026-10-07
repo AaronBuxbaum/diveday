@@ -15,9 +15,9 @@ import {
   isShopIssuedCard,
   needsImportConfirm,
 } from "@/lib/certification-cards";
+import type { DiverStatusRow } from "@/lib/diver-status";
 import { formatShortDate } from "@/lib/format";
 import { isUnsightedSelfDeclaration } from "@/lib/readiness";
-import type { DiverStatusRow } from "../_lib/status";
 import {
   addCardAction,
   clearNoCertificationAction,
@@ -27,6 +27,7 @@ import {
   reviewAction,
   reviewSpecialtyAction,
 } from "../actions";
+import { AgencyCheckLink } from "./AgencyCheckLink";
 import { CardSightingForm } from "./CardSightingForm";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
 import { fileGap } from "./file-gap";
@@ -393,6 +394,9 @@ export function CertificationsGroup({
                   ? t("divers.certifications.shopIssuedNoNumberLabel")
                   : card.identifier}
             {isShopIssuedCard(card) ? <> · {t("divers.certifications.shopIssuedLabel")}</> : null}
+            {awaiting || needsImportConfirm(card) ? (
+              <AgencyCheckLink agency={card.agency} t={t} />
+            ) : null}
             {card.reviewNote ? <span className="block italic">{card.reviewNote}</span> : null}
             {card.reviewedAt && card.reviewedByName ? (
               <span className="block">
@@ -455,7 +459,12 @@ export function CertificationsGroup({
             {t(AGENCY_KEYS[card.agency])} · {t(SPECIALTY_KEYS[card.specialty])}
           </>
         }
-        detail={card.identifier}
+        detail={
+          <>
+            {card.identifier}
+            {awaiting ? <AgencyCheckLink agency={card.agency} t={t} /> : null}
+          </>
+        }
         actions={
           <>
             {selfDeclared ? (
@@ -503,7 +512,16 @@ export function CertificationsGroup({
             ? t("divers.specialty.nitroxLine")
             : t("divers.specialty.nitroxAgencyLine", { agency: t(AGENCY_KEYS[card.agency]) })
         }
-        detail={selfDeclared ? t("divers.certifications.selfDeclaredLabel") : card.identifier}
+        detail={
+          <>
+            {selfDeclared ? t("divers.certifications.selfDeclaredLabel") : card.identifier}
+            {/* A self-declared nitrox card is the diver's word with no card
+                sighted: its agency is often the "other" placeholder and its
+                title drops the agency, so a lookup link would send the staffer
+                to an agency nobody named. The sighted claim gets one. */}
+            {awaiting && !selfDeclared ? <AgencyCheckLink agency={card.agency} t={t} /> : null}
+          </>
+        }
         actions={
           <>
             {selfDeclared ? (

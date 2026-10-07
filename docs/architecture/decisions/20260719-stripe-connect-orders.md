@@ -15,7 +15,7 @@ The product owner now wants two things this ADR settles together, since they are
 integration: (1) a shop supplies its own Stripe account rather than money flowing through a shared
 platform account, and (2) shops can generate an order/invoice for a diver, hand them a payable link,
 and see the paid result in the app without a human re-keying anything. H-07 (payment/deposit/refund/
-tax policy) in [human-decisions.md](../../product/human-decisions.md) remains open for the *policy*
+tax policy) in [human-decisions/](../../product/human-decisions/README.md) remains open for the *policy*
 questions (deposits, cancellation, refunds, tax); this ADR only settles the *mechanism*.
 
 ## Decision

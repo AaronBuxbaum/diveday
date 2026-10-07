@@ -249,6 +249,7 @@ function report(overrides: Partial<MonthlyReport> = {}): MonthlyReport {
     waiverCompletion: 113 / 122,
     partnerReferredSeats: 0,
     buddyReferredSeats: 0,
+    seatsByType: { diver: 122, snorkeler: 0, rider: 0 },
     ...overrides,
   };
 }

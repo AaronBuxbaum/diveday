@@ -1,8 +1,10 @@
 import { and, asc, eq, isNull, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
+import { isDiver } from "@/lib/participant-types";
 import { type CardUnreviewRefusal, needsCardSighting, unreviewedCardState } from "@/lib/readiness";
 import { shopOffersNitrox } from "@/lib/rentals";
-import { type AppDb, isUniqueConstraintViolation } from "./client";
+import type { AppDb } from "./client";
+import { isUniqueConstraintViolation } from "./query-helpers";
 import {
   activeCertificationReviewerId,
   type CardSighting,
@@ -355,7 +357,11 @@ export async function setBookingNitrox(
 ): Promise<SetBookingNitroxOutcome> {
   return db.transaction(async (tx): Promise<SetBookingNitroxOutcome> => {
     const [booking] = await tx
-      .select({ id: bookings.id, personId: bookings.personId })
+      .select({
+        id: bookings.id,
+        personId: bookings.personId,
+        participantType: bookings.participantType,
+      })
       .from(bookings)
       .where(
         and(
@@ -367,7 +373,11 @@ export async function setBookingNitrox(
       .limit(1);
     if (!booking) return { ok: false, reason: "booking_unavailable" };
 
-    let wantsNitrox = input.wantsNitrox;
+    // Enriched air is a gas a diver breathes. A snorkeler's or a rider's seat
+    // is never given a fill, the same quiet "no" a shop that fills no nitrox
+    // gives, rather than a write the column's check would throw on (ADR
+    // 20261007-participant-types).
+    let wantsNitrox = input.wantsNitrox && isDiver(booking.participantType);
     if (wantsNitrox) {
       const [shop] = await tx
         .select({ rentalItems: shops.rentalItems })

@@ -3,7 +3,7 @@
 An inventory of everything DiveDay buys from a vendor that is not AWS, what the AWS replacement
 would be, and what each swap costs and buys. **Nothing here is decided.** Every row is written so
 the owner can answer it with a yes, a no, or a trigger condition; the answers land in
-[human-decisions.md](../product/human-decisions.md#decision-register) (H-45), and anything that
+[human-decisions/](../product/human-decisions/README.md#decision-register) (H-45), and anything that
 gets a yes and is hard to reverse then gets its own ADR.
 
 Dated 2026-08-12. Re-read the numbers before acting on them — vendor pricing moves, and the

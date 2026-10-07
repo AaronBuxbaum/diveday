@@ -223,6 +223,32 @@ const defaultStoreKind: "upstash" | "memory" = upstashConfigSchema.safeParse({
   : "memory";
 
 /**
+ * Whether the module's own default store has already said it is the in-process
+ * one. Per process, so per serverless instance: one line per cold start.
+ */
+let memoryStoreAnnounced = false;
+
+/**
+ * The in-memory fallback is a supported state everywhere except a production
+ * deployment, where it quietly multiplies every limit by the number of warm
+ * instances (ADR 20260801-distributed-rate-limit-store). It stays fail-open --
+ * refusing traffic because a store is unprovisioned would be the outage this
+ * module exists not to cause -- but it is never *silent*: the first check on an
+ * instance logs `rate_limit.memory_store_in_production`, and `pnpm check:env`
+ * fails a production run missing the Upstash pair (config/env-registry.mjs).
+ *
+ * The e2e fleet serves a production build (`NODE_ENV=production`) on purpose
+ * with no Upstash, so `DIVEDAY_E2E=1` is not production for this question --
+ * the same split `src/lib/auth.ts` makes for secure cookies.
+ */
+function announceMemoryStoreInProduction(store: RateLimitStore): void {
+  if (memoryStoreAnnounced || store !== defaultStore || defaultStoreKind !== "memory") return;
+  memoryStoreAnnounced = true;
+  if (process.env.NODE_ENV !== "production" || process.env.DIVEDAY_E2E === "1") return;
+  log("rate_limit.memory_store_in_production", "warn", { store: "memory" });
+}
+
+/**
  * Minimum gap between two store-failure reports from one process.
  *
  * Every public write boundary in the app funnels through `checkRateLimit`, so
@@ -324,6 +350,7 @@ export async function checkRateLimit(
   store: RateLimitStore = defaultStore,
 ): Promise<RateLimitResult> {
   if (rateLimitDisabled()) return { allowed: true, retryAfterMs: 0 };
+  announceMemoryStoreInProduction(store);
   try {
     return await store.take(key, config, now);
   } catch (error) {
@@ -410,6 +437,21 @@ export const RATE_LIMITS = {
   waitlistJoin: perHour(10),
   /** Course inquiry submissions from the public course page, per IP. */
   courseInquiry: perHour(10),
+  /**
+   * Set-up requests from `/get-set-up` (ADR 20261007-setup-request-form), per
+   * IP. A shop asks once; five an hour covers a typo resubmitted and a second
+   * person at the same desk.
+   */
+  setupRequestByIp: perHour(5),
+  /**
+   * Set-up requests from every IP together, as a cheap first filter. Like
+   * every bucket here it is per server instance unless the distributed store is
+   * configured (ADR 20260801-distributed-rate-limit-store), so it is not the
+   * cap: the cap is `SETUP_REQUESTS_PER_HOUR`, counted in `setup_requests`
+   * itself before each insert (ADR 20261007-setup-request-form). An empty
+   * bucket refuses the request with the rate-limit sentence, never silently.
+   */
+  setupRequestGlobal: perHour(30),
   /**
    * Self-registration from the shop's own QR, per IP. The public write with
    * the widest blast radius on this surface: it creates a person row.

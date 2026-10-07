@@ -1,0 +1,23 @@
+// Every Intl formatter is built through src/lib/intl-cache.ts, and no date renders through a
+// bare toLocale*. Intl.Locale is a parsed value with nothing to compile, so it is not refused;
+// toLocaleLowerCase / toLocaleUpperCase fold case and are not refused either. Why:
+// docs/agents/repo-checks.md ("Now Biome rules") and ADR 20260807-intl-formatter-cache.
+language js
+
+// The file is read as text first: almost no file mentions Intl or toLocale, and skipping
+// those before walking their syntax tree is most of this rule's cost saved.
+file(body=$body) where {
+  $body <: r"(?s).*(?:Intl\s*\.|\.\s*toLocale).*",
+  $body <: contains bubble or {
+    `new Intl.$ctor($args)` where { $ctor <: not `Locale` },
+    JsCallExpression(callee=JsStaticMemberExpression(member=$method)) where {
+      $method <: or {
+        `toLocaleString`,
+        `toLocaleDateString`,
+        `toLocaleTimeString`
+      }
+    }
+  } as $call where {
+    register_diagnostic(span=$call, message="intlCache: build Intl formatters through src/lib/intl-cache.ts (cachedFormatter(tag, Intl.X, locale, options), cachedListFormat, cachedPluralRules, cachedCollator, cachedDisplayNames). A toLocale* call wants one of src/lib/format.ts's helpers, which are cached and take timeZone as a required argument. Constructing a formatter costs ~12x reusing one.", severity="error")
+  }
+}

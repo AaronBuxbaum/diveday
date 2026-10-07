@@ -4,7 +4,7 @@ Send this document to the generalist attorney as the engagement brief. It define
 asked to do herself, what she should draft with a specialist's later sign-off, and what stays with
 a dedicated recreational/scuba-liability attorney. The owner already has the generalist relationship;
 the specialist still needs to be found — see [legal.md](legal.md) for how. The decision rows this
-scope maps to are in [human-decisions.md](../human-decisions.md#decision-register): H-01, H-02,
+scope maps to are in [human-decisions/](../human-decisions/README.md#decision-register): H-01, H-02,
 H-03, H-17, H-18.
 
 Working jurisdiction assumption: **Florida** (not yet finalized — H-01 records the final choice).

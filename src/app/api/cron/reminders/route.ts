@@ -7,6 +7,7 @@ import { drainNotificationRetries } from "@/db/notifications";
 import { retryPendingProcessorErasures } from "@/db/processor-erasure";
 import { reapExpiredDemoShops } from "@/db/seed";
 import { DAY_MS } from "@/lib/clock";
+import { requireCronSecret } from "@/lib/cron-auth";
 import { DAILY_TICK_CRONTAB } from "@/lib/cron-schedule";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
@@ -147,11 +148,8 @@ function resultOf<T>(outcome: ScanOutcome<T>): T | undefined {
  * logging can ever report on its own.
  */
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return NextResponse.json({ error: "not_configured" }, { status: 503 });
-  if (request.headers.get("authorization") !== `Bearer ${secret}`) {
-    return new NextResponse(null, { status: 401 });
-  }
+  const refusal = requireCronSecret(request);
+  if (refusal) return refusal;
 
   // Dead-man's switch, half one: tell Sentry the tick started. Sentry upserts
   // the monitor from `CRON_MONITOR_CONFIG` on this call, so there is nothing to

@@ -5,6 +5,7 @@ import {
   featureSource,
   guideSource,
   scheduleAttributionHref,
+  setUpHref,
   switchingHref,
 } from "./funnel";
 import { MIGRATION_GUIDE_SLUGS } from "./migration-guides";
@@ -152,5 +153,13 @@ describe("scheduleAttributionHref", () => {
   it("round-trips: every href it builds survives eventSource", () => {
     const href = scheduleAttributionHref("blue-mantis", "home-hero");
     expect(eventSource(href.split("=")[1])).toBe("home-hero");
+  });
+});
+
+describe("setUpHref", () => {
+  it("opens the set-up form carrying the door's own tag, which eventSource keeps", () => {
+    expect(setUpHref("pricing-close")).toBe("/get-set-up?from=pricing-close");
+    const tag = new URL(setUpHref("about-work"), "https://dive.day").searchParams.get("from");
+    expect(eventSource(tag)).toBe("about-work");
   });
 });

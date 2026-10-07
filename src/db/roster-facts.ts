@@ -2,7 +2,7 @@ import { and, eq, inArray, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { type AboardBlockerKind, aboardBlockerKind } from "@/lib/readiness";
 import { hasSailed } from "@/lib/trips";
-import { inHorizonReadiness } from "./blockers";
+import { sharedInHorizonReadiness } from "./blockers";
 import type { AppDb } from "./client";
 import { bookings, orders, people, priorVisits, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -115,7 +115,7 @@ export async function rosterFacts(
       .where(
         and(eq(orders.shopId, shopId), inArray(orders.personId, ids), eq(orders.status, "open")),
       ),
-    inHorizonReadiness(db, shopId, now),
+    sharedInHorizonReadiness(db, shopId, now),
     // The counter QR's own mark (issue #1236). One column off `people`, read
     // here rather than joined into the roster query, so the fact reaches every
     // surface that asks for roster facts rather than only the list.

@@ -122,6 +122,18 @@ export function canManageStaffAccounts(roles: readonly Role[] | undefined): bool
   return isOwnerOrManager(roles);
 }
 
+/**
+ * See and change what the shop pays **DiveDay** — the card on file, the plan,
+ * cancelling (ADR 20261007-subscription-billing). Owner only, stricter than
+ * the shop's own payment settings: this is the business's contract with its
+ * vendor, the card is the owner's, and cancelling ends the shop's use of the
+ * product. A manager runs the shop's money; the owner decides whether the shop
+ * keeps paying for its tools.
+ */
+export function canManageBilling(roles: readonly Role[] | undefined): boolean {
+  return (roles ?? []).some((role) => role === "owner");
+}
+
 /** Issue or record a refund — money leaving the shop's account. */
 export function canRefund(roles: readonly Role[] | undefined): boolean {
   return isOwnerOrManager(roles);
@@ -331,6 +343,20 @@ export function canExportIncidentRecord(roles: readonly Role[] | undefined): boo
  * now, so this docstring cannot drift away from the code in silence again.
  */
 export function canConfigureTrips(roles: readonly Role[] | undefined): boolean {
+  return (roles ?? []).some(
+    (role) => role === "owner" || role === "manager" || role === "instructor",
+  );
+}
+
+/**
+ * **Seat someone in the water past a missing card**: "Change anyway" when a
+ * snorkeler or rider is changed to a diver and the booking-time card check
+ * would refuse them (ADR 20261007-participant-types). It is the certification
+ * call a trip's own gate is, so it takes the roles that may set that gate:
+ * owner, manager and instructor. A divemaster or captain gets the refusal and
+ * no way past it. The boarding gate still asks for the card either way.
+ */
+export function canOverrideCertBlock(roles: readonly Role[] | undefined): boolean {
   return (roles ?? []).some(
     (role) => role === "owner" || role === "manager" || role === "instructor",
   );

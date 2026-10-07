@@ -2,6 +2,11 @@ import type { BirthdayCallout } from "./age";
 import type { DepthCeilingCheck } from "./depth-ceiling";
 import type { RentalFitLine } from "./dive-prep";
 import type { IdentityMatchKind } from "./identity-match";
+import {
+  countParticipants,
+  type ParticipantCounts,
+  type ParticipantType,
+} from "./participant-types";
 import type { ReadinessResult } from "./readiness";
 import type { RollCallCheckpoint, RollCallRecord } from "./roll-call";
 import { isNotBackAboard } from "./roll-call";
@@ -116,6 +121,26 @@ export function maxRecordedDiveNumber(
 export type ManifestDiverInput = {
   bookingId: string;
   fullName: string;
+  /**
+   * **What this person is doing on the boat** — diver, snorkeler or rider
+   * (ADR 20261007-participant-types).
+   *
+   * Display only, and **never a filter**: every row on this list is a body the
+   * crew counts at every checkpoint, whatever its type. A rider who stays
+   * aboard is still somebody to account for before the lines come off, and a
+   * snorkeler in the water is a person in the water — a head count that quietly
+   * dropped either would be the one failure this list exists to prevent.
+   *
+   * Optional, and absent means a diver: a snapshot saved before the type
+   * existed, or a manifest assembled by hand, held nobody else.
+   */
+  participantType?: ParticipantType;
+  /**
+   * What the seat was sold as. Read with `participantType` by `leftDiving`
+   * (src/lib/participant-types.ts): a seat sold to dive that is snorkeling or
+   * riding now carries a warning-toned "booked as diver" on the rail.
+   */
+  bookedAs?: ParticipantType;
   email: string | null;
   emergencyContactName: string | null;
   emergencyContactPhone: string | null;
@@ -854,7 +879,18 @@ export type TripManifest = {
     buddyAlert: BuddyAlert | null;
   })[];
   summary: {
+    /**
+     * **Every person on this list** — divers, snorkelers and riders alike. The
+     * name predates the other two types; the number never excluded anyone, and
+     * the head count is measured against it.
+     */
     totalDivers: number;
+    /**
+     * The same people split by what they are doing aboard. Informs the words
+     * on screen ("12 aboard: 9 diving, 2 snorkeling, 1 riding") and never the
+     * count that closes a checkpoint, which is {@link totalDivers}.
+     */
+    byType?: ParticipantCounts;
     ready: number;
     blocked: number;
     boarded: number;
@@ -1016,6 +1052,7 @@ export function buildTripManifest(input: {
   const capacity = input.trip.capacity;
   const summary = {
     totalDivers: divers.length,
+    byType: countParticipants(divers),
     ready: divers.filter((diver) => diver.readiness.status === "ready").length,
     blocked: divers.filter((diver) => diver.readiness.status === "blocked").length,
     boarded,

@@ -157,6 +157,7 @@ describe("buildIncidentExport", () => {
       notBoarded: 0,
       awaiting: 1,
       crewAssigned: 1,
+      byType: { diver: 2, snorkeler: 0, rider: 0 },
     });
 
     const ana = doc.roster.find((entry) => entry.bookingId === "b1");

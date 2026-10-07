@@ -1,5 +1,6 @@
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import type { NoticeTone } from "@/lib/staff-notices";
+import type { BillingNotice } from "./billing/actions";
 
 /**
  * What each settings sub-page says back after a write.
@@ -46,5 +47,22 @@ export function divePackageNoticeMessages(t: StaffTranslator): NoticeMessages {
     "package-saved": { tone: "success", text: t("settings.main.notice.packageSaved") },
     "package-deleted": { tone: "success", text: t("settings.main.notice.packageDeleted") },
     "package-invalid": { tone: "danger", text: t("settings.main.notice.packageInvalid") },
+  };
+}
+
+/**
+ * `/settings/billing` — `startBillingCheckoutAction`, `openBillingPortalAction`,
+ * and Checkout's own success redirect. Typed against the actions' `BillingNotice`
+ * so a code added there without words here is a compile error.
+ */
+export function billingNoticeMessages(
+  t: StaffTranslator,
+): Record<BillingNotice, { tone: NoticeTone; text: string }> {
+  return {
+    "card-added": { tone: "success", text: t("billing.notice.cardAdded") },
+    "not-configured": { tone: "danger", text: t("billing.notice.notConfigured") },
+    unavailable: { tone: "danger", text: t("billing.notice.unavailable") },
+    demo: { tone: "danger", text: t("billing.notice.demo") },
+    pending: { tone: "neutral", text: t("billing.notice.pending") },
   };
 }

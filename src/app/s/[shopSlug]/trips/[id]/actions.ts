@@ -11,6 +11,7 @@ import { createBookingParty, getBookingForTrip } from "@/db/bookings";
 import { recordBuddyReferral, resolveBuddyReferral } from "@/db/buddy-referrals";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
+import { recordShopMilestone } from "@/db/founder-metrics";
 import { setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
@@ -24,6 +25,7 @@ import { getTripWithBooked } from "@/db/trips";
 import { joinTripWaitlist } from "@/db/waitlist";
 import { issueWaiverOnJoin } from "@/db/waiver-issue";
 import { diverTranslator } from "@/i18n/messages";
+import { describeCheckoutLine } from "@/i18n/participant-labels";
 import { tripRequirementList } from "@/i18n/readiness-labels";
 import { requestFirstHandLocale, requestLocale } from "@/i18n/request";
 import { trackEvent } from "@/lib/analytics";
@@ -36,8 +38,10 @@ import {
   diveDeclarationSchema,
   toDiveDeclaration,
 } from "@/lib/dive-declaration";
+import { log } from "@/lib/log";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
+import { isDiver, parsePartyTypes, rentsKind } from "@/lib/participant-types";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import {
   DIVER_NAME_MAX,
@@ -222,6 +226,21 @@ export async function bookSpot(
   // under that same condition, so parsing them under a looser one here would
   // read every checkbox as unchecked and silently zero out the diver's fit.
   const tripForGear = await getTripWithBooked(dbi, shopNow.id, tripId);
+  // What each person is coming as (ADR 20261007-participant-types), checked
+  // against what this departure sells rather than trusted from the form.
+  const parsedTypes = parsePartyTypes(
+    Array.from({ length: partySize.data }, (_, index) => formData.get(`participantType-${index}`)),
+    tripForGear,
+  );
+  if (!parsedTypes.ok) {
+    return {
+      error: t("booking.errors.checkFields"),
+      fieldErrors: {
+        [`participantType-${parsedTypes.index}`]: t("booking.fieldErrors.participantTypeInvalid"),
+      },
+    };
+  }
+  const partyTypes = parsedTypes.types;
   const perDiverPriceForGear = tripForGear
     ? perDiverBookingPriceCents(tripForGear, tripForGear.course)
     : null;
@@ -252,10 +271,16 @@ export async function bookSpot(
         // ticks both is charged for the suit that gets packed (H-78).
         rentedKinds: withOneSuit(
           offeredGearItems
+            .filter((item) => rentsKind(partyTypes[index], item.kind))
             .filter((item) => formData.get(`gear-${index}-${item.name}`) === "on")
             .map((item) => item.kind),
         ),
-        wantsNitrox: nitroxOfferedAtCheckout && formData.get(`nitrox-${index}`) === "on",
+        // A nitrox fill is a diver's alone; the database refuses it on any
+        // other seat, so it is never asked for one.
+        wantsNitrox:
+          isDiver(partyTypes[index]) &&
+          nitroxOfferedAtCheckout &&
+          formData.get(`nitrox-${index}`) === "on",
       });
     }
   }
@@ -307,6 +332,7 @@ export async function bookSpot(
       tripId,
       actor: "public" as const,
       fullName: entry.fullName,
+      participantType: partyTypes[index] ?? "diver",
       // No `declared`, and so no `admissionGate: "advise"` either: advising
       // rather than refusing was earned by the form warning a diver as they
       // answered, and there is no answer to warn about now. The sale-time gate
@@ -378,7 +404,11 @@ export async function bookSpot(
             ? "course-unavailable"
             : outcome.reason === "course_ratio_full"
               ? "course-ratio-full"
-              : "unavailable";
+              : outcome.reason === "divers_full"
+                ? "divers-full"
+                : outcome.reason === "participant_type_unavailable"
+                  ? "type-unavailable"
+                  : "unavailable";
     // "already_booked" is the one refusal that names a specific party member
     // (task 25) — `createBookingParty` reports which index it rolled back
     // on, so the form can highlight that diver's fieldset instead of the
@@ -397,6 +427,15 @@ export async function bookSpot(
     return { error: message, fieldErrors: memberFieldErrors };
   }
   await trackEvent({ name: "booking_completed", source: "diver", partySize: validParty.length });
+  // The shop's first booking through its own public pages is an activation
+  // step the founder watches (ADR 20261007-founder-metrics); nothing on the
+  // booking row says which door it came through, so it is recorded here, once.
+  // Deferred and swallowed: the diver's confirmation never waits on it.
+  after(() =>
+    recordShopMilestone(dbi, { shopId: shopNow.id, milestone: "first_public_booking" }).catch(
+      (error) => console.error("bookSpot: first_public_booking milestone failed", error),
+    ),
+  );
   // Which diver's link brought this party, if one did. Every seat of it, the
   // organizer's included, for the reason the partner referral above credits
   // every seat: one person booking four through a friend's link is four divers
@@ -468,14 +507,13 @@ export async function bookSpot(
         packingList: shopNow.packingList,
       });
       if (delivery.status === "failed") {
-        console.error("Booking confirmation notification failed", {
-          bookingId: primaryBookingId,
-        });
+        log("booking.confirmation_send_failed", "error", { bookingId: primaryBookingId });
       }
-    } catch {
+    } catch (error) {
       // Email must never turn a completed, capacity-safe booking into an error page.
-      console.error("Booking confirmation notification could not be prepared", {
+      log("booking.confirmation_prepare_failed", "error", {
         bookingId: primaryBookingId,
+        errorCode: error instanceof Error ? error.name : "unknown_error",
       });
     }
   }
@@ -487,8 +525,11 @@ export async function bookSpot(
     outcome.bookings.map(async ({ bookingId }) => {
       try {
         await issueWaiverOnJoin(dbi, shopNow.id, bookingId);
-      } catch {
-        console.error("Waiver-on-join could not be issued", { bookingId });
+      } catch (error) {
+        log("booking.waiver_on_join_failed", "error", {
+          bookingId,
+          errorCode: error instanceof Error ? error.name : "unknown_error",
+        });
       }
     }),
   );
@@ -549,8 +590,11 @@ export async function bookSpot(
               wantsNitrox: selection.wantsNitrox,
             });
           }
-        } catch {
-          console.error("Rental fit at booking could not be saved", { bookingId });
+        } catch (error) {
+          log("booking.rental_fit_save_failed", "error", {
+            bookingId,
+            errorCode: error instanceof Error ? error.name : "unknown_error",
+          });
         }
       }),
     );
@@ -705,8 +749,11 @@ async function creditBuddyReferral(
       bookingId: input.bookingId,
       referredByBookingId,
     });
-  } catch {
-    console.error("Buddy referral could not be recorded", { bookingId: input.bookingId });
+  } catch (error) {
+    log("booking.buddy_referral_failed", "error", {
+      bookingId: input.bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
   }
 }
 
@@ -756,8 +803,7 @@ async function startCheckoutUrl(
     tripPromo: input.tripPromo,
     shopPromo: input.shopPromo,
     gearLines: input.gearLines,
-    describeLine: ({ isDeposit, tripTitle }) =>
-      isDeposit ? t("checkoutLine.deposit", { tripTitle }) : t("checkoutLine.full", { tripTitle }),
+    describeLine: (parts) => describeCheckoutLine(t, parts),
   }).catch(() => null);
   return outcome?.ok ? (outcome.checkout.checkoutUrl ?? null) : null;
 }

@@ -30,7 +30,7 @@ async function seatDiver(db: AppDb, shopId: string, tripId: string, tag: string)
     .values({ shopId, fullName: `Aboard ${tag}`, email: `staffing-aboard-${tag}@example.com` })
     .returning();
   if (!diver) throw new Error("failed to insert diver");
-  await db.insert(bookings).values({ shopId, tripId, personId: diver.id });
+  await db.insert(bookings).values({ bookedAs: "diver", shopId, tripId, personId: diver.id });
 }
 
 describe("staffing view", () => {
@@ -195,7 +195,9 @@ describe("staffing view", () => {
       })
       .returning();
     if (!extraDiver) throw new Error("failed to insert extra diver");
-    await db.insert(bookings).values({ shopId: shop.id, tripId: trip.id, personId: extraDiver.id });
+    await db
+      .insert(bookings)
+      .values({ bookedAs: "diver", shopId: shop.id, tripId: trip.id, personId: extraDiver.id });
 
     const view = await getStaffingView(
       db,

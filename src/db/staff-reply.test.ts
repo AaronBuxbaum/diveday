@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { getInboundMessage, personThread, recordInboundMessage } from "./inbound-messages";
 import { inboundMessages, people, personRoles, staffReplies } from "./schema";
 import { sendStaffReply } from "./staff-reply";
@@ -31,7 +31,7 @@ function acceptingProvider(): NotificationProvider & { sent: Sent[] } {
 }
 
 async function shopContext() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const [diver] = await db
     .select({ id: people.id, email: people.email, phone: people.phone })
     .from(people)
@@ -68,6 +68,10 @@ async function inboundEmail(
   if (result.status !== "recorded") throw new Error(`unexpected ${result.status}`);
   return result.id;
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 describe("answering by email", () => {
   it("sends the staffer's words, threads them, and answers the message", async () => {

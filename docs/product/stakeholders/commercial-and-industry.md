@@ -3,7 +3,7 @@
 The pilot shops, the industry bodies, and the channels that reach shop owners. The rollout plan
 owns the phase sequencing and recruiting profiles; this playbook owns the per-stakeholder prep so
 each conversation starts warm and specific. Status of record:
-[human-decisions.md](../human-decisions.md) rows **V-04** (pilot rehearsal/load) and **H-12**
+[human-decisions/](../human-decisions/README.md) rows **V-04** (pilot rehearsal/load) and **H-12**
 (the still-open contract/intake flow); phase exits live in [rollout.md](../rollout.md).
 
 ## Why this matters (impact, not blockage)
@@ -48,7 +48,7 @@ What to have prepared per conversation:
   in, the [cold email template](../pilot-kit/cold-email-template.md) is the opener — hand-sent, one
   at a time, aiming at a reply or a forward rather than a meeting. It states **no offer**, on the
   same "only if they ask" principle as the first call's §E; the six-month free term authorized by
-  [H-12's 2026-08-12 amendment](../human-decisions.md#decision-register) belongs to the reply and
+  [H-12's 2026-08-12 amendment](../human-decisions/README.md#decision-register) belongs to the reply and
   the call.
 
 ### Pilot shops' front-desk staff and captains (Phase 1, week 0)
@@ -93,7 +93,7 @@ referral offer (a free month both sides).
 ## Where outcomes land
 
 - Pilot commitments and rehearsal results: V-04 evidence in the
-  [verification queue](../human-decisions.md#human-verification-queue); phase-exit progress in
+  [verification queue](../human-decisions/README.md#human-verification-queue); phase-exit progress in
   [rollout.md](../rollout.md).
 - Anything promised to a pilot in writing must already exist in the
   [claims policy](../marketing.md) or get added there — the offer document is a claims surface.

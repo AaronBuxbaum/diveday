@@ -9,7 +9,7 @@ import { JumpNav } from "@/components/JumpNav";
 import { getDb } from "@/db/client";
 import { getCourseBySlug } from "@/db/courses";
 import { getShopReviewAggregate } from "@/db/reviews";
-import { shopBySlugCached } from "@/db/shops";
+import { shopBySlugCached } from "@/db/shops-cached";
 import { listUpcomingSessionsForCourse } from "@/db/trips";
 import { DiverIntlProvider } from "@/i18n/DiverIntlProvider";
 import { dateRequestCopy } from "@/i18n/date-request-copy";

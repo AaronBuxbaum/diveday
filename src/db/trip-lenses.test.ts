@@ -33,6 +33,11 @@ function mustCreate(lens: Awaited<ReturnType<typeof createTripLens>>) {
 }
 
 describe("a shop's trip tags", () => {
+  // A fresh database per test, not the file-scoped transaction: the rail's order
+  // is `created_at`, which `defaultNow()` stamps from `now()`, and Postgres
+  // freezes `now()` for a whole transaction. Inside one rolled-back transaction
+  // both writes below would carry the same instant and the order would fall to
+  // the random uuid tiebreak (src/test/db.ts, "When NOT to use this").
   it("writes them, keeps them in the order they were written, and reads one back", async () => {
     const { db, shop } = await seededShopContext();
     const before = await listTripLenses(db, shop.id);

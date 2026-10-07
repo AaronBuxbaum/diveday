@@ -10,7 +10,7 @@ import { SegmentedControl } from "@/components/ui/SegmentedControl";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import { FIGURE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import type { TripPrep } from "@/db/trips-prep";
+import type { TripPrep } from "@/db/trips";
 import { gearItemKindLabel } from "@/i18n/gear-labels";
 import { diveRecencyText } from "@/i18n/readiness-labels";
 import { rentalItemLabel, statedSizesText } from "@/i18n/rental-labels";
@@ -175,7 +175,7 @@ export function PrepBody({
       );
     }
     // A drysuit diver's gloves: wet gloves or dry gloves on rings are two
-    // different things off the rack, so the line asks (H-101).
+    // different things off the rack, so the line asks (H-102).
     if (piece.drysuitGloves) {
       return (
         <span className="font-medium text-warning">

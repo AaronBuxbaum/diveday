@@ -204,7 +204,7 @@ export async function seedTrips(
       // Two evenings, because that is what the Night Diver page sells: its
       // day-by-day plan is "Evening 1 — dusk and dark" and "Evening 2 —
       // navigation", and its at-a-glance line reads "2 evenings · 3 dives"
-      // (src/db/course-templates.ts). This session used to run 17:00 on the
+      // (src/content/course-templates.ts). This session used to run 17:00 on the
       // 15th to 21:30 on the *17th*, so the catalogue page and the session it
       // links to disagreed about the length of the course by a whole evening.
       // Three dives across two evenings — two on the first, one on the second
@@ -244,7 +244,7 @@ export async function seedTrips(
    * class was the only entry when this was an `if`, and the two multi-day
    * course sessions added since silently fell through it. Each set of windows
    * matches the day-by-day plan on that course's published page
-   * (src/db/course-templates.ts) — a demo whose Night Diver page promises two
+   * (src/content/course-templates.ts) — a demo whose Night Diver page promises two
    * evenings while the session it links to spans three is a bug a shop reports.
    */
   const meetingDays: Record<string, { startsAt: Date; endsAt: Date }[]> = {

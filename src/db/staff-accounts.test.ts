@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { upcomingTripsWithCounts } from "@/db/trips";
 import type { Role } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { savePushSubscription } from "./push-subscriptions";
 import { people, personRoles, pushSubscriptions, shops, userAccounts } from "./schema";
@@ -80,9 +80,13 @@ async function makeOtherShop(db: AppDb): Promise<string> {
   return shop.id;
 }
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
+
 describe("inviteStaffMember", () => {
   it("creates a new person, roles, and an invited account when no person matches the email", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const result = await inviteStaffMember(db, {
       shopId: shop.id,
       fullName: "Nadia Reyes",
@@ -107,7 +111,7 @@ describe("inviteStaffMember", () => {
   });
 
   it("reuses an existing active diver's person record instead of forking a new one", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [diver] = await db
       .insert(people)
       .values({ shopId: shop.id, fullName: "Theo Marsh", email: "theo@example.com" })
@@ -135,7 +139,7 @@ describe("inviteStaffMember", () => {
   });
 
   it("refuses already_on_team when the matched person already has an account", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const existing = await makeStaff(db, shop.id, ["crew"]);
     const [person] = await db.select().from(people).where(eq(people.id, existing.personId));
     if (!person?.email) throw new Error("expected seeded email");
@@ -150,7 +154,7 @@ describe("inviteStaffMember", () => {
   });
 
   it("refuses email_registered_elsewhere when the email belongs to a different shop's account", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const otherShopId = await makeOtherShop(db);
     await makeStaff(db, otherShopId, ["owner"]);
     // makeStaff's account email is staff.<seq>@example.com — reuse that seq for the invite.
@@ -189,7 +193,7 @@ describe("inviteStaffMember", () => {
       "mallory@coral-cove-divers-a1b2c3.demo.invalid",
       "MALLORY@Demo.Invalid",
     ])("refuses an invite to %s", async (email) => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const result = await inviteStaffMember(db, {
         shopId: shop.id,
         fullName: "Mallory",
@@ -209,7 +213,7 @@ describe("inviteStaffMember", () => {
     it.each(["crew@notdemo.invalid", "crew@demo.invalid.example.com"])(
       "still invites %s",
       async (email) => {
-        const { db, shop } = await seededShopContext();
+        const { db, shop } = ctx;
         const result = await inviteStaffMember(db, {
           shopId: shop.id,
           fullName: "Ordinary Crew",
@@ -224,7 +228,7 @@ describe("inviteStaffMember", () => {
 
 describe("setStaffRoles", () => {
   it("replaces the staff-role subset without touching a diver role", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const staff = await makeStaff(db, shop.id, ["crew"]);
     await db.insert(personRoles).values({ personId: staff.personId, role: "diver" });
 
@@ -245,7 +249,7 @@ describe("setStaffRoles", () => {
   });
 
   it("refuses to strip the shop's last owner", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const owner = await makeStaff(db, shop.id, ["owner"]);
     await stripOtherOwners(db, shop.id, owner.personId);
 
@@ -266,7 +270,7 @@ describe("setStaffRoles", () => {
   });
 
   it("allows demoting an owner when a second owner remains", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const first = await makeStaff(db, shop.id, ["owner"]);
     await makeStaff(db, shop.id, ["owner"]);
 
@@ -281,7 +285,7 @@ describe("setStaffRoles", () => {
 
 describe("setStaffAccountStatus", () => {
   it("refuses to disable the shop's last owner", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const owner = await makeStaff(db, shop.id, ["owner"]);
     await stripOtherOwners(db, shop.id, owner.personId);
 
@@ -301,7 +305,7 @@ describe("setStaffAccountStatus", () => {
   });
 
   it("disables a non-owner's account", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const crew = await makeStaff(db, shop.id, ["crew"]);
 
     const result = await setStaffAccountStatus(db, {
@@ -327,7 +331,7 @@ describe("removeStaffMember", () => {
     // rather than on who still works here. Without an explicit delete a
     // departed divemaster's phone keeps being told a boat's manifest changed
     // after their login stopped working (ADR 20260804-manifest-web-push).
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const staff = await makeStaff(db, shop.id, ["crew"]);
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const trip = trips[0];
@@ -361,7 +365,7 @@ describe("removeStaffMember", () => {
     // on a public trip page a one-tap owner decision — the Undo banner, a plain
     // re-enable, or a re-invite at the same email months later — without them
     // ever being asked again (issue #1181, security review).
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const staff = await makeStaff(db, shop.id, ["crew"]);
     expect(
       await setCrewPublicConsent(db, {
@@ -390,7 +394,7 @@ describe("removeStaffMember", () => {
     // `removeStaffMember` rather than in the status write: somebody suspended
     // for a fortnight is still here to change their own mind, so destroying
     // their answer would make them re-give it for no reason.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const staff = await makeStaff(db, shop.id, ["crew"]);
     await setCrewPublicConsent(db, {
       shopId: shop.id,
@@ -414,7 +418,7 @@ describe("removeStaffMember", () => {
   });
 
   it("strips staff roles and disables the account, leaving a diver role in place", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const staff = await makeStaff(db, shop.id, ["crew"]);
     await db.insert(personRoles).values({ personId: staff.personId, role: "diver" });
 
@@ -441,7 +445,7 @@ describe("removeStaffMember", () => {
   });
 
   it("refuses to remove the shop's last owner", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const owner = await makeStaff(db, shop.id, ["owner"]);
     await stripOtherOwners(db, shop.id, owner.personId);
 
@@ -456,7 +460,7 @@ describe("removeStaffMember", () => {
 
 describe("tenant isolation (security review finding, 20260726-staff-invite-accounts)", () => {
   it("setStaffRoles refuses a personId that belongs to a different shop", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const otherShopId = await makeOtherShop(db);
     const outsider = await makeStaff(db, otherShopId, ["crew"]);
 
@@ -477,7 +481,7 @@ describe("tenant isolation (security review finding, 20260726-staff-invite-accou
   });
 
   it("setStaffAccountStatus refuses a personId/userAccountId pair from a different shop", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const otherShopId = await makeOtherShop(db);
     const outsider = await makeStaff(db, otherShopId, ["crew"]);
 
@@ -497,7 +501,7 @@ describe("tenant isolation (security review finding, 20260726-staff-invite-accou
   });
 
   it("setStaffAccountStatus refuses a userAccountId that doesn't belong to the given personId", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const a = await makeStaff(db, shop.id, ["crew"]);
     const b = await makeStaff(db, shop.id, ["crew"]);
 
@@ -519,7 +523,7 @@ describe("tenant isolation (security review finding, 20260726-staff-invite-accou
   });
 
   it("removeStaffMember refuses a personId/userAccountId pair from a different shop", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const otherShopId = await makeOtherShop(db);
     const outsider = await makeStaff(db, otherShopId, ["crew"]);
 
@@ -547,7 +551,7 @@ describe("tenant isolation (security review finding, 20260726-staff-invite-accou
 
 describe("listShopStaff", () => {
   it("aggregates each staff person's roles once, sorted by name, excluding divers-only", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const zed = await makeStaff(db, shop.id, ["instructor", "divemaster"]);
     const [diverOnly] = await db
       .insert(people)
@@ -572,7 +576,7 @@ describe("setStaffEmergencyContact", () => {
   // reads answered "who do we call?" for the paying passengers and for neither
   // of the two staff most reliably in the water (dive-domain review 20260810).
   it("stores both halves and reads them back through listShopStaff", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const { personId } = await makeStaff(db, shop.id, ["captain"]);
 
     const result = await setStaffEmergencyContact(db, {
@@ -593,7 +597,7 @@ describe("setStaffEmergencyContact", () => {
   });
 
   it("clears both halves when both are emptied", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const { personId } = await makeStaff(db, shop.id, ["captain"]);
     await setStaffEmergencyContact(db, {
       shopId: shop.id,
@@ -623,7 +627,7 @@ describe("setStaffEmergencyContact", () => {
     // Half a contact is the shape that fails at the exact moment it is needed:
     // a name on the printed sheet with nothing to dial is worse than a blank,
     // because it reads as though somebody can be reached.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const { personId } = await makeStaff(db, shop.id, ["captain"]);
 
     expect(
@@ -641,7 +645,7 @@ describe("setStaffEmergencyContact", () => {
     // `people` is the only table here carrying a shop_id, and the action takes
     // a raw personId from a hidden form field — so this is the whole tenant
     // boundary for the write.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     seq += 1;
     const [other] = await db
       .insert(shops)
@@ -666,7 +670,7 @@ describe("setStaffEmergencyContact", () => {
     // The team page's subjects are staff. Without this the action is a
     // general-purpose writer for any `people` row in the shop — every diver
     // record included — reachable by editing one hidden field.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [diver] = await db
       .insert(people)
       .values({ shopId: shop.id, fullName: "Ana Diaz", email: "ana.diaz@example.com" })
@@ -686,7 +690,7 @@ describe("setStaffEmergencyContact", () => {
   });
 
   it("refuses a deleted person", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const { personId } = await makeStaff(db, shop.id, ["captain"]);
     await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, personId));
 
@@ -704,7 +708,7 @@ describe("setStaffEmergencyContact", () => {
 /** Issue #708. */
 describe("setStaffLanguages", () => {
   it("records a staff member's languages, deduplicated", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const { personId } = await makeStaff(db, shop.id, ["captain"]);
 
     expect(
@@ -716,7 +720,7 @@ describe("setStaffLanguages", () => {
   });
 
   it("clears languages back to empty rather than refusing an empty list", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const { personId } = await makeStaff(db, shop.id, ["captain"]);
     await setStaffLanguages(db, { shopId: shop.id, personId, languages: ["de"] });
 
@@ -727,7 +731,7 @@ describe("setStaffLanguages", () => {
   });
 
   it("drops any tag outside the common set rather than storing it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const { personId } = await makeStaff(db, shop.id, ["captain"]);
 
     await setStaffLanguages(db, {
@@ -741,7 +745,7 @@ describe("setStaffLanguages", () => {
   });
 
   it("refuses a person who holds no staff role", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [diver] = await db
       .insert(people)
       .values({ shopId: shop.id, fullName: "Priya Shah" })
@@ -759,7 +763,7 @@ describe("setStaffLanguages", () => {
     // `people` is the only table here carrying a shop_id, and the action takes
     // a raw personId — same tenant boundary `setStaffEmergencyContact`'s own
     // cross-shop test above pins for the identical write shape.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     seq += 1;
     const [other] = await db
       .insert(shops)
@@ -778,7 +782,7 @@ describe("setStaffLanguages", () => {
 
 describe("listShopSpokenLanguages", () => {
   it("returns the union of every active staff member's languages, deduplicated", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const a = await makeStaff(db, shop.id, ["captain"]);
     const b = await makeStaff(db, shop.id, ["divemaster"]);
     await setStaffLanguages(db, { shopId: shop.id, personId: a.personId, languages: ["de", "fr"] });
@@ -788,13 +792,13 @@ describe("listShopSpokenLanguages", () => {
   });
 
   it("returns nothing when no active staff member has recorded a language", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await makeStaff(db, shop.id, ["captain"]);
     expect(await listShopSpokenLanguages(db, shop.id)).toEqual([]);
   });
 
   it("excludes a disabled account's recorded languages", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const { personId } = await makeStaff(db, shop.id, ["captain"], { status: "disabled" });
     await setStaffLanguages(db, { shopId: shop.id, personId, languages: ["de"] });
 

@@ -19,12 +19,13 @@ import { alias } from "drizzle-orm/pg-core";
 import { nowDate } from "@/lib/clock";
 import { shopWaiverStatus } from "@/lib/waivers";
 import { shopDayBounds } from "@/lib/zoned";
-import { type AppDb, isUniqueConstraintViolation } from "./client";
+import type { AppDb } from "./client";
 import { listOrdersForPerson } from "./orders";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { listPersonBookingPayments } from "./payments";
 import { storedPhone } from "./person-phone";
 import { personSearchMatch } from "./person-search";
+import { isUniqueConstraintViolation } from "./query-helpers";
 import {
   bookings,
   certifications,

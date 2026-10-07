@@ -2,7 +2,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { buddyReferralId } from "@/lib/buddy-tokens";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import {
   buddyReferredSeatsForWindow,
@@ -23,7 +23,7 @@ import { upcomingTripsWithCounts } from "./trips";
  * number about the first.
  */
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id);
   const open = trips.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
   if (!open) throw new Error("expected seeded trip missing");
@@ -41,6 +41,10 @@ async function book(db: AppDb, shopId: string, tripId: string, who: string) {
   if (!outcome.ok) throw new Error(`booking failed: ${outcome.reason}`);
   return outcome;
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 describe("resolveBuddyReferral", () => {
   it("resolves a signed id to the booking whose recap carried it", async () => {

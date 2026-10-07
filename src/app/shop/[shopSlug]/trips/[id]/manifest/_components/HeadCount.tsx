@@ -42,6 +42,7 @@ export function HeadCount({
   aboard,
   out,
   t,
+  people = false,
   className = "",
 }: {
   /** Divers with an *aboard* result at this checkpoint. */
@@ -49,6 +50,12 @@ export function HeadCount({
   /** The population the count is about: everyone at the dock, or everyone who went out. */
   out: number;
   t: StaffTranslator;
+  /**
+   * The boat carries snorkelers or riders too (ADR
+   * 20261007-participant-types), so the sentence counts people, not divers.
+   * The figure is the same either way: everyone aboard is counted.
+   */
+  people?: boolean;
   className?: string;
 }) {
   // Bounded for the pixels only: an empty glass stands at zero rather than
@@ -62,7 +69,11 @@ export function HeadCount({
         aria-valuemin={0}
         aria-valuemax={out}
         aria-valuenow={aboard}
-        aria-valuetext={t("manifest.aboardOfTotal", { aboard, total: out })}
+        aria-valuetext={
+          people
+            ? t("participants.headCount.aboardOfTotalPeople", { aboard, total: out })
+            : t("manifest.aboardOfTotal", { aboard, total: out })
+        }
         className="relative size-20 shrink-0 overflow-hidden rounded-full border border-border bg-surface-sunken"
       >
         <div
@@ -82,7 +93,9 @@ export function HeadCount({
           caption that straddled the water line inside an 80px circle was
           neither. `aria-hidden`: the progressbar's own text already says it. */}
       <p aria-hidden="true" className="text-base font-semibold tabular-nums">
-        {t("manifest.ofTotalAboard", { total: out })}
+        {people
+          ? t("participants.headCount.ofTotalAboardPeople", { total: out })
+          : t("manifest.ofTotalAboard", { total: out })}
       </p>
     </div>
   );

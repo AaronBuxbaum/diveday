@@ -335,7 +335,7 @@ export function violationFor(
       return (
         `\`${printed}\` prints a generated artifact whole — the lockfile, build output, a Drizzle snapshot or a ` +
         `Playwright report is thousands of lines nobody reads (AGENTS.md, "Context economy"). For a specific ` +
-        `lookup, \`grep -n\` it for the line you need; \`src/db/schema.ts\` is the schema's source of truth.`
+        `lookup, \`grep -n\` it for the line you need; \`src/db/schema/\` is the schema's source of truth.`
       );
     }
 

@@ -2,10 +2,17 @@
 // skill/agent frontmatter, and task:context doc references. Many short-lived parallel
 // sessions rely on these being accurate; drift here silently misroutes every one of them.
 import { existsSync } from "node:fs";
-import { access, readdir, readFile } from "node:fs/promises";
+import { access, lstat, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
+import {
+  GUARD_COUNT_SITES,
+  guardCountProblems,
+  linkedSkillProblems,
+  spawnedGuardCount,
+} from "./agent-layer.mjs";
+import { listDirs } from "./check-context-budget.mjs";
 import { findLaunchProblems } from "./mcp-launch-guard.mjs";
 import { areas } from "./task-context-data.mjs";
 
@@ -26,13 +33,14 @@ function frontmatter(contents, file) {
   return fields;
 }
 
-async function listDirs(relative) {
-  const entries = await readdir(path.join(ROOT, relative), { withFileTypes: true });
-  return entries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
-}
-
 // 1. Every skill directory has a SKILL.md whose name matches and which describes its trigger.
-const skillDirs = (await listDirs(".claude/skills")).sort();
+// A skill vendored under `.agents/skills/` is linked in, and `listDirs` follows the link, so a
+// linked skill's frontmatter is checked like a local one's.
+const skillDirs = await listDirs(ROOT, ".claude/skills");
+const linkedSkills = new Set();
+for (const dir of skillDirs) {
+  if ((await lstat(path.join(ROOT, ".claude/skills", dir))).isSymbolicLink()) linkedSkills.add(dir);
+}
 for (const dir of skillDirs) {
   const file = `.claude/skills/${dir}/SKILL.md`;
   let contents;
@@ -51,24 +59,27 @@ for (const dir of skillDirs) {
     );
 }
 
-// 2. The skill index and AGENTS.md reference exactly the skills that exist.
+// 2. The skill index and AGENTS.md reference exactly the local skills; a linked skill is
+// indexed by `skills-lock.json` instead, which names its upstream source.
 const skillIndex = await readFile(path.join(ROOT, ".claude/skills/README.md"), "utf8");
 const agentsMd = await readFile(path.join(ROOT, "AGENTS.md"), "utf8");
 const indexed = new Set([...skillIndex.matchAll(/^\| `([^`]+)` \|/gm)].map((m) => m[1]));
-for (const dir of skillDirs) {
+for (const dir of skillDirs.filter((name) => !linkedSkills.has(name))) {
   if (!indexed.has(dir))
     problems.push(`.claude/skills/README.md: skill "${dir}" exists but is not in the index table`);
   if (!agentsMd.includes(dir))
     problems.push(`AGENTS.md: skill "${dir}" exists but is never mentioned`);
 }
 for (const name of indexed) {
-  // A skill vendored under `.agents/skills/` is linked in, and a symlink is
-  // not a directory entry: it exists when its SKILL.md resolves.
-  if (!skillDirs.includes(name) && !existsSync(path.join(ROOT, ".claude/skills", name, "SKILL.md")))
+  if (!skillDirs.includes(name))
     problems.push(
       `.claude/skills/README.md: index lists "${name}" but .claude/skills/${name}/ does not exist`,
     );
 }
+const locked = Object.keys(
+  JSON.parse(await readFile(path.join(ROOT, "skills-lock.json"), "utf8")).skills ?? {},
+);
+problems.push(...linkedSkillProblems([...linkedSkills], locked));
 
 // 3. Reviewer agents: filename matches frontmatter, and the skill index mentions each.
 const agentFiles = (await readdir(path.join(ROOT, ".claude/agents"))).filter((f) =>
@@ -267,6 +278,22 @@ for (const script of [
 // doesn't spawn is a ratchet nobody turns — it would pass review as "checked"
 // while never executing in `pnpm check`.
 const checkRepoSource = await readFile(path.join(ROOT, "scripts/check-repo.mjs"), "utf8");
+// A guard that reads the network instead of the tree runs on a schedule, never per branch:
+// `check-follow-ups.mjs` reads the live tracker, and inside check:repo one malformed issue
+// turned every open pull request red (#2036). It still has to run somewhere, so its
+// workflow must name it.
+const SCHEDULED_GUARDS = {
+  "check-follow-ups.mjs": [".github/workflows/follow-ups.yml", "pnpm check:follow-ups"],
+};
+for (const [file, [workflow, command]] of Object.entries(SCHEDULED_GUARDS)) {
+  const source = await readFile(path.join(ROOT, workflow), "utf8").catch(() => "");
+  if (!source.includes(command))
+    problems.push(`${workflow}: must run \`${command}\` — ${file} runs nowhere else`);
+  if (checkRepoSource.includes(`"${file}"`))
+    problems.push(
+      `scripts/check-repo.mjs: ${file} reads the network and runs in ${workflow}, not per branch`,
+    );
+}
 const checkScripts = (await readdir(path.join(ROOT, "scripts"))).filter(
   (file) =>
     file.startsWith("check-") &&
@@ -279,25 +306,15 @@ const checkScripts = (await readdir(path.join(ROOT, "scripts"))).filter(
     // which is the orchestrator one level *above* check-repo — it spawns this
     // file, so requiring this file to spawn it would be a cycle.
     file !== "check-e2e-build.mjs" &&
-    file !== "check-all.mjs",
+    file !== "check-all.mjs" &&
+    !(file in SCHEDULED_GUARDS),
 );
-// The count AGENTS.md states for `pnpm check:repo` is the one number in that table a
-// reader has no way to verify and every reason to trust. It is also the number that goes
-// stale the instant somebody adds a guard, which is exactly when the table is least likely
-// to be re-read.
-const declaredCheckCount = Number(
-  agentsMd.match(/^\| `pnpm check:repo` \| (\d+) static guards/m)?.[1],
-);
-const actualCheckCount = (checkRepoSource.match(/^\s+\["/gm) ?? []).length;
-if (!declaredCheckCount) {
-  problems.push(
-    'AGENTS.md: the `pnpm check:repo` row no longer opens with "<n> static guards" — that phrasing is what keeps its count honest',
-  );
-} else if (declaredCheckCount !== actualCheckCount) {
-  problems.push(
-    `AGENTS.md: the \`pnpm check:repo\` row says ${declaredCheckCount} guards; scripts/check-repo.mjs spawns ${actualCheckCount}`,
-  );
+// Every place that states the `pnpm check:repo` count states the one check-repo.mjs spawns.
+const guardCountTexts = {};
+for (const { file } of GUARD_COUNT_SITES) {
+  guardCountTexts[file] = await readFile(path.join(ROOT, file), "utf8").catch(() => "");
 }
+problems.push(...guardCountProblems(guardCountTexts, spawnedGuardCount(checkRepoSource)));
 
 for (const file of checkScripts) {
   if (!checkRepoSource.includes(`"${file}"`))
@@ -337,5 +354,5 @@ if (problems.length > 0) {
 }
 
 console.log(
-  `agents: ${skillDirs.length} skills, ${agentFiles.length} reviewer agents, ${ruleFiles.length} path-scoped rules, ${hookCommands.length} hooks, ${Object.keys(areas).length} task-context areas, ${routePathTokens.size} AGENTS.md and ${rulePathCount} rules paths in sync`,
+  `agents: ${skillDirs.length} skills (${linkedSkills.size} linked in from .agents/skills), ${agentFiles.length} reviewer agents, ${ruleFiles.length} path-scoped rules, ${hookCommands.length} hooks, ${Object.keys(areas).length} task-context areas, ${routePathTokens.size} AGENTS.md and ${rulePathCount} rules paths in sync`,
 );

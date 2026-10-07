@@ -1,0 +1,42 @@
+{
+  "title": "Facturación",
+  "plan": {
+    "heading": "Tu plan",
+    "price": "DiveDay, {price} al mes",
+    "nextCharge": "Próximo cobro",
+    "endsOn": "Termina"
+  },
+  "status": {
+    "trialing": "Prueba gratuita, {count, plural, one {queda # día} other {quedan # días}}",
+    "freeTerm": "Gratis hasta el {date}",
+    "active": "Activo",
+    "pastDue": "Pago rechazado",
+    "canceled": "Cancelado",
+    "trialEnded": "Prueba terminada"
+  },
+  "notConfigured": "La facturación todavía no está activada, así que no se cobra nada.",
+  "demo": "Un centro de demostración nunca se factura.",
+  "pastDue": "Tu último pago no se pudo cobrar. Actualiza la tarjeta en Administrar facturación.",
+  "invoices": "Stripe envía cada factura por correo.",
+  "waiting": "Esperando a que Stripe confirme tu tarjeta. Actualiza en un minuto.",
+  "addCard": {
+    "submit": "Agregar una tarjeta",
+    "pending": "Abriendo Stripe…",
+    "firstCharge": "No se cobra nada hasta el {date}."
+  },
+  "manage": {
+    "submit": "Administrar facturación",
+    "pending": "Abriendo Stripe…"
+  },
+  "cancel": {
+    "submit": "Cancelar plan",
+    "pending": "Abriendo Stripe…"
+  },
+  "notice": {
+    "cardAdded": "Tarjeta guardada. Puede tardar un minuto en aparecer aquí.",
+    "notConfigured": "La facturación todavía no está activada.",
+    "unavailable": "Stripe no respondió. Inténtalo de nuevo en un minuto.",
+    "demo": "Un centro de demostración nunca se factura.",
+    "pending": "Stripe todavía está confirmando la tarjeta que agregaste. Inténtalo de nuevo en un minuto."
+  }
+}

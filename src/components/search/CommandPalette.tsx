@@ -6,8 +6,7 @@ import { createPortal } from "react-dom";
 import type { LanguageChoice } from "@/components/LanguageChoices";
 import { DiveDayIcon, StaffDestinationIcon } from "@/components/StaffDestinationIcon";
 import { GroupLabel } from "@/components/ui/ledger";
-import { useExitAnimation } from "@/components/useExitAnimation";
-import { useFocusTrap } from "@/components/useFocusTrap";
+import { useDialog } from "@/components/useDialog";
 import type { SearchResults } from "@/db/search";
 import type { GearItemStatus } from "@/lib/gear";
 import { motionMs } from "@/lib/motion";
@@ -171,12 +170,16 @@ export function CommandPalette({
   const dialogRef = useRef<HTMLDivElement>(null);
   const root = `/shop/${shopSlug}`;
 
-  useFocusTrap(open, dialogRef);
   // 180ms matches .animate-scale-out in globals.css — the two must move
   // together. Restrained on purpose (docs/design/principles.md §5): a short
   // scale-and-fade, the same pair every other menu on the page uses, so the
   // palette reads as a layer arriving rather than a dialog performing.
-  const { mounted, closing } = useExitAnimation(open, motionMs("base"));
+  const { mounted, closing } = useDialog({
+    open,
+    onClose: () => setOpen(false),
+    containerRef: dialogRef,
+    exitMs: motionMs("base"),
+  });
 
   // ⌘K / Ctrl-K from anywhere opens the palette.
   useEffect(() => {
@@ -531,9 +534,6 @@ export function CommandPalette({
     } else if (event.key === "Enter") {
       event.preventDefault();
       go(flat[active]);
-    } else if (event.key === "Escape") {
-      event.preventDefault();
-      setOpen(false);
     }
   }
 

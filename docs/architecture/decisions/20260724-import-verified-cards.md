@@ -30,7 +30,7 @@ it raised the sharp edge — an imported level card now clears depth gates, and 
 now authorizes enriched-air requests, on the strength of a CSV cell — and the product owner chose
 "verified, but surfaced for a quick confirm" over both "keep it gated until re-checked" and "verified
 with no confirm at all," for all sources. Recorded as a decision in
-`docs/product/human-decisions.md` (H-20).
+`docs/product/human-decisions/README.md` (H-20).
 
 ## Decision
 

@@ -152,7 +152,7 @@ describe("rentalFitLineText", () => {
     ).toBe("Mask & fins over a drysuit boot");
   });
 
-  it("asks wet or dry for a drysuit diver's gloves, with and without a size (H-101)", () => {
+  it("asks wet or dry for a drysuit diver's gloves, with and without a size (H-102)", () => {
     expect(
       rentalFitLineText(t, "en-US", {
         state: "rents",

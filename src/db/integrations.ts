@@ -421,13 +421,3 @@ export async function upsertIntegrationSyncRecord(
     .returning();
   return row ?? null;
 }
-
-export async function markIntegrationSyncError(
-  db: DbExecutor,
-  input: IntegrationSyncKey & { errorCode: string },
-) {
-  await db
-    .update(integrationSyncRecords)
-    .set({ lastError: input.errorCode.slice(0, 200), updatedAt: now() })
-    .where(syncRecordMatches(input));
-}

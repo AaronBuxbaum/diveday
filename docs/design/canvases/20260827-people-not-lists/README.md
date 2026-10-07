@@ -63,7 +63,7 @@ Every name, number and time is demo-seed fiction. Nothing here is real customer 
 | Slice | Status | Lands in | Pinned by |
 | --- | --- | --- | --- |
 | 8a — the shared person-row vocabulary | shipped | `src/components/person/rows.tsx` | `src/components/person/rows.test.tsx` |
-| 8b — the diver record recomposition | shipped | `src/app/shop/[shopSlug]/divers/[personId]/page.tsx` | `[personId]/_lib/status.test.ts`, `_lib/record-primaries.test.ts`, `_components/DiverStatusLedger.test.tsx`, `_components/DiverStory.test.tsx` |
+| 8b — the diver record recomposition | shipped | `src/app/shop/[shopSlug]/divers/[personId]/page.tsx` | `src/lib/diver-status.test.ts`, `_lib/record-primaries.test.ts`, `_components/DiverStatusLedger.test.tsx`, `_components/DiverStory.test.tsx` |
 | 8c — the roster ledger | shipped | `src/app/shop/[shopSlug]/divers/_components/DiverList.tsx` | `_components/DiverList.test.tsx`, `src/lib/roster-rows.test.ts`, `src/db/roster-facts.test.ts` |
 | 8d — reviews as a worklist | shipped | `src/app/shop/[shopSlug]/reviews/page.tsx` | `_components/ReviewsAggregateLine.test.tsx`, `_components/ReviewLedgerRow.test.tsx`, `src/db/reviews.test.ts` |
 | 8e — the waiver surface | shipped | `src/app/shop/[shopSlug]/waivers/page.tsx` | `_components/PublishRelease.test.tsx`, `_components/SignatureLog.test.tsx`, `actions.authz.test.ts` |

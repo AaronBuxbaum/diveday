@@ -331,7 +331,9 @@
       "taxAtCheckout": "se suma al pagar",
       "dueNow": "A pagar ahora",
       "dueAtShop": "A pagar en el centro",
-      "balanceAtDock": "{balance} en el muelle el {when}"
+      "balanceAtDock": "{balance} en el muelle el {when}",
+      "snorkelerFare": "{price} × {count, plural, one {# persona de snorkel} other {# personas de snorkel}}",
+      "riderFare": "{price} × {count, plural, one {# acompañante} other {# acompañantes}}"
     },
     "promoLabel": "Código promocional",
     "promoHint": "(si tienes uno)",
@@ -385,14 +387,17 @@
       "courseRatioFull": "Esta sesión alcanzó su límite de proporción instructor-alumno. Llama al centro: puede que puedan añadir otro instructor.",
       "fit": "Ese ajuste de equipo no se guardó. Revisa los detalles e inténtalo de nuevo.",
       "pay": "No hemos podido abrir la página de pago en este momento. Tu plaza está segura. Inténtalo de nuevo en un momento, o paga en el centro.",
-      "checkFields": "Revisa los campos resaltados e inténtalo de nuevo."
+      "checkFields": "Revisa los campos resaltados e inténtalo de nuevo.",
+      "diversFull": "Ya no quedan plazas de buceo en esta salida, así que no pudimos reservar a un buceador.",
+      "typeUnavailable": "Esa opción no está disponible en esta salida. Elige otra y vuelve a intentarlo."
     },
     "fieldErrors": {
       "nameRequired": "Escribe un nombre.",
       "nameTooLong": "Ese nombre es demasiado largo.",
       "emailInvalid": "Escribe un correo electrónico válido.",
       "phoneTooLong": "Ese número de teléfono es demasiado largo.",
-      "promoInvalid": "Ese código no está activo."
+      "promoInvalid": "Ese código no está activo.",
+      "participantTypeInvalid": "Elige una de las opciones de la lista."
     },
     "emailsOnTheWay": "Te llegarán dos correos: la confirmación de tu reserva y el enlace para firmar tu exención.",
     "embedPayNext": "Tu plaza está reservada. El pago se abre en la página segura de DiveDay, fuera de esta ventana.",
@@ -472,6 +477,14 @@
     "submitting": "Cancelando…",
     "confirmedTitle": "Te has dado de baja",
     "confirmedText": "Ya no recibirás correos opcionales de {shopName}. Seguirás recibiendo correos sobre tus propias reservas, exenciones y actualizaciones de viaje."
+  },
+  "weeklyDigestUnsubscribe": {
+    "title": "¿Dejar de recibir el correo de los lunes?",
+    "description": "Cada lunes recibes un resumen de la semana en {shopName}. Puedes volver a activarlo desde tus ajustes de correo.",
+    "submit": "Dejar de recibir el correo de los lunes",
+    "submitting": "Guardando…",
+    "confirmedTitle": "El correo de los lunes está desactivado",
+    "confirmedText": "Ya no recibirás el resumen semanal de {shopName}. Vuelve a activarlo desde tus ajustes de correo."
   },
   "contactConfirm": {
     "title": "¿Confirmar esta dirección para {shopName}?",
@@ -981,7 +994,9 @@
     "full": "{tripTitle}",
     "gear": "Equipo de alquiler",
     "gearForDiver": "Equipo de alquiler — {name}",
-    "tip": "Propina para la tripulación"
+    "tip": "Propina para la tripulación",
+    "seatFull": "{tripTitle} ({type})",
+    "seatDeposit": "Depósito — {tripTitle} ({type})"
   },
   "capability": {
     "waiverReceived": "Exención recibida",
@@ -2000,7 +2015,6 @@
       "signingIn": "Iniciando sesión…",
       "submit": "Iniciar sesión",
       "needShop": "¿Necesitas un centro?",
-      "getSetUp": "Escribe a {email}",
       "publicSchedule": "¿Buscas el calendario de buceo?"
     },
     "onboard": {
@@ -2008,8 +2022,7 @@
       "title": "Abre tu centro",
       "closed": {
         "title": "Abrimos cada centro a mano",
-        "body": "Cuéntanos de tu centro y lo abrimos contigo.",
-        "cta": "Escribir a {email}"
+        "body": "Cuéntanos de tu centro y lo abrimos contigo."
       },
       "shopSectionTitle": "Tu centro",
       "shopNameLabel": "Nombre del centro",
@@ -2646,7 +2659,6 @@
       "gettingReady": "Preparando tu centro…",
       "tryDemo": "Probar la demo en vivo",
       "getSetUp": "Pide tu centro",
-      "setUpSubject": "Quiero abrir mi centro en DiveDay",
       "demoNote": "La demo abre un centro de muestra en funcionamiento con un clic. Sin registro y sin tarjeta."
     },
     "price": {
@@ -2661,7 +2673,8 @@
     },
     "export": {
       "claim": "Ajustes → Exportación de datos descarga un ZIP con CSV simples y documentados (buceadores, reservas, registros de exenciones, historial de pagos), encabezados por un archivo de contactos con la forma que espera el asistente de importación de otro sistema. Cada foto guardada (evidencia de certificación, fotos de sitios, recapitulaciones) va dentro como archivo.",
-      "terms": "Sin tarifa de exportación, sin ticket de soporte, sin permanencia mínima, y la misma descarga funciona el primer día de una prueba."
+      "terms": "Sin tarifa de exportación, sin ticket de soporte, sin permanencia mínima, y la misma descarga funciona el primer día de una prueba.",
+      "continuity": "Si DiveDay cierra algún día, te avisamos con 90 días de antelación, tienes tu exportación y tus copias de seguridad siguen en marcha hasta el último día."
     },
     "capabilities": {
       "onlineBooking": {
@@ -3380,6 +3393,9 @@
           "question": "¿Cómo accedo a los registros de mi centro?",
           "answer": "Cualquier día, desde Ajustes. {claim} {terms}"
         },
+        "shutdown": {
+          "question": "¿Qué pasa con mi centro si DiveDay cierra?"
+        },
         "switching": {
           "question": "¿Qué implica cambiarse a DiveDay?",
           "answer": "Exporta una hoja de cálculo de clientes desde tu sistema actual. El importador de DiveDay trae a tus buceadores, registros de certificación y tallas de alquiler, y muestra qué va a pasar antes de guardar nada. Hay guías para {competitors}.",
@@ -3890,6 +3906,38 @@
         "closeTitle": "Repasa un día de pedidos en la demo.",
         "demoPlace": "los pedidos del día, como propietario"
       }
+    },
+    "setUp": {
+      "title": "Pide tu centro",
+      "description": "Abrimos cada centro a mano y te escribimos para abrir el tuyo.",
+      "shopName": "Nombre del centro",
+      "region": "Ciudad o región",
+      "runsBoat": "¿Tienes barco?",
+      "yes": "Sí",
+      "no": "No",
+      "currentSystem": "¿Qué usas hoy?",
+      "current": {
+        "paper": "Papel",
+        "spreadsheet": "Hojas de cálculo",
+        "bookingSystem": "Un sistema de reservas",
+        "shopSoftware": "Un programa de gestión de buceo",
+        "other": "Otra cosa"
+      },
+      "contactName": "Tu nombre",
+      "email": "Correo electrónico",
+      "phone": "Teléfono",
+      "website": "Sitio web",
+      "submit": "Enviar",
+      "sending": "Enviando…",
+      "errors": {
+        "required": "Completa este campo.",
+        "invalid": "Revisa este dato.",
+        "email": "Revisa la dirección."
+      },
+      "sent": {
+        "title": "Solicitud enviada",
+        "body": "Te escribiremos para abrir tu centro. Mientras tanto, la demo está abierta."
+      }
     }
   },
   "errorBoundary": {
@@ -4050,6 +4098,46 @@
       "confirm": "Confirmar esta dirección",
       "expiry": "Este enlace caduca el {expiresAt}. Si nadie de {shopName} lo pidió, puedes ignorarlo."
     },
+    "weeklyDigest": {
+      "subject": "Tu semana en {shopName}",
+      "lastWeek": {
+        "heading": "La semana pasada, {range}",
+        "bookings": "{count, plural, =0 {Ninguna reserva nueva.} one {# reserva nueva.} other {# reservas nuevas.}}",
+        "sailed": "{departures, plural, one {Salió # salida} other {Salieron # salidas}} con {filled} de {seats} plazas ocupadas ({percent} %).",
+        "link": "Abrir Informes"
+      },
+      "thisWeek": {
+        "heading": "Esta semana, {range}",
+        "board": "{departures, plural, one {# salida} other {# salidas}} en la agenda, {filled} de {seats} plazas reservadas ({percent} %).",
+        "link": "Abrir la agenda"
+      },
+      "waivers": {
+        "heading": "Exenciones",
+        "body": "{divers, plural, one {# buceador aún necesita} other {# buceadores aún necesitan}} una exención firmada, en {departures, plural, one {# salida} other {# salidas}} esta semana.",
+        "link": "Abrir Hoy"
+      },
+      "reviews": {
+        "heading": "Reseñas",
+        "received": "{count, plural, one {# reseña nueva} other {# reseñas nuevas}} la semana pasada.",
+        "waiting": "{count, plural, one {# reseña te está esperando.} other {# reseñas te están esperando.}}",
+        "link": "Moderar reseñas"
+      },
+      "dateRequests": {
+        "heading": "Peticiones de fecha",
+        "body": "{count, plural, one {# petición de un día que no está en la agenda.} other {# peticiones de días que no están en la agenda.}}",
+        "link": "Abrir peticiones"
+      },
+      "overdue": {
+        "heading": "Atrasado",
+        "body": "{count, plural, one {# tarea en Hoy está atrasada.} other {# tareas en Hoy están atrasadas.}}",
+        "link": "Abrir Hoy"
+      },
+      "zoneNote": "Las semanas van de lunes a domingo, {zone}.",
+      "why": "Recibes esto cada lunes como parte del equipo de {shopName}.",
+      "settings": "Ajustes de correo",
+      "turnOff": "Dejar de recibir estos correos",
+      "quietWeek": "La semana pasada no hubo actividad y esta semana no hay nada en la agenda, así que este lunes no se envía ningún correo."
+    },
     "staffInvite": {
       "subject": "{inviterName} te ha invitado a {shopName} en DiveDay",
       "body": "{inviterName} te añadió a {shopName} en DiveDay como {roles}.",
@@ -4160,5 +4248,25 @@
       "mostDived": "El más buceado · {times, number}",
       "divers": "Buceadores"
     }
+  },
+  "participants": {
+    "type": {
+      "diver": "Buceador",
+      "snorkeler": "Snorkel",
+      "rider": "Acompañante"
+    },
+    "joiningAs": "Participa como",
+    "free": "gratis",
+    "choice": {
+      "diver": "Buceo, {price}",
+      "snorkeler": "Snorkel, {price}",
+      "rider": "Acompañante en el barco, {price}"
+    },
+    "choiceUnpriced": {
+      "diver": "Buceo",
+      "snorkeler": "Snorkel",
+      "rider": "Acompañante en el barco"
+    },
+    "priceLine": "{type} {price}"
   }
 }

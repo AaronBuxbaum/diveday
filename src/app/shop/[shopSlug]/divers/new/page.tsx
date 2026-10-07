@@ -40,6 +40,8 @@ const NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
   duplicate: { tone: "danger", key: "divers.page.noticeDuplicate" },
   invalid: { tone: "danger", key: "divers.page.noticeInvalid" },
   "diver-full": { tone: "danger", key: "trips.notices.diverFull" },
+  "diver-divers-full": { tone: "danger", key: "participants.notices.diversFull" },
+  "diver-type-unavailable": { tone: "danger", key: "participants.notices.typeUnavailable" },
   "diver-already": { tone: "danger", key: "trips.notices.diverAlready" },
   "diver-course-unstaffed": { tone: "danger", key: "trips.notices.diverCourseUnstaffed" },
   "diver-course-prerequisite": { tone: "danger", key: "trips.notices.diverCoursePrerequisite" },

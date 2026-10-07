@@ -1,6 +1,6 @@
 ---
 name: i18n-copy
-description: Write user-facing copy so it goes through a message bundle, and extract existing hard-coded English. Use whenever adding or editing any string a person reads on screen, when `pnpm check:copy` fails, or when working through the copy baseline.
+description: Route on-screen copy through a message bundle and extract hard-coded English. Use when adding or editing any string a person reads, when `pnpm check:copy` fails, or when working the copy baseline.
 ---
 
 # Copy goes in a bundle, never in a component
@@ -19,7 +19,7 @@ Decisions: [20260729-diver-copy-localization](../../../docs/architecture/decisio
 `pnpm check:copy` enforces this for `src/app`/`src/components` (`.tsx` and colocated `.ts`).
 `pnpm check:domain-strings` enforces the same rule for `src/lib`/`src/db` — see
 [Copy that is not in a component](#copy-that-is-not-in-a-component) below. Both are ratchets over
-`scripts/copy-baseline.json` / `scripts/domain-strings-baseline.json`: each currently sits at zero
+the `copy` and `domain-strings` sections of `scripts/ratchets.json`: each currently sits at zero
 (the full-app and full-domain-layer extractions are both done — ADRs
 [20260730-frontend-strings-i18n-extraction](../../../docs/architecture/decisions/20260730-frontend-strings-i18n-extraction.md)
 and
@@ -141,7 +141,7 @@ convention and needing no marker:
 
 - **Static `metadata.title`** — Next resolves it before locale negotiation can run.
 - **The waiver body and medical questionnaire** — legally reviewed wording; translating it is a
-  sign-off decision (H-01/H-03 in [human-decisions.md](../../../docs/product/human-decisions.md)),
+  sign-off decision (H-01/H-03 in [human-decisions/](../../../docs/product/human-decisions/README.md)),
   not an engineering one.
 
 Not exempt: marketing pages under `src/app`/`src/components`. They go through `diver.json` like
@@ -161,7 +161,7 @@ no English-first workflow; a key present in one locale and missing in another fa
 ## When `pnpm check:copy` or `pnpm check:domain-strings` fails
 
 Both scripts share the same messages and flags; substitute `check-domain-strings.mjs` and
-`domain-strings-baseline.json` for `src/lib`/`src/db` work.
+`domain-strings` section for `src/lib`/`src/db` work.
 
 | Message | What to do |
 | --- | --- |

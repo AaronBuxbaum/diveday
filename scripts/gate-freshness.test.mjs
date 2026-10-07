@@ -7,6 +7,7 @@ import {
   gateIdsIn,
   latestDateIn,
   movementFor,
+  parseDecisionFile,
   parseFollowUpIssue,
   parseGateRows,
   parseThirtyDayList,
@@ -121,6 +122,41 @@ describe("parseGateRows", () => {
 
   it("leaves an undated row's datedOutcome null rather than guessing", () => {
     expect(rows.find((row) => row.id === "H-05")?.datedOutcome).toBeNull();
+  });
+});
+
+describe("parseDecisionFile", () => {
+  // The shape `docs/product/human-decisions/H-nn-*.md` takes since the register was split.
+  const decision = `# H-07: What payment policy should the first paid booking support?
+
+- **Status:** In progress
+- **Human owner:** Product owner + finance owner
+
+## Unblocks / follow-up
+
+Decided 2026-07-21; see [20260719-stripe-connect-orders](../../architecture/decisions/20260719-stripe-connect-orders.md).
+
+## Note
+
+**H-07 mechanism update (2026-08-26):** Stripe Tax is now the implemented mechanism.
+`;
+
+  it("reads the id from the heading, the status line, and the newest date anywhere in the file", () => {
+    expect(parseDecisionFile(decision)).toMatchObject({
+      id: "H-07",
+      status: "In progress",
+      state: "open",
+      datedOutcome: "2026-08-26",
+    });
+  });
+
+  it("collapses a closed status the way the table rows did", () => {
+    const closed = decision.replace("In progress", "Implemented");
+    expect(parseDecisionFile(closed)?.state).toBe("closed");
+  });
+
+  it("returns null for a file that is not a decision — the README index, say", () => {
+    expect(parseDecisionFile("# Human decision log\n\n| ID | Status |\n")).toBeNull();
   });
 });
 

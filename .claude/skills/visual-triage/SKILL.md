@@ -5,7 +5,7 @@ description: Triage reg-suit visual-regression differences locally or in CI, dec
 
 # Visual triage
 
-reg-suit baselines live in AWS S3 under `reg-publish-s3-plugin`, keyed by full commit sha. A test run captures actual images under `.reg/actual`, compares them against the baseline downloaded from S3 for this commit's *base* — the fork point from `main`, or on a stacked pull request the head of the layer below — and uploads the results/reports. Which commit that is, is stated rather than inferred: `scripts/reg-suit-keys.mjs` computes both keys and `pnpm visual:compare` puts them in the environment `regconfig.json` reads (ADR 20260821-stacked-pull-requests). Set `REG_EXPECTED_KEY` yourself to compare against a commit of your choosing.
+reg-suit baselines live in AWS S3 under `reg-publish-s3-plugin`, keyed by full commit sha. A test run captures actual images under `.reg/actual`, compares them against the baseline downloaded from S3 for this commit's *base* — the fork point from `main`, stacked pull request or not (ADR 20260919-stack-ci-cancels-superseded-layers) — and uploads the results/reports. Which commit that is, is stated rather than inferred: `scripts/reg-suit-keys.mjs` computes both keys and `pnpm visual:compare` puts them in the environment `regconfig.json` reads (ADR 20260821-stacked-pull-requests). Set `REG_EXPECTED_KEY` yourself to compare against a commit of your choosing.
 
 Baselines are captured on CI's `ubuntu-latest` runners (ADR 20260730-linux-ci-runners). Running
 `pnpm visual` on macOS re-renders every screenshot through a different font stack and reports most
@@ -52,13 +52,10 @@ cannot rebase yet — `main` is red, or the fix is still in review — say so in
 the inherited surfaces explicitly by naming the PR each one came from; a reviewer cannot tell them
 apart from yours by looking.
 
-**On a stacked pull request, read that comment on every layer.** A layer's baseline is the head
-commit of the layer below, whose S3 snapshot exists only if its own four visual shards went green in
-a run that finished first — and a cascading rebase rewrites every commit above the merge point,
-orphaning the keys published under them. So `NOTHING WAS COMPARED` is a *likelier* outcome here than
-on an ordinary branch, and it means the same thing it always does: unknown, not clean. Re-run the
-layer below and let it publish before triaging the layer above (ADR
-20260821-stacked-pull-requests).
+**On a stacked pull request, read that comment on every layer.** A layer's baseline is its fork
+point from `main`, like any branch's (`scripts/reg-suit-keys.mjs`, ADR
+20260919-stack-ci-cancels-superseded-layers), so its diff carries every surface the layers below it
+changed as well as its own. Name the layer each inherited diff came from before approving it.
 
 ## Fetching the report as an agent
 

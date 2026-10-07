@@ -83,6 +83,9 @@ const BOAT_MODE_FILES = new Set(
     "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/CrewRollCall.tsx",
     "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/BuddyTeamChip.tsx",
     "src/components/OfflineManifestView.tsx",
+    // Its roll-call sections, drawn only inside that view's `boat-mode` main.
+    "src/components/offline-manifest/CrewRollCall.tsx",
+    "src/components/offline-manifest/DiverRollCall.tsx",
     "src/components/row-tones.ts",
   ].map((file) => path.normalize(file)),
 );

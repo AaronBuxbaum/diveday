@@ -1,4 +1,3 @@
-import { eq } from "drizzle-orm";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -19,10 +18,11 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { issueBookingCapability } from "@/db/booking-capabilities";
 import { getDb } from "@/db/client";
 import { recordDiverOwnLocale } from "@/db/people";
-import { bookings, type MedicalAnswers, people, type Shop, trips } from "@/db/schema";
+import type { MedicalAnswers, Shop } from "@/db/schema";
 import { getShopById } from "@/db/shops";
 import { getTripDiveSitesPeek } from "@/db/trips";
 import { sendGuardianReleaseCopy } from "@/db/waiver-guardian-copy";
+import { getBookingTripId, getWaiverSignerOnFile, getWaiverTripHeader } from "@/db/waiver-signing";
 import {
   completeWaiver,
   getEmergencyContactForBearer,
@@ -464,16 +464,9 @@ export default async function WaiverPage({
     // while every staff surface said cleared (issue #1252, security review N1).
     const needsReview = isUnresolvedMedicalHold(state.record);
     const bookingId = state.record.bookingId;
-    const booking = bookingId
-      ? await db
-          .select({ tripId: bookings.tripId })
-          .from(bookings)
-          .where(eq(bookings.id, bookingId))
-          .limit(1)
-          .then((rows) => rows[0])
-      : null;
+    const bookingTripId = bookingId ? await getBookingTripId(db, bookingId) : null;
 
-    const diveSitesList = booking?.tripId ? await getTripDiveSitesPeek(db, booking.tripId) : [];
+    const diveSitesList = bookingTripId ? await getTripDiveSitesPeek(db, bookingTripId) : [];
 
     const readyCapability = bookingId
       ? await issueBookingCapability(db, {
@@ -598,11 +591,7 @@ export default async function WaiverPage({
   // anything else). Shown as the field's hint so the rule is guidance before
   // it is ever a refusal — and it discloses nothing this booking-scoped
   // bearer link doesn't already stand for.
-  const [signerOnFile] = await db
-    .select({ fullName: people.fullName, dateOfBirth: people.dateOfBirth })
-    .from(people)
-    .where(eq(people.id, record.personId))
-    .limit(1);
+  const signerOnFile = await getWaiverSignerOnFile(db, record.personId);
   /**
    * **A minor signs twice** (ADR 20260907-guardian-co-signature). Decided from
    * the date of birth the shop holds, on the shop's calendar day this page is
@@ -627,15 +616,7 @@ export default async function WaiverPage({
   // The trip this waiver is for (task 42) — named on the page itself so the
   // diver can verify what they're signing for, rather than trusting a link
   // that names only the shop.
-  const tripHeader = recordBookingId
-    ? await db
-        .select({ title: trips.title, startsAt: trips.startsAt, endsAt: trips.endsAt })
-        .from(bookings)
-        .innerJoin(trips, eq(trips.id, bookings.tripId))
-        .where(eq(bookings.id, recordBookingId))
-        .limit(1)
-        .then((rows) => rows[0] ?? null)
-    : null;
+  const tripHeader = recordBookingId ? await getWaiverTripHeader(db, recordBookingId) : null;
   /**
    * The fixed list of questions the diver is handed. The follow-ups their own
    * answers open are deliberately not in it — see `QuestionnaireProgress`.

@@ -1,13 +1,17 @@
 import { and, eq, ilike, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { HOUR_MS } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { courses, diveSites, gearItems, orders, people, shops, trips } from "./schema";
 import { searchShop } from "./search";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
+
 describe("searchShop", () => {
   it("finds a diver by a case-insensitive substring of their name, email, or phone", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const byName = await searchShop(db, shop.id, "priya", "America/New_York", "en-US");
     expect(byName.divers.map((d) => d.fullName)).toContain("Priya Sharma");
@@ -23,7 +27,7 @@ describe("searchShop", () => {
    * tables and gear was not among them (issue #719).
    */
   it("finds a gear unit by its tag, its serial and its brand, with the status", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [unit] = await db
       .insert(gearItems)
       .values({
@@ -59,7 +63,7 @@ describe("searchShop", () => {
     // the register announcing itself to a shop that never asked for it. A shop
     // of its own, because the seeded one *does* run a register — asserting this
     // against blue-mantis would pass only while nothing there matched.
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const [fresh] = await db
       .insert(shops)
       .values({ name: "No Gear Divers", slug: "no-gear-divers", timezone: "America/New_York" })
@@ -71,7 +75,7 @@ describe("searchShop", () => {
   });
 
   it("does not surface a deleted unit", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await db.insert(gearItems).values({
       shopId: shop.id,
       label: "BCD #14",
@@ -89,7 +93,7 @@ describe("searchShop", () => {
    * matched nothing at all (issue #719).
    */
   it("finds a diver by the bare digits of a formatted phone number", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [person] = await db
       .insert(people)
       .values({ shopId: shop.id, fullName: "Caller Id", phone: "+1 (305) 555-0199" })
@@ -108,7 +112,7 @@ describe("searchShop", () => {
   it("does not treat a short ordinary query as a phone number", async () => {
     // The digit floor: "pr" must not drag every phone column through a
     // normalising scan, and a name query must still answer as a name query.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const result = await searchShop(db, shop.id, "priya", "America/New_York", "en-US");
     expect(result.divers.map((d) => d.fullName)).toContain("Priya Sharma");
   });
@@ -122,7 +126,7 @@ describe("searchShop", () => {
    * `"+1 (999) 888-7766"` (the dash is in the way), only of its digits.
    */
   it("switches to digit matching at the floor and not below it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [person] = await db
       .insert(people)
       .values({ shopId: shop.id, fullName: "Floor Case", phone: "+1 (999) 888-7766" })
@@ -137,7 +141,7 @@ describe("searchShop", () => {
   });
 
   it("finds a trip by a substring of its title", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     // A distinctively-worded seeded trip, not a generic "Two-Tank Reef —"
     // charter — the extended roster seeds dozens of those, and search caps
     // results per group, so a common substring can legitimately rank the
@@ -168,7 +172,7 @@ describe("searchShop", () => {
    * handful of trips the limit never truncates and the ordering never bites.
    */
   it("orders the trips group by nearness to now, in either direction", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const [shop] = await db
       .insert(shops)
       .values({ name: "Nearness Divers", slug: "nearness-divers", timezone: "America/New_York" })
@@ -214,7 +218,7 @@ describe("searchShop", () => {
   });
 
   it("never returns another shop's people, even when both have a same-named diver", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [otherShop] = await db
       .insert(shops)
       .values({ name: "Second Shop", slug: "second-shop", timezone: "America/New_York" })
@@ -240,7 +244,7 @@ describe("searchShop", () => {
   });
 
   it("returns nothing for a below-minimum-length query", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const result = await searchShop(db, shop.id, "p", "America/New_York", "en-US");
     expect(result).toEqual({
       divers: [],
@@ -253,7 +257,7 @@ describe("searchShop", () => {
   });
 
   it("finds a dive site by a substring of its name", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [site] = await db
       .select()
       .from(diveSites)
@@ -266,7 +270,7 @@ describe("searchShop", () => {
   });
 
   it("finds a course by a substring of its title", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [course] = await db.select().from(courses).where(eq(courses.shopId, shop.id)).limit(1);
     if (!course) throw new Error("seed course missing");
 
@@ -290,7 +294,7 @@ describe("searchShop", () => {
   });
 
   it("never returns another shop's dive sites, courses, or orders", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [otherShop] = await db
       .insert(shops)
       .values({ name: "Second Shop", slug: "second-shop-2", timezone: "America/New_York" })
@@ -309,7 +313,7 @@ describe("searchShop", () => {
 
 describe("CR-018 trigram search indexes", () => {
   it("creates a GIN trigram index for every leading-wildcard ILIKE search column", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const rows = await db.execute<{ indexname: string }>(
       sql`select indexname from pg_indexes where indexname like '%_trgm_idx' order by indexname`,
     );
@@ -339,7 +343,7 @@ describe("CR-018 trigram search indexes", () => {
   });
 
   it("has the pg_trgm extension available", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const rows = await db.execute<{ extname: string }>(
       sql`select extname from pg_extension where extname = 'pg_trgm'`,
     );

@@ -7,6 +7,7 @@ import { z } from "zod";
 import { paperGuardianFrom, paperWaiverRefused } from "@/app/actions/paper-waiver-fields";
 import {
   canPersonConfigureTrips,
+  canPersonOverrideCertBlock,
   canPersonRefund,
   canPersonRetireMedicalRefusal,
 } from "@/db/authz";
@@ -16,6 +17,7 @@ import {
   cancelBooking,
   confirmBookingIdentity,
   restoreBooking,
+  setBookingParticipantType,
   setBookingPickupDetails,
   splitBookingIdentity,
 } from "@/db/bookings";
@@ -55,6 +57,7 @@ import {
   listTripDiverContacts,
   reinstateTripClearingMinimum,
   setSeriesRepeat,
+  setTripParticipantTerms,
   setTripStatus,
   type TripCrewChange,
   type UpdateTripOutcome,
@@ -76,10 +79,13 @@ import { nowDate } from "@/lib/clock";
 import { emergencyContactSchema } from "@/lib/contact";
 import { depthToMeters, maxEnteredVisibility } from "@/lib/depth-units";
 import { DECLARABLE_CERTIFICATION_LEVELS } from "@/lib/dive-declaration";
+import { parseForm } from "@/lib/form-parse";
 import { MAX_DECISION_HOURS, MAX_MINIMUM_BOOKINGS, MIN_DECISION_HOURS } from "@/lib/minimum-seats";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { PAPER_WAIVER_IDLE, type PaperWaiverFormState } from "@/lib/paper-waiver-form";
+import { parseParticipantTerms } from "@/lib/participant-terms";
+import { PARTICIPANT_TYPES } from "@/lib/participant-types";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import {
   blankableDiverEmailSchema,
@@ -104,6 +110,7 @@ import {
   temperatureToCelsius,
   temperatureUnitFor,
 } from "@/lib/temperature-units";
+import { signTripAdmissionGate } from "@/lib/trip-admission-gate";
 import { MAX_TRIP_DAYS, MIN_TRIP_DAYS } from "@/lib/trip-days";
 import { tripDetailsPatch } from "@/lib/trip-details";
 import { tripDiveDraftsFromForm } from "@/lib/trip-dives";
@@ -1074,6 +1081,84 @@ export async function removeBookingAction(shopSlug: string, tripId: string, form
   revalidateAndRedirect(back, noticeUrl(back, refundNotice(refund), { bid: bookingId }));
 }
 
+const PARTICIPANT_TYPE_NOTICE = {
+  divers_full: "participant-type-divers-full",
+  participant_type_unavailable: "participant-type-unavailable",
+  on_buddy_team: "participant-type-on-team",
+  trip_unavailable: "participant-type-closed",
+  boarded_not_ready: "participant-type-boarded",
+} as const;
+
+/**
+ * "Coming as" on a roster row (ADR 20261007-participant-types): the diver
+ * whose ears will not clear and who snorkels instead. Roster work any staffer
+ * does, like seating; the rules (divers-only limit, buddy teams, courses, the
+ * card check on joining the dive, the boarding re-check, the trail and the
+ * catch-up line) are the database's, in one transaction under the trip lock.
+ *
+ * "Change anyway" past a missing card is the one part that is not open: it is
+ * a certification call, owner, manager or instructor (`canOverrideCertBlock`),
+ * refused on the live roles before anything is written.
+ */
+/** The Coming-as form: the seat, what it becomes, and whether "Change anyway" was pressed. */
+const participantTypeForm = z.object({
+  bookingId: z.string().refine((id) => uuidParam(id) !== undefined),
+  participantType: z.enum(PARTICIPANT_TYPES),
+  confirmCertBlock: z.literal("1").optional(),
+});
+
+export async function setParticipantTypeAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const back = tripPath(shopSlug, tripId);
+  const s = (await requireShopSurface(shopSlug)).session;
+  const parsed = parseForm(participantTypeForm, formData);
+  if (!uuidParam(tripId) || !parsed.ok) redirect(back);
+  const { bookingId, participantType: to } = parsed.data;
+  const confirmCertBlock = parsed.data.confirmCertBlock === "1";
+  const dbi = await getDb();
+  if (
+    confirmCertBlock &&
+    !(await canPersonOverrideCertBlock(dbi, s.user.shopId, s.user.personId))
+  ) {
+    redirect(noticeUrl(back, "not-authorized"));
+  }
+  const outcome = await setBookingParticipantType(dbi, {
+    shopId: s.user.shopId,
+    tripId,
+    bookingId,
+    to,
+    actorPersonId: s.user.personId,
+    confirmCertBlock,
+  });
+  if (!outcome.ok) {
+    // A seat not on this departure: nothing to say about a seat the staffer
+    // cannot act on.
+    if (outcome.reason === "not_found") redirect(back);
+    if (outcome.reason === "cert_blocked") {
+      // Named, and signed to this departure (src/lib/trip-admission-gate.ts),
+      // so the row can ask "Change anyway" knowing which card is missing.
+      revalidateAndRedirect(
+        back,
+        noticeUrl(back, "participant-type-cert", {
+          bid: bookingId,
+          gate: signTripAdmissionGate(outcome.refusal, { kind: "trip", id: tripId }),
+        }),
+      );
+    }
+    revalidateAndRedirect(
+      back,
+      noticeUrl(back, PARTICIPANT_TYPE_NOTICE[outcome.reason], { bid: bookingId }),
+    );
+  }
+  // A paid seat that now costs more: saved, and the difference is said out
+  // loud rather than left for someone to notice at close-out.
+  const saved = outcome.owedCents > 0 ? "participant-type-owed" : "participant-type-set";
+  revalidateAndRedirect(back, noticeUrl(back, saved, { bid: bookingId }));
+}
+
 export async function undoRemoveBookingAction(
   shopSlug: string,
   tripId: string,
@@ -1095,11 +1180,13 @@ export async function undoRemoveBookingAction(
   const restoreNotice =
     outcome === "trip_full"
       ? "booking-restore-full"
-      : outcome === "course_ratio_full"
-        ? "booking-restore-ratio"
-        : outcome === "trip_cancelled"
-          ? "booking-restore-cancelled"
-          : "booking-restored";
+      : outcome === "divers_full"
+        ? "booking-restore-divers-full"
+        : outcome === "course_ratio_full"
+          ? "booking-restore-ratio"
+          : outcome === "trip_cancelled"
+            ? "booking-restore-cancelled"
+            : "booking-restored";
   if (outcome === "restored") {
     // Only a real restore is logged: a refused undo changed nothing, and an
     // activity line for it would read like the diver went back on the boat.
@@ -1521,6 +1608,42 @@ export async function markPaymentAction(shopSlug: string, tripId: string, formDa
     back,
     saved ? noticeUrl(back, "payment", { bid: bookingId }) : noticeUrl(back, "invalid"),
   );
+}
+
+/**
+ * A departure's snorkeler price, rider price and diver seats (ADR
+ * 20261007-participant-types). Trip configuration, so the same gate as the
+ * requirements form; the parse is `parseParticipantTerms` and the rules the
+ * database holds under the trip lock are `setTripParticipantTerms`.
+ */
+export async function saveParticipantTermsAction(
+  shopSlug: string,
+  tripId: string,
+  formData: FormData,
+) {
+  const back = backPath(shopSlug, tripId);
+  const s = await requireTripConfig(shopSlug, tripId);
+  const db = await getDb();
+  const trip = await getTripWithBooked(db, s.user.shopId, tripId);
+  if (!trip) redirect(back);
+  const parsed = parseParticipantTerms(
+    {
+      snorkelerPrice: formData.get("snorkelerPrice"),
+      riderPrice: formData.get("riderPrice"),
+      diverSeats: formData.get("diverSeats"),
+    },
+    { currency: await getShopCurrency(db, s.user.shopId), capacity: trip.capacity },
+  );
+  if (!parsed.ok) redirect(noticeUrl(back, "participant-terms-invalid"));
+  const outcome = await setTripParticipantTerms(db, s.user.shopId, tripId, parsed.patch);
+  if (!outcome.ok) {
+    redirect(
+      outcome.reason === "diver_seats_below_booked"
+        ? noticeUrl(back, "participant-terms-below-booked", { count: outcome.detail.divers })
+        : noticeUrl(back, "participant-terms-invalid"),
+    );
+  }
+  revalidateAndRedirect(back, noticeUrl(back, "participant-terms-saved"));
 }
 
 export async function saveRequirementsAction(shopSlug: string, tripId: string, formData: FormData) {

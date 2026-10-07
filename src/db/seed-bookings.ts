@@ -107,6 +107,7 @@ export async function seedBookings(
     .insert(bookings)
     .values(
       bookingRows.map((row) => ({
+        bookedAs: "diver" as const,
         shopId,
         status: "booked" as const,
         createdAt: nextCreatedAt(),

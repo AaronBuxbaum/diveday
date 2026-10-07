@@ -1,0 +1,11 @@
+// Read the current time through src/lib/clock.ts, never the wall clock directly.
+// Scoped in biome.json to src/lib, src/db and src/features, tests included; why, and the one
+// test that may read the wall clock, are in docs/agents/repo-checks.md ("Now Biome rules").
+language js
+
+or {
+  `new Date()`,
+  `Date.now()`
+} as $read where {
+  register_diagnostic(span=$read, message="clock: read time through src/lib/clock.ts (nowDate() / nowMs()) so the e2e clock freeze can stabilise it; in production it is new Date() / Date.now() unchanged. A file that genuinely means the wall clock is exempted in biome.json's clock override, with its reason.", severity="error")
+}

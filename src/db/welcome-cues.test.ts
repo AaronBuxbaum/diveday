@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { bookings, trips } from "./schema";
 import { setWelcomeConsent, welcomeCueInputsByBooking } from "./welcome-cues";
 
@@ -12,7 +12,7 @@ import { setWelcomeConsent, welcomeCueInputsByBooking } from "./welcome-cues";
  * day rather than a standing preference.
  */
 async function welcomeFixture() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const [trip] = await db
     .select({ id: trips.id, endsAt: trips.endsAt })
     .from(trips)
@@ -28,6 +28,10 @@ async function welcomeFixture() {
   if (!seat) throw new Error("welcome fixture needs a seated diver");
   return { db, shop, trip, seat };
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 describe("setWelcomeConsent", () => {
   it("stamps the seat, and takes it back again", async () => {

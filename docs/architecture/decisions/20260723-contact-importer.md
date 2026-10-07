@@ -44,7 +44,7 @@ system is not clearance under this shop's waiver.
     > Revised by [20260724-import-waiver-acceptance](20260724-import-waiver-acceptance.md): a row
     > explicitly claiming a prior waiver acceptance (`waiver_accepted`) is now trusted, medical
     > clearance included, and written as an `imported` record — a product-owner decision recorded in
-    > `docs/product/human-decisions.md` H-17. Unrecognized medical-ish columns are still left behind
+    > `docs/product/human-decisions/README.md` H-17. Unrecognized medical-ish columns are still left behind
     > exactly as below; only the one recognized claim column changed.
   - **Enriched air is a claim, not a fill authorization.** A nitrox card imports `pending` and only
     against a real nitrox card number; it never authorizes a fill until staff verify it.

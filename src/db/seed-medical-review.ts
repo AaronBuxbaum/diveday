@@ -197,7 +197,13 @@ async function seedHeldDiver(
     ? [undefined]
     : await db
         .insert(bookings)
-        .values({ shopId, tripId: trip.id, personId: diver.id, createdAt: at(-2, 10) })
+        .values({
+          bookedAs: "diver",
+          shopId,
+          tripId: trip.id,
+          personId: diver.id,
+          createdAt: at(-2, 10),
+        })
         .returning();
   const booking = existingBooking ?? insertedBooking;
   if (!booking) throw new Error("seedMedicalReview: booking insert returned no row");

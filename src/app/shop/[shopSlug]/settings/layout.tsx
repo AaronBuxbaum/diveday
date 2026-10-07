@@ -7,10 +7,10 @@ import { staffTranslator } from "@/i18n/staff-messages";
 import {
   canExportShopData,
   canImportShopData,
+  canManageBilling,
   canManageMessagingSettings,
   canManageStaffAccounts,
   canManageWaiverTemplates,
-  canViewShopReports,
 } from "@/lib/authz";
 import { requireShopSurface } from "@/lib/session";
 import { SettingsRail } from "./_components/SettingsRail";
@@ -89,8 +89,8 @@ async function SettingsRailPanel({ params }: { params: Promise<{ shopSlug: strin
   if (canImportShopData(roles)) gates.add("import");
   if (canExportShopData(roles)) gates.add("export");
   if (shop.hasBoatDiving) gates.add("boats");
-  // The hub's own condition for its "Your trial" row (`SettingsPage.tsx`).
-  if (!shop.isDemo && canViewShopReports(roles)) gates.add("trial");
+  // The hub's own condition for its Billing door (`SettingsPage.tsx`).
+  if (!shop.isDemo && canManageBilling(roles)) gates.add("billing");
 
   const rows = settingsRailRowsFor(gates);
   const locale = await requestLocale(shop.defaultLocale);

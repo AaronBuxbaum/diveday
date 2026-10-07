@@ -1,3 +1,4 @@
+import { courseCertifiesStudents } from "@/lib/courses";
 import { demandRecommendation } from "@/lib/demand";
 import { nitroxTanksApproved } from "@/lib/dive-prep";
 import {
@@ -21,6 +22,7 @@ import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { listTripInvitations } from "./trip-invitations";
 import { listTripLastMinutePromoRecipients, listTripLastMinutePromos } from "./trip-promos";
 import { getTripRoster, getTripWaitlist, getTripWithBooked } from "./trips";
+import type { TripSharedReads } from "./trips-shared-reads";
 
 /**
  * Everything the trip's Guests page is about, in one call — the last of the
@@ -56,8 +58,13 @@ export async function getTripGuests(
   shop: TripGuestsShop,
   tripId: string,
   filters: TripGuestsFilters = {},
+  /** The reads shared with `getTripOverview` (`./trips-shared-reads`); omitted, this reads its own. */
+  sharedReads?: TripSharedReads | null | Promise<TripSharedReads | null>,
 ) {
-  const trip = await getTripWithBooked(db, shop.id, tripId);
+  const shared = await sharedReads;
+  // Handed reads that found no departure: the answer is already in.
+  if (sharedReads !== undefined && shared === null) return null;
+  const trip = shared ? shared.trip : await getTripWithBooked(db, shop.id, tripId);
   if (!trip) return null;
 
   const diverQuery = filters.diverQuery?.trim() ?? "";
@@ -88,10 +95,10 @@ export async function getTripGuests(
     courseNextStepByBooking,
   ] = await Promise.all([
     getTripRoster(db, shop.id, tripId),
-    getTripRequirements(db, shop.id, tripId),
-    getTripSiteRequirement(db, shop.id, tripId),
-    listTripReadiness(db, shop.id, tripId),
-    listTripPrepDivers(db, shop.id, tripId),
+    shared ? shared.requirement : getTripRequirements(db, shop.id, tripId),
+    shared ? shared.siteRequirement : getTripSiteRequirement(db, shop.id, tripId),
+    shared ? shared.readiness : listTripReadiness(db, shop.id, tripId),
+    shared ? shared.prepDivers : listTripPrepDivers(db, shop.id, tripId),
     getTripWaitlist(db, shop.id, tripId),
     listTripInvitations(db, shop.id, tripId),
     listLastMinuteList(db, shop.id),
@@ -231,6 +238,15 @@ export async function getTripGuests(
      * (`SameNameHeldSeat.asksDateOfBirth`).
      */
     splitAsksDateOfBirth: Boolean(trip.course?.minimumAge),
+    /**
+     * Whether this roster may certify at all: a course session, and never an
+     * intro one (a DSD, a Try Scuba, a refresher). An intro issues no card, and
+     * a tap there would mint a verified one for a diver who has never been
+     * certified; `certifyDiverFromRosterAction` refuses it too (issue #2059).
+     */
+    certifies: courseCertifiesStudents(trip.course ?? null),
+    /** The rung this course issues (`courses.certifies_level`), where "Certify diver" opens. */
+    certifyDefaultLevel: trip.course?.certifiesLevel ?? null,
     // `orders/new` refuses without a payable account, so each seat's "Create
     // order" link points at connecting one instead of at a door that bounces.
     paymentsConnected: canAcceptPayments(stripeAccount),

@@ -22,8 +22,10 @@ import { pagedUpcomingTripsWithCounts } from "@/db/trips";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
+import { resolveDiverNotice } from "@/lib/diver-notices";
+import { bookingIsAhead, splitDiverStatus } from "@/lib/diver-status";
 import { requireShopSurface } from "@/lib/session";
-import { noticeForForm } from "@/lib/staff-notices";
+import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { ActivitySection } from "./_components/ActivitySection";
 import { BookActivity } from "./_components/BookActivity";
@@ -32,20 +34,14 @@ import { ConversationSection } from "./_components/ConversationSection";
 import { DiverDetailsGroup } from "./_components/DiverDetailsGroup";
 import { DiverHeader } from "./_components/DiverHeader";
 import { DiverNotesSection } from "./_components/DiverNotesSection";
+import { DiverRecordFoot } from "./_components/DiverRecordFoot";
 import { DiverStatusLedger } from "./_components/DiverStatusLedger";
 import { DiverStory } from "./_components/DiverStory";
-import { DownloadDiverExportButton } from "./_components/DownloadDiverExportButton";
-import { ErasePersonalData } from "./_components/ErasePersonalData";
 import { GearAndSizes } from "./_components/GearAndSizes";
-import { GuardianEmailErasure } from "./_components/GuardianEmailErasure";
-import { MergeDiver } from "./_components/MergeDiver";
 import { NoticeBanner } from "./_components/NoticeBanner";
-import { RemoveDiver } from "./_components/RemoveDiver";
 import { RestoreDiver } from "./_components/RestoreDiver";
-import { resolveDiverNotice } from "./_components/record-notices";
 import { WaiverGroup } from "./_components/WaiverGroup";
 import { canRaiseInvoiceFor } from "./_lib/invoice-door";
-import { bookingIsAhead, splitDiverStatus } from "./_lib/status";
 import { diverStatusRows } from "./_lib/status-load";
 import { restoreCardAction, restoreDiverNoteAction } from "./actions";
 
@@ -146,7 +142,7 @@ export default async function DiverDetailPage({
   // profile. Follow it before loading any of the old record's sections so a
   // stale bookmark cannot make a staffer act on the source row again.
   if (diver.person.mergedIntoPersonId) {
-    redirect(`/shop/${shopSlug}/divers/${diver.person.mergedIntoPersonId}`);
+    redirect(shopPath(shopSlug, "divers", diver.person.mergedIntoPersonId));
   }
   const removed = Boolean(diver.person.deletedAt);
   const now = nowDate();
@@ -229,7 +225,7 @@ export default async function DiverDetailPage({
     diverStatusRows(db, shop.id, diver, now, { collectHasSomewhereToGo }),
     pagedUpcomingTripsWithCounts(db, shop.id, { limit: BOOK_ACTIVITY_TRIP_SCAN_LIMIT }),
     // The co-signing guardians' addresses, for the owner's control that erases
-    // one on the guardian's request (H-102). Nobody else is shown them here.
+    // one on the guardian's request (H-103). Nobody else is shown them here.
     canErase ? listGuardianEmails(db, shop.id, personId) : [],
   ]);
   const upcoming = scannedTrips.filter(
@@ -472,70 +468,20 @@ export default async function DiverDetailPage({
           now={now}
         />
       </div>
-      {/* **The quiet foot** — the things you do *to* a record rather than with
-          it. No rule of its own: the file's last hairline already closes the
-          record above it, and a second one 48px lower read as a stray line.
-          Nothing here is primary-weight, and reaching the two destructive ones
-          costs a scroll on purpose (ADR 20260802-diver-data-erasure). */}
-      <div className="mt-10 space-y-6">
-        {canMerge && !removed && mergeCandidates.length > 0 ? (
-          <MergeDiver
-            candidates={mergeCandidates}
-            shopSlug={shopSlug}
-            personId={personId}
-            t={t}
-            status={noticeForForm(diverNotice, "merge")}
-          />
-        ) : null}
-        {canErase ? (
-          <GuardianEmailErasure
-            emails={guardianEmails}
-            shopSlug={shopSlug}
-            personId={personId}
-            locale={locale}
-            status={noticeForForm(diverNotice, "guardian-email")}
-          />
-        ) : null}
-        <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
-          {canExport ? (
-            <DownloadDiverExportButton
-              href={`/shop/${shopSlug}/divers/${personId}/export`}
-              idleLabel={t("divers.export.downloadButton.idle")}
-              acknowledgedLabel={t("divers.export.downloadButton.acknowledged")}
-            />
-          ) : null}
-          {/* Nothing to delete twice: a removed diver gets the Restore panel at
-              the top of the record instead. */}
-          {canDelete && !removed ? (
-            <RemoveDiver
-              diver={diver}
-              shopSlug={shopSlug}
-              personId={personId}
-              t={t}
-              status={noticeForForm(diverNotice, "remove")}
-            />
-          ) : null}
-        </div>
-        {/* **Erasure is offered on a deleted record and nowhere else.** It is
-            the one control in the product with no undo, and it used to sit at
-            the foot of every diver's record — including the diver a staffer
-            opened to take a payment from. Deleting first is the step that makes
-            the erase a decision rather than a scroll: it is reversible, it is
-            the state an erasure request describes anyway, and it puts the
-            record's own "This diver is deleted" panel on screen above the
-            control. `erasePersonAction` enforces the same rule, because this
-            page's tab may be older than the record's state (ADR
-            20260802-diver-data-erasure). */}
-        {canErase && removed ? (
-          <ErasePersonalData
-            diver={diver}
-            shopSlug={shopSlug}
-            personId={personId}
-            locale={locale}
-            status={noticeForForm(diverNotice, "erase")}
-          />
-        ) : null}
-      </div>
+      <DiverRecordFoot
+        diver={diver}
+        shopSlug={shopSlug}
+        personId={personId}
+        locale={locale}
+        t={t}
+        notice={diverNotice}
+        removed={removed}
+        mergeCandidates={canMerge && !removed ? mergeCandidates : []}
+        guardianEmails={canErase ? guardianEmails : null}
+        canErase={canErase}
+        canExport={canExport}
+        canDelete={canDelete}
+      />
     </main>
   );
 }

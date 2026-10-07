@@ -147,6 +147,9 @@ function sesErrorInfo(error: unknown): {
  * union.
  */
 function unsubscribeUrlOf(notification: Notification): string | undefined {
+  // The Monday email is service mail, so it carries no `unsubscribeUrl` (that
+  // field marks a send as commercial); its opt-out still earns the header.
+  if (notification.kind === "weekly_digest") return notification.turnOffUrl;
   return "unsubscribeUrl" in notification ? notification.unsubscribeUrl : undefined;
 }
 

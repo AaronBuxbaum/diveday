@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   countBoatDepartures,
   createBoat,
@@ -14,9 +14,13 @@ import { trips } from "./schema";
 import { setShopDivingOptions } from "./shops";
 import { createTrip } from "./trips-create";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
+
 describe("boats database operations", () => {
   it("creates, retrieves, updates, and lists boats for a shop", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const initialBoats = await listBoats(db, shop.id);
     expect(initialBoats.length).toBe(2);
@@ -47,7 +51,7 @@ describe("boats database operations", () => {
    * (issue #680). The assertion is inverted deliberately.
    */
   it("deletes a boat and leaves the departures it carried naming it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     const boat = await createBoat(db, shop.id, "Wave Runner", 12);
 
@@ -79,7 +83,7 @@ describe("boats database operations", () => {
   });
 
   it("updates shop diving options flags (shore and pool diving)", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
 
     expect(shop.hasShoreDiving).toBe(true);
     expect(shop.hasPoolDiving).toBe(true);
@@ -111,7 +115,7 @@ describe("boats database operations", () => {
  */
 describe("deleting a boat", () => {
   it("stamps the hull instead of removing it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const boat = await createBoat(db, shop.id, "Reef Runner", 6);
 
     expect(await deleteBoat(db, shop.id, boat.id)).toBe(true);
@@ -129,7 +133,7 @@ describe("deleting a boat", () => {
     // The failure this change exists for. Before, the trip's `boat_id` went
     // null and the manifest, the log and the close-out all read as though no
     // boat had ever been recorded.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const boat = await createBoat(db, shop.id, "Blue Horizon", 12);
     const [trip] = await db
       .select({ id: trips.id })
@@ -150,7 +154,7 @@ describe("deleting a boat", () => {
   });
 
   it("counts the departures a delete would touch, so the confirm can say", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const boat = await createBoat(db, shop.id, "Sea Fox", 8);
     expect(await countBoatDepartures(db, shop.id, boat.id)).toBe(0);
 
@@ -166,7 +170,7 @@ describe("deleting a boat", () => {
   });
 
   it("refuses to delete the same hull twice, keeping the date it was retired", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const boat = await createBoat(db, shop.id, "Second Wind", 6);
     expect(await deleteBoat(db, shop.id, boat.id)).toBe(true);
     const first = (await getBoatForHistory(db, shop.id, boat.id))?.deletedAt;
@@ -178,7 +182,7 @@ describe("deleting a boat", () => {
   });
 
   it("will not rename a hull the shop has deleted", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const boat = await createBoat(db, shop.id, "Old Faithful", 6);
     await deleteBoat(db, shop.id, boat.id);
 

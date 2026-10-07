@@ -29,7 +29,7 @@ import { maySendNow } from "@/lib/send-window";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { loadActiveStaffRoles } from "./authz";
 import { getBoatForHistory } from "./boats";
-import { type AppDb, type DbExecutor, queryAll } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { listSiteFieldGuides } from "./dive-sites";
 import { listExecutedDives, peopleWhoDivedBefore } from "./executed-dives";
@@ -39,6 +39,7 @@ import {
   recordNotificationDelivery,
   sendNotificationBatch,
 } from "./notifications";
+import { queryAll } from "./query-helpers";
 import {
   bookings,
   certifications,
@@ -776,7 +777,7 @@ export async function getRecapPageData(
 }
 
 /** A diver's recap photos, including staff-shared departure photos, newest first. */
-export async function listRecapPhotosForBooking(
+async function listRecapPhotosForBooking(
   db: AppDb,
   bookingId: string,
   tripId?: string,

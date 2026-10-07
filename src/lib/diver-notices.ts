@@ -1,0 +1,677 @@
+import type { DiverMergeRefusal } from "@/db/diver-merge";
+import type { SendStaffReplyRefusal } from "@/db/staff-reply";
+import { tripAdmissionRefusalText } from "@/i18n/readiness-labels";
+import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
+import { type FormNotice, type NoticeCodeOf, noticeFromParam } from "@/lib/staff-notices";
+import { verifyTripAdmissionGate } from "@/lib/trip-admission-gate";
+
+/**
+ * A notice that names something the staffer can go and fix carries the link to
+ * it, rather than describing a place and leaving them to find it. Only the
+ * refusals that have somewhere to send someone get one, which since the
+ * record's recomposition is exactly one.
+ */
+type NoticeLink = { key: StaffMessageKey; href: (shopSlug: string) => string };
+
+/**
+ * One entry per notice code, carrying its tone, its message key, and — the
+ * field that changed here — **the form it belongs to**.
+ *
+ * This page is one ~6,400px scroll of nine independent sections: the details
+ * editor, level cards, specialty cards, rental fit, payments, book-an-activity,
+ * remove, erase. Every one of their outcomes used to resolve into a single
+ * banner under the `<h1>`, so saving a rental fit two screens down answered you
+ * somewhere you were not looking — the same complaint the trip page's
+ * `resolveTripNotice` was built to fix, which this mirrors.
+ *
+ * `form` is that fix: the page resolves its `?notice=` once and hands each
+ * section its own with `noticeForForm`, and the section renders it in its own
+ * action row (`FormStatus`). `"page"` is left for what is genuinely about the
+ * page rather than one form on it.
+ *
+ * `field` names the control a refusal belongs *on* rather than beside, for the
+ * one case the server can point at exactly: an email another active diver
+ * already holds.
+ */
+type DiverNoticeDefinition = {
+  form: string;
+  tone: "success" | "danger" | "warning";
+  /** Absent only when `silent` is — nothing renders, so there is nothing to say. */
+  key?: StaffMessageKey;
+  field?: string;
+  /**
+   * A pure "it worked" outcome the surface already shows on its own: a
+   * captured card lands in the list right below as a new pending row, so a
+   * banner repeating "captured as pending" would be a caption on a
+   * photograph of itself (copy-restraint, deletion #1). Routing (`form`)
+   * still resolves normally — only the text is withheld, by both
+   * `DiverFormStatus` and `NoticeBanner`.
+   */
+  silent?: true;
+};
+
+/**
+ * The two domain unions this page prefixes and forwards whole, so a reason
+ * added to either one with no entry below is a `pnpm typecheck` failure rather
+ * than a banner that never renders (issue #1782).
+ *
+ * `reply_` carries every member of `SendStaffReplyRefusal` untouched
+ * (`replyToDiverAction`: ``notice = `reply-${result.reason}` ``, kebabed by
+ * `noticeUrl`). `merge_` carries `DiverMergeRefusal` minus the two the action
+ * translates by hand — `not_authorized` into the page's own
+ * `not-authorized-merge`, and `not_found` into `merge-invalid`, which is why
+ * neither can be derived from the union.
+ *
+ * **The other vocabularies that reach this map are deliberately not here.** The
+ * seating codes (`trip-full`, `course-min-age`, the rest of the "Book an
+ * activity" block) come from `SEAT_SURFACES["diver-record"].refusalNotice`,
+ * which is already `Record<SeatDiverRefusal, string>` — exhaustive by type at
+ * the table that owns it, which is where that guarantee belongs rather than
+ * copied one page over. `CertificationReviewRefusal` cannot produce an
+ * unmapped code at all: `reviewNotice` in the actions file names two members
+ * and collapses everything else to `invalid`.
+ */
+type OwnedDiverNoticeReason =
+  | `reply_${SendStaffReplyRefusal}`
+  | `merge_${Exclude<DiverMergeRefusal, "not_authorized" | "not_found">}`;
+
+/** Loose in the keys it accepts, exact in the ones it demands. */
+type DiverNoticeMap = Record<string, DiverNoticeDefinition> &
+  Record<NoticeCodeOf<OwnedDiverNoticeReason>, DiverNoticeDefinition>;
+
+/**
+ * One entry per notice code, carrying its tone, its message key, and — the
+ * field that changed here — the form it belongs to. See `DiverNoticeMap` above
+ * for which halves of it are proved by the type and which are borrowed.
+ */
+const NOTICE_KEYS: DiverNoticeMap = {
+  // Cards — the two card sections emit the same codes, so their actions stamp
+  // an explicit `?form=`; these defaults are what an old link still resolves to.
+  captured: { form: "cards", tone: "success", silent: true },
+  // Only the card-sighting form still emits this: the one-tap review posts in
+  // place and answers with a toast (`MarkCertifiedControl`). Silent for the
+  // same reason `captured` is — the row it names visibly changes to
+  // "Certified", so a banner would be a caption on a photograph of itself.
+  // "Certification marked verified. It counts toward readiness." is gone with
+  // the copy that said it.
+  verified: { form: "cards", tone: "success", silent: true },
+  "card-restored": { form: "cards", tone: "success", key: "divers.notices.cardRestored" },
+  "card-restore-conflict": {
+    form: "cards",
+    tone: "danger",
+    key: "divers.notices.cardRestoreConflict",
+  },
+  // The card-removal toast is handled by the page itself (`UndoToast`); this
+  // entry is the fallback for a `?notice=card-deleted` with no id to undo.
+  "card-deleted": { form: "cards", tone: "success", key: "divers.notices.cardDeleted" },
+  // A self-declared card cannot be certified on the bare tap every other
+  // pending card gets — see `reviewCertification`. Reachable by hand-editing
+  // the URL or by submitting the sighting form empty; either way the answer is
+  // the same instruction.
+  "card-sighting-required": {
+    form: "cards",
+    tone: "danger",
+    key: "divers.notices.cardSightingRequired",
+  },
+  // The *shape* of the number was wrong, which is a different thing from
+  // carrying no sighting at all — and until this code existed both arrived as
+  // the sentence above, telling a staffer who had just typed the agency and
+  // number to type the agency and number. The fastest way past that is to
+  // delete the claim and capture the same bad number by hand, which reaches the
+  // identical `verified` state and destroys `self_declared_at` on the way
+  // (ADR 20260814-self-declared-cards). It belongs on the box it is about, so
+  // it names one.
+  "card-number-implausible": {
+    form: "cards",
+    tone: "danger",
+    key: "divers.notices.cardNumberImplausible",
+    field: "sighted-identifier",
+  },
+  "duplicate-card": { form: "cards", tone: "danger", key: "divers.notices.duplicateCard" },
+  // A staffer saying a diver never gave the "I'm not certified yet" answer a
+  // public form recorded for them. `"page"` for the same reason `restored`
+  // below is: the panel that carried the control renders only while the stamp
+  // is set, so a *successful* clear unmounts the very thing this would have sat
+  // in and the confirmation could never be seen.
+  "no-certification-cleared": {
+    form: "page",
+    tone: "success",
+    key: "divers.notices.noCertificationCleared",
+  },
+  // A double tap or a replayed submit. It is not a failure — the record already
+  // says what the staffer wanted — so it is neither `invalid` in a danger tone
+  // (which reads as "your correction failed") nor a fresh success (which would
+  // claim an act that did not happen).
+  "no-certification-nothing-to-clear": {
+    form: "page",
+    tone: "warning",
+    key: "divers.notices.noCertificationNothingToClear",
+  },
+  // A staff account that has since been demoted, removed or disabled, still
+  // holding a valid token. Every mutation on this page re-reads live roles for
+  // the same reason.
+  //
+  // `"page"`, not `"cards"`, and the difference is not cosmetic: the cards
+  // section renders its own notice inside the **add a card** `<details>`, which
+  // it also *opens* — so filing this under `cards` would pop open a form the
+  // staffer never submitted and put the refusal in its action row. Every card
+  // action can emit this one, so it has no single form to sit beside anyway.
+  "not-authorized-cards": {
+    form: "page",
+    tone: "danger",
+    key: "divers.notices.notAuthorizedCards",
+  },
+
+  // Details editor.
+  "person-saved": { form: "details", tone: "success", key: "divers.notices.personSaved" },
+  "not-authorized-details": {
+    form: "details",
+    tone: "danger",
+    key: "divers.notices.notAuthorizedDetails",
+  },
+  duplicate: {
+    form: "details",
+    tone: "danger",
+    key: "divers.notices.duplicate",
+    // The refusal is about one box, so it renders on that box.
+    field: "diver-email",
+  },
+  "removed-read-only": {
+    form: "details",
+    tone: "danger",
+    key: "divers.notices.removedReadOnly",
+  },
+
+  // The release, recorded from this record ("signed on paper").
+  "waiver-paper-recorded": {
+    form: "waiver",
+    tone: "success",
+    key: "divers.notices.waiverPaperRecorded",
+  },
+  "waiver-medical-attestation": {
+    form: "waiver",
+    tone: "warning",
+    key: "divers.notices.waiverMedicalAttestation",
+  },
+  "waiver-guardian-name": {
+    form: "waiver",
+    tone: "danger",
+    key: "divers.notices.waiverGuardianName",
+  },
+  "waiver-error": { form: "waiver", tone: "danger", key: "divers.notices.waiverError" },
+
+  // The physician clearance that ends a medical hold (issue #1252).
+  "medical-clearance-recorded": {
+    form: "waiver",
+    tone: "success",
+    key: "divers.notices.medicalClearanceRecorded",
+  },
+  // The other answer (issue #1283). Not a success tone: nothing good happened
+  // to this diver, and a green tick under "the doctor said no" would read as
+  // congratulation. Not danger either — the shop did the right thing by
+  // recording it, and the record is now honest. The block it leaves standing is
+  // stated by the row above the form, not by this line.
+  "medical-not-cleared-recorded": {
+    form: "waiver",
+    tone: "warning",
+    key: "divers.notices.medicalNotClearedRecorded",
+  },
+  // Not a failure — the answer to the question the staffer asked. Nothing of
+  // this diver's is parked in review here, so there is nothing to clear.
+  "medical-clearance-no-hold": {
+    form: "waiver",
+    tone: "warning",
+    key: "divers.notices.medicalClearanceNoHold",
+  },
+  "medical-clearance-document-failed": {
+    form: "waiver",
+    tone: "danger",
+    key: "divers.notices.medicalClearanceDocumentFailed",
+  },
+  // The three that say the evaluation itself is wrong. Each names the box to
+  // correct rather than the act that failed, and the form comes back open.
+  "medical-clearance-date-required": {
+    form: "waiver",
+    tone: "danger",
+    key: "divers.notices.medicalClearanceDateRequired",
+  },
+  "medical-clearance-date-too-early": {
+    form: "waiver",
+    tone: "danger",
+    key: "divers.notices.medicalClearanceDateTooEarly",
+  },
+  "medical-clearance-date-in-future": {
+    form: "waiver",
+    tone: "danger",
+    key: "divers.notices.medicalClearanceDateInFuture",
+  },
+  "medical-clearance-evidence-required": {
+    form: "waiver",
+    tone: "danger",
+    key: "divers.notices.medicalClearanceEvidenceRequired",
+  },
+  // No outcome chosen. Reachable only with the radios stripped, since the form
+  // marks both `required` — but a write this final does not get a default, so
+  // the server refuses rather than picking one.
+  "medical-clearance-outcome-required": {
+    form: "waiver",
+    tone: "danger",
+    key: "divers.notices.medicalClearanceOutcomeRequired",
+  },
+  // A physician's answer is already on this record and the two do not overwrite
+  // each other. Warning rather than danger: the record is correct, and the
+  // staffer is being told what it says.
+  "medical-clearance-answer-recorded": {
+    form: "waiver",
+    tone: "warning",
+    key: "divers.notices.medicalClearanceAnswerRecorded",
+  },
+
+  // Rental fit.
+  "profile-saved": { form: "fit", tone: "success", key: "divers.notices.profileSaved" },
+  "fit-flagged": { form: "fit", tone: "success", key: "divers.notices.fitFlagged" },
+  "fit-cleared": { form: "fit", tone: "success", key: "divers.notices.fitCleared" },
+  "not-authorized-fit": { form: "fit", tone: "danger", key: "divers.notices.notAuthorizedFit" },
+  "not-authorized-waiver": {
+    form: "waiver",
+    tone: "danger",
+    key: "divers.notices.notAuthorizedWaiver",
+  },
+
+  // Money. Refunds and the invoice itself live on the Orders ledger (ADR
+  // 20260827-people-not-lists: "here they are the row's money facts"), so the
+  // only money outcome that still lands back on this record is the bounce from
+  // `orders/new` when the shop cannot take money yet. It keeps its link: the
+  // *CTA* left the person page with the ADR, but a refusal that names
+  // something the staffer can go and fix still carries the way there.
+  "payment-not-connected": {
+    form: "story",
+    tone: "warning",
+    key: "divers.notices.paymentNotConnected",
+  },
+  // Diver-record notes are staff context shared with the boat manifest. The
+  // normal add path revalidates in place, while delete/undo uses these codes
+  // when a redirect is needed to carry the undo text.
+  "note-added": { form: "notes", tone: "success", key: "divers.notices.noteAdded" },
+  "note-deleted": { form: "notes", tone: "success", key: "divers.notices.noteDeleted" },
+  "not-authorized-notes": {
+    form: "notes",
+    tone: "danger",
+    key: "divers.notices.notAuthorizedNotes",
+  },
+
+  // Answering a diver (ADR 20260907-two-way-inbox). The words live in the
+  // inbox namespace with the rest of that area's copy, not in `divers`: it is
+  // one conversation whether it is read on the record or on the inbox page.
+  //
+  // A *sent* reply is silent for the reason `captured` above is — the reply
+  // appears in the thread immediately above the composer, so a banner saying
+  // it was sent would be a caption on a photograph of itself. A send that
+  // **failed** is not silent: the row is there either way, and only the notice
+  // says the diver never got it.
+  "reply-sent": { form: "reply", tone: "success", silent: true },
+  "reply-send-failed": { form: "reply", tone: "danger", key: "inbox.notices.failed" },
+  "reply-not-configured": { form: "reply", tone: "warning", key: "inbox.notices.notConfigured" },
+  "reply-empty-body": { form: "reply", tone: "danger", key: "inbox.notices.emptyBody" },
+  "reply-body-too-long": { form: "reply", tone: "danger", key: "inbox.notices.tooLong" },
+  "reply-message-not-found": { form: "reply", tone: "danger", key: "inbox.notices.notFound" },
+  "reply-channel-unsupported": {
+    form: "reply",
+    tone: "danger",
+    key: "inbox.notices.channelUnsupported",
+  },
+  "reply-no-reply-address": { form: "reply", tone: "danger", key: "inbox.notices.noReplyAddress" },
+  // There *is* an address; the reply cannot be built into something sendable,
+  // so nothing was attempted and a retry would do the same thing again.
+  "reply-cannot-be-sent": { form: "reply", tone: "danger", key: "inbox.notices.cannotBeSent" },
+  "reply-whatsapp-window-closed": {
+    form: "reply",
+    tone: "danger",
+    key: "inbox.notices.whatsappWindowClosed",
+  },
+  "reply-whatsapp-not-connected": {
+    form: "reply",
+    tone: "danger",
+    key: "inbox.notices.whatsappNotConnected",
+  },
+  "not-authorized-reply": { form: "reply", tone: "danger", key: "inbox.notices.notAuthorized" },
+
+  // Explicit duplicate resolution. A successful merge lands on the survivor,
+  // where the candidate panel may no longer render, so its confirmation is a
+  // page notice; refusals stay beside the survivor-choice control.
+  merged: { form: "page", tone: "success", key: "divers.notices.merged" },
+  "not-authorized-merge": {
+    form: "page",
+    tone: "danger",
+    key: "divers.notices.notAuthorizedMerge",
+  },
+  "merge-invalid": { form: "merge", tone: "danger", key: "divers.notices.mergeInvalid" },
+  "merge-anonymized": {
+    form: "merge",
+    tone: "danger",
+    key: "divers.notices.mergeAnonymized",
+  },
+  "merge-already-merged": {
+    form: "merge",
+    tone: "danger",
+    key: "divers.notices.mergeAlreadyMerged",
+  },
+  "merge-already-removed": {
+    form: "merge",
+    tone: "danger",
+    key: "divers.notices.mergeAlreadyRemoved",
+  },
+  "merge-staff-record": {
+    form: "merge",
+    tone: "danger",
+    key: "divers.notices.mergeStaffRecord",
+  },
+  "merge-booking-conflict": {
+    form: "merge",
+    tone: "danger",
+    key: "divers.notices.mergeBookingConflict",
+  },
+  "merge-record-conflict": {
+    form: "merge",
+    tone: "danger",
+    key: "divers.notices.mergeRecordConflict",
+  },
+  "merge-different-people-unacknowledged": {
+    form: "merge",
+    tone: "danger",
+    key: "divers.notices.mergeDifferentPeopleUnacknowledged",
+  },
+  "merge-departure-underway": {
+    form: "merge",
+    tone: "danger",
+    key: "divers.notices.mergeDepartureUnderway",
+  },
+  "merge-assessment-changed": {
+    form: "merge",
+    tone: "danger",
+    key: "divers.notices.mergeAssessmentChanged",
+  },
+  // A write posted against a record merged away while the form was open lands
+  // on the kept record with nothing saved (`requireDiverActionContext`).
+  "merged-record-moved": {
+    form: "page",
+    tone: "warning",
+    key: "divers.notices.mergedRecordMoved",
+  },
+
+  // Book an activity. Every code below is emitted only by the seating path, so
+  // none of them needs an explicit `?form=` to find its way home.
+  booked: { form: "book", tone: "success", key: "divers.notices.booked" },
+  "booked-waiver-undelivered": {
+    form: "book",
+    tone: "warning",
+    key: "divers.notices.bookedWaiverUndelivered",
+  },
+  // This door books a diver the staffer picked by identity, so it has never
+  // raised the hold — the flag is `createBooking`'s call, not the door's, and a
+  // door with no sentence for it would answer a held seat with a plain
+  // "Booked" (`seatedIdentityUnconfirmedNotice`).
+  "booked-identity-unconfirmed": {
+    form: "book",
+    tone: "warning",
+    key: "divers.notices.bookedIdentityUnconfirmed",
+  },
+  "trip-full": { form: "book", tone: "danger", key: "divers.notices.tripFull" },
+  "divers-full": { form: "book", tone: "danger", key: "participants.notices.diversFull" },
+  "type-unavailable": {
+    form: "book",
+    tone: "danger",
+    key: "participants.notices.typeUnavailable",
+  },
+  "already-booked": { form: "book", tone: "danger", key: "divers.notices.alreadyBooked" },
+  "course-unstaffed": {
+    form: "book",
+    tone: "danger",
+    key: "divers.notices.courseUnstaffed",
+  },
+  "course-prerequisite": {
+    form: "book",
+    tone: "danger",
+    key: "divers.notices.coursePrerequisite",
+  },
+  "course-ratio-full": {
+    form: "book",
+    tone: "danger",
+    key: "divers.notices.courseRatioFull",
+  },
+  "course-min-age": { form: "book", tone: "danger", key: "divers.notices.courseMinAge" },
+  "trip-prerequisite": {
+    form: "book",
+    tone: "danger",
+    key: "divers.notices.tripPrerequisite",
+  },
+  "trip-unavailable": {
+    form: "book",
+    tone: "danger",
+    key: "divers.notices.tripUnavailable",
+  },
+  "booking-invalid": {
+    form: "book",
+    tone: "danger",
+    key: "divers.notices.bookingInvalid",
+  },
+
+  // Removal, restore, erasure — each beside its own control.
+  deleted: { form: "remove", tone: "success", key: "divers.notices.deleted" },
+  "not-authorized-delete": {
+    form: "remove",
+    tone: "danger",
+    key: "divers.notices.notAuthorizedDelete",
+  },
+  // Not `"restore"`, even though a restore is what happened: the restore card
+  // renders only while the diver is removed, so a *successful* restore unmounts
+  // the very thing the message would have sat in and the confirmation can never
+  // be seen. An outcome has to render somewhere that survives the state change
+  // it is reporting.
+  restored: { form: "page", tone: "success", key: "divers.notices.restored" },
+  // The refusal is the opposite case and does belong on the card: the restore
+  // failed, so the diver is still removed and the card is still on screen. It
+  // ran into the live record that now holds this diver's email (`restoreDiver`,
+  // CR-008), or an erased record that has no way back. Either way there is a
+  // thing to do about it, and the copy names it.
+  "restore-refused": { form: "restore", tone: "danger", key: "divers.notices.restoreRefused" },
+  "not-authorized-erase": {
+    form: "erase",
+    tone: "danger",
+    key: "divers.notices.notAuthorizedErase",
+  },
+  "erase-name-mismatch": {
+    form: "erase",
+    tone: "danger",
+    key: "divers.notices.eraseNameMismatch",
+    field: "erase-confirm-name",
+  },
+  "erase-refused": { form: "erase", tone: "danger", key: "divers.notices.eraseRefused" },
+  // A guardian's address erased on its own (H-103). On a live record, so the
+  // section is still there to answer in — except after a success that took the
+  // last address, which is why the success is "page": the section it would
+  // have sat in is gone.
+  "guardian-email-erased": {
+    form: "page",
+    tone: "success",
+    key: "divers.notices.guardianEmailErased",
+  },
+  "guardian-email-mismatch": {
+    form: "guardian-email",
+    tone: "danger",
+    key: "divers.notices.guardianEmailMismatch",
+  },
+  "guardian-email-not-found": {
+    form: "guardian-email",
+    tone: "danger",
+    key: "divers.notices.guardianEmailNotFound",
+  },
+  "not-authorized-guardian-email": {
+    form: "guardian-email",
+    tone: "danger",
+    key: "divers.notices.notAuthorizedGuardianEmail",
+  },
+  // Erasure is offered on a deleted record only, and the action enforces it —
+  // so this arrives on a record whose erase section is not rendered. `"page"`
+  // is the only place it can be seen, and it happens to be directly above the
+  // Delete control it is asking for.
+  "erase-requires-delete": {
+    form: "page",
+    tone: "danger",
+    key: "divers.notices.eraseRequiresDelete",
+  },
+
+  /**
+   * **That was the last thing.** Emitted in place of an ordinary success code
+   * when the act a staffer just took left `buildDiverStatus` empty — the
+   * record's one earned moment (20260827-clearwater-surface-language, decision
+   * 11's table). `"details"`, so `noticeForForm` routes it to the masthead
+   * slot; the page renders it as an `EarnedMomentLine` rather than a status
+   * line, on the `code`. Condition-derived, never stored, and `FlashParams`
+   * strips the query straight away so a reload cannot re-celebrate it.
+   */
+  "diver-clear": { form: "details", tone: "success", key: "divers.notices.cleared" },
+
+  // Emitted by half a dozen actions, so it has no single home of its own; each
+  // one stamps a `?form=` and this default is only reached without one.
+  invalid: { form: "page", tone: "danger", key: "divers.notices.invalid" },
+};
+
+/**
+ * Every form name `NOTICE_KEYS` (or an action's `?form=`) may point at. The
+ * `?form=` param is attacker-supplied like any other, so an unknown name has to
+ * degrade to the code's own default home rather than being swallowed into a
+ * section nothing renders — which would silently lose the notice entirely.
+ */
+const DIVER_FORMS = new Set([
+  "page",
+  "details",
+  "cards",
+  "waiver",
+  "fit",
+  "story",
+  "book",
+  "notes",
+  "merge",
+  "remove",
+  "restore",
+  "erase",
+  "guardian-email",
+]);
+
+function diverNoticeForm(param: string | undefined, fallback: string): string {
+  return param !== undefined && DIVER_FORMS.has(param) ? param : fallback;
+}
+
+/**
+ * A resolved diver-record notice: the shared `{form, tone, text}` plus the two
+ * things this page's notices carry that the shared shape does not — a link to
+ * the screen that fixes it, and the id of the control it belongs on.
+ */
+/** The one code with somewhere to send someone. */
+const NOTICE_LINKS: Record<string, NoticeLink> = {
+  "payment-not-connected": {
+    key: "shared.payments.connect",
+    href: (shopSlug) => `/shop/${shopSlug}/settings#money`,
+  },
+};
+
+export type DiverNotice = FormNotice & {
+  /** Where the refusal can be fixed, when it names somewhere. */
+  link?: NoticeLink;
+  /**
+   * The `?notice=` code itself, so a surface can recognise the one outcome
+   * that is not a sentence in a status row — `diver-clear`, the record's
+   * earned moment (ADR 20260827-clearwater-surface-language, decision 11).
+   */
+  code?: string;
+  field?: string;
+  /**
+   * Which card's box the refusal belongs on, when the code names a box at all.
+   *
+   * A diver can hold more than one self-declared card, and `field` alone says
+   * only *which kind* of box — so `card-number-implausible` opened every
+   * sighting disclosure on the record and printed the same red sentence under
+   * each, including the ones nobody had typed in. The action carries the id it
+   * refused (`?card=`), and the group compares.
+   */
+  cardId?: string;
+  silent?: true;
+};
+
+/**
+ * Resolves the page's `?notice=` to words and to the form those words belong
+ * beside. The page calls this once and hands the result to the section it names
+ * (`noticeForForm`); whatever is left over — a genuinely page-level refusal, or
+ * a section this staffer's role means the page never rendered — falls through
+ * to `NoticeBanner`.
+ */
+export function resolveDiverNotice({
+  notice,
+  form,
+  gate,
+  card,
+  personId,
+  locale,
+  canRaiseInvoice = false,
+}: {
+  notice?: string;
+  /**
+   * Which form on the page this notice answers, when the code alone cannot say
+   * — `?notice=captured` is emitted by the level-card form and the specialty
+   * form alike, and `?notice=invalid` by half a dozen actions.
+   */
+  form?: string;
+  /**
+   * The signed `TripAdmissionRefusal` behind `trip-prerequisite` — the trip's
+   * unmet cert requirement and the diver's highest card
+   * (src/lib/trip-admission-gate.ts). This is the surface the old copy sent
+   * staff to ("Add the missing card above"), so it is the one that most needed
+   * to stop saying that on a refusal no card can fix — and, for the same
+   * reason, the one where a *forged* specific refusal would do the most damage.
+   * Absent or unverifiable falls back to the generic sentence. `string[]`
+   * because a repeated `?gate=` really delivers one.
+   */
+  gate?: string | string[];
+  /** The card the refusal is about, for a code that names a box (`?card=`). */
+  card?: string;
+  /**
+   * This record's own person id, from the path. The gate signature is bound to
+   * it — this landing URL carries no departure at all, so the diver is the one
+   * identity the reader can check without trusting the query.
+   */
+  personId: string;
+  locale: string;
+  /**
+   * Whether this reader sees the story's "New invoice" link
+   * (`canRaiseInvoiceFor`). "Booked" tells them to create the invoice next, so
+   * a reader without that link is told only that it booked. Absent reads as no.
+   */
+  canRaiseInvoice?: boolean;
+}): DiverNotice | undefined {
+  const banner = noticeFromParam(notice, NOTICE_KEYS);
+  if (!banner) return undefined;
+  const t = staffTranslator(locale);
+  const refusal =
+    notice === "trip-prerequisite"
+      ? verifyTripAdmissionGate(gate, { kind: "diver", id: personId })
+      : null;
+  return {
+    form: diverNoticeForm(form, banner.form),
+    tone: banner.tone,
+    text: banner.silent
+      ? ""
+      : refusal
+        ? tripAdmissionRefusalText(t, refusal, locale)
+        : notice === "booked" && !canRaiseInvoice
+          ? t("divers.notices.bookedNoInvoice")
+          : t(banner.key as StaffMessageKey),
+    code: notice,
+    link: notice === undefined ? undefined : NOTICE_LINKS[notice],
+    field: banner.field,
+    // Only ever paired with a `field`: an id on a notice that names no box has
+    // nothing to compare against and would read as one that does.
+    cardId: banner.field ? card : undefined,
+    silent: banner.silent,
+  };
+}

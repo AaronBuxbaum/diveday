@@ -1,6 +1,7 @@
 import { and, eq, gt, isNull, ne } from "drizzle-orm";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { nowDate } from "@/lib/clock";
+import { log } from "@/lib/log";
 import { recipientLocale } from "@/lib/notifications/kinds";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
@@ -175,9 +176,9 @@ export async function sendFindMyBookingLinks(
         }).catch(() => null);
       }
     } catch (error) {
-      console.error("Find-my-booking resend failed for one booking", {
+      log("find_my_booking.resend_failed", "error", {
         bookingId: row.bookingId,
-        error: error instanceof Error ? error.message : "unknown_error",
+        errorCode: error instanceof Error ? error.name : "unknown_error",
       });
     }
   }

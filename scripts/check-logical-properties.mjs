@@ -1,7 +1,8 @@
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { physicalUtilitiesInTree, staleBaselineEntries } from "./logical-properties-lib.mjs";
+import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
 
 /**
  * **Layout that does not care which way the page reads.**
@@ -10,7 +11,7 @@ import { physicalUtilitiesInTree, staleBaselineEntries } from "./logical-propert
  * `me-`, `ps-`, `pe-`, `start-`, `end-`, `text-start`, `text-end` — against a
  * few dozen physical ones. Somebody has been writing direction-agnostic layout
  * for a long time, and nothing protected it: `check:tokens` guards colour,
- * `check:timezone` guards time, and this was a convention held in the heads of
+ * Biome's `timezone` rule guards time, and this was a convention held in the heads of
  * whoever happened to have read the neighbouring file (issue #733).
  *
  * The stakes are small today and that is the point. DiveDay ships two locales
@@ -24,7 +25,7 @@ import { physicalUtilitiesInTree, staleBaselineEntries } from "./logical-propert
  * looked at the app in one. See docs/design/principles.md.
  *
  * The escape hatch is a baseline entry, never an inline comment:
- * `logical-properties-baseline.json` records how many physical utilities a
+ * Its section of `scripts/ratchets.json` records how many physical utilities a
  * file still carries. A file not in the baseline may have none, a count may
  * never rise, and a fall must be banked in the same change (`--write`, which
  * refuses to raise anything; `--absorb` records growth arriving from a merge).
@@ -34,7 +35,6 @@ import { physicalUtilitiesInTree, staleBaselineEntries } from "./logical-propert
  */
 
 const ROOT = process.cwd();
-export const BASELINE_PATH = "scripts/logical-properties-baseline.json";
 const guardedRoots = ["src/app", "src/components", "src/features"];
 
 /**
@@ -75,20 +75,12 @@ if (vanished.length > 0) {
   );
 }
 
-let baseline = {};
-let baselineExists = true;
-try {
-  baseline = JSON.parse(await readFile(path.join(ROOT, BASELINE_PATH), "utf8"));
-} catch (error) {
-  if (error?.code !== "ENOENT") throw error;
-  baselineExists = false;
-}
-const baselineCounts = Object.fromEntries(
-  Object.entries(baseline).filter(([key]) => !key.startsWith("//")),
+const { counts: baselineCounts, exists: baselineExists } = await readCounts(
+  ROOT,
+  "logical-properties",
 );
-
-const absorbing = process.argv.includes("--absorb");
-if (process.argv.includes("--write") || absorbing) {
+const { write, absorb } = ratchetFlags();
+if (write || absorb !== null) {
   // A baseline written from a scan that missed a file banks a fall that never
   // happened, and the ratchet does not turn back.
   if (vanished.length > 0) {
@@ -97,39 +89,19 @@ if (process.argv.includes("--write") || absorbing) {
     );
     process.exit(1);
   }
-  const grew = [...details.entries()].filter(
-    ([file, hits]) => baselineExists && hits.length > (baselineCounts[file] ?? 0),
+  process.exit(
+    await bankCounts({
+      root: ROOT,
+      guard: "logical-properties",
+      counts: details,
+      allowed: baselineCounts,
+      exists: baselineExists,
+      note: "Physical directional utilities still in components, per file. Written by `node scripts/check-logical-properties.mjs --write`. This number may only go down — see scripts/check-logical-properties.mjs. Use ms-/me-/ps-/pe-/start-/end-/text-start/text-end instead.",
+      refusal: "The ratchet only turns one way — use the logical utility instead",
+      absorb,
+      summary: (files, total) => `${files} files, ${total} utilities`,
+    }),
   );
-  if (grew.length > 0 && !absorbing) {
-    console.error(
-      "Refusing to write a baseline that grows. The ratchet only turns one way — use the logical utility instead:",
-    );
-    for (const [file, hits] of grew) {
-      console.error(`- ${file}: ${baselineCounts[file] ?? 0} → ${hits.length}`);
-    }
-    console.error(
-      "If this growth arrived in a merge from a branch that predates the check, `--absorb` records it explicitly.",
-    );
-    process.exit(1);
-  }
-  if (grew.length > 0) {
-    console.warn("Absorbing values that grew — this must be merged-in work, not new debt:");
-    for (const [file, hits] of grew) {
-      console.warn(`- ${file}: ${baselineCounts[file] ?? 0} → ${hits.length}`);
-    }
-  }
-  const next = {
-    "//": "Physical directional utilities still in components, per file. Written by `node scripts/check-logical-properties.mjs --write`. This number may only go down — see scripts/check-logical-properties.mjs. Use ms-/me-/ps-/pe-/start-/end-/text-start/text-end instead.",
-    ...Object.fromEntries(
-      [...details.entries()]
-        .map(([file, hits]) => [file, hits.length])
-        .sort(([a], [b]) => a.localeCompare(b)),
-    ),
-  };
-  await writeFile(path.join(ROOT, BASELINE_PATH), `${JSON.stringify(next, null, 2)}\n`);
-  const total = [...details.values()].reduce((sum, hits) => sum + hits.length, 0);
-  console.log(`logical-properties: baseline written — ${details.size} files, ${total} utilities`);
-  process.exit(0);
 }
 
 const violations = [];

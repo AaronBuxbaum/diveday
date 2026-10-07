@@ -31,6 +31,10 @@ export const DESK_EVENT_KINDS = [
   "arrival",
   "seat_taken",
   "seat_released",
+  "now_diving",
+  "now_snorkeling",
+  "now_riding",
+  "balance_owed",
   "gear_changed",
   "pickup_set",
   "help_request",
@@ -81,4 +85,12 @@ export function groupCatchUp(events: readonly DeskEvent[]): CatchUpGroup[] {
     const names = namesByKind.get(kind);
     return names ? [{ kind, names }] : [];
   });
+}
+
+/** The catch-up line a type change writes, named for the seat's new type. */
+export function typeChangedDeskEventKind(
+  to: "diver" | "snorkeler" | "rider",
+): "now_diving" | "now_snorkeling" | "now_riding" {
+  if (to === "diver") return "now_diving";
+  return to === "snorkeler" ? "now_snorkeling" : "now_riding";
 }
