@@ -701,13 +701,6 @@ export async function openCounterFor(page: Page, shopSlug: string, diverName: st
     .first()
     .click();
   await page.waitForURL(new RegExp(`/shop/${shopSlug}/trips/[0-9a-f-]{36}(\\?[^#]*)?(#.*)?$`));
-  // The URL commits before the staff nav re-renders: a capture taken in that
-  // gap shows Today still lit over the departure. Wait for Schedule to light.
-  await page
-    .locator("a[aria-current]")
-    .filter({ hasText: "Schedule", visible: true })
-    .first()
-    .waitFor();
   const tripId = new URL(page.url()).pathname.match(/\/trips\/([0-9a-f-]{36})$/)?.[1];
   if (!tripId) throw new Error(`no trip id in ${page.url()} after opening ${diverName}'s counter`);
   return tripId;
