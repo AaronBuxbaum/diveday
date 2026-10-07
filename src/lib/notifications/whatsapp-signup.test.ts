@@ -1,12 +1,32 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  completeEmbeddedSignup,
+  type CompleteSignupInput,
   courtesyTemplateDefinition,
+  exchangeSignupCode,
+  finishEmbeddedSignup,
+  GRAPH_REQUEST_TIMEOUT_MS,
   generateRegistrationPin,
+  type WhatsAppSignupConfig,
+  type WhatsAppSignupResult,
   whatsAppSignupConfigFromEnvironment,
 } from "./whatsapp-signup";
 
 const config = { appId: "app-1", appSecret: "app-secret", configId: "config-1" };
+
+/**
+ * The whole flow as the caller runs it, minus the lock it takes between the
+ * two halves (`src/db/whatsapp-signup.ts`): exchange, then steps 2–4.
+ */
+async function completeEmbeddedSignup(
+  signup: CompleteSignupInput,
+  signupConfig: WhatsAppSignupConfig,
+  fetchImpl: typeof fetch,
+): Promise<WhatsAppSignupResult> {
+  const exchanged = await exchangeSignupCode(signup.code, signupConfig, fetchImpl);
+  if (exchanged.status === "failed") return exchanged;
+  const { code: _code, ...rest } = signup;
+  return finishEmbeddedSignup({ ...rest, accessToken: exchanged.accessToken }, fetchImpl);
+}
 
 const input = {
   code: "AQD-signup-code",
@@ -248,6 +268,35 @@ describe("completeEmbeddedSignup", () => {
       step: "exchange",
       errorCode: "network_error",
     });
+  });
+
+  /**
+   * **Every Graph call is bounded** (issue #1769). Steps 2–4 run while a
+   * database transaction holds a pooled connection, so a call Meta never
+   * answers must not hold that connection forever.
+   */
+  it("sends every Graph call with a timeout signal", async () => {
+    const timeout = vi.spyOn(AbortSignal, "timeout");
+    try {
+      const fetchImpl = fetchSequence();
+      await completeEmbeddedSignup(input, config, fetchImpl);
+      expect(fetchImpl).toHaveBeenCalledTimes(4);
+      for (const [, init] of fetchImpl.mock.calls) expect(init.signal).toBeInstanceOf(AbortSignal);
+      expect(timeout).toHaveBeenCalledTimes(4);
+      expect(timeout).toHaveBeenCalledWith(GRAPH_REQUEST_TIMEOUT_MS);
+    } finally {
+      timeout.mockRestore();
+    }
+  });
+
+  it("reports a Graph call that timed out as a timeout, without throwing", async () => {
+    const fetchImpl = fetchSequence();
+    fetchImpl.mockImplementationOnce(async () => json(200, { access_token: "EAAG-token" }));
+    fetchImpl.mockImplementationOnce(async () => {
+      throw new DOMException("The operation was aborted due to timeout", "TimeoutError");
+    });
+    const result = await completeEmbeddedSignup(input, config, fetchImpl);
+    expect(result).toMatchObject({ status: "failed", step: "register", errorCode: "timeout" });
   });
 
   it("reports an exchange that returns no token", async () => {

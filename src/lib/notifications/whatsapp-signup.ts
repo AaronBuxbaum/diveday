@@ -155,20 +155,35 @@ function graphFailure(status: number, rawBody: string): GraphFailure {
 
 type GraphCall = { ok: true; body: unknown } | ({ ok: false } & GraphFailure);
 
+/**
+ * How long one Graph call may take, body included.
+ *
+ * Steps 2–4 run while the caller holds a database transaction and an advisory
+ * lock on the WABA (`claimWhatsAppWaba`, issue #1769), so a Graph call that
+ * never answers is a pooled connection that never comes back. Ten seconds is
+ * many times Meta's ordinary latency and short enough that three calls fit
+ * inside the transaction's own idle bound.
+ */
+export const GRAPH_REQUEST_TIMEOUT_MS = 10_000;
+
 async function graphRequest(
   fetchImpl: typeof fetch,
   url: string,
   init: RequestInit,
 ): Promise<GraphCall> {
   try {
-    const response = await fetchImpl(url, init);
+    const response = await fetchImpl(url, {
+      ...init,
+      signal: AbortSignal.timeout(GRAPH_REQUEST_TIMEOUT_MS),
+    });
     const rawBody = await response.text();
     if (!response.ok) return { ok: false, ...graphFailure(response.status, rawBody) };
     return { ok: true, body: safeJson(rawBody) };
   } catch (error) {
     return {
       ok: false,
-      errorCode: "network_error",
+      errorCode:
+        error instanceof Error && error.name === "TimeoutError" ? "timeout" : "network_error",
       detail: error instanceof Error ? error.message.slice(0, 500) : undefined,
     };
   }
@@ -235,33 +250,56 @@ export function courtesyTemplateDefinition(
   };
 }
 
+export type SignupExchangeResult =
+  | { status: "exchanged"; accessToken: string }
+  | Extract<WhatsAppSignupResult, { status: "failed" }>;
+
 /**
- * Turn a finished Embedded Signup popup into a working sender.
+ * **Step 1 on its own: Meta's one-time code for the shop's business token.**
  *
- * Not transactional, and cannot be: these are four calls to someone else's API.
+ * Split from the rest (issues #1766 and #1769) because it is the one step that
+ * changes nothing at Meta: no number is registered and no PIN is minted. So the
+ * caller runs it *before* it takes a lock or opens a transaction, and only a
+ * caller holding a valid code ever learns whether another DiveDay shop holds
+ * the WABA; a junk code fails here, before that question is asked.
+ */
+export async function exchangeSignupCode(
+  code: string,
+  config: WhatsAppSignupConfig,
+  fetchImpl: typeof fetch = fetch,
+): Promise<SignupExchangeResult> {
+  // Meta wants these as query parameters on a GET, unlike every other call here.
+  const exchangeUrl = new URL(graphUrl("oauth/access_token"));
+  exchangeUrl.searchParams.set("client_id", config.appId);
+  exchangeUrl.searchParams.set("client_secret", config.appSecret);
+  exchangeUrl.searchParams.set("code", code);
+  const exchanged = await graphRequest(fetchImpl, exchangeUrl.toString(), { method: "GET" });
+  if (!exchanged.ok) return failed("exchange", exchanged);
+  const token = tokenResponseSchema.safeParse(exchanged.body);
+  if (!token.success) return { status: "failed", step: "exchange", errorCode: "invalid_response" };
+  return { status: "exchanged", accessToken: token.data.access_token };
+}
+
+export type FinishSignupInput = Omit<CompleteSignupInput, "code"> & {
+  /** The business token {@link exchangeSignupCode} returned. */
+  accessToken: string;
+};
+
+/**
+ * Steps 2–4: turn an exchanged token into a working sender.
+ *
+ * Not transactional, and cannot be: these are calls to someone else's API.
  * The order is chosen so a partial failure leaves the least-bad state — a token
  * that was exchanged but never registered simply doesn't send, whereas
  * subscribing webhooks for a number that can't send would produce events for
  * messages that never existed. A failed step is reported with the step name so
  * a retry (the shop pressing Connect again) can be reasoned about.
  */
-export async function completeEmbeddedSignup(
-  input: CompleteSignupInput,
-  config: WhatsAppSignupConfig,
+export async function finishEmbeddedSignup(
+  input: FinishSignupInput,
   fetchImpl: typeof fetch = fetch,
 ): Promise<WhatsAppSignupResult> {
-  // 1. Code → business token. Meta wants these as query parameters on a GET,
-  //    unlike every other call here.
-  const exchangeUrl = new URL(graphUrl("oauth/access_token"));
-  exchangeUrl.searchParams.set("client_id", config.appId);
-  exchangeUrl.searchParams.set("client_secret", config.appSecret);
-  exchangeUrl.searchParams.set("code", input.code);
-  const exchanged = await graphRequest(fetchImpl, exchangeUrl.toString(), { method: "GET" });
-  if (!exchanged.ok) return failed("exchange", exchanged);
-  const token = tokenResponseSchema.safeParse(exchanged.body);
-  if (!token.success) return { status: "failed", step: "exchange", errorCode: "invalid_response" };
-  const accessToken = token.data.access_token;
-
+  const { accessToken } = input;
   const authorized = {
     Authorization: `Bearer ${accessToken}`,
     "Content-Type": "application/json",
@@ -322,7 +360,10 @@ export async function completeEmbeddedSignup(
   return { status: "completed", accessToken, templateAlreadyExisted };
 }
 
-function failed(step: SignupStep, failure: GraphFailure): WhatsAppSignupResult {
+function failed(
+  step: SignupStep,
+  failure: GraphFailure,
+): Extract<WhatsAppSignupResult, { status: "failed" }> {
   log("notification.whatsapp_signup_failed", "warn", {
     step,
     httpStatus: failure.httpStatus,

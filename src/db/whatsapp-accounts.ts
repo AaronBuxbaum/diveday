@@ -209,7 +209,38 @@ export async function connectShopWhatsAppAccount(
   }
 }
 
-export type WhatsAppWabaClaim<T> = { status: "held_elsewhere" } | { status: "claimed"; value: T };
+export type WhatsAppWabaClaim<T> =
+  | { status: "held_elsewhere" }
+  | { status: "busy" }
+  | { status: "claimed"; value: T };
+
+/**
+ * The bounds the claim transaction runs under, set with `set local` so they
+ * end with it. `lock_timeout` and `statement_timeout` bound any one statement;
+ * `idle_in_transaction_session_timeout` bounds the gaps between them, which is
+ * where the Graph calls sit. Three calls of at most `GRAPH_REQUEST_TIMEOUT_MS`
+ * (10 s) each fit inside it; a request that hangs past it loses its connection
+ * and its lock, never the pool.
+ */
+const CLAIM_BOUNDS = [
+  sql`set local lock_timeout = '5s'`,
+  sql`set local statement_timeout = '15s'`,
+  sql`set local idle_in_transaction_session_timeout = '45s'`,
+];
+
+/** Rows out of a `tx.execute` result, whichever shape the driver returned. */
+function executedRows<T>(result: unknown): T[] {
+  if (Array.isArray(result)) return result as T[];
+  const rows = (result as { rows?: unknown })?.rows;
+  return Array.isArray(rows) ? (rows as T[]) : [];
+}
+
+async function tryTransactionLock(tx: DbExecutor, key: string): Promise<boolean> {
+  const result = await tx.execute(
+    sql`select pg_try_advisory_xact_lock(hashtext(${key})) as locked`,
+  );
+  return executedRows<{ locked: boolean }>(result)[0]?.locked === true;
+}
 
 /**
  * **Run one shop's WhatsApp Connect with the WABA to itself** (issue #1769,
@@ -222,24 +253,33 @@ export type WhatsAppWabaClaim<T> = { status: "held_elsewhere" } | { status: "cla
  * Two staffers pressing Connect within the length of a Meta round trip both
  * passed an unlocked pre-check, both registered, and one lost.
  *
- * So the pre-check, `work` (the Meta calls) and the insert run in one
- * transaction holding `pg_advisory_xact_lock` on the WABA id. The second
- * Connect blocks on the lock until the first has committed its row, then reads
- * that row and is refused here, before `work` runs and before any number is
- * registered.
+ * So the holder check, `work` (steps 2–4 at Meta) and the insert run in one
+ * transaction holding two advisory locks, and a Connect that cannot take them
+ * is refused at once (`busy`) rather than queued. Refusing instead of waiting
+ * is the point (security review, #1769): a waiter holds a pooled connection
+ * for as long as the holder's Meta calls take, so a handful of posts would
+ * empty an instance's pool. The busy Connect has registered nothing; pressing
+ * Connect again once the first finishes reads the first one's row.
  *
- * **Scope of the lock.** Keyed on `hashtext('whatsapp-waba:' || wabaId)`, so it
- * serializes Connects naming the same WABA and nothing else; a hash collision
- * with another WABA costs a wait, never a wrong answer, because the refusal is
- * the row read under the lock. It is a *transaction* lock: it ends with the
- * transaction, so a request that throws or a connection that drops releases
- * it, and nothing is reserved that a crash could leave behind. The cost,
- * accepted in H-83, is one pooled connection held for the seconds a Meta round
- * trip takes, and only while a Connect is in flight.
+ * **Scope of the locks.** Shop first, then WABA, always in that order so two
+ * Connects can never each hold the lock the other wants:
+ *
+ * - `hashtext('whatsapp-shop:' || shopId)` — one Connect per shop at a time,
+ *   so the same shop pressing Connect twice with two different WABAs cannot
+ *   register two numbers and keep one.
+ * - `hashtext('whatsapp-waba:' || wabaId)` — one Connect per WABA at a time,
+ *   across shops.
+ *
+ * A hash collision costs a spurious `busy`, never a wrong answer, because the
+ * refusal that matters is the row read under the lock. They are *transaction*
+ * locks: they end with the transaction, so a request that throws or a
+ * connection that drops releases them, and nothing is reserved that a crash
+ * could leave behind. The transaction also runs under {@link CLAIM_BOUNDS}.
  *
  * `work` gets the transaction and must write through it; it must not redirect
  * (a thrown redirect would roll the row back). Answer with its value and let
- * the caller redirect afterwards.
+ * the caller redirect afterwards. Do the code exchange *before* calling this:
+ * it changes nothing at Meta, so it needs no lock and no open transaction.
  */
 export async function claimWhatsAppWaba<T>(
   db: AppDb,
@@ -247,9 +287,9 @@ export async function claimWhatsAppWaba<T>(
   work: (tx: DbExecutor) => Promise<T>,
 ): Promise<WhatsAppWabaClaim<T>> {
   return db.transaction(async (tx): Promise<WhatsAppWabaClaim<T>> => {
-    await tx.execute(
-      sql`select pg_advisory_xact_lock(hashtext(${`whatsapp-waba:${input.wabaId}`}))`,
-    );
+    for (const bound of CLAIM_BOUNDS) await tx.execute(bound);
+    if (!(await tryTransactionLock(tx, `whatsapp-shop:${input.shopId}`))) return { status: "busy" };
+    if (!(await tryTransactionLock(tx, `whatsapp-waba:${input.wabaId}`))) return { status: "busy" };
     const holder = await shopIdForWhatsAppWaba(tx, input.wabaId);
     if (holder && holder !== input.shopId) return { status: "held_elsewhere" };
     return { status: "claimed", value: await work(tx) };
