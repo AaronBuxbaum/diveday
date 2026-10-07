@@ -177,6 +177,54 @@ describe("person-first diver records", () => {
     expect(cleared?.phone).toBeNull();
   });
 
+  /**
+   * H-100, dive-domain review: once a date answers the age question, a
+   * staffer's earlier "18 or older" goes, so clearing the date later cannot
+   * bring back an adult claim the date may have disproved.
+   */
+  it("drops an 18-or-older answer when a date of birth is typed, and keeps it when one is not", async () => {
+    const { db, shop } = ctx;
+    const diver = await createDiver(db, {
+      shopId: shop.id,
+      fullName: "Attested Ari",
+      email: "attested-ari@example.com",
+    });
+    if (!diver) throw new Error("diver insert failed");
+    const [staff] = await db
+      .select({ id: people.id })
+      .from(people)
+      .where(and(eq(people.shopId, shop.id), eq(people.fullName, "Dana Reyes")));
+    if (!staff) throw new Error("expected the seeded staffer");
+    await db
+      .update(people)
+      .set({ adultAttestedAt: nowDate(), adultAttestedByPersonId: staff.id })
+      .where(eq(people.id, diver.id));
+
+    const untouched = await updateDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      fullName: "Attested Ari",
+      dateOfBirth: "",
+    });
+    expect(untouched?.adultAttestedAt).not.toBeNull();
+
+    await updateDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      fullName: "Attested Ari",
+      dateOfBirth: "2011-04-09",
+    });
+    const cleared = await updateDiver(db, {
+      shopId: shop.id,
+      personId: diver.id,
+      fullName: "Attested Ari",
+      dateOfBirth: "",
+    });
+    expect(cleared?.dateOfBirth).toBeNull();
+    expect(cleared?.adultAttestedAt).toBeNull();
+    expect(cleared?.adultAttestedByPersonId).toBeNull();
+  });
+
   it("resolves the staff member who cleared a self-declared no-certification stamp", async () => {
     const { db, shop } = ctx;
     const diver = await createDiver(db, {

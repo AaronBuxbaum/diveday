@@ -67,6 +67,47 @@ function renderGroup({
  * the status ledger no longer says it above this row (`splitDiverStatus`).
  */
 describe("DiverDetailsGroup", () => {
+  /** H-100: a split with no date filed a staffer's "18 or older" instead. */
+  it("says who answered 18 or older where no date of birth is on file", () => {
+    const attested = diver(null);
+    const props = {
+      shopSlug: "blue-mantis",
+      personId: "person-1",
+      t,
+      locale: "en-US",
+      timezone: "America/New_York",
+      country: "US",
+    };
+    const { getByText, rerender } = render(
+      <DiverDetailsGroup
+        {...props}
+        diver={{
+          ...attested,
+          person: { ...attested.person, adultAttestedAt: new Date("2026-10-06T15:00:00Z") },
+          adultAttestedByName: "Dana Reyes",
+        }}
+      />,
+    );
+    expect(getByText("18 or older, per Dana Reyes")).toBeInTheDocument();
+
+    // A date, once typed, is the answer; the hint goes back to optional.
+    rerender(
+      <DiverDetailsGroup
+        {...props}
+        diver={{
+          ...attested,
+          person: {
+            ...attested.person,
+            dateOfBirth: "1990-04-02",
+            adultAttestedAt: new Date("2026-10-06T15:00:00Z"),
+          },
+          adultAttestedByName: "Dana Reyes",
+        }}
+      />,
+    );
+    expect(document.body).not.toHaveTextContent("18 or older");
+  });
+
   it("is a closed door that names a missing contact in warning ink", () => {
     const { container, getByText } = renderGroup();
     const details = container.querySelector("details");

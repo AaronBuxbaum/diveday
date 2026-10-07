@@ -2304,9 +2304,11 @@ new domain concept, define it here in the same PR.
   seat read as theirs. It **carries nothing** of the matched diver's:
   no cards, sizes, date of birth, contact or email (the shared address stays with the record that
   owns it, and is refused if typed). What the staffer types about the person in front of them
-  lands on the new record (issue #2081): a **date of birth**, required when a moving seat is on a
-  course with a minimum age, because the age check and the guardian co-signature rule both read it
-  and fail open without one, and an optional **email or phone** for sending their own waiver. When
+  lands on the new record (issue #2081): a **date of birth** or the staffer's **"They're 18 or
+  older"** (H-100), one of the two on every departure and the date itself when a moving seat is on a
+  course with a minimum age, because the age check and the guardian co-signature rule both read the
+  date and fail open without one (the tick is filed with who gave it, `people.adult_attested_at`),
+  and an optional **email or phone** for sending their own waiver. When
   there are **other held seats under the same name** matched to the same diver on *other*
   departures, one box names each of those departures and, when ticked (it starts unticked: two
   strangers can share a name), moves them onto the one new record, so three dives booked with a

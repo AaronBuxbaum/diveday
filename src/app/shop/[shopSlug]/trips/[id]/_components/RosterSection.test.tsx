@@ -562,7 +562,8 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
 
   /**
    * **"Different person" asks who the new diver is** (issue #2081): a date of
-   * birth, required on a course with a minimum age, and an optional email or
+   * birth or a "They're 18 or older" tick (H-100), the date itself on a course
+   * with a minimum age, and an optional email or
    * phone. Every box but the name starts empty: nothing of the matched
    * record's is offered as the new diver's.
    */
@@ -573,7 +574,7 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
         identityMatchedBy: "shared_email",
       });
 
-    it("asks for a date of birth, optional unless the course has a minimum age", () => {
+    it("asks for a date of birth or an 18-or-older tick, and the date itself on a course with a minimum age", () => {
       const { unmount } = renderRoster({
         roster: [heldSeat()],
         readiness: unconfirmed,
@@ -583,6 +584,11 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       const optionalDate = document.querySelector<HTMLInputElement>('input[name="dateOfBirth"]');
       expect(optionalDate).not.toBeNull();
       expect(optionalDate?.required).toBe(false);
+      // H-100: the other answer, one tap for an adult; the writer refuses neither.
+      const tick = document.querySelector<HTMLInputElement>('input[name="adultAttested"]');
+      expect(tick?.type).toBe("checkbox");
+      expect(tick?.checked).toBe(false);
+      expect(screen.getByLabelText("They’re 18 or older")).toBe(tick);
       unmount();
 
       renderRoster({
@@ -594,6 +600,8 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       });
       const requiredDate = document.querySelector<HTMLInputElement>('input[name="dateOfBirth"]');
       expect(requiredDate?.required).toBe(true);
+      // A course measures a date, so no tick stands in for one there.
+      expect(document.querySelector('input[name="adultAttested"]')).toBeNull();
       // A future date is refused by the browser before the round trip.
       expect(requiredDate?.max).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });

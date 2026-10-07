@@ -169,6 +169,7 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "people.merged_into_person_id":
     "the merge pointer itself — structural, and what makes the shell resolve",
   "people.no_certification_cleared_by_person_id": "who cleared the no-card stamp",
+  "people.adult_attested_by_person_id": "who said the diver is 18 or older (H-100)",
   "pre_departure_check_events.recorded_by_person_id": "who ticked the check",
   "pre_departure_checklist_items.deleted_by_person_id": "who removed the check",
   "held_sends.actor_person_id": "who tapped Send; the hold lives eight seconds",
@@ -530,6 +531,20 @@ export async function mergeDiverRecords(input: {
           emergencyContactName: survivor.emergencyContactName ?? source.emergencyContactName,
           emergencyContactPhone: survivor.emergencyContactPhone ?? source.emergencyContactPhone,
           dateOfBirth: survivor.dateOfBirth ?? source.dateOfBirth,
+          // A staffer's "18 or older" (H-100) travels as a pair with its author,
+          // from whichever record has one, survivor first, and only while no
+          // date answers the question instead.
+          ...(survivor.dateOfBirth || source.dateOfBirth
+            ? { adultAttestedAt: null, adultAttestedByPersonId: null }
+            : survivor.adultAttestedAt
+              ? {
+                  adultAttestedAt: survivor.adultAttestedAt,
+                  adultAttestedByPersonId: survivor.adultAttestedByPersonId,
+                }
+              : {
+                  adultAttestedAt: source.adultAttestedAt,
+                  adultAttestedByPersonId: source.adultAttestedByPersonId,
+                }),
           diveInsurance: survivor.diveInsurance ?? source.diveInsurance,
           locale: survivor.locale ?? source.locale,
           spokenLanguages: mergedSpokenLanguages,
