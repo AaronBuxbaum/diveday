@@ -30,7 +30,7 @@
 // count and records the reason and the date in the baseline, so a raise arrives in the diff
 // with its justification attached instead of as a number that drifted.
 
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -59,18 +59,34 @@ function frontmatterDescription(contents) {
   return line ? line[1] : "";
 }
 
+/** Whether a skill is invocable only by a human typing its name. */
+export function isUserOnly(contents) {
+  const block = contents.match(/^---\n([\s\S]*?)\n---/);
+  return Boolean(block && /^disable-model-invocation:\s*true\s*$/m.test(block[1]));
+}
+
 /** Whether a `.claude/rules/*.md` file carries `paths:` frontmatter, and so loads on demand. */
 export function isPathScoped(contents) {
   const block = contents.match(/^---\n([\s\S]*?)\n---/);
   return Boolean(block && /^paths:/m.test(block[1]));
 }
 
-async function listDirs(root, relative) {
+/**
+ * The directories under `relative`, following symlinks. Many of `.claude/skills/` are links into
+ * `.agents/skills/`, and a `Dirent` reports a link as a link, not a directory — filtering on
+ * `isDirectory()` alone left every imported skill's description out of the count.
+ */
+export async function listDirs(root, relative) {
   const entries = await readdir(path.join(root, relative), { withFileTypes: true });
-  return entries
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort();
+  const dirs = [];
+  for (const entry of entries) {
+    if (entry.isDirectory()) dirs.push(entry.name);
+    else if (entry.isSymbolicLink()) {
+      const target = await stat(path.join(root, relative, entry.name)).catch(() => null);
+      if (target?.isDirectory()) dirs.push(entry.name);
+    }
+  }
+  return dirs.sort();
 }
 
 /**
@@ -123,7 +139,11 @@ export async function measure(root = ROOT) {
   let skillDescriptions = 0;
   for (const dir of await listDirs(root, ".claude/skills")) {
     const file = path.join(root, ".claude/skills", dir, "SKILL.md");
-    skillDescriptions += words(frontmatterDescription(await readFile(file, "utf8")));
+    const contents = await readFile(file, "utf8");
+    // A user-only skill (`disable-model-invocation: true`) is kept out of the model's listing
+    // entirely: only a human typing its name reaches it, so its description costs no session.
+    if (isUserOnly(contents)) continue;
+    skillDescriptions += words(frontmatterDescription(contents));
   }
   measured[".claude/skills/*/SKILL.md (description lines)"] = skillDescriptions;
 

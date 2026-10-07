@@ -36,6 +36,7 @@ import {
   diveDeclarationSchema,
   toDiveDeclaration,
 } from "@/lib/dive-declaration";
+import { log } from "@/lib/log";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
@@ -468,14 +469,13 @@ export async function bookSpot(
         packingList: shopNow.packingList,
       });
       if (delivery.status === "failed") {
-        console.error("Booking confirmation notification failed", {
-          bookingId: primaryBookingId,
-        });
+        log("booking.confirmation_send_failed", "error", { bookingId: primaryBookingId });
       }
-    } catch {
+    } catch (error) {
       // Email must never turn a completed, capacity-safe booking into an error page.
-      console.error("Booking confirmation notification could not be prepared", {
+      log("booking.confirmation_prepare_failed", "error", {
         bookingId: primaryBookingId,
+        errorCode: error instanceof Error ? error.name : "unknown_error",
       });
     }
   }
@@ -487,8 +487,11 @@ export async function bookSpot(
     outcome.bookings.map(async ({ bookingId }) => {
       try {
         await issueWaiverOnJoin(dbi, shopNow.id, bookingId);
-      } catch {
-        console.error("Waiver-on-join could not be issued", { bookingId });
+      } catch (error) {
+        log("booking.waiver_on_join_failed", "error", {
+          bookingId,
+          errorCode: error instanceof Error ? error.name : "unknown_error",
+        });
       }
     }),
   );
@@ -548,8 +551,11 @@ export async function bookSpot(
               wantsNitrox: selection.wantsNitrox,
             });
           }
-        } catch {
-          console.error("Rental fit at booking could not be saved", { bookingId });
+        } catch (error) {
+          log("booking.rental_fit_save_failed", "error", {
+            bookingId,
+            errorCode: error instanceof Error ? error.name : "unknown_error",
+          });
         }
       }),
     );
@@ -704,8 +710,11 @@ async function creditBuddyReferral(
       bookingId: input.bookingId,
       referredByBookingId,
     });
-  } catch {
-    console.error("Buddy referral could not be recorded", { bookingId: input.bookingId });
+  } catch (error) {
+    log("booking.buddy_referral_failed", "error", {
+      bookingId: input.bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
   }
 }
 

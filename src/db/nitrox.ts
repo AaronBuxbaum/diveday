@@ -2,7 +2,8 @@ import { and, asc, eq, isNull, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { type CardUnreviewRefusal, needsCardSighting, unreviewedCardState } from "@/lib/readiness";
 import { shopOffersNitrox } from "@/lib/rentals";
-import { type AppDb, isUniqueConstraintViolation } from "./client";
+import type { AppDb } from "./client";
+import { isUniqueConstraintViolation } from "./query-helpers";
 import {
   activeCertificationReviewerId,
   type CardSighting,

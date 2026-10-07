@@ -1,14 +1,58 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { isUniqueConstraintViolation } from "@/db/client";
+import { isUniqueConstraintViolation } from "@/db/query-helpers";
 import { firstHandLocale } from "@/i18n/negotiate";
 import type { DiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
-import { findOrCreatePerson, recordDiverOwnLocale, recordDiverOwnLocaleForBooking } from "./people";
+import {
+  findOrCreatePerson,
+  recordDiverOwnLocale,
+  recordDiverOwnLocaleForBooking,
+  selectActivePersonByEmail,
+} from "./people";
 import { bookings, people, shops } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
+
+describe("selectActivePersonByEmail", () => {
+  // Two copies of this lookup once drifted: this one lowercased both sides,
+  // the one in staff-accounts.ts only the column, so a mixed-case argument
+  // there found nobody and its caller would have forked a second person for
+  // the same address. There is one copy now, and this pins its contract.
+  it("matches an address whatever the case of the argument and of the stored value", async () => {
+    const { db, shop } = await seededShopContext();
+    const [person] = await db
+      .insert(people)
+      .values({ shopId: shop.id, fullName: "Ines Duarte", email: "Ines.Duarte@Example.com" })
+      .returning();
+    if (!person) throw new Error("failed to insert person");
+
+    for (const email of [
+      "ines.duarte@example.com",
+      "INES.DUARTE@EXAMPLE.COM",
+      "Ines.Duarte@Example.com",
+    ]) {
+      expect((await selectActivePersonByEmail(db, shop.id, email))?.id).toBe(person.id);
+    }
+  });
+
+  it("finds nobody for a deleted person or for another shop's", async () => {
+    const { db, shop } = await seededShopContext();
+    const [otherShop] = await db
+      .insert(shops)
+      .values({ name: "Third Shop", slug: "third-shop-people-test", timezone: "UTC" })
+      .returning();
+    if (!otherShop) throw new Error("other shop insert failed");
+    await db.insert(people).values([
+      { shopId: shop.id, fullName: "Gone", email: "gone@example.com", deletedAt: nowDate() },
+      { shopId: otherShop.id, fullName: "Elsewhere", email: "elsewhere@example.com" },
+    ]);
+
+    expect(await selectActivePersonByEmail(db, shop.id, "Gone@example.com")).toBeNull();
+    expect(await selectActivePersonByEmail(db, shop.id, "Elsewhere@example.com")).toBeNull();
+  });
+});
 
 describe("findOrCreatePerson (CR-008)", () => {
   it("creates a new person when no active match exists", async () => {

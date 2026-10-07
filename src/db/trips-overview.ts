@@ -36,6 +36,7 @@ import {
   listTripDives,
   listTripScheduleDays,
 } from "./trips";
+import type { TripSharedReads } from "./trips-shared-reads";
 
 /**
  * Everything the trip's Overview page is about, in one call — the third of the
@@ -73,8 +74,17 @@ export async function getTripOverview(
   tripId: string,
   actorPersonId: string,
   now: Date = nowDate(),
+  /**
+   * The five reads the trip page shares with `getTripGuests`
+   * (`./trips-shared-reads`), when the caller has them in hand or in flight.
+   * Omitted, this reads its own, as the print packet's call does.
+   */
+  sharedReads?: TripSharedReads | null | Promise<TripSharedReads | null>,
 ) {
-  const trip = await getTripWithBooked(db, shop.id, tripId);
+  const shared = await sharedReads;
+  // Handed reads that found no departure: the answer is already in.
+  if (sharedReads !== undefined && shared === null) return null;
+  const trip = shared ? shared.trip : await getTripWithBooked(db, shop.id, tripId);
   if (!trip) return null;
 
   const cancelled = trip.status === "cancelled";
@@ -108,10 +118,10 @@ export async function getTripOverview(
   ] = await Promise.all([
     listStaff(db, shop.id),
     getTripCrewAssignments(db, shop.id, tripId),
-    getTripRequirements(db, shop.id, tripId),
+    shared ? shared.requirement : getTripRequirements(db, shop.id, tripId),
     listDiveSites(db, shop.id),
     listTripDives(db, shop.id, tripId),
-    getTripSiteRequirement(db, shop.id, tripId),
+    shared ? shared.siteRequirement : getTripSiteRequirement(db, shop.id, tripId),
     getTripSeriesSummary(db, shop.id, tripId),
     listTripScheduleDays(db, shop.id, tripId),
     canPersonConfigureTrips(db, shop.id, actorPersonId),
@@ -125,8 +135,8 @@ export async function getTripOverview(
     // blocked predicate, the prep list's own completeness rule, and the
     // manifest's own boarded reader — so the counts on this strip can never
     // disagree with the pages it links to.
-    pulseNeeded ? listTripReadiness(db, shop.id, tripId) : [],
-    pulseNeeded ? listTripPrepDivers(db, shop.id, tripId) : [],
+    pulseNeeded ? (shared?.readiness ?? listTripReadiness(db, shop.id, tripId)) : [],
+    pulseNeeded ? (shared?.prepDivers ?? listTripPrepDivers(db, shop.id, tripId)) : [],
     pulseNeeded
       ? listDepartureBoardedByTrip(db, shop.id, [tripId])
       : new Map<string, Set<string>>(),

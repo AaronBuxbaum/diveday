@@ -38,14 +38,10 @@ import {
   type SizedRentalKind,
   sizedRentalKindOfGearKind,
 } from "@/lib/rentals";
-import {
-  type AppDb,
-  type DbExecutor,
-  violatesExclusionConstraint,
-  violatesUniqueIndex,
-} from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { type OffsetPage, offsetPage } from "./paging";
+import { violatesExclusionConstraint, violatesUniqueIndex } from "./query-helpers";
 import {
   bookings,
   type GearItem,
@@ -1462,15 +1458,6 @@ export async function listDeletedGearItems(
       return rows.flatMap((row) => (row.deletedAt ? [{ ...row, deletedAt: row.deletedAt }] : []));
     },
   });
-}
-
-/** How many units are deleted — the register's Deleted chip appears on it. */
-export async function countDeletedGearItems(db: AppDb, shopId: string): Promise<number> {
-  const [row] = await db
-    .select({ value: count() })
-    .from(gearItems)
-    .where(and(eq(gearItems.shopId, shopId), isNotNull(gearItems.deletedAt)));
-  return row?.value ?? 0;
 }
 
 export type GearItemDetail = {

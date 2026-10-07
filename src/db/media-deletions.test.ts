@@ -17,7 +17,7 @@ const failing = async () => ({ ok: false as const, error: "blob delete failed: 5
 describe("queueMediaDeletion (managed-URL guard, CR-012 review finding)", () => {
   it("skips queuing a URL that was never actually stored by this seam", async () => {
     const { db, shop } = await seededShopContext();
-    // A bundled template asset (src/db/course-templates.ts's bundledImage())
+    // A bundled template asset (src/content/course-templates.ts's bundledImage())
     // or a legacy pasted external URL — the provider has never heard of
     // either, so queuing a delete for one could never resolve, ever.
     const bundled = await queueMediaDeletion(db, {

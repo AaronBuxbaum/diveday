@@ -6,240 +6,67 @@ paths:
 
 # Rules for `src/app/` and `src/components/`
 
-Everything a person looks at. Loaded when a file under these paths is read; the universal rules
-stay in `AGENTS.md`.
+Everything a person looks at. Each rule names what enforces it; the reasoning, incidents and the
+longer form of every row are in [docs/agents/repo-checks.md](../../docs/agents/repo-checks.md#the-surfaces-rules).
 
 ## Where things are
 
-- **Public pages** (landing, sign-in): `src/app/`. **Diver-facing shop pages**:
-  `src/app/s/[shopSlug]/**` — its own namespace, no auth anywhere in it; path strings come from
-  `src/lib/public-routes.ts`, which also holds the 308s from the old `/shop/**` URLs (ADR
-  20260803-public-shop-namespace). `/shop/**` is staff, without exception.
-- **Where a diver can go**: the header nav in `src/components/PublicShopNav.tsx`, assembled once in
-  `src/app/s/[shopSlug]/layout.tsx` and rendered by `src/components/PublicShopChrome.tsx`. Add a
-  public destination there, never as a per-page cross-link; the whole header is dropped in
-  `?embed=1`.
-- **Where staff can go**: derive from `src/lib/staff-destinations.ts`, a registry of
-  destinations each filed under one **section** — Today, Schedule, Divers, Inbox, Money, Courses,
-  Gear, Settings (ADR 20261001-logbook). It has **two** consumers:
-  `src/components/ShopSectionNav.tsx` (the labelled sidebar from `lg` up, the phone tab bar below
-  it — Today, Schedule, Divers, Inbox and More) and `src/components/search/CommandPalette.tsx`, the
-  shortcut to everything. `staffNavSections` decides which rows a viewer sees (a gated section is
-  absent; Courses and Gear only for a shop that teaches or keeps a fleet) and `currentStaffSection`
-  is the one answer to "which row is lit". Add a destination to the registry with its section,
-  never to a consumer. The sidebar is its own `<Suspense>` boundary in the staff layout, beside the
-  page; the tab bar sets `--tabbar-h`, which anything fixed to the foot (toasts, the sticky Save
-  bar) stands off. A diver the search finds opens their record, `divers/[personId]`.
-  `src/components/ShopIdentityMenu.tsx` holds what is the reader's own: their calendar feed, their
-  language, sign out.
-- **Bearer-token pages** (`src/app/waivers/[token]`, `ready/[token]`, `recap/[token]`,
-  `verify/[token]`, `reset-password/[token]`, `calendar/[token]`): the URL *is* the capability;
-  read [docs/engineering/capability-telemetry-runbook.md](../../docs/engineering/capability-telemetry-runbook.md)
-  before touching. Never structured data or telemetry that could carry the token.
-- **The four lines every staff page opens with**: one helper, `requireShopSurface` in
-  `src/lib/session.ts`: `requireStaffSession()` → the shop row read by `session.user.shopId` (never
-  the URL slug) → `notFound()` when it is missing **or** disagrees with the slug → an optional live
-  `src/db/authz.ts` gate → a `?notice=` refusal redirect. Every refusal *throws*; there is no path
-  that returns after deciding against the caller, and `src/lib/session.test.ts` pins that. Never
-  `return null`, `redirect("/")`, or a bounce to the shop home for a cross-tenant miss — all of those
-  are now `notFound()`.
-- **Server actions**: inline `"use server"` closures for single-page mutations; `src/app/actions/`
-  only for actions shared across pages; a large page colocates its actions/zod schemas in a sibling
-  `actions.ts`. **Seating a diver** from any surface goes through `src/app/actions/seat-diver.ts`
-  and the per-surface table in `seat-diver-surfaces.ts`; the global door is
-  `src/app/shop/[shopSlug]/bookings/new` then `bookings/new/[tripId]` — the trip is a path segment,
-  not a `?tripId=`, so a refusal can land back on it.
-- **The schedule builder**: `src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.tsx`
-  + `schedule/board/actions.ts`; mutations in `src/db/trips-schedule.ts`. The add panel is the
-  **one place a trip is created**; `/shop/[shopSlug]/trips/new` is a 308 to
-  `schedule/board?add=full` (ADR 20260806-one-trip-create-form).
-- **Schedule is one place with two views** (ADR 20261001-logbook): Week (`schedule/board`, the
-  departures and the builder) and Crew (`staffing/`, the same week by who is working it), both
-  titled "Schedule" under `schedule/_components/ScheduleViews.tsx`, which carries `?week=` across.
-  A third reading of the week is a third view there, never a page of its own.
-- **A departure is four tabs under one header** (ADR 20261001-logbook, decision 3):
-  Divers (`trips/[id]/page.tsx`, the roster, which is also the arrival desk inside the arrivals window:
-  `_arrivals/arrival-desk.tsx`, its walk-in form at `walk-in/`), Boat (`manifest/`), Gear (`prep/`, the packing list) and Details (`trips/[id]?view=details`,
-  the About panel). One component draws them, `_components/TripTabs.tsx`; every tab wears `TripPageHeader`, whose
-  stage pill's phase (Prep, Check-in, Aboard, Back) comes from `src/lib/trip-phase.ts`, where the crew's tap
-  on the manifest beats the clock. Add to a tab, never a fifth surface; a second list of the same divers is the duplicate this cut removed. A gear form redirects to
-  `prep#{PREP_SECTION_ID}`; an About form redirects to the departure with its `form`, which opens
-  Details. **A cancelled departure keeps its Boat tab and packs nothing**: the roll call is a
-  record of people, the packing list an instruction about a check-in that is not happening
-  (dive-domain review 20260920). `print/` composes prep as a component for the paper day.
-  Finding which boat an arriving diver is on is Today's arrival lookup (`?q=`), never a search on
-  the tab.
-- **The shop home** is the day's departures, then one "Needs you" list (ADR 20261001-logbook,
-  decision 4): `_components/today/DaySpine.tsx` composes them, `DayStation.tsx` is a departure
-  card (time, stage pill from `tripPhaseOf`, readiness bar), and every job on the day, at a boat
-  or at the desk, ranks in the one list and names its own boat. Its evening state is the settled
-  stations (`ClosingStation.tsx`) and the day's takings; there is no act of closing the day. `?view=` and `/blockers` 308 home (ADR 20260827-clearwater-surface-language). A
-  departure's **log** is generated from there (`trips/[id]/log`, owner-only).
-- **The back-office queues** are **not on Reports** — each sits with the object it is about and
-  renders *nothing* when empty: stuck payment operations on the Orders index behind
-  `canPersonManagePaymentSettings`; stuck media deletions and owed processor erasures lead Settings'
-  "Data" group in `settings/SettingsPage.tsx`. `/shop/[shopSlug]/reports` is the
-  shop's own reading of itself and nothing else: the month by default, the year at `?range=year`,
-  one segmented control between them, and **no money at all on the year** (ADR 20260908-one-hand,
-  decision 6, lever T). The year prints as a 3:2 card at `reports/card`, staff-only.
-- **A diver asking for a day not on the board**: one composer, `src/components/DateRequestForm.tsx`,
-  behind one action `src/app/actions/inquiry.ts`; staff read them at `shop/[shopSlug]/requests`.
-  Never the wait list or the last-minute deal list — those answer "tell me when a seat frees".
-- **A dive site's briefing**: written on `dive-sites/_components/SiteFields.tsx`; read on the
-  departure page as four beats in `_components/TripDayPlan.tsx` — `TripLookFor`, `TripRoutes`,
-  `TripMoments`, `TripSiteNotes`. Every sentence comes off the site row, uncaptioned; the fit tone
-  is one word and there is no canned filler (ADR 20260813-dive-site-briefings-are-the-shops-own-words).
-  The field guide is the one exception — a *selection* of catalog species whose words are DiveDay's
-  (`src/i18n/marine-life-labels.ts`).
-- **Design tokens**: `src/app/globals.css` (semantic only, ADR-0004). **Wrappers**:
-  `src/components/ui/` — `form.tsx` (`Field`, `FieldGrid`, `controlClass`, `FormStatus`,
-  `FieldErrorFocus`, and `StatusInView`, which `FormStatus` carries), `button.ts` (`buttonClass`),
-  `card.tsx` (`SectionCard`, `sectionCardClass`), `tone.ts` (`toneMark`). Readiness words: `src/i18n/readiness-labels.ts` — never spell a status
-  inline. Heading levels come from `src/components/ui/typography.ts` (`pnpm check:type-ramp`).
-- **Paging a staff list**: `src/components/Pager.tsx` + `offsetPage` in `src/db/paging.ts`. Every
-  paged staff list wears it with `words={staffPagerWords(t)}`, and the public reviews archive with
-  the diver bundle's words (ADR 20260803-one-pagination-model); keyset cursors (`src/db/cursor.ts`)
-  are the one earned exception. A list's **count must share the row query's exact scope** (joins,
-  `where`, `having`, `now`), or the pager promises pages that render nothing.
-- **Link previews and icons** (`ImageResponse`): every surface that rasterizes at request time —
-  DiveDay's own card at `link-card/route.tsx`, the three `opengraph-image.tsx` cards under
-  `/recap/` and `/s/`, `pwa-icon-maskable/route.tsx` and `/shop/[shopSlug]/reports/card` — calls `allowSvgRasterization()` (`src/lib/og-rasterizer.ts`)
-  first, and so does any new one: `next/image` disables libvips' SVG loader process-wide on first
-  use and satori's output is SVG, so without it the card severs the socket mid-stream (ADR
-  20260804-og-svg-rasterizer). **A metadata module that imports `next/og` reaches every page entry
-  in its segment's subtree**, so one in the *root* segment reaches the whole app — which is how the
-  favicon and then the root card each put 3.07 MiB of renderer into every closure in it. The
-  favicon and touch icon are committed PNGs now, re-rendered by `pnpm brand:icons` (issue #1361),
-  and DiveDay's card is a route handler named by `sharedLinkCardImage` in `src/lib/site-metadata.ts`
-  (issue #1709); `src/app/_og/card.test.tsx` refuses a new root metadata module and holds every card
-  to the shared chrome. **Every page that exports an `openGraph` block spreads `openGraphSite`**
-  (`src/lib/site-metadata.ts`): Next merges `metadata` shallowly, so a page-level block *replaces*
-  the root layout's. `sharedLinkCard` (`src/lib/marketing.ts`) is this plus the card image — and the
-  card is deliberately *not* inside `openGraphSite`, because a level that names `images` makes Next
-  skip that segment's own `opengraph-image.tsx`. Structured data (`JsonLd`) never renders in
-  `?embed=1` mode or on a bearer-token page.
-- **Design for a surface that does not exist yet**: read
-  [docs/design/design-artifacts.md](../../docs/design/design-artifacts.md) first — the canvas
-  argues in pictures, the ADR decides, code obeys the ADR. Reach for a canvas only when a surface is
-  significant enough for an ADR; for a component, a form or a copy change, the screenshot script and
-  the **design-review** skill answer faster against the real app.
+- **Diver shop pages**: `src/app/s/[shopSlug]/**`, no auth anywhere; paths from
+  `src/lib/public-routes.ts` (ADR 20260803-public-shop-namespace). `/shop/**` is staff.
+- **Where a diver can go**: `src/components/PublicShopNav.tsx`, assembled in
+  `src/app/s/[shopSlug]/layout.tsx`; never a per-page cross-link; the header drops in `?embed=1`.
+- **Where staff can go**: add a destination to `src/lib/staff-destinations.ts` with its section,
+  never to a consumer (`src/components/ShopSectionNav.tsx`, `src/components/search/CommandPalette.tsx`).
+  Anything fixed to the foot stands off `--tabbar-h` (ADR 20261001-logbook).
+- **Bearer-token pages** (`src/app/waivers/[token]` and siblings): the URL is the capability; read
+  [the capability runbook](../../docs/engineering/capability-telemetry-runbook.md) first; no
+  structured data or telemetry that could carry the token.
+- **A staff page opens with** `requireShopSurface` (`src/lib/session.ts`); every refusal throws, a
+  cross-tenant miss is `notFound()` (`src/lib/session.test.ts`).
+- **Server actions**: inline `"use server"` for one page, `src/app/actions/` when shared, a sibling
+  `actions.ts` for a large page. Seating a diver goes through `src/app/actions/seat-diver.ts`.
+- **Schedule**: the builder (`schedule/board/_components/ScheduleBuilder.tsx`) is the one place a
+  trip is created (ADR 20260806-one-trip-create-form). Week and Crew are two views under
+  `schedule/_components/ScheduleViews.tsx`; a third reading is a third view there.
+- **A departure is four tabs** (Divers, Boat, Gear, Details) drawn by `_components/TripTabs.tsx`;
+  add to a tab, never a fifth surface. A cancelled departure keeps Boat and packs nothing.
+- **The shop home** is `_components/today/DaySpine.tsx`: the day's departures, then one "Needs you"
+  list. There is no act of closing the day.
+- **Back-office queues** sit with their object and render nothing when empty, never on Reports;
+  the year on Reports shows no money (ADR 20260908-one-hand).
+- **A day not on the board**: `src/components/DateRequestForm.tsx` + `src/app/actions/inquiry.ts`,
+  never the wait list.
+- **A dive-site briefing** is written in `SiteFields.tsx` and read in `TripDayPlan.tsx`, every
+  sentence off the site row (ADR 20260813-dive-site-briefings-are-the-shops-own-words).
+- **Tokens and wrappers**: `src/app/globals.css`, `src/components/ui/`; readiness words from
+  `src/i18n/readiness-labels.ts`; heading levels from `src/components/ui/typography.ts`.
+- **Paging**: `src/components/Pager.tsx` + `offsetPage`; a count shares the row query's exact scope
+  (ADR 20260803-one-pagination-model).
+- **Link previews**: `allowSvgRasterization()` before every `ImageResponse` (ADR
+  20260804-og-svg-rasterizer); no root metadata module imports `next/og`
+  (`src/app/_og/card.test.tsx`); every `openGraph` block spreads `openGraphSite`
+  (`pnpm check:repo`, Open-Graph-site).
+- **A surface that does not exist yet**: [docs/design/design-artifacts.md](../../docs/design/design-artifacts.md) first.
 
-## Semantic tokens only
+## Rules
 
-No raw hex, no palette-scale classes in components (ADR-0004; `pnpm check:tokens`). Next
-metadata-file conventions (OG images, icons, manifest) are exempt by design — tokens cannot reach a
-Satori bitmap.
-
-## Forms, buttons and panels go through the wrappers
-
-Stacked fields via `<Field>`/`<FieldGrid>`, button-shaped things via `buttonClass()`, controls via
-`controlClass`, the bordered panel a page is made of via `<SectionCard>` (and its `loading.tsx`
-twin via `sectionCardClass()`). Hand-rolled class strings are how fields fall out of alignment,
-button labels drift off-center, and sibling routes one tap apart end up at two different corner
-radii. Never pass a `text-<colour>` through `className` to `buttonClass()` — Tailwind emits colour
-utilities **alphabetically by token name**, so the override silently loses to the variant's own
-colour; that read as an instruction and did nothing at 31 call sites until 2026-08-15, and
-`button.test.ts` now fails on it. If you find yourself cancelling a variant's own styles, the
-variant is wrong. `SectionCard` has **deliberately no `radius` prop** — one that let each call site
-keep its current corner would preserve the drift behind an abstraction. Pages space their sections
-with `space-y-10` rather than per-section `mt-*`. See
-[docs/design/forms-and-controls.md](../../docs/design/forms-and-controls.md).
-
-## Where a form says what happened
-
-**Beside the form, never in a banner at the top of the page.** Field-level refusals go on the field
-(`Field`'s `error` prop, which wires `aria-invalid`/`aria-describedby`); form-level ones go in the
-action row (`FormStatus`), with `FieldErrorFocus` to move the cursor to the offending box. A page's
-`?notice=` is routed to the form that produced it by `noticeForForm` (`src/lib/staff-notices.ts`);
-the page banner is left for what is genuinely about the page.
-
-**And it has to be on screen, or it said nothing.** Putting the outcome in its own section fixed a
-confirmation appearing off-screen *above* a reader who saved halfway down, and left the mirror image
-open: `PreserveFormScroll` puts them back exactly where they submitted from, so an outcome rendered
-below the submit button can land below the fold. `FormStatus` carries `StatusInView`, which brings
-it into view **only when it is off screen** — a status that yanks the viewport when the reader can
-already read it is worse than one that does nothing — and never for `danger`, whose `FieldErrorFocus`
-has the better destination. It waits for three conditions rather than a duration: the status is
-something the renderer is drawing (`checkVisibility()`, not a zero-sized rect inside a `<details>`
-that has just opened), `PreserveFormScroll` has stamped `SCROLL_SETTLED_ATTRIBUTE`, and the page has
-stopped moving. All three were found by measuring: on the diver record's gear group the status read
-viewport 138 mid-flight and 748 once the disclosure, the restore and the browser's smooth animation
-between them had all landed.
-
-## A new page ships with a `loading.tsx` and `export const instant = true`
-
-That file is the route's `<Suspense>` boundary — what a client navigation into the segment paints,
-and what stands in the static shell while the page's request-scoped reads stream in. Shape it like
-the body it replaces (an `animate-pulse` wrapper, `bg-surface-sunken` bars, `border-border
-bg-surface` cards), never a spinner. **Never put an `await` above `{children}` in a `layout.tsx`**:
-a layout wraps the page, so no boundary can be placed between them, and one request-scoped read
-there costs every route beneath it its static shell — put the read in an async child inside its
-own `<Suspense>`, with a fallback that holds its height. `next build` fails on a route that breaks
-this (`blocking-prerender-dynamic` / `blocking-prerender-client-hook`), naming the component.
-`instant = false` survives on exactly one layout, `src/app/shop/[shopSlug]/trips/[id]/layout.tsx`.
-The staff shell is no longer the second: its six reads — session, shop row, locale, demo roles, nav
-badge, boat link — moved into `_components/ShopChrome.tsx` behind a `<Suspense>` that holds the
-bar's height, and its cross-tenant `notFound()` went with them, which is safe because every staff
-page gates itself as well (ADR 20260804-instant-navigation; the **instant-navigation** skill).
-
-## Never hard-code a locale, and every rendered date names its zone
-
-Every date, time and money figure formats for the negotiated request locale (`requestLocale`) —
-never a literal `"en-US"` (`pnpm check:locale`). Timestamps are stored as UTC instants and
-displayed in the shop's own zone, so every date/time render passes `shop.timezone` alongside the
-locale. This is not a style preference: `Intl` falls back to the *host* zone when no zone is given,
-and every DiveDay server and CI box is UTC, so an omission renders a 7:30 AM departure as 11:30 AM —
-plausible, green, and four hours wrong on the screen a diver uses to decide when to leave. A value
-with no instant in it says `timeZone: "UTC"` explicitly (`src/lib/calendar-date.ts`).
-`pnpm check:timezone` enforces the rest.
-
-## Copy comes from a message bundle, never a component
-
-Diver copy in `src/i18n/locales/<locale>/diver.json`, staff copy in
-`locales/<locale>/staff/<namespace>.json` (one file per area). `pnpm check:copy` is a full gate over
-`src/app`, `src/components` and `src/features`: any hard-coded copy fails it. **Never add English
-(or any language) as a string the user will read outside `src/i18n/locales/`** — every new sentence
-lands in *every* locale's bundle in the same change, and a key missing from one locale fails
-`pnpm check:locale`. Waiver/medical wording stays English pending H-01/H-03. **Any diver Client
-Component that reads copy needs `DiverIntlProvider` above it** — without one it throws during the
-server render and the page silently degrades to a blank client-only 200;
-`src/i18n/provider-coverage.test.ts` fails on a consumer with no provider in an ancestor segment.
-Staff Client Components take words as props (`staffTranslator` is server-side only). See the
-**i18n-copy** skill and the i18n rules.
-
-## Every sentence earns its place, or it is deleted
-
-Before writing a string — and every time you read past an existing one — ask whether the reader
-would get something wrong without it. Only two kinds survive: one carrying a state or consequence
-the surface cannot show on its own, and one that is genuine delight. A caption restating its own
-heading, a clause explaining which rule won, a second manual path to what a nearby button already
-does, and an apology for a refusal all go — deleted, not shortened, along with the element that held
-them. Deleting a key means all three edits in one change: the call site, `en-US`, and `es-ES`. See
-the **copy-restraint** skill. Where restraint and accessibility genuinely conflict, build for the
-standard user and record the trade in
-[docs/design/accessibility-tradeoffs.md](../../docs/design/accessibility-tradeoffs.md) — never a
-follow-up, never silence. That licence stops at safety surfaces (manifests, roll call, cert gating,
-medical flags), at keyboard reach, and at anything that costs the sighted user nothing.
-
-## Delete says Delete
-
-Every delete is soft (`deleted_at`) and the word on screen is still "Delete" — never Archive,
-Deactivate, Retire, Hide or "soft delete", and never a caption explaining which history survived.
-A publish toggle is "Hidden", not deleted. The full rule and its exceptions are in the db rules
-(`.claude/rules/db.md`) and ADR 20260820-every-delete-is-soft.
-
-## A panel that only renders when something has gone wrong
-
-is photographed through `/api/test/seed-trouble-states`
-(`src/app/api/test/seed-trouble-states/route.ts`), never by seeding the failure into the demo shop:
-add the new state to that route and a capture beside the surface's calm one. A demo permanently
-shouting that four payments are broken is a worse demo. Mutating is safe because each Playwright
-worker owns its own database and resets it before every test (`e2e/servers.ts`).
-
-## Every surface gets looked at
-
-A user-facing change is verified by looking at it — `node scripts/screenshot.mjs <path…>` against a
-running `pnpm dev`, phone and desktop, light only unless the work is colour (then `--both`) — and by
-the **design-review** skill for a significant surface. Every important flow gets an `e2e/` spec and
-every important surface a capture in `e2e/visual.spec.ts` (the **e2e-and-visual** skill).
-Safety-critical surfaces get a `dive-domain-expert` review.
+- **Semantic tokens only**, no raw hex or palette classes: `pnpm check:tokens` (ADR-0004).
+- **Fields, buttons, controls and panels go through the wrappers**; never a `text-<colour>` into
+  `buttonClass()` (`button.test.ts`); sections space with `space-y-10`.
+- **A form's outcome sits beside the form** (`Field`'s `error`, `FormStatus`), routed by
+  `noticeForForm`, brought on screen by `StatusInView`; scroll-preservation guard.
+- **A new page ships with `loading.tsx` and `export const instant = true`; no `await` above
+  `{children}` in a layout**: loading-skeleton guard and `next build` (ADR 20260804-instant-navigation).
+- **No literal locale; every rendered date passes `shop.timezone`**: `pnpm check:locale`,
+  `pnpm check:timezone`.
+- **Copy comes from a message bundle, in every locale at once**: `pnpm check:copy`,
+  `pnpm check:locale`; a diver Client Component needs `DiverIntlProvider` above it
+  (`src/i18n/provider-coverage.test.ts`). Waiver and medical wording stays English (H-01, H-03).
+- **Every sentence earns its place, or it is deleted**: the **copy-restraint** skill; an
+  accessibility trade goes in [docs/design/accessibility-tradeoffs.md](../../docs/design/accessibility-tradeoffs.md).
+- **Delete says Delete**: soft-delete-vocabulary guard (ADR 20260820-every-delete-is-soft).
+- **A trouble state is photographed through `/api/test/seed-trouble-states`**, never seeded into
+  the demo shop.
+- **Look at what you changed**: `node scripts/screenshot.mjs`, the **design-review** skill, an
+  `e2e/` spec and a visual capture (`pnpm check:route-coverage`); safety surfaces get a
+  `dive-domain-expert` review.

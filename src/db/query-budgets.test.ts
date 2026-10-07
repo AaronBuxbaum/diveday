@@ -29,7 +29,7 @@ describe("what the assembly readers cost", () => {
    * three surfaces gets slower on exactly the busy days they exist for.
    *
    * `queryAll` is what makes it one batch, and `queryAll` is also allowed to go
-   * sequential inside a transaction (`src/db/client.ts`) — sequential is fine,
+   * sequential inside a transaction (`src/db/query-helpers.ts`) — sequential is fine,
    * *per-trip* is not, and only a count can tell those apart.
    */
   it("reads readiness for many departures in the same number of queries as for one", async () => {

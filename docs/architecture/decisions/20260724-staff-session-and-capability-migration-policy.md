@@ -11,7 +11,7 @@ mutations trust role-bearing JWT state until the next sign-in, with no stated to
 disable/demotion delay; (3) whether the CR-002/CR-003 move from permanent readiness links to
 expiring capabilities needed a one-time cutover or an ongoing migration policy. The product owner
 resolved both on 2026-07-24 (recorded in
-[human-decisions.md](../../product/human-decisions.md#decision-register) as H-15 and H-16); this
+[human-decisions/](../../product/human-decisions/README.md#decision-register) as H-15 and H-16); this
 ADR records the reasoning so a future agent doesn't rediscover it or "fix" either as a bug.
 
 ## Decision
@@ -60,5 +60,5 @@ ADR records the reasoning so a future agent doesn't rediscover it or "fix" eithe
   the specific mutations that need it, not a global session-strategy change.
 - Role authority boundaries (which roles may reach payment settings, refunds, waiver templates,
   diver deletion, and trip configuration) remain a separate, larger, not-yet-implemented decision —
-  tracked as **H-14** in [human-decisions.md](../../product/human-decisions.md#decision-register),
+  tracked as **H-14** in [human-decisions/](../../product/human-decisions/README.md#decision-register),
   not resolved by this ADR.

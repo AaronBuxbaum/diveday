@@ -1,6 +1,6 @@
 ---
 name: e2e-and-visual
-description: Write and maintain Playwright functional E2E tests and Playwright visual-regression captures that stay stable and complete. Use when adding or changing a user-facing flow or surface, when a visual diff appears, or when deciding what needs an E2E spec or visual scenario.
+description: Write stable Playwright E2E specs and visual-regression captures. Use when adding or changing a user-facing flow or surface, or deciding what needs a spec or a capture.
 ---
 
 # E2E flows and visual regression

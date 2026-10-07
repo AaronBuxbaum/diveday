@@ -20,7 +20,7 @@ line between the two.
 
 A focused `pnpm test <file>` runs the tests you can name. The **coverage guards** are the ones you
 cannot: `src/db/export.test.ts`, `src/db/diver-merge.test.ts`, `src/db/delete-path-coverage.test.ts`
-and `src/db/retention.test.ts` assert over `src/db/schema.ts` from files whose whole job is to
+and `src/db/retention.test.ts` assert over the schema (`src/db/schema/`) from files whose whole job is to
 notice something you added
 *elsewhere*. Nothing you touch selects them, so they go red on CI instead — four times in one
 afternoon on 2026-09-05: slice 16g's four columns, 16i's `recap_pulses` table and its
@@ -28,18 +28,18 @@ afternoon on 2026-09-05: slice 16g's four columns, 16i's `recap_pulses` table an
 the documented local gate correctly.
 
 `pnpm test:changed` selects by import graph and catches all four, which is why it is a pre-push
-step rather than a mid-iteration convenience. Know its cost before you start it: `schema.ts` sits
-in nearly every import chain, so a diff touching it selects the **whole** suite — 9,391 of 9,391
+step rather than a mid-iteration convenience. Know its cost before you start it: the schema sits
+in nearly every import chain (every module under `src/db/schema/` is reached through its `index.ts`), so a diff touching it selects the **whole** suite — 9,391 of 9,391
 entries, measured 2026-09-06 — and on a stack the diff against `origin/main` is every layer
 beneath you, so that is a floor rather than a ceiling. That run belongs to CI. When you touched
-`schema.ts`, name the four by path instead:
+a file under `src/db/schema/`, name the four by path instead:
 
 ```bash
 pnpm test src/db/export.test.ts src/db/diver-merge.test.ts src/db/delete-path-coverage.test.ts src/db/retention.test.ts --reporter=dot
 ```
 
 40 tests, about a minute, and it catches every failure listed above. The trigger is touching
-`schema.ts` at all — 16j-B added only columns and tripped two guards.
+any schema module at all — 16j-B added only columns and tripped two guards.
 
 ## Push and read CI: anything whole
 
@@ -52,6 +52,14 @@ the same work serially on four cores. Measured on 2026-08-28: a full local unit 
 minutes without finishing, at a load average above eight, while CI answered the same question in
 a few. Worse than the wait is what it does to everything else — a saturated box starves the dev
 server, a focused spec, and any parallel session sharing the machine.
+
+A change that touches only `docs/`, Markdown or `.claude/` skips the four unit shards along with
+the build and the browser jobs; `Unit tests that read docs` runs the unit files that quote a
+document path instead. The shards are dealt by each file's recorded CI duration when
+`scripts/test-durations.json` exists, and by a source estimate when it does not
+(`src/test/shard-sequencer.ts`). When their finish times drift apart, refresh it from one green
+run: download every `unit-durations-<n>` artifact and run
+`node scripts/merge-test-durations.mjs <files…>`.
 
 **So the PR is the instrument, not the trophy.** Open it before it is green when that is the
 fastest way to learn what is broken; say so in the body, name what you have and have not run, and
@@ -106,7 +114,7 @@ what a failure here is about.
 
 Whether the surface looks right. Screenshots, phone and desktop, are yours — in light only, unless
 the work is itself about colour (then `screenshot.mjs --both`); that is the owner's rule,
-[H-90](../product/human-decisions.md#decision-register). CI's visual run keeps both schemes, so a
+[H-90](../product/human-decisions/README.md#decision-register). CI's visual run keeps both schemes, so a
 dark pixel that moved still shows up as a diff — but it tells you a pixel *moved*, never that the
 new one is better. See the **design-review** and **visual-triage** skills.
 

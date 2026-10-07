@@ -37,7 +37,7 @@ describe("dayTimeline", () => {
     expect(byId.underway[0]).toEqual(sailAt);
     expect(byId.home[0]).toEqual(endsAt);
     expect(byId["checked-in"][0].getTime()).toBeLessThan(sailAt.getTime());
-    expect(byId["evening"][0].getTime()).toBe(endsAt.getTime() + EVENING_AFTER_MS);
+    expect(byId.evening[0].getTime()).toBe(endsAt.getTime() + EVENING_AFTER_MS);
     expect(byId["recap-sent"][0].getTime()).toBeGreaterThan(endsAt.getTime() + RECAP_FLOOR_MS);
   });
 

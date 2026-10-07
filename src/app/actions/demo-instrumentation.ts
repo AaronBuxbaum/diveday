@@ -4,6 +4,7 @@ import { getShopBySlug } from "@/db/shops";
 import { trackEvent } from "@/lib/analytics";
 import type { DemoRoleId } from "@/lib/demo-roles";
 import type { FunnelSource } from "@/lib/funnel";
+import { log } from "@/lib/log";
 import { alertRecipient } from "@/lib/platform-mail";
 
 /**
@@ -54,7 +55,9 @@ export async function announceDemoEntry(input: {
   try {
     await trackEvent({ name: "demo_entered", source, role });
   } catch (error) {
-    console.error("announceDemoEntry: demo_entered event failed", error);
+    log("demo.entered_event_failed", "warn", {
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
   }
 
   try {
@@ -73,6 +76,8 @@ export async function announceDemoEntry(input: {
       source,
     });
   } catch (error) {
-    console.error("announceDemoEntry: demo alert failed", error);
+    log("demo.entry_alert_failed", "error", {
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
   }
 }

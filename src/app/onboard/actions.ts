@@ -19,6 +19,7 @@ import { shopDefaultsForTimeZone } from "@/lib/curated-defaults";
 import { isDemoAccountEmail } from "@/lib/demo-identity";
 import { parseFirstDayFields } from "@/lib/first-day";
 import { eventSource } from "@/lib/funnel";
+import { log } from "@/lib/log";
 import { publicAppUrl } from "@/lib/notifications";
 import { isOnboardSetupKey, ONBOARD_SETUP_PARAM } from "@/lib/onboard-setup-key";
 import { onboardSchema } from "@/lib/onboarding";
@@ -237,7 +238,9 @@ export async function onboardAction(formData: FormData) {
     // carry internal detail (a DB driver error, a stack fragment). The real
     // cause goes to the server log, where the shop's technical owner can see
     // it; the visitor gets a generic, actionable message (CR-014).
-    console.error("onboardAction: failed to create shop", err);
+    log("onboard.create_shop_failed", "error", {
+      errorCode: err instanceof Error ? err.name : "unknown_error",
+    });
     backToForm("create_failed");
   }
 
@@ -258,7 +261,9 @@ export async function onboardAction(formData: FormData) {
         now: nowDate(),
       });
     } catch (error) {
-      console.error("onboardAction: first departure failed", error);
+      log("onboard.first_departure_failed", "error", {
+        errorCode: error instanceof Error ? error.name : "unknown_error",
+      });
     }
   }
 
@@ -301,7 +306,9 @@ export async function onboardAction(formData: FormData) {
           shopSlug,
         });
       } catch (error) {
-        console.error("onboardAction: new-account alert failed", error);
+        log("onboard.new_account_alert_failed", "error", {
+          errorCode: error instanceof Error ? error.name : "unknown_error",
+        });
       }
     });
 
@@ -314,7 +321,9 @@ export async function onboardAction(formData: FormData) {
         }).catch((error: unknown) => {
           // Degrades to "welcome sent, verification never arrives" — say so,
           // or the only trace is a diver who cannot verify.
-          console.error("onboardAction: email-verification token failed", error);
+          log("onboard.verification_token_failed", "error", {
+            errorCode: error instanceof Error ? error.name : "unknown_error",
+          });
           return null;
         });
         await sendNotification(db, {

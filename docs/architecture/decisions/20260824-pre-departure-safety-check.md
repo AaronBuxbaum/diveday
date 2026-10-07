@@ -34,7 +34,7 @@ a crew has open at the rail) — nothing had assembled them.
   first look, and nothing else is DiveDay's words.
 - **Informs, never gates.** Nothing here may block a departure page from rendering, a trip from
   sailing, or any other surface's own logic. Whether it *should* gate is a real, live question —
-  recorded as H-51 in `docs/product/human-decisions.md`, not decided by this table's shape or by an
+  recorded as H-51 in `docs/product/human-decisions/README.md`, not decided by this table's shape or by an
   engineer's default.
 - **Two states only: `checked` and `cleared`.** `cleared` is the undo — a re-tap of an already-
   checked item retracts it, mirroring roll call's own undo grammar, so an accidental tap leaves a

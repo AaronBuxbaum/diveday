@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { invoicingProviderFromEnvironment } from "./invoicing";
 
+/** The `stripe_api.request_threw` lines a case wrote, parsed. */
+function threwLines(spy: { mock: { calls: unknown[][] } }): Array<Record<string, unknown>> {
+  return spy.mock.calls
+    .map((call) => JSON.parse(String(call[0])) as Record<string, unknown>)
+    .filter((line) => line.event === "stripe_api.request_threw");
+}
+
 function providerWith(env: Record<string, string | undefined>, fetchImpl: unknown) {
   return invoicingProviderFromEnvironment(env, fetchImpl as typeof fetch);
 }
@@ -149,10 +156,15 @@ describe("stripe invoicing provider", () => {
     expect(await provider.createInvoice(request)).toEqual({ status: "failed" });
   });
 
-  it("fails on a network error", async () => {
+  it("fails on a network error, and logs the throw", async () => {
+    const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
     const fetchImpl = vi.fn().mockRejectedValue(new Error("network"));
     const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
     expect(await provider.createInvoice(request)).toEqual({ status: "failed" });
+    expect(threwLines(warned)).toEqual([
+      expect.objectContaining({ operation: "create_invoice", errorCode: "Error" }),
+    ]);
+    warned.mockRestore();
   });
 
   it("voids an invoice on the connected account", async () => {

@@ -5,8 +5,9 @@ import { nowDate } from "@/lib/clock";
 import { seatName } from "@/lib/held-seat";
 import { isUuid } from "@/lib/uuid";
 import { loadActiveStaffRoles } from "./authz";
-import { type AppDb, type DbExecutor, isUniqueConstraintViolation } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { publishManifestEvent } from "./manifest-events";
+import { isUniqueConstraintViolation } from "./query-helpers";
 import {
   bookings,
   buddyPairMembers,

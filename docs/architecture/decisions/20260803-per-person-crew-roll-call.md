@@ -192,5 +192,5 @@ Why now: four shipped diver-facing strings already said roll call works offline,
 needs both halves — so an after-dive checkpoint, the one where a person may still be in the water,
 could not be closed at sea. The owner chose to build the half rather than narrow the copy. The data
 question this asks — crew **person ids** inside the encrypted snapshot retained on crew devices —
-is settled by **H-46** (`docs/product/human-decisions.md`), which adds one field to that payload's
+is settled by **H-46** (`docs/product/human-decisions/README.md`), which adds one field to that payload's
 allow-list deliberately.

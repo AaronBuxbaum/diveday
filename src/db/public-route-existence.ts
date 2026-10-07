@@ -107,6 +107,7 @@
  */
 
 import type { PublicRouteQuery } from "@/lib/public-route-shape";
+import { TtlLru } from "@/lib/ttl-lru";
 import type { AppDb } from "./client";
 import { getCourseBySlug } from "./courses";
 import { getDiveSiteBySlug } from "./dive-sites";
@@ -171,4 +172,57 @@ export async function publicRouteLookup(
         hidden: false,
       };
   }
+}
+
+/** How long an instance believes "this URL names a row" without asking again. */
+export const PUBLIC_ROUTE_LOOKUP_TTL_MS = 60_000;
+const PUBLIC_ROUTE_LOOKUP_MAX_ENTRIES = 2_000;
+
+const rememberedLookups = new TtlLru<PublicRouteLookup>(
+  PUBLIC_ROUTE_LOOKUP_MAX_ENTRIES,
+  PUBLIC_ROUTE_LOOKUP_TTL_MS,
+);
+
+/**
+ * {@link publicRouteLookup} behind a per-instance memory of the answers that
+ * said **yes** (app audit 2026-10-07, item 21).
+ *
+ * `src/proxy.ts` asks this before the static shell of every public `/s/**`
+ * document, so without a memory every public page view opened the pool and
+ * paid one to two round trips before a byte was sent. Remembering the yeses
+ * for {@link PUBLIC_ROUTE_LOOKUP_TTL_MS} takes a busy storefront's repeat
+ * views off the database entirely; `open` is only called on a miss, so a warm
+ * instance answering a remembered URL never touches the pool at all.
+ *
+ * **What it is allowed to get wrong, and for how long.** Only a plain yes —
+ * `exists`, and not a hidden course — is remembered, so:
+ *
+ * - A shop, departure, course or site created (or a course published) a
+ *   moment ago is visible at once. A refusal is never remembered, and neither
+ *   is a hidden course, so nothing new waits on a TTL.
+ * - One deleted (or a course taken off the public site) may still pass the
+ *   edge for up to the TTL on an instance that saw it live. That is the same
+ *   answer the edge gave a minute earlier, and it is not the only gate: the
+ *   page's own reader runs its own `notFound()` and its own `isActive` and
+ *   staff checks on every render, so the lingering yes buys a dead link the
+ *   page's 404 rather than the edge's — never a hidden row.
+ *
+ * The key is the whole shape, so a course and a site with one slug, or one
+ * slug under two shops, never share an entry. A throw is never remembered.
+ */
+export async function rememberedPublicRouteLookup(
+  shape: PublicRouteQuery,
+  open: () => Promise<AppDb>,
+): Promise<PublicRouteLookup> {
+  const key = JSON.stringify(shape);
+  const remembered = rememberedLookups.get(key);
+  if (remembered) return remembered;
+  const lookup = await publicRouteLookup(await open(), shape);
+  if (lookup.exists && !lookup.hidden) rememberedLookups.set(key, lookup);
+  return lookup;
+}
+
+/** Forget every remembered answer — for tests. */
+export function forgetPublicRouteLookups(): void {
+  rememberedLookups.clear();
 }

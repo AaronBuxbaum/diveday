@@ -1,6 +1,6 @@
 ---
 name: design-implementation
-description: Build a surface from a design canvas — the read order that keeps a drawing from overriding shipped code, and the obligations that close the loop when a slice lands. Use when implementing any slice of a design recorded in docs/design/canvases/, or whenever a canvas and the code disagree.
+description: Build a surface from a design canvas in docs/design/canvases/ without letting the drawing override shipped code. Use when implementing a canvas slice or when a canvas and the code disagree.
 ---
 
 # Building from a design canvas

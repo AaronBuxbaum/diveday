@@ -53,7 +53,7 @@ the inherited surfaces explicitly by naming the PR each one came from; a reviewe
 apart from yours by looking.
 
 **On a stacked pull request, read that comment on every layer.** A layer's baseline is the head
-commit of the layer below, whose S3 snapshot exists only if its own four visual shards went green in
+commit of the layer below, whose S3 snapshot exists only if its own eight visual shards went green in
 a run that finished first — and a cascading rebase rewrites every commit above the merge point,
 orphaning the keys published under them. So `NOTHING WAS COMPARED` is a *likelier* outcome here than
 on an ordinary branch, and it means the same thing it always does: unknown, not clean. Re-run the

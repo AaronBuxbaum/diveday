@@ -1,17 +1,18 @@
 ---
 name: schema-change
-description: How to change the database schema (Drizzle/Postgres/PGlite) safely — new tables, columns, enums, constraints, indexes. Use whenever editing src/db/schema.ts or when a feature needs new persistent state.
+description: Change the database schema safely (Drizzle, PGlite) — tables, columns, enums, constraints, indexes. Use when editing src/db/schema/ or when a feature needs new persistent state.
 ---
 
 # Change the schema
 
-`src/db/schema.ts` is the source of truth; `drizzle/` holds generated SQL migrations, which are
+`src/db/schema/` (one module per domain, re-exported by `index.ts`) is the source of truth; `drizzle/` holds generated SQL migrations, which are
 **committed** and never hand-edited (ADR-0005). Never read `drizzle/` to answer schema
-questions — read `schema.ts`.
+questions — read the schema module.
 
 ## Steps
 
-1. **Edit `src/db/schema.ts`.** Keep TS unions aligned with their pg enums (e.g. `Role` in
+1. **Edit the domain's module under `src/db/schema/`** (a new table goes beside its domain; a
+   new domain gets a module and an `export *` line in `index.ts`). Keep TS unions aligned with their pg enums (e.g. `Role` in
    `src/lib/authz.ts` ↔ `person_role`). Multi-tenancy rule: every domain table carries
    `shop_id`. A surprising modeling choice gets an ADR; a new domain concept goes in the
    glossary — same PR.
@@ -24,23 +25,23 @@ questions — read `schema.ts`.
    migration chain via `createTestDb()` — the column exists as soon as the migration does.
    Write failure-path tests for new constraints (unique violations, FK violations), not just
    happy paths.
-5. **Run the coverage guards before you push.** Touching `src/db/schema.ts` at all — a whole table
+5. **Run the coverage guards before you push.** Touching any file under `src/db/schema/` — a whole table
    or a single column — is the trigger, not the shape of the change:
 
    ```bash
    pnpm test src/db/export.test.ts src/db/diver-merge.test.ts src/db/delete-path-coverage.test.ts src/db/retention.test.ts --reporter=dot
    ```
 
-   Three files, 40 tests, about a minute. They assert over `schema.ts` from files your change will
+   Three files, 40 tests, about a minute. They assert over the schema from files your change will
    not touch, so a focused `pnpm test <file>` never selects them and you learn about them from CI
    instead — which is how 16g's four columns, 16i's `recap_pulses` table *and* its
    `addressed_by_person_id`, and 16j-B's two `person_id` columns all went red after a push. An
    unclassified `person_id` is the expensive one: a merge silently leaves rows pointing at a
-   removed diver. `pnpm test:changed` selects these too, but after a `schema.ts` edit it selects
+   removed diver. `pnpm test:changed` selects these too, but after a schema edit it selects
    the *whole* suite (9,391 of 9,391 entries, measured 2026-09-06) — that run belongs to CI.
 6. **Local sanity**: `pnpm db:reset && pnpm e2e` exercises the auto-migrate + auto-seed boot
    from zero.
-7. **Commit together**: `schema.ts`, `drizzle/**`, seed, tests, docs. One schema change per PR
+7. **Commit together**: the schema module, `drizzle/**`, seed, tests, docs. One schema change per PR
    where possible.
 
 ## Removing something
@@ -54,7 +55,7 @@ value nothing writes any more:
   shapes. Each of those is a migration spent on rows that have never had a reader — three follow-ups
   proposed exactly that in one week.
 - **Take the code with it.** A writer with no production caller, its tests, its CSV column in
-  `src/db/export.ts`, its seed references, and its glossary entry all go in the same change. A table
+  `src/db/export-shop-files.ts` (and `export-diver-files.ts`), its seed references, and its glossary entry all go in the same change. A table
   kept alive only by its own test suite is the shape to watch for: grep the writer's name and see
   whether anything outside `*.test.ts` calls it.
 - The absence of a compatibility path is **not** an oversight to fix.
@@ -134,7 +135,7 @@ Two things to hold on to:
 - Never hand-edit a migration that has been pushed (applied history is immutable) — ship a new
   migration instead.
 - Never resolve a merge conflict inside `drizzle/` by hand: revert your migration files, rebase,
-  regenerate from the merged `schema.ts`, and re-commit. See "Two branches, two migrations" below
+  regenerate from the merged schema, and re-commit. See "Two branches, two migrations" below
   for the case where nothing conflicts in git and the graph still ends up with two heads.
 - Never run destructive SQL against a database you didn't create this session.
 

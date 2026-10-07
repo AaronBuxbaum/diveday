@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { logStripeRequestThrew } from "./stripe-request-log";
 
 /**
  * Order/invoice creation on a shop's connected Stripe account. Every call
@@ -369,7 +370,8 @@ export function stripeInvoicingProvider(
         ).catch(() => undefined);
 
         return { status: "created", ...toCreatedInvoice(finalizeBody.data, stripeCustomerId) };
-      } catch {
+      } catch (error) {
+        logStripeRequestThrew("create_invoice", error);
         return { status: "failed" };
       }
     },
@@ -382,7 +384,8 @@ export function stripeInvoicingProvider(
           new URLSearchParams(),
         );
         return { status: response.ok ? "voided" : "failed" };
-      } catch {
+      } catch (error) {
+        logStripeRequestThrew("void_invoice", error);
         return { status: "failed" };
       }
     },
@@ -395,7 +398,8 @@ export function stripeInvoicingProvider(
           new URLSearchParams(),
         );
         return { status: response.ok ? "sent" : "failed" };
-      } catch {
+      } catch (error) {
+        logStripeRequestThrew("resend_invoice", error);
         return { status: "failed" };
       }
     },
@@ -431,7 +435,8 @@ export function stripeInvoicingProvider(
         return body.success
           ? { status: "refunded", refundId: body.data.id, amountCents: body.data.amount }
           : { status: "failed" };
-      } catch {
+      } catch (error) {
+        logStripeRequestThrew("refund_invoice", error);
         return { status: "failed" };
       }
     },
@@ -455,7 +460,8 @@ export function stripeInvoicingProvider(
             taxCents: taxCentsOf(body.data),
           },
         };
-      } catch {
+      } catch (error) {
+        logStripeRequestThrew("retrieve_invoice", error);
         return { status: "failed" };
       }
     },

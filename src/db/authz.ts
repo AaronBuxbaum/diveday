@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { cache } from "react";
 import {
   canConfigureTrips,
   canDeleteDiver,
@@ -61,7 +62,7 @@ async function activeStaffRolesFor(db: DbExecutor, personId: string): Promise<Ro
  * caller with no shop yet resolved wants `loadActiveStaffRolesByPerson`
  * below instead.
  */
-export async function loadActiveStaffRoles(
+async function readActiveStaffRoles(
   db: DbExecutor,
   shopId: string,
   personId: string,
@@ -87,7 +88,7 @@ export async function loadActiveStaffRoles(
  * `requireShopSurface`'s own tenant assert to catch and 404 on, not a
  * reason for this check to say the account is inactive.
  */
-export async function loadActiveStaffRolesByPerson(
+async function readActiveStaffRolesByPerson(
   db: DbExecutor,
   personId: string,
 ): Promise<Role[] | null> {
@@ -99,6 +100,20 @@ export async function loadActiveStaffRolesByPerson(
   if (!person || person.deletedAt) return null;
   return activeStaffRolesFor(db, personId);
 }
+
+/**
+ * Memoized per request with React's `cache()` (app audit 2026-10-07, item 2):
+ * the staff gate, the shell and every `canPerson*` gate on a page asked this
+ * same question of the same connection, two to three statements a time, up
+ * to seven times in one trip-page render. Keyed on the executor's identity as
+ * well as the ids, so a transaction handle never shares an answer with the
+ * pool; outside a render (an action, a route handler, a test) `cache()` calls
+ * straight through and every call reads live, as before.
+ */
+export const loadActiveStaffRoles = cache(readActiveStaffRoles);
+
+/** {@link loadActiveStaffRoles}'s person-scoped sibling, memoized the same way. */
+export const loadActiveStaffRolesByPerson = cache(readActiveStaffRolesByPerson);
 
 async function canPerson(
   db: DbExecutor,

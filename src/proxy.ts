@@ -2,7 +2,7 @@ import { getCookieCache, getSessionCookie } from "better-auth/cookies";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
-import { publicRouteLookup } from "@/db/public-route-existence";
+import { rememberedPublicRouteLookup } from "@/db/public-route-existence";
 import { authSecret } from "@/lib/auth-secret";
 import { isStaff, type Role } from "@/lib/authz";
 import {
@@ -512,10 +512,11 @@ async function refusedPublicRoute(
   // who sent a parameter that made the verifier raise. So the read is fenced
   // here and every judgement about what it returned is made after it, where a
   // throw is a 500 rather than a silent admission (issue #1735).
-  let lookup: Awaited<ReturnType<typeof publicRouteLookup>>;
+  let lookup: Awaited<ReturnType<typeof rememberedPublicRouteLookup>>;
   try {
-    const db = await getDb();
-    lookup = await publicRouteLookup(db, shape);
+    // Remembered per instance for a minute when the answer is a plain yes, and
+    // the pool is opened only on a miss (`rememberedPublicRouteLookup`).
+    lookup = await rememberedPublicRouteLookup(shape, getDb);
   } catch (error) {
     return databaseUnavailable(error, shape);
   }

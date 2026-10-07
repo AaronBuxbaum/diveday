@@ -26,7 +26,7 @@ that authorizes a materially riskier dive: the deep gate is what keeps an uncard
 still gated — that mitigation disappears the moment specialties import. The assistant put the choice
 to the owner as three postures (clears on import like a ladder card / verified but gate holds until
 confirm / imports `pending`), and the owner chose the middle one. Recorded as **H-23** in
-`docs/product/human-decisions.md`.
+`docs/product/human-decisions/README.md`.
 
 Two smaller gaps surfaced while reading the same path and are fixed here because leaving them would
 make the new row's copy false: a card's **expiry was silently dropped** on import (nothing mapped to

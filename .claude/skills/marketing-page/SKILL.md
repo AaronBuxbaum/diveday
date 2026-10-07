@@ -1,6 +1,6 @@
 ---
 name: marketing-page
-description: Write or edit the public marketing pages (/, /product, /pricing, /onboard, /switching/*) — copy, positioning, SEO metadata, feature claims, or pricing display. Use whenever a task touches public-page copy or when a shipped feature changes what a buyer should be told.
+description: Write or edit the public marketing pages (/, /product, /pricing, /onboard, /switching/*) — copy, positioning, SEO, claims, pricing. Use when a task touches public-page copy or a shipped feature changes what a buyer should be told.
 ---
 
 # Marketing page work
