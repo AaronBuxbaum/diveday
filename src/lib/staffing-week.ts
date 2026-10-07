@@ -176,6 +176,23 @@ export type CrewClash = { tripId: string; title: string };
  * chip's own meeting, not of the run: a course still mid-week keeps the mark on
  * the legs that are still ahead.
  */
+/**
+ * **One warning per clash** (UX audit 2026-10-07, item 34). A clash is a pair
+ * of departures, and both of them name the other, so one person's day said the
+ * same fact twice, once under each boat, side by side. The earlier departure
+ * keeps the line and the later one drops the clash it already shares; a
+ * clash with a departure not placed on this day still draws, since nothing
+ * else in the column says it. Takes the day's crewing already in start order.
+ */
+export function sayEachClashOnce(crewing: readonly PlacedTrip[]): PlacedTrip[] {
+  const said = new Set<string>();
+  return crewing.map((trip) => {
+    const clashes = trip.clashes.filter((clash) => !said.has(`${clash.tripId}|${trip.tripId}`));
+    for (const clash of clashes) said.add(`${trip.tripId}|${clash.tripId}`);
+    return clashes.length === trip.clashes.length ? trip : { ...trip, clashes };
+  });
+}
+
 export function clashingDepartures(
   window: TripMeeting,
   tripId: string,
@@ -509,7 +526,7 @@ export function staffWeek(input: {
     const personDays = dates.map((date) => ({
       date,
       shifts: (shiftsByDay.get(date) ?? []).sort(byStart),
-      crewing: (crewingByDay.get(date) ?? []).sort(byStart),
+      crewing: sayEachClashOnce((crewingByDay.get(date) ?? []).sort(byStart)),
       away: ownBlocks.filter((block) => blockCoversDay(block, date)),
     }));
     return {

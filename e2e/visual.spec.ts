@@ -4244,9 +4244,8 @@ for (const scheme of ["light", "dark"] as const) {
       // Staffing as a week (ADR 20260827-the-shops-shelves, decision 3):
       // people down the side, seven shop-local days across the top, shifts as
       // quiet chips, credentials as a ledger beneath. The demo's own week,
-      // gap row included — the seeded board carries the departure whose
-      // divemaster is driving it (`seed-trips.ts`, the DOM-M3 case), which
-      // Today already reports as uncrewed and this surface now agrees with.
+      // which carries no gap row: the DOM-M3 charter (`seed-trips.ts`) sails
+      // the week after, and the gap is photographed below on purpose.
       // Its 390 image is the day list, which is what the week collapses to
       // below `lg` (the same call H-63 made for the board).
       test(`the staffing week renders true to the design (${scheme})`, async ({ page }) => {

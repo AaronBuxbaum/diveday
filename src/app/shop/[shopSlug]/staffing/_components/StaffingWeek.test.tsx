@@ -469,17 +469,18 @@ describe("StaffingWeek standing crew clash", () => {
     return { grid, list };
   }
 
-  it("names the other departure on each chip, in the day the overlap falls", () => {
+  it("names the other departure once, under the earlier chip, in the day the overlap falls", () => {
     const { container } = renderWeek({ people: [{ ...KEIKO, crewingTrips: [DRIFT, WRECK] }] });
     const { grid, list } = branches(container);
 
-    // Both hulls say it, because a manager fixes this from whichever one they
-    // opened, and each names the *other* boat. The word is what carries it —
+    // One clash, one line (UX audit 2026-10-07, item 34): the two chips sit
+    // side by side in the same day, so the earlier boat names the later one
+    // and the later one does not say it back. The word is what carries it —
     // this grid's own rule, and the reason the chip is the blackout's chip
     // rather than a second warning grammar.
     for (const branch of [grid, list]) {
       expect(within(branch).getByText("Also rostered on Spiegel Grove")).toBeVisible();
-      expect(within(branch).getByText("Also rostered on Reef drift")).toBeVisible();
+      expect(within(branch).queryByText("Also rostered on Reef drift")).toBeNull();
     }
   });
 
@@ -780,8 +781,10 @@ describe("StaffingWeek geometry", () => {
     const listLines = within(list)
       .getAllByText(/^Also rostered on /)
       .map(lineOf);
-    expect(chipLines).toHaveLength(5);
-    expect(listLines).toHaveLength(2);
+    // One clash line (said once, under the earlier boat), two away lines and
+    // the gap's; one clash line in the list.
+    expect(chipLines).toHaveLength(4);
+    expect(listLines).toHaveLength(1);
 
     for (const [lines, gap, glyph] of [
       [chipLines, "gap-1", "size-3"],

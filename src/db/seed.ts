@@ -233,7 +233,9 @@ async function seedStaffShifts(db: DbExecutor, shopId: string, personIds: string
       personId,
       startsAt,
       endsAt,
-      note: "Demo schedule",
+      // No note: a seed label ("Demo schedule") on every chip of the Crew
+      // view read as a test fixture, not a shop (UX audit 2026-10-07, item 34).
+      note: null,
       createdByPersonId: personId,
     })),
   );
