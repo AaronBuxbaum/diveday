@@ -1161,7 +1161,7 @@ export default async function ManageTripPage({
 
             <PulseFacts
               facts={shownPulseFacts}
-              foldLabel={(count) => t("trips.pulse.beforeBoarding", { count })}
+              foldLabel={(count) => t("trips.pulse.toSort", { count })}
             />
 
             <TripRosterContent

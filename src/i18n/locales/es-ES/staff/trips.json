@@ -141,7 +141,7 @@
     "needsInstructor": "El curso necesita instructor",
     "overRatio": "Ratio de alumnos excedida",
     "overIntroRatio": "Ratio de bautismo excedida",
-    "beforeBoarding": "{count, plural, one {# cosa antes de embarcar} other {# cosas antes de embarcar}}",
+    "toSort": "{count, plural, one {# cosa por resolver} other {# cosas por resolver}}",
     "prepGaps": "{count, plural, one {A # buceador le faltan tallas de alquiler} other {A # buceadores les faltan tallas de alquiler}}",
     "awaitingPayment": "{count, plural, one {# pedido pendiente de pago} other {# pedidos pendientes de pago}}",
     "noRequirements": "Define los requisitos para que alguien pueda embarcar",

@@ -180,7 +180,7 @@
     "blockedCount": "{count, plural, one {# bloqueado} other {# bloqueados}}",
     "departuresLabel": "Salidas",
     "needsYouCount": "{count, plural, one {# cosa} other {# cosas}}",
-    "deskFoldLabel": "{count, plural, one {# cosa para el mostrador} other {# cosas para el mostrador}}",
+    "deskFoldLabel": "{count, plural, one {# más para otras salidas y el mostrador} other {# más para otras salidas y el mostrador}}",
     "needsYouLabel": "Pendiente"
   },
   "quietAddDeparture": "Añadir una salida",

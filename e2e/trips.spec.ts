@@ -218,7 +218,7 @@ test.describe("trip pulse", () => {
     // surfaces, slice 5d — the `?rf=` filter retired with the chips).
     // The work facts (sizes to take, an order to collect) fold into one line
     // above the count, which opens to the same doors (UX audit item 23).
-    await page.getByText(/^\d+ things before boarding$/).click();
+    await page.getByText(/^\d+ things to sort$/).click();
     await expect(page.getByRole("link", { name: /missing rental sizes/ })).toBeVisible();
     // This boat is inside its arrivals window, so the desk's count leads the
     // roster and says "can't board yet" itself; the pulse's door to the same
@@ -252,7 +252,7 @@ test.describe("trip pulse", () => {
     // difference matters: reconstructing the URL only ever proved the URL, and
     // would have kept passing if the fact stopped rendering at all.
     await page.goto(`/shop/blue-mantis/trips/${tripId}`);
-    await page.getByText(/^\d+ things before boarding$/).click();
+    await page.getByText(/^\d+ things to sort$/).click();
     await page.getByRole("link", { name: /awaiting payment/ }).click();
     await expect(page).toHaveURL(new RegExp(`tripId=${tripId}`));
     // Narrowed, and it says so with the departure's own name rather than

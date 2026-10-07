@@ -25,7 +25,8 @@ function FactLink({ fact }: { fact: TripPulseFact }) {
  * line: a missing instructor or a boat clash is never one tap deep. The rest
  * (rental sizes to take, orders awaiting payment) are work, not hazards: one
  * of them renders as its own link, and two or more fold into one line, "2
- * things before boarding", that opens to the same links.
+ * things to sort", that opens to the same links. Not "before boarding": an
+ * order awaiting payment does not gate boarding.
  *
  * **The stack's gap is measured to the words** (K-262). Each fact is a 44px
  * link round a 20px line, and gives the unseen 12px back as `-my-3`, so the
@@ -37,7 +38,7 @@ export function PulseFacts({
   foldLabel,
 }: {
   facts: readonly TripPulseFact[];
-  /** "2 things before boarding", already counted for the folded facts. */
+  /** "2 things to sort", already counted for the folded facts. */
   foldLabel: (count: number) => string;
 }) {
   if (facts.length === 0) return null;

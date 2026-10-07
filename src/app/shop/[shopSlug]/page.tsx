@@ -954,6 +954,7 @@ async function TodayBody({
           timeZone={shop.timezone}
           currency={shop.currency}
           crewedTripIds={lens === "boat" ? crewedTripIds : undefined}
+          readerPersonId={session.user.personId}
           withheldCount={withheldCount}
           drafts={spineDrafts}
           helpRequestAction={updateHelpRequestAction}

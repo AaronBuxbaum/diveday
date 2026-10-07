@@ -180,7 +180,7 @@
     "blockedCount": "{count} blocked",
     "departuresLabel": "Departures",
     "needsYouCount": "{count, plural, one {# thing} other {# things}}",
-    "deskFoldLabel": "{count, plural, one {# thing for the desk} other {# things for the desk}}",
+    "deskFoldLabel": "{count, plural, one {# more for other boats and the desk} other {# more for other boats and the desk}}",
     "needsYouLabel": "Needs you"
   },
   "quietAddDeparture": "Add a departure",

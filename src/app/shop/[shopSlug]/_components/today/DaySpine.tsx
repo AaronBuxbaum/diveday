@@ -489,6 +489,7 @@ export function DaySpine({
   timeZone,
   currency,
   crewedTripIds,
+  readerPersonId,
   withheldCount = 0,
   helpRequestAction,
   drafts = [],
@@ -511,6 +512,11 @@ export function DaySpine({
    * about them lead the Needs you list while every other row folds.
    */
   crewedTripIds?: readonly string[];
+  /**
+   * The signed-in staffer, so a row about them (their own credential coming
+   * due) stays open under the crew lens instead of folding with the desk's.
+   */
+  readerPersonId?: string;
   /** How many rows the reader's role lens withheld (issue #715). */
   withheldCount?: number;
   helpRequestAction?: SpineHelpRequestAction;
@@ -650,12 +656,14 @@ export function DaySpine({
   // **A crew reader's lens** (UX audit 2026-10-07, item 7): for a captain or
   // divemaster who crews one of today's boats, the list leads with that boat's
   // rows, and every other row folds into one line. A danger row about any boat
-  // never folds: a diver unaccounted for is everyone's to see.
+  // never folds: a diver unaccounted for is everyone's to see. Nor does a row
+  // about the reader themself, such as their own credential coming due.
   const crewsToday = spine.stations.some((station) => crewed.has(station.tripId));
   const leads = (action: TodayAction) =>
     !crewsToday ||
     ACTION_KIND_META[action.kind].tone === "danger" ||
-    (action.departure != null && crewed.has(action.departure.tripId));
+    (action.departure != null && crewed.has(action.departure.tripId)) ||
+    (readerPersonId != null && action.staffPersonId === readerPersonId);
   const lead = needsYou.filter(leads);
   const folded = needsYou.filter((action) => !leads(action));
   const deskFold = crewsToday && (folded.length > 0 || showPaymentsRow) ? folded : null;

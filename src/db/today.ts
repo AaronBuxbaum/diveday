@@ -2913,6 +2913,7 @@ export async function getTodayWork(
     actions.push({
       id: `staff-credential:${personId}`,
       kind: "staff_credential_due",
+      staffPersonId: personId,
       urgency: entry.overdue ? "now" : urgencyFor(entry.dueAt, now),
       subject: entry.name,
       context: null,

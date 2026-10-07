@@ -6,7 +6,7 @@ import { PulseFacts } from "./PulseFacts";
 
 afterEach(cleanup);
 
-const label = (count: number) => `${count} things before boarding`;
+const label = (count: number) => `${count} things to sort`;
 
 describe("PulseFacts (UX audit item 23)", () => {
   it("renders nothing when nothing needs anyone", () => {
@@ -22,7 +22,7 @@ describe("PulseFacts (UX audit item 23)", () => {
       />,
     );
     expect(screen.getByRole("link", { name: "1 order is awaiting payment" })).toBeVisible();
-    expect(screen.queryByText(/before boarding/)).toBeNull();
+    expect(screen.queryByText(/to sort/)).toBeNull();
   });
 
   it("folds two work facts into one closed line that opens to the same doors", () => {
@@ -38,7 +38,7 @@ describe("PulseFacts (UX audit item 23)", () => {
     const fold = container.querySelector("details");
     expect(fold).not.toBeNull();
     expect(fold).not.toHaveAttribute("open");
-    expect(screen.getByText("2 things before boarding")).toBeInTheDocument();
+    expect(screen.getByText("2 things to sort")).toBeInTheDocument();
     expect(fold?.querySelectorAll("a")).toHaveLength(2);
   });
 

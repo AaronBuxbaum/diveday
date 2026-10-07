@@ -3,10 +3,12 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
+  ACTION_KIND_META,
   assembleDaySpine,
   type FactOfScale,
   type SpineDeparture,
   type TodayAction,
+  type TodayActionKind,
 } from "@/lib/today";
 
 // The spine composes WaiverSendControl/ResendConfirmationControl/
@@ -145,6 +147,7 @@ function renderSpine({
   showPaymentsRow?: boolean;
   drafts?: SpineDraft[];
   crewedTripIds?: string[];
+  readerPersonId?: string;
   sessions?: React.ReactNode;
   firstRun?: React.ReactNode;
   firstBooking?: FirstBooking | null;
@@ -1375,7 +1378,7 @@ describe("the evening reading", () => {
         action({ id: "r", kind: "reviews_pending", subject: "1 review", urgency: "later" }),
       ],
     });
-    const fold = screen.getByText("2 things for the desk").closest("details");
+    const fold = screen.getByText("2 more for other boats and the desk").closest("details");
     if (!fold) throw new Error("the desk rows did not fold");
     expect(fold).not.toHaveAttribute("open");
     expect(within(fold).getByText("Sal Moretti", { exact: false })).toBeInTheDocument();
@@ -1386,13 +1389,70 @@ describe("the evening reading", () => {
     expect(screen.getByText("Priya Sharma", { exact: false })).toBeVisible();
   });
 
+  const dangerKinds = (Object.keys(ACTION_KIND_META) as TodayActionKind[]).filter(
+    (kind) => ACTION_KIND_META[kind].tone === "danger",
+  );
+
+  it("has danger-tone kinds to keep open, so the next case is not vacuous", () => {
+    expect(dangerKinds.length).toBeGreaterThan(0);
+  });
+
+  it.each(dangerKinds)("never folds a %s row about another boat for a crew reader", (kind) => {
+    renderSpine({
+      departures: [
+        departure({ tripId: "mine", title: "Dawn Two-Tank" }),
+        departure({ tripId: "other", title: "Wreck Trip", startsAt: hoursFromNow(3) }),
+      ],
+      crewedTripIds: ["mine"],
+      actions: [
+        action({ id: "o", kind: "waiver", subject: "Sal Moretti", departure: boat("other") }),
+        action({ id: "d", kind, subject: "Keiko Tanaka", departure: boat("other") }),
+      ],
+    });
+    const fold = screen.getByText("1 more for other boats and the desk").closest("details");
+    if (!fold) throw new Error("the other boat's rows did not fold");
+    expect(within(fold).queryAllByText("Keiko Tanaka", { exact: false })).toEqual([]);
+    for (const shown of screen.getAllByText("Keiko Tanaka", { exact: false })) {
+      expect(shown.closest("details")).toBeNull();
+    }
+  });
+
+  it("keeps the reader's own credential row open while the desk's fold", () => {
+    renderSpine({
+      departures: [departure({ tripId: "mine", title: "Dawn Two-Tank" })],
+      crewedTripIds: ["mine"],
+      readerPersonId: "me",
+      actions: [
+        action({
+          id: "staff-credential:me",
+          kind: "staff_credential_due",
+          staffPersonId: "me",
+          subject: "Sal Moretti",
+          urgency: "later",
+        }),
+        action({
+          id: "staff-credential:them",
+          kind: "staff_credential_due",
+          staffPersonId: "them",
+          subject: "Keiko Tanaka",
+          urgency: "later",
+        }),
+      ],
+    });
+    const fold = screen.getByText("1 more for other boats and the desk").closest("details");
+    if (!fold) throw new Error("the other staffer's row did not fold");
+    expect(within(fold).getByText("Keiko Tanaka", { exact: false })).toBeInTheDocument();
+    expect(within(fold).queryByText("Sal Moretti", { exact: false })).toBeNull();
+    expect(screen.getByText("Sal Moretti", { exact: false })).toBeVisible();
+  });
+
   it("folds nothing for a reader who crews none of today's boats", () => {
     renderSpine({
       departures: [departure({ tripId: "t1" })],
       crewedTripIds: [],
       actions: [action({ id: "o", subject: "Sal Moretti", departure: boat("t1") })],
     });
-    expect(screen.queryByText(/for the desk/)).toBeNull();
+    expect(screen.queryByText(/for other boats and the desk/)).toBeNull();
   });
 
   it("keeps the log off a live departure's card, which is the day's briefing", () => {
