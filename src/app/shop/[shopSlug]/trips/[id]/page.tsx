@@ -293,7 +293,13 @@ export default async function ManageTripPage({
             cap: crewGap.capacity,
             perInstructor: DSD_RATIO.openWaterStudentsPerInstructor,
           })
-        : t("trips.detail.overRatioWarning", { booked: crewGap.booked, cap: crewGap.capacity });
+        : crewGap.remedy === "instructor"
+          ? // Past the 12-per-instructor ceiling an assistant buys no seat.
+            t("trips.detail.overRatioWarningCeiling", {
+              booked: crewGap.booked,
+              cap: crewGap.capacity,
+            })
+          : t("trips.detail.overRatioWarning", { booked: crewGap.booked, cap: crewGap.capacity });
 
   // One resolution, handed to the section it belongs to. Whatever no rendered
   // section claims — a page-level permission refusal, or a section this
@@ -381,12 +387,15 @@ export default async function ManageTripPage({
         ...(crewGap.code === "over_ratio"
           ? [
               {
-                // Two caps, two people to find (issue #1677): a divemaster
-                // raises the student cap and adds nothing to an intro one.
+                // Who to go and find (issue #1677): a divemaster or AI raises
+                // the student cap up to 12 per instructor, and adds nothing
+                // past that or to an intro session.
                 text: t(
                   crewGap.ratio === "intro"
                     ? "trips.pulse.overIntroRatio"
-                    : "trips.pulse.overRatio",
+                    : crewGap.remedy === "instructor"
+                      ? "trips.pulse.overRatioInstructor"
+                      : "trips.pulse.overRatio",
                 ),
                 href: "?view=details#crew",
                 tone: "danger" as const,
