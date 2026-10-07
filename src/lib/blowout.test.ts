@@ -193,3 +193,48 @@ describe("qualifyingAlternatives — ordering and cap", () => {
     expect(offers(trips, openWaterDiver(), { horizonDays: 1 })).toEqual([trips[0].id]);
   });
 });
+
+describe("qualifyingAlternatives — the seat's own type (ADR 20261007-participant-types)", () => {
+  it("never offers a diver a boat whose diver seats are all taken", () => {
+    // Regression (dive-domain review, PR #2224): the offer read only the boat's
+    // capacity, so a diver was sent to a departure that would refuse them.
+    const diversFull = candidate({
+      capacity: 8,
+      activeBookings: 4,
+      activeDivers: 4,
+      diverCapacity: 4,
+    });
+    const room = candidate({ capacity: 8, activeBookings: 4, activeDivers: 3, diverCapacity: 4 });
+    expect(offers([diversFull, room], openWaterDiver())).toEqual([room.id]);
+  });
+
+  it("offers a snorkeler the boat whose diver seats are taken, if it sells a snorkeler's seat", () => {
+    const diversFull = candidate({
+      capacity: 8,
+      activeBookings: 4,
+      activeDivers: 4,
+      diverCapacity: 4,
+      snorkelerPriceCents: 4_500,
+    });
+    expect(offers([diversFull], openWaterDiver({ participantType: "snorkeler" }))).toEqual([
+      diversFull.id,
+    ]);
+  });
+
+  it("offers a rider only departures that sell a rider's seat", () => {
+    const noRiders = candidate({ riderPriceCents: null });
+    const riders = candidate({ riderPriceCents: 2_500 });
+    expect(offers([noRiders, riders], openWaterDiver({ participantType: "rider" }))).toEqual([
+      riders.id,
+    ]);
+  });
+
+  it("asks a rider for no card on a gated departure", () => {
+    const gated = candidate({
+      riderPriceCents: 0,
+      requirement: requirement({ minimumCertificationLevel: "advanced_open_water" }),
+    });
+    expect(offers([gated], openWaterDiver())).toEqual([]);
+    expect(offers([gated], openWaterDiver({ participantType: "rider" }))).toEqual([gated.id]);
+  });
+});
