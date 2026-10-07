@@ -6,7 +6,7 @@ import { buttonClass } from "@/components/ui/button";
 import { DisclosureCaret } from "@/components/ui/DisclosureCaret";
 import { DisclosureRow, DisclosureRowMessage } from "@/components/ui/disclosure";
 import { controlClass, DateField, Field, FieldGrid, textareaClassFor } from "@/components/ui/form";
-import { LEAD_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { ITEM_TITLE_CLASS, LEAD_TITLE_CLASS } from "@/components/ui/typography";
 import { telHref } from "@/lib/contact-links";
 import {
   COURSE_INQUIRY_EXPERIENCE,
@@ -106,12 +106,11 @@ export function DateRequestForm({
    */
   className?: string;
   /**
-   * The section heading's rung, which is the host's: a lead (24px) on the
-   * course page, whose sections all head themselves that way, and the brand
-   * face at `SECTION_TITLE_CLASS` (18px) on the storefront, where every other
-   * section head is. Hard-coded, it made "Ask us for a day" the one 24px head
-   * on an off-season storefront. Ignored by the collapsible row, whose
-   * `DisclosureRow` owns its heading.
+   * The section heading's rung, which is the host's: a lead on the course
+   * page, whose sections all head themselves that way, and the brand face at
+   * `SECTION_TITLE_CLASS` on the storefront, where every other section head
+   * is. Both are 24px since #1966; the face is what differs. Ignored by the
+   * collapsible row, whose `DisclosureRow` owns its heading.
    */
   headingClassName?: string;
   copy: DateRequestCopy;
@@ -288,7 +287,7 @@ export function DateRequestForm({
               captions and boxes on shared rows so a pair reads as a pair rather
               than as two boxes that happen to be adjacent. */}
           <fieldset className="sm:col-span-2">
-            <legend className={SECTION_TITLE_CLASS}>{copy.dateOptionsHeading}</legend>
+            <legend className={ITEM_TITLE_CLASS}>{copy.dateOptionsHeading}</legend>
             <FieldGrid columns={2} className="mt-3 gap-y-5">
               <Field label={copy.preferredDate}>
                 <DateField

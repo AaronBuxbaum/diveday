@@ -1,6 +1,6 @@
 import { ShopStatSkeleton, SkeletonLineBars } from "@/components/ShopPageHeader";
 import { sectionCardClass } from "@/components/ui/card";
-import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 
 /**
  * The packing list's own shape while its reads are in flight — the Tanks
@@ -19,7 +19,7 @@ import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
  * `h-28` boxes in `sm:grid-cols-3` — stacked 360px tall below 640px, where
  * the list draws one 98px row. On the departure page that collapse came right
  * after a jump to `#packing-list`. So: each section title in its own line box
- * (`LEAD_TITLE_CLASS`, the size the list sets every section title at), the
+ * (`SECTION_TITLE_CLASS`, the size the list sets every section title at), the
  * basis line's two phone lines and one desk line, the note under the tiles the
  * same, and `ShopStat`'s own tile three across at every width. Three because
  * a shop that offers nitrox draws Total, Air and Nitrox; one without draws
@@ -29,7 +29,7 @@ export function PrepBodySkeleton({ className }: { className: string }) {
   return (
     <div className={`animate-pulse ${className}`}>
       <div>
-        <div className={`h-lh ${LEAD_TITLE_CLASS} w-32 rounded bg-surface-sunken`} />
+        <div className={`h-lh ${SECTION_TITLE_CLASS} w-32 rounded bg-surface-sunken`} />
         <div className="mt-1">
           <SkeletonLineBars lines={{ base: 2, sm: 1 }} height="h-5" width="w-md max-w-full" />
         </div>
@@ -47,7 +47,7 @@ export function PrepBodySkeleton({ className }: { className: string }) {
         <div key={i} className={sectionCardClass({ padding: "md", className: "h-36" })} />
       ))}
       <div>
-        <div className={`h-lh ${LEAD_TITLE_CLASS} w-40 rounded bg-surface-sunken`} />
+        <div className={`h-lh ${SECTION_TITLE_CLASS} w-40 rounded bg-surface-sunken`} />
         <div className={sectionCardClass({ padding: "none", className: "mt-3 h-64" })} />
       </div>
     </div>

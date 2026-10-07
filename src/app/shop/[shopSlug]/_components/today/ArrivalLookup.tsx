@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { LedgerRow } from "@/components/ui/ledger";
-import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import type { CheckInQueueRow } from "@/db/check-in";
 import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -75,7 +75,7 @@ export function ArrivalLookup({
                   }
                 >
                   <div className="min-w-0">
-                    <p className={`${SECTION_TITLE_CLASS} break-words`}>{row.personName}</p>
+                    <p className={`${ITEM_TITLE_CLASS} break-words`}>{row.personName}</p>
                     <p className="text-sm text-muted tabular-nums">
                       {formatWeekdayTime(row.startsAt, locale, timeZone)} · {row.tripTitle}
                     </p>

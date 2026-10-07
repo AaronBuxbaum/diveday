@@ -53,8 +53,8 @@ import { SectionCard } from "@/components/ui/card";
   `Table`'s `flush` and `ShopStat`'s `inset` still follow containment — they drop the *border and
   fill*, which is a different question.
 - **The heading is folded in.** Pass `title`; never spell a heading class at a call site. The
-  card's `h2` is `LEAD_TITLE_CLASS` from `src/components/ui/typography.ts` (`text-2xl font-semibold
-  tracking-tight`, 24px). `titleAs="h3"` steps a card down one level, to `text-base
+  card's `h2` is `SECTION_TITLE_CLASS` from `src/components/ui/typography.ts` (`text-2xl
+  font-semibold tracking-tight`, 24px), the one section rung every section heading uses. `titleAs="h3"` steps a card down one level, to `text-base
   font-semibold` (16px), when it sits under a group that already owns the `h2` (the export page's
   Backups half). It changes the element *and* its size, so a group and the five cards under it
   never shout at the same volume.
@@ -86,11 +86,14 @@ it names itself.
 - **A plural body → the heading stands above, and the members name themselves.** "Plural" means a
   stack of sibling cards, a grid of object cards, one `padding="none"` shell of divided rows, or a
   body that renders `EmptyState` when it is empty. The group heading is a bare `<h2
-  className={LEAD_TITLE_CLASS}>`, the **same scale** as a card's own `h2`, because a section speaks
-  at one volume whether its heading sits inside one card or above five. Each card under it steps
-  down with `titleAs="h3"`, or carries the object's own name when the card *is* a thing. The tree
-  does not keep this yet: most hand-spelled section headings still wear `SECTION_TITLE_CLASS`
-  (`text-lg`, 18px) beside titled cards at 24px, and #1966 picks the one size.
+  className={SECTION_TITLE_CLASS}>`, the **same constant** as a card's own `h2`, because a section
+  speaks at one volume whether its heading sits inside one card or above five. Each card under it
+  steps down with `titleAs="h3"`, or carries the object's own name when the card *is* a thing.
+  **Every section heading is 24px** (Aaron, #1966): a card's title, a bare group heading, a
+  `<summary>` heading, a `<form>` card's first child, a tone panel. A named thing *inside* a
+  section (a diver's name on a roll-call row, a departure on the Today spine, a course day) takes
+  `ITEM_TITLE_CLASS`, 18px, and is never an `h2`. `pnpm check:type-ramp` refuses an `h2` at the
+  item rung and the reading ramp's `LEAD_TITLE_CLASS` anywhere under `src/app/shop`.
   The heading has to live above precisely because the body is unreliable: close-out's "Tomorrow"
   heading must survive its card swapping to an `EmptyState`, and a heading inside that card would
   vanish at the moment the section most needs to say "nothing waiting".
@@ -127,7 +130,7 @@ hierarchy, colour carries state. A heading that grew or shrank because something
 move the page's apparent structure as panels change state, and a reader would re-learn the
 hierarchy every time — so a tone-carrying panel's heading is never quieter for having a tone, and
 never louder for it either. The trip's packing list keeps it: its two warning panels, its two
-titled cards and its four group headings are all `LEAD_TITLE_CLASS`.
+titled cards and its four group headings are all `SECTION_TITLE_CLASS`.
 
 ### Section rhythm: `space-y-10`, never `mt-*`
 

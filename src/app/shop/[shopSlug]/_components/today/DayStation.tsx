@@ -4,7 +4,7 @@ import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { INLINE_LINE_BOX } from "@/components/ui/StatusMark";
-import { FIGURE_INLINE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { FIGURE_INLINE_CLASS, ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { staffDiveIntentLine } from "@/i18n/dive-intent-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatMoneyCents, formatTime } from "@/lib/format";
@@ -144,7 +144,7 @@ export function DayStation({
           </span>
         ) : null}
       </p>
-      <h3 className={`mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 ${SECTION_TITLE_CLASS}`}>
+      <h3 className={`mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 ${ITEM_TITLE_CLASS}`}>
         <Link
           href={`/shop/${shopSlug}/trips/${station.tripId}`}
           className={`${tapTargetLinkClass} group/station -mx-2 rounded-lg px-2 transition-colors hover:bg-surface-sunken hover:no-underline`}

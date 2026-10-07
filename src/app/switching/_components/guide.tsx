@@ -9,9 +9,9 @@ import { groupLabelClass } from "@/components/ui/ledger";
 import {
   BANNER_TITLE_CLASS,
   DISPLAY_TITLE_CLASS,
+  ITEM_TITLE_CLASS,
   LEAD_TITLE_CLASS,
   MARKETING_EYEBROW_CLASS,
-  SECTION_TITLE_CLASS,
   SUB_TITLE_CLASS,
 } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
@@ -504,7 +504,7 @@ export function ScopePhase({ locale, number }: { locale: DiverLocale; number: nu
       {/* The return trip, stated where the reader is weighing the one-way
           risk. The claim itself is never re-authored here. */}
       <div className="mt-10 max-w-2xl">
-        <h4 className={SECTION_TITLE_CLASS}>{t("switching.common.bothWaysTitle")}</h4>
+        <h4 className={ITEM_TITLE_CLASS}>{t("switching.common.bothWaysTitle")}</h4>
         <p className="mt-2 text-sm leading-6 text-muted">
           {t("switching.common.bothWaysBody", { claim: t(fullShopExport.claimKey) })}
         </p>
