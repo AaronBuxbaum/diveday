@@ -74,6 +74,7 @@ import { resolveTripNotice, TripNoticeBanner } from "./_components/TripNoticeBan
 import { TripAddDiverLink, TripCapacityBadge, TripPageHeader } from "./_components/TripPageHeader";
 import { TripPromoteAndActivity, TripRosterContent } from "./_components/TripRosterContent";
 import { TripStageBadge, TripTabs } from "./_components/TripTabs";
+import { DETAILS_FORMS, ROSTER_FORMS } from "./_components/trip-notice-tabs";
 import { tripTabsCopy } from "./_components/trip-tabs-copy";
 import {
   addInternalNoteAction,
@@ -480,26 +481,14 @@ export default async function ManageTripPage({
     station: entry.stationLabel ? staffTideStationText(t, entry.stationLabel) : null,
   }));
 
-  const aboutForms = new Set([
-    "details",
-    "requirements",
-    "conditions",
-    "crew",
-    "series",
-    "lifecycle",
-    // Promote lives on Details (`TripPromoteAndActivity`), so its answer does.
-    "last-minute-deal",
-  ]);
-  const rosterForms = new Set(["roster", "add-diver"]);
   const rootPageNotice =
-    tripNotice && !aboutForms.has(tripNotice.form) && !rosterForms.has(tripNotice.form)
+    tripNotice && !DETAILS_FORMS.has(tripNotice.form) && !ROSTER_FORMS.has(tripNotice.form)
       ? tripNotice
       : undefined;
   const rosterPageNotice = tripNotice && tripNotice.form === "roster" ? tripNotice : undefined;
-  // **Details is its own tab**, and a save on it lands back on it: the About
-  // forms redirect to the departure with their `form`, which is enough to
-  // know which tab the answer belongs to, so no action needs to know the tab.
-  const showDetails = view === "details" || Boolean(tripNotice && aboutForms.has(tripNotice.form));
+  // **Details is its own tab**, and a save on it lands back on it.
+  const showDetails =
+    view === "details" || Boolean(tripNotice && DETAILS_FORMS.has(tripNotice.form));
   const now = nowDate();
   const acceptsDivers = acceptsNewDivers(trip, now);
   const phase = tripPhaseOf({
