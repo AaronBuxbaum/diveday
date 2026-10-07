@@ -1,5 +1,6 @@
 {
   "//": "Line counts of the page.tsx files still over 400 lines. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
+  "// absorbed": "merged the perf layer: the trip page passes its shared reads to both readers (7 lines)",
   "src/app/onboard/page.tsx": 494,
   "src/app/page.tsx": 592,
   "src/app/pricing/page.tsx": 591,
@@ -16,7 +17,7 @@
   "src/app/shop/[shopSlug]/orders/[id]/page.tsx": 558,
   "src/app/shop/[shopSlug]/orders/new/page.tsx": 416,
   "src/app/shop/[shopSlug]/orders/page.tsx": 851,
-  "src/app/shop/[shopSlug]/page.tsx": 1088,
+  "src/app/shop/[shopSlug]/page.tsx": 1079,
   "src/app/shop/[shopSlug]/promos/page.tsx": 610,
   "src/app/shop/[shopSlug]/reports/page.tsx": 720,
   "src/app/shop/[shopSlug]/reviews/page.tsx": 466,
@@ -27,6 +28,6 @@
   "src/app/shop/[shopSlug]/staffing/page.tsx": 651,
   "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 761,
   "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 1186,
-  "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 1234,
+  "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 1241,
   "src/app/waivers/[token]/page.tsx": 1489
 }

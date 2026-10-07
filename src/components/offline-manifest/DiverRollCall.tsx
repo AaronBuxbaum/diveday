@@ -69,7 +69,7 @@ function OfflineDiverRow({
   view: OfflineTripView;
   controls: OfflineTripControls;
 }) {
-  const { envelope, checkpoint, isDeparture, expired } = view;
+  const { checkpoint, isDeparture, expired } = view;
   const {
     t,
     locale,
