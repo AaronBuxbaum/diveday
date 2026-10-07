@@ -572,14 +572,15 @@ test("/product holds one primary per screen across both of its doors", async ({ 
 
 test("a visitor who wants a shop is sent to a person, not a sign-up form", async ({ page }) => {
   // Every shop is set up by hand (ADR 20260925-shops-are-set-up-by-hand): the
-  // pricing page's second door is a mail to the onboarding inbox.
+  // pricing page's second door is the set-up request form, carrying the
+  // page's tag (ADR 20261007-setup-request-form).
   await page.goto("/pricing");
   await expect(
     page.getByRole("main").getByRole("link", { name: "Get set up" }).first(),
   ).toHaveAttribute("href", "/get-set-up?from=pricing");
 
   // And the old address, from a bookmark or a search result, is a closed door
-  // that says where to write — with no form, and nothing to submit.
+  // that sends them to the set-up form — with no sign-up form of its own.
   await page.goto("/onboard?from=pricing");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("We set up every shop by hand");
   await expect(page.getByRole("main").getByRole("link", { name: "Get set up" })).toHaveAttribute(
@@ -588,7 +589,7 @@ test("a visitor who wants a shop is sent to a person, not a sign-up form", async
   );
   await expect(page.locator('input[name="ownerPassword"]')).toHaveCount(0);
   // The one form left on the closed door is the demo, at link weight under the
-  // mail that is the page's primary, with its own funnel tag (issue #1956). It
+  // set-up link that is the page's primary, with its own funnel tag (issue #1956). It
   // linked to `/` until 2026-10-06, sending a reader to find the demo again.
   const mainForms = page.getByRole("main").locator("form");
   await expect(mainForms).toHaveCount(1);
@@ -605,11 +606,15 @@ test("a visitor who wants a shop is sent to a person, not a sign-up form", async
 });
 
 test("the setup link opens the form, which answers the hesitation it creates", async ({ page }) => {
-  await page.goto(`${ONBOARD_FORM_PATH}&from=pricing`);
-  // The tag still reaches the form when the link carries one. Scoped to the
-  // sign-up form: the footer's demo door carries a `source` of its own.
+  await page.goto(ONBOARD_FORM_PATH);
+  // The setup link is the owner's own, so the sign-up form carries no funnel
+  // tag: the tag a page's "Get set up" door carries now reaches the set-up
+  // request form instead (ADR 20261007-setup-request-form; asserted in the
+  // test below). Scoped to the sign-up form: the footer's demo door carries a
+  // `source` of its own.
   const signUpForm = page.locator('form:has(input[name="ownerPassword"])');
-  await expect(signUpForm.locator('input[name="source"]')).toHaveValue("pricing");
+  await expect(signUpForm).toBeVisible();
+  await expect(signUpForm.locator('input[name="source"]')).toHaveCount(0);
   // The footer's demo door stays link weight, so "Create shop & start trial"
   // is still the page's one primary (issue #1956).
   const demoDoor = page.getByRole("main").getByRole("button", { name: "Try the live demo" });
@@ -632,10 +637,20 @@ test("the setup link opens the form, which answers the hesitation it creates", a
   await expect(page.getByText("Your records are ready from day one.")).toHaveCount(0);
   await expect(page.getByText("Real support, one email away.")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Create shop & start trial" })).toBeVisible();
+});
+
+test("a page's tag reaches the set-up request form, and an unknown one is bucketed", async ({
+  page,
+}) => {
+  // The tag still reaches the form when the link carries one, so a request
+  // reads per surface. Scoped to the set-up form, the page's one form.
+  await page.goto("/get-set-up?from=pricing");
+  const setUpForm = page.locator('form:has(input[name="shopName"])');
+  await expect(setUpForm.locator('input[name="source"]')).toHaveValue("pricing");
 
   // An unrecognized tag is bucketed rather than echoed into the funnel.
-  await page.goto(`${ONBOARD_FORM_PATH}&from=Not%20A%20Real%20Source`);
-  await expect(signUpForm.locator('input[name="source"]')).toHaveValue("unknown");
+  await page.goto("/get-set-up?from=Not%20A%20Real%20Source");
+  await expect(setUpForm.locator('input[name="source"]')).toHaveValue("unknown");
 });
 
 test("the about page tells why DiveDay exists, who builds it, and how a shop gets set up", async ({

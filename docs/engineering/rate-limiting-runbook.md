@@ -22,6 +22,7 @@ cannot see it.
 | Surface | File | Dimension(s) | Policy |
 | --- | --- | --- | --- |
 | Onboarding (account + shop creation) | `src/app/onboard/actions.ts` | IP | `RATE_LIMITS.onboard` (5/hour) |
+| "Get set up" request (the public set-up form; ADR 20261007-setup-request-form) | `src/app/get-set-up/actions.ts` | IP, checked first; then every IP together, checked only after the honeypot and validation pass | `RATE_LIMITS.setupRequestByIp` (5/hour) + `RATE_LIMITS.setupRequestGlobal` (30/hour). The global bucket is a per-instance first filter; the real cap is `SETUP_REQUESTS_PER_HOUR` (30), counted in `setup_requests` over the last hour before each insert, so it holds across instances |
 | "Try the live demo" (mints a seeded demo shop) | `src/app/actions/demo.ts` | IP | `RATE_LIMITS.demoCreate` (10/hour) |
 | Marking a browser as the founder's, so its demos send no alert | `src/app/api/demo/quiet/route.ts` | IP | `RATE_LIMITS.demoQuiet` (10/hour) |
 | Sign-in | `src/lib/auth.ts` `authorize()` | IP **and** attempted email | `RATE_LIMITS.signInByIp` (20/15min) + `RATE_LIMITS.signInByEmail` (8/15min) |

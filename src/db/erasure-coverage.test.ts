@@ -349,8 +349,8 @@ const ERASURE_KEEPS: Record<string, string> = {
  * what a `sourcery-ai` review pointed out against the issue's own wording:
  * scope is every table, not the ones a regex thought to ask about.
  *
- * So: 121 tables, 96 in the closure, and each of the other 25 named here with
- * why an erasure is right to leave it. Almost all of them are the shop's own
+ * So every table outside the closure is named here with why an erasure is
+ * right to leave it. Almost all of them are the shop's own
  * settings or a provider's plumbing, which is exactly why this list is cheap to
  * keep and worth having — a new table lands here the day it is added, and the
  * only way past it is to write a sentence a reviewer can disagree with.
@@ -389,6 +389,15 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   // DiveDay's own catalogue, shared by every shop and owned by none.
   global_dive_sites: "DiveDay’s catalog of sites",
   global_dive_site_versions: "that catalog's own history",
+
+  // DiveDay's own sales funnel (ADRs 20261007-setup-request-form and
+  // 20261007-founder-metrics). None belongs to a shop, so no shop's erasure
+  // reaches it.
+  setup_requests:
+    "a shop owner asking DiveDay to set them up: their name, address and phone, sent to DiveDay rather than to any shop. A diver is never on it. It leaves by `deleteSetupRequestsByEmail` / `deleteSetupRequestsByPhone` when that owner asks DiveDay to forget them",
+  demo_entries: "someone opening the demo: a source, a role and a time, and no person",
+  shop_milestones:
+    "when a shop reached a step of getting started, and whether a stall alert went out. A shop and a date, no diver",
 
   // Plumbing: provider coordination and delivery ledgers, holding no person.
   notification_rate_limit_state: "provider coordination keyed by ceiling and period",
