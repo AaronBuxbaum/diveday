@@ -4,7 +4,7 @@ import { isUniqueConstraintViolation } from "@/db/query-helpers";
 import { firstHandLocale } from "@/i18n/negotiate";
 import type { DiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { createBookingParty } from "./bookings";
 import {
   findOrCreatePerson,
@@ -15,13 +15,17 @@ import {
 import { bookings, people, shops } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
+
 describe("selectActivePersonByEmail", () => {
   // Two copies of this lookup once drifted: this one lowercased both sides,
   // the one in staff-accounts.ts only the column, so a mixed-case argument
   // there found nobody and its caller would have forked a second person for
   // the same address. There is one copy now, and this pins its contract.
   it("matches an address whatever the case of the argument and of the stored value", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [person] = await db
       .insert(people)
       .values({ shopId: shop.id, fullName: "Ines Duarte", email: "Ines.Duarte@Example.com" })
@@ -38,7 +42,7 @@ describe("selectActivePersonByEmail", () => {
   });
 
   it("finds nobody for a deleted person or for another shop's", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [otherShop] = await db
       .insert(shops)
       .values({ name: "Third Shop", slug: "third-shop-people-test", timezone: "UTC" })
@@ -56,7 +60,7 @@ describe("selectActivePersonByEmail", () => {
 
 describe("findOrCreatePerson (CR-008)", () => {
   it("creates a new person when no active match exists", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const result = await findOrCreatePerson(db, {
       shopId: shop.id,
       fullName: "Nora Quinn",
@@ -67,7 +71,7 @@ describe("findOrCreatePerson (CR-008)", () => {
   });
 
   it("reuses the existing active person for the same email instead of splitting identity", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const first = await findOrCreatePerson(db, {
       shopId: shop.id,
       fullName: "Nora Quinn",
@@ -89,7 +93,7 @@ describe("findOrCreatePerson (CR-008)", () => {
   });
 
   it("treats email matching as case-insensitive, matching the database constraint", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const first = await findOrCreatePerson(db, {
       shopId: shop.id,
       fullName: "Nora Quinn",
@@ -108,7 +112,7 @@ describe("findOrCreatePerson (CR-008)", () => {
   });
 
   it("reports nameMatches for the H-13 identity safeguard", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const created = await findOrCreatePerson(db, {
       shopId: shop.id,
       fullName: "Nora Quinn",
@@ -138,7 +142,7 @@ describe("findOrCreatePerson (CR-008)", () => {
   });
 
   it("scopes to the shop: the same email at a different shop is a different person", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [otherShop] = await db
       .insert(shops)
       .values({ name: "Second Shop", slug: "second-shop-people-test", timezone: "UTC" })
@@ -161,7 +165,7 @@ describe("findOrCreatePerson (CR-008)", () => {
 
 describe("people_shop_email_unique (CR-008)", () => {
   it("the database itself rejects a second active person with the same email in different casing", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await db
       .insert(people)
       .values({ shopId: shop.id, fullName: "Nora Quinn", email: "nora@example.com" });
@@ -179,7 +183,7 @@ describe("people_shop_email_unique (CR-008)", () => {
   });
 
   it("frees the email once the holder is soft-deleted, so a genuinely new person can take it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [original] = await db
       .insert(people)
       .values({ shopId: shop.id, fullName: "Nora Quinn", email: "nora@example.com" })
@@ -195,7 +199,7 @@ describe("people_shop_email_unique (CR-008)", () => {
   });
 
   it("does not constrain people with no email on file", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await db.insert(people).values({ shopId: shop.id, fullName: "Walk-up One", email: null });
     await expect(
       db.insert(people).values({ shopId: shop.id, fullName: "Walk-up Two", email: null }),
@@ -237,7 +241,7 @@ describe("recordDiverOwnLocale (docs ADR 20260731-per-person-notification-locale
    * to notice (security-reviewer finding).
    */
   it("refuses to record a locale from an identity-unconfirmed booking", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const trip = trips[0];
     if (!trip) throw new Error("no seeded trip");
@@ -273,7 +277,7 @@ describe("recordDiverOwnLocale (docs ADR 20260731-per-person-notification-locale
   });
 
   it("records from a booking whose identity was never in doubt", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const trip = trips[0];
     if (!trip) throw new Error("no seeded trip");
@@ -299,13 +303,13 @@ describe("recordDiverOwnLocale (docs ADR 20260731-per-person-notification-locale
   });
 
   it("starts null — a person DiveDay has never heard from first-hand", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const person = await newPerson(db, shop.id);
     expect(await storedLocale(db, person.id)).toBeNull();
   });
 
   it("records what the diver's own request asked for", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const person = await newPerson(db, shop.id);
     await recordDiverOwnLocale(db, {
       shopId: shop.id,
@@ -316,7 +320,7 @@ describe("recordDiverOwnLocale (docs ADR 20260731-per-person-notification-locale
   });
 
   it("lets the most recent first-hand signal win — people change devices", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const person = await newPerson(db, shop.id);
     await recordDiverOwnLocale(db, { shopId: shop.id, personId: person.id, locale: "es-ES" });
     await recordDiverOwnLocale(db, { shopId: shop.id, personId: person.id, locale: "en-US" });
@@ -324,7 +328,7 @@ describe("recordDiverOwnLocale (docs ADR 20260731-per-person-notification-locale
   });
 
   it("treats null as 'nothing learned', never as a clear", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const person = await newPerson(db, shop.id);
     await recordDiverOwnLocale(db, { shopId: shop.id, personId: person.id, locale: "es-ES" });
     // A later visit from a device asking for a language DiveDay doesn't carry:
@@ -339,7 +343,7 @@ describe("recordDiverOwnLocale (docs ADR 20260731-per-person-notification-locale
   });
 
   it("never lets a garbage or hostile Accept-Language reach the column", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const person = await newPerson(db, shop.id);
     const hostile = ["", ";;;", "*", "🙂", "en;q=notanumber", "de-DE", "x".repeat(5_000)];
     for (const header of hostile) {
@@ -373,7 +377,7 @@ describe("recordDiverOwnLocale (docs ADR 20260731-per-person-notification-locale
   });
 
   it("refuses to write across shops even when handed a real person id", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const person = await newPerson(db, shop.id);
     const [otherShop] = await db
       .insert(shops)
@@ -389,7 +393,7 @@ describe("recordDiverOwnLocale (docs ADR 20260731-per-person-notification-locale
   });
 
   it("leaves a soft-deleted person alone", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const person = await newPerson(db, shop.id);
     await db.update(people).set({ deletedAt: nowDate() }).where(eq(people.id, person.id));
     await recordDiverOwnLocale(db, { shopId: shop.id, personId: person.id, locale: "es-ES" });
@@ -401,7 +405,7 @@ describe("recordDiverOwnLocale (docs ADR 20260731-per-person-notification-locale
     // *staff* member's Accept-Language, so identity creation deliberately has
     // no locale parameter for a caller to pass one into. Booking a walk-in from
     // a staff surface must leave the column null.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const trip = trips[0];
     if (!trip) throw new Error("seeded shop has no upcoming trip");

@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { people, personRoles, shops, userAccounts } from "@/db/schema";
 import type { Role } from "@/lib/authz";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import {
   SEEDED_CAPTAIN_EMAIL,
   SEEDED_OWNER_EMAIL,
@@ -54,9 +54,13 @@ type Context = Awaited<ReturnType<typeof seededShopContext>>;
 
 let context: Context;
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
+
 beforeEach(async () => {
   vi.clearAllMocks();
-  context = await seededShopContext();
+  context = ctx;
   vi.mocked(getDb).mockResolvedValue(context.db);
 });
 

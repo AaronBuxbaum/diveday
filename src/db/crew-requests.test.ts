@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
 import { nowMs } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import {
   decideCrewAssignmentRequest,
@@ -29,7 +29,7 @@ import { changeTripCrew, getTripCrewIds, listStaff } from "./trips-crew";
 const now = new Date("2026-07-18T12:00:00.000Z");
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const staff = await listStaff(db, shop.id);
   const owner = staff.find((row) => row.roles.includes("owner"));
   const crew = staff.find((row) => !row.roles.includes("owner") && !row.roles.includes("manager"));
@@ -57,6 +57,10 @@ async function diverPerson(db: Awaited<ReturnType<typeof context>>["db"], shopId
  * second author, and every one of these refusals is what stops that author
  * reaching past their own row.
  */
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
+
 describe("crew availability blocks", () => {
   it("lets a crew member record their own days away", async () => {
     const { db, shop, crew } = await context();
@@ -428,7 +432,7 @@ describe("tripOverIntroRatio", () => {
    * this reports on is one a data import or a crew change leaves behind.
    */
   async function overRatioSession(courseTitle: string, withinRatio: number, tag: string) {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [course] = await db
       .select()
       .from(courses)

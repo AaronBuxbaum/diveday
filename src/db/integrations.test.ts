@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { enqueueIntegrationEvent } from "./integration-events";
 import {
   consumeIntegrationOAuthState,
@@ -53,9 +53,13 @@ async function connectQuickBooks(
  * Disconnect exactly when a token has errored, so the reconnect that follows is
  * the common path, not the rare one.
  */
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
+
 describe("disconnect and reconnect", () => {
   it("keeps the sync map, so a reconnect does not re-create a synced customer", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const first = await connectQuickBooks(db, shop.id);
     await upsertIntegrationSyncRecord(db, {
       shopId: shop.id,
@@ -81,7 +85,7 @@ describe("disconnect and reconnect", () => {
   });
 
   it("keeps an undelivered order and hands it to the reconnected integration", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const first = await connectQuickBooks(db, shop.id);
     const event = await enqueueIntegrationEvent(db, {
       shopId: shop.id,
@@ -116,7 +120,7 @@ describe("disconnect and reconnect", () => {
    * wrong is a re-auth that throws instead of adopting.
    */
   it("skips an event the reconnected integration already carries", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const first = await connectQuickBooks(db, shop.id);
     await disconnectShopIntegration(db, shop.id, "quickbooks");
     const second = await connectQuickBooks(db, shop.id, "access-2");
@@ -150,7 +154,7 @@ describe("disconnect and reconnect", () => {
 
   // The record of a send stays where it was sent from; only work still owed moves.
   it("leaves an already-delivered row on the connection that sent it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const first = await connectQuickBooks(db, shop.id);
     const event = await enqueueIntegrationEvent(db, {
       shopId: shop.id,
@@ -176,7 +180,7 @@ describe("disconnect and reconnect", () => {
   });
 
   it("stamps the row instead of deleting it, and empties the sealed credential", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await connectQuickBooks(db, shop.id);
     await disconnectShopIntegration(db, shop.id, "quickbooks");
 
@@ -194,7 +198,7 @@ describe("disconnect and reconnect", () => {
   });
 
   it("hides a disconnected provider from every active read", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await connectQuickBooks(db, shop.id);
     await disconnectShopIntegration(db, shop.id, "quickbooks");
 
@@ -203,7 +207,7 @@ describe("disconnect and reconnect", () => {
   });
 
   it("queues nothing for a provider the shop disconnected", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await connectQuickBooks(db, shop.id);
     await disconnectShopIntegration(db, shop.id, "quickbooks");
     const event = await enqueueIntegrationEvent(db, {
@@ -227,7 +231,7 @@ describe("disconnect and reconnect", () => {
   // of the connection row reaches it. Only deleting the shop does, which is the
   // one case where losing it is right.
   it("survives even a hard delete of the connection row", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await connectQuickBooks(db, shop.id);
     await upsertIntegrationSyncRecord(db, {
       shopId: shop.id,
@@ -256,7 +260,7 @@ describe("disconnect and reconnect", () => {
  */
 describe("integration OAuth state", () => {
   it("stores only a digest, never the browser's state", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const person = await aPerson(db, shop.id);
     const state = await createIntegrationOAuthState(db, {
       shopId: shop.id,
@@ -271,7 +275,7 @@ describe("integration OAuth state", () => {
   });
 
   it("resolves once and refuses the replay", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const person = await aPerson(db, shop.id);
     const state = await createIntegrationOAuthState(db, {
       shopId: shop.id,
@@ -293,7 +297,7 @@ describe("integration OAuth state", () => {
   // The callback URL names its provider; a state minted for one must not open
   // the other's, or a Shopify redirect could seal QuickBooks credentials.
   it("does not resolve against a different provider's callback", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const person = await aPerson(db, shop.id);
     const state = await createIntegrationOAuthState(db, {
       shopId: shop.id,
@@ -307,7 +311,7 @@ describe("integration OAuth state", () => {
   });
 
   it("does not resolve an expired state", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const person = await aPerson(db, shop.id);
     const state = await createIntegrationOAuthState(db, {
       shopId: shop.id,
@@ -323,7 +327,7 @@ describe("integration OAuth state", () => {
   });
 
   it("does not resolve a state nobody minted", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     expect(
       await consumeIntegrationOAuthState(db, { state: "made-up", provider: "quickbooks" }),
     ).toBeNull();

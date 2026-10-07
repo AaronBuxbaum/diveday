@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 
 import { STAFF_ROLES } from "@/lib/authz";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { people, personRoles, shops, tripAssignments } from "./schema";
 import {
   listShopStaff,
@@ -29,12 +29,16 @@ import {
  * person on a page anyone on the internet can read.
  */
 async function aCrewedDeparture() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const [trip] = await upcomingTripsWithCounts(db, shop.id);
   if (!trip) throw new Error("seed has no upcoming departure");
   const crew = await tripPublicCrew(db, shop.id, trip.id);
   return { db, shop, tripId: trip.id, crew };
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 describe("tripPublicCrew", () => {
   it("names only the crew who said yes, and never their surname", async () => {
@@ -294,7 +298,7 @@ describe("tripPublicCrew", () => {
 
 describe("setCrewPublicConsent", () => {
   it("refuses a person who is not this shop's staff", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [diver] = await db
       .insert(people)
       .values({ shopId: shop.id, fullName: "Priya Raman" })
@@ -314,7 +318,7 @@ describe("setCrewPublicConsent", () => {
   });
 
   it("refuses a staff member of another shop", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("seeded shop has no staff");
     const [other] = await db
@@ -334,7 +338,7 @@ describe("setCrewPublicConsent", () => {
   });
 
   it("records when they agreed, and clears it rather than dating a withdrawal", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [staff] = await db
       .select({ id: people.id })
       .from(people)
@@ -387,7 +391,7 @@ describe("setCrewPublicConsent", () => {
  */
 describe("listShopStaff and the name a diver reads", () => {
   it("carries the stored name and the day it was agreed, for somebody who consented", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("seeded shop has no staff");
 
@@ -426,7 +430,7 @@ describe("listShopStaff and the name a diver reads", () => {
    * page built to let them check exactly that.
    */
   it("stops naming a disabled person, who no public page shows any more", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     // Not the owner: disabling the last one is refused, and that refusal would
     // make this test pass for the wrong reason.
     const member = (await listShopStaff(db, shop.id)).find(
@@ -490,7 +494,7 @@ describe("listShopStaff and the name a diver reads", () => {
    * roster carrying both shapes at once can say which.
    */
   it("shows nothing for somebody who declined, exactly as for somebody never asked", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [staff] = await listStaff(db, shop.id);
     if (!staff) throw new Error("seeded shop has no staff");
 

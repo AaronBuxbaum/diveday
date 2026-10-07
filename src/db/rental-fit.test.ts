@@ -2,7 +2,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { rentalFitLine } from "@/lib/dive-prep";
 import { NOTHING_RENTED, rentalFitCompleteness } from "@/lib/rentals";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { cancelBooking, createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { createNitroxCertification, reviewNitroxCertification } from "./nitrox";
@@ -22,7 +22,7 @@ import { setShopRentalItems } from "./shops";
 import { upcomingTripsWithCounts } from "./trips";
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id);
   const open = trips.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
   if (!open) throw new Error("open trip missing");
@@ -64,6 +64,10 @@ function baseFitInput(shopId: string, personId: string) {
     weightPreference: "12 lbs",
   };
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 describe("saveRentalFit / getRentalFit", () => {
   it("creates a fit and reads it back", async () => {

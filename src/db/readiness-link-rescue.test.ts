@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   issueBookingCapability,
   revokeBookingCapabilities,
@@ -37,6 +37,10 @@ vi.mock("./notifications", () => ({
   },
 }));
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
+
 beforeEach(() => sent.mockClear());
 
 async function bookedDiver(db: AppDb, shopId: string, tripId: string, email?: string) {
@@ -53,7 +57,7 @@ async function bookedDiver(db: AppDb, shopId: string, tripId: string, email?: st
 
 /** A booking holding one readiness capability that has already been revoked. */
 async function bookingWithDeadLink(email?: string) {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const [trip] = await upcomingTripsWithCounts(db, shop.id);
   if (!trip) throw new Error("expected a seeded trip");
   const bookingId = await bookedDiver(db, shop.id, trip.id, email);
@@ -223,7 +227,7 @@ describe("staleReadinessBookingForResend", () => {
    * to the readiness rescue, even though every capability lives in one table.
    */
   it("does not resolve a token issued for a different purpose", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("expected a seeded trip");
     const bookingId = await bookedDiver(db, shop.id, trip.id);

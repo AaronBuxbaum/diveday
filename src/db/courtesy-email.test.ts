@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   issuePersonCourtesyEmailUnsubscribeToken,
   optOutAddressAfterComplaint,
@@ -17,7 +17,7 @@ import {
 } from "./schema";
 
 async function seededPerson() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const { person } = await findOrCreatePerson(db, {
     shopId: shop.id,
     fullName: "Nora Quinn",
@@ -29,6 +29,10 @@ async function seededPerson() {
 // Leo (persona 15) — self-serve email unsubscribe (docs/product/features/story-backlog.md):
 // the general, cross-kind counterpart to the last-minute-list entry's own
 // token, governing `waitlist_invite` and `trip_recap` instead.
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
+
 describe("self-serve courtesy-email unsubscribe token", () => {
   it("resolves a fresh token to the person's shop, name, and not-yet-opted-out state", async () => {
     const { db, shop, person } = await seededPerson();
@@ -47,7 +51,7 @@ describe("self-serve courtesy-email unsubscribe token", () => {
   });
 
   it("reads an unknown token as unavailable, not a crash", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     expect(await resolveCourtesyEmailUnsubscribeToken(db, "not-a-real-token")).toBeNull();
   });
 

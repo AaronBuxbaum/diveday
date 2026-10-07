@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { CONFIRMATION_WINDOW_MS, confirmationCode } from "@/lib/reply-keywords";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { recordInboundMessage } from "./inbound-messages";
@@ -45,7 +45,7 @@ function replyBodies(sent: Notification[]): string[] {
 }
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const open = (await upcomingTripsWithCounts(db, shop.id)).find(
     (trip) => trip.title === "Two-Tank Reef — Christ of the Abyss",
   );
@@ -103,6 +103,10 @@ async function statusOf(db: AppDb, bookingId: string) {
     .where(eq(bookings.id, bookingId));
   return row?.status;
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 describe("handleInboundReplyKeyword — what it refuses", () => {
   it("leaves a sentence alone and changes nothing", async () => {

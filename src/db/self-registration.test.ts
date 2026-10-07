@@ -3,7 +3,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { getRentalFit, saveRentalFit } from "./rental-fit";
 import { certifications, people, waiverDeliveries, waiverRecords } from "./schema";
 import { deliverSelfRegistrationWaiver, registerDiverAtShop } from "./self-registration";
@@ -31,9 +31,13 @@ const walkIn = (overrides: Partial<Parameters<typeof registerDiverAtShop>[1]> = 
  * this could have become a person-enumeration oracle — so the tests that matter
  * most are the ones proving the *outcome* is the same either way.
  */
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
+
 describe("self-registration", () => {
   it("creates the person, marks where the record came from, and sends their release", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const email = `ines-${randomUUID()}@example.com`;
     const { personId } = await registerDiverAtShop(db, { shopId: shop.id, ...walkIn({ email }) });
     // The action runs this in `after()`, off the request path — the send is
@@ -73,7 +77,7 @@ describe("self-registration", () => {
 
     it("texts the link to a diver who gave only a phone", async () => {
       vi.stubEnv("APP_HOST", "https://diveday.example");
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const { personId } = await registerDiverAtShop(db, {
         shopId: shop.id,
         ...walkIn({ email: null, phone: "+13055550188" }),
@@ -93,7 +97,7 @@ describe("self-registration", () => {
 
     it("keeps email for a diver who gave both, and texts nothing", async () => {
       vi.stubEnv("APP_HOST", "https://diveday.example");
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const { personId } = await registerDiverAtShop(db, {
         shopId: shop.id,
         ...walkIn({ phone: "+13055550189" }),
@@ -112,7 +116,7 @@ describe("self-registration", () => {
   });
 
   it("files the certification as the diver's own word, never as evidence", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const { personId } = await registerDiverAtShop(db, {
       shopId: shop.id,
       ...walkIn(),
@@ -140,7 +144,7 @@ describe("self-registration", () => {
   });
 
   it("keeps the sizes the diver gave, and claims nothing about what they rent", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const { personId } = await registerDiverAtShop(db, {
       shopId: shop.id,
       ...walkIn(),
@@ -151,7 +155,7 @@ describe("self-registration", () => {
   });
 
   it("reuses the person on a second submission, and never splits their history", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const email = `ines-${randomUUID()}@example.com`;
     const first = await registerDiverAtShop(db, { shopId: shop.id, ...walkIn({ email }) });
     const second = await registerDiverAtShop(db, {
@@ -169,7 +173,7 @@ describe("self-registration", () => {
   it("leaves the original mark alone when a returning diver registers again", async () => {
     // The mark means "this record came from the diver", not "this diver was
     // here recently" — so a second visit must not rewrite it.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const email = `ines-${randomUUID()}@example.com`;
     const { personId } = await registerDiverAtShop(db, { shopId: shop.id, ...walkIn({ email }) });
     await registerDiverAtShop(db, {
@@ -181,7 +185,7 @@ describe("self-registration", () => {
   });
 
   it("mints no second link for a diver whose release still stands — sign-once holds", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const email = `ines-${randomUUID()}@example.com`;
     const { personId } = await registerDiverAtShop(db, { shopId: shop.id, ...walkIn({ email }) });
     await deliverSelfRegistrationWaiver(db, { shopId: shop.id, personId, now });
@@ -213,7 +217,7 @@ describe("self-registration", () => {
   });
 
   it("registers a phone-only walk-in as their own record, matching nobody", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const first = await registerDiverAtShop(db, {
       shopId: shop.id,
       fullName: "Phone Only",
@@ -237,7 +241,7 @@ describe("self-registration", () => {
   });
 
   it("never reaches another shop's diver with a matching address", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const email = `ines-${randomUUID()}@example.com`;
     const { personId } = await registerDiverAtShop(db, { shopId: shop.id, ...walkIn({ email }) });
     const [person] = await db.select().from(people).where(eq(people.id, personId));
@@ -248,7 +252,7 @@ describe("self-registration", () => {
     // The medical hard block is untouched by this door: the answers arrive
     // through the ordinary waiver flow, and the block is the shop's to see.
     // `registerDiverAtShop` returns the same shape whatever the answers were.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const email = `ines-${randomUUID()}@example.com`;
     const { personId } = await registerDiverAtShop(db, { shopId: shop.id, ...walkIn({ email }) });
     await deliverSelfRegistrationWaiver(db, { shopId: shop.id, personId, now });
@@ -274,7 +278,7 @@ describe("self-registration", () => {
   it("survives a shop with no waiver template rather than losing the diver", async () => {
     // The person is the thing that had to land: a shop mid-setup with no
     // release yet still gets the walk-in on file.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await db.delete(waiverRecords).where(eq(waiverRecords.shopId, shop.id));
     const { personId } = await registerDiverAtShop(db, { shopId: shop.id, ...walkIn() });
     await deliverSelfRegistrationWaiver(db, { shopId: shop.id, personId, now });
@@ -291,7 +295,7 @@ describe("self-registration", () => {
    */
   describe("a person the shop already knows", () => {
     it("never overwrites the fit a returning diver already has", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const email = `ines-${randomUUID()}@example.com`;
       const { personId } = await registerDiverAtShop(db, { shopId: shop.id, ...walkIn({ email }) });
       // What the shop and the diver settled on together: sizes, and the gear
@@ -337,7 +341,7 @@ describe("self-registration", () => {
     });
 
     it("never displaces the card the shop verified with a claim typed on a phone", async () => {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const email = `ines-${randomUUID()}@example.com`;
       const { personId } = await registerDiverAtShop(db, { shopId: shop.id, ...walkIn({ email }) });
       // The card a staffer sighted, off the physical plastic.

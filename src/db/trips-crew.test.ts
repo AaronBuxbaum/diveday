@@ -2,7 +2,7 @@ import { and, count, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate, nowMs } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { getTripManifest, recordCrewRollCall } from "./manifests";
@@ -36,9 +36,13 @@ const FOREIGN_SHOP_ID = "00000000-0000-4000-8000-000000000099";
 const byPerson = (row: { personId: string; tripRole: string | null }) =>
   [row.personId, row.tripRole] as const;
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
+
 describe("trip crew (CR-007: cross-tenant write path)", () => {
   it("stores variable meeting windows and rejects crew overlap on any course day", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const staff = await listStaff(db, shop.id);
     const instructor = staff.find((entry) => entry.roles.includes("instructor"));
     if (!instructor) throw new Error("seeded instructor missing");
@@ -90,7 +94,7 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
   });
 
   it("assigns and replaces the crew, keeping only staff of this shop", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const trip = trips[0];
     if (!trip) throw new Error("expected a seeded trip");
@@ -115,7 +119,7 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
     expect(await getTripCrewIds(db, shop.id, trip.id)).toEqual([first.person.id]);
   });
   it("changes one crew member without replacing other assignments", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const trip = trips[0];
     if (!trip) throw new Error("expected a seeded trip");
@@ -154,7 +158,7 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
    */
   describe("per-trip crew roles survive both write paths", () => {
     async function context() {
-      const { db, shop } = await seededShopContext();
+      const { db, shop } = ctx;
       const trips = await upcomingTripsWithCounts(db, shop.id);
       const trip = trips[0];
       if (!trip) throw new Error("expected a seeded trip");
@@ -473,7 +477,7 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
   }
 
   it("records a crew change that leaves a session over ratio, and raises over_ratio", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const { trip, course, staying, leaving } = await twoInstructorIntroSession(db, shop.id);
 
     // 6:45am, one of the two instructors calls in sick. The change is recorded.
@@ -504,7 +508,7 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
   });
 
   it("records the same reduction through a whole-crew replace", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const { trip, course, staying } = await twoInstructorIntroSession(db, shop.id);
 
     expect(await setTripCrew(db, shop.id, trip.id, [staying])).toBe(true);
@@ -518,7 +522,7 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
   });
 
   it("still refuses a crew change that would leave a course session with no instructor", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const { trip, staying, leaving } = await twoInstructorIntroSession(db, shop.id);
     expect(
       await changeTripCrew(db, shop.id, trip.id, { personId: leaving, operation: "unassign" }),
@@ -534,7 +538,7 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
   });
 
   it("refuses to write or read crew for a trip id that isn't this shop's", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const trip = trips[0];
     if (!trip) throw new Error("expected a seeded trip");
@@ -558,7 +562,7 @@ describe("trip crew (CR-007: cross-tenant write path)", () => {
   });
 
   it("does not leak a trip's roster to a genuinely different shop (CR-007)", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [otherShop] = await db
       .insert(shops)
       .values({ name: "Other Shop", slug: "other-shop-roster-test", timezone: "UTC" })
@@ -636,7 +640,7 @@ describe("crewMoveConflicts", () => {
   }
 
   it("names the crew member whose hours the move would collide with, and the boat", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const timeZone = await honoluluShop(db, shop.id);
     const [first, second] = await listStaff(db, shop.id);
     if (!first || !second) throw new Error("expected two seeded staff");
@@ -680,7 +684,7 @@ describe("crewMoveConflicts", () => {
    * the boat they were told about while the second one stood.
    */
   it("names both boats when the move collides one person with two departures", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const timeZone = await honoluluShop(db, shop.id);
     const [first] = await listStaff(db, shop.id);
     if (!first) throw new Error("expected a seeded staff member");
@@ -734,7 +738,7 @@ describe("crewMoveConflicts", () => {
    * how a dive shop runs a Saturday, and the roster lets it happen on purpose.
    */
   it("leaves the ordinary double shift alone", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const timeZone = await honoluluShop(db, shop.id);
     const [first] = await listStaff(db, shop.id);
     if (!first) throw new Error("expected a seeded staff member");
@@ -765,7 +769,7 @@ describe("crewMoveConflicts", () => {
   it("asks the same question the roster refuses on, so the two cannot disagree", async () => {
     // The proof rather than the claim: whatever this reports a clash for is a
     // crew list `setTripCrew` would refuse to write.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await honoluluShop(db, shop.id);
     const [first] = await listStaff(db, shop.id);
     if (!first) throw new Error("expected a seeded staff member");
@@ -797,7 +801,7 @@ describe("crewMoveConflicts", () => {
    * mutation will.
    */
   it("checks every day of a multi-day departure, not only the one it starts on", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const timeZone = await honoluluShop(db, shop.id);
     const [first] = await listStaff(db, shop.id);
     if (!first) throw new Error("expected a seeded staff member");
@@ -852,7 +856,7 @@ describe("crewMoveConflicts", () => {
     // 2030-08-06T06:00Z is 2030-08-05, 20:00 in Honolulu. A reader working in
     // UTC would place the moving boat on the 6th and find no overlap at all —
     // green on every UTC box, wrong for the shop.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const timeZone = await honoluluShop(db, shop.id);
     const [first] = await listStaff(db, shop.id);
     if (!first) throw new Error("expected a seeded staff member");
@@ -880,7 +884,7 @@ describe("crewMoveConflicts", () => {
    * a manager slid a whole departure onto somebody's approved holiday.
    */
   it("says who has told the shop they are away on the days it would move to", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const timeZone = await honoluluShop(db, shop.id);
     const [first, second] = await listStaff(db, shop.id);
     if (!first || !second) throw new Error("expected two seeded staff");
@@ -919,7 +923,7 @@ describe("crewMoveConflicts", () => {
   });
 
   it("never counts the departure against itself", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const timeZone = await honoluluShop(db, shop.id);
     const [first] = await listStaff(db, shop.id);
     if (!first) throw new Error("expected a seeded staff member");
@@ -939,7 +943,7 @@ describe("crewMoveConflicts", () => {
     // Both are boats nobody is standing on. `check:live-trips` refuses a read
     // of `trips` that carries neither `liveTrip()` nor a written exemption,
     // and a called-off departure holds no crew member's hours either.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const timeZone = await honoluluShop(db, shop.id);
     const [first] = await listStaff(db, shop.id);
     if (!first) throw new Error("expected a seeded staff member");
@@ -961,7 +965,7 @@ describe("crewMoveConflicts", () => {
   });
 
   it("answers nothing for another shop's departure, or for a time it cannot read", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const timeZone = await honoluluShop(db, shop.id);
     const [first] = await listStaff(db, shop.id);
     if (!first) throw new Error("expected a seeded staff member");
@@ -1037,7 +1041,7 @@ describe("crewClashes", () => {
    * shop can actually reach.
    */
   async function shopWithAMovedDeparture() {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await honoluluShop(db, shop.id);
     const [marisol] = await listStaff(db, shop.id);
     if (!marisol) throw new Error("expected a seeded staff member");
@@ -1098,7 +1102,7 @@ describe("crewClashes", () => {
    * saturation failure #757 and #1203 already paid for once.
    */
   it("leaves the ordinary double shift alone", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await honoluluShop(db, shop.id);
     const [first] = await listStaff(db, shop.id);
     if (!first) throw new Error("expected a seeded staff member");
@@ -1131,7 +1135,7 @@ describe("crewClashes", () => {
    * first two are clear.
    */
   it("finds a clash on a later leg of a multi-day course", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await honoluluShop(db, shop.id);
     const [first] = await listStaff(db, shop.id);
     if (!first) throw new Error("expected a seeded staff member");
@@ -1297,7 +1301,7 @@ describe("crewClashes", () => {
  */
 describe("changeTripCrewOutcome", () => {
   it("names a crew clash, and keeps every other refusal one word", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [marisol, ana] = await listStaff(db, shop.id);
     if (!marisol || !ana) throw new Error("expected two seeded staff members");
 
@@ -1364,7 +1368,7 @@ describe("changeTripCrewOutcome", () => {
    * a view rather than a copy.
    */
   it("is the one transaction `changeTripCrew` reports as a boolean", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [marisol] = await listStaff(db, shop.id);
     if (!marisol) throw new Error("expected a seeded staff member");
 

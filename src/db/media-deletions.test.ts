@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { dbNowPlus, seededShopContext } from "@/test/db";
+import { dbNowPlus, fileScopedShopContext } from "@/test/db";
 import {
   listPendingMediaDeletions,
   queueAndAttemptMediaDeletion,
@@ -14,9 +14,13 @@ import { mediaDeletionAttempts, shops } from "./schema";
 const ok = async () => ({ ok: true as const });
 const failing = async () => ({ ok: false as const, error: "blob delete failed: 500" });
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
+
 describe("queueMediaDeletion (managed-URL guard, CR-012 review finding)", () => {
   it("skips queuing a URL that was never actually stored by this seam", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     // A bundled template asset (src/content/course-templates.ts's bundledImage())
     // or a legacy pasted external URL — the provider has never heard of
     // either, so queuing a delete for one could never resolve, ever.
@@ -36,7 +40,7 @@ describe("queueMediaDeletion (managed-URL guard, CR-012 review finding)", () => 
   });
 
   it("still queues a genuine Blob URL", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const attempt = await queueMediaDeletion(db, {
       shopId: shop.id,
       kind: "course_photo",
@@ -48,7 +52,7 @@ describe("queueMediaDeletion (managed-URL guard, CR-012 review finding)", () => 
 
 describe("queueMediaDeletion / resolveMediaDeletion", () => {
   it("is durable before the delete call, then records how it resolved", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const attempt = await queueMediaDeletion(db, {
       shopId: shop.id,
       kind: "recap_photo",
@@ -68,7 +72,7 @@ describe("queueMediaDeletion / resolveMediaDeletion", () => {
   });
 
   it("leaves a failed attempt unresolved (retryable), with the error recorded", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const attempt = await queueMediaDeletion(db, {
       shopId: shop.id,
       kind: "course_photo",
@@ -89,7 +93,7 @@ describe("queueMediaDeletion / resolveMediaDeletion", () => {
 
 describe("queueAndAttemptMediaDeletion", () => {
   it("resolves succeeded on the common path", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await queueAndAttemptMediaDeletion(
       db,
       {
@@ -104,7 +108,7 @@ describe("queueAndAttemptMediaDeletion", () => {
   });
 
   it("leaves a failed delete pending and owner-visible rather than swallowing it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await queueAndAttemptMediaDeletion(
       db,
       {
@@ -121,7 +125,7 @@ describe("queueAndAttemptMediaDeletion", () => {
   });
 
   it("never calls the delete function for a URL that was never actually stored", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     let called = false;
     await queueAndAttemptMediaDeletion(
       db,
@@ -138,7 +142,7 @@ describe("queueAndAttemptMediaDeletion", () => {
 
 describe("listPendingMediaDeletions", () => {
   it("surfaces a pending row that has sat unresolved past the staleness window", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await queueMediaDeletion(db, {
       shopId: shop.id,
       kind: "course_photo",
@@ -155,7 +159,7 @@ describe("listPendingMediaDeletions", () => {
   });
 
   it("does not surface a succeeded deletion", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await queueAndAttemptMediaDeletion(
       db,
       {
@@ -169,7 +173,7 @@ describe("listPendingMediaDeletions", () => {
   });
 
   it("scopes to the requesting shop", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [otherShop] = await db
       .insert(shops)
       .values({ name: "Other Shop", slug: "other-shop-media-deletions-test", timezone: "UTC" })
@@ -186,7 +190,7 @@ describe("listPendingMediaDeletions", () => {
 
 describe("retryMediaDeletion", () => {
   it("retries a failed attempt and resolves it on success", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await queueAndAttemptMediaDeletion(
       db,
       {
@@ -204,7 +208,7 @@ describe("retryMediaDeletion", () => {
   });
 
   it("does not retry another shop's attempt", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [otherShop] = await db
       .insert(shops)
       .values({ name: "Other Shop 2", slug: "other-shop-media-deletions-test-2", timezone: "UTC" })
@@ -220,7 +224,7 @@ describe("retryMediaDeletion", () => {
   });
 
   it("returns false for an already-succeeded attempt rather than re-deleting", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const attempt = await queueMediaDeletion(db, {
       shopId: shop.id,
       kind: "recap_photo",
@@ -241,7 +245,7 @@ describe("retryMediaDeletion", () => {
 
 describe("retryPendingMediaDeletions (bounded orphan cleanup)", () => {
   it("retries every stuck attempt across shops, up to the bound", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await queueAndAttemptMediaDeletion(
       db,
       {
@@ -266,7 +270,7 @@ describe("retryPendingMediaDeletions (bounded orphan cleanup)", () => {
   });
 
   it("respects the bound instead of retrying an unbounded batch", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     for (let i = 0; i < 3; i++) {
       await queueAndAttemptMediaDeletion(
         db,
@@ -285,7 +289,7 @@ describe("retryPendingMediaDeletions (bounded orphan cleanup)", () => {
   });
 
   it("leaves a still-failing attempt failed rather than losing track of it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await queueAndAttemptMediaDeletion(
       db,
       {

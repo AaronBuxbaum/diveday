@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { eq, getTableName } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { RETENTION_DAYS, UNBOUNDED_BY_DECISION } from "@/lib/retention";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { setBookingPayment } from "./payments";
 import { pruneExpiredRecords } from "./retention";
 import * as schema from "./schema";
@@ -28,7 +28,7 @@ function daysAgo(days: number): Date {
 }
 
 async function retentionContext() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const reef = trips.find((t) => t.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
@@ -43,6 +43,10 @@ function outcomeFor(summary: Awaited<ReturnType<typeof pruneExpiredRecords>>, ta
   if (!outcome) throw new Error(`no prune outcome for ${table}`);
   return outcome;
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 describe("pruneExpiredRecords", () => {
   it("deletes stripe webhook events past the window and keeps everything inside it", async () => {

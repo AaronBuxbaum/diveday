@@ -5,7 +5,7 @@ import { nowDate } from "@/lib/clock";
 import { prepareContactImport } from "@/lib/import";
 import { RENTAL_FIT_TEXT_LIMITS } from "@/lib/rentals";
 import { isCompletedWaiverCurrent } from "@/lib/waivers";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { DEV_STAFF_LOGINS } from "./dev-credentials";
 import { canPersonImportShopData, commitContactImport } from "./import";
@@ -56,9 +56,13 @@ async function accountPersonId(
   return account.personId;
 }
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
+
 describe("commitContactImport", () => {
   it("creates divers with a diver role, a verified-and-flagged imported card, and a rental fit", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const csv = [
       "full_name,email,phone,certification_agency,certification_level,certification_number,prior_shop,wetsuit_size,fin_size",
       "Nadia Okonkwo,nadia.import@example.com,+1 305 555 0140,PADI,Advanced Open Water,AOW-778,Blue Horizon Divers,3mm/M,L",
@@ -104,7 +108,7 @@ describe("commitContactImport", () => {
   });
 
   it("matches an existing diver by email — updating, not duplicating — and leaves a card on file alone", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     const first = "full_name,email,phone\nRepeat Rita,rita.import@example.com,111";
     await commitContactImport(db, shop.id, prepareContactImport(first), importer);
@@ -129,7 +133,7 @@ describe("commitContactImport", () => {
   });
 
   it("normalizes the phone on the update branch too, not only on insert", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     // First file has no phone, so the second one lands through `applyUpdate`
     // rather than the insert. A CSV is where somebody else's export arrives,
@@ -156,7 +160,7 @@ describe("commitContactImport", () => {
   });
 
   it("merges rental sizes without wiping ones the import doesn't carry", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     await commitContactImport(
       db,
@@ -196,7 +200,7 @@ describe("commitContactImport", () => {
   });
 
   it("never rewrites what a diver already said they rent (#1754)", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     await commitContactImport(
       db,
@@ -238,7 +242,7 @@ describe("commitContactImport", () => {
   });
 
   it("never lands a size the diver's own fit form could not save back (#1754)", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     // A staffer's note filed under "wetsuit size" in the prior system, 45
     // characters. Stored whole, it failed `safeParse` on both writers of
@@ -291,7 +295,7 @@ describe("commitContactImport", () => {
   });
 
   it("imports a nitrox card as verified-and-flagged, surfaced for a confirm", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const csv = [
       "full_name,email,nitrox_certified,nitrox_certification_number",
       "Enzo Nitrox,enzo.import@example.com,yes,NX-9001",
@@ -313,7 +317,7 @@ describe("commitContactImport", () => {
   });
 
   it("imports a specialty card verified-and-flagged, with its gate held for a confirm", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const csv = [
       "full_name,email,certification_agency,specialty,specialty_certification_number,prior_shop",
       "Dana Deep,dana.import@example.com,PADI,Deep Diver,DP-4242,Blue Horizon Divers",
@@ -350,7 +354,7 @@ describe("commitContactImport", () => {
   it("gives one diver every specialty their agency number carries", async () => {
     // A PADI number identifies the diver, so Deep and Wreck share it. Before the
     // table was keyed on the specialty, the second card was silently dropped.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const csv = [
       "full_name,email,certification_agency,specialty,specialty_certification_number",
       "Multi Molly,molly.import@example.com,PADI,Deep & Wreck,PADI-5150",
@@ -373,7 +377,7 @@ describe("commitContactImport", () => {
     // The file the switching guides tell a shop to export: one row per card, so
     // the same diver's email repeats. Those rows must add cards, not be
     // discarded as duplicate people (`dive-domain-expert` review).
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const csv = [
       "full_name,email,certification_agency,certification_level,certification_number",
       "Cert Cass,cass.import@example.com,PADI,Advanced Open Water,PADI-777",
@@ -406,7 +410,7 @@ describe("commitContactImport", () => {
   });
 
   it("reports a card number held by a different diver as exactly that, and writes nothing", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     await commitContactImport(
       db,
@@ -441,7 +445,7 @@ describe("commitContactImport", () => {
   });
 
   it("never sees another shop's divers or card numbers", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [rival] = await db
       .insert(shops)
       .values({ name: "Rival Reef", slug: "rival-reef-import", timezone: "America/New_York" })
@@ -481,7 +485,7 @@ describe("commitContactImport", () => {
   });
 
   it("imports a card pending when the file says the prior system never verified it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const csv = [
       "full_name,email,certification_level,certification_number,cert_status",
       "Unverified Uma,uma.import@example.com,Open Water,OW-4004,unverified",
@@ -500,7 +504,7 @@ describe("commitContactImport", () => {
   });
 
   it("writes nothing for skipped rows and reports the count", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const csv = [
       "full_name,email",
       ",nameless.import@example.com",
@@ -515,7 +519,7 @@ describe("commitContactImport", () => {
 
 describe("commitContactImport — imported waiver acceptance (ADR 20260724-import-waiver-acceptance)", () => {
   it("trusts a row's accepted waiver, marks it imported, and stamps the actual acceptance date", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     const csv = [
       "full_name,email,waiver_accepted,waiver_signed_at,waiver_source_name",
@@ -555,7 +559,7 @@ describe("commitContactImport — imported waiver acceptance (ADR 20260724-impor
   });
 
   it("falls back to the import date when the row gives no parseable acceptance date", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     const csv = [
       "full_name,email,waiver_accepted,waiver_signed_at",
@@ -574,7 +578,7 @@ describe("commitContactImport — imported waiver acceptance (ADR 20260724-impor
   });
 
   it("never disturbs a diver who already has current signed evidence on file", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     // No waiver_signed_at: the commit stamps import time, which is always
     // current — the point of this test is the dedup, not the date math.
@@ -599,7 +603,7 @@ describe("commitContactImport — imported waiver acceptance (ADR 20260724-impor
   });
 
   it("fills the gap when the diver's only existing evidence is stale, rather than trusting a mere row's existence", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     const staleCsv = [
       "full_name,email,waiver_accepted,waiver_signed_at",
@@ -629,7 +633,7 @@ describe("commitContactImport — imported waiver acceptance (ADR 20260724-impor
   });
 
   it("never lets an import override a live medical-review hold, however the row is dated", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     // Seed a real diver with a live, unresolved medical_review hold, the way
     // the diver-facing waiver flow creates one — never faked as an import.
@@ -685,7 +689,7 @@ describe("commitContactImport — imported waiver acceptance (ADR 20260724-impor
   });
 
   it("skips a waiver claim (without failing the whole row) when the shop has no waiver template", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     await db
       .update(waiverTemplates)
@@ -707,7 +711,7 @@ describe("commitContactImport — imported waiver acceptance (ADR 20260724-impor
   });
 
   it("drops a waiver document link that resolves to a blocked/private address, without failing the import", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     const csv = [
       "full_name,email,waiver_accepted,waiver_document_url",
@@ -767,7 +771,7 @@ describe("commitContactImport — prior visits and imported payment history", ()
   }
 
   it("writes one inert visit per booking plus separate unverified financial evidence", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     const summary = await commitContactImport(
       db,
@@ -813,7 +817,7 @@ describe("commitContactImport — prior visits and imported payment history", ()
   });
 
   it("touches no operational table — the migration can never reach the dock", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     const before = {
       trips: (await db.select().from(trips).where(eq(trips.shopId, shop.id))).length,
@@ -833,7 +837,7 @@ describe("commitContactImport — prior visits and imported payment history", ()
   });
 
   it("does not double a diver's history when the same export is re-imported", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     await commitContactImport(db, shop.id, prepareContactImport(bookingsExport), importer);
     const again = await commitContactImport(
@@ -853,7 +857,7 @@ describe("commitContactImport — prior visits and imported payment history", ()
   });
 
   it("retains a receipt and source Stripe reference as evidence, not a local order", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     const csv = [
       "full_name,email,payment_date,payment_status,payment_amount,payment_currency,payment_reference,receipt_number,receipt_url,stripe_invoice_id,prior_shop",
@@ -882,7 +886,7 @@ describe("commitContactImport — prior visits and imported payment history", ()
   });
 
   it("still de-duplicates when the export carries no booking reference", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     const csv = [
       "customer_name,email,booking_date,tour_name,total",
@@ -895,7 +899,7 @@ describe("commitContactImport — prior visits and imported payment history", ()
   });
 
   it("keeps two same-day bookings apart when the export distinguishes them", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     const csv = [
       "customer_name,email,booking_date,tour_name,booking_id",
@@ -908,7 +912,7 @@ describe("commitContactImport — prior visits and imported payment history", ()
   });
 
   it("scopes visits to the importing shop", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     await commitContactImport(db, shop.id, prepareContactImport(bookingsExport), importer);
     const [other] = await db
@@ -923,7 +927,7 @@ describe("commitContactImport — prior visits and imported payment history", ()
   });
 
   it("imports internal notes onto diver profiles and does not duplicate identical notes on re-import", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const importer = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     const csv = [
       "name,email,notes",
@@ -959,7 +963,7 @@ describe("commitContactImport — prior visits and imported payment history", ()
 
 describe("import privilege re-check (database, not JWT)", () => {
   it("passes a current owner, refuses a captain, a disabled account, and a bad shop", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const owner = await accountPersonId(db, DEV_STAFF_LOGINS.owner.email);
     expect(await canPersonImportShopData(db, shop.id, owner)).toBe(true);
 
@@ -998,7 +1002,7 @@ describe("commitContactImport — a declined size is kept as a staff note (#1801
   }
 
   it("files the value on the diver, and counts it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     expect(noteFiledAsASize.length).toBeGreaterThan(RENTAL_FIT_TEXT_LIMITS.size);
     const summary = await importOne(
       db,
@@ -1031,7 +1035,7 @@ describe("commitContactImport — a declined size is kept as a staff note (#1801
    * the diver can then delete.
    */
   it("leaves the diver's own note untouched", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await importOne(
       db,
       shop.id,
@@ -1053,7 +1057,7 @@ describe("commitContactImport — a declined size is kept as a staff note (#1801
   });
 
   it("does not stack a second copy when the same file is re-run", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const csv = [
       "full_name,email,wetsuit_size",
       `Kept Kira,kira.import@example.com,"${noteFiledAsASize}"`,
