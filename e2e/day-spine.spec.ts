@@ -49,7 +49,7 @@ test("the day is named, said once, and followed by its departures and what needs
   await expect(page.getByRole("img", { name: /The day at a glance/ })).toHaveCount(0);
 
   // The day in one line, said once.
-  await expect(page.getByText(/boats? today\./)).toHaveCount(1);
+  await expect(page.getByText(/boats? today[.,]/)).toHaveCount(1);
 
   // A departure still ahead wears its stage and says how ready its divers
   // are; the seeded morning boat is already home, and reads as settled.

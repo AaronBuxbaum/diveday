@@ -314,7 +314,12 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   const tripId = page.url().match(/\/trips\/([^/?#]+)/)?.[1];
   if (!tripId) throw new Error("could not read the trip id from the URL");
 
-  await page.getByRole("link", { name: "Add diver" }).click();
+  // Inside the arrivals window "Add a diver" is one search field, and a booked
+  // seat is its empty result's "Add diver" (UX audit item 24).
+  const find = page.getByRole("searchbox", { name: "Find a returning diver" });
+  await find.fill("Fills The Boat");
+  await find.press("Enter");
+  await page.getByRole("link", { name: "Add diver", exact: true }).first().click();
   await page.waitForURL(/\/divers\/new/);
   await page.getByLabel("Full name").fill("Fills The Boat");
   await page.getByLabel("Email").fill(`fills-${e2eNow().getTime()}@example.com`);
