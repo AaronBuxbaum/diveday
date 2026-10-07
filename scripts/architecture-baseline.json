@@ -1,3 +1,0 @@
-{
-  "//": "Pre-existing architecture-boundary violations, per file. Written by `node scripts/check-architecture.mjs --write`. This number may only go down — see scripts/check-architecture.mjs."
-}

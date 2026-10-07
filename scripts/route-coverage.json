@@ -24,6 +24,16 @@
     "visual": ["forgot-password"],
     "a11y": ["a11y.spec.ts"]
   },
+  "/get-set-up": {
+    "e2e": ["setup-request.spec.ts"],
+    "visual": ["get-set-up"],
+    "a11y": ["a11y.spec.ts"]
+  },
+  "/get-set-up/sent": {
+    "e2e": ["setup-request.spec.ts"],
+    "visual": ["get-set-up-sent"],
+    "a11y": ["a11y.spec.ts"]
+  },
   "/invite/[token]": {
     "e2e": ["staff-invite.spec.ts"],
     "visual": ["staff-invite"]
@@ -217,6 +227,7 @@
       "first-ten-minutes.spec.ts",
       "next-departure.spec.ts",
       "nitrox.spec.ts",
+      "participant-types.spec.ts",
       "partner-referral.spec.ts",
       "promo-codes.spec.ts",
       "readiness.spec.ts",
@@ -232,6 +243,7 @@
     "visual": [
       "booking-confirmed-embed",
       "booking-pitch-open",
+      "public-trip-participant-types",
       "shop-not-found",
       "site-briefing",
       "site-briefing-requirements"
@@ -321,6 +333,10 @@
     ],
     "visual": ["divers", "divers-removed"],
     "a11y": ["a11y.spec.ts"]
+  },
+  "/shop/[shopSlug]/divers/[personId]/merge/[survivorId]": {
+    "e2e": ["diver-merge.spec.ts"],
+    "visual": ["diver-merge-preview"]
   },
   "/shop/[shopSlug]/divers/[personId]/waivers/[recordId]": {
     "e2e": ["waivers.spec.ts"],
@@ -485,10 +501,14 @@
       "settings-data-unfinished",
       "settings-payments",
       "settings-profile",
-      "settings-tax",
-      "settings-trial"
+      "settings-tax"
     ],
     "a11y": ["a11y.spec.ts"]
+  },
+  "/shop/[shopSlug]/settings/billing": {
+    "e2e": ["billing.spec.ts"],
+    "visual": ["settings-billing"],
+    "a11y": []
   },
   "/shop/[shopSlug]/settings/boats": {
     "e2e": ["settings-editor-pages.spec.ts"],
@@ -504,6 +524,11 @@
     "e2e": ["calendar-sync.spec.ts"],
     "visual": ["settings-calendar"],
     "a11y": ["a11y.spec.ts"]
+  },
+  "/shop/[shopSlug]/settings/email": {
+    "e2e": ["weekly-digest.spec.ts"],
+    "visual": ["settings-email"],
+    "a11y": []
   },
   "/shop/[shopSlug]/settings/embed": {
     "e2e": ["schedule-embed.spec.ts"],
@@ -572,6 +597,7 @@
       "manifest.spec.ts",
       "minimum-seats.spec.ts",
       "nitrox.spec.ts",
+      "participant-types.spec.ts",
       "promo-codes.spec.ts",
       "recap.spec.ts",
       "refunds.spec.ts",
@@ -592,11 +618,13 @@
       "trip-desk-no-show",
       "trip-desk-no-show-sailed",
       "trip-desk-waiver-refused",
+      "trip-details-participant-terms",
       "trip-manage",
       "trip-manage-course-requirements",
       "trip-minimum-seats",
       "trip-repeating-cadence",
-      "trip-repeating-panel"
+      "trip-repeating-panel",
+      "trip-roster-participant-types"
     ],
     "a11y": ["a11y.spec.ts"]
   },
@@ -614,6 +642,7 @@
       "depth-and-age-surfaces.spec.ts",
       "divers.spec.ts",
       "manifest.spec.ts",
+      "participant-types.spec.ts",
       "sightings.spec.ts"
     ],
     "visual": [
@@ -622,6 +651,7 @@
       "manifest-buddy-teams-panel",
       "manifest-not-back-aboard",
       "manifest-not-here",
+      "manifest-participant-types",
       "manifest-person-panel",
       "manifest-plan-change",
       "manifest-seen"

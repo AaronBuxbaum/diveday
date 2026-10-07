@@ -1425,6 +1425,248 @@ async function blockedAboardOnBoatsOut(
   return { out, blocked };
 }
 
+type DepartureTrip = HorizonReadinessEvidence["trips"][number];
+
+/**
+ * What a departure card reads beyond readiness and the roll call: what its
+ * divers came for, the hull it sails on, and who crews it. Shared by today's
+ * stations (`getTodayWork`) and tomorrow's (`getShopDayDepartures`), so the two
+ * disclosures can never draw a card from different readers.
+ */
+async function departureCardFacts(db: AppDb, shopId: string, trips: readonly DepartureTrip[]) {
+  const tripIds = trips.map((t) => t.id);
+  // What the divers on these boats came for, as counts (issue #1386).
+  // **One query for the whole day**, keyed on the trip ids already in hand —
+  // one call per station is the shape this is written to avoid, and the reader
+  // leaves departures nobody answered on out of its map entirely, so an
+  // absent entry is the ordinary "nobody said" rather than a case to test for.
+  //
+  // The hull each departure sails on, for the station's meta line.
+  // A bounded lookup keyed on the trips already in hand rather than a join
+  // widened into `pagedUpcomingTripsWithCounts`: that reader also feeds the
+  // public schedule and the booking picker, neither of which has any business
+  // knowing a boat's name.
+  const boatIds = [
+    ...new Set(trips.map((trip) => trip.boatId).filter((id): id is string => Boolean(id))),
+  ];
+  const [diveIntents, boatRows, assignments] = await Promise.all([
+    diveIntentTallyForTrips(db, shopId, tripIds),
+    boatIds.length > 0
+      ? db
+          .select({ id: boats.id, name: boats.name })
+          .from(boats)
+          .where(and(eq(boats.shopId, shopId), inArray(boats.id, boatIds)))
+      : [],
+    tripIds.length > 0
+      ? db
+          .select({
+            tripId: tripAssignments.tripId,
+            personId: people.id,
+            fullName: people.fullName,
+            tripRole: tripAssignments.tripRole,
+            role: personRoles.role,
+          })
+          .from(tripAssignments)
+          .innerJoin(people, eq(people.id, tripAssignments.personId))
+          .leftJoin(personRoles, eq(personRoles.personId, people.id))
+          .where(inArray(tripAssignments.tripId, tripIds))
+          // **By name, because otherwise there is no order at all.** Without
+          // this the crew line renders in whatever order the database hands
+          // back, which is not stable: the same departure read "Keiko Tanaka,
+          // Sal Moretti" on one render and "Sal Moretti, Keiko Tanaka" on the
+          // next, and a visual baseline caught it flapping between two runs of
+          // identical seeded data. A shop reading its own board twice in a
+          // morning should not have to wonder what changed. `personId` breaks
+          // a tie between two people with the same name, so the order is total
+          // rather than merely usually-stable. Matches `listTripCrew`
+          // (src/db/trips-crew.ts), which already sorted by name.
+          .orderBy(asc(people.fullName), asc(people.id))
+      : [],
+  ]);
+  const boatNames = new Map(boatRows.map((row) => [row.id, row.name] as const));
+
+  // What each person is doing on *this* boat when the roster says so, otherwise
+  // their standing roles — `effectiveCrewRoles` (src/lib/crew-roles.ts), the one
+  // definition. This used to be re-implemented inline right here, a sixth copy
+  // of a rule that already had a home (review 20260803, D8); the standing role
+  // list is true and misleading at once on a board whose whole question is "who
+  // is doing what today", so it is worth exactly one implementation.
+  const namesByPerson = new Map(assignments.map((row) => [row.personId, row.fullName] as const));
+  const rowsByTrip = new Map<string, typeof assignments>();
+  for (const row of assignments) {
+    const list = rowsByTrip.get(row.tripId) ?? [];
+    list.push(row);
+    rowsByTrip.set(row.tripId, list);
+  }
+  const crewByTrip = new Map<string, { id: string; fullName: string; roles: string[] }[]>();
+  for (const [tripId, rows] of rowsByTrip) {
+    crewByTrip.set(
+      tripId,
+      groupCrewAssignments(rows).map((member) => ({
+        id: member.personId,
+        fullName: namesByPerson.get(member.personId) ?? "",
+        roles: effectiveCrewRoles(member),
+      })),
+    );
+  }
+
+  return { diveIntents, boatNames, crewByTrip };
+}
+
+type DepartureCardInputs = Awaited<ReturnType<typeof departureCardFacts>> & {
+  readinessByTrip: HorizonReadinessEvidence["readinessByTrip"];
+  departureRollCall: Awaited<ReturnType<typeof listDepartureRollCallByTrip>>;
+  departureCrewRollCall: Awaited<ReturnType<typeof listDepartureCrewRollCallByTrip>>;
+  stagesByTrip: Awaited<ReturnType<typeof latestTripStagesByTrip>>;
+};
+
+/** One shop-day's departure cards, from facts already read. No queries. */
+function summarizeDepartures(
+  trips: readonly DepartureTrip[],
+  inputs: DepartureCardInputs,
+  now: Date,
+  timeZone: string,
+): DepartureSummary[] {
+  const {
+    readinessByTrip,
+    departureRollCall,
+    departureCrewRollCall,
+    stagesByTrip,
+    diveIntents,
+    boatNames,
+    crewByTrip,
+  } = inputs;
+  return trips.map((trip) => {
+    const rows = readinessByTrip.get(trip.id) ?? [];
+    const blockedRows = rows.filter((row) => row.readiness.status === "blocked");
+    const rollCall = departureRollCall.get(trip.id) ?? new Map();
+    let aboardCount = 0;
+    for (const state of rollCall.values()) if (state === "boarded") aboardCount += 1;
+    const aboardBlocked = blockedRows.filter((row) => rollCall.get(row.booking.id) === "boarded");
+    // `not_boarded` drops out **only once the boat has actually gone.**
+    //
+    // At the departure checkpoint that result means "never left the dock",
+    // which is benign and accounted for — but the control a deckhand taps is
+    // labelled "Mark not boarded", and at 07:05 on a 07:30 boat that reads as
+    // "isn't aboard yet", not "isn't coming". This card lives from the moment a
+    // trip is scheduled until about an hour after it sails, so silencing on the
+    // tap alone took the prompt off the front desk 25 minutes before it stopped
+    // being fixable (found by `dive-domain-expert` after #698 shipped). The
+    // same 1-hour buffer every other "has it sailed" question in this app uses.
+    const ashoreBlocked = blockedRows.filter((row) => {
+      const result = rollCall.get(row.booking.id);
+      if (result === "boarded") return false;
+      if (result === undefined) return true;
+      return !hasSailed(trip.startsAt, now);
+    });
+    // The crew list this trip names *now*, each carrying their own departure
+    // result — the shape `rollCallCompleteness` requires, so that the verdict
+    // Today renders is literally the manifest's own.
+    const tripCrew = crewByTrip.get(trip.id) ?? [];
+    const crewResults = departureCrewRollCall.get(trip.id) ?? new Map();
+    const completeness = rollCallCompleteness({
+      checkpoint: "departure",
+      totalDivers: rows.length,
+      awaiting: rows.filter((row) => rollCall.get(row.booking.id) === undefined).length,
+      // Structurally zero at departure — there is no dive to not come back
+      // from yet — and passed anyway, because the signature refuses to let a
+      // caller quietly omit the half that means somebody is in the water.
+      notBackAboard: 0,
+      crew: tripCrew.map((member) => {
+        const state = crewResults.get(member.id);
+        return state ? { rollCall: { state, implied: false } } : {};
+      }),
+    });
+    return {
+      tripId: trip.id,
+      title: trip.title,
+      startsAt: trip.startsAt,
+      endsAt: trip.endsAt,
+      booked: trip.booked,
+      capacity: trip.capacity,
+      ready: rows.filter((row) => row.readiness.status === "ready").length,
+      blocked: blockedRows.length,
+      boarded: aboardCount,
+      blockedAboard: aboardBlocked.length,
+      blockedAshore: ashoreBlocked.length,
+      blockedAshoreNames: ashoreBlocked.map((row) => row.person.fullName),
+      courseTitle: trip.course?.title ?? null,
+      siteName: trip.diveSite?.name ?? null,
+      boatName: trip.boatId ? (boatNames.get(trip.boatId) ?? null) : null,
+      priceCents: trip.priceCents,
+      crew: tripCrew,
+      crewAccountedFor: completeness.crewAccountedFor,
+      crewReason: completeness.crewReason,
+      // The same staleness rule every other reader applies: a word older than
+      // the boat's own day stops speaking, so a crew that tapped Underway and
+      // then got busy does not leave the home saying it at midnight. The
+      // manifest is the exception and reads the raw ledger — that strip is the
+      // crew's own control, and it shows them their last answer.
+      stage: liveStageOf(stagesByTrip.get(trip.id) ?? null, trip.endsAt, now),
+      phase: tripPhaseOf({
+        startsAt: trip.startsAt,
+        endsAt: trip.endsAt,
+        now,
+        timeZone,
+        stage: stagesByTrip.get(trip.id) ?? null,
+        cancelled: false,
+      }),
+      // Absent from the map means nobody aboard answered, and an empty tally is
+      // what makes the station render no line at all.
+      intents: diveIntents.get(trip.id) ?? [],
+    };
+  });
+}
+
+/**
+ * **One shop-day's departure cards and nothing else** - the Tomorrow
+ * disclosure on the shop home (app audit 2026-10-07, item 2).
+ *
+ * The home used to read tomorrow by calling {@link getTodayWork} a second
+ * time at noon tomorrow and keeping only its `departures`: the whole action
+ * queue - about forty statements of fit, nitrox, contact, waitlist, delivery,
+ * staffing, payments, reviews, gear - assembled and thrown away, because the
+ * spine files every job from *today's* queue (`assembleDaySpine`). This reads
+ * only what a card shows, through the same readers and the same summarizer
+ * `getTodayWork` builds its own stations with, so a card cannot read
+ * differently in the two disclosures.
+ *
+ * `day` is any instant inside the shop-day wanted (the home passes noon), and
+ * it is also the "now" the cards are drawn at - exactly what the second
+ * `getTodayWork` call used to pass. `evidence` is the request's one readiness
+ * pass; the day's boats are drawn from its horizon.
+ */
+export async function getShopDayDepartures(
+  db: AppDb,
+  shopId: string,
+  timeZone: string,
+  day: Date,
+  evidence: HorizonReadinessEvidence,
+): Promise<DepartureSummary[]> {
+  const wanted = shopDay(day, timeZone);
+  const trips = evidence.trips.filter((trip) => shopDay(trip.startsAt, timeZone) === wanted);
+  if (trips.length === 0) return [];
+  const tripIds = trips.map((trip) => trip.id);
+  const [departureRollCall, departureCrewRollCall, stagesByTrip, facts] = await Promise.all([
+    listDepartureRollCallByTrip(db, shopId, tripIds),
+    listDepartureCrewRollCallByTrip(db, shopId, tripIds),
+    latestTripStagesByTrip(db, shopId, tripIds),
+    departureCardFacts(db, shopId, trips),
+  ]);
+  return summarizeDepartures(
+    trips,
+    {
+      readinessByTrip: evidence.readinessByTrip,
+      departureRollCall,
+      departureCrewRollCall,
+      stagesByTrip,
+      ...facts,
+    },
+    day,
+    timeZone,
+  );
+}
+
 export async function getTodayWork(
   db: AppDb,
   shopId: string,
@@ -1608,82 +1850,9 @@ export async function getTodayWork(
   }));
   const credentialRows = await listStaffCredentials(db, shopId);
 
-  const tripIds = todayTrips.map((t) => t.id);
-  // What the divers on today's boats came for, as counts (issue #1386).
-  // **One query for the whole day**, keyed on the trip ids already in hand —
-  // one call per station is the shape this is written to avoid, and the reader
-  // leaves departures nobody answered on out of its map entirely, so an
-  // absent entry is the ordinary "nobody said" rather than a case to test for.
-  const diveIntents = await diveIntentTallyForTrips(db, shopId, tripIds);
-  // The hull each of today's departures sails on, for the station's meta line.
-  // A bounded lookup keyed on the trips already in hand rather than a join
-  // widened into `pagedUpcomingTripsWithCounts`: that reader also feeds the
-  // public schedule and the booking picker, neither of which has any business
-  // knowing a boat's name.
-  const boatIds = [
-    ...new Set(todayTrips.map((trip) => trip.boatId).filter((id): id is string => Boolean(id))),
-  ];
-  const boatNames = new Map(
-    boatIds.length > 0
-      ? (
-          await db
-            .select({ id: boats.id, name: boats.name })
-            .from(boats)
-            .where(and(eq(boats.shopId, shopId), inArray(boats.id, boatIds)))
-        ).map((row) => [row.id, row.name] as const)
-      : [],
-  );
-  const assignments =
-    tripIds.length > 0
-      ? await db
-          .select({
-            tripId: tripAssignments.tripId,
-            personId: people.id,
-            fullName: people.fullName,
-            tripRole: tripAssignments.tripRole,
-            role: personRoles.role,
-          })
-          .from(tripAssignments)
-          .innerJoin(people, eq(people.id, tripAssignments.personId))
-          .leftJoin(personRoles, eq(personRoles.personId, people.id))
-          .where(inArray(tripAssignments.tripId, tripIds))
-          // **By name, because otherwise there is no order at all.** Without
-          // this the crew line renders in whatever order the database hands
-          // back, which is not stable: the same departure read "Keiko Tanaka,
-          // Sal Moretti" on one render and "Sal Moretti, Keiko Tanaka" on the
-          // next, and a visual baseline caught it flapping between two runs of
-          // identical seeded data. A shop reading its own board twice in a
-          // morning should not have to wonder what changed. `personId` breaks
-          // a tie between two people with the same name, so the order is total
-          // rather than merely usually-stable. Matches `listTripCrew`
-          // (src/db/trips-crew.ts), which already sorted by name.
-          .orderBy(asc(people.fullName), asc(people.id))
-      : [];
-
-  // What each person is doing on *this* boat when the roster says so, otherwise
-  // their standing roles — `effectiveCrewRoles` (src/lib/crew-roles.ts), the one
-  // definition. This used to be re-implemented inline right here, a sixth copy
-  // of a rule that already had a home (review 20260803, D8); the standing role
-  // list is true and misleading at once on a board whose whole question is "who
-  // is doing what today", so it is worth exactly one implementation.
-  const namesByPerson = new Map(assignments.map((row) => [row.personId, row.fullName] as const));
-  const rowsByTrip = new Map<string, typeof assignments>();
-  for (const row of assignments) {
-    const list = rowsByTrip.get(row.tripId) ?? [];
-    list.push(row);
-    rowsByTrip.set(row.tripId, list);
-  }
-  const crewByTrip = new Map<string, { id: string; fullName: string; roles: string[] }[]>();
-  for (const [tripId, rows] of rowsByTrip) {
-    crewByTrip.set(
-      tripId,
-      groupCrewAssignments(rows).map((member) => ({
-        id: member.personId,
-        fullName: namesByPerson.get(member.personId) ?? "",
-        roles: effectiveCrewRoles(member),
-      })),
-    );
-  }
+  // What each card shows beyond readiness and the roll call - intents, hull,
+  // crew - read the one way tomorrow's cards read it too.
+  const { diveIntents, boatNames, crewByTrip } = await departureCardFacts(db, shopId, todayTrips);
 
   const actions: TodayAction[] = [];
 
@@ -1981,7 +2150,7 @@ export async function getTodayWork(
     // this answer to know whether it applies (issue #1338, and the matching
     // walk in `staffingWeek`, src/db/staffing.ts).
     const ratioGap = divemasterRatioGap({
-      divers: trip.booked,
+      divers: trip.bookedDivers,
       divemasterCount: inWaterDivemasterCount(counts),
       diversPerDivemaster,
       // A departure the shop has marked self-guided raises neither of the
@@ -2031,7 +2200,7 @@ export async function getTodayWork(
       booked: trip.booked,
     });
     const rosterRatioGap = divemasterRatioGap({
-      divers: trip.booked,
+      divers: trip.bookedDivers,
       divemasterCount: inWaterDivemasterCount(counts.roster),
       diversPerDivemaster,
       selfGuided: trip.selfGuided,
@@ -2717,86 +2886,20 @@ export async function getTodayWork(
     });
   }
 
-  const departures: DepartureSummary[] = todayTrips.map((trip) => {
-    const rows = readinessByTrip.get(trip.id) ?? [];
-    const blockedRows = rows.filter((row) => row.readiness.status === "blocked");
-    const rollCall = departureRollCall.get(trip.id) ?? new Map();
-    let aboardCount = 0;
-    for (const state of rollCall.values()) if (state === "boarded") aboardCount += 1;
-    const aboardBlocked = blockedRows.filter((row) => rollCall.get(row.booking.id) === "boarded");
-    // `not_boarded` drops out **only once the boat has actually gone.**
-    //
-    // At the departure checkpoint that result means "never left the dock",
-    // which is benign and accounted for — but the control a deckhand taps is
-    // labelled "Mark not boarded", and at 07:05 on a 07:30 boat that reads as
-    // "isn't aboard yet", not "isn't coming". This card lives from the moment a
-    // trip is scheduled until about an hour after it sails, so silencing on the
-    // tap alone took the prompt off the front desk 25 minutes before it stopped
-    // being fixable (found by `dive-domain-expert` after #698 shipped). The
-    // same 1-hour buffer every other "has it sailed" question in this app uses.
-    const ashoreBlocked = blockedRows.filter((row) => {
-      const result = rollCall.get(row.booking.id);
-      if (result === "boarded") return false;
-      if (result === undefined) return true;
-      return !hasSailed(trip.startsAt, now);
-    });
-    // The crew list this trip names *now*, each carrying their own departure
-    // result — the shape `rollCallCompleteness` requires, so that the verdict
-    // Today renders is literally the manifest's own.
-    const tripCrew = crewByTrip.get(trip.id) ?? [];
-    const crewResults = departureCrewRollCall.get(trip.id) ?? new Map();
-    const completeness = rollCallCompleteness({
-      checkpoint: "departure",
-      totalDivers: rows.length,
-      awaiting: rows.filter((row) => rollCall.get(row.booking.id) === undefined).length,
-      // Structurally zero at departure — there is no dive to not come back
-      // from yet — and passed anyway, because the signature refuses to let a
-      // caller quietly omit the half that means somebody is in the water.
-      notBackAboard: 0,
-      crew: tripCrew.map((member) => {
-        const state = crewResults.get(member.id);
-        return state ? { rollCall: { state, implied: false } } : {};
-      }),
-    });
-    return {
-      tripId: trip.id,
-      title: trip.title,
-      startsAt: trip.startsAt,
-      endsAt: trip.endsAt,
-      booked: trip.booked,
-      capacity: trip.capacity,
-      ready: rows.filter((row) => row.readiness.status === "ready").length,
-      blocked: blockedRows.length,
-      boarded: aboardCount,
-      blockedAboard: aboardBlocked.length,
-      blockedAshore: ashoreBlocked.length,
-      blockedAshoreNames: ashoreBlocked.map((row) => row.person.fullName),
-      courseTitle: trip.course?.title ?? null,
-      siteName: trip.diveSite?.name ?? null,
-      boatName: trip.boatId ? (boatNames.get(trip.boatId) ?? null) : null,
-      priceCents: trip.priceCents,
-      crew: tripCrew,
-      crewAccountedFor: completeness.crewAccountedFor,
-      crewReason: completeness.crewReason,
-      // The same staleness rule every other reader applies: a word older than
-      // the boat's own day stops speaking, so a crew that tapped Underway and
-      // then got busy does not leave the home saying it at midnight. The
-      // manifest is the exception and reads the raw ledger — that strip is the
-      // crew's own control, and it shows them their last answer.
-      stage: liveStageOf(stagesByTrip.get(trip.id) ?? null, trip.endsAt, now),
-      phase: tripPhaseOf({
-        startsAt: trip.startsAt,
-        endsAt: trip.endsAt,
-        now,
-        timeZone,
-        stage: stagesByTrip.get(trip.id) ?? null,
-        cancelled: false,
-      }),
-      // Absent from the map means nobody aboard answered, and an empty tally is
-      // what makes the station render no line at all.
-      intents: diveIntents.get(trip.id) ?? [],
-    };
-  });
+  const departures = summarizeDepartures(
+    todayTrips,
+    {
+      readinessByTrip,
+      departureRollCall,
+      departureCrewRollCall,
+      stagesByTrip,
+      diveIntents,
+      boatNames,
+      crewByTrip,
+    },
+    now,
+    timeZone,
+  );
 
   const next = todayTrips.length === 0 ? upcoming[0] : null;
 

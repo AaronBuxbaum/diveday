@@ -2,7 +2,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { FIGURE_CLASS, LEAD_TITLE_CLASS } from "@/components/ui/typography";
-import type { TripPrep } from "@/db/trips-prep";
+import type { TripPrep } from "@/db/trips";
 import { diveRecencyText } from "@/i18n/readiness-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
 import {
@@ -168,7 +168,7 @@ describe("an empty departure on the departure page", () => {
 const STATED = new Date("2026-09-01T00:00:00Z");
 
 /** A stated fit that rents nothing until an override says it does. */
-function fit(overrides: Partial<RentalFit> = {}): RentalFit {
+function statedFit(overrides: Partial<RentalFit> = {}): RentalFit {
   return {
     rentsBcd: false,
     rentsRegulator: false,
@@ -221,7 +221,7 @@ function everyPanelPrep(): TripPrep {
   const checklist = buildDivePrepChecklist({
     divers: [
       diver(1, "Carmen Ruiz", {
-        fit: fit({
+        fit: statedFit({
           rentsBcd: true,
           bcdSize: "L",
           rentsWetsuit: true,
@@ -232,7 +232,7 @@ function everyPanelPrep(): TripPrep {
         lastDivedBand: "over_five_years",
       }),
       diver(2, "Sam Whitfield", {
-        fit: fit({
+        fit: statedFit({
           rentsBcd: true,
           bcdSize: "XL",
           needsStaffFitAt: STATED,
@@ -242,7 +242,7 @@ function everyPanelPrep(): TripPrep {
       // BCD L beside Carmen, so one rental line is for two divers; no weight
       // stated, so the partial list has a row.
       diver(3, "Grace Mensah", {
-        fit: fit({ rentsBcd: true, bcdSize: "L", rentsWeights: true }),
+        fit: statedFit({ rentsBcd: true, bcdSize: "L", rentsWeights: true }),
       }),
       diver(4, "Theo Lindqvist"),
       diver(5, "Nadia Petrov", { wantsNitrox: true }),

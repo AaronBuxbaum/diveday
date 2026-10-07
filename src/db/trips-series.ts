@@ -18,8 +18,9 @@ import {
 } from "@/lib/recurrence";
 import { tripSiteList, tripSiteListChanged } from "@/lib/trip-revision";
 import { utcToWallTime, type WallTime, wallTimeToUtc } from "@/lib/zoned";
-import { type AppDb, type AppTransaction, queryAll } from "./client";
+import type { AppDb, AppTransaction } from "./client";
 import { releaseUnclaimedGearReservationsForTrips } from "./gear";
+import { queryAll } from "./query-helpers";
 import {
   bookings,
   rollCallEvents,
@@ -211,7 +212,7 @@ async function materializeWindow(
   if (!ok) return null;
 
   // `queryAll`, not `Promise.all`: the nightly roll materializes inside a
-  // transaction, which is one pinned client. See `queryAll` in `src/db/client.ts`.
+  // transaction, which is one pinned client. See `queryAll` in `src/db/query-helpers.ts`.
   const [taken, skipped] = await queryAll(tx, [
     () =>
       tx
@@ -262,6 +263,10 @@ async function materializeWindow(
         plannedDives: template.trip.plannedDives,
         priceCents: template.trip.priceCents,
         depositCents: template.trip.depositCents,
+        // Every Saturday sells the same snorkel and ride-along seats.
+        snorkelerPriceCents: template.trip.snorkelerPriceCents,
+        riderPriceCents: template.trip.riderPriceCents,
+        diverCapacity: template.trip.diverCapacity,
         cancellationWindowHours: template.trip.cancellationWindowHours,
         isPrivate: template.trip.isPrivate,
         // The case this matters most for: a standing weekly self-guided charter

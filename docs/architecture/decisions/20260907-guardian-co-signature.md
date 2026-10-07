@@ -244,7 +244,7 @@ So it moves. A minor's form draws a second sentence, selected by the `requiresGu
 
 **Escape hatch.** One key per locale and one ternary. If H-01/H-03 returns a minor-specific template, this sentence is replaced by whatever that template asserts and nothing else has to move.
 
-## Amendment 2026-10-07 — the guardian's email can be erased on its own (H-102, issue #1673)
+## Amendment 2026-10-07 — the guardian's email can be erased on its own (H-103, issue #1673)
 
 Decision 8 erased the guardian's address only with the diver's own data. A parent is a third party with no record of their own, so a parent asking for their address to go had nothing to ask for but the child's erasure, and nulling the address alone made `verifyWaiverIntegrity` report tampering on a release nobody had altered (decision 5 put it inside the seal).
 

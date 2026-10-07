@@ -14,7 +14,7 @@
 > A strategic read of where DiveDay actually is versus where the vision says it should be, and an
 > opinionated recommendation for the next arc of work. Written 2026-07-20 from a full pass over
 > [vision](../vision.md), [roadmap](../features/roadmap.md),
-> [human-decisions](../human-decisions.md), [glossary](../glossary.md),
+> [human-decisions](../human-decisions/README.md), [glossary](../glossary.md),
 > [design principles](../../design/principles.md), the 2026-07-19 cleanup audit (executed and retired
 > 2026-07-20; its lasting rulings live in
 > [architecture/overview.md](../../architecture/overview.md#settled-shape-decisions)),
@@ -122,7 +122,7 @@ should be retired, gated, or paused — not extended:
   seam (`src/lib/payments/index.ts`) was removed; the Connect + invoicing order flow the UI actually
   uses is the single payment path.
 - ~~**The cert-verification agency-gateway plumbing**~~ ✅ **Removed (2026-07-21).** No agency
-  exposed such an API ([H-10](../human-decisions.md)), so the per-agency PADI/SSI/NAUI plumbing always
+  exposed such an API ([H-10](../human-decisions/README.md)), so the per-agency PADI/SSI/NAUI plumbing always
   resolved to the stub. The whole seam was removed in favour of manual staff certification (staff
   look the number up and click Mark certified) — see
   [20260721-manual-certification](../../architecture/decisions/20260721-manual-certification.md). The
@@ -142,7 +142,7 @@ should be retired, gated, or paused — not extended:
 
 Common thread: much of this is **built ahead of the human decisions needed to run it.** Nitrox
 (H-11), courses (H-08), payment policy (H-07), notifications (H-09), and waiver legal (H-01–03) are
-all *provisional* and unapproved ([provisional defaults](../human-decisions.md#provisional-implementation-defaults--verify-before-production)). A large slice of
+all *provisional* and unapproved ([provisional defaults](../human-decisions/README.md#provisional-implementation-defaults--verify-before-production)). A large slice of
 shipped surface **cannot go to production** as-is — and in a default deploy with no keys, no email
 sends, no image stores, no payment processes. We are polishing rooms in a house that has no plumbing
 connected.
@@ -211,7 +211,7 @@ Delight over a product that can't operate is theater. In parallel with Move 2:
   Move 2 pay off.
 - **Pick and finish one monetization path** (the Connect/invoicing flow), retire the other, and close
   the H-07 policy gaps enough to take a real deposit.
-- Drive the open [human decisions](../human-decisions.md) for anything presented as shippable. Don't
+- Drive the open [human decisions](../human-decisions/README.md) for anything presented as shippable. Don't
   present provisional-policy surfaces (nitrox, courses) as done until their H-row is Chosen.
 
 ## Sequenced queue

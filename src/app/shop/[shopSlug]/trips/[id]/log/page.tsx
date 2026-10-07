@@ -26,6 +26,7 @@ import { requireShopSurface } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { CertificationLine } from "./_components/CertificationLine";
+import { incidentSummaryRows } from "./_components/incident-summary";
 import { NumberedName } from "./_components/NumberedName";
 import {
   rollCallCheckpointPrintClass,
@@ -122,13 +123,7 @@ export default async function IncidentExportPage({
   const agencyText = (agency: string) =>
     t(AGENCY_KEYS[agency as keyof typeof AGENCY_KEYS] ?? AGENCY_KEYS.other);
 
-  const summary: [string, number][] = [
-    [t("incidentExport.summaryDivers"), doc.departureSummary.totalDivers],
-    [t("incidentExport.summaryBoarded"), doc.departureSummary.boarded],
-    [t("incidentExport.summaryNotBoarded"), doc.departureSummary.notBoarded],
-    [t("incidentExport.summaryAwaiting"), doc.departureSummary.awaiting],
-    [t("incidentExport.summaryCrewAssigned"), doc.departureSummary.crewAssigned],
-  ];
+  const summary = incidentSummaryRows(t, doc.departureSummary);
 
   // Section rhythm is the wrapper's, one `space-y-10`, and no section hangs a
   // margin of its own (docs/design/forms-and-controls.md): they used to step

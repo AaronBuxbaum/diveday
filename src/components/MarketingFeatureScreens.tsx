@@ -720,7 +720,7 @@ export function GearRegisterFallback({ locale }: { locale: DiverLocale }) {
  * the hero card (`CourseHero`: the agency's eyebrow, the course name, its
  * summary, the price per diver, and the duration and group size under it),
  * the plan by day (`CourseSessions`, from the Open Water template in
- * `src/db/course-templates.ts`), and the next date to book (`CourseSchedule`).
+ * `src/content/course-templates.ts`), and the next date to book (`CourseSchedule`).
  * Left out: the cover photo, each day's list of skills, the requirements and
  * the other dates. The day titles take a colon where the template has a dash,
  * and from a 448px panel the hero and the plan stand side by side; the page

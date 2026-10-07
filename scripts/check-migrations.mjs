@@ -52,7 +52,7 @@ const MIGRATIONS_DIR = "drizzle";
  *
  * The folder names are timestamp-prefixed, so "predates" is a lexicographic
  * comparison and needs no list of names. This is the same ratchet shape as
- * `scripts/copy-baseline.json` and friends, with one difference worth stating:
+ * the counter sections of `scripts/ratchets.json`, with one difference worth stating:
  * it never needs bumping. Everything after this line is audited *forever*, not
  * once — a destructive migration that legitimately merges carries its
  * acknowledgement in the file, so it keeps passing on its own evidence.

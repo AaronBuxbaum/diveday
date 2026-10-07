@@ -16,7 +16,7 @@ export type CourseRatioRule = {
  * PADI's published in-water ratio for Open Water Diver open-water training
  * dives: up to 8 students per instructor, extendable by 2 per certified
  * assistant (a Divemaster or an Assistant Instructor aboard, in DiveDay's role
- * model) to a hard ceiling of 12 — see H-08 (docs/product/human-decisions.md) and
+ * model) to a hard ceiling of 12 — see H-08 (docs/product/human-decisions/) and
  * docs/architecture/decisions/20260724-course-admission-standards.md for the
  * PADI/SSI sourcing. Continuing-education courses (Advanced Open Water,
  * Rescue, specialties) are not modeled here — they already require a verified
@@ -27,7 +27,7 @@ export type CourseRatioRule = {
  * {@link DSD_RATIO} — because DSD participants have had zero prior water
  * time, unlike an Open Water student who has already completed confined
  * dives. The two were previously conflated (this constant applied to both),
- * which overstated DSD capacity; HD-6 (docs/product/human-decisions.md, H-08
+ * which overstated DSD capacity; HD-6 (docs/product/human-decisions/, H-08
  * reopened) obtained the real PADI Instructor Manual figures and split them.
  */
 export const ENTRY_LEVEL_COURSE_RATIO: CourseRatioRule = {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { cancelBooking } from "./bookings";
 import { joinLastMinuteList } from "./last-minute-list";
@@ -21,7 +21,7 @@ const visitor = {
 };
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id);
   const fullTrip = trips.find((trip) => trip.title === "Wreck Trip — Spiegel Grove");
   const openTrip = trips.find((trip) => trip.title === "Two-Tank Reef — Christ of the Abyss");
@@ -37,6 +37,10 @@ async function connectStripe(db: Awaited<ReturnType<typeof context>>["db"], shop
     detailsSubmitted: true,
   });
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 describe("sendLastMinuteDealBlast (in-memory PGlite)", () => {
   it("refuses an out-of-range discount before touching Stripe or the last-minute list", async () => {

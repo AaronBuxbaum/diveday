@@ -7,7 +7,7 @@
 
 [20260718-vercel-hosting](20260718-vercel-hosting.md) selected Vercel as the web host but
 deliberately left the managed Postgres provider unchosen, tracked as
-[H-04](../../product/human-decisions.md) in the human decision log ("this ADR deliberately does
+[H-04](../../product/human-decisions/README.md) in the human decision log ("this ADR deliberately does
 not choose a database vendor or store secrets"). [ADR-0005](0005-database.md) separately deferred
 only the production driver, anticipating `drizzle-orm/node-postgres` "when hosting lands."
 
@@ -76,3 +76,7 @@ hosting itself.
   is production-ready for real customer data — update the human decision log when that's assigned.
 - Escape hatch: if connection-count pressure or edge-runtime needs show up later, revisit toward
   `neon-serverless`; the `getDb()` seam and this ADR's alternatives section are the starting point.
+
+## Amendment 2026-10-07: pool size on the pooled URL
+
+The request-path `pg` pool (`src/lib/db-pool-config.ts`) defaults to `max: 10` when `DATABASE_URL` is Neon's pooled `-pooler` host, and keeps `max: 5` for any other URL. The cap `max: 5` protected is Postgres's `max_connections`, which a direct connection spends per client; PgBouncer in transaction mode accepts up to 10,000 client connections and multiplexes them onto its own bounded server pool, so on the pooled URL a client connection does not cost a backend. Five was instead throttling single renders whose fifteen-read `Promise.all` fan-outs (the shop home, the trip page, Today's queue) ran in four waves. Capping fan-out width instead was considered and not taken: the pool already queues excess reads, so a per-site limiter would only re-implement that queue while keeping the four waves. `DATABASE_POOL_MAX` still overrides both defaults (app audit 2026-10-07, item 5).

@@ -64,7 +64,7 @@ concretely here.
 
 **DiveDay is a deliberately bounded, founder-run lifestyle business — not a venture-scale
 trajectory.** No outside capital, no aggressive multi-shop growth target. Decided explicitly
-2026-08-02 (H-26, `docs/product/human-decisions.md`), because the commercial terms already in
+2026-08-02 (H-26, `docs/product/human-decisions/README.md`), because the commercial terms already in
 place only make sense under this reading and nothing had said so out loud: the **$99 flat
 price**, **no platform fee**, the **25-shop founding cohort cap**, and the **two-year price lock**
 (H-12) are all consistent with a small, bounded customer base one person can actually run —

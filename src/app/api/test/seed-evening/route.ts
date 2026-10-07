@@ -16,8 +16,7 @@ import {
   trips,
 } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
-import { listStaff } from "@/db/trips";
-import { liveTrip } from "@/db/trips-live";
+import { listStaff, liveTrip } from "@/db/trips";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 import { tripReservationWindow } from "@/lib/gear";

@@ -8,12 +8,13 @@
     "booking_restored": "{actor} put {diver} back on the trip",
     "booking_no_show": "{actor} marked {diver} as not here, freeing the seat",
     "booking_no_show_undone": "{actor} put {diver} back on the expected list",
-    "booking_no_show_undo_refused": "{actor} could not put {diver} back: {reason, select, course_ratio_full {the session was already at its instructor ratio} other {the freed seat had been sold}}",
+    "booking_no_show_undo_refused": "{actor} could not put {diver} back: {reason, select, course_ratio_full {the session was already at its instructor ratio} divers_full {every diver’s seat had been taken} other {the freed seat had been sold}}",
     "booking_no_show_boarded": "{actor} boarded {diver} at the boat, so the released seat is theirs again",
     "booking_no_show_missing_after_dive": "{actor} recorded {diver} as not back aboard after a dive, so the released seat is theirs again",
     "identity_confirmed": "{actor} confirmed on the trip roster that this booking is {diver}",
     "identity_split": "{actor} gave {diver} their own diver record: not the same person as the match",
     "identity_split_off": "{actor} moved a booking made under another name off {diver}’s record",
+    "diver_merged": "{actor} merged {merged}’s record into {diver}’s",
     "crew_assigned": "{actor} assigned {crew} to crew",
     "crew_removed": "{actor} removed {crew} from crew",
     "blowout_called": "{actor} called a weather blow-out",
@@ -41,7 +42,8 @@
     "demo_bcd_swapped": "{actor} swapped {diver} onto a smaller BCD after the fit check",
     "demo_nitrox_logged": "{actor} logged {diver}’s nitrox card off the plastic",
     "demo_own_computer_confirmed": "{actor} confirmed {diver} is bringing their own computer",
-    "demo_paper_card_reminded": "{actor} reminded {diver} to bring the paper card to the dock"
+    "demo_paper_card_reminded": "{actor} reminded {diver} to bring the paper card to the dock",
+    "participant_type_changed": "{actor} changed {diver} from {from, select, snorkeler {snorkeling} rider {riding along} other {diving}} to {type, select, snorkeler {snorkeling} rider {riding along} other {diving}}{certCheck, select, cleared {, which cleared a card check} overridden {, past a missing card} other {}}"
   },
   "unknown": "An earlier entry"
 }

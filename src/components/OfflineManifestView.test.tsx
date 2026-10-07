@@ -1744,9 +1744,6 @@ describe("OfflineManifestView — crew are part of the head count offline too", 
     // And it says why, rather than going quiet — naming the count that is
     // holding it open, in the same words the live manifest uses.
     expect(screen.getByText(/2 crew members still to call/)).toBeInTheDocument();
-    expect(
-      screen.getByText(/Every person on the crew list needs a result of their own/),
-    ).toBeInTheDocument();
     // And the way to close it is right there, on this copy, with no signal:
     // one aboard control per crew member, which is the whole point of H-46.
     expect(screen.getAllByRole("button", { name: "Mark aboard" })).toHaveLength(2);

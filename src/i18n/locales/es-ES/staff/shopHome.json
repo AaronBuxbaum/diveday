@@ -29,7 +29,8 @@
     "backupNotAuthorized": "Solo un propietario o gerente puede cambiar los ajustes de respaldo.",
     "whatsappNotAuthorized": "Solo un propietario o gerente puede cambiar los ajustes de WhatsApp.",
     "promosNotAuthorized": "Los códigos promocionales están limitados a propietarios y gerentes.",
-    "integrationsNotAuthorized": "Solo un propietario o gerente puede cambiar las integraciones."
+    "integrationsNotAuthorized": "Solo un propietario o gerente puede cambiar las integraciones.",
+    "billingNotAuthorized": "La facturación es solo para el propietario."
   },
   "orientation": {
     "heading": "¿Recién llegado? Algunas pistas para tu puesto.",
@@ -130,8 +131,8 @@
     "until": "hasta las {time}",
     "crewing": "Formas parte de la tripulación",
     "crewRollCallOpen": "Todos los buceadores están a bordo y falta pasar lista a la tripulación.",
-    "allHome": "Todos los barcos están en puerto: salieron {divers, plural, one {# buceador} other {# buceadores}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}.",
-    "firstBoatHome": "Tu primer barco está en puerto: salieron {divers, plural, one {# buceador} other {# buceadores}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}.",
+    "allHome": "Todos los barcos están en puerto: salieron {divers, plural, one {# pasajero} other {# pasajeros}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}.",
+    "firstBoatHome": "Tu primer barco está en puerto: salieron {divers, plural, one {# pasajero} other {# pasajeros}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}.",
     "firstBooking": "Tu primera reserva",
     "stage": {
       "boarding": "Embarcando",
@@ -151,8 +152,8 @@
       "back": "{back} de {sailed} de vuelta",
       "backBy": "{back} de {sailed} de vuelta a las {time}",
       "closedBy": "lista cerrada por {name}",
-      "backSouls": "salieron {divers, plural, one {# buceador} other {# buceadores}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}",
-      "backSoulsBy": "salieron {divers, plural, one {# buceador} other {# buceadores}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back} a las {time}",
+      "backSouls": "salieron {divers, plural, one {# pasajero} other {# pasajeros}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back}",
+      "backSoulsBy": "salieron {divers, plural, one {# pasajero} other {# pasajeros}} y {crew, plural, one {# tripulante} other {# tripulantes}}, volvieron {back} a las {time}",
       "openSeats": {
         "label": "Plazas sin vender",
         "sentence": "{seats, plural, one {Quedó # plaza sin vender} other {Quedaron # plazas sin vender}}: {facts}.",

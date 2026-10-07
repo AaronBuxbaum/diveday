@@ -38,14 +38,10 @@ import {
   type SizedRentalKind,
   sizedRentalKindOfGearKind,
 } from "@/lib/rentals";
-import {
-  type AppDb,
-  type DbExecutor,
-  violatesExclusionConstraint,
-  violatesUniqueIndex,
-} from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { type OffsetPage, offsetPage } from "./paging";
+import { violatesExclusionConstraint, violatesUniqueIndex } from "./query-helpers";
 import {
   bookings,
   type GearItem,
@@ -910,18 +906,37 @@ export async function releaseGearReservation(
  */
 export async function releaseUnclaimedGearReservations(
   db: DbExecutor,
-  input: { shopId: string; bookingId: string },
+  input: {
+    shopId: string;
+    bookingId: string;
+    /**
+     * Only units of these kinds. A seat that stops diving lets go of the
+     * regulator it will not breathe from and keeps the mask it will still
+     * wear (ADR 20261007-participant-types). Omitted, every kind goes.
+     */
+    kinds?: readonly GearItemKind[];
+  },
 ): Promise<void> {
-  await db
-    .delete(gearReservations)
-    .where(
-      and(
-        eq(gearReservations.shopId, input.shopId),
-        eq(gearReservations.bookingId, input.bookingId),
-        isNull(gearReservations.checkedOutAt),
-        isNull(gearReservations.returnedAt),
-      ),
-    );
+  if (input.kinds?.length === 0) return;
+  await db.delete(gearReservations).where(
+    and(
+      eq(gearReservations.shopId, input.shopId),
+      eq(gearReservations.bookingId, input.bookingId),
+      isNull(gearReservations.checkedOutAt),
+      isNull(gearReservations.returnedAt),
+      input.kinds
+        ? inArray(
+            gearReservations.gearItemId,
+            db
+              .select({ id: gearItems.id })
+              .from(gearItems)
+              .where(
+                and(eq(gearItems.shopId, input.shopId), inArray(gearItems.kind, [...input.kinds])),
+              ),
+          )
+        : undefined,
+    ),
+  );
 }
 
 /**
@@ -1462,15 +1477,6 @@ export async function listDeletedGearItems(
       return rows.flatMap((row) => (row.deletedAt ? [{ ...row, deletedAt: row.deletedAt }] : []));
     },
   });
-}
-
-/** How many units are deleted — the register's Deleted chip appears on it. */
-export async function countDeletedGearItems(db: AppDb, shopId: string): Promise<number> {
-  const [row] = await db
-    .select({ value: count() })
-    .from(gearItems)
-    .where(and(eq(gearItems.shopId, shopId), isNotNull(gearItems.deletedAt)));
-  return row?.value ?? 0;
 }
 
 export type GearItemDetail = {

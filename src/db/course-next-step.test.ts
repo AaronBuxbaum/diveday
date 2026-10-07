@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { courseNextStepsByBooking, recordCourseNextStep } from "./course-next-step";
 import { bookings } from "./schema";
 import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
@@ -13,7 +13,7 @@ import { getTripRoster, listStaff, upcomingTripsWithCounts } from "./trips";
  * and nothing about it may drift into a curriculum the software keeps.
  */
 async function courseContext() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const session = trips.find((trip) => trip.title.startsWith("Advanced Open Water Diver"));
   const funDive = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
@@ -43,6 +43,10 @@ const stored = async (db: Awaited<ReturnType<typeof courseContext>>["db"], booki
     .where(eq(bookings.id, bookingId));
   return row;
 };
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 describe("recordCourseNextStep", () => {
   it("writes the words, the moment, and who wrote them", async () => {

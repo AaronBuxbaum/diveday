@@ -11,6 +11,7 @@ import {
 import { toDiverLocale } from "@/i18n/settings";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
+import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
 import { publicAppUrl } from "@/lib/notifications/app-url";
 import { flushLogs } from "@/lib/observability";
@@ -82,11 +83,8 @@ const CRON_MONITOR_CONFIG = {
  * backup happened.
  */
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return NextResponse.json({ error: "not_configured" }, { status: 503 });
-  if (request.headers.get("authorization") !== `Bearer ${secret}`) {
-    return new NextResponse(null, { status: 401 });
-  }
+  const refusal = requireCronSecret(request);
+  if (refusal) return refusal;
 
   // Before the check-in: a deployment with no uploader credential has no
   // platform backup, and saying "ok" to the monitor would be a lie that reads

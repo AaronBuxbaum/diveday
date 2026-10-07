@@ -359,7 +359,7 @@ async function paidPartyOfTwo(db: AppDb) {
     if (!person) throw new Error("person insert returned no row");
     const [booking] = await db
       .insert(bookings)
-      .values({ shopId: shop.id, tripId: trip.id, personId: person.id })
+      .values({ bookedAs: "diver", shopId: shop.id, tripId: trip.id, personId: person.id })
       .returning();
     if (!booking) throw new Error("booking insert returned no row");
     // One `providerRef` across both seats: this *is* the shared party checkout,

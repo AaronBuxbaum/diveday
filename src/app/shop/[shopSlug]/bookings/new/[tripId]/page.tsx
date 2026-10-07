@@ -56,6 +56,8 @@ const NOTICE_KEYS: Record<string, { tone: "danger"; key: StaffMessageKey }> = {
   // diver the counter always could.
   "diver-invalid": { tone: "danger", key: "bookings.new.noticeInvalid" },
   "diver-full": { tone: "danger", key: "trips.notices.diverFull" },
+  "diver-divers-full": { tone: "danger", key: "participants.notices.diversFull" },
+  "diver-type-unavailable": { tone: "danger", key: "participants.notices.typeUnavailable" },
   "diver-already": { tone: "danger", key: "trips.notices.diverAlready" },
   "diver-course-unstaffed": { tone: "danger", key: "trips.notices.diverCourseUnstaffed" },
   "diver-course-prerequisite": { tone: "danger", key: "trips.notices.diverCoursePrerequisite" },

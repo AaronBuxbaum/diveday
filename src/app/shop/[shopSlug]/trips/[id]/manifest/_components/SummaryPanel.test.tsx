@@ -212,7 +212,7 @@ describe("a boat carrying more than it seats says so", () => {
   it("raises the count of divers aboard beyond the seats, and stays quiet within them", () => {
     renderPanel({ summary: summary({ overCapacity: 1 }) });
     const line = screen.getByText(/aboard beyond the seats this boat has/);
-    expect(line.textContent).toContain("1 diver is aboard beyond the seats this boat has.");
+    expect(line.textContent).toContain("1 person is aboard beyond the seats this boat has.");
     // Pinned, never in the half a captain can scroll past.
     expect(line.closest("section")).not.toBeNull();
 
@@ -500,6 +500,18 @@ describe("uncalled crew while divers are still open", () => {
  * still spaced themselves off it: 4px of margin above "1 diver is blocked."
  * against a 0px line.
  */
+describe("who the people are", () => {
+  it("leaves out a type nobody is, as the offline copy does", () => {
+    // Regression (dive-domain review, PR #2224): the live panel printed
+    // "0 riders" where the offline copy left the type out.
+    renderPanel({
+      summary: summary({ totalDivers: 4, byType: { diver: 3, snorkeler: 1, rider: 0 } }),
+    });
+    expect(screen.getByText("3 divers · 1 snorkeler")).toBeInTheDocument();
+    expect(screen.queryByText(/rider/)).toBeNull();
+  });
+});
+
 describe("the prose under the pinned card", () => {
   function renderAwaiting() {
     return renderPanel({

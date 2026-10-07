@@ -2,7 +2,7 @@
 
 The safety spine (manifests, roll call, readiness, medical flags, nitrox) ships on provisional
 policy and is unproven in the field. These conversations turn it into evidence. Status of record:
-[human-decisions.md](../human-decisions.md) rows **H-05** (offline-manifest thresholds), **H-06**
+[human-decisions/](../human-decisions/README.md) rows **H-05** (offline-manifest thresholds), **H-06**
 (gear policy remainder), **H-08** (course/agency rules remainder), **H-11** (nitrox fill-station
 policy), and verification rows **V-01, V-02, V-04, V-05**.
 
@@ -30,7 +30,7 @@ policy), and verification rows **V-01, V-02, V-04, V-05**.
 ## V-02 — the boat day (run the script, record everything)
 
 The full script lives in the
-[human verification queue](../human-decisions.md#human-verification-queue) (V-02 row); the
+[human verification queue](../human-decisions/README.md#human-verification-queue) (V-02 row); the
 [printable run sheet](../pilot-kit/v-02-field-test-run-sheet.md) turns it into a sheet a person
 carries on the boat — expected observations from the shipped manifest surfaces, blanks for what
 actually happens, and the spray-guard false-trigger measurement (DOM-L3). What to have prepared so
@@ -86,18 +86,18 @@ and the exception process (who may waive what, recorded how).
 Question list for the blending authority: fill log of record (paper sticker vs. system), accepted
 ppO₂ ceilings vs. the provisional 1.4/1.6 defaults, the EANx band (provisional 22–40%), blender
 qualification records, O₂-clean tank tracking, and per-agency card-acceptance rules. The
-[provisional parameters](../human-decisions.md#nitrox-fills) are the strawman to correct, and
+[provisional parameters](../human-decisions/README.md#nitrox-fills) are the strawman to correct, and
 V-05 is the `dive-domain-expert` review that closes it.
 
 ## Where outcomes land
 
 - V-rows get their evidence recorded verbatim in the
-  [verification queue](../human-decisions.md#human-verification-queue); H-05/H-06/H-08/H-11 rows
+  [verification queue](../human-decisions/README.md#human-verification-queue); H-05/H-06/H-08/H-11 rows
   move state with dates and owners.
 - The no-signal roll-call claim already runs on the public pages, worded with its condition, by
-  the owner's decision ([H-94](../human-decisions.md#decision-register), 2026-10-06). V-02 decides
+  the owner's decision ([H-94](../human-decisions/README.md#decision-register), 2026-10-06). V-02 decides
   whether it stays: a pass lets the pages say it has been tested on a boat, and a failure takes the
   claim off every page through [marketing.md](../marketing.md)'s claims policy.
 - Field defects on safety surfaces become stop-the-line fixes with regression tests, per
   AGENTS.md hard rules; policy gaps become updates to the
-  [provisional defaults](../human-decisions.md#provisional-implementation-defaults--verify-before-production).
+  [provisional defaults](../human-decisions/README.md#provisional-implementation-defaults--verify-before-production).

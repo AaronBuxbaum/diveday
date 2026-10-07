@@ -887,3 +887,32 @@ describe("admission is monotone with respect to readiness", () => {
     );
   });
 });
+
+describe("decideTripAdmission — participant types (ADR 20261007-participant-types)", () => {
+  it("admits a rider or a snorkeler whatever the trip and its sites ask of divers", () => {
+    for (const participantType of ["rider", "snorkeler"] as const) {
+      expect(
+        decideTripAdmission({
+          requirement: requirement({
+            minimumCertificationLevel: "rescue",
+            requiresNitrox: true,
+          }),
+          siteRequirement: site({ minimumCertificationLevel: "rescue" }),
+          evidence: evidence(),
+          participantType,
+        }),
+      ).toEqual({ admitted: true });
+    }
+  });
+
+  it("still judges a diver", () => {
+    expect(
+      decideTripAdmission({
+        requirement: advancedTrip,
+        siteRequirement: null,
+        evidence: evidence({ certifications: [certification({ level: "open_water" })] }),
+        participantType: "diver",
+      }).admitted,
+    ).toBe(false);
+  });
+});

@@ -112,7 +112,7 @@ the market" posture below, which is the one **H-12 closed on 2026-07-24**: **$99
 month**, everything included, no setup fee, no platform fee, cancel anytime with the export button,
 plus a **two-year founding-cohort price lock** and **founder-direct, same-day support**. Still open
 (not blocking the founding-cohort launch): standard post-cohort pricing, taxes/fees treatment, and
-the public contract/intake flow — see [human-decisions.md](../human-decisions.md#decision-register)
+the public contract/intake flow — see [human-decisions/](../human-decisions/README.md#decision-register)
 H-12.
 
 - **Meet the market** (chosen): land flat, everything included, zero commission — makes

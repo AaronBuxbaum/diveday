@@ -19,7 +19,7 @@
  *     is worse than no card.
  *   - A row that says the diver already accepted a waiver at the prior shop is
  *     trusted here too (ADR 20260724-import-waiver-acceptance, product-owner
- *     decision recorded in docs/product/human-decisions.md) — including its
+ *     decision recorded in docs/product/human-decisions/) — including its
  *     medical clearance. This is a deliberate reversal of the original
  *     fail-closed rule: the resulting record satisfies the waiver gate exactly
  *     like any other completed record, but is marked `imported` everywhere it

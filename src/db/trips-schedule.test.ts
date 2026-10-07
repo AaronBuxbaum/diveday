@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, type seededShopContext } from "@/test/db";
 import { SEEDED_OWNER_EMAIL, seededStaffPersonId } from "@/test/staff-session";
 import { courses, rollCallCrewEvents, tripDives, trips } from "./schema";
 import { createTripLens, deleteTripLens } from "./trip-lenses";
@@ -16,6 +16,10 @@ import {
   upcomingTripsWithCounts,
   updateTrip,
 } from "./trips";
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 describe("moveTrip / duplicateTrip across a DST transition", () => {
   // The seeded blue-mantis shop is America/New_York. Spring-forward in 2026
@@ -51,7 +55,7 @@ describe("moveTrip / duplicateTrip across a DST transition", () => {
   }
 
   it("moveTrip preserves each schedule day's wall-clock hour across spring-forward", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     expect(shop.timezone).toBe(tz);
 
     const source = await buildThreeDayCourse(db, shop.id);
@@ -110,7 +114,7 @@ describe("moveTrip / duplicateTrip across a DST transition", () => {
   });
 
   it("duplicateTrip preserves each schedule day's wall-clock hour across spring-forward", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     expect(shop.timezone).toBe(tz);
 
     const source = await buildThreeDayCourse(db, shop.id);
@@ -189,7 +193,7 @@ describe("moveTrip / duplicateTrip when the start's clock time also changes", ()
     wallTimeToUtc({ year: 2026, month: 6, day, hour, minute }, tz);
 
   it("moveTrip shifts endsAt by the same wall-clock delta as the new start time", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     expect(shop.timezone).toBe(tz);
 
     const source = await createTrip(db, {
@@ -222,7 +226,7 @@ describe("moveTrip / duplicateTrip when the start's clock time also changes", ()
   });
 
   it("duplicateTrip shifts endsAt by the same wall-clock delta as the new start time", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     expect(shop.timezone).toBe(tz);
 
     const source = await createTrip(db, {
@@ -256,7 +260,7 @@ describe("moveTrip / duplicateTrip when the start's clock time also changes", ()
 
 describe("schedule edits after roll-call evidence", () => {
   it("refuses move and delete after a head count, but deletes an untouched trip", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const staffId = await seededStaffPersonId(db, shop.id, SEEDED_OWNER_EMAIL);
     const sailed = await createTrip(db, {
       shopId: shop.id,
@@ -300,7 +304,7 @@ describe("schedule edits after roll-call evidence", () => {
   });
 
   it("stamps a deleted departure instead of removing it, and takes it off every board read", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await createTrip(db, {
       shopId: shop.id,
       title: "Deleted departure",
@@ -344,7 +348,7 @@ describe("schedule edits after roll-call evidence", () => {
   });
 
   it("answers not_found on a second delete, and leaves the first stamp alone", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await createTrip(db, {
       shopId: shop.id,
       title: "Deleted once",
@@ -390,7 +394,7 @@ describe("schedule edits after roll-call evidence", () => {
  */
 describe("a self-guided departure keeps its mark when copied", () => {
   it("carries self_guided through duplicateTrip", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const source = await createTrip(db, {
       shopId: shop.id,
       title: "Standing shore dive — buddy pairs",
@@ -449,7 +453,7 @@ describe("a course session is never self-guided", () => {
   }
 
   it("refuses the mark at creation, even when the caller asks for it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await createTrip(db, {
       shopId: shop.id,
       courseId: await aCourse(db, shop.id),
@@ -471,7 +475,7 @@ describe("a course session is never self-guided", () => {
    * already holds the state must not propagate it.
    */
   it("does not let a copy carry it onto a course session", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const courseId = await aCourse(db, shop.id);
     const source = await createTrip(db, {
       shopId: shop.id,
@@ -499,7 +503,7 @@ describe("a course session is never self-guided", () => {
   });
 
   it("refuses the mark on an edit, read against the row's own course", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await createTrip(db, {
       shopId: shop.id,
       courseId: await aCourse(db, shop.id),
@@ -531,7 +535,7 @@ describe("a course session is never self-guided", () => {
   it("still lets a fun dive be marked self-guided", async () => {
     // The rule is about course sessions, not about the mark. A guard that took
     // the feature down with the incoherent state would be worse than the state.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trip = await createTrip(db, {
       shopId: shop.id,
       title: "Standing shore dive — buddy pairs",
@@ -558,7 +562,7 @@ describe("moveTrip and the calendar revision", () => {
     wallTimeToUtc({ year: 2026, month: 9, day, hour, minute: 0 }, tz);
 
   it("bumps by exactly one when the departure really moves, and not at all when it does not", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const source = await createTrip(db, {
       shopId: shop.id,
       title: "Revision — a boat that moves",
@@ -583,7 +587,7 @@ describe("moveTrip and the calendar revision", () => {
   });
 
   it("gives a copy revision 0 however many times the source has moved", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const source = await createTrip(db, {
       shopId: shop.id,
       title: "Revision — a boat that gets copied",
@@ -620,7 +624,7 @@ describe("duplicateTrip and the shop's kind of day", () => {
   const at = (iso: string) => new Date(iso);
 
   it("carries the source's kind of day onto the copy", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     expect(shop.timezone).toBe(tz);
     const lens = await createTripLens(db, shop.id, "After dark");
     if (!lens) throw new Error("lens not created");
@@ -643,7 +647,7 @@ describe("duplicateTrip and the shop's kind of day", () => {
   it("keeps a copy of a departure with no kind of day without one", async () => {
     // The inverse, so the fix cannot be a blanket write — and the guarantee
     // that copying never *invents* a word for a day nobody chose one for.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const source = await createTrip(db, {
       shopId: shop.id,
       title: "Ordinary charter",
@@ -663,7 +667,7 @@ describe("duplicateTrip and the shop's kind of day", () => {
     // which kind of day it was — so unlike `boatId` this is copied rather than
     // re-validated. A shop retiring a word must not silently rewrite the
     // departures that carried it.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const lens = await createTripLens(db, shop.id, "After dark");
     if (!lens) throw new Error("lens not created");
     const source = await createTrip(db, {

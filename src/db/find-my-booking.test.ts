@@ -2,7 +2,7 @@
 import { and, eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { cancelBooking, createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import { sendFindMyBookingLinks } from "./find-my-booking";
@@ -63,6 +63,10 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 
 const { checkRateLimit } = await import("@/lib/rate-limit");
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
+
 beforeEach(() => {
   sent.mockClear();
   failBooking.id = null;
@@ -83,7 +87,7 @@ async function bookedDiver(db: AppDb, shopId: string, tripId: string, email = "n
 
 describe("sendFindMyBookingLinks", () => {
   it("mails a fresh readiness link for a current booking on a future departure", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("expected a seeded trip");
     const bookingId = await bookedDiver(db, shop.id, trip.id);
@@ -103,7 +107,7 @@ describe("sendFindMyBookingLinks", () => {
   });
 
   it("matches the stored address case-insensitively but never mails what the caller typed", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("expected a seeded trip");
     await bookedDiver(db, shop.id, trip.id, "Nora@Example.com");
@@ -120,7 +124,7 @@ describe("sendFindMyBookingLinks", () => {
   });
 
   it("sends nothing for an address with no booking at this shop", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await sendFindMyBookingLinks(db, {
       shopId: shop.id,
       email: "nobody@example.com",
@@ -130,7 +134,7 @@ describe("sendFindMyBookingLinks", () => {
   });
 
   it("does not reissue a booking whose departure has already sailed past the buffer", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("expected a seeded trip");
     await bookedDiver(db, shop.id, trip.id);
@@ -158,7 +162,7 @@ describe("sendFindMyBookingLinks", () => {
   });
 
   it("does not reissue a canceled booking", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("expected a seeded trip");
     const bookingId = await bookedDiver(db, shop.id, trip.id);
@@ -173,7 +177,7 @@ describe("sendFindMyBookingLinks", () => {
   });
 
   it("does not reissue a booking on a canceled trip", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("expected a seeded trip");
     await bookedDiver(db, shop.id, trip.id);
@@ -188,7 +192,7 @@ describe("sendFindMyBookingLinks", () => {
   });
 
   it("does not reissue, and does not spend a live slot, when a live readiness link already exists", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("expected a seeded trip");
     const bookingId = await bookedDiver(db, shop.id, trip.id);
@@ -207,7 +211,7 @@ describe("sendFindMyBookingLinks", () => {
   });
 
   it("re-sends once the booking's only link has gone dead", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("expected a seeded trip");
     const bookingId = await bookedDiver(db, shop.id, trip.id);
@@ -233,7 +237,7 @@ describe("sendFindMyBookingLinks", () => {
   });
 
   it("mails one link per current booking, never a digest of every trip the address has", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const upcoming = await upcomingTripsWithCounts(db, shop.id);
     if (upcoming.length < 2) throw new Error("expected at least two seeded upcoming trips");
     await bookedDiver(db, shop.id, upcoming[0].id);
@@ -253,7 +257,7 @@ describe("sendFindMyBookingLinks", () => {
   });
 
   it("quietly records the re-request on the trip's own activity trail", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("expected a seeded trip");
     const bookingId = await bookedDiver(db, shop.id, trip.id);
@@ -285,7 +289,7 @@ describe("sendFindMyBookingLinks", () => {
    * with submissions that mint nothing.
    */
   it("does not spend the per-inbox rate limit when every matching booking already has a live link", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("expected a seeded trip");
     const bookingId = await bookedDiver(db, shop.id, trip.id);
@@ -303,7 +307,7 @@ describe("sendFindMyBookingLinks", () => {
   });
 
   it("spends the per-inbox rate limit once real work is pending, and honors it", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await upcomingTripsWithCounts(db, shop.id);
     if (!trip) throw new Error("expected a seeded trip");
     await bookedDiver(db, shop.id, trip.id);
@@ -326,7 +330,7 @@ describe("sendFindMyBookingLinks", () => {
    * stop every booking after it for the same address.
    */
   it("isolates one booking's mint failure from the rest of the same address's bookings", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const upcoming = await upcomingTripsWithCounts(db, shop.id);
     if (upcoming.length < 2) throw new Error("expected at least two seeded upcoming trips");
     const failingBookingId = await bookedDiver(db, shop.id, upcoming[0].id);

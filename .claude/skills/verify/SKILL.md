@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Verify a change actually works before committing — run checks, exercise the app, look at UI changes. Use before every commit and whenever asked to confirm something works.
+description: Verify a change works before committing — checks, the running app, screenshots of changed UI. Use before every commit and whenever asked to confirm something works.
 ---
 
 # Verify a change
@@ -31,7 +31,7 @@ pnpm test:changed
 ```
 
 It selects by import graph, so it picks up the coverage guards — the ones that assert over
-`src/db/schema.ts` from files your change never touches, and therefore the ones a focused
+`src/db/schema/` from files your change never touches, and therefore the ones a focused
 `pnpm test <file>` can never select. When you touched `schema.ts`, `test:changed` widens to the
 whole suite and belongs to CI; name the four guards by path instead
 (`src/db/export.test.ts`, `src/db/diver-merge.test.ts`, `src/db/delete-path-coverage.test.ts`,
@@ -45,14 +45,14 @@ pnpm e2e e2e/<flow>.spec.ts --reporter=line   # one spec; the whole suite runs o
 
 If new user-facing flows were added, extend `e2e/` with a smoke spec for them first, and add a
 visual snapshot in `e2e/visual.spec.ts` for any new surface (see the `e2e-and-visual` skill). `pnpm
-check` includes `check:clock`, which fails if domain/data code reads the wall clock directly.
+lint` includes the `clock` rule, which fails if domain/data code reads the wall clock directly.
 
 ## 3. UI changed: look at it
 
 Never ship UI you haven't seen. The visual spec asserts nothing — it writes PNGs at both the
 phone and desktop widths — so a filtered run of it is the capture step. Look in light only; dark
 joins it only when the change is colour work (a token, a tint, a hue — the owner's rule,
-[H-90](../../../docs/product/human-decisions.md#decision-register)), and the `light mode.*` prefix
+[H-90](../../../docs/product/human-decisions/README.md#decision-register)), and the `light mode.*` prefix
 is what keeps the run to one scheme:
 
 ```bash

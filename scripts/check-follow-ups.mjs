@@ -32,18 +32,18 @@ import { readBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
  * line saying what would un-park it. Both are additional labels alongside `needs-triage`,
  * not replacements for it.
  *
- * **This is the one check in `pnpm check:repo` that makes a network call.** `gh issue list`
- * needs GitHub reachable and authenticated (see .github/workflows/ci.yml's `repo-safeguards`
- * job for the token it runs under in CI). check-repo.mjs's other checks are all local,
- * static passes for a reason — a flaky network dependency in the commit gate is exactly the
- * class of failure this repo refuses to tolerate in e2e (`pnpm check:e2e-hygiene`) — so a
- * `gh` call that cannot complete is not a content problem and does not fail the build: it
- * prints a warning and exits `SKIPPED_EXIT`. A `gh` call that *does* complete and returns
- * malformed content still fails, same as always.
+ * **This is the one guard that makes a network call, so it is not in `pnpm check:repo`.**
+ * `gh issue list` needs GitHub reachable and authenticated. It ran inside `check:repo` until
+ * 2026-10-07, which made the live tracker a property of every branch: one malformed issue
+ * (#2036) turned every open pull request red for a problem none of them contained. It runs on
+ * a schedule instead (.github/workflows/follow-ups.yml, with the repository token) and as
+ * `pnpm check:follow-ups` on demand. A `gh` call that cannot complete is not a content problem:
+ * it prints a warning and exits `SKIPPED_EXIT`. A `gh` call that *does* complete and returns
+ * malformed content fails, same as always.
  *
  * **Failing open is not the same as passing, and the runner has to be able to tell.** Until
- * 2026-08-28 this exited 0 on an unreachable `gh`, so `check-repo.mjs` — which labels a check
- * by its exit code alone — printed it under the same `ok` header as a check that had actually
+ * 2026-08-28 this exited 0 on an unreachable `gh`, so `check-repo.mjs`, where it ran then, labelling a
+ * check by its exit code alone, printed it under the same `ok` header as a check that had actually
  * validated something, and ended the run "all checks passed". `gh` is absent from the remote
  * containers this repo is mostly developed in, so that was *every* local run; meanwhile a
  * malformed `needs-triage` issue was failing this same check on CI and reddening every open
@@ -381,7 +381,7 @@ export function listIssuesByLabel(root, { label, fields, what, state = "open" })
     raw = readBounded(
       "gh",
       ["issue", "list", "--label", label, "--state", state, "--limit", "500", "--json", fields],
-      { cwd: root, encoding: "utf8", timeoutMs: SUBPROCESS_TIMEOUTS.ghCliInCheckGate },
+      { cwd: root, encoding: "utf8", timeoutMs: SUBPROCESS_TIMEOUTS.ghCli },
     );
   } catch (error) {
     console.warn(
@@ -476,7 +476,7 @@ async function checkDraft(bodyPath, title, { allowUnresolvedTouches = false } = 
       `Draft follow-up (${bodyPath}):\n${findings.map((item) => `- ${item}`).join("\n")}`,
     );
     console.error(
-      "Fix these before filing: a malformed issue fails `check:follow-ups` inside every open pull request's `pnpm check`, not just your own. See docs/agents/issue-tracker.md's Filing a follow-up section.",
+      "Fix these before filing: a malformed issue fails the scheduled `check:follow-ups` run for everyone, not just you. See docs/agents/issue-tracker.md's Filing a follow-up section.",
     );
     if (missing.length > 0) {
       console.error(
@@ -601,13 +601,10 @@ async function main() {
     console.error(
       "Each entry is a task a human runs cold, months later — see docs/agents/issue-tracker.md's Filing a follow-up section.",
     );
-    // The one thing the list above does not say, and the reason this guard is
-    // confusing to meet: these are problems in the *tracker*, not in the branch
-    // that happens to be running. This check reads the live issue list, so a
-    // malformed issue fails it on every open pull request at once, and nothing
-    // in your diff caused it or can fix it.
+    // The one thing the list above does not say: these are problems in the *tracker*, not in
+    // any branch. This check reads the live issue list, so nothing in a diff caused them.
     console.error(
-      "These are tracker problems, not branch problems: edit the issues named above. Nothing in this branch caused them, and every other open pull request is failing the same way until they are fixed. File through `node scripts/file-follow-up.mjs` — it composes the body and refuses to call `gh` when it would not pass — or draft a body to a file and run `node scripts/check-follow-ups.mjs --body <path>` before filing, to avoid adding to this.",
+      "These are tracker problems, not branch problems: edit the issues named above. Nothing in any branch caused them. File through `node scripts/file-follow-up.mjs` — it composes the body and refuses to call `gh` when it would not pass — or draft a body to a file and run `node scripts/check-follow-ups.mjs --body <path>` before filing, to avoid adding to this.",
     );
     process.exit(1);
   }

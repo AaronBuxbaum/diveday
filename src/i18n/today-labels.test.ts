@@ -109,7 +109,9 @@ describe("a crew clash, said once per other departure", () => {
   });
 
   it("names a person once however many times the read lists them", () => {
-    expect(crewClashDetailText(t, "en-US", [clashes[0]!, clashes[0]!])).toBe(
+    const [first] = clashes;
+    if (!first) throw new Error("the fixture lists a clash");
+    expect(crewClashDetailText(t, "en-US", [first, first])).toBe(
       "Keiko Tanaka is also rostered on Dawn Two-Tank at these hours.",
     );
   });

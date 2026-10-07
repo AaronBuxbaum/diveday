@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { cancelBooking, createBooking } from "./bookings";
 import type { AppDb } from "./client";
 import {
@@ -16,7 +16,7 @@ import { setShopRentalItems } from "./shops";
 import { upcomingTripsWithCounts } from "./trips";
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = fileCtx;
   const trips = await upcomingTripsWithCounts(db, shop.id);
   const open = trips.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
   if (!open) throw new Error("open trip missing");
@@ -63,6 +63,10 @@ async function wantsNitrox(db: AppDb, bookingId: string) {
     .limit(1);
   return row?.wantsNitrox;
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const fileCtx = fileScopedShopContext();
 
 describe("nitrox certification workflow", () => {
   it("captures pending, and only a reviewed card becomes a gate", async () => {

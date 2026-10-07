@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { promotionProviderFromEnvironment } from "./promotions";
 
+/** The `stripe_api.request_threw` lines a case wrote, parsed. */
+function threwLines(spy: { mock: { calls: unknown[][] } }): Array<Record<string, unknown>> {
+  return spy.mock.calls
+    .map((call) => JSON.parse(String(call[0])) as Record<string, unknown>)
+    .filter((line) => line.event === "stripe_api.request_threw");
+}
+
 function providerWith(env: Record<string, string | undefined>, fetchImpl: unknown) {
   return promotionProviderFromEnvironment(env, fetchImpl as typeof fetch);
 }
@@ -84,10 +91,15 @@ describe("stripe promotion provider", () => {
     expect(await provider.createTripPromotion(request)).toEqual({ status: "failed" });
   });
 
-  it("fails on a network error", async () => {
+  it("fails on a network error, and logs the throw", async () => {
+    const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
     const fetchImpl = vi.fn().mockRejectedValue(new Error("network"));
     const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
     expect(await provider.createTripPromotion(request)).toEqual({ status: "failed" });
+    expect(threwLines(warned)).toEqual([
+      expect.objectContaining({ operation: "create_promotion", errorCode: "Error" }),
+    ]);
+    warned.mockRestore();
   });
 });
 

@@ -1,4 +1,4 @@
-import { desc, eq, gte } from "drizzle-orm";
+import { desc, gte } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { AppDb } from "./client";
 import { marineLifeRequests } from "./schema";
@@ -50,13 +50,4 @@ export async function listMarineLifeRequests(
     .orderBy(desc(marineLifeRequests.createdAt))
     .limit(options.limit ?? 200);
   return options.since ? rows.where(gte(marineLifeRequests.createdAt, options.since)) : rows;
-}
-
-/** Every request one shop has made — the per-tenant read, for an export or an erasure. */
-export async function listShopMarineLifeRequests(db: AppDb, shopId: string) {
-  return db
-    .select()
-    .from(marineLifeRequests)
-    .where(eq(marineLifeRequests.shopId, shopId))
-    .orderBy(desc(marineLifeRequests.createdAt));
 }

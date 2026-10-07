@@ -10,6 +10,7 @@ import {
 import { MINIMUM_SEATS_CRON_CRONTAB } from "./minimum-seats";
 import { RECAP_CRON_CRONTAB } from "./recap-schedule";
 import { TRIP_REMINDER_CRON_CRONTAB } from "./reminders";
+import { WEEKLY_DIGEST_CRON_CRONTAB } from "./weekly-digest";
 
 /**
  * vercel.json is the deployed schedule. Everything else in the repo that names
@@ -37,6 +38,11 @@ describe("the daily tick", () => {
   it("matches the deployed hourly schedule for /api/cron/trip-reminders", () => {
     const reminders = vercelCrons().find((cron) => cron.path === "/api/cron/trip-reminders");
     expect(reminders?.schedule).toBe(TRIP_REMINDER_CRON_CRONTAB);
+  });
+
+  it("matches the deployed hourly schedule for /api/cron/weekly-digest", () => {
+    const digest = vercelCrons().find((cron) => cron.path === "/api/cron/weekly-digest");
+    expect(digest?.schedule).toBe(WEEKLY_DIGEST_CRON_CRONTAB);
   });
 
   it("matches the deployed hourly schedule for /api/cron/minimum-seats", () => {
@@ -100,6 +106,13 @@ describe("the daily tick", () => {
       "/api/cron/recaps",
       "/api/cron/trip-reminders",
       "/api/cron/integrations",
+      // The Monday email (market audit item 51) is the fifth, on the
+      // trip-reminder pass's argument: a weekly message promised for Monday
+      // morning in the shop's own zone cannot ride one fixed UTC hour. It
+      // calls only `sendDueWeeklyDigests`, which sends fresh mail and never
+      // drains the queue; every pass after a shop's first on its Monday stops
+      // at the per-person, per-week claim.
+      "/api/cron/weekly-digest",
     ]);
     const subDaily = vercelCrons().filter((cron) => {
       const [minute, hour] = cron.schedule.split(" ");

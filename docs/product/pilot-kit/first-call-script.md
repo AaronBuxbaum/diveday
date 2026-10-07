@@ -239,7 +239,7 @@ Where it goes:
   rule in [dive-operations.md](../stakeholders/dive-operations.md).
 - **A committed pilot** is V-04 evidence and a phase-progress note in
   [rollout.md](../rollout.md); the status lives in
-  [human-decisions.md](../human-decisions.md#human-verification-queue), never in this kit.
+  [human-decisions/](../human-decisions/README.md#human-verification-queue), never in this kit.
 - **A repeated finding across calls** that changes who we think the buyer is belongs in
   [personas.md](../personas.md) — with a note that it came from a real conversation, since today
   every line in that file is synthetic.

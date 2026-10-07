@@ -1,7 +1,7 @@
 # Six voices for the public pages (2026-09-17)
 
 **Status: decided 2026-09-24** (Aaron Buxbaum, H-89 in
-[product/human-decisions.md](../product/human-decisions.md)): **6, Margin Notes, on every public
+[product/human-decisions/](../product/human-decisions/README.md)): **6, Margin Notes, on every public
 page, with 4, Over a Beer, on `/about`.** The voice now lives in [brand.md](brand.md) ("The two
 registers of the public pages"); this document is the dated record of the diagnosis and the
 alternatives, and the samples below are proposals, not the pages as shipped.

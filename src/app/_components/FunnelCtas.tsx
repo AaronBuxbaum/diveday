@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { enterDemoAction } from "@/app/actions/demo";
 import { FunnelTag } from "@/components/FunnelTag";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -6,17 +7,18 @@ import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 import type { DemoLanding } from "@/lib/demo-landings";
 import type { DemoRoleId } from "@/lib/demo-roles";
-import type { FunnelSource } from "@/lib/funnel";
-import { setUpMailto } from "@/lib/platform-mail";
+import { type FunnelSource, setUpHref } from "@/lib/funnel";
 
 /**
  * The funnel's two doors, in the one order they are ever offered: **the demo
  * leads, getting set up follows** (Aaron, 2026-08-22 — issue #785;
  * docs/product/marketing.md, "The two doors, and which one leads").
  *
- * The second door is a mail, not a sign-up form: every shop is opened by hand
- * (ADR 20260925-shops-are-set-up-by-hand), so it writes to the onboarding
- * inbox. The funnel tag rides the demo door only — a mail client carries none.
+ * The second door is the set-up request form, not a sign-up: every shop is
+ * opened by hand (ADR 20260925-shops-are-set-up-by-hand), so it asks to be set
+ * up (ADR 20261007-setup-request-form). Both doors carry the funnel tag — the
+ * demo in its form, the set-up door in its link — so `demo_entered` and
+ * `setup_requested` read per page.
  *
  * It exists because the arrangement is a property of the *funnel* and every
  * page had been deciding it alone. Each page was written as a page and reviewed
@@ -81,12 +83,12 @@ export function FunnelCtas({
           {t("marketing.common.tryDemo")}
         </SubmitButton>
       </form>
-      <a
-        href={setUpMailto(t("marketing.common.setUpSubject"))}
+      <Link
+        href={setUpHref(source)}
         className={buttonClass({ variant: "outline", className: width })}
       >
         {t("marketing.common.getSetUp")}
-      </a>
+      </Link>
     </div>
   );
 }

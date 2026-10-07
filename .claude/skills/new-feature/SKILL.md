@@ -1,6 +1,6 @@
 ---
 name: new-feature
-description: Build a product feature end to end — the full loop from docs to verified, reviewed, shipped slice. Use when starting any feature or milestone work.
+description: Build a product feature end to end, from docs to a verified, reviewed, shipped slice. Use when starting any feature or milestone work.
 ---
 
 # Build a feature

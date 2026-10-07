@@ -1,7 +1,7 @@
 /**
  * The filing door's whole reason to exist is that it *refuses*. A malformed
- * `needs-triage` issue fails `check:follow-ups` inside every open pull request's
- * `pnpm check`, so the property worth pinning is not that a good body files —
+ * `needs-triage` issue fails `check:follow-ups` for everyone until a human edits
+ * it, so the property worth pinning is not that a good body files —
  * it is that a bad one never reaches `gh` at all (issue #1356, and the four
  * issues of 2026-09-04 it was written from). Every case here therefore runs the
  * script with a recording `gh` stub as the *only* thing on PATH: an inherited

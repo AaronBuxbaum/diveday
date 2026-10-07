@@ -1,7 +1,7 @@
 import { and, asc, count, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { isUuid } from "@/lib/uuid";
-import type { AppDb } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import { activityEvents, bookings, internalNotes, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
@@ -487,11 +487,21 @@ export type TripActivityEntry =
         | "seat_added_walk_in";
       diver: string;
     }
+  | {
+      code: "participant_type_changed";
+      diver: string;
+      from: "diver" | "snorkeler" | "rider";
+      type: "diver" | "snorkeler" | "rider";
+      /** Whether the change cleared, or was written past, a certification check. */
+      certCheck: "none" | "cleared" | "overridden";
+      /** The certification blocker codes the seat stopped facing, comma-joined; empty for none. */
+      cleared: string;
+    }
   | { code: "crew_assigned" | "crew_removed"; crew: string }
   | { code: "blowout_called" | "booking_link_requested" | "seat_claimed" };
 
 export async function recordTripActivity(
-  db: AppDb,
+  db: DbExecutor,
   input: { shopId: string; tripId: string; actorPersonId: string; entry: TripActivityEntry },
 ) {
   const entry = input.entry;

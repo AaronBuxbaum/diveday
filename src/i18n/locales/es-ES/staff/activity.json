@@ -8,12 +8,13 @@
     "booking_restored": "{actor} volvió a poner a {diver} en la salida",
     "booking_no_show": "{actor} marcó que {diver} no se presentó y liberó la plaza",
     "booking_no_show_undone": "{actor} volvió a poner a {diver} en la lista de personas esperadas",
-    "booking_no_show_undo_refused": "{actor} no pudo volver a poner a {diver}: {reason, select, course_ratio_full {la sesión ya estaba en su ratio de instructor} other {la plaza liberada ya se había vendido}}",
+    "booking_no_show_undo_refused": "{actor} no pudo volver a poner a {diver}: {reason, select, course_ratio_full {la sesión ya estaba en su ratio de instructor} divers_full {ya se habían ocupado todas las plazas de buceo} other {la plaza liberada ya se había vendido}}",
     "booking_no_show_boarded": "{actor} embarcó a {diver} en el barco, así que la plaza liberada vuelve a ser suya",
     "booking_no_show_missing_after_dive": "{actor} registró que {diver} no volvió a bordo después de una inmersión, así que la plaza liberada vuelve a ser suya",
     "identity_confirmed": "{actor} confirmó en el listado de la salida que esta reserva es de {diver}",
     "identity_split": "{actor} creó una ficha propia para {diver}: no era la persona a la que se había asociado la reserva",
     "identity_split_off": "{actor} quitó de la ficha de {diver} una reserva hecha con otro nombre",
+    "diver_merged": "{actor} unió la ficha de {merged} a la de {diver}",
     "crew_assigned": "{actor} asignó a {crew} a la tripulación",
     "crew_removed": "{actor} quitó a {crew} de la tripulación",
     "blowout_called": "{actor} canceló la salida por el clima",
@@ -41,7 +42,8 @@
     "demo_bcd_swapped": "{actor} cambió a {diver} a un BCD más chico después de la prueba de talla",
     "demo_nitrox_logged": "{actor} registró la certificación de nitrox de {diver} desde la tarjeta",
     "demo_own_computer_confirmed": "{actor} confirmó que {diver} trae su propia computadora",
-    "demo_paper_card_reminded": "{actor} le recordó a {diver} traer la tarjeta física al muelle"
+    "demo_paper_card_reminded": "{actor} le recordó a {diver} traer la tarjeta física al muelle",
+    "participant_type_changed": "{actor} cambió a {diver} de {from, select, snorkeler {snorkel} rider {acompañante en el barco} other {buceo}} a {type, select, snorkeler {snorkel} rider {acompañante en el barco} other {buceo}}{certCheck, select, cleared {, y eso quitó una verificación de tarjeta} overridden {, aunque falta una tarjeta} other {}}"
   },
   "unknown": "Una entrada anterior"
 }

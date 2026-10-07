@@ -6,6 +6,7 @@ import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
 import { resolveCourtesyEmailUnsubscribeToken } from "@/db/courtesy-email";
 import { resolveLastMinuteListUnsubscribeToken } from "@/db/last-minute-list";
+import { resolveWeeklyDigestUnsubscribeToken } from "@/db/weekly-digest";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { confirmUnsubscribe } from "./actions";
@@ -107,6 +108,29 @@ export default async function UnsubscribePage({ params }: { params: Promise<{ to
         description={t("courtesyEmailUnsubscribe.description", { shopName: courtesy.shopName })}
         submitLabel={t("courtesyEmailUnsubscribe.submit")}
         pendingLabel={t("courtesyEmailUnsubscribe.submitting")}
+        token={token}
+      />
+    );
+  }
+
+  // The third kind: a staffer's own Monday email (`src/db/weekly-digest.ts`).
+  const digest = await resolveWeeklyDigestUnsubscribeToken(db, token);
+  if (digest) {
+    if (digest.alreadyOff) {
+      return (
+        <EntryDone
+          glyph="quiet"
+          title={t("weeklyDigestUnsubscribe.confirmedTitle")}
+          text={t("weeklyDigestUnsubscribe.confirmedText", { shopName: digest.shopName })}
+        />
+      );
+    }
+    return (
+      <ConfirmUnsubscribe
+        title={t("weeklyDigestUnsubscribe.title")}
+        description={t("weeklyDigestUnsubscribe.description", { shopName: digest.shopName })}
+        submitLabel={t("weeklyDigestUnsubscribe.submit")}
+        pendingLabel={t("weeklyDigestUnsubscribe.submitting")}
         token={token}
       />
     );

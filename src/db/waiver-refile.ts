@@ -27,9 +27,13 @@ import { waiverRecords } from "./schema";
  * Called by `mergeDiverRecords` for every release of the record merged away,
  * which is also how a wrong split of a held seat is undone. A version 3
  * release verifies again after a second move, re-sealed over its newest owner.
- * A version 4 release — its guardian's address erased on request (H-102) —
+ * A version 4 release — its guardian's address erased on request (H-103) —
  * moves under version 4 again: that seal covers the move fields too, and a
  * re-seal under version 3 would put the erased address back inside the seal.
+ *
+ * `movedFromPersonId` records only the latest hop: a release moved twice names
+ * the record it last left, and the earlier hops survive only as the
+ * merged-away records' own `merged_into_person_id` pointers.
  */
 export async function refileWaiverRecords(
   tx: DbExecutor,

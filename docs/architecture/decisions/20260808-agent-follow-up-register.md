@@ -9,7 +9,7 @@ Every agent session ends with more thoughts than commits: an improvement outside
 given, a question whose answer would have changed the build, a risk spotted in nearby code, a
 cleanup deliberately skipped. Until now those landed in the session's closing message or a PR
 comment — read once during review, then unreachable. The docs already have homes for *committed*
-work (`docs/product/features/` for scope, `docs/product/human-decisions.md` for human-owned calls,
+work (`docs/product/features/` for scope, `docs/product/human-decisions/README.md` for human-owned calls,
 ADRs for hard-to-reverse choices), but nothing for the pre-triage state: a thought a human has not
 yet accepted or declined. Filing straight into the roadmap would break that folder's rule that it
 holds sequenced work rather than an inbox.
@@ -37,7 +37,7 @@ It reports the count and oldest entry but never fails on volume or age — an in
 aging is the human's business.
 
 The register is an inbox, not a backlog: an entry ends by being accepted (moved into
-`docs/product/features/`, `human-decisions.md`, or an ADR, and the file deleted) or declined (the
+`docs/product/features/`, `human-decisions/`, or an ADR, and the file deleted) or declined (the
 file deleted). There is no "done" status, matching the roadmap and assessment rule that delivered
 work leaves the planning doc rather than sitting there marked complete. Agents file; they do not
 act on entries as drive-bys.

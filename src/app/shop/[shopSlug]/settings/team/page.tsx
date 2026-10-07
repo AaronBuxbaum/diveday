@@ -23,12 +23,11 @@ import {
 import { InsetGroup, ledgerRowBoxClass } from "@/components/ui/ledger";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { canPersonManageStaffAccounts } from "@/db/authz";
-import type { staffCredentials } from "@/db/schema";
 import { listShopStaff, type StaffMember } from "@/db/staff-accounts";
 import { listStaffCredentials } from "@/db/staff-credentials";
 import { languageNameIn } from "@/i18n/language-labels";
 import { requestLocale } from "@/i18n/request";
-import { type StaffMessageKey, type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
+import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { staffRoleLabelRecord } from "@/i18n/staff-role-labels";
 import { type Role, STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone, formatCalendarDate, shiftCalendarDate } from "@/lib/calendar-date";
@@ -58,6 +57,7 @@ import {
   saveStaffRolesAction,
   setStaffStatusAction,
 } from "./actions";
+import { CREDENTIAL_KIND_KEYS } from "./credential-kinds";
 import { TEAM_FORMS, teamNoticeForm, teamNoticeOnRoster } from "./notices";
 
 // `instant = true` asserts that navigating *into* this page paints
@@ -113,20 +113,6 @@ function noticeMessages(t: StaffTranslator): Record<string, NoticeMessage> {
     "credential-invalid": { tone: "danger", text: t("staffing.notice.credentialInvalid") },
   };
 }
-
-const CREDENTIAL_KIND_KEYS: Record<
-  (typeof staffCredentials.kind.enumValues)[number],
-  StaffMessageKey
-> = {
-  instructor_rating: "staffing.credentials.kinds.instructor_rating",
-  assistant_instructor_rating: "staffing.credentials.kinds.assistant_instructor_rating",
-  divemaster_rating: "staffing.credentials.kinds.divemaster_rating",
-  liability_insurance: "staffing.credentials.kinds.liability_insurance",
-  first_aid_cpr: "staffing.credentials.kinds.first_aid_cpr",
-  oxygen_provider: "staffing.credentials.kinds.oxygen_provider",
-  captains_licence: "staffing.credentials.kinds.captains_licence",
-  other: "staffing.credentials.kinds.other",
-};
 
 /** How far ahead a renewal counts as due soon. H-59: a word, never a gate. */
 const RENEWAL_WINDOW_DAYS = 30;

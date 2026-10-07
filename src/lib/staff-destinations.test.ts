@@ -273,6 +273,7 @@ describe("what each consumer derives", () => {
       "waivers",
       "team",
       "calendarFeed",
+      "emailSettings",
       "settings",
     ]);
   });
@@ -447,6 +448,7 @@ describe("currentStaffDestination and the section it lights", () => {
     expect(current(`${root}/settings/team`, crew)).toBeNull();
     // But their own calendar feed, ungated, still lights.
     expect(current(`${root}/settings/calendar`, crew)).toBe("calendarFeed");
+    expect(current(`${root}/settings/email`, crew)).toBe("emailSettings");
   });
 
   it("answers null off the registry's map", () => {
@@ -490,6 +492,9 @@ describe("the calendar subscription survives the settings gate", () => {
 
   it("keeps its door in the search for that role", () => {
     expect(staffPaletteDestinations(crew).map((d) => d.id)).toContain("calendarFeed");
+    // The staffer's own email settings, for the same reason: anyone may ask
+    // for the Monday email.
+    expect(staffPaletteDestinations(crew).map((d) => d.id)).toContain("emailSettings");
     expect(staffDestination("calendarFeed").section).toBe("settings");
   });
 

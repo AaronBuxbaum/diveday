@@ -8,11 +8,13 @@ import {
   canExportIncidentRecord,
   canExportShopData,
   canImportShopData,
+  canManageBilling,
   canManageMessagingSettings,
   canManageOrders,
   canManagePaymentSettings,
   canManageStaffAccounts,
   canManageWaiverTemplates,
+  canOverrideCertBlock,
   canOverrideGearRequest,
   canReadMedicalClearanceDocument,
   canReadPrivateRecapPulse,
@@ -141,6 +143,20 @@ describe("canExportIncidentRecord (owner only)", () => {
   });
 });
 
+describe("canOverrideCertBlock (owner/manager/instructor)", () => {
+  it("admits the roles that set a trip's card gate, and nobody else", () => {
+    for (const role of ["owner", "manager", "instructor"] as const) {
+      expect(canOverrideCertBlock([role])).toBe(true);
+    }
+    // Narrower than the gear override: sizing a diver is not a card call.
+    for (const role of ["divemaster", "captain", "crew", "diver"] as const) {
+      expect(canOverrideCertBlock([role])).toBe(false);
+    }
+    expect(canOverrideCertBlock([])).toBe(false);
+    expect(canOverrideCertBlock(undefined)).toBe(false);
+  });
+});
+
 describe("canOverrideGearRequest (H-06 — owner/manager/instructor/divemaster)", () => {
   it("admits the in-water judgment roles, divemaster included", () => {
     expect(canOverrideGearRequest(["owner"])).toBe(true);
@@ -221,4 +237,13 @@ describe("canReadPrivateRecapPulse and the promise on the recap form", () => {
       }
     });
   }
+});
+
+describe("canManageBilling", () => {
+  it("is the owner's alone — not a manager's, not the crew's", () => {
+    expect(canManageBilling(["owner"])).toBe(true);
+    expect(canManageBilling(["manager"])).toBe(false);
+    expect(canManageBilling(["captain", "crew", "divemaster", "instructor"])).toBe(false);
+    expect(canManageBilling(undefined)).toBe(false);
+  });
 });

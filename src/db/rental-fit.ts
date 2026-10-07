@@ -488,7 +488,7 @@ export type DiverRentalFit = {
    * about them, which is what this projection exists to hold back.
    */
   drysuitSize: string | null;
-  /** The diver's own answers on their own form, like the drysuit size (H-101). */
+  /** The diver's own answers on their own form, like the drysuit size (H-102). */
   hoodSize: string | null;
   gloveSize: string | null;
   bootSize: string | null;
@@ -591,6 +591,7 @@ export async function listTripPrepDivers(
     lastDivedBand: row.booking.lastDivedBand,
     hotelPickupLocation: row.booking.hotelPickupLocation,
     pickupTime: row.booking.pickupTime,
+    participantType: row.booking.participantType,
   }));
 }
 

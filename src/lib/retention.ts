@@ -113,8 +113,10 @@ export type RetainedTable =
   | "trip_desk_events"
   | "trip_read_marks"
   | "form_drafts"
+  | "demo_entries"
   | "inbound_messages"
-  | "staff_replies";
+  | "staff_replies"
+  | "weekly_digest_sends";
 
 /**
  * The append-only trails this mechanism deliberately leaves unbounded, as a
@@ -257,6 +259,13 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    */
   form_drafts: 1,
   /**
+   * 400 days. A demo entry is a funnel tag, a role and an instant — nothing
+   * about a person — kept so the founder digest can count the demo by source
+   * (ADR 20261007-founder-metrics). A year plus a season is enough to compare a
+   * week with the same week last year; nothing older is read.
+   */
+  demo_entries: 400,
+  /**
    * 400 days, the same window as `notification_deliveries` and for the same
    * reason: a diver's reply and the shop's answer are the other half of the
    * "you never told me" conversation that trail exists to settle, and a
@@ -269,6 +278,15 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
   inbound_messages: 400,
   /** Measured on `sent_at`; a reply outliving the message it answered says nothing. */
   staff_replies: 400,
+  /**
+   * 400 days, measured on `created_at`. A row is the claim that keeps the
+   * Monday email to one per person per week, plus the hash of the opt-out
+   * link that week's email carried. The claim stops mattering the moment its
+   * week ends; the link is what decides the window. A year-old email's
+   * "turn this off" still works for a season and a year, the same horizon the
+   * delivery trail keeps, and every newer email carries a live one of its own.
+   */
+  weekly_digest_sends: 400,
 };
 
 /**

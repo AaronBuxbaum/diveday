@@ -135,6 +135,7 @@ export async function seedMinimumSeats(
     if (!person) throw new Error("seed: minimum-seat diver insert returned no row");
     await db.insert(personRoles).values({ personId: person.id, role: "diver" as const });
     await db.insert(bookings).values({
+      bookedAs: "diver",
       shopId,
       tripId: trip.id,
       personId: person.id,

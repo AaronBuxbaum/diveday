@@ -2,9 +2,14 @@ import type { AppDb } from "@/db/client";
 import { getDiverProfile } from "@/db/divers";
 import { getBookingReadiness } from "@/db/readiness";
 import { nowDate } from "@/lib/clock";
+import {
+  bookingIsAhead,
+  buildDiverStatus,
+  type DiverStatusRow,
+  nextBookingAhead,
+} from "@/lib/diver-status";
 import { BLOCKER_CATEGORY, type ReadinessResult } from "@/lib/readiness";
 import type { DiverProfile } from "../_components/shared";
-import { bookingIsAhead, buildDiverStatus, type DiverStatusRow, nextBookingAhead } from "./status";
 
 /**
  * The database half of the status ledger: read the readiness of the departure

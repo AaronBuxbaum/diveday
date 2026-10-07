@@ -75,6 +75,7 @@ import {
   shopPromoCodes,
   shopPromoRedemptions,
   shopStripeAccounts,
+  shopSubscriptions,
   shops,
   shopWhatsappAccounts,
   specialtyCertifications,
@@ -294,6 +295,7 @@ export async function deleteDemoShopCascade(db: DbExecutor, shopId: string): Pro
   // `delete(shops)` throw 23503 and stranded the shop past its TTL.
   await db.delete(tripLenses).where(eq(tripLenses.shopId, shopId));
   await db.delete(shopStripeAccounts).where(eq(shopStripeAccounts.shopId, shopId));
+  await db.delete(shopSubscriptions).where(eq(shopSubscriptions.shopId, shopId));
   await db.delete(mediaDeletionAttempts).where(eq(mediaDeletionAttempts.shopId, shopId));
   // References both shops and people (ADR 20260803-processor-erasure-obligations),
   // so it must go before the people/shops deletes below or reaping a demo shop

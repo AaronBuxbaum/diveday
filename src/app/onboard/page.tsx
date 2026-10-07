@@ -14,7 +14,6 @@ import { GroupLabel } from "@/components/ui/ledger";
 import { type DiverMessageKey, type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { MAX_FIRST_DAY_NAME, parseFirstDayFields } from "@/lib/first-day";
-import { eventSource } from "@/lib/funnel";
 import { APP_ORIGIN, publicAppUrl } from "@/lib/notifications";
 import { isOnboardSetupKey, ONBOARD_SETUP_PARAM } from "@/lib/onboard-setup-key";
 import {
@@ -219,7 +218,6 @@ export default async function OnboardPage({
 }: {
   searchParams: Promise<{
     error?: string;
-    from?: string;
     shopName?: string;
     shopSlug?: string;
     timezone?: string;
@@ -231,18 +229,8 @@ export default async function OnboardPage({
     setup?: string;
   }>;
 }) {
-  const {
-    error,
-    from,
-    shopName,
-    shopSlug,
-    timezone,
-    ownerName,
-    ownerEmail,
-    boat,
-    departure,
-    setup,
-  } = await searchParams;
+  const { error, shopName, shopSlug, timezone, ownerName, ownerEmail, boat, departure, setup } =
+    await searchParams;
   const t = diverTranslator(await requestLocale());
 
   // **Shut without the key** (ADR 20260925-shops-are-set-up-by-hand). A
@@ -253,8 +241,6 @@ export default async function OnboardPage({
   // A hand-edited parameter loses itself and nothing else.
   const firstDay = parseFirstDayFields({ boat, departure });
   const shopNameValue = shopName ?? "";
-  // The action reads this back off the form for the trial_started event.
-  const source = eventSource(from);
 
   // The refusal lands on the box that earned it, not in a banner above the
   // whole form (docs/design/forms-and-controls.md); only a code about the
@@ -295,7 +281,6 @@ export default async function OnboardPage({
       >
         {errorField && errorField !== "form" ? <FieldErrorFocus key={error} /> : null}
         <form action={onboardAction} className="flex flex-col gap-5">
-          <input type="hidden" name="source" value={source} />
           <input type="hidden" name={ONBOARD_SETUP_PARAM} value={setup} />
           <section className="flex flex-col gap-4">
             <GroupLabel as="h2">{t("account.onboard.shopSectionTitle")}</GroupLabel>

@@ -3,6 +3,7 @@ import { isStaff } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { checkDepthCeiling, diverDepthLimit } from "@/lib/depth-ceiling";
+import { isDiver, participantPriceCents } from "@/lib/participant-types";
 import type { CardUnreviewRefusal, CertificationLevel, SiteCertRequirement } from "@/lib/readiness";
 import {
   BLOCKER_CATEGORY,
@@ -22,8 +23,9 @@ import {
   inTrainingBefore,
   listCourseSeatsInTraining,
 } from "./certifications-in-training";
-import { type AppDb, type DbExecutor, isUniqueConstraintViolation, queryAll } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { paymentsByBooking } from "./payments";
+import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
 import type { Certification, CertificationAgency, DiveSpecialty } from "./schema";
 import {
   bookings,
@@ -1361,9 +1363,12 @@ export async function listTripReadiness(
        * site's maximum, so this must never be able to flip a `ready` diver to
        * `blocked`. Nothing downstream treats it as a gate.
        */
-      depthAdvisory: certificationBlocked
-        ? ({ status: "unknown" } as const)
-        : checkDepthCeiling(tripMaxDepthMeters, depthLimit, depthUnit),
+      // A snorkeler or a rider is not going to the site's depth, so a ceiling
+      // has nothing to say about them — silence, not "within".
+      depthAdvisory:
+        certificationBlocked || !isDiver(row.booking.participantType)
+          ? ({ status: "unknown" } as const)
+          : checkDepthCeiling(tripMaxDepthMeters, depthLimit, depthUnit),
     };
   });
 }
@@ -1500,7 +1505,14 @@ export async function listTripsReadiness(
         db.select({ timezone: shops.timezone }).from(shops).where(eq(shops.id, shopId)).limit(1),
       () =>
         db
-          .select({ id: trips.id, startsAt: trips.startsAt, minimumAge: courses.minimumAge })
+          .select({
+            id: trips.id,
+            startsAt: trips.startsAt,
+            minimumAge: courses.minimumAge,
+            priceCents: trips.priceCents,
+            snorkelerPriceCents: trips.snorkelerPriceCents,
+            riderPriceCents: trips.riderPriceCents,
+          })
           .from(trips)
           .leftJoin(courses, eq(courses.id, trips.courseId))
           .where(and(inArray(trips.id, tripIds), eq(trips.shopId, shopId), liveTrip())),
@@ -1670,6 +1682,16 @@ export async function listTripsReadiness(
         // The guardian rule measures the diver's age on the shop-local day
         // they signed (src/lib/guardian.ts), so the engine needs the zone.
         timezone,
+        // What this seat is doing aboard: a snorkeler or a rider is asked for
+        // no card (ADR 20261007-participant-types).
+        participantType: row.booking.participantType,
+        // A kind of seat the shop states as free has no payment to clear. Read
+        // off the departure's own price for that kind, never inferred from a
+        // missing one (`paymentGateIsUnclearable`).
+        statedFree:
+          !isDiver(row.booking.participantType) &&
+          courseRow !== undefined &&
+          participantPriceCents(courseRow, row.booking.participantType) === 0,
         now,
       }),
     };

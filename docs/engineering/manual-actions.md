@@ -91,7 +91,22 @@ this file is the checklist, not the argument.
     verify   Label any open pull request `preview` -- the Preview workflow should run and comment a URL. Without the secrets it fails at its first step naming the one that is empty, rather than at an opaque Vercel CLI error.
     note     This credential can deploy to the project, which is why the workflow checks `author_association` before acting on a `/preview` comment: `issue_comment` fires for anyone who can comment. Labelling and pushing already require write access.
 
-[9] Give the weekly database dump its connection string
+[9] Turn on DiveDay's own subscription billing in Stripe
+    when     once, after the entity that bills shops exists (H-18), and again in test mode for a staging deploy
+    why      The product, the price, the webhook endpoint, the Customer Portal and Stripe's invoice emails are settings on DiveDay's own Stripe account, and the merchant they name is a legal entity this repository cannot create. Until all three BILLING_STRIPE_* values are set, Settings > Billing says billing is not turned on and nothing is charged (ADR 20261007-subscription-billing).
+    run      Stripe (DiveDay's own account, not a connected one) -> Product catalog -> Add product 'DiveDay', one recurring price: USD 99.00 per month, per unit. Copy the price_... id.
+             Developers -> API keys -> Create restricted key 'diveday-billing' with write on Customers, Checkout Sessions and Customer portal; nothing else. Copy the rk_live_... value.
+             Developers -> Webhooks -> Add endpoint https://dive.day/api/webhooks/billing listening on Your account (not Connected accounts) for checkout.session.completed, customer.subscription.created, customer.subscription.updated, customer.subscription.deleted and invoice.paid. Copy the whsec_... signing secret.
+             Settings -> Billing -> Customer portal: allow updating the payment method, show invoice history, allow cancelling at the end of the billing period, and set the business name, terms and privacy links to the H-18 entity's.
+             Settings -> Billing -> Customer emails: send finalized invoices and successful payment receipts, and email about failed payments.
+             pnpm env:manual, then fill BILLING_STRIPE_SECRET_KEY, BILLING_STRIPE_WEBHOOK_SECRET and BILLING_STRIPE_PRICE_ID and redeploy.
+    store    1Password, then .env.manual as BILLING_STRIPE_SECRET_KEY, BILLING_STRIPE_WEBHOOK_SECRET and BILLING_STRIPE_PRICE_ID, which reach Vercel Production through the generated .env.vercel.
+    verify   Settings > Billing as an owner of a non-demo shop shows 'Add a card' rather than 'Billing isn't turned on yet'.
+             Stripe -> Webhooks -> the endpoint -> Send test event customer.subscription.updated answers 200 (the event is logged as customer_not_found, which is right for a test customer).
+    if not   A 503 from the endpoint means one of the three values is missing or malformed in the running app (a price id must start price_, the key sk_ or rk_, the secret whsec_). A 400 means the signing secret belongs to a different endpoint; Connect's STRIPE_WEBHOOK_SECRET is not this one.
+    note     Keep these keys apart from STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET even when both live on the same Stripe account: one moves divers' money to shops through Connect, the other bills shops for DiveDay, and a restricted billing key cannot reach a connected account. Stripe Tax is not turned on here; the CPA question in docs/product/stakeholders/finance-and-tax.md decides whether it should be. A free term granted to a founding shop is set with pnpm billing:free-term <shop-slug> <last-free-day>, not in Stripe.
+
+[10] Give the weekly database dump its connection string
     when     once, before the first Monday after this stack is deployed, and again if the Neon connection string changes
     why      The dump is the only backup layer that can restore a login -- the per-shop export bundles exclude user_accounts, account_tokens and calendar_feeds by design -- and it needs Neon's direct (non-pooled) connection string, which is another vendor's credential this stack has no identity to mint or read. It deploys holding the literal 'unset' and refuses to run until this is done, rather than writing a zero-byte object every week.
     run      aws secretsmanager put-secret-value --secret-id diveday/database-url-unpooled --secret-string '<the DATABASE_URL_UNPOOLED value from Neon -- the direct endpoint, not -pooler>'
@@ -102,7 +117,7 @@ this file is the checklist, not the argument.
              AWS_PROFILE=diveday-admin aws s3 ls s3://diveday-database-dumps/dumps/ --recursive
     note     A transaction-mode pooler is unreliable for pg_dump, the same reason migrations use the direct connection. The resulting file holds every password hash and every medical answer in the platform, which is why it lives in its own bucket that nothing holding Vercel-resident credentials can touch, why everything in that bucket is deleted after 35 days while the export bundles never expire, and why the job's own role is write-only. Restoring one is a deliberate human act with the admin profile.
 
-[10] Mint the Vercel and Neon usage read tokens
+[11] Mint the Vercel and Neon usage read tokens
     when     once, before the usage monitor can measure anything, and again after rotating either
     why      Both are another vendor's account credentials -- this stack has no identity on either platform and no API that could mint one. Nothing else in DiveDay needs them, so they exist only for the daily usage poll.
     run      Vercel -> Account Settings -> Tokens -> Create: scope it to the team that holds the billing account, read access only.
@@ -115,7 +130,7 @@ this file is the checklist, not the argument.
 ## AWS account
 
 ```text
-[11] Request SES production access
+[12] Request SES production access
     when     once per region -- currently us-east-1, before sending to anyone who has not verified their address
     why      A human-reviewed AWS Support case. There is no API, and the sandbox is per region: each region is its own request, judged on its own text. The history of every case filed so far is in docs/engineering/ses-email-runbook.md (ADR 20260924-one-region-in-us-east-1).
     run      Read docs/engineering/ses-email-runbook.md, 'Production access: the request', and paste its case text.
@@ -125,7 +140,7 @@ this file is the checklist, not the argument.
     if not   A denial with no reason is the norm, not the end: reply on the same case with the runbook's follow-up answers, and if it is closed, open a new case that names the closed case id. A second region is its own sandbox and its own request.
     note     Everything the reviewer asks for is already in the stack: DKIM and a custom MAIL FROM on the identity, bounce and complaint events to /api/webhooks/ses, account-level suppression on the configuration set, one-click unsubscribe headers, Reply-To and a postal footer from the shop record, and the two reputation alarms in the email stack. The case text lists them; do not paraphrase it shorter.
 
-[12] Leave the SMS sandbox, raise the spend limit, register a toll-free number and set its HELP/STOP replies
+[13] Leave the SMS sandbox, raise the spend limit, register a toll-free number and set its HELP/STOP replies
     when     once per region, before sending SMS to a diver -- start it early, the vetting is measured in weeks
     why      All of it is account-and-region SMS state. The sandbox exit and any spend limit above $1 are Support cases; a US toll-free number is a vetted registration with the carriers that takes weeks, not days. Toll-free rather than 10DLC because one DiveDay number sends for every shop (ADR 20261007-sms-stop-and-help). The keyword replies and the two-way setting live on the number, which the stack does not own, so they are set here; the stack supplies the topic and the role they name. The SetSMSAttributes custom resource (infra-stack.ts S10) deliberately touches none of it. Moving the estate to another region means doing all of it again there (docs/engineering/region-migration.md).
     run      AWS End User Messaging SMS console -> Account settings -> Request production access (a Support case); ask for the spend limit in the same case.
@@ -139,7 +154,7 @@ this file is the checklist, not the argument.
              Text STOP to the number from your own phone: the STOP reply arrives, and an sms_webhook.reply_applied line is logged.
     note     Skipping this does not fail anything visibly: the pipeline reads healthy end to end while sends are capped or dropped, and without the two-way setting a STOP is still honored by AWS but the app never hears of it.
 
-[13] Confirm the observability alarm subscription email
+[14] Confirm the observability alarm subscription email
     when     three times per alert address -- once per alarm topic -- and again if the address changes
     why      An SNS email subscription is not live until a human clicks the link AWS mails to that address. There is no API for it -- by design, since otherwise anyone could subscribe anyone. Until it is clicked every log-signal alarm (infra-stack.ts S13), both SES reputation alarms (infra/lib/email-stack.ts) and both uptime alarms (infra/lib/global-stack.ts) transition correctly and notify nobody, which is the failure mode the alarms exist to prevent.
     run      Open all three 'AWS Notification - Subscription Confirmation' mails sent to the alert address and click Confirm subscription in each.
@@ -154,7 +169,7 @@ this file is the checklist, not the argument.
 ## Verification
 
 ```text
-[14] Confirm the usage monitor reports numbers and reaches a real inbox
+[15] Confirm the usage monitor reports numbers and reaches a real inbox
     when     after minting the tokens, and after changing OPS_ALERT_EMAIL
     why      Every failure mode of this monitor is silent by construction. A wrong token, a revoked scope, a renamed provider field, or an unreachable alert mailbox all leave a cron that runs green and reports nothing, which is indistinguishable from a month with no cost problem.
     run      curl -s -H "Authorization: Bearer $CRON_SECRET" <webhookHost>/api/cron/usage | jq '.evaluations[] | {ceilingId, level, value}'

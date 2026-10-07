@@ -15,6 +15,7 @@ import { depthWarningText } from "@/i18n/depth-labels";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import { crewBlockerText } from "@/i18n/identity-check-labels";
 import { rollCallCheckpointText, rollCallLabelText } from "@/i18n/manifest-labels";
+import { staffParticipantTypeLabel, staffSeatTypeNote } from "@/i18n/participant-labels";
 import { readinessStatusText, readinessStatusTone } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -167,7 +168,9 @@ function DiverFacts({
           is the absence of information formatted as information
           (principle 9), and Prep owns chasing the gap. A nitrox
           request always shows — that's an operational fact. */}
-      {diver.rentalFit.state !== "not_recorded" || diver.nitroxRequested ? (
+      {/* A rider takes nothing from the rack (ADR 20261007-participant-types). */}
+      {diver.participantType !== "rider" &&
+      (diver.rentalFit.state !== "not_recorded" || diver.nitroxRequested) ? (
         <p>
           <span className="font-bold">{t("manifest.rentalFitLabel")}</span>
           <span className="mt-0.5 block text-muted">
@@ -563,6 +566,15 @@ export function DiverRollCall({
             ) : diver.birthday ? (
               <Badge tone="primary">{birthdayCalloutText(t, diver.birthday)}</Badge>
             ) : null;
+          // **Snorkeler or rider, in words** (ADR 20261007-participant-types).
+          // Neutral and outside the one-capsule chain, like the not-here pill:
+          // it is not an exception to act on, it is who this body is.
+          const seatNote = staffSeatTypeNote(t, diver);
+          const typeBadge = seatNote ? (
+            <Badge tone="warning">{seatNote}</Badge>
+          ) : diver.participantType && diver.participantType !== "diver" ? (
+            <Badge tone="neutral">{staffParticipantTypeLabel(t, diver.participantType)}</Badge>
+          ) : null;
           // The one line under the name: **who said what, and when.** Roll call
           // is never optimistic and every result keeps its who-and-when, so the
           // moment a row is anything but "to call" it says so in words — which
@@ -656,7 +668,7 @@ export function DiverRollCall({
                         {String(index + 1).padStart(2, "0")}
                       </span>
                       <span
-                        className={`min-w-0 flex-1 ${capsule || diver.notHere ? "sm:flex-initial print:flex-initial" : ""}`}
+                        className={`min-w-0 flex-1 ${capsule || typeBadge || diver.notHere ? "sm:flex-initial print:flex-initial" : ""}`}
                       >
                         <span className={`block ${ITEM_TITLE_CLASS} group-hover/summary:underline`}>
                           {diver.fullName}
@@ -702,7 +714,7 @@ export function DiverRollCall({
                         first line: a second line there only made every
                         flagged row taller, and on paper it cost the packet
                         pages (e2e/paper-day). */}
-                      {capsule || diver.notHere ? (
+                      {capsule || typeBadge || diver.notHere ? (
                         <span
                           className={`order-last flex basis-full flex-wrap items-center gap-2 sm:order-none sm:flex-1 sm:basis-auto print:order-none print:flex-1 print:basis-auto ${
                             // Level with the name's line: the top of a
@@ -711,6 +723,7 @@ export function DiverRollCall({
                           }`}
                         >
                           {capsule}
+                          {typeBadge}
                           {/* **The desk wrote this one off** (#1209). On the
                             row and not in the sheet, unlike "Checked in":
                             that one is routine and a tap away is fine, this

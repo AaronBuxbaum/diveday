@@ -2,14 +2,28 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { checkInBooking, undoCheckInBooking } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { markBookingNoShow, undoBookingNoShow } from "@/db/no-show";
+import { parseForm } from "@/lib/form-parse";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
 import { counterQueuePath } from "./focus";
+
+/** Every door here posts one field: the seat it acts on. */
+const bookingForm = z.object({
+  bookingId: z.string().refine((id) => uuidParam(id) !== undefined),
+});
+
+/** The posted seat, or the counter's `invalid` notice back on this departure. */
+function bookingIdFrom(formData: FormData, back: string): string {
+  const parsed = parseForm(bookingForm, formData);
+  if (!parsed.ok) redirect(noticeUrl(back, "invalid"));
+  return parsed.data.bookingId;
+}
 
 /**
  * **Every refusal lands back on the boat the staffer was working.**
@@ -35,9 +49,8 @@ export async function checkInAction(
   formData: FormData,
 ): Promise<{ ok: true }> {
   const session = await requireStaffSession();
-  const bookingId = String(formData.get("bookingId") ?? "");
   const back = counterQueuePath(shopSlug, tripId);
-  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
+  const bookingId = bookingIdFrom(formData, back);
 
   const outcome = await checkInBooking(await getDb(), {
     shopId: session.user.shopId,
@@ -87,9 +100,8 @@ export async function undoCheckInAction(
   formData: FormData,
 ): Promise<{ ok: true }> {
   const session = await requireStaffSession();
-  const bookingId = String(formData.get("bookingId") ?? "");
   const back = counterQueuePath(shopSlug, tripId);
-  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
+  const bookingId = bookingIdFrom(formData, back);
 
   const outcome = await undoCheckInBooking(await getDb(), {
     shopId: session.user.shopId,
@@ -128,9 +140,8 @@ export async function markNoShowAction(
   formData: FormData,
 ): Promise<void> {
   const session = await requireStaffSession();
-  const bookingId = String(formData.get("bookingId") ?? "");
   const back = counterQueuePath(shopSlug, tripId);
-  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
+  const bookingId = bookingIdFrom(formData, back);
 
   const outcome = await markBookingNoShow(await getDb(), {
     shopId: session.user.shopId,
@@ -163,9 +174,8 @@ export async function undoNoShowAction(
   formData: FormData,
 ): Promise<void> {
   const session = await requireStaffSession();
-  const bookingId = String(formData.get("bookingId") ?? "");
   const back = counterQueuePath(shopSlug, tripId);
-  if (!uuidParam(bookingId)) redirect(noticeUrl(back, "invalid"));
+  const bookingId = bookingIdFrom(formData, back);
 
   const outcome = await undoBookingNoShow(await getDb(), {
     shopId: session.user.shopId,

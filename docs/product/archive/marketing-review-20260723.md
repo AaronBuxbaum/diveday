@@ -151,7 +151,7 @@ push). Copy touching safety claims (readiness, manifest, medical) gets `dive-dom
 | M8 | ✅ *(shipped 2026-07-30)* **Onboard reassurance**: three checkable reassurances beside the sign-up form (no card/no setup fee, the day-one export, the founder-direct line), a founding-shop eyebrow, and the page's own metadata/canonical. Also closed M2's deferred half: a typed `trial_started` event, with every "Start a trial" link now carrying `?from=<page>` so demo-vs-trial reads per surface | S | |
 
 **Human gate (not an agent task):** the price number and terms remain provisional until H-12 is
-decided ([human-decisions.md](../human-decisions.md)); nothing above publishes the price anywhere
+decided ([human-decisions/](../human-decisions/README.md)); nothing above publishes the price anywhere
 new outside `src/lib/marketing.ts` rendering.
 
 **Measure**: after M2, watch demo-entry rate and demo→trial rate per page; revisit this assessment

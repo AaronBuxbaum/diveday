@@ -43,7 +43,7 @@ function dateValue(value: Date | null): string | null {
  *   record, so the new `person_id` verifies as the shop's act rather than
  *   reading as tampering.
  * - **4** — a signed release whose **guardian's email was erased** on the
- *   guardian's own request (H-102, issue #1673): every fact version 3 seals
+ *   guardian's own request (H-103, issue #1673): every fact version 3 seals
  *   except `guardian_email`, plus who erased it and when. The guardian is a
  *   third party with no record of their own; the address was the one thing on
  *   the release that was theirs to take back, and nulling it under version 1

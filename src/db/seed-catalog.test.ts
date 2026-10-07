@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { COURSE_TEMPLATES } from "@/content/course-templates";
 import { courseSlug } from "@/lib/courses";
-import { COURSE_TEMPLATES } from "./course-templates";
 import { courseTemplateDisplayTitle } from "./seed-catalog";
 
 /**

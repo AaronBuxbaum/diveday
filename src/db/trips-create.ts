@@ -215,6 +215,10 @@ export async function insertTripInstance(
     plannedDives: number;
     priceCents?: number | null;
     depositCents?: number | null;
+    /** A copied departure's snorkeler and rider prices and diver limit (ADR 20261007-participant-types). */
+    snorkelerPriceCents?: number | null;
+    riderPriceCents?: number | null;
+    diverCapacity?: number | null;
     cancellationWindowHours?: number | null;
     minimumBookings?: number | null;
     minimumDecisionHours?: number | null;
@@ -242,6 +246,9 @@ export async function insertTripInstance(
       capacity: params.capacity,
       priceCents: params.priceCents,
       depositCents: params.depositCents,
+      snorkelerPriceCents: params.snorkelerPriceCents ?? null,
+      riderPriceCents: params.riderPriceCents ?? null,
+      diverCapacity: params.diverCapacity ?? null,
       cancellationWindowHours: params.cancellationWindowHours,
       minimumBookings: params.minimumBookings,
       minimumDecisionHours: params.minimumDecisionHours,

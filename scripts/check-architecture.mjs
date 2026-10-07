@@ -1,7 +1,8 @@
-import { readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
 
 /**
  * Layout invariants (docs ADR 20260730-feature-module-contracts).
@@ -29,7 +30,7 @@ import { pathToFileURL } from "node:url";
  * `src/components/today/` importing server actions from `src/app/actions/`),
  * and unwinding it means moving files, not deleting an import — too structural
  * to mass-fix in the change that adds the rule. So, exactly like
- * `check-copy.mjs`, `architecture-baseline.json` records how many violations
+ * `check-copy.mjs`, its section of `scripts/ratchets.json` records how many violations
  * each file still carries. A file not in the baseline may have none, a file's
  * count may never rise, and a count that falls must be banked in the same
  * change (`node scripts/check-architecture.mjs --write`, which refuses to
@@ -39,7 +40,6 @@ import { pathToFileURL } from "node:url";
  */
 
 const ROOT = process.cwd();
-export const BASELINE_PATH = "scripts/architecture-baseline.json";
 const FEATURES_DIR = "src/features";
 const sourceExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
 
@@ -193,22 +193,6 @@ export async function collectViolations(root = ROOT) {
   return violations;
 }
 
-export async function readBaseline(root = ROOT) {
-  let baseline = {};
-  let exists = true;
-  try {
-    baseline = JSON.parse(await readFile(path.join(root, BASELINE_PATH), "utf8"));
-  } catch (error) {
-    if (error?.code !== "ENOENT") throw error;
-    exists = false;
-  }
-  // The file carries a leading note for humans; it is not a path.
-  const counts = Object.fromEntries(
-    Object.entries(baseline).filter(([key]) => !key.startsWith("//")),
-  );
-  return { counts, exists };
-}
-
 /**
  * The ratchet verdict: every violation in a file with no baseline entry, every
  * file whose count rose, and every file whose count fell without the baseline
@@ -245,45 +229,22 @@ export function auditBaseline(violations, baselineCounts) {
 
 async function main() {
   const violations = await collectViolations(ROOT);
-  const { counts: baselineCounts, exists: baselineExists } = await readBaseline(ROOT);
-
-  const absorbing = process.argv.includes("--absorb");
-  if (process.argv.includes("--write") || absorbing) {
-    const grew = [...violations.entries()].filter(
-      ([file, messages]) => baselineExists && messages.length > (baselineCounts[file] ?? 0),
+  const { counts: baselineCounts, exists: baselineExists } = await readCounts(ROOT, "architecture");
+  const { write, absorb } = ratchetFlags();
+  if (write || absorb !== null) {
+    process.exit(
+      await bankCounts({
+        root: ROOT,
+        guard: "architecture",
+        counts: violations,
+        allowed: baselineCounts,
+        exists: baselineExists,
+        note: "Pre-existing architecture-boundary violations, per file. Written by `node scripts/check-architecture.mjs --write`. This number may only go down — see scripts/check-architecture.mjs.",
+        refusal: "The ratchet only turns one way — fix the imports instead",
+        absorb,
+        summary: (files, total) => `${files} files, ${total} violations still to unwind`,
+      }),
     );
-    if (grew.length > 0 && !absorbing) {
-      console.error(
-        "Refusing to write a baseline that grows. The ratchet only turns one way — fix the imports instead:",
-      );
-      for (const [file, messages] of grew) {
-        console.error(`- ${file}: ${baselineCounts[file] ?? 0} → ${messages.length}`);
-      }
-      console.error(
-        "If this growth arrived in a merge from a branch that predates the check, `--absorb` records it explicitly.",
-      );
-      process.exit(1);
-    }
-    if (grew.length > 0) {
-      console.warn("Absorbing violations that grew — this must be merged-in work, not new debt:");
-      for (const [file, messages] of grew) {
-        console.warn(`- ${file}: ${baselineCounts[file] ?? 0} → ${messages.length}`);
-      }
-    }
-    const next = {
-      "//": "Pre-existing architecture-boundary violations, per file. Written by `node scripts/check-architecture.mjs --write`. This number may only go down — see scripts/check-architecture.mjs.",
-      ...Object.fromEntries(
-        [...violations.entries()]
-          .map(([file, messages]) => [file, messages.length])
-          .sort(([a], [b]) => a.localeCompare(b)),
-      ),
-    };
-    await writeFile(path.join(ROOT, BASELINE_PATH), `${JSON.stringify(next, null, 2)}\n`);
-    const total = [...violations.values()].reduce((sum, messages) => sum + messages.length, 0);
-    console.log(
-      `architecture: baseline written — ${violations.size} files, ${total} violations still to unwind`,
-    );
-    process.exit(0);
   }
 
   const failures = auditBaseline(violations, baselineCounts);
