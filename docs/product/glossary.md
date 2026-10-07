@@ -1976,7 +1976,11 @@ new domain concept, define it here in the same PR.
   all, which is the judgement call.
 - **Trip prep list** — the derived packing list for one departure: tanks (one per diver per planned
   dive, split air/nitrox) plus rental kit grouped by item and size, with the divers each line is
-  for. Purely derived — nothing on it is an allocation. A diver who **dives dry** (above, rented
+  for. Crew get one air tank per planned dive when their job on this trip puts them in the water:
+  the job rostered for this departure decides it (instructor or divemaster yes, captain or deck
+  crew no), and only when no job is set do their standing roles (instructor, assistant instructor,
+  divemaster) stand in (`divesOnTrip`, `src/lib/crew-roles.ts`; issue #1851). Purely derived —
+  nothing on it is an allocation. A diver who **dives dry** (above, rented
   suit or their own) is the one diver whose weights line deliberately carries no number: every fit
   form asks usual weighting against a
   wetsuit ("Usually 12 lb with 3 mm suit"), and a drysuit needs two to four kilos more, so their
