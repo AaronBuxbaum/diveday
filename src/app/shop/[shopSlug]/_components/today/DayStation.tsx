@@ -29,8 +29,10 @@ import { STAGE_WORD_KEYS } from "@/lib/trip-stages";
  * still open (issue #789). A blocked diver who is **already aboard** (issue
  * #791) used to be a second one; it is a `blocked_aboard` row in Needs you
  * now, because that diver already had a row there with the fix on it, and the
- * card's sentence told the same person a second way. The log door stays too: the 2026-08-12 amendment to ADR
- * 20260804-incident-export-owner-gate offers it on every live departure.
+ * card's sentence told the same person a second way. The departure log's door
+ * is not here: a live card is the day's briefing, and the log is offered on
+ * the departure's Details tab and on the settled card once it is back (ADR
+ * 20260804-incident-export-owner-gate, amendment 2026-10-07).
  *
  * A Server Component, so it takes the translator rather than a copy object.
  */
@@ -67,7 +69,6 @@ export function DayStation({
   timeZone,
   currency,
   crewed = false,
-  canOpenLog = false,
   t,
 }: {
   station: DayStationData;
@@ -77,16 +78,11 @@ export function DayStation({
   currency: string;
   /** The signed-in staffer crews this boat — the one badge a station may wear. */
   crewed?: boolean;
-  /**
-   * `canPersonExportIncidentRecord`; the log door is simply absent for
-   * everyone else (ADR 20260804-incident-export-owner-gate, decision 3).
-   */
-  canOpenLog?: boolean;
   t: StaffTranslator;
 }) {
   const stage = station.stage ?? null;
   const phase = station.phase ?? null;
-  // The crew's own word, beside the pill: "Out on Molasses Reef · 9:14 AM"
+  // The crew's own word, beside the pill: "Out on Molasses Reef since 9:14 AM"
   // says more than "Aboard" and is what the crew actually tapped.
   const stageWord = stage
     ? stage.stage === "underway" && !stage.siteName
@@ -207,14 +203,6 @@ export function DayStation({
         <span className="text-muted">
           {open === 0 ? t("shopHome.spine.full") : t("shopHome.spine.spotsOpen", { count: open })}
         </span>
-        {canOpenLog ? (
-          <Link
-            href={`/shop/${shopSlug}/trips/${station.tripId}/log`}
-            className={`${tapTargetLinkClass} ms-auto font-medium text-primary hover:underline print:hidden`}
-          >
-            {t("incidentExport.openLink")}
-          </Link>
-        ) : null}
       </p>
 
       {crewRollCallOpen ? (

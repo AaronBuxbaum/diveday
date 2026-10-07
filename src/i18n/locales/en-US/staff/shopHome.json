@@ -140,7 +140,7 @@
       "surface": "On the surface",
       "headingIn": "Heading in",
       "home": "Home",
-      "chip": "{stage} · {time}"
+      "chip": "{stage} since {time}"
     },
     "factOfScale": {
       "divers": "{name} boards the {time} as your {count}th diver of the season.",

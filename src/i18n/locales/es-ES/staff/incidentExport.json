@@ -63,7 +63,7 @@
   "noBuddyRecorded": "No se registró ningún equipo de buceo",
   "notOnFile": "No registrado",
   "identityWithheld": "Identidad sin confirmar: datos no mostrados",
-  "openLink": "Generar registro",
+  "openLink": "Registro de la salida",
   "ownerOnlyNotice": "Solo un propietario puede generar el registro de una salida. Todo lo que recoge (recuento, cronología, estado de cada buceador) está en el manifiesto de esa salida.",
   "recordedByName": "Registrado por {name}",
   "resultRecordedBy": "{date}\u00a0· {name}",

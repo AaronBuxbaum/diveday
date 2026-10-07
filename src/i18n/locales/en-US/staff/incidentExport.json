@@ -63,7 +63,7 @@
   "noBuddyRecorded": "No buddy team recorded",
   "notOnFile": "Not on file",
   "identityWithheld": "Identity not confirmed, so details are withheld",
-  "openLink": "Generate log",
+  "openLink": "Departure log",
   "ownerOnlyNotice": "Only an owner can generate a departure’s log. Everything it draws on (roll call, timeline, each diver’s status) is on that departure’s manifest.",
   "recordedByName": "Recorded by {name}",
   "resultRecordedBy": "{date}\u00a0· {name}",

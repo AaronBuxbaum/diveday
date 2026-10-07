@@ -794,10 +794,6 @@ export function DaySpine({
                   timeZone={timeZone}
                   currency={currency}
                   crewed={crewed.has(entry.station.tripId)}
-                  // Today's live departures carry the log door too, not only
-                  // the settled ones (ADR 20260804-incident-export-owner-gate's
-                  // amendment).
-                  canOpenLog={evening?.canOpenLog ?? false}
                   t={t}
                 />
               ) : evening ? (

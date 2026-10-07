@@ -332,18 +332,6 @@ describe("the station is a panel (16a)", () => {
     expect(container.querySelector('[class*="grid-cols-[112px_112px_1fr]"]')).toBeNull();
   });
 
-  it("offers the departure log on a live station as a quiet link, never a button", () => {
-    renderSpine({
-      departures: [departure({ tripId: "t1" })],
-      evening: evening([]),
-    });
-    const door = screen.getByRole("link", { name: "Generate log" });
-    expect(door).toHaveAttribute("href", "/shop/blue-mantis/trips/t1/log");
-    // `buttonClass()` always emits the control rung; the door is a text link.
-    expect(door.className).not.toContain("rounded-lg");
-    expect(door.className).toContain("text-primary");
-  });
-
   /**
    * **The title's chevron stays with its last word** (pixel-craft class 2,
    * K-464). The link is `inline-flex`, so a title that wrapped became one
@@ -1343,7 +1331,7 @@ describe("the evening reading", () => {
 
   it("offers the departure log only to a reader who may generate one", () => {
     renderSpine({ departures: [], evening: evening([closed({ tripId: "t1" })]) });
-    expect(screen.getByRole("link", { name: "Generate log" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Departure log" })).toBeInTheDocument();
 
     cleanup();
     renderSpine({
@@ -1351,33 +1339,24 @@ describe("the evening reading", () => {
       evening: evening([closed({ tripId: "t1" })], { canOpenLog: false }),
     });
     // Absent, never disabled — the gate is the render (AGENTS.md).
-    expect(screen.queryByRole("link", { name: "Generate log" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Departure log" })).toBeNull();
   });
 
-  it("offers it on a departure that has not come home, which is when it is wanted", () => {
-    // ADR 20260804-incident-export-owner-gate's 2026-08-12 amendment, verbatim:
-    // *offered on every departure row, not only the ones that are back, because
-    // the moment a shop most needs a departure's recorded facts is while the
-    // departure is still happening.* Moving the door onto the evening's station
-    // in 6d dropped it from the live one, which put an owner whose boat is
-    // overdue in the one place they could not reach the record of who is on it.
+  it("keeps the log off a live departure's card, which is the day's briefing", () => {
+    // ADR 20260804-incident-export-owner-gate, amendment 2026-10-07: a live
+    // departure's log is one tap away on its Details tab, which is where an
+    // owner whose boat is overdue goes for it; the card stays a briefing.
     renderSpine({
       departures: [departure({ tripId: "t1" })],
       evening: evening([closed({ tripId: "t2", title: "Dawn Wall" })]),
     });
     const live = screen.getByRole("link", { name: "Two-Tank Reef" }).closest("li");
     if (!live) throw new Error("the live departure did not render a station");
-    expect(within(live).getByRole("link", { name: "Generate log" })).toHaveAttribute(
+    expect(within(live).queryByRole("link", { name: "Departure log" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Departure log" })).toHaveAttribute(
       "href",
-      "/shop/blue-mantis/trips/t1/log",
+      "/shop/blue-mantis/trips/t2/log",
     );
-
-    cleanup();
-    renderSpine({
-      departures: [departure({ tripId: "t1" })],
-      evening: evening([closed({ tripId: "t2", title: "Dawn Wall" })], { canOpenLog: false }),
-    });
-    expect(screen.queryByRole("link", { name: "Generate log" })).toBeNull();
   });
 
   it("says how the head count ended, once, on the station that owns it", () => {
@@ -1628,7 +1607,7 @@ describe("the stage chip (slice 16c)", () => {
 
   it("carries the crew's word, the site and the time they said it", () => {
     withStage("underway");
-    expect(screen.getByText(/Out on Molasses Reef · /)).toBeInTheDocument();
+    expect(screen.getByText(/Out on Molasses Reef since /)).toBeInTheDocument();
   });
 
   it("falls back to the siteless word on a departure with no plan", () => {
@@ -1641,7 +1620,7 @@ describe("the stage chip (slice 16c)", () => {
       ],
       actions: [action({ id: "b", departure: boat("t1") })],
     });
-    expect(screen.getByText(/Out on the water · /)).toBeInTheDocument();
+    expect(screen.getByText(/Out on the water since /)).toBeInTheDocument();
   });
 });
 

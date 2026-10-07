@@ -60,6 +60,7 @@ import { CopyLinkButton } from "./_components/CopyLinkButton";
 import { CrewSection } from "./_components/CrewSection";
 import { DetailsSection } from "./_components/DetailsSection";
 import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
+import { DepartureLogLink } from "./_components/DepartureLogLink";
 import { PrintTripBundleButton } from "./_components/PrintTripBundleButton";
 import { RequirementsSection } from "./_components/RequirementsSection";
 import {
@@ -1068,6 +1069,14 @@ export default async function ManageTripPage({
                     popupBlockedLabel={t("shared.printButton.popupBlocked")}
                     recordAction={recordTripPrintPdfAction.bind(null, shopSlug, tripId)}
                     flush
+                  />
+                  <DepartureLogLink
+                    db={db}
+                    shopId={shop.id}
+                    personId={session.user.personId}
+                    shopSlug={shopSlug}
+                    tripId={tripId}
+                    label={t("incidentExport.openLink")}
                   />
                 </>
               }

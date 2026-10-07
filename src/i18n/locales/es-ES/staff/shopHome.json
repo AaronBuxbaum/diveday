@@ -140,7 +140,7 @@
       "surface": "En superficie",
       "headingIn": "De regreso",
       "home": "En puerto",
-      "chip": "{stage} · {time}"
+      "chip": "{stage} desde las {time}"
     },
     "factOfScale": {
       "divers": "{name} embarca en la salida de las {time} como tu buceador número {count} de la temporada.",
