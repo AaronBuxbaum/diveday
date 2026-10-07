@@ -23,8 +23,9 @@ import { bookings, people } from "./schema";
  * The seeded database is rebuilt every run, so three things in it are not
  * stable across runs and are normalized away before hashing: uuids (random),
  * instants (some are stamped by the database's own clock, which the frozen
- * test clock does not reach), and therefore the order of rows that tie on such
- * an instant and fall back to a uuid — each file's rows are sorted after
+ * test clock does not reach), digests computed over those two (a waiver's
+ * integrity hash), and therefore the order of rows that tie on such an
+ * instant and fall back to a uuid — each file's rows are sorted after
  * normalizing. What is pinned is every file, its note, its header, its row
  * count, and every other value in every cell. Row order is the other two
  * files' to assert, and they do.
@@ -36,12 +37,14 @@ import { bookings, people } from "./schema";
  */
 
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+/** A digest over a row's own ids and instants (`waiver_records.integrity_hash`), as volatile as they are. */
+const DIGEST = /\b[0-9a-f]{32,}\b/g;
 
 function normalizeCell(value: CsvValue): string {
   if (value instanceof Date) return "<instant>";
   if (value === null) return "<null>";
   if (value === undefined) return "<undefined>";
-  return `${typeof value}:${String(value).replace(UUID, "<uuid>")}`;
+  return `${typeof value}:${String(value).replace(UUID, "<uuid>").replace(DIGEST, "<digest>")}`;
 }
 
 type NormalizedFile = { file: string; text: string; digest: string };
