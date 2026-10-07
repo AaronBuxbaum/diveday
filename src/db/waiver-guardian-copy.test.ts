@@ -118,7 +118,7 @@ describe("the guardian's copy of a signed release", () => {
 
     expect(email.sent).toHaveLength(1);
     const [sent] = email.sent;
-    if (!sent || sent.kind !== "guardian_release_copy") throw new Error("wrong kind sent");
+    if (sent?.kind !== "guardian_release_copy") throw new Error("wrong kind sent");
     expect(sent.to).toBe("jordan@example.com");
     expect(sent.diverName).toBe(ctx.person.fullName);
     expect(sent.shopName).toBe(ctx.shop.name);
@@ -164,7 +164,7 @@ describe("the guardian's copy of a signed release", () => {
     ).toEqual({ sent: true });
 
     const [sent] = email.sent;
-    if (!sent || sent.kind !== "guardian_release_copy") throw new Error("wrong kind sent");
+    if (sent?.kind !== "guardian_release_copy") throw new Error("wrong kind sent");
     expect(sent.medicalReviewPending).toBe(true);
 
     const rendered = messageFor(sent);
@@ -189,7 +189,7 @@ describe("the guardian's copy of a signed release", () => {
       { provider: email.provider },
     );
     const [sent] = email.sent;
-    if (!sent || sent.kind !== "guardian_release_copy") throw new Error("wrong kind sent");
+    if (sent?.kind !== "guardian_release_copy") throw new Error("wrong kind sent");
     expect(sent.medicalReviewPending).toBe(false);
     expect(messageFor(sent).text).not.toContain("physician");
   });
