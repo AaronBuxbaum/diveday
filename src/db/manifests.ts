@@ -1237,12 +1237,7 @@ async function reclaimReleasedSeat(
   // the desk saw the diver, `booked` otherwise. Restoring `booked` every time
   // put a diver the counter had already checked in back on its "still to
   // come" list (issue #1838). Both hold a seat (`SEAT_HELD_STATUSES`).
-  const standing = await standingArrivalStatus(
-    tx,
-    input.shopId,
-    input.tripId,
-    input.bookingId,
-  );
+  const standing = await standingArrivalStatus(tx, input.shopId, input.tripId, input.bookingId);
   const [updated] = await tx
     .update(bookings)
     .set({ status: standing === "arrived" ? "checked_in" : "booked" })
