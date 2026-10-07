@@ -3,7 +3,6 @@ import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { FlashParams } from "@/components/FlashParams";
 import { Pager, staffPagerWords } from "@/components/Pager";
-import { PaymentsConnectCta } from "@/components/PaymentsConnectCta";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { Badge } from "@/components/ui/badge";

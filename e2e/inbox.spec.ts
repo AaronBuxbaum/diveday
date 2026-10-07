@@ -59,10 +59,7 @@ test("a staffer reads the inbox, opens the record, and answers the diver", async
   // a staffer should be able to see that before they send rather than after
   // (issue #1515). Exact, so the label carrying the address is what is asserted
   // rather than a substring that would also match the old channel-only text.
-  const composer = page.getByLabel(
-    "Reply by email to priya.sharma@mail.example",
-    { exact: true },
-  );
+  const composer = page.getByLabel("Reply by email to priya.sharma@mail.example", { exact: true });
   await expect(composer).toBeVisible();
   await composer.fill("Yes, you’re on the 1pm boat now. See you at the dock.");
   await page.getByRole("button", { name: "Send", exact: true }).click();
