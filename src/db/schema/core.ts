@@ -979,6 +979,15 @@ export const userAccounts = pgTable(
      * tablet also clears it on the same person's own phone.
      */
     orientationDismissedAt: timestamp("orientation_dismissed_at", { withTimezone: true }),
+    /**
+     * This person's own answer to the Monday email (`src/lib/weekly-digest.ts`).
+     * Null until they give one, and null means their role's default: on for an
+     * owner, off for everyone else (`weeklyDigestWanted`). Stored as the answer
+     * rather than materialised at invite time, so an owner promoted later gets
+     * the email without a backfill, and "never chose" stays distinguishable
+     * from "turned it on" and "turned it off".
+     */
+    weeklyDigest: boolean("weekly_digest"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     /**
      * better-auth's core `user` model requires an `updatedAt`; nothing in
