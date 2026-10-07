@@ -22,7 +22,7 @@ import { STAFF_MESSAGES } from "./staff-messages";
  * The hint therefore owes two things in every locale: the reader is *anyone*,
  * not a screened diver, and what they can do is read the departure as well as
  * take a seat on it. It is rendered twice — the board's builder
- * (`schedule/board/_components/ScheduleBuilder.tsx`) and a departure's Details
+ * (`schedule/board/_components/AddPanel.tsx`) and a departure's Details
  * panel (`trips/[id]/_components/DetailsSection.tsx`) — from this one key.
  */
 const ANYONE = {
