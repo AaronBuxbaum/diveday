@@ -27,7 +27,7 @@ doc to update when.
   Never commit the seeded payload — it is build output. `pnpm check:design-canvases` enforces the
   mechanics; [design/design-artifacts.md](../../docs/design/design-artifacts.md) sets what a canvas
   may claim.
-- **Human-owned decisions** live in [product/human-decisions.md](../../docs/product/human-decisions.md);
+- **Human-owned decisions** live in [product/human-decisions/](../../docs/product/human-decisions/README.md);
   an agent records an outcome there only when a human made the call. Unbuilt work lives in
   [product/features/](../../docs/product/features/README.md); shipped slices move to
   [product/shipped.md](../../docs/product/shipped.md).

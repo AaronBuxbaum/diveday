@@ -140,7 +140,7 @@ What that cost, and what it bought:
   rule, renamed `drain-legacy-database-dumps`, on the reasoning that the dumps already there are real
   dumps and deleting the rule would strand them in a bucket whose other prefix never expires — a wait
   of roughly 70 days, since that bucket is versioned and an expiry there writes a delete marker. That
-  reasoning was wrong about the data. [H-47](../../product/human-decisions.md) records that DiveDay is
+  reasoning was wrong about the data. [H-47](../../product/human-decisions/README.md) records that DiveDay is
   pre-pilot, has no users, and treats the database as disposable, so those objects are dumps of seeded
   demo data: no real password hash, no real medical answer, nothing anyone would miss. Keeping a
   lifecycle rule, a CDK assertion and a ten-week reminder alive to tidy them was more machinery than

@@ -1,6 +1,6 @@
 ---
 name: copy-restraint
-description: Decide whether a sentence deserves to exist before writing or keeping it, and strip explanatory, redundant, or apologetic copy from a surface. Use whenever writing, editing, reviewing, or reading past any user-facing string — a label, hint, description, empty state, error, or section subtitle — and when sweeping a surface for words that earn nothing.
+description: Decide whether a user-facing sentence deserves to exist, and strip explanatory, redundant, or apologetic copy. Use when writing, editing, or reviewing any label, hint, empty state, error, or subtitle, or sweeping a surface for words that earn nothing.
 ---
 
 # Only two kinds of sentence earn their place

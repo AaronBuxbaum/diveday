@@ -1,6 +1,6 @@
 ---
 name: stacked-prs
-description: Open work as stacked pull requests — the default shape for any branch cut while another of your own branches is still open, related or not, pixels or not. Chained base branches, GitHub stacks, cascading rebase, bottom-up merge. Use when cutting a branch or opening a pull request, when a scope has steps that cannot compile or review independently (schema → db reader → surface), or when asked to review, rebase, or land an existing stack.
+description: Open work as stacked pull requests — chained bases, GitHub stacks, cascading rebase, bottom-up merge. Use when cutting a branch or opening a PR while another of yours is open, related or not, or when reviewing, rebasing, or landing a stack.
 ---
 
 # Stacked pull requests

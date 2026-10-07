@@ -35,7 +35,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 /** A whole-file read past this many lines is refused without an explicit range. */
-export const LARGE_FILE_LINES = 600;
+export const LARGE_FILE_LINES = 900;
 
 /** Generated artifacts that are never read whole, with the reason each one is refused. */
 const GENERATED = [

@@ -57,6 +57,6 @@ nothing here that looks like a filled example.
 - Send the drafted quote/case study back to the shop for sign-off before it's used anywhere
   (matches `marketing.md`: "when real customers exist, their words go through the product owner
   first" — the shop's sign-off comes first, the product owner's second).
-- Record the outcome in the [human-decisions.md](../human-decisions.md) verification queue (V-04)
+- Record the outcome in the [human-decisions/](../human-decisions/README.md) verification queue (V-04)
   and, once published, add it as a real claim in [marketing.md](../marketing.md) rather than
   letting it live only in this interview record.

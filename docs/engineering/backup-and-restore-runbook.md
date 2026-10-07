@@ -27,7 +27,7 @@ of the export bundle stated in §2.
 
 This exists because the highest-value rows are the ones we can least re-create.
 `waiver_records` is legal evidence and its working retention default is "indefinite"
-([H-02](../product/human-decisions.md)) — a database we cannot restore is a shop's liability
+([H-02](../product/human-decisions/README.md)) — a database we cannot restore is a shop's liability
 history we cannot produce.
 
 ## What holds production state
@@ -369,7 +369,7 @@ a `drain-legacy-database-dumps` lifecycle rule over `s3://diveday-backups/dumps/
 out on their own, roughly 70 days out because that bucket is versioned and an expiry there writes a
 delete marker rather than deleting bytes. **That rule is gone**, and so is the wait: DiveDay is
 pre-pilot with no users and a deliberately disposable database
-([H-47](../product/human-decisions.md)), so what is under that prefix is dumps of seeded demo data —
+([H-47](../product/human-decisions/README.md)), so what is under that prefix is dumps of seeded demo data —
 no diver's medical answer, no real shop's waivers, and no password hash anybody uses. Keeping a
 lifecycle rule, a test and a ten-week reminder alive to tidy data nobody would miss costs more than
 the data is worth. This paragraph is the record for whoever opens that bucket later and wonders what

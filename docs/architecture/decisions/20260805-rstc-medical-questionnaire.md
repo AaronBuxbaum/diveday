@@ -10,7 +10,7 @@ physician referral. The 2026 UHMS/DMSC form uses ten top-level questions plus co
 so that rule incorrectly blocks cases such as question 1 yes followed by all Box A no answers.
 The product decision also permits storing the participant's yes/no answers server-side. The
 published participant form remains safety/legal copy pending the H-01/H-03 specialist sign-off
-recorded in `docs/product/human-decisions.md`.
+recorded in `docs/product/human-decisions/README.md`.
 
 ## Decision
 

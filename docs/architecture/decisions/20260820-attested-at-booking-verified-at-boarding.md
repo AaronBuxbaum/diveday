@@ -10,7 +10,7 @@ DiveDay has two certification gates and they ask different questions.
 (`decideTripAdmission` — *could this diver ever be cleared?*), and `calculateReadiness` has always
 held the other at the dock (*is this diver cleared now?*).
 
-Two rows on `docs/product/human-decisions.md` said the sale-time gate was pointed at the wrong
+Two rows on `docs/product/human-decisions/README.md` said the sale-time gate was pointed at the wrong
 people.
 
 **H-29 — the gate contradicted itself.** `shopHasAdjudicated` decided whether a diver was "unknown

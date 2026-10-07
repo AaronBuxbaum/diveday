@@ -225,6 +225,96 @@ describe("checkRateLimit — fail-open is observable", () => {
 });
 
 /**
+ * Without the Upstash pair a production deployment rate-limits per serverless
+ * instance, which multiplies every limit by however many are warm. Still
+ * fail-open, never silent: the first check on an instance says which store it
+ * is using. Each case re-imports the module so its env is read afresh and the
+ * once-per-process latch starts clear.
+ */
+describe("checkRateLimit — the in-memory store announces itself in production", () => {
+  let warned: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    warned = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "");
+    vi.stubEnv("DIVEDAY_RATE_LIMIT_DISABLED", "");
+    vi.stubEnv("DIVEDAY_E2E", "");
+  });
+
+  afterEach(() => {
+    warned.mockRestore();
+  });
+
+  async function freshLimiter() {
+    vi.resetModules();
+    const { checkRateLimit: check } = await import("./rate-limit");
+    return check;
+  }
+
+  function warnedEvents(): Array<Record<string, unknown>> {
+    return warned.mock.calls.map((call: unknown[]) => JSON.parse(String(call[0])));
+  }
+
+  it("logs a warning once per instance, naming the store, and still allows the request", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const check = await freshLimiter();
+
+    await expect(check("k", config, 1_000)).resolves.toEqual({ allowed: true, retryAfterMs: 0 });
+    await check("k", config, 1_001);
+    await check("other", config, 1_002);
+
+    expect(warnedEvents()).toEqual([
+      expect.objectContaining({
+        event: "rate_limit.memory_store_in_production",
+        level: "warn",
+        store: "memory",
+      }),
+    ]);
+  });
+
+  it("stays quiet outside production", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const check = await freshLimiter();
+
+    await check("k", config, 1_000);
+
+    expect(warned).not.toHaveBeenCalled();
+  });
+
+  it("stays quiet in the e2e build, which is a production build without Upstash on purpose", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("DIVEDAY_E2E", "1");
+    const check = await freshLimiter();
+
+    await check("k", config, 1_000);
+
+    expect(warned).not.toHaveBeenCalled();
+  });
+
+  it("stays quiet in production when the distributed store is configured", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://example.upstash.io");
+    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "test-token");
+    vi.stubGlobal("fetch", async () => new Response(JSON.stringify({ result: [1, "2"] })));
+    const check = await freshLimiter();
+
+    await check("k", config, 1_000);
+
+    expect(warned).not.toHaveBeenCalled();
+  });
+
+  it("stays quiet for an injected store, which is a caller's choice rather than a deployment gap", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const check = await freshLimiter();
+
+    await check("k", config, 1_000, inMemoryRateLimitStore());
+
+    expect(warned).not.toHaveBeenCalled();
+  });
+});
+
+/**
  * The runbook drifted from the code once already (OPS-7: it promised 30/hour
  * for `capabilityAction` for a fortnight after a security review raised it to
  * 60), and a stale number in a runbook is worse than no number — it is read

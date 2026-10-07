@@ -45,7 +45,9 @@ Reviewer agents (`.claude/agents/`): `design-critic` (delight principles), `dive
 isolation, authz, data exposure — required for auth/allowlist/token/PII/export changes),
 `conversion-reviewer` (persuasion/conversion quality on marketing pages and private sales
 collateral — recommended after drafting or editing a marketing page, switching guide, or
-`commercial-outreach` artifact).
+`commercial-outreach` artifact). `design-critic` and `conversion-reviewer` run on `model: sonnet`, a
+judgement over screenshots or copy that does not need the session's model; the two required
+reviewers inherit it.
 
 ## Maintenance
 

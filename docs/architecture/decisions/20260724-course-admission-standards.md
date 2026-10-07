@@ -5,7 +5,7 @@
 
 ## Context
 
-H-08 (docs/product/human-decisions.md) left the exact per-agency ratios, depth ceilings,
+H-08 (docs/product/human-decisions/README.md) left the exact per-agency ratios, depth ceilings,
 minimum-age/Junior rules, and medical-exception process as "must verify — needs the operator's
 agency-specific input," alongside the already-accepted conservative baseline (DSD/OW ungated,
 AOW+ requiring a verified Open Water card, instructor-led sessions blocked until staffed). The

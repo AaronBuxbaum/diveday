@@ -214,7 +214,7 @@ line is built for it. Do not measure this in calls booked.
 Every reply gets a call note within the hour, in the
 [first-call script](first-call-script.md#within-ten-minutes-of-hanging-up)'s format. A reply that
 changes a standing assumption is H-31 evidence and belongs in
-[human-decisions.md](../human-decisions.md), never here.
+[human-decisions/](../human-decisions/README.md), never here.
 
 **The 25-shop cap counts shops that take the offer, not emails sent.** H-12's founding cohort is
 capped at 25, and six free months is a promise kept by hand with no product mechanism behind it
@@ -229,7 +229,7 @@ each is an existing rule rather than a new one:
 - **A ship date, or "I could build that for you."** One developer, no customers; a promise made in
   a reply becomes the thing the shop judges everything by.
 - **Anything about how fast support answers.** That promise was retired 2026-08-05
-  ([H-12/H-26](../human-decisions.md#decision-register)) and has not been replaced.
+  ([H-12/H-26](../human-decisions/README.md#decision-register)) and has not been replaced.
 - **A discount, a longer free term, or a price different from the site's.** Six months is the whole
   commercial position. Anything beyond it gets written down and taken away, never agreed to live.
 - **The price as a number in prose.** Send the pricing page; the figure has one source
@@ -261,7 +261,7 @@ Not knowing something is a fine answer with this audience. An invented one costs
 ## Flagged — settle before the offer is stated on a call
 
 **The six-month term is defined in exactly one place: H-12's 2026-08-12 amendment**
-([human-decisions.md](../human-decisions.md#decision-register)). What it covers, what it leaves
+([human-decisions/](../human-decisions/README.md#decision-register)). What it covers, what it leaves
 open (the still-live legal/tax dependency, the missing start-event decision, the day-22 Settings
 contradiction), and the 25-shop cohort cap all live there, and this page does not restate them —
 a term described in two documents is a term that will drift in one of them. Read that row before

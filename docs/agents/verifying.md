@@ -53,6 +53,14 @@ minutes without finishing, at a load average above eight, while CI answered the 
 a few. Worse than the wait is what it does to everything else — a saturated box starves the dev
 server, a focused spec, and any parallel session sharing the machine.
 
+A change that touches only `docs/`, Markdown or `.claude/` skips the four unit shards along with
+the build and the browser jobs; `Unit tests that read docs` runs the unit files that quote a
+document path instead. The shards are dealt by each file's recorded CI duration when
+`scripts/test-durations.json` exists, and by a source estimate when it does not
+(`src/test/shard-sequencer.ts`). When their finish times drift apart, refresh it from one green
+run: download every `unit-durations-<n>` artifact and run
+`node scripts/merge-test-durations.mjs <files…>`.
+
 **So the PR is the instrument, not the trophy.** Open it before it is green when that is the
 fastest way to learn what is broken; say so in the body, name what you have and have not run, and
 work what comes back. This does not license pushing carelessly: a push that turns CI red costs a
@@ -106,7 +114,7 @@ what a failure here is about.
 
 Whether the surface looks right. Screenshots, phone and desktop, are yours — in light only, unless
 the work is itself about colour (then `screenshot.mjs --both`); that is the owner's rule,
-[H-90](../product/human-decisions.md#decision-register). CI's visual run keeps both schemes, so a
+[H-90](../product/human-decisions/README.md#decision-register). CI's visual run keeps both schemes, so a
 dark pixel that moved still shows up as a diff — but it tells you a pixel *moved*, never that the
 new one is better. See the **design-review** and **visual-triage** skills.
 

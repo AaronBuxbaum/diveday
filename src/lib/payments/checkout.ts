@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { logStripeRequestThrew } from "./stripe-request-log";
 
 /**
  * Hosted Stripe Checkout for pay-at-booking on a shop's connected account.
@@ -254,7 +255,8 @@ export function stripeCheckoutProvider(
         const body = sessionResponseSchema.safeParse(await response.json());
         if (!body.success) return { status: "failed" };
         return { status: "created", ...toSnapshot(body.data) };
-      } catch {
+      } catch (error) {
+        logStripeRequestThrew("create_checkout_session", error);
         return { status: "failed" };
       }
     },
@@ -269,7 +271,8 @@ export function stripeCheckoutProvider(
         const body = sessionResponseSchema.safeParse(await response.json());
         if (!body.success) return { status: "failed" };
         return { status: "ok", session: toSnapshot(body.data) };
-      } catch {
+      } catch (error) {
+        logStripeRequestThrew("retrieve_checkout_session", error);
         return { status: "failed" };
       }
     },
@@ -313,7 +316,8 @@ export function stripeCheckoutProvider(
         return refund.success
           ? { status: "refunded", refundId: refund.data.id }
           : { status: "failed" };
-      } catch {
+      } catch (error) {
+        logStripeRequestThrew("refund_checkout_session", error);
         return { status: "failed" };
       }
     },

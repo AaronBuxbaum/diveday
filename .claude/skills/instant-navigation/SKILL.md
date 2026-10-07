@@ -1,6 +1,6 @@
 ---
 name: instant-navigation
-description: Build routes that paint instantly under Next 16's static-shell enforcement — loading.tsx boundaries, instant = true, layout rules, redirects, and cacheComponents state. Use when adding or restructuring any page or layout, when `next build` fails with blocking-prerender-*, or when a redirect or client navigation misbehaves.
+description: Build routes that paint instantly under Next 16 — loading.tsx, instant = true, layouts, redirects, cacheComponents. Use when adding or restructuring a page or layout, on a blocking-prerender-* build failure, or when a navigation misbehaves.
 ---
 
 # Instant navigation (Next 16 static shells)

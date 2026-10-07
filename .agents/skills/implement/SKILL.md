@@ -10,6 +10,6 @@ Use /tdd where possible, at pre-agreed seams.
 
 Run typechecking regularly, single test files regularly, and the full test suite once at the end.
 
-Once done, use /code-review to review the work.
+Once done, review the work the way this repo does: the `verify` skill, then the reviewer agents in `.claude/agents/` that AGENTS.md requires for the surfaces touched.
 
 Commit your work to the current branch.

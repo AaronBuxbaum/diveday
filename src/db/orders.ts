@@ -14,6 +14,7 @@ import {
 } from "drizzle-orm";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { log } from "@/lib/log";
 import { majorToMinor } from "@/lib/money";
 import {
   type InvoiceCustomerAddress,
@@ -1013,7 +1014,7 @@ async function applyOrderUpdate(
           : 0;
 
     if (!ALLOWED_ORDER_TRANSITIONS[current.status].has(status)) {
-      console.error("applyOrderUpdate: refused an illegal order status transition", {
+      log("order.illegal_status_transition", "error", {
         orderId: current.id,
         shopId: current.shopId,
         from: current.status,
@@ -1152,7 +1153,7 @@ export async function markOrderPaidByInvoiceId(
     .limit(1);
   if (!order) return null;
   if (!accountMatches(expectedAccountId, order.stripeAccountId)) {
-    console.error("markOrderPaidByInvoiceId: refused an account mismatch", {
+    log("order.paid_account_mismatch", "error", {
       orderId: order.id,
       shopId: order.shopId,
       expectedAccountId,
@@ -1179,7 +1180,7 @@ export async function markOrderVoidedByInvoiceId(
     .limit(1);
   if (!order) return null;
   if (!accountMatches(expectedAccountId, order.stripeAccountId)) {
-    console.error("markOrderVoidedByInvoiceId: refused an account mismatch", {
+    log("order.voided_account_mismatch", "error", {
       orderId: order.id,
       shopId: order.shopId,
       expectedAccountId,
