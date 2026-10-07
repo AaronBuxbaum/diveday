@@ -802,16 +802,23 @@ export async function getTripManifests(
   // When/how each diver's medical currency was last established, for spotting a
   // stale medical. Digital and staff-attested paper reviews both resolve here;
   // a pending/in-review record resolves to null.
-  // The mark carries `overriddenReferralAt` (issue #1282), which one record
-  // alone cannot answer — so the flag `getTripReadiness` already derived from
-  // the diver's whole signed history is put back onto it here rather than
-  // derived a second time from a single row.
+  // The mark carries `overriddenReferralAt` (issue #1282) and
+  // `overriddenRefusal` (issue #2158), which one record alone cannot answer —
+  // so the two `getTripReadiness` already derived from the diver's whole signed
+  // history are put back onto it here rather than derived a second time from a
+  // single row.
   const medicalByBooking = new Map(
     readinessRows.map((row) => {
       const mark = medicalWaiverMark(row.waiver);
       return [
         row.booking.id,
-        mark ? { ...mark, overriddenReferralAt: row.overriddenReferralAt } : null,
+        mark
+          ? {
+              ...mark,
+              overriddenReferralAt: row.overriddenReferralAt,
+              overriddenRefusal: row.overriddenRefusal,
+            }
+          : null,
       ] as const;
     }),
   );

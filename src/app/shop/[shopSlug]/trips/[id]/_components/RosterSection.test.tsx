@@ -1320,3 +1320,47 @@ describe("the one-line row", () => {
     expect(screen.queryByText("Waiver not signed yet")).toBeNull();
   });
 });
+
+/**
+ * **A new release can clear a diver a physician refused, and the row says so**
+ * (Aaron, 2026-10-07, issue #2158: "allow a waiver without, but show a warning
+ * that a previous waiver had a physician say no (with link)").
+ */
+describe("an earlier physician refusal under a cleared release", () => {
+  const refusedRow = (status: "ready" | "blocked" = "ready") =>
+    ({
+      ...readinessRow(status),
+      overriddenRefusal: { recordId: "w-refused", at: new Date("2026-08-01T15:00:00Z") },
+    }) as unknown as ReadinessByBooking extends Map<string, infer V> ? V : never;
+
+  it("warns in the open on a Ready row, with a link to the refused record", () => {
+    renderRoster({
+      ...fixtures,
+      roster: [entry("r", "Noor Haddad")],
+      readiness: new Map([["r", refusedRow()]]) as ReadinessByBooking,
+      waivers: new Map([["r", signedWaiver]]) as WaiverByBooking,
+    });
+
+    const line = screen.getByText(/A physician did not clear an earlier waiver/);
+    expect(line).toBeVisible();
+    expect(line.textContent).toMatch(/Aug\s1\)/);
+    const link = within(line.closest("li") as HTMLElement).getByRole("link", {
+      name: "View signed record",
+    });
+    expect(link).toHaveAttribute("href", "/shop/blue-mantis/divers/p-r/waivers/w-refused");
+  });
+
+  it("says nothing on a held seat: the refusal is the matched person's history", () => {
+    const held = entry("r", "Noor Haddad", { identityBookedAs: "Noor H." });
+    (held.booking as { identityUnconfirmedAt: Date | null }).identityUnconfirmedAt = new Date(
+      "2026-08-20T15:00:00Z",
+    );
+    renderRoster({
+      ...fixtures,
+      roster: [held],
+      readiness: new Map([["r", refusedRow("blocked")]]) as ReadinessByBooking,
+      waivers: new Map([["r", signedWaiver]]) as WaiverByBooking,
+    });
+    expect(screen.queryByText(/A physician did not clear an earlier waiver/)).toBeNull();
+  });
+});

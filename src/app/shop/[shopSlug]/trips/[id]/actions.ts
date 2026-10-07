@@ -1119,13 +1119,14 @@ export async function undoRemoveBookingAction(
  * **"Send a new waiver" on a seat a physician refused** (Aaron, 2026-10-06).
  * Retires the refusal from this seat (`retireMedicalRefusal`), when the seat
  * holds it, and emails the diver a fresh release in the same tap. The refusal
- * keeps the seat blocked until that release is signed and a physician clears
- * it, so nothing here lets anybody board.
+ * keeps the seat blocked until that release is signed, so nothing here lets
+ * anybody board. A clean new release boards them, with a warning on the row
+ * that links back to the refusal (Aaron, 2026-10-07, issue #2158).
  *
  * Owner or manager, refused on the live roles before anything is written. A
  * diver with no email on file still gets the seat freed for a new release, and
- * the row's own waiver controls (copy the link, text it) take over; paper is
- * refused after a physician's "no" (`physician_refused`).
+ * the row's own waiver controls (copy the link, text it, or record paper) take
+ * over.
  */
 export async function sendNewWaiverAction(shopSlug: string, tripId: string, formData: FormData) {
   const back = tripPath(shopSlug, tripId);

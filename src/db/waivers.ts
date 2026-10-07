@@ -45,7 +45,6 @@ import {
   isCompletedWaiverCurrent,
   isUnresolvedMedicalHold,
   needsMedicalReview,
-  physicianRefusalStands,
   WAIVER_LINK_TTL_MS,
   WAIVER_SIGNATURE_VALIDITY_MS,
 } from "@/lib/waivers";
@@ -1341,14 +1340,7 @@ export async function completeWaiver(
   if (!medicalValidation.ok) {
     return { ok: false, reason: "invalid_medical" };
   }
-  // After a physician's "no", the next release goes back to a physician
-  // whatever it answers: a clean self-declaration is not the way back.
-  const medicalReviewRequired =
-    needsMedicalReview(input.medicalAnswers) ||
-    (await physicianRefusalStandsFor(db, {
-      shopId: state.record.shopId,
-      personId: state.record.personId,
-    }));
+  const medicalReviewRequired = needsMedicalReview(input.medicalAnswers);
   const status = medicalReviewRequired ? ("medical_review" as const) : ("completed" as const);
   const [saved] = await db
     .update(waiverRecords)
@@ -1788,13 +1780,7 @@ export type InPersonWaiverOutcome =
          * paper in hand is one tap away on both surfaces: confirm the identity,
          * then record the release.
          */
-        | "identity_unconfirmed"
-        /**
-         * A physician did not clear this diver, and no release signed since
-         * has been cleared. Paper cannot follow that answer: the diver signs
-         * online, and a physician clears the new release.
-         */
-        | "physician_refused";
+        | "identity_unconfirmed";
     };
 
 /**
@@ -2150,11 +2136,6 @@ export async function recordInPersonWaiver(
       now,
     });
     if (standing) return { ok: true, recordId: standing.id, alreadySigned: true };
-    // Paper carries no questionnaire a physician could clear, so it can never
-    // be the release that follows a physician's "no".
-    if (await physicianRefusalStandsFor(tx, { shopId: input.shopId, personId: signer.personId })) {
-      return { ok: false, reason: "physician_refused" };
-    }
 
     const evidence = inPersonAttestationProvider.capture({
       signerName: signer.fullName,
@@ -2492,33 +2473,6 @@ export async function recordMedicalEvaluation(
   });
 }
 
-/**
- * Whether a physician's refusal still governs this diver's next release
- * (`physicianRefusalStands`): read over every medical record the person has at
- * the shop, superseded ones included, because retiring a refusal off a seat is
- * exactly what must not end it.
- */
-async function physicianRefusalStandsFor(
-  db: DbExecutor,
-  input: { shopId: string; personId: string },
-): Promise<boolean> {
-  const records = await db
-    .select()
-    .from(waiverRecords)
-    .where(
-      and(
-        eq(waiverRecords.shopId, input.shopId),
-        eq(waiverRecords.personId, input.personId),
-        inArray(waiverRecords.status, ["completed", "medical_review"]),
-        or(
-          isNotNull(waiverRecords.medicalClearanceDeclinedAt),
-          isNotNull(waiverRecords.medicalClearedAt),
-        ),
-      ),
-    );
-  return physicianRefusalStands(records);
-}
-
 export type RetireMedicalRefusalResult =
   | { ok: true; personId: string }
   | { ok: false; reason: "not_authorized" | "no_refusal" };
@@ -2538,8 +2492,10 @@ export type RetireMedicalRefusalResult =
  * **Nothing is lifted.** The refusal keeps outranking every signature older
  * than it (`isStandingRefusal`, read through `listSignedWaiversByPerson`), so
  * the seat stays blocked — "A physician did not clear this diver to dive" —
- * until the diver signs the new release and a physician clears it: the new
- * release parks for review whatever it answers (`physicianRefusalStands`).
+ * until the diver signs a new release, online or on paper. A clean one boards
+ * them without a second physician (Aaron, 2026-10-07, issue #2158), and every
+ * surface that shows it warns that an earlier release was refused, with a
+ * link to it (`overriddenRefusal`).
  *
  * Owner or manager, checked here against live roles as well as by the action,
  * because it is the one act that moves a physician's answer off a seat.

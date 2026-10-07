@@ -111,6 +111,7 @@
   "medicalClearanceImported": "Medical clearance imported, not reviewed here",
   "medicalClearedByPhysician": "Cleared by physician",
   "medicalWaiverSigned": "Medical waiver signed",
+  "medicalEarlierRefusal": "A physician did not clear an earlier waiver ({date})",
   "medicalReferralUnresolved": "Re-signed after a referral with no physician clearance on file ({date})",
   "resolveBlockersLink": "Resolve blockers on Guests →",
   "addNoteSummary": "Add a note",

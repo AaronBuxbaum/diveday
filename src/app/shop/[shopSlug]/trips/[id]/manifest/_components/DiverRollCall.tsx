@@ -203,6 +203,16 @@ function DiverFacts({
               {guardianCoSignedText(t, diver.medicalWaiver.guardian)}
             </span>
           ) : null}
+          {/* An earlier release was refused by a physician, and this one
+              cleared the diver without a second physician (issue #2158). Not
+              a block; the crew at the rail decides with it in view. */}
+          {diver.medicalWaiver.overriddenRefusal ? (
+            <span className="mt-0.5 block font-medium text-warning-strong">
+              {t("manifest.medicalEarlierRefusal", {
+                date: formatShortDate(diver.medicalWaiver.overriddenRefusal.at, locale, timezone),
+              })}
+            </span>
+          ) : null}
           {/* The signature standing here replaced a referral instead of
               answering it — nobody's fault, and not a block, but a crew member
               at the rail is the person best placed to ask (issue #1282). */}

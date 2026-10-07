@@ -1,9 +1,11 @@
+import Link from "next/link";
 import { waiverSendCopy } from "@/app/actions/waiver-send-types";
 import { MedicalClearanceControl } from "@/components/MedicalClearanceControl";
 import { medicalClearanceCopy } from "@/components/medical-clearance-copy";
 import { PaperWaiverControl } from "@/components/PaperWaiverControl";
 import { paperWaiverCopy } from "@/components/paper-waiver-copy";
 import { FILE_ROW_INSET, WaiverStateRow } from "@/components/person/rows";
+import { buttonClass } from "@/components/ui/button";
 import { InsetGroup } from "@/components/ui/ledger";
 import { guardianCoSignedText } from "@/i18n/guardian-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -12,6 +14,7 @@ import { calendarDateInTimezone, formatCalendarDate } from "@/lib/calendar-date"
 import { nowDate } from "@/lib/clock";
 import { guardianSignatureRequired, signingDate } from "@/lib/guardian";
 import { smsRecipient } from "@/lib/notifications/sms";
+import { shopPath } from "@/lib/staff-notices";
 import type { DiverStatusRow } from "../_lib/status";
 import { markWaiverInPersonAction, recordMedicalClearanceAction } from "../actions";
 import { DiverFileGroupDisclosure } from "./DiverFileGroupDisclosure";
@@ -104,6 +107,7 @@ function waiverSummary(
   timezone: string,
   state: WaiverRowState,
   overriddenReferralAt: Date | null,
+  earlierRefusal: { recordId: string; at: Date } | null,
 ): string {
   const text = waiverRowStateText(t, state);
   const date = (value: Date) => formatCalendarDate(calendarDateInTimezone(value, timezone), locale);
@@ -120,6 +124,11 @@ function waiverSummary(
     // on a questionnaire the diver re-answered clean after a physician was
     // asked. The closed door is where a staffer decides whether to open it at
     // all, so the door has to carry it.
+    // A physician's "no" on an earlier release rides the door the same way
+    // (issue #2158): the release standing today cleared the diver without one.
+    if (earlierRefusal) {
+      return `${goodUntil} · ${t("divers.stats.waiverEarlierRefusal", { date: date(earlierRefusal.at) })}`;
+    }
     return overriddenReferralAt
       ? `${goodUntil} · ${t("divers.stats.waiverReferralOpen", { date: date(overriddenReferralAt) })}`
       : goodUntil;
@@ -204,6 +213,11 @@ export function WaiverGroup({
   // is not, and the record is where the staffer who can act is standing.
   const overriddenReferralAt =
     diver.waiver.state === "current" ? (diver.waiver.medical?.overriddenReferralAt ?? null) : null;
+  // **A physician refused an earlier release, and a new one cleared the diver
+  // anyway** (Aaron, 2026-10-07, issue #2158). Allowed, and said out loud with
+  // the refused record one tap away.
+  const earlierRefusal =
+    diver.waiver.state === "current" ? (diver.waiver.medical?.overriddenRefusal ?? null) : null;
   // **The evaluation the shop stored, and a door to it** (issue #1283). Drawn
   // only when there is a file *and* this reader may open it — a link that
   // 404s for a divemaster teaches them the record is broken rather than that
@@ -241,6 +255,7 @@ export function WaiverGroup({
   const hasWork = Boolean(
     offersSend ||
       overriddenReferralAt ||
+      earlierRefusal ||
       clearanceDocument ||
       heldForMedical ||
       notCleared ||
@@ -250,7 +265,15 @@ export function WaiverGroup({
     <DiverFileGroupDisclosure
       id="waiver"
       label={t("divers.stats.waiver")}
-      summary={waiverSummary(diver, t, locale, timezone, state, overriddenReferralAt)}
+      summary={waiverSummary(
+        diver,
+        t,
+        locale,
+        timezone,
+        state,
+        overriddenReferralAt,
+        earlierRefusal,
+      )}
       // The two facts a closed "Signed" door would hide are the two that stand
       // on somebody's word rather than on a document: a signature that ended a
       // referral without answering it is the second (issue #1282).
@@ -263,7 +286,7 @@ export function WaiverGroup({
         // without a departure to name, so they are danger on their own.
         (heldForMedical || notCleared
           ? "danger"
-          : overriddenReferralAt || needsAction
+          : overriddenReferralAt || earlierRefusal || needsAction
             ? "warning"
             : "muted")
       }
@@ -280,6 +303,7 @@ export function WaiverGroup({
         heldForMedical ||
         notCleared ||
         Boolean(overriddenReferralAt) ||
+        Boolean(earlierRefusal) ||
         needsAction ||
         Boolean(missing?.open)
       }
@@ -301,6 +325,24 @@ export function WaiverGroup({
               detail={waiverDetail(diver, t, locale, timezone)}
             />
           )}
+          {earlierRefusal ? (
+            <p className="flex flex-wrap items-baseline gap-x-4 px-5 pb-3 text-sm font-medium text-warning-strong sm:px-6">
+              <span>
+                {t("divers.waiver.earlierRefusal", {
+                  date: formatCalendarDate(
+                    calendarDateInTimezone(earlierRefusal.at, timezone),
+                    locale,
+                  ),
+                })}
+              </span>
+              <Link
+                href={shopPath(shopSlug, "divers", personId, "waivers", earlierRefusal.recordId)}
+                className={buttonClass({ variant: "link", size: "sm", flush: true })}
+              >
+                {t("divers.waiver.viewRefusedRecord")}
+              </Link>
+            </p>
+          ) : null}
           {overriddenReferralAt ? (
             <p className="px-5 pb-3 text-sm font-medium text-warning-strong sm:px-6">
               {t("divers.waiver.referralUnresolved", {

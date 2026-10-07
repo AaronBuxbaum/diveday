@@ -1439,16 +1439,15 @@ new domain concept, define it here in the same PR.
   are mutually exclusive by the `waiver_records_medical_clearance_attributed` check, so recording a
   clearance over a refusal is refused and so is the reverse: a physician's "no" is not erasable by
   whoever is at the desk next. A diver re-evaluated three months later gets back on a boat by
-  **signing a fresh release** that a physician then clears — a new questionnaire, a new record,
-  which is also the honest thing to do with a disclosure that is now months old. Deliberate and
-  fail-closed, not an omission. The act is **Send a new waiver** on the refused diver's roster row:
-  one owner/manager tap (`retireMedicalRefusal` in `src/db/waivers.ts`) that marks the refused
-  record superseded and emails a fresh link. The refusal stays on file and **keeps outranking every
-  older signature** (`isStandingRefusal` in `src/lib/waivers.ts`), so the seat stays blocked as not
-  cleared. **The way back runs through a physician** (`physicianRefusalStands`, dive-domain review
-  2026-10-06): until a release signed after the refusal carries its own clearance, a new online
-  release parks in medical review whatever it answers, and a paper attestation is refused
-  (`physician_refused`). A self-declared clean questionnaire never overrides a physician's "no".
+  **signing a fresh release** — a new questionnaire, a new record, which is also the honest thing
+  to do with a disclosure that is now months old. The act is **Send a new waiver** on the refused
+  diver's roster row: one owner/manager tap (`retireMedicalRefusal` in `src/db/waivers.ts`) that
+  marks the refused record superseded and emails a fresh link. The refusal stays on file and
+  **keeps outranking every older signature** (`isStandingRefusal` in `src/lib/waivers.ts`), so the
+  seat stays blocked as not cleared until the new release is signed. **A clean new release clears
+  the diver without a second physician, and says so** (H-98, Aaron 2026-10-07): online or on paper,
+  it boards them, and the roster, the manifest and the diver record warn that a physician did not
+  clear an earlier waiver, with a link to that signed record (`overriddenRefusal`).
 - **Paper / in-person signature** — a non-diver (staff) recording that a diver signed the release on
   paper — a copy on the boat or on shore — that the app never saw signed. It creates the same
   immutable completed record, marked as staff-attested and stamped with the staff member who recorded

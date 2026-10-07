@@ -111,6 +111,7 @@
   "medicalClearanceImported": "Autorización médica importada, no revisada aquí",
   "medicalClearedByPhysician": "Autorizado por un médico",
   "medicalWaiverSigned": "Exención médica firmada",
+  "medicalEarlierRefusal": "Un médico no autorizó una exención anterior ({date})",
   "medicalReferralUnresolved": "Firmada de nuevo tras una derivación médica sin autorización de un médico registrada ({date})",
   "resolveBlockersLink": "Resolver bloqueos en Buceadores →",
   "addNoteSummary": "Añadir una nota",

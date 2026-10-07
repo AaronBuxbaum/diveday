@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
@@ -281,6 +281,43 @@ describe("the waiver group", () => {
     // rather than on anything the shop has seen.
     expect(door?.querySelector("span")?.className).toContain("text-warning-strong");
     expect(group).toHaveAttribute("open");
+  });
+
+  /**
+   * **A physician refused an earlier release, and a clean new one cleared the
+   * diver anyway** (Aaron, 2026-10-07, issue #2158). Allowed; the door says so
+   * in warning ink, and the refused record is one tap away.
+   */
+  it("carries an earlier physician refusal on the door, with a link to it", () => {
+    renderCard(
+      diver({
+        email: "priya@dive.day",
+        waiver: {
+          state: "current",
+          signedAt: new Date("2026-07-21T15:00:00.000Z"),
+          expiresAt: new Date("2027-07-21T15:00:00.000Z"),
+          medical: {
+            at: new Date("2026-07-21T15:00:00.000Z"),
+            source: "digital",
+            overriddenReferralAt: null,
+            overriddenRefusal: { recordId: "w-refused", at: new Date("2026-06-02T15:00:00.000Z") },
+            clearance: null,
+          },
+        } as DiverProfile["waiver"],
+      }),
+    );
+
+    const group = screen.getByTestId("diver-file-group-waiver");
+    const door = group.querySelector("summary");
+    expect(door).toHaveTextContent(
+      /Signed · Good until Jul 21, 2027 · Earlier waiver refused by a physician on Jun 2, 2026/,
+    );
+    expect(door?.querySelector("span")?.className).toContain("text-warning-strong");
+    expect(group).toHaveAttribute("open");
+    expect(within(group).getByRole("link", { name: "View signed record" })).toHaveAttribute(
+      "href",
+      expect.stringMatching(/\/divers\/[^/]+\/waivers\/w-refused$/),
+    );
   });
 
   it("keeps a physician's refusal behind a door, drawn as a refusal", () => {

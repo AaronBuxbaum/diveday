@@ -353,6 +353,15 @@ export function buildDiverStatus(
       },
       action: { labelKey: "divers.status.acts.sendWaiver", target: "send_waiver" },
     });
+  } else if (diver.waiver.medical?.overriddenRefusal) {
+    // A current release signed after a physician's "no" (issue #2158). Allowed
+    // without a second physician, so a warning, with the refused record linked
+    // from the waiver group.
+    rows.push({
+      kind: "waiver",
+      tone: "warning",
+      sentence: { key: "divers.status.waiverEarlierRefusal" },
+    });
   } else if (diver.waiver.medical?.overriddenReferralAt) {
     // A current release that *ended* a physician referral rather than
     // answering it (issue #1282). Sign-once is symmetric, so a diver who was

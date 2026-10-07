@@ -14,7 +14,7 @@ import {
   unavailableReadiness,
   unreviewedCardState,
 } from "@/lib/readiness";
-import { effectiveWaiverForBooking, overriddenReferralAt } from "@/lib/waivers";
+import { effectiveWaiverForBooking, overriddenReferralAt, overriddenRefusal } from "@/lib/waivers";
 import { loadActiveStaffRoles } from "./authz";
 import {
   type CourseSeatInTraining,
@@ -1601,6 +1601,12 @@ export async function listTripsReadiness(
       // history. Deriving it a second time downstream from one of the two would
       // be a second answer to a safety question (issue #1282).
       overriddenReferralAt: overriddenReferralAt(
+        effectiveWaiver,
+        signedWaiversByPerson.get(row.person.id) ?? [],
+      ),
+      // The physician's "no" a clean new release stands over (issue #2158):
+      // the seat boards, and every surface warns with a link to the refusal.
+      overriddenRefusal: overriddenRefusal(
         effectiveWaiver,
         signedWaiversByPerson.get(row.person.id) ?? [],
       ),

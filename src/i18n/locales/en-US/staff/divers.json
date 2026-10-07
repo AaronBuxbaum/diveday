@@ -291,6 +291,7 @@
     "waiverGuardianMissing": "Signed {date} by the diver alone; a parent or guardian still has to sign",
     "waiverHeldSince": "Held since {date}",
     "waiverNotClearedOn": "Answered {date}",
+    "waiverEarlierRefusal": "Earlier waiver refused by a physician on {date}",
     "waiverReferralOpen": "Referral on {date} not answered",
     "sendWaiverViaEmail": "Email waiver",
     "sendWaiverViaSms": "Text waiver",
@@ -395,6 +396,7 @@
     "waiverExpired": "The signed release has lapsed.",
     "waiverHeld": "A medical answer is with a doctor for sign-off.",
     "waiverNotCleared": "A physician did not clear this diver to dive.",
+    "waiverEarlierRefusal": "A physician did not clear an earlier waiver.",
     "waiverReferralOpen": "A physician referral was never answered.",
     "openBalance": "{count, plural, one {One seat still owes money.} other {# seats still owe money.}}",
     "noEmergencyContact": "No emergency contact on file.",
@@ -431,6 +433,8 @@
     "cantBoard": "Can’t board {when}."
   },
   "waiver": {
+    "earlierRefusal": "A physician did not clear an earlier waiver ({date}).",
+    "viewRefusedRecord": "View signed record",
     "referralUnresolved": "Re-signed after a referral, with no physician clearance on file ({date}). Record one, or ask.",
     "openClearanceDocument": "Open the physician’s evaluation"
   },

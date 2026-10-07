@@ -119,23 +119,6 @@ export function isStandingRefusal(record: WaiverRecord): boolean {
   );
 }
 
-/**
- * **Whether a physician's "no" still governs what this diver signs next.** The
- * newest refusal on file stands until a release signed after it has been
- * cleared by a physician in its own right. While it stands, a new online
- * release parks for review whatever its answers, and a paper attestation is
- * refused: a self-declared clean questionnaire is not the way back from a
- * physician's "no" (dive-domain review 2026-10-06).
- */
-export function physicianRefusalStands(records: readonly WaiverRecord[]): boolean {
-  const refusal = records
-    .filter(isStandingRefusal)
-    .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
-  if (!refusal) return false;
-  const refusedAt = signatureTime(refusal);
-  return !records.some((record) => record.medicalClearedAt && signatureTime(record) > refusedAt);
-}
-
 /** What outranks an older clean signature: an open hold, or a refusal. */
 function outranksOlderSignatures(record: WaiverRecord): boolean {
   return isUnresolvedMedicalHold(record) || isStandingRefusal(record);
@@ -442,6 +425,12 @@ export type MedicalWaiverMark = {
    */
   overriddenReferralAt: Date | null;
   /**
+   * **An earlier release a physician refused, that this one stands over**
+   * ({@link overriddenRefusal}) — its record and date, or null. A warning,
+   * never a block: the crew reads it with a link to the refused record.
+   */
+  overriddenRefusal: { recordId: string; at: Date } | null;
+  /**
    * **The record a `cleared` mark hangs on, and whether the physician's
    * evaluation itself is stored against it** (issue #1283) — null for every
    * other source.
@@ -489,10 +478,45 @@ export function overriddenReferralAt(
   if (!standing || !isCleanCompletion(standing)) return null;
   const standingTime = signatureTime(standing);
   const referral = personSignedWaivers
-    .filter(isUnresolvedMedicalHold)
+    .filter((record) => isUnresolvedMedicalHold(record) && !isStandingRefusal(record))
     .filter((record) => record.id !== standing.id && signatureTime(record) < standingTime)
     .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
   return referral ? new Date(signatureTime(referral)) : null;
+}
+
+/**
+ * **The physician's "no" a standing clean signature sits on top of** — the
+ * refused record and when it was signed, or null in the ordinary case.
+ *
+ * A diver a physician did not clear gets back on a boat by signing a new
+ * release, and a clean one clears them without a second physician (Aaron,
+ * 2026-10-07, issue #2158: "allow a waiver without, but show a warning that a
+ * previous waiver had a physician say no (with link)"). This is the warning:
+ * every surface that shows the standing release also says that an earlier one
+ * was refused, and links to it, so the crew decides with the refusal in view.
+ *
+ * Only for a release no physician cleared. Once any release signed after the
+ * refusal carries a physician's clearance, a physician has answered since, and
+ * the earlier "no" is history rather than something to warn about. Separate
+ * from {@link overriddenReferralAt}, which leaves refusals out, so one record
+ * is never warned about twice.
+ */
+export function overriddenRefusal(
+  standing: WaiverRecord | null,
+  personSignedWaivers: readonly WaiverRecord[],
+): { recordId: string; at: Date } | null {
+  if (!standing || !isCleanCompletion(standing) || standing.medicalClearedAt) return null;
+  const standingTime = signatureTime(standing);
+  const refusal = personSignedWaivers
+    .filter(isStandingRefusal)
+    .filter((record) => record.id !== standing.id && signatureTime(record) < standingTime)
+    .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
+  if (!refusal) return null;
+  const refusedAt = signatureTime(refusal);
+  const answeredSince = personSignedWaivers.some(
+    (record) => record.medicalClearedAt && signatureTime(record) > refusedAt,
+  );
+  return answeredSince ? null : { recordId: refusal.id, at: new Date(refusedAt) };
 }
 
 /**
@@ -518,6 +542,7 @@ export function medicalWaiverMark(
   const at = record.signedAt ?? record.completedAt;
   if (!at) return null;
   const overridden = overriddenReferralAt(record, personSignedWaivers);
+  const refusal = overriddenRefusal(record, personSignedWaivers);
   const guardian = guardianSignatureOf(record);
   // A referral a physician cleared is the strongest medical evidence a shop
   // ever holds, and staff reading the record need to see that it is not an
@@ -533,6 +558,7 @@ export function medicalWaiverMark(
       at: evaluatedAt === null ? record.medicalClearedAt : new Date(evaluatedAt),
       source: "cleared",
       overriddenReferralAt: overridden,
+      overriddenRefusal: refusal,
       clearance: {
         recordId: record.id,
         documentOnFile: Boolean(record.medicalClearanceDocumentUrl),
@@ -542,7 +568,12 @@ export function medicalWaiverMark(
   }
   // Every other source has no clearance behind it by construction — the branch
   // above is the only one a `medical_cleared_at` can reach.
-  const uncleared = { overriddenReferralAt: overridden, clearance: null, guardian } as const;
+  const uncleared = {
+    overriddenReferralAt: overridden,
+    overriddenRefusal: refusal,
+    clearance: null,
+    guardian,
+  } as const;
   if (record.signatureMethod === "imported") return { at, source: "imported", ...uncleared };
   if (record.medicalAnswers) return { at, source: "digital", ...uncleared };
   if (record.signatureMethod === "in_person_attested") {
