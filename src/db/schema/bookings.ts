@@ -12,6 +12,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { PARTICIPANT_TYPES } from "@/lib/participant-types";
 import { people, shops } from "./core";
 import { courseInquiries } from "./courses";
 import { trips } from "./trips";
@@ -35,6 +36,17 @@ export const bookingStatus = pgEnum("booking_status", [
   "cancelled",
   "no_show",
 ]);
+
+/**
+ * **What this person is doing on the boat** (ADR 20261007-participant-types).
+ *
+ * A diver dives; a snorkeler is in the water on the surface with no tank; a
+ * rider stays aboard. All three are a seat, a body the crew counts at every
+ * checkpoint, and a waiver. Only a diver is asked for a certification card, put
+ * on a buddy team, or packed tanks for. Kept in step with `PARTICIPANT_TYPES`
+ * in `src/lib/participant-types.ts`.
+ */
+export const participantType = pgEnum("participant_type", PARTICIPANT_TYPES);
 
 /** A small, non-medical day-of request a diver can make from `/ready`. */
 export const tripHelpRequestKind = pgEnum("trip_help_request_kind", [
@@ -132,6 +144,30 @@ export const bookings = pgTable(
      * booking to air rather than silently trusting this flag.
      */
     wantsNitrox: boolean("wants_nitrox").notNull().default(false),
+    /**
+     * **Diver, snorkeler or rider** (ADR 20261007-participant-types). Every
+     * type holds a seat against `trips.capacity` and is counted at every
+     * roll-call checkpoint; only a diver also holds one against
+     * `trips.diver_capacity`, is asked for a card, and can be on a buddy team.
+     * A held seat that is not a diver's never carries a nitrox request.
+     */
+    participantType: participantType("participant_type").notNull().default("diver"),
+    /**
+     * **What this seat was sold as**, written once when the booking is made and
+     * never changed after (ADR 20261007-participant-types). A seat that was
+     * booked to dive and is now snorkeling or riding carries a warning-toned
+     * "booked as diver" note on every crew surface, because the card check it
+     * no longer faces is one it was sold under: a change of type at the desk is
+     * the one door that clears a certification block without a card, and the
+     * crew at the rail should be able to see it was used. Every writer that
+     * makes a seat states what it sold, so a snorkeler inserted by a path that
+     * forgot cannot read as "booked as diver". The default is only the expand
+     * half of expand/contract: the release this column lands in still serves
+     * the previous code's inserts, which cannot name it, and a NOT NULL column
+     * with no default fails every one of them (`pnpm check:migrations`). It is
+     * dropped in the next release (the contract half, issue #2222).
+     */
+    bookedAs: participantType("booked_as").notNull().default("diver"),
     conditionsBriefedAt: timestamp("conditions_briefed_at", { withTimezone: true }),
     /**
      * **The diver answered "Anything changed?" for this seat** (ADR
@@ -327,6 +363,12 @@ export const bookings = pgTable(
   },
   (table) => [
     uniqueIndex("bookings_trip_person_unique").on(table.tripId, table.personId),
+    // Enriched air is a gas a diver breathes; a snorkeler or a rider asking for
+    // it is a write that went wrong somewhere, and the prep list would pack it.
+    check(
+      "bookings_nitrox_is_a_divers",
+      sql`not ${table.wantsNitrox} or ${table.participantType} = 'diver'`,
+    ),
     // A next step nobody is recorded as having written is not one a student
     // should read, and a stamp with no words under it renders nothing.
     check(
