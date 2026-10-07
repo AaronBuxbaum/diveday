@@ -1678,6 +1678,12 @@ new domain concept, define it here in the same PR.
   and the **SMS channel** otherwise. Any WhatsApp failure — most often a diver who simply isn't on
   WhatsApp — falls back to SMS immediately rather than being retried, because a reminder that lands
   after the boat leaves is worth nothing.
+- **STOP list** — the phone numbers that replied STOP to DiveDay's texting number (`sms_opt_outs`,
+  ADR [20261007-sms-stop-and-help](../architecture/decisions/20261007-sms-stop-and-help.md)). One
+  list for the platform, because every shop texts from the one number. A listed number gets no SMS
+  from any shop until it replies START; WhatsApp and email are unaffected. Every SMS ends with the
+  STOP line, and every phone field a diver fills in for themselves carries the **SMS consent** line
+  saying which texts follow.
 - **SMS channel** — an optional text channel for notifications, delivered through an AWS SNS seam
   (`SmsProvider.send()`, resolved by `smsProviderFromEnvironment()`). A number is texted only if it is already E.164, and the channel degrades to
   `not_configured` with no SNS credentials configured, exactly like the email seam. The platform-wide

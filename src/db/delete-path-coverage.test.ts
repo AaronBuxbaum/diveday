@@ -142,6 +142,8 @@ const UNSCOPED_REASONS: Record<string, string> = {
     "provider coordination keyed by ceiling and period, holding no person",
   stripe_webhook_events:
     "the platform's delivery ledger, pruned by retention; it carries no payload",
+  sms_opt_outs:
+    "the texting number's STOP list, one for the platform because every shop texts from one number; a shop's delete must not resume texting a diver who said stop",
 };
 
 /**

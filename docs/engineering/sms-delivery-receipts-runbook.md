@@ -102,3 +102,47 @@ aws logs delete-log-group --log-group-name /aws/lambda/diveday-sms-receipt-forwa
 
 `infra/lib/sms-receipt-forwarder.test.ts` pins the declared name so a tidy-minded rename cannot bring
 the collision back.
+
+## STOP, HELP and START
+
+Replies to DiveDay's texting number come down the same topic and the same route as the receipts
+(ADR [20261007-sms-stop-and-help](../architecture/decisions/20261007-sms-stop-and-help.md)). The
+number's two-way setting forwards every inbound text to `diveday-sms-delivery-receipts` through the
+`diveday-sms-two-way` role; manual action `sns-sms-account-limits` sets it.
+
+| The diver sends | AWS replies (keyword on the number) | The app |
+| --- | --- | --- |
+| `HELP` | the HELP message | nothing |
+| `STOP`, `STOPALL`, `UNSUBSCRIBE`, `CANCEL`, `END`, `QUIT`, `OPTOUT`, `REVOKE` | the STOP message, and adds the number to its own opt-out list | adds the number to `sms_opt_outs` |
+| `START`, `UNSTOP` | AWS's opt-in confirmation | removes the number from `sms_opt_outs` |
+| anything else | nothing | nothing |
+
+The word has to be the whole reply ("Stop by the shop at 7?" changes nothing). A number on the
+list is refused at send time with code `opted_out`, so a phone-only diver's delivery row says why no
+text went. The route logs `sms_webhook.reply_applied` with the kind and never the number.
+
+If a STOP is not reaching the list: confirm the number's two-way setting names the topic and role
+(`aws pinpoint-sms-voice-v2 describe-phone-numbers`), then the subscription, as for receipts.
+
+## Registering the number
+
+Toll-free verification asks for the fields below. Fill in the brackets and paste each one as it
+stands.
+
+Use case description:
+
+> DiveDay is booking and operations software for recreational scuba dive shops. Divers book a boat trip or course with a dive shop on the shop's DiveDay booking page. DiveDay sends text messages only about a booking the diver made: a reminder a week before and the day before the trip with the departure time and anything the diver still needs to finish, a link to sign the shop's dive waiver, and a link to the trip recap afterward. Every message names the dive shop and ends with how to opt out. DiveDay does not send marketing or promotional messages and does not share or sell phone numbers.
+
+Opt-in workflow:
+
+> A diver opts in on the dive shop's DiveDay booking page, for example [booking page URL]. The mobile number field is optional. Directly under it the form says: "By giving a mobile number, you agree to texts from DiveDay about your bookings: reminders, waiver links and trip recaps, up to four per booking. Message and data rates may apply. Reply STOP to opt out, HELP for help. Privacy policy" (linked to https://dive.day/privacy). Divers who leave the field blank are never texted. The same line sits under the phone field on the shop's self-registration and seat-claim pages. Screenshot attached.
+
+Sample messages:
+
+> Blue Reef Divers: Morning two-tank sails tomorrow (Oct 12, 7:30 – 11:30 AM EDT). Please be at the dock 30 min early. Questions? Text us at +1 305 555 0134. Reply STOP to opt out.
+
+> Blue Reef Divers: please sign your dive release for Morning two-tank — https://dive.day/waivers/[token] Reply STOP to opt out.
+
+> Blue Reef Divers: thanks for diving Morning two-tank! Your recap: https://dive.day/recap/[token] Reply STOP to opt out.
+
+Message type: transactional. Use case: account notifications. Privacy policy: https://dive.day/privacy. Terms: https://dive.day/terms.

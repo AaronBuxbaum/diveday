@@ -857,6 +857,22 @@ export class InfraStack extends cdk.Stack {
 
     smsDeliveryReceipts.addSubscription(webhookSubscription("/api/webhooks/sms"));
 
+    // Replies to DiveDay's texting number ride the same topic (ADR
+    // 20261007-sms-stop-and-help). AWS End User Messaging answers HELP and STOP
+    // itself from the keyword replies set on the number, and forwards every
+    // inbound text here so /api/webhooks/sms can keep the app's own stop list.
+    // The number is requested and registered by hand (manual action
+    // sns-sms-account-limits), so this stack supplies only the role the number's
+    // two-way setting names.
+    const smsTwoWayRole = new iam.Role(this, "SmsTwoWayRole", {
+      roleName: "diveday-sms-two-way",
+      assumedBy: new iam.ServicePrincipal("sms-voice.amazonaws.com").withConditions({
+        StringEquals: { "aws:SourceAccount": this.account },
+      }),
+      description: "Lets AWS End User Messaging forward texts sent to DiveDay's number.",
+    });
+    smsDeliveryReceipts.grantPublish(smsTwoWayRole);
+
     // SNS assumes this to write delivery receipts.
     const smsDeliveryStatusRole = new iam.Role(this, "SnsSmsDeliveryStatusRole", {
       roleName: "diveday-sns-sms-delivery-status",
@@ -956,7 +972,13 @@ exports.handler = async (event) => {
 
     new cdk.CfnOutput(this, "SmsDeliveryReceiptsTopicArn", {
       value: smsDeliveryReceipts.topicArn,
-      description: `SNS topic carrying SMS delivery receipts. ${webhookHost}/api/webhooks/sms is subscribed by this stack; set this ARN as SMS_SNS_TOPIC_ARN in the app.`,
+      description: `SNS topic carrying SMS delivery receipts and replies to the texting number. ${webhookHost}/api/webhooks/sms is subscribed by this stack; set this ARN as SMS_SNS_TOPIC_ARN in the app.`,
+    });
+
+    new cdk.CfnOutput(this, "SmsTwoWayRoleArn", {
+      value: smsTwoWayRole.roleArn,
+      description:
+        "The role the texting number's two-way setting names, alongside SmsDeliveryReceiptsTopicArn (manual action sns-sms-account-limits).",
     });
 
     // Switch delivery-status logging on. There is no native resource for this:
@@ -2512,17 +2534,25 @@ exports.handler = async (event) => {
       },
       {
         id: "sns-sms-account-limits",
-        title: "Leave the SMS sandbox, raise the spend limit, register an origination identity",
+        title:
+          "Leave the SMS sandbox, raise the spend limit, register a toll-free number and set its HELP/STOP replies",
         category: "AWS account",
         when: "once per region, before sending SMS to a diver -- start it early, the vetting is measured in weeks",
-        why: "All three are account-and-region SMS state. The sandbox exit and any spend limit above $1 are Support cases; a US origination identity (10DLC or toll-free) is a vetted registration with the carriers that takes weeks, not days. The SetSMSAttributes custom resource (infra-stack.ts S10) deliberately touches none of them -- it sets delivery-status logging and nothing else. Moving the estate to another region means doing all three again there, which is most of the reason a region move is a decision rather than a chore (docs/engineering/region-migration.md).",
+        why: "All of it is account-and-region SMS state. The sandbox exit and any spend limit above $1 are Support cases; a US toll-free number is a vetted registration with the carriers that takes weeks, not days. Toll-free rather than 10DLC because one DiveDay number sends for every shop (ADR 20261007-sms-stop-and-help). The keyword replies and the two-way setting live on the number, which the stack does not own, so they are set here; the stack supplies the topic and the role they name. The SetSMSAttributes custom resource (infra-stack.ts S10) deliberately touches none of it. Moving the estate to another region means doing all of it again there (docs/engineering/region-migration.md).",
         run: [
-          "SNS console -> Text messaging (SMS) -> Exit SMS sandbox (a Support case).",
-          "Service Quotas -> Amazon SNS -> Account spend threshold for SMS (default $1/month).",
-          "SNS console -> Text messaging (SMS) -> Origination identities, for US traffic.",
+          "AWS End User Messaging SMS console -> Account settings -> Request production access (a Support case); ask for the spend limit in the same case.",
+          "SNS console -> Text messaging (SMS) -> Edit preferences: set the account spend limit to what the case granted.",
+          "AWS End User Messaging SMS console -> Phone numbers -> Request originator: United States, Toll-free, SMS, Transactional; then submit its toll-free registration with the answers in docs/engineering/sms-delivery-receipts-runbook.md, 'Registering the number'.",
+          `aws pinpoint-sms-voice-v2 put-keyword --origination-identity <phone-number-id> --keyword HELP --keyword-action AUTOMATIC_RESPONSE --keyword-message "DiveDay texts about your dive bookings. For help with a booking, contact the dive shop that sent it. Reply STOP to opt out. Msg & data rates may apply."`,
+          `aws pinpoint-sms-voice-v2 put-keyword --origination-identity <phone-number-id> --keyword STOP --keyword-action OPT_OUT --keyword-message "You won't get more texts from DiveDay. Reply START to opt back in."`,
+          "aws pinpoint-sms-voice-v2 update-phone-number --phone-number-id <phone-number-id> --two-way-enabled --two-way-channel-arn <SmsDeliveryReceiptsTopicArn> --two-way-channel-role <SmsTwoWayRoleArn> --no-self-managed-opt-outs-enabled",
         ],
-        verify: ["aws sns get-sms-attributes --attributes MonthlySpendLimit"],
-        note: "Skipping this does not fail anything visibly: the pipeline reads healthy end to end while sends are capped or dropped.",
+        verify: [
+          "aws sns get-sms-attributes --attributes MonthlySpendLimit",
+          "aws pinpoint-sms-voice-v2 describe-keywords --origination-identity <phone-number-id> -- HELP and STOP carry the messages above.",
+          "Text STOP to the number from your own phone: the STOP reply arrives, and an sms_webhook.reply_applied line is logged.",
+        ],
+        note: "Skipping this does not fail anything visibly: the pipeline reads healthy end to end while sends are capped or dropped, and without the two-way setting a STOP is still honored by AWS but the app never hears of it.",
       },
       {
         id: "backup-bucket-readoption",

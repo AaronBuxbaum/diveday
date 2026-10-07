@@ -9,6 +9,7 @@
     "said": "La tripulación lo dijo a las {time}."
   },
   "common": {
+    "smsConsent": "Al dar un número de móvil, aceptas recibir mensajes de texto de DiveDay sobre tus reservas: recordatorios, enlaces de exención y resúmenes del viaje, hasta cuatro por reserva. Pueden aplicarse tarifas de mensajes y datos. Responde STOP para darte de baja o HELP para pedir ayuda. <a>Política de privacidad</a>",
     "backToSchedule": "Volver al calendario",
     "needHelpContact": "¿Necesitas ayuda? <link>Contacta con {shop}</link>.",
     "needHelpPlain": "¿Necesitas ayuda? Contacta directamente con {shop}.",
@@ -3450,6 +3451,8 @@
         "paymentsBody": "DiveDay nunca ve un número de tarjeta. Las tarjetas se introducen directamente en Stripe, en la cuenta conectada del propio centro. Guardamos el importe, el estado y los identificadores de Stripe, para que un centro pueda cuadrar un reembolso sin que tengamos nada que valga la pena robar.",
         "trailsTerm": "Historiales operativos",
         "trailsBody": "quién movió una reserva, quién marcó a un buceador a bordo, si llegó una confirmación. Filas breves de quién-hizo-qué-cuándo, en el espacio del propio centro.",
+        "textsTerm": "Mensajes de texto",
+        "textsBody": "el número de móvil que se da con una reserva se usa solo para escribir a ese buceador sobre sus reservas, desde el número propio de DiveDay. Los números de móvil y el consentimiento para escribirles nunca se comparten ni se venden a nadie para su propio marketing. Responder STOP a cualquier mensaje los detiene, y el número queda en una lista de bajas para no volver a escribirle hasta que responda START.",
         "devicesTerm": "La copia en un teléfono del barco",
         "devicesBody": "Para que el pase de lista siga funcionando sin señal, un teléfono de la tripulación guarda su propia copia de los manifiestos de los próximos dos días. De cada buceador guarda su nombre y su contacto de emergencia; sus tallas de equipo de alquiler y si pidió nitrox; quién va en su equipo de buceo; si se registró o si el mostrador marcó que no vino; si puede embarcar y, si no, por qué, lo que puede ser una retención médica; y cada marca del pase de lista, con el nombre de quien la hizo en la tripulación y cualquier nota que haya escrito. Se guarda cifrada en ese teléfono, con una clave que el navegador no devuelve, así que no se puede leer desde el almacenamiento del dispositivo. Quien tenga el teléfono desbloqueado puede abrirla, igual que con el manifiesto en papel al que sustituye. Se elimina cuando otro centro inicia sesión en ese teléfono, y se borra sola a los catorce días de haberse guardado o a los siete días del fin de la salida, lo que ocurra antes."
       },
@@ -4137,7 +4140,8 @@
       "medicalReviewNote": "Revisa si una respuesta médica necesita el visto bueno de un médico",
       "recap": "{shopName}: ¡gracias por bucear {tripTitle}! Tu resumen: {recapUrl}",
       "waiver": "{shopName}: firma tu exención de buceo antes de bucear — {url}",
-      "waiverForTrip": "{shopName}: firma tu exención de buceo para {tripTitle} — {url}"
+      "waiverForTrip": "{shopName}: firma tu exención de buceo para {tripTitle} — {url}",
+      "stopLine": "Responde STOP para darte de baja."
     },
     "whatsappTemplate": {
       "body": "¡Hola! Un aviso de '{{1}}': '{{2}}'",

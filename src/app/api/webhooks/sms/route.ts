@@ -1,8 +1,10 @@
 import { getDb } from "@/db/client";
 import { applyProviderEmailEvent } from "@/db/notifications";
+import { clearSmsOptOut, recordSmsOptOut } from "@/db/sms-opt-outs";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import { parseSmsDeliveryEvent } from "@/lib/notifications/sms-events";
+import { parseSmsReply } from "@/lib/notifications/sms-replies";
 import {
   confirmSnsSubscription,
   readWebhookPayload,
@@ -10,7 +12,10 @@ import {
 } from "@/lib/notifications/sns";
 
 /**
- * SMS delivery receipts (docs ADR 20260802-sms-delivery-receipts).
+ * SMS delivery receipts (docs ADR 20260802-sms-delivery-receipts), and the
+ * STOP and START replies to DiveDay's texting number, which AWS End User
+ * Messaging forwards to the same topic (ADR 20261007-sms-stop-and-help). HELP
+ * arrives too and is ignored: AWS has already answered it from the number.
  *
  * Structurally identical to `/api/webhooks/ses` — same SNS envelope, same
  * verification, same subscription handshake — because it deliberately arrives
@@ -40,6 +45,16 @@ export async function POST(request: Request) {
       type: message.Type,
       confirmed,
     });
+    return new Response(null, { status: 200 });
+  }
+
+  const reply = parseSmsReply(message.Message);
+  if (reply.kind !== "ignored") {
+    const db = await getDb();
+    if (reply.kind === "stop") await recordSmsOptOut(db, reply.phone, nowDate());
+    else await clearSmsOptOut(db, reply.phone);
+    // The number is personal data and stays out of the log line.
+    log("sms_webhook.reply_applied", "info", { kind: reply.kind });
     return new Response(null, { status: 200 });
   }
 
