@@ -16,7 +16,7 @@ import {
 } from "@/lib/waivers";
 import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
-import { getBookingReadiness } from "./readiness";
+import { getBookingReadiness, listTripReadiness } from "./readiness";
 import {
   bookings,
   people,
@@ -2906,19 +2906,8 @@ describe("physician medical clearance", () => {
       medicalAnswers: clearAnswers,
       now: later,
     });
-    // A clean self-declaration is not the way back from a physician's "no"
-    // (`physicianRefusalStands`): the new release waits for a physician too.
-    const parked = await getBookingReadiness(db, shop.id, nextBooking.id);
-    expect(parked?.blockers).toContainEqual(expect.objectContaining({ code: "medical_review" }));
-    await recordMedicalEvaluation(db, {
-      outcome: "cleared",
-      shopId: shop.id,
-      personId: person.id,
-      recordedByPersonId: staff.id,
-      evaluatedOn: EVALUATED_ON,
-      physicianName: "Dr. Imani Reyes",
-      now: new Date(later.getTime() + 60_000),
-    });
+    // A clean new release clears the diver without a second physician (Aaron,
+    // 2026-10-07, issue #2158); the roster warns instead.
     const boarded = await getBookingReadiness(db, shop.id, nextBooking.id);
     expect(boarded?.status).toBe("ready");
     expect(boarded?.blockers).toEqual([]);
@@ -3053,7 +3042,7 @@ describe("physician medical clearance", () => {
       expect(await hasUnansweredMedicalHold(db, shop.id, person.id)).toBe(true);
     });
 
-    it("sends a clean new release back to a physician, and boards once one clears it", async () => {
+    it("boards a clean new release without a physician, and warns with the refused record", async () => {
       const { db, shop, booking, person, owner } = await refusedOverAnOlderCleanRelease();
       await retireMedicalRefusal(db, {
         shopId: shop.id,
@@ -3067,7 +3056,8 @@ describe("physician medical clearance", () => {
         now: later,
       });
       if (!fresh.ok) throw new Error(`the new release was refused: ${fresh.reason}`);
-      // Every answer "no": a self-declaration, after a physician said no.
+      // Every answer "no", after a physician said no: allowed (Aaron,
+      // 2026-10-07, issue #2158), and never silent.
       expect(
         await completeWaiver(db, fresh.token, {
           signerName: person.fullName,
@@ -3075,31 +3065,31 @@ describe("physician medical clearance", () => {
           medicalAnswers: clearAnswers,
           now: signedLater,
         }),
-      ).toMatchObject({ ok: true, status: "medical_review" });
-      const parked = await getBookingReadiness(db, shop.id, booking.id);
-      expect(parked?.status).toBe("blocked");
-      expect(parked?.blockers).toContainEqual(expect.objectContaining({ code: "medical_review" }));
-      expect(await hasUnansweredMedicalHold(db, shop.id, person.id)).toBe(true);
-
-      await recordMedicalEvaluation(db, {
-        outcome: "cleared",
-        shopId: shop.id,
-        personId: person.id,
-        recordedByPersonId: owner.id,
-        evaluatedOn: EVALUATED_ON,
-        physicianName: "Dr. Imani Reyes",
-        now: new Date(signedLater.getTime() + 60_000),
-      });
-      const cleared = await getBookingReadiness(db, shop.id, booking.id);
-      expect(cleared?.blockers).not.toContainEqual(
+      ).toMatchObject({ ok: true, status: "completed" });
+      const boarded = await getBookingReadiness(db, shop.id, booking.id);
+      expect(boarded?.blockers).not.toContainEqual(
         expect.objectContaining({ code: "medical_not_cleared" }),
       );
-      expect(cleared?.blockers).not.toContainEqual(
+      expect(boarded?.blockers).not.toContainEqual(
         expect.objectContaining({ code: "medical_review" }),
       );
+
+      const [refused] = await db
+        .select()
+        .from(waiverRecords)
+        .where(
+          and(eq(waiverRecords.bookingId, booking.id), eq(waiverRecords.status, "medical_review")),
+        );
+      const row = (await listTripReadiness(db, shop.id, booking.tripId, signedLater)).find(
+        (candidate) => candidate.booking.id === booking.id,
+      );
+      expect(row?.overriddenRefusal).toEqual({
+        recordId: refused.id,
+        at: refused.medicalClearanceDeclinedAt,
+      });
     });
 
-    it("refuses a paper waiver while the refusal stands", async () => {
+    it("takes a paper waiver after a refusal, with the same warning", async () => {
       const { db, shop, booking, owner } = await refusedOverAnOlderCleanRelease();
       await retireMedicalRefusal(db, {
         shopId: shop.id,
@@ -3115,9 +3105,36 @@ describe("physician medical clearance", () => {
           medicalAttested: true,
           now: signedLater,
         }),
-      ).toEqual({ ok: false, reason: "physician_refused" });
+      ).toMatchObject({ ok: true });
       const readiness = await getBookingReadiness(db, shop.id, booking.id);
-      expect(readiness?.blockers).toContainEqual(
+      expect(readiness?.blockers).not.toContainEqual(
+        expect.objectContaining({ code: "medical_not_cleared" }),
+      );
+      const row = (await listTripReadiness(db, shop.id, booking.tripId, signedLater)).find(
+        (candidate) => candidate.booking.id === booking.id,
+      );
+      expect(row?.overriddenRefusal).not.toBeNull();
+    });
+
+    it("leaves paper after a refusal to an owner or manager", async () => {
+      const { db, shop, booking, owner } = await refusedOverAnOlderCleanRelease();
+      await retireMedicalRefusal(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        actorPersonId: owner.id,
+        now: later,
+      });
+      const divemaster = await staffWithRole(db, shop.id, "divemaster");
+      expect(
+        await recordInPersonWaiver(db, {
+          shopId: shop.id,
+          subject: { bookingId: booking.id },
+          recordedByPersonId: divemaster.id,
+          medicalAttested: true,
+          now: signedLater,
+        }),
+      ).toEqual({ ok: false, reason: "refusal_needs_manager" });
+      expect((await getBookingReadiness(db, shop.id, booking.id))?.blockers).toContainEqual(
         expect.objectContaining({ code: "medical_not_cleared" }),
       );
     });

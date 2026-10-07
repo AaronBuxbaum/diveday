@@ -96,14 +96,14 @@ const REFUSAL_COPY: Record<
     medical_attestation: { key: "trips.notices.waiverMedicalAttestation", tone: "danger" },
     guardian_name: { key: "trips.notices.waiverGuardianName", tone: "danger" },
     identity_unconfirmed: { key: "trips.notices.waiverIdentityUnconfirmed", tone: "danger" },
-    physician_refused: { key: "shared.paperWaiver.physicianRefused", tone: "danger" },
+    refusal_needs_manager: { key: "shared.paperWaiver.refusalNeedsManager", tone: "danger" },
     error: { key: "trips.notices.waiverError", tone: "danger" },
   },
   counter: {
     medical_attestation: { key: "checkIn.notice.waiverMedicalAttestation", tone: "warning" },
     guardian_name: { key: "checkIn.notice.waiverGuardianName", tone: "danger" },
     identity_unconfirmed: { key: "checkIn.notice.waiverIdentityUnconfirmed", tone: "danger" },
-    physician_refused: { key: "shared.paperWaiver.physicianRefused", tone: "danger" },
+    refusal_needs_manager: { key: "shared.paperWaiver.refusalNeedsManager", tone: "danger" },
     error: { key: "checkIn.notice.waiverError", tone: "danger" },
   },
   diver: {
@@ -114,7 +114,7 @@ const REFUSAL_COPY: Record<
     // because the table is total and a refusal with no sentence renders nothing;
     // they point at the seat, which is where the confirm lives.
     identity_unconfirmed: { key: "divers.notices.waiverIdentityUnconfirmed", tone: "danger" },
-    physician_refused: { key: "shared.paperWaiver.physicianRefused", tone: "danger" },
+    refusal_needs_manager: { key: "shared.paperWaiver.refusalNeedsManager", tone: "danger" },
     error: { key: "divers.notices.waiverError", tone: "danger" },
   },
 };
@@ -145,9 +145,9 @@ export function paperWaiverCopy(t: StaffTranslator, surface: PaperWaiverSurface)
         text: t(refusals.identity_unconfirmed.key),
         tone: refusals.identity_unconfirmed.tone,
       },
-      physician_refused: {
-        text: t(refusals.physician_refused.key),
-        tone: refusals.physician_refused.tone,
+      refusal_needs_manager: {
+        text: t(refusals.refusal_needs_manager.key),
+        tone: refusals.refusal_needs_manager.tone,
       },
       error: { text: t(refusals.error.key), tone: refusals.error.tone },
     },

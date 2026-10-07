@@ -163,6 +163,28 @@ describe("what earns a row", () => {
     expect(rows[0]?.action).toBeUndefined();
   });
 
+  it("raises an earlier physician refusal a clean new release cleared past", () => {
+    const rows = buildDiverStatus(
+      diver({
+        waiver: {
+          state: "current",
+          medical: {
+            overriddenReferralAt: null,
+            overriddenRefusal: { recordId: "w-refused", at: new Date("2026-06-02T15:00:00.000Z") },
+          },
+        } as never,
+      }),
+      null,
+      { now: NOW },
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      kind: "waiver",
+      tone: "warning",
+      sentence: { key: "divers.status.waiverEarlierRefusal" },
+    });
+  });
+
   it("says nothing about a current release with no referral behind it", () => {
     const rows = buildDiverStatus(
       diver({ waiver: { state: "current", medical: { overriddenReferralAt: null } } as never }),

@@ -45,7 +45,7 @@ import {
   isCompletedWaiverCurrent,
   isUnresolvedMedicalHold,
   needsMedicalReview,
-  physicianRefusalStands,
+  unansweredRefusal,
   WAIVER_LINK_TTL_MS,
   WAIVER_SIGNATURE_VALIDITY_MS,
 } from "@/lib/waivers";
@@ -1341,14 +1341,7 @@ export async function completeWaiver(
   if (!medicalValidation.ok) {
     return { ok: false, reason: "invalid_medical" };
   }
-  // After a physician's "no", the next release goes back to a physician
-  // whatever it answers: a clean self-declaration is not the way back.
-  const medicalReviewRequired =
-    needsMedicalReview(input.medicalAnswers) ||
-    (await physicianRefusalStandsFor(db, {
-      shopId: state.record.shopId,
-      personId: state.record.personId,
-    }));
+  const medicalReviewRequired = needsMedicalReview(input.medicalAnswers);
   const status = medicalReviewRequired ? ("medical_review" as const) : ("completed" as const);
   const [saved] = await db
     .update(waiverRecords)
@@ -1790,11 +1783,10 @@ export type InPersonWaiverOutcome =
          */
         | "identity_unconfirmed"
         /**
-         * A physician did not clear this diver, and no release signed since
-         * has been cleared. Paper cannot follow that answer: the diver signs
-         * online, and a physician clears the new release.
+         * A physician did not clear this diver and no clearance has answered
+         * that since; only an owner or manager may record paper (H-98).
          */
-        | "physician_refused";
+        | "refusal_needs_manager";
     };
 
 /**
@@ -2150,10 +2142,16 @@ export async function recordInPersonWaiver(
       now,
     });
     if (standing) return { ok: true, recordId: standing.id, alreadySigned: true };
-    // Paper carries no questionnaire a physician could clear, so it can never
-    // be the release that follows a physician's "no".
-    if (await physicianRefusalStandsFor(tx, { shopId: input.shopId, personId: signer.personId })) {
-      return { ok: false, reason: "physician_refused" };
+    // **After a physician's "no", paper is an owner's or manager's call**
+    // (H-98). Online, the diver re-answers the questionnaire and an honest
+    // "yes" is referred again; on paper a staffer ticks that no answer needs a
+    // physician, against a physician's answer on file. The same bar as
+    // retiring the refusal (`retireMedicalRefusal`).
+    if (await unansweredRefusalFor(tx, { shopId: input.shopId, personId: signer.personId })) {
+      const roles = await loadActiveStaffRoles(tx, input.shopId, input.recordedByPersonId);
+      if (!canRetireMedicalRefusal(roles ?? undefined)) {
+        return { ok: false, reason: "refusal_needs_manager" };
+      }
     }
 
     const evidence = inPersonAttestationProvider.capture({
@@ -2493,12 +2491,11 @@ export async function recordMedicalEvaluation(
 }
 
 /**
- * Whether a physician's refusal still governs this diver's next release
- * (`physicianRefusalStands`): read over every medical record the person has at
- * the shop, superseded ones included, because retiring a refusal off a seat is
- * exactly what must not end it.
+ * Whether a physician's "no" on this person still stands unanswered
+ * (`unansweredRefusal`), read over every medical record they have at the shop,
+ * superseded ones included: retiring a refusal off a seat does not answer it.
  */
-async function physicianRefusalStandsFor(
+async function unansweredRefusalFor(
   db: DbExecutor,
   input: { shopId: string; personId: string },
 ): Promise<boolean> {
@@ -2509,14 +2506,14 @@ async function physicianRefusalStandsFor(
       and(
         eq(waiverRecords.shopId, input.shopId),
         eq(waiverRecords.personId, input.personId),
-        inArray(waiverRecords.status, ["completed", "medical_review"]),
+        eq(waiverRecords.status, "medical_review"),
         or(
           isNotNull(waiverRecords.medicalClearanceDeclinedAt),
           isNotNull(waiverRecords.medicalClearedAt),
         ),
       ),
     );
-  return physicianRefusalStands(records);
+  return unansweredRefusal(records) !== null;
 }
 
 export type RetireMedicalRefusalResult =
@@ -2538,8 +2535,10 @@ export type RetireMedicalRefusalResult =
  * **Nothing is lifted.** The refusal keeps outranking every signature older
  * than it (`isStandingRefusal`, read through `listSignedWaiversByPerson`), so
  * the seat stays blocked — "A physician did not clear this diver to dive" —
- * until the diver signs the new release and a physician clears it: the new
- * release parks for review whatever it answers (`physicianRefusalStands`).
+ * until the diver signs a new release, online or on paper. A clean one boards
+ * them without a second physician (Aaron, 2026-10-07, issue #2158), and every
+ * surface that shows it warns that an earlier release was refused, with a
+ * link to it (`overriddenRefusal`).
  *
  * Owner or manager, checked here against live roles as well as by the action,
  * because it is the one act that moves a physician's answer off a seat.
