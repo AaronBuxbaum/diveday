@@ -121,7 +121,10 @@ new domain concept, define it here in the same PR.
   template update carries it and no editor changes it; it matches the importer: SSI Advanced
   Adventurer and SDI Advanced Adventure Diver are the Advanced rung; specialties, refreshers and
   tasters certify none, and neither does a course a shop built without a template. The roster's
-  "Certify" select opens on it.
+  "Certify" select opens on it, or on an empty required choice where the course names none; an intro
+  session (`courses.is_intro_course`) draws no Certify control, and the action refuses one posted
+  anyway (`not_a_certifying_course`). A Rescue student counts as in training toward an Advanced trip
+  (the higher rung covers the lower one) at sale only.
   It is **never evidence**. At a charter's sale it counts toward the trip's level, so a fun dive the
   morning after an Open Water course can be sold. It does **not** satisfy a course's own
   prerequisite: Advanced still asks for a certified Open Water card (H-08's course baseline). At
@@ -1842,9 +1845,10 @@ new domain concept, define it here in the same PR.
   the shop rather than quoted at zero. A shop that prices nothing keeps the "ask the shop what's
   included" behaviour.
 - **Rental fit** — a shop-scoped diver's reusable record of *which* pieces they take from the shop
-  and in *what size* (BCD, wetsuit, drysuit, hood, glove, boot, fin, usual weighting, plus the
+  and in *what size* (BCD, wetsuit, drysuit, hood, gloves, boot, fin, usual weighting, plus the
   dive-computer, GoPro, dive-light and SMB add-ons). A **hood** and **gloves** are two kinds, each
-  with a free-text size (H-100): a hood racks by size and thickness ("M, 5 mm"), gloves by size.
+  with a free-text size (H-100), each racked by size and thickness ("M, 5 mm", "L, 3 mm"). A
+  drysuit diver's gloves are flagged on the packing line ("wet or dry gloves?").
   The **drysuit** is the one add-on that carries a size, and it is sized on its own scale — the
   manufacturer grid a rental wall is racked from (a girth letter, a trailing `T` for the tall cut),
   which shares the wetsuit's girth letters but carries a second axis the wetsuit scale has no room

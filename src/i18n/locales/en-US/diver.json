@@ -1043,7 +1043,7 @@
     "hoodSize": "Hood size",
     "hoodSizePlaceholder": "M, 5 mm",
     "gloveSize": "Glove size",
-    "gloveSizePlaceholder": "L",
+    "gloveSizePlaceholder": "L, 3 mm",
     "finSize": "Fin & boot size",
     "weightSetup": "Usual weight setup",
     "anythingElse": "Anything else the crew should know?",

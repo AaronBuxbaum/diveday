@@ -437,6 +437,8 @@
     "itemWithSize": "{item} {size}",
     "itemOverDrysuitBoot": "{item} sobre la bota del traje seco",
     "itemOverDrysuitBootWithSize": "{item} sobre la bota del traje seco, pie {size}",
+    "itemDrysuitGloves": "{item}: traje seco, ¿húmedos o secos?",
+    "itemDrysuitGlovesWithSize": "{item} {size}: traje seco, ¿húmedos o secos?",
     "itemDrysuitWeightCheck": "{item}: traje seco, verificar el lastre en el agua",
     "itemNoLongerRented": "{item} (el centro ya no alquila esto)",
     "notRecorded": "No hay equipo registrado, aún no se ha preguntado",

@@ -437,6 +437,8 @@
     "itemWithSize": "{item} {size}",
     "itemOverDrysuitBoot": "{item} over a drysuit boot",
     "itemOverDrysuitBootWithSize": "{item} over a drysuit boot, shoe {size}",
+    "itemDrysuitGloves": "{item}: drysuit, wet or dry?",
+    "itemDrysuitGlovesWithSize": "{item} {size}: drysuit, wet or dry?",
     "itemDrysuitWeightCheck": "{item}: drysuit, weight check in the water",
     "itemNoLongerRented": "{item} (shop no longer rents this)",
     "notRecorded": "No fit on file, not asked yet",

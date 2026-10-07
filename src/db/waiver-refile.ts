@@ -51,7 +51,11 @@ export async function refileWaiverRecords(
         eq(waiverRecords.personId, input.fromPersonId),
         isNull(waiverRecords.anonymizedAt),
       ),
-    );
+    )
+    // Locked, as `eraseGuardianEmail` locks the same rows: a refile and a
+    // guardian erasure racing would otherwise each re-seal from a row the
+    // other had already rewritten (security review F3).
+    .for("update");
   for (const record of records) {
     const resealable =
       (record.integrityVersion === WAIVER_INTEGRITY_VERSION_SIGNED ||

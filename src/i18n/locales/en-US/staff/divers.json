@@ -246,7 +246,7 @@
     "hoodSizeLabel": "Hood size",
     "hoodSizePlaceholder": "M, 5 mm",
     "gloveSizeLabel": "Glove size",
-    "gloveSizePlaceholder": "L",
+    "gloveSizePlaceholder": "L, 3 mm",
     "finSizeLabel": "Fin & boot size",
     "finSizePlaceholder": "US 9 / EU 42",
     "weightPreferenceLabel": "Weight preference",
@@ -388,7 +388,7 @@
     "waiverMedicalAttestation": "Confirm you reviewed the medical questionnaire before recording a paper waiver, or send the digital link so the diver answers it.",
     "waiverGuardianName": "The co-signer’s name is the diver’s own, so this release would show one person signing twice. Type the guardian’s name as their own ID reads it, and if the diver’s record is shorter than the diver’s ID, correct the record to match. If the two really do read exactly alike, record the release at the check-in counter or from the trip roster, where you can confirm you watched both of them sign.",
     "waiverPaperRecorded": "Paper waiver recorded, signed and on file.",
-    "guardianEmailErased": "Guardian’s email erased. Each release they co-signed here is marked as redacted.",
+    "guardianEmailErased": "Guardian’s email erased from every release at this shop that carried it. Each one is marked as redacted.",
     "guardianEmailMismatch": "The email you typed doesn’t match, so nothing was erased. Type it exactly as it appears above.",
     "guardianEmailNotFound": "That email is no longer on this diver’s releases. Nothing was erased.",
     "notAuthorizedGuardianEmail": "Erasing a guardian’s email is limited to the shop owner. Ask them to do it."

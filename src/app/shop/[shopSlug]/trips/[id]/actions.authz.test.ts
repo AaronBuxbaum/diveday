@@ -3,7 +3,7 @@ import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
-import { bookings, tripRequirements, trips } from "@/db/schema";
+import { bookings, certifications, courses, tripRequirements, trips } from "@/db/schema";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 import { seededShopContext } from "@/test/db";
 import {
@@ -50,8 +50,13 @@ vi.mock("@/db/refunds", async (importOriginal) => {
 const { getDb } = await import("@/db/client");
 const { requireShopSurface } = await import("@/lib/session");
 const { refundBookingOnCancellation } = await import("@/db/refunds");
-const { markPaymentAction, removeBookingAction, reinstateTripAction, saveRequirementsAction } =
-  await import("./actions");
+const {
+  certifyDiverFromRosterAction,
+  markPaymentAction,
+  removeBookingAction,
+  reinstateTripAction,
+  saveRequirementsAction,
+} = await import("./actions");
 
 /**
  * A seeded ordinary charter — not a course session, whose rules are frozen —
@@ -359,6 +364,51 @@ describe("setting what a trip admits", () => {
     );
 
     expect(to).toBe(`/shop/${shop.slug}/trips/${tripId}?notice=requirements`);
+  });
+});
+
+/**
+ * **An intro session certifies nobody, whatever is posted** (dive-domain
+ * review). The roster draws no Certify control on a DSD, but a form post
+ * reaches the action regardless, and a forged `award=open_water` must never
+ * mint the verified card the booking gate trusts.
+ */
+describe("certifying from an intro session's roster", () => {
+  it("refuses a forged open-water award on a DSD session and writes no card", async () => {
+    const { db, shop, owner } = await context();
+    const [seat] = await db
+      .select({
+        tripId: trips.id,
+        courseId: trips.courseId,
+        bookingId: bookings.id,
+        personId: bookings.personId,
+      })
+      .from(trips)
+      .innerJoin(bookings, and(eq(bookings.tripId, trips.id), eq(bookings.status, "booked")))
+      .where(and(eq(trips.shopId, shop.id), isNotNull(trips.courseId)))
+      .limit(1);
+    if (!seat?.courseId) throw new Error("seeded shop has no booked course session");
+    await db.update(courses).set({ isIntroCourse: true }).where(eq(courses.id, seat.courseId));
+    const cardsBefore = await db
+      .select({ id: certifications.id })
+      .from(certifications)
+      .where(eq(certifications.personId, seat.personId));
+    signIn(shop, owner);
+    const formData = new FormData();
+    formData.set("bookingId", seat.bookingId);
+    formData.set("personId", seat.personId);
+    formData.set("award", "open_water");
+
+    const to = await redirectedTo(() =>
+      certifyDiverFromRosterAction(shop.slug, seat.tripId, formData),
+    );
+
+    expect(to).toContain("notice=certify-failed");
+    const cardsAfter = await db
+      .select({ id: certifications.id })
+      .from(certifications)
+      .where(eq(certifications.personId, seat.personId));
+    expect(cardsAfter).toHaveLength(cardsBefore.length);
   });
 });
 

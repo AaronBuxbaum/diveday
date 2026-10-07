@@ -592,6 +592,91 @@ describe("fins for a diver in a drysuit", () => {
   });
 });
 
+/**
+ * **Gloves for a diver in a drysuit** (H-100, dive-domain review). Wet gloves
+ * or dry gloves on a ring system are two different things off the rack, so
+ * the line asks rather than reading like any other pair to pull.
+ */
+describe("gloves for a diver in a drysuit", () => {
+  const dryGloves = {
+    ...fullFit,
+    rentsDrysuit: true,
+    divesDry: true,
+    drysuitSize: "ML",
+    rentsWetsuit: false,
+    rentsGloves: true,
+    gloveSize: "L, 3 mm",
+  };
+  const wetGloves = {
+    ...dryGloves,
+    rentsDrysuit: false,
+    divesDry: false,
+    drysuitSize: null,
+    rentsWetsuit: true,
+  };
+
+  it("marks the glove line and keeps the size", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [diver({ bookingId: "b1", fullName: "Dry Dana", fit: dryGloves })],
+      plannedDives: 1,
+    });
+    expect(lineFor(checklist, "gloves", "L, 3 mm")).toMatchObject({
+      drysuitGloves: true,
+      count: 1,
+    });
+  });
+
+  it("keeps a wet diver's same-size gloves on a separate, unmarked line", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({ bookingId: "b1", fullName: "Dry Dana", fit: dryGloves }),
+        diver({ bookingId: "b2", fullName: "Wet Wanda", fit: wetGloves }),
+      ],
+      plannedDives: 1,
+    });
+    const gloves = checklist.lines.filter((line) => line.kind === "gloves");
+    expect(gloves.map((line) => [line.drysuitGloves, line.divers])).toEqual([
+      [false, ["Wet Wanda"]],
+      [true, ["Dry Dana"]],
+    ]);
+  });
+
+  it("leaves a flagged diver on fit-at-check-in", () => {
+    const flaggedAt = new Date("2026-09-01T08:00:00Z");
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({
+          bookingId: "b1",
+          fullName: "Dry Dana",
+          fit: { ...dryGloves, needsStaffFitAt: flaggedAt },
+        }),
+      ],
+      plannedDives: 1,
+      now: flaggedAt,
+    });
+    expect(lineFor(checklist, "gloves", null)).toMatchObject({
+      fitAtCheckIn: true,
+      drysuitGloves: false,
+    });
+  });
+
+  it("says it on the roll call, and only on the gloves", () => {
+    const line = rentalFitLine(dryGloves);
+    const items = line.state === "rents" ? line.items : [];
+    expect(items.find((item) => item.kind === "gloves")).toEqual({
+      kind: "gloves",
+      size: "L, 3 mm",
+      drysuitGloves: true,
+    });
+    const wet = rentalFitLine(wetGloves);
+    const wetItems = wet.state === "rents" ? wet.items : [];
+    expect(wetItems.find((item) => item.kind === "gloves")).toEqual({
+      kind: "gloves",
+      size: "L, 3 mm",
+    });
+  });
+});
+
 describe("buildDivePrepChecklist tanks", () => {
   it("plans one tank per diver per planned dive", () => {
     const checklist = buildDivePrepChecklist({

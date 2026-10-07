@@ -240,7 +240,9 @@ async function restoreFieldGuides(
       }
       slugs.push(entry.slug);
     }
-    await replaceDiveSiteCreatures(db, shopId, siteId, slugs);
+    // One transaction per site: the delete and the insert land together, so a
+    // failed insert never leaves a site whose guide was emptied (security review).
+    await db.transaction((tx) => replaceDiveSiteCreatures(tx, shopId, siteId, slugs));
     summary.guides += 1;
   }
   summary.creaturesSkipped.sort((a, b) => a.rowNumber - b.rowNumber);

@@ -360,6 +360,8 @@ export async function getSignedWaiverForDiver(
      * shop's act rather than as a field nobody filled.
      */
     guardianEmailErasedAt: record.guardianEmailErasedAt,
+    /** Which seal is on it — the redaction note is only true under version 4. */
+    integrityVersion: record.integrityVersion,
     /** Every answer, for an owner or manager; null for anyone else. */
     medicalAnswers: input.readsMedicalAnswers ? answers : null,
     /** What the roster shows every staff role: the prompts that flagged, on a record held for them. */

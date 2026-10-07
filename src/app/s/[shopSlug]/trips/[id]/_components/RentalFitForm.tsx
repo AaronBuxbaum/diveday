@@ -641,7 +641,7 @@ export function RentalFitForm({
               </Field>
             ) : null}
             {/* Free text, like the staff side's drysuit box (H-100): a hood racks
-                by size and thickness, gloves by size, and the diver's own words
+                and gloves both by size and thickness, and the diver's own words
                 reach the packing list verbatim. */}
             {offers.has("hood") ? (
               <Field label={t("rental.hoodSize")} hint={t("common.optional")}>

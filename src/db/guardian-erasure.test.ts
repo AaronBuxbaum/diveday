@@ -14,7 +14,12 @@ import { eraseGuardianEmail, listGuardianEmails } from "./guardian-erasure";
 import { people, personRoles, shops, waiverRecords } from "./schema";
 import { getTripRoster, upcomingTripsWithCounts } from "./trips";
 import { refileWaiverRecords } from "./waiver-refile";
-import { completeWaiver, getSignedWaiverForDiver, issueWaiverRequest } from "./waivers";
+import {
+  completeWaiver,
+  getSignedWaiverForDiver,
+  issueWaiverRequest,
+  saveWaiverDraft,
+} from "./waivers";
 
 /**
  * **A guardian's address, erased on its own** (H-101, issue #1673). The
@@ -130,6 +135,46 @@ describe("eraseGuardianEmail", () => {
     });
     expect(view?.integrity).toBe("valid");
     expect(view?.guardianEmailErasedAt?.toISOString()).toBe(now.toISOString());
+  });
+
+  it("finds and erases an address a guardian typed into a draft and never submitted", async () => {
+    const { db, shop, roster, owner } = await fixtures();
+    const [seat] = roster;
+    if (!seat) throw new Error("seat missing");
+    await db.update(people).set({ dateOfBirth: MINOR_DOB }).where(eq(people.id, seat.person.id));
+    const issued = await issueWaiverRequest(db, {
+      shopId: shop.id,
+      bookingId: seat.booking.id,
+      now,
+    });
+    if (!issued.ok) throw new Error(`issue failed: ${issued.reason}`);
+    await saveWaiverDraft(db, issued.token, {
+      acknowledged: false,
+      medicalAnswers: clearAnswers,
+      guardian: {
+        name: "Jonas Fischer",
+        relationship: "parent",
+        email: " Jonas@Example.com ",
+        acknowledged: false,
+      },
+      now,
+    });
+    expect(await listGuardianEmails(db, shop.id, seat.person.id)).toEqual(["Jonas@Example.com"]);
+
+    expect(
+      await eraseGuardianEmail(db, {
+        shopId: shop.id,
+        personId: seat.person.id,
+        email: "jonas@example.com",
+        actorPersonId: owner,
+        now,
+      }),
+    ).toEqual({ ok: true, erased: 1 });
+    const after = await readRecord(db, issued.recordId);
+    expect(after.draftGuardian).toMatchObject({ name: "Jonas Fischer", email: null });
+    // No stamp on a draft: the guardian may still finish it and give an address.
+    expect(after.guardianEmailErasedAt).toBeNull();
+    expect(await listGuardianEmails(db, shop.id, seat.person.id)).toEqual([]);
   });
 
   it("answers for the guardian across every child they co-signed for at this shop", async () => {

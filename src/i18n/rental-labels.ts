@@ -157,9 +157,16 @@ export function rentalFitLineText(t: StaffTranslator, locale: string, line: Rent
                   size: sizeText(item.size),
                 })
               : t("shared.rentalFit.itemOverDrysuitBoot", { item: label })
-            : item.size
-              ? sizedPiece(t, label, item.size)
-              : oneUnit(label);
+            : item.drysuitGloves
+              ? item.size
+                ? t("shared.rentalFit.itemDrysuitGlovesWithSize", {
+                    item: label,
+                    size: sizeText(item.size),
+                  })
+                : t("shared.rentalFit.itemDrysuitGloves", { item: label })
+              : item.size
+                ? sizedPiece(t, label, item.size)
+                : oneUnit(label);
         // Wrapped rather than substituted, so the piece keeps whatever it
         // already said and gains the contradiction. A staffer reading the rail
         // is about to go and fetch this: "Drysuit ML" with nothing on it sends

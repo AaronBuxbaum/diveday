@@ -14,6 +14,7 @@ import { applicableMedicalQuestions, findQuestionnaireVersion } from "@/lib/medi
 import { requireShopSurface } from "@/lib/session";
 import { shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
+import { WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED } from "@/lib/waiver-integrity";
 
 export const instant = true;
 
@@ -63,7 +64,11 @@ export default async function SignedWaiverPage({
       : "";
   const seal =
     waiver.integrity === "valid"
-      ? waiver.guardianEmailErasedAt
+      ? // Only the version 4 seal covers the redaction; on any other the
+        // stamp is a column beside the seal, not a fact the seal vouches for
+        // (security review F2).
+        waiver.integrityVersion === WAIVER_INTEGRITY_VERSION_GUARDIAN_REDACTED &&
+        waiver.guardianEmailErasedAt
         ? t("waiversStaff.record.sealValidGuardianRedacted", {
             date: when(waiver.guardianEmailErasedAt),
           })

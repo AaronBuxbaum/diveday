@@ -28,6 +28,7 @@ import { staffTideStationText, staffTideWindowText } from "@/i18n/tide-labels";
 import { ratingLapsedDetailText } from "@/i18n/today-labels";
 import { nowDate } from "@/lib/clock";
 import { DSD_RATIO } from "@/lib/course-ratios";
+import { courseCertifiesStudents } from "@/lib/courses";
 import { oneWindowPerSite, tideWindowsForDeparture } from "@/lib/departure-tides";
 import { depthInUnit } from "@/lib/depth-units";
 import { parseDockDayRhythm } from "@/lib/diver-planning";
@@ -640,7 +641,10 @@ export default async function ManageTripPage({
     sendNewWaiverAction: mayRetireRefusal
       ? sendNewWaiverAction.bind(null, shopSlug, tripId)
       : undefined,
-    certifyDiverAction: trip.course
+    // Never on an intro session (a DSD, a Try Scuba, a refresher): it issues
+    // no card, and a tap there would mint a verified one for a diver who has
+    // never been certified. The action refuses it too.
+    certifyDiverAction: courseCertifiesStudents(trip.course ?? null)
       ? certifyDiverFromRosterAction.bind(null, shopSlug, tripId)
       : undefined,
     // The two course acts travel together: a roster that could certify a

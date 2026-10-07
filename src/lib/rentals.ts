@@ -121,8 +121,8 @@ export const RENTABLE_ITEMS: readonly RentableItem[] = [
   // the shelf.
   //
   // **A hood and gloves are two kinds, each with a size** (H-100, issue
-  // #1816; `dive-domain-expert`, issue #1805). Hoods rack S/M/L/XL and
-  // 3/5/7 mm, gloves S–XL; a hood two sizes big flushes on every descent, and
+  // #1816; `dive-domain-expert`, issue #1805). Hoods and gloves both rack by
+  // size and thickness (S–XL, 3/5/7 mm); a hood two sizes big flushes on every descent, and
   // gloves a size small cannot be pulled onto a wet hand at the dock. A
   // warm-water diver takes gloves and no hood, a quarry diver takes both in
   // different thicknesses, so one checkbox could say neither. Each size is
@@ -425,7 +425,7 @@ export function nitroxCardWanted(
  * only one whose free text is load-bearing beyond the size itself
  * (`src/lib/dive-prep.ts`; every size reaches the packing list verbatim).
  * The `hood` and `gloves` joined it with a free-text size each (H-100, issue
- * #1816): a hood by size and thickness ("M, 5 mm"), gloves by size.
+ * #1816): each by size and thickness ("M, 5 mm" for a hood, "L, 3 mm" for gloves).
  *
  * Same union `statedSizeItems` in `dive-prep.ts` already speaks, so a surface
  * can render both through `src/i18n/rental-labels.ts` without a second map.

@@ -16,9 +16,9 @@ export type CourseSeatInTraining = CertificationInTraining & {
  * **Which levels each diver is booked to be certified at, and when.**
  *
  * A seat on a scheduled course session, for a course that issues a rung of
- * the ladder (`courses.certifies_level`, issue #2059 — the course's own
- * column, copied from its template, so a course a shop built for itself can
- * say so too and one that issues nothing never counts). One row per session, so
+ * the ladder (`courses.certifies_level`, issue #2059 — copied from the
+ * course's template and owned by it, so no editor changes it; a course a shop
+ * built without a template issues nothing and never counts). One row per session, so
  * a caller measures each against the trip it is deciding: only a session that
  * ends before that trip starts counts (`inTrainingBefore`).
  *

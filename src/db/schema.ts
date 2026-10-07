@@ -2405,7 +2405,8 @@ export const staffCredentialKind = pgEnum("staff_credential_kind", [
  * Staff-owned evidence; warning-only and never an assignment/booking gate.
  * Decided permanently, not merely unbuilt — see H-59 in
  * docs/product/human-decisions.md. Its 2026-10-07 amendment (issue #1853) lets
- * a lapsed `instructor_rating` / `divemaster_rating` narrow the **supervision
+ * a lapsed `instructor_rating` / `assistant_instructor_rating` /
+ * `divemaster_rating` (the last rung's kind added by issue #1850) narrow the **supervision
  * claim** — Today, the staffing week, the trip page — through `lapsedRungs`
  * (src/lib/crew-roles.ts); the booking gate and the crew editor's refusals
  * still never read this table.
@@ -7226,8 +7227,8 @@ export const rentalFitProfiles = pgTable(
     drysuitSize: text("drysuit_size"),
     /**
      * **Free text, like the drysuit's, on both fit forms** (H-100, issue
-     * #1816). A rental hood racks by size *and* thickness ("M, 5 mm") and
-     * gloves by size (S–XL); a closed select would need two axes and somebody
+     * #1816). A rental hood and rental gloves both rack by size *and*
+     * thickness ("M, 5 mm", "L, 3 mm"); a closed select would need two axes and somebody
      * to own them, so the shop's own words reach the packing list verbatim.
      */
     hoodSize: text("hood_size"),

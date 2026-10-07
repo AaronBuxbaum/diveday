@@ -1282,11 +1282,19 @@ export function RosterSection({
                 label={t("trips.roster.certifyLevel")}
                 description={t("trips.roster.certifyLevelHint")}
               >
+                {/* Opens on the rung the course issues, or on nothing: a
+                    course that issues none (a specialty, a refresher the shop
+                    wrote itself) must never put a level in front of the
+                    instructor to confirm by reflex (dive-domain review). */}
                 <select
                   name="award"
+                  required
                   className={controlClass}
-                  defaultValue={certifyDefaultLevel ?? undefined}
+                  defaultValue={certifyDefaultLevel ?? ""}
                 >
+                  <option value="" disabled>
+                    {t("trips.roster.certifyChoose")}
+                  </option>
                   <optgroup label={t("trips.roster.certifyLevelGroup")}>
                     {Object.entries(CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
                       <option key={value} value={value}>
