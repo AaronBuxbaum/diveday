@@ -1,8 +1,9 @@
+import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { BillingEventEffect } from "@/lib/billing/events";
 import { seededShopContext } from "@/test/db";
 import type { AppDb } from "./client";
-import { shops } from "./schema";
+import { shopMilestones, shops } from "./schema";
 import {
   applyBillingEffect,
   ensureShopBillingCustomer,
@@ -302,6 +303,25 @@ describe("applyBillingEffect", () => {
     expect(await applyBillingEffect(db, paid(9_900, later(100)))).toBe("first_paid");
     expect(await applyBillingEffect(db, paid(9_900, later(9_000)))).toBe("already_paid");
     expect((await getShopSubscription(db, shop.id))?.firstPaidAt).toEqual(later(100));
+  });
+
+  it("records the funnel's first_paid_month milestone for a real shop", async () => {
+    const { db, shop } = await seededShopContext();
+    await db.update(shops).set({ isDemo: false }).where(eq(shops.id, shop.id));
+    await ensureShopBillingCustomer(db, shop.id, "cus_a");
+    await applyBillingEffect(db, completed(shop.id));
+    await applyBillingEffect(db, {
+      kind: "invoice_paid",
+      customerId: "cus_a",
+      subscriptionId: "sub_a",
+      amountPaid: 9_900,
+      paidAt: later(100),
+    });
+    const milestones = await db
+      .select({ milestone: shopMilestones.milestone, reachedAt: shopMilestones.reachedAt })
+      .from(shopMilestones)
+      .where(eq(shopMilestones.shopId, shop.id));
+    expect(milestones).toContainEqual({ milestone: "first_paid_month", reachedAt: later(100) });
   });
 
   it("passes ignored and malformed events through without a read", async () => {

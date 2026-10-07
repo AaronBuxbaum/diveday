@@ -4,7 +4,8 @@ import type { SubscriptionSnapshot } from "@/lib/billing/standing";
 import { type CalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import type { AppDb, DbExecutor } from "./client";
-import { isUniqueConstraintViolation } from "./client";
+import { recordShopMilestone } from "./founder-metrics";
+import { isUniqueConstraintViolation } from "./query-helpers";
 import { shopSubscriptions, shops } from "./schema";
 
 /**
@@ -292,7 +293,14 @@ export async function applyBillingEffect(
             ),
           )
           .returning({ shopId: shopSubscriptions.shopId });
-        return first ? "first_paid" : "already_paid";
+        if (!first) return "already_paid";
+        // The funnel's activation step (ADR 20261007-founder-metrics).
+        await recordShopMilestone(db, {
+          shopId: first.shopId,
+          milestone: "first_paid_month",
+          at: effect.paidAt,
+        });
+        return "first_paid";
       }
     }
   } catch (error) {

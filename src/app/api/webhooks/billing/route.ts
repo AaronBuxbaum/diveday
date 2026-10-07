@@ -119,7 +119,8 @@ async function handle(
   const customer = effect.kind === "malformed" ? null : effect.customerId;
   if (outcome === "first_paid") {
     // The "first paid month" milestone, as an event a log reader can count.
-    // The durable record is `shop_subscriptions.first_paid_at`.
+    // The durable records are `shop_subscriptions.first_paid_at` and the
+    // `first_paid_month` row in `shop_milestones`.
     log("billing.first_paid_month", "info", { eventId: event.id, customer });
   }
   // A refusal that a person should look at is a warning, not routine.

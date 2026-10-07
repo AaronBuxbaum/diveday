@@ -30,11 +30,12 @@ import { DAY_MS } from "./clock";
  */
 
 /**
- * The milestones a shop can reach, as codes. `first_paid_month` is the seam
- * billing fills in: it can be recorded like the others, but nothing writes it
- * yet, so it is not on {@link ACTIVATION_PATH} — a step nobody can reach would
- * report every shop as stalled in front of it. When billing records it, it
- * joins the path and the stall check covers it with no other change.
+ * The milestones a shop can reach, as codes. `first_paid_month` is written by
+ * the billing webhook on a shop's first paid invoice (ADR
+ * 20261007-subscription-billing). It stays off {@link ACTIVATION_PATH} while
+ * billing is not turned on in every deployment — until then no shop can reach
+ * it, and every shop would read as stalled in front of it. Adding it to the
+ * path is the only change the stall check needs once billing is live.
  */
 export const SHOP_MILESTONES = [
   "shop_created",

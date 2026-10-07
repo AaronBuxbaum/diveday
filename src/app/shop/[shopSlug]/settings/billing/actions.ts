@@ -1,5 +1,6 @@
 "use server";
 import { redirect } from "next/navigation";
+import { z } from "zod";
 import { canPersonManageBilling } from "@/db/authz";
 import { getDb } from "@/db/client";
 import {
@@ -12,6 +13,7 @@ import { getShopById } from "@/db/shops";
 import { freeTimeEndsAt } from "@/lib/billing/standing";
 import { billingProviderFromEnvironment } from "@/lib/billing/stripe-billing";
 import { nowDate } from "@/lib/clock";
+import { parseForm } from "@/lib/form-parse";
 import { publicAppUrl } from "@/lib/notifications";
 import { requireStaffSession } from "@/lib/session";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
@@ -68,6 +70,9 @@ async function requireBillingOwner(): Promise<BillingContext> {
     createdAt: shop.createdAt,
   };
 }
+
+/** The Portal form's one field: which door, the front one or straight to cancel. */
+const portalForm = z.object({ intent: z.enum(["manage", "cancel"]).default("manage") });
 
 function billingPath(slug: string): string {
   return shopPath(slug, "settings", "billing");
@@ -176,7 +181,8 @@ export async function openBillingPortalAction(formData: FormData): Promise<void>
   const row = await getShopSubscription(db, context.shopId);
   if (!row?.stripeCustomerId) refuse(context.slug, "unavailable");
 
-  const wantsCancel = formData.get("intent") === "cancel";
+  const form = parseForm(portalForm, formData);
+  const wantsCancel = form.ok && form.data.intent === "cancel";
   const cancelSubscriptionId =
     wantsCancel && row.stripeSubscriptionId ? row.stripeSubscriptionId : undefined;
   const portal = await provider.createPortalSession({

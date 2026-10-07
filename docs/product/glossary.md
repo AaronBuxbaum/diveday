@@ -2176,7 +2176,7 @@ new domain concept, define it here in the same PR.
 - **Subscription (DiveDay billing)** — what a *shop* pays *DiveDay*: one monthly price, billed by Stripe Billing on DiveDay's own Stripe account, never through the shop's connected account (that is the shop's money from divers). One row per shop in `shop_subscriptions`, written by the billing webhook; Settings > Billing is the owner's alone. ADR [20261007-subscription-billing](../architecture/decisions/20261007-subscription-billing.md).
 - **Billing standing** — the one word a shop's subscription reads as: *trialing*, *free term*, *active*, *past due*, *canceled* or *trial ended*. Derived, never stored, by `billingStanding` in `src/lib/billing/standing.ts` from the trial window, the free term and Stripe's own status. *In good standing* means trialing, free term or active; nothing gates on it.
 - **Free term** — free months DiveDay grants a shop by hand (the founding offer), set with `pnpm billing:free-term <shop-slug> <last-free-day>`. The date is the last free day, inclusive, in the shop's zone. Adding a card during the trial or a free term charges nothing until the free time ends.
-- **First paid month** — the instant the first non-zero invoice for a shop's subscription was paid: `shop_subscriptions.first_paid_at`, written once, also logged as `billing.first_paid_month`.
+- **First paid month** — the instant the first non-zero invoice for a shop's subscription was paid: `shop_subscriptions.first_paid_at`, written once, also logged as `billing.first_paid_month` and recorded as the `first_paid_month` milestone in `shop_milestones`.
 
 ## What a shop says about itself
 

@@ -62,7 +62,8 @@ customer emails.
   in the product.
 - `first_paid_at` is written once, by the first `invoice.paid` with a non-zero amount on the
   subscription the row holds. It is the "first paid month" milestone, and the route also logs it
-  as `billing.first_paid_month`. A paid invoice that arrives before its subscription is linked
+  as `billing.first_paid_month` and records the funnel's `first_paid_month` milestone in
+  `shop_milestones` (ADR 20261007-founder-metrics) for a real shop. A paid invoice that arrives before its subscription is linked
   gives its claim back and answers 503, so Stripe delivers it again once the link has landed; a
   one-off dashboard invoice, or one for another subscription, never counts.
 
