@@ -1139,6 +1139,10 @@ export async function loadShopExportBundleInput(
             // rather than dumps, resolves the pair down to one cell.
             "no_certification_cleared_at",
             "no_certification_cleared_by_person_id",
+            // A staffer's "18 or older" at a split, and whose (H-99): the age
+            // answer the guardian rule read when no date was on file.
+            "adult_attested_at",
+            "adult_attested_by_person_id",
             // **Where this record came from.** Set once, when a diver put
             // themselves on file at the shop's counter QR rather than being
             // typed in by staff (issue #1236). It changes how a destination
@@ -1178,6 +1182,8 @@ export async function loadShopExportBundleInput(
             row.noCertificationDeclaredAt,
             row.noCertificationClearedAt,
             row.noCertificationClearedByPersonId,
+            row.adultAttestedAt,
+            row.adultAttestedByPersonId,
             row.selfRegisteredAt,
             row.deletedAt,
             row.anonymizedAt,
@@ -4083,6 +4089,7 @@ export async function loadDiverExportBundleInput(
             "courtesy_email_opt_out_at",
             "no_certification_declared_at",
             "no_certification_cleared_at",
+            "adult_attested_at",
             "deleted_at",
             "created_at",
           ],
@@ -4099,6 +4106,7 @@ export async function loadDiverExportBundleInput(
               person.courtesyEmailOptOutAt,
               person.noCertificationDeclaredAt,
               person.noCertificationClearedAt,
+              person.adultAttestedAt,
               person.deletedAt,
               person.createdAt,
             ],

@@ -741,3 +741,52 @@ describe("merging a diver's signed releases (issue #2080)", () => {
     expect(moved && verifyWaiverIntegrity(moved)).toBe("valid");
   });
 });
+
+/** A staffer's "18 or older" (H-99) is an answer and its author, kept together. */
+describe("merging an 18-or-older answer", () => {
+  it("takes the source's answer and who gave it when the survivor has none", async () => {
+    const { db, shop, owner, source, survivor } = await mergeFixtures();
+    const attestedAt = new Date("2026-10-06T15:00:00.000Z");
+    await db
+      .update(people)
+      .set({ adultAttestedAt: attestedAt, adultAttestedByPersonId: owner.id })
+      .where(eq(people.id, source.id));
+
+    await mergeDiverRecords({
+      db,
+      shopId: shop.id,
+      personId: source.id,
+      survivorId: survivor.id,
+      actorPersonId: owner.id,
+    });
+
+    const [merged] = await db.select().from(people).where(eq(people.id, survivor.id));
+    expect(merged?.adultAttestedAt).toEqual(attestedAt);
+    expect(merged?.adultAttestedByPersonId).toBe(owner.id);
+  });
+
+  it("drops the answer when either record has a date of birth", async () => {
+    const { db, shop, owner, source, survivor } = await mergeFixtures();
+    await db
+      .update(people)
+      .set({
+        adultAttestedAt: new Date("2026-10-06T15:00:00.000Z"),
+        adultAttestedByPersonId: owner.id,
+      })
+      .where(eq(people.id, source.id));
+    await db.update(people).set({ dateOfBirth: "2011-04-09" }).where(eq(people.id, survivor.id));
+
+    await mergeDiverRecords({
+      db,
+      shopId: shop.id,
+      personId: source.id,
+      survivorId: survivor.id,
+      actorPersonId: owner.id,
+    });
+
+    const [merged] = await db.select().from(people).where(eq(people.id, survivor.id));
+    expect(merged?.dateOfBirth).toBe("2011-04-09");
+    expect(merged?.adultAttestedAt).toBeNull();
+    expect(merged?.adultAttestedByPersonId).toBeNull();
+  });
+});

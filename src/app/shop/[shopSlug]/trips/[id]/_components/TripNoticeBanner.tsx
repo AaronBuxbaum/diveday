@@ -151,6 +151,12 @@ const NOTICE_KEYS: Record<
     tone: "warning",
     key: "trips.notices.identitySplitDobRequired",
   },
+  // H-99: a blank date with no "18 or older" on a plain departure.
+  "identity-split-age-unstated": {
+    form: "roster",
+    tone: "warning",
+    key: "trips.notices.identitySplitAgeUnstated",
+  },
   "identity-split-dob-invalid": {
     form: "roster",
     tone: "danger",

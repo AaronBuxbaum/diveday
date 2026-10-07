@@ -11,6 +11,7 @@ export type IdentityCheckWords = {
   emailLabel: string;
   phoneLabel: string;
   optional: string;
+  adultAttested: string;
   split: string;
   splitting: string;
 };
@@ -29,7 +30,9 @@ export type IdentityCheckWords = {
  *
  * The split also takes who the new diver is (issue #2081): a date of birth,
  * required on a course with a minimum age because the age check and the
- * guardian rule both read it and fail open without it, and an optional email
+ * guardian rule both read it and fail open without it; anywhere else, the date
+ * or a "They're 18 or older" tick, one of the two (H-99), which the writer
+ * refuses without; and an optional email
  * or phone so the shop can send their own waiver. When other held seats were
  * booked under the same name and matched to the same diver, on other
  * departures, one box names those departures and moves them onto the one new
@@ -93,9 +96,14 @@ export function IdentityCheck({
               className={controlClass}
             />
           </Field>
-          <Field label={words.dateOfBirthLabel} hint={asksDateOfBirth ? undefined : words.optional}>
+          <Field label={words.dateOfBirthLabel}>
             <DateField name="dateOfBirth" required={asksDateOfBirth} max={maxDateOfBirth} />
           </Field>
+          {asksDateOfBirth ? null : (
+            <ChoiceRow type="checkbox" name="adultAttested" value="yes">
+              {words.adultAttested}
+            </ChoiceRow>
+          )}
           <FieldGrid columns={2}>
             <Field label={words.emailLabel} hint={words.optional}>
               <input

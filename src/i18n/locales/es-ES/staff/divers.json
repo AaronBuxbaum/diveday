@@ -155,6 +155,8 @@
     "emailLabel": "Correo electrónico",
     "phoneLabel": "Teléfono",
     "dateOfBirthLabel": "Fecha de nacimiento",
+    "adultAttestedHint": "18 años o más, según {name}",
+    "adultAttestedHintNoName": "18 años o más, según el personal",
     "optionalHint": "(opcional)",
     "diveInsuranceFieldLabel": "Seguro de buceo",
     "diveInsurancePlaceholder": "DAN n.º 12345",

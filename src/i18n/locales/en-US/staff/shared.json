@@ -539,6 +539,7 @@
     "emailLabel": "Email",
     "phoneLabel": "Phone",
     "optional": "(optional)",
+    "adultAttested": "They’re 18 or older",
     "sameNameSeats": "{count, plural, one {Also move the held seat booked as {bookedAs} on {departures}} other {Also move the held seats booked as {bookedAs} on {departures}}}",
     "sameNameDeparture": "{trip} ({date}, {time})",
     "split": "Give them their own record",
