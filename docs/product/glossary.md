@@ -1448,8 +1448,8 @@ new domain concept, define it here in the same PR.
   the diver without a second physician, and says so** (H-98, Aaron 2026-10-07): it boards them,
   and the roster, the manifest and the diver record warn that a physician did not clear this
   diver, with a link to the refused record on the roster and the diver record
-  (`overriddenRefusal`). Paper is recorded only by an owner or manager while the refusal stands
-  (`refusal_needs_manager`). The warning ends only when a physician has since cleared a release
+  (`overriddenRefusal`). Any staffer may record a paper waiver after a refusal (Aaron, 2026-10-07).
+  The warning ends only when a physician has since cleared a release
   that flagged every question the refused one did, ordered by when each physician answered.
 - **Paper / in-person signature** — a non-diver (staff) recording that a diver signed the release on
   paper — a copy on the boat or on shore — that the app never saw signed. It creates the same
