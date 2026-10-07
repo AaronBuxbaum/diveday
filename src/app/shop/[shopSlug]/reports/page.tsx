@@ -5,7 +5,6 @@ import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopNotice, ShopPageHeader } from "@/components/ShopPageHeader";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
-import { DateField } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import {
   canPersonViewShopReports,
@@ -37,6 +36,7 @@ import {
   formatPercentChange,
   formatPointsChange,
   formatReportMoney,
+  hasComparableBaseline,
   type MonthComparison,
   monthHasActivity,
   summarizeMonth,
@@ -48,6 +48,7 @@ import { shopMonthBounds, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { StaffSectionTabs } from "../_components/StaffSectionTabs";
 import { DepartureLedger, type DepartureRow } from "./_components/DepartureLedger";
 import { type MonthFigure, MonthFigures } from "./_components/MonthFigures";
+import { MonthJump } from "./_components/MonthJump";
 import { ReportRangeTabs } from "./_components/ReportRangeTabs";
 import { YearReport } from "./_components/YearReport";
 
@@ -318,6 +319,9 @@ export default async function ReportsPage({
   // (percent vs. points vs. neither, year-ago vs. previous-month) is a
   // decision tree, not something ICU's own conditionals read clearly.
   const baselineMonthLabel = baselineMonth ? monthLabel(baselineMonth, locale) : null;
+  // **No line against nothing** (UX audit 2026-10-07, item 21): "vs $0 in
+  // October 2025" compares a month to one that had none of the thing, which
+  // reads as a bug. A zero baseline drops its line; the figure stands alone.
   function comparisonLine(trend: string | null, baselineText: string): string | undefined {
     if (!comparison || !baselineMonthLabel) return undefined;
     const key =
@@ -330,30 +334,33 @@ export default async function ReportsPage({
       month: baselineMonthLabel,
     });
   }
-  const revenueComparison = comparison
-    ? comparisonLine(
-        comparison.revenueCents.percentChange !== null
-          ? formatPercentChange(comparison.revenueCents.percentChange)
-          : null,
-        formatReportMoney(baselineReport?.revenueCents ?? 0, currency, locale),
-      )
-    : undefined;
-  const tipsComparison = comparison
-    ? comparisonLine(
-        comparison.tipsCents.percentChange !== null
-          ? formatPercentChange(comparison.tipsCents.percentChange)
-          : null,
-        formatReportMoney(baselineReport?.tipsCents ?? 0, currency, locale),
-      )
-    : undefined;
-  const bookingsComparison = comparison
-    ? comparisonLine(
-        comparison.seatsBooked.percentChange !== null
-          ? formatPercentChange(comparison.seatsBooked.percentChange)
-          : null,
-        String(comparison.seatsBooked.baseline),
-      )
-    : undefined;
+  const revenueComparison =
+    comparison && hasComparableBaseline(comparison.revenueCents)
+      ? comparisonLine(
+          comparison.revenueCents.percentChange !== null
+            ? formatPercentChange(comparison.revenueCents.percentChange)
+            : null,
+          formatReportMoney(baselineReport?.revenueCents ?? 0, currency, locale),
+        )
+      : undefined;
+  const tipsComparison =
+    comparison && hasComparableBaseline(comparison.tipsCents)
+      ? comparisonLine(
+          comparison.tipsCents.percentChange !== null
+            ? formatPercentChange(comparison.tipsCents.percentChange)
+            : null,
+          formatReportMoney(baselineReport?.tipsCents ?? 0, currency, locale),
+        )
+      : undefined;
+  const bookingsComparison =
+    comparison && hasComparableBaseline(comparison.seatsBooked)
+      ? comparisonLine(
+          comparison.seatsBooked.percentChange !== null
+            ? formatPercentChange(comparison.seatsBooked.percentChange)
+            : null,
+          String(comparison.seatsBooked.baseline),
+        )
+      : undefined;
   // Ratio cards need their own baseline to exist too, not merely a
   // comparison month with a report — a baseline month with zero seats
   // offered has nothing to measure fill against, and that absence must stay
@@ -528,25 +535,16 @@ export default async function ReportsPage({
       <ReportRangeTabs shopSlug={shopSlug} range="month" t={t} className="mb-6" />
 
       {/*
-        Month navigator — plain server-rendered links plus one GET form, no
-        client JS. The arrows walk neighbouring months; the picker exists
-        because they are useless for a far one (last July used to be thirteen
-        clicks). `<input type="month">` submits exactly the `YYYY-MM` shape
-        `parseMonthKey` already reads, and its `min` matches the floor the page
-        clamps to server-side, so the control cannot offer a month the page
-        would silently rewrite.
+        Month navigator — plain server-rendered links, and between them one
+        month box that applies on change (`MonthJump`; UX audit item 22, which
+        retired its "Go" button). The arrows walk neighbouring months; the box
+        exists because they are useless for a far one. `<input type="month">`
+        submits exactly the `YYYY-MM` shape `parseMonthKey` already reads.
 
-        One size across the row: the arrows are `icon`, 48px squares that sit
-        level with `md`, as the 48px month box is, and so is "Go". They were the
-        44px default and `sm` (14px), two heights and two type sizes in four
-        controls (`reports`, `reports-figures`, 2026-09-25).
-
-        The box's width is on a wrapper, because `controlClass` carries
-        `w-full` and a `w-40` beside it on the input lost to it: the box drew
-        at its intrinsic 191px. An `md` "Go" is about 11px wider than an `sm`
-        one, which at 390px pushed the next-month arrow onto a line of its own.
-        176px (`w-44`) keeps the row on one line at 390px and still shows
-        "September 2026", the longest month name; 160px cut its year.
+        One size across the row: the arrows are `icon`, 48px squares, level
+        with the 48px month box. The box's width is on a wrapper (`w-44`),
+        because `controlClass` carries `w-full`; 176px still shows "September
+        2026", the longest month name.
       */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h2 className={SECTION_TITLE_CLASS}>
@@ -574,22 +572,11 @@ export default async function ReportsPage({
               <DiveDayIcon name="arrow-left" className="size-4" />
             </span>
           )}
-          <form className="flex items-center gap-2">
-            <label htmlFor="report-month" className="sr-only">
-              {t("reports.monthPicker.label")}
-            </label>
-            <DateField
-              id="report-month"
-              type="month"
-              name="month"
-              defaultValue={monthKey(current)}
-              min={monthKey(floorMonth)}
-              wrapperClassName="w-44"
-            />
-            <button type="submit" className={buttonClass({ variant: "secondary" })}>
-              {t("reports.monthPicker.go")}
-            </button>
-          </form>
+          <MonthJump
+            value={monthKey(current)}
+            min={monthKey(floorMonth)}
+            label={t("reports.monthPicker.label")}
+          />
           {nextMonthKey ? (
             <Link
               href={`/shop/${shopSlug}/reports?month=${nextMonthKey}`}

@@ -6,8 +6,7 @@
   "currentMonthTitle": "Estás viendo el mes actual",
   "earliestMonthTitle": "Este es tu primer mes con salidas",
   "monthPicker": {
-    "label": "Ir a un mes",
-    "go": "Ir"
+    "label": "Ir a un mes"
   },
   "numbersLabel": "Los números de este mes",
   "comparison": {
@@ -29,7 +28,7 @@
     "waiversAllIn": "Toda la documentación está en regla",
     "revenueViewOrders": "Ver pedidos",
     "tipsLabel": "Propinas",
-    "tipsDetail": "{count, plural, =0 {Sin propinas en las salidas de este mes} one {# propina en las salidas de este mes} other {# propinas en las salidas de este mes}} · 100 % para el centro"
+    "tipsDetail": "{count, plural, =0 {Sin propinas en las salidas de este mes} one {# propina, íntegra para el centro} other {# propinas, íntegras para el centro}}"
   },
   "noTripsFuture": "Todavía no hay nada reservado para este mes.",
   "noTripsPast": "Ninguna salida zarpó este mes.",

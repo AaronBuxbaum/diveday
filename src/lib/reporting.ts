@@ -253,6 +253,18 @@ export function compareMetric(
 }
 
 /**
+ * Whether a count or money comparison has anything to compare against. A zero
+ * baseline ("vs $0 in October 2025") is a month that had none of the thing,
+ * and a line against it reads as a bug rather than a trend (UX audit
+ * 2026-10-07, item 21), so the report drops the line and lets the figure
+ * stand alone. A small non-zero baseline still shows both raw numbers; only
+ * its percent is withheld (`compareMetric`).
+ */
+export function hasComparableBaseline(comparison: MetricComparison): boolean {
+  return comparison.baseline > 0;
+}
+
+/**
  * A ratio comparison (seat fill, waiver completion) in percentage POINTS,
  * never a relative "percent change of a percent" — the same small-base trap
  * `compareMetric`'s threshold exists to avoid, except a percent-of-a-percent
