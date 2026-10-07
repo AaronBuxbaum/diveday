@@ -29,7 +29,7 @@ what is currently wired.
 
 | Event | Script | What it does |
 | --- | --- | --- |
-| `SessionStart` (all sources) | `scripts/session-context.mjs` | prints the checkout's state; after a compaction, the reminders a summary drops; in a cloud container, installs dependencies when `node_modules/` is missing |
+| `SessionStart` (all sources) | `scripts/session-context.mjs` | prints the checkout's state; after a compaction, the reminders a summary drops; puts the pinned Node first on PATH when it is installed but not running; in a cloud container, installs dependencies when `node_modules/` is missing or older than the lockfile |
 | `UserPromptSubmit` | `scripts/session-context.mjs --prompt` | one line: branch, uncommitted count, unpushed count |
 | `PreToolUse` on `Bash` | `scripts/guard-bash.mjs` | refuses six command shapes, each naming the correct form |
 | `PreToolUse` on `Read` | `scripts/guard-read.mjs` | refuses a generated artifact and a whole-file read of a large source file |
@@ -56,9 +56,18 @@ is the queue, which checks run before a commit, that follow-ups are issues, that
 on an intention — is exactly what a summary compresses into "continued working". Path-scoped rules
 reload only as matching files are re-read, so the reminders also say that they exist.
 
-In a cloud container (`CLAUDE_CODE_REMOTE=true`) with no `node_modules/`, it runs
+When the running Node is not the major `.nvmrc` pins, it looks for that major under nvm, fnm, n,
+volta and `/opt/node<major>`, and when it finds one it appends an `export PATH=…` line to
+`CLAUDE_ENV_FILE`, which Claude Code sources before every later shell command; the block says
+which Node the session got. When none is installed it says so, and that `node_modules` may then
+have been installed under another Node — the fix for that is the environment's own setup, not
+this hook.
+
+In a cloud container (`CLAUDE_CODE_REMOTE=true`) with no `node_modules/`, or one older than
+`pnpm-lock.yaml` (by `node_modules/.modules.yaml`'s mtime), it runs
 `pnpm install --frozen-lockfile --prefer-offline`, bounded at four minutes, so the first
-`pnpm lint` is not the moment a session discovers there is nothing to run it with.
+`pnpm lint` is not the moment a session discovers there is nothing — or last week's lockfile — to
+run it with.
 
 Nothing here can block, and it prints nothing rather than something wrong: a missing context line
 costs a few tokens; an invented branch name costs a wrong push.
