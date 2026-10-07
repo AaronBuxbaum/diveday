@@ -85,14 +85,20 @@ const LOCK_GRACE_MS = 5 * 60 * 1_000;
  * shop.
  *
  * That last clause used to read "it needs the staff-visible parked-failure
- * surface", and **there is no such surface**. It was expected when this was
- * written and never built: `listNotificationDeliveryIssues` feeds the Today
- * panel from `notification_deliveries` and never reads this queue, so a row
- * that gives up here is invisible on every staff screen. What actually
- * happens to it is what the terminal write below does — payload and all four
- * handles cleared, `error_code` kept — and nothing tells anybody (issue
- * #1719). Widen this if a real provider outage ever outlasts it — and widen it
- * here, in days, so the code keeps saying how long it actually waits.
+ * surface", and **there is no such surface, by decision** (issue #1826).
+ * `listNotificationDeliveryIssues` feeds the Today panel from
+ * `notification_deliveries` and never reads this queue, and that stays: a
+ * booking-carrying send already lands its last failure there (the drain
+ * records it before the terminal write), and what is left — a password
+ * reset, a staff invite, an email verification, a payload that will not
+ * open — is the deployment's problem, not something a staffer can act on.
+ * So the honest surface is the operator's: every write below that gives a
+ * notification up logs `notification.send_abandoned`, every unreadable park
+ * logs `notification.queue_payload_unreadable`, and both page through
+ * `NotificationSendFailures` in `infra/lib/observability.ts`. Before that, a
+ * row that gave up here was cleared and nothing told anybody (issue #1719).
+ * Widen this if a real provider outage ever outlasts it — and widen it here,
+ * in days, so the code keeps saying how long it actually waits.
  */
 const RETRY_WINDOW_MS = 3 * DAILY_TICK_INTERVAL_MS;
 
@@ -203,6 +209,48 @@ function queueSealingKey(where: "queue" | "drain"): SecretKey | null {
 }
 
 /**
+ * Why a notification will never be sent. Codes, never sentences: these are
+ * the `reason` field on `notification.send_abandoned`, and an operator reads
+ * them off a log line to pick the next move.
+ *
+ * - `retries_exhausted` — still failing retryably when the three-day window ran out.
+ * - `rejected` — a drain attempt failed and the provider said retrying would not help.
+ * - `not_configured` — a drain attempt found no provider configured at all.
+ * - `payload_unreadable` — the fortnight of unreadable parks is spent.
+ * - `missing_payload` — a claimed row had no payload to send.
+ * - `no_shop` / `not_queueable` / `queue_seal_unavailable` / `queue_write_failed`
+ *   — a retryable first failure that could not be put on the queue at all.
+ */
+type SendAbandonedReason =
+  | "retries_exhausted"
+  | "rejected"
+  | "not_configured"
+  | "payload_unreadable"
+  | "missing_payload"
+  | QueueRefusal
+  | "queue_write_failed";
+
+/**
+ * The one line that says a notification is gone for good (issue #1826).
+ *
+ * A staffer is deliberately never shown these — see `RETRY_WINDOW_MS` — so
+ * this line, and the alarm counting it, is the whole of the trace. Ids and
+ * codes only (`LogContext`): the kind, the shop, the provider's error code,
+ * never the address, the payload or a provider's free-text detail, which can
+ * quote an address back. `kind` is absent where the payload could not be read,
+ * because the queue keeps no plaintext copy of it.
+ */
+function logSendAbandoned(context: {
+  reason: SendAbandonedReason;
+  shopId?: string;
+  kind?: Notification["kind"];
+  errorCode?: string | null;
+  attempts?: number;
+}): void {
+  log("notification.send_abandoned", "error", context);
+}
+
+/**
  * Read a sealed payload back, or `null` when it cannot be opened.
  *
  * Three ways that happens, and none of them may be treated as "this row has
@@ -242,21 +290,27 @@ function openQueuedPayload(sealed: string, key: SecretKey): Notification | null 
  * The second refusal is `notificationIsQueueable`, which asks whether legal
  * erasure could ever find the row again. Only `guardian_release_copy` answers
  * no, and its reasoning is written where the answer is given.
+ *
+ * Every refusal answers with its code rather than returning quietly, because
+ * a refused retry is a message that will never go out and the caller logs it
+ * as one (`queueRetryOrLog`).
  */
+type QueueRefusal = "no_shop" | "not_queueable" | "queue_seal_unavailable";
+
 async function queueRetry(
   db: AppDb,
   input: Notification,
   delivery: Extract<NotificationDelivery, { status: "failed" }>,
-) {
-  if (!("shopId" in input)) return;
-  if (!notificationIsQueueable(input)) return;
+): Promise<"queued" | QueueRefusal> {
+  if (!("shopId" in input)) return "no_shop";
+  if (!notificationIsQueueable(input)) return "not_queueable";
   // Sealed before it reaches the column, never after (issue #1297). With no
   // key there is nowhere safe to put a payload carrying a capability URL, and
   // storing one in plaintext to preserve a retry would trade a working
   // credential at rest for a message that was going to be re-sendable by hand
   // anyway. `queueSealingKey` has already said so in the log.
   const key = queueSealingKey("queue");
-  if (!key) return;
+  if (!key) return "queue_seal_unavailable";
   await db
     .insert(notificationSendQueue)
     .values({
@@ -279,6 +333,35 @@ async function queueRetry(
       lastError: delivery.detail ?? null,
     })
     .onConflictDoNothing({ target: notificationSendQueue.idempotencyKey });
+  return "queued";
+}
+
+/**
+ * Queue a retryable first failure, and say so when it cannot be queued.
+ *
+ * The one shape `sendNotification` and `sendNotificationBatch` share, so the
+ * two cannot drift on what a refused retry logs. A thrown insert is logged by
+ * the error's *name* only: a driver's message can quote the bound parameters,
+ * and those include the recipient's address.
+ */
+async function queueRetryOrLog(
+  db: AppDb,
+  input: Notification,
+  delivery: Extract<NotificationDelivery, { status: "failed" }>,
+): Promise<void> {
+  const shopId = "shopId" in input ? input.shopId : undefined;
+  try {
+    const outcome = await queueRetry(db, input, delivery);
+    if (outcome === "queued") return;
+    logSendAbandoned({ reason: outcome, shopId, kind: input.kind, errorCode: delivery.errorCode });
+  } catch (error) {
+    logSendAbandoned({
+      reason: "queue_write_failed",
+      shopId,
+      kind: input.kind,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
+  }
 }
 
 /**
@@ -367,14 +450,7 @@ export async function sendNotification(
     };
   }
   if (delivery.status === "failed" && delivery.retryable) {
-    try {
-      await queueRetry(db, input, delivery);
-    } catch (error) {
-      console.error("Retryable notification could not be queued", {
-        kind: input.kind,
-        error: error instanceof Error ? error.message : "unknown_error",
-      });
-    }
+    await queueRetryOrLog(db, input, delivery);
   }
   return delivery;
 }
@@ -463,14 +539,7 @@ export async function sendNotificationBatch(
       const delivery = results[index] ?? { status: "failed" as const, retryable: true };
       deliveries.push(delivery);
       if (delivery.status === "failed" && delivery.retryable) {
-        try {
-          await queueRetry(db, batch[index], delivery);
-        } catch (error) {
-          console.error("Retryable notification could not be queued", {
-            kind: batch[index].kind,
-            error: error instanceof Error ? error.message : "unknown_error",
-          });
-        }
+        await queueRetryOrLog(db, batch[index], delivery);
       }
     }
   }
@@ -661,6 +730,11 @@ export async function drainNotificationRetries(
           updatedAt: nowDate(),
         })
         .where(eq(notificationSendQueue.id, claimed.id));
+      logSendAbandoned({
+        reason: "missing_payload",
+        shopId: claimed.shopId,
+        attempts: claimed.attempts,
+      });
       summary.failed += 1;
       continue;
     }
@@ -728,6 +802,27 @@ export async function drainNotificationRetries(
           updatedAt: nowDate(),
         })
         .where(eq(notificationSendQueue.id, claimed.id));
+      // **Loud on every park, not only the last** (issue #1826). No key at all
+      // logs `queue_seal_unavailable` before the pass claims anything; the
+      // *wrong* key gets past that check, because a key is set, and until this
+      // line nothing anywhere said so — the fortnight above ran out in silence
+      // and the rows were written off. The window exists so somebody can
+      // notice and put the key back, so the first park is when they have to
+      // hear about it. The last park is a loss rather than a warning, and says
+      // so under the code every other loss uses.
+      if (parkIsFinal) {
+        logSendAbandoned({
+          reason: "payload_unreadable",
+          shopId: claimed.shopId,
+          attempts: claimed.attempts,
+        });
+      } else {
+        log("notification.queue_payload_unreadable", "error", {
+          shopId: claimed.shopId,
+          recoveryAttempts,
+          recoveryAttemptsLeft: UNREADABLE_RETRY_MAX_ATTEMPTS - recoveryAttempts,
+        });
+      }
       summary.failed += 1;
       continue;
     }
@@ -834,6 +929,18 @@ export async function drainNotificationRetries(
           updatedAt: nowDate(),
         })
         .where(eq(notificationSendQueue.id, claimed.id));
+      logSendAbandoned({
+        reason:
+          delivery.status !== "failed"
+            ? "not_configured"
+            : delivery.retryable
+              ? "retries_exhausted"
+              : "rejected",
+        shopId: claimed.shopId,
+        kind: notification.kind,
+        errorCode: delivery.status === "failed" ? (delivery.errorCode ?? null) : null,
+        attempts: claimed.attempts,
+      });
       summary.failed += 1;
     }
   }

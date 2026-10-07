@@ -124,6 +124,20 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
       // having touched no row (issue #1297). Same consequence as the three above
       // and the same page: a waiver link that will never leave.
       "notification.queue_seal_unavailable",
+      // The retry queue's own losses (issue #1826). Every point at which a
+      // notification is given up for good -- retries spent, a refusal on a
+      // retry, a retry that could not be queued, a payload written off -- logs
+      // this one code with a `reason`, and no staff screen shows any of it by
+      // decision: a password reset or a staff invite has no booking for the
+      // Today panel to hang it on, and a staffer could not act on it anyway.
+      // So this alarm is the only place the loss is ever reported.
+      "notification.send_abandoned",
+      // A payload the drain cannot open while a key *is* set: the wrong
+      // SECRET_ENCRYPTION_KEY, which `queue_seal_unavailable` cannot see. The
+      // row is re-offered daily for a fortnight so a restored key can still
+      // send it; this is what tells somebody to restore it inside that window
+      // rather than learn about it from the write-off.
+      "notification.queue_payload_unreadable",
     ],
     // One, not the five this used to ask for. Every outbound email failed for
     // an unknown stretch before issue #517 and this alarm stayed silent the
@@ -140,7 +154,9 @@ export const LOG_SIGNALS: readonly LogSignal[] = [
     threshold: 1,
     periodMinutes: 60,
     response:
-      "Read the error code on the log lines, then follow the matching provider runbook (ses-email, sms-delivery-receipts, whatsapp-cloud-api).",
+      "Read the event and error code on the log lines. A provider's send_failed: follow its runbook (ses-email, sms-delivery-receipts, whatsapp-cloud-api). " +
+      "queue_seal_unavailable or queue_payload_unreadable: put SECRET_ENCRYPTION_KEY back before the fortnight runs out. " +
+      "send_abandoned: the reason field names which loss it was; see the CloudWatch runbook.",
   },
   {
     metricName: "CronPassFailures",

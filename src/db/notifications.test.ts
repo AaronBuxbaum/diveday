@@ -1,5 +1,5 @@
 import { and, asc, eq } from "drizzle-orm";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { nowMs } from "@/lib/clock";
 import type { Notification, NotificationDelivery, NotificationProvider } from "@/lib/notifications";
 import { seededShopContext } from "@/test/db";
@@ -1143,6 +1143,233 @@ describe("what the retry queue is allowed to hold", () => {
     await expect(drainNotificationRetries(db, { provider: failsRetryably })).resolves.toMatchObject(
       { scanned: 0 },
     );
+  });
+
+  /**
+   * **What an operator hears when the queue gives a notification up** (issue
+   * #1826). No staff screen lists these, by decision, so the log line and the
+   * `NotificationSendFailures` alarm counting it are the whole of the trace —
+   * and the failure this guards against is silence, which no assertion on a
+   * row would ever notice.
+   */
+  describe("the line an operator gets instead of a screen", () => {
+    let errorLines: Record<string, unknown>[] = [];
+
+    beforeEach(() => {
+      errorLines = [];
+      vi.spyOn(console, "error").mockImplementation((line: unknown) => {
+        if (typeof line !== "string") return;
+        try {
+          errorLines.push(JSON.parse(line) as Record<string, unknown>);
+        } catch {
+          // Not a `log()` line.
+        }
+      });
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+      vi.unstubAllEnvs();
+    });
+
+    function linesFor(event: string) {
+      return errorLines.filter((line) => line.event === event);
+    }
+
+    /** No address, no capability URL, no payload — ids and codes only. */
+    function expectNothingPersonal() {
+      const raw = JSON.stringify(errorLines);
+      expect(raw).not.toContain("front-desk@example.invalid");
+      expect(raw).not.toContain(TOKEN);
+      expect(raw).not.toContain("Ola Roe");
+    }
+
+    async function dueNow(db: Awaited<ReturnType<typeof seededShopContext>>["db"], shopId: string) {
+      await db
+        .update(notificationSendQueue)
+        .set({ nextAttemptAt: new Date(0) })
+        .where(eq(notificationSendQueue.shopId, shopId));
+    }
+
+    it.each(["password_reset_request", "staff_invite", "email_verification"])(
+      "says a %s gave up once its retries are spent",
+      async (kind) => {
+        const { db, shop } = await seededShopContext();
+        await sendNotification(db, linkBearing(shop.id, kind), failsRetryably);
+        // Two passes already spent, so the next claim is the window's third
+        // and last.
+        await db
+          .update(notificationSendQueue)
+          .set({ nextAttemptAt: new Date(0), attempts: 2 })
+          .where(eq(notificationSendQueue.shopId, shop.id));
+
+        // Unchanged for whoever drives the drain: the same summary, the same
+        // terminal row.
+        await expect(
+          drainNotificationRetries(db, { provider: failsRetryably }),
+        ).resolves.toMatchObject({ failed: 1, queued: 0 });
+        const [row] = await db
+          .select()
+          .from(notificationSendQueue)
+          .where(eq(notificationSendQueue.shopId, shop.id));
+        expect(row).toMatchObject({ status: "failed", payloadSealed: null });
+
+        expect(linesFor("notification.send_abandoned")).toEqual([
+          expect.objectContaining({
+            level: "error",
+            reason: "retries_exhausted",
+            kind,
+            shopId: shop.id,
+            errorCode: "temporary_failure",
+            attempts: 3,
+          }),
+        ]);
+        expectNothingPersonal();
+      },
+    );
+
+    it("says so when a retry is refused outright", async () => {
+      const { db, shop } = await seededShopContext();
+      await sendNotification(db, linkBearing(shop.id, "staff_invite"), failsRetryably);
+      await dueNow(db, shop.id);
+
+      await drainNotificationRetries(db, {
+        provider: {
+          async send() {
+            return { status: "failed", retryable: false, errorCode: "MessageRejected" };
+          },
+        },
+      });
+
+      expect(linesFor("notification.send_abandoned")).toEqual([
+        expect.objectContaining({
+          reason: "rejected",
+          kind: "staff_invite",
+          errorCode: "MessageRejected",
+        }),
+      ]);
+    });
+
+    it("says nothing when the retry goes out, or is only re-queued", async () => {
+      const { db, shop } = await seededShopContext();
+      await sendNotification(db, linkBearing(shop.id, "password_reset_request"), failsRetryably);
+      await dueNow(db, shop.id);
+      await drainNotificationRetries(db, { provider: failsRetryably });
+      await dueNow(db, shop.id);
+      await drainNotificationRetries(db, {
+        provider: {
+          async send() {
+            return { status: "sent", providerMessageId: "finally" };
+          },
+        },
+      });
+
+      expect(linesFor("notification.send_abandoned")).toEqual([]);
+      expect(linesFor("notification.queue_payload_unreadable")).toEqual([]);
+    });
+
+    it("warns on the first unreadable park, while the key can still be put back", async () => {
+      const { db, shop } = await seededShopContext();
+      await sendNotification(db, linkBearing(shop.id, "staff_invite"), failsRetryably);
+      // A well-formed but wrong key looks like this from the drain: a key is
+      // set, so `queue_seal_unavailable` never fires, and the value will not
+      // open. Before #1826 nothing at all was logged on this path.
+      await db
+        .update(notificationSendQueue)
+        .set({ nextAttemptAt: new Date(0), payloadSealed: "v1.not.a.real.seal" })
+        .where(eq(notificationSendQueue.shopId, shop.id));
+
+      await expect(
+        drainNotificationRetries(db, { provider: failsRetryably }),
+      ).resolves.toMatchObject({ failed: 1 });
+
+      expect(linesFor("notification.queue_payload_unreadable")).toEqual([
+        expect.objectContaining({
+          level: "error",
+          shopId: shop.id,
+          recoveryAttempts: 1,
+          recoveryAttemptsLeft: UNREADABLE_RETRY_MAX_ATTEMPTS - 1,
+        }),
+      ]);
+      // Parked, not lost: the row still holds what a restored key needs.
+      expect(linesFor("notification.send_abandoned")).toEqual([]);
+      const [row] = await db
+        .select()
+        .from(notificationSendQueue)
+        .where(eq(notificationSendQueue.shopId, shop.id));
+      expect(row?.payloadSealed).toBe("v1.not.a.real.seal");
+      expectNothingPersonal();
+    });
+
+    it("calls the park that spends the fortnight a loss", async () => {
+      const { db, shop } = await seededShopContext();
+      await sendNotification(db, linkBearing(shop.id, "staff_invite"), failsRetryably);
+      await db
+        .update(notificationSendQueue)
+        .set({
+          status: "failed",
+          errorCode: "sealed_payload_unreadable",
+          recoveryAttempts: UNREADABLE_RETRY_MAX_ATTEMPTS - 1,
+          nextAttemptAt: new Date(0),
+          payloadSealed: "v1.not.a.real.seal",
+        })
+        .where(eq(notificationSendQueue.shopId, shop.id));
+
+      await drainNotificationRetries(db, { provider: failsRetryably });
+
+      expect(linesFor("notification.queue_payload_unreadable")).toEqual([]);
+      expect(linesFor("notification.send_abandoned")).toEqual([
+        expect.objectContaining({ reason: "payload_unreadable", shopId: shop.id }),
+      ]);
+      // The payload could not be read, so the kind is not known and not guessed.
+      expect(linesFor("notification.send_abandoned")[0]).not.toHaveProperty("kind");
+    });
+
+    it("says so when a first failure cannot be queued, and answers the caller as before", async () => {
+      const { db, shop } = await seededShopContext();
+      vi.stubEnv("SECRET_ENCRYPTION_KEY", "");
+
+      const delivery = await sendNotification(
+        db,
+        linkBearing(shop.id, "email_verification"),
+        failsRetryably,
+      );
+
+      // What the sign-up flow sees is exactly what it saw before: the
+      // provider's retryable failure, nothing more.
+      expect(delivery).toEqual({
+        status: "failed",
+        retryable: true,
+        errorCode: "temporary_failure",
+      });
+      expect(linesFor("notification.send_abandoned")).toEqual([
+        expect.objectContaining({
+          reason: "queue_seal_unavailable",
+          kind: "email_verification",
+          shopId: shop.id,
+          errorCode: "temporary_failure",
+        }),
+      ]);
+      expectNothingPersonal();
+    });
+
+    it("says so for a batch member that cannot be queued", async () => {
+      const { db, shop } = await seededShopContext();
+      vi.stubEnv("SECRET_ENCRYPTION_KEY", "");
+
+      const deliveries = await sendNotificationBatch(
+        db,
+        [linkBearing(shop.id, "staff_invite")],
+        failsRetryably,
+      );
+
+      expect(deliveries).toEqual([
+        { status: "failed", retryable: true, errorCode: "temporary_failure" },
+      ]);
+      expect(linesFor("notification.send_abandoned")).toEqual([
+        expect.objectContaining({ reason: "queue_seal_unavailable", kind: "staff_invite" }),
+      ]);
+    });
   });
 });
 
