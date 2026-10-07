@@ -1,9 +1,16 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import type { Notification, NotificationProvider } from "@/lib/notifications";
 import { messageFor } from "@/lib/notifications/render";
 import { dbNow, seededShopContext } from "@/test/db";
-import { people, shops, userAccounts, weeklyDigestSends } from "./schema";
+import {
+  bookings,
+  paymentOperationIntents,
+  people,
+  shops,
+  userAccounts,
+  weeklyDigestSends,
+} from "./schema";
 import {
   listWeeklyDigestRecipients,
   previewWeeklyDigest,
@@ -61,8 +68,16 @@ async function context() {
     .where(eq(people.shopId, shop.id));
   const owner = staff.find((row) => row.email === "dana@demo.invalid");
   const instructor = staff.find((row) => row.email === "marcus@demo.invalid");
-  if (!owner || !instructor) throw new Error("seeded staff missing");
-  return { db, shop: digestShop, owner, instructor, monday: await nextMondayMorning(db) };
+  const captain = staff.find((row) => row.email === "sal@demo.invalid");
+  if (!owner || !instructor || !captain) throw new Error("seeded staff missing");
+  return {
+    db,
+    shop: digestShop,
+    owner,
+    instructor,
+    captain,
+    monday: await nextMondayMorning(db),
+  };
 }
 
 describe("who gets the Monday email", () => {
@@ -178,6 +193,35 @@ describe("sendWeeklyDigestForShop", () => {
     );
   });
 
+  it("reads a link sent to someone since deleted as unavailable", async () => {
+    const { db, shop, owner, monday } = await context();
+    const { sent, provider } = capturingProvider();
+    await sendWeeklyDigestForShop(db, shop, { now: monday, origin: ORIGIN, provider });
+    const notification = sent[0];
+    if (notification?.kind !== "weekly_digest") throw new Error("no digest sent");
+    const token = notification.turnOffUrl.split("/unsubscribe/")[1] ?? "";
+    await db.update(people).set({ deletedAt: monday }).where(eq(people.id, owner.personId));
+
+    expect(await resolveWeeklyDigestUnsubscribeToken(db, token)).toBeNull();
+    expect(await turnOffWeeklyDigestByToken(db, { token })).toBeNull();
+    const [account] = await db
+      .select({ choice: userAccounts.weeklyDigest })
+      .from(userAccounts)
+      .where(eq(userAccounts.personId, owner.personId));
+    expect(account?.choice).toBeNull();
+  });
+
+  it("gives a crew member who opted in the staff-grade week", async () => {
+    const { db, shop, captain, monday } = await context();
+    await setWeeklyDigestChoice(db, { shopId: shop.id, personId: captain.personId, wanted: true });
+    const { sent, provider } = capturingProvider();
+    await sendWeeklyDigestForShop(db, shop, { now: monday, origin: ORIGIN, provider });
+    const theirs = sent.find((n) => n.kind === "weekly_digest" && n.personId === captain.personId);
+    if (theirs?.kind !== "weekly_digest") throw new Error("no digest for the captain");
+    expect(theirs.sections.map((section) => section.kind)).not.toContain("last_week");
+    expect(messageFor(theirs).text).not.toContain("/reports");
+  });
+
   it("reads an unknown or tampered link as unavailable", async () => {
     const { db } = await context();
     expect(await resolveWeeklyDigestUnsubscribeToken(db, "not-a-token")).toBeNull();
@@ -261,6 +305,62 @@ describe("previewWeeklyDigest", () => {
         ),
       );
     expect(claims).toHaveLength(0);
+  });
+
+  /**
+   * Reports' gate decides two things in the email (security review): last
+   * week's bookings and seat fill, and the money and platform chores Today
+   * only shows that gate's holders. A crew member's preview carries neither;
+   * the owner's carries both.
+   */
+  it("keeps Reports-grade facts out of a crew member's email", async () => {
+    const { db, shop, owner, captain, instructor, monday } = await context();
+    // A stuck Stripe call: an ops alert on Today for an owner or manager only.
+    await db.insert(paymentOperationIntents).values({
+      shopId: shop.id,
+      kind: "refund",
+      startedAt: new Date(monday.getTime() - 2 * 24 * 3_600_000),
+    });
+    // A booking made last week, so the owner's email has a last week to report.
+    const [booking] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.shopId, shop.id), ne(bookings.status, "cancelled")))
+      .limit(1);
+    if (!booking) throw new Error("seeded booking missing");
+    await db
+      .update(bookings)
+      .set({ createdAt: new Date(monday.getTime() - 3 * 24 * 3_600_000) })
+      .where(eq(bookings.id, booking.id));
+    const previewFor = async (personId: string) => {
+      const preview = await previewWeeklyDigest(db, {
+        shop,
+        personId,
+        origin: ORIGIN,
+        now: monday,
+      });
+      if (preview?.kind !== "weekly_digest") throw new Error("no preview");
+      return preview;
+    };
+    const overdueOf = (preview: Awaited<ReturnType<typeof previewFor>>) => {
+      const section = preview.sections.find((s) => s.kind === "overdue");
+      return section?.kind === "overdue" ? section.count : 0;
+    };
+
+    const ownerPreview = await previewFor(owner.personId);
+    expect(ownerPreview.sections.map((section) => section.kind)).toContain("last_week");
+    expect(messageFor(ownerPreview).text).toContain(`${ORIGIN}/shop/${shop.slug}/reports`);
+
+    for (const crew of [captain, instructor]) {
+      const crewPreview = await previewFor(crew.personId);
+      const kinds = crewPreview.sections.map((section) => section.kind);
+      expect(kinds).not.toContain("last_week");
+      const { text } = messageFor(crewPreview);
+      expect(text).not.toMatch(/sailed with/);
+      expect(text).not.toContain("/reports");
+      // The owner's overdue count is the crew's plus the stuck Stripe call.
+      expect(overdueOf(ownerPreview)).toBe(overdueOf(crewPreview) + 1);
+    }
   });
 
   it("previews nothing for somebody who is not staff here", async () => {

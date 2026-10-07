@@ -17,10 +17,12 @@ import {
   type DigestWeeks,
   digestWeeks,
   isWeeklyDigestDue,
+  NO_LAST_WEEK,
   overdueTodayActions,
   WEEKLY_DIGEST_SECTION_PATHS,
-  type WeeklyDigestFacts,
+  type WeeklyDigestFactGrades,
   type WeeklyDigestSection,
+  weeklyDigestGrade,
   weeklyDigestSections,
   weeklyDigestWanted,
 } from "@/lib/weekly-digest";
@@ -206,12 +208,16 @@ async function countDateRequestsWaiting(
   return row?.n ?? 0;
 }
 
-/** Everything the email could say about this shop at `now`. */
+/**
+ * Everything the email could say about this shop at `now`, in both grades
+ * (`WeeklyDigestFactGrades`): read once per shop, picked per recipient by
+ * their live roles.
+ */
 export async function readWeeklyDigestFacts(
   db: AppDb,
   shop: WeeklyDigestShop,
   now: Date = nowDate(),
-): Promise<{ weeks: DigestWeeks; facts: WeeklyDigestFacts }> {
+): Promise<{ weeks: DigestWeeks; grades: WeeklyDigestFactGrades }> {
   const weeks = digestWeeks(now, shop.timezone);
 
   const lastWeekReport = await getMonthlyReport(
@@ -238,19 +244,24 @@ export async function readWeeklyDigestFacts(
     }
   }
 
-  const today = await getTodayWork(
-    db,
-    shop.id,
-    shop.slug,
-    shop.timezone,
-    now,
-    undefined,
-    undefined,
-    undefined,
-    true,
-    evidence,
-    shop.diversPerDivemaster,
-  );
+  // Today's queue twice off the one readiness pass: with the owed-refund,
+  // stuck-payment and failed-deletion rows Reports' gate holders see, and
+  // without them for everyone else — the same split the shop home makes.
+  const todayQueue = (includeOpsAlerts: boolean) =>
+    getTodayWork(
+      db,
+      shop.id,
+      shop.slug,
+      shop.timezone,
+      now,
+      undefined,
+      undefined,
+      undefined,
+      includeOpsAlerts,
+      evidence,
+      shop.diversPerDivemaster,
+    );
+  const [reportsToday, staffToday] = await Promise.all([todayQueue(true), todayQueue(false)]);
 
   const [bookingsMade, reviewsReceived, awaiting, dateRequestsWaiting] = await Promise.all([
     countBookingsMade(db, shop.id, weeks.lastWeek.startUtc, weeks.lastWeek.endUtc),
@@ -259,25 +270,47 @@ export async function readWeeklyDigestFacts(
     countDateRequestsWaiting(db, shop.id, weeks, weeks.weekOf),
   ]);
 
+  const shared = {
+    thisWeek: {
+      departures: thisWeekTrips.length,
+      seatsFilled: thisWeekTrips.reduce((sum, trip) => sum + trip.booked, 0),
+      seats: thisWeekTrips.reduce((sum, trip) => sum + trip.capacity, 0),
+    },
+    waiversOutstanding: { divers: owingDivers.size, departures: owingTrips.size },
+    reviews: { received: reviewsReceived, awaitingModeration: awaiting.count },
+    dateRequestsWaiting,
+  };
   return {
     weeks,
-    facts: {
-      lastWeek: {
-        bookingsMade,
-        departures: lastWeekReport.trips.length,
-        seatsFilled: lastWeekReport.trips.reduce((sum, trip) => sum + trip.activeBookings, 0),
-        seats: lastWeekReport.trips.reduce((sum, trip) => sum + trip.capacity, 0),
+    grades: {
+      reports: {
+        ...shared,
+        lastWeek: {
+          bookingsMade,
+          departures: lastWeekReport.trips.length,
+          seatsFilled: lastWeekReport.trips.reduce((sum, trip) => sum + trip.activeBookings, 0),
+          seats: lastWeekReport.trips.reduce((sum, trip) => sum + trip.capacity, 0),
+        },
+        overdueTodayItems: overdueTodayActions(reportsToday.actions, now),
       },
-      thisWeek: {
-        departures: thisWeekTrips.length,
-        seatsFilled: thisWeekTrips.reduce((sum, trip) => sum + trip.booked, 0),
-        seats: thisWeekTrips.reduce((sum, trip) => sum + trip.capacity, 0),
+      staff: {
+        ...shared,
+        lastWeek: NO_LAST_WEEK,
+        overdueTodayItems: overdueTodayActions(staffToday.actions, now),
       },
-      waiversOutstanding: { divers: owingDivers.size, departures: owingTrips.size },
-      reviews: { received: reviewsReceived, awaitingModeration: awaiting.count },
-      dateRequestsWaiting,
-      overdueTodayItems: overdueTodayActions(today.actions, now),
     },
+  };
+}
+
+/** Each grade's sections, linked once per shop rather than once per recipient. */
+function linkedGrades(
+  grades: WeeklyDigestFactGrades,
+  origin: string,
+  shopSlug: string,
+): { reports: WeeklyDigestEmailSection[]; staff: WeeklyDigestEmailSection[] } {
+  return {
+    reports: digestSectionsWithLinks(weeklyDigestSections(grades.reports), origin, shopSlug),
+    staff: digestSectionsWithLinks(weeklyDigestSections(grades.staff), origin, shopSlug),
   };
 }
 
@@ -346,14 +379,16 @@ export async function previewWeeklyDigest(
     (person) => person.personId === input.personId,
   );
   if (!recipient) return null;
-  const { weeks, facts } = await readWeeklyDigestFacts(db, input.shop, input.now ?? nowDate());
-  const sections = weeklyDigestSections(facts);
+  const { weeks, grades } = await readWeeklyDigestFacts(db, input.shop, input.now ?? nowDate());
+  const sections = linkedGrades(grades, input.origin, input.shop.slug)[
+    weeklyDigestGrade(recipient.roles)
+  ];
   if (sections.length === 0) return null;
   return digestNotification({
     shop: input.shop,
     recipient,
     weeks,
-    sections: digestSectionsWithLinks(sections, input.origin, input.shop.slug),
+    sections,
     origin: input.origin,
     turnOffUrl: `${input.origin}${weeklyDigestSettingsPath(input.shop.slug)}`,
   });
@@ -414,15 +449,18 @@ export async function sendWeeklyDigestForShop(
   // are the expensive half, and nobody is left to send them to.
   if (pending.length === 0) return summary;
 
-  const { weeks, facts } = await readWeeklyDigestFacts(db, shop, now);
-  const sections = weeklyDigestSections(facts);
-  if (sections.length === 0) {
+  const { weeks, grades } = await readWeeklyDigestFacts(db, shop, now);
+  const linked = linkedGrades(grades, options.origin, shop.slug);
+  if (linked.reports.length === 0 && linked.staff.length === 0) {
     summary.quiet = true;
     return summary;
   }
-  const linked = digestSectionsWithLinks(sections, options.origin, shop.slug);
 
   for (const recipient of pending) {
+    const sections = linked[weeklyDigestGrade(recipient.roles)];
+    // Nothing this person may read happened: no email, and no claim, so a
+    // later pass the same morning asks again rather than remembering a send.
+    if (sections.length === 0) continue;
     const token = createBearerToken();
     const [claim] = await db
       .insert(weeklyDigestSends)
@@ -444,7 +482,7 @@ export async function sendWeeklyDigestForShop(
         shop,
         recipient,
         weeks,
-        sections: linked,
+        sections,
         origin: options.origin,
         turnOffUrl: `${options.origin}/unsubscribe/${token}`,
       }),
@@ -591,7 +629,14 @@ export async function resolveWeeklyDigestUnsubscribeToken(
     .innerJoin(people, eq(people.id, weeklyDigestSends.personId))
     .innerJoin(shops, eq(shops.id, people.shopId))
     .innerJoin(userAccounts, eq(userAccounts.personId, people.id))
-    .where(eq(weeklyDigestSends.unsubscribeTokenHash, hashBearerToken(token)))
+    .where(
+      and(
+        eq(weeklyDigestSends.unsubscribeTokenHash, hashBearerToken(token)),
+        // A deleted person's link is not available: the account it would turn
+        // off belongs to nobody the shop still has.
+        isNull(people.deletedAt),
+      ),
+    )
     .limit(1);
   if (!row || row.claimShopId !== row.personShopId) return null;
   return { shopName: row.shopName, personId: row.personId, alreadyOff: row.choice === false };

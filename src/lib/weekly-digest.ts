@@ -1,4 +1,4 @@
-import type { Role } from "@/lib/authz";
+import { canViewShopReports, type Role } from "@/lib/authz";
 import {
   type CalendarDate,
   calendarDateInTimezone,
@@ -134,6 +134,32 @@ export type WeeklyDigestFacts = {
   reviews: { received: number; awaitingModeration: number };
   dateRequestsWaiting: number;
   overdueTodayItems: number;
+};
+
+/**
+ * The same week told twice: once for someone who may read Reports and once
+ * for everyone else. Reports' gate (`canViewShopReports`) decides two things in
+ * the email — last week's bookings and seat fill, whose link is Reports itself,
+ * and the money and platform chores Today only shows that gate's holders
+ * (`includeOpsAlerts`). Opt-in stays open to all staff; what a crew member who
+ * asked for the email reads is the staff-grade week.
+ */
+export type WeeklyDigestFactGrades = {
+  reports: WeeklyDigestFacts;
+  staff: WeeklyDigestFacts;
+};
+
+/** Which grade of the week this person may read, by their live roles. */
+export function weeklyDigestGrade(roles: readonly Role[]): keyof WeeklyDigestFactGrades {
+  return canViewShopReports(roles) ? "reports" : "staff";
+}
+
+/** The staff-grade last week: nothing, so the Reports section is never built. */
+export const NO_LAST_WEEK: WeeklyDigestFacts["lastWeek"] = {
+  bookingsMade: 0,
+  departures: 0,
+  seatsFilled: 0,
+  seats: 0,
 };
 
 export type WeeklyDigestSection =

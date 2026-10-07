@@ -19,12 +19,19 @@ import { isLiveShopStaff, requireShopSurface } from "@/lib/session";
  * A Route Handler rather than a page because the answer is a whole HTML
  * document, chrome and all, which is what an inbox would render.
  */
-export async function GET(request: Request, { params }: { params: Promise<{ shopSlug: string }> }) {
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ shopSlug: string }> },
+) {
   const { shopSlug } = await params;
   const { db, shop, session } = await requireShopSurface(shopSlug);
   if (!(await isLiveShopStaff(db, shop.id, session))) return new Response(null, { status: 404 });
 
-  const origin = publicAppUrl() ?? new URL(request.url).origin;
+  // Every link in the email is built from the configured origin, never the
+  // request's: a Host-header origin is how a link gets pointed at someone
+  // else's server. A deploy without a valid one has no preview to give.
+  const origin = publicAppUrl();
+  if (!origin) return new Response(null, { status: 503 });
   const preview = await previewWeeklyDigest(db, {
     shop,
     personId: session.user.personId,

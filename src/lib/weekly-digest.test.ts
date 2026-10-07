@@ -6,6 +6,7 @@ import {
   overdueTodayActions,
   seatFillPercent,
   type WeeklyDigestFacts,
+  weeklyDigestGrade,
   weeklyDigestSections,
   weeklyDigestWanted,
 } from "./weekly-digest";
@@ -215,5 +216,15 @@ describe("seatFillPercent", () => {
 
   it("has no percentage for a week with no seats", () => {
     expect(seatFillPercent(0, 0)).toBeNull();
+  });
+});
+
+describe("weeklyDigestGrade", () => {
+  it("gives the Reports-grade week only to someone Reports' gate admits", () => {
+    expect(weeklyDigestGrade(["owner"])).toBe("reports");
+    expect(weeklyDigestGrade(["manager"])).toBe("reports");
+    expect(weeklyDigestGrade(["captain"])).toBe("staff");
+    expect(weeklyDigestGrade(["instructor", "divemaster"])).toBe("staff");
+    expect(weeklyDigestGrade([])).toBe("staff");
   });
 });
