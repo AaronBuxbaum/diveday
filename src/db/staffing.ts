@@ -2,6 +2,7 @@ import { and, asc, count, eq, gt, inArray, isNull, lt, ne } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
+import type { InWaterCrewCount } from "@/lib/crew-roles";
 import {
   DEFAULT_DIVERS_PER_DIVEMASTER,
   divemasterRatioGap,
@@ -342,9 +343,9 @@ export async function getStaffingView(
   // week places in their own day cells. They cannot disagree, because the
   // count *is* the list's length.
   const gapTrips: StaffingGapTrip[] = [];
-  for (const entry of tripMap.values()) {
-    if (entry.trip.endsAt < sailedBefore) continue;
-    const counts = crewCounts.get(entry.trip.id) ?? NO_SUPERVISION;
+  // The one decision this walk makes, for one departure and one count — asked
+  // of both claims below (issue #1853).
+  const gapCodeFor = (entry: TripEntry, counts: InWaterCrewCount): StaffGapCode | null => {
     // The agency training ratio first, exactly as Today orders them: a course
     // session missing its instructor is the more precise fact, and firing the
     // shop's own target underneath it would name one gap in two vocabularies.
@@ -354,15 +355,6 @@ export async function getStaffingView(
       assistantCount: counts.assistantCount,
       booked: entry.booked,
     });
-    const place = (gap: StaffGapCode) =>
-      gapTrips.push({
-        tripId: entry.trip.id,
-        title: entry.trip.title,
-        startsAt: entry.trip.startsAt,
-        gap,
-        meetings: meetingsFor(entry.trip),
-        ratingLapsed: counts.lapsed.length > 0,
-      });
     // Then the shop's own target, which reaches every departure it runs rather
     // than only the courses — and which owns the two exemptions this walk used
     // to miss: a self-guided departure, and one with nobody booked. Computed
@@ -409,21 +401,36 @@ export async function getStaffingView(
     // `ceil(divers / ratio) >= 1` across the whole legal range, so
     // `under_target` always holds and only the two exemptions decide.
     if (ratioGap.code === "under_target" && ratioGap.divemasterCount === 0) {
-      place(courseGap.code === "no_instructor" ? "uncrewed_course" : "uncrewed_departure");
-      continue;
+      return courseGap.code === "no_instructor" ? "uncrewed_course" : "uncrewed_departure";
     }
     // Through the mapper, not `courseGap.code`: the code the chip renders has
     // to keep the intro cap apart from the entry-level one, and placing the
     // raw code threw `ratio` away (issue #1339, `staffGapForCourseGap`).
     const courseGapCode = staffGapForCourseGap(courseGap);
-    if (courseGapCode) {
-      place(courseGapCode);
-      continue;
-    }
-    if (ratioGap.code === "none") continue;
+    if (courseGapCode) return courseGapCode;
+    if (ratioGap.code === "none") return null;
     // Short of the shop's target but not empty — the zero case returned above,
     // so this is Today's quieter of the two words by construction.
-    place("crew_below_target");
+    return "crew_below_target";
+  };
+  for (const entry of tripMap.values()) {
+    if (entry.trip.endsAt < sailedBefore) continue;
+    const counts = crewCounts.get(entry.trip.id) ?? NO_SUPERVISION;
+    // **One decision, asked of both claims** (issue #1853). The code placed is
+    // the supervision claim's; the same decision on the roster's claim says
+    // whether a lapse is what opened it, so the chip names a lapse only on a
+    // gap the roster would not have drawn — never on every departure where
+    // somebody aboard holds a card that isn't current.
+    const gap = gapCodeFor(entry, counts);
+    if (gap === null) continue;
+    gapTrips.push({
+      tripId: entry.trip.id,
+      title: entry.trip.title,
+      startsAt: entry.trip.startsAt,
+      gap,
+      meetings: meetingsFor(entry.trip),
+      ratingLapsed: gapCodeFor(entry, counts.roster) !== gap,
+    });
   }
   gapTrips.sort(
     (a, b) => a.startsAt.getTime() - b.startsAt.getTime() || compareByTitleThenId(a, b),

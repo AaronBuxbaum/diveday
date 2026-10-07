@@ -96,19 +96,20 @@ describe("a rating that lapses before the departure", () => {
         crewGapCode="no_instructor"
         copy={{
           ...COPY,
-          ratingLapsedNote: "Keiko Tanaka has a rating that lapses before this departure.",
+          ratingLapsedNote: "Keiko Tanaka has a rating that isn’t current for this departure.",
         }}
       />,
     );
     expect(screen.getByText("This course needs an instructor.")).toBeTruthy();
     expect(
-      screen.getByText("Keiko Tanaka has a rating that lapses before this departure.").className,
+      screen.getByText("Keiko Tanaka has a rating that isn’t current for this departure.")
+        .className,
     ).toBe(INSET_NOTE_CLASS);
   });
 
   it("says nothing when no rating lapses", () => {
     render(<CrewSection {...props} crewGapCode="none" copy={COPY} />);
-    expect(screen.queryByText(/lapses before this departure/)).toBeNull();
+    expect(screen.queryByText(/isn’t current for this departure/)).toBeNull();
   });
 });
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  countBothClaims,
   countInWaterCrew,
   effectiveCrewRoles,
   groupCrewAssignments,
@@ -8,6 +9,7 @@ import {
   lapsedRungs,
   lastDayOfDeparture,
   narrowedByLapse,
+  rungLostToLapse,
   standingRatingsBesideJob,
   TRIP_CREW_ROLES,
 } from "./crew-roles";
@@ -410,6 +412,38 @@ describe("narrowedByLapse", () => {
     ).toBe(false);
     expect(narrowedByLapse({ shopRoles: ["instructor"] })).toBe(false);
     expect(narrowedByLapse({ shopRoles: ["instructor"], lapsedRungs: [] })).toBe(false);
+  });
+});
+
+describe("rungLostToLapse", () => {
+  it("names the rung the roster gave and the lapse took", () => {
+    const both: LapsedRung[] = ["instructor", "certified_assistant"];
+    expect(rungLostToLapse({ shopRoles: ["instructor"], lapsedRungs: both })).toBe("instructor");
+    // Down one rung, not two: still the instructor rung that was lost.
+    expect(rungLostToLapse({ shopRoles: ["instructor"], lapsedRungs: ["instructor"] })).toBe(
+      "instructor",
+    );
+    // A divemaster's lapse is never why a session has no instructor.
+    expect(
+      rungLostToLapse({ shopRoles: ["divemaster"], lapsedRungs: ["certified_assistant"] }),
+    ).toBe("certified_assistant");
+    expect(
+      rungLostToLapse({ tripRole: "captain", shopRoles: ["divemaster"], lapsedRungs: both }),
+    ).toBe(null);
+  });
+});
+
+describe("countBothClaims", () => {
+  it("counts the supervision claim and the roster's claim side by side", () => {
+    expect(
+      countBothClaims([
+        { shopRoles: ["instructor"], lapsedRungs: ["instructor", "certified_assistant"] },
+        { shopRoles: ["divemaster"] },
+      ]),
+    ).toEqual({
+      supervision: { instructorCount: 0, assistantCount: 1 },
+      roster: { instructorCount: 1, assistantCount: 1 },
+    });
   });
 });
 

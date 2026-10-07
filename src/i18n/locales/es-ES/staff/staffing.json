@@ -98,7 +98,7 @@
     "next": "Semana siguiente",
     "person": "Persona",
     "previous": "Semana anterior",
-    "ratingLapsed": "Una titulación del equipo vence antes",
+    "ratingLapsed": "Una titulación de la tripulación no está vigente",
     "request": "Pedir esta salida",
     "requestApproved": "Aprobado",
     "requestAria": "Pedir trabajar en {trip}",

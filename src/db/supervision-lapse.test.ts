@@ -42,16 +42,26 @@ const SESSION_OFFSET_MS = 180 * 24 * HOUR_MS;
 
 let seq = 0;
 
-async function instructor(db: AppDb, shopId: string, name: string): Promise<string> {
+async function staffer(
+  db: AppDb,
+  shopId: string,
+  name: string,
+  role: "instructor" | "divemaster",
+): Promise<string> {
   seq += 1;
   const [person] = await db
     .insert(people)
-    .values({ shopId, fullName: name, email: `lapse-instructor-${seq}@example.com` })
+    .values({ shopId, fullName: name, email: `lapse-staff-${seq}@example.com` })
     .returning();
-  if (!person) throw new Error("failed to insert instructor");
-  await db.insert(personRoles).values({ personId: person.id, role: "instructor" });
+  if (!person) throw new Error("failed to insert staffer");
+  await db.insert(personRoles).values({ personId: person.id, role });
   return person.id;
 }
+
+const instructor = (db: AppDb, shopId: string, name: string) =>
+  staffer(db, shopId, name, "instructor");
+const divemaster = (db: AppDb, shopId: string, name: string) =>
+  staffer(db, shopId, name, "divemaster");
 
 async function rating(
   db: AppDb,
@@ -83,7 +93,7 @@ async function seat(db: AppDb, shopId: string, tripId: string, count: number) {
   }
 }
 
-/** An Open Water session with the given instructors rostered and nobody else. */
+/** An Open Water session with the given crew rostered and nobody else. */
 async function session(
   db: AppDb,
   shopId: string,
@@ -92,6 +102,7 @@ async function session(
     startsAt: new Date(nowMs() + SESSION_OFFSET_MS),
     endsAt: new Date(nowMs() + SESSION_OFFSET_MS + 4 * HOUR_MS),
   },
+  kind: "course" | "fun_dive" = "course",
 ) {
   const [course] = await db
     .select()
@@ -101,7 +112,7 @@ async function session(
   seq += 1;
   const trip = await createTrip(db, {
     shopId,
-    courseId: course.id,
+    ...(kind === "course" ? { courseId: course.id } : {}),
     title: `Lapse session ${seq}`,
     ...window,
     capacity: 20,
@@ -133,6 +144,7 @@ describe("the supervision count reads recorded ratings (issue #1853)", () => {
     expect(await countsFor(db, shop.id, trip.id)).toEqual({
       instructorCount: 1,
       assistantCount: 0,
+      roster: { instructorCount: 1, assistantCount: 0 },
       lapsed: [],
     });
 
@@ -143,7 +155,8 @@ describe("the supervision count reads recorded ratings (issue #1853)", () => {
     expect(await countsFor(db, shop.id, trip.id)).toEqual({
       instructorCount: 0,
       assistantCount: 0,
-      lapsed: [{ personId: keiko, fullName: "Keiko Tanaka" }],
+      roster: { instructorCount: 1, assistantCount: 0 },
+      lapsed: [{ personId: keiko, fullName: "Keiko Tanaka", lost: "instructor" }],
     });
   });
 
@@ -185,6 +198,7 @@ describe("the supervision count reads recorded ratings (issue #1853)", () => {
     expect(await countsFor(db, shop.id, trip.id)).toEqual({
       instructorCount: 2,
       assistantCount: 0,
+      roster: { instructorCount: 2, assistantCount: 0 },
       lapsed: [],
     });
   });
@@ -201,7 +215,8 @@ describe("the supervision count reads recorded ratings (issue #1853)", () => {
     expect(await countsFor(db, shop.id, trip.id)).toEqual({
       instructorCount: 1,
       assistantCount: 0,
-      lapsed: [{ personId: lapsed, fullName: "Bo Lapsed" }],
+      roster: { instructorCount: 2, assistantCount: 0 },
+      lapsed: [{ personId: lapsed, fullName: "Bo Lapsed", lost: "instructor" }],
     });
   });
 
@@ -293,7 +308,7 @@ describe("the surfaces that state the claim say why (issue #1853)", () => {
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
     const row = work.actions.find((action) => action.id === `instructor:${trip.id}`);
     expect(row?.kind).toBe("instructor_missing");
-    expect(row?.detail).toBe("Keiko Tanaka has a rating that lapses before this departure.");
+    expect(row?.detail).toBe("Keiko Tanaka has a rating that isn’t current for this departure.");
   });
 
   it("names the lapsed instructor in the trip page's crew panel", async () => {
@@ -312,6 +327,128 @@ describe("the surfaces that state the claim say why (issue #1853)", () => {
     expect(overview?.crew.inWaterCrew).toEqual({ instructorCount: 0, assistantCount: 0 });
     expect(overview?.crew.crewGap.code).toBe("no_instructor");
     expect(overview?.crew.lapsedCrew).toEqual([{ personId: keiko, fullName: "Keiko Tanaka" }]);
+  });
+});
+
+/**
+ * Dive-domain review of #1853: a lapse is named only on the gap it opened.
+ * Somebody aboard holding a card that isn't current is not, by itself, why a
+ * session has no instructor rostered — and the shop's own divemaster target,
+ * on a fun dive, reads the same narrowed count.
+ */
+describe("a lapse is said only where it opened the gap", () => {
+  const dayBefore = (trip: { endsAt: Date }, timeZone: string) =>
+    shiftCalendarDate(lastDayOfDeparture(trip.endsAt, timeZone), -1);
+
+  it("still says no instructor is assigned when nobody rostered one, whoever else lapsed", async () => {
+    const { db, shop } = await seededShopContext();
+    const bea = await divemaster(db, shop.id, "Bea Lapsed");
+    const cal = await divemaster(db, shop.id, "Cal Current");
+    const startsAt = new Date(nowMs() + 3 * HOUR_MS);
+    const trip = await session(db, shop.id, [bea, cal], {
+      startsAt,
+      endsAt: new Date(startsAt.getTime() + 4 * HOUR_MS),
+    });
+    await seat(db, shop.id, trip.id, 2);
+    await rating(db, shop.id, bea, dayBefore(trip, shop.timezone), "divemaster_rating");
+
+    // Bea is counted out — and named as the rung she lost…
+    expect((await countsFor(db, shop.id, trip.id)).lapsed).toEqual([
+      { personId: bea, fullName: "Bea Lapsed", lost: "certified_assistant" },
+    ]);
+    // …but she is not why the session has no instructor.
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const row = work.actions.find((action) => action.id === `instructor:${trip.id}`);
+    expect(row?.detail).toBe("No instructor assigned.");
+
+    const view = await getStaffingView(
+      db,
+      shop.id,
+      new Date(trip.startsAt.getTime() - HOUR_MS),
+      new Date(trip.endsAt.getTime() + HOUR_MS),
+    );
+    expect(view.gapTrips.filter((gap) => gap.tripId === trip.id)).toEqual([
+      expect.objectContaining({ tripId: trip.id, gap: "no_instructor", ratingLapsed: false }),
+    ]);
+  });
+
+  it("counts a lapsed divemaster out of a fun dive's crew, everywhere the target is read", async () => {
+    const { db, shop } = await seededShopContext();
+    const bea = await divemaster(db, shop.id, "Bea Lapsed");
+    const startsAt = new Date(nowMs() + 3 * HOUR_MS);
+    const trip = await session(
+      db,
+      shop.id,
+      [bea],
+      { startsAt, endsAt: new Date(startsAt.getTime() + 4 * HOUR_MS) },
+      "fun_dive",
+    );
+    await seat(db, shop.id, trip.id, 4);
+    await rating(db, shop.id, bea, dayBefore(trip, shop.timezone), "divemaster_rating");
+
+    // Today: nobody current in the water, and the lapse is why.
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const row = work.actions.find((action) => action.id === `uncrewed:${trip.id}`);
+    expect(row?.kind).toBe("uncrewed_departure");
+    expect(row?.detail).toContain("Bea Lapsed has a rating that isn’t current for this departure.");
+
+    // The trip page's own target reads the same narrowed count.
+    const overview = await getTripOverview(db, shop, trip.id, bea);
+    expect(overview?.crew.ratioGap).toMatchObject({ code: "under_target", divemasterCount: 0 });
+
+    const view = await getStaffingView(
+      db,
+      shop.id,
+      new Date(trip.startsAt.getTime() - HOUR_MS),
+      new Date(trip.endsAt.getTime() + HOUR_MS),
+    );
+    expect(view.gapTrips.filter((gap) => gap.tripId === trip.id)).toEqual([
+      expect.objectContaining({ tripId: trip.id, gap: "uncrewed_departure", ratingLapsed: true }),
+    ]);
+  });
+
+  it("puts a fun dive under the shop's target when one of its two divemasters lapsed", async () => {
+    const { db, shop } = await seededShopContext();
+    const bea = await divemaster(db, shop.id, "Bea Lapsed");
+    const cal = await divemaster(db, shop.id, "Cal Current");
+    const startsAt = new Date(nowMs() + 3 * HOUR_MS);
+    const trip = await session(
+      db,
+      shop.id,
+      [bea, cal],
+      { startsAt, endsAt: new Date(startsAt.getTime() + 4 * HOUR_MS) },
+      "fun_dive",
+    );
+    // Two divemasters cover twelve at Today's default 6:1; one does not.
+    await seat(db, shop.id, trip.id, 12);
+    await rating(db, shop.id, bea, dayBefore(trip, shop.timezone), "divemaster_rating");
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const row = work.actions.find((action) => action.id === `crew-target:${trip.id}`);
+    expect(row?.kind).toBe("crew_below_target");
+    expect(row?.detail).toContain("Bea Lapsed has a rating that isn’t current for this departure.");
+  });
+
+  it("does not name a lapse beside a target the roster was already short of", async () => {
+    const { db, shop } = await seededShopContext();
+    const bea = await divemaster(db, shop.id, "Bea Lapsed");
+    const cal = await divemaster(db, shop.id, "Cal Current");
+    const startsAt = new Date(nowMs() + 3 * HOUR_MS);
+    const trip = await session(
+      db,
+      shop.id,
+      [bea, cal],
+      { startsAt, endsAt: new Date(startsAt.getTime() + 4 * HOUR_MS) },
+      "fun_dive",
+    );
+    // Eighteen wants three at 6:1: short with Bea counted, short without her.
+    await seat(db, shop.id, trip.id, 18);
+    await rating(db, shop.id, bea, dayBefore(trip, shop.timezone), "divemaster_rating");
+
+    const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+    const row = work.actions.find((action) => action.id === `crew-target:${trip.id}`);
+    expect(row?.kind).toBe("crew_below_target");
+    expect(row?.detail).not.toContain("isn’t current");
   });
 });
 

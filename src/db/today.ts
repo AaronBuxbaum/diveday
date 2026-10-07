@@ -66,13 +66,14 @@ import {
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
 import {
-  countInWaterCrew,
+  countBothClaims,
   effectiveCrewRoles,
   groupCrewAssignments,
   type InWaterCrewCount,
+  type LapsedRung,
   lapsedRungs,
   lastDayOfDeparture,
-  narrowedByLapse,
+  rungLostToLapse,
 } from "@/lib/crew-roles";
 import type { DiveIntentCount } from "@/lib/dive-intent";
 import {
@@ -1209,18 +1210,21 @@ export async function courseCrewCountsByTrip(
       lapsedRungs:
         divesOn === null ? [] : lapsedRungs(credentials.get(member.personId) ?? [], divesOn),
     }));
-    counts.set(tripId, {
-      ...countInWaterCrew(members),
-      lapsed: members
-        .filter(narrowedByLapse)
-        .map((member) => ({
-          personId: member.personId,
-          fullName: nameByPerson.get(member.personId) ?? "",
-        }))
-        // Names in a stable order, so the sentence that lists them does not
-        // reshuffle between loads.
-        .sort(byNameThenId),
-    });
+    const { supervision, roster } = countBothClaims(members);
+    const lapsed: SupervisionCrewCount["lapsed"] = [];
+    for (const member of members) {
+      const lost = rungLostToLapse(member);
+      if (lost === null) continue;
+      lapsed.push({
+        personId: member.personId,
+        fullName: nameByPerson.get(member.personId) ?? "",
+        lost,
+      });
+    }
+    // Names in a stable order, so the sentence that lists them does not
+    // reshuffle between loads.
+    lapsed.sort(byNameThenId);
+    counts.set(tripId, { ...supervision, roster, lapsed });
   }
   return counts;
 }
@@ -1235,17 +1239,21 @@ function byNameThenId(
 
 /**
  * The supervision claim for one departure: the in-water counts with every
- * rostered professional's recorded ratings read, and who a lapse took down a
- * rung (issue #1853). Empty `lapsed` means the count is the roster's own.
+ * rostered professional's recorded ratings read, the roster's claim beside it
+ * (the same count with none read), and who a lapse took down a rung and which
+ * rung (issue #1853). A surface says a gap is a lapse's only when the two
+ * claims disagree about that gap.
  */
 export type SupervisionCrewCount = InWaterCrewCount & {
-  lapsed: { personId: string; fullName: string }[];
+  roster: InWaterCrewCount;
+  lapsed: { personId: string; fullName: string; lost: LapsedRung }[];
 };
 
 /** A departure nobody is rostered on: nobody in the water, nobody lapsed. */
 export const NO_SUPERVISION: SupervisionCrewCount = {
   instructorCount: 0,
   assistantCount: 0,
+  roster: { instructorCount: 0, assistantCount: 0 },
   lapsed: [],
 };
 
@@ -2008,15 +2016,37 @@ export async function getTodayWork(
     // shop-set preference deciding whether a supervision signal appears would
     // be alarming; it cannot.
     const uncrewed = ratioGap.code === "under_target" && ratioGap.divemasterCount === 0;
-    // **A gap a lapse opened says so** (issue #1853). `counts` reads each
-    // rostered professional's recorded ratings, so a crew list with an
-    // instructor's name on it can still raise these rows; without the sentence
-    // they read as a crew nobody had filled in. Never a refusal — the booking
-    // gate still reads the roster's claim (H-59).
+    // **A gap a lapse opened says so, and only that gap** (issue #1853).
+    // `counts` reads each rostered professional's recorded ratings, so a crew
+    // list with an instructor's name on it can still raise these rows. The
+    // same three answers are taken again on the roster's claim, and a row
+    // carries the lapse only when the roster would not have raised it: a
+    // divemaster's lapsed card beside a session nobody rostered an instructor
+    // on is not why it has no instructor (dive-domain review). Never a refusal
+    // — the booking gate still reads the roster's claim (H-59).
+    const rosterCrewGap = courseCrewGap({
+      course: trip.course,
+      instructorCount: counts.roster.instructorCount,
+      assistantCount: counts.roster.assistantCount,
+      booked: trip.booked,
+    });
+    const rosterRatioGap = divemasterRatioGap({
+      divers: trip.booked,
+      divemasterCount: inWaterDivemasterCount(counts.roster),
+      diversPerDivemaster,
+      selfGuided: trip.selfGuided,
+    });
+    const rosterUncrewed =
+      rosterRatioGap.code === "under_target" && rosterRatioGap.divemasterCount === 0;
     const lapseNote =
       counts.lapsed.length > 0 ? ratingLapsedDetailText(t, locale, counts.lapsed) : null;
-    const explained = (detail: string) => (lapseNote ? `${detail} ${lapseNote}` : detail);
+    const explainedIf = (opened: boolean, detail: string) =>
+      opened && lapseNote ? `${detail} ${lapseNote}` : detail;
+    // Who lost the instructor rung — the only people who can be why a session
+    // reads as having no instructor.
+    const lostInstructor = counts.lapsed.filter((member) => member.lost === "instructor");
     if (crewGap.code !== "none" && !uncrewed) {
+      const opened = rosterCrewGap.code !== crewGap.code || rosterUncrewed;
       actions.push({
         id: `instructor:${trip.id}`,
         kind: "instructor_missing",
@@ -2033,14 +2063,19 @@ export async function getTodayWork(
               // 8-plus-2 and tells staff to add an assistant — would both
               // misquote a standard and prescribe a fix that changes nothing.
               // Each rule gets its own sentence.
-              explained(
+              explainedIf(
+                opened,
                 crewGap.ratio === "intro"
                   ? overRatioIntroDetailText(t, crewGap.booked, crewGap.capacity)
                   : overRatioDetailText(t, crewGap.booked, crewGap.capacity),
               )
             : // "No instructor assigned" is false beside a lapsed instructor's
-              // name, so the lapse is the whole sentence.
-              (lapseNote ?? instructorMissingDetailText(t)),
+              // name, so when one lost the rung the lapse is the whole
+              // sentence. When nobody did, the session has no instructor
+              // rostered at all, and that is what it says.
+              opened && lostInstructor.length > 0
+              ? ratingLapsedDetailText(t, locale, lostInstructor)
+              : instructorMissingDetailText(t),
         actionLabel: openCrewActionText(t),
         // The trip's crew editor, not the bare Overview it used to land on
         // (Lens 17 task 139) — the fix for either gap lives right there.
@@ -2088,7 +2123,8 @@ export async function getTodayWork(
           context: when,
           departure,
           aboutDeparture: true,
-          detail: explained(
+          detail: explainedIf(
+            !rosterUncrewed,
             course
               ? uncrewedCourseDetailText(t, ratioGap.divers)
               : uncrewedDepartureDetailText(t, ratioGap.divers),
@@ -2106,7 +2142,8 @@ export async function getTodayWork(
           context: when,
           departure,
           aboutDeparture: true,
-          detail: explained(
+          detail: explainedIf(
+            rosterRatioGap.code === "none",
             crewBelowTargetDetailText(
               t,
               ratioGap.divers,

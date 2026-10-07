@@ -306,8 +306,40 @@ export function countInWaterCrew(members: Iterable<TripCrewAssignment>): InWater
  * opened is explained rather than shown as one more shortfall.
  */
 export function narrowedByLapse(member: TripCrewAssignment): boolean {
-  if (!member.lapsedRungs || member.lapsedRungs.length === 0) return false;
-  return inWaterCrewRole(member) !== inWaterCrewRole({ ...member, lapsedRungs: undefined });
+  return rungLostToLapse(member) !== null;
+}
+
+/**
+ * The rung a recorded lapse took this person off — what the roster says they
+ * are worth, when the count with their credentials read is less — or null.
+ *
+ * Which rung matters to the sentence a surface may say: only somebody who lost
+ * the **instructor** rung can be why a session reads "no instructor". A
+ * divemaster's lapse beside a session nobody rostered an instructor on is a
+ * different fact, and saying it in place of "No instructor assigned" hid the
+ * real gap (dive-domain review of issue #1853).
+ */
+export function rungLostToLapse(member: TripCrewAssignment): LapsedRung | null {
+  if (!member.lapsedRungs || member.lapsedRungs.length === 0) return null;
+  const roster = inWaterCrewRole({ ...member, lapsedRungs: undefined });
+  if (roster === "none" || inWaterCrewRole(member) === roster) return null;
+  return roster;
+}
+
+/**
+ * The same count twice: the supervision claim (credentials read) and the
+ * roster's claim (none read). A surface flags a gap as a lapse's only when the
+ * two claims disagree about that gap, never merely because somebody aboard has
+ * a lapsed card.
+ */
+export function countBothClaims(members: readonly TripCrewAssignment[]): {
+  supervision: InWaterCrewCount;
+  roster: InWaterCrewCount;
+} {
+  return {
+    supervision: countInWaterCrew(members),
+    roster: countInWaterCrew(members.map((member) => ({ ...member, lapsedRungs: undefined }))),
+  };
 }
 
 /**

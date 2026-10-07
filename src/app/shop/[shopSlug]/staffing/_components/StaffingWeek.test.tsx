@@ -57,7 +57,7 @@ const WORDS: StaffingWeekWords = {
   requestDeclined: "Declined",
   askWontClose: "You add no seats to this session. Only another instructor does.",
   requestWontClose: "Approving this one won’t close the gap. Only an instructor adds seats.",
-  ratingLapsed: "A crew rating lapses first",
+  ratingLapsed: "A crew rating isn’t current",
 };
 
 const GAP_WORDS: GapWords = {
@@ -173,11 +173,11 @@ describe("StaffingWeek", () => {
    */
   it("says a lapsed rating is why a crewed departure is short, and only then", () => {
     renderWeek({ gaps: [{ ...GAP, gap: "uncrewed_course", ratingLapsed: true }] });
-    expect(screen.getAllByText("A crew rating lapses first").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("A crew rating isn’t current").length).toBeGreaterThan(0);
     cleanup();
 
     renderWeek({ gaps: [{ ...GAP, gap: "uncrewed_course" }] });
-    expect(screen.queryByText("A crew rating lapses first")).toBeNull();
+    expect(screen.queryByText("A crew rating isn’t current")).toBeNull();
   });
 
   it("says nothing about crew when every departure has some", () => {
