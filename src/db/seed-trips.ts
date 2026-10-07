@@ -440,6 +440,11 @@ export async function seedTrips(
   );
   const captainId = crewByRole.get("captain");
   const divemasterId = crewByRole.get("divemaster");
+  // The second pair of eyes in the water. Six divers per supervisor is the
+  // shop's default target, and the demo boats carry eight or nine, so with the
+  // divemaster alone every charter opened Today and the Crew view on "Under
+  // target" (UX audit 2026-10-07, item 4).
+  const assistantId = crewByRole.get("assistant_instructor");
   /**
    * The job each person is doing on this sailing, not just who is aboard
    * (DOM-M3, ADR 20260803-per-trip-crew-role). Deliberately *varied*: a seed
@@ -539,6 +544,17 @@ export async function seedTrips(
                 tripId: trip.id,
                 personId: divemasterId,
                 tripRole: divemasterRole,
+              } satisfies CrewRow,
+            ]
+          : []),
+        // Not on the DOM-M3 charter, whose point is that nobody aboard is
+        // supervising in the water.
+        ...(assistantId && nth !== DOM_M3_CHARTER
+          ? [
+              {
+                tripId: trip.id,
+                personId: assistantId,
+                tripRole: nth === 1 ? null : ("divemaster" as TripAssignmentRole),
               } satisfies CrewRow,
             ]
           : []),

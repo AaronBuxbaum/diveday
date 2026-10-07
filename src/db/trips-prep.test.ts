@@ -76,12 +76,17 @@ describe("getTripPrep", () => {
    * hand it were covered only by Playwright — and they are what says how many
    * tanks go on the boat.
    *
-   * The seed already states the case: the reef trip's crew is a divemaster and a
-   * captain, and only one of them gets wet.
+   * The mixed case is set here rather than read off the seed: the reef boat
+   * now also carries the assistant instructor in the water (UX audit
+   * 2026-10-07, item 4), and the test is about the dry captain.
    */
   describe("only the crew who actually dive count toward the tanks", () => {
     it("leaves the dry half of a mixed crew off the tank count", async () => {
       const ctx = await context();
+      await setTripCrew(ctx.db, ctx.shop.id, ctx.tripId, [
+        ctx.byRole("divemaster"),
+        ctx.byRole("captain"),
+      ]);
       const prep = await prepFor(ctx);
       // Keiko (divemaster) and Sal (captain) are both assigned; one tank, not two.
       expect(prep.checklist.crewCount).toBe(1);
