@@ -218,7 +218,7 @@ const RINGED = new Set(["a", "button", "input", "select", "textarea", "summary"]
 /**
  * `[file, anchor in the element's class string, the class in the same file that
  * draws its focus instead]`. Which element wears that class is pinned by the
- * component's own rendered test (table.test.tsx, TipAmountPicker.test.tsx).
+ * component's own rendered test (table.test.tsx, TipAmountPicker.test.tsx, form.test.tsx).
  */
 const FOCUS_SHOWN_ELSEWHERE: readonly (readonly [file: string, anchor: string, shownBy: string])[] =
   [
@@ -233,6 +233,13 @@ const FOCUS_SHOWN_ELSEWHERE: readonly (readonly [file: string, anchor: string, s
       "app/shop/[shopSlug]/settings/_components/SettingsRows.tsx",
       "after:absolute after:inset-0",
       "focus-visible:after:focus-ring-inset",
+    ],
+    // A visible radio (`radioClass`): its outline would be a square round a
+    // round dot, so the pill or row round it is ringed (#2007).
+    [
+      "components/ui/form.tsx",
+      "} focus-visible:outline-none",
+      "has-[input:focus-visible]:focus-ring",
     ],
     // The tip picker's amount field: the bordered label around it is ringed.
     [

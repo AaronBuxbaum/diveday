@@ -748,6 +748,28 @@ export function Field({
  */
 export const choiceClass = "size-4 shrink-0";
 
+/**
+ * **A radio's focus is drawn on the box it sits in, not round its dot.** An
+ * outline follows `border-radius`, and a native radio's is 0 whatever asks
+ * otherwise: Preflight's `input { border-radius: 0 }` outranks a `:where()`
+ * rule in the same layer, and Chromium resets the border of an
+ * `appearance: auto` radio in its layout theme. So the global ring drew a
+ * square round a 16px circle — the waiver's medical Yes / No, /ready's
+ * answers, a call's outcome (#2007). Drawing our own radio would have put it
+ * beside native checkboxes and risked the medical answers' only visible
+ * record under forced colours, so the radio stays native and its ring moves.
+ *
+ * `radioClass` is `choiceClass` with the radio's own outline switched off;
+ * `radioRingClass` goes on the rounded box round it — `ChoicePill`'s pill,
+ * `ChoiceRow`'s row, a hand-built card's label — and draws the global ring
+ * there, following that box's corner. `input:focus-visible` rather than any
+ * `:focus-visible`, so a button in the box (a pill's aside) rings itself and
+ * not the pill. The two travel together: `form.test.tsx` refuses a visible
+ * radio without `radioClass`, and a file that wears it without the ring.
+ */
+export const radioClass = `${choiceClass} focus-visible:outline-none`;
+export const radioRingClass = "has-[input:focus-visible]:focus-ring";
+
 type ChoiceProps = {
   type: "checkbox" | "radio";
   /** The words, which are the box's accessible name and part of its target. */
@@ -768,6 +790,18 @@ type ChoiceProps = {
  * its words and spills them over its border.
  */
 const CHOICE_BOX_LINE = "flex h-lh items-center";
+
+/** A checkbox keeps the global ring on itself; a radio's is on its row or pill (`radioClass`). */
+function boxClass(type: ChoiceProps["type"]): string {
+  return type === "radio" ? radioClass : choiceClass;
+}
+
+/**
+ * A radio row is ringed, so it gets a corner for the ring to follow and 8px
+ * of room either side of it, given back as a negative margin so neither the
+ * box nor the words move off the column every other row stands on.
+ */
+const CHOICE_ROW_RADIO = `-mx-2 rounded-lg px-2 ${radioRingClass}`;
 
 /** `ChoiceRow`'s `outdent="block-end"`: see `ChoiceRow`. `--spacing(11)` is the 44px floor. */
 const CHOICE_ROW_OUTDENT =
@@ -803,12 +837,13 @@ export function ChoiceRow({
   children,
   ...input
 }: ChoiceProps & { outdent?: "block-end" }) {
+  const radio = type === "radio" ? ` ${CHOICE_ROW_RADIO}` : "";
   return (
     <label
-      className={`grid min-h-11 cursor-pointer grid-cols-[auto_1fr] content-center items-start gap-x-3${outdent ? ` ${CHOICE_ROW_OUTDENT}` : ""} ${className}`.trim()}
+      className={`grid min-h-11 cursor-pointer grid-cols-[auto_1fr] content-center items-start gap-x-3${radio}${outdent ? ` ${CHOICE_ROW_OUTDENT}` : ""} ${className}`.trim()}
     >
       <span className={CHOICE_BOX_LINE}>
-        <input type={type} {...input} className={choiceClass} />
+        <input type={type} {...input} className={boxClass(type)} />
       </span>
       {/* A sentence, often: `text-pretty` so it never ends on one word (K-534). */}
       <span className="text-pretty">{children}</span>
@@ -851,11 +886,12 @@ export function ChoicePill({
 }: ChoiceProps & { size?: "sm" | "md"; aside?: ReactNode }) {
   const pill = `rounded-lg border border-border bg-surface transition-colors hover:bg-surface-sunken ${size === "md" ? "text-base" : "text-sm"}`;
   const row = "grid cursor-pointer grid-cols-[auto_1fr] content-center items-start gap-x-2 py-2";
+  const ring = type === "radio" ? ` ${radioRingClass}` : "";
   if (aside === undefined || aside === null || aside === false) {
     return (
-      <label className={`${row} min-h-11 ${pill} px-4 ${className}`.trim()}>
+      <label className={`${row} min-h-11 ${pill}${ring} px-4 ${className}`.trim()}>
         <span className={CHOICE_BOX_LINE}>
-          <input type={type} {...input} className={choiceClass} />
+          <input type={type} {...input} className={boxClass(type)} />
         </span>
         <span>{children}</span>
       </label>
@@ -873,10 +909,10 @@ export function ChoicePill({
   // and bottom makes its border box the pill's full 44px. Not across the start
   // border: that would move the box 1px off the plain pills' column.
   return (
-    <div className={`flex min-h-11 items-center gap-2 ${pill} pe-4 ${className}`.trim()}>
+    <div className={`flex min-h-11 items-center gap-2 ${pill}${ring} pe-4 ${className}`.trim()}>
       <label className={`${row} -my-px flex-1 self-stretch ps-4`}>
         <span className={CHOICE_BOX_LINE}>
-          <input type={type} {...input} className={choiceClass} />
+          <input type={type} {...input} className={boxClass(type)} />
         </span>
         <span>{children}</span>
       </label>

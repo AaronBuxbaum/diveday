@@ -670,9 +670,10 @@ them cut it away. The pixel probe's first pass counted 1,700 clipped rings.
   sit on the rule.
 - **Never switch the outline off** on an `a`, `button`, `input`, `select`, `textarea` or
   `summary`. In `@layer base` the global rule loses to `outline-none`, so it now does what it
-  says and leaves a keyboard user nothing. The two exceptions show focus on another box:
-  `RowLink`'s text (its `::after` overlay is ringed) and the tip picker's amount field (the
-  bordered box around it is).
+  says and leaves a keyboard user nothing. The exceptions show focus on another box:
+  `RowLink`'s text (its `::after` overlay is ringed), the tip picker's amount field (the
+  bordered box around it is), and a visible radio, `radioClass` (its pill or row is; see
+  [Checkboxes and radios](#checkboxes-and-radios-choicerow-choicepill-choiceclass)).
 - **A positioned child paints over its parent's outline.** An inset ring on a link that holds a
   photo is hidden under the photo. The storefront's course cards moved the clip from the card onto
   the link instead, which keeps the global ring: an element's `overflow` never clips its own
@@ -680,7 +681,7 @@ them cut it away. The pixel probe's first pass counted 1,700 clipped rings.
 
 `src/app/focus-ring.test.ts` refuses a width or an offset under any focus variant, and an outline
 switched off anywhere but an element the global rule never rings (in practice a `tabIndex={-1}`
-container a script moves focus into) and those two exceptions. It also lists the elements the
+container a script moves focus into) and those exceptions. It also lists the elements the
 probe measured a clip cutting whose components do not render in jsdom; the rest are pinned in
 their own components' tests. These read classes, not pixels: the pixel probe measures the ring.
 
@@ -873,6 +874,26 @@ refuses a visible box that does not wear `choiceClass` (the conditions hold and 
 drag rows are 20px on purpose, and named there), one wearing the forms plugin's `rounded border-*
 text-primary focus:ring-*` (not loaded here, and inert on a native box), and a pill spelled by hand,
 a bordered `<div>` around a label included.
+
+**A radio's focus ring is drawn on the box it sits in, not round its dot.** An outline follows
+`border-radius`, and a native radio's computes 0 whatever asks: Preflight's `input { border-radius:
+0 }` outranks a `:where()` rule in the same layer, and Chromium resets the border of an `appearance:
+auto` radio. So the global ring was a square round a 16px circle on the waiver's medical Yes / No,
+/ready's answers and a call's outcome (#2007). Drawing our own radio (`appearance: none`) was the
+other fix, and it was turned down: it would sit beside native checkboxes in the same forms, and a
+painted dot needs its own fallback under forced colours, where the medical answers' checked dot is
+the only visible record of a diver's yes or no. So the radio stays native and the ring moves.
+`radioClass` is `choiceClass` with the radio's outline off (`focus-visible:outline-none`), and
+`radioRingClass` (`has-[input:focus-visible]:focus-ring`) goes on the rounded box round it, whose
+corner the ring then follows. `ChoicePill` and `ChoiceRow` do both for `type="radio"`; a radio row
+also takes `rounded-lg` and 8px of room either side, handed back as a negative margin (`-mx-2
+px-2`), so the ring has a corner and some air and the box stays on the column. A rule above or below
+a radio row goes on a wrapper, not the row, or the corner curls its ends (the waiver editor's
+publish choice). A hand-built radio card imports both, as the diver merge's does. Checkboxes keep
+the global ring on themselves: a square ring round a square box is the right shape. `form.test.tsx`
+refuses a visible radio without `radioClass` and a file that wears it with no `radioRingClass`;
+`e2e/waivers.spec.ts` asks a real browser that the waiver's first medical answer has no outline of
+its own and a 3px one on its rounded pill.
 
 A box with words is a `ChoiceRow`, not a `Field`: `Field` wraps a child that is not one control in
 a `<label>`, so a row inside it is a label in a label. Where a row needs a field's caption beside

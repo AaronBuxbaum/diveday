@@ -19,6 +19,8 @@ import {
   FormStatus,
   legendClass,
   PriceField,
+  radioClass,
+  radioRingClass,
   SearchField,
   StickyFormActions,
   textareaClassFor,
@@ -530,6 +532,65 @@ describe("ChoicePill and ChoiceRow", () => {
       "text-sm",
       "hover:bg-surface-sunken",
     );
+  });
+
+  /**
+   * **A radio's ring is on its pill or row, a checkbox's on itself.** A
+   * native radio's border-radius computes 0 however it is asked, so the global
+   * ring drew a square round a round dot (#2007). The radio switches its own
+   * outline off and the rounded box round it draws the ring. The rendered
+   * shape is asked of a real browser in e2e/waivers.spec.ts; this pins which
+   * element carries which class.
+   */
+  it("rings a radio's pill, a radio row, and a radio pill with an aside, and leaves checkboxes alone", () => {
+    render(
+      <>
+        <ChoicePill type="radio" name="q" value="yes">
+          Yes
+        </ChoicePill>
+        <ChoiceRow type="radio" name="help" value="none">
+          Nothing
+        </ChoiceRow>
+        <ChoicePill type="radio" name="suit" value="dry" aside={<button type="button">?</button>}>
+          Drysuit
+        </ChoicePill>
+        <ChoicePill type="checkbox" name="roles" value="captain">
+          Captain
+        </ChoicePill>
+        <ChoiceRow type="checkbox" name="agree" value="on">
+          I agree
+        </ChoiceRow>
+      </>,
+    );
+    expect(radioClass.split(/\s+/)).toEqual([
+      ...choiceClass.split(/\s+/),
+      "focus-visible:outline-none",
+    ]);
+    for (const name of ["Yes", "Nothing", "Drysuit"]) {
+      const radio = screen.getByRole("radio", { name });
+      expect(radio).toHaveClass("focus-visible:outline-none");
+    }
+    expect(screen.getByRole("radio", { name: "Yes" }).closest("label")).toHaveClass(
+      radioRingClass,
+      "rounded-lg",
+    );
+    // A row has no corner of its own: it takes one, and room either side for
+    // the ring, handed back so its box stays on the column.
+    expect(screen.getByRole("radio", { name: "Nothing" }).closest("label")).toHaveClass(
+      radioRingClass,
+      "rounded-lg",
+      "-mx-2",
+      "px-2",
+    );
+    // The aside's pill is the bordered div; its label sits inside the borders.
+    const drysuit = screen.getByRole("radio", { name: "Drysuit" });
+    expect(drysuit.closest("label")).not.toHaveClass(radioRingClass);
+    expect(drysuit.closest("label")?.parentElement).toHaveClass(radioRingClass, "rounded-lg");
+    for (const name of ["Captain", "I agree"]) {
+      const box = screen.getByRole("checkbox", { name });
+      expect(box).not.toHaveClass("focus-visible:outline-none");
+      expect(box.closest("label")).not.toHaveClass(radioRingClass);
+    }
   });
 
   it("sets a diver-facing pill's words at 16px when asked", () => {
@@ -1604,12 +1665,18 @@ describe("source sweeps", () => {
    * spelled `size-4` by hand, most without `shrink-0` (K-13 review). A box
    * that is `sr-only` or `opacity-0` is a stand-in's business, not this rule's.
    *
+   * A visible radio wears `radioClass` instead — `choiceClass` with its own
+   * outline off — and the box round it wears `radioRingClass`: a native
+   * radio's ring is a square round a round dot, so it is drawn on the label
+   * (#2007). This reads the input's tag and its file, not which element the
+   * ring lands on; the rendered test above pins that for the two components.
+   *
    * Two boxes are 20px on purpose and named here by path: the conditions
    * hold, a warning-tinted card whose box stands beside its 16px semibold
    * heading, and the buddy builder's drag rows, a manifest surface whose own
    * note asks for a box big enough to hit without aiming.
    */
-  it("draws every visible choice box with choiceClass", () => {
+  it("draws every visible choice box with choiceClass, and every radio with radioClass", () => {
     const deliberate20px = new Set([
       "src/app/shop/[shopSlug]/trips/[id]/_components/ConditionsSection.tsx",
       "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/BuddyDragGroups.tsx",
@@ -1620,7 +1687,11 @@ describe("source sweeps", () => {
         if (!/type=(?:"|\{")(checkbox|radio)"/.test(text)) continue;
         if (/\b(sr-only|opacity-0)\b/.test(text)) continue;
         const where = `${file}:${lineOf(source, index)}`;
-        if (!/\bchoiceClass\b/.test(text) && !deliberate20px.has(file))
+        if (/type=(?:"|\{")radio"/.test(text)) {
+          if (!/\bradioClass\b/.test(text)) offenders.push(`${where} lacks radioClass`);
+          else if (!/\bradioRingClass\b/.test(source))
+            offenders.push(`${where} wears radioClass with no radioRingClass on its box`);
+        } else if (!/\bchoiceClass\b/.test(text) && !deliberate20px.has(file))
           offenders.push(`${where} lacks choiceClass`);
         if (/\b(rounded|border-[a-z-]+|text-primary|focus:ring-[a-z-]+)\b/.test(text))
           offenders.push(`${where} wears forms-plugin classes`);

@@ -1,7 +1,7 @@
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
-import { choiceClass } from "@/components/ui/form";
+import { radioClass, radioRingClass } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { DiverMergeCandidate } from "@/db/diver-merge";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -67,7 +67,7 @@ export function MergeDiver({
           {options.map((option, index) => (
             <label
               key={option.id}
-              className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface p-3 has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary/20"
+              className={`flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface p-3 has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary/20 ${radioRingClass}`}
             >
               <input
                 type="radio"
@@ -75,7 +75,7 @@ export function MergeDiver({
                 value={option.id}
                 defaultChecked={index === 0}
                 required
-                className={`${choiceClass} mt-1`}
+                className={`${radioClass} mt-1`}
               />
               <span className="min-w-0">
                 <span className="block font-medium">
