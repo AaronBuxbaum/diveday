@@ -223,6 +223,11 @@ const EXCLUDED_TABLES = [
   "trip_blowout_divers", // per-diver message/rebooking state for that cascade — same reasoning as notification_send_queue
   "notification_rate_limit_state", // provider coordination, not shop records
   "shop_stripe_accounts", // provider linkage, useless outside Stripe
+  // What the shop pays DiveDay (ADR 20261007-subscription-billing): DiveDay's
+  // own billing of the shop, not a record the shop keeps. Ids on DiveDay's
+  // Stripe account mean nothing in another system, and the invoices are
+  // Stripe's, emailed to the owner.
+  "shop_subscriptions",
   "payment_operation_intents", // internal reconciliation ledger, not a shop record (CR-005)
   "stripe_webhook_events", // provider webhook-delivery ledger, not a shop record — same reasoning as payment_operation_intents
   "sms_opt_outs", // the platform texting number's STOP list, not one shop's record (ADR 20261007-sms-stop-and-help)

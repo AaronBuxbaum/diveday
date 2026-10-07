@@ -372,6 +372,8 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   shop_whatsapp_accounts:
     "the shop’s own WhatsApp sender: a number, a template and sealed credentials",
   shop_stripe_accounts: "the shop’s Connect account and what it is enabled for",
+  shop_subscriptions:
+    "what the shop pays DiveDay: Stripe ids on DiveDay’s own account, a status and a few dates. The business is the customer, never a diver",
   shop_integrations: "a provider connection the shop made, and the sealed credentials behind it",
   shop_backup_destinations: "where the shop sends its own backups, and the sealed key to get there",
   shop_backup_deliveries:
@@ -526,6 +528,18 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
   },
   "booking_checkouts.stripe_account_id": { held: "shop", why: "as orders.stripe_account_id" },
   "tips.stripe_account_id": { held: "shop", why: "as orders.stripe_account_id" },
+  "shop_subscriptions.stripe_customer_id": {
+    held: "shop",
+    why: "the shop as DiveDay's own billing customer, on DiveDay's account; no diver is behind it",
+  },
+  "shop_subscriptions.stripe_subscription_id": {
+    held: "shop",
+    why: "as shop_subscriptions.stripe_customer_id",
+  },
+  "shop_subscriptions.stripe_checkout_session_id": {
+    held: "shop",
+    why: "the owner's last open Checkout for DiveDay's plan, as shop_subscriptions.stripe_customer_id",
+  },
   "shop_stripe_accounts.stripe_account_id": {
     held: "shop",
     why: "the shop's own Connect account. Disconnecting it is a shop decision, not an erasure",

@@ -486,6 +486,9 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "integration_sync_records",
   "shop_integrations",
   "shop_stripe_accounts",
+  // One row per shop, updated in place by the billing webhook (ADR
+  // 20261007-subscription-billing): the subscription as it is now, not a trail.
+  "shop_subscriptions",
   "shop_whatsapp_accounts",
   "shop_backup_destinations",
   "shop_backup_deliveries",

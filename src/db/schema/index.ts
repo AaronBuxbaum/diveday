@@ -11,6 +11,7 @@
 
 export * from "./accounts";
 export * from "./activity";
+export * from "./billing";
 export * from "./bookings";
 export * from "./certifications";
 export * from "./core";
