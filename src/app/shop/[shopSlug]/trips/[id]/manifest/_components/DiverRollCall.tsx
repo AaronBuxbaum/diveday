@@ -631,7 +631,7 @@ export function DiverRollCall({
                     ) : null
                   }
                   closeLabel={t("manifest.closePersonDetails")}
-                  triggerClassName={`${ROW_DISCLOSURE_SUMMARY_CLASS} flex-wrap gap-y-2`}
+                  triggerClassName={`${ROW_DISCLOSURE_SUMMARY_CLASS} flex-wrap gap-y-2 print:flex-nowrap`}
                   mark={
                     rowState.notBackAboard ? (
                       <RollCallMark state="notBack" />
@@ -693,9 +693,12 @@ export function DiverRollCall({
                         it stays inside the name button: one tap target, the
                         same reading order, the mark centred on the whole row.
                         `order-last` puts it under the caret's line, which
-                        `PersonSheet` renders after this fragment. */}
+                        `PersonSheet` renders after this fragment. On paper
+                        the caret does not print and the sheet is wide, so the
+                        capsule goes back beside the name: one line per
+                        person, the packet's page count (e2e/paper-day). */}
                       {capsule || diver.notHere ? (
-                        <span className="order-last flex basis-full flex-wrap items-center gap-2">
+                        <span className="order-last flex basis-full flex-wrap items-center gap-2 print:order-none print:basis-auto">
                           {capsule}
                           {/* **The desk wrote this one off** (#1209). On the
                             row and not in the sheet, unlike "Checked in":
