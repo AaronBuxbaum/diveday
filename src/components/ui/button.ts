@@ -284,7 +284,7 @@ const sizes = {
    * The width is `w-12` against `min-h-12` rather than `size-12`: a fixed
    * height would clip a glyph whose line box is taller than 48px, where a
    * floor grows with it. 48px, not the 44px floor, so the square stands level
-   * with `md` and with a `controlClassFor("md")` box on the same line.
+   * with `md` and with a `controlClass` box on the same line.
    */
   icon: { x: "px-0", rest: "w-12 min-h-12 text-base" },
   /**

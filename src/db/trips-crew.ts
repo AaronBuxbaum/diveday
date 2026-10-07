@@ -623,6 +623,8 @@ export async function setTripCrew(
         proposedCrew,
       });
       if (review.blocking) return false;
+      // The roster's claim: no `lapsedRungs`, so a lapsed rating never refuses
+      // an assignment (H-59; issue #1853 narrowed only the supervision claim).
       const { instructorCount } = countInWaterCrew(proposedCrew);
       if (instructorCount === 0) return false;
       // Deliberately no ratio check here. A crew change that leaves the session
@@ -835,6 +837,7 @@ export async function changeTripCrewOutcome(
         proposedCrew,
       });
       if (review.blocking) return { ok: false, refusal: "refused" };
+      // The roster's claim, as in `setTripCrew` above (H-59, issue #1853).
       const { instructorCount } = countInWaterCrew(proposedCrew);
       if (instructorCount === 0) return { ok: false, refusal: "refused" };
       // No ratio check — same reason as `setTripCrew` above: pulling a crew

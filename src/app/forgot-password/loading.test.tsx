@@ -27,7 +27,8 @@ describe("the forgot-password skeleton", () => {
   it("still draws the one-field door between them", () => {
     render(<ForgotPasswordLoading />);
     const main = screen.getByRole("main");
-    expect(main.querySelectorAll(".h-11")).toHaveLength(1);
-    expect(main.querySelectorAll(".h-12")).toHaveLength(1);
+    // The field's 48px box and the 48px button.
+    expect(main.querySelectorAll(".h-11")).toHaveLength(0);
+    expect(main.querySelectorAll(".h-12")).toHaveLength(2);
   });
 });

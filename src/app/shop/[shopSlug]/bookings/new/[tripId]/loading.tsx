@@ -10,7 +10,7 @@ export default function NewBookingForTripLoading() {
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton titleWidth="w-64 max-w-full" description={false} />
-        <div className="mt-6 h-11 w-full max-w-sm rounded-lg bg-surface-sunken" />
+        <div className="mt-6 h-12 w-full max-w-sm rounded-lg bg-surface-sunken" />
         <div
           className={sectionCardClass({
             padding: "none",

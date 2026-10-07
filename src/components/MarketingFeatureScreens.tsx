@@ -20,8 +20,8 @@ import {
   FIGURE_CLASS,
   FIGURE_INLINE_CLASS,
   FIGURE_LARGE_CLASS,
+  ITEM_TITLE_CLASS,
   LEAD_TITLE_CLASS,
-  SECTION_TITLE_CLASS,
   SUB_TITLE_CLASS,
 } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
@@ -207,7 +207,7 @@ export function StorefrontFallback({ locale }: { locale: DiverLocale }) {
             </button>
           </div>
         </div>
-        <h3 className={`mt-5 font-brand-display ${SECTION_TITLE_CLASS}`}>
+        <h3 className={`mt-5 font-brand-display ${ITEM_TITLE_CLASS}`}>
           {t("fallback.storefront.scheduleHeading")}
         </h3>
         <div className="mt-2 flex items-center gap-3">

@@ -53,8 +53,8 @@ import { SectionCard } from "@/components/ui/card";
   `Table`'s `flush` and `ShopStat`'s `inset` still follow containment — they drop the *border and
   fill*, which is a different question.
 - **The heading is folded in.** Pass `title`; never spell a heading class at a call site. The
-  card's `h2` is `LEAD_TITLE_CLASS` from `src/components/ui/typography.ts` (`text-2xl font-semibold
-  tracking-tight`, 24px). `titleAs="h3"` steps a card down one level, to `text-base
+  card's `h2` is `SECTION_TITLE_CLASS` from `src/components/ui/typography.ts` (`text-2xl
+  font-semibold tracking-tight`, 24px), the one section rung every section heading uses. `titleAs="h3"` steps a card down one level, to `text-base
   font-semibold` (16px), when it sits under a group that already owns the `h2` (the export page's
   Backups half). It changes the element *and* its size, so a group and the five cards under it
   never shout at the same volume.
@@ -86,11 +86,14 @@ it names itself.
 - **A plural body → the heading stands above, and the members name themselves.** "Plural" means a
   stack of sibling cards, a grid of object cards, one `padding="none"` shell of divided rows, or a
   body that renders `EmptyState` when it is empty. The group heading is a bare `<h2
-  className={LEAD_TITLE_CLASS}>`, the **same scale** as a card's own `h2`, because a section speaks
-  at one volume whether its heading sits inside one card or above five. Each card under it steps
-  down with `titleAs="h3"`, or carries the object's own name when the card *is* a thing. The tree
-  does not keep this yet: most hand-spelled section headings still wear `SECTION_TITLE_CLASS`
-  (`text-lg`, 18px) beside titled cards at 24px, and #1966 picks the one size.
+  className={SECTION_TITLE_CLASS}>`, the **same constant** as a card's own `h2`, because a section
+  speaks at one volume whether its heading sits inside one card or above five. Each card under it
+  steps down with `titleAs="h3"`, or carries the object's own name when the card *is* a thing.
+  **Every section heading is 24px** (Aaron, #1966): a card's title, a bare group heading, a
+  `<summary>` heading, a `<form>` card's first child, a tone panel. A named thing *inside* a
+  section (a diver's name on a roll-call row, a departure on the Today spine, a course day) takes
+  `ITEM_TITLE_CLASS`, 18px, and is never an `h2`. `pnpm check:type-ramp` refuses an `h2` at the
+  item rung and the reading ramp's `LEAD_TITLE_CLASS` anywhere under `src/app/shop`.
   The heading has to live above precisely because the body is unreliable: close-out's "Tomorrow"
   heading must survive its card swapping to an `EmptyState`, and a heading inside that card would
   vanish at the moment the section most needs to say "nothing waiting".
@@ -127,7 +130,7 @@ hierarchy, colour carries state. A heading that grew or shrank because something
 move the page's apparent structure as panels change state, and a reader would re-learn the
 hierarchy every time — so a tone-carrying panel's heading is never quieter for having a tone, and
 never louder for it either. The trip's packing list keeps it: its two warning panels, its two
-titled cards and its four group headings are all `LEAD_TITLE_CLASS`.
+titled cards and its four group headings are all `SECTION_TITLE_CLASS`.
 
 ### Section rhythm: `space-y-10`, never `mt-*`
 
@@ -215,7 +218,7 @@ import { controlClass, Field, FieldActions, FieldGrid } from "@/components/ui/fo
   knocks each later field half a row out of step and the grid renders as a staircase.
 - A control keeps its own height. The control row is one subgrid track shared across the row, so it
   is as tall as the longest neighbouring field's `description`; `Field` pins the control to the top
-  of that track (`content-start`) so a 44px input never renders as a 52px box beside its sibling.
+  of that track (`content-start`) so a 48px input never renders as a 56px box beside its sibling.
 - `FieldActions` spans every column, so the submit button never becomes a lopsided extra field.
 - Horizontal checkbox/radio rows are not stacked fields — they are `ChoiceRow`s or `ChoicePill`s
   (below), never a `Field`.
@@ -667,9 +670,10 @@ them cut it away. The pixel probe's first pass counted 1,700 clipped rings.
   sit on the rule.
 - **Never switch the outline off** on an `a`, `button`, `input`, `select`, `textarea` or
   `summary`. In `@layer base` the global rule loses to `outline-none`, so it now does what it
-  says and leaves a keyboard user nothing. The two exceptions show focus on another box:
-  `RowLink`'s text (its `::after` overlay is ringed) and the tip picker's amount field (the
-  bordered box around it is).
+  says and leaves a keyboard user nothing. The exceptions show focus on another box:
+  `RowLink`'s text (its `::after` overlay is ringed), the tip picker's amount field (the
+  bordered box around it is), and a visible radio, `radioClass` (its pill or row is; see
+  [Checkboxes and radios](#checkboxes-and-radios-choicerow-choicepill-choiceclass)).
 - **A positioned child paints over its parent's outline.** An inset ring on a link that holds a
   photo is hidden under the photo. The storefront's course cards moved the clip from the card onto
   the link instead, which keeps the global ring: an element's `overflow` never clips its own
@@ -677,7 +681,7 @@ them cut it away. The pixel probe's first pass counted 1,700 clipped rings.
 
 `src/app/focus-ring.test.ts` refuses a width or an offset under any focus variant, and an outline
 switched off anywhere but an element the global rule never rings (in practice a `tabIndex={-1}`
-container a script moves focus into) and those two exceptions. It also lists the elements the
+container a script moves focus into) and those exceptions. It also lists the elements the
 probe measured a clip cutting whose components do not render in jsdom; the rest are pinned in
 their own components' tests. These read classes, not pixels: the pixel probe measures the ring.
 
@@ -723,17 +727,17 @@ and a chip row take `sm`; and every button in one row takes the same size. A 16p
 is made by being the row's one primary, or by `w-full` on a phone, never by its own type size.
 `icon` is a 48px square so it sits level with `md` in a header or a pager.
 
-**A row with a text control in it is an `md` row.** A control's type is 16px at every size, because
-iOS Safari zooms the page when a box under 16px takes focus, so the only button it can stand level
-with is `md`, whose label is 16px too. `sm` beside a box matches its 44px and not its type. The
-control then takes md's height: `controlClassFor("md")` (48px) for an input or select, placed by hand
-or in a `Field` that shares its line with the button, and `size="md"` on `SearchField`.
-`controlClass` stays the 44px `field` size for a control stacked in a `Field` whose line holds no
-button, alone in a toolbar, or in a row of controls only. The pixel probe found the two sizes
-together on 2026-09-25: a 44px search box beside a 48px "Add diver" on the trip roster's seat-diver
-door and the diver roster, and a 16px box beside a 14px "Go" or "Save" wherever a row reached for
-`sm` to match the box's height. The probe groups a control inside a `Field` with its caption, not
-with the row, so it cannot see a `Field` beside a button: read those rows.
+**A row with a text control in it is an `md` row.** A control's type is 16px, because iOS Safari
+zooms the page when a box under 16px takes focus, so the only button it can stand level with is
+`md`, whose label is 16px too. **Every text control is 48px** — `controlClass`, and `SearchField`
+and `DateField`, which wear it — whether it is stacked in a `Field`, alone in a toolbar, or on a
+line with buttons, so it is level with an `md` button by construction and no call site picks a
+size (issue #1987). There used to be two: a 44px `field` size for a stacked control and a 48px `md`
+one for a control beside buttons. The pixel probe found them together on 2026-09-25 — a 44px search
+box beside a 48px "Add diver" on the trip roster's seat-diver door and the diver roster — and the
+review of that fix found seven more rows a call site had not moved, none of which the probe could
+see, since it groups a control inside a `Field` with its caption rather than with the row. `sm`
+beside a box still matches neither its height nor its type.
 
 **A `link` that must line up with the prose above it passes `flush: true`, never `className:
 "px-0"`.** Two utilities for one property resolve by **stylesheet** order, not by the order you
@@ -871,6 +875,26 @@ drag rows are 20px on purpose, and named there), one wearing the forms plugin's 
 text-primary focus:ring-*` (not loaded here, and inert on a native box), and a pill spelled by hand,
 a bordered `<div>` around a label included.
 
+**A radio's focus ring is drawn on the box it sits in, not round its dot.** An outline follows
+`border-radius`, and a native radio's computes 0 whatever asks: Preflight's `input { border-radius:
+0 }` outranks a `:where()` rule in the same layer, and Chromium resets the border of an `appearance:
+auto` radio. So the global ring was a square round a 16px circle on the waiver's medical Yes / No,
+/ready's answers and a call's outcome (#2007). Drawing our own radio (`appearance: none`) was the
+other fix, and it was turned down: it would sit beside native checkboxes in the same forms, and a
+painted dot needs its own fallback under forced colours, where the medical answers' checked dot is
+the only visible record of a diver's yes or no. So the radio stays native and the ring moves.
+`radioClass` is `choiceClass` with the radio's outline off (`focus-visible:outline-none`), and
+`radioRingClass` (`has-[input:focus-visible]:focus-ring`) goes on the rounded box round it, whose
+corner the ring then follows. `ChoicePill` and `ChoiceRow` do both for `type="radio"`; a radio row
+also takes `rounded-lg` and 8px of room either side, handed back as a negative margin (`-mx-2
+px-2`), so the ring has a corner and some air and the box stays on the column. A rule above or below
+a radio row goes on a wrapper, not the row, or the corner curls its ends (the waiver editor's
+publish choice). A hand-built radio card imports both, as the diver merge's does. Checkboxes keep
+the global ring on themselves: a square ring round a square box is the right shape. `form.test.tsx`
+refuses a visible radio without `radioClass` and a file that wears it with no `radioRingClass`;
+`e2e/waivers.spec.ts` asks a real browser that the waiver's first medical answer has no outline of
+its own and a 3px one on its rounded pill.
+
 A box with words is a `ChoiceRow`, not a `Field`: `Field` wraps a child that is not one control in
 a `<label>`, so a row inside it is a label in a label. Where a row needs a field's caption beside
 it, give the `Field` `htmlFor` and the row's box that `id`, as the departure's private and
@@ -965,10 +989,9 @@ radii on 2026-09-19. They are these now:
 - **Buttons**: `md` is **48px tall with a 16px label**, the sheet's default; `sm` stays 44/14 for a
   table row or a chip row; `icon` is a 48px square; `boat` stays the 56px dock target. The base's
   `min-h-11` is still the floor every size clears.
-- **Text controls**: 16px type at every size. `field` is 44px (`controlClass`), for a stacked
-  field with no button on its line; `md` is 48px (`controlClassFor("md")`, `SearchField size="md"`),
-  for a control on one line with `md` buttons. Each size carries its own vertical padding, so the
-  content box is 26px at both.
+- **Text controls**: one size, **48px with 16px type** (`controlClass`, worn by `SearchField` and
+  `DateField`), the Counter canvas's single field and `md`'s height, wherever the control stands.
+  `py-2.5` leaves a 26px content box, so a native file picker's button sits centred in it.
 - **Rows**: a `LedgerRow` is never tighter than **52px** (`md`); `lg` is 56. Every row, door or
   not, keeps 8px of room each side of its words and runs its rules 8px past the column with it, so
   every ledger on a page draws its rules at one length; a skeleton or a hand-set line among ledger
@@ -997,9 +1020,9 @@ A staff list that can be searched renders **one search box and nothing around it
 `SearchField` in `src/components/ui/form.tsx`: a `type="search"` control wearing `controlClass`, a
 magnifier in its leading inset, its label `sr-only`, no caption above it and no "Search" button
 beside it. A form with one text control submits on Enter; surfaces that want type-to-apply drive
-`requestSubmit()` from `onInput`, as the orders toolbar and the counter do. A box that shares its
-line with an `md` button, as the roster's and the seat-diver picker's do with "Add diver", passes
-`size="md"` and stands at the button's 48px.
+`requestSubmit()` from `onInput`, as the orders toolbar and the counter do. It is 48px like every
+text control, so beside an `md` button, as the roster's and the seat-diver picker's "Add diver", it
+stands level with no size to pass.
 
 ```tsx
 import { SearchField } from "@/components/ui/form";
@@ -1026,7 +1049,7 @@ and "Add diver" is the band's one primary again.
 
 A date is entered through **`DateField`** in `src/components/ui/form.tsx`, never a bare `<input type="date">`. It is a `type="date"` control wearing `controlClass` with a calendar glyph in its trailing inset, and it goes inside a `Field` like any other control.
 
-So are a month, a time and a date-and-time: `type="month" | "time" | "datetime-local"` (a time draws a clock). Spelled bare they kept the platform's solid black indicator beside a date box's muted outline, and iOS paints nothing in an empty one; `form.test.tsx` refuses a bare temporal `<input>` anywhere else. `size="md"` stands one on a line with `md` buttons, as `controlClassFor("md")` does.
+So are a month, a time and a date-and-time: `type="month" | "time" | "datetime-local"` (a time draws a clock). Spelled bare they kept the platform's solid black indicator beside a date box's muted outline, and iOS paints nothing in an empty one; `form.test.tsx` refuses a bare temporal `<input>` anywhere else. Like every text control it is 48px, level with an `md` button on its line.
 
 An empty one looks empty. No temporal box matches `::placeholder`, so its `mm/dd/yyyy` mask drew in the ink of a filled answer beside muted placeholders; the input `DateField` renders is `DateInput` (`src/components/ui/DateInput.tsx`), a client leaf that marks itself `data-empty` while it holds no value, and `globals.css` paints `input[data-empty]:not(:focus)::-webkit-datetime-edit` in the placeholder's colour. Not while it has focus: the value stays "" until every segment is filled, so the digits a person has typed would draw grey; and a box left half-typed (`validity.badInput`) stops saying it is empty.
 

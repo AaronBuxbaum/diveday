@@ -66,7 +66,7 @@ export default function DiveSiteLoading() {
                   {[0, 1].map((field) => (
                     <div key={field}>
                       <div className="h-4 w-28 rounded bg-surface-sunken" />
-                      <div className="mt-2 h-11 rounded-lg bg-surface-sunken" />
+                      <div className="mt-2 h-12 rounded-lg bg-surface-sunken" />
                     </div>
                   ))}
                 </div>

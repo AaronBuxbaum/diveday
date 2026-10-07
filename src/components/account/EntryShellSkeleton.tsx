@@ -98,7 +98,7 @@ export function EntryShellSkeleton({
             {fields.map((slot, index) => (
               <div key={slot} className={index === 0 ? "" : "mt-4"}>
                 <div className="h-4 w-28 rounded bg-surface-sunken" />
-                <div className="mt-2 h-11 w-full rounded-lg bg-surface-sunken" />
+                <div className="mt-2 h-12 w-full rounded-lg bg-surface-sunken" />
               </div>
             ))}
             {body !== undefined ? (

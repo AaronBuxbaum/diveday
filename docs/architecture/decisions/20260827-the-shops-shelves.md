@@ -80,6 +80,12 @@ tile restating a group — not the counter's count-led anatomy.
   departure needing crew renders in its day cell with the warning word **and its act** (Assign →
   the trip's crew section). Credentials are a quiet ledger beneath (renewal words, never gates —
   H-59); the two add-forms become one "+ Add a shift" door.
+  - *Amended 2026-10-07, issue #1853 (H-59's amendment).* A lapsed rating now narrows the
+    supervision count the week's gaps are read from, so a departure whose crew list names an
+    instructor can draw a gap; the chip then carries a second line saying a crew rating lapses
+    first, and the trip's crew section names who. Still never a gate: nothing on this surface
+    disables, greys or refuses on a credential, and booking and assignment keep the roster's
+    count.
 - **Reports** keeps its shape and sheds its chrome: the five figures render as an unboxed figure
   row (Clearwater ramp; departures folds into the seats figure's subline, tax drops to the quiet
   line beside the CSV door), the trips table becomes a ledger whose waiver column keeps its

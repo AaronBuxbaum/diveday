@@ -7,8 +7,8 @@ import { SectionCard } from "@/components/ui/card";
 import { groupLabelClass } from "@/components/ui/ledger";
 import {
   FIGURE_CLASS,
+  ITEM_TITLE_CLASS,
   LEAD_TITLE_CLASS,
-  SECTION_TITLE_CLASS,
   SUB_TITLE_CLASS,
 } from "@/components/ui/typography";
 import type { Course } from "@/db/schema";
@@ -245,7 +245,7 @@ export function CourseSchedule({
                   className="absolute top-2 left-0 size-[11px] rounded-full border-2 border-primary bg-surface"
                 />
                 <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                  <h3 className={SECTION_TITLE_CLASS}>{day.title}</h3>
+                  <h3 className={ITEM_TITLE_CLASS}>{day.title}</h3>
                   {time ? <p className="text-sm tabular-nums text-muted">{time}</p> : null}
                 </div>
                 {day.items.length > 0 ? (

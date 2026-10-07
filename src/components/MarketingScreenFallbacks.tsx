@@ -1,10 +1,6 @@
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { groupLabelClass } from "@/components/ui/ledger";
-import {
-  FIGURE_INLINE_CLASS,
-  SECTION_TITLE_CLASS,
-  SUB_TITLE_CLASS,
-} from "@/components/ui/typography";
+import { FIGURE_INLINE_CLASS, ITEM_TITLE_CLASS, SUB_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import type { DiverLocale } from "@/i18n/settings";
 
@@ -151,7 +147,7 @@ export function CaptainRollCallFallback({
       <div className={`space-y-4 ${PHONE_BODY}`}>
         <div>
           <p className={groupLabelClass("primary")}>{t("fallback.offlineManifest")}</p>
-          <h3 className={`mt-1 ${SECTION_TITLE_CLASS}`}>{t("fallback.tripName")}</h3>
+          <h3 className={`mt-1 ${ITEM_TITLE_CLASS}`}>{t("fallback.tripName")}</h3>
           <p className="text-xs text-muted">{t("fallback.tripTime")}</p>
         </div>
         {afterDive ? (

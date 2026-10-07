@@ -38,9 +38,10 @@ reminders, recaps, and checkout recovery. A permanent 4xx is not retried.
 queue — the daily tick is the only thing that reads `next_attempt_at` — so a message SES refuses at
 09:00 is next attempted at 14:00 UTC the following day, not minutes later. Three daily passes is the
 whole budget (`RETRY_WINDOW_MS` in `src/db/notifications.ts`, derived from
-`DAILY_TICK_INTERVAL_MS`); after the third the row is parked as `failed` for the staff-visible
-failure surface rather than retried a fourth time, so a human sees it while the trip it concerns is
-still ahead of the shop.
+`DAILY_TICK_INTERVAL_MS`); after the third the row is written off as `failed` rather than retried a
+fourth time. No staff screen lists it (issue #1826): the drain logs `notification.send_abandoned`
+and the `diveday-notification-send-failures` alarm pages the operator — see
+[When a notification is given up](cloudwatch-observability-runbook.md#when-a-notification-is-given-up).
 
 This used to read as a 30s → 1h exponential ladder in the code, which described a system that does
 not exist: under a once-a-day drain every rung of it collapsed to "tomorrow", and the eight attempts

@@ -179,8 +179,6 @@ export default async function DiveSitesPage({
             label={t("diveSites.list.searchLabel")}
             defaultValue={query}
             placeholder={t("diveSites.list.searchPlaceholder")}
-            // `md`: the clear button beside it is a 48px `icon` square.
-            size="md"
             className="w-full min-w-0 sm:w-80"
           />
           {query ? (

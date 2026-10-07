@@ -11,6 +11,11 @@ afterEach(cleanup);
  * *absence*, which is the kind of rule that regresses quietly — a later change
  * that disables a control on a lapsed rating looks helpful and breaks the one
  * promise this surface makes.
+ *
+ * H-59's 2026-10-07 amendment (issue #1853) does not touch this: a lapsed
+ * rating now narrows the *supervision count* on Today, the staffing week and
+ * the trip page, which say so in words. This ledger still gates nothing, and
+ * neither does booking or rostering.
  */
 
 const WORDS = { saving: "Saving…", remove: "Remove", removing: "Removing…" };

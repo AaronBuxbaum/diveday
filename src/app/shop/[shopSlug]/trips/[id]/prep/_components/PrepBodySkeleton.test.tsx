@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { ShopStatSkeleton } from "@/components/ShopPageHeader";
-import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { TripPageHeaderSkeleton } from "../../_components/TripPageHeader";
 import TripPrepLoading from "../loading";
 import { PrepBodySkeleton } from "./PrepBodySkeleton";
@@ -32,9 +32,9 @@ describe("PrepBodySkeleton", () => {
     // change to the list's section titles that is not made here goes red.
     const list = readFileSync(join(__dirname, "PrepBody.tsx"), "utf8");
     expect(list).toMatch(
-      /id=\{scopedId\(idPrefix, "tanks-heading"\)\} className=\{LEAD_TITLE_CLASS\}/,
+      /id=\{scopedId\(idPrefix, "tanks-heading"\)\} className=\{SECTION_TITLE_CLASS\}/,
     );
-    expect(heading).toHaveClass("h-lh", ...LEAD_TITLE_CLASS.split(" "));
+    expect(heading).toHaveClass("h-lh", ...SECTION_TITLE_CLASS.split(" "));
     // `PrepBody`'s `mt-1 text-sm` line: two lines on a phone, one from `sm`.
     expect(basis).toHaveClass("mt-1");
     expect(basis.children).toHaveLength(2);

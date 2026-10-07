@@ -7,7 +7,7 @@ import { RollCallMark } from "@/components/RollCallMark";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass, TONE_PANEL_CLASS } from "@/components/ui/card";
-import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { ITEM_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { buddyAlertText } from "@/i18n/buddy-labels";
 import { rollCallLabelText } from "@/i18n/manifest-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
@@ -319,9 +319,7 @@ export function CrewRollCall({
                       trigger={
                         <span className="min-w-0 flex-1">
                           <span className="flex flex-wrap items-center gap-2">
-                            <span
-                              className={`${SECTION_TITLE_CLASS} group-hover/summary:underline`}
-                            >
+                            <span className={`${ITEM_TITLE_CLASS} group-hover/summary:underline`}>
                               {member.fullName}
                             </span>
                             {/* The reader's own words, never the enum: this

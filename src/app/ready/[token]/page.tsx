@@ -45,7 +45,7 @@ import {
 } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { SettledCheck } from "@/components/ui/SettledCheck";
-import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import {
   resolveRevokedBookingCapability,
   staleBookingCapabilityForToken,
@@ -1990,7 +1990,7 @@ export default async function DiverReadinessPage({
                 moments are booked, paperwork done, and welcome home, and
                 "your boat is today" is none of them. */}
             {diveDay ? (
-              <p className={`mt-2 ${SECTION_TITLE_CLASS}`}>{t("thread.diveDayLine")}</p>
+              <p className={`mt-2 ${ITEM_TITLE_CLASS}`}>{t("thread.diveDayLine")}</p>
             ) : null}
             {/* The one number that matters on the morning of the trip — a
                 shade stronger than the meta line above it, never shouting.

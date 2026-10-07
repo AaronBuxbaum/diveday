@@ -2,7 +2,7 @@ import Link from "next/link";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { tapTargetLinkClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 
 /** A request row already reduced to words by the server page. */
 export type BookingRequestCardItem = {
@@ -39,7 +39,7 @@ export function BookingRequestContext({
   return (
     <SectionCard className={className} padding="lg">
       <p className="text-xs font-bold tracking-wide text-primary uppercase">{title}</p>
-      <p className={`mt-2 ${SECTION_TITLE_CLASS}`}>
+      <p className={`mt-2 ${ITEM_TITLE_CLASS}`}>
         {name} <span className="font-normal text-muted">({diversLabel})</span>
       </p>
       <p className="mt-1 text-sm text-muted">{subject}</p>

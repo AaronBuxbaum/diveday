@@ -141,6 +141,12 @@ export type WeekGap = {
   title: string;
   gap: StaffGapCode;
   meetings: readonly TripMeeting[];
+  /**
+   * Somebody rostered on it counts for less than their role says, because
+   * every rating the shop recorded for them lapses before the departure
+   * (issue #1853). Absent reads as no.
+   */
+  ratingLapsed?: boolean;
 };
 
 /** Another departure the same person crews at the same hours as this one. */
@@ -227,6 +233,14 @@ export type PlacedTrip = {
  */
 export type PlacedGap = PlacedTrip & {
   gap: StaffGapCode;
+  /**
+   * **The gap is a lapse, not an empty seat** (issue #1853). The count behind
+   * `gap` reads each rostered professional's recorded ratings, so a crew list
+   * that names an instructor can still say "Course needs instructor"; the chip
+   * says why under the code rather than showing one more shortfall. It informs:
+   * the departure still sells and seats on the roster's claim (H-59).
+   */
+  ratingLapsed: boolean;
   requests: readonly PlacedGapRequest[];
   viewerMayRequest: boolean;
   /**
@@ -556,6 +570,7 @@ export function staffWeek(input: {
       {
         ...first.placed,
         gap: gap.gap,
+        ratingLapsed: gap.ratingLapsed ?? false,
         // The same fact the reader's own line states, said to the person who
         // can act on it: a pending ask from somebody who is not an instructor
         // does not move an intro session's instructor-to-student cap. Only

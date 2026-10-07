@@ -57,6 +57,7 @@ const WORDS: StaffingWeekWords = {
   requestDeclined: "Declined",
   askWontClose: "You add no seats to this session. Only another instructor does.",
   requestWontClose: "Approving this one won’t close the gap. Only an instructor adds seats.",
+  ratingLapsed: "A crew rating isn’t current",
 };
 
 const GAP_WORDS: GapWords = {
@@ -162,6 +163,21 @@ describe("StaffingWeek", () => {
     }
     // Thursday, in the shop's zone — not the 5:00 PM the host would read.
     expect(screen.getAllByText("1:00 PM").length).toBeGreaterThan(0);
+  });
+
+  /**
+   * Issue #1853. The week's count reads recorded ratings, so a departure whose
+   * crew list names an instructor can still draw "No instructor or crew". The
+   * chip says why, in the grid and in the phone list, and an ordinary gap
+   * carries no such line.
+   */
+  it("says a lapsed rating is why a crewed departure is short, and only then", () => {
+    renderWeek({ gaps: [{ ...GAP, gap: "uncrewed_course", ratingLapsed: true }] });
+    expect(screen.getAllByText("A crew rating isn’t current").length).toBeGreaterThan(0);
+    cleanup();
+
+    renderWeek({ gaps: [{ ...GAP, gap: "uncrewed_course" }] });
+    expect(screen.queryByText("A crew rating isn’t current")).toBeNull();
   });
 
   it("says nothing about crew when every departure has some", () => {

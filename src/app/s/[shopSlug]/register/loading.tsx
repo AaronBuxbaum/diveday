@@ -2,7 +2,7 @@ import { ShopPageHeaderSkeleton, SkeletonLineBars } from "@/components/ShopPageH
 
 /**
  * One `Field` as bars, in the field's own boxes: the caption's 20px `text-sm`
- * line, the 4px row gap, the 44px `controlClass` box, and — for a field with a
+ * line, the 4px row gap, the 48px `controlClass` box, and — for a field with a
  * `description` — the 4px gap and its 16px `text-xs` line.
  */
 function FieldBars({ label, description = false }: { label: string; description?: boolean }) {
@@ -11,7 +11,7 @@ function FieldBars({ label, description = false }: { label: string; description?
       <div className="flex h-5 items-center">
         <div className={`h-3.5 ${label} rounded bg-surface-sunken`} />
       </div>
-      <div data-control-bar className="mt-1 h-11 rounded-lg border border-border bg-surface" />
+      <div data-control-bar className="mt-1 h-12 rounded-lg border border-border bg-surface" />
       {description ? <div className="mt-1 h-4 w-64 max-w-full rounded bg-surface-sunken" /> : null}
     </div>
   );

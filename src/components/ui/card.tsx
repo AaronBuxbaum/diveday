@@ -1,5 +1,5 @@
 import { type ReactNode, useId } from "react";
-import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 
 /**
  * The card — the bordered panel a staff page is mostly made of, and the last
@@ -96,7 +96,7 @@ import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
  * - **Yes**: the body is plural — sibling cards, a grid of object cards, a
  *   `padding="none"` shell of divided rows, anything that swaps to an
  *   `EmptyState`. The heading stands above as a bare
- *   `<h2 className={LEAD_TITLE_CLASS}>` — Reef's section rung — the *same* scale a card's own
+ *   `<h2 className={SECTION_TITLE_CLASS}>` — the section rung — the *same* scale a card's own
  *   `h2` gets, because a section speaks at one volume whether its heading sits
  *   inside one card or above five. Each card under it steps down with
  *   `titleAs="h3"`, or carries the object's own name.
@@ -280,10 +280,9 @@ type SectionCardElement = "section" | "div" | "article" | "aside" | "ul" | "li" 
  * `font-medium`, bare `font-semibold` — is gone.
  */
 const TITLE_CLASS = {
-  // Reef moved this rung up from `text-lg` to `text-2xl` (#1286); it is
-  // `LEAD_TITLE_CLASS` exactly, so it stays a named level rather than a
-  // literal that would drift away from the ramp again (#1229).
-  h2: LEAD_TITLE_CLASS,
+  // The app's one section rung (#1966): every hand-spelled section heading
+  // reads the same constant, so the two cannot drift apart again (#1229).
+  h2: SECTION_TITLE_CLASS,
   h3: "text-base font-semibold",
 } as const;
 

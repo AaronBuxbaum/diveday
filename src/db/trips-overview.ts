@@ -1,7 +1,12 @@
 import { nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
 import { crewLanguageGap } from "@/lib/crew-languages";
-import { countInWaterCrew } from "@/lib/crew-roles";
+import {
+  countInWaterCrew,
+  lapsedRungs,
+  lastDayOfDeparture,
+  narrowedByLapse,
+} from "@/lib/crew-roles";
 import { shopCrewTarget } from "@/lib/crew-schedule";
 import { divemasterRatioGap, inWaterDivemasterCount } from "@/lib/divemaster-ratio";
 import { rentalFitCompleteness } from "@/lib/rentals";
@@ -17,6 +22,7 @@ import { listDepartureBoardedByTrip } from "./manifests";
 import { countOpenTripOrders } from "./orders";
 import { getTripRequirements, getTripSiteRequirement, listTripReadiness } from "./readiness";
 import { listTripPrepDivers } from "./rental-fit";
+import { ratingCredentialsByPerson } from "./staff-credentials";
 import { crewShiftCoverage } from "./staffing";
 import {
   boatClashes,
@@ -176,12 +182,25 @@ export async function getTripOverview(
   // booking gate, the staffing window, and Today, so a divemaster rostered as
   // this trip's captain stops buying two students' worth of capacity here too
   // (DOM-M3).
-  const inWaterCrew = countInWaterCrew(
-    assignedCrew.map((entry) => ({
-      tripRole: tripRoleByPerson.get(entry.person.id) ?? null,
-      shopRoles: entry.roles,
-    })),
-  );
+  //
+  // This page states the supervision claim, so it reads each rostered
+  // professional's recorded ratings against the departure's last shop-local
+  // day, as Today and the staffing week do (issue #1853). The booking gate on
+  // this same trip does not: it sells on the roster's claim (H-59).
+  const credentials = await ratingCredentialsByPerson(db, shop.id, crewIds);
+  const divesOn = lastDayOfDeparture(trip.endsAt, shop.timezone);
+  const crewMembers = assignedCrew.map((entry) => ({
+    person: entry.person,
+    tripRole: tripRoleByPerson.get(entry.person.id) ?? null,
+    shopRoles: entry.roles,
+    lapsedRungs: lapsedRungs(credentials.get(entry.person.id) ?? [], divesOn),
+  }));
+  const inWaterCrew = countInWaterCrew(crewMembers);
+  // Who a lapse took down a rung, so the Crew panel can say why a list that
+  // names an instructor still reads as short.
+  const lapsedCrew = crewMembers
+    .filter(narrowedByLapse)
+    .map((member) => ({ personId: member.person.id, fullName: member.person.fullName }));
   // `courseCrewGap` is the one computation of "does this course session have
   // enough crew", also consumed by the staffing coverage list and the Today
   // queue — `over_ratio` is the visible nudge to fix a ratio-gated session before
@@ -257,6 +276,7 @@ export async function getTripOverview(
       crewIds,
       tripRoleByPerson,
       inWaterCrew,
+      lapsedCrew,
       crewGap,
       ratioGap,
       languageGap,

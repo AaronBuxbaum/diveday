@@ -395,6 +395,7 @@ export default async function StaffingPage({
               requestDeclined: t("staffing.week.requestDeclined"),
               askWontClose: t("staffing.week.askWontClose"),
               requestWontClose: t("staffing.week.requestWontClose"),
+              ratingLapsed: t("staffing.week.ratingLapsed"),
             }}
           />
 
