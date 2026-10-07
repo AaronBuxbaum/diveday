@@ -1,0 +1,46 @@
+{
+  "notices": {
+    "diversFull": "Todas las plazas de buceo de este barco están ocupadas. Todavía hay lugar para snorkel o acompañantes.",
+    "typeUnavailable": "Una sesión de curso solo admite buceadores.",
+    "restoreDiversFull": "No se pudo deshacer. Desde entonces se ocuparon todas las plazas de buceo.",
+    "noShowDiversFull": "No se pudo volver a ponerlo. Desde entonces se ocuparon todas las plazas de buceo.",
+    "typeSet": "Guardado.",
+    "onBuddyTeam": "Primero sácalo de su equipo de buceo. Un equipo de buceo es solo de buceadores.",
+    "certBlocked": "Su tarjeta para esta salida no está en el registro. Revísala primero o cámbialo de todos modos.",
+    "closed": "Ya es tarde para ese cambio. Nadie se suma al buceo después de la hora de salida, y nada cambia cuando el barco ya volvió.",
+    "boardedNotReady": "Ya embarcó y no está listo para bucear. Primero resuelve lo que lo bloquea.",
+    "owed": "Guardado. Su plaza ahora cuesta más, así que debe la diferencia."
+  },
+  "terms": {
+    "saved": "Guardado.",
+    "invalid": "Revisa los precios y las plazas de buceo. Las plazas de buceo no pueden superar lo que lleva el barco.",
+    "heading": "Snorkel y acompañantes",
+    "description": "Deja un precio en blanco para que esa plaza no aparezca en el formulario público de reservas. El equipo puede seguir añadiendo a cualquiera desde la página de la salida.",
+    "snorkelerPrice": "Precio de snorkel",
+    "riderPrice": "Precio de acompañante",
+    "diverSeats": "Plazas de buceo",
+    "diverSeatsHint": "Déjalo en blanco si todas las plazas pueden bucear.",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "belowBooked": "{count, plural, one {Ya hay # buceador reservado} other {Ya hay # buceadores reservados}}, así que las plazas de buceo no pueden ser menos.",
+    "edit": "Editar",
+    "divesOnly": "Solo buceadores",
+    "priceLine": "{type} {price}",
+    "free": "gratis",
+    "diverSeatsLine": "{count, plural, one {# plaza de buceo} other {# plazas de buceo}}"
+  },
+  "roster": {
+    "comingAs": "Participa como: {type}",
+    "typeLabel": "Participa como",
+    "save": "Guardar",
+    "changeAnyway": "Cambiar de todos modos"
+  },
+  "headCount": {
+    "split": "{divers, plural, one {# buceador} other {# buceadores}} · {snorkelers, plural, one {# de snorkel} other {# de snorkel}} · {riders, plural, one {# acompañante} other {# acompañantes}}",
+    "aboardOfTotalPeople": "{aboard} de {total, plural, one {# persona} other {# personas}} a bordo",
+    "ofTotalAboardPeople": "de {total, plural, one {# persona} other {# personas}} a bordo"
+  },
+  "reports": {
+    "bookingsDetailSplit": "{detail}: {split}"
+  }
+}

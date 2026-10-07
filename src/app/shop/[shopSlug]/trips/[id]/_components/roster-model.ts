@@ -6,6 +6,7 @@ import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import type { CalendarDate } from "@/lib/calendar-date";
 import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
+import { isDiver } from "@/lib/participant-types";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import { waiverState } from "@/lib/waivers";
 import type { PaymentStatus, PaymentStatusControlCopy } from "./PaymentStatusControl";
@@ -107,6 +108,13 @@ export type RosterRows = {
    * namesake confirmation; every other minor's does not.
    */
   namesakeRefusedBookingId?: string;
+  /**
+   * The seat whose change into diving the card check just refused (ADR
+   * 20261007-participant-types). That one row's "Coming as" opens and offers
+   * "Change anyway"; no other row does. The page passes it only to an owner,
+   * manager or instructor (`canOverrideCertBlock`).
+   */
+  participantTypeCertBookingId?: string;
 };
 
 /** The server actions a row posts to. */
@@ -116,6 +124,12 @@ export type RosterActions = {
   markWaiverInPersonAction: PaperWaiverAction;
   markPaymentAction: (formData: FormData) => void;
   removeBookingAction: (formData: FormData) => void;
+  /**
+   * "Coming as": change what this seat is for (ADR
+   * 20261007-participant-types). Absent where the staffer may not change a
+   * booking, and then the row only shows the type.
+   */
+  setParticipantTypeAction?: (formData: FormData) => void;
   confirmIdentityAction: (formData: FormData) => void;
   /** "Different person": the held seat becomes a new diver (`splitBookingIdentity`). */
   splitIdentityAction: (formData: FormData) => void;
@@ -423,7 +437,7 @@ export function groupRoster({
       // Currency informs, never gates (ADR 20260821-currency-is-what-catches-
       // people) — but a warning filed under "Ready" is a warning nobody reads
       // (dive-domain review 2026-08-21).
-      !diveRecencyIsNotable(booking.lastDivedBand)
+      !(isDiver(booking.participantType) && diveRecencyIsNotable(booking.lastDivedBand))
     );
   };
 

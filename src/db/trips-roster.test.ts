@@ -80,7 +80,7 @@ describe("getTripRoster", () => {
     ] as const) {
       await db
         .insert(bookings)
-        .values({ shopId: shop.id, tripId: trip, personId: person.id, status });
+        .values({ bookedAs: "diver", shopId: shop.id, tripId: trip, personId: person.id, status });
     }
 
     const ours = new Set([booked.id, checkedIn.id, noShow.id, cancelled.id]);
@@ -133,6 +133,7 @@ describe("getTripRoster", () => {
     for (const bookingId of [HIGH_BOOKING_ID, LOW_BOOKING_ID]) {
       const person = await makeDiver(db, shop.id, { name: "John Smith" });
       await db.insert(bookings).values({
+        bookedAs: "diver",
         id: bookingId,
         shopId: shop.id,
         tripId: trip,
@@ -170,6 +171,7 @@ describe("getTripRoster", () => {
         const person = await makeDiver(db, shop.id, { name });
         ours.add(person.id);
         await db.insert(bookings).values({
+          bookedAs: "diver",
           id: bookingId,
           shopId: shop.id,
           tripId,
@@ -206,12 +208,14 @@ describe("getTripRoster", () => {
     const early = await makeDiver(db, shop.id, { name: "Zoe Adler" });
     const late = await makeDiver(db, shop.id, { name: "Ángel Ferrer" });
     await db.insert(bookings).values({
+      bookedAs: "diver",
       shopId: shop.id,
       tripId: trip,
       personId: early.id,
       createdAt: new Date("2026-03-02T10:00:00.000Z"),
     });
     await db.insert(bookings).values({
+      bookedAs: "diver",
       shopId: shop.id,
       tripId: trip,
       personId: late.id,
@@ -229,7 +233,9 @@ describe("getTripRoster", () => {
     const { db, shop } = ctx;
     const [trip] = await twoTrips(db, shop.id);
     const diver = await makeDiver(db, shop.id);
-    await db.insert(bookings).values({ shopId: shop.id, tripId: trip, personId: diver.id });
+    await db
+      .insert(bookings)
+      .values({ bookedAs: "diver", shopId: shop.id, tripId: trip, personId: diver.id });
     expect(await getTripRoster(db, OTHER_SHOP, trip)).toEqual([]);
   });
 });
@@ -242,9 +248,15 @@ describe("listTripDiverContacts", () => {
     const cancelled = await makeDiver(db, shop.id);
     const deleted = await makeDiver(db, shop.id, { deleted: true });
     await db.insert(bookings).values([
-      { shopId: shop.id, tripId: trip, personId: holder.id },
-      { shopId: shop.id, tripId: trip, personId: cancelled.id, status: "cancelled" },
-      { shopId: shop.id, tripId: trip, personId: deleted.id },
+      { bookedAs: "diver", shopId: shop.id, tripId: trip, personId: holder.id },
+      {
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: trip,
+        personId: cancelled.id,
+        status: "cancelled",
+      },
+      { bookedAs: "diver", shopId: shop.id, tripId: trip, personId: deleted.id },
     ]);
 
     const contacts = await listTripDiverContacts(db, shop.id, trip);

@@ -1353,7 +1353,7 @@ describe("full-shop export dataset", () => {
       const [person] = await db.insert(people).values({ shopId: shop.id, fullName }).returning();
       const [booking] = await db
         .insert(bookings)
-        .values({ shopId: shop.id, tripId: trip.id, personId: person.id })
+        .values({ bookedAs: "diver", shopId: shop.id, tripId: trip.id, personId: person.id })
         .returning();
       return booking;
     };

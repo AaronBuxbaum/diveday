@@ -54,7 +54,7 @@ async function aSeat(
   if (!person) throw new Error("test person insert failed");
   const [booking] = await db
     .insert(bookings)
-    .values({ shopId, tripId, personId: person.id, status })
+    .values({ bookedAs: "diver", shopId, tripId, personId: person.id, status })
     .returning();
   if (!booking) throw new Error("test booking insert failed");
   return booking;

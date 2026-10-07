@@ -29,6 +29,7 @@ import { certificationAgency, certificationLevel, diveSpecialty } from "@/db/sch
 import { issueWaiverRequest, saveBookingEmergencyContact } from "@/db/waivers";
 import { setWelcomeConsent } from "@/db/welcome-cues";
 import { diverTranslator } from "@/i18n/messages";
+import { describeCheckoutLine } from "@/i18n/participant-labels";
 import { requestFirstHandLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
 import { trackEvent } from "@/lib/analytics";
@@ -469,8 +470,7 @@ export async function payFromReady(token: string) {
     customerEmail: ctx.data.person.email,
     successUrl: `${returnBase}?pay=paid`,
     cancelUrl: `${returnBase}?pay=cancelled`,
-    describeLine: ({ isDeposit, tripTitle }) =>
-      isDeposit ? t("checkoutLine.deposit", { tripTitle }) : t("checkoutLine.full", { tripTitle }),
+    describeLine: (parts) => describeCheckoutLine(t, parts),
   }).catch(() => null);
   const url = outcome?.ok ? outcome.checkout.checkoutUrl : null;
   if (!url) redirect(`${base(token)}?error=pay`);

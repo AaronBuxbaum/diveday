@@ -263,6 +263,10 @@ async function materializeWindow(
         plannedDives: template.trip.plannedDives,
         priceCents: template.trip.priceCents,
         depositCents: template.trip.depositCents,
+        // Every Saturday sells the same snorkel and ride-along seats.
+        snorkelerPriceCents: template.trip.snorkelerPriceCents,
+        riderPriceCents: template.trip.riderPriceCents,
+        diverCapacity: template.trip.diverCapacity,
         cancellationWindowHours: template.trip.cancellationWindowHours,
         isPrivate: template.trip.isPrivate,
         // The case this matters most for: a standing weekly self-guided charter

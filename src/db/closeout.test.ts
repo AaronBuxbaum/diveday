@@ -105,6 +105,7 @@ describe("day close-out (in-memory PGlite)", () => {
     const [booking] = await db
       .insert(bookingsTable)
       .values({
+        bookedAs: "diver",
         shopId: shop.id,
         tripId: trip.id,
         personId: diver.id,
@@ -276,7 +277,10 @@ describe("day close-out (in-memory PGlite)", () => {
       db: Awaited<ReturnType<typeof boatThatSailedShort>>["db"],
       values: { shopId: string; tripId: string; personId: string; status: "booked" | "checked_in" },
     ) => {
-      const [booking] = await db.insert(bookingsTable).values(values).returning();
+      const [booking] = await db
+        .insert(bookingsTable)
+        .values({ bookedAs: "diver", ...values })
+        .returning();
       if (!booking) throw new Error("fixture booking insert returned no row");
       return booking;
     };

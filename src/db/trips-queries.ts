@@ -18,6 +18,7 @@ import { alias } from "drizzle-orm/pg-core";
 import { type CalendarDate, calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
+import type { SeatCounts } from "@/lib/participant-types";
 import {
   summarizeTripDiveSites,
   type TripDiveSiteRef,
@@ -299,6 +300,35 @@ export const seatHeld = inArray(bookings.status, [...SEAT_HELD_STATUSES]);
  * predicate the schedule does, rather than a second spelling of it.
  */
 export const liveBookingJoin = and(eq(bookings.tripId, trips.id), seatHeld);
+
+/**
+ * **Every seat held on a departure, and the divers among them** — the two
+ * numbers the two limits are measured against (ADR 20261007-participant-types).
+ *
+ * `seatHeld`, the same predicate the schedule counts with, so a seat released
+ * at the counter is free under both limits at once. One query, one snapshot:
+ * reading the two counts separately would let a concurrent write land between
+ * them on a reader that is not holding the trip-row lock. Every seat-granting
+ * caller holds it (`createBookingRecord`, `restoreBooking`,
+ * `setBookingParticipantType`, `undoBookingNoShow`, `setTripParticipantTerms`), which is what makes the
+ * answer a gate rather than advice.
+ */
+export async function heldSeatCounts(
+  tx: DbExecutor,
+  shopId: string,
+  tripId: string,
+): Promise<SeatCounts> {
+  const [row] = await tx
+    .select({
+      aboard: count(bookings.id),
+      divers: sql<number>`count(*) filter (where ${bookings.participantType} = 'diver')`.mapWith(
+        Number,
+      ),
+    })
+    .from(bookings)
+    .where(and(eq(bookings.shopId, shopId), eq(bookings.tripId, tripId), seatHeld));
+  return { aboard: row?.aboard ?? 0, divers: row?.divers ?? 0 };
+}
 
 /**
  * The schedule page's list, one keyset page at a time (ordered by departure,

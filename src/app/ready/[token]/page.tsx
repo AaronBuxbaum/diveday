@@ -82,7 +82,7 @@ import { THREAD_STEP_STATE_KEYS, THREAD_STEP_TITLE_KEYS } from "@/i18n/thread-la
 import { claimLinkPath } from "@/lib/booking-capabilities";
 import type { CarriedPreparation as CarriedPreparationItem } from "@/lib/carried-preparation";
 import { nowDate } from "@/lib/clock";
-import { perDiverBookingPriceCents } from "@/lib/courses";
+import { seatListPriceCents } from "@/lib/deposits";
 import { DIVE_INTENTS } from "@/lib/dive-intent";
 import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";
 import {
@@ -1577,10 +1577,10 @@ export default async function DiverReadinessPage({
       }
     : null;
 
-  // What one seat on this departure costs. Null on an unpriced trip, which
-  // then quotes nothing rather than guessing — see `resolvePaymentReceipt`,
-  // which takes the same figure to work out a balance after a deposit.
-  const fullPriceCents = fullTrip ? perDiverBookingPriceCents(fullTrip, fullTrip.course) : null;
+  // This seat's price (a snorkeler pays the snorkeler fare, ADR 20261007-participant-types); null
+  // on an unpriced trip, which quotes nothing. `resolvePaymentReceipt` takes it for the balance.
+  const fullPriceCents =
+    fullTrip && seatListPriceCents(fullTrip, fullTrip.course, data.participantType);
 
   // What this booking has been charged. Read on every visit, because "what did
   // I pay?" is a question the night before too — and it is what the Pay step's

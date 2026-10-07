@@ -148,7 +148,7 @@ describe("diver record merge", () => {
     });
     const [booking] = await db
       .insert(bookings)
-      .values({ shopId: shop.id, tripId: trip.id, personId: source.id })
+      .values({ bookedAs: "diver", shopId: shop.id, tripId: trip.id, personId: source.id })
       .returning({ id: bookings.id });
     if (!booking) throw new Error("booking fixture insert failed");
     await db.insert(internalNotes).values({
@@ -233,8 +233,8 @@ describe("diver record merge", () => {
   it("refuses a shared trip, anonymized source, and unauthorized actor without moving rows", async () => {
     const { db, shop, owner, trip, source, survivor } = await mergeFixtures();
     await db.insert(bookings).values([
-      { shopId: shop.id, tripId: trip.id, personId: source.id },
-      { shopId: shop.id, tripId: trip.id, personId: survivor.id },
+      { bookedAs: "diver", shopId: shop.id, tripId: trip.id, personId: source.id },
+      { bookedAs: "diver", shopId: shop.id, tripId: trip.id, personId: survivor.id },
     ]);
     expect(
       await mergeDiverRecords({

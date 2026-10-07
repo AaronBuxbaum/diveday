@@ -1,7 +1,8 @@
 import { and, desc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
-import { checkoutCharge } from "@/lib/deposits";
+import { checkoutCharge, seatCheckoutCharge } from "@/lib/deposits";
 import { log } from "@/lib/log";
+import { isDiver, type ParticipantType } from "@/lib/participant-types";
 import { parsePassThroughFee, passThroughTotalCents } from "@/lib/pass-through-fee";
 import { capturedPaymentStatuses } from "@/lib/payment-source";
 import {
@@ -107,7 +108,17 @@ export type StartCheckoutInput = {
    * re-translated afterwards, which would make our record of the charge
    * disagree with theirs.
    */
-  describeLine: (parts: { isDeposit: boolean; tripTitle: string }) => string;
+  describeLine: (parts: {
+    isDeposit: boolean;
+    tripTitle: string;
+    /**
+     * Whose seat the line is for. Absent or `diver` is the trip fee as it has
+     * always read; a snorkeler's or a rider's line is named as such so the
+     * hosted page and the receipt say what was bought (ADR
+     * 20261007-participant-types).
+     */
+    participantType?: ParticipantType;
+  }) => string;
 };
 
 export type StartCheckoutOutcome =
@@ -151,22 +162,8 @@ export async function startBookingCheckout(
   if (!tripRow) return { ok: false, reason: "invalid" };
   const shop = await getShopById(db, input.shopId);
   const passThroughFee = parsePassThroughFee(shop?.passThroughFee);
-  // A zero-priced trip can still have a real third-party fee to collect. In
-  // that case the fee is the checkout's only line; a truly free, fee-free
-  // booking still falls back to the ordinary no-payment flow.
-  const charge =
-    checkoutCharge(tripRow.trip, tripRow.course) ??
-    (passThroughFee ? { amountCents: 0, isDeposit: false, balanceDueCents: 0 } : null);
-  if (charge === null) return { ok: false, reason: "unpriced" };
-  const amountPerDiverCents = charge.amountCents;
-  // The shop's own currency, never the connected account's and never a
-  // hardcoded "usd" (docs ADR 20260731-shop-currency). `amountPerDiverCents`
-  // is already an integer count of this currency's minor unit, so it reaches
-  // Stripe unchanged — there is no divisor anywhere on this path.
-  const currency = await getShopCurrency(db, input.shopId);
-  const taxEnabled = await getShopTaxEnabled(db, input.shopId);
   const bookingRows = await db
-    .select({ id: bookings.id })
+    .select({ id: bookings.id, participantType: bookings.participantType })
     .from(bookings)
     .where(
       and(
@@ -178,6 +175,37 @@ export async function startBookingCheckout(
     );
   if (bookingRows.length !== input.bookingIds.length) return { ok: false, reason: "invalid" };
 
+  // Each seat is charged for what it is (ADR 20261007-participant-types): a
+  // diver the trip's own fare, a snorkeler or a rider their own price. A seat
+  // whose type this departure names no price for is charged nothing here.
+  const NO_CHARGE = { amountCents: 0, isDeposit: false, balanceDueCents: 0 } as const;
+  const seatCharges = new Map(
+    bookingRows.map((row) => [
+      row.id,
+      seatCheckoutCharge(tripRow.trip, tripRow.course, row.participantType),
+    ]),
+  );
+  const anySeatPriced = [...seatCharges.values()].some((c) => c !== null);
+  // A zero-priced trip can still have a real third-party fee to collect. In
+  // that case the fee is the checkout's only line; a truly free, fee-free
+  // booking still falls back to the ordinary no-payment flow.
+  if (!anySeatPriced && !passThroughFee) return { ok: false, reason: "unpriced" };
+  // The figure stored as `amount_per_diver_cents` and compared for staleness
+  // stays the trip's own diver charge, exactly as before; a party with no
+  // priced diver seat stores its first priced seat's charge instead. Every
+  // seat's own figure is on its `booking_checkout_bookings` row either way.
+  const charge =
+    checkoutCharge(tripRow.trip, tripRow.course) ??
+    [...seatCharges.values()].find((c) => c !== null) ??
+    NO_CHARGE;
+  const amountPerDiverCents = charge.amountCents;
+  // The shop's own currency, never the connected account's and never a
+  // hardcoded "usd" (docs ADR 20260731-shop-currency). `amountPerDiverCents`
+  // is already an integer count of this currency's minor unit, so it reaches
+  // Stripe unchanged — there is no divisor anywhere on this path.
+  const currency = await getShopCurrency(db, input.shopId);
+  const taxEnabled = await getShopTaxEnabled(db, input.shopId);
+
   const consumedByBooking = await countConsumedEntitlementsForBookings(
     db,
     input.shopId,
@@ -185,9 +213,11 @@ export async function startBookingCheckout(
   );
   const tripCentsByBooking = new Map(
     bookingRows.map((row) => {
+      const seatCharge = seatCharges.get(row.id) ?? NO_CHARGE;
+      // Only a diver's seat ever consumes a prepaid dive (`settlePackageCoverage`).
       const consumed = consumedByBooking.get(row.id) ?? 0;
       const uncovered = Math.max(0, tripRow.trip.plannedDives - consumed);
-      const tripCents = Math.ceil((charge.amountCents * uncovered) / tripRow.trip.plannedDives);
+      const tripCents = Math.ceil((seatCharge.amountCents * uncovered) / tripRow.trip.plannedDives);
       return [row.id, tripCents] as const;
     }),
   );
@@ -244,9 +274,21 @@ export async function startBookingCheckout(
     gearTotalCents +
     passThroughCents;
   if (totalCents === 0) return { ok: false, reason: "already_paid" };
-  const tripLineQuantities = new Map<number, number>();
-  for (const cents of tripCentsByBooking.values()) {
-    if (cents > 0) tripLineQuantities.set(cents, (tripLineQuantities.get(cents) ?? 0) + 1);
+  // One Stripe line per (amount, kind of seat, deposit-or-fare): two divers at
+  // the same figure share a line, a snorkeler at the same figure does not.
+  const tripLines = new Map<
+    string,
+    { cents: number; participantType: ParticipantType; isDeposit: boolean; quantity: number }
+  >();
+  for (const row of bookingRows) {
+    const cents = tripCentsByBooking.get(row.id) ?? 0;
+    if (cents <= 0) continue;
+    const isDeposit = (seatCharges.get(row.id) ?? NO_CHARGE).isDeposit;
+    const key = `${cents}:${row.participantType}:${isDeposit}`;
+    const line = tripLines.get(key);
+    if (line) line.quantity += 1;
+    else
+      tripLines.set(key, { cents, participantType: row.participantType, isDeposit, quantity: 1 });
   }
 
   const existing = await latestCheckoutForBookingIds(db, input.shopId, input.bookingIds);
@@ -361,12 +403,16 @@ export async function startBookingCheckout(
       stripeAccountId,
       currency,
       lineItems: [
-        ...[...tripLineQuantities].map(([tripCents, quantity]) => ({
+        ...[...tripLines.values()].map((line) => ({
           description: stripeLineDescription(
-            input.describeLine({ isDeposit: charge.isDeposit, tripTitle: tripRow.trip.title }),
+            input.describeLine({
+              isDeposit: line.isDeposit,
+              tripTitle: tripRow.trip.title,
+              participantType: line.participantType,
+            }),
           ),
-          unitAmountCents: tripCents,
-          quantity,
+          unitAmountCents: line.cents,
+          quantity: line.quantity,
         })),
         // One single-quantity line per diver's priced gear, always charged in
         // full — a deposit only ever discounts the trip fee above (docs ADR
@@ -590,6 +636,36 @@ export async function retirePendingCheckoutIfRepriced(
   // against, and inventing a mismatch out of missing data would retire a
   // perfectly good session. Leave it exactly as it is.
   if (!tripRow) return existing;
+  // A snorkeler's or a rider's seat is quoted on its own row at its own price
+  // and never discounted by a prepaid dive, so its stored `trip_cents` is
+  // exactly what that seat would be charged now. A seat repriced since (or no
+  // longer priced at all) is a stale quote, the same as a diver's fare moving.
+  const nonDiverSeats = (
+    await db
+      .select({
+        participantType: bookings.participantType,
+        tripCents: bookingCheckoutBookings.tripCents,
+      })
+      .from(bookingCheckoutBookings)
+      .innerJoin(bookings, eq(bookings.id, bookingCheckoutBookings.bookingId))
+      .where(
+        and(
+          eq(bookingCheckoutBookings.checkoutId, existing.id),
+          eq(bookingCheckoutBookings.shopId, shopId),
+          eq(bookings.shopId, shopId),
+        ),
+      )
+  ).filter((seat) => !isDiver(seat.participantType));
+  const nonDiverRepriced = nonDiverSeats.some(
+    (seat) =>
+      seat.tripCents !== null &&
+      seat.tripCents !==
+        (seatCheckoutCharge(tripRow.trip, tripRow.course, seat.participantType)?.amountCents ?? 0),
+  );
+  if (nonDiverRepriced) {
+    await retireStaleCheckout(db, existing);
+    return { ...existing, status: "expired" };
+  }
   const charge = checkoutCharge(tripRow.trip, tripRow.course);
   if (charge === null) return existing;
 

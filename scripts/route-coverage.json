@@ -227,6 +227,7 @@
       "first-ten-minutes.spec.ts",
       "next-departure.spec.ts",
       "nitrox.spec.ts",
+      "participant-types.spec.ts",
       "partner-referral.spec.ts",
       "promo-codes.spec.ts",
       "readiness.spec.ts",
@@ -242,6 +243,7 @@
     "visual": [
       "booking-confirmed-embed",
       "booking-pitch-open",
+      "public-trip-participant-types",
       "shop-not-found",
       "site-briefing",
       "site-briefing-requirements"
@@ -595,6 +597,7 @@
       "manifest.spec.ts",
       "minimum-seats.spec.ts",
       "nitrox.spec.ts",
+      "participant-types.spec.ts",
       "promo-codes.spec.ts",
       "recap.spec.ts",
       "refunds.spec.ts",
@@ -615,11 +618,13 @@
       "trip-desk-no-show",
       "trip-desk-no-show-sailed",
       "trip-desk-waiver-refused",
+      "trip-details-participant-terms",
       "trip-manage",
       "trip-manage-course-requirements",
       "trip-minimum-seats",
       "trip-repeating-cadence",
-      "trip-repeating-panel"
+      "trip-repeating-panel",
+      "trip-roster-participant-types"
     ],
     "a11y": ["a11y.spec.ts"]
   },
@@ -637,6 +642,7 @@
       "depth-and-age-surfaces.spec.ts",
       "divers.spec.ts",
       "manifest.spec.ts",
+      "participant-types.spec.ts",
       "sightings.spec.ts"
     ],
     "visual": [
@@ -645,6 +651,7 @@
       "manifest-buddy-teams-panel",
       "manifest-not-back-aboard",
       "manifest-not-here",
+      "manifest-participant-types",
       "manifest-person-panel",
       "manifest-plan-change",
       "manifest-seen"

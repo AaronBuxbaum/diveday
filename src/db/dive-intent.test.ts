@@ -51,6 +51,7 @@ describe("diveIntentTallyForTrip", () => {
     const [trip] = await twoTrips(db, shop.id);
     for (const intent of ["small_life", "small_life", "easing_back"] as const) {
       await db.insert(bookings).values({
+        bookedAs: "diver",
         shopId: shop.id,
         tripId: trip,
         personId: await makeDiver(db, shop.id),
@@ -68,9 +69,12 @@ describe("diveIntentTallyForTrip", () => {
     // the buddy panel render no line rather than a heading over nothing.
     const { db, shop } = ctx;
     const [trip] = await twoTrips(db, shop.id);
-    await db
-      .insert(bookings)
-      .values({ shopId: shop.id, tripId: trip, personId: await makeDiver(db, shop.id) });
+    await db.insert(bookings).values({
+      bookedAs: "diver",
+      shopId: shop.id,
+      tripId: trip,
+      personId: await makeDiver(db, shop.id),
+    });
     expect(await diveIntentTallyForTrip(db, shop.id, trip)).toEqual([]);
   });
 
@@ -78,6 +82,7 @@ describe("diveIntentTallyForTrip", () => {
     const { db, shop } = ctx;
     const [trip] = await twoTrips(db, shop.id);
     await db.insert(bookings).values({
+      bookedAs: "diver",
       shopId: shop.id,
       tripId: trip,
       personId: await makeDiver(db, shop.id),
@@ -85,6 +90,7 @@ describe("diveIntentTallyForTrip", () => {
       status: "cancelled",
     });
     await db.insert(bookings).values({
+      bookedAs: "diver",
       shopId: shop.id,
       tripId: trip,
       personId: await makeDiver(db, shop.id),
@@ -99,6 +105,7 @@ describe("diveIntentTallyForTrip", () => {
     const { db, shop } = ctx;
     const [trip] = await twoTrips(db, shop.id);
     await db.insert(bookings).values({
+      bookedAs: "diver",
       shopId: shop.id,
       tripId: trip,
       personId: await makeDiver(db, shop.id),
@@ -115,6 +122,7 @@ describe("diveIntentTallyForTrip", () => {
     const { db, shop } = ctx;
     const [trip] = await twoTrips(db, shop.id);
     await db.insert(bookings).values({
+      bookedAs: "diver",
       shopId: shop.id,
       tripId: trip,
       personId: await makeDiver(db, shop.id),
@@ -131,14 +139,18 @@ describe("diveIntentTallyForTrips", () => {
     const { db, shop } = ctx;
     const [answered, silent] = await twoTrips(db, shop.id);
     await db.insert(bookings).values({
+      bookedAs: "diver",
       shopId: shop.id,
       tripId: answered,
       personId: await makeDiver(db, shop.id),
       diveIntent: "easing_back",
     });
-    await db
-      .insert(bookings)
-      .values({ shopId: shop.id, tripId: silent, personId: await makeDiver(db, shop.id) });
+    await db.insert(bookings).values({
+      bookedAs: "diver",
+      shopId: shop.id,
+      tripId: silent,
+      personId: await makeDiver(db, shop.id),
+    });
     const byTrip = await diveIntentTallyForTrips(db, shop.id, [answered, silent]);
     expect(byTrip.get(answered)).toEqual([{ intent: "easing_back", count: 1 }]);
     expect(byTrip.has(silent)).toBe(false);

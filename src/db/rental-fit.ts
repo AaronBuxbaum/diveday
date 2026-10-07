@@ -579,6 +579,7 @@ export async function listTripPrepDivers(
     lastDivedBand: row.booking.lastDivedBand,
     hotelPickupLocation: row.booking.hotelPickupLocation,
     pickupTime: row.booking.pickupTime,
+    participantType: row.booking.participantType,
   }));
 }
 

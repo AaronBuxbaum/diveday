@@ -906,18 +906,37 @@ export async function releaseGearReservation(
  */
 export async function releaseUnclaimedGearReservations(
   db: DbExecutor,
-  input: { shopId: string; bookingId: string },
+  input: {
+    shopId: string;
+    bookingId: string;
+    /**
+     * Only units of these kinds. A seat that stops diving lets go of the
+     * regulator it will not breathe from and keeps the mask it will still
+     * wear (ADR 20261007-participant-types). Omitted, every kind goes.
+     */
+    kinds?: readonly GearItemKind[];
+  },
 ): Promise<void> {
-  await db
-    .delete(gearReservations)
-    .where(
-      and(
-        eq(gearReservations.shopId, input.shopId),
-        eq(gearReservations.bookingId, input.bookingId),
-        isNull(gearReservations.checkedOutAt),
-        isNull(gearReservations.returnedAt),
-      ),
-    );
+  if (input.kinds?.length === 0) return;
+  await db.delete(gearReservations).where(
+    and(
+      eq(gearReservations.shopId, input.shopId),
+      eq(gearReservations.bookingId, input.bookingId),
+      isNull(gearReservations.checkedOutAt),
+      isNull(gearReservations.returnedAt),
+      input.kinds
+        ? inArray(
+            gearReservations.gearItemId,
+            db
+              .select({ id: gearItems.id })
+              .from(gearItems)
+              .where(
+                and(eq(gearItems.shopId, input.shopId), inArray(gearItems.kind, [...input.kinds])),
+              ),
+          )
+        : undefined,
+    ),
+  );
 }
 
 /**

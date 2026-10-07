@@ -77,6 +77,7 @@ export const DESK_NOTICES: DeskNoticeMap = {
   "no-show-already-marked": { tone: "neutral", key: "checkIn.notice.noShowAlreadyMarked" },
   "no-show-not-booked": { tone: "neutral", key: "checkIn.notice.noShowNotBooked" },
   "no-show-trip-cancelled": { tone: "neutral", key: "checkIn.notice.noShowTripCancelled" },
+  "no-show-divers-full": { tone: "danger", key: "participants.notices.noShowDiversFull" },
   "no-show-before-departure": { tone: "warning", key: "checkIn.notice.noShowBeforeDeparture" },
   "no-show-window-closed": { tone: "warning", key: "checkIn.notice.noShowWindowClosed" },
   "no-show-not-marked": { tone: "neutral", key: "checkIn.notice.noShowNotMarked" },

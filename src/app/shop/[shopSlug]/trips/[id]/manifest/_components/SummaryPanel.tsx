@@ -5,6 +5,7 @@ import { rollCallCheckpointText } from "@/i18n/manifest-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { crewRowId, diverRowHash, scopedHash, scopedId } from "@/lib/element-id";
 import type { RollCallCheckpoint, TripManifest } from "@/lib/manifests";
+import { hasNonDivers } from "@/lib/participant-types";
 import { HeadCount } from "./HeadCount";
 import { PanelHeight } from "./PanelHeight";
 
@@ -266,8 +267,21 @@ export function SummaryPanel({
             aboard={summary.boarded}
             out={summary.totalDivers - ashore - summary.notHere}
             t={t}
+            people={summary.byType ? hasNonDivers(summary.byType) : false}
           />
         </div>
+        {/* Who the people are, when they are not all divers (ADR
+            20261007-participant-types): a split of the same rows the head
+            count above counts, never a second count of the boat. */}
+        {summary.byType && hasNonDivers(summary.byType) ? (
+          <p className="mt-2 text-base tabular-nums">
+            {t("participants.headCount.split", {
+              divers: summary.byType.diver,
+              snorkelers: summary.byType.snorkeler,
+              riders: summary.byType.rider,
+            })}
+          </p>
+        ) : null}
         {/* The counts the six tiles used to carry, folded in under the bar they
             explain. A definition list, not a grid of cards: label/number pairs
             read in one pass and cost the roll-call list no vertical space on a

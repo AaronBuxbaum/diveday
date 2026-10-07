@@ -21,6 +21,7 @@
 
 import { DAY_MS } from "@/lib/clock";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
+import { isDiver, type ParticipantType, rentsGear, rentsKind } from "@/lib/participant-types";
 import { nowDate } from "./clock";
 import {
   rentalFitCompleteness,
@@ -119,6 +120,12 @@ export type PrepDiver = {
   hotelPickupLocation?: string | null;
   /** Staff-set pickup time for this booking (e.g. "07:15"). */
   pickupTime?: string | null;
+  /**
+   * What this seat is for (ADR 20261007-participant-types). Absent is a
+   * diver's. A rider is packed nothing and breathes no tank; a snorkeler is
+   * packed the surface kit they rent and no tank.
+   */
+  participantType?: ParticipantType;
 };
 
 export type HotelPickupRun = {
@@ -717,8 +724,14 @@ export function buildDivePrepChecklist(input: {
   const diversNeedingStaffFit: DivePrepChecklist["diversNeedingStaffFit"] = [];
   let nitroxDivers = 0;
 
-  for (const diver of input.divers) {
-    if (nitroxTanksApproved(diver)) nitroxDivers += 1;
+  // Gear and tanks are for the people who get in the water. A rider takes
+  // nothing from the rack; a snorkeler takes surface kit and no cylinder.
+  // Neither is dropped from any head count: this is the packing list, and the
+  // manifest and roll call count everyone (ADR 20261007-participant-types).
+  const inWater = input.divers.filter((diver) => rentsGear(diver.participantType));
+  for (const diver of inWater) {
+    const diving = isDiver(diver.participantType);
+    if (diving && nitroxTanksApproved(diver)) nitroxDivers += 1;
     else if (diver.wantsNitrox) {
       nitroxBlockers.push({
         bookingId: diver.bookingId,
@@ -732,8 +745,10 @@ export function buildDivePrepChecklist(input: {
     // ones who *have* a row. A partial fit is named here and still packed
     // below: the sizes they did give are real, and dropping their pieces to
     // punish the gap would send the boat out short.
+    // Only a diver is chased for a complete scuba fit; a snorkeler who
+    // stated a mask size has said all the rack needs.
     const fit = rentalFitCompleteness(diver.fit, input.offeredKinds);
-    if (fit.state !== "complete") {
+    if (diving && fit.state !== "complete") {
       diversWithIncompleteFit.push({
         fullName: diver.fullName,
         personId: diver.personId,
@@ -751,7 +766,9 @@ export function buildDivePrepChecklist(input: {
         fullName: diver.fullName,
         items: [],
         state: "not_recorded",
-        lastDivedBand: diver.lastDivedBand,
+        // How long since they last dived is a diver's question; a snorkeler
+        // is not asked it (ADR 20261007-participant-types).
+        lastDivedBand: isDiver(diver.participantType) ? diver.lastDivedBand : null,
       });
       continue;
     }
@@ -774,14 +791,16 @@ export function buildDivePrepChecklist(input: {
     // it returns, so a diver's row reads down the rack in the same order the
     // by-item rows do — and neither grouping can hold a piece the other
     // doesn't.
-    const items = rentedItems(diver.fit, offered);
+    const items = rentedItems(diver.fit, offered).filter((item) =>
+      rentsKind(diver.participantType, item.kind),
+    );
     diverLines.push({
       bookingId: diver.bookingId,
       personId: diver.personId,
       fullName: diver.fullName,
       items,
       state: items.length > 0 ? "rents" : "own_kit",
-      lastDivedBand: diver.lastDivedBand,
+      lastDivedBand: isDiver(diver.participantType) ? diver.lastDivedBand : null,
     });
     for (const item of items) {
       const key = `${item.kind}:${prepLineKey(item)}`;
@@ -831,7 +850,8 @@ export function buildDivePrepChecklist(input: {
   });
   for (const line of lines) line.divers.sort((a, b) => a.localeCompare(b));
 
-  const diverCount = input.divers.length;
+  // Tanks are counted for divers alone.
+  const diverCount = inWater.filter((diver) => isDiver(diver.participantType)).length;
   const crewCount = input.divingCrew?.length ?? 0;
   return {
     diveCount,

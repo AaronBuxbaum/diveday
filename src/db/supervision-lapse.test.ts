@@ -89,7 +89,7 @@ async function seat(db: AppDb, shopId: string, tripId: string, count: number) {
       .values({ shopId, fullName: `Student ${seq}`, email: `lapse-student-${seq}@example.com` })
       .returning();
     if (!diver) throw new Error("failed to insert student");
-    await db.insert(bookings).values({ shopId, tripId, personId: diver.id });
+    await db.insert(bookings).values({ bookedAs: "diver", shopId, tripId, personId: diver.id });
   }
 }
 

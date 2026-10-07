@@ -119,6 +119,8 @@ const tripPath = ({ shopSlug, tripId }: SeatLanding) => shopPath(shopSlug, "trip
 /** The trip page's vocabulary — one distinct notice per gate. */
 const TRIP_REFUSAL_NOTICE: Record<SeatDiverRefusal, string> = {
   trip_full: "diver-full",
+  divers_full: "diver-divers-full",
+  participant_type_unavailable: "diver-type-unavailable",
   already_booked: "diver-already",
   course_unstaffed: "diver-course-unstaffed",
   course_prerequisite: "diver-course-prerequisite",
@@ -185,6 +187,8 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     invalidNotice: "walkin-invalid",
     refusalNotice: {
       trip_full: "walkin-full",
+      divers_full: "walkin-divers-full",
+      participant_type_unavailable: "walkin-type-unavailable",
       already_booked: "walkin-already",
       course_unstaffed: "walkin-course-unstaffed",
       course_prerequisite: "walkin-course-prerequisite",
@@ -216,6 +220,8 @@ export const SEAT_SURFACES: Record<SeatSurfaceId, SeatSurface> = {
     invalidNotice: "booking-invalid",
     refusalNotice: {
       trip_full: "trip-full",
+      divers_full: "divers-full",
+      participant_type_unavailable: "type-unavailable",
       already_booked: "already-booked",
       course_unstaffed: "course-unstaffed",
       course_prerequisite: "course-prerequisite",

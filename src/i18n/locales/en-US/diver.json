@@ -330,7 +330,9 @@
       "taxAtCheckout": "added at checkout",
       "dueNow": "Due now",
       "dueAtShop": "Due at the shop",
-      "balanceAtDock": "{balance} at the dock on {when}"
+      "balanceAtDock": "{balance} at the dock on {when}",
+      "snorkelerFare": "{price} × {count, plural, one {# snorkeler} other {# snorkelers}}",
+      "riderFare": "{price} × {count, plural, one {# rider} other {# riders}}"
     },
     "promoLabel": "Promo code",
     "promoHint": "(if you have one)",
@@ -384,14 +386,17 @@
       "courseRatioFull": "This session is at its instructor-to-student ratio limit. Call the shop: they may be able to add another instructor.",
       "fit": "That rental fit didn’t save. Check the details and try again.",
       "pay": "We couldn’t open the payment page just now. Your spot is safe. Try again in a moment, or pay at the shop.",
-      "checkFields": "Check the highlighted fields and try again."
+      "checkFields": "Check the highlighted fields and try again.",
+      "diversFull": "The diver spots on this trip are taken, so we couldn’t book a diver.",
+      "typeUnavailable": "That option isn’t offered on this trip. Pick another and try again."
     },
     "fieldErrors": {
       "nameRequired": "Enter a name.",
       "nameTooLong": "That name is too long.",
       "emailInvalid": "Enter a valid email address.",
       "phoneTooLong": "That phone number is too long.",
-      "promoInvalid": "That code isn’t active."
+      "promoInvalid": "That code isn’t active.",
+      "participantTypeInvalid": "Pick one of the options listed."
     },
     "emailsOnTheWay": "Two emails are on their way: your booking confirmation, and the link to sign your waiver.",
     "embedPayNext": "Your seat’s held. Paying opens on DiveDay’s secure page, outside this window.",
@@ -988,7 +993,9 @@
     "full": "{tripTitle}",
     "gear": "Rental gear",
     "gearForDiver": "Rental gear — {name}",
-    "tip": "Tip for the crew"
+    "tip": "Tip for the crew",
+    "seatFull": "{tripTitle} ({type})",
+    "seatDeposit": "Deposit — {tripTitle} ({type})"
   },
   "capability": {
     "waiverReceived": "Waiver received",
@@ -4235,5 +4242,25 @@
       "mostDived": "Most dived · {times, number}",
       "divers": "Divers"
     }
+  },
+  "participants": {
+    "type": {
+      "diver": "Diver",
+      "snorkeler": "Snorkeler",
+      "rider": "Rider"
+    },
+    "joiningAs": "Joining as",
+    "free": "free",
+    "choice": {
+      "diver": "Diving, {price}",
+      "snorkeler": "Snorkeling, {price}",
+      "rider": "Riding along, {price}"
+    },
+    "choiceUnpriced": {
+      "diver": "Diving",
+      "snorkeler": "Snorkeling",
+      "rider": "Riding along"
+    },
+    "priceLine": "{type} {price}"
   }
 }

@@ -4,6 +4,7 @@ import { nowDate } from "@/lib/clock";
 import type { TripCrewRole } from "@/lib/crew-roles";
 import type { DiveSiteDifficulty } from "@/lib/dive-site-difficulty";
 import { maxRecordedDiveNumber } from "@/lib/manifests";
+import type { ParticipantTermsPatch } from "@/lib/participant-terms";
 import type { SpokenLanguageTag } from "@/lib/spoken-languages";
 import {
   tripArrivalSnapshot,
@@ -41,7 +42,7 @@ import {
   validateDiveSites,
 } from "./trips-create";
 import { liveTrip } from "./trips-live";
-import { seatHeld } from "./trips-queries";
+import { heldSeatCounts, seatHeld } from "./trips-queries";
 
 /**
  * One departure's own record: read it, edit its details, its dives, its
@@ -648,6 +649,63 @@ export type TripConditionsPatch = {
   /** The staffer who published this conditions update, when known. */
   changeActorPersonId?: string | null;
 };
+
+export type SetParticipantTermsOutcome =
+  | { ok: true }
+  | { ok: false; reason: "not_found" | "invalid" }
+  /** Fewer diver seats than divers already booked: the seats already sold stand. */
+  | { ok: false; reason: "diver_seats_below_booked"; detail: { divers: number } };
+
+/**
+ * Save a departure's snorkeler price, rider price and divers-only limit (ADR
+ * 20261007-participant-types; parsed by `parseParticipantTerms`).
+ *
+ * Under the trip-row lock every seat-granting write takes, for the reason
+ * `updateTrip` refuses a capacity below the booked count: a divers-only limit
+ * lowered beneath the divers already aboard would leave a manifest no rule
+ * agrees with. Refused, typed, never silently clamped. The limit is also held
+ * to the boat's own capacity here, against the row as it is now rather than as
+ * the form saw it.
+ */
+export async function setTripParticipantTerms(
+  db: AppDb,
+  shopId: string,
+  tripId: string,
+  patch: ParticipantTermsPatch,
+): Promise<SetParticipantTermsOutcome> {
+  const outcome = await db.transaction(async (tx): Promise<SetParticipantTermsOutcome> => {
+    const [trip] = await tx
+      .select({ id: trips.id, capacity: trips.capacity, courseId: trips.courseId })
+      .from(trips)
+      .where(and(eq(trips.id, tripId), eq(trips.shopId, shopId), liveTrip()))
+      .limit(1)
+      .for("update");
+    if (!trip) return { ok: false, reason: "not_found" };
+    if (patch.diverCapacity !== null && patch.diverCapacity > trip.capacity) {
+      return { ok: false, reason: "invalid" };
+    }
+    // A course session seats divers only, so it has no other seat to price.
+    if (trip.courseId && (patch.snorkelerPriceCents !== null || patch.riderPriceCents !== null)) {
+      return { ok: false, reason: "invalid" };
+    }
+    if (patch.diverCapacity !== null) {
+      const held = await heldSeatCounts(tx, shopId, trip.id);
+      if (held.divers > patch.diverCapacity) {
+        return { ok: false, reason: "diver_seats_below_booked", detail: { divers: held.divers } };
+      }
+    }
+    await tx
+      .update(trips)
+      .set({
+        snorkelerPriceCents: patch.snorkelerPriceCents,
+        riderPriceCents: patch.riderPriceCents,
+        diverCapacity: patch.diverCapacity,
+      })
+      .where(and(eq(trips.id, trip.id), eq(trips.shopId, shopId)));
+    return { ok: true };
+  });
+  return outcome;
+}
 
 /**
  * Forecasts belong to the dated charter and are explicitly timestamped.

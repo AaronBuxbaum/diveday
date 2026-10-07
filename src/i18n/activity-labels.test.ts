@@ -24,7 +24,14 @@ describe("activity lines", () => {
       // message does not mention is unused.
       const line = activityLine(t, {
         code,
-        params: { ...NAMES, reason: "trip_full" },
+        params: {
+          ...NAMES,
+          reason: "trip_full",
+          from: "diver",
+          type: "snorkeler",
+          certCheck: "cleared",
+          cleared: "",
+        },
       });
       expect(line.trim(), code).not.toBe("");
       // A missing key renders as the key itself, which is the failure this

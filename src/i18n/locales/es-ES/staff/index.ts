@@ -44,6 +44,7 @@ import lenses from "./lenses.json";
 import manifest from "./manifest.json";
 import orderLine from "./orderLine.json";
 import orders from "./orders.json";
+import participants from "./participants.json";
 import print from "./print.json";
 import promos from "./promos.json";
 import reports from "./reports.json";
@@ -103,6 +104,7 @@ const staff = {
   integrations,
   boats,
   lenses,
+  participants,
 };
 
 export default staff;

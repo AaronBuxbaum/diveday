@@ -2066,7 +2066,13 @@ describe("saving the waiver template", () => {
       if (!trip) throw new Error("trip insert failed");
       const [booking] = await db
         .insert(bookings)
-        .values({ shopId: shop.id, tripId: trip.id, personId: person.id, status: "booked" })
+        .values({
+          bookedAs: "diver",
+          shopId: shop.id,
+          tripId: trip.id,
+          personId: person.id,
+          status: "booked",
+        })
         .returning();
       if (!booking) throw new Error("booking insert failed");
       const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
@@ -2118,7 +2124,13 @@ describe("saving the waiver template", () => {
     if (!trip) throw new Error("trip insert failed");
     const [booking] = await db
       .insert(bookings)
-      .values({ shopId: shop.id, tripId: trip.id, personId: person.id, status: "booked" })
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: person.id,
+        status: "booked",
+      })
       .returning();
     if (!booking) throw new Error("booking insert failed");
     const issued = await issueWaiverRequest(db, { shopId: shop.id, bookingId: booking.id, now });
@@ -2889,7 +2901,13 @@ describe("physician medical clearance", () => {
     if (!nextTrip) throw new Error("trip insert failed");
     const [nextBooking] = await db
       .insert(bookings)
-      .values({ shopId: shop.id, tripId: nextTrip.id, personId: person.id, status: "booked" })
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: nextTrip.id,
+        personId: person.id,
+        status: "booked",
+      })
       .returning();
     if (!nextBooking) throw new Error("booking insert failed");
     expect((await getBookingReadiness(db, shop.id, nextBooking.id))?.status).toBe("blocked");
@@ -3823,9 +3841,14 @@ describe("listTripWaiverStatuses row order (issue #1753)", () => {
     const seat = async (fullName: string, id: string) => {
       const [person] = await db.insert(people).values({ shopId: shop.id, fullName }).returning();
       if (!person) throw new Error("test person insert failed");
-      await db
-        .insert(bookings)
-        .values({ id, shopId: shop.id, tripId: trip.id, personId: person.id, createdAt: together });
+      await db.insert(bookings).values({
+        bookedAs: "diver",
+        id,
+        shopId: shop.id,
+        tripId: trip.id,
+        personId: person.id,
+        createdAt: together,
+      });
     };
     // "Alpha Nord" must come first, so it gets the higher uuid.
     await seat("Zulu Mbeki", "00000000-0000-4000-8000-000000000001");

@@ -893,6 +893,9 @@ export async function getTripManifests(
       // A held seat is named as booked here, once, so the alarm, the buddy
       // builder and every copy downstream inherit it (issue #1690).
       fullName: seatName(person.fullName, booking),
+      // Diver, snorkeler or rider — shown on the row, never used to drop it.
+      participantType: booking.participantType,
+      bookedAs: booking.bookedAs,
       email: person.email,
       emergencyContactName: person.emergencyContactName,
       emergencyContactPhone: person.emergencyContactPhone,

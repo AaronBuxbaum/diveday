@@ -1,4 +1,4 @@
-import { and, count, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { isStaff } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { courseSeatCapacity } from "@/lib/course-ratios";
@@ -9,6 +9,7 @@ import {
   SEAT_HELD_STATUSES,
   salvageOffer,
 } from "@/lib/no-show";
+import { seatRefusal } from "@/lib/participant-types";
 import { similarDepartures } from "@/lib/similar-departures";
 import { standingArrivalStatus } from "./arrival-provenance";
 import { loadActiveStaffRoles } from "./authz";
@@ -19,6 +20,7 @@ import { onTheWaterByRollCall } from "./manifests";
 import { activityEvents, bookings, courses, people, trips } from "./schema";
 import { getTripWaitlist, pagedUpcomingTripsWithCounts } from "./trips";
 import { liveTrip } from "./trips-live";
+import { heldSeatCounts } from "./trips-queries";
 
 /**
  * **The first writer of `bookings.status = "no_show"`** (issue #1209).
@@ -61,6 +63,8 @@ export type UndoNoShowOutcome =
         | "staff_not_found"
         | "not_marked"
         | "trip_full"
+        /** The boat has room, but every diver's seat has gone (ADR 20261007-participant-types). */
+        | "divers_full"
         | "course_ratio_full"
         | "trip_cancelled";
     };
@@ -249,6 +253,7 @@ export async function undoBookingNoShow(
         id: bookings.id,
         status: bookings.status,
         tripId: bookings.tripId,
+        participantType: bookings.participantType,
         personName: people.fullName,
       })
       .from(bookings)
@@ -263,6 +268,7 @@ export async function undoBookingNoShow(
       .select({
         id: trips.id,
         capacity: trips.capacity,
+        diverCapacity: trips.diverCapacity,
         status: trips.status,
         courseId: trips.courseId,
       })
@@ -276,11 +282,11 @@ export async function undoBookingNoShow(
     // Counted under the lock, and counting only the seats somebody else holds:
     // this booking is `no_show` right now, so it is not in the total, and the
     // question is whether the boat has room for it back.
-    const [held] = await tx
-      .select({ booked: count(bookings.id) })
-      .from(bookings)
-      .where(and(eq(bookings.tripId, trip.id), inArray(bookings.status, [...SEAT_HELD_STATUSES])));
-    const booked = held?.booked ?? 0;
+    //
+    // Both limits (ADR 20261007-participant-types): every held seat against the
+    // boat, and divers against the divers-only limit when this seat is one.
+    const held = await heldSeatCounts(tx, input.shopId, trip.id);
+    const booked = held.aboard;
     /**
      * **The two refusals that get a line of their own.**
      *
@@ -298,7 +304,7 @@ export async function undoBookingNoShow(
      * and history is what the trail is for.
      */
     const refuse = async (
-      reason: "trip_full" | "course_ratio_full",
+      reason: "trip_full" | "divers_full" | "course_ratio_full",
     ): Promise<UndoNoShowOutcome> => {
       await tx.insert(activityEvents).values({
         shopId: input.shopId,
@@ -311,7 +317,8 @@ export async function undoBookingNoShow(
       });
       return { ok: false, reason };
     };
-    if (booked >= trip.capacity) return await refuse("trip_full");
+    const full = seatRefusal(seat.participantType, trip, held);
+    if (full) return await refuse(full);
 
     if (trip.courseId) {
       const [course] = await tx

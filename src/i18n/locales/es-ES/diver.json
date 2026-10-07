@@ -330,7 +330,9 @@
       "taxAtCheckout": "se suma al pagar",
       "dueNow": "A pagar ahora",
       "dueAtShop": "A pagar en el centro",
-      "balanceAtDock": "{balance} en el muelle el {when}"
+      "balanceAtDock": "{balance} en el muelle el {when}",
+      "snorkelerFare": "{price} × {count, plural, one {# persona de snorkel} other {# personas de snorkel}}",
+      "riderFare": "{price} × {count, plural, one {# acompañante} other {# acompañantes}}"
     },
     "promoLabel": "Código promocional",
     "promoHint": "(si tienes uno)",
@@ -384,14 +386,17 @@
       "courseRatioFull": "Esta sesión alcanzó su límite de proporción instructor-alumno. Llama al centro: puede que puedan añadir otro instructor.",
       "fit": "Ese ajuste de equipo no se guardó. Revisa los detalles e inténtalo de nuevo.",
       "pay": "No hemos podido abrir la página de pago en este momento. Tu plaza está segura. Inténtalo de nuevo en un momento, o paga en el centro.",
-      "checkFields": "Revisa los campos resaltados e inténtalo de nuevo."
+      "checkFields": "Revisa los campos resaltados e inténtalo de nuevo.",
+      "diversFull": "Ya no quedan plazas de buceo en esta salida, así que no pudimos reservar a un buceador.",
+      "typeUnavailable": "Esa opción no está disponible en esta salida. Elige otra y vuelve a intentarlo."
     },
     "fieldErrors": {
       "nameRequired": "Escribe un nombre.",
       "nameTooLong": "Ese nombre es demasiado largo.",
       "emailInvalid": "Escribe un correo electrónico válido.",
       "phoneTooLong": "Ese número de teléfono es demasiado largo.",
-      "promoInvalid": "Ese código no está activo."
+      "promoInvalid": "Ese código no está activo.",
+      "participantTypeInvalid": "Elige una de las opciones de la lista."
     },
     "emailsOnTheWay": "Te llegarán dos correos: la confirmación de tu reserva y el enlace para firmar tu exención.",
     "embedPayNext": "Tu plaza está reservada. El pago se abre en la página segura de DiveDay, fuera de esta ventana.",
@@ -988,7 +993,9 @@
     "full": "{tripTitle}",
     "gear": "Equipo de alquiler",
     "gearForDiver": "Equipo de alquiler — {name}",
-    "tip": "Propina para la tripulación"
+    "tip": "Propina para la tripulación",
+    "seatFull": "{tripTitle} ({type})",
+    "seatDeposit": "Depósito — {tripTitle} ({type})"
   },
   "capability": {
     "waiverReceived": "Exención recibida",
@@ -4235,5 +4242,25 @@
       "mostDived": "El más buceado · {times, number}",
       "divers": "Buceadores"
     }
+  },
+  "participants": {
+    "type": {
+      "diver": "Buceador",
+      "snorkeler": "Snorkel",
+      "rider": "Acompañante"
+    },
+    "joiningAs": "Participa como",
+    "free": "gratis",
+    "choice": {
+      "diver": "Buceo, {price}",
+      "snorkeler": "Snorkel, {price}",
+      "rider": "Acompañante en el barco, {price}"
+    },
+    "choiceUnpriced": {
+      "diver": "Buceo",
+      "snorkeler": "Snorkel",
+      "rider": "Acompañante en el barco"
+    },
+    "priceLine": "{type} {price}"
   }
 }

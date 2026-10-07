@@ -11,8 +11,13 @@ import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { choiceClass, controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { LEAD_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import {
+  DIVER_PARTICIPANT_CHOICE_KEYS,
+  DIVER_PARTICIPANT_CHOICE_UNPRICED_KEYS,
+} from "@/i18n/participant-labels";
 import { formatMoneyCents } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
+import { type ParticipantType, rentsGear } from "@/lib/participant-types";
 import type { PassThroughFee } from "@/lib/pass-through-fee";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { hasAnyRentalPricing, type RentalPricing } from "@/lib/rentals";
@@ -20,7 +25,7 @@ import { capacityLabel } from "@/lib/trips";
 import { type BookingFormState, bookSpot, joinWaitlist, type TripRef } from "../actions";
 import { BookingGearFields } from "./BookingGearFields";
 import { KnownDiverPanel, type KnownDiverPanelProps } from "./KnownDiverPanel";
-import { MoneyBlock } from "./MoneyBlock";
+import { MoneyBlock, type MoneyBlockSeatLine } from "./MoneyBlock";
 import type { Trip } from "./types";
 
 /**
@@ -361,10 +366,18 @@ export function BookSpotSection({
   terms,
   knownDiver,
   offerHandoff,
+  otherSeatOffers = [],
 }: {
   trip: Trip;
   tripRef: TripRef;
   remaining: number;
+  /**
+   * The snorkeler and rider seats this departure sells publicly, each at its
+   * own price and deposit, resolved server-side (ADR
+   * 20261007-participant-types). Empty on a departure that sells diver seats
+   * only, and then the form asks nothing new.
+   */
+  otherSeatOffers?: ReadonlyArray<Omit<MoneyBlockSeatLine, "count">>;
   errorMessage?: string;
   payAtBooking: boolean;
   /**
@@ -440,6 +453,40 @@ export function BookSpotSection({
   // back up rather than this section duplicating that state — `MoneyBlock`
   // multiplies the fare by it.
   const [partySize, setPartySize] = useState(1);
+  // What each person in the party is coming as, reported up by
+  // `BookingPartyFields` the same way the size is. Only read when the
+  // departure sells more than diver seats.
+  const [partyTypes, setPartyTypes] = useState<ParticipantType[]>(["diver"]);
+  const typesOffered = otherSeatOffers.length > 0;
+  const typeOf = (index: number): ParticipantType =>
+    typesOffered ? (partyTypes[index] ?? "diver") : "diver";
+  const diverCount = typesOffered
+    ? partyTypes.filter((type) => type === "diver").length
+    : partySize;
+  const moneySeats: MoneyBlockSeatLine[] = otherSeatOffers.map((offer) => ({
+    ...offer,
+    count: typesOffered ? partyTypes.filter((type) => type === offer.type).length : 0,
+  }));
+  const priceWords = (cents: number | null) =>
+    cents === null ? null : cents === 0 ? tRoot("participants.free") : money(cents);
+  const choiceLabel = (type: ParticipantType, cents: number | null) => {
+    const price = priceWords(cents);
+    return price === null
+      ? tRoot(DIVER_PARTICIPANT_CHOICE_UNPRICED_KEYS[type])
+      : tRoot(DIVER_PARTICIPANT_CHOICE_KEYS[type], { price });
+  };
+  const participantChoices = typesOffered
+    ? [
+        {
+          type: "diver" as const,
+          label: choiceLabel("diver", perDiverPriceCents),
+        },
+        ...otherSeatOffers.map((offer) => ({
+          type: offer.type,
+          label: choiceLabel(offer.type, offer.fareCents),
+        })),
+      ]
+    : undefined;
   // Per-diver gear subtotal, reported up by each `BookingGearFields` slot
   // (docs ADR 20260801-checkout-upsells-rental-gear) — summed into the running
   // total below so "3 divers × $120" becomes accurate once gear is added.
@@ -454,7 +501,11 @@ export function BookSpotSection({
   // Shrinking the party leaves a stale subtotal behind for the dropped slot
   // (BookingGearFields unmounts, but its last report stays in state) — sum
   // only the indexes still in play.
-  const activeGearIndexes = new Set(Array.from({ length: partySize }, (_, index) => String(index)));
+  const activeGearIndexes = new Set(
+    Array.from({ length: partySize }, (_, index) => index)
+      .filter((index) => rentsGear(typeOf(index)))
+      .map(String),
+  );
   const gearTotalCents = showGearFields
     ? Object.entries(gearSubtotals)
         .filter(([index]) => activeGearIndexes.has(index))
@@ -515,21 +566,27 @@ export function BookSpotSection({
           contactPhone={contactPhone}
           lead={knownDiver?.lead ?? null}
           onLeadEmailSettled={knownDiver || tripRef.embed ? undefined : offerHandoff}
+          participantChoices={participantChoices}
+          onTypesChange={setPartyTypes}
         />
+        {/* A rider stays aboard and rents nothing, so no gear step. */}
         {showGearFields
-          ? Array.from({ length: partySize }, (_, index) => (
-              <BookingGearFields
-                key={GEAR_SLOTS[index]}
-                index={index}
-                showDiverLabel={partySize > 1}
-                rentalItems={rentalItems}
-                course={trip.course}
-                pricing={rentalPricing}
-                plannedDives={trip.plannedDives}
-                currency={currency}
-                onSubtotalChange={onGearSubtotalChange}
-              />
-            ))
+          ? Array.from({ length: partySize }, (_, index) => index)
+              .filter((index) => rentsGear(typeOf(index)))
+              .map((index) => (
+                <BookingGearFields
+                  key={GEAR_SLOTS[index]}
+                  participantType={typeOf(index)}
+                  index={index}
+                  showDiverLabel={partySize > 1}
+                  rentalItems={rentalItems}
+                  course={trip.course}
+                  pricing={rentalPricing}
+                  plannedDives={trip.plannedDives}
+                  currency={currency}
+                  onSubtotalChange={onGearSubtotalChange}
+                />
+              ))
           : null}
         {/* **The certification question is not asked here at all.** It was,
             per diver, until 2026-08-27 (product owner) — and asking a
@@ -595,7 +652,8 @@ export function BookSpotSection({
           <MoneyBlock
             className="border-t border-border pt-4"
             fareCents={perDiverPriceCents}
-            partySize={partySize}
+            partySize={diverCount}
+            otherSeats={moneySeats}
             gearCents={gearTotalCents}
             courseFeeCents={courseFeeCents ?? null}
             eLearningFeeCents={eLearningFeeCents ?? null}

@@ -107,6 +107,8 @@ export {
   listTripDives,
   listTripScheduleDays,
   type PublicCrewMember,
+  type SetParticipantTermsOutcome,
+  setTripParticipantTerms,
   setTripStatus,
   type TripConditionsPatch,
   type TripPatch,
