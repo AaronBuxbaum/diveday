@@ -1023,7 +1023,10 @@ describe("uncrewed and below-target departures (issue #732)", () => {
 
     const row = work.actions.find((action) => action.id === `uncrewed:${reef.id}`);
     expect(row?.kind).toBe("uncrewed_departure");
-    expect(row?.detail).toBe(`${reef.booked} divers booked, no divemaster or instructor.`);
+    // Divers only: the snorkeler and the rider aboard (`seed-mixed-boat.ts`)
+    // are in the headcount, not the ratio.
+    expect(reef.bookedDivers).toBeLessThan(reef.booked);
+    expect(row?.detail).toBe(`${reef.bookedDivers} divers booked, no divemaster or instructor.`);
     // The boundary this ticket must not blur: instructor_missing is an
     // agency training ratio and only ever fires for a course session. This
     // trip carries no course.
@@ -1077,7 +1080,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
     expect(work.actions.some((action) => action.id === `uncrewed:${reef.id}`)).toBe(false);
     const row = work.actions.find((action) => action.id === `crew-target:${reef.id}`);
     expect(row?.kind).toBe("crew_below_target");
-    expect(row?.detail).toBe(`${reef.booked} divers, 1 supervisor. Your target is 6:1.`);
+    expect(row?.detail).toBe(`${reef.bookedDivers} divers, 1 supervisor. Your target is 6:1.`);
   });
 
   it("clears both rows once the departure meets its own target", async () => {
