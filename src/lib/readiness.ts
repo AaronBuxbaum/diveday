@@ -762,18 +762,15 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
     }
   }
 
-  if (!input.requirement) {
-    blockers.push({ code: "requirements_not_configured" });
-    return { status: "blocked", blockers };
-  }
-
   const state = waiverState(input.waiver, now);
 
   // A medical answer is a fact about the diver, not about the departure
   // (H-102, issue #2096): a referral nobody has cleared, or a physician's "no",
   // holds the diver on every trip, including one whose requirements leave the
-  // release off. A clean release signed after a refusal is the record handed
-  // in here instead (H-98), so it reads "complete" and raises neither.
+  // release off, and — like the two checks above — one whose requirements
+  // nobody has configured yet. A clean release signed after a refusal is the
+  // record handed in here instead (H-98), so it reads "complete" and raises
+  // neither.
   if (state === "medical_review") {
     blockers.push({ code: "medical_review" });
   }
@@ -782,6 +779,11 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   // "still waiting on the doctor" (issue #1283).
   if (state === "medical_not_cleared") {
     blockers.push({ code: "medical_not_cleared" });
+  }
+
+  if (!input.requirement) {
+    blockers.push({ code: "requirements_not_configured" });
+    return { status: "blocked", blockers };
   }
 
   // The release's own blockers follow the departure's setting.

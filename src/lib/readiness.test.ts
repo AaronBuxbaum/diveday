@@ -1189,6 +1189,27 @@ describe("the medical block on a departure that does not require the waiver", ()
     expect(result.blockers).toEqual([{ code }]);
   });
 
+  // Raised ahead of the requirements, like identity_unconfirmed: a departure
+  // nobody has configured yet still holds a diver a physician has to see
+  // (dive-domain review of #2096).
+  it.each([
+    ["an open referral", { status: "medical_review" }, "medical_review"],
+    [
+      "a physician's refusal",
+      { status: "medical_review", medicalClearanceDeclinedAt: refusedAt },
+      "medical_not_cleared",
+    ],
+  ] as const)("names %s on a departure with no requirements set", (_label, overrides, code) => {
+    const result = calculateReadiness({
+      requirement: null,
+      waiver: { ...signedWaiver, ...overrides } as WaiverRecord,
+      certifications: [certification()],
+      now: heldNow,
+    });
+    expect(result.status).toBe("blocked");
+    expect(result.blockers).toEqual([{ code }, { code: "requirements_not_configured" }]);
+  });
+
   it("boards a cleared referral", () => {
     const result = calculateReadiness({
       requirement: noWaiverRequirement,
