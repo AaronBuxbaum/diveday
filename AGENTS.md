@@ -22,7 +22,7 @@ provider-specific folders are adapters and must not introduce unique requirement
   `test-results/` whole; Grep them for the one line a diagnosis needs. The session hooks refuse the
   whole-file form at both doors (`Read` and the shell).
 - Locate symbols with Grep and read the narrow range; `scripts/guard-read.mjs` refuses a
-  whole-file `Read` of a file over 600 lines, and an explicit `offset` or `limit` always passes.
+  whole-file `Read` of a file over 900 lines, and an explicit `offset` or `limit` always passes.
 - Read `foo.test.ts` before `foo.ts`: tests are the contract.
 - Iterate with one focused test and quiet output. The whole suite belongs to CI; the shell guard
   refuses a bare `pnpm test` / `pnpm e2e` / `pnpm check`.
