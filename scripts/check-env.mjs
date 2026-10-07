@@ -13,6 +13,15 @@
  *     the exact shape that left production signing with an access key AWS had
  *     never issued (ADR 20260812-env-provenance-registry).
  *
+ * And one more, only where it can be answered: run with `VERCEL_ENV=production`
+ * (a Vercel production build, or `VERCEL_ENV=production pnpm check:env` against
+ * a pulled production environment), every registry row marked
+ * `requiredInProduction` must be set in this process's environment. Those are
+ * the values whose absence is a security gap rather than a switched-off feature
+ * -- today the Upstash pair, without which every rate limit is per serverless
+ * instance. Nowhere else can this be asked: a value Vercel's own integration
+ * provisions never passes through `.env.manual`.
+ *
  * Then it prints what is unset and what each one switches off. That is a report,
  * never a failure: every one of these is legitimately absent — a local run has
  * no Stripe account, no Neon database, and nowhere to ship logs. The old version
@@ -22,7 +31,13 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { ENV_ENTRIES, envEntry, isManual, isStackProduced } from "../config/env-registry.mjs";
+import {
+  ENV_ENTRIES,
+  envEntry,
+  isManual,
+  isStackProduced,
+  keysRequiredInProduction,
+} from "../config/env-registry.mjs";
 import { parseDotenv } from "./dotenv.mjs";
 import { readEnvExample, renderEnvExample } from "./render-env-example.mjs";
 
@@ -53,6 +68,15 @@ if (manual) {
   if (unknown.length > 0) {
     failures.push(
       `.env.manual sets ${unknown.join(", ")}, which nothing in DiveDay reads. Add it to config/env-registry.mjs or remove it.`,
+    );
+  }
+}
+
+if (process.env.VERCEL_ENV === "production") {
+  const missing = keysRequiredInProduction().filter((key) => !process.env[key]?.trim());
+  if (missing.length > 0) {
+    failures.push(
+      `production is missing ${missing.join(", ")}. ${missing.map((key) => `${key}: ${envEntry(key)?.absent ?? "no documented effect"}.`).join(" ")} Set them on the Vercel project (see config/env-registry.mjs).`,
     );
   }
 }

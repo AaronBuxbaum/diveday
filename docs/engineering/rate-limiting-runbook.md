@@ -169,7 +169,10 @@ var unset (every environment until one is provisioned, and all of dev/e2e/CI)
 and it falls back to the original in-memory `Map`, scoped to one Node
 process — bounding abuse per function instance only, not globally (ADR
 20260724-rate-limiting's original, still-real gap when the distributed store
-isn't configured). There is currently no dashboard or query surface into
+isn't configured). In production that fallback is loud rather than silent: the
+first check on each instance logs `rate_limit.memory_store_in_production`
+(warn), and `pnpm check:env` fails when run with `VERCEL_ENV=production` and
+either var unset (both are rows in `config/env-registry.mjs`). There is currently no dashboard or query surface into
 live bucket state either way; if you suspect active abuse, look at Vercel's
 own request logs/analytics for the IP/path pattern first, and consider a
 platform-level (WAF/Vercel Firewall) block for anything the in-app limiter

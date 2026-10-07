@@ -7,6 +7,25 @@ allowBuilds:
 
 minimumReleaseAge: 0
 
+# Security overrides for transitive dev-only dependencies (`pnpm audit`).
+# Each one lifts a pinned or stale copy to a patched release in the *same*
+# major, so the parent's API contract is unchanged; anything that would need a
+# major jump is deliberately not here. The selectors name the vulnerable range
+# so an already-patched copy elsewhere in the tree is left alone. Delete a line
+# once its parent ships the fix itself.
+#   vercel CLI: ajv, js-yaml, minimatch, path-to-regexp, smol-toml, tar, undici 5
+#   next-devtools-mcp: @modelcontextprotocol/sdk (pinned 1.25.2 upstream)
+overrides:
+  '@modelcontextprotocol/sdk@<1.31.0': ^1.31.0
+  'ajv@>=8.0.0 <8.18.0': ^8.18.0
+  'js-yaml@>=4.0.0 <4.3.2': ^4.3.2
+  'minimatch@>=10.0.0 <10.2.3': ^10.2.3
+  'path-to-regexp@>=6.0.0 <6.3.0': ^6.3.0
+  'path-to-regexp@>=8.0.0 <8.4.0': ^8.4.0
+  'smol-toml@<1.9.0': ^1.9.0
+  'tar@>=7.0.0 <7.5.21': ^7.5.21
+  'undici@>=5.0.0 <5.29.0': ^5.29.0
+
 patchedDependencies:
   '@vercel/analytics@2.0.1': patches/@vercel__analytics@2.0.1.patch
 

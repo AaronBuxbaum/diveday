@@ -5,6 +5,7 @@ import {
   qualifyingAlternatives,
 } from "@/lib/blowout";
 import { nowDate } from "@/lib/clock";
+import { log } from "@/lib/log";
 import {
   type Notification,
   type NotificationProvider,
@@ -470,9 +471,9 @@ async function sendPendingBlowoutMessages(
       // Settle the claimed row as failed so the surface shows it honestly and
       // "Retry unsent messages" picks it up. If even this write fails the row
       // stays `sending`, which resume also reclaims.
-      console.error("Blow-out message could not be processed", {
+      log("blowout.message_failed", "error", {
         blowoutDiverId: row.diver.id,
-        error: error instanceof Error ? error.message : "unknown_error",
+        errorCode: error instanceof Error ? error.name : "unknown_error",
       });
       try {
         await db

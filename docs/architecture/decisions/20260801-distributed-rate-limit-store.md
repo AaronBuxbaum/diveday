@@ -83,6 +83,12 @@ security audit re-confirming the gap.
   per-instance one. Provisioning those two env vars is an operational follow-up outside this PR's
   scope (billing/plan selection is a product decision, not an engineering one) — until they're set,
   behavior is unchanged from ADR 20260724-rate-limiting.
+  *Update 2026-10-07:* the follow-up is still open, but it is no longer silent. The pair is
+  registered in `config/env-registry.mjs` (`manual`, Vercel only, `requiredInProduction`), so it
+  appears in `.env.example` and `.env.manual`; `pnpm check:env` fails when run with
+  `VERCEL_ENV=production` and either is unset; and a production instance on the in-memory store logs
+  `rate_limit.memory_store_in_production` (warn) on its first check. The fallback itself is
+  unchanged and still fail-open.
 - `checkRateLimit` is now `async`; any future call site must `await` it. A missed `await` would type-error
   (`Promise<RateLimitResult>` has no `.allowed`), not silently misbehave.
 - `src/lib/rate-limit.test.ts` covers the Lua script's behavior via a fake `fetch` that mirrors the

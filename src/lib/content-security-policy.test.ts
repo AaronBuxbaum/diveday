@@ -1,7 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { nowMs } from "./clock";
 import {
   CSP_REPORT_PATH,
   enforcedPolicy,
+  REPORT_ONLY_REVIEW_BY,
+  REPORT_ONLY_SINCE,
   reportingEndpointsHeader,
   reportOnlyPolicy,
 } from "./content-security-policy";
@@ -71,6 +74,26 @@ describe("the enforced half", () => {
     expect(formAction).toContain("'self'");
     expect(formAction).toContain("https://checkout.stripe.com");
     expect(formAction).toContain("https://connect.stripe.com");
+  });
+});
+
+describe("the report-only phase", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("is reviewed by its date", () => {
+    // The wall clock, deliberately: unit tests freeze `nowMs()` to a July
+    // instant, and this asks what day it really is. Clearing DIVEDAY_CLOCK
+    // makes the clock seam answer with the live time.
+    vi.stubEnv("DIVEDAY_CLOCK", "");
+    const reviewBy = Date.parse(`${REPORT_ONLY_REVIEW_BY}T00:00:00Z`);
+
+    expect(Date.parse(`${REPORT_ONLY_SINCE}T00:00:00Z`)).toBeLessThan(reviewBy);
+    expect(
+      nowMs() < reviewBy,
+      `The full Content-Security-Policy has been report-only since ${REPORT_ONLY_SINCE}, and its review date ${REPORT_ONLY_REVIEW_BY} has passed. Read the CspViolations metric and the security.csp_violation lines in CloudWatch Logs Insights (infra/lib/observability.ts). If a real week of traffic is near zero, promote the report-only directives into enforcedPolicy, flip that signal's alarm to true, and update ADR 20260824-content-security-policy. If not, fix or allow what is reported and move REPORT_ONLY_REVIEW_BY in src/lib/content-security-policy.ts, saying why in the commit.`,
+    ).toBe(true);
   });
 });
 
