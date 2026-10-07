@@ -2,6 +2,7 @@ import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { getDb } from "@/db/client";
 import { rollAllSeriesForward } from "@/db/trips";
+import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
 import { SERIES_HORIZON_DAYS } from "@/lib/recurrence";
@@ -59,11 +60,8 @@ const CRON_MONITOR_CONFIG = {
  * tell the monitor the roll happened.
  */
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return NextResponse.json({ error: "not_configured" }, { status: 503 });
-  if (request.headers.get("authorization") !== `Bearer ${secret}`) {
-    return new NextResponse(null, { status: 401 });
-  }
+  const refusal = requireCronSecret(request);
+  if (refusal) return refusal;
 
   const checkInId = Sentry.captureCheckIn(
     { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },
