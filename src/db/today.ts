@@ -2150,7 +2150,7 @@ export async function getTodayWork(
     // this answer to know whether it applies (issue #1338, and the matching
     // walk in `staffingWeek`, src/db/staffing.ts).
     const ratioGap = divemasterRatioGap({
-      divers: trip.booked,
+      divers: trip.bookedDivers,
       divemasterCount: inWaterDivemasterCount(counts),
       diversPerDivemaster,
       // A departure the shop has marked self-guided raises neither of the
@@ -2200,7 +2200,7 @@ export async function getTodayWork(
       booked: trip.booked,
     });
     const rosterRatioGap = divemasterRatioGap({
-      divers: trip.booked,
+      divers: trip.bookedDivers,
       divemasterCount: inWaterDivemasterCount(counts.roster),
       diversPerDivemaster,
       selfGuided: trip.selfGuided,

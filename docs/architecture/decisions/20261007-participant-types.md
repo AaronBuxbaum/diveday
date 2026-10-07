@@ -113,5 +113,9 @@ trip-row lock, never as a pre-check.
   `diver_capacity` belongs to the boat or the boat-day, and moving it is a column move with no data
   to reconcile (H-49).
 - Promo codes discount the whole session as before, and so discount every seat's line.
+- The divemaster ratio is a scuba-guiding ratio, so it counts divers only (`bookedDivers`, beside
+  `booked` on every trip read). A snorkeler or a rider adds to the boat's headcount and capacity,
+  never to the divers a supervisor guides, and every ratio sentence that says "divers" means divers.
+  Whether a snorkeler needs a surface watcher of their own is a separate, unbuilt question.
 - "Apply to future departures" from the Details form does not carry the participant terms. A
   repeating series copies them onto each new instance, and duplicating a departure copies them too.

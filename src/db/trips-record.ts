@@ -42,7 +42,7 @@ import {
   validateDiveSites,
 } from "./trips-create";
 import { liveTrip } from "./trips-live";
-import { heldSeatCounts, seatHeld } from "./trips-queries";
+import { bookedDiversCount, heldSeatCounts, seatHeld } from "./trips-queries";
 
 /**
  * One departure's own record: read it, edit its details, its dives, its
@@ -95,7 +95,13 @@ export async function tripExistsForShop(
 /** Trip scoped to a shop (staff pages must never cross tenants), with booked count. */
 export async function getTripWithBooked(db: AppDb, shopId: string, tripId: string) {
   const rows = await db
-    .select({ trip: trips, course: courses, diveSite: diveSites, booked: count(bookings.id) })
+    .select({
+      trip: trips,
+      course: courses,
+      diveSite: diveSites,
+      booked: count(bookings.id),
+      bookedDivers: bookedDiversCount(),
+    })
     .from(trips)
     .leftJoin(courses, eq(courses.id, trips.courseId))
     .leftJoin(diveSites, eq(diveSites.id, trips.diveSiteId))
@@ -105,7 +111,13 @@ export async function getTripWithBooked(db: AppDb, shopId: string, tripId: strin
     .limit(1);
   const row = rows[0];
   return row
-    ? { ...row.trip, course: row.course, diveSite: row.diveSite, booked: row.booked }
+    ? {
+        ...row.trip,
+        course: row.course,
+        diveSite: row.diveSite,
+        booked: row.booked,
+        bookedDivers: row.bookedDivers,
+      }
     : null;
 }
 

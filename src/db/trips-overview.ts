@@ -220,7 +220,9 @@ export async function getTripOverview(
   // separately from the two agency gates above — it applies to every departure,
   // course or fun dive, and it refuses nothing.
   const ratioGap = divemasterRatioGap({
-    divers: trip.booked,
+    // Divers only (ADR 20261007-participant-types): a snorkeler or a rider is
+    // aboard, not supervised underwater.
+    divers: trip.bookedDivers,
     divemasterCount: inWaterDivemasterCount(inWaterCrew),
     diversPerDivemaster: shopCrewTarget(shop),
     // A departure the shop has marked self-guided is never short of its own
