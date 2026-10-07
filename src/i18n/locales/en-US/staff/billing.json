@@ -18,6 +18,7 @@
   "demo": "A demo shop is never billed.",
   "pastDue": "Your last payment didn’t go through. Update the card under Manage billing.",
   "invoices": "Stripe emails each invoice.",
+  "waiting": "Waiting for Stripe to confirm your card. Refresh in a minute.",
   "addCard": {
     "submit": "Add a card",
     "pending": "Opening Stripe…",
@@ -35,6 +36,7 @@
     "cardAdded": "Card saved. It can take a minute to show here.",
     "notConfigured": "Billing isn’t turned on yet.",
     "unavailable": "Stripe didn’t answer. Try again in a minute.",
-    "demo": "A demo shop is never billed."
+    "demo": "A demo shop is never billed.",
+    "pending": "Stripe is still confirming the card you added. Try again in a minute."
   }
 }

@@ -1,7 +1,11 @@
 import { eq } from "drizzle-orm";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { shopSubscriptions, shops } from "@/db/schema";
-import { applyBillingEffect, getShopSubscription } from "@/db/shop-subscriptions";
+import {
+  applyBillingEffect,
+  getShopSubscription,
+  recordShopCheckoutSession,
+} from "@/db/shop-subscriptions";
 import { seededShopContext } from "@/test/db";
 import {
   demoteOwnerToManager,
@@ -127,12 +131,17 @@ describe("Add a card", () => {
     fetchMock
       .mockResolvedValueOnce(new Response(JSON.stringify({ id: "cus_new" }), { status: 200 }))
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ url: "https://checkout.stripe.com/c/1" }), { status: 200 }),
+        new Response(JSON.stringify({ id: "cs_1", url: "https://checkout.stripe.com/c/1" }), {
+          status: 200,
+        }),
       );
     expect(await redirectedTo(() => startBillingCheckoutAction())).toBe(
       "https://checkout.stripe.com/c/1",
     );
-    expect((await getShopSubscription(db, shop.id))?.stripeCustomerId).toBe("cus_new");
+    expect(await getShopSubscription(db, shop.id)).toMatchObject({
+      stripeCustomerId: "cus_new",
+      stripeCheckoutSessionId: "cs_1",
+    });
     const checkoutBody = new URLSearchParams(String(fetchMock.mock.calls[1]?.[1]?.body));
     expect(checkoutBody.get("client_reference_id")).toBe(shop.id);
     expect(checkoutBody.get("customer")).toBe("cus_new");
@@ -177,6 +186,99 @@ describe("Add a card", () => {
     expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
       "https://api.stripe.com/v1/billing_portal/sessions",
     );
+  });
+});
+
+describe("one subscription per shop", () => {
+  async function linkedWithoutStatus() {
+    const ctx = await context();
+    configure();
+    ctx.signIn(ctx.owner);
+    await ctx.db.insert(shopSubscriptions).values({
+      shopId: ctx.shop.id,
+      stripeCustomerId: "cus_paid",
+      stripeSubscriptionId: "sub_linked",
+    });
+    return ctx;
+  }
+
+  it("sends a shop whose subscription is linked but not yet described to the Portal", async () => {
+    await linkedWithoutStatus();
+    stripeAnswers({ url: "https://billing.stripe.com/p/1" });
+    expect(await redirectedTo(() => startBillingCheckoutAction())).toBe(
+      "https://billing.stripe.com/p/1",
+    );
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
+      "https://api.stripe.com/v1/billing_portal/sessions",
+    );
+  });
+
+  it("sends a shop with an incomplete subscription to the Portal too", async () => {
+    const { db, shop } = await linkedWithoutStatus();
+    await db
+      .update(shopSubscriptions)
+      .set({ stripeStatus: "incomplete" })
+      .where(eq(shopSubscriptions.shopId, shop.id));
+    stripeAnswers({ url: "https://billing.stripe.com/p/1" });
+    await redirectedTo(() => startBillingCheckoutAction());
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("billing_portal");
+  });
+
+  it("expires the Checkout another tab left open before opening its own", async () => {
+    const { db, shop, owner, signIn } = await context();
+    configure();
+    signIn(owner);
+    await db.insert(shopSubscriptions).values({ shopId: shop.id, stripeCustomerId: "cus_a" });
+    await recordShopCheckoutSession(db, shop.id, { previous: null, sessionId: "cs_old" });
+    const bodies = [
+      { status: "open" },
+      { status: "expired" },
+      { id: "cs_new", url: "https://checkout.stripe.com/c/new" },
+    ];
+    fetchMock.mockImplementation(
+      async () => new Response(JSON.stringify(bodies.shift()), { status: 200 }),
+    );
+    expect(await redirectedTo(() => startBillingCheckoutAction())).toBe(
+      "https://checkout.stripe.com/c/new",
+    );
+    expect(fetchMock.mock.calls.map((call) => String(call[0]))).toEqual([
+      "https://api.stripe.com/v1/checkout/sessions/cs_old",
+      "https://api.stripe.com/v1/checkout/sessions/cs_old/expire",
+      "https://api.stripe.com/v1/checkout/sessions",
+    ]);
+    expect((await getShopSubscription(db, shop.id))?.stripeCheckoutSessionId).toBe("cs_new");
+  });
+
+  it("opens no second Checkout while the first one's payment is still on its way", async () => {
+    const { db, shop, owner, signIn } = await context();
+    configure();
+    signIn(owner);
+    await db.insert(shopSubscriptions).values({ shopId: shop.id, stripeCustomerId: "cus_a" });
+    await recordShopCheckoutSession(db, shop.id, { previous: null, sessionId: "cs_paid" });
+    stripeAnswers({ status: "complete" });
+    expect(await redirectedTo(() => startBillingCheckoutAction())).toBe(
+      "/shop/blue-mantis/settings/billing?notice=pending",
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses when Stripe hands back a customer another shop already holds", async () => {
+    const { db, owner, signIn } = await context();
+    configure();
+    signIn(owner);
+    const [other] = await db
+      .insert(shops)
+      .values({ name: "Other Shop", slug: "other-shop-billing-action", timezone: "UTC" })
+      .returning({ id: shops.id });
+    await db
+      .insert(shopSubscriptions)
+      .values({ shopId: other?.id ?? "", stripeCustomerId: "cus_x" });
+    stripeAnswers({ id: "cus_x" });
+    expect(await redirectedTo(() => startBillingCheckoutAction())).toBe(
+      "/shop/blue-mantis/settings/billing?notice=unavailable",
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
 

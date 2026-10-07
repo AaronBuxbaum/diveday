@@ -200,6 +200,8 @@ describe("POST /api/webhooks/billing — applies what Stripe says, once", () => 
   });
 
   it("records the first paid month from a paid invoice", async () => {
+    const linked = subscriptionEvent("evt_linked", { status: "active" }, nowSeconds() - 5);
+    await deliver(linked, signed(linked));
     const payload = JSON.stringify({
       id: "evt_paid",
       type: "invoice.paid",
@@ -215,6 +217,29 @@ describe("POST /api/webhooks/billing — applies what Stripe says, once", () => 
       },
     });
     expect((await deliver(payload, signed(payload))).status).toBe(200);
+    expect((await getShopSubscription(db, shopId))?.firstPaidAt).toBeInstanceOf(Date);
+  });
+
+  it("asks Stripe to retry a paid invoice that beat its subscription, and counts it then", async () => {
+    const paid = JSON.stringify({
+      id: "evt_early_paid",
+      type: "invoice.paid",
+      created: nowSeconds(),
+      livemode: false,
+      data: {
+        object: {
+          customer: "cus_a",
+          amount_paid: 9_900,
+          parent: { subscription_details: { subscription: "sub_a" } },
+        },
+      },
+    });
+    expect((await deliver(paid, signed(paid))).status).toBe(503);
+    expect((await getShopSubscription(db, shopId))?.firstPaidAt).toBeNull();
+    const linked = subscriptionEvent("evt_link_late", { status: "active" });
+    await deliver(linked, signed(linked));
+    // Stripe's retry: the claim was given back, so it is handled, not a duplicate.
+    expect((await deliver(paid, signed(paid))).status).toBe(200);
     expect((await getShopSubscription(db, shopId))?.firstPaidAt).toBeInstanceOf(Date);
   });
 });

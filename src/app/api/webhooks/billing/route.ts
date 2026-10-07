@@ -75,8 +75,9 @@ export async function POST(request: Request) {
     return new Response(null, { status: 200 });
   }
 
+  let outcome: string;
   try {
-    await handle(db, event, receivedAt, logOutcome);
+    outcome = await handle(db, event, receivedAt, logOutcome);
   } catch (error) {
     let released = false;
     try {
@@ -92,6 +93,14 @@ export async function POST(request: Request) {
     logOutcome("handler_failed", { claimReleased: released });
     return new Response(null, { status: 500 });
   }
+  if (outcome === "subscription_not_linked") {
+    // A paid invoice that beat its own subscription's events here. Not an
+    // error: give the claim back and ask Stripe to deliver it again later,
+    // by which time the subscription is linked and the invoice can count.
+    const released = await releaseStripeWebhookEventClaim(db, ledgerId);
+    logOutcome("retry_later", { claimReleased: released });
+    return new Response(null, { status: 503 });
+  }
   return new Response(null, { status: 200 });
 }
 
@@ -100,11 +109,11 @@ async function handle(
   event: Parameters<typeof readBillingEvent>[0],
   receivedAt: Date,
   logOutcome: (outcome: string, extra?: LogContext) => void,
-): Promise<void> {
+): Promise<string> {
   const effect = readBillingEvent(event, receivedAt);
   if (effect.kind === "ignored") {
     logOutcome(effect.reason);
-    return;
+    return effect.reason;
   }
   const outcome = await applyBillingEffect(db, effect);
   const customer = effect.kind === "malformed" ? null : effect.customerId;
@@ -128,4 +137,5 @@ async function handle(
     });
   }
   logOutcome(outcome, { customer });
+  return outcome;
 }

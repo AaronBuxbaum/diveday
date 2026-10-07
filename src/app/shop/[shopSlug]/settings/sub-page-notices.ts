@@ -63,5 +63,6 @@ export function billingNoticeMessages(
     "not-configured": { tone: "danger", text: t("billing.notice.notConfigured") },
     unavailable: { tone: "danger", text: t("billing.notice.unavailable") },
     demo: { tone: "danger", text: t("billing.notice.demo") },
+    pending: { tone: "neutral", text: t("billing.notice.pending") },
   };
 }

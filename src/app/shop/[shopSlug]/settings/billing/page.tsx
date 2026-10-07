@@ -7,7 +7,11 @@ import { Badge, type BadgeTone } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
 import { canPersonManageBilling } from "@/db/authz";
-import { getShopSubscription, subscriptionSnapshot } from "@/db/shop-subscriptions";
+import {
+  getShopSubscription,
+  holdsLiveSubscription,
+  subscriptionSnapshot,
+} from "@/db/shop-subscriptions";
 import { requestLocale } from "@/i18n/request";
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { type BillingStatus, billingStanding } from "@/lib/billing/standing";
@@ -114,6 +118,16 @@ export default async function BillingSettingsPage({
       : t("billing.notConfigured");
   const canAct = configured && !shop.isDemo;
   const canCancel = standing.hasSubscription && standing.nextChargeAt !== null;
+  // Which button, decided on the row as the actions decide it: a subscription
+  // that has not ended — even one whose status Stripe has not sent yet — is
+  // managed in the Portal, never added to.
+  const live = holdsLiveSubscription(row);
+  // Back from Checkout before its webhook, or linked with no status yet: say
+  // Stripe is still confirming instead of offering the card button again.
+  const awaitingStripe =
+    canAct &&
+    ((notice === "card-added" && !standing.hasSubscription) ||
+      (row?.stripeSubscriptionId != null && row.stripeStatus === null));
 
   return (
     <main className={settingsPaneClass()}>
@@ -145,7 +159,9 @@ export default async function BillingSettingsPage({
           <p className="mt-4 text-sm text-danger">{t("billing.pastDue")}</p>
         ) : null}
 
-        {canAct && !standing.hasSubscription ? (
+        {awaitingStripe ? <p className="mt-6 text-sm text-muted">{t("billing.waiting")}</p> : null}
+
+        {canAct && !awaitingStripe && !live ? (
           <form action={startBillingCheckoutAction} className="mt-6 space-y-2">
             {standing.freeUntil ? (
               <p className="text-sm text-muted">
@@ -158,7 +174,7 @@ export default async function BillingSettingsPage({
           </form>
         ) : null}
 
-        {canAct && standing.hasSubscription ? (
+        {canAct && !awaitingStripe && live ? (
           <div className="mt-6 space-y-3">
             <p className="text-sm text-muted">{t("billing.invoices")}</p>
             <div className="flex flex-wrap gap-3">

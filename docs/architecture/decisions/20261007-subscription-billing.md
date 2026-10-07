@@ -33,7 +33,9 @@ the same as Connect, from `src/lib/billing/stripe-billing.ts`:
 
 **Three environment values turn billing on**, all registered in `config/env-registry.mjs` as
 manual: `BILLING_STRIPE_SECRET_KEY`, `BILLING_STRIPE_WEBHOOK_SECRET` and `BILLING_STRIPE_PRICE_ID`.
-They are separate from the Connect variables and never fall back to them.
+They are separate from the Connect variables and never fall back to them. A billing key equal to
+`STRIPE_SECRET_KEY` counts as not configured, so the Connect key pasted into the wrong slot cannot
+half-work.
 
 - `billingConfigFromEnvironment` returns `null` unless all three are present and well-formed.
 - While it is `null`, Settings > Billing says billing is not turned on and offers no button.
@@ -49,12 +51,20 @@ customer emails.
   the current period end, `cancel_at_period_end`, and the instant of the newest event applied
   (`last_subscription_event_at`).
 - The Checkout action records the Stripe customer id. The id is minted with Idempotency-Key
-  `diveday-billing-customer-<shopId>`, and the first write wins.
+  `diveday-billing-customer-<shopId>-<hash of the request parameters>`, so a double tap is one
+  customer while a changed shop name inside Stripe's 24-hour key window is a new request rather
+  than a refused one. The first write wins; a customer id another shop already holds is refused
+  with "Stripe didn’t answer" rather than bound to two shops.
+- The Checkout action also records the session it opened (`stripe_checkout_session_id`), only over
+  the session it last settled (a compare-and-set); `checkout.session.completed` clears it.
 - `pnpm billing:free-term <shop-slug> <last-free-day | none>` sets `free_term_ends_on`. This is how
   Aaron grants founding free months by hand. It is a script because there is no operator identity
   in the product.
-- `first_paid_at` is written once, by the first `invoice.paid` with a non-zero amount. It is the
-  "first paid month" milestone, and the route also logs it as `billing.first_paid_month`.
+- `first_paid_at` is written once, by the first `invoice.paid` with a non-zero amount on the
+  subscription the row holds. It is the "first paid month" milestone, and the route also logs it
+  as `billing.first_paid_month`. A paid invoice that arrives before its subscription is linked
+  gives its claim back and answers 503, so Stripe delivers it again once the link has landed; a
+  one-off dashboard invoice, or one for another subscription, never counts.
 
 **The status a person sees is derived, not stored.** `billingStanding` in
 `src/lib/billing/standing.ts` is pure, and maps the trial window, the free term and Stripe's status
@@ -93,11 +103,17 @@ patterns, in this order:
    customer's shop, nothing is written (`tenant_mismatch`).
    - A subscription is adopted only when the shop has none, or when its current one has ended.
    - A second live subscription is refused (`foreign_subscription`).
+   - `checkout.session.completed` only **links**: it writes the subscription id into an empty slot
+     and touches no status, period or ordering clock. Those belong to the subscription events,
+     which may arrive before or after it; a reset decided on a read those events had already made
+     stale would wipe what they wrote.
    - A subscription id another shop holds is refused by a unique index
      (`subscription_claimed_elsewhere`).
 5. **Order.** An update applies only when its event is at least as new as
    `last_subscription_event_at`. The check is part of the UPDATE's WHERE clause, so an older event
-   that arrives late is a no-op.
+   that arrives late is a no-op. Stripe stamps events to the second, so within one subscription
+   `canceled` and `incomplete_expired` are terminal: only another ended status may follow them,
+   whatever order two same-second events arrive in.
 
 The five events handled are `checkout.session.completed`, `customer.subscription.created`,
 `customer.subscription.updated`, `customer.subscription.deleted` and `invoice.paid`.
@@ -110,6 +126,18 @@ each action. A manager is refused, as is a session whose JWT still says owner.
   end date.
 - It offers one button: **Add a card** before a subscription exists, then **Manage billing** and
   **Cancel plan**.
+- **One subscription per shop** is decided on the row, never on the displayed standing. "Add a
+  card" goes to the Portal whenever the row holds a subscription that has not ended, including one
+  linked with no status yet and one still `incomplete`. Before opening a Checkout it settles the
+  last one at Stripe: an open session is expired (`POST /v1/checkout/sessions/:id/expire`), and a
+  completed one whose webhook has not landed refuses with "Stripe is still confirming". Back from
+  Checkout, or linked with no status yet, the page reads "Waiting for Stripe to confirm your card"
+  instead of offering the button again.
+- The actions redirect to the URL Stripe's API returns, and follow it only when it is https. The
+  host is deliberately **not pinned** to `*.stripe.com`: Stripe can serve Checkout and the Portal
+  from a custom domain the account configures, and pinning would turn that dashboard setting into
+  a silent "Stripe didn’t answer". The URL arrives over TLS from Stripe's API under DiveDay's own
+  key, so it is as trusted as the key.
 - Demo shops are never billed and have no door to the page.
 - The trial card that used to sit on the Settings hub moved here.
 

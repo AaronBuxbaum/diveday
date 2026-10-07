@@ -14,6 +14,7 @@ describe("readBillingEvent", () => {
     expect(
       readBillingEvent(
         event("checkout.session.completed", {
+          id: "cs_1",
           mode: "subscription",
           customer: "cus_1",
           subscription: { id: "sub_1" },
@@ -23,6 +24,7 @@ describe("readBillingEvent", () => {
       ),
     ).toEqual({
       kind: "checkout_completed",
+      sessionId: "cs_1",
       customerId: "cus_1",
       subscriptionId: "sub_1",
       shopIdClaim: "shop-1",

@@ -5,10 +5,11 @@ import { getDb } from "@/db/client";
 import {
   ensureShopBillingCustomer,
   getShopSubscription,
-  subscriptionSnapshot,
+  holdsLiveSubscription,
+  recordShopCheckoutSession,
 } from "@/db/shop-subscriptions";
 import { getShopById } from "@/db/shops";
-import { billingStanding, freeTimeEndsAt } from "@/lib/billing/standing";
+import { freeTimeEndsAt } from "@/lib/billing/standing";
 import { billingProviderFromEnvironment } from "@/lib/billing/stripe-billing";
 import { nowDate } from "@/lib/clock";
 import { publicAppUrl } from "@/lib/notifications";
@@ -31,7 +32,7 @@ import { trialEndsAt } from "@/lib/trial";
  */
 
 /** Codes the Billing page answers (`billingNoticeMessages`, `../sub-page-notices.ts`). */
-export type BillingNotice = "not-configured" | "unavailable" | "demo" | "card-added";
+export type BillingNotice = "not-configured" | "unavailable" | "demo" | "card-added" | "pending";
 
 type BillingContext = {
   slug: string;
@@ -81,9 +82,16 @@ function refuse(slug: string, notice: BillingNotice): never {
  * Checkout for the one price, with the first charge deferred to the end of
  * whatever free time the shop has left.
  *
- * A shop that already holds a live subscription is sent to the Portal
- * instead — a second Checkout would be a second subscription and a second
- * charge every month.
+ * Two guards keep a shop to one subscription, both decided on the row rather
+ * than on the standing the page shows:
+ *
+ * - A shop whose row holds a subscription that has not ended — including one
+ *   Checkout linked whose status has not arrived, and one still `incomplete` —
+ *   is sent to the Portal instead.
+ * - The Checkout session opened last is settled at Stripe before another
+ *   opens: expired if still open (a second tab), and a refusal ("pending")
+ *   if it already completed but its webhook has not landed. The new session
+ *   is then recorded only if no other tab recorded one in between.
  */
 export async function startBillingCheckoutAction(): Promise<void> {
   const context = await requireBillingOwner();
@@ -94,15 +102,16 @@ export async function startBillingCheckoutAction(): Promise<void> {
 
   const db = await getDb();
   const row = await getShopSubscription(db, context.shopId);
-  const now = nowDate();
-  const standingInput = {
-    now,
-    timeZone: context.timezone,
-    trialEndsAt: trialEndsAt(context.createdAt),
-    freeTermEndsOn: row?.freeTermEndsOn ?? null,
-  };
-  const standing = billingStanding({ ...standingInput, subscription: subscriptionSnapshot(row) });
   const returnUrl = `${origin}${billingPath(context.slug)}`;
+
+  if (row?.stripeCustomerId && holdsLiveSubscription(row)) {
+    const portal = await provider.createPortalSession({
+      customerId: row.stripeCustomerId,
+      returnUrl,
+    });
+    if (portal.status !== "ok") refuse(context.slug, "unavailable");
+    redirect(portal.value);
+  }
 
   let customerId = row?.stripeCustomerId ?? null;
   if (!customerId) {
@@ -113,24 +122,41 @@ export async function startBillingCheckoutAction(): Promise<void> {
     });
     if (created.status !== "ok") refuse(context.slug, "unavailable");
     customerId = await ensureShopBillingCustomer(db, context.shopId, created.value);
+    if (!customerId) refuse(context.slug, "unavailable");
   }
 
-  if (standing.hasSubscription) {
-    const portal = await provider.createPortalSession({ customerId, returnUrl });
-    if (portal.status !== "ok") refuse(context.slug, "unavailable");
-    redirect(portal.value);
+  const previous = row?.stripeCheckoutSessionId ?? null;
+  if (previous) {
+    const settled = await provider.settleCheckoutSession(previous);
+    if (settled.status !== "ok") refuse(context.slug, "unavailable");
+    if (settled.value === "completed") refuse(context.slug, "pending");
   }
 
+  const now = nowDate();
   const checkout = await provider.createCheckoutSession({
     shopId: context.shopId,
     customerId,
     successUrl: `${origin}${noticeUrl(billingPath(context.slug), "card-added")}`,
     cancelUrl: returnUrl,
-    firstChargeAt: freeTimeEndsAt(standingInput),
+    firstChargeAt: freeTimeEndsAt({
+      now,
+      timeZone: context.timezone,
+      trialEndsAt: trialEndsAt(context.createdAt),
+      freeTermEndsOn: row?.freeTermEndsOn ?? null,
+    }),
     now,
   });
   if (checkout.status !== "ok") refuse(context.slug, "unavailable");
-  redirect(checkout.value);
+  const recorded = await recordShopCheckoutSession(db, context.shopId, {
+    previous,
+    sessionId: checkout.value.id,
+  });
+  if (!recorded) {
+    // Another tab opened its own session in between: this one must never be paid.
+    await provider.settleCheckoutSession(checkout.value.id);
+    refuse(context.slug, "unavailable");
+  }
+  redirect(checkout.value.url);
 }
 
 /**

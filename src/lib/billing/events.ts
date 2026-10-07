@@ -22,6 +22,8 @@ import { STRIPE_SUBSCRIPTION_STATUSES, type StripeSubscriptionStatus } from "./s
 export type BillingEventEffect =
   | {
       kind: "checkout_completed";
+      /** The Checkout session's own id, cleared from the row it was opened for. */
+      sessionId: string;
       customerId: string;
       subscriptionId: string;
       shopIdClaim: string | null;
@@ -59,6 +61,7 @@ function idOf(value: z.infer<typeof expandable>): string {
 const metadataSchema = z.record(z.string(), z.string()).nullable().optional();
 
 const checkoutSessionSchema = z.object({
+  id: z.string().min(1).optional(),
   mode: z.string(),
   customer: expandable.nullable().optional(),
   subscription: expandable.nullable().optional(),
@@ -118,9 +121,12 @@ export function readBillingEvent(event: StripeWebhookEvent, fallbackNow: Date): 
       if (session.data.mode !== "subscription") {
         return { kind: "ignored", reason: "not_a_subscription_checkout" };
       }
-      if (!session.data.customer || !session.data.subscription) return { kind: "malformed" };
+      if (!session.data.id || !session.data.customer || !session.data.subscription) {
+        return { kind: "malformed" };
+      }
       return {
         kind: "checkout_completed",
+        sessionId: session.data.id,
         customerId: idOf(session.data.customer),
         subscriptionId: idOf(session.data.subscription),
         shopIdClaim: session.data.client_reference_id ?? null,

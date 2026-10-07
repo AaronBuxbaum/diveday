@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { z } from "zod";
 
 /**
@@ -70,7 +71,12 @@ export function billingConfigFromEnvironment(
     webhookSecret: env.BILLING_STRIPE_WEBHOOK_SECRET,
     priceId: env.BILLING_STRIPE_PRICE_ID,
   });
-  return parsed.success ? parsed.data : null;
+  if (!parsed.success) return null;
+  // The Connect key pasted into the billing slot would bill shops from the
+  // platform account Connect acts through, and blur which key touches which
+  // money. Treated as not configured rather than half-working.
+  if (parsed.data.secretKey === env.STRIPE_SECRET_KEY?.trim()) return null;
+  return parsed.data;
 }
 
 /** Which Stripe mode the configured key acts in — what a verified event's `livemode` must match. */
@@ -102,10 +108,15 @@ export type BillingCallResult<T> = { status: "ok"; value: T } | { status: "faile
 const idResponse = z.object({ id: z.string().min(1) });
 /**
  * The actions redirect the owner's browser to this URL, so only an https one
- * is followed: Stripe's hosted pages (or a shop-branded custom domain Stripe
- * serves) are never plain http, and a `javascript:` or `data:` value is never
- * a page Stripe made.
+ * is followed: Stripe's hosted pages are never plain http, and a
+ * `javascript:` or `data:` value is never a page Stripe made. The host is
+ * deliberately not pinned to `*.stripe.com`: Checkout and the Portal can be
+ * served from a custom domain configured in Stripe (ADR
+ * 20261007-subscription-billing), and the URL comes back over TLS from
+ * Stripe's own API under DiveDay's key.
  */
+const checkoutResponse = z.object({ id: z.string().min(1) });
+const checkoutStatusResponse = z.object({ status: z.enum(["open", "complete", "expired"]) });
 const urlResponse = z.object({
   url: z
     .string()
@@ -132,7 +143,17 @@ export interface BillingProvider {
     shopName: string;
     email: string | null;
   }): Promise<BillingCallResult<string>>;
-  createCheckoutSession(input: CheckoutRequest): Promise<BillingCallResult<string>>;
+  /** A Checkout session: its id, kept on the shop's row, and the URL to send the owner to. */
+  createCheckoutSession(
+    input: CheckoutRequest,
+  ): Promise<BillingCallResult<{ id: string; url: string }>>;
+  /**
+   * Make sure the Checkout session "Add a card" opened last can no longer
+   * start a subscription: expire it if still open. `completed` means it
+   * already did — a subscription is on its way by webhook, and a second
+   * Checkout must not open.
+   */
+  settleCheckoutSession(sessionId: string): Promise<BillingCallResult<"cleared" | "completed">>;
   /**
    * A Customer Portal session. With `cancelSubscriptionId` the portal opens
    * straight on its cancel confirmation for that subscription — one tap to
@@ -146,20 +167,21 @@ export interface BillingProvider {
 }
 
 export function stripeBillingProvider(config: BillingConfig, fetchImpl: Fetch): BillingProvider {
-  async function post(
+  async function call(
+    method: "GET" | "POST",
     path: string,
-    body: URLSearchParams,
+    body?: URLSearchParams,
     idempotencyKey?: string,
   ): Promise<unknown | null> {
     try {
       const response = await fetchImpl(`https://api.stripe.com/v1/${path}`, {
-        method: "POST",
+        method,
         headers: {
           Authorization: `Bearer ${config.secretKey}`,
-          "Content-Type": "application/x-www-form-urlencoded",
+          ...(body ? { "Content-Type": "application/x-www-form-urlencoded" } : {}),
           ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
         },
-        body: body.toString(),
+        ...(body ? { body: body.toString() } : {}),
       });
       if (!response.ok) return null;
       return await response.json();
@@ -167,13 +189,19 @@ export function stripeBillingProvider(config: BillingConfig, fetchImpl: Fetch): 
       return null;
     }
   }
+  const post = (path: string, body: URLSearchParams, idempotencyKey?: string) =>
+    call("POST", path, body, idempotencyKey);
 
   return {
     async createCustomer({ shopId, shopName, email }) {
       const body = new URLSearchParams({ name: shopName, "metadata[shop_id]": shopId });
       if (email) body.set("email", email);
+      // Keyed by the shop *and* what is sent: a double tap is one Customer,
+      // while a renamed shop or a changed owner email within Stripe's 24-hour
+      // key window is a new request rather than a 400 for a reused key.
+      const parameters = createHash("sha256").update(body.toString()).digest("hex").slice(0, 16);
       const parsed = idResponse.safeParse(
-        await post("customers", body, `diveday-billing-customer-${shopId}`),
+        await post("customers", body, `diveday-billing-customer-${shopId}-${parameters}`),
       );
       return parsed.success ? { status: "ok", value: parsed.data.id } : { status: "failed" };
     },
@@ -191,8 +219,31 @@ export function stripeBillingProvider(config: BillingConfig, fetchImpl: Fetch): 
       });
       const trialEnd = checkoutTrialEnd(firstChargeAt, now);
       if (trialEnd !== null) body.set("subscription_data[trial_end]", String(trialEnd));
-      const parsed = urlResponse.safeParse(await post("checkout/sessions", body));
-      return parsed.success ? { status: "ok", value: parsed.data.url } : { status: "failed" };
+      const answer = await post("checkout/sessions", body);
+      const id = checkoutResponse.safeParse(answer);
+      const url = urlResponse.safeParse(answer);
+      return id.success && url.success
+        ? { status: "ok", value: { id: id.data.id, url: url.data.url } }
+        : { status: "failed" };
+    },
+
+    async settleCheckoutSession(sessionId) {
+      const path = `checkout/sessions/${encodeURIComponent(sessionId)}`;
+      const current = checkoutStatusResponse.safeParse(await call("GET", path));
+      if (!current.success) return { status: "failed" };
+      if (current.data.status === "complete") return { status: "ok", value: "completed" };
+      if (current.data.status === "expired") return { status: "ok", value: "cleared" };
+      const expired = checkoutStatusResponse.safeParse(
+        await post(`${path}/expire`, new URLSearchParams()),
+      );
+      if (expired.success && expired.data.status === "expired") {
+        return { status: "ok", value: "cleared" };
+      }
+      // The expire lost a race with the owner finishing payment in the other tab.
+      const settled = checkoutStatusResponse.safeParse(await call("GET", path));
+      return settled.success && settled.data.status === "complete"
+        ? { status: "ok", value: "completed" }
+        : { status: "failed" };
     },
 
     async createPortalSession({ customerId, returnUrl, cancelSubscriptionId }) {

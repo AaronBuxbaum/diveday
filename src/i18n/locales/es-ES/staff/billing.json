@@ -18,6 +18,7 @@
   "demo": "Un centro de demostración nunca se factura.",
   "pastDue": "Tu último pago no se pudo cobrar. Actualiza la tarjeta en Administrar facturación.",
   "invoices": "Stripe envía cada factura por correo.",
+  "waiting": "Esperando a que Stripe confirme tu tarjeta. Actualiza en un minuto.",
   "addCard": {
     "submit": "Agregar una tarjeta",
     "pending": "Abriendo Stripe…",
@@ -35,6 +36,7 @@
     "cardAdded": "Tarjeta guardada. Puede tardar un minuto en aparecer aquí.",
     "notConfigured": "La facturación todavía no está activada.",
     "unavailable": "Stripe no respondió. Inténtalo de nuevo en un minuto.",
-    "demo": "Un centro de demostración nunca se factura."
+    "demo": "Un centro de demostración nunca se factura.",
+    "pending": "Stripe todavía está confirmando la tarjeta que agregaste. Inténtalo de nuevo en un minuto."
   }
 }

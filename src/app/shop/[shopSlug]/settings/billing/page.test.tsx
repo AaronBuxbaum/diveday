@@ -41,7 +41,10 @@ function configure() {
   vi.stubEnv("BILLING_STRIPE_PRICE_ID", "price_monthly");
 }
 
-async function render(setup: (db: AppDb, shopId: string) => Promise<void> = async () => {}) {
+async function render(
+  setup: (db: AppDb, shopId: string) => Promise<void> = async () => {},
+  searchParams: { notice?: string } = {},
+) {
   const db = await seededTestDb();
   const shop = await getShopBySlug(db, "blue-mantis");
   if (!shop) throw new Error("demo shop missing");
@@ -60,11 +63,12 @@ async function render(setup: (db: AppDb, shopId: string) => Promise<void> = asyn
   });
   const tree = await BillingSettingsPage({
     params: Promise.resolve({ shopSlug: "blue-mantis" }),
-    searchParams: Promise.resolve({}),
+    searchParams: Promise.resolve(searchParams),
   });
   const [card] = findElements<{ description?: unknown; actions?: unknown }>(tree, SectionCard);
   const forms = findElements<{ action?: unknown }>(tree, "form");
-  return { card: card as ReactElement<{ description?: unknown; actions?: unknown }>, forms };
+  const lines = findElements<{ children?: unknown }>(tree, "p").map((p) => p.props.children);
+  return { card: card as ReactElement<{ description?: unknown; actions?: unknown }>, forms, lines };
 }
 
 const notDemo = async (db: AppDb, shopId: string) => {
@@ -128,6 +132,27 @@ describe("the Billing page once billing is on", () => {
       });
     });
     expect(forms).toHaveLength(1);
+  });
+
+  it("waits for Stripe after Checkout's return instead of offering the card again", async () => {
+    configure();
+    const { forms, lines } = await render(notDemo, { notice: "card-added" });
+    expect(forms).toHaveLength(0);
+    expect(lines).toContain(COPY.waiting);
+  });
+
+  it("waits for Stripe while a linked subscription has no status yet", async () => {
+    configure();
+    const { forms, lines } = await render(async (db, shopId) => {
+      await notDemo(db, shopId);
+      await db.insert(shopSubscriptions).values({
+        shopId,
+        stripeCustomerId: "cus_paid",
+        stripeSubscriptionId: "sub_linked",
+      });
+    });
+    expect(forms).toHaveLength(0);
+    expect(lines).toContain(COPY.waiting);
   });
 
   it("never offers a demo shop a card", async () => {

@@ -7,6 +7,8 @@ import {
   applyBillingEffect,
   ensureShopBillingCustomer,
   getShopSubscription,
+  holdsLiveSubscription,
+  recordShopCheckoutSession,
   setShopFreeTerm,
   subscriptionSnapshot,
 } from "./shop-subscriptions";
@@ -30,6 +32,20 @@ function changed(
   };
 }
 
+function completed(
+  shopId: string,
+  overrides: Partial<Extract<BillingEventEffect, { kind: "checkout_completed" }>> = {},
+): BillingEventEffect {
+  return {
+    kind: "checkout_completed",
+    sessionId: "cs_a",
+    customerId: "cus_a",
+    subscriptionId: "sub_a",
+    shopIdClaim: shopId,
+    ...overrides,
+  };
+}
+
 async function otherShop(db: AppDb): Promise<string> {
   const [row] = await db
     .insert(shops)
@@ -47,11 +63,54 @@ describe("ensureShopBillingCustomer", () => {
     expect((await getShopSubscription(db, shop.id))?.stripeCustomerId).toBe("cus_first");
   });
 
-  it("refuses a customer id another shop already holds", async () => {
+  it("answers null, writing nothing, for a customer id another shop already holds", async () => {
     const { db, shop } = await seededShopContext();
     const other = await otherShop(db);
     await ensureShopBillingCustomer(db, other, "cus_shared");
-    await expect(ensureShopBillingCustomer(db, shop.id, "cus_shared")).rejects.toThrow();
+    expect(await ensureShopBillingCustomer(db, shop.id, "cus_shared")).toBeNull();
+    expect(await getShopSubscription(db, shop.id)).toBeNull();
+  });
+});
+
+describe("recordShopCheckoutSession", () => {
+  it("records a session only over the one the caller settled", async () => {
+    const { db, shop } = await seededShopContext();
+    await ensureShopBillingCustomer(db, shop.id, "cus_a");
+    expect(
+      await recordShopCheckoutSession(db, shop.id, { previous: null, sessionId: "cs_1" }),
+    ).toBe(true);
+    // A second tab that read the row before cs_1 was recorded loses.
+    expect(
+      await recordShopCheckoutSession(db, shop.id, { previous: null, sessionId: "cs_2" }),
+    ).toBe(false);
+    expect(
+      await recordShopCheckoutSession(db, shop.id, { previous: "cs_1", sessionId: "cs_3" }),
+    ).toBe(true);
+    expect((await getShopSubscription(db, shop.id))?.stripeCheckoutSessionId).toBe("cs_3");
+  });
+
+  it("is cleared by its own checkout.session.completed, and only by its own", async () => {
+    const { db, shop } = await seededShopContext();
+    await ensureShopBillingCustomer(db, shop.id, "cus_a");
+    await recordShopCheckoutSession(db, shop.id, { previous: null, sessionId: "cs_new" });
+    await applyBillingEffect(db, completed(shop.id, { sessionId: "cs_old" }));
+    expect((await getShopSubscription(db, shop.id))?.stripeCheckoutSessionId).toBe("cs_new");
+    await applyBillingEffect(db, completed(shop.id, { sessionId: "cs_new" }));
+    expect((await getShopSubscription(db, shop.id))?.stripeCheckoutSessionId).toBeNull();
+  });
+});
+
+describe("holdsLiveSubscription", () => {
+  it("counts a linked subscription with no status yet, and an incomplete one, as live", async () => {
+    const { db, shop } = await seededShopContext();
+    await ensureShopBillingCustomer(db, shop.id, "cus_a");
+    expect(holdsLiveSubscription(await getShopSubscription(db, shop.id))).toBe(false);
+    await applyBillingEffect(db, completed(shop.id));
+    expect(holdsLiveSubscription(await getShopSubscription(db, shop.id))).toBe(true);
+    await applyBillingEffect(db, changed({ status: "incomplete" }));
+    expect(holdsLiveSubscription(await getShopSubscription(db, shop.id))).toBe(true);
+    await applyBillingEffect(db, changed({ status: "incomplete_expired", occurredAt: later(1) }));
+    expect(holdsLiveSubscription(await getShopSubscription(db, shop.id))).toBe(false);
   });
 });
 
@@ -60,12 +119,10 @@ describe("applyBillingEffect", () => {
     const { db, shop } = await seededShopContext();
     await ensureShopBillingCustomer(db, shop.id, "cus_a");
     expect(
-      await applyBillingEffect(db, {
-        kind: "checkout_completed",
-        customerId: "cus_a",
-        subscriptionId: "sub_a",
-        shopIdClaim: shop.id,
-      }),
+      await applyBillingEffect(
+        db,
+        completed(shop.id, { subscriptionId: "sub_a", shopIdClaim: shop.id }),
+      ),
     ).toBe("linked");
     expect(await applyBillingEffect(db, changed({ shopIdClaim: shop.id }))).toBe(
       "subscription_updated",
@@ -85,12 +142,10 @@ describe("applyBillingEffect", () => {
       "subscription_updated",
     );
     expect(
-      await applyBillingEffect(db, {
-        kind: "checkout_completed",
-        customerId: "cus_a",
-        subscriptionId: "sub_a",
-        shopIdClaim: shop.id,
-      }),
+      await applyBillingEffect(
+        db,
+        completed(shop.id, { subscriptionId: "sub_a", shopIdClaim: shop.id }),
+      ),
     ).toBe("linked");
     expect((await getShopSubscription(db, shop.id))?.stripeStatus).toBe("trialing");
   });
@@ -114,18 +169,48 @@ describe("applyBillingEffect", () => {
     );
   });
 
+  it("never lets Checkout's event undo the state a subscription event already wrote", async () => {
+    const { db, shop } = await seededShopContext();
+    await ensureShopBillingCustomer(db, shop.id, "cus_a");
+    // subscription.created lands first, then Checkout, then subscription.updated.
+    await applyBillingEffect(db, changed({ status: "trialing", occurredAt: T0 }));
+    expect(await applyBillingEffect(db, completed(shop.id))).toBe("linked");
+    expect(await getShopSubscription(db, shop.id)).toMatchObject({
+      stripeSubscriptionId: "sub_a",
+      stripeStatus: "trialing",
+      lastSubscriptionEventAt: T0,
+    });
+    // An older updated event must still be refused: Checkout reset no clock.
+    expect(
+      await applyBillingEffect(db, changed({ status: "incomplete", occurredAt: later(-30) })),
+    ).toBe("stale_event");
+    expect((await getShopSubscription(db, shop.id))?.stripeStatus).toBe("trialing");
+  });
+
+  it("keeps a subscription ended when a live status shares its second, in either order", async () => {
+    const { db, shop } = await seededShopContext();
+    await ensureShopBillingCustomer(db, shop.id, "cus_a");
+    await applyBillingEffect(db, changed({ status: "canceled", occurredAt: T0 }));
+    expect(await applyBillingEffect(db, changed({ status: "active", occurredAt: T0 }))).toBe(
+      "stale_event",
+    );
+    expect((await getShopSubscription(db, shop.id))?.stripeStatus).toBe("canceled");
+    // Another ended status may still follow.
+    expect(
+      await applyBillingEffect(db, changed({ status: "incomplete_expired", occurredAt: T0 })),
+    ).toBe("subscription_updated");
+  });
+
   it("writes nothing when the event's shop claim names a different shop than the customer's", async () => {
     const { db, shop } = await seededShopContext();
     const other = await otherShop(db);
     await ensureShopBillingCustomer(db, shop.id, "cus_a");
     expect(await applyBillingEffect(db, changed({ shopIdClaim: other }))).toBe("tenant_mismatch");
     expect(
-      await applyBillingEffect(db, {
-        kind: "checkout_completed",
-        customerId: "cus_a",
-        subscriptionId: "sub_a",
-        shopIdClaim: other,
-      }),
+      await applyBillingEffect(
+        db,
+        completed(shop.id, { subscriptionId: "sub_a", shopIdClaim: other }),
+      ),
     ).toBe("tenant_mismatch");
     expect(subscriptionSnapshot(await getShopSubscription(db, shop.id))).toBeNull();
     expect(await getShopSubscription(db, other)).toBeNull();
@@ -146,12 +231,10 @@ describe("applyBillingEffect", () => {
       "foreign_subscription",
     );
     expect(
-      await applyBillingEffect(db, {
-        kind: "checkout_completed",
-        customerId: "cus_a",
-        subscriptionId: "sub_b",
-        shopIdClaim: shop.id,
-      }),
+      await applyBillingEffect(
+        db,
+        completed(shop.id, { subscriptionId: "sub_b", shopIdClaim: shop.id }),
+      ),
     ).toBe("foreign_subscription");
     expect((await getShopSubscription(db, shop.id))?.stripeSubscriptionId).toBe("sub_a");
   });
@@ -186,9 +269,27 @@ describe("applyBillingEffect", () => {
     expect(await getShopSubscription(db, shop.id)).toMatchObject({ stripeSubscriptionId: null });
   });
 
+  it("counts only an invoice of the subscription the shop holds", async () => {
+    const { db, shop } = await seededShopContext();
+    await ensureShopBillingCustomer(db, shop.id, "cus_a");
+    const paid = (subscriptionId: string): BillingEventEffect => ({
+      kind: "invoice_paid",
+      customerId: "cus_a",
+      subscriptionId,
+      amountPaid: 9_900,
+      paidAt: T0,
+    });
+    expect(await applyBillingEffect(db, paid("sub_a"))).toBe("subscription_not_linked");
+    await applyBillingEffect(db, completed(shop.id));
+    expect(await applyBillingEffect(db, paid("sub_other"))).toBe("foreign_subscription");
+    expect((await getShopSubscription(db, shop.id))?.firstPaidAt).toBeNull();
+    expect(await applyBillingEffect(db, paid("sub_a"))).toBe("first_paid");
+  });
+
   it("records the first paid month once, and not for a zero invoice", async () => {
     const { db, shop } = await seededShopContext();
     await ensureShopBillingCustomer(db, shop.id, "cus_a");
+    await applyBillingEffect(db, completed(shop.id));
     const paid = (amountPaid: number, paidAt: Date): BillingEventEffect => ({
       kind: "invoice_paid",
       customerId: "cus_a",

@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, lte, ne, notInArray, or, sql } from "drizzle-orm";
 import type { BillingEventEffect } from "@/lib/billing/events";
 import type { SubscriptionSnapshot } from "@/lib/billing/standing";
 import { type CalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
@@ -52,29 +52,79 @@ export function subscriptionSnapshot(row: ShopSubscriptionRow | null): Subscript
  * is actually bound to. **The first recorded customer wins**: a second tab's
  * "Add a card" racing the first gets the stored id back, never overwrites it,
  * so the customer every later event names is the one this row already holds.
+ *
+ * Null when another shop's row already holds that customer id — the unique
+ * index refused it. That cannot happen with ids DiveDay minted per shop; if it
+ * does, the caller refuses rather than bind one customer to two shops.
  */
 export async function ensureShopBillingCustomer(
   db: AppDb,
   shopId: string,
   stripeCustomerId: string,
-): Promise<string> {
+): Promise<string | null> {
   const now = nowDate();
+  try {
+    const [row] = await db
+      .insert(shopSubscriptions)
+      .values({ shopId, stripeCustomerId, createdAt: now, updatedAt: now })
+      .onConflictDoUpdate({
+        target: shopSubscriptions.shopId,
+        set: {
+          stripeCustomerId: sql`coalesce(${shopSubscriptions.stripeCustomerId}, excluded.stripe_customer_id)`,
+          updatedAt: now,
+        },
+      })
+      .returning({ stripeCustomerId: shopSubscriptions.stripeCustomerId });
+    return row?.stripeCustomerId ?? stripeCustomerId;
+  } catch (error) {
+    if (isUniqueConstraintViolation(error)) return null;
+    throw error;
+  }
+}
+
+/**
+ * Record the Checkout session "Add a card" just opened, **only if** the row
+ * still holds the one the caller settled (`previous`). False means another
+ * tab opened its own session in between; the caller expires this one and
+ * refuses, so at most one open session per shop can ever start a subscription.
+ */
+export async function recordShopCheckoutSession(
+  db: AppDb,
+  shopId: string,
+  input: { previous: string | null; sessionId: string },
+): Promise<boolean> {
   const [row] = await db
-    .insert(shopSubscriptions)
-    .values({ shopId, stripeCustomerId, createdAt: now, updatedAt: now })
-    .onConflictDoUpdate({
-      target: shopSubscriptions.shopId,
-      set: {
-        stripeCustomerId: sql`coalesce(${shopSubscriptions.stripeCustomerId}, excluded.stripe_customer_id)`,
-        updatedAt: now,
-      },
-    })
-    .returning({ stripeCustomerId: shopSubscriptions.stripeCustomerId });
-  return row?.stripeCustomerId ?? stripeCustomerId;
+    .update(shopSubscriptions)
+    .set({ stripeCheckoutSessionId: input.sessionId, updatedAt: nowDate() })
+    .where(
+      and(
+        eq(shopSubscriptions.shopId, shopId),
+        input.previous === null
+          ? isNull(shopSubscriptions.stripeCheckoutSessionId)
+          : eq(shopSubscriptions.stripeCheckoutSessionId, input.previous),
+      ),
+    )
+    .returning({ shopId: shopSubscriptions.shopId });
+  return Boolean(row);
+}
+
+/**
+ * Whether the shop holds a subscription that has not ended — including one
+ * Checkout linked whose status has not arrived yet, and one still
+ * `incomplete`. Any of these is a reason to send the owner to the Portal, never
+ * to a second Checkout.
+ */
+export function holdsLiveSubscription(row: ShopSubscriptionRow | null): boolean {
+  if (!row?.stripeSubscriptionId) return false;
+  return row.stripeStatus === null || !isEndedStatus(row.stripeStatus);
 }
 
 /** Statuses after which a subscription is over, and a new one may take its place. */
 const ENDED_STATUSES = ["canceled", "incomplete_expired"] as const;
+
+function isEndedStatus(status: string): boolean {
+  return (ENDED_STATUSES as readonly string[]).includes(status);
+}
 
 export type BillingEffectOutcome =
   | "linked"
@@ -87,6 +137,7 @@ export type BillingEffectOutcome =
   | "stale_event"
   | "foreign_subscription"
   | "subscription_claimed_elsewhere"
+  | "subscription_not_linked"
   | "ignored"
   | "malformed";
 
@@ -141,25 +192,37 @@ export async function applyBillingEffect(
   try {
     switch (effect.kind) {
       case "checkout_completed": {
+        // The session that just completed can no longer start anything.
+        await db
+          .update(shopSubscriptions)
+          .set({ stripeCheckoutSessionId: null, updatedAt: now })
+          .where(
+            and(sameCustomer, eq(shopSubscriptions.stripeCheckoutSessionId, effect.sessionId)),
+          );
+        // Checkout only *links*: it writes the subscription id into an empty
+        // slot and touches no state. Status, period and ordering belong to the
+        // subscription events, which may land before or after this one; a
+        // reset here, decided on a read that a concurrent subscription event
+        // has already made stale, could wipe the state that event just wrote.
         const [linked] = await db
           .update(shopSubscriptions)
-          .set({
-            stripeSubscriptionId: effect.subscriptionId,
-            // A new subscription after an ended one starts its own state; the
-            // subscription events that follow fill it in.
-            ...(row.stripeSubscriptionId !== effect.subscriptionId
-              ? {
-                  stripeStatus: null,
-                  currentPeriodEnd: null,
-                  cancelAtPeriodEnd: false,
-                  lastSubscriptionEventAt: null,
-                }
-              : {}),
-            updatedAt: now,
-          })
-          .where(and(sameCustomer, mayHoldSubscription(effect.subscriptionId)))
+          .set({ stripeSubscriptionId: effect.subscriptionId, updatedAt: now })
+          .where(and(sameCustomer, isNull(shopSubscriptions.stripeSubscriptionId)))
           .returning({ shopId: shopSubscriptions.shopId });
-        return linked ? "linked" : "foreign_subscription";
+        if (linked) return "linked";
+        const [current] = await db
+          .select({
+            subscriptionId: shopSubscriptions.stripeSubscriptionId,
+            status: shopSubscriptions.stripeStatus,
+          })
+          .from(shopSubscriptions)
+          .where(sameCustomer)
+          .limit(1);
+        // Already linked by its own subscription event, or replacing one that
+        // ended: the subscription events adopt it (`mayHoldSubscription`).
+        if (current?.subscriptionId === effect.subscriptionId) return "linked";
+        if (current?.status && isEndedStatus(current.status)) return "linked";
+        return "foreign_subscription";
       }
       case "subscription_changed": {
         const [updated] = await db
@@ -183,6 +246,17 @@ export async function applyBillingEffect(
                 ne(shopSubscriptions.stripeSubscriptionId, effect.subscriptionId),
                 lte(shopSubscriptions.lastSubscriptionEventAt, effect.occurredAt),
               ),
+              // An ended subscription stays ended. Stripe stamps events to the
+              // second, so "updated: active" and "deleted" can share a
+              // timestamp and arrive in either order; only another ended
+              // status may follow an ended one on the same subscription.
+              isEndedStatus(effect.status)
+                ? undefined
+                : or(
+                    isNull(shopSubscriptions.stripeStatus),
+                    ne(shopSubscriptions.stripeSubscriptionId, effect.subscriptionId),
+                    notInArray(shopSubscriptions.stripeStatus, [...ENDED_STATUSES]),
+                  ),
             ),
           )
           .returning({ shopId: shopSubscriptions.shopId });
@@ -200,10 +274,23 @@ export async function applyBillingEffect(
         // A $0 invoice — the one Stripe issues when a deferred subscription
         // starts — is not a paid month.
         if (effect.amountPaid <= 0) return "zero_amount";
+        // Only an invoice of the subscription this shop holds is its paid
+        // month. One that beats its own subscription's events here (a card
+        // charged at once) is answered "not linked", and the webhook has
+        // Stripe retry it once the link has landed.
+        if (row.firstPaidAt) return "already_paid";
+        if (row.stripeSubscriptionId === null) return "subscription_not_linked";
+        if (row.stripeSubscriptionId !== effect.subscriptionId) return "foreign_subscription";
         const [first] = await db
           .update(shopSubscriptions)
           .set({ firstPaidAt: effect.paidAt, updatedAt: now })
-          .where(and(sameCustomer, isNull(shopSubscriptions.firstPaidAt)))
+          .where(
+            and(
+              sameCustomer,
+              eq(shopSubscriptions.stripeSubscriptionId, effect.subscriptionId),
+              isNull(shopSubscriptions.firstPaidAt),
+            ),
+          )
           .returning({ shopId: shopSubscriptions.shopId });
         return first ? "first_paid" : "already_paid";
       }
