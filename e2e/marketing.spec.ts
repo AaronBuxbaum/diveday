@@ -635,141 +635,107 @@ test("the setup link opens the form, which answers the hesitation it creates", a
   await expect(signUpForm.locator('input[name="source"]')).toHaveValue("unknown");
 });
 
-test("the about page says who is behind DiveDay and what it won't pretend", async ({ page }) => {
-  // Reachable from the footer on any marketing page — the conventional place a
-  // buyer looks for who they're dealing with.
-  await page.goto("/");
-  await page.getByRole("contentinfo").getByRole("link", { name: "About" }).click();
+test("the about page tells why DiveDay exists, who builds it, and how a shop gets set up", async ({
+  page,
+}) => {
+  await page.goto("/about");
 
-  // This headline has walked into four different failures, so it is pinned
-  // against all of them. "Built by divers, for divers." was true of every
-  // dive-adjacent vendor on earth — a rival could paste it unchanged, making it
-  // an eyebrow in a headline's clothes. "One person owns every line of code
-  // running on this boat." conceded smallness so hard it read as a vendor with
-  // no infrastructure behind it — the fear this page exists to answer, not
-  // feed. "Small enough to answer you." then spent the site's most valuable
-  // line on the company's *size*, the one thing about DiveDay a buyer has no
-  // reason to want. "We'd rather be checked than believed." fixed the register
-  // but picked a fight: it presumes the reader's distrust and answers it with a
-  // dare, which is a strange way to open a page about who you are.
+  // The page opens on why DiveDay exists: the Lonergans, left behind on the
+  // Great Barrier Reef in 1998 (docs/product/marketing.md, "Biography is a
+  // claim like any other", holds the sourcing and the limits). The eyebrow is
+  // the page's `h1` since the 2026-10-07 rewrite (H-99): the display heading
+  // that stood over the story ("Why did you build this") left at the owner's
+  // call, along with the spoken register it belonged to, so the story is the
+  // first thing read and the page's name is the one heading a screen reader
+  // lands on first.
   //
-  // "Your season doesn't hang on us." survived all four by stating the
-  // reassurance as a fact about the shop's operation rather than a posture
-  // about us. Since 2026-09-24 the page is written as speech (docs/design/
-  // brand.md, "The spoken register on /about"): every heading is the owner's
-  // question, repeated back without a mark, and that sentence is now the
-  // first thing said under the H1 rather than the H1 itself — the reassurance
-  // is still the answer, and the proof still follows it: the shop's own Stripe
-  // account, the ZIP, roll call with no signal. The Stripe half is asserted
-  // beside the headline because the headline alone would be the second failure
-  // again.
-  //
-  // Since 2026-10-06 the page opens on why DiveDay exists (the Lonergans,
-  // left behind on the Great Barrier Reef in 1998) and "Who am I dealing
-  // with" is the band right under it, still closing on the same reassurance.
-  await expect(
-    page.getByRole("heading", { level: 1, name: "Why did you build this" }),
-  ).toBeVisible();
+  // The page's hero has failed the headline test four times before this one,
+  // every failure recorded here so none comes back: "Built by divers, for
+  // divers." (true of every dive-adjacent vendor), "One person owns every
+  // line of code running on this boat." (conceded smallness until it read as
+  // no infrastructure), "Small enough to answer you." (spent the line on the
+  // company's size) and "We'd rather be checked than believed." (picked a
+  // fight). The story carries its own weight and the page does not sell with
+  // it.
+  await expect(page.getByRole("heading", { level: 1, name: "Why DiveDay exists" })).toBeVisible();
   await expect(page.getByText(/Tom and Eileen Lonergan/)).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Who am I dealing with" })).toBeVisible();
-  await expect(page.getByText(/doesn’t hang on the two of us/)).toBeVisible();
-  // Case-insensitive on purpose. The claim is "the money is in the shop's own
-  // account"; whether the sentence happens to start with it is not part of the
-  // claim, and pinning the capital broke this line when the hero was reordered
-  // for reasons that had nothing to do with what it asserts. The *words* stay
-  // pinned — that is the point of the marketing specs — but incidental form
-  // does not.
-  await expect(page.getByText(/payments run through your own Stripe account/i)).toBeVisible();
+  // The tie from the story to the product is the company's, in the plural
+  // (Aaron, 2026-10-07: "we built DiveDay").
+  await expect(page.getByText(/That story is why we built DiveDay/)).toBeVisible();
 
-  // The page earns trust by conceding, not by claiming: the honest-no block is
-  // the load-bearing part. (It used to also pin "Aaron Buxbaum, founder" from
-  // the "Who builds it" credential row; that row was removed 2026-08-05 — see
-  // docs/product/marketing.md — so the page names no individual, and asserting
-  // one here would only re-introduce it by the back door.)
-  await expect(page.getByRole("heading", { name: "What’s the catch" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "DiveDay is new." })).toBeVisible();
-
-  // Trust here is checkable, not asserted: each rule ships with the demo action
-  // that proves it.
+  // Who is behind it, in generalities. The page names no individual and
+  // states no CV: the founder's name, the employers that used to carry the
+  // page's credibility, and the head count of the team are pinned out by
+  // value, so none of them comes back under a new heading.
   await expect(
-    page.getByRole("heading", { name: "How do I know any of that’s true" }),
+    page.getByRole("heading", { name: "Divers who have shipped software to millions of people." }),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { name: "It has to work on the boat." })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "A blank field is never a yes." })).toBeVisible();
-  await expect(page.getByText("open a manifest on your phone")).toBeVisible();
+  const rendered = await page.locator("body").innerText();
+  expect(rendered).not.toMatch(/Aaron|Google|biotech|self-driving|two of us/);
 
-  // The checkable half comes *before* the conceding half. The rules used to sit
-  // fourth, below two sections of prose, which put the page's only verifiable
-  // content off the bottom of every screen a visitor actually saw. Asserted as
-  // an order rather than a presence, because both blocks existed then too.
+  // The four standards every screen is held to, as cards under a statement
+  // heading. Each is a shipped behavior a visitor can reproduce in the demo.
+  await expect(
+    page.getByRole("heading", { name: "The one job on a boat that can’t go wrong." }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "The roll call runs with no signal." }),
+  ).toBeVisible();
+  // The export terms are the shared claim, composed into the records card
+  // rather than reworded there (src/lib/marketing.ts, `fullShopExport`).
+  await expect(page.getByText(/No export fee, no support ticket/)).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: "Gaps in a diver’s record show up at the desk, not on the boat.",
+    }),
+  ).toBeVisible();
+
+  // Every band's heading is a statement the band can be read against, never a
+  // question: the spoken register's question headings are retired by value in
+  // src/app/about/copy.test.ts, and the rendered page is held to the same
+  // here. Asserted as an order too: who, what it is built around, how a shop
+  // gets set up, which is the order a reader asks in.
   const headings = await page.getByRole("heading", { level: 2 }).allInnerTexts();
-  expect(headings.indexOf("How do I know any of that’s true")).toBeLessThan(
-    headings.indexOf("What’s the catch"),
+  expect(headings.length).toBeGreaterThanOrEqual(4);
+  for (const heading of headings)
+    expect(heading, `a question heads a band: ${heading}`).not.toMatch(/\?/);
+  expect(headings.indexOf("Divers who have shipped software to millions of people.")).toBeLessThan(
+    headings.indexOf("The one job on a boat that can’t go wrong."),
+  );
+  expect(headings.indexOf("The one job on a boat that can’t go wrong.")).toBeLessThan(
+    headings.indexOf("We set your shop up with you."),
   );
 
-  // A trust page that didn't land on the exit would be missing the point, and
-  // the heading over that band has to *be* the exit answer rather than gesture
-  // at it. It re-asked the founder band's question ("Who you're actually
-  // buying from.") until slice 12f, and then spent one revision on a metaphor
-  // ("What you're standing on.") that every incumbent could have pasted onto
-  // their own site truthfully — the exact failure docs/product/marketing.md's
-  // headline test says binds `/about` hardest. It then stated the plan terms
-  // ("Month to month, and the export is one button.") until the page moved to
-  // the spoken register on 2026-09-24: the heading is now the owner's exit
-  // question, and the terms it used to carry are the first thing said under
-  // it (src/app/about/copy.test.ts holds the arithmetic).
-  await expect(
-    page.getByRole("heading", { name: "What happens to my records if I go" }),
-  ).toBeVisible();
-  await expect(page.getByText(/No export fee, no support ticket/)).toBeVisible();
-  // …and the door out of that band is tagged, like every other in-page
-  // switching door (2026-08-15). The nav and footer ones stay bare on purpose:
-  // they render on every marketing page, so one tag across them answers
-  // nothing (src/lib/funnel.ts).
-  await expect(
-    page.getByRole("main").getByRole("link", { name: /How switching works, both directions/ }),
-  ).toHaveAttribute("href", "/switching?from=about-switching");
-
   // No fabricated proof anywhere on the page a buyer reads for credibility.
-  const rendered = await page.locator("body").innerText();
   for (const pattern of [/trusted by/i, /\d+\+? (shops|customers|divers) (use|trust)/i]) {
     expect(rendered, `unfounded social proof matching ${pattern}`).not.toMatch(pattern);
   }
 
-  // The impulse is spent where it is made (slice 12f;
-  // docs/product/marketing-review-20260827.md, "help arrives after the
-  // homework"). The rules band dares the reader to go and check four things,
-  // and until 2026-08-28 the nearest thing to act on was a primary-weight
-  // mailto two bands down, with the demo waiting past the founder story, the
-  // concessions and the export terms. Scoped to `<main>`: the nav carries its
-  // own demo button on every marketing page (#934).
+  // The first demo door sits under the standards, where a reader who wants to
+  // see them for themselves is (docs/product/marketing-review-20260827.md,
+  // "help arrives after the homework"). Scoped to `<main>`: the nav carries
+  // its own demo button on every marketing page (#934).
   const aboutMain = page.getByRole("main");
-  const rulesBand = aboutMain.locator("section").filter({
-    has: page.getByRole("heading", { name: "How do I know any of that’s true" }),
+  const standardsBand = aboutMain.locator("section").filter({
+    has: page.getByRole("heading", { name: "The one job on a boat that can’t go wrong." }),
   });
-  await expect(rulesBand.getByRole("button", { name: "Try the live demo" })).toBeEnabled();
-  await expect(rulesBand.locator(`a[href="${SET_UP_HREF}"]`)).toHaveCount(1);
+  await expect(standardsBand.getByRole("button", { name: "Try the live demo" })).toBeEnabled();
+  await expect(standardsBand.locator(`a[href="${SET_UP_HREF}"]`)).toHaveCount(1);
 
   // …and the note that answers the only question that button raises, at the
   // page's *first* door (docs/product/marketing.md, "The demo's cost is stated
-  // once per page, at the first door"). `/about` carried it nowhere at all
-  // until 2026-08-28: a page that dares a buyer to go and check four things
-  // and then offers an unlabeled button leaves them guessing whether the click
-  // costs them their email address, which at the moment of maximum impulse
-  // makes scrolling past it the safest move — and by the closing band the
-  // impulse is spent.
-  await expect(rulesBand.locator("p", { hasText: "No sign-up and no card" })).toHaveCount(1);
-  // Once on the page, not under both doors. The answer is worth nothing the
-  // second time — repeated under every demo button it stops reading as
-  // reassurance and starts reading as insistence — so the closing band repeats
-  // the door, not the note.
+  // once per page, at the first door"). Once on the page, not under both
+  // doors: repeated under every demo button it stops reading as reassurance
+  // and starts reading as insistence, so the closing band repeats the door,
+  // not the note.
+  await expect(standardsBand.locator("p", { hasText: "No sign-up and no card" })).toHaveCount(1);
   await expect(aboutMain.locator("p", { hasText: "No sign-up and no card" })).toHaveCount(1);
 
   // Two positions, in DOM order, each tagged for itself — a reader who moved
-  // at the proof is a different moment from one who read the whole page and
-  // reached the close, and folded into one bucket neither could be read on its
-  // own (src/lib/funnel.ts). Asserted as a list rather than a presence: the
-  // page total is the thing this split exists to stop.
+  // at the standards is a different moment from one who read the whole page
+  // and reached the close, and folded into one bucket neither could be read
+  // on its own (src/lib/funnel.ts). Asserted as a list rather than a
+  // presence: the page total is the thing this split exists to stop.
   const aboutTags = await aboutMain
     .locator('input[name="source"]')
     .evaluateAll((nodes) => nodes.map((node) => (node as HTMLInputElement).value));
@@ -795,43 +761,39 @@ test("the about page says who is behind DiveDay and what it won't pretend", asyn
     }
   }
 
-  // …which is what the support mailto gave up to make room. It is a real offer
-  // and stays on the page, demoted to the secondary variant beside the pricing
-  // door it now sits level with: `bg-primary` is the primary variant's own
-  // fill (src/components/ui/button.ts), so its absence here is the demotion,
-  // asserted where a reader would feel it rather than in a class list nobody
-  // reads.
-  const supportDoor = aboutMain.getByRole("link", { name: "Email support@dive.day" });
-  // Anchored on both sides, or `hover:bg-surface-sunken` would satisfy it and
-  // the assertion would pass on a button whose resting fill had changed.
-  await expect(supportDoor).toHaveClass(/(^|\s)bg-surface(\s|$)/);
-  await expect(supportDoor).not.toHaveClass(/bg-primary/);
-
-  // The door beside it states the figure rather than parking it behind itself
-  // — the same unlabeled-door fix `/product`'s money band took on 2026-08-28.
-  // This band raises the cost question three times (the "One price, no seats."
-  // rule sends the reader here to *check it*, the heading promises
-  // straightforward pricing, the paragraph says the whole of it is on one
-  // page) and answered it with "See what it costs", which a skeptic reading a
-  // trust page reads as "they won't say"
-  // (docs/product/marketing-review-20260827.md, diagnosis 2).
+  // The how-we-work band offers three peer doors and no primary: the set-up
+  // mail (its first paragraph is the set-up offer, so its door is the pair's
+  // second door and not a support mailto, which until 2026-10-07 sent a reader
+  // who had just decided to the wrong inbox), at the outline weight
+  // (`bg-primary` is the primary variant's own fill, src/components/ui/
+  // button.ts, so its absence is the demotion, asserted where a reader would
+  // feel it rather than in a class list nobody reads); the pricing door, which
+  // states the figure rather than parking it behind itself (the figure read
+  // out of the one source rather than typed here, which is also the proof the
+  // interpolation ran: `src/lib/marketing.test.ts` pins the key among those
+  // that must carry `{price}`); and the one in-page switching door, tagged
+  // like every other (2026-08-15; the nav and footer ones stay bare on
+  // purpose, since they render on every marketing page and one tag across
+  // them answers nothing, src/lib/funnel.ts).
   const aboutPriceDoor = aboutMain.getByRole("link", { name: /^One flat / });
   await expect(aboutPriceDoor).toHaveAttribute("href", "/pricing");
-  // The figure read out of the one source rather than typed here, which is
-  // also the proof the interpolation ran: the stored message carries `{price}`
-  // (`src/lib/marketing.test.ts` pins it among the keys that must).
   await expect(aboutPriceDoor).toContainText(earlyAccessPrice.price);
-  // Still no new control on the page — the number arrived inside a door that
-  // already existed (docs/product/marketing.md, "The budget binds controls,
-  // not facts"), so the band's link count is unchanged and it still offers no
-  // primary at all.
+  await expect(
+    aboutMain.getByRole("link", { name: /How your records come in, and how they leave/ }),
+  ).toHaveAttribute("href", "/switching?from=about-switching");
   // `has:` is resolved from the outer match, so it takes a page-rooted
-  // locator rather than `aboutPriceDoor` — the same shape `rulesBand` uses.
-  const runBand = aboutMain
+  // locator rather than `aboutPriceDoor` — the same shape `standardsBand` uses.
+  const workBand = aboutMain
     .locator("section")
     .filter({ has: page.getByRole("link", { name: /^One flat / }) });
-  await expect(runBand.locator("button:not([disabled])")).toHaveCount(0);
-  await expect(runBand.locator("a")).toHaveCount(3);
+  await expect(workBand.locator("button:not([disabled])")).toHaveCount(0);
+  await expect(workBand.locator("a")).toHaveCount(3);
+  const setUpDoor = workBand.locator(`a[href="${SET_UP_HREF}"]`);
+  await expect(setUpDoor).toHaveCount(1);
+  // Anchored on both sides, or `hover:bg-surface-sunken` would satisfy it and
+  // the assertion would pass on a button whose resting fill had changed.
+  await expect(setUpDoor).toHaveClass(/(^|\s)bg-surface(\s|$)/);
+  await expect(setUpDoor).not.toHaveClass(/bg-primary/);
 });
 
 test("migration guides walk a shop from an incumbent export into the importer", async ({
@@ -1550,8 +1512,8 @@ test.describe("with Accept-Language: es", () => {
       spanish: "Trae la hoja de cálculo contigo.",
     },
     "/about": {
-      english: "Why did you build this",
-      spanish: "Por qué lo construiste",
+      english: "Why DiveDay exists",
+      spanish: "Por qué existe DiveDay",
     },
   } as const;
 
