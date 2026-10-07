@@ -155,10 +155,10 @@ export type ShopSurface = {
  * the returned `{ allowed: false }` above — except invisibly, since execution
  * simply continues and the page renders for someone this function said no to.
  * The test can only pin the helper's own behaviour, so the callers are held by
- * `scripts/check-repo.mjs`'s `redirect-in-try` rule
- * (`scripts/check-redirect-in-try.mjs`), which refuses any unwinding call
- * written inside a `try` body and leaves `catch { redirect(…) }` alone. It was
- * worth a script rather than a convention for the reason the notice-code rule
+ * Biome's `redirectInTry` rule (`scripts/lint-rules/redirectInTry.grit`, run
+ * by `pnpm lint`), which refuses any unwinding call written inside a `try` body
+ * and leaves `catch { redirect(…) }` alone. It was worth a rule rather than a
+ * convention for the reason the notice-code rule
  * was: the failure renders nothing, so nothing goes red.
  */
 export async function requireShopSurface(

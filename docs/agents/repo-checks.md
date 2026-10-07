@@ -1,6 +1,6 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 48 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 44 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
@@ -16,7 +16,7 @@ the guard's name.
 
 ## The full roster
 
-environment, architecture/feature-module, design-token, tinted-ink, type-ramp, voice, logical-property, clock, transaction-concurrency, timezone, Intl-cache, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, soft-delete-vocabulary, shop-word, live-trip-read, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, infra-ASCII, CI-change-detection and Node-version safeguards.
+environment, architecture/feature-module, design-token, tinted-ink, type-ramp, voice, logical-property, transaction-concurrency, image-sizes, ADR, design-canvas, doc-link, locale-coverage, hard-coded-copy, bundle-reach, domain-layer-copy, route-coverage, loading-skeleton, uuid-path-segment, notice-code, scroll-preservation, exit-curve, soft-delete-vocabulary, shop-word, live-trip-read, departure-buffer, capability-runbook, destructive-migration, migration-graph, e2e-hygiene, agent-layer (skills/index/rules/hooks/task-context), Open-Graph-site, infra-ASCII, CI-change-detection and Node-version safeguards.
 
 ## The guards worth reading about
 
@@ -284,7 +284,7 @@ The `.set()` search, and the brace match that reads its literal, both end at the
 
 **A `.set()` given anything but an object literal is refused, not passed.** `.set(patch)`, `.set(buildPatch())` and `.set({ ...timesPatch, status })` give the brace matcher nothing of this write to read — it would take the first `{` anywhere after `.set(`, which for the last anchor in a file means the rest of the file, and conclude from someone else's object that no departure moved. That is the shape a developer writes the moment two branches share a patch, and the failure would be silent: the guard's own move count would drop by one with nothing watching it. So the rule says it cannot read the write and asks for the literal to be inlined, or for the exemption by name. The move count is pinned in the tests for the same reason (`security-reviewer`, issue #1394).
 
-**The exemption's reason is required.** `diveday:allow-flat-revision:` with nothing after the colon is refused; `check-redirect-in-try.mjs` and `check-db-concurrency.mjs` already spell theirs the same way.
+**The exemption's reason is required.** `diveday:allow-flat-revision:` with nothing after the colon is refused; `check-db-concurrency.mjs` already spell theirs the same way.
 
 The anchor is matched per line, so a `.update(\n  trips,\n)` split across three lines is not an anchor and the write goes uninspected. Biome keeps it on one line today. If that ever changes, this is the line to change with it.
 
@@ -385,6 +385,28 @@ On `main` itself the merge base is `HEAD`, the range is empty, and the guard pas
 The follow-ups guard (`scripts/check-follow-ups.mjs`) is the one guard that makes a **network call** — `gh issue list` for every open `needs-triage` issue — and it is deliberately **not** in this table. What it reads is the tracker, not the branch: while it ran here, one malformed issue (#2036, and #1097, #1526, #1555 before it) turned every open pull request red at once, for a problem none of them contained and none could fix. Since 2026-10-07 it runs daily in `.github/workflows/follow-ups.yml` with the repository token, and on demand as `pnpm check:follow-ups`; [issue-tracker.md](issue-tracker.md)'s "Filing a follow-up" says when a session runs it.
 
 It keeps its three outcomes. Exit 0 is clean, exit 1 is a malformed issue, and exit **2** is `SKIPPED`: `gh` could not answer, so nothing was validated. That code is unreachable from any validation path, so a genuine failure can never downgrade itself into a skip. Every guard in `check:repo` exits 0 or fails; none reads the network, and `check-repo.mjs` no longer has a skipped outcome at all.
+
+## Now Biome rules
+
+Four guards that were one syntactic pattern each are rules in `pnpm lint` now: a GritQL plugin in `scripts/lint-rules/<rule>.grit`, scoped and exempted by an `overrides` entry in `biome.json`, and tested through that real config by `scripts/lint-rules/lint-rules.test.mjs`. A rule reads the syntax tree, so a comment or a string that only *mentions* the call is no longer refused; nothing else moved. That was checked before the guards were deleted: each old guard and its rule ran over every `.ts`/`.tsx` under `src/` with scopes and exemptions lifted, then over a copy with the refused shapes and their look-alikes injected into every `try` body, `catch` body and function in the tree (from 722 refused lines for `timezone` to 4,733 for `redirectInTry`), and the two sets of refused lines were identical apart from the twelve comment lines `clock` used to count. `pnpm lint:rules` runs these rules alone.
+
+The escape hatch is Biome's own, and its reason is required: `// biome-ignore lint/plugin/<rule>: <why>` on the line above. One with nothing after the rule name is itself an error, so the hatch cannot be taken silently. A file-wide exemption is a negated glob in the rule's `biome.json` override, with its reason in this section.
+
+### clock
+
+Refuses `new Date()` and `Date.now()` in `src/lib`, `src/db` and `src/features`, tests included; read time through `nowDate()` / `nowMs()` in `src/lib/clock.ts`. The demo seed is clock-anchored and dozens of surfaces render relative time, so a live wall-clock read in domain or data code is what makes visual baselines drift: the clock module is the one seam the e2e fleet freezes (`DIVEDAY_CLOCK`), and in production it is the native call byte for byte. `src/app` is out of scope because client components read the browser clock, which the e2e specs freeze with `page.clock`. Tests are in scope because dozens of them once drifted into depending on real time running ahead of the frozen instant (`new Date(Date.now() + 1000)` as an upper bound, a session placed relative to real time and read back against `nowMs()`), and failed as a mass the day the instant moved. Exempt: `src/lib/clock.ts`, and `src/lib/clock.test.ts`, whose assertion is bracketing `nowMs()` between two real readings.
+
+### intlCache
+
+Refuses `new Intl.*` (except `Intl.Locale`, a parsed value with nothing to compile) and `.toLocaleString` / `.toLocaleDateString` / `.toLocaleTimeString`, optional-chained or not, outside tests in `src/app`, `src/components`, `src/lib`, `src/db`, `src/features` and `src/i18n`. Build formatters through `src/lib/intl-cache.ts`; a date goes through a `src/lib/format.ts` helper. Constructing a formatter is ~12x the cost of reusing one and this app formats on essentially every render; it regressed twice before it was checked (ADR 20260807-intl-formatter-cache). The `toLocale*` family is on the list because each call builds a formatter internally *and* picks its own fields: the forecast's "last updated" line told divers `10:33:06` (issue #799). `toLocaleLowerCase` / `toLocaleUpperCase` fold case and are allowed. Exempt: `src/lib/intl-cache.ts`, which is the cache.
+
+### timezone
+
+Refuses `new Intl.DateTimeFormat(…)` and the three `toLocale*String` calls whose arguments do not mention `timeZone`, outside tests in `src/app`, `src/components`, `src/lib`, `src/db` and `src/features`. Every timestamp is a UTC instant shown in the shop's zone, and these APIs fall back to the host zone — UTC on every server and in CI — so a 7:30 AM Key Largo departure renders 11:30 AM, plausibly and silently. The rule is "name a zone", not "name the shop's zone": `timeZone: "UTC"` for a date-only value (`src/lib/calendar-date.ts`) is a visible choice and passes. `timeZoneName` alone does not count. Within its scope it overlaps `intlCache`, which refuses the same calls everywhere except `src/lib/intl-cache.ts`; this is the rule that holds the cache itself to naming a zone.
+
+### redirectInTry
+
+Refuses a call that unwinds the render — `redirect`, `permanentRedirect`, `notFound`, `forbidden`, `unauthorized`, this repo's `revalidateAndRedirect`, `requireStaffSession` and `requireShopSurface`, and any function the same file declares `: never` or `: Promise<never>` — written inside a `try` body (callbacks nested in it included), or with `.catch(…)` chained straight onto it, anywhere in `src/` outside tests. These throw a sentinel the framework turns into a 307/404/403/401, so a `try` around one catches the refusal itself and the page below the gate renders for someone the gate said no to: a tenant-isolation bug, since `requireShopSurface`'s whole contract is that every refusal throws. `catch { redirect(…) }` is a refusal decided by the failure and is correct; so is a redirect after the `try`. Tests are exempt because asserting a helper throws means catching the sentinel. The guard this replaced was a 439-line lexical masker that had to fail loudly when it lost its footing; Biome parses the file, and one that does not parse fails lint. Not covered, stated rather than implied: a `return` inside `finally`, which lint already refuses.
 
 ## The path-scoped rules, in full
 
@@ -576,7 +598,7 @@ locale. This is not a style preference: `Intl` falls back to the *host* zone whe
 and every DiveDay server and CI box is UTC, so an omission renders a 7:30 AM departure as 11:30 AM —
 plausible, green, and four hours wrong on the screen a diver uses to decide when to leave. A value
 with no instant in it says `timeZone: "UTC"` explicitly (`src/lib/calendar-date.ts`).
-`pnpm check:timezone` enforces the rest.
+Biome's `timezone` rule enforces the rest ([Now Biome rules](#now-biome-rules)).
 
 #### Copy comes from a message bundle, never a component
 
@@ -847,7 +869,7 @@ import neither `src/app` nor `src/features`. Routes stay thin; the rules live he
 `src/lib`, `src/db`, and `src/features` never call `new Date()` / `Date.now()` directly — use
 `nowDate()` / `nowMs()` from `src/lib/clock.ts` (default a `now` parameter to it). This is what lets
 the e2e fleet freeze one instant so the clock-anchored seed and every render stay pixel-stable for
-visual regression; in production the clock is the native call, unchanged. `pnpm check:clock`
+visual regression; in production the clock is the native call, unchanged. Biome's `clock` rule
 enforces it. Never stabilise a visual test by masking moving text — freeze the clock at the
 Playwright harness boundary.
 
@@ -874,7 +896,7 @@ The `src/lib/format.ts` formatters take `timeZone` as a **required** parameter s
 a compile error rather than a wrong time. A value with no instant in it (a date-only calendar date,
 a wall-clock time of day) says `timeZone: "UTC"` explicitly — see `src/lib/calendar-date.ts`.
 Every `Intl` formatter is built through `src/lib/intl-cache.ts`, never a bare `new Intl.*` at the
-call site (constructing one costs ~12x reusing it; `pnpm check:intl-cache`).
+call site (constructing one costs ~12x reusing it; Biome's `intlCache` rule).
 
 A formatted date or time is one unit on the line: every formatter in `format.ts` and
 `calendar-date.ts` that prints one joins its parts through `keepUnitsWhole`

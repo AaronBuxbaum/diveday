@@ -58,7 +58,7 @@ longer form of every row are in [docs/agents/repo-checks.md](../../docs/agents/r
 - **A new page ships with `loading.tsx` and `export const instant = true`; no `await` above
   `{children}` in a layout**: loading-skeleton guard and `next build` (ADR 20260804-instant-navigation).
 - **No literal locale; every rendered date passes `shop.timezone`**: `pnpm check:locale`,
-  `pnpm check:timezone`.
+  Biome rule `timezone`.
 - **Copy comes from a message bundle, in every locale at once**: `pnpm check:copy`,
   `pnpm check:locale`; a diver Client Component needs `DiverIntlProvider` above it
   (`src/i18n/provider-coverage.test.ts`). Waiver and medical wording stays English (H-01, H-03).

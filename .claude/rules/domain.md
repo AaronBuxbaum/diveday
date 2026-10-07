@@ -38,15 +38,15 @@ reasoning and the longer form of every row are in
 
 - **`app → features → lib/db`, one way**: `pnpm check:architecture`.
 - **Time is read through the clock** (`nowDate()`/`nowMs()` from `src/lib/clock.ts`), never
-  `new Date()` or `Date.now()`: `pnpm check:clock`. Freeze the clock at the harness, never mask
+  `new Date()` or `Date.now()`: Biome rule `clock` (`pnpm lint`). Freeze the clock at the harness, never mask
   moving text.
 - **The one-hour departure buffer is asked through `hasSailed()`/`hasReturned()`**, never a second
   constant or a hand comparison: departure-buffer guard.
 - **`src/lib` and `src/db` return codes, not sentences**; a registry feeding the UI holds bundle
   keys: `pnpm check:domain-strings` (ADR 20260731-domain-layer-copy-leaks).
 - **Every formatter takes a required `timeZone`**; a value with no instant says `"UTC"`
-  (`src/lib/calendar-date.ts`): `pnpm check:timezone`. Every `Intl` formatter comes from
-  `src/lib/intl-cache.ts`: `pnpm check:intl-cache`.
+  (`src/lib/calendar-date.ts`): Biome rule `timezone`. Every `Intl` formatter comes from
+  `src/lib/intl-cache.ts`: Biome rule `intlCache`.
 - **A formatted date or time is one unit**, joined by `keepUnitsWhole` (`src/lib/date-parts.ts`)
   with U+00A0 inside; a test matches it with a string query or a regex that spells `\s`.
 - **Safety-critical logic** (manifests, roll call, cert gating, medical flags) gets boring code,

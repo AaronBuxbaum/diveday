@@ -45,7 +45,7 @@ pnpm e2e e2e/<flow>.spec.ts --reporter=line   # one spec; the whole suite runs o
 
 If new user-facing flows were added, extend `e2e/` with a smoke spec for them first, and add a
 visual snapshot in `e2e/visual.spec.ts` for any new surface (see the `e2e-and-visual` skill). `pnpm
-check` includes `check:clock`, which fails if domain/data code reads the wall clock directly.
+lint` includes the `clock` rule, which fails if domain/data code reads the wall clock directly.
 
 ## 3. UI changed: look at it
 

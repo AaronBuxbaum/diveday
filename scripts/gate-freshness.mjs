@@ -40,7 +40,7 @@
 // takes its blame evidence from that row in the old file, at the commit before the split — the
 // split moved words, it did not move a decision.
 //
-// Time: `pnpm check:clock` guards src/lib, src/db, and src/features — not scripts/ — so
+// Time: Biome's `clock` rule guards src/lib, src/db, and src/features — not scripts/ — so
 // the bare `new Date()` in `main()` below is in bounds. Every function that reasons about
 // time still takes `now` as a parameter, because that is what makes the parsing testable
 // (`scripts/gate-freshness.test.mjs`) without a frozen wall clock.

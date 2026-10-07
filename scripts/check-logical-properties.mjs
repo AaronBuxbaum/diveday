@@ -10,7 +10,7 @@ import { physicalUtilitiesInTree, staleBaselineEntries } from "./logical-propert
  * `me-`, `ps-`, `pe-`, `start-`, `end-`, `text-start`, `text-end` — against a
  * few dozen physical ones. Somebody has been writing direction-agnostic layout
  * for a long time, and nothing protected it: `check:tokens` guards colour,
- * `check:timezone` guards time, and this was a convention held in the heads of
+ * Biome's `timezone` rule guards time, and this was a convention held in the heads of
  * whoever happened to have read the neighbouring file (issue #733).
  *
  * The stakes are small today and that is the point. DiveDay ships two locales
