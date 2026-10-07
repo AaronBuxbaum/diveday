@@ -29,6 +29,11 @@ const ROSTERED = {
   "es-ES": /figura en|en la tripulación de/i,
 } as const satisfies Record<(typeof DIVER_LOCALES)[number], RegExp>;
 
+const HOURS = {
+  "en-US": /at these hours/,
+  "es-ES": /a estas horas/,
+} as const satisfies Record<(typeof DIVER_LOCALES)[number], RegExp>;
+
 const IMPOSSIBLE = {
   "en-US": /cannot|can’t|can't/i,
   "es-ES": /no puede/i,
@@ -46,7 +51,10 @@ describe("crew-clash copy, on every surface that says it", () => {
       ["the staffing week's chip", messages.staffing.week.crewClash, ["{departure}"]],
       // The roster's refusal: the panel knows who was picked, not which boat.
       ["the roster's refusal", messages.trips.crew.assignClash, ["{name}"]],
-      // The boat manifest, which ends in an instruction for the captain.
+      // The boat manifest's crew row: the other boat and the hours. The live
+      // manifest says "confirm who sails" once over the crew list; the row
+      // itself is also what the offline viewer and the printed sheet show, so
+      // it carries the hours and never reads like an ordinary two-boat day.
       ["the boat manifest", messages.manifest.crewClashDetail, ["{departures}"]],
       // Today's queue, before the boat sails and after (issues #1776, #1814).
       ["Today, before it sails", messages.today.detail.crewClash, ["{names}", "{departure}"]],
@@ -60,6 +68,15 @@ describe("crew-clash copy, on every surface that says it", () => {
         expect(sentence, locale).not.toMatch(IMPOSSIBLE[locale]);
       });
     }
+
+    it(`keeps the hours on the boat manifest's row in ${locale}, which stands alone offline and on paper`, () => {
+      // UX audit 2026-10-07, item 3 cut the row's instruction and said it
+      // once over the live crew list. `OfflineManifestView` renders this same
+      // key with no such header (dive-domain review of that change), so the
+      // row must still say it is the same hours, not merely another boat.
+      expect(messages.manifest.crewClashDetail, locale).toMatch(HOURS[locale]);
+      expect(messages.manifest.crewClashConfirm, locale).toMatch(HOURS[locale]);
+    });
 
     it(`does not read like the blackout line in ${locale}`, () => {
       // The two sit one above the other and carry different weights on purpose:

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, within } from "@testing-library/react";
+import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { TripPlanSection } from "./TripPlanSection";
 
@@ -11,15 +11,7 @@ const DIVES = [
 ];
 
 function plan(dives = DIVES) {
-  return render(
-    <TripPlanSection
-      heading="The plan"
-      dives={dives}
-      doorLabel="Changed the plan?"
-      doorNote="Record it on the dive log."
-      doorHref="/shop/blue-mantis/trips/t1/manifest#log"
-    />,
-  );
+  return render(<TripPlanSection heading="The plan" dives={dives} />);
 }
 
 describe("TripPlanSection", () => {
@@ -37,58 +29,21 @@ describe("TripPlanSection", () => {
   it("keeps the plan off the printed sheet", () => {
     // The printed trip packet renders this whole manifest *and* its own
     // `PacketDives` list, so without `print:hidden` the sheet a crew carries to
-    // the boat prints the dive plan twice — and the door beside it is a link to
-    // a screen nobody can tap on paper. Caught by e2e/trips.spec.ts's packet
+    // the boat prints the dive plan twice. Caught by e2e/trips.spec.ts's packet
     // test, which found two "Dive 1 ·" on one page; pinned here so the next
     // reader does not have to learn it from a strict-mode violation.
     const { container } = plan();
     expect(container.querySelector("section")?.className).toContain("print:hidden");
   });
 
-  it("offers the door as a link, never a control the packet could carry", () => {
+  it("carries no door and no sentence about the dive log", () => {
+    // "Changed the plan? Say why in the dive log after each dive." stood under
+    // the plan at the dock (UX audit 2026-10-07, item 3); the log is on the
+    // checkpoint switch, at the checkpoint where a change is recorded.
     const { container } = plan();
     const section = container.querySelector("section");
     if (!section) throw new Error("expected the plan to render");
-    expect(within(section).getByRole("link", { name: /Changed the plan/ })).toBeInTheDocument();
-    expect(section.querySelectorAll("button, input, select, textarea")).toHaveLength(0);
-  });
-});
-
-/**
- * **The door and its note read as one pair on a phone** (K-497). The row was
- * `flex-wrap items-baseline` around a link that is a 44px box with its text
- * centred, so on a phone the wrapped note started under the whole box: the two
- * baselines 38px apart against the body's 24px leading. Below `sm` the pair is
- * a column and the link's text sits at the foot of its box, so the note
- * follows at body spacing; the 44px target stays, and none of it hangs below
- * the words into the gap before the next section.
- */
-describe("the door row", () => {
-  it("stacks below sm and lines up by baseline from sm", () => {
-    const { container } = plan();
-    const link = within(container).getByRole("link", { name: /Changed the plan/ });
-    const row = link.parentElement as HTMLElement;
-    expect(row).toHaveClass("flex", "flex-col", "sm:flex-row", "sm:items-baseline");
-    expect(row.className).not.toMatch(/(^|\s)items-baseline/);
-  });
-
-  it("keeps the link as wide as its words in the phone's column", () => {
-    // A column stretches its children by default, and the link is a flex box:
-    // on a 390px phone it became a 358x44 target, so a tap in the empty space
-    // right of the words opened the dive log's after-dive checkpoint on the
-    // safety surface. `items-start` holds it to its words; `sm:items-baseline`
-    // takes over from sm. jsdom has no layout, so this pins the class.
-    const { container } = plan();
-    const link = within(container).getByRole("link", { name: /Changed the plan/ });
-    const row = link.parentElement as HTMLElement;
-    expect(row).toHaveClass("items-start");
-    expect(link.className).not.toMatch(/(^|\s)(self-stretch|w-full)\b/);
-  });
-
-  it("sets the link's text at the foot of its 44px box", () => {
-    const { container } = plan();
-    const link = within(container).getByRole("link", { name: /Changed the plan/ });
-    expect(link).toHaveClass("inline-flex", "min-h-11", "items-end");
-    expect(link).not.toHaveClass("items-center");
+    expect(section.querySelectorAll("a, button, input, select, textarea")).toHaveLength(0);
+    expect(section.textContent).not.toMatch(/dive log|Changed the plan/);
   });
 });

@@ -1,6 +1,6 @@
 {
   "//": "Line counts of the page.tsx files still over 400 lines. Written by `node scripts/check-page-length.mjs --write`. Each number may only go down — see scripts/check-page-length.mjs.",
-  "// absorbed": "merged the perf layer: the trip page passes its shared reads to both readers (7 lines)",
+  "// absorbed": "Merge of the participant-types stack under the UX stack",
   "src/app/onboard/page.tsx": 479,
   "src/app/page.tsx": 592,
   "src/app/pricing/page.tsx": 504,
@@ -27,7 +27,7 @@
   "src/app/shop/[shopSlug]/settings/team/page.tsx": 886,
   "src/app/shop/[shopSlug]/staffing/page.tsx": 651,
   "src/app/shop/[shopSlug]/trips/[id]/log/page.tsx": 756,
-  "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 1186,
+  "src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx": 1187,
   "src/app/shop/[shopSlug]/trips/[id]/page.tsx": 1211,
   "src/app/waivers/[token]/page.tsx": 1489
 }
