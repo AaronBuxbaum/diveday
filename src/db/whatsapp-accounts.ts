@@ -1,4 +1,4 @@
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { log } from "@/lib/log";
 import type { CourtesyProvider } from "@/lib/notifications/courtesy";
@@ -10,7 +10,7 @@ import {
   whatsAppTextSender,
 } from "@/lib/notifications/whatsapp";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
-import { type DbExecutor, violatesUniqueIndex } from "./client";
+import { type AppDb, type DbExecutor, violatesUniqueIndex } from "./client";
 import type { ShopWhatsappAccount } from "./schema";
 import { shopWhatsappAccounts } from "./schema";
 
@@ -39,7 +39,13 @@ export type WhatsAppKeyRefusal = "encryption_key_unset" | "encryption_key_invali
  */
 export type WhatsAppConnectRefusal = WhatsAppKeyRefusal | "waba_already_connected";
 
-/** The unique index that makes a WABA resolve to one shop; named so its 23505 can be told apart. */
+/**
+ * The unique index that makes a WABA resolve to one shop; named so its 23505 can be told apart.
+ *
+ * It keeps the table right and nothing else: a Connect it refuses has already
+ * registered a number at Meta. The signup runs under {@link claimWhatsAppWaba}'s
+ * advisory lock on the WABA, whose scope is stated there (issue #1769).
+ */
 const WABA_UNIQUE_INDEX = "shop_whatsapp_accounts_waba_unique";
 
 export type ConnectWhatsAppInput = {
@@ -175,18 +181,25 @@ export async function connectShopWhatsAppAccount(
     ? { registrationPinSealed: sealSecret(input.registrationPin.trim(), key) }
     : {};
   try {
-    const [account] = await db
-      .insert(shopWhatsappAccounts)
-      .values({ ...values, ...pin, connectedAt: now })
-      .onConflictDoUpdate({
-        target: shopWhatsappAccounts.shopId,
-        // `connectedAt` deliberately survives a re-connect — it is when this shop
-        // first switched WhatsApp on, not when it last rotated a token.
-        // `verifiedAt` deliberately does not: new credentials are unproven until
-        // a fresh test send proves them.
-        set: { ...values, ...pin, verifiedAt: null },
-      })
-      .returning();
+    // In its own savepoint (a transaction when `db` is not one), so a WABA
+    // collision rolls back only this insert. Under `claimWhatsAppWaba` the
+    // caller's transaction is still open, and a bare 23505 there would abort
+    // it and turn the worded refusal into "current transaction is aborted".
+    const account = await db.transaction(async (savepoint) => {
+      const [row] = await savepoint
+        .insert(shopWhatsappAccounts)
+        .values({ ...values, ...pin, connectedAt: now })
+        .onConflictDoUpdate({
+          target: shopWhatsappAccounts.shopId,
+          // `connectedAt` deliberately survives a re-connect — it is when this shop
+          // first switched WhatsApp on, not when it last rotated a token.
+          // `verifiedAt` deliberately does not: new credentials are unproven until
+          // a fresh test send proves them.
+          set: { ...values, ...pin, verifiedAt: null },
+        })
+        .returning();
+      return row;
+    });
     return { status: "connected", account };
   } catch (error) {
     if (violatesUniqueIndex(error, WABA_UNIQUE_INDEX)) {
@@ -194,6 +207,53 @@ export async function connectShopWhatsAppAccount(
     }
     throw error;
   }
+}
+
+export type WhatsAppWabaClaim<T> = { status: "held_elsewhere" } | { status: "claimed"; value: T };
+
+/**
+ * **Run one shop's WhatsApp Connect with the WABA to itself** (issue #1769,
+ * H-83).
+ *
+ * `shop_whatsapp_accounts_waba_unique` keeps the table right, but the table is
+ * not the only state: registering a number at Meta mints a PIN, and a Connect
+ * whose row the index then refuses has already bound the number to a PIN
+ * DiveDay throws away. Recovery for that runs through Meta support, not here.
+ * Two staffers pressing Connect within the length of a Meta round trip both
+ * passed an unlocked pre-check, both registered, and one lost.
+ *
+ * So the pre-check, `work` (the Meta calls) and the insert run in one
+ * transaction holding `pg_advisory_xact_lock` on the WABA id. The second
+ * Connect blocks on the lock until the first has committed its row, then reads
+ * that row and is refused here, before `work` runs and before any number is
+ * registered.
+ *
+ * **Scope of the lock.** Keyed on `hashtext('whatsapp-waba:' || wabaId)`, so it
+ * serializes Connects naming the same WABA and nothing else; a hash collision
+ * with another WABA costs a wait, never a wrong answer, because the refusal is
+ * the row read under the lock. It is a *transaction* lock: it ends with the
+ * transaction, so a request that throws or a connection that drops releases
+ * it, and nothing is reserved that a crash could leave behind. The cost,
+ * accepted in H-83, is one pooled connection held for the seconds a Meta round
+ * trip takes, and only while a Connect is in flight.
+ *
+ * `work` gets the transaction and must write through it; it must not redirect
+ * (a thrown redirect would roll the row back). Answer with its value and let
+ * the caller redirect afterwards.
+ */
+export async function claimWhatsAppWaba<T>(
+  db: AppDb,
+  input: { shopId: string; wabaId: string },
+  work: (tx: DbExecutor) => Promise<T>,
+): Promise<WhatsAppWabaClaim<T>> {
+  return db.transaction(async (tx): Promise<WhatsAppWabaClaim<T>> => {
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext(${`whatsapp-waba:${input.wabaId}`}))`,
+    );
+    const holder = await shopIdForWhatsAppWaba(tx, input.wabaId);
+    if (holder && holder !== input.shopId) return { status: "held_elsewhere" };
+    return { status: "claimed", value: await work(tx) };
+  });
 }
 
 /** Disconnect by deleting the row — holding a live credential a shop revoked serves nobody. */
