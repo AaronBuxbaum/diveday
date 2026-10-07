@@ -2283,7 +2283,7 @@ new domain concept, define it here in the same PR.
   (`src/db/bookings.ts`) is the only writer, reached from the trip roster's guest row, which is also the desk
   inside the arrivals window, and writes a trail line on the departure and on the *matched
   person's* record naming the staffer (`identity_confirmed`). The counter's own door
-  (`identity_confirmed_at_counter`, issue #1696) went with the Check-in tab on 2026-10-05: a window
+  (issue #1696) and its trail line went with the Check-in tab on 2026-10-05: a window
   that opens 36 hours ahead is no evidence the person was at the desk. **Open to every live staff role on
   purpose**: the flag is raised at the counter, and a staffer who cannot clear one they just
   raised strands a walk-in until a manager walks past — what carries the weight is the trail, not
