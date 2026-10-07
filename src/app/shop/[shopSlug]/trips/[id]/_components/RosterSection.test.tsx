@@ -550,7 +550,7 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       rentalFit,
     });
 
-    expect(screen.getByText(/Might be someone else/)).toBeVisible();
+    expect(screen.getByText(/Matched to this record on a guess/)).toBeVisible();
     expect(screen.getByRole("link", { name: "Marisol Vega" })).toBeVisible();
     // Both answers stand in the open, outside the row's fold (Aaron,
     // 2026-10-05: the old row offered one answer, behind the mark).
@@ -815,7 +815,7 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       rentalFit,
     });
 
-    expect(screen.getByText(/Might be someone else/).closest("details")).toBeNull();
+    expect(screen.getByText(/Matched to this record on a guess/).closest("details")).toBeNull();
   });
 
   it("renders the same facts as soon as the row is confirmed", () => {

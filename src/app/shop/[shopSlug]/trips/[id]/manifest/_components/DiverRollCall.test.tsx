@@ -853,7 +853,7 @@ describe("a held seat on the manifest", () => {
     expect(printed).toHaveTextContent(crewLine);
     expect(container.textContent?.toLowerCase()).not.toContain("medical");
     expect(printed?.textContent?.toLowerCase()).not.toContain("medical");
-    expect(container.textContent).not.toContain("Confirm who this is");
+    expect(container.textContent?.toLowerCase()).not.toContain("confirm who this is");
   });
 
   it("says nothing of other holds when the identity question is the only one", () => {

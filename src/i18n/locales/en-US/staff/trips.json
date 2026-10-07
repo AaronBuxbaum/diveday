@@ -416,7 +416,7 @@
     "certifySpecialtyGroup": "Specialty",
     "certifying": "Certifying…",
     "checkedInPill": "Checked in",
-    "confirmIdentityMessage": "Confirm this booking is {name}? Only do this once you’ve checked it’s the same person, and not someone else with a similar name or a shared email.",
+    "confirmIdentityMessage": "Confirm this booking is {name}?",
     "confirmRemoveBooking": "Remove {name} from this trip? If they’re eligible for a refund, it’s issued automatically.",
     "confirmResendWaiver": "Send {name} a new waiver link? Their previous link will stop working.",
     "confirming": "Confirming…",
