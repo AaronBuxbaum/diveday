@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { connectProviderFromEnvironment, stripeConnectCallbackUrl } from "./connect";
 
+/** The `stripe_api.request_threw` lines a case wrote, parsed. */
+function threwLines(spy: { mock: { calls: unknown[][] } }): Array<Record<string, unknown>> {
+  return spy.mock.calls
+    .map((call) => JSON.parse(String(call[0])) as Record<string, unknown>)
+    .filter((line) => line.event === "stripe_api.request_threw");
+}
+
 function providerWith(env: Record<string, string | undefined>, fetchImpl: unknown) {
   return connectProviderFromEnvironment(env, fetchImpl as typeof fetch);
 }
@@ -57,8 +64,15 @@ describe("stripe connect provider", () => {
     );
     expect(await notOk.exchangeCode("code", "https://x/cb")).toEqual({ status: "failed" });
 
+    const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
     const threw = providerWith(configuredEnv, vi.fn().mockRejectedValue(new Error("network")));
     expect(await threw.exchangeCode("code", "https://x/cb")).toEqual({ status: "failed" });
+    // Only the throw leaves a line; the non-ok answer above did not.
+    expect(threwLines(warned)).toEqual([
+      expect.objectContaining({ operation: "exchange_connect_code", errorCode: "Error" }),
+    ]);
+    expect(JSON.stringify(threwLines(warned))).not.toContain("network");
+    warned.mockRestore();
   });
 
   it("retrieves connected account status, defaulting currency to usd when Stripe omits it", async () => {
