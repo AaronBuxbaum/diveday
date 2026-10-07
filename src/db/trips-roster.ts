@@ -124,7 +124,11 @@ export async function getTripRoster(db: AppDb, shopId: string, tripId: string) {
  */
 export async function getTripWaitlist(db: AppDb, shopId: string, tripId: string) {
   return db
-    .select({ entry: tripWaitlistEntries, person: people })
+    .select({
+      entry: tripWaitlistEntries,
+      // What the wait-list renders: a name and the address an offer goes to.
+      person: { id: people.id, fullName: people.fullName, email: people.email },
+    })
     .from(tripWaitlistEntries)
     .innerJoin(people, eq(people.id, tripWaitlistEntries.personId))
     .where(and(eq(tripWaitlistEntries.tripId, tripId), eq(tripWaitlistEntries.shopId, shopId)))
