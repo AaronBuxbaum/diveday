@@ -17,6 +17,10 @@ import path from "node:path";
  * - **`ui`** — opts into jsdom with a `// @vitest-environment jsdom` docblock.
  *   The docblock stays the switch; the project just groups the files that pay
  *   the jsdom boot so `pnpm test:ui` can run them alone.
+ * - **`guards`** — source-text guards: a file that reads the repository's own
+ *   files and asserts on their text, importing nothing from the app. They need
+ *   no module graph and no isolation, so they share one process
+ *   (`isolate: false`).
  * - **`lib`** — pure `src/lib` logic with no module mocks. `isolate: false`:
  *   the files share a worker and its module cache. A file that calls
  *   `vi.mock` and friends is excluded, because a mock is per file and a shared
@@ -33,9 +37,16 @@ import path from "node:path";
  * `include` matches, and every matched file lands in exactly one project
  * (`projects.test.ts` pins that).
  */
-export type ProjectName = "db" | "ui" | "lib" | "scripts" | "node";
+export type ProjectName = "db" | "ui" | "guards" | "lib" | "scripts" | "node";
 
-export const PROJECT_NAMES: readonly ProjectName[] = ["db", "ui", "lib", "scripts", "node"];
+export const PROJECT_NAMES: readonly ProjectName[] = [
+  "db",
+  "ui",
+  "guards",
+  "lib",
+  "scripts",
+  "node",
+];
 
 /** The root `include`: every test file in the repository. */
 export const TEST_GLOBS = [
@@ -54,12 +65,45 @@ const JSDOM_DOCBLOCK = /^\s*(?:\/\/|\/?\*+)\s*@vitest-environment\s+jsdom\b/m;
 /** Anything that makes a file's module registry its own business. */
 const MODULE_STATE =
   /\bvi\.(?:mock|doMock|unmock|doUnmock|resetModules|importActual|importMock|stubGlobal|stubEnv)\s*\(/;
+/** Reads a file off disk. */
+const READS_FILES = /\breadFileSync\s*\(|\breadFile\s*\(|\breaddirSync\s*\(/;
+/**
+ * Specifiers a source-text guard may import: the test runner, Node's own
+ * modules, and the stylesheet reader, which is itself only a file read.
+ */
+const GUARD_SAFE_SPECIFIER = /^(?:vitest|node:.+|@\/test\/stylesheet)$/;
+/**
+ * Every top-level `import … from "…"`, `} from "…"`, `export … from "…"` and
+ * bare `import "…"` specifier. Anchored to column 0 so an example inside a
+ * comment or a string fixture (`import-cycles.test.ts` is made of them) is not
+ * read as the file's own import.
+ */
+const SPECIFIER = /^(?:(?:import|export|\})[^\n]*?\bfrom\s+|import\s+)["']([^"']+)["']/gm;
+/** A line that is prose or a string fixture rather than code. */
+const NOT_CODE = /^\s*(?:\/\/|\/\*|\*|`|"|')/;
+
+/** A source-text guard: reads files, imports nothing but the runner and Node. */
+export function isSourceGuard(source: string): boolean {
+  const code = source
+    .split("\n")
+    .filter((line) => !NOT_CODE.test(line))
+    .join("\n");
+  if (!READS_FILES.test(code)) return false;
+  if (/\bvi\./.test(code) || /\bimport\s*\(/.test(code)) return false;
+  if (/\bchild_process\b/.test(code)) return false;
+  for (const match of code.matchAll(SPECIFIER)) {
+    if (!GUARD_SAFE_SPECIFIER.test(match[1])) return false;
+  }
+  return true;
+}
+
 /** The project one test file belongs to, from its repo-relative path and source. */
 export function classifyTestFile(file: string, source: string): ProjectName {
   const posix = file.split(path.sep).join("/");
   if (posix.startsWith("scripts/")) return "scripts";
   if (DB_IMPORT.test(source) || DB_FACTORY.test(source)) return "db";
   if (JSDOM_DOCBLOCK.test(source)) return "ui";
+  if (posix.startsWith("src/") && isSourceGuard(source)) return "guards";
   if (posix.startsWith("src/lib/") && !MODULE_STATE.test(source)) return "lib";
   return "node";
 }

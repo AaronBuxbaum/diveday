@@ -95,8 +95,8 @@ export default defineConfig({
     //
     // Do not reach for `isolate: false` across the board to win the time back —
     // module mocks are per-file here, and a shared registry across files is a
-    // different bug. Only the `lib` project below shares a worker, and
-    // src/test/projects.ts keeps every file that mocks a module out of it.
+    // different bug. Only the `lib` and `guards` projects below share a worker,
+    // and src/test/projects.ts keeps every file that mocks a module out of both.
     pool: "forks",
     // The sequencer is a root-only option: Vitest hands it every project's
     // files at once, so `--shard` deals the whole run across all projects.
@@ -180,6 +180,7 @@ export default defineConfig({
       // (`pnpm test:lib --sequence.shuffle`); a file that leaks state belongs
       // in `node` (src/test/projects.ts says how one gets there).
       { extends: true, test: { name: "lib", include: only(groups.lib), isolate: false } },
+      { extends: true, test: { name: "guards", include: only(groups.guards), isolate: false } },
       { extends: true, test: { name: "scripts", include: only(groups.scripts) } },
       { extends: true, test: { name: "node", include: only(groups.node) } },
     ],

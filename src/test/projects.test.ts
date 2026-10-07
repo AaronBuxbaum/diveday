@@ -1,6 +1,12 @@
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { classifyTestFile, literalGlob, PROJECT_NAMES, partitionTestFiles } from "./projects";
+import {
+  classifyTestFile,
+  isSourceGuard,
+  literalGlob,
+  PROJECT_NAMES,
+  partitionTestFiles,
+} from "./projects";
 
 const ROOT = path.resolve(__dirname, "../..");
 // Spelled in pieces so that this file's own source does not match the rules it
@@ -31,6 +37,41 @@ describe("classifyTestFile", () => {
     expect(classifyTestFile("src/lib/a.test.ts", `const s = "${ENV} jsdom is a docblock";`)).toBe(
       "lib",
     );
+  });
+
+  it("sends a pure source-text guard to guards", () => {
+    const guard = [
+      `import { readFileSync } from "node:fs";`,
+      `import { describe, expect, it } from "vitest";`,
+      `it("reads", () => expect(readFileSync("x", "utf8")).toContain("y"));`,
+    ].join("\n");
+    expect(classifyTestFile("src/app/tap-highlight.test.ts", guard)).toBe("guards");
+  });
+
+  it("keeps a guard that also imports app code, mocks, or spawns out of guards", () => {
+    const reads = `import { readFileSync } from "node:fs";\nconst text = readFileSync("x", "utf8");\n`;
+    expect(isSourceGuard(`${reads}import { x } from "./brand";`)).toBe(false);
+    expect(isSourceGuard(`${reads}import type { X } from "@/db/schema";`)).toBe(false);
+    expect(isSourceGuard(`${reads}vi.mock("./x");`)).toBe(false);
+    expect(isSourceGuard(`${reads}const m = await import("./route");`)).toBe(false);
+    expect(isSourceGuard(`${reads}import { execFileSync } from "node:child_process";`)).toBe(false);
+    expect(isSourceGuard(`import { x } from "node:path";`)).toBe(false);
+    expect(isSourceGuard(`${reads}import { rule } from "@/test/stylesheet";`)).toBe(true);
+  });
+
+  it("does not mistake an import quoted in a comment or a string fixture for the file's own", () => {
+    const guard = [
+      `import { readFileSync } from "node:fs";`,
+      "/**",
+      ` * Pages that are a bare re-export (\`export { default } from "./SettingsPage"\`)`,
+      " */",
+      "const fixture = [",
+      '  `import { a } from "./a";`,',
+      '  `const seed = await import("./seed");`,',
+      "];",
+      `const text = readFileSync("x", "utf8");`,
+    ].join("\n");
+    expect(isSourceGuard(guard)).toBe(true);
   });
 
   it("puts src/lib in lib unless the file owns its module registry", () => {

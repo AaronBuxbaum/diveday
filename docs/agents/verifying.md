@@ -28,6 +28,7 @@ together.
 | `db` | every file importing `@/test/db`, `@/test/postgres` or `@/test/query-count`, or building a database itself | forks, isolated; the only project that runs the PGlite global setup | `pnpm test:db` |
 | `ui` | every file with a `// @vitest-environment jsdom` docblock | jsdom, forks, isolated | `pnpm test:ui` |
 | `lib` | pure `src/lib` files that mock no module | one shared worker (`isolate: false`) | `pnpm test:lib` |
+| `guards` | source-text guards: files that read the repository and import nothing from the app | one shared worker (`isolate: false`) | `pnpm test:guards` |
 | `scripts` | `scripts/**` | forks, isolated | `vitest run --project scripts` |
 | `node` | everything else | forks, isolated | `vitest run --project node` |
 

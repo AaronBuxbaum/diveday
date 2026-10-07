@@ -390,6 +390,12 @@ So a check has three outcomes. Exit 0 is `ok`, exit 1 is `FAILED`, and exit **2*
 
 When you see `SKIPPED`, the inbox was not validated. Run it where `gh` exists, or read the CI log.
 
+### Source-text guards written as tests (the `guards` Vitest project)
+
+Not a `check:repo` script, and listed here because it does the same job. About forty `*.test.ts` files under `src/` are guards in test clothing: they read the repository's own source (`readFileSync` over a page, a stylesheet, a directory of routes) and assert on its text — `instant-coverage.test.ts`, `tenant-gate-coverage.test.ts`, `provider-coverage.test.ts`, the `page.composition.test.ts` family, `import-cycles.test.ts`. They stay beside the code they guard and keep their names, because source comments, `.claude/rules/` and the design docs cite them by path; what changed (2026-10-07) is how they run. `src/test/projects.ts` puts a file in the `guards` project when it reads files and imports nothing but `vitest`, `node:*` and `@/test/stylesheet` — no app module, no `vi.*`, no dynamic `import()`, no child process — and that project runs them in one shared worker (`isolate: false`) instead of a fresh fork, transform and setup per file. Each was paying a second or two of process boot to run a few milliseconds of string matching. `pnpm test:guards` runs the set alone; `pnpm test <file>` still runs one.
+
+A file that reads source **and** renders, hydrates a database or imports the module it guards stays where it is (its project is decided by the render or the database, not the read): the render-and-read component tests, `src/db/shop-by-slug-cache.test.ts` (spawns a React server child), the two cron route tests that read their own route source beside a mocked handler, `src/features/integrations/dispatch-on-write.test.ts`, `src/test/db-template.test.ts`, `src/app/print-bundle.test.ts` (reads the print rules into jsdom), and the `src/lib` and `src/components/ui` files that check an exported table against the source that uses it. Adding an app import to a guard moves it out of `guards` automatically; nothing has to be re-listed.
+
 ## The path-scoped rules, in full
 
 Each `.claude/rules/<area>.md` is a short list of rules, each naming the guard or hook that enforces it and pointing here. What those files used to carry in full (the reasoning, the incidents, and the longer route-map entries) is kept below as it stood on 2026-10-07, one section per area, so a session that needs the *why* finds it without every session paying for it.
