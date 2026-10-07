@@ -45,6 +45,7 @@ import {
   isCompletedWaiverCurrent,
   isUnresolvedMedicalHold,
   needsMedicalReview,
+  unansweredRefusal,
   WAIVER_LINK_TTL_MS,
   WAIVER_SIGNATURE_VALIDITY_MS,
 } from "@/lib/waivers";
@@ -1780,7 +1781,12 @@ export type InPersonWaiverOutcome =
          * paper in hand is one tap away on both surfaces: confirm the identity,
          * then record the release.
          */
-        | "identity_unconfirmed";
+        | "identity_unconfirmed"
+        /**
+         * A physician did not clear this diver and no clearance has answered
+         * that since; only an owner or manager may record paper (H-98).
+         */
+        | "refusal_needs_manager";
     };
 
 /**
@@ -2136,6 +2142,17 @@ export async function recordInPersonWaiver(
       now,
     });
     if (standing) return { ok: true, recordId: standing.id, alreadySigned: true };
+    // **After a physician's "no", paper is an owner's or manager's call**
+    // (H-98). Online, the diver re-answers the questionnaire and an honest
+    // "yes" is referred again; on paper a staffer ticks that no answer needs a
+    // physician, against a physician's answer on file. The same bar as
+    // retiring the refusal (`retireMedicalRefusal`).
+    if (await unansweredRefusalFor(tx, { shopId: input.shopId, personId: signer.personId })) {
+      const roles = await loadActiveStaffRoles(tx, input.shopId, input.recordedByPersonId);
+      if (!canRetireMedicalRefusal(roles ?? undefined)) {
+        return { ok: false, reason: "refusal_needs_manager" };
+      }
+    }
 
     const evidence = inPersonAttestationProvider.capture({
       signerName: signer.fullName,
@@ -2471,6 +2488,32 @@ export async function recordMedicalEvaluation(
     }
     return { ok: true, recordId: written.id, outcome: input.outcome, alreadyRecorded: false };
   });
+}
+
+/**
+ * Whether a physician's "no" on this person still stands unanswered
+ * (`unansweredRefusal`), read over every medical record they have at the shop,
+ * superseded ones included: retiring a refusal off a seat does not answer it.
+ */
+async function unansweredRefusalFor(
+  db: DbExecutor,
+  input: { shopId: string; personId: string },
+): Promise<boolean> {
+  const records = await db
+    .select()
+    .from(waiverRecords)
+    .where(
+      and(
+        eq(waiverRecords.shopId, input.shopId),
+        eq(waiverRecords.personId, input.personId),
+        eq(waiverRecords.status, "medical_review"),
+        or(
+          isNotNull(waiverRecords.medicalClearanceDeclinedAt),
+          isNotNull(waiverRecords.medicalClearedAt),
+        ),
+      ),
+    );
+  return unansweredRefusal(records) !== null;
 }
 
 export type RetireMedicalRefusalResult =

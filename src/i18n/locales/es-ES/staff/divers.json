@@ -291,7 +291,7 @@
     "waiverGuardianMissing": "Firmada el {date} solo por el buceador; falta la firma de su madre, padre o tutor",
     "waiverHeldSince": "En espera desde el {date}",
     "waiverNotClearedOn": "Respondido el {date}",
-    "waiverEarlierRefusal": "Un médico no autorizó una exención anterior el {date}",
+    "waiverEarlierRefusal": "Un médico no autorizó a esta persona el {date}",
     "waiverReferralOpen": "Derivación del {date} sin responder",
     "sendWaiverViaEmail": "Enviar exención por correo",
     "sendWaiverViaSms": "Enviar exención por texto",
@@ -396,7 +396,7 @@
     "waiverExpired": "La exención firmada ya caducó.",
     "waiverHeld": "Una respuesta médica espera la firma de un médico.",
     "waiverNotCleared": "Un médico no autorizó a esta persona a bucear.",
-    "waiverEarlierRefusal": "Un médico no autorizó una exención anterior.",
+    "waiverEarlierRefusal": "Un médico no autorizó a esta persona en una exención anterior.",
     "waiverReferralOpen": "Una derivación médica quedó sin responder.",
     "openBalance": "{count, plural, one {Un lugar todavía debe dinero.} other {# lugares todavía deben dinero.}}",
     "noEmergencyContact": "No hay contacto de emergencia archivado.",
@@ -433,7 +433,7 @@
     "cantBoard": "No puede embarcar el {when}."
   },
   "waiver": {
-    "earlierRefusal": "Un médico no autorizó una exención anterior ({date}).",
+    "earlierRefusal": "Un médico no autorizó a esta persona el {date} (exención anterior).",
     "viewRefusedRecord": "Ver registro firmado",
     "referralUnresolved": "Firmada de nuevo tras una derivación médica: no consta autorización de un médico ({date}). Regístrala o pregunta.",
     "openClearanceDocument": "Abrir la evaluación médica"

@@ -493,7 +493,7 @@
     "signedPaper": "Firmado el {date} · registrado a partir de una copia en papel",
     "signedPlain": "Firmado el {date}",
     "viewSignedRecord": "Ver registro firmado",
-    "earlierRefusal": "Un médico no autorizó una exención anterior ({date}).",
+    "earlierRefusal": "Un médico no autorizó a esta persona el {date} (exención anterior).",
     "waiverColumnHeading": "Exención",
     "waiverLinkExpired": "Enlace caducado",
     "waiverMedicalReview": "Revisión médica",

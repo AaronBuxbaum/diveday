@@ -1341,9 +1341,9 @@ describe("an earlier physician refusal under a cleared release", () => {
       waivers: new Map([["r", signedWaiver]]) as WaiverByBooking,
     });
 
-    const line = screen.getByText(/A physician did not clear an earlier waiver/);
+    const line = screen.getByText(/A physician did not clear this diver on/);
     expect(line).toBeVisible();
-    expect(line.textContent).toMatch(/Aug\s1\)/);
+    expect(line.textContent).toMatch(/Aug\s1 \(earlier waiver\)/);
     const link = within(line.closest("li") as HTMLElement).getByRole("link", {
       name: "View signed record",
     });
@@ -1361,6 +1361,6 @@ describe("an earlier physician refusal under a cleared release", () => {
       readiness: new Map([["r", refusedRow("blocked")]]) as ReadinessByBooking,
       waivers: new Map([["r", signedWaiver]]) as WaiverByBooking,
     });
-    expect(screen.queryByText(/A physician did not clear an earlier waiver/)).toBeNull();
+    expect(screen.queryByText(/A physician did not clear this diver on/)).toBeNull();
   });
 });

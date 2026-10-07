@@ -1445,9 +1445,12 @@ new domain concept, define it here in the same PR.
   marks the refused record superseded and emails a fresh link. The refusal stays on file and
   **keeps outranking every older signature** (`isStandingRefusal` in `src/lib/waivers.ts`), so the
   seat stays blocked as not cleared until the new release is signed. **A clean new release clears
-  the diver without a second physician, and says so** (H-98, Aaron 2026-10-07): online or on paper,
-  it boards them, and the roster, the manifest and the diver record warn that a physician did not
-  clear an earlier waiver, with a link to that signed record (`overriddenRefusal`).
+  the diver without a second physician, and says so** (H-98, Aaron 2026-10-07): it boards them,
+  and the roster, the manifest and the diver record warn that a physician did not clear this
+  diver, with a link to the refused record on the roster and the diver record
+  (`overriddenRefusal`). Paper is recorded only by an owner or manager while the refusal stands
+  (`refusal_needs_manager`). The warning ends only when a physician has since cleared a release
+  that flagged every question the refused one did, ordered by when each physician answered.
 - **Paper / in-person signature** — a non-diver (staff) recording that a diver signed the release on
   paper — a copy on the boat or on shore — that the app never saw signed. It creates the same
   immutable completed record, marked as staff-attested and stamped with the staff member who recorded

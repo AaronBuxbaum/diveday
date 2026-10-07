@@ -493,7 +493,7 @@
     "signedPaper": "Signed {date} · recorded from a paper copy",
     "signedPlain": "Signed {date}",
     "viewSignedRecord": "View signed record",
-    "earlierRefusal": "A physician did not clear an earlier waiver ({date}).",
+    "earlierRefusal": "A physician did not clear this diver on {date} (earlier waiver).",
     "waiverColumnHeading": "Waiver",
     "waiverLinkExpired": "Link expired",
     "waiverMedicalReview": "Medical review",

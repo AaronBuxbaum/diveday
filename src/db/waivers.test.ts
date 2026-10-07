@@ -3085,7 +3085,7 @@ describe("physician medical clearance", () => {
       );
       expect(row?.overriddenRefusal).toEqual({
         recordId: refused.id,
-        at: refused.signedAt ?? refused.completedAt,
+        at: refused.medicalClearanceDeclinedAt,
       });
     });
 
@@ -3114,6 +3114,29 @@ describe("physician medical clearance", () => {
         (candidate) => candidate.booking.id === booking.id,
       );
       expect(row?.overriddenRefusal).not.toBeNull();
+    });
+
+    it("leaves paper after a refusal to an owner or manager", async () => {
+      const { db, shop, booking, owner } = await refusedOverAnOlderCleanRelease();
+      await retireMedicalRefusal(db, {
+        shopId: shop.id,
+        bookingId: booking.id,
+        actorPersonId: owner.id,
+        now: later,
+      });
+      const divemaster = await staffWithRole(db, shop.id, "divemaster");
+      expect(
+        await recordInPersonWaiver(db, {
+          shopId: shop.id,
+          subject: { bookingId: booking.id },
+          recordedByPersonId: divemaster.id,
+          medicalAttested: true,
+          now: signedLater,
+        }),
+      ).toEqual({ ok: false, reason: "refusal_needs_manager" });
+      expect((await getBookingReadiness(db, shop.id, booking.id))?.blockers).toContainEqual(
+        expect.objectContaining({ code: "medical_not_cleared" }),
+      );
     });
 
     it("leaves the refusal on file, untouched but for its seat", async () => {

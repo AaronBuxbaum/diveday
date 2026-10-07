@@ -310,7 +310,7 @@ describe("the waiver group", () => {
     const group = screen.getByTestId("diver-file-group-waiver");
     const door = group.querySelector("summary");
     expect(door).toHaveTextContent(
-      /Signed · Good until Jul 21, 2027 · Earlier waiver refused by a physician on Jun 2, 2026/,
+      /Signed · Good until Jul 21, 2027 · A physician did not clear them on Jun 2, 2026/,
     );
     expect(door?.querySelector("span")?.className).toContain("text-warning-strong");
     expect(group).toHaveAttribute("open");

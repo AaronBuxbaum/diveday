@@ -6,7 +6,7 @@ import {
   guardianSignatureMissing,
   guardianSignatureOf,
 } from "./guardian";
-import { needsPhysicianReview } from "./medical";
+import { flaggedMedicalPrompts, needsPhysicianReview } from "./medical";
 
 export const WAIVER_LINK_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -485,38 +485,89 @@ export function overriddenReferralAt(
 }
 
 /**
+ * When a physician's answer was given, for ordering a "yes" against a "no".
+ * The evaluation's own day first, because two referrals can be answered out
+ * of the order they were signed in; the moment staff recorded it breaks a tie
+ * within one day, and stands in when no day was stored.
+ */
+function decisionOrder(record: WaiverRecord): [number, number] {
+  const recorded = (record.medicalClearedAt ?? record.medicalClearanceDeclinedAt)?.getTime() ?? 0;
+  const day = record.medicalClearanceEvaluatedOn
+    ? Date.parse(`${record.medicalClearanceEvaluatedOn}T00:00:00.000Z`)
+    : Number.NaN;
+  return [Number.isFinite(day) ? day : recorded, recorded];
+}
+
+function decidedAfter(a: WaiverRecord, b: WaiverRecord): boolean {
+  const [dayA, recordedA] = decisionOrder(a);
+  const [dayB, recordedB] = decisionOrder(b);
+  return dayA !== dayB ? dayA > dayB : recordedA > recordedB;
+}
+
+/** The questions a record flagged, which are what a physician answered. */
+function flaggedPromptsOf(record: WaiverRecord): string[] {
+  return record.medicalAnswers ? flaggedMedicalPrompts(record.medicalAnswers) : [];
+}
+
+/**
  * **The physician's "no" a standing clean signature sits on top of** — the
- * refused record and when it was signed, or null in the ordinary case.
+ * refused record and when the physician's answer was recorded, or null in the
+ * ordinary case.
  *
  * A diver a physician did not clear gets back on a boat by signing a new
  * release, and a clean one clears them without a second physician (Aaron,
  * 2026-10-07, issue #2158: "allow a waiver without, but show a warning that a
  * previous waiver had a physician say no (with link)"). This is the warning:
- * every surface that shows the standing release also says that an earlier one
- * was refused, and links to it, so the crew decides with the refusal in view.
+ * every surface that shows the standing release also says that a physician did
+ * not clear this diver, and links to the refused record, so the crew decides
+ * with the refusal in view.
  *
- * Only for a release no physician cleared. Once any release signed after the
- * refusal carries a physician's clearance, a physician has answered since, and
- * the earlier "no" is history rather than something to warn about. Separate
- * from {@link overriddenReferralAt}, which leaves refusals out, so one record
- * is never warned about twice.
+ * A refusal stops being worth a warning only when a physician has since
+ * cleared the diver **on everything the refusal was about**: a clearance
+ * decided after the "no" (by the evaluation's date, not the signature's — two
+ * referrals can be answered out of order) on a record that flagged at least
+ * every question the refused one did. An ENT clearing ears says nothing about
+ * a cardiologist's "no" (dive-domain review 2026-10-07). Separate from
+ * {@link overriddenReferralAt}, which leaves refusals out, so one record is
+ * never warned about twice.
  */
 export function overriddenRefusal(
   standing: WaiverRecord | null,
   personSignedWaivers: readonly WaiverRecord[],
 ): { recordId: string; at: Date } | null {
-  if (!standing || !isCleanCompletion(standing) || standing.medicalClearedAt) return null;
-  const standingTime = signatureTime(standing);
-  const refusal = personSignedWaivers
-    .filter(isStandingRefusal)
-    .filter((record) => record.id !== standing.id && signatureTime(record) < standingTime)
-    .sort((a, b) => signatureTime(b) - signatureTime(a))[0];
-  if (!refusal) return null;
-  const refusedAt = signatureTime(refusal);
-  const answeredSince = personSignedWaivers.some(
-    (record) => record.medicalClearedAt && signatureTime(record) > refusedAt,
-  );
-  return answeredSince ? null : { recordId: refusal.id, at: new Date(refusedAt) };
+  if (!standing || !isCleanCompletion(standing)) return null;
+  const candidates = personSignedWaivers.some((record) => record.id === standing.id)
+    ? personSignedWaivers
+    : [...personSignedWaivers, standing];
+  return unansweredRefusal(candidates, signatureTime(standing));
+}
+
+/**
+ * The physician's "no" on file that no later clearance has answered
+ * ({@link overriddenRefusal}'s rule), among refusals signed before
+ * `signedBefore` — every one of them when omitted. The paper path asks this
+ * with no standing release, to decide who may record one (H-98).
+ */
+export function unansweredRefusal(
+  records: readonly WaiverRecord[],
+  signedBefore = Number.POSITIVE_INFINITY,
+): { recordId: string; at: Date } | null {
+  const refusals = records
+    .filter((record) => isStandingRefusal(record) && signatureTime(record) < signedBefore)
+    .sort((a, b) => (decidedAfter(a, b) ? -1 : decidedAfter(b, a) ? 1 : 0));
+  for (const refusal of refusals) {
+    const refused = flaggedPromptsOf(refusal);
+    const answered = records.some(
+      (record) =>
+        record.medicalClearedAt &&
+        decidedAfter(record, refusal) &&
+        refused.every((prompt) => flaggedPromptsOf(record).includes(prompt)),
+    );
+    if (!answered && refusal.medicalClearanceDeclinedAt) {
+      return { recordId: refusal.id, at: refusal.medicalClearanceDeclinedAt };
+    }
+  }
+  return null;
 }
 
 /**
