@@ -4,10 +4,10 @@ import { canPersonMergeDiver } from "@/db/authz";
 import { getDiverMergePreview } from "@/db/diver-merge";
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
+import { resolveDiverNotice } from "@/lib/diver-notices";
 import { requireShopSurface } from "@/lib/session";
 import { noticeForForm, shopPath } from "@/lib/staff-notices";
 import { uuidParam } from "@/lib/uuid";
-import { resolveDiverNotice } from "../../_components/record-notices";
 import { MergePreview } from "./MergePreview";
 
 export const instant = true;

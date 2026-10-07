@@ -345,7 +345,7 @@ describe("every person_id column in the schema has a merge answer", () => {
    * `people` must have a merge answer, whatever it is called.
    */
   it("classifies every foreign key that references people, whatever its column is called", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const result = await db.execute(sql`
       select cl.relname as table_name, att.attname as column_name
       from pg_constraint con
