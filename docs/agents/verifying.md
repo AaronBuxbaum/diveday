@@ -16,6 +16,27 @@ line between the two.
 - `node scripts/screenshot.mjs <path…>` against a running `pnpm dev` — looking at UI you changed
   is not optional and has no CI substitute
 
+## The unit suite's projects
+
+`vitest.config.ts` splits the suite into Vitest projects by what each file needs, read from its
+source by `src/test/projects.ts`. `pnpm test <file>`, `pnpm test:changed` and CI's `--shard` are
+unchanged: they see one run across every project, and the shard sequencer deals all of them
+together.
+
+| Project | Holds | Runs as | Shortcut |
+| --- | --- | --- | --- |
+| `db` | every file importing `@/test/db`, `@/test/postgres` or `@/test/query-count`, or building a database itself | forks, isolated; the only project that runs the PGlite global setup | `pnpm test:db` |
+| `ui` | every file with a `// @vitest-environment jsdom` docblock | jsdom, forks, isolated | `pnpm test:ui` |
+| `lib` | pure `src/lib` files that mock no module | one shared worker (`isolate: false`) | `pnpm test:lib` |
+| `scripts` | `scripts/**` | forks, isolated | `vitest run --project scripts` |
+| `node` | everything else | forks, isolated | `vitest run --project node` |
+
+A project shortcut is for a sweep after a change to a shared helper (`src/test/db.ts` →
+`pnpm test:db`), not a substitute for `pnpm test:changed`; `test:db` is the expensive one, minutes
+on a quiet box. A `src/lib` file that starts calling `vi.mock`, `vi.stubEnv` or `vi.resetModules` moves
+itself to `node` on the next run; a `lib` file that leaks state another way shows up as an
+order-dependent failure, which `pnpm test:lib --sequence.shuffle` reproduces.
+
 ## The guards that live in files you will never edit
 
 A focused `pnpm test <file>` runs the tests you can name. The **coverage guards** are the ones you
