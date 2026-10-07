@@ -157,14 +157,17 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
   const reviewModerationRows = await tx
     .select({ event: reviewModerationEvents, staffName: people.fullName })
     .from(reviewModerationEvents)
-    .innerJoin(people, eq(people.id, reviewModerationEvents.recordedByPersonId))
+    .innerJoin(
+      people,
+      and(eq(people.id, reviewModerationEvents.recordedByPersonId), eq(people.shopId, shopId)),
+    )
     .where(eq(reviewModerationEvents.shopId, shopId))
     .orderBy(asc(reviewModerationEvents.occurredAt), asc(reviewModerationEvents.id));
 
   const reviewRows = await tx
     .select({ review: tripReviews, diverName: people.fullName })
     .from(tripReviews)
-    .innerJoin(people, eq(people.id, tripReviews.personId))
+    .innerJoin(people, and(eq(people.id, tripReviews.personId), eq(people.shopId, shopId)))
     .where(eq(tripReviews.shopId, shopId))
     .orderBy(asc(tripReviews.createdAt), asc(tripReviews.id));
 
@@ -263,7 +266,7 @@ async function loadShopExportContext(tx: AppTransaction, shopId: string) {
   const staffShiftRows = await tx
     .select()
     .from(staffShifts)
-    .innerJoin(people, eq(people.id, staffShifts.personId))
+    .innerJoin(people, and(eq(people.id, staffShifts.personId), eq(people.shopId, shopId)))
     .where(eq(staffShifts.shopId, shopId))
     .orderBy(asc(staffShifts.startsAt), asc(staffShifts.id));
 
@@ -628,8 +631,10 @@ export type ShopExportContext = NonNullable<Awaited<ReturnType<typeof loadShopEx
  * ## Tenant + subject scoping
  *
  * Every query below is scoped to `shopId` **and** to this `personId` (or to a
- * booking/order/review id already proven to belong to them) — there is no
- * query in this function that reads a table by `shopId` alone.
+ * booking/order/review id already proven to belong to them), with one
+ * deliberate exception: the `{ id, fullName }` name map read from `people`
+ * by `shopId` alone, which carries no other column and is only ever looked
+ * up by an id taken from the diver's own rows.
  */
 export async function loadDiverExportBundleInput(
   db: AppDb,
@@ -718,7 +723,10 @@ async function loadDiverExportContext(tx: AppTransaction, shopId: string, person
   // buddy team. Used only to resolve a name string onto the diver's own
   // rows below; no other person's row is ever written to a file (see the
   // shared-row decisions above).
-  const staffRows = await tx.select().from(people).where(eq(people.shopId, shopId));
+  const staffRows = await tx
+    .select({ id: people.id, fullName: people.fullName })
+    .from(people)
+    .where(eq(people.shopId, shopId));
   const personName = new Map(staffRows.map((row) => [row.id, row.fullName]));
 
   const certificationRows = await readPersonScoped(tx, "certifications", shopId, personId);
