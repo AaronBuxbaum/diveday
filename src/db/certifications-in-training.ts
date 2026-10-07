@@ -1,8 +1,8 @@
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
+import { courseTemplateCertifiedLevel } from "@/content/course-templates";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
 import type { CertificationInTraining, CertificationLevel } from "@/lib/readiness";
 import type { DbExecutor } from "./client";
-import { courseTemplateCertifiedLevel } from "./course-templates";
 import { bookings, courses, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 

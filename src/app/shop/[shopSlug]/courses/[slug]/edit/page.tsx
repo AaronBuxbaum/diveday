@@ -609,7 +609,7 @@ export default async function EditCoursePage({
                   {/* No "this is a taster session" tick box. Which courses are
                 tasters is not something a shop tells DiveDay — DiveDay ships
                 the catalogue and already knows (`isIntroCourse` on the
-                published templates, src/db/course-templates.ts): Discover
+                published templates, src/content/course-templates.ts): Discover
                 Scuba and Try Scuba are, and an Advanced Open Water is not.
                 Worse, it was a safety control wearing a checkbox: the flag
                 picks the tighter 2:1 in-water ratio (src/lib/course-ratios.ts,

@@ -125,7 +125,7 @@ export const courses = pgTable(
     /**
      * A no-certification-required taster session (Discover Scuba Diving, Try
      * Scuba, …). DiveDay's own published catalog says which entries these are
-     * (`COURSE_TEMPLATES` in src/db/course-templates.ts) — never sniffed from
+     * (`COURSE_TEMPLATES` in src/content/course-templates.ts) — never sniffed from
      * the title at render time, which would pattern-match English words and
      * silently miss a differently-worded or translated one, and no longer
      * editable on the course page either: it selects the tighter 2:1 in-water

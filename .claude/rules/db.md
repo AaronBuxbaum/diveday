@@ -50,8 +50,8 @@ never pays for them.
 - **Buddy teams**: `src/db/buddy-pairs.ts` (named for its table, `buddy_pair_members`; every word a
   human reads says "team"). A team is two or more, a member is a booking **or** a crew person, and
   every act appends to `buddy_team_events` — informs, never gates (ADR 20260804-buddy-teams).
-- **Starting content a shop copies and then owns**: `src/db/dive-site-templates.ts` and
-  `src/db/course-templates.ts`, both `i18n-exempt-file` — picking one **copies** its words onto the
+- **Starting content a shop copies and then owns**: `src/content/dive-site-templates.ts` and
+  `src/content/course-templates.ts`, both `i18n-exempt-file` — picking one **copies** its words onto the
   shop's row, and nothing is read back at render, so a later correction never rewrites what a shop
   published. The **opposite** contract is `src/db/marine-life-catalog.ts`: 148 species as slug +
   Latin binomial + category code and no prose; DiveDay writes the words once in every language

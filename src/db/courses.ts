@@ -1,4 +1,5 @@
 import { and, asc, count, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { courseTemplateSnapshot, getCourseTemplate } from "@/content/course-templates";
 import {
   type CourseTemplateDiff,
   type CourseTemplateSnapshot,
@@ -13,7 +14,6 @@ import { type CourseContent, canonicalAgency } from "@/lib/courses";
 import { REFRESHER_TEMPLATE_SLUGS } from "@/lib/re-entry";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { AppDb } from "./client";
-import { courseTemplateSnapshot, getCourseTemplate } from "./course-templates";
 import { offsetPage, PAGE_SIZE } from "./paging";
 import type { Course } from "./schema";
 import { courses, shops } from "./schema";

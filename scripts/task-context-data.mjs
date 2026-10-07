@@ -222,7 +222,7 @@ export const areas = {
     code: [
       "src/db/schema/",
       "src/db/courses.ts",
-      "src/db/course-templates.ts",
+      "src/content/course-templates.ts",
       "src/lib/courses.ts",
       "src/lib/course-inquiry.ts",
       "src/app/s/[shopSlug]/courses",

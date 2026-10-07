@@ -71,8 +71,8 @@ export async function seedProductionDb(
     // through rolls back every row instead of leaving a half-seeded
     // shop a retry would find already-non-empty and stop repairing.
     // Imported here rather than at module scope, and this is not style. The
-    // seed reaches `./schema` (360 KB), `./course-templates` (186 KB) and
-    // `./dive-site-templates`, and `client.ts` is imported by every route that
+    // seed reaches `./schema/` (360 KB), `@/content/course-templates` (186 KB) and
+    // `@/content/dive-site-templates`, and `client.ts` is imported by every route that
     // touches the database — so a static edge here put that whole subgraph in
     // the module closure of 122 of this app's 127 route entries, including
     // every marketing page and API handler that never seeds anything.
