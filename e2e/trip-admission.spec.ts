@@ -83,7 +83,7 @@ test.describe("as owner", () => {
     await page.getByLabel("Name", { exact: true }).fill("Diego Alvarez");
     await page
       .getByLabel("Email", { exact: true })
-      .fill("success+diego.alvarez@simulator.amazonses.com");
+      .fill("diego.alvarez@mail.example");
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
 
     // What the *trip* requires, never what this person lacks (H-22). The

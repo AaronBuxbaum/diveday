@@ -1,4 +1,4 @@
-import { simulatorEmail } from "@/lib/simulator-email";
+import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
 import {
   bookings,
@@ -47,9 +47,9 @@ import { at, nextCreatedAt } from "./seed-clock";
  */
 const DEMO_MINIMUM_TRIP = "Long-Range Day — Duane & Outer Reef";
 const DEMO_MINIMUM_DIVERS = [
-  { fullName: "Rosa Lindqvist", email: simulatorEmail("rosa.lindqvist"), phone: "+13055550192" },
-  { fullName: "Amir Haddad", email: simulatorEmail("amir.haddad"), phone: "+13055550193" },
-  { fullName: "Wren Okafor", email: simulatorEmail("wren.okafor"), phone: "+13055550194" },
+  { fullName: "Rosa Lindqvist", email: demoEmail("rosa.lindqvist"), phone: "+13055550192" },
+  { fullName: "Amir Haddad", email: demoEmail("amir.haddad"), phone: "+13055550193" },
+  { fullName: "Wren Okafor", email: demoEmail("wren.okafor"), phone: "+13055550194" },
 ] as const;
 
 export async function seedMinimumSeats(

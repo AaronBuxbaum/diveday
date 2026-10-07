@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { nowDate, nowMs } from "@/lib/clock";
-import { simulatorEmail } from "@/lib/simulator-email";
+import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
 import {
   bookingCheckoutBookings,
@@ -122,7 +122,7 @@ export async function seedFrontDesk(
           stripeAccountId: "acct_demo",
           stripeSessionId: "cs_demo_pending",
           checkoutUrl: "https://checkout.stripe.com/c/pay/demo-pending",
-          customerEmail: simulatorEmail("priya.sharma"),
+          customerEmail: demoEmail("priya.sharma"),
           amountPerDiverCents: 18_000,
           totalCents: 18_000,
           expiresAt: at(1, 12),

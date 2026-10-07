@@ -1,4 +1,4 @@
-import { simulatorEmail } from "@/lib/simulator-email";
+import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
 import {
   certifications,
@@ -37,7 +37,7 @@ export async function seedDivers(
       customerDefs.map((customer, i) => ({
         shopId,
         fullName: customer.fullName,
-        email: simulatorEmail(customer.fullName),
+        email: demoEmail(customer.fullName),
         // E.164, because that is what `createDiver` writes (issue #1547) and a
         // demo that stores a shape the app never produces teaches the wrong one.
         phone: `+130555501${String(i + 10).padStart(2, "0")}`,

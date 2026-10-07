@@ -1,5 +1,5 @@
 import { and, eq, ne } from "drizzle-orm";
-import { simulatorEmail } from "@/lib/simulator-email";
+import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
 import { bookings, people } from "./schema";
 
@@ -35,9 +35,9 @@ import { bookings, people } from "./schema";
  * never be the reason a shop fails to seed.
  */
 const REFERRALS = [
-  { email: simulatorEmail("tom.okafor"), partner: "coral-sands-resort" },
-  { email: simulatorEmail("priya.sharma"), partner: "coral-sands-resort" },
-  { email: simulatorEmail("lena.fischer"), partner: "harbour-house-inn" },
+  { email: demoEmail("tom.okafor"), partner: "coral-sands-resort" },
+  { email: demoEmail("priya.sharma"), partner: "coral-sands-resort" },
+  { email: demoEmail("lena.fischer"), partner: "harbour-house-inn" },
 ];
 
 export async function seedPartnerReferrals(db: DbExecutor, shopId: string) {

@@ -122,6 +122,21 @@ describe("notify", () => {
     expect(client.send).not.toHaveBeenCalled();
   });
 
+  it("delivers a seeded person's human-looking address to the SES mailbox simulator", async () => {
+    // UX audit 2026-10-07, item 4: staff read `priya.sharma@mail.example`;
+    // SES receives the simulator's success box under the same label.
+    const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-demo-id" }) };
+    const provider = sesNotificationProvider(sesConfig, { client });
+
+    await expect(
+      notify({ ...booking, to: "priya.sharma@mail.example" }, provider),
+    ).resolves.toEqual({ status: "sent", providerMessageId: "ses-demo-id" });
+    const command = client.send.mock.calls[0]?.[0] as SendEmailCommand;
+    expect(command.input).toMatchObject({
+      Destination: { ToAddresses: ["success+priya.sharma@simulator.amazonses.com"] },
+    });
+  });
+
   it("never sends seeded demo.com recipients to SES", async () => {
     const client = { send: vi.fn() };
     const provider = sesNotificationProvider(sesConfig, { client });

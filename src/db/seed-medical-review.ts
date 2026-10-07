@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { simulatorEmail } from "@/lib/simulator-email";
+import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
 import { bookings, certifications, people, personRoles, type trips, waiverRecords } from "./schema";
 import { at } from "./seed-clock";
@@ -8,9 +8,9 @@ import { reviewedBy } from "./seed-review";
 /** Two fictitious divers used only to train on the medical-review states. */
 const DEMO_MEDICAL_REVIEW_DIVER = "Morgan Vale";
 const DEMO_MEDICAL_REVIEW_TRIP = "Afternoon Two-Tank — French Reef";
-const DEMO_MEDICAL_REVIEW_EMAIL = simulatorEmail("medical-review-demo");
+const DEMO_MEDICAL_REVIEW_EMAIL = demoEmail("medical-review-demo");
 const DEMO_NOT_CLEARED_DIVER = "Rowan Pike";
-const DEMO_NOT_CLEARED_EMAIL = simulatorEmail("medical-not-cleared-demo");
+const DEMO_NOT_CLEARED_EMAIL = demoEmail("medical-not-cleared-demo");
 
 /** How the physician's answer landed, or that it has not landed at all. */
 type MedicalOutcome = "awaiting" | "not_cleared";

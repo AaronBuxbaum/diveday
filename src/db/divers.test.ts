@@ -622,7 +622,7 @@ describe("roster search and pagination", () => {
     expect(byName.total).toBe(1);
 
     const byEmail = await listDiverSummaries(db, shop.id, {
-      query: "success+priya.sharma@simulator",
+      query: "priya.sharma@mail",
     });
     expect(byEmail.divers).toHaveLength(1);
 

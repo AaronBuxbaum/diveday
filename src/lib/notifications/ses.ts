@@ -2,6 +2,7 @@ import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 import { z } from "zod";
 import { redactCapabilityUrl } from "@/lib/capability-urls";
 import { log } from "@/lib/log";
+import { deliveryAddressFor } from "@/lib/simulator-email";
 import type { Notification } from "./kinds";
 import type { NotificationProvider } from "./provider";
 import { reservedTestRecipientDelivery } from "./provider";
@@ -209,7 +210,10 @@ export function sesNotificationProvider(
     });
   return {
     async send(notification) {
-      const invalidRecipient = reservedTestRecipientDelivery(notification.to);
+      // A seeded person's address reads like a person's and is delivered to the
+      // SES mailbox simulator (`deliveryAddressFor`); everything else as written.
+      const to = deliveryAddressFor(notification.to);
+      const invalidRecipient = reservedTestRecipientDelivery(to);
       if (invalidRecipient) return invalidRecipient;
       const message = messageFor(notification);
       const unsubscribeUrl = unsubscribeUrlOf(notification);
@@ -218,13 +222,13 @@ export function sesNotificationProvider(
         const result = await client.send(
           new SendEmailCommand({
             FromEmailAddress: config.from,
-            Destination: { ToAddresses: [notification.to] },
+            Destination: { ToAddresses: [to] },
             // A reply to a booking confirmation is a diver writing to the
             // shop, and `noreply@ses.dive.day` is a dead letter box. The
             // shop's own front-desk address, when it has one on file (ADR
             // 20260902-sender-standards-for-ses).
             ...(notification.sender?.replyTo && {
-              ReplyToAddresses: [notification.sender.replyTo],
+              ReplyToAddresses: [deliveryAddressFor(notification.sender.replyTo)],
             }),
             EmailTags: emailTagsOf(notification),
             Content: {

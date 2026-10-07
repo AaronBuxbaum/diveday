@@ -412,7 +412,7 @@ test("the desk shows no diver's email on the roster's face", async ({ page }) =>
   // typing on Today, never a display, and it must not have been narrowed with
   // the display.
   await page.goto(
-    `/shop/blue-mantis?q=${encodeURIComponent("success+priya.sharma@simulator.amazonses.com")}`,
+    `/shop/blue-mantis?q=${encodeURIComponent("priya.sharma@mail.example")}`,
   );
   await expect(page.getByRole("link", { name: /check-in for Priya Sharma$/ })).toHaveCount(1);
 });

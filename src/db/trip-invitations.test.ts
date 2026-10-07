@@ -138,7 +138,7 @@ describe("trip invitations", () => {
   it("supports a direct existing-diver invitation without seating them", async () => {
     const { db, shop, author, firstTrip } = await invitationContext();
     const [candidate] = await listBookableDivers(db, shop.id, firstTrip.id, {
-      query: "simulator.amazonses.com",
+      query: "mail.example",
     });
     if (!candidate) throw new Error("expected a bookable seeded diver");
 

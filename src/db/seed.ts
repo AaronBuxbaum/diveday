@@ -5,7 +5,7 @@ import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { crewPublicNameToStore } from "@/lib/crew-public-name";
 import { generateDemoShopIdentity, pinnedDemoShopIdentity } from "@/lib/demo-identity";
-import { simulatorEmail } from "@/lib/simulator-email";
+import { demoEmail } from "@/lib/simulator-email";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
@@ -362,7 +362,7 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       crewScheduleEnabled: true,
       // A front-desk address, not a person's — this is printed on the public
       // course pages, where it backs the "Get in touch" composer.
-      contactEmail: simulatorEmail("front.desk"),
+      contactEmail: demoEmail("front.desk"),
       // The demo shop's front desk is confirmed: it is the state a real shop
       // reaches after opening the link (issue #1288), and the one the settings
       // capture should show.

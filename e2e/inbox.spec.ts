@@ -37,7 +37,7 @@ test("a staffer reads the inbox, opens the record, and answers the diver", async
   await expect(page.getByRole("heading", { name: /Waiting on you/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Done" })).toBeVisible();
   // A stranger's row has no record to open, so it shows the address instead.
-  await expect(page.getByText("success+marta.keller@simulator.amazonses.com")).toBeVisible();
+  await expect(page.getByText("marta.keller@mail.example")).toBeVisible();
 
   // The row is the door to the diver it belongs to, and it lands on the very
   // message it was opened from rather than the top of the record.
@@ -60,7 +60,7 @@ test("a staffer reads the inbox, opens the record, and answers the diver", async
   // (issue #1515). Exact, so the label carrying the address is what is asserted
   // rather than a substring that would also match the old channel-only text.
   const composer = page.getByLabel(
-    "Reply by email to success+priya.sharma@simulator.amazonses.com",
+    "Reply by email to priya.sharma@mail.example",
     { exact: true },
   );
   await expect(composer).toBeVisible();
@@ -94,13 +94,13 @@ test("a staffer deletes the message from a sender nobody on the roster holds", a
   page.on("dialog", (dialog) => dialog.accept());
 
   await page.goto("/shop/blue-mantis/inbox");
-  await expect(page.getByText("success+marta.keller@simulator.amazonses.com")).toBeVisible();
+  await expect(page.getByText("marta.keller@mail.example")).toBeVisible();
 
   // Delete lives behind the row's "⋯" with the row's other acts.
   await page.getByRole("button", { name: "More for the message from Unknown sender" }).click();
   await page
     .getByRole("button", {
-      name: "Delete the message from success+marta.keller@simulator.amazonses.com",
+      name: "Delete the message from marta.keller@mail.example",
     })
     .click();
 
@@ -108,7 +108,7 @@ test("a staffer deletes the message from a sender nobody on the roster holds", a
   // the request is sent, not when the write has landed.
   await page.waitForURL(/notice=deleted/);
   await expect(page.getByText("Message deleted.")).toBeVisible();
-  await expect(page.getByText("success+marta.keller@simulator.amazonses.com")).toHaveCount(0);
+  await expect(page.getByText("marta.keller@mail.example")).toHaveCount(0);
 });
 
 /**

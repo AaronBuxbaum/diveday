@@ -1,6 +1,6 @@
 import { DAY_MS } from "@/lib/clock";
 import { rollCallCheckpoints } from "@/lib/manifests";
-import { simulatorEmail } from "@/lib/simulator-email";
+import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
 import {
   bookingPayments,
@@ -134,7 +134,7 @@ export async function seedHistory(
       historicalDivers.map((fullName, i) => ({
         shopId,
         fullName,
-        email: simulatorEmail(fullName),
+        email: demoEmail(fullName),
         phone: `+130555502${String(i + 20).padStart(2, "0")}`,
         createdAt: nextCreatedAt(),
       })),

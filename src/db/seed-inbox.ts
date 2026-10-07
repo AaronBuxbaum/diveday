@@ -1,4 +1,4 @@
-import { simulatorEmail } from "@/lib/simulator-email";
+import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
 import { inboundMessages, type people, staffReplies } from "./schema";
 import { hoursFromNow } from "./seed-clock";
@@ -96,7 +96,7 @@ export async function seedInbox(
       shopId,
       personId: null,
       channel: "email",
-      fromAddress: simulatorEmail("marta.keller"),
+      fromAddress: demoEmail("marta.keller"),
       // i18n-exempt: fixture text — what a stranger typed, stored verbatim
       subject: "Night dives in October?",
       // i18n-exempt: fixture text — what a stranger typed, stored verbatim
