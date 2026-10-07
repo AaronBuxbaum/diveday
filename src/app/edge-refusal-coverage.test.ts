@@ -1,10 +1,13 @@
-import { readdirSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
+import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { unstable_doesMiddlewareMatch } from "next/experimental/testing/server";
 import { describe, expect, it } from "vitest";
 import { publicRouteShape } from "@/lib/public-route-shape";
 
 const APP_DIR = dirname(fileURLToPath(import.meta.url));
+const PUBLIC_DIR = join(APP_DIR, "..", "..", "public");
+const PROXY_SOURCE = join(APP_DIR, "..", "proxy.ts");
 
 /**
  * **A public route cannot go back to answering 200 for a slug that names
@@ -160,5 +163,80 @@ describe("the edge refusal covers the public route tree", () => {
 
   it("keeps no exemption for a route that no longer exists", () => {
     expect([...EDGE_EXEMPT.keys()].filter((route) => !routes.includes(route))).toEqual([]);
+  });
+});
+
+/**
+ * The proxy's `config.matcher`, read off the source. Next reads `config` from
+ * `src/proxy.ts` statically, so it has to be a literal there; importing the
+ * module would evaluate the database client for one string.
+ */
+function proxyMatcher(): string[] {
+  const source = readFileSync(PROXY_SOURCE, "utf8");
+  const literal = /export const config = \{\s*matcher:\s*(\[[^\]]*\])/.exec(source)?.[1];
+  if (!literal) throw new Error("expected `export const config = { matcher: [...] }` in proxy.ts");
+  // Biome writes a trailing comma inside a wrapped array; JSON does not take one.
+  return JSON.parse(literal.replace(/,\s*\]$/, "]")) as string[];
+}
+
+const reachesProxy = (url: string) =>
+  unstable_doesMiddlewareMatch({ config: { matcher: proxyMatcher() }, url });
+
+/** Every file under `public/`, as the URL path it is served at. */
+function publicFiles(dir = PUBLIC_DIR): string[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+    entry.isDirectory()
+      ? publicFiles(join(dir, entry.name))
+      : [`/${relative(PUBLIC_DIR, join(dir, entry.name)).split(sep).join("/")}`],
+  );
+}
+
+/**
+ * **A dynamic public URL ending in `.png` still reaches the edge refusal**
+ * (issue #2093).
+ *
+ * The matcher used to skip every path ending `.svg`, `.png`, `.jpg` or `.ico`,
+ * which meant `/product/kiosk.png`, `/switching/eve.png` and
+ * `/s/<shop>/trips/x.jpg` never met `publicRouteShape` and answered 200 with
+ * the not-found page in the body: the soft 404 the test above exists to stop,
+ * arrived at through the side door. Only files that are really on disk skip
+ * the proxy now, and both directions are pinned here.
+ */
+describe("the proxy matcher skips static files and nothing else", () => {
+  const publicRoutes = pageRoutes().filter((route) => !route.startsWith(STAFF_PREFIX));
+
+  it("reads the matcher", () => {
+    expect(proxyMatcher().length).toBeGreaterThan(0);
+  });
+
+  it("sends every dynamic public route through the proxy, whatever its last segment ends in", () => {
+    const failures = publicRoutes
+      .filter(isDynamic)
+      .filter((route) => !EDGE_EXEMPT.has(route))
+      .flatMap((route) =>
+        [".png", ".jpg", ".svg", ".ico"].map((extension) => `${probePath(route)}${extension}`),
+      )
+      .filter((url) => !reachesProxy(url));
+    expect(failures).toEqual([]);
+    for (const url of ["/product/kiosk.png", "/switching/eve.png", "/s/blue-mantis/trips/x.jpg"])
+      expect(reachesProxy(url), url).toBe(true);
+  });
+
+  it("still sends a static public page through the proxy", () => {
+    const failures = publicRoutes.filter((route) => !isDynamic(route) && !reachesProxy(route));
+    expect(failures).toEqual([]);
+  });
+
+  it("lets every image under public/ and the app's own icons skip it", () => {
+    const images = [
+      ...publicFiles().filter((path) => /\.(?:svg|png|jpg|ico)$/.test(path)),
+      "/icon.png",
+      "/apple-icon.png",
+    ];
+    expect(images.length).toBeGreaterThan(100);
+    expect(images.filter(reachesProxy)).toEqual([]);
+    expect(reachesProxy("/_next/static/chunks/app.js")).toBe(false);
+    expect(reachesProxy("/_next/image?url=%2Fdive-sites%2Fx.jpg&w=640&q=75")).toBe(false);
+    expect(reachesProxy("/api/health")).toBe(false);
   });
 });
