@@ -114,6 +114,7 @@
   },
   "spine": {
     "summaryBoats": "{count, plural, one {# boat today.} other {# boats today.}}",
+    "summaryBoatsBlocked": "{count, plural, one {# boat today} other {# boats today}}, {blocked, plural, one {# diver blocked.} other {# divers blocked.}}",
     "summaryNext": "{count, plural, =0 {Nothing needs you before the {time} leaves the dock.} one {# thing needs you before the {time} leaves the dock.} other {# things need you before the {time} leaves the dock.}}",
     "summaryAfter": "{count, plural, =0 {Nothing is waiting on you.} one {# thing still needs you.} other {# things still need you.}}",
     "quietSentence": "No boats today, and nothing is waiting on you.",
@@ -176,6 +177,7 @@
     "readyCount": "{ready} of {booked} ready",
     "blockedCount": "{count} blocked",
     "departuresLabel": "Departures",
+    "needsYouCount": "{count, plural, one {# thing} other {# things}}",
     "needsYouLabel": "Needs you"
   },
   "quietAddDeparture": "Add a departure",

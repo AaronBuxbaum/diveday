@@ -753,7 +753,7 @@ export function LedgerRow({
         // 2026-09-16).** The comment here used to carry 2026-09-07 figures and
         // an admission that they were stale. They were: what made a prefetch
         // expensive was the six awaits the staff layout held above
-        // `{children}` — session, shop row, locale, `countBlockedDivers` —
+        // `{children}` — session, shop row, locale, `countBlockedDiversToday` —
         // which #1446 moved into `ShopChrome`, beside `{children}` behind a
         // `<Suspense>`, on 2026-09-08 (ADR 20260804-instant-navigation).
         //

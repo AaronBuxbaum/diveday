@@ -9,7 +9,7 @@ import { DemoBanner } from "@/components/DemoBanner";
 import { OfflineManifestAutoSave } from "@/components/OfflineManifestAutoSave";
 import { ShopNav, ShopNavSidebar } from "@/components/ShopNav";
 import { SkipLink } from "@/components/SkipLink";
-import { countBlockedDivers } from "@/db/blockers";
+import { countBlockedDiversToday } from "@/db/blockers";
 import { getDb } from "@/db/client";
 import { hasActiveCourses } from "@/db/courses";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
@@ -175,7 +175,7 @@ const loadShopChrome = cache(async (shopSlug: string) => {
   const [navBlockersCount, boatBoardingHref, teaches, gearCount] =
     showNav && shop
       ? await Promise.all([
-          countBlockedDivers(db, shop.id, nowDate()),
+          countBlockedDiversToday(db, shop.id, shop.timezone, nowDate()),
           todayNextDepartureTripId(db, shop.id, shop.timezone).then((tripId) =>
             // The manifest opens on its "Before departure" checkpoint — the boarding pass.
             tripId ? `/shop/${shopSlug}/trips/${tripId}/manifest` : undefined,

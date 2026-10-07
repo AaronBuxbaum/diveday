@@ -2,7 +2,7 @@ import type { PGlite } from "@electric-sql/pglite";
 import { and, asc, eq, gt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { describe, expect, it, vi } from "vitest";
-import { countBlockedDivers, inHorizonReadiness } from "@/db/blockers";
+import { countBlockedDiversToday, inHorizonReadiness } from "@/db/blockers";
 import type { AppDb } from "@/db/client";
 import { hasActiveCourses } from "@/db/courses";
 import { countGearItems } from "@/db/gear";
@@ -97,7 +97,7 @@ describe("what a staff render sends", () => {
       const row = await getShopBySlug(db, shop.slug);
       if (!row) throw new Error("no shop");
       await Promise.all([
-        countBlockedDivers(db, row.id, nowDate()),
+        countBlockedDiversToday(db, row.id, row.timezone, nowDate()),
         todayNextDepartureTripId(db, row.id, row.timezone),
         hasActiveCourses(db, row.id),
         countGearItems(db, row.id),

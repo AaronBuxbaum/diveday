@@ -941,10 +941,17 @@ export function openStaffingActionText(t: StaffTranslator): string {
  */
 export function daySpineSummaryText(
   t: StaffTranslator,
-  summary: { boats: number; jobs: number; nextDepartureTime: string | null },
+  summary: { boats: number; blocked?: number; jobs: number; nextDepartureTime: string | null },
 ): string | null {
   if (summary.boats === 0) return null;
-  const boats = t("shopHome.spine.summaryBoats", { count: summary.boats });
+  // **The blocked figure is the Today row's badge, word for word** (UX audit
+  // 2026-10-07, item 1): the same count the departure cards' "N blocked" sum
+  // to, so the badge, the cards and this sentence are one number.
+  const blocked = summary.blocked ?? 0;
+  const boats =
+    blocked > 0
+      ? t("shopHome.spine.summaryBoatsBlocked", { count: summary.boats, blocked })
+      : t("shopHome.spine.summaryBoats", { count: summary.boats });
   const jobs = summary.nextDepartureTime
     ? t("shopHome.spine.summaryNext", {
         count: summary.jobs,

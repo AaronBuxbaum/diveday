@@ -191,7 +191,7 @@ describe("a station owns its departure's facts", () => {
       "href",
       "/shop/blue-mantis/trips/t1",
     );
-    const needsYou = screen.getByText("Needs you").closest("div") as HTMLElement;
+    const needsYou = screen.getByText("Needs you").closest("div")?.parentElement as HTMLElement;
     // Both rows say their boat on a quiet line under their words.
     const labels = within(needsYou).getAllByText("Two-Tank Reef · 7:00 AM");
     expect(labels).toHaveLength(2);
@@ -458,7 +458,7 @@ describe("the desk group", () => {
         }),
       ],
     });
-    const needsYou = screen.getByText("Needs you").closest("div") as HTMLElement;
+    const needsYou = screen.getByText("Needs you").closest("div")?.parentElement as HTMLElement;
     const rows = within(needsYou).getAllByRole("listitem");
     // Warning before quiet, wherever each row is filed.
     expect(rows[0]).toHaveTextContent("Priya Sharma");
@@ -1114,7 +1114,7 @@ describe("the evening reading", () => {
       evening: evening([closed({ tripId: "t1" })]),
     });
 
-    const needsYou = screen.getByText("Needs you").closest("div") as HTMLElement;
+    const needsYou = screen.getByText("Needs you").closest("div")?.parentElement as HTMLElement;
     expect(
       within(needsYou).getByText("Confirm the shop units", { exact: true }),
     ).toBeInTheDocument();
@@ -1340,6 +1340,18 @@ describe("the evening reading", () => {
     });
     // Absent, never disabled — the gate is the render (AGENTS.md).
     expect(screen.queryByRole("link", { name: "Departure log" })).toBeNull();
+  });
+
+  it("says how many rows the Needs you list holds, beside its heading", () => {
+    renderSpine({
+      departures: [departure({ tripId: "t1" })],
+      actions: [
+        action({ id: "a", departure: boat("t1") }),
+        action({ id: "b", departure: boat("t1") }),
+      ],
+    });
+    const heading = screen.getByRole("heading", { name: "Needs you" });
+    expect(heading.parentElement).toHaveTextContent("2 things");
   });
 
   it("keeps the log off a live departure's card, which is the day's briefing", () => {

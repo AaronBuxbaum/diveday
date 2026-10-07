@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DAY_MS, nowDate } from "@/lib/clock";
 import { seededShopContext } from "@/test/db";
 import { countQueries } from "@/test/query-count";
-import { countBlockedDivers, inHorizonReadiness, sharedInHorizonReadiness } from "./blockers";
+import { countBlockedDiversToday, inHorizonReadiness, sharedInHorizonReadiness } from "./blockers";
 import { getShopDayDepartures, getTodayWork } from "./today";
 
 /**
@@ -84,6 +84,6 @@ describe("the shared readiness pass", () => {
     const own = await inHorizonReadiness(db, shop.id, now);
     expect(shared.trips.map((trip) => trip.id)).toEqual(own.trips.map((trip) => trip.id));
     expect([...shared.readinessByTrip.keys()]).toEqual([...own.readinessByTrip.keys()]);
-    expect(await countBlockedDivers(db, shop.id, now)).toBeGreaterThanOrEqual(0);
+    expect(await countBlockedDiversToday(db, shop.id, shop.timezone, now)).toBeGreaterThanOrEqual(0);
   });
 });

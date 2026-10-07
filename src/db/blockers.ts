@@ -1,6 +1,7 @@
 import { cache } from "react";
 import { MINUTE_MS, nowDate } from "@/lib/clock";
 import { OPERATIONAL_MAX_TRIPS, operationalWindow } from "@/lib/operational-window";
+import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb } from "./client";
 import { listTripsReadiness } from "./readiness";
 import { pagedUpcomingTripsWithCounts } from "./trips";
@@ -95,7 +96,7 @@ const horizonSlot = cache(
  * {@link inHorizonReadiness}, run once per render for every caller asking about
  * the same shop in the same clock minute (app audit 2026-10-07, item 2).
  *
- * The staff shell's badge (`countBlockedDivers`), the shop home and the roster
+ * The staff shell's badge (`countBlockedDiversToday`), the shop home and the roster
  * each run the pass, about eleven statements a time. The first asker's pass is
  * the one every later asker in the render receives, so the badge and the page
  * it links to now read literally the same evidence - the property this file
@@ -121,25 +122,44 @@ export function sharedInHorizonReadiness(
 }
 
 /**
- * Distinct divers who can't board yet, across the same shared horizon
- * this file reads — for the nav badge (task 83, UX persona 11
- * "Kai"/12 "Maren"), which only needs the headline count, not each row's fix
- * label/href. It walks the *same* helper as the full queue, so the badge and
- * the page it links to can never report different numbers; there is no cheaper
- * SQL-only signal, since "blocked" is a business rule computed from
- * certs/waivers/payment rather than a stored flag.
+ * Divers who can't board yet on **today's** departures, in the shop's own
+ * zone: the number the Today row's nav badge carries (UX audit 2026-10-07,
+ * item 1). It counts exactly what the day's departure cards count — one per
+ * blocked booking on each of today's departures, the sum of every card's
+ * "N blocked" — and the summary line under the date says the same number in
+ * words, so the badge, the cards and the sentence are one figure.
+ *
+ * It used to count the whole week's horizon, on a row labelled Today, which is
+ * how the badge came to read 21 over a page whose cards said 4.
  */
-export async function countBlockedDivers(
+export async function countBlockedDiversToday(
   db: AppDb,
   shopId: string,
+  timeZone: string,
   now: Date = nowDate(),
 ): Promise<number> {
-  const { trips, readinessByTrip } = await sharedInHorizonReadiness(db, shopId, now);
-  const blocked = new Set<string>();
-  for (const trip of trips) {
-    for (const row of readinessByTrip.get(trip.id) ?? []) {
-      if (row.readiness.status === "blocked") blocked.add(row.person.id);
+  const evidence = await sharedInHorizonReadiness(db, shopId, now);
+  return blockedOnShopDay(evidence, timeZone, now);
+}
+
+/**
+ * The shared derivation behind {@link countBlockedDiversToday}, over evidence a
+ * caller already holds: blocked readiness rows on the departures whose start
+ * falls on `now`'s shop-day.
+ */
+export function blockedOnShopDay(
+  evidence: Pick<HorizonReadinessEvidence, "trips" | "readinessByTrip">,
+  timeZone: string,
+  now: Date,
+): number {
+  const day = (date: Date) => toDateInputValue(utcToWallTime(date, timeZone));
+  const today = day(now);
+  let blocked = 0;
+  for (const trip of evidence.trips) {
+    if (day(trip.startsAt) !== today) continue;
+    for (const row of evidence.readinessByTrip.get(trip.id) ?? []) {
+      if (row.readiness.status === "blocked") blocked += 1;
     }
   }
-  return blocked.size;
+  return blocked;
 }

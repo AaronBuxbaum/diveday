@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { operationalWindow } from "@/lib/operational-window";
+import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import { seededShopContext } from "@/test/db";
-import { countBlockedDivers, inHorizonReadiness } from "./blockers";
+import { countBlockedDiversToday, inHorizonReadiness } from "./blockers";
 import { upsertTripRequirements } from "./readiness";
 import { upcomingTripsWithCounts } from "./trips";
 
@@ -13,15 +14,20 @@ import { upcomingTripsWithCounts } from "./trips";
  */
 const NOW = nowDate();
 
-/** Distinct people still blocked, the way the badge counts them. */
-function blockedPeople(evidence: Awaited<ReturnType<typeof inHorizonReadiness>>): Set<string> {
-  const people = new Set<string>();
+/** Blocked bookings on the shop-day `NOW` falls on, the way the badge counts them. */
+function blockedToday(
+  evidence: Awaited<ReturnType<typeof inHorizonReadiness>>,
+  timeZone: string,
+): number {
+  const day = (date: Date) => toDateInputValue(utcToWallTime(date, timeZone));
+  let blocked = 0;
   for (const trip of evidence.trips) {
+    if (day(trip.startsAt) !== day(NOW)) continue;
     for (const row of evidence.readinessByTrip.get(trip.id) ?? []) {
-      if (row.readiness.status === "blocked") people.add(row.person.id);
+      if (row.readiness.status === "blocked") blocked += 1;
     }
   }
-  return people;
+  return blocked;
 }
 
 describe("in-horizon readiness (in-memory PGlite)", () => {
@@ -49,17 +55,17 @@ describe("in-horizon readiness (in-memory PGlite)", () => {
     expect((await inHorizonReadiness(db, shop.id, NOW)).truncated).toBe(false);
   });
 
-  it("countBlockedDivers matches the evidence's distinct-diver headline count (nav badge, task 83)", async () => {
+  it("countBlockedDiversToday counts today's blocked divers only (nav badge, UX audit item 1)", async () => {
     const { db, shop } = await seededShopContext();
-    const expected = blockedPeople(await inHorizonReadiness(db, shop.id, NOW)).size;
+    const expected = blockedToday(await inHorizonReadiness(db, shop.id, NOW), shop.timezone);
     expect(expected).toBeGreaterThan(0);
 
-    expect(await countBlockedDivers(db, shop.id, NOW)).toBe(expected);
+    expect(await countBlockedDiversToday(db, shop.id, shop.timezone, NOW)).toBe(expected);
   });
 
-  it("countBlockedDivers drops when a departure's blockers are cleared", async () => {
+  it("countBlockedDiversToday drops when a departure's blockers are cleared", async () => {
     const { db, shop } = await seededShopContext();
-    const before = await countBlockedDivers(db, shop.id, NOW);
+    const before = await countBlockedDiversToday(db, shop.id, shop.timezone, NOW);
     const trips = await upcomingTripsWithCounts(db, shop.id, NOW);
     const target = trips[0];
     if (!target) throw new Error("expected an upcoming trip");
@@ -73,8 +79,8 @@ describe("in-horizon readiness (in-memory PGlite)", () => {
       requiresPayment: false,
     });
 
-    const after = await countBlockedDivers(db, shop.id, NOW);
+    const after = await countBlockedDiversToday(db, shop.id, shop.timezone, NOW);
     expect(after).toBeLessThanOrEqual(before);
-    expect(after).toBe(blockedPeople(await inHorizonReadiness(db, shop.id, NOW)).size);
+    expect(after).toBe(blockedToday(await inHorizonReadiness(db, shop.id, NOW), shop.timezone));
   });
 });

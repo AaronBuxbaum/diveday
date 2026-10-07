@@ -556,6 +556,7 @@ async function TodayBody({
         // has three boats on it, and the line under the date says what the day
         // *is* before it says what is left of it.
         boats: dayDepartures.length,
+        blocked: blockedToday,
         jobs: nextStation
           ? pressingRows(nextStation.rows)
           : spine.stations.reduce((total, station) => total + pressingRows(station.rows), 0) +

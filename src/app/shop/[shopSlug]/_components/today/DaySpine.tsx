@@ -816,7 +816,17 @@ export function DaySpine({
       ) : null}
 
       {needsYou.length > 0 || showPaymentsRow || drafts.length > 0 ? (
-        <LedgerGroup as="h2" label={t("shopHome.spine.needsYouLabel")}>
+        <LedgerGroup
+          as="h2"
+          label={t("shopHome.spine.needsYouLabel")}
+          // **The list says how long it is** (UX audit 2026-10-07, item 1): the
+          // summary under the date counts what is due before the next boat and
+          // the badge counts blocked divers, so the list carries its own total
+          // rather than leaving the reader to reconcile three numbers.
+          meta={t("shopHome.spine.needsYouCount", {
+            count: needsYou.length + drafts.length + (showPaymentsRow ? 1 : 0),
+          })}
+        >
           <ul>
             {needsYou.map((action) => (
               <StationRow key={rowKey(action)} action={action} controls={controls} />
