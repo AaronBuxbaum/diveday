@@ -1205,8 +1205,20 @@ describe("what the retry queue is allowed to hold", () => {
 
         // Unchanged for whoever drives the drain: the same summary, the same
         // terminal row.
+        // The provider's own words quote the recipient and the link, as a
+        // bounce can: the line must carry the code, never the detail.
+        const failsQuotingTheRecipient: NotificationProvider = {
+          async send() {
+            return {
+              status: "failed",
+              retryable: true,
+              errorCode: "temporary_failure",
+              detail: `550 front-desk@example.invalid refused ${TOKEN}`,
+            };
+          },
+        };
         await expect(
-          drainNotificationRetries(db, { provider: failsRetryably }),
+          drainNotificationRetries(db, { provider: failsQuotingTheRecipient }),
         ).resolves.toMatchObject({ failed: 1, queued: 0 });
         const [row] = await db
           .select()
@@ -1227,6 +1239,29 @@ describe("what the retry queue is allowed to hold", () => {
         expectNothingPersonal();
       },
     );
+
+    it("names a queue write that threw by the error's name, never its message", async () => {
+      const { db, shop } = await seededShopContext();
+      // A driver's message can quote the bound parameters, which include the
+      // recipient's address.
+      vi.spyOn(db, "insert").mockImplementationOnce(() => {
+        throw new Error(`duplicate key: (front-desk@example.invalid) ${TOKEN}`);
+      });
+
+      await expect(
+        sendNotification(db, linkBearing(shop.id, "password_reset_request"), failsRetryably),
+      ).resolves.toMatchObject({ status: "failed", retryable: true });
+
+      expect(linesFor("notification.send_abandoned")).toEqual([
+        expect.objectContaining({
+          reason: "queue_write_failed",
+          kind: "password_reset_request",
+          shopId: shop.id,
+          errorCode: "Error",
+        }),
+      ]);
+      expectNothingPersonal();
+    });
 
     it("says so when a retry is refused outright", async () => {
       const { db, shop } = await seededShopContext();
