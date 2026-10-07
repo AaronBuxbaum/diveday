@@ -67,7 +67,7 @@ function renderGroup({
  * the status ledger no longer says it above this row (`splitDiverStatus`).
  */
 describe("DiverDetailsGroup", () => {
-  /** H-99: a split with no date filed a staffer's "18 or older" instead. */
+  /** H-100: a split with no date filed a staffer's "18 or older" instead. */
   it("says who answered 18 or older where no date of birth is on file", () => {
     const attested = diver(null);
     const props = {

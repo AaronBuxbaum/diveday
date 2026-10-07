@@ -742,7 +742,7 @@ describe("merging a diver's signed releases (issue #2080)", () => {
   });
 });
 
-/** A staffer's "18 or older" (H-99) is an answer and its author, kept together. */
+/** A staffer's "18 or older" (H-100) is an answer and its author, kept together. */
 describe("merging an 18-or-older answer", () => {
   it("takes the source's answer and who gave it when the survivor has none", async () => {
     const { db, shop, owner, source, survivor } = await mergeFixtures();

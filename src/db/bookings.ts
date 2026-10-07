@@ -1869,7 +1869,7 @@ export type SplitBookingIdentityInput = {
    */
   dateOfBirth?: string | null;
   /**
-   * The staffer's "18 or older", for a split with no date of birth (H-99,
+   * The staffer's "18 or older", for a split with no date of birth (H-100,
    * issue #2143). One of the two is required on every departure: the split
    * is for someone who is not the matched diver, often a minor booked with a
    * parent's email, and a blank date alone would read as an adult. Ignored
@@ -2003,7 +2003,7 @@ export async function sameNameHeldSeats(
  * **It hands over nothing**, which is why it needs no blocking confirm while
  * the opposite answer does. The new record starts with only what the staffer
  * typed about the person in front of them (issue #2081): a name, a date of
- * birth or the staffer's "18 or older" (H-99: one of the two on any
+ * birth or the staffer's "18 or older" (H-100: one of the two on any
  * departure, and the date itself on a course with a minimum age, since the age
  * check and the guardian rule read the date and fail open without one; the
  * answer is filed with who gave it), and an optional
@@ -2164,7 +2164,7 @@ export async function splitBookingIdentity(
           .limit(1);
         if (gated.length > 0) return { refused: "date_of_birth_required" as const };
         // Anywhere else, a blank date is an adult only by the staffer's word
-        // (H-99): it is what the guardian rule will read.
+        // (H-100): it is what the guardian rule will read.
         if (!input.adultAttested) return { refused: "age_unstated" as const };
       }
 

@@ -157,7 +157,7 @@ export async function updateDiver(
           ? {}
           : { dateOfBirth: input.dateOfBirth.trim() || null }),
         // A date answers the age question, so a staffer's earlier "18 or
-        // older" (H-99) goes: clearing the date later must not bring back an
+        // older" (H-100) goes: clearing the date later must not bring back an
         // adult claim the date may have disproved (dive-domain review).
         ...(input.dateOfBirth?.trim()
           ? { adultAttestedAt: null, adultAttestedByPersonId: null }
@@ -769,7 +769,7 @@ export async function getDiverProfile(
   return {
     person: personRow.person,
     noCertificationClearedByName: personRow.clearedByName,
-    /** Who said, at a split, that this diver is 18 or older (H-99). */
+    /** Who said, at a split, that this diver is 18 or older (H-100). */
     adultAttestedByName: personRow.adultAttestedByName,
     certifications: levelCards.map(({ card, reviewedByName }) => ({ ...card, reviewedByName })),
     specialtyCertifications: specialtyCards.map(({ card, reviewedByName }) => ({

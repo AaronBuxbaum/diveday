@@ -2305,7 +2305,7 @@ new domain concept, define it here in the same PR.
   no cards, sizes, date of birth, contact or email (the shared address stays with the record that
   owns it, and is refused if typed). What the staffer types about the person in front of them
   lands on the new record (issue #2081): a **date of birth** or the staffer's **"They're 18 or
-  older"** (H-99), one of the two on every departure and the date itself when a moving seat is on a
+  older"** (H-100), one of the two on every departure and the date itself when a moving seat is on a
   course with a minimum age, because the age check and the guardian co-signature rule both read the
   date and fail open without one (the tick is filed with who gave it, `people.adult_attested_at`),
   and an optional **email or phone** for sending their own waiver. When

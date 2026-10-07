@@ -562,7 +562,7 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
 
   /**
    * **"Different person" asks who the new diver is** (issue #2081): a date of
-   * birth or a "They're 18 or older" tick (H-99), the date itself on a course
+   * birth or a "They're 18 or older" tick (H-100), the date itself on a course
    * with a minimum age, and an optional email or
    * phone. Every box but the name starts empty: nothing of the matched
    * record's is offered as the new diver's.
@@ -584,7 +584,7 @@ describe("an unconfirmed identity withholds the matched person's record", () => 
       const optionalDate = document.querySelector<HTMLInputElement>('input[name="dateOfBirth"]');
       expect(optionalDate).not.toBeNull();
       expect(optionalDate?.required).toBe(false);
-      // H-99: the other answer, one tap for an adult; the writer refuses neither.
+      // H-100: the other answer, one tap for an adult; the writer refuses neither.
       const tick = document.querySelector<HTMLInputElement>('input[name="adultAttested"]');
       expect(tick?.type).toBe("checkbox");
       expect(tick?.checked).toBe(false);

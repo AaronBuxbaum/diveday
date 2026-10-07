@@ -1616,7 +1616,7 @@ describe("createBooking identity safeguard (H-13)", () => {
       });
 
       /**
-       * **A blank date never reads as an adult on its own** (H-99, issue
+       * **A blank date never reads as an adult on its own** (H-100, issue
        * #2143). The split is for someone who is not the matched diver, and the
        * usual one is a minor booked with a parent's email: on a plain charter
        * the date used to be optional, and a record with none passes the

@@ -513,7 +513,7 @@ export const people = pgTable(
     dateOfBirth: date("date_of_birth", { mode: "string" }),
     /**
      * **When a staffer said, at the counter, that this person is 18 or older**
-     * without giving a date of birth (H-99, issue #2143). Written only by
+     * without giving a date of birth (H-100, issue #2143). Written only by
      * `splitBookingIdentity`: a held seat split into a new diver must carry a
      * date or this answer, because the split exists for a person who is *not*
      * the matched diver, and the common case is a minor booked with a parent's

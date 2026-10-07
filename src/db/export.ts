@@ -1139,7 +1139,7 @@ export async function loadShopExportBundleInput(
             // rather than dumps, resolves the pair down to one cell.
             "no_certification_cleared_at",
             "no_certification_cleared_by_person_id",
-            // A staffer's "18 or older" at a split, and whose (H-99): the age
+            // A staffer's "18 or older" at a split, and whose (H-100): the age
             // answer the guardian rule read when no date was on file.
             "adult_attested_at",
             "adult_attested_by_person_id",

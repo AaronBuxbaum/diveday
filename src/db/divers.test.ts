@@ -178,7 +178,7 @@ describe("person-first diver records", () => {
   });
 
   /**
-   * H-99, dive-domain review: once a date answers the age question, a
+   * H-100, dive-domain review: once a date answers the age question, a
    * staffer's earlier "18 or older" goes, so clearing the date later cannot
    * bring back an adult claim the date may have disproved.
    */
