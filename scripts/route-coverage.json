@@ -332,6 +332,10 @@
     "visual": ["divers", "divers-removed"],
     "a11y": ["a11y.spec.ts"]
   },
+  "/shop/[shopSlug]/divers/[personId]/merge/[survivorId]": {
+    "e2e": ["diver-merge.spec.ts"],
+    "visual": ["diver-merge-preview"]
+  },
   "/shop/[shopSlug]/divers/[personId]/waivers/[recordId]": {
     "e2e": ["waivers.spec.ts"],
     "visual": ["diver-signed-waiver"]

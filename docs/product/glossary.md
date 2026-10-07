@@ -2339,6 +2339,22 @@ new domain concept, define it here in the same PR.
   (owner or manager), which re-seals each verified release it moves as integrity **version 3**
   (who moved it, when, from which record) so it does not read as tampered. Trail lines on the departure (`identity_split`) and on the matched diver's
   record (`identity_split_off`).
+- **Merge (two diver records)** — the shop saying two records are one diver, and the record kept
+  taking everything the other held (`mergeDiverRecords`, `src/db/diver-merge.ts`; issue #1240).
+  Owner or manager only. A **likely duplicate** is offered on the record and flagged on the roster
+  when two live records share one mailbox (a `+tag`, or Gmail's dots, folded away), one phone, or
+  one name with no disagreeing date of birth; two records under one name with *different* dates
+  are two people and are never offered on the name (`src/lib/diver-duplicates.ts`). Every merge
+  goes through a side-by-side **merge preview** (`divers/[personId]/merge/[survivorId]`): both
+  records' particulars, what each holds, and a choice wherever they disagree (name, date of birth,
+  email, phone, emergency contact as one pair, rental sizes as one profile), the kept record's value
+  preselected. A departure both records sit on refuses the merge until staff resolve the seat; two
+  different dates of birth, or signed releases signed under names that do not match, mean the two
+  may be **two people**, and the merge runs only after the staffer ticks that they checked. Every
+  signed release and medical answer moves, re-sealed as integrity version 3; none is dropped. The
+  record merged away is deleted with a pointer to the one kept (`people.merged_into_person_id`), so
+  its old links land on the kept record, and the kept record's trail says who merged which name
+  into it (`diver_merged`).
 - **Remove vs. erase (a diver)** — two different operations, deliberately not the same button.
   **Removing** a diver is the reversible archive action every entity has
   ([20260719-crud-archive-semantics](../architecture/decisions/20260719-crud-archive-semantics.md)):

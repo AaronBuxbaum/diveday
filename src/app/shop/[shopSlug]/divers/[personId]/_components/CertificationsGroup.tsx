@@ -394,7 +394,9 @@ export function CertificationsGroup({
                   ? t("divers.certifications.shopIssuedNoNumberLabel")
                   : card.identifier}
             {isShopIssuedCard(card) ? <> · {t("divers.certifications.shopIssuedLabel")}</> : null}
-            {awaiting || needsImportConfirm(card) ? <AgencyCheckLink agency={card.agency} t={t} /> : null}
+            {awaiting || needsImportConfirm(card) ? (
+              <AgencyCheckLink agency={card.agency} t={t} />
+            ) : null}
             {card.reviewNote ? <span className="block italic">{card.reviewNote}</span> : null}
             {card.reviewedAt && card.reviewedByName ? (
               <span className="block">

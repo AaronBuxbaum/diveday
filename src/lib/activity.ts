@@ -63,6 +63,12 @@ type ActivityParamShapes = {
   identity_split: { actor: string; diver: string };
   /** The same split, on the record the seat left; `diver` is that record's name. */
   identity_split_off: { actor: string; diver: string };
+  /**
+   * Two records were merged into one, on the record kept: `diver` is its name
+   * after the merge, `merged` the name the other record carried
+   * (`mergeDiverRecords`). The merged record's own lines stay on it.
+   */
+  diver_merged: { actor: string; diver: string; merged: string };
   /** A seat was taken off a departure. */
   booking_removed: { actor: string; diver: string };
   /** …and put back. */

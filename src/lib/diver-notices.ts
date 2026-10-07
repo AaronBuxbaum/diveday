@@ -376,6 +376,11 @@ const NOTICE_KEYS: DiverNoticeMap = {
     tone: "danger",
     key: "divers.notices.mergeRecordConflict",
   },
+  "merge-different-people-unacknowledged": {
+    form: "merge",
+    tone: "danger",
+    key: "divers.notices.mergeDifferentPeopleUnacknowledged",
+  },
 
   // Book an activity. Every code below is emitted only by the seating path, so
   // none of them needs an explicit `?form=` to find its way home.

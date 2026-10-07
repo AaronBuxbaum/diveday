@@ -1,12 +1,8 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { MergeDiver } from "./MergeDiver";
-
-vi.mock("../actions", () => ({
-  mergeDiverAction: Object.assign(() => {}, { bind: () => () => {} }),
-}));
 
 afterEach(cleanup);
 
@@ -16,7 +12,7 @@ const candidates = [
     fullName: "Maya Rivera",
     email: "maya@example.test",
     phone: "+13055550142",
-    reasons: ["same_name" as const],
+    reasons: ["same_email" as const, "same_name_and_birth_date" as const],
   },
   {
     id: "22222222-2222-4222-8222-222222222222",
@@ -26,45 +22,40 @@ const candidates = [
     reasons: ["same_phone" as const],
   },
 ];
+const personId = "33333333-3333-4333-8333-333333333333";
+
+function renderPanel(list = candidates) {
+  return render(
+    <MergeDiver
+      candidates={list}
+      shopSlug="blue-mantis"
+      personId={personId}
+      t={staffTranslator("en-US")}
+    />,
+  );
+}
 
 /**
- * The panel used to head its list with the record being viewed, checked by
- * default -- and the form posts one id which the action always merges the
- * route's diver *into*, so that option posted `survivorId === personId` and was
- * refused outright. An owner who left the default alone was told to choose one
- * of the duplicates, which is what they had done.
+ * Nothing merges from the record any more. Each likely duplicate is a door to
+ * the side-by-side preview, where the staffer chooses which record to keep and
+ * which value wins; a panel that merged on one tap from here had no room to
+ * show what moves.
  */
-describe("the merge-diver panel", () => {
-  it("offers only the duplicates, so every choice is a merge that can run", () => {
-    render(
-      <MergeDiver
-        candidates={candidates}
-        shopSlug="blue-mantis"
-        personId="33333333-3333-4333-8333-333333333333"
-        t={staffTranslator("en-US")}
-      />,
+describe("the possible duplicates panel", () => {
+  it("opens the preview for each duplicate, never for the record itself", () => {
+    renderPanel();
+    const links = screen.getAllByRole("link", { name: /Compare with/ });
+    expect(links.map((link) => link.getAttribute("href"))).toEqual(
+      candidates.map((c) => `/shop/blue-mantis/divers/${personId}/merge/${c.id}`),
     );
-
-    const radios = screen.getAllByRole("radio") as HTMLInputElement[];
-    expect(radios.map((radio) => radio.value)).toEqual(candidates.map((c) => c.id));
-    expect(radios.map((radio) => radio.value)).not.toContain(
-      "33333333-3333-4333-8333-333333333333",
-    );
+    expect(screen.queryAllByRole("radio")).toHaveLength(0);
+    expect(screen.queryByRole("button")).toBeNull();
   });
 
-  it("pre-selects a duplicate rather than an option that cannot run", () => {
-    render(
-      <MergeDiver
-        candidates={candidates}
-        shopSlug="blue-mantis"
-        personId="33333333-3333-4333-8333-333333333333"
-        t={staffTranslator("en-US")}
-      />,
-    );
-
-    const checked = (screen.getAllByRole("radio") as HTMLInputElement[]).filter((r) => r.checked);
-    expect(checked).toHaveLength(1);
-    expect(checked[0]?.value).toBe(candidates[0]?.id);
+  it("says why each record was offered", () => {
+    renderPanel();
+    expect(screen.getByText("Same email · Same name and date of birth")).toBeVisible();
+    expect(screen.getByText("Same phone number")).toBeVisible();
   });
 
   /**
@@ -74,29 +65,14 @@ describe("the merge-diver panel", () => {
    * eleven digits (#1712).
    */
   it("groups a candidate's stored number for the eye comparing them", () => {
-    render(
-      <MergeDiver
-        candidates={candidates}
-        shopSlug="blue-mantis"
-        personId="33333333-3333-4333-8333-333333333333"
-        t={staffTranslator("en-US")}
-      />,
-    );
-
+    renderPanel();
     expect(screen.getByText("maya@example.test · +1 305 555 0142")).toBeVisible();
     expect(screen.getByText("+1 305 555 0142")).toBeVisible();
     expect(screen.queryByText(/\+13055550142/)).toBeNull();
   });
 
-  it("renders nothing to merge when the roster found no duplicates", () => {
-    render(
-      <MergeDiver
-        candidates={[]}
-        shopSlug="blue-mantis"
-        personId="33333333-3333-4333-8333-333333333333"
-        t={staffTranslator("en-US")}
-      />,
-    );
-    expect(screen.queryAllByRole("radio")).toHaveLength(0);
+  it("renders nothing to compare when the roster found no duplicates", () => {
+    renderPanel([]);
+    expect(screen.queryAllByRole("link")).toHaveLength(0);
   });
 });

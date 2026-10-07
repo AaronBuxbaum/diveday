@@ -10,10 +10,12 @@ import {
 import { fileScopedShopContext } from "@/test/db";
 import {
   DIVER_HISTORY_TABLES,
+  DIVER_MERGE_COUNT_GROUPS,
   listDiverMergeCandidates,
   listDiverMergeDuplicateIds,
   mergeDiverRecords,
   PERSON_COLUMNS_DELIBERATELY_UNMOVED,
+  PERSON_REFERENCES_OUTSIDE_THE_NAMING_CONVENTION,
   PERSON_TABLES_DELIBERATELY_UNMOVED,
   STAFF_HISTORY_TABLES,
   STAFF_PERSON_ONLY_TABLES,
@@ -327,6 +329,67 @@ describe("every person_id column in the schema has a merge answer", () => {
     const classified = new Set<string>(Object.keys(PERSON_COLUMNS_DELIBERATELY_UNMOVED));
     expect(inSchema.filter((pair) => !classified.has(pair))).toEqual([]);
     expect([...classified].filter((pair) => !inSchema.includes(pair)).sort()).toEqual([]);
+  });
+
+  /**
+   * The two cases above find a person column by its *name*. A foreign key to
+   * `people` under any other name (`guardian_id`, `instructor_id`, a column a
+   * future table calls `diver_id`) would slip past both, so this one asks the
+   * catalog for the constraints themselves: every column that references
+   * `people` must have a merge answer, whatever it is called.
+   */
+  it("classifies every foreign key that references people, whatever its column is called", async () => {
+    const { db } = await seededShopContext();
+    const result = await db.execute(sql`
+      select cl.relname as table_name, att.attname as column_name
+      from pg_constraint con
+      join pg_class cl on cl.oid = con.conrelid
+      join pg_class ref on ref.oid = con.confrelid
+      join pg_namespace ns on ns.oid = cl.relnamespace
+      cross join lateral unnest(con.conkey) as k(attnum)
+      join pg_attribute att on att.attrelid = con.conrelid and att.attnum = k.attnum
+      where con.contype = 'f' and ref.relname = 'people' and ns.nspname = 'public'
+      order by 1, 2
+    `);
+    const foreignKeys = result.rows.map((row) => {
+      const { table_name, column_name } = row as { table_name: string; column_name: string };
+      return { table: table_name, column: column_name };
+    });
+    expect(foreignKeys.length).toBeGreaterThan(20);
+
+    const bareTables = new Set<string>([
+      ...DIVER_HISTORY_TABLES,
+      ...STAFF_HISTORY_TABLES,
+      ...STAFF_PERSON_ONLY_TABLES,
+      ...Object.keys(PERSON_TABLES_DELIBERATELY_UNMOVED),
+    ]);
+    const unanswered = foreignKeys
+      .filter(({ table, column }) =>
+        column === "person_id"
+          ? !bareTables.has(table)
+          : !(`${table}.${column}` in PERSON_COLUMNS_DELIBERATELY_UNMOVED) &&
+            !(`${table}.${column}` in PERSON_REFERENCES_OUTSIDE_THE_NAMING_CONVENTION),
+      )
+      .map(({ table, column }) => `${table}.${column}`);
+    expect(unanswered).toEqual([]);
+    // And the outside-the-convention list names only references that exist.
+    const present = new Set(foreignKeys.map(({ table, column }) => `${table}.${column}`));
+    expect(
+      Object.keys(PERSON_REFERENCES_OUTSIDE_THE_NAMING_CONVENTION).filter(
+        (pair) => !present.has(pair),
+      ),
+    ).toEqual([]);
+  });
+
+  /**
+   * The preview's counts are the whole of what moves only if every moved
+   * table is counted, once. A table added to the moved list and forgotten here
+   * would move rows the staffer was never shown.
+   */
+  it("counts every moved table in exactly one preview group", () => {
+    const grouped: string[] = Object.values(DIVER_MERGE_COUNT_GROUPS).flat();
+    expect([...grouped].sort()).toEqual([...DIVER_HISTORY_TABLES].sort());
+    expect(new Set(grouped).size).toBe(grouped.length);
   });
 
   /**

@@ -5054,10 +5054,9 @@ for (const scheme of ["light", "dark"] as const) {
 
       /**
        * The explicit duplicate-resolution surface: create a second record for
-       * a seeded diver, then photograph the owner/manager's survivor choice.
-       * This keeps the warning, match reasons, radio controls, and one primary
-       * merge action in the visual suite without making the demo seed itself a
-       * duplicate. The per-test reset removes the temporary record afterward.
+       * a seeded diver, then photograph the possible-duplicates panel: each
+       * likely duplicate, why it was offered, and its door to the merge
+       * preview, without making the demo seed itself a duplicate. The per-test reset removes the temporary record afterward.
        */
       test(`a possible duplicate record renders true to the design (${scheme})`, async ({
         page,
@@ -5077,6 +5076,30 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Possible duplicate records" }).waitFor();
         await page.mouse.move(0, 0);
         await capture(page, "diver-profile-merge", scheme);
+      });
+
+      /**
+       * **The merge preview** (issue #1240): the two records side by side, the
+       * fields they disagree on as choices with the kept record's preselected,
+       * what moves, and the one danger action. Reached the way a staffer
+       * reaches it, from the duplicate made at the counter above; the per-test
+       * reset removes the temporary record afterward.
+       */
+      test(`the merge preview renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/divers/new");
+        await page.getByRole("heading", { level: 1, name: "Add a diver" }).waitFor();
+        await page.getByLabel("Full name").fill("Priya Sharma");
+        await page.getByLabel("Email").fill("priya.duplicate@example.com");
+        await page.getByLabel("Phone").fill("+1 305 555 0999");
+        await page.getByRole("button", { name: "Add diver", exact: true }).click();
+        await page.getByRole("heading", { name: /^Is this the same Priya Sharma\?/ }).waitFor();
+        await page.getByRole("button", { name: "Create new diver anyway" }).click();
+        await page.getByRole("heading", { level: 1, name: "Priya Sharma" }).waitFor();
+        await page.getByRole("link", { name: "Compare with Priya Sharma" }).first().click();
+        await page.getByRole("heading", { level: 1, name: "Merge duplicate records" }).waitFor();
+        await page.getByRole("heading", { name: "What moves to the kept record" }).waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "diver-merge-preview", scheme);
       });
 
       /**

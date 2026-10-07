@@ -1,18 +1,34 @@
-import { SubmitButton } from "@/components/SubmitButton";
+import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
-import { radioClass, radioRingClass } from "@/components/ui/form";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
-import type { DiverMergeCandidate } from "@/db/diver-merge";
-import type { StaffTranslator } from "@/i18n/staff-messages";
+import type { DiverMergeCandidate, DiverMergeCandidateReason } from "@/db/diver-merge";
+import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { displayStoredPhoneWhole } from "@/lib/forgiving-fields";
-import { mergeDiverAction } from "../actions";
+import { shopPath } from "@/lib/staff-notices";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
+
+/** The words for why a record was offered, strongest signal first. */
+export const MERGE_REASON_KEYS: Record<DiverMergeCandidateReason, StaffMessageKey> = {
+  same_email: "divers.merge.sameEmail",
+  same_phone: "divers.merge.samePhone",
+  same_name_and_birth_date: "divers.merge.sameNameAndBirthDate",
+  same_name: "divers.merge.sameName",
+};
 
 function contactLine(email: string | null, phone: string | null, missing: string): string {
   return [email, displayStoredPhoneWhole(phone)].filter(Boolean).join(" · ") || missing;
 }
 
+/**
+ * **Likely duplicates of this diver**, each a door to the side-by-side merge
+ * preview (`merge/[survivorId]`). Nothing merges from here: the choice of which
+ * record to keep, and of which value wins where they disagree, is made on the
+ * preview, with both records and everything that moves in front of the staffer.
+ *
+ * Renders only for an owner or manager, and only when a candidate exists; the
+ * status slot stays so a refusal sent back here is still read.
+ */
 export function MergeDiver({
   candidates,
   shopSlug,
@@ -29,85 +45,40 @@ export function MergeDiver({
   if (candidates.length === 0) {
     return <DiverFormStatus status={status} className="mt-6" />;
   }
-  /**
-   * Candidates only. The record being viewed used to head this list, checked by
-   * default -- but the form posts one id and the action always merges the
-   * route's diver *into* it, so choosing "keep this record" posted
-   * `survivorId === personId`, which `mergeDiverRecords` refuses outright. The
-   * default option was the one option that could never work, and the refusal
-   * told the staffer to choose, which is what they had done.
-   */
-  const options = candidates.map((candidate) => ({
-    id: candidate.id,
-    name: candidate.fullName,
-    contact: contactLine(candidate.email, candidate.phone, t("divers.merge.noContact")),
-    reasons: candidate.reasons,
-  }));
-
   return (
     /* Flat, per 20260827-clearwater-surface-language decision 1: the panel
-       keeps its condition (it renders only when a candidate exists) and loses
-       its tinted fill — the warning line inside it is what carries the tone,
-       and a tint under a box that only appears when something is wrong is the
-       same fact twice. */
+       keeps its condition (it renders only when a candidate exists) and the
+       reasons carry the tone. */
     <section id="merge" aria-labelledby="merge-heading" className={sectionCardClass()}>
       <h2 id="merge-heading" className={SECTION_TITLE_CLASS}>
         {t("divers.merge.heading")}
       </h2>
-      <p className="mt-1 max-w-2xl text-sm text-muted">{t("divers.merge.description")}</p>
-      <p className="mt-3 max-w-2xl text-sm font-medium text-warning-strong">
-        {t("divers.merge.warning")}
-      </p>
-      <form
-        action={mergeDiverAction.bind(null, shopSlug, personId)}
-        className="mt-4 flex flex-col gap-3"
-      >
-        <fieldset className="grid gap-2">
-          <legend className="sr-only">{t("divers.merge.survivorLabel")}</legend>
-          {options.map((option, index) => (
-            <label
-              key={option.id}
-              className={`flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-surface p-3 has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary/20 ${radioRingClass}`}
-            >
-              <input
-                type="radio"
-                name="survivorId"
-                value={option.id}
-                defaultChecked={index === 0}
-                required
-                className={`${radioClass} mt-1`}
-              />
-              <span className="min-w-0">
-                <span className="block font-medium">
-                  {t("divers.merge.keepCandidate", { name: option.name })}
-                </span>
-                <span className="mt-0.5 block text-sm text-muted">{option.contact}</span>
-                {option.reasons.length > 0 ? (
-                  <span className="mt-1 block text-xs text-warning-strong">
-                    {option.reasons
-                      .map((reason) =>
-                        reason === "same_phone"
-                          ? t("divers.merge.samePhone")
-                          : t("divers.merge.sameName"),
-                      )
-                      .join(" · ")}
-                  </span>
-                ) : null}
-              </span>
-            </label>
-          ))}
-        </fieldset>
-        <div className="flex flex-wrap items-center gap-3">
-          <SubmitButton
-            pendingLabel={t("divers.merge.pending")}
-            confirmMessage={t("divers.merge.confirm")}
-            className={buttonClass({ variant: "danger-ghost" })}
+      <ul className="mt-4 grid gap-2">
+        {candidates.map((candidate) => (
+          <li
+            key={candidate.id}
+            className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface p-3"
           >
-            {t("divers.merge.submit")}
-          </SubmitButton>
-          <DiverFormStatus status={status} />
-        </div>
-      </form>
+            <span className="min-w-0">
+              <span className="block font-medium">{candidate.fullName}</span>
+              <span className="mt-0.5 block text-sm text-muted">
+                {contactLine(candidate.email, candidate.phone, t("divers.merge.noContact"))}
+              </span>
+              <span className="mt-1 block text-xs text-warning-strong">
+                {candidate.reasons.map((reason) => t(MERGE_REASON_KEYS[reason])).join(" · ")}
+              </span>
+            </span>
+            <Link
+              href={shopPath(shopSlug, "divers", personId, "merge", candidate.id)}
+              aria-label={t("divers.merge.compareWith", { name: candidate.fullName })}
+              className={buttonClass({ variant: "secondary", size: "sm" })}
+            >
+              {t("divers.merge.compare")}
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <DiverFormStatus status={status} className="mt-3" />
     </section>
   );
 }

@@ -17,6 +17,19 @@ Every public "Get set up" door, which used to be a mail to `onboarding@dive.day`
 
 A nightly cron (`/api/cron/founder-metrics`) records each real shop's activation milestones in `shop_milestones` (first departure, first public booking, first self-signed waiver, first roll call, and the first paid month, which the billing webhook records) and logs the north star, dive days run end to end per week. On Mondays it mails `FOUNDER_DIGEST_EMAIL` last week's north star, demo entries and set-up requests by source, and each shop stalled 7 or more days, reported once ([ADR 20261007-founder-metrics](../architecture/decisions/20261007-founder-metrics.md)).
 
+## Merging duplicate divers, and checking a card with its agency (delivered 2026-10-07)
+
+Market audit items 30 and 38. A diver record's likely duplicates (same mailbox, same phone, or same
+name without a disagreeing birth date) each open a side-by-side merge preview at
+`divers/[personId]/merge/[survivorId]`: both records, the fields they disagree on as choices, what
+moves, the departures that block it, and an acknowledgement when the two may be two people. One
+transaction moves everything, keeps every signed release and medical answer, and leaves a pointer
+so old links land on the kept record (glossary "Merge (two diver records)"; `diver-merge.test.ts`
+asks the catalog for every foreign key to `people`). A card waiting for a check carries **Check
+with <agency>**, a link to that agency's own public lookup (SSI, NAUI, SDI, TDI, CMAS, GUE), from
+`src/lib/agency-verification.ts`; PADI's lookup is member-only, so it has none (H-10 amendment in
+[20260721-manual-certification](../architecture/decisions/20260721-manual-certification.md)).
+
 ## A page for every feature (delivered 2026-10-05)
 
 H-93. Twelve feature pages under `/product/<feature>` (online booking, the shop's website, waivers

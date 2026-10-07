@@ -14,7 +14,7 @@ import {
   loadActiveStaffRoles,
 } from "@/db/authz";
 import { type AppDb, getDb } from "@/db/client";
-import { mergeDiverRecords } from "@/db/diver-merge";
+import { DIVER_MERGE_FIELDS, type DiverMergeChoices, mergeDiverRecords } from "@/db/diver-merge";
 import {
   deleteDiver,
   getDiverProfile,
@@ -1220,10 +1220,14 @@ const MEDICAL_CLEARANCE_NOTICES: Record<
 };
 
 /**
- * Merge the route's diver with one of its explicitly surfaced candidates.
- * The posted survivor id is untrusted and the domain transaction checks the
- * shop, active state, diver role, booking collision, and live owner/manager
- * authorization again before moving anything.
+ * Merge the route's diver into the record posted as `survivorId`, from the
+ * side-by-side preview (`merge/[survivorId]`). Every posted value is untrusted:
+ * the survivor id is parsed as a uuid, each field choice is read only as
+ * `"source"` (anything else keeps the kept record's value), and the domain
+ * transaction checks the shop, both records' state, the diver role, a shared
+ * departure, the different-people acknowledgement and live owner/manager
+ * authorization again before moving anything. A refusal lands back on the
+ * preview beside the button, so the staffer reads it where they decided.
  */
 export async function mergeDiverAction(shopSlug: string, personId: string, formData: FormData) {
   const context = await requireDiverActionContext(
@@ -1239,9 +1243,13 @@ export async function mergeDiverAction(shopSlug: string, personId: string, formD
     return;
   }
   const survivorId = uuidParam(String(formData.get("survivorId") ?? ""));
-  if (!survivorId) {
+  if (!survivorId || survivorId === personId) {
     revalidateAndRedirect(base, backTo(base, "merge-invalid", "merge"));
     return;
+  }
+  const choices: DiverMergeChoices = {};
+  for (const field of DIVER_MERGE_FIELDS) {
+    if (formData.get(`keep_${field}`) === "source") choices[field] = "source";
   }
 
   const result = await mergeDiverRecords({
@@ -1250,18 +1258,20 @@ export async function mergeDiverAction(shopSlug: string, personId: string, formD
     personId,
     survivorId,
     actorPersonId: staff.user.personId,
+    choices,
+    acknowledgeDifferentPeople: formData.get("acknowledgeDifferentPeople") === "yes",
   });
   if (!result.ok) {
-    const notice =
-      result.reason === "not_authorized"
-        ? "not-authorized-merge"
-        : result.reason === "not_found"
-          ? "merge-invalid"
-          : `merge-${result.reason}`;
-    revalidateAndRedirect(
-      base,
-      backTo(base, notice, notice === "not-authorized-merge" ? undefined : "merge"),
-    );
+    if (result.reason === "not_authorized") {
+      revalidateAndRedirect(base, backTo(base, "not-authorized-merge"));
+      return;
+    }
+    if (result.reason === "not_found") {
+      revalidateAndRedirect(base, backTo(base, "merge-invalid", "merge"));
+      return;
+    }
+    const preview = shopPath(staff.user.shopSlug, "divers", personId, "merge", survivorId);
+    revalidateAndRedirect(preview, noticeUrl(preview, `merge-${result.reason}`, { form: "merge" }));
     return;
   }
 
