@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { getIncidentExport } from "./incident-export";
 import { getTripManifest, recordCrewRollCall, recordRollCall } from "./manifests";
 import {
@@ -19,7 +19,7 @@ import { completeWaiver, issueWaiverRequest } from "./waivers";
 const clearAnswers = emptyMedicalAnswers(RSTC_QUESTIONNAIRE);
 
 async function exportContext() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
@@ -33,6 +33,10 @@ async function exportContext() {
   if (!owner || !crew) throw new Error("demo shop needs an owner and a non-owner staff member");
   return { db, shop, reef, staff: owner.person, nonOwner: crew.person };
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 describe("incident-ready export assembly (in-memory PGlite)", () => {
   it("collects the roster, full roll-call history, evidence, and a reproducible hash", async () => {

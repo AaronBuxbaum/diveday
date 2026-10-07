@@ -1,6 +1,6 @@
 ---
 name: switching-pages
-description: Add or edit a competitive switching guide (/switching, /switching/[competitor], /switching/spreadsheet) — new incumbent guide, coexist-led channel guide, or edits to an existing one. Use whenever the task names an incumbent (EVE, DiveShop360, Smartwaiver, FareHarbor, Rezdy, Checkfront, …) or touches src/lib/migration-guides.ts.
+description: Add or edit a competitive switching guide (/switching/*, src/lib/migration-guides.ts). Use when a task names an incumbent (EVE, DiveShop360, Smartwaiver, FareHarbor, Rezdy, Checkfront, …).
 ---
 
 # Switching-guide work

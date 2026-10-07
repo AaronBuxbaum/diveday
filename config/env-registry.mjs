@@ -65,6 +65,15 @@
  * are CI's, not the application's.
  */
 
+/**
+ * Whether being absent is legitimate. Every row says what its absence switches
+ * off (`absent`), and for nearly all of them that is a supported state -- a
+ * local run has no Stripe account and nowhere to ship logs. A row marked
+ * `requiredInProduction: true` is the exception: its absence from a production
+ * deployment is a security gap, not a feature turned off, so
+ * `pnpm check:env` refuses it when run with VERCEL_ENV=production.
+ */
+
 const LOCAL = ["local"];
 const VERCEL = ["vercel"];
 const LOCAL_AND_VERCEL = ["local", "vercel"];
@@ -155,6 +164,25 @@ export const ENV_GROUPS = [
         targets: LOCAL_AND_VERCEL,
         absent:
           "both alerts go to the ALERT_EMAIL mailbox in src/lib/platform-mail.ts, which is the right answer for every deployment that *is* DiveDay. Only a fork, a staging deploy, or a self-hosted instance has one to set",
+      },
+    ],
+  },
+  {
+    doc: [
+      "Who reads the founder's Monday digest: last week's north star, demo entries",
+      "and set-up requests by source, and shops stalled between activation steps",
+      "(ADR 20261007-founder-metrics). A person's address, not a shared mailbox,",
+      "which is why it is configuration rather than a constant. Not a secret.",
+    ],
+    keys: [
+      {
+        key: "FOUNDER_DIGEST_EMAIL",
+        from: "manual",
+        // Vercel only: the cron that sends it runs there, and a workstation has
+        // no business mailing the founder a digest of its dev database.
+        targets: VERCEL,
+        absent:
+          "the nightly founder-metrics run still computes and logs the numbers, but no digest is sent",
       },
     ],
   },
@@ -255,6 +283,42 @@ export const ENV_GROUPS = [
         targets: LOCAL_AND_VERCEL,
         absent:
           'orders work but paid/void status only updates via the manual "Refresh status" action',
+      },
+    ],
+  },
+  {
+    doc: [
+      "DiveDay's own subscription billing: what a shop pays DiveDay, on DiveDay's own",
+      "Stripe account (ADR 20261007-subscription-billing). Deliberately separate from the",
+      "STRIPE_* Connect keys above, which move divers' money to shops: a restricted key",
+      "here (Customers, Checkout Sessions, Customer Portal sessions: write) cannot touch a",
+      "connected account. BILLING_STRIPE_WEBHOOK_SECRET signs /api/webhooks/billing,",
+      "configured on the account itself (not Connected accounts) for",
+      "checkout.session.completed, customer.subscription.created/updated/deleted and",
+      "invoice.paid. BILLING_STRIPE_PRICE_ID is the one recurring monthly price. All three",
+      "or none: until every one is set, Settings > Billing says billing is not turned on",
+      "and the webhook answers 503. The steps are in docs/engineering/manual-actions.md",
+      "(stripe-billing-setup). Keep them in 1Password; they reach Vercel from .env.manual.",
+    ],
+    keys: [
+      {
+        key: "BILLING_STRIPE_SECRET_KEY",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "Settings > Billing says billing is not turned on yet; nothing is charged",
+      },
+      {
+        key: "BILLING_STRIPE_WEBHOOK_SECRET",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent:
+          "billing counts as not turned on; /api/webhooks/billing answers 503 so Stripe keeps retrying",
+      },
+      {
+        key: "BILLING_STRIPE_PRICE_ID",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "billing counts as not turned on; there is nothing to subscribe to",
       },
     ],
   },
@@ -493,6 +557,36 @@ export const ENV_GROUPS = [
         targets: LOCAL_AND_VERCEL,
         absent:
           "the endpoint is unavailable (503), so nothing can trigger reminder sends by accident",
+      },
+    ],
+  },
+  {
+    doc: [
+      "The distributed rate-limit store (ADR 20260801-distributed-rate-limit-store):",
+      "an Upstash Redis database's REST URL and token, read by src/lib/rate-limit.ts.",
+      "Vercel's Upstash integration sets both on the project; otherwise paste them",
+      "from the Upstash console. Vercel only: a local run, the e2e fleet and CI use",
+      "the in-process store on purpose. Absent in production, every limit is per",
+      "serverless instance and so multiplied by however many are warm -- the app",
+      "logs rate_limit.memory_store_in_production once per instance, and",
+      "`pnpm check:env` fails when it runs with VERCEL_ENV=production and either",
+      "is unset.",
+    ],
+    keys: [
+      {
+        key: "UPSTASH_REDIS_REST_URL",
+        from: "manual",
+        targets: VERCEL,
+        requiredInProduction: true,
+        absent:
+          "rate limits fall back to a per-instance in-memory store, so sign-in, password reset and public booking limits are bypassable by fan-out",
+      },
+      {
+        key: "UPSTASH_REDIS_REST_TOKEN",
+        from: "manual",
+        targets: VERCEL,
+        requiredInProduction: true,
+        absent: "as UPSTASH_REDIS_REST_URL",
       },
     ],
   },
@@ -781,6 +875,10 @@ export const isStackProduced = (key) => {
   const from = byKey.get(key)?.from;
   return from === "stack" || from === "derived";
 };
+
+/** Keys a production deployment must carry; see `requiredInProduction` above. */
+export const keysRequiredInProduction = () =>
+  ENV_ENTRIES.filter((entry) => entry.requiredInProduction === true).map((entry) => entry.key);
 
 /** Whether a target file carries this key at all. */
 export const goesTo = (key, target) => Boolean(byKey.get(key)?.targets.includes(target));

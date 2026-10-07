@@ -13,7 +13,7 @@
 //     SQL to be reviewed once.
 //
 //  2. A whole-file read of a large source file. Claude's `Read` returns up to 2,000 lines
-//     when no range is given, so `src/db/schema.ts` (8,700 lines) costs roughly 25,000
+//     when no range is given, so the old one-file `src/db/schema.ts` (8,700 lines) cost roughly 25,000
 //     tokens per open and answers a question that Grep answers in fifty. AGENTS.md says
 //     "locate symbols with search and read the narrow surrounding range instead of opening
 //     large files"; this makes the range the default path for any file over LARGE_FILE_LINES.
@@ -35,7 +35,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 /** A whole-file read past this many lines is refused without an explicit range. */
-export const LARGE_FILE_LINES = 600;
+export const LARGE_FILE_LINES = 900;
 
 /** Generated artifacts that are never read whole, with the reason each one is refused. */
 const GENERATED = [
@@ -45,7 +45,7 @@ const GENERATED = [
   },
   {
     match: (relative) => relative.startsWith("drizzle/") && !relative.endsWith("migration.sql"),
-    why: "`drizzle/` is generated from `src/db/schema.ts`, which is the source of truth for the schema (the one exception, a migration's own `migration.sql`, stays readable)",
+    why: "`drizzle/` is generated from `src/db/schema/` (one module per domain), which is the source of truth for the schema (the one exception, a migration's own `migration.sql`, stays readable)",
   },
   {
     match: (relative) => relative.startsWith(".next/"),

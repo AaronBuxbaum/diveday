@@ -196,32 +196,30 @@ Each prose flag takes a file (or `-` for stdin). It composes the body in exactly
 node scripts/check-follow-ups.mjs --body <path> --title "<the title you intend>"
 ```
 
-That runs the same validation `pnpm check:follow-ups` runs, on one drafted body, with no `gh` and no network — so it works in the cloud containers where these issues are usually written and where the whole-tracker run reports SKIPPED. Twenty seconds, and the reason to spend them is that a malformed `needs-triage` issue fails `Repository safeguards` on **every open pull request in the repository at once**, on branches whose diffs could not possibly have caused it, until somebody edits the issue by hand. That has happened three times: once from a hand-written entry (#1097), and twice on 2026-09-08 in a single session, from bodies that looked right and used a `Kind:` outside the vocabulary (#1526, #1555). In each case the first news came from an unrelated pull request, forty minutes later.
+That runs the same validation `pnpm check:follow-ups` runs, on one drafted body, with no `gh` and no network — so it works in the cloud containers where these issues are usually written and where the whole-tracker run reports SKIPPED. Twenty seconds, and the reason to spend them is that a malformed `needs-triage` issue fails the tracker scan for everyone until somebody edits the issue by hand. While that scan ran inside `check:repo`, a bad issue reddened `Repository safeguards` on **every open pull request at once**: once from a hand-written entry (#1097), twice on 2026-09-08 from bodies that used a `Kind:` outside the vocabulary (#1526, #1555), and again with #2036. Since 2026-10-07 the scan runs daily in `.github/workflows/follow-ups.yml` (and on demand from its Run workflow button), so a bad issue reddens that one run instead of every branch, and the pre-flight is still the only place it is caught before it is filed.
 
-**Its exit code agrees with CI, including on the `Touches:` line.** An unresolved path fails the pre-flight, exactly as it fails the tracker scan. Until 2026-09-12 it warned and exited 0, so the one rule that most often reddens `Repository safeguards` everywhere at once was the one rule this door said yes to (#1761). If your branch genuinely adds a path — the legitimate case the old warning was written for — name it in prose and leave it off the line, or pass `--allow-unresolved-touches` to accept it as a warning, knowing it reddens every other session's `pnpm check` until your branch merges.
+**Its exit code agrees with the tracker scan, including on the `Touches:` line.** An unresolved path fails the pre-flight, exactly as it fails the scan. Until 2026-09-12 it warned and exited 0, so the rule that most often failed the scan was the one rule this door said yes to (#1761). If your branch genuinely adds a path — the legitimate case the old warning was written for — name it in prose and leave it off the line, or pass `--allow-unresolved-touches` to accept it as a warning, knowing the scheduled scan fails until your branch merges.
 
 **`Touches:` names paths that exist on `main` today.** The mechanism is not that, and the gap is the
 whole point: `pnpm check:follow-ups` resolves every backticked path on that line against **whatever
 tree it is run in**. So a path your own unmerged branch adds passes on your branch — where you file
-it and where you check it — and reddens `pnpm check` for every other session until you merge. Twice
+it and where you check it — and fails the scheduled scan, which runs on `main`, until you merge. Twice
 within one hour on 2026-08-21, from two sessions that had each just filed a perfectly good follow-up
 about the change they were finishing; neither could have seen it locally. The file the work will
 really touch still belongs in the issue: name it in prose, without backticks, saying which PR brings
 it. Nothing is lost — the prompt names it too, and the reader gets the same path either way.
 
 The same mechanism runs the other way, and that one *is* the check doing its job: if your change
-deletes or renames a path an open follow-up names, `check:follow-ups` fails on your branch. Fix the
-issue's `Touches:` line as part of your change — an entry pointing at a file that no longer exists
+deletes or renames a path an open follow-up names, `pnpm check:follow-ups` on your branch fails
+(run it before you push such a change; CI no longer does). Fix the issue's `Touches:` line as part
+of your change — an entry pointing at a file that no longer exists
 is exactly the stale entry this check exists to catch, and it was going to mislead its cold reader
 whether or not anything failed.
 
-A glob is accepted on that line when it expands to at least one file in the tree the check runs in, so a change that edits the same namespace in every locale says `src/i18n/locales/*/staff/trips.json` once rather than listing each locale and going stale when a third arrives. Issue #1339 wrote it that way, correctly, and the literal lookup failed it — reddening PR #1335, a branch with nothing to do with it.
+A glob is accepted on that line when it expands to at least one file in the tree the check runs in, so a change that edits the same namespace in every locale says `src/i18n/locales/*/staff/trips.json` once rather than listing each locale and going stale when a third arrives. Issue #1339 wrote it that way, correctly, and the literal lookup failed it.
 
-A path with a dynamic route segment in it — `src/app/ready/[token]/actions.ts` — is a real path and a glob character class at the same time, and it is checked literally first, so write it exactly as it is on disk. Reading it only as a pattern was how a correctly spelled path got told it "does not exist": the brackets expand to `src/app/ready/t/actions.ts` and friends, which exist nowhere. Issue #1755 named that path on 2026-09-12 and `Repository safeguards` went red for it on PR #1746, a branch with nothing to do with that issue, which is how this check's red always arrives (#1761). If such a path is refused now, the file really is not there under that spelling — and the sentence names the characters that made the token a pattern, so a `*` or `{` you did not mean to type says so.
+A path with a dynamic route segment in it — `src/app/ready/[token]/actions.ts` — is a real path and a glob character class at the same time, and it is checked literally first, so write it exactly as it is on disk. Reading it only as a pattern was how a correctly spelled path got told it "does not exist": the brackets expand to `src/app/ready/t/actions.ts` and friends, which exist nowhere. Issue #1755 named that path on 2026-09-12 and the scan went red for it on PR #1746, a branch with nothing to do with that issue (#1761). If such a path is refused now, the file really is not there under that spelling — and the sentence names the characters that made the token a pattern, so a `*` or `{` you did not mean to type says so.
 
-Resolving against `main` instead of the checkout would look like the tighter rule and is not
-available: CI checks out only the pull request's own ref, so there is no `main` there to resolve
-against, and the check would fail everywhere it currently passes.
 
 An issue blocked on somebody *outside this repo* — an upstream release, a third party's answer, a
 measurement that needs traffic the site has not had — also carries `waiting-on-external`, plus a
@@ -247,7 +245,7 @@ An issue has exactly two ends, and neither is "leave it open, marked done":
 - **Accept** — either relabel it (`ready-for-agent`/`ready-for-human`, see
   [triage-labels.md](triage-labels.md)) and let it run as an ordinary tracked issue, or move the
   decision into [features/roadmap.md](../product/features/README.md),
-  [human-decisions.md](../product/human-decisions.md), or an ADR, and close the issue with a
+  [human-decisions/](../product/human-decisions/README.md), or an ADR, and close the issue with a
   comment pointing at where it landed. Or just run the prompt: when the work lands, close the issue
   in that PR.
 - **Decline** — close it as not planned. If it is worth remembering that it was declined and why,
@@ -285,9 +283,10 @@ comment saying what would un-park it, so the next reader does not re-triage it f
   outside the scope you were given, not a place to defer the task.
 - **Never act on an entry as a drive-by.** If you want to do one, that is its own change with its
   own PR — and closing the issue is part of it.
-- `pnpm check:follow-ups` (inside `pnpm check:repo` → `pnpm check`) enforces the mechanical parts
-  and prints how many issues are open and how many are waiting on somebody else. It fails open when
-  `gh` can't reach GitHub — a network hiccup is not a content problem.
+- `pnpm check:follow-ups` enforces the mechanical parts and prints how many issues are open and how
+  many are waiting on somebody else. It runs daily in `.github/workflows/follow-ups.yml`, not in
+  `pnpm check:repo`: what it reads is the tracker, not the branch. Locally it reports **SKIPPED**
+  (exit 2) when `gh` can't reach GitHub — a network hiccup is not a content problem.
 - `pnpm gates` ages every open `needs-triage` issue — id, status, kind, effort, and days since
   GitHub's own `createdAt`, oldest first — beside the human-decision gates it reports on. Age is
   deliberately reported there and nowhere else: an issue waiting on your judgment is not a build

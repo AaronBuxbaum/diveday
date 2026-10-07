@@ -1,6 +1,7 @@
 import { createHash, createHmac, randomBytes } from "node:crypto";
 import { z } from "zod";
 import { nowDate } from "../clock";
+import { log } from "../log";
 import type { ImageStorageProvider, ImageUpload, StoredImage } from "./index";
 
 const SERVICE = "s3";
@@ -153,7 +154,13 @@ export function s3ImageStorageProvider(
           : `https://${config.bucket}.s3.${config.region}.amazonaws.com/${key}`;
 
         return { status: "stored", url: publicUrl };
-      } catch {
+      } catch (error) {
+        // A thrown PUT (network, timeout) reads as `failed` exactly like a
+        // refused one; the line is what tells the two apart. The error's name
+        // only -- its message can carry the signed URL.
+        log("storage.upload_threw", "warn", {
+          errorCode: error instanceof Error ? error.name : "unknown_error",
+        });
         return { status: "failed" };
       }
     },

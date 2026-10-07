@@ -15,6 +15,7 @@
     "identity_confirmed_at_counter": "{actor} confirmó en el mostrador que esta reserva es de {diver}",
     "identity_split": "{actor} creó una ficha propia para {diver}: no era la persona a la que se había asociado la reserva",
     "identity_split_off": "{actor} quitó de la ficha de {diver} una reserva hecha con otro nombre",
+    "diver_merged": "{actor} unió la ficha de {merged} a la de {diver}",
     "crew_assigned": "{actor} asignó a {crew} a la tripulación",
     "crew_removed": "{actor} quitó a {crew} de la tripulación",
     "blowout_called": "{actor} canceló la salida por el clima",

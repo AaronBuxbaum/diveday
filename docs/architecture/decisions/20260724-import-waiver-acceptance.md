@@ -14,7 +14,7 @@ The contact importer (20260723) deliberately never imported a waiver or medical 
 'cleared' flag from another system is not clearance here." That was a considered fail-closed default,
 consistent with DiveDay's waiver domain rule that a signed release is safety and legal evidence
 (20260718-waiver-signature-retention) and with the still-open legal-policy gates H-01–H-03 in
-`docs/product/human-decisions.md` (jurisdiction, template wording, e-signature assurance level — none
+`docs/product/human-decisions/README.md` (jurisdiction, template wording, e-signature assurance level — none
 of which are decided even for DiveDay's own in-house waiver yet).
 
 The product owner explicitly requested the opposite: if a shop's prior system already had a diver
@@ -24,7 +24,7 @@ a staff attestation per row (unlike the existing in-person/paper-signature path,
 one). This is a deliberate reversal of a documented safety default, made knowingly: the assistant
 building this raised the conflict with the fail-closed rule and the open legal gates before
 implementing, and the product owner confirmed the direction anyway. It is recorded as a decision in
-`docs/product/human-decisions.md` (H-17) alongside the still-open H-01–H-03 items, since it does not
+`docs/product/human-decisions/README.md` (H-17) alongside the still-open H-01–H-03 items, since it does not
 resolve them — it only decides what an *import* does, not what DiveDay's own waiver policy should be.
 
 ## Decision
@@ -109,7 +109,7 @@ Easy: a migrating shop's roster arrives with its waiver history intact, closing 
 safe" gap in the data-portability wedge; the CSV schema mirrors the export's own `waiver_records.csv`
 provenance fields, so a round trip stays legible. Hard, and worth a future owner's attention: this
 import path can now clear a diver to board on evidence DiveDay itself never reviewed and a
-questionnaire it never asked — the `imported` marker and `docs/product/human-decisions.md` H-17 exist
+questionnaire it never asked — the `imported` marker and `docs/product/human-decisions/README.md` H-17 exist
 specifically so this is never mistaken for DiveDay's own reviewed waiver flow. Before any shop relies
 on this in production, the same legal/policy sign-off the base waiver flow still needs (H-01–H-03)
 applies with extra force here, since the shop is now also vouching for another operator's process. The

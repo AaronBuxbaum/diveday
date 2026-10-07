@@ -4,10 +4,10 @@ import { publicSchedulePath } from "./public-routes";
 
 /**
  * The funnel vocabulary: every page that can send a visitor toward the demo,
- * named once. `demo_entered` carries one of these tags so the demo can be read
- * per surface; `trial_started` still reads one off `/onboard?from=`, though
- * since every shop is set up by hand (ADR 20260925-shops-are-set-up-by-hand)
- * no public door carries it there.
+ * named once. `demo_entered` and `setup_requested` carry one of these tags so
+ * both doors can be read per surface: the demo form posts it, and the set-up
+ * door carries it to `/get-set-up?from=`, whose form posts it back (ADR
+ * 20261007-setup-request-form).
  *
  * A registry rather than a loose string, because the failure it prevents is
  * silent: a misspelled tag doesn't error, it just opens a second bucket that
@@ -106,6 +106,10 @@ const FIXED_SOURCES = [
   "about-rules",
   "about-closing",
   "about-switching",
+  // `/about`'s work band, whose first door is the set-up form beside the
+  // pricing and switching doors — a set-up door with no demo beside it, so it
+  // takes its own tag rather than folding into the page's two pair positions.
+  "about-work",
   "sign-in",
   // `/onboard`'s footer line, on both of the page's faces (issue #1956). The
   // page exists to start a shop, so a door back out of it is the one place
@@ -114,6 +118,14 @@ const FIXED_SOURCES = [
   // page tag it could never be asked. Until 2026-10-06 the line linked to `/`
   // and carried no tag at all.
   "onboard-demo",
+  // `/onboard`'s closed door, for a reader who arrived from an old link: its
+  // one button is the set-up form.
+  "onboard-closed",
+  // The thank-you page after a set-up request: one door into the demo while
+  // the reader waits for a reply. Its own tag, because a demo opened by
+  // somebody who has already asked to be set up is a different moment from a
+  // demo opened instead of asking.
+  "setup-sent",
   "switching-hub",
   // The hub's annotated import-preview screen ends in one door into the demo
   // as the owner, the role that runs the import (docs/design/brand.md, "The
@@ -193,9 +205,25 @@ export function eventSource(value: unknown): FunnelSource | "unknown" {
   return known ? (value as FunnelSource) : "unknown";
 }
 
+/** Where the `/get-set-up` form lives. */
+export const SET_UP_PATH = "/get-set-up";
+
+/** Where it lands once a request is stored: the thank-you page. */
+export const SET_UP_SENT_PATH = `${SET_UP_PATH}/sent`;
+
+/**
+ * The "Get set up" door: the set-up form, carrying the tag of the page whose
+ * door it is so the request it produces can be read per surface. The tag rides
+ * the query string and the form posts it back; `eventSource` clamps whatever
+ * arrives, so a hand-edited link opens no bucket of its own.
+ */
+export function setUpHref(source: FunnelSource): string {
+  return `${SET_UP_PATH}?from=${source}`;
+}
+
 /**
  * The "see a diver's booking page" link's destination — the third door out of
- * a marketing CTA, alongside the demo and the set-up mail. Tagged the same way
+ * a marketing CTA, alongside the demo and the set-up form. Tagged the same way
  * the demo form tags its own; the query string needs no companion custom event
  * because the Vercel `<Analytics />` page view it produces already carries it.
  * Takes the shop slug rather than assuming the demo shop, so a server

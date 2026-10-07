@@ -142,6 +142,10 @@ const UNSCOPED_REASONS: Record<string, string> = {
     "provider coordination keyed by ceiling and period, holding no person",
   stripe_webhook_events:
     "the platform's delivery ledger, pruned by retention; it carries no payload",
+  setup_requests:
+    "a shop asking DiveDay to be set up, before any shop exists — the platform's lead list, not a tenant's (ADR 20261007-setup-request-form)",
+  demo_entries:
+    "a count of demo entries by funnel tag, deliberately unkeyed from the minted shop so the reaper does not erase the count; pruned by retention",
   sms_opt_outs:
     "the texting number's STOP list, one for the platform because every shop texts from one number; a shop's delete must not resume texting a diver who said stop",
 };
@@ -194,6 +198,8 @@ const RESET_KEEPS: Record<string, string> = {
   notification_rate_limit_state: "provider coordination state, not shop records",
   stripe_webhook_events: "provider delivery ledger, pruned by retention, not by a reset",
   shop_whatsapp_accounts: "shop settings, outside the resettable schedule",
+  shop_subscriptions:
+    "what the shop pays DiveDay, set by a person or Stripe's webhook — never by a demo visitor, so nothing for a reset to restore",
   shop_contact_email_confirmation_tokens:
     "the front-desk address's own proof of ownership (issue #1288) — settings, not schedule",
   boats: "shop settings, outside the resettable schedule",
@@ -219,6 +225,8 @@ const RESET_KEEPS: Record<string, string> = {
   trip_desk_events: "ON DELETE CASCADE from trips clears it",
   trip_read_marks: "ON DELETE CASCADE from trips clears it",
   trip_schedule_days: "ON DELETE CASCADE from trips clears it",
+  shop_milestones:
+    "DiveDay's own activation bookkeeping, written only for real shops (never a demo), so a schedule reset has none to clear",
 };
 
 /**
@@ -253,6 +261,7 @@ const CASCADE_KEEPS: Record<string, string> = {
   trip_desk_events: "ON DELETE CASCADE from trips clears it",
   trip_read_marks: "ON DELETE CASCADE from trips clears it",
   trip_schedule_days: "ON DELETE CASCADE from trips clears it",
+  shop_milestones: "ON DELETE CASCADE from shops clears it",
 };
 
 describe("shop-scoped delete-path coverage", () => {

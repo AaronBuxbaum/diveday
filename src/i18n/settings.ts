@@ -7,7 +7,7 @@
  * stay in English, and the waiver body and medical questionnaire are excluded
  * on purpose — that wording is legally reviewed, so translating it is a
  * sign-off decision rather than an engineering one (H-01/H-03 in
- * docs/product/human-decisions.md).
+ * docs/product/human-decisions/).
  *
  * Note what this deliberately does *not* set up: next-intl's routing and
  * middleware. DiveDay's locale is a property of the **shop row**

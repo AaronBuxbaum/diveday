@@ -1,6 +1,6 @@
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { listDeskEventsSince, markTripCaughtUp, recordDeskEvent } from "./desk-events";
 import { bookings, people, personRoles, shops, tripReadMarks, trips } from "./schema";
@@ -13,7 +13,7 @@ import { bookings, people, personRoles, shops, tripReadMarks, trips } from "./sc
  * reader must never be told about is their own act.
  */
 async function catchUpFixture() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const staff = await db
     .select({ id: people.id, role: personRoles.role, name: people.fullName })
     .from(people)
@@ -36,6 +36,10 @@ async function catchUpFixture() {
   if (!seat) throw new Error("catch-up fixture needs a seated diver");
   return { db, shop, reader, desk, trip, seat };
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 describe("listDeskEventsSince", () => {
   it("tells a first-time reader nothing, however busy the morning was", async () => {

@@ -24,6 +24,16 @@
     "visual": ["forgot-password"],
     "a11y": ["a11y.spec.ts"]
   },
+  "/get-set-up": {
+    "e2e": ["setup-request.spec.ts"],
+    "visual": ["get-set-up"],
+    "a11y": ["a11y.spec.ts"]
+  },
+  "/get-set-up/sent": {
+    "e2e": ["setup-request.spec.ts"],
+    "visual": ["get-set-up-sent"],
+    "a11y": ["a11y.spec.ts"]
+  },
   "/invite/[token]": {
     "e2e": ["staff-invite.spec.ts"],
     "visual": ["staff-invite"]
@@ -322,6 +332,10 @@
     "visual": ["divers", "divers-removed"],
     "a11y": ["a11y.spec.ts"]
   },
+  "/shop/[shopSlug]/divers/[personId]/merge/[survivorId]": {
+    "e2e": ["diver-merge.spec.ts"],
+    "visual": ["diver-merge-preview"]
+  },
   "/shop/[shopSlug]/divers/[personId]/waivers/[recordId]": {
     "e2e": ["waivers.spec.ts"],
     "visual": ["diver-signed-waiver"]
@@ -485,10 +499,14 @@
       "settings-data-unfinished",
       "settings-payments",
       "settings-profile",
-      "settings-tax",
-      "settings-trial"
+      "settings-tax"
     ],
     "a11y": ["a11y.spec.ts"]
+  },
+  "/shop/[shopSlug]/settings/billing": {
+    "e2e": ["billing.spec.ts"],
+    "visual": ["settings-billing"],
+    "a11y": []
   },
   "/shop/[shopSlug]/settings/boats": {
     "e2e": ["settings-editor-pages.spec.ts"],

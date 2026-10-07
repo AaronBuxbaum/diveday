@@ -1,7 +1,11 @@
 import { eq } from "drizzle-orm";
+import {
+  COURSE_TEMPLATES,
+  type CourseTemplate,
+  courseTemplateSnapshot,
+} from "@/content/course-templates";
 import { courseSlug } from "@/lib/courses";
 import type { DbExecutor } from "./client";
-import { COURSE_TEMPLATES, type CourseTemplate, courseTemplateSnapshot } from "./course-templates";
 import { courses } from "./schema";
 
 /**

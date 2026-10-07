@@ -86,7 +86,14 @@ describe("anonymizeDiver — a merged-away record (issue #1014)", () => {
           emergencyContactName: "Ngozi Nwosu",
           emergencyContactPhone: "+1 (305) 555-0143",
         },
-        { shopId: shop.id, fullName: "Adaeze Nwosu", email: "adaeze@new.example" },
+        // The same date on both: a name and a date agree, so the merge needs
+        // no "two people" acknowledgement (`assessMerge`).
+        {
+          shopId: shop.id,
+          fullName: "Adaeze Nwosu",
+          email: "adaeze@new.example",
+          dateOfBirth: "1990-04-02",
+        },
       ])
       .returning();
     if (!source || !survivor) throw new Error("fixture insert failed");

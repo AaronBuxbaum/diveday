@@ -111,9 +111,45 @@ const ReviewRowContext = createContext<{
   run: (formData: FormData) => void;
 } | null>(null);
 
-export function ReviewRowProvider({ children }: { children: React.ReactNode }) {
+/**
+ * Holds the rows' one outcome, and draws **the hide's land-then-undo toast**
+ * once above the lists when given the words for it.
+ *
+ * The toast used to live inside the row, and a hide is precisely the act that
+ * takes that row off the page: the review leaves the Published group, and on a
+ * shop with more moderated reviews than fit one page it leaves this *page* — so
+ * there was no row left to render the toast, and the Undo that is the whole
+ * point of announcing a hide could not be offered at all. The provider is the
+ * one thing on the page that outlives every row, so the toast is drawn here. A
+ * toast is page furniture anyway — fixed to the bottom of the viewport, not
+ * part of any row.
+ */
+export function ReviewRowProvider({
+  children,
+  copy,
+}: {
+  children: React.ReactNode;
+  /** The hide's toast words; without them no toast is drawn. */
+  copy?: ReviewRowCopy;
+}) {
   const [result, run] = useActionState(reviewRowAction, null);
-  return <ReviewRowContext.Provider value={{ result, run }}>{children}</ReviewRowContext.Provider>;
+  const undoReviewId = result?.ok && result.effect === "hidden" ? result.undoReviewId : undefined;
+  return (
+    <ReviewRowContext.Provider value={{ result, run }}>
+      {copy && undoReviewId ? (
+        /* Undo posts back through the same action, so putting the review back
+           lands in that row's own status region rather than anywhere else. */
+        <UndoToast
+          message={copy.hiddenToast}
+          action={run}
+          fields={{ reviewId: undoReviewId, publish: "true" }}
+          pendingLabel={copy.undoPending}
+          undoLabel={copy.undo}
+        />
+      ) : null}
+      {children}
+    </ReviewRowContext.Provider>
+  );
 }
 
 function useReviewRow() {
@@ -259,36 +295,5 @@ export function ReviewRowActions({
         ) : null}
       </ListItemActions>
     </>
-  );
-}
-
-/**
- * **The hide's land-then-undo toast, rendered once above the lists.**
- *
- * It used to live inside the row, and a hide is precisely the act that takes
- * that row off the page: the review leaves the Published group, and on a shop
- * with more moderated reviews than fit one page it leaves this *page* — so
- * there was no row left to render the toast, and the Undo that is the whole
- * point of announcing a hide could not be offered at all. Hoisting the state
- * into `ReviewRowProvider` was not enough on its own; the element had to come
- * out too.
- *
- * A toast is page furniture anyway — fixed to the bottom of the viewport, not
- * part of any row — so this is also where it belonged. Same shape and same
- * reasoning as `PublishAllStatus` directly above it.
- */
-export function ReviewRowUndoToast({ copy }: { copy: ReviewRowCopy }) {
-  const { result, run } = useReviewRow();
-  if (!result?.ok || result.effect !== "hidden" || !result.undoReviewId) return null;
-  return (
-    /* Undo posts back through the same action, so putting the review back lands
-       in that row's own status region rather than anywhere else. */
-    <UndoToast
-      message={copy.hiddenToast}
-      action={run}
-      fields={{ reviewId: result.undoReviewId, publish: "true" }}
-      pendingLabel={copy.undoPending}
-      undoLabel={copy.undo}
-    />
   );
 }

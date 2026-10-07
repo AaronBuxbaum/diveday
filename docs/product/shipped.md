@@ -7,6 +7,30 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## A shop can pay DiveDay (delivered 2026-10-07)
+
+Market audit item 7, N-59. Settings > Billing (`/shop/[slug]/settings/billing`, owner only) shows the plan, the shop's billing standing (trialing, free term, active, past due, canceled, trial ended) and the next charge or end date. Its one button is **Add a card**, which opens Stripe Checkout with the first charge deferred to the end of the trial or free term. Once the shop pays, it becomes **Manage billing** and **Cancel plan**, both through Stripe's Customer Portal. Stripe emails the invoices. A webhook at `/api/webhooks/billing` is the only writer of `shop_subscriptions`: it checks the signature, ignores a replay, refuses an out-of-order event and refuses a cross-tenant one. Founding free months are granted by hand with `pnpm billing:free-term`. The first paid invoice stamps `first_paid_at`. Nothing is gated on standing; `isInGoodStanding` is the seam. Off until the `stripe-billing-setup` manual action sets three `BILLING_STRIPE_*` values, and until then the page says so. The trial card moved off the Settings hub onto this page. ADR [20261007-subscription-billing](../architecture/decisions/20261007-subscription-billing.md).
+
+## A set-up request form, and the founder's numbers (delivered 2026-10-07)
+
+Every public "Get set up" door, which used to be a mail to `onboarding@dive.day`, now opens `/get-set-up?from=<tag>`. The form asks for shop name, town or region, whether the shop runs a boat, what it uses today, name, email and an optional phone. It checks a per-IP and a global rate limit and a honeypot, stores a `setup_requests` row with the funnel tag, mails onboarding@ (`setup_request_alert`), fires `setup_requested`, and lands on a thank-you page with the demo door. `trial_started` is deleted ([ADR 20261007-setup-request-form](../architecture/decisions/20261007-setup-request-form.md)).
+
+A nightly cron (`/api/cron/founder-metrics`) records each real shop's activation milestones in `shop_milestones` (first departure, first public booking, first self-signed waiver, first roll call, and the first paid month, which the billing webhook records) and logs the north star, dive days run end to end per week. On Mondays it mails `FOUNDER_DIGEST_EMAIL` last week's north star, demo entries and set-up requests by source, and each shop stalled 7 or more days, reported once ([ADR 20261007-founder-metrics](../architecture/decisions/20261007-founder-metrics.md)).
+
+## Merging duplicate divers, and checking a card with its agency (delivered 2026-10-07)
+
+Market audit items 30 and 38. A diver record's likely duplicates (same mailbox, same phone, or same
+name and birth date; a name alone is never offered) each open a side-by-side merge preview at
+`divers/[personId]/merge/[survivorId]`: both records, the fields they disagree on as choices, what
+moves, the departures that block it (shared, or out on the water now), and an acknowledgement when
+the two may be two people or a medical answer is still open. One
+transaction moves everything, keeps every signed release and medical answer, and leaves a pointer
+so old links land on the kept record (glossary "Merge (two diver records)"; `diver-merge.test.ts`
+asks the catalog for every foreign key to `people`). A card waiting for a check carries **Check
+with <agency>**, a link to that agency's own lookup (SSI, NAUI, SDI, TDI, GUE; "Search the CMAS
+portal"; "Check with PADI (member sign-in)"), from `src/lib/agency-verification.ts` (H-10 amendment in
+[20260721-manual-certification](../architecture/decisions/20260721-manual-certification.md)).
+
 ## A page for every feature (delivered 2026-10-05)
 
 H-93. Twelve feature pages under `/product/<feature>` (online booking, the shop's website, waivers
@@ -2808,7 +2832,7 @@ is focus-ring only (HD-17 unchanged), and visual diffs warn loudly rather than b
   [20260802-visual-diff-pr-comment](../architecture/decisions/20260802-visual-diff-pr-comment.md),
   closing HD-18.
 - **`pnpm gates`** (PROD-C1's tooling only): a report — never a gate, never in `check` — of days since
-  each `human-decisions.md` H-/V- row last moved, reconciled against `rollout.md`'s "next 30 days"
+  each `human-decisions/` H-/V- row last moved, reconciled against `rollout.md`'s "next 30 days"
   list, with ages derived from dated outcomes and `git blame` and printed as `≥ N` when a shallow
   clone can only bound them (`scripts/gate-freshness.mjs`). With it, the
   [pilot-kit/](pilot-kit/README.md): design-partner one-pager, Florida call-list template, first-call
@@ -2933,7 +2957,7 @@ shipped, each with a `security-reviewer` pass per the repo's hard rules.
   Wired into the Playwright harness (`playwright.config.ts`, `e2e/global-setup.ts`).
 
 **"Close the revocation window on base staff surfaces" was not built** — it re-proposed exactly what
-[H-15](human-decisions.md#decision-register) already decided against on 2026-07-24; see
+[H-15](human-decisions/README.md#decision-register) already decided against on 2026-07-24; see
 [20260724-staff-session-and-capability-migration-policy](../architecture/decisions/20260724-staff-session-and-capability-migration-policy.md).
 **"Reduce what a stolen device can read from offline manifests" remains open by deliberate human
 decision**, kept in full in the archived audit's §5 for whoever eventually revisits it.
@@ -3159,7 +3183,7 @@ archived.
 - **Hosting** — Vercel selected and ADR'd; production builds run migrations
   ([Vercel](../architecture/decisions/20260718-vercel-hosting.md),
   [Neon](../architecture/decisions/20260718-vercel-neon-hosting.md)). Remaining owner/backup/incident
-  naming is H-04 in [human-decisions.md](human-decisions.md).
+  naming is H-04 in [human-decisions/](human-decisions/README.md).
 - **Demo mode / dynamic onboarding** — one-click trial into a per-visitor isolated shop, checked by
   the presence of a demo shop rather than a global flag
   ([dynamic-demo-onboarding](../architecture/decisions/20260718-dynamic-demo-onboarding.md),
@@ -3245,7 +3269,7 @@ archived.
   ([automated-cancellation-refund](../architecture/decisions/20260721-automated-cancellation-refund.md)).
 
 > The deposit/window **values**, percentage-vs-flat deposits, legal/accounting tax policy, and any
-> platform fee remain open policy — H-07 in [human-decisions.md](human-decisions.md). Stripe Tax
+> platform fee remain open policy — H-07 in [human-decisions/](human-decisions/README.md). Stripe Tax
 > collection now ships as an opt-in, provider-owned mechanism; the connected-account setup and
 > legal/accounting obligations still require their named owners.
 
@@ -3285,7 +3309,7 @@ archived.
   ([trip-dive-briefings](../architecture/decisions/20260719-trip-dive-briefings.md)).
 
 > **Not yet done:** human field validation of the offline manifest (V-02) — the one manifest item
-> still open. Tracked in [roadmap.md](features/roadmap.md) and [human-decisions.md](human-decisions.md).
+> still open. Tracked in [roadmap.md](features/roadmap.md) and [human-decisions/](human-decisions/README.md).
 
 ## Operational surfaces (M7)
 
@@ -3487,7 +3511,7 @@ The roadmap's §7 smaller follow-ons and the whole open Delight backlog shipped:
   (`loadActiveStaffRoles` + `canPersonX`) so a demoted/disabled/deleted staff member loses the
   surface immediately. Enforced in both layers per ADR-0006 — each surface's page hides the control
   and its server action(s)/route re-check. Answers H-14 in
-  [human-decisions.md](human-decisions.md#decision-register).
+  [human-decisions/](human-decisions/README.md#decision-register).
   See [20260724-role-authorization](../architecture/decisions/20260724-role-authorization.md).
 
 ## Account lifecycle emails (delivered 2026-07-26)

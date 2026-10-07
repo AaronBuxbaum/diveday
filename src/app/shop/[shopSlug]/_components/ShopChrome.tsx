@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { cache } from "react";
 import { switchDemoRoleAction } from "@/app/actions/demo";
 import { createDiverFromSearchAction } from "@/app/actions/divers";
@@ -24,6 +25,7 @@ import { isStaff, staffDestinationGates } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import { DEMO_BYPASS_PASSWORD } from "@/lib/credentials";
 import { DEMO_ROLE_KEYS, DEMO_ROLE_META } from "@/lib/demo-roles";
+import { reportRenderQueries } from "@/lib/observability/query-timing";
 
 /**
  * **Everything above a staff page that has to be asked of this request** — the
@@ -101,6 +103,9 @@ const loadShopChrome = cache(async (shopSlug: string) => {
   // under a foreign-looking URL — not a leak, but a phishing-shaped breach of
   // the "slug and session agree" invariant above.
   if (session?.user && !shop) notFound();
+  // The shell renders in a pass of its own (`src/db/blockers.ts`), so it
+  // reports its own line; see `src/lib/observability/query-timing.ts`.
+  if (ownShop) reportRenderQueries("/shop/[shopSlug] (chrome)", after, { fallback: true });
 
   const showBanner = shop?.isDemo ?? false;
   // Staff read chrome in the language their own device asks for, same

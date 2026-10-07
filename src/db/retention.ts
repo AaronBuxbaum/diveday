@@ -12,6 +12,7 @@ import {
   accountTokens,
   activityEvents,
   bookingPaymentEvents,
+  demoEntries,
   formDrafts,
   inboundMessages,
   integrationEvents,
@@ -317,6 +318,21 @@ export async function pruneExpiredRecords(
           .where(lt(formDrafts.savedAt, cutoff("form_drafts")))
           .limit(PRUNE_BATCH_LIMIT),
       (ids) => db.delete(formDrafts).where(inArray(formDrafts.id, ids)),
+    ),
+  );
+
+  // The founder digest's demo count (ADR 20261007-founder-metrics), on the
+  // instant of the entry.
+  outcomes.push(
+    await pruneBatch(
+      "demo_entries",
+      () =>
+        db
+          .select({ id: demoEntries.id })
+          .from(demoEntries)
+          .where(lt(demoEntries.enteredAt, cutoff("demo_entries")))
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(demoEntries).where(inArray(demoEntries.id, ids)),
     ),
   );
 

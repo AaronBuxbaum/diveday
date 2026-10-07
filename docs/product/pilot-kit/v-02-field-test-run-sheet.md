@@ -7,7 +7,7 @@ a lock screen or a dead battery must not take the checklist down with it.
 V-02 is [the single most important pre-pilot task](../rollout.md#03-field-validation-v-01-v-02-v-04-rehearsal).
 The offline manifest is differentiator #2 and it has never met salt water. The evidence list of
 record is the V-02 row in the
-[verification queue](../human-decisions.md#human-verification-queue); this sheet is that row turned
+[verification queue](../human-decisions/README.md#human-verification-queue); this sheet is that row turned
 into steps, matched against what the manifest surfaces actually do today
 (`src/app/shop/[shopSlug]/trips/[id]/manifest/page.tsx`, `src/components/OfflineManifestView.tsx`).
 
@@ -155,9 +155,8 @@ same way a diver is.
       Y / N
 
 **a. A rostered crew member still to call.** With every diver counted and nobody having tapped the
-crew, expect the crew panel (**Crew aboard**) to read *"{n} crew members still to call. Every person
-on the crew list needs a result of their own."*, to name each of them, and the checkpoint **not** to
-read complete.
+crew, expect the crew panel (**Crew aboard**) to read *"{n} crew members still to call."*, to name
+each of them, and the checkpoint **not** to read complete.
 
 - [ ] As described. Otherwise: ______________________________________________
 - [ ] Each crew member's row carries **Mark aboard** and **Mark not back aboard**, at the same size
@@ -256,7 +255,7 @@ not exercised in the field.
 ## Where this goes afterwards
 
 - The evidence, verbatim, into the V-02 row of the
-  [verification queue](../human-decisions.md#human-verification-queue) — date, device, network,
+  [verification queue](../human-decisions/README.md#human-verification-queue) — date, device, network,
   scenarios, freshness shown, reconciliation results, findings, reviewer sign-off, and whether
   production departures may proceed. Status lives there and nowhere else.
 - Safety-severity defects become stop-the-line fixes with regression tests

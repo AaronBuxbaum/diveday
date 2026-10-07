@@ -54,7 +54,7 @@ export type AnalyticsEvent =
       /**
        * A visitor entered the live demo — the primary skeptic funnel on the
        * marketing pages. `source` names the page the click came from so the
-       * demo-vs-trial story can be read per surface; `role` names which of the
+       * demo-vs-set-up story can be read per surface; `role` names which of the
        * landing page's role-picker options they chose (or "owner", the primary
        * CTA's default when no picker option was used).
        */
@@ -64,11 +64,13 @@ export type AnalyticsEvent =
     }
   | {
       /**
-       * A visitor finished the sign-up form and got a shop of their own — the
-       * other half of the funnel `demo_entered` opens. Same `source` vocabulary,
-       * so demo-vs-trial can be read per marketing surface.
+       * A shop asked to be set up through `/get-set-up` — the funnel's one
+       * committed conversion since every shop is opened by hand (ADR
+       * 20261007-setup-request-form). Same `source` vocabulary as
+       * `demo_entered`, so the two halves read per marketing surface. Never
+       * carries anything the reader typed.
        */
-      name: "trial_started";
+      name: "setup_requested";
       source: FunnelSource | "unknown";
     }
   | {

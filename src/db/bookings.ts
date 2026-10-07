@@ -22,7 +22,7 @@ import { hasSailed } from "@/lib/trips";
 import { revokeBookingCapabilities } from "./booking-capabilities";
 import { readCertificationEvidence } from "./certification-evidence";
 import { inTrainingBefore, listCourseSeatsInTraining } from "./certifications-in-training";
-import { type AppDb, type DbExecutor, isUniqueConstraintViolation, queryAll } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { consumeEntitlementsForBooking, releaseEntitlementsForBooking } from "./dive-packages";
 import { releaseUnclaimedGearReservations } from "./gear";
@@ -31,6 +31,7 @@ import { recordDiverActivity, recordTripActivity } from "./operations";
 import { getBookingPayment, setBookingPayment } from "./payments";
 import { findOrCreatePerson } from "./people";
 import { storedPhone } from "./person-phone";
+import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
 import { getTripRequirements, getTripSiteRequirement } from "./readiness";
 import {
   bookingPayments,
@@ -473,7 +474,7 @@ export async function tripAdmissionFor(
   }
   // `queryAll`, not `Promise.all`: every caller of this gate reaches it inside
   // `createBookingRecord`'s transaction, which is one pinned client. See
-  // `queryAll` in `src/db/client.ts`.
+  // `queryAll` in `src/db/query-helpers.ts`.
   const [requirement, siteRequirement] = await queryAll(tx, [
     () => getTripRequirements(tx, shopId, tripId),
     () => getTripSiteRequirement(tx, shopId, tripId),
@@ -724,8 +725,14 @@ async function createBookingRecord(
       .where(
         and(eq(people.id, req.personId), eq(people.shopId, req.shopId), isNull(people.deletedAt)),
       )
-      .limit(1);
-    // A copied URL or a since-removed diver must not book into this tenant.
+      .limit(1)
+      // Waits on a merge holding this row `for update`, then re-reads it: a
+      // record merged away mid-booking is deleted by then and refused here,
+      // instead of taking a seat the merge has already moved past. `key share`
+      // is the weakest lock that does it, so two bookings for one diver never
+      // block each other.
+      .for("key share");
+    // A copied URL, a since-removed diver or a merged-away record must not book into this tenant.
     if (!person) return { ok: false, reason: "person_not_found" };
     identityUnconfirmed = req.fromNameMatch
       ? await nameMatchLeavesIdentityInDoubt(tx, req.shopId, person, req.fromNameMatch.typedName)
@@ -742,7 +749,9 @@ async function createBookingRecord(
         .where(
           and(eq(people.shopId, req.shopId), eq(people.email, email), isNull(people.deletedAt)),
         )
-        .limit(1);
+        .limit(1)
+        // As above: a record a merge is moving away is re-read once it lands.
+        .for("key share");
       if (person) {
         // Reuse-by-email before the capacity gate: flag a name that doesn't match
         // the person already on file for this address.

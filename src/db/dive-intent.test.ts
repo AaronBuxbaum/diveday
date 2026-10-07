@@ -1,6 +1,6 @@
 import { and, eq, isNotNull, notInArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { diveIntentTallyForTrip, diveIntentTallyForTrips } from "./dive-intent";
 import { bookings, people, trips } from "./schema";
@@ -41,9 +41,13 @@ async function twoTrips(db: AppDb, shopId: string) {
   return [a.id, b.id] as const;
 }
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
+
 describe("diveIntentTallyForTrip", () => {
   it("counts an answer once per seat that gave one", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await twoTrips(db, shop.id);
     for (const intent of ["small_life", "small_life", "easing_back"] as const) {
       await db.insert(bookings).values({
@@ -62,7 +66,7 @@ describe("diveIntentTallyForTrip", () => {
   it("says nothing at all for a departure nobody answered on", async () => {
     // Which is most departures for a long while. An empty tally is what lets
     // the buddy panel render no line rather than a heading over nothing.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await twoTrips(db, shop.id);
     await db
       .insert(bookings)
@@ -71,7 +75,7 @@ describe("diveIntentTallyForTrip", () => {
   });
 
   it("does not count a canceled seat", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await twoTrips(db, shop.id);
     await db.insert(bookings).values({
       shopId: shop.id,
@@ -92,7 +96,7 @@ describe("diveIntentTallyForTrip", () => {
   });
 
   it("does not count a seat on a departure the shop took off the board", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await twoTrips(db, shop.id);
     await db.insert(bookings).values({
       shopId: shop.id,
@@ -108,7 +112,7 @@ describe("diveIntentTallyForTrip", () => {
   });
 
   it("refuses to answer for another shop's departure", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await twoTrips(db, shop.id);
     await db.insert(bookings).values({
       shopId: shop.id,
@@ -124,7 +128,7 @@ describe("diveIntentTallyForTrip", () => {
 
 describe("diveIntentTallyForTrips", () => {
   it("answers a whole day in one read, and leaves silent departures out", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [answered, silent] = await twoTrips(db, shop.id);
     await db.insert(bookings).values({
       shopId: shop.id,
@@ -141,7 +145,7 @@ describe("diveIntentTallyForTrips", () => {
   });
 
   it("asks nothing of the database for an empty day", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     expect(await diveIntentTallyForTrips(db, shop.id, [])).toEqual(new Map());
   });
 });

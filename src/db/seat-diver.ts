@@ -1,4 +1,5 @@
 import { trackEvent } from "@/lib/analytics";
+import { log } from "@/lib/log";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { type BookingOutcome, createBooking } from "./bookings";
 import type { AppDb } from "./client";
@@ -215,8 +216,11 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
     // the same waiver-on-join a hand-entered walk-in does. Idempotent: a
     // diver already holding a link or a signature is skipped, not re-sent.
     waiver = waiverOutcome(await issueWaiverOnJoin(db, input.shopId, outcome.bookingId));
-  } catch {
-    console.error("Waiver-on-join could not be issued", { bookingId: outcome.bookingId });
+  } catch (error) {
+    log("booking.waiver_on_join_failed", "error", {
+      bookingId: outcome.bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
     waiver = "failed";
   }
 

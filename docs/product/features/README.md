@@ -36,14 +36,14 @@ straight from a brainstorm entry.
   exists.
 - When a roadmap item ships or a backlog ticket closes, remove it here and record the delivery in
   [../shipped.md](../shipped.md) (with its ADR link) instead of leaving it marked done.
-- [../rollout.md](../rollout.md) (go-to-market) and [../human-decisions.md](../human-decisions.md)
+- [../rollout.md](../rollout.md) (go-to-market) and [../human-decisions/](../human-decisions/README.md)
   (the gate register) point *into* this folder for feature detail — they sequence and gate, they
   don't duplicate a feature write-up that belongs here. Keep it that way: if you find yourself
   describing a feature in either of those files, move the description here and leave a link.
 - The GitHub issue tracker's `needs-triage` label (see
   [../../agents/issue-tracker.md](../../agents/issue-tracker.md)) is the inbox *upstream* of this
   folder, not a fifth file in it: an agent files a thought there mid-change, and when the human
-  accepts it, the decision moves here (or into [../human-decisions.md](../human-decisions.md), or
+  accepts it, the decision moves here (or into [../human-decisions/](../human-decisions/README.md), or
   becomes an ADR) and the issue is closed. Never leave an accepted item living in both places.
 - Dated buyer/rival analyses under `docs/product/assessments/` (see [the doc map](../../README.md)
   for the full list) feed this folder — a surviving recommendation belongs here (usually

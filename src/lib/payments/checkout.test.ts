@@ -1,6 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { checkoutProviderFromEnvironment } from "./checkout";
 
+/** The `stripe_api.request_threw` lines a case wrote, parsed. */
+function threwLines(spy: { mock: { calls: unknown[][] } }): Array<Record<string, unknown>> {
+  return spy.mock.calls
+    .map((call) => JSON.parse(String(call[0])) as Record<string, unknown>)
+    .filter((line) => line.event === "stripe_api.request_threw");
+}
+
 function providerWith(env: Record<string, string | undefined>, fetchImpl: unknown) {
   return checkoutProviderFromEnvironment(env, fetchImpl as typeof fetch);
 }
@@ -174,13 +181,19 @@ describe("stripe checkout provider", () => {
     expect(await provider.createCheckoutSession(request)).toEqual({ status: "failed" });
   });
 
-  it("fails on a network error", async () => {
-    const fetchImpl = vi.fn().mockRejectedValue(new Error("network"));
+  it("fails on a network error, and logs the throw so it reads apart from a refusal", async () => {
+    const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const fetchImpl = vi.fn().mockRejectedValue(new TypeError("network"));
     const provider = providerWith({ STRIPE_SECRET_KEY: "sk_test" }, fetchImpl);
     expect(await provider.createCheckoutSession(request)).toEqual({ status: "failed" });
     expect(await provider.retrieveCheckoutSession("acct_123", "cs_1")).toEqual({
       status: "failed",
     });
+    expect(threwLines(warned)).toEqual([
+      expect.objectContaining({ operation: "create_checkout_session", errorCode: "TypeError" }),
+      expect.objectContaining({ operation: "retrieve_checkout_session", errorCode: "TypeError" }),
+    ]);
+    warned.mockRestore();
   });
 
   it("retrieves current session status from Stripe, not from any URL claim", async () => {

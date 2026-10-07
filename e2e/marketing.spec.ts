@@ -4,11 +4,14 @@ import { expect, test } from "./fixtures";
 import { ONBOARD_FORM_PATH } from "./servers";
 
 /**
- * Every public "Get set up" door: a mail to the onboarding inbox, because every
- * shop is set up by hand (ADR 20260925-shops-are-set-up-by-hand). There is no
+ * Every public "Get set up" door: the set-up request form, carrying the tag of
+ * the page whose door it is (ADR 20261007-setup-request-form). Every shop is
+ * still set up by hand (ADR 20260925-shops-are-set-up-by-hand); there is no
  * self-serve sign-up for a marketing page to link to.
  */
-const SET_UP_HREF = "mailto:onboarding@dive.day?subject=Set%20up%20my%20shop%20on%20DiveDay";
+const SET_UP_HREF = /^\/get-set-up\?from=[a-z0-9-]+$/;
+/** The same door as a CSS selector, for counting them in a band. */
+const SET_UP_DOOR = 'a[href^="/get-set-up?from="]';
 
 test("the homepage hero offers one demo door, and states the price at it", async ({ page }) => {
   await page.goto("/");
@@ -50,7 +53,7 @@ test("the homepage hero offers one demo door, and states the price at it", async
   const heroSection = page.getByRole("main").locator("section").first();
   await expect(heroSection.locator("button:not([disabled])")).toHaveCount(1);
   await expect(heroSection.getByRole("link")).toHaveCount(1);
-  await expect(heroSection.getByRole("link")).toHaveAttribute("href", SET_UP_HREF);
+  await expect(heroSection.getByRole("link")).toHaveAttribute("href", "/get-set-up?from=home-hero");
 
   // The flat price reaches the first screen as a *sentence*
   // (docs/product/marketing-review-20260827.md, "The price reaches the first
@@ -341,9 +344,9 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   await expect(productMain.locator('input[name="source"][value="product-mid"]')).toHaveCount(0);
   await expect(productMain.locator('input[name="source"][value="product-index"]')).toHaveCount(0);
   await expect(productMain.locator('input[name="source"][value="product"]')).toHaveCount(2);
-  // Every demo door has its set-up mail beside it (two), and there is no
+  // Every demo door has its set-up form door beside it (two), and there is no
   // self-serve trial link left to tag.
-  await expect(productMain.locator(`a[href="${SET_UP_HREF}"]`)).toHaveCount(2);
+  await expect(productMain.locator(SET_UP_DOOR)).toHaveCount(2);
   await expect(productMain.locator('a[href^="/onboard"]')).toHaveCount(0);
 
   // The index is a reference, not the page's argument, so it is closed at rest
@@ -491,7 +494,7 @@ test("public marketing pages lead to the product and pricing details", async ({ 
   // anchor, and a closing door nobody can see is the bug this one exists to
   // fix rather than a fix for it.
   await expect(pricingMain.getByRole("link", { name: "Get set up" }).last()).toBeVisible();
-  await expect(pricingMain.locator(`a[href="${SET_UP_HREF}"]`)).toHaveCount(2);
+  await expect(pricingMain.locator(SET_UP_DOOR)).toHaveCount(2);
   // The demo is offered at the close too, and tagged for that position. It
   // used to be dropped here, leaving the higher-friction door alone at the
   // moment the reader is warmest (issue #785).
@@ -554,7 +557,7 @@ test("/product holds one primary per screen across both of its doors", async ({ 
     // sits (src/app/_components/FunnelCtas.tsx). A band that grew a second
     // one would be a third choice at one moment of decision.
     if (primaries === 1) {
-      await expect(band.locator(`a[href="${SET_UP_HREF}"]`)).toHaveCount(1);
+      await expect(band.locator(SET_UP_DOOR)).toHaveCount(1);
     }
   }
 
@@ -569,23 +572,24 @@ test("/product holds one primary per screen across both of its doors", async ({ 
 
 test("a visitor who wants a shop is sent to a person, not a sign-up form", async ({ page }) => {
   // Every shop is set up by hand (ADR 20260925-shops-are-set-up-by-hand): the
-  // pricing page's second door is a mail to the onboarding inbox.
+  // pricing page's second door is the set-up request form, carrying the
+  // page's tag (ADR 20261007-setup-request-form).
   await page.goto("/pricing");
   await expect(
     page.getByRole("main").getByRole("link", { name: "Get set up" }).first(),
-  ).toHaveAttribute("href", SET_UP_HREF);
+  ).toHaveAttribute("href", "/get-set-up?from=pricing");
 
   // And the old address, from a bookmark or a search result, is a closed door
-  // that says where to write — with no form, and nothing to submit.
+  // that sends them to the set-up form — with no sign-up form of its own.
   await page.goto("/onboard?from=pricing");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("We set up every shop by hand");
-  await expect(page.getByRole("link", { name: "Email onboarding@dive.day" })).toHaveAttribute(
+  await expect(page.getByRole("main").getByRole("link", { name: "Get set up" })).toHaveAttribute(
     "href",
-    SET_UP_HREF,
+    "/get-set-up?from=onboard-closed",
   );
   await expect(page.locator('input[name="ownerPassword"]')).toHaveCount(0);
   // The one form left on the closed door is the demo, at link weight under the
-  // mail that is the page's primary, with its own funnel tag (issue #1956). It
+  // set-up link that is the page's primary, with its own funnel tag (issue #1956). It
   // linked to `/` until 2026-10-06, sending a reader to find the demo again.
   const mainForms = page.getByRole("main").locator("form");
   await expect(mainForms).toHaveCount(1);
@@ -602,11 +606,15 @@ test("a visitor who wants a shop is sent to a person, not a sign-up form", async
 });
 
 test("the setup link opens the form, which answers the hesitation it creates", async ({ page }) => {
-  await page.goto(`${ONBOARD_FORM_PATH}&from=pricing`);
-  // The tag still reaches the form when the link carries one. Scoped to the
-  // sign-up form: the footer's demo door carries a `source` of its own.
+  await page.goto(ONBOARD_FORM_PATH);
+  // The setup link is the owner's own, so the sign-up form carries no funnel
+  // tag: the tag a page's "Get set up" door carries now reaches the set-up
+  // request form instead (ADR 20261007-setup-request-form; asserted in the
+  // test below). Scoped to the sign-up form: the footer's demo door carries a
+  // `source` of its own.
   const signUpForm = page.locator('form:has(input[name="ownerPassword"])');
-  await expect(signUpForm.locator('input[name="source"]')).toHaveValue("pricing");
+  await expect(signUpForm).toBeVisible();
+  await expect(signUpForm.locator('input[name="source"]')).toHaveCount(0);
   // The footer's demo door stays link weight, so "Create shop & start trial"
   // is still the page's one primary (issue #1956).
   const demoDoor = page.getByRole("main").getByRole("button", { name: "Try the live demo" });
@@ -629,10 +637,20 @@ test("the setup link opens the form, which answers the hesitation it creates", a
   await expect(page.getByText("Your records are ready from day one.")).toHaveCount(0);
   await expect(page.getByText("Real support, one email away.")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Create shop & start trial" })).toBeVisible();
+});
+
+test("a page's tag reaches the set-up request form, and an unknown one is bucketed", async ({
+  page,
+}) => {
+  // The tag still reaches the form when the link carries one, so a request
+  // reads per surface. Scoped to the set-up form, the page's one form.
+  await page.goto("/get-set-up?from=pricing");
+  const setUpForm = page.locator('form:has(input[name="shopName"])');
+  await expect(setUpForm.locator('input[name="source"]')).toHaveValue("pricing");
 
   // An unrecognized tag is bucketed rather than echoed into the funnel.
-  await page.goto(`${ONBOARD_FORM_PATH}&from=Not%20A%20Real%20Source`);
-  await expect(signUpForm.locator('input[name="source"]')).toHaveValue("unknown");
+  await page.goto("/get-set-up?from=Not%20A%20Real%20Source");
+  await expect(setUpForm.locator('input[name="source"]')).toHaveValue("unknown");
 });
 
 test("the about page tells why DiveDay exists, who builds it, and how a shop gets set up", async ({
@@ -720,7 +738,7 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
     has: page.getByRole("heading", { name: "The one job on a boat that can’t go wrong." }),
   });
   await expect(standardsBand.getByRole("button", { name: "Try the live demo" })).toBeEnabled();
-  await expect(standardsBand.locator(`a[href="${SET_UP_HREF}"]`)).toHaveCount(1);
+  await expect(standardsBand.locator(SET_UP_DOOR)).toHaveCount(1);
 
   // …and the note that answers the only question that button raises, at the
   // page's *first* door (docs/product/marketing.md, "The demo's cost is stated
@@ -757,7 +775,7 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
     // pair is one component and a page chooses only where it sits
     // (src/app/_components/FunnelCtas.tsx).
     if (primaries === 1) {
-      await expect(band.locator(`a[href="${SET_UP_HREF}"]`)).toHaveCount(1);
+      await expect(band.locator(SET_UP_DOOR)).toHaveCount(1);
     }
   }
 
@@ -788,7 +806,7 @@ test("the about page tells why DiveDay exists, who builds it, and how a shop get
     .filter({ has: page.getByRole("link", { name: /^One flat / }) });
   await expect(workBand.locator("button:not([disabled])")).toHaveCount(0);
   await expect(workBand.locator("a")).toHaveCount(3);
-  const setUpDoor = workBand.locator(`a[href="${SET_UP_HREF}"]`);
+  const setUpDoor = workBand.locator(SET_UP_DOOR);
   await expect(setUpDoor).toHaveCount(1);
   // Anchored on both sides, or `hover:bg-surface-sunken` would satisfy it and
   // the assertion would pass on a button whose resting fill had changed.

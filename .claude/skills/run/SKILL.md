@@ -1,6 +1,6 @@
 ---
 name: run
-description: Start, wait for, or stop the local dev server; look at a change in the real app; or work out why it died, refuses to start, or answers on the wrong port.
+description: Start, wait for, or stop the local dev server, look at a change in the real app, or find why it died or answers on the wrong port.
 ---
 
 # Run

@@ -10,7 +10,8 @@ import {
   whatsAppTextSender,
 } from "@/lib/notifications/whatsapp";
 import { openSecret, type SecretKey, sealSecret, secretKeyFromEnvironment } from "@/lib/secret-box";
-import { type DbExecutor, violatesUniqueIndex } from "./client";
+import type { DbExecutor } from "./client";
+import { violatesUniqueIndex } from "./query-helpers";
 import type { ShopWhatsappAccount } from "./schema";
 import { shopWhatsappAccounts } from "./schema";
 

@@ -1,6 +1,7 @@
 import { and, asc, countDistinct, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { shopDayBounds } from "@/lib/zoned";
-import { type DbExecutor, queryAll } from "./client";
+import type { DbExecutor } from "./client";
+import { queryAll } from "./query-helpers";
 import { bookings, people, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 

@@ -1,0 +1,18 @@
+# H-13: CR-008 made (shop_id, lower(email)) a hard uniqueness constraint for active people and, per the…
+
+- **Status:** Implemented
+- **Human owner:** Product owner + `dive-domain-expert` reviewer
+
+## Decision or approval needed
+
+CR-008 made `(shop_id, lower(email))` a hard uniqueness constraint for active people and, per the existing pattern, self-service paths (booking, wait-list, import) silently *reuse* the matching person on any email match — the submitted name is never compared. A `dive-domain-expert` review of that diff flagged this as **unsafe**: a shared-inbox submission (a spouse, or a minor booked under a parent's email — see the glossary's Junior-certification rules) can silently attach a new diver's booking to an existing person's verified cert/current waiver, skipping medical-questionnaire collection and cert verification for someone who never provided either. Decide whether email-only reuse is acceptable as-is, or requires a name-mismatch safeguard (e.g. route a mismatched name to a staff-verify state instead of auto-"ready", surface `findOrCreatePerson`'s `created: false` to staff, or a light "is this you?" confirmation) before a live shop relies on it. The same review separately flagged the soft-delete-frees-the-email window: if staff soft-delete the wrong person and a genuinely *different* new person claims the freed email before the mistake is caught, that new person gets a blank record with no link back — bounded (fails closed, no data ever becomes ambiguous) but worth a deliberate policy call rather than leaving implicit.
+
+## Minimum outcome to record
+
+Accepted behavior or a chosen safeguard design, and whether the soft-delete window needs a mitigation before production.
+
+## Unblocks / follow-up
+
+**Decided + shipped 2026-07-24: add the name-mismatch safeguard; accept the soft-delete window as-is.** `findOrCreatePerson` now returns `nameMatches` (a case/accent/order/middle-initial-tolerant compare, `src/lib/person-name.ts`), and a public booking that reuses an email under a genuinely different name is stamped `bookings.identity_unconfirmed_at`. That raises a fail-closed `identity_unconfirmed` readiness blocker — surfaced on the roster, Today queue, and manifest — so a shared-inbox booking can't board on the matched diver's certs/waiver until staff tap **Confirm identity**. Reuse itself is unchanged (the person is never forked); only *readiness* is withheld. The soft-delete-frees-the-email window was accepted as-is (already fails closed to a blank record). **Extended 2026-10-05 (Aaron, PR #2079):** a held seat now names who booked it and on whose email, and offers the other answer in place: **Different person** splits the seat onto its own new diver record (glossary "Split off a held seat"), so the person is now forked when staff say so. **Extended again 2026-10-05 (Aaron, issue #2080):** a signed release on a split seat stays with the matched diver, because the signature check means it can only carry their name; the seat's unsigned links follow it with any draft answers cleared, and its order stays with the person it billed. A diver merge (the undo for a wrong split) now re-seals each verified release as integrity version 3, which records the move, instead of leaving it reading as tampered. Recorded in the [identity match key glossary entry](../glossary.md#modeling-notes) and [20260723-person-email-uniqueness ADR](../../architecture/decisions/20260723-person-email-uniqueness.md). **Still required before merge:** `security-reviewer` + `dive-domain-expert` sign-off per AGENTS.md (safety-critical + personal-data change).
+
+Part of the [human decision log](README.md#decision-register).

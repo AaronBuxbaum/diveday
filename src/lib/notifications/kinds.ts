@@ -4,9 +4,16 @@ import { isValidCalendarDate } from "@/lib/calendar-date";
 import { ALERTING_LEVELS, CEILING_UNITS, COST_PROVIDERS } from "@/lib/cost-guardrails";
 import { COURSE_INQUIRY_EXPERIENCE } from "@/lib/course-inquiry";
 import { DEMO_ROLE_IDS } from "@/lib/demo-roles";
+import { SHOP_MILESTONES } from "@/lib/founder-metrics";
 import { REPLY_BODY_MAX_LENGTH } from "@/lib/inbox";
 import { DIVER_EMAIL_MAX } from "@/lib/person-fields";
 import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
+import {
+  isSingleLineText,
+  SETUP_CURRENT_SYSTEMS,
+  SETUP_PHONE_MAX,
+  SETUP_TEXT_MAX,
+} from "@/lib/setup-requests";
 
 /**
  * Every kind of notification DiveDay sends, as a discriminated union of zod
@@ -665,6 +672,77 @@ const usageCeilingAlertSchema = z.object({
   overflow: z.enum(["bills_overage", "suspends", "drops"]),
 });
 
+/**
+ * A shop asked to be set up through `/get-set-up` (ADR
+ * 20261007-setup-request-form). Mailed to DiveDay's onboarding inbox, English
+ * like the founder alerts above: it is read by DiveDay, not by the shop.
+ *
+ * **It carries the requester's contact details** — that is the whole point of
+ * it — so `notificationSubjectEmail` names `contactEmail` for the erasure
+ * sweep. It goes through `notify()` with no shop to queue a retry against;
+ * the row in `setup_requests` is the durable copy, and its `notified_at`
+ * stays null when this send fails so the founder digest can say so.
+ */
+/**
+ * One answer a stranger typed, bound for the alert's subject or body: the same
+ * single-line rule the form's parser applies, held again here so the mail
+ * refuses a line break or a bidi override even from a caller that skipped it.
+ */
+const setupAnswerSchema = (max: number) =>
+  z.string().trim().min(1).max(max).refine(isSingleLineText, "unsafe character");
+
+const setupRequestAlertSchema = z.object({
+  kind: z.literal("setup_request_alert"),
+  setupRequestId: z.uuid(),
+  to: emailAddressSchema,
+  shopName: setupAnswerSchema(SETUP_TEXT_MAX),
+  region: setupAnswerSchema(SETUP_TEXT_MAX),
+  runsBoat: z.boolean(),
+  currentSystem: z.enum(SETUP_CURRENT_SYSTEMS),
+  contactName: setupAnswerSchema(SETUP_TEXT_MAX),
+  contactEmail: emailAddressSchema,
+  contactPhone: setupAnswerSchema(SETUP_PHONE_MAX).optional(),
+  /** A `FunnelSource` clamped by `eventSource`, or "unknown". */
+  source: z.string().trim().min(1).max(60),
+  /** The language the reader filled the form in. */
+  requestLocale: z.string().trim().min(2).max(10),
+});
+
+const sourceCountSchema = z.object({
+  source: z.string().trim().min(1).max(60),
+  count: z.number().int().positive(),
+});
+
+/**
+ * The founder's Monday digest (ADR 20261007-founder-metrics): last week's north
+ * star, the funnel by source, and the shops that have stalled between
+ * activation steps. Founder-only and English, with no shop to queue against,
+ * so it rides `notify()` like `usage_ceiling_alert`. Counts, funnel tags and
+ * shop names — no diver and no requester appears in it.
+ */
+const founderDigestSchema = z.object({
+  kind: z.literal("founder_digest"),
+  to: emailAddressSchema,
+  weekStart: calendarDateSchema,
+  weekEnd: calendarDateSchema,
+  diveDays: z.number().int().nonnegative(),
+  diveDayShops: z.number().int().nonnegative(),
+  demoEntries: z.array(sourceCountSchema).max(200),
+  setupRequests: z.array(sourceCountSchema).max(200),
+  unnotifiedSetupRequests: z.number().int().nonnegative(),
+  stalls: z
+    .array(
+      z.object({
+        shopName: z.string().trim().min(1).max(120),
+        shopSlug: z.string().trim().min(1).max(120),
+        lastReached: z.enum(SHOP_MILESTONES),
+        since: calendarDateSchema,
+        waitingFor: z.enum(SHOP_MILESTONES),
+      }),
+    )
+    .max(500),
+});
+
 // The shop's own inbox learns about a lead the moment the diver submits the
 // public course-page composer (docs/product/archive/ux-personas-20260730-findings.md
 // task 7) — carries the course_inquiries row id so a retried send can't double
@@ -816,6 +894,8 @@ export const notificationSchema = z
     newAccountAlertSchema,
     demoStartedAlertSchema,
     usageCeilingAlertSchema,
+    setupRequestAlertSchema,
+    founderDigestSchema,
     courseInquirySchema,
     staffReplySchema,
   ])
@@ -855,6 +935,8 @@ export function notificationSubjectEmail(notification: Notification): string | n
       return notification.inquirerEmail ?? null;
     case "new_account_alert":
       return notification.ownerEmail;
+    case "setup_request_alert":
+      return notification.contactEmail;
     default:
       return null;
   }
@@ -888,6 +970,8 @@ export function notificationSubjectPhone(notification: Notification): string | n
   switch (notification.kind) {
     case "course_inquiry":
       return notification.inquirerPhone ?? null;
+    case "setup_request_alert":
+      return notification.contactPhone ?? null;
     default:
       return null;
   }
@@ -1030,6 +1114,12 @@ export function notificationIdempotencyKey(notification: Notification): string {
     // Level is in the key deliberately: crossing from warn to over is news.
     case "usage_ceiling_alert":
       return `usage-ceiling/${notification.ceilingId}/${notification.periodKey}/${notification.level}`;
+    // One mail per stored request row; the row exists before the send does.
+    case "setup_request_alert":
+      return `setup-request/${notification.setupRequestId}`;
+    // One digest per week, ever — the same key the claim takes.
+    case "founder_digest":
+      return `founder-digest/${notification.weekStart}`;
     // One notification per submitted inquiry row.
     case "course_inquiry":
       return `course-inquiry/${notification.courseInquiryId}`;

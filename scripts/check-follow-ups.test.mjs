@@ -523,7 +523,7 @@ describe("--body, the pre-flight for one drafted issue", () => {
     expect(result.stderr).toMatch(/\*\*Effort:\*\* must be one of/);
     expect(result.stderr).toMatch(/missing section “What I noticed”/);
     // And it says *why* this is worth fixing before filing rather than after.
-    expect(result.stderr).toMatch(/every open pull request/);
+    expect(result.stderr).toMatch(/fails the scheduled `check:follow-ups` run for everyone/);
   });
 
   it("does not blame the draft for a title the caller has not written yet", () => {

@@ -8,7 +8,7 @@ import {
   verifyWaiverIntegrity,
   WAIVER_INTEGRITY_VERSION_SIGNED,
 } from "@/lib/waiver-integrity";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import * as bookingCapabilitiesModule from "./booking-capabilities";
 import {
   cancelBooking,
@@ -56,7 +56,7 @@ import {
 import { issueWaiverRequest } from "./waivers";
 
 async function seededContext() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id);
   const open = trips.find((t) => t.title === "Two-Tank Reef — Christ of the Abyss");
   const fullTrip = trips.find((t) => t.title === "Wreck Trip — Spiegel Grove");
@@ -69,6 +69,10 @@ const visitor = { fullName: "Nora Quinn", email: "nora@example.com", phone: "+1-
 async function bookVisitor(db: AppDb, shopId: string, tripId: string) {
   return createBooking(db, { actor: "staff", shopId, tripId, ...visitor });
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 describe("createBooking (in-memory PGlite)", () => {
   it("books a new visitor, creating a person with the diver role", async () => {

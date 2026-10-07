@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
+import { EXPORT_TABLES, type ExportTableRead } from "./export-tables";
 import * as schema from "./schema";
 import {
   bookings,
@@ -348,8 +349,8 @@ const ERASURE_KEEPS: Record<string, string> = {
  * what a `sourcery-ai` review pointed out against the issue's own wording:
  * scope is every table, not the ones a regex thought to ask about.
  *
- * So: 121 tables, 96 in the closure, and each of the other 25 named here with
- * why an erasure is right to leave it. Almost all of them are the shop's own
+ * So every table outside the closure is named here with why an erasure is
+ * right to leave it. Almost all of them are the shop's own
  * settings or a provider's plumbing, which is exactly why this list is cheap to
  * keep and worth having — a new table lands here the day it is added, and the
  * only way past it is to write a sentence a reviewer can disagree with.
@@ -371,6 +372,8 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   shop_whatsapp_accounts:
     "the shop’s own WhatsApp sender: a number, a template and sealed credentials",
   shop_stripe_accounts: "the shop’s Connect account and what it is enabled for",
+  shop_subscriptions:
+    "what the shop pays DiveDay: Stripe ids on DiveDay’s own account, a status and a few dates. The business is the customer, never a diver",
   shop_integrations: "a provider connection the shop made, and the sealed credentials behind it",
   shop_backup_destinations: "where the shop sends its own backups, and the sealed key to get there",
   shop_backup_deliveries:
@@ -388,6 +391,15 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   // DiveDay's own catalogue, shared by every shop and owned by none.
   global_dive_sites: "DiveDay’s catalog of sites",
   global_dive_site_versions: "that catalog's own history",
+
+  // DiveDay's own sales funnel (ADRs 20261007-setup-request-form and
+  // 20261007-founder-metrics). None belongs to a shop, so no shop's erasure
+  // reaches it.
+  setup_requests:
+    "a shop owner asking DiveDay to set them up: their name, address and phone, sent to DiveDay rather than to any shop. A diver is never on it. It leaves by `deleteSetupRequestsByEmail` / `deleteSetupRequestsByPhone` when that owner asks DiveDay to forget them",
+  demo_entries: "someone opening the demo: a source, a role and a time, and no person",
+  shop_milestones:
+    "when a shop reached a step of getting started, and whether a stall alert went out. A shop and a date, no diver",
 
   // Plumbing: provider coordination and delivery ledgers, holding no person.
   notification_rate_limit_state: "provider coordination keyed by ceiling and period",
@@ -525,6 +537,18 @@ const PROCESSOR_OBJECT_COLUMNS: Record<
   },
   "booking_checkouts.stripe_account_id": { held: "shop", why: "as orders.stripe_account_id" },
   "tips.stripe_account_id": { held: "shop", why: "as orders.stripe_account_id" },
+  "shop_subscriptions.stripe_customer_id": {
+    held: "shop",
+    why: "the shop as DiveDay's own billing customer, on DiveDay's account; no diver is behind it",
+  },
+  "shop_subscriptions.stripe_subscription_id": {
+    held: "shop",
+    why: "as shop_subscriptions.stripe_customer_id",
+  },
+  "shop_subscriptions.stripe_checkout_session_id": {
+    held: "shop",
+    why: "the owner's last open Checkout for DiveDay's plan, as shop_subscriptions.stripe_customer_id",
+  },
   "shop_stripe_accounts.stripe_account_id": {
     held: "shop",
     why: "the shop's own Connect account. Disconnecting it is a shop decision, not an erasure",
@@ -823,6 +847,50 @@ describe("erasure coverage", () => {
       .filter((name) => !written.has(name) && !(name in ERASURE_KEEPS))
       .sort();
     expect(undecided).toEqual([]);
+  });
+
+  /**
+   * The export read list (`./export-tables`) names, per table, the column a
+   * diver's own bundle reads it by. A table a diver can ask to *see* as theirs
+   * is a table they can ask to have *forgotten*, so every one of them must be
+   * decided by the erasure path above — and the scope column must really be a
+   * foreign key to `people` or `bookings`, or the list is describing a table
+   * the closure cannot see.
+   */
+  it("decides every table a diver's own export reads as theirs", () => {
+    const { written } = erasureWriteSites();
+    const diverScoped = Object.values(EXPORT_TABLES as Record<string, ExportTableRead>)
+      .filter(({ scope }) => scope.personColumn || scope.bookingColumn)
+      .map(({ table }) => getTableName(table));
+    expect(diverScoped.length).toBeGreaterThan(15);
+    expect(
+      diverScoped.filter((name) => !written.has(name) && !(name in ERASURE_KEEPS)).sort(),
+    ).toEqual([]);
+  });
+
+  it("scopes a diver's export reads only through a foreign key to people or bookings", () => {
+    const misdeclared: string[] = [];
+    for (const { table, scope } of Object.values(
+      EXPORT_TABLES as Record<string, ExportTableRead>,
+    )) {
+      const name = getTableName(table);
+      const facts = tables.get(name);
+      for (const [column, target] of [
+        [scope.personColumn, "people"],
+        [scope.bookingColumn, "bookings"],
+      ] as const) {
+        if (!column) continue;
+        const keyed = facts?.foreignKeys.some(
+          (key) => key.target === target && key.columns.includes(column.name),
+        );
+        if (!keyed) misdeclared.push(`${name}.${column.name} references no ${target}`);
+      }
+      const ownColumn = getTableConfig(table).columns.includes(scope.shopColumn as never);
+      if (!ownColumn || scope.shopColumn.name !== "shop_id") {
+        misdeclared.push(`${name} is shop-scoped by ${scope.shopColumn.name}`);
+      }
+    }
+    expect(misdeclared).toEqual([]);
   });
 
   it("has no keep-reason for a table the erasure does write", () => {

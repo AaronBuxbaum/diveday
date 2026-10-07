@@ -2870,7 +2870,7 @@ describe("physician medical clearance", () => {
 
     // The locked door the sentence must not point at: nothing can be sent
     // against the seat that was refused. The record page offers no send at all
-    // for a held release (`divers/[personId]/_lib/status.ts`), and the writer
+    // for a held release (`src/lib/diver-status.ts`), and the writer
     // agrees — this booking already carries a record that is not pending.
     const later = new Date(now.getTime() + 120_000);
     expect(

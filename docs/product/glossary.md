@@ -72,7 +72,11 @@ new domain concept, define it here in the same PR.
   outside DiveDay) and clicks **Mark certified**; a card arrives already `verified` through the contact
   importer (see **Imported certification**); or this shop's own instructor certifies a diver directly
   from a course session's own roster (see **Shop-issued certification**). There is no automated agency
-  integration for the first path. Only a certified card at or above a trip's required level can
+  integration for the first path. A card awaiting a check carries a link to its agency's lookup page
+  ("Check with SSI"): a convenience that saves finding the page, never evidence — the card becomes
+  certified only when a staffer marks it so — and some agencies (RAID, BSAC, the cave-diving bodies)
+  get none because they publish no lookup to link to, while PADI's sits behind the shop's member
+  sign-in and its link says so. Only a certified card at or above a trip's required level can
   satisfy readiness. (The staff surface says "certified"; the stored status value is `verified`, which
   is what readiness reads.)
 - **Claimed certification** — a card recorded as evidence but not yet verified: the stored status is
@@ -116,7 +120,7 @@ new domain concept, define it here in the same PR.
   purpose (see their own entries on why even an *imported* row waits for a staff confirm there).
 - **In training** — a diver with no card at a trip's level yet, holding a seat on a course session
   that certifies that level (or higher), ends before the trip starts, and has not ended yet. Which
-  courses certify a rung is agency fact, kept by template in `src/db/course-templates.ts`
+  courses certify a rung is agency fact, kept by template in `src/content/course-templates.ts`
   (`courseTemplateCertifiedLevel`), and matches the importer: SSI Advanced Adventurer and SDI
   Advanced Adventure Diver are the Advanced rung; specialties, refreshers and tasters certify none.
   It is **never evidence**. At a charter's sale it counts toward the trip's level, so a fun dive the
@@ -355,8 +359,11 @@ new domain concept, define it here in the same PR.
   Diver deserves to be told the difference is ours and invited to ask.
 - **CMAS** — a **confederation, not an issuer**: the card is issued and numbered by a *national
   federation* (FFESSM in France, VDST in Germany, FIPSAS in Italy, LIFRAS in francophone Belgium…)
-  under CMAS standards, so there is no single CMAS registry a staffer can check a number against —
-  the lookup **Verified certification** describes has to go to the federation named on the card.
+  under CMAS standards. CMAS does run a central portal (portal.cmas.org) that searches by CMAS code,
+  or by name and birth date, but national federations are still filling it: a card it finds is
+  confirmed, and a card it does not find is **not** thereby invalid — the lookup **Verified
+  certification** describes then goes to the federation named on the card. That is why the staff
+  link reads "Search the CMAS portal" rather than "Check with CMAS".
   Its ladder is stars, and DiveDay's ladder holds it like this: **1★ ≈ Open Water** (ISO 24801-2
   *Autonomous Diver*, the same rung PADI Open Water maps to), **2★ ≈ Advanced Open Water**, **3★ ≈
   Divemaster** (ISO 24801-3 *Dive Leader*). Two traps live in that mapping. **The stars are also
@@ -1470,7 +1477,7 @@ new domain concept, define it here in the same PR.
   immutable completed record any signature produces, marked `signatureMethod: "imported"` so it is
   never confused with a release DiveDay itself watched a diver sign or a staff-attested paper copy.
   Unlike the paper path, **no staff attestation is required** — a deliberate, knowingly-made
-  product-owner decision (H-17 in human-decisions.md) that reverses the contact importer's original
+  product-owner decision (H-17 in human-decisions/) that reverses the contact importer's original
   fail-closed medical rule. It carries the diver's real acceptance date when the row gives one (still
   subject to the one-year signature-validity window), snapshots the shop's *current* template for
   reference only (the diver never agreed to that text), and is never fabricated from a source
@@ -1723,6 +1730,9 @@ new domain concept, define it here in the same PR.
   out. Dormant until Meta approves DiveDay's app — the settings page says so, and courtesy messages
   go out as SMS meanwhile. See
   [20260802-whatsapp-embedded-signup](../architecture/decisions/20260802-whatsapp-embedded-signup.md).
+- **Set-up request** — a shop asking to be set up, sent from the public form at `/get-set-up` (every "Get set up" button opens it). One `setup_requests` row with the shop's answers, the contact's details and the funnel tag of the page that sent them; the founder opens the shop by hand from it ([ADR 20261007-setup-request-form](../architecture/decisions/20261007-setup-request-form.md)). Not a booking inquiry, which is a diver asking a shop.
+- **Dive day (north star)** — one real shop's local calendar day on which at least one diver was boarded at a departure roll call. Counted per week, it is the north star in [rollout.md](rollout.md#metrics--the-scoreboard). Two boats out on one Saturday is one dive day ([ADR 20261007-founder-metrics](../architecture/decisions/20261007-founder-metrics.md)).
+- **Activation milestone** — a first-time step a real shop has taken: created, first departure, first public booking, first diver-signed waiver, first roll call, and (once billing exists) first paid month. Stored once each in `shop_milestones`. A shop is **stalled** when its newest step is 7 or more days old and the next is missing; the founder digest names a stall once.
 - **Demo mode** — a shop flagged `isDemo` gets the Demo Playground banner, its role switcher, and a
   "Reset demo data" affordance scoped to that one tenant. "Try the live demo" **mints a fresh
   `isDemo` shop per visitor** with a generated name/slug, seeded with the full sample schedule; a
@@ -1732,10 +1742,10 @@ new domain concept, define it here in the same PR.
   **never seeded** — it starts empty, with no playground banner or destructive reset (ADR
   20260724-per-visitor-demo-shops, superseding 20260718-production-demo-seed). A trial runs
   **3 weeks** from `shops.created_at` (`TRIAL_DURATION_DAYS`, `src/lib/trial.ts`), shown to the
-  owner in Settings as days left / trial ended. Expiry is **soft** — the shop keeps working exactly
-  as before past the window; there is no paid/trial entitlement flag in the schema to gate on.
-  Moving to a paid plan is by writing to `onboarding@dive.day`, not a self-serve checkout
-  (product-owner decision, 2026-08-05, [human-decisions.md](human-decisions.md#decision-register)).
+  owner on Settings > Billing as days left / trial ended. Expiry is **soft**: the shop keeps working
+  exactly as before past the window, and nothing gates on **billing standing**. Once billing is
+  turned on, the owner moves to paid by adding a card on that page (see **Subscription** under
+  Money; ADR [20261007-subscription-billing](../architecture/decisions/20261007-subscription-billing.md)).
 - **Owner reporting / monthly report** — the owner's "how's my month" view (`/shop/[slug]/reports`):
   net revenue, bookings, **fill rate**, and **waiver completion** for the trips that departed in a
   chosen month, plus a per-trip breakdown. Trip metrics remain anchored to trip-departure month in
@@ -2170,6 +2180,10 @@ new domain concept, define it here in the same PR.
   owns (ADR
   [20260826-stripe-tax-is-opt-in-and-provider-owned](../architecture/decisions/20260826-stripe-tax-is-opt-in-and-provider-owned.md)),
   and from a **deposit**, which is the shop's money held early.
+- **Subscription (DiveDay billing)** — what a *shop* pays *DiveDay*: one monthly price, billed by Stripe Billing on DiveDay's own Stripe account, never through the shop's connected account (that is the shop's money from divers). One row per shop in `shop_subscriptions`, written by the billing webhook; Settings > Billing is the owner's alone. ADR [20261007-subscription-billing](../architecture/decisions/20261007-subscription-billing.md).
+- **Billing standing** — the one word a shop's subscription reads as: *trialing*, *free term*, *active*, *past due*, *canceled* or *trial ended*. Derived, never stored, by `billingStanding` in `src/lib/billing/standing.ts` from the trial window, the free term and Stripe's own status. *In good standing* means trialing, free term or active; nothing gates on it.
+- **Free term** — free months DiveDay grants a shop by hand (the founding offer), set with `pnpm billing:free-term <shop-slug> <last-free-day>`. The date is the last free day, inclusive, in the shop's zone. Adding a card during the trial or a free term charges nothing until the free time ends.
+- **First paid month** — the instant the first non-zero invoice for a shop's subscription was paid: `shop_subscriptions.first_paid_at`, written once, also logged as `billing.first_paid_month` and recorded as the `first_paid_month` milestone in `shop_milestones`.
 
 ## What a shop says about itself
 
@@ -2259,7 +2273,7 @@ new domain concept, define it here in the same PR.
   same **Confirm identity** tap. Staff-facing diver create/edit/restore still **refuse** on the
   same email collision rather than reuse, and a soft-deleted person's email frees up for a new,
   unrelated person (that soft-delete window is accepted as-is; it fails closed to a blank record). See H-13 in
-  [human-decisions.md](human-decisions.md) and
+  [human-decisions/](human-decisions/README.md) and
   [20260723-person-email-uniqueness](../architecture/decisions/20260723-person-email-uniqueness.md).
 - **Held seat** — a booking attached to an existing diver on a guess: it carries
   `bookings.identity_unconfirmed_at` (with `identity_booked_as` and `identity_matched_by`) and the
@@ -2295,7 +2309,7 @@ new domain concept, define it here in the same PR.
   #2082): `/ready` and `/waivers` neither show nor write the record's emergency contact, rental
   fit, cards or language, a clean release signed on the seat does not carry to the diver's other
   bookings (a medical hold signed there still does), and no readiness reminder or recap is sent
-  until the flag clears. See H-13 in [human-decisions.md](human-decisions.md).
+  until the flag clears. See H-13 in [human-decisions/](human-decisions/README.md).
 - **Split off a held seat** ("Different person") — the other answer to a held seat: this booking is
   *not* the diver it was attached to. `splitBookingIdentity` (`src/db/bookings.ts`) creates a new
   diver record, named by the staffer and prefilled with the name the seat was booked under
@@ -2332,6 +2346,27 @@ new domain concept, define it here in the same PR.
   (owner or manager), which re-seals each verified release it moves as integrity **version 3**
   (who moved it, when, from which record) so it does not read as tampered. Trail lines on the departure (`identity_split`) and on the matched diver's
   record (`identity_split_off`).
+- **Merge (two diver records)** — the shop saying two records are one diver, and the record kept
+  taking everything the other held (`mergeDiverRecords`, `src/db/diver-merge.ts`; issue #1240).
+  Owner or manager only. A **likely duplicate** is offered on the record and flagged on the roster
+  when two live records share one mailbox (a `+tag`, or Gmail's dots, folded away), one phone, or
+  one name and one date of birth; a name with a date missing on one side is offered only when an
+  email or phone agrees too, and two records under one name with *different* dates are two people
+  and are never offered on the name (`src/lib/diver-duplicates.ts`). Every merge
+  goes through a side-by-side **merge preview** (`divers/[personId]/merge/[survivorId]`): both
+  records' particulars, what each holds, and a choice wherever they disagree (name, date of birth,
+  email, phone, emergency contact as one pair, rental sizes as one profile), the kept record's value
+  preselected. A departure both records sit on refuses the merge until staff move the seat, and so
+  does a seat on a departure that is out right now ("Merge after the boat is back"). Two different
+  dates of birth, one date missing where only the name matches, cards or signed releases on both
+  records, releases signed under names that do not match, or a medical answer still waiting on (or
+  declined by) a physician mean the two may be **two people**, and the merge runs only after the
+  staffer ticks that they confirmed it with the diver; the tick names the exact warnings read, and a
+  new one appearing before the click refuses the merge. Every
+  signed release and medical answer moves, re-sealed as integrity version 3; none is dropped. The
+  record merged away is deleted with a pointer to the one kept (`people.merged_into_person_id`), so
+  its old links land on the kept record, and the kept record's trail says who merged which name
+  into it (`diver_merged`).
 - **Remove vs. erase (a diver)** — two different operations, deliberately not the same button.
   **Removing** a diver is the reversible archive action every entity has
   ([20260719-crud-archive-semantics](../architecture/decisions/20260719-crud-archive-semantics.md)):

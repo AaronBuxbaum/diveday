@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
-import { buildAfterStateProps } from "@/app/ready/[token]/_lib/after-state-data";
 import { EntryDone } from "@/components/account/EntryShell";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { buttonClass } from "@/components/ui/button";
@@ -16,6 +15,7 @@ import { buddyReferralId } from "@/lib/buddy-tokens";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { publicAppUrl } from "@/lib/notifications";
 import { publicSchedulePath } from "@/lib/public-routes";
+import { buildAfterStateProps } from "@/lib/recap-after-state";
 import { verifyRecapToken } from "@/lib/recap-links";
 import { openGraphSite } from "@/lib/site-metadata";
 import {

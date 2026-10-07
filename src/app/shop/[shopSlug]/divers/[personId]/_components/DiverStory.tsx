@@ -7,10 +7,10 @@ import { ORDER_STATUS_KEYS } from "@/i18n/order-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { formatCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { bookingIsAhead } from "@/lib/diver-status";
 import { formatMoneyCents, formatShortDate, formatTime } from "@/lib/format";
 import { SHOP_HISTORY_PREVIEW_COUNT } from "@/lib/prior-visits";
 import { canRaiseInvoiceFor } from "../_lib/invoice-door";
-import { bookingIsAhead } from "../_lib/status";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 import { bookingMoney, bookingMoneyStatusKey, type DiverProfile, type Shop } from "./shared";
 

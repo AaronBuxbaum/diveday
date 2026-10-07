@@ -1,7 +1,8 @@
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
 
 /**
  * The heading ramp stays closed (ADR 20260827-clearwater-surface-language,
@@ -22,7 +23,7 @@ import { pathToFileURL } from "node:url";
  * ### Why a ratchet rather than a flat gate
  *
  * The same shape as `scripts/check-copy.mjs`: a per-file count in
- * `scripts/type-ramp-baseline.json` that may only fall. It lands at zero, so it
+ * `scripts/ratchets.json` (its `type-ramp` section) that may only fall. It lands at zero, so it
  * behaves as a full gate today — but a merge from a branch cut before the sweep
  * will carry spellings that are pre-existing debt rather than new drift, and
  * `--absorb` is how that gets recorded loudly instead of silently. `--write`
@@ -39,7 +40,6 @@ import { pathToFileURL } from "node:url";
  */
 
 const ROOT = process.cwd();
-const BASELINE_PATH = "scripts/type-ramp-baseline.json";
 export const guardedRoots = ["src/app", "src/components"];
 
 /**
@@ -189,54 +189,23 @@ async function main() {
     process.exit(0);
   }
 
-  let baseline = {};
-  let baselineExists = true;
-  try {
-    baseline = JSON.parse(await readFile(path.join(ROOT, BASELINE_PATH), "utf8"));
-  } catch (error) {
-    if (error?.code !== "ENOENT") throw error;
-    baselineExists = false;
-  }
-  const baselineCounts = Object.fromEntries(
-    Object.entries(baseline).filter(([key]) => !key.startsWith("//")),
-  );
-
-  const absorbing = process.argv.includes("--absorb");
-  if (process.argv.includes("--write") || absorbing) {
-    const grew = [...counts.entries()].filter(
-      ([file, count]) => baselineExists && count > (baselineCounts[file] ?? 0),
+  const { counts: baselineCounts, exists: baselineExists } = await readCounts(ROOT, "type-ramp");
+  const { write, absorb } = ratchetFlags();
+  if (write || absorb !== null) {
+    process.exit(
+      await bankCounts({
+        root: ROOT,
+        guard: "type-ramp",
+        counts: counts,
+        allowed: baselineCounts,
+        exists: baselineExists,
+        note: "Bare heading spellings still typed at a call site, per file. Written by `node scripts/check-type-ramp.mjs --write`. This number may only go down — see scripts/check-type-ramp.mjs.",
+        refusal:
+          "The ramp only closes — use a constant from src/components/ui/typography.ts instead",
+        absorb,
+        summary: (files, total) => `${files} files, ${total} spellings left`,
+      }),
     );
-    const added = [...counts.keys()].filter((file) => baselineExists && !(file in baselineCounts));
-    if (grew.length > 0 || added.length > 0) {
-      if (!absorbing) {
-        console.error(
-          "Refusing to write a baseline that grows. The ramp only closes — use a constant from src/components/ui/typography.ts instead:",
-        );
-        for (const [file, count] of grew) {
-          console.error(`- ${file}: ${baselineCounts[file]} → ${count}`);
-        }
-        for (const file of added) console.error(`- ${file}: new file with ${counts.get(file)}`);
-        console.error(
-          "If this growth arrived in a merge from a branch that predates the sweep, `--absorb` records it explicitly.",
-        );
-        process.exit(1);
-      }
-      console.warn("Absorbing ramp spellings that grew — this must be merged-in work, not new:");
-      for (const [file, count] of grew) {
-        console.warn(
-          `- ${file}: ${baselineCounts[file]} → ${count} (+${count - baselineCounts[file]})`,
-        );
-      }
-      for (const file of added) console.warn(`- ${file}: new file with ${counts.get(file)}`);
-    }
-    const next = {
-      "//": "Bare heading spellings still typed at a call site, per file. Written by `node scripts/check-type-ramp.mjs --write`. This number may only go down — see scripts/check-type-ramp.mjs.",
-      ...Object.fromEntries([...counts.entries()].sort(([a], [b]) => a.localeCompare(b))),
-    };
-    await writeFile(path.join(ROOT, BASELINE_PATH), `${JSON.stringify(next, null, 2)}\n`);
-    const total = [...counts.values()].reduce((sum, n) => sum + n, 0);
-    console.log(`type-ramp: baseline written — ${counts.size} files, ${total} spellings left`);
-    process.exit(0);
   }
 
   const violations = [...rungDrift];

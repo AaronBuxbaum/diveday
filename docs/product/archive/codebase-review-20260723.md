@@ -5,7 +5,7 @@
 > All 21 tickets (CR-001–CR-021) are implemented and merged: CR-001–CR-012 shipped first, then
 > CR-013–CR-021 in [PR #144](https://github.com/AaronBuxbaum/diveday/pull/144). The three
 > [human-owned decisions](#human-owned-decisions) below are resolved — see
-> [human-decisions.md](../human-decisions.md#decision-register) (H-14, H-15, H-16) and
+> [human-decisions/](../human-decisions/README.md#decision-register) (H-14, H-15, H-16) and
 > [20260724-staff-session-and-capability-migration-policy](../../architecture/decisions/20260724-staff-session-and-capability-migration-policy.md)
 > for H-15/H-16's reasoning. H-14 (role authority boundaries) is implemented — see
 > [shipped.md](../shipped.md#staff-role-authorization-delivered-2026-07-24).
@@ -417,7 +417,7 @@ These are material risks, but a smaller model must not silently change them:
    can decide whether to invalidate all historical readiness/confirmation URLs immediately or allow
    a transition window.
 
-Record those decisions in `docs/product/human-decisions.md` and the relevant ADR before assigning
+Record those decisions in `docs/product/human-decisions/README.md` and the relevant ADR before assigning
 implementation.
 
 ## Suggested execution order

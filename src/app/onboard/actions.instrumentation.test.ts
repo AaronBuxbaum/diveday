@@ -5,13 +5,15 @@ import { seededTestDb } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
 
 /**
- * **The trial half of the marketing funnel: the event, and the founder's
- * alert** (docs ADR 20260727-sentry-error-monitoring-q7fk2p for the alert,
- * 20260805-demo-try-alerts for the pair).
+ * **The founder's new-shop alert** (docs ADR
+ * 20260727-sentry-error-monitoring-q7fk2p, 20260805-demo-try-alerts).
  *
- * Both already shipped; neither had a test that they still fire. That is the
- * gap this file closes, because this is code that fails silently — a signup
- * still works perfectly with its event and its alert quietly gone.
+ * This is code that fails silently — a signup still works perfectly with its
+ * alert quietly gone — so this file pins that it still fires. The
+ * `trial_started` event that used to fire beside it is gone: `/onboard` opens
+ * only behind the setup key, so it counted the founder's own form fills, and
+ * the funnel's conversion is `setup_requested` now (ADR
+ * 20261007-setup-request-form).
  *
  * The load-bearing assertion is the last one: **a broken alert must not cost a
  * shop its signup.** The alert block awaits `getDb()` as an argument, so a
@@ -48,14 +50,12 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/rate-limit")>();
   return { ...actual, checkRateLimit: vi.fn(async () => ({ allowed: true })) };
 });
-vi.mock("@/lib/analytics", () => ({ trackEvent: vi.fn(async () => {}) }));
 vi.mock("@/db/notifications", () => ({
   sendNotification: vi.fn(async () => ({ status: "sent" })),
 }));
 
 const { getDb } = await import("@/db/client");
 const { checkRateLimit } = await import("@/lib/rate-limit");
-const { trackEvent } = await import("@/lib/analytics");
 const { sendNotification } = await import("@/db/notifications");
 const { onboardAction } = await import("./actions");
 
@@ -69,7 +69,6 @@ function onboardForm(overrides: Record<string, string> = {}): FormData {
   form.set("ownerName", "Marisol Vega");
   form.set("ownerEmail", "marisol@reefrunners.example");
   form.set("ownerPassword", "a-long-enough-password");
-  form.set("source", "pricing");
   for (const [key, value] of Object.entries(overrides)) form.set(key, value);
   return form;
 }
@@ -120,8 +119,6 @@ beforeEach(() => {
   hoisted.afterTasks.length = 0;
   vi.mocked(getDb).mockReset();
   vi.mocked(checkRateLimit).mockResolvedValue({ allowed: true } as never);
-  vi.mocked(trackEvent).mockReset();
-  vi.mocked(trackEvent).mockResolvedValue(undefined);
   vi.mocked(sendNotification).mockReset();
   vi.mocked(sendNotification).mockResolvedValue({ status: "sent", providerMessageId: "m1" });
 });
@@ -131,15 +128,9 @@ afterEach(() => {
 });
 
 describe("onboardAction instrumentation", () => {
-  it("fires trial_started once and alerts the founder once, on one sign-up", async () => {
-    // Both observers asserted against the same sign-up rather than one each: a
-    // second sign-up costs another whole database and proves nothing the first
-    // doesn't, and "exactly once" is about this run of the action either way.
+  it("alerts the founder once, on one sign-up", async () => {
     await useDb();
     expect(await signUp()).toBe("/shop/reef-runners");
-
-    expect(trackEvent).toHaveBeenCalledTimes(1);
-    expect(trackEvent).toHaveBeenCalledWith({ name: "trial_started", source: "pricing" });
 
     // Filtered by kind rather than counting every send: what "once" means here
     // is one founder alert per sign-up, and that stays true whether or not the
@@ -159,21 +150,13 @@ describe("onboardAction instrumentation", () => {
     });
   });
 
-  it("clamps an unregistered source rather than opening a bucket for it", async () => {
-    await useDb();
-    await signUp(onboardForm({ source: "not-a-real-page" }));
-
-    expect(trackEvent).toHaveBeenCalledWith({ name: "trial_started", source: "unknown" });
-  });
-
   it("counts nothing when the sign-up was refused", async () => {
     // A refused attempt bounces back to the form. No shop exists, so there is
-    // no trial to count and nothing to tell the founder about — the same
+    // no shop and nothing to tell the founder about — the same
     // accuracy rule the demo half is held to.
     vi.mocked(checkRateLimit).mockResolvedValue({ allowed: false } as never);
 
     expect(await signUp()).toContain("/onboard?");
-    expect(trackEvent).not.toHaveBeenCalled();
     expect(sendNotification).not.toHaveBeenCalled();
   });
 
@@ -182,11 +165,9 @@ describe("onboardAction instrumentation", () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     await signUp();
     hoisted.afterTasks.length = 0;
-    vi.mocked(trackEvent).mockClear();
     vi.mocked(sendNotification).mockClear();
 
     expect(await signUp()).toContain("error=shop_slug_taken");
-    expect(trackEvent).not.toHaveBeenCalled();
     expect(sendNotification).not.toHaveBeenCalled();
     logged.mockRestore();
   });
@@ -203,14 +184,13 @@ describe("onboardAction instrumentation", () => {
    *
    * So: the refusal is `email_taken`, it lands on the form rather than
    * creating anything, and — the half that is not about enumeration at all —
-   * it counts no trial and alerts nobody, because no shop exists to count.
+   * it alerts nobody, because no shop exists to count.
    */
   it("says an address is already registered, and creates nothing when it is", async () => {
     await useDb();
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     expect(await signUp()).toBe("/shop/reef-runners");
     hoisted.afterTasks.length = 0;
-    vi.mocked(trackEvent).mockClear();
     vi.mocked(sendNotification).mockClear();
 
     // Same owner email, a shop link nothing has taken — so the slug check
@@ -218,7 +198,6 @@ describe("onboardAction instrumentation", () => {
     const landing = await signUp(onboardForm({ shopSlug: "reef-runners-two" }));
     expect(landing).toContain("error=email_taken");
     expect(landing).not.toContain("/shop/");
-    expect(trackEvent).not.toHaveBeenCalled();
     expect(sendNotification).not.toHaveBeenCalled();
     logged.mockRestore();
   });

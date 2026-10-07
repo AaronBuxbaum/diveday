@@ -98,6 +98,20 @@ export const fullShopExport = {
 } as const satisfies { claimKey: DiverMessageKey; termsKey: DiverMessageKey };
 
 /**
+ * The continuity promise: what a shop gets if DiveDay itself shuts down. An
+ * authorized service commitment, not a product feature (H-101, Aaron Buxbaum,
+ * 2026-10-07: "We can publish that exact promise"), so its words are not
+ * edited without the product owner. It rests on mechanisms that ship: the
+ * one-ZIP export above and the weekly scheduled backup to the shop's own
+ * bucket (`src/features/backup-export/`). Rendered on `/pricing` (the
+ * `faq.shutdown` answer) and `/about` (the records card); `src/lib/marketing.test.ts`
+ * pins it on both, in every locale.
+ */
+export const continuityPromise = {
+  claimKey: "marketing.export.continuity",
+} as const satisfies { claimKey: DiverMessageKey };
+
+/**
  * The mid-season answer, rendered on the homepage's records band
  * (docs/product/marketing-review-20260827.md, "Mid-season answered where it
  * disqualifies"). One claim, told at two lengths: the switching guides walk it

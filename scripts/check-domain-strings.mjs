@@ -1,7 +1,8 @@
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
 
 /**
  * No English sentence returned from `src/lib` or `src/db` (docs ADR
@@ -32,13 +33,12 @@ import { pathToFileURL } from "node:url";
  * stating: the baseline below is **empty**, so a rule that is too *wide* turns this gate off
  * silently, with nothing to notice.
  *
- * This is a ratchet like `check-copy.mjs`, seeded at zero: `scripts/domain-strings-baseline.json`
+ * This is a ratchet like `check-copy.mjs`, seeded at zero: the `domain-strings` section of `scripts/ratchets.json`
  * starts empty because the audit that motivated this script extracted everything it found in the
  * same change. A file with no baseline entry may contain none of this shape at all.
  */
 
 const ROOT = process.cwd();
-const BASELINE_PATH = "scripts/domain-strings-baseline.json";
 // src/features sits on the lib/db side of the app → features → lib/db dependency direction
 // (ADR 20260730-feature-module-contracts), so the codes-not-sentences discipline applies there too.
 export const guardedRoots = ["src/lib", "src/db", "src/features"];
@@ -262,57 +262,25 @@ async function main() {
     process.exit(0);
   }
 
-  let baseline = {};
-  let baselineExists = true;
-  try {
-    baseline = JSON.parse(await readFile(path.join(ROOT, BASELINE_PATH), "utf8"));
-  } catch (error) {
-    if (error?.code !== "ENOENT") throw error;
-    baselineExists = false;
-  }
-  const baselineCounts = Object.fromEntries(
-    Object.entries(baseline).filter(([key]) => !key.startsWith("//")),
+  const { counts: baselineCounts, exists: baselineExists } = await readCounts(
+    ROOT,
+    "domain-strings",
   );
-
-  const absorbing = process.argv.includes("--absorb");
-
-  if (process.argv.includes("--write") || absorbing) {
-    const grew = [...counts.entries()].filter(
-      ([file, count]) => baselineExists && count > (baselineCounts[file] ?? 0),
+  const { write, absorb } = ratchetFlags();
+  if (write || absorb !== null) {
+    process.exit(
+      await bankCounts({
+        root: ROOT,
+        guard: "domain-strings",
+        counts: counts,
+        allowed: baselineCounts,
+        exists: baselineExists,
+        note: "English strings returned from src/lib or src/db, per file. Written by `node scripts/check-domain-strings.mjs --write`. This number may only go down — see scripts/check-domain-strings.mjs.",
+        refusal: "The ratchet only turns one way — extract the strings instead",
+        absorb,
+        summary: (files, total) => `${files} files, ${total} strings still to extract`,
+      }),
     );
-    const added = [...counts.keys()].filter((file) => baselineExists && !(file in baselineCounts));
-    if (grew.length > 0 || added.length > 0) {
-      if (!absorbing) {
-        console.error(
-          "Refusing to write a baseline that grows. The ratchet only turns one way — extract the strings instead:",
-        );
-        for (const [file, count] of grew) {
-          console.error(`- ${file}: ${baselineCounts[file]} → ${count}`);
-        }
-        for (const file of added) console.error(`- ${file}: new file with ${counts.get(file)}`);
-        console.error(
-          "If this growth arrived in a merge from a branch that predates the check, `--absorb` records it explicitly.",
-        );
-        process.exit(1);
-      }
-      console.warn("Absorbing strings that grew — this must be merged-in work, not new code:");
-      for (const [file, count] of grew) {
-        console.warn(
-          `- ${file}: ${baselineCounts[file]} → ${count} (+${count - baselineCounts[file]})`,
-        );
-      }
-      for (const file of added) console.warn(`- ${file}: new file with ${counts.get(file)}`);
-    }
-    const next = {
-      "//": "English strings returned from src/lib or src/db, per file. Written by `node scripts/check-domain-strings.mjs --write`. This number may only go down — see scripts/check-domain-strings.mjs.",
-      ...Object.fromEntries([...counts.entries()].sort(([a], [b]) => a.localeCompare(b))),
-    };
-    await writeFile(path.join(ROOT, BASELINE_PATH), `${JSON.stringify(next, null, 2)}\n`);
-    const total = [...counts.values()].reduce((sum, n) => sum + n, 0);
-    console.log(
-      `domain-strings: baseline written — ${counts.size} files, ${total} strings still to extract`,
-    );
-    process.exit(0);
   }
 
   const violations = [];

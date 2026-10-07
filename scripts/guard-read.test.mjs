@@ -92,6 +92,19 @@ describe("large source files", () => {
     expect(violationFor({ file_path: path.join(root, "docs/long.md") }, { root })).toBeNull();
   });
 
+  it("reads a mid-sized module whole: the cap is 900 lines, not 600", async () => {
+    // At 600, 242 of ~2,800 source files were refused whole; 900 leaves the 135 that
+    // really are read by symbol (docs/agents/session-hooks.md).
+    expect(LARGE_FILE_LINES).toBe(900);
+    const root = await repo();
+    expect(
+      violationFor(
+        { file_path: path.join(root, "src/db/small.ts") },
+        { root, lineCount: () => 750 },
+      ),
+    ).toBeNull();
+  });
+
   it("counts the line cap exactly", async () => {
     const root = await repo();
     const lineCount = () => LARGE_FILE_LINES;

@@ -1,7 +1,8 @@
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
 
 /**
  * The copy does not sound like a language model wrote it.
@@ -70,14 +71,13 @@ import { pathToFileURL } from "node:url";
  * exemptions. The pilot-kit collateral is read by a human against
  * `docs/design/brand.md` instead.
  *
- * Ratcheted like `check:copy` — a per-file count in `scripts/voice-baseline.json`
+ * Ratcheted like `check:copy` — a per-file count in `scripts/ratchets.json`'s `voice` section
  * that may only fall. `--write` banks a fall and refuses a rise, `--absorb`
  * records growth that arrived in a merge, `--report [prefix]` prints every hit.
  * It lands at zero, so it behaves as a full gate today.
  */
 
 const ROOT = process.cwd();
-const BASELINE_PATH = "scripts/voice-baseline.json";
 export const LOCALES_DIR = "src/i18n/locales";
 
 /**
@@ -524,7 +524,7 @@ export function straightDoubleQuotes(value) {
 
 /**
  * The four **shape** rules (2026-09-24, the voice decision — H-89 in
- * docs/product/human-decisions.md, "The builder's note" in docs/design/brand.md).
+ * docs/product/human-decisions/README.md, "The builder's note" in docs/design/brand.md).
  *
  * The 2026-09-03 sweep removed the words a model overuses and left the shapes:
  * measured over the five marketing pages afterwards, the mirrored pair
@@ -1206,54 +1206,22 @@ async function main() {
     process.exit(0);
   }
 
-  let baseline = {};
-  let baselineExists = true;
-  try {
-    baseline = JSON.parse(await readFile(path.join(ROOT, BASELINE_PATH), "utf8"));
-  } catch (error) {
-    if (error?.code !== "ENOENT") throw error;
-    baselineExists = false;
-  }
-  const baselineCounts = Object.fromEntries(
-    Object.entries(baseline).filter(([key]) => !key.startsWith("//")),
-  );
-
-  const absorbing = process.argv.includes("--absorb");
-  if (process.argv.includes("--write") || absorbing) {
-    const grew = [...counts.entries()].filter(
-      ([file, count]) => baselineExists && count > (baselineCounts[file] ?? 0),
+  const { counts: baselineCounts, exists: baselineExists } = await readCounts(ROOT, "voice");
+  const { write, absorb } = ratchetFlags();
+  if (write || absorb !== null) {
+    process.exit(
+      await bankCounts({
+        root: ROOT,
+        guard: "voice",
+        counts: counts,
+        allowed: baselineCounts,
+        exists: baselineExists,
+        note: "Voice tells — a machine-written mannerism, or a straight apostrophe or double quote where the house ’ and “ ” belong — still in a message bundle or a route's metadata block, per file. Written by `node scripts/check-voice.mjs --write`. This number may only go down — see scripts/check-voice.mjs.",
+        refusal: 'Rewrite the sentence instead — docs/design/brand.md, "What gives us away"',
+        absorb,
+        summary: (files, total) => `${files} files, ${total} tells left`,
+      }),
     );
-    const added = [...counts.keys()].filter((file) => baselineExists && !(file in baselineCounts));
-    if (grew.length > 0 || added.length > 0) {
-      if (!absorbing) {
-        console.error(
-          'Refusing to write a baseline that grows. Rewrite the sentence instead — docs/design/brand.md, "What gives us away":',
-        );
-        for (const [file, count] of grew) {
-          console.error(`- ${file}: ${baselineCounts[file]} → ${count}`);
-        }
-        for (const file of added) console.error(`- ${file}: new file with ${counts.get(file)}`);
-        console.error(
-          "If this growth arrived in a merge from a branch that predates the sweep, `--absorb` records it explicitly.",
-        );
-        process.exit(1);
-      }
-      console.warn("Absorbing voice tells that grew — this must be merged-in work, not new:");
-      for (const [file, count] of grew) {
-        console.warn(
-          `- ${file}: ${baselineCounts[file]} → ${count} (+${count - baselineCounts[file]})`,
-        );
-      }
-      for (const file of added) console.warn(`- ${file}: new file with ${counts.get(file)}`);
-    }
-    const next = {
-      "//": "Voice tells — a machine-written mannerism, or a straight apostrophe or double quote where the house ’ and “ ” belong — still in a message bundle or a route's metadata block, per file. Written by `node scripts/check-voice.mjs --write`. This number may only go down — see scripts/check-voice.mjs.",
-      ...Object.fromEntries([...counts.entries()].sort(([a], [b]) => a.localeCompare(b))),
-    };
-    await writeFile(path.join(ROOT, BASELINE_PATH), `${JSON.stringify(next, null, 2)}\n`);
-    const total = [...counts.values()].reduce((sum, n) => sum + n, 0);
-    console.log(`voice: baseline written — ${counts.size} files, ${total} tells left`);
-    process.exit(0);
   }
 
   const violations = [];

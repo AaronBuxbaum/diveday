@@ -122,6 +122,18 @@ export function canManageStaffAccounts(roles: readonly Role[] | undefined): bool
   return isOwnerOrManager(roles);
 }
 
+/**
+ * See and change what the shop pays **DiveDay** — the card on file, the plan,
+ * cancelling (ADR 20261007-subscription-billing). Owner only, stricter than
+ * the shop's own payment settings: this is the business's contract with its
+ * vendor, the card is the owner's, and cancelling ends the shop's use of the
+ * product. A manager runs the shop's money; the owner decides whether the shop
+ * keeps paying for its tools.
+ */
+export function canManageBilling(roles: readonly Role[] | undefined): boolean {
+  return (roles ?? []).some((role) => role === "owner");
+}
+
 /** Issue or record a refund — money leaving the shop's account. */
 export function canRefund(roles: readonly Role[] | undefined): boolean {
   return isOwnerOrManager(roles);

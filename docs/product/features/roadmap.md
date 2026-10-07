@@ -15,7 +15,7 @@ report.)
 - What already shipped is indexed in [../shipped.md](../shipped.md) — check there before assuming a
   gap.
 - Human-owned approvals, provisional defaults, and validation gates are in
-  [../human-decisions.md](../human-decisions.md); the deep buyer/rival analysis is in
+  [../human-decisions/](../human-decisions/README.md); the deep buyer/rival analysis is in
   [competitive-analysis.md](../assessments/competitive-analysis.md) and
   [competitive-strategy.md](../assessments/competitive-strategy.md). The 2026-07-31 specialist
   optimization audit is archived
@@ -87,7 +87,7 @@ The gear register (shipped 2026-08-20,
 [20260815-minimal-gear-register](../../architecture/decisions/20260815-minimal-gear-register.md))
 tracks cylinders again — including their O2-clean clocks — but deliberately holds no fill record
 of any kind: whether one should return remains gated on the nitrox policy decision — V-05 and
-H-11 in [../human-decisions.md](../human-decisions.md).
+H-11 in [../human-decisions/](../human-decisions/README.md).
 
 ### 4. Multi-boat / multi-shop configuration
 
@@ -159,7 +159,7 @@ test pins the rule (never a pixel snapshot).
 **Every slice of this section shipped 2026-08-28** ([shipped.md](../shipped.md)) — 6a–6i, the
 last of them 6d (the home's evening reading and the fold) and 6f. Both of the section's owner calls
 were decided before the build: H-62 (the fold) and H-63 (desktop-only week) in
-[../human-decisions.md](../human-decisions.md), 2026-08-27. The ADR is what code obeys now; the
+[../human-decisions/](../human-decisions/README.md), 2026-08-27. The ADR is what code obeys now; the
 canvas and [its implementation spec](../../design/canvases/20260827-clearwater-surface-language/SPEC.md)
 stand as the dated argument.
 
@@ -700,7 +700,7 @@ converged on one finding: the app asks a shop to learn roughly twice as many nou
 concepts. The surface-level follow-through shipped (the Today redesign, the audit-fix loops, the
 six-tab header); what remains below is **concept**-level — each row changes what the product *is*
 named or shaped like, so each needs an explicit owner call before implementation, recorded in
-[human-decisions.md](../human-decisions.md). None is sequenced; recommendations are the review's,
+[human-decisions/](../human-decisions/README.md). None is sequenced; recommendations are the review's,
 not decisions.
 
 | Proposal | What it merges or cuts | Recommendation | Cost |
@@ -1001,8 +1001,6 @@ alongside them moved several of these prerequisites.
 - **N-57 What's new.** An in-app page and a monthly note derived from
   [../shipped.md](../shipped.md), so a shop learns what changed under it. *Effort:* S. *Needs:* i18n for the frame; the notes land
   in both locales.
-- **N-59 Self-serve billing.** Stripe Billing for the $99: trial to subscription, invoices,
-  cancel-with-export. *Effort:* M. *Needs:* owner (H-12's open half).
 
 ### The reef itself
 
@@ -1080,14 +1078,14 @@ ADR rather than letting this become an unbounded second backlog.
    `drizzle/` from empty *and* from the previous release's schema, and races two genuinely concurrent
    connections for the last seat; the `FOR UPDATE` oversell guard is no longer dead code under test
    (remove the lock and a one-seat trip sells two). Gated on `src/db/**`/`drizzle/**` plus a nightly
-   run rather than per-PR — [H-38](../human-decisions.md#decision-register) asks the owner to bless
+   run rather than per-PR — [H-38](../human-decisions/README.md#decision-register) asks the owner to bless
    that cadence rather than change it. See
    [20260806-real-postgres-ci-job](../../architecture/decisions/20260806-real-postgres-ci-job.md) and
    [shipped.md](../shipped.md). The [2026-08-02 review](../archive/comprehensive-review-20260802.md)
    this closed the last of its *original* engineering queue for is fully dissolved and archived as of
    2026-08-07 — its two small leftover buildable items (dropping two Stripe invoice URLs from the
    export contract, and DOM-L1's agency companion field above) and its full human-decision register
-   moved into [human-decisions.md](../human-decisions.md) as H-31 through H-44.
+   moved into [human-decisions/](../human-decisions/README.md) as H-31 through H-44.
    What it still does not rehearse, deliberately: the migrations meet an *empty* database, so lock
    duration and backfill runtime on a table with production's row count are still found in
    production.
@@ -1112,7 +1110,7 @@ ADR rather than letting this become an unbounded second backlog.
    `useTranslations()` consumers under `src/components` through their importing pages). Still
    open: a scheduled check watching Next 16.3 GA, drizzle 1.0 stable and next-auth v5
    stable, which the ADRs commit to migrating to promptly with nothing tracking them (ARCH-4,
-   [H-39](../human-decisions.md#decision-register)).
+   [H-39](../human-decisions/README.md#decision-register)).
 
 (Feature-folder boundaries were P2 and are now settled — see
 [20260730-feature-module-contracts](../../architecture/decisions/20260730-feature-module-contracts.md)
@@ -1141,7 +1139,7 @@ new cross-cutting quality in here as it arises.
 ## Production-readiness gates (human-owned)
 
 These block real operations regardless of code completeness; owners and evidence live in
-[../human-decisions.md](../human-decisions.md), and the per-discipline playbooks for clearing them
+[../human-decisions/](../human-decisions/README.md), and the per-discipline playbooks for clearing them
 (who to talk to, with what prepared) live in [stakeholders/](../stakeholders/README.md):
 
 - **V-02 — field-validate the offline manifest** on a phone, outdoors, wet hands, airplane-mode.
@@ -1152,7 +1150,8 @@ These block real operations regardless of code completeness; owners and evidence
   pricing and home pages. H-26 (2026-08-02) confirms the posture behind these terms is
   deliberately lifestyle-scale, not venture-scale (see [vision.md](../vision.md#what-kind-of-business-this-is)),
   and dropped the explicit same-day response-time SLA pending a real support-hour-capacity answer.
-  Billing cadence, taxes/fees, and the contract flow remain open. See
+  Billing is built and monthly (N-59, [shipped](../shipped.md#a-shop-can-pay-diveday-delivered-2026-10-07));
+  taxes/fees and the contract flow remain open. See
   [competitive-analysis.md](../assessments/competitive-analysis.md#pricing-posture).
 - **Legal / policy sign-off** for waivers, medical, retention, course rules, nitrox parameters, and
   notification consent — H-01…H-11.

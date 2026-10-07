@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { PRE_DEPARTURE_CHECK_RETRACTION_SUPERSEDED } from "@/lib/pre-departure-check";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   createChecklistItem,
   deleteChecklistItem,
@@ -14,7 +14,7 @@ import {
 import { listStaff, upcomingTripsWithCounts } from "./trips";
 
 async function checklistContext() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const reef = trips.find((trip) => trip.title.startsWith("Two-Tank Reef — Molasses"));
   if (!reef) throw new Error("demo reef trip missing");
@@ -27,6 +27,10 @@ async function checklistContext() {
   if (!nonManager) throw new Error("demo non-manager staff missing");
   return { db, shop, reef, owner: owner.person, nonManager: nonManager.person };
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 describe("pre-departure checklist items (in-memory PGlite)", () => {
   it("adds an item, one past the current tail, and lists it in reading order", async () => {

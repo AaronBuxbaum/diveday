@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { bookings, people, shops } from "./schema";
 import { listCertificationSummaries } from "./self-declared-cards";
 import {
@@ -13,7 +13,7 @@ import {
 import { inviteWaitlistDiver, joinTripWaitlist, recordWaitlistInvite } from "./waitlist";
 
 async function seededContext() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id);
   const fullTrip = trips.find((trip) => trip.title === "Wreck Trip — Spiegel Grove");
   const openTrip = trips.find((trip) => trip.title === "Two-Tank Reef — Christ of the Abyss");
@@ -22,6 +22,10 @@ async function seededContext() {
 }
 
 const visitor = { fullName: "Nora Quinn", email: "nora@example.com", phone: "+1-305-555-0199" };
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 describe("joinTripWaitlist (in-memory PGlite)", () => {
   it("adds a new diver to a full trip without consuming a seat", async () => {

@@ -2285,6 +2285,30 @@ exports.handler = async (event) => {
         note: "Neon is the one whose overflow can take DiveDay down rather than cost money: on the free plan an exhausted compute allowance suspends the endpoint. Record which behaviour your plan has in docs/engineering/cost-guardrails-runbook.md.",
       },
       {
+        id: "stripe-billing-setup",
+        title: "Turn on DiveDay's own subscription billing in Stripe",
+        category: "Credentials",
+        when: "once, after the entity that bills shops exists (H-18), and again in test mode for a staging deploy",
+        why: "The product, the price, the webhook endpoint, the Customer Portal and Stripe's invoice emails are settings on DiveDay's own Stripe account, and the merchant they name is a legal entity this repository cannot create. Until all three BILLING_STRIPE_* values are set, Settings > Billing says billing is not turned on and nothing is charged (ADR 20261007-subscription-billing).",
+        run: [
+          "Stripe (DiveDay's own account, not a connected one) -> Product catalog -> Add product 'DiveDay', one recurring price: USD 99.00 per month, per unit. Copy the price_... id.",
+          "Developers -> API keys -> Create restricted key 'diveday-billing' with write on Customers, Checkout Sessions and Customer portal; nothing else. Copy the rk_live_... value.",
+          "Developers -> Webhooks -> Add endpoint https://dive.day/api/webhooks/billing listening on Your account (not Connected accounts) for checkout.session.completed, customer.subscription.created, customer.subscription.updated, customer.subscription.deleted and invoice.paid. Copy the whsec_... signing secret.",
+          "Settings -> Billing -> Customer portal: allow updating the payment method, show invoice history, allow cancelling at the end of the billing period, and set the business name, terms and privacy links to the H-18 entity's.",
+          "Settings -> Billing -> Customer emails: send finalized invoices and successful payment receipts, and email about failed payments.",
+          "pnpm env:manual, then fill BILLING_STRIPE_SECRET_KEY, BILLING_STRIPE_WEBHOOK_SECRET and BILLING_STRIPE_PRICE_ID and redeploy.",
+        ],
+        store:
+          "1Password, then .env.manual as BILLING_STRIPE_SECRET_KEY, BILLING_STRIPE_WEBHOOK_SECRET and BILLING_STRIPE_PRICE_ID, which reach Vercel Production through the generated .env.vercel.",
+        verify: [
+          "Settings > Billing as an owner of a non-demo shop shows 'Add a card' rather than 'Billing isn't turned on yet'.",
+          "Stripe -> Webhooks -> the endpoint -> Send test event customer.subscription.updated answers 200 (the event is logged as customer_not_found, which is right for a test customer).",
+        ],
+        onFailure:
+          "A 503 from the endpoint means one of the three values is missing or malformed in the running app (a price id must start price_, the key sk_ or rk_, the secret whsec_). A 400 means the signing secret belongs to a different endpoint; Connect's STRIPE_WEBHOOK_SECRET is not this one.",
+        note: "Keep these keys apart from STRIPE_SECRET_KEY/STRIPE_WEBHOOK_SECRET even when both live on the same Stripe account: one moves divers' money to shops through Connect, the other bills shops for DiveDay, and a restricted billing key cannot reach a connected account. Stripe Tax is not turned on here; the CPA question in docs/product/stakeholders/finance-and-tax.md decides whether it should be. A free term granted to a founding shop is set with pnpm billing:free-term <shop-slug> <last-free-day>, not in Stripe.",
+      },
+      {
         id: "credentials-to-vercel",
         title: "Put the app's AWS credentials into Vercel",
         category: "Credentials",
@@ -2687,6 +2711,10 @@ exports.handler = async (event) => {
         // (ADR 20260806-cloudwatch-log-shipping). Skipping it leaves every
         // alarm silently notifying nobody.
         "confirm-observability-alarms",
+        // Another vendor's console, and the step that names the merchant: no
+        // CLI here can create a Stripe product, a portal configuration or the
+        // legal entity behind them (ADR 20261007-subscription-billing).
+        "stripe-billing-setup",
       ]).has(id),
     );
 

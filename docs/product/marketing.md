@@ -126,9 +126,9 @@ chosen battlegrounds — and re-read it before changing the spine.
 The funnel has two doors — **Try the live demo** and **Get set up** — and the order they are
 offered in is a property of the funnel, not of any one page.
 
-**Since 2026-09-25 the second door is a mail, not a sign-up** ([ADR 20260925-shops-are-set-up-by-hand](../architecture/decisions/20260925-shops-are-set-up-by-hand.md)). Every shop is set up
-by hand, so "Get set up" is a `mailto:` to `onboarding@dive.day` with the subject written, and
-`/onboard` without the owner's setup key is one sentence and that same mail. Where this section
+**Since 2026-09-25 the second door is a request, not a sign-up** ([ADR 20260925-shops-are-set-up-by-hand](../architecture/decisions/20260925-shops-are-set-up-by-hand.md)). Every shop is set up
+by hand, so "Get set up" opens the set-up request form at `/get-set-up?from=<tag>` (since 2026-10-07, [ADR 20261007-setup-request-form](../architecture/decisions/20261007-setup-request-form.md); before that it was a mail), and
+`/onboard` without the owner's setup key is one sentence and a door to that same form. Where this section
 says "trial" below, read it as that door.
 
 - **The demo leads, everywhere, at every depth.** It is the primary; the trial follows as
@@ -185,7 +185,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   the same breath as the work. Compressed at the top, authored once, never re-worded — the same
   shape `midSeasonCutover` uses for the cutover steps and `GUIDE_FACTS.back` uses for the export
   claim. A new service claim needs product-owner sign-off the same way the price does. **A second offer was authorized 2026-09-01 (H-64/H-65): a website, built for you** — a shop asks, and a person at DiveDay builds them one (with Claude, when someone asks; nothing is built ahead of a request). It is a human commitment like the concierge: "ask and we'll build it with you", never a turnaround time, never a page count, never "free website" as a product feature — and priced as part of the subscription until H-65 says otherwise. It may sit beside Harbor's storefront (which *is* a website a shop can point a domain at, and a shipped product claim) on `/pricing`, `/product`, the website feature page (`/product/website`, in its lede and its first question) and the FareHarbor guide, where FareHarbor's own hosted-site price may be stated only as the figure third parties report (FareHarbor publishes none — the Bókun-reported Web Core package, cited in the guide), never as what a shop pays; it is a `sitesPrice` string on the guide interpolated into one sentence, so no bundle carries the figure. Shipped 2026-09-02 as slice 13e: `marketing.price.item7`, the `website` capability group on `/product` (product lines only — the person's offer sits beside the booking chapter, never in the index that promises the demo), and the FareHarbor guide's website ledger. **Founder-direct support retired 2026-08-05 (Aaron Buxbaum,
-  [human-decisions.md](human-decisions.md#decision-register), H-12/H-26).** From 2026-07-27 through
+  [human-decisions/](human-decisions/README.md#decision-register), H-12/H-26).** From 2026-07-27 through
   that date a general founder-direct contact line, routed to `aaron@dive.day`, was authorized here —
   the same promise the "You can reach the founder" section on `/about` made in prose. It is
   rescinded outright, not reworded down again: a solo-founder company cannot durably hold a
@@ -201,6 +201,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   soft expiry — see `src/lib/trial.ts`). Both addresses are hosted mailboxes reaching the same
   people as `aaron@dive.day` always did; see
   [docs/engineering/ses-email-runbook.md](../engineering/ses-email-runbook.md#divedays-own-addresses).
+- **A third service commitment was authorized 2026-10-07 (H-101): the continuity promise.** Aaron Buxbaum, in the project thread: "We can publish that exact promise." The sentence is "If DiveDay ever shuts down, you get 90 days' notice, your export, and your backups keep running until the last day." It answers the objection the demo cannot (a new vendor closing, market audit 2026-10-07 item 46), and it rests on things that ship: the one-ZIP export (`fullShopExport`) and the weekly scheduled backup to storage the shop owns (`src/features/backup-export/`). It is one shared key, `continuityPromise` in `src/lib/marketing.ts` (`marketing.export.continuity`), rendered on `/pricing` as the answer to the FAQ row "What happens to my shop if DiveDay shuts down?" (`faq.shutdown`, beside the records row) and on `/about` as the second paragraph of the "Download every record" card. Its words are the owner's: no rewording, no added timeline or refund, and no other page carries it without a new decision. `src/lib/marketing.test.ts` pins the English word for word and the three commitments in every locale.
 - **No fabricated proof.** No invented testimonials, user counts, logos, ratings, or "trusted by"
   language — ever. When real customers exist, their words go through the product owner first.
 - **Biography is a claim like any other.** `/about` names a real person and describes real history,
@@ -283,7 +284,7 @@ reviewed as a page, which is the right unit for copy and the wrong one for hiera
   earlier "same-day response" wording from the support claim — keep the support commitment worded
   as a founder-direct line, without a stated response-time SLA, until support-hour capacity is
   scoped for real. Billing cadence, taxes/fees, and the contract flow remain undecided
-  ([human-decisions.md](human-decisions.md)); do not publish billing terms through any new channel
+  ([human-decisions/](human-decisions/README.md)); do not publish billing terms through any new channel
   without that decision. The two-year price lock and the founder-direct support promise are
   **binding commercial commitments** and taxes/fees are jurisdiction-dependent — both carry an open
   legal/tax-review dependency (H-12); do not treat the closed *price* as clearing them.
@@ -673,20 +674,20 @@ sent the visitor:
 | Event | Fired by | Meaning |
 | --- | --- | --- |
 | `demo_entered` | `src/app/actions/demo.ts` | A skeptic chose to look — the low-commitment half |
-| `trial_started` | `src/app/onboard/actions.ts` | A shop of their own now exists — the committed half |
+| `setup_requested` | `src/app/get-set-up/announce.ts` | A shop asked to be set up — the committed half |
 
 Both fire **after the outcome they name**, deferred with `after()` — a rate-limited demo attempt or a
 refused sign-up is not an entry, and counting one would inflate the numerator of every ratio read off
-the pair. Both also email the founder as they fire, so neither half needs a dashboard to be noticed:
-`new_account_alert` for a trial, `demo_started_alert` for a demo try, both to `alertRecipient()`
-(overridable with `OPS_ALERT_EMAIL`). The demo alert is anonymous by construction — the shop slug,
+the pair. Both also email someone as they fire, so neither half needs a dashboard to be noticed:
+`setup_request_alert` to `onboarding@dive.day` for a set-up request, `demo_started_alert` to `alertRecipient()`
+(overridable with `OPS_ALERT_EMAIL`) for a demo try. The Monday founder digest counts both by tag ([ADR 20261007-founder-metrics](../architecture/decisions/20261007-founder-metrics.md)). The demo alert is anonymous by construction — the shop slug,
 the role, and the tag below, and nothing about the visitor, who never identified themselves. See
 [ADR 20260805-demo-try-alerts](../architecture/decisions/20260805-demo-try-alerts.md).
 
 The tag vocabulary is a closed registry in `src/lib/funnel.ts`, because the failure it prevents is
 silent: a misspelled tag doesn't error, it opens a second bucket that reads like a real page with
 suspiciously few visits. So a demo form tags itself with `<FunnelTag source="…">` — type-checked against the registry; the
-"Get set up" mail carries no tag at all, since a mail client drops it — and a tag arriving
+"Get set up" door carries its tag in `?from=` through `setUpHref`, and the form posts it back — and a tag arriving
 off a request goes through `eventSource()`, which returns `unknown` for anything unregistered.
 **Adding a marketing CTA means tagging it**, and a new page means adding its tag to the registry
 first; an untagged link is a conversion we can't attribute. Read the pair per surface: a page with
@@ -814,7 +815,8 @@ band's own copy is where the photos claim belongs.
 It sits between the fee anchor and the included list rather than in the FAQ, because that is where
 the objection lands: the fee anchor has just made switching look attractive, and the next thought a
 shop owner has is about being stuck again. The `faq.dataIfNotWorking` row still answers it in words
-for a reader who scans that far.
+for a reader who scans that far, and the `faq.shutdown` row beside it carries the continuity
+promise (H-101) for the reader whose worry is DiveDay leaving rather than the shop.
 
 **The homepage records band shows both halves, in the order the copy argues them**: the import
 preview (arriving) beside the export inventory (leaving). Arriving is a picture — the importer's
@@ -899,7 +901,7 @@ take a claim on trust; now each row names a feature page and its one sentence, a
 it shows the screen (H-93, and "The homepage breadth band" near the top of this file). It still
 carries no demo door of its own: the close is one band away, and three banded CTAs in a row read as
 pressure, not confidence (the mid-page door retired in the 2026-08-13 redesign for that reason).
-Revisit the band when the page-level `demo_entered`/`trial_started` pairs (`home-hero` /
+Revisit the band when the page-level `demo_entered`/`setup_requested` pairs (`home-hero` /
 `home-closing`) have numbers.
 
 **`SectionMarker` is deliberately page-local.** The homepage's kicker — a short sentence-case label
@@ -933,6 +935,7 @@ structure* live; none of them may contain an English sentence:
 | Every feature page's name and one-sentence summary, listed on `/` and `/product` | `src/lib/feature-pages.ts` (the registry and `FEATURE_PHASES`), rendered by `FeatureDirectory` in `src/components/MarketingSections.tsx` | `marketing.featurePages.<page>.name` / `.summary`, and `marketing.featureChrome.phases.*` |
 | Price, plan name, included list | `src/lib/marketing.ts` (`earlyAccessPrice`) — the `$99` figure is the only literal, and the only place it exists | `marketing.price.*` in the bundles |
 | Export claim shared by home + pricing | `src/lib/marketing.ts` (`fullShopExport`) | `marketing.export.*` in the bundles |
+| Continuity promise shared by pricing + about (H-101) | `src/lib/marketing.ts` (`continuityPromise`) | `marketing.export.continuity` in the bundles |
 | Mid-season cutover claim shared by home + the guides | `src/lib/marketing.ts` (`midSeasonCutover`) | `marketing.guides.shared.cutover.*` in the bundles |
 | Shared link-preview card fields every page's `openGraph` needs | `src/lib/marketing.ts` (`sharedLinkCard`) | none — URLs and dimensions, no words |
 | Capability index on `/product`, one group per feature page | `src/lib/marketing.ts` (`productCapabilityIndex`, `capabilityGroup()`) | `marketing.capabilities.*` in the bundles; a feature page's group is titled by its `name` |

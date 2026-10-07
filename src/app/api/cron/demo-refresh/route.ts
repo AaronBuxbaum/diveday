@@ -1,7 +1,9 @@
 import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
-import { getDb, sqlStateOf } from "@/db/client";
+import { getDb } from "@/db/client";
 import { DEMO_SCHEDULE_MIN_RUNWAY_DAYS, refreshCanonicalDemoSchedule } from "@/db/demo-refresh";
+import { sqlStateOf } from "@/db/query-helpers";
+import { requireCronSecret } from "@/lib/cron-auth";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
 
@@ -54,11 +56,8 @@ const CRON_MONITOR_CONFIG = {
  * never tell the monitor the pass happened.
  */
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return NextResponse.json({ error: "not_configured" }, { status: 503 });
-  if (request.headers.get("authorization") !== `Bearer ${secret}`) {
-    return new NextResponse(null, { status: 401 });
-  }
+  const refusal = requireCronSecret(request);
+  if (refusal) return refusal;
 
   const checkInId = Sentry.captureCheckIn(
     { monitorSlug: CRON_MONITOR_SLUG, status: "in_progress" },

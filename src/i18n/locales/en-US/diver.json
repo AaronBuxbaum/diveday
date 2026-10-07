@@ -1994,7 +1994,6 @@
       "signingIn": "Signing in…",
       "submit": "Sign in",
       "needShop": "Need a shop?",
-      "getSetUp": "Write to {email}",
       "publicSchedule": "Looking for the dive schedule?"
     },
     "onboard": {
@@ -2002,8 +2001,7 @@
       "title": "Open your shop",
       "closed": {
         "title": "We set up every shop by hand",
-        "body": "Tell us about your shop and we’ll open it with you.",
-        "cta": "Email {email}"
+        "body": "Tell us about your shop and we’ll open it with you."
       },
       "shopSectionTitle": "Your shop",
       "shopNameLabel": "Shop name",
@@ -2640,7 +2638,6 @@
       "gettingReady": "Getting your shop ready…",
       "tryDemo": "Try the live demo",
       "getSetUp": "Get set up",
-      "setUpSubject": "Set up my shop on DiveDay",
       "demoNote": "The demo opens a working sample shop in one click. No sign-up and no card."
     },
     "price": {
@@ -2655,7 +2652,8 @@
     },
     "export": {
       "claim": "Settings → Data export downloads one ZIP of plain, documented CSVs (divers, bookings, waiver records, payment history), led by a contacts file shaped for another system’s import wizard. Every stored photo (certification evidence, dive-site pictures, trip recaps) is in it as a file.",
-      "terms": "No export fee, no support ticket, no minimum stay, and the same download works on the first day of a trial."
+      "terms": "No export fee, no support ticket, no minimum stay, and the same download works on the first day of a trial.",
+      "continuity": "If DiveDay ever shuts down, you get 90 days’ notice, your export, and your backups keep running until the last day."
     },
     "capabilities": {
       "onlineBooking": {
@@ -3374,6 +3372,9 @@
           "question": "How do I access my shop’s records?",
           "answer": "Any day, from Settings. {claim} {terms}"
         },
+        "shutdown": {
+          "question": "What happens to my shop if DiveDay shuts down?"
+        },
         "switching": {
           "question": "What does switching to DiveDay involve?",
           "answer": "Export a spreadsheet of customers from your current system. DiveDay’s importer brings in your divers, certification records and rental sizes, and shows what will happen before anything is saved. Guides cover {competitors}.",
@@ -3883,6 +3884,38 @@
         "faq3A": "Paid and refunded orders post to QuickBooks or Xero as receipts, and the report downloads as a spreadsheet.",
         "closeTitle": "Look over a day of demo orders.",
         "demoPlace": "the day’s orders, as the owner"
+      }
+    },
+    "setUp": {
+      "title": "Get your shop set up",
+      "description": "We open every shop by hand and write back to set up yours.",
+      "shopName": "Shop name",
+      "region": "Town or region",
+      "runsBoat": "Do you run a boat?",
+      "yes": "Yes",
+      "no": "No",
+      "currentSystem": "What do you use today?",
+      "current": {
+        "paper": "Paper",
+        "spreadsheet": "Spreadsheets",
+        "bookingSystem": "A booking system",
+        "shopSoftware": "Dive-shop software",
+        "other": "Something else"
+      },
+      "contactName": "Your name",
+      "email": "Email",
+      "phone": "Phone",
+      "website": "Website",
+      "submit": "Send",
+      "sending": "Sending…",
+      "errors": {
+        "required": "Fill this in.",
+        "invalid": "Check this one.",
+        "email": "Check the address."
+      },
+      "sent": {
+        "title": "Request sent",
+        "body": "We’ll write to you to set up your shop. The demo is open while you wait."
       }
     }
   },

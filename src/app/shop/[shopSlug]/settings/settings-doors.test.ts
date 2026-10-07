@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { STAFF_DESTINATIONS } from "@/lib/staff-destinations";
@@ -21,13 +21,26 @@ import { STAFF_DESTINATIONS } from "@/lib/staff-destinations";
  * nav does not also get a door here, or Settings grows back into a second nav.
  */
 const SETTINGS_PAGE = path.join(import.meta.dirname, "SettingsPage.tsx");
+/** The hub draws each group from its own component (`_components/groups/`). */
+const SETTINGS_GROUPS_DIR = path.join(import.meta.dirname, "_components", "groups");
+
+/** The hub's source and every group's, read as one. */
+async function hubSource(): Promise<string> {
+  const groups = (await readdir(SETTINGS_GROUPS_DIR))
+    .filter((file) => file.endsWith(".tsx") && !file.includes(".test."))
+    .map((file) => path.join(SETTINGS_GROUPS_DIR, file));
+  const sources = await Promise.all(
+    [SETTINGS_PAGE, ...groups].map((file) => readFile(file, "utf8")),
+  );
+  return sources.join("\n");
+}
 
 /** `/shop/${shopSlug}/promos` and `/shop/${shopSlug}/settings/team` alike. */
 const DOOR_HREF = /shopSlug\}(\/[a-z-]+(?:\/[a-z-]+)?)`/g;
 
 describe("Settings is the door to everything in its section", () => {
   it("has a row for each `settings` destination, and for no other", async () => {
-    const source = await readFile(SETTINGS_PAGE, "utf8");
+    const source = await hubSource();
     const doors = new Set(Array.from(source.matchAll(DOOR_HREF), (match) => match[1] as string));
 
     for (const destination of STAFF_DESTINATIONS) {
@@ -66,7 +79,7 @@ describe("Settings is the door to everything in its section", () => {
     // `Set`, so a regex that stopped matching would agree with a registry in
     // which nothing is `shop` and quietly pass on half the rows it was
     // written for.
-    const source = await readFile(SETTINGS_PAGE, "utf8");
+    const source = await hubSource();
     const doors = Array.from(source.matchAll(DOOR_HREF), (match) => match[1]);
     expect(doors).toContain("/dive-sites");
     expect(doors.length).toBeGreaterThan(5);

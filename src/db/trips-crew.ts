@@ -42,15 +42,36 @@ import { liveTrip } from "./trips-live";
  * bookings are still refused at the tightened cap in `createBookingRecord`.
  */
 
+/**
+ * The columns of a staff member every `listStaff` caller reads, and no more
+ * (app audit 2026-10-07, item 28). A person row also carries contact details,
+ * a date of birth, an emergency contact and insurance; none of the callers
+ * (Today's queue, the trip overview, staffing, the crew pickers) renders
+ * them, and the compiler is what proves it - a caller reaching for a dropped
+ * column does not type-check.
+ */
+const staffPersonColumns = {
+  id: people.id,
+  fullName: people.fullName,
+  spokenLanguages: people.spokenLanguages,
+  crewPublicConsentAt: people.crewPublicConsentAt,
+  crewPublicName: people.crewPublicName,
+};
+
+/** One staff member as {@link listStaff} returns them. */
+export type StaffPerson = {
+  [K in keyof typeof staffPersonColumns]: (typeof people.$inferSelect)[K];
+};
+
 /** All people holding at least one staff role in the shop, with their roles. */
 export async function listStaff(db: AppDb, shopId: string) {
   const rows = await db
-    .select({ person: people, role: personRoles.role })
+    .select({ person: staffPersonColumns, role: personRoles.role })
     .from(people)
     .innerJoin(personRoles, eq(personRoles.personId, people.id))
     .where(and(eq(people.shopId, shopId), inArray(personRoles.role, [...STAFF_ROLES])))
     .orderBy(asc(people.fullName));
-  const byId = new Map<string, { person: typeof people.$inferSelect; roles: string[] }>();
+  const byId = new Map<string, { person: StaffPerson; roles: string[] }>();
   for (const { person, role } of rows) {
     const entry = byId.get(person.id) ?? { person, roles: [] };
     entry.roles.push(role);

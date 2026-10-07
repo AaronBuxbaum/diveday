@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
 import { emptyMedicalAnswers, RSTC_QUESTIONNAIRE } from "@/lib/medical";
 import { WAIVER_LINK_TTL_MS } from "@/lib/waivers";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { cancelBooking, createBooking } from "./bookings";
 import { applyProviderEmailEvent } from "./notifications";
 import type { MedicalAnswers } from "./schema";
@@ -37,7 +37,7 @@ vi.mock("@aws-sdk/client-sesv2", async (importOriginal) => {
 });
 
 async function seededBooking(email: string | null = "delivered@dive.day") {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const [trip] = await upcomingTripsWithCounts(db, shop.id);
   if (!trip) throw new Error("demo trip missing");
   const outcome = await createBooking(db, {
@@ -59,6 +59,10 @@ async function seededBooking(email: string | null = "delivered@dive.day") {
   return { db, shop, trip, bookingId: outcome.bookingId };
 }
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
+
 afterEach(() => {
   vi.unstubAllEnvs();
   sesSend.mockReset();
@@ -73,7 +77,7 @@ describe("issueAndDeliverWaiver", () => {
     vi.stubEnv("SES_FROM_EMAIL", "shop@diveday.example");
     sesSend.mockResolvedValue({ MessageId: "person-waiver-message" });
 
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [person] = await db
       .insert(people)
       .values({ shopId: shop.id, fullName: "Unscheduled Diver", email: "unscheduled@dive.day" })
@@ -259,7 +263,7 @@ describe("issueAndDeliverWaiver", () => {
 
   it("falls back to SMS, and reports no_phone when there is no dialable number", async () => {
     vi.stubEnv("APP_HOST", "https://diveday.example");
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [person] = await db
       .insert(people)
       .values({ shopId: shop.id, fullName: "Textable Diver", phone: "+13055550143" })
@@ -295,7 +299,7 @@ describe("issueAndDeliverWaiver", () => {
     vi.stubEnv("SES_FROM_EMAIL", "shop@diveday.example");
     sesSend.mockResolvedValue({ MessageId: "ses-id" });
 
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [person] = await db
       .insert(people)
       .values({ shopId: shop.id, fullName: "Counter Diver", email: "counter@dive.day" })

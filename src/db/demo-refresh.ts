@@ -16,7 +16,7 @@ import { upcomingScheduleRange } from "./trips";
  * about two months out, and the cards and history behind them are dated
  * relative to the same moment. That seed runs **once**, on the first cold start
  * against a fresh database — `isDemoShopSeeded` short-circuits every start after
- * it (`src/db/client.ts`) — and nothing has ever moved those dates again.
+ * it (`src/db/dev-bootstrap.ts`) — and nothing has ever moved those dates again.
  *
  * So the demo has a shelf life. Roughly two months after a database is created,
  * the last seeded departure sails, `upcomingScheduleRange` comes back empty, and
@@ -123,7 +123,7 @@ export async function refreshCanonicalDemoSchedule(
   const { last } = await upcomingScheduleRange(db, shop.id, now);
   const runwayDays = last ? Math.floor((last.getTime() - now.getTime()) / DAY_MS) : 0;
   if (runwayDays < minRunwayDays) {
-    // Deferred for the same reason as `client.ts`'s `seedIfEmpty`: a static
+    // Deferred for the same reason as `dev-bootstrap.ts`'s `seedIfEmpty`: a static
     // edge to `./seed` from a module this widely imported drags the schema and
     // the course templates into most of the app's route graphs.
     const { resetDemoSchedule } = await import("./seed");

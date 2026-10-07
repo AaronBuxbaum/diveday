@@ -428,7 +428,7 @@ rather than a terminology sweep:
   read, and part of the voice the bundles already have. (*ficha* no longer names a **dive site**'s
   record — see the section above.)
 - **The waiver body and medical questionnaire stay English.** That wording is legally reviewed;
-  translating it is a human sign-off (H-01/H-03 in `docs/product/human-decisions.md`), not a
+  translating it is a human sign-off (H-01/H-03 in `docs/product/human-decisions/`), not a
   translator's call.
 - **Brand and agency names** — DiveDay, PADI, SSI, Open Water, C-card, Stripe, WhatsApp — and
   competitor product names and menu labels quoted from their own UI.

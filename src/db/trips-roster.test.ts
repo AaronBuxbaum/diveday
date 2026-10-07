@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import type { AppDb } from "./client";
 import { bookings, people, trips, tripWaitlistEntries } from "./schema";
 import {
@@ -60,9 +60,13 @@ async function twoTrips(db: AppDb, shopId: string) {
   return [a.id, b.id] as const;
 }
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
+
 describe("getTripRoster", () => {
   it("lists every non-canceled seat, oldest first, with its person", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await twoTrips(db, shop.id);
     const booked = await makeDiver(db, shop.id);
     const checkedIn = await makeDiver(db, shop.id);
@@ -122,7 +126,7 @@ describe("getTripRoster", () => {
    * cannot tell a total order from a lucky heap.
    */
   it("falls through to the booking id for two divers of the same name", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await twoTrips(db, shop.id);
     const seatedAt = nowDate();
 
@@ -151,7 +155,7 @@ describe("getTripRoster", () => {
   });
 
   it("breaks a same-instant tie on the diver's name, whichever way the uuids fall", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [tripA, tripB] = await twoTrips(db, shop.id);
     // The instant `createBooking` would stamp under the frozen test clock.
     const seatedAt = nowDate();
@@ -197,7 +201,7 @@ describe("getTripRoster", () => {
    * Adler.
    */
   it("keeps seat time above the name, so a later seat does not jump the queue", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await twoTrips(db, shop.id);
     const early = await makeDiver(db, shop.id, { name: "Zoe Adler" });
     const late = await makeDiver(db, shop.id, { name: "Ángel Ferrer" });
@@ -222,7 +226,7 @@ describe("getTripRoster", () => {
   });
 
   it("answers nothing for another shop's id, even with a real trip id", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await twoTrips(db, shop.id);
     const diver = await makeDiver(db, shop.id);
     await db.insert(bookings).values({ shopId: shop.id, tripId: trip, personId: diver.id });
@@ -232,7 +236,7 @@ describe("getTripRoster", () => {
 
 describe("listTripDiverContacts", () => {
   it("names the live people holding active seats, and nobody else", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await twoTrips(db, shop.id);
     const holder = await makeDiver(db, shop.id);
     const cancelled = await makeDiver(db, shop.id);
@@ -253,7 +257,7 @@ describe("listTripDiverContacts", () => {
 
 describe("the wait list", () => {
   it("stays outside the roster and reads oldest first", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip] = await twoTrips(db, shop.id);
     const first = await makeDiver(db, shop.id);
     const second = await makeDiver(db, shop.id);
@@ -274,7 +278,7 @@ describe("the wait list", () => {
   });
 
   it("resolves one entry only under its own trip and shop", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [trip, otherTrip] = await twoTrips(db, shop.id);
     const diver = await makeDiver(db, shop.id);
     const [entry] = await db

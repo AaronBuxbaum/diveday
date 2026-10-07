@@ -126,7 +126,7 @@ describe("trackEvent", () => {
 
     it("leaves an ordinary page URL alone", async () => {
       const tracker = vi.fn();
-      await trackEvent({ name: "trial_started", source: "pricing" }, tracker);
+      await trackEvent({ name: "setup_requested", source: "pricing" }, tracker);
       expect(hookFrom(tracker)({ type: "event", url: "https://dive.day/pricing" })).toEqual({
         type: "event",
         url: "https://dive.day/pricing",
@@ -154,10 +154,10 @@ describe("trackEvent", () => {
   it("carries the funnel source on both halves of the marketing funnel", async () => {
     const tracker = vi.fn();
     await trackEvent({ name: "demo_entered", source: "pricing", role: "captain" }, tracker);
-    await trackEvent({ name: "trial_started", source: "pricing" }, tracker);
+    await trackEvent({ name: "setup_requested", source: "pricing" }, tracker);
     expect(tracker.mock.calls).toEqual([
       ["demo_entered", { source: "pricing", role: "captain" }, redaction],
-      ["trial_started", { source: "pricing" }, redaction],
+      ["setup_requested", { source: "pricing" }, redaction],
     ]);
   });
 

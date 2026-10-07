@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { upcomingTripsWithCounts } from "@/db/trips";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   COALESCE_WINDOW_MS,
   claimDuePushTargets,
@@ -17,7 +17,7 @@ const ENDPOINT = "https://fcm.googleapis.com/fcm/send/device-a";
 const OTHER_ENDPOINT = "https://fcm.googleapis.com/fcm/send/device-b";
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id);
   const trip = trips.find((candidate) => candidate.title === "Two-Tank Reef — Molasses & French");
   if (!trip) throw new Error("expected seeded trip missing");
@@ -31,6 +31,10 @@ async function staffPersonId(db: Awaited<ReturnType<typeof context>>["db"], shop
   if (!row) throw new Error("expected a seeded person");
   return row.id;
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 beforeEach(() => {
   vi.unstubAllEnvs();
@@ -224,7 +228,7 @@ describe("deletePushSubscriptionsById", () => {
 describe("per-trip subscription state", () => {
   /** Two departures the same captain might run on one day, one phone. */
   async function twoTrips() {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const trips = await upcomingTripsWithCounts(db, shop.id);
     const [morning, afternoon] = trips;
     if (!morning || !afternoon) throw new Error("expected two seeded trips");

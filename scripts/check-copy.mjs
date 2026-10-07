@@ -1,7 +1,8 @@
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
 
 /**
  * No new hard-coded user-facing copy (docs ADR 20260730-staff-copy-localization).
@@ -10,7 +11,7 @@ import { pathToFileURL } from "node:url";
  * into a message bundle is translated into every locale. It cannot see the much
  * larger problem: copy that never made it into a bundle at all.
  *
- * This is a **ratchet**, not a hand-authored gate. `copy-baseline.json` records how much
+ * This is a **ratchet**, not a hand-authored gate. Its section of `scripts/ratchets.json` records how much
  * un-extracted copy each file still has. The build fails if a file grows, if a
  * file that isn't in the baseline has any at all, or — importantly — if a file
  * *shrinks* without its baseline entry being lowered in the same change. That
@@ -18,7 +19,7 @@ import { pathToFileURL } from "node:url";
  * down, and it tracks reality rather than drifting into a stale allowlist.
  *
  * The original extraction backlog (once ~1,000 strings across 110 files) is finished:
- * `copy-baseline.json` holds only its `//` note, so the ratchet now behaves as a full gate —
+ * The `copy` section holds only its `//` note, so the ratchet now behaves as a full gate —
  * any hard-coded copy anywhere under the guarded roots fails the check. Trust the baseline
  * file over any number in prose, here or elsewhere, since prose drifts and the file cannot.
  *
@@ -69,7 +70,6 @@ import { pathToFileURL } from "node:url";
  */
 
 const ROOT = process.cwd();
-const BASELINE_PATH = "scripts/copy-baseline.json";
 export const guardedRoots = ["src/app", "src/components"];
 
 /** Attributes that exist to be read by a person or announced by a screen reader. */
@@ -312,7 +312,7 @@ export function findCopy(source, { isTsx }) {
  * `looksLikeCopy` and `findCopy` can be imported and tested without walking the
  * tree, calling `process.exit`, or rewriting the baseline — the same shape
  * `scripts/check-e2e-hygiene.mjs` uses. That matters more here than it looks:
- * `scripts/copy-baseline.json` is empty, so this check is a full gate over
+ * The `copy` section of `scripts/ratchets.json` is empty, so this check is a full gate over
  * `src/app` and `src/components`, and an exclusion one character too broad
  * stops the repository's main defence against untranslated copy with a green
  * run and nothing to notice.
@@ -348,69 +348,22 @@ async function main() {
     process.exit(0);
   }
 
-  let baseline = {};
-  let baselineExists = true;
-  try {
-    baseline = JSON.parse(await readFile(path.join(ROOT, BASELINE_PATH), "utf8"));
-  } catch (error) {
-    if (error?.code !== "ENOENT") throw error;
-    baselineExists = false;
-  }
-  // The file carries a leading note for humans; it is not a path.
-  const baselineCounts = Object.fromEntries(
-    Object.entries(baseline).filter(([key]) => !key.startsWith("//")),
-  );
-
-  /**
-   * `--absorb` is `--write` for one specific situation: merging a branch that was
-   * authored before this check existed on it. Copy that landed on `main` in
-   * parallel is pre-existing debt from the ratchet's point of view, not new debt
-   * — but `--write` cannot tell the two apart, and correctly refuses both.
-   *
-   * So this exists, and it is deliberately loud rather than convenient: it prints
-   * every increase it is about to accept, so the growth appears in the run log
-   * and the reviewer sees it in the diff. It is not a way to land new copy. If
-   * you are reaching for it and you did not just merge, extract the strings.
-   *
-   * Expect this to stop being needed once every branch carries the check.
-   */
-  const absorbing = process.argv.includes("--absorb");
-
-  if (process.argv.includes("--write") || absorbing) {
-    const grew = [...counts.entries()].filter(
-      ([file, count]) => baselineExists && count > (baselineCounts[file] ?? 0),
+  const { counts: baselineCounts, exists: baselineExists } = await readCounts(ROOT, "copy");
+  const { write, absorb } = ratchetFlags();
+  if (write || absorb !== null) {
+    process.exit(
+      await bankCounts({
+        root: ROOT,
+        guard: "copy",
+        counts: counts,
+        allowed: baselineCounts,
+        exists: baselineExists,
+        note: "Hard-coded user-facing strings still awaiting extraction, per file. Written by `node scripts/check-copy.mjs --write`. This number may only go down — see scripts/check-copy.mjs.",
+        refusal: "The ratchet only turns one way — extract the copy instead",
+        absorb,
+        summary: (files, total) => `${files} files, ${total} strings still to extract`,
+      }),
     );
-    const added = [...counts.keys()].filter((file) => baselineExists && !(file in baselineCounts));
-    if (grew.length > 0 || added.length > 0) {
-      if (!absorbing) {
-        console.error(
-          "Refusing to write a baseline that grows. The ratchet only turns one way — extract the copy instead:",
-        );
-        for (const [file, count] of grew) {
-          console.error(`- ${file}: ${baselineCounts[file]} → ${count}`);
-        }
-        for (const file of added) console.error(`- ${file}: new file with ${counts.get(file)}`);
-        console.error(
-          "If this growth arrived in a merge from a branch that predates the check, `--absorb` records it explicitly.",
-        );
-        process.exit(1);
-      }
-      console.warn("Absorbing copy that grew — this must be merged-in work, not new copy:");
-      for (const [file, count] of grew) {
-        console.warn(
-          `- ${file}: ${baselineCounts[file]} → ${count} (+${count - baselineCounts[file]})`,
-        );
-      }
-      for (const file of added) console.warn(`- ${file}: new file with ${counts.get(file)}`);
-    }
-    const next = {
-      "//": "Hard-coded user-facing strings still awaiting extraction, per file. Written by `node scripts/check-copy.mjs --write`. This number may only go down — see scripts/check-copy.mjs.",
-      ...Object.fromEntries([...counts.entries()].sort(([a], [b]) => a.localeCompare(b))),
-    };
-    await writeFile(path.join(ROOT, BASELINE_PATH), `${JSON.stringify(next, null, 2)}\n`);
-    const total = [...counts.values()].reduce((sum, n) => sum + n, 0);
-    console.log(`copy: baseline written — ${counts.size} files, ${total} strings still to extract`);
-    process.exit(0);
   }
 
   const violations = [];

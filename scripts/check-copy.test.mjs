@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { EXEMPT_FILE, findCopy, looksLikeCopy } from "./check-copy.mjs";
 
 /**
- * `scripts/copy-baseline.json` is empty, so this check is a **full gate** over
+ * The `copy` section of `scripts/ratchets.json` is empty, so this check is a **full gate** over
  * `src/app` and `src/components`: any hard-coded copy anywhere under those
  * roots fails it. That makes the failure mode of a too-broad exclusion a green
  * run — nothing to notice, and the repository's main defence against

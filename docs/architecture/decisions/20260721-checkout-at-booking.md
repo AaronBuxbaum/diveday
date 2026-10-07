@@ -85,4 +85,4 @@ require H-07 sign-off before production money.
   webhook; all three still read through the one readiness rule.
 - H-07's remaining policy questions (deposits, cancellation, tax, fees) now gate *pricing posture*,
   not mechanism. The provisional defaults above are recorded in
-  [human-decisions.md](../../product/human-decisions.md#provisional-implementation-defaults--verify-before-production).
+  [human-decisions/](../../product/human-decisions/README.md#provisional-implementation-defaults--verify-before-production).

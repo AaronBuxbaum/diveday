@@ -7,6 +7,7 @@ import {
   heldSendRunAt,
   isHeldSendDue,
 } from "@/lib/held-sends";
+import { log } from "@/lib/log";
 import type { AppDb } from "./client";
 import { heldSends } from "./schema";
 import { type SendLastMinuteDealOutcome, sendLastMinuteDealBlast } from "./trip-promos";
@@ -200,9 +201,11 @@ export async function drainHeldSends(
       summary.sent += 1;
     } catch (error) {
       summary.failed += 1;
-      console.error("Held send failed", {
+      // The error's name, not its message: a provider or driver message can
+      // quote the recipient or a bound parameter.
+      log("held_send.failed", "error", {
         kind: row.kind,
-        error: error instanceof Error ? error.message : "unknown_error",
+        errorCode: error instanceof Error ? error.name : "unknown_error",
       });
     }
   }

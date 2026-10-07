@@ -12,7 +12,7 @@ or an action the screen could have carried.
 **One scheme: light, unless the work is about colour.** Every check below — capture, probe, tiles,
 checklist — runs in light only. Dark joins it only when the change is colour work: a token, a tint,
 a hue, a raw colour a component was drawing. That is the owner's rule for every check in this repo
-([H-90](../../../docs/product/human-decisions.md#decision-register)), not a shortcut this skill
+([H-90](../../../docs/product/human-decisions/README.md#decision-register)), not a shortcut this skill
 takes; CI's visual run still captures both schemes.
 
 ## Procedure

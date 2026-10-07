@@ -2,7 +2,7 @@
 
 The longest-lead discipline and the rollout's critical path. Nothing here is legal advice; it is
 the preparation that makes the counsel engagement short and cheap. Status of record:
-[human-decisions.md](../human-decisions.md) rows **H-01** (jurisdiction + waiver/medical
+[human-decisions/](../human-decisions/README.md) rows **H-01** (jurisdiction + waiver/medical
 templates), **H-02** (retention/deletion), **H-03** (e-signature sufficiency), **H-17** (imported
 waiver acceptance — decided, but counsel should see it), **H-18** (corporate footing + SaaS
 contract set), and **V-03** (flow review against the approved policies).
@@ -24,7 +24,7 @@ are scoped to her Tier 3 work plus the Tier 2 items she signs off on, not the wh
 ## Why this blocks rollout
 
 - The waiver/medical flow is a core pillar shipped on [provisional
-  baselines](../human-decisions.md#provisional-implementation-defaults--verify-before-production)
+  baselines](../human-decisions/README.md#provisional-implementation-defaults--verify-before-production)
   — PADI-*shaped*, not counsel-approved. A pilot shop sending a real release on unapproved
   language converts the differentiator into the founder's personal liability.
 - Phase 1 cannot start without a pilot agreement to sign, and no agreement can be signed without
@@ -34,7 +34,7 @@ are scoped to her Tier 3 work plus the Tier 2 items she signs off on, not the wh
   [legal-engagement-scope.md](legal-engagement-scope.md#tier-1--generalist-no-specialist-needed).
 - The published founding-cohort claim needing contract language (H-12's open contract flow) is the
   **two-year price lock**. The support promise it used to sit beside — "founder-direct support" —
-  was retired 2026-08-05 (Aaron Buxbaum, [human-decisions.md](../human-decisions.md#decision-register),
+  was retired 2026-08-05 (Aaron Buxbaum, [human-decisions/](../human-decisions/README.md#decision-register),
   H-12/H-26): support is now a plain `support@dive.day` inbox with no personal-response or
   response-time commitment, so it carries no binding-commercial-term weight for counsel to review.
 
@@ -86,7 +86,7 @@ asked of the specialist. What the specialist's engagement should produce:
 Everything already exists; the packet is links and screenshots, not new writing:
 
 - The [waiver signature/retention ADR](../../architecture/decisions/20260718-waiver-signature-retention.md)
-  and the [provisional waiver/signature defaults](../human-decisions.md#waiver-and-signature)
+  and the [provisional waiver/signature defaults](../human-decisions/README.md#waiver-and-signature)
   (form shape, sources, and what is explicitly *not* claimed).
 - The evidence model in one paragraph: immutable versioned templates, typed full name + explicit
   consent + timestamp, expiring private completion links (the URL is the capability — see the
@@ -151,7 +151,7 @@ Open questions for the generalist + CPA (do not decide these unilaterally):
 - Interim posture: if pilots start before formation completes, is signing under Pseudorandom
   d/b/a DiveDay acceptable *with E&O/cyber bound* (H-19), or do pilot agreements wait?
 
-**Record the outcome in H-18** ([human-decisions.md](../human-decisions.md#decision-register)).
+**Record the outcome in H-18** ([human-decisions/](../human-decisions/README.md#decision-register)).
 
 ## Where outcomes land
 
@@ -160,6 +160,6 @@ Open questions for the generalist + CPA (do not decide these unilaterally):
   if H-03 demands a vendor, the `SignatureProvider` adapter becomes a
   [roadmap](../features/roadmap.md) item with an ADR.
 - V-03 performed against the approved policies; evidence recorded in the
-  [verification queue](../human-decisions.md#human-verification-queue).
+  [verification queue](../human-decisions/README.md#human-verification-queue).
 - Contract set filed where the owner keeps executed documents; the terms-of-service obligations
   feed [marketing.md](../marketing.md)'s claims policy (claims must match the contract).

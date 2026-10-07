@@ -10,7 +10,7 @@ import {
 
 /**
  * Fixed instants, never a wall-clock read: nothing here is about *when* a card
- * arrived, and `pnpm check:clock` refuses one under `src/lib` for exactly that
+ * arrived, and Biome's `clock` rule (`pnpm lint`) refuses one under `src/lib` for exactly that
  * reason.
  */
 const IMPORTED_AT = new Date("2026-07-01T14:00:00Z");

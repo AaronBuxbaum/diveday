@@ -11,6 +11,7 @@ import { createBookingParty, getBookingForTrip } from "@/db/bookings";
 import { recordBuddyReferral, resolveBuddyReferral } from "@/db/buddy-referrals";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
+import { recordShopMilestone } from "@/db/founder-metrics";
 import { setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
@@ -36,6 +37,7 @@ import {
   diveDeclarationSchema,
   toDiveDeclaration,
 } from "@/lib/dive-declaration";
+import { log } from "@/lib/log";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
@@ -397,6 +399,15 @@ export async function bookSpot(
     return { error: message, fieldErrors: memberFieldErrors };
   }
   await trackEvent({ name: "booking_completed", source: "diver", partySize: validParty.length });
+  // The shop's first booking through its own public pages is an activation
+  // step the founder watches (ADR 20261007-founder-metrics); nothing on the
+  // booking row says which door it came through, so it is recorded here, once.
+  // Deferred and swallowed: the diver's confirmation never waits on it.
+  after(() =>
+    recordShopMilestone(dbi, { shopId: shopNow.id, milestone: "first_public_booking" }).catch(
+      (error) => console.error("bookSpot: first_public_booking milestone failed", error),
+    ),
+  );
   // Which diver's link brought this party, if one did. Every seat of it, the
   // organizer's included, for the reason the partner referral above credits
   // every seat: one person booking four through a friend's link is four divers
@@ -468,14 +479,13 @@ export async function bookSpot(
         packingList: shopNow.packingList,
       });
       if (delivery.status === "failed") {
-        console.error("Booking confirmation notification failed", {
-          bookingId: primaryBookingId,
-        });
+        log("booking.confirmation_send_failed", "error", { bookingId: primaryBookingId });
       }
-    } catch {
+    } catch (error) {
       // Email must never turn a completed, capacity-safe booking into an error page.
-      console.error("Booking confirmation notification could not be prepared", {
+      log("booking.confirmation_prepare_failed", "error", {
         bookingId: primaryBookingId,
+        errorCode: error instanceof Error ? error.name : "unknown_error",
       });
     }
   }
@@ -487,8 +497,11 @@ export async function bookSpot(
     outcome.bookings.map(async ({ bookingId }) => {
       try {
         await issueWaiverOnJoin(dbi, shopNow.id, bookingId);
-      } catch {
-        console.error("Waiver-on-join could not be issued", { bookingId });
+      } catch (error) {
+        log("booking.waiver_on_join_failed", "error", {
+          bookingId,
+          errorCode: error instanceof Error ? error.name : "unknown_error",
+        });
       }
     }),
   );
@@ -548,8 +561,11 @@ export async function bookSpot(
               wantsNitrox: selection.wantsNitrox,
             });
           }
-        } catch {
-          console.error("Rental fit at booking could not be saved", { bookingId });
+        } catch (error) {
+          log("booking.rental_fit_save_failed", "error", {
+            bookingId,
+            errorCode: error instanceof Error ? error.name : "unknown_error",
+          });
         }
       }),
     );
@@ -704,8 +720,11 @@ async function creditBuddyReferral(
       bookingId: input.bookingId,
       referredByBookingId,
     });
-  } catch {
-    console.error("Buddy referral could not be recorded", { bookingId: input.bookingId });
+  } catch (error) {
+    log("booking.buddy_referral_failed", "error", {
+      bookingId: input.bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
   }
 }
 

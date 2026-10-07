@@ -21,7 +21,7 @@ import {
   trips,
 } from "./schema";
 import { courseCrewCountsByTrip, NO_SUPERVISION } from "./today";
-import { listStaff } from "./trips";
+import { listStaff, type StaffPerson } from "./trips";
 import { liveTrip } from "./trips-live";
 
 /*
@@ -129,7 +129,7 @@ export type StaffingView = {
   from: Date;
   to: Date;
   staff: {
-    person: typeof people.$inferSelect;
+    person: StaffPerson;
     roles: string[];
     shifts: (typeof staffShifts.$inferSelect)[];
     /** Trips in this window this person is on the crew of — a shift with no

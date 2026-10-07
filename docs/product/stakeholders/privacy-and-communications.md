@@ -2,7 +2,7 @@
 
 The data DiveDay holds (medical flags, minors' records, capability URLs) and the messages it
 sends (booking email, waiver links, SMS reminders) each have a compliance owner to satisfy before
-a pilot. Status of record: [human-decisions.md](../human-decisions.md) rows **H-02**
+a pilot. Status of record: [human-decisions/](../human-decisions/README.md) rows **H-02**
 (retention/deletion — shared with [legal.md](legal.md)), **H-04** (incident-response owner), and
 **H-09** (consent, copy, sender identity, credentials).
 
@@ -14,7 +14,7 @@ owner/manager like the shop-wide export. `security-reviewer` reviewed the shared
 diver's identifying data. **One field is deliberately withheld pending your call: signed
 medical answers.** The incident export withholds them because its reader is an investigator; a
 subject-access request's reader is the person who wrote them, which is the opposite case — see
-**H-50** in [human-decisions.md](../human-decisions.md) for the question as recorded. Until it is
+**H-50** in [human-decisions/](../human-decisions/README.md) for the question as recorded. Until it is
 answered, the export ships every other field of a diver's own signed waiver evidence and states
 the gap in the bundle's own README rather than leaving it silent. `/privacy` now names this
  export alongside the shop-wide one and says medical answers are excluded for now.

@@ -19,11 +19,10 @@ import { runBounded, SUBPROCESS_TIMEOUTS } from "./subprocess.mjs";
 /**
  * **The door onto the follow-up tracker that cannot file a malformed issue.**
  *
- * A `needs-triage` issue in the wrong shape fails `check:follow-ups`, which runs
- * inside every pull request's `pnpm check` — so one bad body reddens
- * `Repository safeguards` on *every open pull request in the repository at
- * once*, on branches whose diffs could not have caused it, until somebody edits
- * the issue by hand. That happened four times on 2026-09-04 alone (#1339,
+ * A `needs-triage` issue in the wrong shape fails `check:follow-ups` for
+ * everyone until somebody edits the issue by hand. While that check ran inside
+ * every pull request's `pnpm check` (until 2026-10-07; it is scheduled now),
+ * one bad body reddened *every open pull request in the repository at once*. That happened four times on 2026-09-04 alone (#1339,
  * #1351, #1352 and #1356 itself), from four different sessions, every one with
  * good content and only a format problem, each fixed mid-PR by a session that
  * had nothing to do with it.
