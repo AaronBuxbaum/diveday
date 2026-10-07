@@ -54,7 +54,8 @@ function baseFitInput(shopId: string, personId: string) {
     rentsDiveComputer: false,
     rentsGopro: false,
     rentsDrysuit: false,
-    rentsHoodGloves: false,
+    rentsHood: false,
+    rentsGloves: false,
     rentsTorch: false,
     rentsSmb: false,
     bcdSize: "M",
@@ -186,6 +187,37 @@ describe("saveRentalFit / getRentalFit", () => {
     await saveRentalFit(db, { ...baseFitInput(shopId, personId), bcdSize: "L" });
 
     expect((await getRentalFit(db, shopId, personId))?.drysuitSize).toBe("MT");
+  });
+
+  it("writes a hood and gloves as two answers with a size each (H-101)", async () => {
+    const { db, shop, shopId, tripId } = await context();
+    await setShopRentalItems(db, shopId, [...shop.rentalItems, "hood", "gloves"]);
+    const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");
+
+    await saveRentalFit(db, {
+      ...baseFitInput(shopId, personId),
+      rentsHood: false,
+      rentsGloves: true,
+      hoodSize: "",
+      gloveSize: "  L ",
+    });
+
+    const fetched = await getRentalFit(db, shopId, personId);
+    expect(fetched).toMatchObject({ rentsHood: false, rentsGloves: true, gloveSize: "L" });
+    expect(fetched?.hoodSize).toBeNull();
+    expect(toDiverRentalFit(fetched)).toMatchObject({ rentsGloves: true, gloveSize: "L" });
+    // The kind they replace is never written.
+    expect(fetched?.rentsHoodGloves).toBe(false);
+
+    // A shop that stops renting hoods leaves the diver's hood answer standing.
+    await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsHood: true, hoodSize: "M" });
+    await setShopRentalItems(
+      db,
+      shopId,
+      shop.rentalItems.filter((kind) => kind !== "hood"),
+    );
+    await saveRentalFit(db, { ...baseFitInput(shopId, personId), rentsHood: false });
+    expect((await getRentalFit(db, shopId, personId))?.rentsHood).toBe(true);
   });
 
   it("returns null for a person with no fit on file", async () => {
@@ -827,7 +859,8 @@ describe("rental fit completeness over a stored profile", () => {
       rentsDiveComputer: false,
       rentsGopro: false,
       rentsDrysuit: false,
-      rentsHoodGloves: false,
+      rentsHood: false,
+      rentsGloves: false,
       rentsTorch: false,
       rentsSmb: false,
       finSize: "M",

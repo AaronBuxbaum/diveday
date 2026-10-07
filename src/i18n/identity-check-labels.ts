@@ -17,6 +17,7 @@ export function identityCheckWords(t: StaffTranslator, recordName: string) {
     emailLabel: t("shared.identityCheck.emailLabel"),
     phoneLabel: t("shared.identityCheck.phoneLabel"),
     optional: t("shared.identityCheck.optional"),
+    adultAttested: t("shared.identityCheck.adultAttested"),
     split: t("shared.identityCheck.split"),
     splitting: t("shared.identityCheck.splitting"),
   };

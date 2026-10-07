@@ -1851,6 +1851,7 @@ export type SplitBookingIdentityResult =
         | "medical_hold"
         | "date_of_birth_required"
         | "date_of_birth_invalid"
+        | "age_unstated"
         | "email_in_use";
     };
 
@@ -1867,6 +1868,15 @@ export type SplitBookingIdentityInput = {
    * booking would otherwise read as an adult (issue #2081).
    */
   dateOfBirth?: string | null;
+  /**
+   * The staffer's "18 or older", for a split with no date of birth (H-100,
+   * issue #2143). One of the two is required on every departure: the split
+   * is for someone who is not the matched diver, often a minor booked with a
+   * parent's email, and a blank date alone would read as an adult. Ignored
+   * beside a date, which is the better answer; never enough on a course with
+   * a minimum age, which measures a date.
+   */
+  adultAttested?: boolean;
   /** Optional, so the shop can send the new diver their own waiver link. */
   email?: string | null;
   phone?: string | null;
@@ -1993,8 +2003,10 @@ export async function sameNameHeldSeats(
  * **It hands over nothing**, which is why it needs no blocking confirm while
  * the opposite answer does. The new record starts with only what the staffer
  * typed about the person in front of them (issue #2081): a name, a date of
- * birth (required when a moving seat is on a course with a minimum age, since
- * the age check and the guardian rule fail open without one), and an optional
+ * birth or the staffer's "18 or older" (H-100: one of the two on any
+ * departure, and the date itself on a course with a minimum age, since the age
+ * check and the guardian rule read the date and fail open without one; the
+ * answer is filed with who gave it), and an optional
  * email or phone so the shop can send their own waiver. Never the matched
  * record's: an address another live record holds is refused (`email_in_use`),
  * and the shared address stays with the record that owns it. No cards, no
@@ -2057,7 +2069,12 @@ export async function splitBookingIdentity(
     return { ok: false, reason: "date_of_birth_invalid" };
   }
   const email = input.email?.trim().toLowerCase() || null;
-  type Refusal = "not_held" | "medical_hold" | "date_of_birth_required" | "email_in_use";
+  type Refusal =
+    | "not_held"
+    | "medical_hold"
+    | "date_of_birth_required"
+    | "age_unstated"
+    | "email_in_use";
   type Split =
     | { refused: Refusal }
     | {
@@ -2146,6 +2163,9 @@ export async function splitBookingIdentity(
           )
           .limit(1);
         if (gated.length > 0) return { refused: "date_of_birth_required" as const };
+        // Anywhere else, a blank date is an adult only by the staffer's word
+        // (H-100): it is what the guardian rule will read.
+        if (!input.adultAttested) return { refused: "age_unstated" as const };
       }
 
       // Superseding a referral nobody has answered would lift the hold, and the
@@ -2194,6 +2214,9 @@ export async function splitBookingIdentity(
           email,
           phone: await storedPhone(tx, input.shopId, input.phone?.trim() || null),
           dateOfBirth,
+          ...(dateOfBirth
+            ? {}
+            : { adultAttestedAt: now, adultAttestedByPersonId: input.actorPersonId }),
         })
         .returning({ id: people.id });
       if (!person) throw new Error("splitBookingIdentity: person insert returned no row");

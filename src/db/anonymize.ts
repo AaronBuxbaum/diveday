@@ -170,6 +170,9 @@ const ERASED_PERSON_COLUMNS = {
   emergencyContactName: null,
   emergencyContactPhone: null,
   dateOfBirth: null,
+  // The age answer stands in for the date above, and its author goes with it.
+  adultAttestedAt: null,
+  adultAttestedByPersonId: null,
   diveInsurance: null,
   locale: null,
   courtesyEmailOptOutAt: null,

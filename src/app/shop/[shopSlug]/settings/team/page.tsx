@@ -119,6 +119,7 @@ const CREDENTIAL_KIND_KEYS: Record<
   StaffMessageKey
 > = {
   instructor_rating: "staffing.credentials.kinds.instructor_rating",
+  assistant_instructor_rating: "staffing.credentials.kinds.assistant_instructor_rating",
   divemaster_rating: "staffing.credentials.kinds.divemaster_rating",
   liability_insurance: "staffing.credentials.kinds.liability_insurance",
   first_aid_cpr: "staffing.credentials.kinds.first_aid_cpr",

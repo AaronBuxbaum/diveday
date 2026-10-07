@@ -765,7 +765,7 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
   const state = waiverState(input.waiver, now);
 
   // A medical answer is a fact about the diver, not about the departure
-  // (H-102, issue #2096): a referral nobody has cleared, or a physician's "no",
+  // (H-103, issue #2096): a referral nobody has cleared, or a physician's "no",
   // holds the diver on every trip, including one whose requirements leave the
   // release off, and — like the two checks above — one whose requirements
   // nobody has configured yet. A clean release signed after a refusal is the

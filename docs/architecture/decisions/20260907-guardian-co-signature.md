@@ -243,3 +243,14 @@ So it moves. A minor's form draws a second sentence, selected by the `requiresGu
 **One clause, nothing else.** No `medical_answered_by` column: the assertion is the staffer's, it is already carried by `in_person_attested` and `recorded_by_person_id`, and a column would imply DiveDay can distinguish the two cases when nothing on the paper reaches it. No guardian-answered questionnaire inside the app — that is H-01/H-03's. And no change to what `recordInPersonWaiver` refuses: the writer's rules are identical, so a hand-built request is neither newly allowed nor newly refused.
 
 **Escape hatch.** One key per locale and one ternary. If H-01/H-03 returns a minor-specific template, this sentence is replaced by whatever that template asserts and nothing else has to move.
+
+## Amendment 2026-10-07 — the guardian's email can be erased on its own (H-102, issue #1673)
+
+Decision 8 erased the guardian's address only with the diver's own data. A parent is a third party with no record of their own, so a parent asking for their address to go had nothing to ask for but the child's erasure, and nulling the address alone made `verifyWaiverIntegrity` report tampering on a release nobody had altered (decision 5 put it inside the seal).
+
+**An owner can now erase the address on its own, from the child's record.** `eraseGuardianEmail` (`src/db/guardian-erasure.ts`) re-checks the erasure permission inside its transaction and takes the address only when it is on a release of the diver the URL names, in the staffer's own shop. It then clears it from every live release in that shop carrying it (one guardian, several children) and from any unsent guardian draft. The owner types the address back to confirm, as decision 8's erasure has them type the name.
+
+**The release re-seals as version 4, with the note inside the seal.** Version 4 seals everything version 3 seals except `guardian_email`, plus `guardian_email_erased_at` and `guardian_email_erased_by_person_id`. So "this release was redacted, by whom, and when" is sealed fact, not an annotation beside the seal, and the release's staff page says so. As with versions 2 and 3, only a release whose seal verified at that moment is re-sealed: an unsealed one stays unsealed and a failing one keeps failing. A version 4 release that is refiled stays version 4 (`signedIntegrityVersionFor`), and erasing the diver still seals version 2. The `waiver_records_guardian_email_erased_stays_erased` check refuses a write that puts an address back under the stamp.
+
+**The name stays.** The guardian's name, relationship, method and both timestamps are who signed and when, and the release is the shop's evidence of that. They go only with the diver's own erasure, as decision 8 says. H-82 called this seal "v3"; by the time it was built v3 meant a refiled release, so it is v4.
+

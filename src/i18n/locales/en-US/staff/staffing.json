@@ -47,6 +47,7 @@
     "add": "Add a credential",
     "kinds": {
       "instructor_rating": "Instructor rating",
+      "assistant_instructor_rating": "Assistant Instructor rating",
       "divemaster_rating": "Divemaster rating",
       "liability_insurance": "Liability insurance",
       "first_aid_cpr": "First aid / CPR",

@@ -298,7 +298,8 @@ const RENTAL_ITEM_KINDS = everyCodeOf<RentalItemKind>({
   dive_computer: true,
   gopro: true,
   drysuit: true,
-  hood_gloves: true,
+  hood: true,
+  gloves: true,
   torch: true,
   smb: true,
 });

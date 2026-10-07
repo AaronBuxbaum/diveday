@@ -47,6 +47,7 @@
     "add": "Añadir una credencial",
     "kinds": {
       "instructor_rating": "Titulación de instructor",
+      "assistant_instructor_rating": "Titulación de Instructor Asistente",
       "divemaster_rating": "Titulación de divemaster",
       "liability_insurance": "Seguro de responsabilidad",
       "first_aid_cpr": "Primeros auxilios / RCP",

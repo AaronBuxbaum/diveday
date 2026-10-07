@@ -152,6 +152,21 @@ describe("rentalFitLineText", () => {
     ).toBe("Mask & fins over a drysuit boot");
   });
 
+  it("asks wet or dry for a drysuit diver's gloves, with and without a size (H-101)", () => {
+    expect(
+      rentalFitLineText(t, "en-US", {
+        state: "rents",
+        items: [{ kind: "gloves", size: "L", drysuitGloves: true }],
+      }),
+    ).toBe("Gloves L: drysuit, wet or dry?");
+    expect(
+      rentalFitLineText(t, "en-US", {
+        state: "rents",
+        items: [{ kind: "gloves", size: null, drysuitGloves: true }],
+      }),
+    ).toBe("Gloves: drysuit, wet or dry?");
+  });
+
   it("says why a drysuit diver's weights carry no number (H-78)", () => {
     // A bare "Weights" reads as nobody having written a number down. This one
     // is a different job at the ladder: the stated number is a wetsuit answer.

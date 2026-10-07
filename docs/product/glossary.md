@@ -116,9 +116,15 @@ new domain concept, define it here in the same PR.
   purpose (see their own entries on why even an *imported* row waits for a staff confirm there).
 - **In training** — a diver with no card at a trip's level yet, holding a seat on a course session
   that certifies that level (or higher), ends before the trip starts, and has not ended yet. Which
-  courses certify a rung is agency fact, kept by template in `src/db/course-templates.ts`
-  (`courseTemplateCertifiedLevel`), and matches the importer: SSI Advanced Adventurer and SDI
-  Advanced Adventure Diver are the Advanced rung; specialties, refreshers and tasters certify none.
+  courses certify a rung is agency fact, written on each template in `src/db/course-templates.ts`
+  (`certifiesLevel`) and copied onto the course (`courses.certifies_level`, issue #2059), so a
+  template update carries it and no editor changes it; it matches the importer: SSI Advanced
+  Adventurer and SDI Advanced Adventure Diver are the Advanced rung; specialties, refreshers and
+  tasters certify none, and neither does a course a shop built without a template. The roster's
+  "Certify" select opens on it, or on an empty required choice where the course names none; an intro
+  session (`courses.is_intro_course`) draws no Certify control, and the action refuses one posted
+  anyway (`not_a_certifying_course`). A Rescue student counts as in training toward an Advanced trip
+  (the higher rung covers the lower one) at sale only.
   It is **never evidence**. At a charter's sale it counts toward the trip's level, so a fun dive the
   morning after an Open Water course can be sold. It does **not** satisfy a course's own
   prerequisite: Advanced still asks for a certified Open Water card (H-08's course baseline). At
@@ -317,8 +323,9 @@ new domain concept, define it here in the same PR.
   already count. The credit assumes a rating **in teaching status** — a lapsed AI is out of teaching
   status and uninsured, and is not a certified assistant. Since H-59's 2026-10-07 amendment (issue
   #1853) the **supervision claim** checks it, so far as the shop has recorded it: an AI whose every
-  recorded `instructor_rating` / `divemaster_rating` renewed before the departure counts for nothing
-  on Today, the staffing week and the trip page (see **Supervision claim**). Booking and rostering
+  recorded `instructor_rating` / `assistant_instructor_rating` / `divemaster_rating` renewed before the departure counts for nothing
+  on Today, the staffing week and the trip page (see **Supervision claim**); the AI's own rating is
+  filed as `assistant_instructor_rating` (issue #1850). Booking and rostering
   still give the credit, because H-59 kept those two gates closed.
   **It carries no permissions of its own** — DiveDay's authorization gates are
   unchanged by it, so a shop that wants their AI to hold a Divemaster's permissions files them as
@@ -491,7 +498,9 @@ new domain concept, define it here in the same PR.
   the shop has no evidence a second person exists at all. The distinction is evidence and nothing
   else: no surface renders it, readiness treats the record as co-signed, and the only readers are
   the integrity seal and the export bundle. The guardian's email is **optional**, and the one thing
-  it is for is a copy of what was signed (see **Guardian's copy** below).
+  it is for is a copy of what was signed (see **Guardian's copy** below). **It can be erased on
+  its own** (H-102): an owner takes it off from the child's record, and the release is re-sealed as
+  **redacted** (integrity version 4), still verifying, with who erased it and when inside the seal.
   **Two codes, and only two** — `parent` and `legal_guardian`, confirmed by the owner on 2026-09-10
   (issue 1541) rather than widened. Free text was rejected in the ADR because the code renders to
   staff in their own language, and that reason still holds. **The paper path is not an escape hatch
@@ -1394,7 +1403,7 @@ new domain concept, define it here in the same PR.
   answers on the medical form require a physician sign-off — that's a blocking state, not a checkbox,
   and the only thing that ends it is a **physician clearance** recorded against that record. The
   hold is a fact about the diver, not the trip: it blocks every departure, including one that does
-  not require the release (H-102).
+  not require the release (H-103).
 
   **Publishing a version invalidates every standing signature at the shop, at once.** A signature is
   held against the version it was signed on, so a new version leaves every booked diver on every
@@ -1789,9 +1798,9 @@ new domain concept, define it here in the same PR.
 - **Rental set** — typically: **BCD** (jacket, sized), **regulator** ("reg", with octopus and
   SPG), **wetsuit** (sized, thickness in mm) with **boots**, mask/fins, **weights**, a **dive
   computer**, and a **tank/cylinder** (e.g. AL80 aluminum 80 cu ft). The dive computer is default-on
-  for every diver **and** part of the priced core set (H-06, reconfirmed 2026-08-02 — HD-9). Four
-  add-ons are off by default and priced separately: the **GoPro**, the **drysuit**, **hood &
-  gloves**, a **dive light** and an **SMB** (`RENTABLE_ITEMS`, `src/lib/rentals.ts`). A diver who skips a core
+  for every diver **and** part of the priced core set (H-06, reconfirmed 2026-08-02 — HD-9). Six
+  add-ons are off by default and priced separately: the **GoPro**, the **drysuit**, a **hood**,
+  **gloves**, a **dive light** and an **SMB** (`RENTABLE_ITEMS`, `src/lib/rentals.ts`). A diver who skips a core
   piece (brings their own dive computer, say) is quoted whichever is cheaper — the set price or the
   sum of the pieces they actually take — so skipping one never costs more than the full set would
   have (`quoteRentalFit`, `src/lib/rentals.ts`).
@@ -1842,8 +1851,10 @@ new domain concept, define it here in the same PR.
   the shop rather than quoted at zero. A shop that prices nothing keeps the "ask the shop what's
   included" behaviour.
 - **Rental fit** — a shop-scoped diver's reusable record of *which* pieces they take from the shop
-  and in *what size* (BCD, wetsuit, drysuit, boot, fin, usual weighting, plus the dive-computer,
-  GoPro, hood-and-gloves, dive-light and SMB add-ons).
+  and in *what size* (BCD, wetsuit, drysuit, hood, gloves, boot, fin, usual weighting, plus the
+  dive-computer, GoPro, dive-light and SMB add-ons). A **hood** and **gloves** are two kinds, each
+  with a free-text size (H-101), each racked by size and thickness ("M, 5 mm", "L, 3 mm"). A
+  drysuit diver's gloves are flagged on the packing line ("wet or dry gloves?").
   The **drysuit** is the one add-on that carries a size, and it is sized on its own scale — the
   manufacturer grid a rental wall is racked from (a girth letter, a trailing `T` for the tall cut),
   which shares the wetsuit's girth letters but carries a second axis the wetsuit scale has no room
@@ -2314,9 +2325,11 @@ new domain concept, define it here in the same PR.
   seat read as theirs. It **carries nothing** of the matched diver's:
   no cards, sizes, date of birth, contact or email (the shared address stays with the record that
   owns it, and is refused if typed). What the staffer types about the person in front of them
-  lands on the new record (issue #2081): a **date of birth**, required when a moving seat is on a
-  course with a minimum age, because the age check and the guardian co-signature rule both read it
-  and fail open without one, and an optional **email or phone** for sending their own waiver. When
+  lands on the new record (issue #2081): a **date of birth** or the staffer's **"They're 18 or
+  older"** (H-100), one of the two on every departure and the date itself when a moving seat is on a
+  course with a minimum age, because the age check and the guardian co-signature rule both read the
+  date and fail open without one (the tick is filed with who gave it, `people.adult_attested_at`),
+  and an optional **email or phone** for sending their own waiver. When
   there are **other held seats under the same name** matched to the same diver on *other*
   departures, one box names each of those departures and, when ticked (it starts unticked: two
   strangers can share a name), moves them onto the one new record, so three dives booked with a

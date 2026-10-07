@@ -563,7 +563,8 @@ describe("today's work queue (in-memory PGlite)", () => {
       rentsDiveComputer: false,
       rentsGopro: false,
       rentsDrysuit: false,
-      rentsHoodGloves: false,
+      rentsHood: false,
+      rentsGloves: false,
       rentsTorch: false,
       rentsSmb: false,
     };

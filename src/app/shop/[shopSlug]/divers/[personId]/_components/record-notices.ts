@@ -459,6 +459,30 @@ const NOTICE_KEYS: DiverNoticeMap = {
     field: "erase-confirm-name",
   },
   "erase-refused": { form: "erase", tone: "danger", key: "divers.notices.eraseRefused" },
+  // A guardian's address erased on its own (H-102). On a live record, so the
+  // section is still there to answer in — except after a success that took the
+  // last address, which is why the success is "page": the section it would
+  // have sat in is gone.
+  "guardian-email-erased": {
+    form: "page",
+    tone: "success",
+    key: "divers.notices.guardianEmailErased",
+  },
+  "guardian-email-mismatch": {
+    form: "guardian-email",
+    tone: "danger",
+    key: "divers.notices.guardianEmailMismatch",
+  },
+  "guardian-email-not-found": {
+    form: "guardian-email",
+    tone: "danger",
+    key: "divers.notices.guardianEmailNotFound",
+  },
+  "not-authorized-guardian-email": {
+    form: "guardian-email",
+    tone: "danger",
+    key: "divers.notices.notAuthorizedGuardianEmail",
+  },
   // Erasure is offered on a deleted record only, and the action enforces it —
   // so this arrives on a record whose erase section is not rendered. `"page"`
   // is the only place it can be seen, and it happens to be directly above the
@@ -504,6 +528,7 @@ const DIVER_FORMS = new Set([
   "remove",
   "restore",
   "erase",
+  "guardian-email",
 ]);
 
 function diverNoticeForm(param: string | undefined, fallback: string): string {

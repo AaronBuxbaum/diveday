@@ -52,6 +52,12 @@ describe("enum arrays stay in step with the schema", () => {
 });
 
 describe("normalizeLevel", () => {
+  it("never reads an Assistant Instructor card as the instructor rung", () => {
+    expect(normalizeLevel("Assistant Instructor")).toBe("divemaster");
+    expect(normalizeLevel("PADI AI")).toBe("divemaster");
+    expect(normalizeLevel("Open Water Scuba Instructor")).toBe("instructor");
+  });
+
   it("maps agency dialects onto ladder rungs, advanced before open water", () => {
     expect(normalizeLevel("Advanced Open Water")).toBe("advanced_open_water");
     expect(normalizeLevel("AOW")).toBe("advanced_open_water");

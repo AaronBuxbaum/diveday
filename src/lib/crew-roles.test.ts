@@ -255,6 +255,17 @@ describe("lapsedRungs", () => {
     ).toEqual(["instructor"]);
   });
 
+  it("lapses an Assistant Instructor's rating off the assistant rung only (issue #1850)", () => {
+    // The rung an AI stands on is the assistant one; their rating says nothing
+    // about whether they may teach as an instructor.
+    expect(lapsedRungs([rating("assistant_instructor_rating", "2026-10-09")], DIVE_DAY)).toEqual([
+      "certified_assistant",
+    ]);
+    expect(lapsedRungs([rating("assistant_instructor_rating", "2027-01-01")], DIVE_DAY)).toEqual(
+      [],
+    );
+  });
+
   it("needs every rating for a rung lapsed — one current card is enough", () => {
     // Two agencies' instructor ratings, one renewed and one not.
     expect(

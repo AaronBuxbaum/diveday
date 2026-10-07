@@ -505,7 +505,7 @@ export async function bookSpot(
         const selection = gearSelections[index];
         if (!selection) return;
         const rentedSet = new Set(selection.rentedKinds);
-        // **Every one of the eleven, checked by the compiler.** The writer's
+        // **Every one of the twelve, checked by the compiler.** The writer's
         // flags went optional so a caller with nothing to say about a piece can
         // stay quiet (issue #1755) — but this caller is the checkout, where a
         // tick is a paid line item, and a flag dropped here would take a gear
@@ -521,7 +521,8 @@ export async function bookSpot(
           rentsDiveComputer: rentedSet.has("dive_computer"),
           rentsGopro: rentedSet.has("gopro"),
           rentsDrysuit: rentedSet.has("drysuit"),
-          rentsHoodGloves: rentedSet.has("hood_gloves"),
+          rentsHood: rentedSet.has("hood"),
+          rentsGloves: rentedSet.has("gloves"),
           rentsTorch: rentedSet.has("torch"),
           rentsSmb: rentedSet.has("smb"),
         } satisfies Record<RentalFitField, boolean>;

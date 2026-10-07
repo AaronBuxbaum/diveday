@@ -1158,7 +1158,7 @@ describe("physician clearance and the medical block", () => {
 });
 
 /**
- * A medical answer is a fact about the diver, not about the trip (H-102,
+ * A medical answer is a fact about the diver, not about the trip (H-103,
  * issue #2096): a departure that does not require the release still holds a
  * diver whose questionnaire referred them to a physician, or whose physician
  * said no. Only the release's own blockers follow the departure's setting.

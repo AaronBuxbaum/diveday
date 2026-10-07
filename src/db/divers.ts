@@ -156,6 +156,12 @@ export async function updateDiver(
         ...(input.dateOfBirth === undefined
           ? {}
           : { dateOfBirth: input.dateOfBirth.trim() || null }),
+        // A date answers the age question, so a staffer's earlier "18 or
+        // older" (H-100) goes: clearing the date later must not bring back an
+        // adult claim the date may have disproved (dive-domain review).
+        ...(input.dateOfBirth?.trim()
+          ? { adultAttestedAt: null, adultAttestedByPersonId: null }
+          : {}),
         ...(input.emergencyContactName === undefined
           ? {}
           : { emergencyContactName: input.emergencyContactName.trim() || null }),
@@ -634,16 +640,30 @@ export async function getDiverProfile(
   options: { includeRemoved?: boolean } = {},
 ) {
   const clearedBy = alias(people, "no_certification_cleared_by");
+  const attestedBy = alias(people, "adult_attested_by");
   const levelReviewer = alias(people, "level_certification_reviewer");
   const specialtyReviewer = alias(people, "specialty_certification_reviewer");
   const nitroxReviewer = alias(people, "nitrox_certification_reviewer");
   const [personRow] = await db
-    .select({ person: people, clearedByName: clearedBy.fullName })
+    .select({
+      person: people,
+      clearedByName: clearedBy.fullName,
+      adultAttestedByName: attestedBy.fullName,
+    })
     .from(people)
     .innerJoin(personRoles, eq(personRoles.personId, people.id))
     .leftJoin(
       clearedBy,
       and(eq(clearedBy.id, people.noCertificationClearedByPersonId), eq(clearedBy.shopId, shopId)),
+    )
+    .leftJoin(
+      attestedBy,
+      and(
+        eq(attestedBy.id, people.adultAttestedByPersonId),
+        eq(attestedBy.shopId, shopId),
+        // An erased staffer is "staff", never the erasure placeholder.
+        isNull(attestedBy.anonymizedAt),
+      ),
     )
     .where(
       and(
@@ -749,6 +769,8 @@ export async function getDiverProfile(
   return {
     person: personRow.person,
     noCertificationClearedByName: personRow.clearedByName,
+    /** Who said, at a split, that this diver is 18 or older (H-100). */
+    adultAttestedByName: personRow.adultAttestedByName,
     certifications: levelCards.map(({ card, reviewedByName }) => ({ ...card, reviewedByName })),
     specialtyCertifications: specialtyCards.map(({ card, reviewedByName }) => ({
       ...card,

@@ -69,6 +69,8 @@ const SIZE_FIELDS = [
   "bcdSize",
   "wetsuitSize",
   "drysuitSize",
+  "hoodSize",
+  "gloveSize",
   "bootSize",
   "finSize",
   "weightPreference",
