@@ -94,10 +94,42 @@ async function renderSettings(
   if (seed) await seed(db, session);
   vi.mocked(getDb).mockResolvedValue(db);
   vi.mocked(auth).mockResolvedValue(session);
-  return SettingsPage({
-    params: Promise.resolve({ shopSlug: SHOP_SLUG }),
-    searchParams: Promise.resolve(searchParams),
-  });
+  return expandGroups(
+    await SettingsPage({
+      params: Promise.resolve({ shopSlug: SHOP_SLUG }),
+      searchParams: Promise.resolve(searchParams),
+    }),
+  );
+}
+
+/**
+ * The hub composes one component per settings group (`_components/groups/`),
+ * two of them async under their own `<Suspense>`. Every reader in this file
+ * asks what the hub decided to show, so the group components are rendered
+ * in place — awaited where async — and the tree is read exactly as one page.
+ */
+const GROUP_COMPONENTS = new Set<unknown>(
+  Object.values(await import("./_components/groups/groups")),
+);
+
+async function expandGroups(node: unknown): Promise<ReactElement> {
+  return (await expand(node)) as ReactElement;
+}
+
+async function expand(node: unknown): Promise<unknown> {
+  if (node === null || typeof node !== "object") return node;
+  if (Array.isArray(node)) return Promise.all(node.map(expand));
+  if (!("type" in node) || !("props" in node)) return node;
+  const element = node as ReactElement<{ children?: unknown }>;
+  if (GROUP_COMPONENTS.has(element.type)) {
+    const render = element.type as (props: unknown) => unknown;
+    return expand(await render(element.props));
+  }
+  if (element.props?.children === undefined) return element;
+  return {
+    ...element,
+    props: { ...element.props, children: await expand(element.props.children) },
+  };
 }
 
 describe("settings findability", () => {
