@@ -54,7 +54,7 @@ value nothing writes any more:
   shapes. Each of those is a migration spent on rows that have never had a reader — three follow-ups
   proposed exactly that in one week.
 - **Take the code with it.** A writer with no production caller, its tests, its CSV column in
-  `src/db/export.ts`, its seed references, and its glossary entry all go in the same change. A table
+  `src/db/export-shop-files.ts` (and `export-diver-files.ts`), its seed references, and its glossary entry all go in the same change. A table
   kept alive only by its own test suite is the shape to watch for: grep the writer's name and see
   whether anything outside `*.test.ts` calls it.
 - The absence of a compatibility path is **not** an oversight to fix.

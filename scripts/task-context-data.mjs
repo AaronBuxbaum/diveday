@@ -577,9 +577,16 @@ export const areas = {
       "docs/architecture/decisions/20260724-import-waiver-acceptance.md",
       "docs/architecture/decisions/20260725-import-prior-visits.md",
     ],
-    code: ["src/db/export.ts", "src/db/import.ts"],
+    code: [
+      "src/db/export.ts",
+      "src/db/export-tables.ts",
+      "src/db/export-shop-files.ts",
+      "src/db/export-diver-files.ts",
+      "src/db/import.ts",
+    ],
     tests: [
       "src/db/export.test.ts",
+      "src/db/export-bundle.snapshot.test.ts",
       "src/db/import.test.ts",
       "e2e/export.spec.ts",
       "e2e/import.spec.ts",

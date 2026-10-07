@@ -106,7 +106,7 @@ rather than a backup-only path that rots.
 
 | Property | Reality |
 | --- | --- |
-| Scope | **Per shop, not full-database.** Every query in `src/db/export.ts` is `where(eq(<table>.shopId, shopId))`. A platform backup is a loop over shops, one bundle each; there is no single "dump everything" call. |
+| Scope | **Per shop, not full-database.** Every query in `src/db/export.ts` and its read list `src/db/export-tables.ts` is `where(eq(<table>.shopId, shopId))`. A platform backup is a loop over shops, one bundle each; there is no single "dump everything" call. |
 | Consistency | Each bundle is produced in one `read only` / `repeatable read` transaction (`src/db/export.ts`, the transaction options at the end of `loadShopExportBundleInput`), so a booking that commits mid-export can never appear in `bookings.csv` while its person is missing from `people.csv`. Bundles for *different* shops are separate transactions and are not consistent with each other. |
 | Coverage | 34 CSVs, including `waiver_records.csv` (26 columns — carrying `integrity_hash`, `integrity_version`, and `medical_answers`) and `waiver_templates.csv` (**including the full `body`**, so a restored waiver can be reconstructed against the text that was actually signed rather than against whatever the current template says). |
 | Photos | Every DiveDay-stored image or document URL referenced by any CSV is fetched and bundled byte-identically under `photos/<url pathname>` — including `import_source_document_url` and `import_source_medical_document_url` on waiver records. |
@@ -530,6 +530,6 @@ log below. It should take under an hour.
 | `pg_restore` fails on ownership or grants | The dump is taken `--no-owner --no-privileges`; pass both on the way in too — the target branch's roles are not the source cluster's |
 | A waiver renders but its integrity hash does not verify | Compare `waiver_templates.csv`'s `body` for that `template_version` against what the app is rendering — a restore that mixed a current template with an old record is the usual cause |
 | `photos/` is short of what the CSVs reference | `fetchExportPhotos` dropped them silently (`src/lib/export.ts`). Check whether the blob objects still exist; if they do, re-run the export for that shop, if they do not, the document is gone and the incident is a data-loss incident |
-| Export bundle is missing a table you expected | The table was never added to `src/db/export.ts`. Confirm against `EXPORT_FILE_NOTES` in `src/lib/export.ts` — a table absent there is absent from every historical bundle too |
+| Export bundle is missing a table you expected | The table was never added to the export (`src/db/export-tables.ts` for the read, `src/db/export-shop-files.ts` for the file). Confirm against `EXPORT_FILE_NOTES` in `src/lib/export.ts` — a table absent there is absent from every historical bundle too |
 | App still points at the old database after a cutover | `DATABASE_URL`/`DATABASE_URL_UNPOOLED` are read at boot in `src/db/client.ts`; changing them in Vercel requires a redeploy, not just a save |
 | `cdk destroy` ran and you need the backups | They are still there — `RemovalPolicy.RETAIN` leaves **both** `DatabaseBackupBucket` and `DatabaseDumpBucket` behind on purpose. Re-adopt them by name (`backup-bucket-readoption` in [manual-actions.md](manual-actions.md)) or read them directly from the console |

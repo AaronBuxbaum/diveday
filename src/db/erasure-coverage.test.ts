@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import type { AppDb } from "./client";
+import { EXPORT_TABLES, type ExportTableRead } from "./export-tables";
 import * as schema from "./schema";
 import {
   bookings,
@@ -823,6 +824,49 @@ describe("erasure coverage", () => {
       .filter((name) => !written.has(name) && !(name in ERASURE_KEEPS))
       .sort();
     expect(undecided).toEqual([]);
+  });
+
+  /**
+   * The export read list (`./export-tables`) names, per table, the column a
+   * diver's own bundle reads it by. A table a diver can ask to *see* as theirs
+   * is a table they can ask to have *forgotten*, so every one of them must be
+   * decided by the erasure path above — and the scope column must really be a
+   * foreign key to `people` or `bookings`, or the list is describing a table
+   * the closure cannot see.
+   */
+  it("decides every table a diver's own export reads as theirs", () => {
+    const { written } = erasureWriteSites();
+    const diverScoped = Object.values(EXPORT_TABLES as Record<string, ExportTableRead>)
+      .filter(({ scope }) => scope.personColumn || scope.bookingColumn)
+      .map(({ table }) => getTableName(table));
+    expect(diverScoped.length).toBeGreaterThan(15);
+    expect(
+      diverScoped.filter((name) => !written.has(name) && !(name in ERASURE_KEEPS)).sort(),
+    ).toEqual([]);
+  });
+
+  it("scopes a diver's export reads only through a foreign key to people or bookings", () => {
+    const misdeclared: string[] = [];
+    for (const { table, scope } of Object.values(
+      EXPORT_TABLES as Record<string, ExportTableRead>,
+    )) {
+      const name = getTableName(table);
+      const facts = tables.get(name);
+      for (const [column, target] of [
+        [scope.personColumn, "people"],
+        [scope.bookingColumn, "bookings"],
+      ] as const) {
+        if (!column) continue;
+        const keyed = facts?.foreignKeys.some(
+          (key) => key.target === target && key.columns.includes(column.name),
+        );
+        if (!keyed) misdeclared.push(`${name}.${column.name} references no ${target}`);
+      }
+      if (getTableName(scope.shopColumn.table) !== name || scope.shopColumn.name !== "shop_id") {
+        misdeclared.push(`${name} is shop-scoped by ${scope.shopColumn.name}`);
+      }
+    }
+    expect(misdeclared).toEqual([]);
   });
 
   it("has no keep-reason for a table the erasure does write", () => {
