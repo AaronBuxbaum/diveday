@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   countBothClaims,
   countInWaterCrew,
+  divesOnTrip,
   effectiveCrewRoles,
   groupCrewAssignments,
   inWaterCrewRole,
@@ -529,5 +530,29 @@ describe("standingRatingsBesideJob", () => {
         shopRoles: ["owner", "captain", "divemaster", "manager", "instructor"],
       }),
     ).toEqual(["instructor", "divemaster", "captain"]);
+  });
+});
+
+/** Who needs a tank on the packing list (issue #1851). */
+describe("divesOnTrip", () => {
+  it.each([
+    ["captain", ["divemaster", "instructor"], false],
+    ["crew", ["divemaster"], false],
+    ["divemaster", ["captain"], true],
+    ["instructor", ["owner"], true],
+  ] as const)("reads the rostered job %s over the standing roles", (tripRole, shopRoles, wet) => {
+    expect(divesOnTrip({ tripRole, shopRoles })).toBe(wet);
+  });
+
+  it.each([
+    [["divemaster"], true],
+    [["assistant_instructor"], true],
+    [["instructor"], true],
+    [["captain"], false],
+    [["owner", "manager"], false],
+    [[], false],
+  ] as const)("falls back to the standing roles %j with no job rostered", (shopRoles, wet) => {
+    expect(divesOnTrip({ tripRole: null, shopRoles })).toBe(wet);
+    expect(divesOnTrip({ shopRoles })).toBe(wet);
   });
 });

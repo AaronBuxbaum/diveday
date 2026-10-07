@@ -355,6 +355,30 @@ export function effectiveCrewRoles(member: TripCrewAssignment): string[] {
   return member.tripRole ? [member.tripRole] : [...member.shopRoles];
 }
 
+/** The standing roles that put a person in the water when no job is rostered. */
+const IN_WATER_SHOP_ROLES = ["instructor", "assistant_instructor", "divemaster"] as const;
+
+/**
+ * **Whether this crew member gets wet on this trip**, which is what decides a
+ * tank on the packing list (issue #1851).
+ *
+ * The rostered job answers it when there is one: a captain drives the boat and
+ * a deckhand handles lines, whatever ratings they hold, and anyone rostered as
+ * the instructor or divemaster is in the water. With no job rostered it falls
+ * back to the standing roles, as {@link inWaterCrewRole} does; an Assistant
+ * Instructor is in the water with students by definition (issue #1680).
+ *
+ * Not the supervision ratio: a person rostered in the water without the
+ * qualification still needs a tank, though `inWaterCrewRole` counts them for
+ * less.
+ */
+export function divesOnTrip(member: TripCrewAssignment): boolean {
+  if (member.tripRole) {
+    return member.tripRole === "instructor" || member.tripRole === "divemaster";
+  }
+  return IN_WATER_SHOP_ROLES.some((role) => member.shopRoles.includes(role));
+}
+
 /**
  * The standing roles that are a professional rating — a dive teaching or
  * leadership rung, or a vessel licence — most senior first. Owner, manager and
