@@ -1,7 +1,14 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
 import { nowDate } from "@/lib/clock";
-import { DIVE_SITE_IMPORT_COLUMNS, prepareDiveSiteImport } from "@/lib/dive-site-import";
+import {
+  DIVE_SITE_CREATURE_IMPORT_COLUMNS,
+  DIVE_SITE_IMPORT_COLUMNS,
+  isDiveSiteCreaturesCsv,
+  prepareDiveSiteCreaturesImport,
+  prepareDiveSiteImport,
+} from "@/lib/dive-site-import";
+import { MAX_SITE_CREATURES } from "@/lib/dive-site-field-guide";
 import { DIVE_SITE_LANDMARK_KINDS, type DiveSiteLandmark } from "@/lib/dive-site-landmarks";
 import { MAX_ROUTE_POINTS } from "@/lib/dive-site-route";
 import { buildCsv } from "@/lib/export";
@@ -9,17 +16,35 @@ import { MAX_IMPORT_BYTES, MAX_IMPORT_CELL_LENGTH, MAX_IMPORT_ROWS } from "@/lib
 import { seededShopContext, unseededTestDb } from "@/test/db";
 import type { AppDb } from "./client";
 import { commitDiveSiteImport } from "./dive-site-import";
-import { listDiveSites } from "./dive-sites";
+import { listDiveSiteCreatures, listDiveSites, replaceDiveSiteCreatures } from "./dive-sites";
 import { loadShopExportBundleInput } from "./export";
 import { diveSites, people, shops } from "./schema";
 
-/** The shop's own `dive_sites.csv`, exactly as the bundle would hand it over. */
-async function exportedDiveSitesCsv(db: AppDb, shopId: string): Promise<string> {
+/** One file of the shop's bundle, exactly as the export would hand it over. */
+async function exportedCsv(db: AppDb, shopId: string, file: string): Promise<string> {
   const bundle = await loadShopExportBundleInput(db, shopId);
   if (!bundle) throw new Error("expected an export bundle for the seeded shop");
-  const table = bundle.tables.find((candidate) => candidate.file === "dive_sites.csv");
-  if (!table) throw new Error("expected dive_sites.csv in the bundle");
+  const table = bundle.tables.find((candidate) => candidate.file === file);
+  if (!table) throw new Error(`expected ${file} in the bundle`);
   return buildCsv([...table.header], table.rows);
+}
+
+/** The shop's own `dive_sites.csv`, exactly as the bundle would hand it over. */
+async function exportedDiveSitesCsv(db: AppDb, shopId: string): Promise<string> {
+  return exportedCsv(db, shopId, "dive_sites.csv");
+}
+
+/** Each site's guide, keyed by site name so two libraries can be compared. */
+async function guidesByName(db: AppDb, shopId: string) {
+  const guides = new Map<string, (string | null)[]>();
+  for (const site of await listDiveSites(db, shopId)) {
+    const rows = await listDiveSiteCreatures(db, shopId, site.id);
+    guides.set(
+      site.name,
+      rows.map((row) => row.catalogSlug),
+    );
+  }
+  return guides;
 }
 
 /**
@@ -478,5 +503,229 @@ describe("the dive-site importer", () => {
     const summary = await commitDiveSiteImport(db, shop.id, prepareDiveSiteImport(csv), staffId);
     expect(summary.created).toBe(1);
     expect(summary.skipped).toEqual([{ rowNumber: 3, issues: ["duplicate_in_file"] }]);
+  });
+});
+
+/**
+ * **The field guide comes back with its sites** (issue #1841): the second
+ * file of the same bundle, read in the same upload and joined on the ids the
+ * sites pass just placed — never on the database.
+ */
+describe("restoring the field guide from dive_site_creatures.csv", () => {
+  const creatureCsv = (rows: (string | number | null)[][]) =>
+    buildCsv([...DIVE_SITE_CREATURE_IMPORT_COLUMNS], rows);
+  const creatureRow = (siteId: string, slug: string, position: number) =>
+    DIVE_SITE_CREATURE_IMPORT_COLUMNS.map((column) =>
+      column === "dive_site_id"
+        ? siteId
+        : column === "catalog_slug"
+          ? slug
+          : column === "position"
+            ? position
+            : null,
+    );
+  const siteCsv = (rows: { id: string; name: string }[]) =>
+    buildCsv(
+      [...DIVE_SITE_IMPORT_COLUMNS],
+      rows.map((site) =>
+        DIVE_SITE_IMPORT_COLUMNS.map((column) =>
+          column === "id" ? site.id : column === "name" ? site.name : null,
+        ),
+      ),
+    );
+  const SOURCE_ID = "11111111-1111-4111-8111-111111111111";
+
+  it("knows every column the export writes, in the order it writes them", async () => {
+    const { db, shop } = await seededShopContext();
+    const bundle = await loadShopExportBundleInput(db, shop.id);
+    const table = bundle?.tables.find((candidate) => candidate.file === "dive_site_creatures.csv");
+    expect(table?.header).toEqual([...DIVE_SITE_CREATURE_IMPORT_COLUMNS]);
+  });
+
+  it("restores every site's species, in order, into a shop the bundle did not come from", async () => {
+    const source = await seededShopContext();
+    const expected = await guidesByName(source.db, source.shop.id);
+    expect([...expected.values()].some((slugs) => slugs.length > 0)).toBe(true);
+    const sitesFile = await exportedDiveSitesCsv(source.db, source.shop.id);
+    const creaturesFile = await exportedCsv(source.db, source.shop.id, "dive_site_creatures.csv");
+    expect(isDiveSiteCreaturesCsv(creaturesFile)).toBe(true);
+    expect(isDiveSiteCreaturesCsv(sitesFile)).toBe(false);
+
+    const target = await bareShopContext("import-guides");
+    const creatures = prepareDiveSiteCreaturesImport(creaturesFile);
+    expect(creatures.fatal).toBeNull();
+    const summary = await commitDiveSiteImport(
+      target.db,
+      target.shop.id,
+      prepareDiveSiteImport(sitesFile),
+      target.staffId,
+      creatures,
+    );
+    expect(summary.creaturesSkipped).toEqual([]);
+    expect(summary.guides).toBe(expected.size);
+    expect(await guidesByName(target.db, target.shop.id)).toEqual(expected);
+  });
+
+  it("leaves a site's guide alone when the upload carries no creatures file", async () => {
+    const { db, shop } = await seededShopContext();
+    const before = await guidesByName(db, shop.id);
+    const summary = await commitDiveSiteImport(
+      db,
+      shop.id,
+      prepareDiveSiteImport(await exportedDiveSitesCsv(db, shop.id)),
+      await anyStaffPersonId(db, shop.id),
+    );
+    expect(summary.guides).toBe(0);
+    expect(await guidesByName(db, shop.id)).toEqual(before);
+  });
+
+  it("skips a row naming a site the file did not place, even one this shop holds", async () => {
+    const { db, shop } = await seededShopContext();
+    const [held] = await listDiveSites(db, shop.id);
+    if (!held) throw new Error("expected a seeded dive site");
+    await replaceDiveSiteCreatures(db, shop.id, held.id, ["green-sea-turtle"]);
+    const summary = await commitDiveSiteImport(
+      db,
+      shop.id,
+      prepareDiveSiteImport(siteCsv([{ id: SOURCE_ID, name: "Brand New Ledge" }])),
+      await anyStaffPersonId(db, shop.id),
+      prepareDiveSiteCreaturesImport(
+        creatureCsv([
+          creatureRow(SOURCE_ID, "green-moray", 0),
+          // The held site's real id, but not in this file's sites: never reached.
+          creatureRow(held.id, "nurse-shark", 0),
+          creatureRow("22222222-2222-4222-8222-222222222222", "nurse-shark", 0),
+        ]),
+      ),
+    );
+    expect(summary.creaturesSkipped).toEqual([
+      { rowNumber: 3, issues: ["site_not_restored"] },
+      { rowNumber: 4, issues: ["site_not_restored"] },
+    ]);
+    const guides = await guidesByName(db, shop.id);
+    expect(guides.get("Brand New Ledge")).toEqual(["green-moray"]);
+    expect(guides.get(held.name)).toEqual(["green-sea-turtle"]);
+  });
+
+  it("never writes onto another shop's site, whatever id the file names", async () => {
+    const victim = await seededShopContext();
+    const [theirs] = await listDiveSites(victim.db, victim.shop.id);
+    if (!theirs) throw new Error("expected a seeded dive site");
+    const before = await listDiveSiteCreatures(victim.db, victim.shop.id, theirs.id);
+    const [attacker] = await victim.db
+      .insert(shops)
+      .values({ name: "Other Reef", slug: "import-guides-attacker", timezone: "UTC" })
+      .returning();
+    if (!attacker) throw new Error("shop insert failed");
+    const [staff] = await victim.db
+      .insert(people)
+      .values({ shopId: attacker.id, fullName: "Attacker", email: "attacker@example.com" })
+      .returning();
+    if (!staff) throw new Error("person insert failed");
+
+    // The file claims the victim's site id for its own row, then names it again.
+    const summary = await commitDiveSiteImport(
+      victim.db,
+      attacker.id,
+      prepareDiveSiteImport(siteCsv([{ id: theirs.id, name: "Borrowed Name" }])),
+      staff.id,
+      prepareDiveSiteCreaturesImport(creatureCsv([creatureRow(theirs.id, "nurse-shark", 0)])),
+    );
+    expect(summary.created).toBe(1);
+    expect(await listDiveSiteCreatures(victim.db, victim.shop.id, theirs.id)).toEqual(before);
+    const [mine] = await listDiveSites(victim.db, attacker.id);
+    expect(mine?.id).not.toBe(theirs.id);
+    expect(
+      (await listDiveSiteCreatures(victim.db, attacker.id, mine?.id ?? "")).map(
+        (row) => row.catalogSlug,
+      ),
+    ).toEqual(["nurse-shark"]);
+  });
+
+  it("drops a species DiveDay no longer carries, counts it, and keeps the rest of the guide", async () => {
+    const { db, shop, staffId } = await bareShopContext("import-guides-unknown");
+    const summary = await commitDiveSiteImport(
+      db,
+      shop.id,
+      prepareDiveSiteImport(siteCsv([{ id: SOURCE_ID, name: "Kelp Wall" }])),
+      staffId,
+      prepareDiveSiteCreaturesImport(
+        creatureCsv([
+          creatureRow(SOURCE_ID, "nurse-shark", 2),
+          creatureRow(SOURCE_ID, "kraken", 1),
+          creatureRow(SOURCE_ID, "green-moray", 0),
+        ]),
+      ),
+    );
+    expect(summary.creaturesSkipped).toEqual([{ rowNumber: 3, issues: ["unknown_species"] }]);
+    expect((await guidesByName(db, shop.id)).get("Kelp Wall")).toEqual(["green-moray", "nurse-shark"]);
+  });
+
+  it("stores no repeat and nothing past the guide's limit", async () => {
+    const { db, shop, staffId } = await bareShopContext("import-guides-limit");
+    const slugs = [
+      "green-moray",
+      "nurse-shark",
+      "green-sea-turtle",
+      "hawksbill-turtle",
+      "spotted-eagle-ray",
+      "french-angelfish",
+      "queen-angelfish",
+      "great-barracuda",
+      "stoplight-parrotfish",
+    ];
+    const summary = await commitDiveSiteImport(
+      db,
+      shop.id,
+      prepareDiveSiteImport(siteCsv([{ id: SOURCE_ID, name: "Long Reef" }])),
+      staffId,
+      prepareDiveSiteCreaturesImport(
+        creatureCsv([
+          ...slugs.map((slug, index) => creatureRow(SOURCE_ID, slug, index)),
+          creatureRow(SOURCE_ID, "green-moray", 99),
+        ]),
+      ),
+    );
+    const guide = (await guidesByName(db, shop.id)).get("Long Reef") ?? [];
+    expect(guide).toHaveLength(MAX_SITE_CREATURES);
+    expect(summary.creaturesSkipped.map((row) => row.issues[0]).sort()).toEqual([
+      "duplicate_species",
+      "too_many_species",
+    ]);
+  });
+
+  it("refuses a creatures file it cannot read whole, and then writes no site either", async () => {
+    const { db, shop, staffId } = await bareShopContext("import-guides-refused");
+    const creatures = prepareDiveSiteCreaturesImport(
+      `${DIVE_SITE_CREATURE_IMPORT_COLUMNS.join(",")},secret_column\n`,
+    );
+    expect(creatures.fatal).toBe("unknown_columns");
+    const summary = await commitDiveSiteImport(
+      db,
+      shop.id,
+      prepareDiveSiteImport(siteCsv([{ id: SOURCE_ID, name: "Untouched" }])),
+      staffId,
+      creatures,
+    );
+    expect(summary.created).toBe(0);
+    expect(await listDiveSites(db, shop.id)).toEqual([]);
+    expect(prepareDiveSiteCreaturesImport("position,name\n1,x\n").fatal).toBe("no_slug_column");
+  });
+
+  it("is bounded like the sites file", () => {
+    const header = `${DIVE_SITE_CREATURE_IMPORT_COLUMNS.join(",")}\n`;
+    expect(prepareDiveSiteCreaturesImport(`${header}${"a".repeat(MAX_IMPORT_BYTES)}`).fatal).toBe(
+      "file_too_large",
+    );
+    expect(
+      prepareDiveSiteCreaturesImport(
+        header + Array.from({ length: MAX_IMPORT_ROWS + 1 }, (_, i) => `r${i}`).join("\n"),
+      ).fatal,
+    ).toBe("too_many_rows");
+    expect(
+      prepareDiveSiteCreaturesImport(
+        `dive_site_id,catalog_slug\nx,${"a".repeat(MAX_IMPORT_CELL_LENGTH + 1)}\n`,
+      ).fatal,
+    ).toBe("cell_too_long");
   });
 });
