@@ -439,7 +439,9 @@ const PROCESSOR_ERASURE_FAILURE_KEYS: Record<ErasureFailure, StaffMessageKey> = 
 
 function processorErasureFailureFact(t: StaffTranslator, lastError: string | null) {
   const failure = erasureFailureOf(lastError);
-  return failure ? { value: t(PROCESSOR_ERASURE_FAILURE_KEYS[failure]), className: "text-muted" } : null;
+  return failure
+    ? { value: t(PROCESSOR_ERASURE_FAILURE_KEYS[failure]), className: "text-muted" }
+    : null;
 }
 
 /**

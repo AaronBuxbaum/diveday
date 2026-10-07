@@ -2123,8 +2123,7 @@ describe("createBooking identity safeguard (H-13)", () => {
     const record = await pagedDiverActivity(db, shop.id, shared.personId);
     expect(
       record.rows.some(
-        (row) =>
-          row.code === "identity_confirmed" && row.params.actor === staffer.fullName,
+        (row) => row.code === "identity_confirmed" && row.params.actor === staffer.fullName,
       ),
     ).toBe(true);
   });
