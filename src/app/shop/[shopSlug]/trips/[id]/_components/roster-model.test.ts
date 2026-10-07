@@ -114,6 +114,36 @@ describe("groupRoster", () => {
     expect(groups.blockedCount).toBe(0);
   });
 
+  it("holds a signed waiver under medical review in Still to clear, with no tap to offer", () => {
+    // The medical answers flagged something a physician has not yet cleared:
+    // the seat is cleared to dive by readiness, but the desk is not done with it.
+    const rows = rowsFor([seat("a")], { a: readiness("ready") });
+    rows.waiverByBooking = new Map([
+      [
+        "a",
+        {
+          ...signed,
+          waiver: {
+            ...(signed as { waiver: object }).waiver,
+            status: "medical_review",
+            medicalClearedAt: null,
+            medicalClearanceDeclinedAt: null,
+          },
+        } as unknown as WaiverRow,
+      ],
+    ]) as WaiverByBooking;
+    const groups = groupRoster({
+      t,
+      rows,
+      requiresPayment: false,
+      arrival: undefined,
+      controls: waiverControls(t),
+    });
+    expect(ids(groups.stillToClear)).toEqual(["a"]);
+    expect(ids(groups.ready)).toEqual([]);
+    expect(groups.blockedCount).toBe(0);
+  });
+
   it("with the desk open, sinks a cleared arrival into Checked in and a released seat into Not here", () => {
     const rows = rowsFor(
       [

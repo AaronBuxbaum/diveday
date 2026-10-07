@@ -63,7 +63,7 @@ checkpoint from reading complete. Not a per-person crew roll call.
 
 6. **Offline: read-only in this slice, and it fails closed.** Crew attestation is not recordable
    from the offline manifest — that would need a new offline event kind, store, and sync-route
-   surface. The saved snapshot carries the attestation, `OfflineManifestView` recomputes
+   surface. The saved snapshot carries the attestation, `OfflineManifestView` (now `offlineTripView` in `offline-manifest/trip-view.ts`) recomputes
    `rollCallCompleteness` with it, and a checkpoint with every diver counted and no crew attested
    reads **open** offline exactly as it does online, saying why. The divergence that would be worse
    than the original bug — offline "done", online "not done" — cannot occur. The snapshot record

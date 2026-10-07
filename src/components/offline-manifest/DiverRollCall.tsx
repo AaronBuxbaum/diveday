@@ -8,7 +8,6 @@ import { readinessStatusTone } from "@/i18n/readiness-labels";
 import { rentalFitLineText } from "@/i18n/rental-labels";
 import { isHeldSeat } from "@/lib/held-seat";
 import { rollCallLabel, rollCallRecordedTone, rollCallRowState } from "@/lib/manifests";
-import { latestOfflineRollCall } from "@/lib/offline-manifests";
 import type { OfflineTripControls } from "./controls";
 import {
   OFFLINE_BOAT_TARGET_CLASS,
@@ -81,12 +80,9 @@ function OfflineDiverRow({
     setNoteDrafts,
     record,
   } = controls;
-  const state = latestOfflineRollCall(
-    envelope.snapshot,
-    envelope.events,
-    diver.bookingId,
-    checkpoint,
-  );
+  // The one answer the head count above this row was built from
+  // (`offlineTripView`); a second call here could drift from it.
+  const state = view.localStates[index];
   const ready = diver.readiness.status === "ready";
   // The live manifest's own derivation, not a second copy of it
   // (`src/lib/manifests.ts`). The copy this replaces got two things

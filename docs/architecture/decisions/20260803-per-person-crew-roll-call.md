@@ -95,7 +95,7 @@ key carries no subject kind.
 6. **Offline stays read-only for crew, and fails closed.** The snapshot carries each crew member's
    saved result (names only — no person ids reach a crew phone, since nothing there can record one;
    the list is keyed by position, which is stable in a fixed saved slice and does not collide for
-   two crew who share a name and a role, as `fullName-roles` did). `OfflineManifestView` recomputes
+   two crew who share a name and a role, as `fullName-roles` did). `OfflineManifestView` (now `offlineTripView` in `offline-manifest/trip-view.ts`) recomputes
    completeness from that list. **Absence reads as awaiting**, so a snapshot saved before this
    existed reads *every* crew member as uncounted and the checkpoint stays open there exactly as it
    does online. The divergence that would be worse than the original bug — offline "done", online
