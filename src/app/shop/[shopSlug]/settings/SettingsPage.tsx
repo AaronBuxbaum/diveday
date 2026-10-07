@@ -75,6 +75,7 @@ import { toShopCurrency } from "@/lib/money";
 import { publicAppUrl } from "@/lib/notifications";
 import { parsePassThroughFee } from "@/lib/pass-through-fee";
 import { CONNECT_CLIENT_ID } from "@/lib/payments/connect";
+import { type ErasureFailure, erasureFailureOf } from "@/lib/payments/erasure-failure";
 import { ONBOARDING_EMAIL, SUPPORT_EMAIL } from "@/lib/platform-mail";
 import { publicShopRegisterPath } from "@/lib/public-routes";
 import { RENTABLE_ITEMS, SHOP_CATALOG_ITEMS, toRentableKinds } from "@/lib/rentals";
@@ -423,6 +424,23 @@ const PROCESSOR_ERASURE_TARGET_KEYS: Record<ProcessorErasureTarget, StaffMessage
   stripe_checkout_session_snapshot:
     "settings.main.dataJobs.erasureTarget.stripe_checkout_session_snapshot",
 };
+
+/**
+ * Why an erasure is still owed, in shop words (issue #1865). The row's
+ * `last_error` is Stripe's own English and stays in the ledger; the panel
+ * reads its class (`erasureFailureOf`), keyed so a new class fails typecheck.
+ */
+const PROCESSOR_ERASURE_FAILURE_KEYS: Record<ErasureFailure, StaffMessageKey> = {
+  account_not_owned: "settings.main.dataJobs.processorErasures.failure.account_not_owned",
+  refused: "settings.main.dataJobs.processorErasures.failure.refused",
+  unreachable: "settings.main.dataJobs.processorErasures.failure.unreachable",
+  not_confirmed: "settings.main.dataJobs.processorErasures.failure.not_confirmed",
+};
+
+function processorErasureFailureFact(t: StaffTranslator, lastError: string | null) {
+  const failure = erasureFailureOf(lastError);
+  return failure ? { value: t(PROCESSOR_ERASURE_FAILURE_KEYS[failure]), className: "text-muted" } : null;
+}
 
 /**
  * A labelled group of settings rows with an anchor `#id`. Rows keep their own
@@ -2251,14 +2269,7 @@ export default async function SettingsPage({
                               }),
                               className: "text-muted",
                             },
-                            // Stripe's own words, so free text that wraps.
-                            obligation.lastError
-                              ? {
-                                  value: obligation.lastError,
-                                  className: "text-muted",
-                                  wraps: true,
-                                }
-                              : null,
+                            processorErasureFailureFact(t, obligation.lastError),
                           ]}
                         />
                       </p>

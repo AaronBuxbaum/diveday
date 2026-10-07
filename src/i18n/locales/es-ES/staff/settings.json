@@ -450,7 +450,13 @@
         "retry": "Reintentar borrado",
         "retrying": "Reintentando…",
         "discharge": "Marcar como hecho en Stripe",
-        "discharging": "Guardando…"
+        "discharging": "Guardando…",
+        "failure": {
+          "account_not_owned": "La cuenta de Stripe ya no está conectada",
+          "refused": "Stripe rechazó el borrado",
+          "unreachable": "Stripe no respondió",
+          "not_confirmed": "Stripe no confirmó el borrado"
+        }
       }
     },
     "summary": {
