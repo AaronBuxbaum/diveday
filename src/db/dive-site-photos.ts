@@ -138,3 +138,19 @@ export async function diveSitePhotosNoOtherSiteHolds(
   const held = new Set(others.flatMap(photoUrlsOf).filter((url) => wanted.has(url)));
   return [...wanted].filter((url) => !held.has(url));
 }
+
+/**
+ * Both halves of letting a saved site's photos go (issue #2078), for a caller
+ * that writes in between: which of `superseded` are this shop's is asked now,
+ * while the site still holds them, and whether another site still shows one
+ * is asked by the returned function, once the write has landed.
+ */
+export async function planDiveSitePhotoRelease(
+  db: AppDb,
+  shopId: string,
+  siteId: string,
+  superseded: readonly string[],
+): Promise<() => Promise<string[]>> {
+  const candidates = await ownedDiveSitePhotos(db, shopId, superseded);
+  return () => diveSitePhotosNoOtherSiteHolds(db, siteId, candidates);
+}

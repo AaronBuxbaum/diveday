@@ -1,0 +1,38 @@
+name: Follow-ups
+
+# `pnpm check:follow-ups` reads the live tracker: every open `needs-triage`
+# issue must still be actionable cold (docs/agents/issue-tracker.md's "Filing a
+# follow-up"). It used to run inside `check:repo` on every pull request, which
+# made the tracker's state a property of every branch: one malformed issue
+# (#2036) turned every open pull request red at once, for a problem none of
+# them contained. What it checks decays with the tracker, not with a diff, so it
+# runs here on a schedule and on demand, and a red run names the issues to edit.
+#
+# Exit 2 is the guard's SKIPPED outcome (`gh` could not answer). Here, with the
+# repository token, that is a broken run rather than a disconnected laptop, so
+# it fails the job like any other non-zero exit.
+on:
+  schedule:
+    # 06:00 UTC, ahead of simulate-day.yml (06:30) and ci.yml's nightly (07:00).
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: follow-ups
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: read
+
+jobs:
+  follow-ups:
+    name: Every needs-triage issue is actionable cold
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - run: pnpm check:follow-ups
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

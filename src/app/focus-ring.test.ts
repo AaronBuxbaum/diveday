@@ -429,11 +429,15 @@ const CUT_RINGS: readonly (readonly [file: string, anchor: string, needs: readon
   ],
   // The offline manifest's saved-trip rows, cut left, right and top.
   [
-    "components/OfflineManifestView.tsx",
+    "components/offline-manifest/ManifestList.tsx",
     "p-4 transition-colors hover:bg-surface-sunken focus-visible:bg-surface-sunken",
     ["focus-visible:focus-ring-inset", "rounded-[inherit]"],
   ],
-  ["components/OfflineManifestView.tsx", "first:rounded-t-panel last:rounded-b-panel", []],
+  [
+    "components/offline-manifest/ManifestList.tsx",
+    "first:rounded-t-panel last:rounded-b-panel",
+    [],
+  ],
   // The command palette's options, full width in a scroll box: cut left and right.
   [
     "components/search/CommandPalette.tsx",

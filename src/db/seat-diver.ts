@@ -1,4 +1,6 @@
 import { trackEvent } from "@/lib/analytics";
+import { log } from "@/lib/log";
+import type { ParticipantType } from "@/lib/participant-types";
 import type { TripAdmissionRefusal } from "@/lib/trip-admission";
 import { type BookingOutcome, createBooking } from "./bookings";
 import type { AppDb } from "./client";
@@ -77,6 +79,14 @@ export type SeatDiverInput = {
   diver: SeatDiverPerson;
   entry: SeatDiverEntry;
   refusals: SeatDiverRefusalDetail;
+  /**
+   * What the seat is for (ADR 20261007-participant-types). Absent is a
+   * diver's, as every door seated before the type existed. Staff may seat a
+   * snorkeler or a rider whether or not the public form sells that seat; the
+   * booking transaction still holds the boat, the divers-only limit and the
+   * no-non-divers-on-a-course rule.
+   */
+  participantType?: ParticipantType;
 };
 
 /**
@@ -160,7 +170,9 @@ function activityEntry(entry: SeatDiverEntry, personName: string): TripActivityE
 
 function collapse(reason: BookingRefusalReason, detail: SeatDiverRefusalDetail): SeatDiverRefusal {
   if (detail === "specific") return reason;
-  return reason === "trip_full" || reason === "already_booked" ? reason : "unavailable";
+  return reason === "trip_full" || reason === "divers_full" || reason === "already_booked"
+    ? reason
+    : "unavailable";
 }
 
 /**
@@ -195,6 +207,7 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
     actor: "staff",
     shopId: input.shopId,
     tripId: input.tripId,
+    participantType: input.participantType ?? "diver",
     ...input.diver,
   });
   if (!outcome.ok) {
@@ -215,8 +228,11 @@ export async function seatDiver(db: AppDb, input: SeatDiverInput): Promise<SeatD
     // the same waiver-on-join a hand-entered walk-in does. Idempotent: a
     // diver already holding a link or a signature is skipped, not re-sent.
     waiver = waiverOutcome(await issueWaiverOnJoin(db, input.shopId, outcome.bookingId));
-  } catch {
-    console.error("Waiver-on-join could not be issued", { bookingId: outcome.bookingId });
+  } catch (error) {
+    log("booking.waiver_on_join_failed", "error", {
+      bookingId: outcome.bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
     waiver = "failed";
   }
 

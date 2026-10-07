@@ -57,7 +57,7 @@ function eventIsSubscribed(settings: unknown, eventType: string): boolean {
   return Array.isArray(eventTypes) && eventTypes.includes(eventType);
 }
 
-export async function loadOrderIntegrationPayload(
+async function loadOrderIntegrationPayload(
   db: DbExecutor,
   shopId: string,
   orderId: string,

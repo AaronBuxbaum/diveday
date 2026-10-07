@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { logStripeRequestThrew } from "./stripe-request-log";
 
 /**
  * Stripe coupon + promotion code creation for last-minute-deal blasts, on the
@@ -165,7 +166,8 @@ export function stripePromotionProvider(
         stripeCouponId: coupon.data.id,
         stripePromotionCodeId: promotionCode.data.id,
       };
-    } catch {
+    } catch (error) {
+      logStripeRequestThrew("create_promotion", error);
       return { status: "failed" };
     }
   }
@@ -202,7 +204,8 @@ export function stripePromotionProvider(
         return coupon.success
           ? { status: "created", stripeCouponId: coupon.data.id }
           : { status: "failed" };
-      } catch {
+      } catch (error) {
+        logStripeRequestThrew("create_session_discount", error);
         return { status: "failed" };
       }
     },

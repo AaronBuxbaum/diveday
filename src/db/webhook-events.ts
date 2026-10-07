@@ -1,7 +1,7 @@
 import { and, eq, gt, isNotNull, isNull, ne } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { AppDb } from "./client";
-import { isUniqueConstraintViolation } from "./client";
+import { isUniqueConstraintViolation } from "./query-helpers";
 import { stripeWebhookEvents } from "./schema";
 
 export type ClaimStripeWebhookEventInput = {

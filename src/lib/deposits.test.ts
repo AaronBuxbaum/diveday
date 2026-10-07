@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   cancellationDeadline,
   checkoutCharge,
+  checkoutSeatTerms,
   refundOnCancellation,
+  seatListPriceCents,
   withinCancellationWindow,
 } from "./deposits";
 
@@ -117,5 +119,50 @@ describe("refundOnCancellation", () => {
     const now = new Date("2026-07-29T12:00:00.000Z");
     expect(refundOnCancellation(trip, 0, now).refundCents).toBe(0);
     expect(refundOnCancellation(trip, -100, now).refundCents).toBe(0);
+  });
+});
+
+describe("seatListPriceCents", () => {
+  const trip = { priceCents: 12_000, snorkelerPriceCents: 4_500, riderPriceCents: 0 };
+
+  it("prices a diver at the trip's fare and every other seat at its own column", () => {
+    expect(seatListPriceCents(trip, null, "diver")).toBe(12_000);
+    expect(seatListPriceCents(trip, null, "snorkeler")).toBe(4_500);
+    expect(seatListPriceCents(trip, null, "rider")).toBe(0);
+  });
+
+  it("never falls back to the diver's fare for a seat the trip does not price", () => {
+    expect(
+      seatListPriceCents({ priceCents: 12_000, snorkelerPriceCents: null }, null, "snorkeler"),
+    ).toBeNull();
+  });
+});
+
+describe("checkoutSeatTerms", () => {
+  const trip = {
+    priceCents: 12_000,
+    depositCents: 3_000,
+    snorkelerPriceCents: 4_500,
+    riderPriceCents: 0,
+  };
+
+  it("quotes the diver deposit and each other seat at its own fare and deposit", () => {
+    expect(checkoutSeatTerms(trip, null)).toEqual({
+      depositCents: 3_000,
+      otherSeatOffers: [
+        { type: "snorkeler", fareCents: 4_500, depositCents: 3_000 },
+        { type: "rider", fareCents: 0, depositCents: null },
+      ],
+    });
+  });
+
+  it("offers no other seat on a departure that prices none, or on a course session", () => {
+    const plain = { ...trip, snorkelerPriceCents: null, riderPriceCents: null };
+    expect(checkoutSeatTerms(plain, null).otherSeatOffers).toEqual([]);
+    expect(checkoutSeatTerms({ ...trip, courseId: "course-1" }, null).otherSeatOffers).toEqual([]);
+  });
+
+  it("quotes no deposit on a departure that takes none", () => {
+    expect(checkoutSeatTerms({ ...trip, depositCents: null }, null).depositCents).toBeNull();
   });
 });

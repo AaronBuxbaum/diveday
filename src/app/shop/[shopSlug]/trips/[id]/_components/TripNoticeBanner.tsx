@@ -195,6 +195,79 @@ const NOTICE_KEYS: Record<
   "contact-incomplete": { form: "roster", tone: "warning", key: "trips.notices.contactIncomplete" },
   "diver-invalid": { form: "add-diver", tone: "danger", key: "trips.notices.diverInvalid" },
   "diver-full": { form: "add-diver", tone: "danger", key: "trips.notices.diverFull" },
+  "diver-divers-full": {
+    form: "add-diver",
+    tone: "danger",
+    key: "participants.notices.diversFull",
+  },
+  "diver-type-unavailable": {
+    form: "add-diver",
+    tone: "danger",
+    key: "participants.notices.typeUnavailable",
+  },
+  "booking-restore-divers-full": {
+    form: "roster",
+    tone: "danger",
+    key: "participants.notices.restoreDiversFull",
+  },
+  "participant-type-set": { form: "roster", tone: "success", key: "participants.notices.typeSet" },
+  "participant-type-divers-full": {
+    form: "roster",
+    tone: "danger",
+    key: "participants.notices.diversFull",
+  },
+  "participant-type-unavailable": {
+    form: "roster",
+    tone: "danger",
+    key: "participants.notices.typeUnavailable",
+  },
+  "participant-type-on-team": {
+    form: "roster",
+    tone: "danger",
+    key: "participants.notices.onBuddyTeam",
+  },
+  // Too late: joining after the departure time, or anything once home.
+  "participant-type-closed": {
+    form: "roster",
+    tone: "danger",
+    key: "participants.notices.closed",
+  },
+  // Boarded as a snorkeler or rider, and the boarding gate refuses them as a
+  // diver. No override: the crew clear the blocker first.
+  "participant-type-boarded": {
+    form: "roster",
+    tone: "danger",
+    key: "participants.notices.boardedNotReady",
+  },
+  // Saved, and a paid seat now lists higher: the difference is owed.
+  "participant-type-owed": {
+    form: "roster",
+    tone: "warning",
+    key: "participants.notices.owed",
+  },
+  // Joining the dive, and the card check refused: the signed gate names the
+  // card, and the row offers "Change anyway" (ADR 20261007-participant-types).
+  "participant-type-cert": {
+    form: "roster",
+    tone: "warning",
+    key: "participants.notices.certBlocked",
+  },
+  "participant-terms-saved": {
+    form: "participant-terms",
+    tone: "success",
+    key: "participants.terms.saved",
+  },
+  "participant-terms-invalid": {
+    form: "participant-terms",
+    tone: "danger",
+    key: "participants.terms.invalid",
+  },
+  "participant-terms-below-booked": {
+    form: "participant-terms",
+    tone: "danger",
+    key: "participants.terms.belowBooked",
+    countKey: "participants.terms.belowBooked",
+  },
   "diver-waitlist-available": {
     form: "add-diver",
     tone: "danger",
@@ -388,6 +461,7 @@ const TRIP_FORMS = new Set([
   "recap-note",
   "recap-photos",
   "requirements",
+  "participant-terms",
   "crew",
   "series",
   "lifecycle",
@@ -454,7 +528,7 @@ export function resolveTripNotice({
   const t = staffTranslator(locale);
   const parsedCount = count !== undefined && /^\d+$/.test(count) ? Number(count) : undefined;
   const refusal =
-    notice === "diver-trip-prerequisite"
+    notice === "diver-trip-prerequisite" || notice === "participant-type-cert"
       ? verifyTripAdmissionGate(gate, { kind: "trip", id: tripId })
       : null;
   const text = refusal

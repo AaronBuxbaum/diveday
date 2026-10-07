@@ -1,7 +1,14 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { DIVER_MESSAGES } from "@/i18n/messages";
 import { DIVER_LOCALES } from "@/i18n/settings";
-import { earlyAccessPrice, earlyAccessPriceAmount, midSeasonCutover } from "./marketing";
+import {
+  continuityPromise,
+  earlyAccessPrice,
+  earlyAccessPriceAmount,
+  midSeasonCutover,
+} from "./marketing";
 
 describe("earlyAccessPriceAmount", () => {
   // JSON-LD offers need a bare number; it must stay a derivation of the one
@@ -397,4 +404,49 @@ describe("the export's credentials claim never overstates what is held back", ()
       expect(mockup).not.toMatch(absolute[locale]);
     });
   }
+});
+
+/**
+ * The continuity promise is the product owner's own sentence (H-101, Aaron
+ * Buxbaum, 2026-10-07: "We can publish that exact promise"). These pin its
+ * three commitments in every locale and its two homes, so a later rewrite of
+ * either page cannot quietly drop it or soften it. Changing its words is a
+ * product-owner decision, not a copy edit.
+ */
+describe("the continuity promise", () => {
+  it("is the authorized sentence, word for word, in en-US", () => {
+    expect(marketingMessages("en-US")[continuityPromise.claimKey]).toBe(
+      "If DiveDay ever shuts down, you get 90 days’ notice, your export, and your backups keep running until the last day.",
+    );
+  });
+
+  const commitments = {
+    "en-US": [
+      /shuts down/,
+      /90 days’ notice/,
+      /your export/,
+      /backups keep running until the last day/,
+    ],
+    "es-ES": [
+      /cierra/,
+      /90 días de antelación/,
+      /tu exportación/,
+      /copias de seguridad siguen en marcha hasta el último día/,
+    ],
+  } as const;
+
+  for (const locale of DIVER_LOCALES) {
+    it(`keeps all three commitments in ${locale}`, () => {
+      const message = marketingMessages(locale)[continuityPromise.claimKey];
+      for (const commitment of commitments[locale]) expect(message).toMatch(commitment);
+    });
+  }
+
+  it.each([
+    ["/pricing", "src/app/pricing/faq.ts"],
+    ["/about", "src/app/about/page.tsx"],
+  ])("is rendered on %s from the shared key", (_route, file) => {
+    const source = readFileSync(join(process.cwd(), file), "utf8");
+    expect(source).toContain("t(continuityPromise.claimKey)");
+  });
 });

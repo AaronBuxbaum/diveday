@@ -46,7 +46,7 @@ test.describe("the evening on the home", () => {
     await page.goto("/shop/blue-mantis");
 
     await expect(
-      page.getByText(/^All boats are home: \d+ divers and \d+ crew out, \d+ back\.$/),
+      page.getByText(/^All boats are home: \d+ passengers and \d+ crew out, \d+ back\.$/),
     ).toBeVisible();
   });
 
@@ -85,7 +85,7 @@ test.describe("the evening on the home", () => {
     await page.goto("/shop/blue-mantis");
     await expect(page.getByRole("region", { name: "What today made" })).toBeVisible();
     await expect(
-      page.getByText(/^All boats are home: \d+ divers and \d+ crew out, \d+ back\.$/),
+      page.getByText(/^All boats are home: \d+ passengers and \d+ crew out, \d+ back\.$/),
     ).toBeVisible();
   });
 

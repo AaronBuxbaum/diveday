@@ -108,7 +108,7 @@ describe("GearAndSizes", () => {
     expect(screen.queryByLabelText("Drysuit size")).not.toBeInTheDocument();
   });
 
-  it("asks a hood and glove size each, in free text, only for what the shop rents (H-101)", () => {
+  it("asks a hood and glove size each, in free text, only for what the shop rents (H-102)", () => {
     renderGear(
       makeRentalFit({ rentsHood: true, hoodSize: "M, 5 mm", rentsGloves: true, gloveSize: "L" }),
       ["hood", "gloves"],

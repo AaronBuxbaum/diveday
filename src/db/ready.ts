@@ -1,11 +1,11 @@
 import { and, eq, isNull } from "drizzle-orm";
 import { type CarriedPreparation, carriedPreparation } from "@/lib/carried-preparation";
 import { nowDate } from "@/lib/clock";
-import { perDiverBookingPriceCents } from "@/lib/courses";
-import { withinCancellationWindow } from "@/lib/deposits";
+import { seatListPriceCents, withinCancellationWindow } from "@/lib/deposits";
 import type { DiveIntent } from "@/lib/dive-intent";
 import type { DiveRecencyBand } from "@/lib/dive-recency";
 import { publicAppUrl } from "@/lib/notifications";
+import type { ParticipantType } from "@/lib/participant-types";
 import { isCapturedPaymentStatus } from "@/lib/payment-source";
 import { type ReEntryAsk, reEntryWindowOpen } from "@/lib/re-entry";
 import type { RentalPricing } from "@/lib/rentals";
@@ -167,6 +167,11 @@ export type ReadyPageData = {
   /** True when the shop can actually take a card for this trip right now. */
   canPay: boolean;
   /**
+   * What this seat is (ADR 20261007-participant-types): its price is its own,
+   * and a snorkeler or a rider is not asked a diver's questions.
+   */
+  participantType: ParticipantType;
+  /**
    * What cancelling right now would do to any payment already captured —
    * shown before the diver commits, mirroring `refundBookingOnCancellation`'s
    * decision without moving any money. Never trust this for the actual
@@ -229,6 +234,7 @@ export async function getReadyPageData(
       tripId: bookings.tripId,
       personId: bookings.personId,
       wantsNitrox: bookings.wantsNitrox,
+      participantType: bookings.participantType,
       lastDivedBand: bookings.lastDivedBand,
       welcomeSharedAt: bookings.welcomeSharedAt,
       diveIntent: bookings.diveIntent,
@@ -310,7 +316,9 @@ export async function getReadyPageData(
   // it server-side as well; this only decides whether the button is drawn.
   const settled = isCapturedPaymentStatus(payment?.status) || payment?.status === "waived";
 
-  const perDiverPriceCents = perDiverBookingPriceCents(trip, trip.course);
+  // This seat's own price: a snorkeler is never asked for the dive fare
+  // (ADR 20261007-participant-types).
+  const perDiverPriceCents = seatListPriceCents(trip, trip.course, row.participantType);
   const canPay = Boolean(
     perDiverPriceCents && !settled && canAcceptPayments(stripeAccount) && publicAppUrl(),
   );
@@ -368,6 +376,7 @@ export async function getReadyPageData(
     carriedFactsConfirmedAt: row.carriedFactsConfirmedAt,
     fitConfirmation: identityHeld ? null : fitConfirmation,
     wantsNitrox: row.wantsNitrox,
+    participantType: row.participantType,
     lastDivedBand: row.lastDivedBand,
     diveIntent: row.diveIntent,
     reEntryAsk: row.reEntryAsk,

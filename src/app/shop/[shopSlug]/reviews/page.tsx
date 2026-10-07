@@ -37,11 +37,7 @@ import {
   PublishAllStatus,
 } from "./_components/ReviewBulkPublish";
 import { type ReviewGroup, ReviewLedgerRow } from "./_components/ReviewLedgerRow";
-import {
-  type ReviewRowCopy,
-  ReviewRowProvider,
-  ReviewRowUndoToast,
-} from "./_components/ReviewRowActions";
+import { type ReviewRowCopy, ReviewRowProvider } from "./_components/ReviewRowActions";
 import { ReviewsAggregateLine } from "./_components/ReviewsAggregateLine";
 import { markPulseAddressedAction } from "./actions";
 
@@ -406,11 +402,11 @@ export default async function ReviewsPage({
 
             {/* One rhythm between groups, the page-section spacing every staff
                 surface uses — never a per-section `mt-*` that drifts. */}
-            <ReviewRowProvider>
-              {/* Above the lists for the same reason `PublishAllStatus` is: a
-                  hide takes its own row off the group, and off the page entirely
-                  once there are more moderated reviews than fit one. */}
-              <ReviewRowUndoToast copy={rowCopy} />
+            {/* The provider draws the hide's Undo toast, above the lists for
+                the same reason `PublishAllStatus` is: a hide takes its own row
+                off the group, and off the page entirely once there are more
+                moderated reviews than fit one. */}
+            <ReviewRowProvider copy={rowCopy}>
               <div className="space-y-10">
                 {waitingPage.reviews.length > 0 ? (
                   <section aria-labelledby="reviews-waiting">

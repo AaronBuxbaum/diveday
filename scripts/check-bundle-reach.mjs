@@ -3,6 +3,7 @@ import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
 
 /**
  * Every message-bundle key has a reader.
@@ -59,7 +60,6 @@ import { pathToFileURL } from "node:url";
  */
 
 const ROOT = process.cwd();
-const BASELINE_PATH = "scripts/bundle-reach-baseline.json";
 const LOCALES_DIR = "src/i18n/locales";
 const DEFAULT_LOCALE = "en-US";
 
@@ -249,52 +249,22 @@ async function main() {
     process.exit(0);
   }
 
-  let baseline = {};
-  let baselineExists = true;
-  try {
-    baseline = JSON.parse(await readFile(path.join(ROOT, BASELINE_PATH), "utf8"));
-  } catch (error) {
-    if (error?.code !== "ENOENT") throw error;
-    baselineExists = false;
-  }
-  const baselineCounts = Object.fromEntries(
-    Object.entries(baseline).filter(([key]) => !key.startsWith("//")),
-  );
-
-  const absorbing = process.argv.includes("--absorb");
-  if (process.argv.includes("--write") || absorbing) {
-    const grew = [...counts.entries()].filter(
-      ([file, count]) => baselineExists && count > (baselineCounts[file] ?? 0),
+  const { counts: baselineCounts, exists: baselineExists } = await readCounts(ROOT, "bundle-reach");
+  const { write, absorb } = ratchetFlags();
+  if (write || absorb !== null) {
+    process.exit(
+      await bankCounts({
+        root: ROOT,
+        guard: "bundle-reach",
+        counts: counts,
+        allowed: baselineCounts,
+        exists: baselineExists,
+        note: "Message-bundle keys no string literal in src/ can reach, per bundle. Written by `node scripts/check-bundle-reach.mjs --write`. This number may only go down — see scripts/check-bundle-reach.mjs. An entry is a list to triage, not a list to delete on sight: some are a hole in the walk.",
+        refusal: "The ratchet only turns one way — delete the key, or give it a reader",
+        absorb,
+        summary: (files, total) => `${files} bundles, ${total} keys`,
+      }),
     );
-    const added = [...counts.keys()].filter((file) => baselineExists && !(file in baselineCounts));
-    if (grew.length > 0 || added.length > 0) {
-      if (!absorbing) {
-        console.error(
-          "Refusing to write a baseline that grows. The ratchet only turns one way — delete the key, or give it a reader:",
-        );
-        for (const [file, count] of grew) {
-          console.error(`- ${file}: ${baselineCounts[file]} → ${count}`);
-        }
-        for (const file of added) console.error(`- ${file}: new bundle with ${counts.get(file)}`);
-        console.error(
-          "If this growth arrived in a merge from a branch that predates the check, `--absorb` records it explicitly.",
-        );
-        process.exit(1);
-      }
-      console.warn("Absorbing unreached keys — this must be merged-in work, not new dead copy:");
-      for (const [file, count] of grew) {
-        console.warn(`- ${file}: ${baselineCounts[file]} → ${count}`);
-      }
-      for (const file of added) console.warn(`- ${file}: new bundle with ${counts.get(file)}`);
-    }
-    const next = {
-      "//": "Message-bundle keys no string literal in src/ can reach, per bundle. Written by `node scripts/check-bundle-reach.mjs --write`. This number may only go down — see scripts/check-bundle-reach.mjs. An entry is a list to triage, not a list to delete on sight: some are a hole in the walk.",
-      ...Object.fromEntries([...counts.entries()].sort(([a], [b]) => a.localeCompare(b))),
-    };
-    await writeFile(path.join(ROOT, BASELINE_PATH), `${JSON.stringify(next, null, 2)}\n`);
-    const total = [...counts.values()].reduce((sum, n) => sum + n, 0);
-    console.log(`bundle-reach: baseline written — ${counts.size} bundles, ${total} keys`);
-    process.exit(0);
   }
 
   const violations = [];

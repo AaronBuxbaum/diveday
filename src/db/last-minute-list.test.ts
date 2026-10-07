@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import {
   issueLastMinuteListUnsubscribeToken,
   joinLastMinuteList,
@@ -16,9 +16,13 @@ import { setShopFeature } from "./shops";
 
 const visitor = { fullName: "Nora Quinn", email: "nora@example.com", phone: "+1-305-555-0199" };
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
+
 describe("joinLastMinuteList (in-memory PGlite)", () => {
   it("adds a diver with no capacity check, regardless of any trip", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const outcome = await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
     expect(outcome.personName).toBe("Nora Quinn");
     const list = await listLastMinuteList(db, shop.id);
@@ -29,7 +33,7 @@ describe("joinLastMinuteList (in-memory PGlite)", () => {
   });
 
   it("lists nobody while the shop has the list switched off, and everyone again once it is back on", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
     await setShopFeature(db, shop.id, "lastMinuteList", false);
     expect(await listLastMinuteList(db, shop.id)).toEqual([]);
@@ -40,7 +44,7 @@ describe("joinLastMinuteList (in-memory PGlite)", () => {
   });
 
   it("stores the stated date range", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await joinLastMinuteList(db, {
       shopId: shop.id,
       ...visitor,
@@ -53,7 +57,7 @@ describe("joinLastMinuteList (in-memory PGlite)", () => {
   });
 
   it("reuses the same person and updates the range on a re-submission, keyed by email", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const first = await joinLastMinuteList(db, {
       shopId: shop.id,
       ...visitor,
@@ -75,7 +79,7 @@ describe("joinLastMinuteList (in-memory PGlite)", () => {
   });
 
   it("reactivates an unsubscribed entry on re-submission", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const joined = await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
     await unsubscribeLastMinuteListEntry(db, { shopId: shop.id, entryId: joined.entryId });
     expect(await listLastMinuteList(db, shop.id)).toEqual([]);
@@ -99,7 +103,7 @@ describe("joinLastMinuteList (in-memory PGlite)", () => {
    * A certification is stronger than all three.
    */
   it("does not write a declaration onto a person whose name does not match", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     await joinLastMinuteList(db, {
       shopId: shop.id,
       ...visitor,
@@ -124,7 +128,7 @@ describe("joinLastMinuteList (in-memory PGlite)", () => {
   });
 
   it("still creates the list entry on a name mismatch — only the evidence is withheld", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const first = await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
 
     const again = await joinLastMinuteList(db, {
@@ -149,7 +153,7 @@ describe("joinLastMinuteList (in-memory PGlite)", () => {
 
 describe("unsubscribeLastMinuteListEntry", () => {
   it("refuses to unsubscribe an entry from another shop", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [otherShop] = await db
       .insert(shops)
       .values({ name: "Other Shop", slug: "other-shop-last-minute-test", timezone: "UTC" })
@@ -166,7 +170,7 @@ describe("unsubscribeLastMinuteListEntry", () => {
 
 describe("listLastMinuteList cross-tenant isolation", () => {
   it("a shop never sees another shop's last-minute-list entries", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [otherShop] = await db
       .insert(shops)
       .values({ name: "Other Shop", slug: "other-shop-last-minute-list", timezone: "UTC" })
@@ -180,7 +184,7 @@ describe("listLastMinuteList cross-tenant isolation", () => {
 // Leo (persona 15) — self-serve email unsubscribe (docs/product/features/story-backlog.md).
 describe("self-serve unsubscribe token", () => {
   it("resolves a fresh token to the entry's shop, name, and not-yet-unsubscribed state", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const joined = await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
     const token = await issueLastMinuteListUnsubscribeToken(db, {
       shopId: shop.id,
@@ -197,12 +201,12 @@ describe("self-serve unsubscribe token", () => {
   });
 
   it("reads an unknown token as unavailable, not a crash", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     expect(await resolveLastMinuteListUnsubscribeToken(db, "not-a-real-token")).toBeNull();
   });
 
   it("unsubscribes the entry the token names, removing it from the active list", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const joined = await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
     const token = await issueLastMinuteListUnsubscribeToken(db, {
       shopId: shop.id,
@@ -215,7 +219,7 @@ describe("self-serve unsubscribe token", () => {
   });
 
   it("is idempotent — the same link clicked twice reads as already unsubscribed, never errors", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const joined = await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
     const token = await issueLastMinuteListUnsubscribeToken(db, {
       shopId: shop.id,
@@ -231,7 +235,7 @@ describe("self-serve unsubscribe token", () => {
   });
 
   it("mints an independent token per blast — an earlier email's link keeps working after a later one is issued", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const joined = await joinLastMinuteList(db, { shopId: shop.id, ...visitor });
     const first = await issueLastMinuteListUnsubscribeToken(db, {
       shopId: shop.id,
@@ -251,7 +255,7 @@ describe("self-serve unsubscribe token", () => {
   });
 
   it("never trusts a token whose stored shopId drifts from its entry's", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [otherShop] = await db
       .insert(shops)
       .values({ name: "Other Shop", slug: "other-shop-unsubscribe-token", timezone: "UTC" })

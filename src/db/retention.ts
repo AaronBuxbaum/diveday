@@ -12,6 +12,7 @@ import {
   accountTokens,
   activityEvents,
   bookingPaymentEvents,
+  demoEntries,
   formDrafts,
   inboundMessages,
   integrationEvents,
@@ -24,6 +25,7 @@ import {
   stripeWebhookEvents,
   tripDeskEvents,
   tripReadMarks,
+  weeklyDigestSends,
 } from "./schema";
 
 /**
@@ -287,6 +289,21 @@ export async function pruneExpiredRecords(
     ),
   );
 
+  // The Monday email's per-week claims and their opt-out link hashes. Pruned
+  // on their own age: the claim is spent once its week is over.
+  outcomes.push(
+    await pruneBatch(
+      "weekly_digest_sends",
+      () =>
+        db
+          .select({ id: weeklyDigestSends.id })
+          .from(weeklyDigestSends)
+          .where(lt(weeklyDigestSends.createdAt, cutoff("weekly_digest_sends")))
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(weeklyDigestSends).where(inArray(weeklyDigestSends.id, ids)),
+    ),
+  );
+
   // The manifest's shift catch-up (issues #1202, #1187). Pruned on the event's
   // own `occurred_at`: a desk act is a same-day handoff, so its age is the only
   // thing that decides, and a departure that was moved or never sailed is
@@ -317,6 +334,21 @@ export async function pruneExpiredRecords(
           .where(lt(formDrafts.savedAt, cutoff("form_drafts")))
           .limit(PRUNE_BATCH_LIMIT),
       (ids) => db.delete(formDrafts).where(inArray(formDrafts.id, ids)),
+    ),
+  );
+
+  // The founder digest's demo count (ADR 20261007-founder-metrics), on the
+  // instant of the entry.
+  outcomes.push(
+    await pruneBatch(
+      "demo_entries",
+      () =>
+        db
+          .select({ id: demoEntries.id })
+          .from(demoEntries)
+          .where(lt(demoEntries.enteredAt, cutoff("demo_entries")))
+          .limit(PRUNE_BATCH_LIMIT),
+      (ids) => db.delete(demoEntries).where(inArray(demoEntries.id, ids)),
     ),
   );
 

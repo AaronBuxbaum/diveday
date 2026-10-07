@@ -1,15 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
+import { ToastShell } from "@/components/Toast";
 import { buttonClass } from "@/components/ui/button";
-import { motionMs } from "@/lib/motion";
-
-// Matches the `.toast-dismiss` keyframe duration in globals.css. Kept as a
-// timer (not `onAnimationEnd`) because the reduced-motion kill-switch there
-// only shortens the animation to ~0ms — it doesn't skip it — and we want one
-// unmount path that works identically either way.
-const EXIT_DURATION_MS = motionMs("base");
 
 /**
  * A land-then-undo toast: the action already happened, and this offers a few
@@ -19,10 +12,9 @@ const EXIT_DURATION_MS = motionMs("base");
  * after a beat, and its Undo submits a bound server action. Deliberately generic:
  * pass any inverse action plus the hidden fields it needs.
  *
- * The auto-dismiss countdown pauses while a reader's mouse or keyboard focus
- * is anywhere in the toast (including the Undo button) and resumes counting
- * down from wherever it left off — not a reset to the full duration — once
- * they leave, so tabbing in and out repeatedly can't keep it alive forever.
+ * The shared `ToastShell` with an Undo inside it, so the countdown pauses while
+ * a reader's mouse or keyboard focus is in the toast (including the Undo
+ * button) and resumes from wherever it left off once they leave.
  */
 export function UndoToast({
   message,
@@ -42,90 +34,38 @@ export function UndoToast({
   undoLabel: string;
   autoDismissMs?: number;
 }) {
-  const [visible, setVisible] = useState(true);
-  const [dismissing, setDismissing] = useState(false);
-
-  // Pending auto-dismiss timer, or null while paused (hover/focus) or once
-  // the exit animation has taken over. `remainingMs`/`startedAtMs` are the
-  // elapsed-time bookkeeping that lets a pause stop the clock and a resume
-  // pick up from where it left off instead of restarting at full duration.
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const remainingMsRef = useRef(autoDismissMs);
-  const startedAtMsRef = useRef(0);
-
-  useEffect(() => {
-    remainingMsRef.current = autoDismissMs;
-    startedAtMsRef.current = Date.now();
-    timerRef.current = setTimeout(() => setDismissing(true), autoDismissMs);
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-    // Intentionally only [autoDismissMs]: pause()/resume() below manage the
-    // same timer without needing this effect to re-run on every render.
-  }, [autoDismissMs]);
-
-  useEffect(() => {
-    if (!dismissing) return;
-    const timer = setTimeout(() => setVisible(false), EXIT_DURATION_MS);
-    return () => clearTimeout(timer);
-  }, [dismissing]);
-
-  function pause() {
-    if (dismissing || timerRef.current === null) return;
-    clearTimeout(timerRef.current);
-    timerRef.current = null;
-    remainingMsRef.current = Math.max(
-      remainingMsRef.current - (Date.now() - startedAtMsRef.current),
-      0,
-    );
-  }
-
-  function resume() {
-    if (dismissing || timerRef.current !== null) return;
-    startedAtMsRef.current = Date.now();
-    timerRef.current = setTimeout(() => setDismissing(true), remainingMsRef.current);
-  }
-
-  if (!visible) return null;
   // `ps-4 pe-1`, not `px-4`: Undo's own `px-3` supplies the rest of the end
   // inset, so the word ends 16px inside the toast as the message starts 16px
   // inside it. Both sides at `px-4` put Undo 7px further in (pixel-craft K-102).
   return (
-    <div className="fixed inset-x-0 bottom-[calc(1rem+var(--tabbar-h))] z-50 flex justify-center px-4 print:hidden">
-      <div
-        role="status"
-        onMouseEnter={pause}
-        onMouseLeave={resume}
-        onFocusCapture={pause}
-        onBlurCapture={resume}
-        className={`flex items-center gap-4 rounded-inset border border-border bg-surface py-3 ps-4 pe-1 shadow-2xl ${
-          dismissing ? "toast-dismiss" : "rise-in"
-        }`}
-      >
-        <span className="text-sm font-medium">{message}</span>
-        <form action={action}>
-          {Object.entries(fields).map(([name, value]) => (
-            <input key={name} type="hidden" name={name} value={value} />
-          ))}
-          {/* The shared link button at `sm`: a 44px target with the press and
-              the pointer every button has. It was hand-rolled at 52×36, under
-              the floor (pixel-craft K-347). `busy`: a SubmitButton disables
-              itself while its own undo is in flight. Its ring is drawn inside
-              its box: the toast's `pe-1` leaves 4px of room at the end, and the
-              outset ring's 5px ran over the toast's border (K-102). */}
-          <SubmitButton
-            pendingLabel={pendingLabel}
-            className={buttonClass({
-              variant: "link",
-              size: "sm",
-              busy: true,
-              className: "focus-visible:focus-ring-inset",
-            })}
-          >
-            {undoLabel}
-          </SubmitButton>
-        </form>
-      </div>
-    </div>
+    <ToastShell
+      autoDismissMs={autoDismissMs}
+      pausable
+      className="flex items-center gap-4 py-3 ps-4 pe-1"
+    >
+      <span className="text-sm font-medium">{message}</span>
+      <form action={action}>
+        {Object.entries(fields).map(([name, value]) => (
+          <input key={name} type="hidden" name={name} value={value} />
+        ))}
+        {/* The shared link button at `sm`: a 44px target with the press and
+            the pointer every button has. It was hand-rolled at 52×36, under
+            the floor (pixel-craft K-347). `busy`: a SubmitButton disables
+            itself while its own undo is in flight. Its ring is drawn inside
+            its box: the toast's `pe-1` leaves 4px of room at the end, and the
+            outset ring's 5px ran over the toast's border (K-102). */}
+        <SubmitButton
+          pendingLabel={pendingLabel}
+          className={buttonClass({
+            variant: "link",
+            size: "sm",
+            busy: true,
+            className: "focus-visible:focus-ring-inset",
+          })}
+        >
+          {undoLabel}
+        </SubmitButton>
+      </form>
+    </ToastShell>
   );
 }

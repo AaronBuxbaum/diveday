@@ -1,0 +1,59 @@
+// Nothing that unwinds the render may sit inside a try body, or have .catch() chained onto it.
+// redirect(), notFound() and the rest throw a sentinel the framework turns into a 307/404; a try
+// around one catches the refusal itself and the page below the gate renders anyway. A redirect
+// in the catch is a refusal decided by the failure, and is correct. Tests are exempt in
+// biome.json: asserting a helper throws means catching the sentinel. Why, in full:
+// docs/agents/repo-checks.md ("Now Biome rules").
+language js
+
+// The unwinding calls: Next's five, this repo's three cross-file wrappers whose throw happens
+// one frame down, and any function this file declares as never returning (: never or
+// : Promise<never>), found rather than listed.
+pattern unwinds() {
+  or {
+    `redirect`,
+    `permanentRedirect`,
+    `notFound`,
+    `forbidden`,
+    `unauthorized`,
+    `revalidateAndRedirect`,
+    `requireStaffSession`,
+    `requireShopSurface`,
+    $name where {
+      // A text test first: asking the syntax tree about every call in every try costs
+      // minutes on this tree, and almost no file declares a never-returning function.
+      $program <: r"(?s).*\)\s*:\s*(?:Promise\s*<\s*never\s*>|never)\s*(?:\{|=>).*",
+      $program <: contains or {
+        `function $name($params): never { $_ }`,
+        `function $name($params): Promise<never> { $_ }`,
+        `async function $name($params): Promise<never> { $_ }`,
+        JsVariableDeclarator(id=$name, initializer=JsInitializerClause(expression=$init)) where {
+          $init <: or {
+            `($params): never => $_`,
+            `($params): Promise<never> => $_`,
+            `async ($params): Promise<never> => $_`,
+            `function ($params): never { $_ }`,
+            `function ($params): Promise<never> { $_ }`,
+            `async function ($params): Promise<never> { $_ }`
+          }
+        }
+      }
+    }
+  }
+}
+
+or {
+  or {
+    JsTryStatement(body=$body),
+    JsTryFinallyStatement(body=$body)
+  } where {
+    $body <: contains bubble `$fn($args)` as $call where {
+      $fn <: unwinds(),
+      register_diagnostic(span=$call, message="redirectInTry: this call unwinds the render by throwing, and the try around it catches the refusal itself. Move it out of the try body (a redirect in the catch is fine). A line that genuinely re-throws the sentinel says so with a biome-ignore lint/plugin/redirectInTry comment and its reason.", severity="error")
+    }
+  },
+  JsCallExpression(callee=JsStaticMemberExpression(object=JsCallExpression(callee=$fn), member=`catch`)) where {
+    $fn <: unwinds(),
+    register_diagnostic(span=$fn, message="redirectInTry: .catch() chained onto a call that unwinds the render swallows the refusal it throws. Let the throw through.", severity="error")
+  }
+}

@@ -257,7 +257,7 @@ Copy rules:
 
 ### The two registers of the public pages
 
-**Decided 2026-09-24** (Aaron Buxbaum; H-89 in [product/human-decisions.md](../product/human-decisions.md)):
+**Decided 2026-09-24** (Aaron Buxbaum; H-89 in [product/human-decisions/](../product/human-decisions/README.md)):
 of the six voices drawn in [voice-strategies-20260917.md](voice-strategies-20260917.md), the public
 pages speak in **6, Margin Notes**, and `/about` in **4, Over a Beer**. That document is the dated
 record of the alternatives and the diagnosis; this section is the voice.

@@ -22,21 +22,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // within this many seconds instead of hanging the whole `pnpm check` — and everything that
 // shells out to it — forever with no diagnosis.
 //
-// One exception: `follow-ups` calls `gh issue list`, a real network round trip. It fails
-// open (SKIPPED, with a warning) when `gh` cannot answer rather than blocking a commit on
-// network state — see check-follow-ups.mjs's module doc comment.
-//
-// That fail-open path is only reachable if `gh`'s own timeout fires *first*. It did not:
-// `ghCli` was 120s against this 90s, so a wedged `gh` was killed here — as a hard failure,
-// which is the exact outcome the SKIPPED path exists to prevent, arrived at by the one
-// route nobody tests. `SUBPROCESS_TIMEOUTS.ghCliInCheckGate` is the shorter ceiling that
-// closes it, and `scripts/subprocess.test.mjs` pins the ordering so re-raising it fails a
-// test rather than silently restoring the inversion.
-//
-// That test reads this number out of this file as *text* rather than importing it. This
-// script is entirely top-level, so importing it runs all 43 checks — 43 subprocesses inside
-// a unit test. Keeping this a plain `const` is deliberate: an export would invite exactly
-// that import.
+// None of them reads the network. `check-follow-ups.mjs`, the one that did (`gh issue list`), ran
+// here until 2026-10-07 and made the live tracker a property of every branch: one malformed
+// issue (#2036) turned every open pull request red. It now runs on a schedule
+// (.github/workflows/follow-ups.yml) and as `pnpm check:follow-ups`.
 const CHECK_TIMEOUT_MS = 90_000;
 
 // label -> script path (relative to this file's directory)
@@ -46,11 +35,10 @@ const checks = [
   ["tokens", "check-tokens.mjs"],
   ["tinted-ink", "check-tinted-ink.mjs"],
   ["type-ramp", "check-type-ramp.mjs"],
+  ["page-length", "check-page-length.mjs"],
   ["voice", "check-voice.mjs"],
   ["logical-properties", "check-logical-properties.mjs"],
-  ["clock", "check-clock.mjs"],
   ["db-concurrency", "check-db-concurrency.mjs"],
-  ["intl-cache", "check-intl-cache.mjs"],
   ["image-sizes", "check-image-sizes.mjs"],
   ["adrs", "check-adrs.mjs"],
   ["design-canvases", "check-design-canvases.mjs"],
@@ -58,7 +46,6 @@ const checks = [
   ["glossary", "check-glossary.mjs"],
   ["agents", "check-agents.mjs"],
   ["context-budget", "check-context-budget.mjs"],
-  ["follow-ups", "check-follow-ups.mjs"],
   ["e2e-fixtures", "check-e2e-fixtures.mjs"],
   ["e2e-hygiene", "check-e2e-hygiene.mjs"],
   ["route-coverage", "check-route-coverage.mjs"],
@@ -76,11 +63,9 @@ const checks = [
   ["trip-revision", "check-trip-revision.mjs"],
   ["time-id-order", "check-time-id-order.mjs"],
   ["departure-buffer", "check-departure-buffer.mjs"],
-  ["redirect-in-try", "check-redirect-in-try.mjs"],
   ["text", "check-source-text.mjs"],
   ["infra-ascii", "check-infra-ascii.mjs"],
   ["locale", "check-locale.mjs"],
-  ["timezone", "check-timezone.mjs"],
   ["copy", "check-copy.mjs"],
   ["bundle-reach", "check-bundle-reach.mjs"],
   ["domain-strings", "check-domain-strings.mjs"],
@@ -138,32 +123,11 @@ function runCheck(label, scriptFile) {
 
 const results = await Promise.all(checks.map(([label, scriptFile]) => runCheck(label, scriptFile)));
 
-/**
- * A check has three outcomes, not two.
- *
- * `SKIPPED_EXIT` means the guard could not run at all — today only `check:follow-ups`, the one
- * check here that makes a network call, when `gh` cannot answer. It fails open on purpose: a
- * commit must never be blocked on GitHub's availability. But an exit code was the only thing
- * this loop read, so a guard that skipped printed under the same `ok` header as one that
- * validated, and the run still ended "all checks passed" — false for that check, and false in
- * exactly the containers where `gh` is absent, which is most of them (issue #1097).
- *
- * The exit code stays 0 so nothing is blocked. What changes is that the summary says which
- * checks did not run, rather than claiming they passed.
- */
-const SKIPPED_EXIT = 2;
-
 let anyFailed = false;
-const skipped = [];
 for (const result of results) {
   const header = `check:${result.label} (${result.scriptFile})`;
   if (result.code === 0) {
     console.log(`== ${header}: ok ==`);
-    if (result.stdout) console.log(result.stdout);
-    if (result.stderr) console.log(result.stderr);
-  } else if (result.code === SKIPPED_EXIT) {
-    skipped.push(result.label);
-    console.log(`== ${header}: SKIPPED ==`);
     if (result.stdout) console.log(result.stdout);
     if (result.stderr) console.log(result.stderr);
   } else {
@@ -179,8 +143,4 @@ if (anyFailed) {
   process.exit(1);
 }
 
-console.log(
-  skipped.length > 0
-    ? `\ncheck:repo: all checks passed (${skipped.length} skipped: ${skipped.join(", ")})`
-    : "\ncheck:repo: all checks passed",
-);
+console.log("\ncheck:repo: all checks passed");

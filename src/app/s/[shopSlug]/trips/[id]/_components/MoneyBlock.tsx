@@ -4,6 +4,20 @@ import { useTranslations } from "next-intl";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { formatMoneyCents, formatShortDate } from "@/lib/format";
 import type { ShopCurrency } from "@/lib/money";
+import type { NonDiverParticipantType } from "@/lib/participant-types";
+
+/**
+ * Seats in the party that are not a diver's (ADR 20261007-participant-types):
+ * a snorkeler's or a rider's, at that seat's own price and deposit, each already
+ * resolved by the caller through `seatCheckoutCharge`.
+ */
+export type MoneyBlockSeatLine = {
+  type: NonDiverParticipantType;
+  fareCents: number;
+  /** The per-seat deposit, or null when this seat pays its whole fare now. */
+  depositCents: number | null;
+  count: number;
+};
 
 /**
  * **The money, resolved once, directly above the pay button.**
@@ -55,6 +69,7 @@ export function MoneyBlock({
   currency,
   locale,
   timeZone,
+  otherSeats = [],
   className = "",
 }: {
   /** The per-diver fare the checkout charges (`perDiverBookingPriceCents`). */
@@ -92,6 +107,12 @@ export function MoneyBlock({
   locale: string;
   /** The shop's zone: a date rendered without one reads in the host's (UTC). */
   timeZone: string;
+  /**
+   * Snorkelers and riders in the party, one line per kind. `partySize` then
+   * counts the divers alone, and a party of no divers drops the diver line
+   * rather than showing "× 0 divers".
+   */
+  otherSeats?: ReadonlyArray<MoneyBlockSeatLine>;
   className?: string;
 }) {
   const t = useTranslations("booking");
@@ -102,10 +123,22 @@ export function MoneyBlock({
   // now, so there is no "now" for a deposit to be due at.
   const deposit = dueNow === "checkout" ? depositCents : null;
   const extrasCents = gearCents + passThroughTotalCents;
-  const totalCents = fareCents * partySize + extrasCents;
-  const dueNowCents = deposit === null ? totalCents : deposit * partySize + extrasCents;
-  const balanceCents = deposit === null ? 0 : (fareCents - deposit) * partySize;
+  const seats = otherSeats.filter((seat) => seat.count > 0);
+  // Each seat pays its deposit now when it has one, else its whole fare.
+  const seatNowCents = (fare: number, seatDeposit: number | null) =>
+    dueNow === "checkout" && seatDeposit !== null ? seatDeposit : fare;
+  const otherTotalCents = seats.reduce((sum, seat) => sum + seat.fareCents * seat.count, 0);
+  const otherNowCents = seats.reduce(
+    (sum, seat) => sum + seatNowCents(seat.fareCents, seat.depositCents) * seat.count,
+    0,
+  );
+  const dueNowCents =
+    (deposit === null ? fareCents : deposit) * partySize + otherNowCents + extrasCents;
+  const balanceCents =
+    (deposit === null ? 0 : (fareCents - deposit) * partySize) + (otherTotalCents - otherNowCents);
+  const anyDeposit = deposit !== null || otherNowCents < otherTotalCents;
   const courseLines = courseFeeCents !== null || eLearningFeeCents !== null;
+  const showDiverLine = partySize > 0 || seats.length === 0;
 
   return (
     <dl className={`flex flex-col gap-2 ${className}`.trim()}>
@@ -118,12 +151,23 @@ export function MoneyBlock({
             <Line label={t("money.eLearning")} value={money(eLearningFeeCents * partySize)} />
           ) : null}
         </>
-      ) : (
+      ) : showDiverLine ? (
         <Line
           label={t("money.fare", { price: money(fareCents), count: partySize })}
           value={money(fareCents * partySize)}
         />
-      )}
+      ) : null}
+      {seats.map((seat) => (
+        <Line
+          key={seat.type}
+          label={
+            seat.type === "snorkeler"
+              ? t("money.snorkelerFare", { price: money(seat.fareCents), count: seat.count })
+              : t("money.riderFare", { price: money(seat.fareCents), count: seat.count })
+          }
+          value={money(seat.fareCents * seat.count)}
+        />
+      ))}
       {gearCents > 0 ? <Line label={t("money.gear")} value={money(gearCents)} /> : null}
       {passThroughFeeLine ? (
         <Line label={passThroughFeeLine} value={money(passThroughTotalCents)} />
@@ -149,7 +193,7 @@ export function MoneyBlock({
         </dt>
         <dd className={FIGURE_INLINE_CLASS}>{money(dueNowCents)}</dd>
       </div>
-      {deposit !== null && balanceCents > 0 && balanceDueAt ? (
+      {anyDeposit && balanceCents > 0 && balanceDueAt ? (
         <div className="text-sm text-muted tabular-nums">
           {t("money.balanceAtDock", {
             balance: money(balanceCents),

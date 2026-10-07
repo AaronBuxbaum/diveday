@@ -2,13 +2,13 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
+import { DIVE_SITE_TEMPLATES } from "@/content/dive-site-templates";
 import { unseededTestDb } from "@/test/db";
 import {
   diveSitePhotosNoOtherSiteHolds,
   diveSitePhotoUrlsHeldByShop,
   ownedDiveSitePhotos,
 } from "./dive-site-photos";
-import { DIVE_SITE_TEMPLATES } from "./dive-site-templates";
 import { diveSites, shops } from "./schema";
 
 const MEDIA = "https://media.example.com";

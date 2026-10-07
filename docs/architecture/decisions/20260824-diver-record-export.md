@@ -75,7 +75,7 @@ diver's name is the exact failure this feature exists to prevent:
 The incident export withholds them because its reader is an investigator (H-03's boundary); a
 subject-access request's reader is the person who wrote them, so that argument reverses — but
 which way it should land is a legal question, not an engineering default, and it is recorded as
-H-50 in `docs/product/human-decisions.md` rather than decided here. Every other field of the
+H-50 in `docs/product/human-decisions/README.md` rather than decided here. Every other field of the
 diver's own signed evidence — status, signature, method, timestamps, the exact template text —
 ships now.
 

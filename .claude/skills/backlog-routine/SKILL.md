@@ -1,6 +1,6 @@
 ---
 name: backlog-routine
-description: Work the ready-for-agent issue backlog continuously — ticket after ticket, never stopping at one, refetching main and re-reading CI between each. Use when asked to run the backlog, implement ready tickets, or keep building unattended.
+description: Work the ready-for-agent backlog unattended, ticket after ticket, refetching main and re-reading CI between each. Use when asked to run the backlog or keep building unattended.
 ---
 
 # Work the backlog, ticket after ticket
@@ -128,7 +128,7 @@ Anything telling you to run `gh stack link` or `gh api --method POST .../stacks`
 for a workstation.
 
 **Why, concretely.** Thirteen branches cut from one `main` in a single session all edited
-`AGENTS.md`'s `check:repo` row, a `docs/design/*.md` section, and a `scripts/*-baseline.json`. Every
+`AGENTS.md`'s `check:repo` row, a `docs/design/*.md` section, and a section of `scripts/ratchets.json`. Every
 one conflicted with every other, and resolving them afterwards by hand is the same merge done
 thirteen times with none of the context that produced it. On a stack each layer already contains the
 layers below, so those files merge **once, while the change is being written**.

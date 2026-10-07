@@ -61,7 +61,7 @@ export function reEntryOffersFor(hasRefresherCourse: boolean): readonly ReEntryA
 
 /**
  * The DiveDay-published course templates that *are* a refresher, by slug
- * (`src/db/course-templates.ts`). A shop's own course copied from one of these
+ * (`src/content/course-templates.ts`). A shop's own course copied from one of these
  * keeps the slug, so this recognises the shop's course without reading its
  * prose — and a shop that wrote its own refresher under its own name is simply
  * not recognised, which costs the diver the third ask and never a wrong answer.

@@ -343,7 +343,7 @@ describe("rentalFitCompleteness", () => {
     weightPreference: null,
   };
 
-  it("asks a hood and gloves for their own sizes, each on its own (H-101)", () => {
+  it("asks a hood and gloves for their own sizes, each on its own (H-102)", () => {
     // A warm-water diver takes gloves and no hood: only the gloves need a size.
     expect(rentalFitCompleteness({ ...OWN_KIT, rentsGloves: true })).toEqual({
       state: "incomplete",
@@ -598,7 +598,7 @@ describe("sizedRentalKindOfGearKind", () => {
     expect(sizedRentalKindOfGearKind("hood_gloves")).toBeNull();
   });
 
-  it("teaches a hood and gloves their own columns, now that each has a size (H-101)", () => {
+  it("teaches a hood and gloves their own columns, now that each has a size (H-102)", () => {
     expect(sizedRentalKindOfGearKind("hood")).toBe("hood");
     expect(sizedRentalKindOfGearKind("gloves")).toBe("gloves");
     expect(SIZED_RENTAL_FIT_COLUMN.hood).toBe("hoodSize");

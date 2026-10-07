@@ -331,15 +331,6 @@
     "integrations": {
       "heading": "Integraciones del centro"
     },
-    "trial": {
-      "heading": "Tu prueba",
-      "activeDescription": "Quedan {count, plural, one {# día} other {# días}}, hasta el {endDate}.",
-      "expiredDescription": "Tu prueba terminó el {endDate}. Todo lo que has configurado sigue funcionando.",
-      "upgradeBody": "¿Listo para pasar a un plan de pago?",
-      "emailCta": "Escribir a {email}",
-      "value": "{count, plural, one {Queda # día} other {Quedan # días}}",
-      "expiredValue": "Terminó el {endDate}"
-    },
     "support": {
       "description": "Una mala mañana en el mostrador, una función que echas en falta, un fallo. Escribe cuando quieras.",
       "emailCta": "Escribir a {email}"

@@ -5,7 +5,7 @@ import { getDb } from "@/db/client";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
-import { liveTrip } from "@/db/trips-live";
+import { liveTrip } from "@/db/trips";
 import { MINUTE_MS, nowDate } from "@/lib/clock";
 import { e2eTestRouteAuthorized } from "@/lib/e2e-test-routes";
 

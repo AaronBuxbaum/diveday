@@ -195,6 +195,11 @@ header.
   `opengraph-image` routes. Until that has run, `CspViolations` collects and does not page.
 - When it does get promoted, `alarm` on that signal flips to `true` in the same change: from then on
   a report means the enforced policy blocked something real.
+- *Added 2026-10-07:* the measuring phase has a review date. `REPORT_ONLY_SINCE` and
+  `REPORT_ONLY_REVIEW_BY` in `src/lib/content-security-policy.ts` record it, and a unit test fails
+  on the wall clock once the review date passes, telling the reader to read the `CspViolations`
+  counts and either promote or move the date with a reason. The counts live in CloudWatch, so
+  nothing in the repository can decide the promotion by itself.
 - Every future feature that wants to load a third party now has a place to declare it and a reason
   to justify it, which is the constraint this document exists to impose.
 - `e2e/schedule-embed.spec.ts` and `src/proxy.test.ts` asserted the exact string

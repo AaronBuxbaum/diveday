@@ -199,7 +199,7 @@ export function gearAssignmentNeeds(
       { kind: "fins", size: piece.size },
     ];
   }
-  // A hood and gloves are two kinds in the fit as in the register (H-101), so
+  // A hood and gloves are two kinds in the fit as in the register (H-102), so
   // each meets its own tagged units with its own size, like every other piece.
   return [{ kind: piece.kind as Exclude<RentalItemKind, "mask_fins">, size: piece.size }];
 }

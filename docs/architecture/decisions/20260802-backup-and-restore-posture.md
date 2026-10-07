@@ -11,7 +11,7 @@ about backup or recovery had ever been written down: no stated point-in-time-rec
 copy of the data anywhere DiveDay controls, no restore ever rehearsed. That is the OPS-1 finding in
 [the 2026-08-02 review](../../product/archive/comprehensive-review-20260802.md), and it is worse
 than a generic gap because `waiver_records` is legal evidence whose working retention default is
-"indefinite" ([H-02](../../product/human-decisions.md)): the one dataset we are least able to
+"indefinite" ([H-02](../../product/human-decisions/README.md)): the one dataset we are least able to
 re-create is the one with the longest obligation attached to it.
 
 Neon's own PITR is the fast, correct answer for almost every recovery — but it is a window inside a

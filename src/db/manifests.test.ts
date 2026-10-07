@@ -768,7 +768,13 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       .onConflictDoNothing();
     const [seat] = await db
       .insert(bookings)
-      .values({ shopId: shop.id, tripId: reef.id, personId: staff.id, status: "booked" })
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: staff.id,
+        status: "booked",
+      })
       .returning({ id: bookings.id });
     if (!seat) throw new Error("expected the crew member's own seat");
 
@@ -812,7 +818,13 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       .onConflictDoNothing();
     const [seat] = await db
       .insert(bookings)
-      .values({ shopId: shop.id, tripId: reef.id, personId: staff.id, status: "booked" })
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: staff.id,
+        status: "booked",
+      })
       .returning({ id: bookings.id });
     if (!seat) throw new Error("expected the crew member's own seat");
 
@@ -856,7 +868,13 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       .onConflictDoNothing();
     const [seat] = await db
       .insert(bookings)
-      .values({ shopId: shop.id, tripId: reef.id, personId: staff.id, status: "booked" })
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: staff.id,
+        status: "booked",
+      })
       .returning({ id: bookings.id });
     if (!seat) throw new Error("expected the crew member's own seat");
 
@@ -903,7 +921,13 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       .onConflictDoNothing();
     const [seat] = await db
       .insert(bookings)
-      .values({ shopId: shop.id, tripId: reef.id, personId: staff.id, status: "booked" })
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: staff.id,
+        status: "booked",
+      })
       .returning({ id: bookings.id });
     if (!seat) throw new Error("expected the crew member's own seat");
 
@@ -951,7 +975,13 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       .onConflictDoNothing();
     const [seat] = await db
       .insert(bookings)
-      .values({ shopId: shop.id, tripId: reef.id, personId: staff.id, status: "booked" })
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: staff.id,
+        status: "booked",
+      })
       .returning({ id: bookings.id });
     if (!seat) throw new Error("expected the crew member's own seat");
 
@@ -1009,7 +1039,13 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       .onConflictDoNothing();
     const [seat] = await db
       .insert(bookings)
-      .values({ shopId: shop.id, tripId: reef.id, personId: staff.id, status: "booked" })
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: staff.id,
+        status: "booked",
+      })
       .returning({ id: bookings.id });
     if (!seat) throw new Error("expected the crew member's own seat");
     const now = nowMs();
@@ -1070,7 +1106,13 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       .onConflictDoNothing();
     const [seat] = await db
       .insert(bookings)
-      .values({ shopId: shop.id, tripId: reef.id, personId: staff.id, status: "cancelled" })
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: reef.id,
+        personId: staff.id,
+        status: "cancelled",
+      })
       .returning({ id: bookings.id });
     if (!seat) throw new Error("expected the crew member's canceled seat");
 
@@ -1104,7 +1146,13 @@ describe("trip manifest and roll call (in-memory PGlite)", () => {
       .onConflictDoNothing();
     const [elsewhere] = await db
       .insert(bookings)
-      .values({ shopId: shop.id, tripId: other.id, personId: staff.id, status: "no_show" })
+      .values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: other.id,
+        personId: staff.id,
+        status: "no_show",
+      })
       .returning({ id: bookings.id });
     if (!elsewhere) throw new Error("expected the staffer's seat on the other departure");
 

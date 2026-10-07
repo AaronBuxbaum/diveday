@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { ratingIsWithheld, reviewsToRepublishForRating } from "@/lib/reviews";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { createBookingParty } from "./bookings";
 import {
@@ -28,7 +28,7 @@ import { createTrip, upcomingTripsWithCounts } from "./trips";
 const OTHER_SHOP_ID = "00000000-0000-0000-0000-000000000000";
 
 async function reviewContext(divers = ["Reviewing Diver"]) {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = ctx;
   const trips = await upcomingTripsWithCounts(db, shop.id);
   const bookableCharters = trips.filter((trip) => !trip.course);
   const reef =
@@ -65,6 +65,10 @@ async function reviewContext(divers = ["Reviewing Diver"]) {
     bookingIds: party.bookings.map((b) => b.bookingId),
   };
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
 
 describe("submitTripReview", () => {
   it("publishes a bare rating immediately and counts it toward the shop's average", async () => {

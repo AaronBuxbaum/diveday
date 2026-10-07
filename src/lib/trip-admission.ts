@@ -5,6 +5,7 @@ import type {
   NitroxCertification,
   SpecialtyCertification,
 } from "@/db/schema";
+import { isDiver, type ParticipantType } from "./participant-types";
 import {
   type CertificationLevel,
   type CertRequirementSource,
@@ -34,7 +35,7 @@ import {
  * diver knows nothing about them, and refusing there would lock out every new
  * customer and every diver whose cards predate this rule shipping. That is the
  * same trade-off the product owner already settled for the course minimum-age
- * gate (docs/product/human-decisions.md H-08: "collect a date of birth, fail
+ * gate (docs/product/human-decisions/ H-08: "collect a date of birth, fail
  * open"; the fail-closed option was declined for exactly this blast radius),
  * and this rule follows it rather than inventing a second policy. Readiness and
  * the dock still hold that line — nothing here weakens them.
@@ -262,6 +263,15 @@ export type TripAdmissionInput = {
    * an instructor is in the water either way.
    */
   courseSession?: boolean;
+  /**
+   * What this person will be doing on the boat (ADR 20261007-participant-types).
+   * Absent is a diver. A snorkeler or a rider is asked for no card at all —
+   * there is no dive for a certification to qualify — so the requirement this
+   * gate composes for them is empty, and it admits. Readiness composes the same
+   * empty requirement (`calculateReadiness`), which is what keeps the rule that
+   * admission never refuses someone readiness would clear.
+   */
+  participantType?: ParticipantType;
 };
 
 /**
@@ -275,6 +285,9 @@ export function decideTripAdmission(input: TripAdmissionInput): TripAdmission {
   // it is a statement about *which rule applies*, not an exemption from this
   // one.
   if (input.courseSession) return ADMITTED;
+  // Not diving, so nothing a card qualifies is being bought. A course session
+  // never reaches here with one (`createBookingRecord` refuses it first).
+  if (!isDiver(input.participantType)) return ADMITTED;
 
   // The trip's own requirement and every site it visits, folded together — the
   // strictest level, the union of specialties, nitrox if either wants it. A

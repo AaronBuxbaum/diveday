@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
+import { DIVE_SITE_TEMPLATES } from "@/content/dive-site-templates";
 import type { DbExecutor } from "./client";
-import { DIVE_SITE_TEMPLATES } from "./dive-site-templates";
 import { globalDiveSites, globalDiveSiteVersions } from "./schema";
 
 /**

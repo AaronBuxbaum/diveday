@@ -9,7 +9,7 @@
 seam (`src/lib/cert-verification/`) that POSTed a C-card to its issuing agency's gateway and, on a
 confirmed match, promoted the card pending→verified. That seam never had a real gateway to call: PADI,
 SSI, and NAUI expose no usable public C-card verification API, and standing one up was a per-agency,
-credential-gated human prerequisite ([H-10](../../product/human-decisions.md)) that never
+credential-gated human prerequisite ([H-10](../../product/human-decisions/README.md)) that never
 resolved. So the seam always fell through to its disabled provider and staff verified every card by
 hand anyway — the automated path was carrying configuration, docs, env vars, and a UI button for a
 capability that did not exist.
@@ -53,3 +53,15 @@ even though it never fired. The cost was real; the benefit was hypothetical.
 - No behavioural change to readiness: the same verified/unexpired evidence clears the same gates.
 - If DiveDay later integrates a real agency API, it returns as a new, deliberately-scoped decision —
   not resurrected speculative plumbing.
+
+## Amendment 2026-10-07: a link to the agency's own lookup
+
+A card waiting for a check (pending, self-declared, or imported and unconfirmed) carries a **Check
+with <agency>** link that opens the agency's own public verification page in a new tab, from one
+registry, `src/lib/agency-verification.ts` (market audit 2026-10-07, item 30). It is a link and
+nothing more: DiveDay never fetches, scrapes or posts to the agency, never prefills a diver's
+details into the URL (no agency documents a parameter for it), and the staffer still marks the card
+certified here. Agencies with a confirmed public lookup get "Check with <agency>"; the CMAS portal,
+which has gaps while federations fill it, gets "Search the CMAS portal"; PADI's DiveChek is behind
+the shop's PADI member login, so PADI cards get "Check with PADI (member sign-in)" pointing at the
+PADI Pros' Site. This stays inside the decision above.

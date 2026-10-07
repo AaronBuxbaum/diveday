@@ -2,7 +2,7 @@ import type { getBookingForTrip } from "@/db/bookings";
 import type { listPublishedDiveSiteMoments } from "@/db/dive-sites";
 import type { getBookingReadiness, getTripRequirements } from "@/db/readiness";
 import type { DiverRentalFit } from "@/db/rental-fit";
-import type { shopBySlugCached } from "@/db/shops";
+import type { shopBySlugCached } from "@/db/shops-cached";
 import type { getTripWithBooked, listTripDives, listTripScheduleDays } from "@/db/trips";
 import type { MarineLifeCard } from "@/i18n/marine-life-labels";
 import type { DiverMessageKey } from "@/i18n/messages";
@@ -65,6 +65,8 @@ export type ErrorCode =
   | "unavailable"
   | "course-unavailable"
   | "course-ratio-full"
+  | "divers-full"
+  | "type-unavailable"
   | "fit"
   | "pay"
   | "waiver"
@@ -78,6 +80,8 @@ export const ERROR_MESSAGE_KEYS: Record<ErrorCode, DiverMessageKey> = {
   unavailable: "booking.errors.unavailable",
   "course-unavailable": "booking.errors.courseUnavailable",
   "course-ratio-full": "booking.errors.courseRatioFull",
+  "divers-full": "booking.errors.diversFull",
+  "type-unavailable": "booking.errors.typeUnavailable",
   fit: "booking.errors.fit",
   pay: "booking.errors.pay",
   // Reuses `/ready`'s own wording for the same refusal, so a diver who lands

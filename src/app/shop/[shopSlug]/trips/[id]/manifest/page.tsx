@@ -30,6 +30,7 @@ import { crewBlockerText } from "@/i18n/identity-check-labels";
 import { rollCallCheckpointShortText, rollCallCheckpointText } from "@/i18n/manifest-labels";
 import { fieldGuideCards, marineLifeCatalogCards } from "@/i18n/marine-life-labels";
 import { diverTranslator } from "@/i18n/messages";
+import { staffSoulsOnBoardLine } from "@/i18n/participant-labels";
 import { requestLocale } from "@/i18n/request";
 import { type StaffTranslator, staffTranslator } from "@/i18n/staff-messages";
 import { nowDate } from "@/lib/clock";
@@ -50,6 +51,7 @@ import {
 } from "@/lib/manifests";
 import { webPushPublicKey } from "@/lib/notifications/web-push";
 import { serializeManifests } from "@/lib/offline-manifests";
+import { unteamedDivers as divingAndUnteamed } from "@/lib/participant-types";
 import { requireShopSurface } from "@/lib/session";
 import { seenChipSlugs, seenSiteFor } from "@/lib/sightings";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
@@ -544,7 +546,7 @@ export default async function TripManifestPage({
       team.members.flatMap((member) => (member.kind === "diver" ? [member.bookingId] : [])),
     ),
   );
-  const unteamedDivers = manifest.divers.filter((diver) => !teamedBookingIds.has(diver.bookingId));
+  const unteamedDivers = divingAndUnteamed(manifest.divers, teamedBookingIds);
   // Everyone the builder can offer, as `{ token, label }` — divers who are
   // free, and every assigned crew member.
   const diverOptions = unteamedDivers.map((diver) => ({
@@ -586,9 +588,11 @@ export default async function TripManifestPage({
         ? t("manifest.buddyErrorAlreadyTeamed")
         : buddyError === "few"
           ? t("manifest.buddyErrorTooFew")
-          : buddyError
-            ? t("manifest.buddyErrorGeneric")
-            : null;
+          : buddyError === "not-diver"
+            ? t("manifest.buddyErrorNotDiver")
+            : buddyError
+              ? t("manifest.buddyErrorGeneric")
+              : null;
   // A refusal renders beside the form that produced it
   // (docs/design/forms-and-controls.md). `few` is the one code only the
   // new-team builder can earn, so it lands in that fieldset's action row;
@@ -718,11 +722,7 @@ export default async function TripManifestPage({
           correct itself, so nothing here moves after the sheet comes off the
           printer. */}
       <p className="mt-4 hidden text-base font-semibold tabular-nums print:block">
-        {t("manifest.soulsOnBoardLine", {
-          divers: manifest.summary.totalDivers,
-          crew: manifest.crew.length,
-          souls: manifest.summary.totalDivers + manifest.crew.length,
-        })}
+        {staffSoulsOnBoardLine(t, manifest.summary, manifest.crew.length)}
         {/* **The count is the number read over the radio, and a crew member
             rostered on two overlapping boats makes it wrong** (issue #1779).
             Their row below says which other departure; this says the head

@@ -1,7 +1,7 @@
 import { and, asc, eq, gte, lt } from "drizzle-orm";
 import type { DbExecutor } from "@/db/client";
 import { courses, diveSites, people, tripAssignments, tripScheduleDays, trips } from "@/db/schema";
-import { liveTrip } from "@/db/trips-live";
+import { liveTrip } from "@/db/trips";
 import { nowDate } from "@/lib/clock";
 import type { FeedTrip } from "./feed-document";
 import type { FeedScope } from "./feed-store";

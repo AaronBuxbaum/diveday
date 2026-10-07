@@ -855,6 +855,9 @@ test.describe("automated accessibility scans of the signed-out surfaces", () => 
       // The same route with the setup key is the form itself; without it,
       // the closed door above.
       { path: ONBOARD_FORM_PATH, heading: /\S/ },
+      // Where every "Get set up" door lands, and the `EntryDone` it ends on.
+      { path: "/get-set-up", heading: /\S/ },
+      { path: "/get-set-up/sent", heading: /\S/ },
       // **A door that has closed** (issue #1123). Every route above is one a
       // person walks *through*, and `EntryDone` is a different composition
       // entirely — a decorative drawn mark in a circle, an `<h1>`, one muted

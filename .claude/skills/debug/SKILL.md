@@ -1,6 +1,6 @@
 ---
 name: debug
-description: Debugging playbook — failing tests, red CI, Playwright flakes, Drizzle/PGlite errors, Next 16 surprises, auth redirect loops, and a local dev server that died, refuses to start, or serves stale data. Use whenever investigating a bug report, a red check, or unexpected runtime behavior, BEFORE attempting fixes.
+description: Debugging playbook — failing tests, red CI, Playwright flakes, Drizzle/PGlite errors, Next 16 surprises, auth redirect loops, a dead dev server. Use on any bug report, red check, or unexpected behavior, before attempting fixes.
 ---
 
 # Debug

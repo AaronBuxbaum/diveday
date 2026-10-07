@@ -2206,13 +2206,30 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       // What everyone without the key meets at `/onboard`: one sentence on how
-      // a shop is set up and the mail that starts it.
+      // a shop is set up and the door to the set-up form.
       test(`the closed onboarding door renders true to the design (${scheme})`, async ({
         page,
       }) => {
         await page.goto("/onboard");
         await page.locator("h1").first().waitFor();
         await capture(page, "onboard-closed", scheme);
+      });
+
+      // Where every "Get set up" door lands (ADR 20261007-setup-request-form):
+      // seven asks, two of them as pills.
+      test(`the set-up request form renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/get-set-up?from=pricing");
+        await page.locator("h1").first().waitFor();
+        await capture(page, "get-set-up", scheme);
+      });
+
+      // The thank-you page a sent request lands on, with the demo door.
+      test(`the set-up request thank-you page renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/get-set-up/sent");
+        await page.locator("h1").first().waitFor();
+        await capture(page, "get-set-up-sent", scheme);
       });
 
       test(`the sign-in page renders true to the design (${scheme})`, async ({ page }) => {
@@ -2577,6 +2594,27 @@ for (const scheme of ["light", "dark"] as const) {
         // hydrate so the shot is of the settled page, not of the form mounting.
         await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
         await capture(page, "site-briefing-requirements", scheme);
+      });
+
+      /**
+       * **"Joining as", with a price per type** (ADR 20261007-participant-types).
+       * A departure that sells snorkeler and rider seats asks each person what
+       * they are doing, and the hero states each type's price. Today's reef
+       * boat, through `/api/test/seed-trouble-states?mixedBoat=1`, which names
+       * the two prices unless the demo seed already has.
+       */
+      test(`the public trip page offers a snorkeler and a rider seat (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        const seeded = await request.post("/api/test/seed-trouble-states?mixedBoat=1");
+        expect(seeded.ok()).toBe(true);
+        const { mixedBoat } = (await seeded.json()) as { mixedBoat?: { tripId: string } };
+        if (!mixedBoat) throw new Error("seed-trouble-states found no departure to mix");
+        await page.goto(`/s/blue-mantis/trips/${mixedBoat.tripId}`);
+        await expect(page.getByLabel("Number of divers")).toHaveAttribute("data-hydrated", "true");
+        await expect(page.getByLabel("Joining as")).toBeVisible();
+        await capture(page, "public-trip-participant-types", scheme);
       });
 
       /**
@@ -3489,10 +3527,10 @@ for (const scheme of ["light", "dark"] as const) {
        * other baseline. A freshly onboarded shop is the real "empty queue"
        * scenario — same flow as e2e/onboard.spec.ts's first-run checklist test.
        *
-       * **Two captures in one test, deliberately.** `settings-trial` is
-       * this shop's Settings page — the trial-status card only ever renders
-       * for a real (non-demo) trial shop, so `blue-mantis` (the seeded demo
-       * shop the other settings capture uses) can never show it. Both
+       * **Two captures in one test, deliberately.** `settings-billing` is
+       * this shop's Settings > Billing page — demo shops have no Billing door
+       * and are never billed, so `blue-mantis` (the seeded demo shop the
+       * other settings captures use) can never show a trial's standing. Both
        * images contain the shop's slug — the first-run checklist renders the
        * public schedule URL. A second test would have to onboard a *second*
        * shop, because `/api/test/reset` reseeds the demo shop and purges
@@ -3500,7 +3538,7 @@ for (const scheme of ["light", "dark"] as const) {
        * so the slug would have to differ — and a different slug is different
        * pixels in every baseline. Splitting here would move a baseline to buy
        * isolation, which is the wrong trade; the captures are one
-       * onboarded session anyway. The trial card itself is clock-anchored and
+       * onboarded session anyway. The trial's standing is clock-anchored and
        * deterministic: this shop's `created_at` is the harness's one frozen
        * instant, so "21 days left" and the end date never drift between runs.
        */
@@ -3599,11 +3637,12 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Nothing upcoming on the board" }).waitFor();
         await capture(page, "schedule-builder-empty", scheme);
 
-        // Same session, straight to Settings: the one place a trial shop's
-        // owner sees the trial-status card (days left, upgrade-by-email CTA).
-        await page.goto(`/shop/${unique}/settings`);
-        await page.getByRole("heading", { name: "Your trial" }).waitFor();
-        await capture(page, "settings-trial", scheme);
+        // Same session, straight to Settings > Billing: the one place a trial
+        // shop's owner sees its standing (days left, and — with the billing
+        // env absent here, as in every e2e build — "billing isn't turned on").
+        await page.goto(`/shop/${unique}/settings/billing`);
+        await page.getByRole("heading", { name: "Your plan" }).waitFor();
+        await capture(page, "settings-billing", scheme);
       });
 
       /**
@@ -4711,6 +4750,46 @@ for (const scheme of ["light", "dark"] as const) {
         await capture(page, "schedule-builder-move-blocked", scheme);
       });
 
+      /**
+       * **A snorkeler and a rider aboard** (ADR 20261007-participant-types):
+       * the roster's type badge, the Details row that sets their prices, the
+       * manifest head count's split and the roll-call badge, on today's reef
+       * boat. `/api/test/seed-trouble-states?mixedBoat=1` seats Mara and Owen
+       * Quint there through `seatDiver` unless the demo seed already has, so
+       * the capture reads the same on every layer of the stack.
+       */
+      test(`a departure carrying a snorkeler and a rider (${scheme})`, async ({
+        page,
+        request,
+      }) => {
+        test.setTimeout(FLOW_TIMEOUT_MS);
+        const seeded = await request.post("/api/test/seed-trouble-states?mixedBoat=1");
+        expect(seeded.ok()).toBe(true);
+        const { mixedBoat } = (await seeded.json()) as {
+          mixedBoat?: { tripId: string; snorkeler: string; rider: string };
+        };
+        if (!mixedBoat) throw new Error("seed-trouble-states found no departure to mix");
+
+        await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}`);
+        await expect(
+          page
+            .locator('#roster li[id^="booking-"]')
+            .filter({ hasText: mixedBoat.rider })
+            .first()
+            .getByText("Rider", { exact: true }),
+        ).toBeVisible();
+        await capture(page, "trip-roster-participant-types", scheme);
+
+        await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}?view=details`);
+        await expect(page.locator("details#participant-terms")).toBeVisible();
+        await capture(page, "trip-details-participant-terms", scheme);
+
+        await page.goto(`/shop/blue-mantis/trips/${mixedBoat.tripId}/manifest`);
+        await page.getByRole("heading", { name: "Roll call" }).waitFor();
+        await expect(page.getByText(/1 snorkeler · 1 rider/).first()).toBeVisible();
+        await capture(page, "manifest-participant-types", scheme);
+      });
+
       // The add-a-departure form as a shop meets it all week: the quick path,
       // which the board only ever shows as a button — every field a departure
       // is born with, price included, with the rare half collapsed behind
@@ -4913,7 +4992,7 @@ for (const scheme of ["light", "dark"] as const) {
        * really about, and the one a seeded demo never shows: every seeded
        * diver has a card, a signature or a balance waiting on somebody. The
        * status section renders *nothing at all* here, which is the pinned rule
-       * (`_lib/status.test.ts`), and this is the only baseline that can catch
+       * (`src/lib/diver-status.test.ts`), and this is the only baseline that can catch
        * a heading or an "all clear" line creeping back in above the story.
        *
        * Built rather than seeded: a fresh diver has no cards, no bookings and
@@ -5036,10 +5115,9 @@ for (const scheme of ["light", "dark"] as const) {
 
       /**
        * The explicit duplicate-resolution surface: create a second record for
-       * a seeded diver, then photograph the owner/manager's survivor choice.
-       * This keeps the warning, match reasons, radio controls, and one primary
-       * merge action in the visual suite without making the demo seed itself a
-       * duplicate. The per-test reset removes the temporary record afterward.
+       * a seeded diver, then photograph the possible-duplicates panel: each
+       * likely duplicate, why it was offered, and its door to the merge
+       * preview, without making the demo seed itself a duplicate. The per-test reset removes the temporary record afterward.
        */
       test(`a possible duplicate record renders true to the design (${scheme})`, async ({
         page,
@@ -5048,7 +5126,8 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { level: 1, name: "Add a diver" }).waitFor();
         await page.getByLabel("Full name").fill("Priya Sharma");
         await page.getByLabel("Email").fill("priya.duplicate@example.com");
-        await page.getByLabel("Phone").fill("+1 305 555 0999");
+        // Seeded Priya's own number: a name alone is never offered as a duplicate.
+        await page.getByLabel("Phone").fill("+1 305 555 0110");
         await page.getByRole("button", { name: "Add diver", exact: true }).click();
         // The prompt asks the counter's question by name now (issue #1556), so
         // this waits on the half that is about this diver rather than on a
@@ -5059,6 +5138,55 @@ for (const scheme of ["light", "dark"] as const) {
         await page.getByRole("heading", { name: "Possible duplicate records" }).waitFor();
         await page.mouse.move(0, 0);
         await capture(page, "diver-profile-merge", scheme);
+      });
+
+      /**
+       * **The merge preview** (issue #1240): the two records side by side, the
+       * fields they disagree on as choices with the kept record's preselected,
+       * what moves, and the one danger action. Reached the way a staffer
+       * reaches it, from the duplicate made at the counter above; the per-test
+       * reset removes the temporary record afterward.
+       */
+      test(`the merge preview renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/divers/new");
+        await page.getByRole("heading", { level: 1, name: "Add a diver" }).waitFor();
+        await page.getByLabel("Full name").fill("Priya Sharma");
+        await page.getByLabel("Email").fill("priya.duplicate@example.com");
+        // Seeded Priya's own number: a name alone is never offered as a duplicate.
+        await page.getByLabel("Phone").fill("+1 305 555 0110");
+        await page.getByRole("button", { name: "Add diver", exact: true }).click();
+        await page.getByRole("heading", { name: /^Is this the same Priya Sharma\?/ }).waitFor();
+        await page.getByRole("button", { name: "Create new diver anyway" }).click();
+        await page.getByRole("heading", { level: 1, name: "Priya Sharma" }).waitFor();
+        await page.getByRole("link", { name: "Compare with Priya Sharma" }).first().click();
+        await page.getByRole("heading", { level: 1, name: "Merge duplicate records" }).waitFor();
+        // Swap so the seeded Priya, with her bookings and releases, is the
+        // record merged away: "What moves" then shows real movement rather
+        // than a row of zeros from the record made a moment ago. The two
+        // share a name, so the link names which Priya it keeps.
+        await page.getByRole("link", { name: /^Keep Priya Sharma \(Added .*\) instead$/ }).click();
+        await page.getByRole("heading", { level: 1, name: "Merge duplicate records" }).waitFor();
+        await page.getByRole("heading", { name: "What moves to the kept record" }).waitFor();
+        await page.getByRole("rowheader", { name: "Bookings" }).waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "diver-merge-preview", scheme);
+      });
+
+      /**
+       * **A card waiting for a check, with its agency's lookup beside it**
+       * (market audit item 30). Mateo Duarte's seeded SSI card is pending, so
+       * the open Certification records group shows "Check with SSI": the one
+       * place the agency link renders, and behind a closed group in every
+       * other capture.
+       */
+      test(`a pending card's agency check link renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await openDiverProfile(page, "Mateo", "Mateo Duarte");
+        const group = await openDiverFileGroup(page, "Certification records");
+        await group.getByRole("link", { name: "Check with SSI" }).waitFor();
+        await page.mouse.move(0, 0);
+        await capture(page, "diver-profile-agency-check", scheme);
       });
 
       /**
@@ -6425,6 +6553,22 @@ for (const scheme of ["light", "dark"] as const) {
         // heading resolves before the interesting part has mounted.
         await page.getByRole("button", { name: "Create subscription link" }).first().waitFor();
         await capture(page, "settings-calendar", scheme);
+      });
+
+      // The staffer's own Email settings: the Monday email's row, on for the
+      // owner by default, with its preview door.
+      test(`the email settings render true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/email");
+        await page.getByRole("button", { name: "Turn off" }).waitFor();
+        await capture(page, "settings-email", scheme);
+      });
+
+      // The Monday email itself, as the preview renders it from the frozen
+      // clock's week of the seeded demo shop: the one capture of an email body.
+      test(`the Monday email renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/shop/blue-mantis/settings/email/preview");
+        await page.getByText(/Weeks run Monday to Sunday|no email goes out this Monday/).waitFor();
+        await capture(page, "weekly-digest-email", scheme);
       });
 
       // The courses catalog as one ledger (slice 9g of ADR

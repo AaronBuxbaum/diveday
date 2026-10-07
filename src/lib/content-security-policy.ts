@@ -65,6 +65,23 @@
  * reopen it.
  */
 
+/**
+ * When the full policy started shipping as report-only, and the date by which
+ * somebody must have read the evidence and either promoted it or said why not.
+ *
+ * Report-only is a measuring phase, not a resting state: every day it lasts,
+ * the full policy protects nothing. The evidence is the `CspViolations` metric
+ * (`security.csp_violation` lines, `infra/lib/observability.ts`), which lives
+ * in CloudWatch and not in this repository, so no test can read it. What a test
+ * can do is refuse to let the phase outlive its review date unnoticed:
+ * `content-security-policy.test.ts` fails on the wall clock once
+ * {@link REPORT_ONLY_REVIEW_BY} has passed. Promoting moves directives into
+ * {@link enforcedPolicy} (ADR 20260824-content-security-policy); keeping
+ * report-only longer moves the review date, with the reason in the commit.
+ */
+export const REPORT_ONLY_SINCE = "2026-08-24";
+export const REPORT_ONLY_REVIEW_BY = "2026-11-01";
+
 /** Where a violating browser posts its report. Same-origin, so no CORS. */
 export const CSP_REPORT_PATH = "/api/csp-report";
 

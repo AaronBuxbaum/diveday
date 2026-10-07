@@ -142,6 +142,23 @@ export async function isOrientationDismissed(db: DbExecutor, personId: string): 
   return account?.orientationDismissedAt != null;
 }
 
+/**
+ * The id of the login account a person signs in with, or null when they have
+ * none. `person_id` is unique in `user_accounts`, so a staff session's person
+ * resolves to at most one account.
+ */
+export async function getAccountIdForPerson(
+  db: DbExecutor,
+  personId: string,
+): Promise<string | null> {
+  const [account] = await db
+    .select({ id: userAccounts.id })
+    .from(userAccounts)
+    .where(eq(userAccounts.personId, personId))
+    .limit(1);
+  return account?.id ?? null;
+}
+
 /** Records the dismissal so the orientation card never shows this account again. */
 export async function dismissOrientation(
   db: DbExecutor,

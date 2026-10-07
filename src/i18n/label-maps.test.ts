@@ -67,6 +67,18 @@ import {
 } from "./next-dive-labels";
 import { ORDER_STATUS_KEYS } from "./order-labels";
 import {
+  DIVER_PARTICIPANT_CHOICE_KEYS,
+  DIVER_PARTICIPANT_CHOICE_UNPRICED_KEYS,
+  DIVER_PARTICIPANT_TYPE_KEYS,
+  STAFF_JOINED_DIVING_KEYS,
+  STAFF_LEFT_DIVING_KEYS,
+  STAFF_PARTICIPANT_TYPE_KEYS,
+  STAFF_PASSENGER_COUNT_KEYS,
+  staffJoinedDivingLabel,
+  staffLeftDivingLabel,
+  staffParticipantTypeLabel,
+} from "./participant-labels";
+import {
   CERTIFICATION_LEVEL_KEYS,
   DIVER_CERTIFICATION_AGENCY_KEYS,
   DIVER_CERTIFICATION_LEVEL_KEYS,
@@ -577,6 +589,55 @@ const CASES: readonly LabelMapCase[] = [
     map: "ORDER_STATUS_KEYS",
     rows: codeRows(keysOf(ORDER_STATUS_KEYS), (locale, status) =>
       staffTranslator(locale)(ORDER_STATUS_KEYS[status]),
+    ),
+  },
+  {
+    module: "participant-labels.ts",
+    map: "STAFF_PARTICIPANT_TYPE_KEYS",
+    rows: codeRows(keysOf(STAFF_PARTICIPANT_TYPE_KEYS), (locale, type) =>
+      staffParticipantTypeLabel(staffTranslator(locale), type),
+    ),
+  },
+  {
+    module: "participant-labels.ts",
+    map: "STAFF_LEFT_DIVING_KEYS",
+    rows: codeRows(keysOf(STAFF_LEFT_DIVING_KEYS), (locale, type) =>
+      staffLeftDivingLabel(staffTranslator(locale), type),
+    ),
+  },
+  {
+    module: "participant-labels.ts",
+    map: "STAFF_JOINED_DIVING_KEYS",
+    rows: codeRows(keysOf(STAFF_JOINED_DIVING_KEYS), (locale, type) =>
+      staffJoinedDivingLabel(staffTranslator(locale), type),
+    ),
+  },
+  {
+    module: "participant-labels.ts",
+    map: "STAFF_PASSENGER_COUNT_KEYS",
+    rows: codeRows(keysOf(STAFF_PASSENGER_COUNT_KEYS), (locale, type) =>
+      staffTranslator(locale)(STAFF_PASSENGER_COUNT_KEYS[type], { count: 2 }),
+    ),
+  },
+  {
+    module: "participant-labels.ts",
+    map: "DIVER_PARTICIPANT_TYPE_KEYS",
+    rows: codeRows(keysOf(DIVER_PARTICIPANT_TYPE_KEYS), (locale, type) =>
+      diverTranslator(locale)(DIVER_PARTICIPANT_TYPE_KEYS[type]),
+    ),
+  },
+  {
+    module: "participant-labels.ts",
+    map: "DIVER_PARTICIPANT_CHOICE_KEYS",
+    rows: codeRows(keysOf(DIVER_PARTICIPANT_CHOICE_KEYS), (locale, type) =>
+      diverTranslator(locale)(DIVER_PARTICIPANT_CHOICE_KEYS[type], { price: "$45" }),
+    ),
+  },
+  {
+    module: "participant-labels.ts",
+    map: "DIVER_PARTICIPANT_CHOICE_UNPRICED_KEYS",
+    rows: codeRows(keysOf(DIVER_PARTICIPANT_CHOICE_UNPRICED_KEYS), (locale, type) =>
+      diverTranslator(locale)(DIVER_PARTICIPANT_CHOICE_UNPRICED_KEYS[type]),
     ),
   },
   {

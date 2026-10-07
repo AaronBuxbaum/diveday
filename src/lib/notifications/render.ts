@@ -6,6 +6,7 @@ import {
   contactEmailConfirmationEmail,
   courseInquiryEmail,
   demoStartedAlertEmail,
+  founderDigestEmail,
   guardianReleaseCopyEmail,
   lastMinuteDealEmail,
   type NotificationEmail,
@@ -13,6 +14,7 @@ import {
   passwordChangedEmail,
   passwordResetEmail,
   readinessLinkEmail,
+  setupRequestAlertEmail,
   staffInviteEmail,
   staffReplyEmail,
   tripBlowoutEmail,
@@ -29,6 +31,7 @@ import {
   wrapEmailHtml,
 } from "./email";
 import type { Notification } from "./kinds";
+import { weeklyDigestEmail } from "./weekly-digest-email";
 
 /**
  * Which email body each notification kind renders to, and the document chrome
@@ -109,7 +112,10 @@ function rawMessageFor(notification: Notification): NotificationEmail {
   if (notification.kind === "new_account_alert") return newAccountAlertEmail(notification);
   if (notification.kind === "demo_started_alert") return demoStartedAlertEmail(notification);
   if (notification.kind === "usage_ceiling_alert") return usageCeilingAlertEmail(notification);
+  if (notification.kind === "setup_request_alert") return setupRequestAlertEmail(notification);
+  if (notification.kind === "founder_digest") return founderDigestEmail(notification);
   if (notification.kind === "course_inquiry") return courseInquiryEmail(notification);
   if (notification.kind === "staff_reply") return staffReplyEmail(notification);
+  if (notification.kind === "weekly_digest") return weeklyDigestEmail(notification);
   return passwordChangedEmail(notification);
 }

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { tripReservationWindow } from "@/lib/gear";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext } from "@/test/db";
 import { checkOutTripGearSet, listAvailableGearUnits, reserveGearUnit } from "./gear";
 import { gearItems } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
@@ -11,7 +11,7 @@ import { listStaff, setTripCrew } from "./trips-crew";
 import { getTripPrep } from "./trips-prep";
 
 async function context() {
-  const { db, shop } = await seededShopContext();
+  const { db, shop } = fileCtx;
   const trips = await upcomingTripsWithCounts(db, shop.id, new Date(0));
   const trip = trips.find((entry) => entry.title.startsWith("Two-Tank Reef — Molasses"));
   if (!trip) throw new Error("demo reef trip missing");
@@ -59,6 +59,10 @@ async function reserveOneUnit(ctx: Awaited<ReturnType<typeof context>>) {
   if (!row) throw new Error("the reserved diver left the assignment rows");
   return row;
 }
+
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const fileCtx = fileScopedShopContext();
 
 describe("getTripPrep", () => {
   it("answers null for a trip that is not this shop's", async () => {

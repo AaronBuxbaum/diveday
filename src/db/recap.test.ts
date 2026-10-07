@@ -1092,6 +1092,7 @@ describe("sendDueRecaps", () => {
     await db
       .insert(bookings)
       .values({
+        bookedAs: "diver",
         shopId: shop.id,
         tripId: yesterday.id,
         personId: alsoToday.bookings[0].personId,
@@ -1182,9 +1183,13 @@ describe("sendDueRecaps", () => {
       if (!rae) throw new Error("today’s booking missing");
       // Inserted rather than booked: `createBookingParty` refuses a departure
       // that has already sailed, which yesterday's has.
-      await db
-        .insert(bookings)
-        .values({ shopId: shop.id, tripId: yesterday.id, personId: rae.personId, status });
+      await db.insert(bookings).values({
+        bookedAs: "diver",
+        shopId: shop.id,
+        tripId: yesterday.id,
+        personId: rae.personId,
+        status,
+      });
       const recorded = await upsertExecutedDive(db, {
         shopId: shop.id,
         tripId: yesterday.id,

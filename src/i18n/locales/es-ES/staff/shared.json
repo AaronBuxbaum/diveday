@@ -247,7 +247,8 @@
     "promoCodes": "Descuentos",
     "settings": "Ajustes",
     "team": "Equipo",
-    "calendarFeed": "Suscripción al calendario"
+    "calendarFeed": "Suscripción al calendario",
+    "emailSettings": "Ajustes de correo"
   },
   "shopSections": {
     "navAriaLabel": "Principal",
@@ -343,7 +344,7 @@
       "freshnessBanner": "{freshnessNote}. La disponibilidad refleja ese momento, y lo verificamos todo de nuevo en cuanto tengas señal.",
       "pendingRejectedCounts": "{pending} esperando para enviarse · {rejected} necesitan revisión",
       "checkpointNavAria": "Punto del pase de lista",
-      "statsDivers": "Buceadores",
+      "statsDivers": "Pasajeros",
       "statsBoarded": "Embarcados",
       "statsAwaiting": "Pendientes",
       "rollCallCompleteHeading": "Pase de lista completo",
@@ -357,7 +358,7 @@
       "crewNotBackAboard": "{count, plural, one {# tripulante no ha vuelto a bordo.} other {# tripulantes no han vuelto a bordo.}} Este control sigue abierto.",
       "crewOlderCopy": "{count, plural, one {A # tripulante no se le puede pasar lista en esta copia guardada} other {A # tripulantes no se les puede pasar lista en esta copia guardada}} porque se guardó antes de que el pase de lista de tripulación funcionara sin conexión. Actualiza la copia la próxima vez que tengas cobertura o regístralos en el manifiesto en vivo.",
       "buddyReadOnlyHere": "Los equipos de buceo se muestran tal como se guardaron. Si alguien del equipo está a bordo se registra en el pase de lista en vivo, y esta copia no lo sigue.",
-      "crewAwaiting": "{count, plural, one {Falta pasar lista a # tripulante.} other {Falta pasar lista a # tripulantes.}} Cada persona de la lista de tripulación necesita su propio resultado.",
+      "crewAwaiting": "{count, plural, one {Falta pasar lista a # tripulante.} other {Falta pasar lista a # tripulantes.}}",
       "readyBadge": "Listo cuando se guardó",
       "blockedBadge": "Bloqueado cuando se guardó",
       "notHereBadge": "Marcado “no vino” cuando se guardó",

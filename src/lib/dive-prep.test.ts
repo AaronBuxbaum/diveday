@@ -103,7 +103,7 @@ describe("rented add-ons on the prep list", () => {
   });
 
   /**
-   * **A hood and gloves are two pieces, each with its own size** (H-101,
+   * **A hood and gloves are two pieces, each with its own size** (H-102,
    * issue #1816). A warm-water diver takes gloves and no hood; a quarry
    * diver takes both, the hood in its thickness, and the packer reads the
    * shop's own words for each.
@@ -593,7 +593,7 @@ describe("fins for a diver in a drysuit", () => {
 });
 
 /**
- * **Gloves for a diver in a drysuit** (H-101, dive-domain review). Wet gloves
+ * **Gloves for a diver in a drysuit** (H-102, dive-domain review). Wet gloves
  * or dry gloves on a ring system are two different things off the rack, so
  * the line asks rather than reading like any other pair to pull.
  */
@@ -1016,6 +1016,21 @@ describe("rentalFitLine", () => {
         { kind: "weights", size: "6 kg" },
       ],
     });
+  });
+
+  it("names a snorkeler's surface kit only, and nothing for a rider", () => {
+    // Regression (dive-domain review, PR #2224): the manifests listed a
+    // snorkeler's BCD and regulator, kit nobody hands someone staying on top.
+    expect(rentalFitLine(fullFit, undefined, "snorkeler")).toEqual({
+      state: "rents",
+      items: [
+        { kind: "wetsuit", size: "5mm M" },
+        { kind: "boots", size: "9" },
+        { kind: "mask_fins", size: "M" },
+      ],
+    });
+    expect(rentalFitLine(fullFit, undefined, "rider")).toEqual({ state: "own_kit" });
+    expect(rentalFitLine(fullFit, undefined, "diver")).toEqual(rentalFitLine(fullFit));
   });
 
   it("distinguishes a diver who brings their own kit from one nobody asked", () => {
@@ -1618,5 +1633,47 @@ describe("buildHotelPickupList", () => {
         pickupTime: null,
       },
     ]);
+  });
+});
+
+describe("participant types on the packing list (ADR 20261007-participant-types)", () => {
+  it("packs a rider nothing and counts no tank for them, but keeps their pickup", () => {
+    const divers = [
+      diver({ bookingId: "b1", fullName: "Dee Diver" }),
+      diver({
+        bookingId: "b2",
+        fullName: "Ray Rider",
+        participantType: "rider",
+        hotelPickupLocation: "Reef Inn",
+      }),
+    ];
+    const checklist = buildDivePrepChecklist({ divers, plannedDives: 2 });
+    expect(checklist.diverCount).toBe(1);
+    expect(checklist.tanks.total).toBe(2);
+    expect(checklist.diverLines.map((line) => line.fullName)).toEqual(["Dee Diver"]);
+    expect(checklist.lines.every((line) => !line.divers.includes("Ray Rider"))).toBe(true);
+    expect(buildHotelPickupList(divers).map((run) => run.diverName)).toContain("Ray Rider");
+  });
+
+  it("packs a snorkeler surface kit only, with no tank and no fit to chase", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({
+          bookingId: "b1",
+          fullName: "Sol Snorkel",
+          participantType: "snorkeler",
+          fit: { ...fullFit, bcdSize: null },
+        }),
+      ],
+      plannedDives: 2,
+    });
+    expect(checklist.tanks.total).toBe(0);
+    expect(checklist.diversWithIncompleteFit).toEqual([]);
+    const kinds = checklist.diverLines[0]?.items.map((item) => item.kind) ?? [];
+    expect(kinds).toContain("mask_fins");
+    expect(kinds).toContain("wetsuit");
+    expect(kinds).not.toContain("bcd");
+    expect(kinds).not.toContain("regulator");
+    expect(kinds).not.toContain("weights");
   });
 });

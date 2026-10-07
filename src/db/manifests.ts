@@ -894,6 +894,9 @@ export async function getTripManifests(
       // A held seat is named as booked here, once, so the alarm, the buddy
       // builder and every copy downstream inherit it (issue #1690).
       fullName: seatName(person.fullName, booking),
+      // Diver, snorkeler or rider — shown on the row, never used to drop it.
+      participantType: booking.participantType,
+      bookedAs: booking.bookedAs,
       email: person.email,
       emergencyContactName: person.emergencyContactName,
       emergencyContactPhone: person.emergencyContactPhone,
@@ -904,7 +907,12 @@ export async function getTripManifests(
       // The shop's own catalog. Without it the rail and the offline snapshot
       // read a dropped piece as an ordinary piece to fetch, and size a
       // drysuit diver's fins up over a boot that is not coming (issue #1804).
-      rentalFit: rentalFitLine(fitByBooking.get(booking.id) ?? null, shop.rentalItems),
+      // A snorkeler's line names surface kit only (ADR 20261007-participant-types).
+      rentalFit: rentalFitLine(
+        fitByBooking.get(booking.id) ?? null,
+        shop.rentalItems,
+        booking.participantType,
+      ),
       nitroxRequested: booking.wantsNitrox && certified.has(person.id),
       medicalWaiver: medicalByBooking.get(booking.id) ?? null,
       // Null/false whenever the shop holds no date of birth, so the captain's

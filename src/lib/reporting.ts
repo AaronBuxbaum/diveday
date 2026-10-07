@@ -18,6 +18,7 @@
 
 import { cachedFormatter } from "./intl-cache";
 import { minorToMajor } from "./money";
+import { emptyParticipantCounts, type ParticipantCounts } from "./participant-types";
 
 /** One trip's contribution to a month, as the db layer hands it up. */
 export type ReportTrip = {
@@ -84,6 +85,12 @@ export type MonthlyReportInput = {
    * a shop's answer to "are my partner links working?" quietly wrong.
    */
   buddyReferredSeats: number;
+  /**
+   * The month's active seats by participant type (ADR
+   * 20261007-participant-types), on the same basis as the trips' own counts.
+   * Optional so a report assembled by hand reads as divers only.
+   */
+  seatsByType?: ParticipantCounts;
 };
 
 export type MonthlyReport = {
@@ -123,6 +130,8 @@ export type MonthlyReport = {
   partnerReferredSeats: number;
   /** Seats that arrived on a diver's own buddy link this month. */
   buddyReferredSeats: number;
+  /** `seatsBooked`, split by what each person did aboard. */
+  seatsByType: ParticipantCounts;
 };
 
 /** Bookings on active statuses. Mirrors the roster's "who is on this boat" set. */
@@ -157,6 +166,7 @@ export function summarizeMonth(input: MonthlyReportInput): MonthlyReport {
     waiverCompletion: seatsBooked > 0 ? waiverComplete / seatsBooked : null,
     partnerReferredSeats: input.partnerReferredSeats,
     buddyReferredSeats: input.buddyReferredSeats,
+    seatsByType: input.seatsByType ?? { ...emptyParticipantCounts(), diver: seatsBooked },
   };
 }
 

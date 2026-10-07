@@ -640,7 +640,7 @@ export function RentalFitForm({
                 </select>
               </Field>
             ) : null}
-            {/* Free text, like the staff side's drysuit box (H-101): a hood racks
+            {/* Free text, like the staff side's drysuit box (H-102): a hood racks
                 and gloves both by size and thickness, and the diver's own words
                 reach the packing list verbatim. */}
             {offers.has("hood") ? (

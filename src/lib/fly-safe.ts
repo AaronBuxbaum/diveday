@@ -66,7 +66,7 @@ import { DEPARTURE_BUFFER_MS, hasReturned } from "./trips";
  * `peopleWhoDivedBefore` already answers for any person id, and what is
  * missing is a surface — the day close-out, the staffer's own record, or
  * nowhere. A `dive-domain-expert` review on #1552 raised it, issue #1557 has
- * the argument, and H-75 in `docs/product/human-decisions.md` is where the
+ * the argument, and H-75 in `docs/product/human-decisions/` is where the
  * owner's call gets written down.
  *
  * What that guidance is about, finally, is **exposure to altitude**, of which

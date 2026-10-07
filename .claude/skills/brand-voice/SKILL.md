@@ -1,6 +1,6 @@
 ---
 name: brand-voice
-description: Create or review DiveDay brand, voice, visual, merch, vendor, or promotional collateral, and any run of user-facing prose, so it stays consistent with the current identity and claims policy and carries none of the tells that mark copy as machine-written.
+description: Create or review DiveDay brand, visual, merch, or promotional collateral, or any run of user-facing prose, against the identity, the claims policy, and the tells of machine-written copy.
 ---
 
 # Brand and voice

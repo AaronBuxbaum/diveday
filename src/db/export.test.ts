@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { DEV_STAFF_LOGINS } from "@/db/dev-credentials";
 import { ANONYMIZED_PERSON_NAME } from "@/lib/anonymization";
 import { nowDate } from "@/lib/clock";
-import { seededShopContext } from "@/test/db";
+import { fileScopedShopContext, seededShopContext } from "@/test/db";
 import { anonymizeDiver } from "./anonymize";
 import { createDiver, deleteDiver } from "./divers";
 import { canPersonExportShopData, loadShopExportBundleInput, loadShopExportCounts } from "./export";
@@ -223,6 +223,11 @@ const EXCLUDED_TABLES = [
   "trip_blowout_divers", // per-diver message/rebooking state for that cascade — same reasoning as notification_send_queue
   "notification_rate_limit_state", // provider coordination, not shop records
   "shop_stripe_accounts", // provider linkage, useless outside Stripe
+  // What the shop pays DiveDay (ADR 20261007-subscription-billing): DiveDay's
+  // own billing of the shop, not a record the shop keeps. Ids on DiveDay's
+  // Stripe account mean nothing in another system, and the invoices are
+  // Stripe's, emailed to the owner.
+  "shop_subscriptions",
   "payment_operation_intents", // internal reconciliation ledger, not a shop record (CR-005)
   "stripe_webhook_events", // provider webhook-delivery ledger, not a shop record — same reasoning as payment_operation_intents
   "sms_opt_outs", // the platform texting number's STOP list, not one shop's record (ADR 20261007-sms-stop-and-help)
@@ -258,6 +263,7 @@ const EXCLUDED_TABLES = [
   "calendar_feeds", // bearer credentials for a staff calendar subscription, never exported
   "last_minute_list_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   "person_courtesy_email_unsubscribe_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
+  "weekly_digest_sends", // the Monday email's send claims and opt-out link hashes — delivery plumbing and bearer credentials, never exported
   "shop_contact_email_confirmation_tokens", // bearer credentials, never exported — same reasoning as booking_capabilities
   // The shop's own Meta access token (sealed) plus the provider linkage around
   // it. Never exported, for both reasons already on this list: it is a live
@@ -300,6 +306,13 @@ const EXCLUDED_TABLES = [
   // What one staffer had typed into a form when the phone rang (same ADR,
   // decision 3): a day-old draft of their own, never a shop record.
   "form_drafts",
+  // DiveDay's own funnel and activation bookkeeping (ADR
+  // 20261007-founder-metrics): a set-up request predates any shop, a demo
+  // entry belongs to no shop, and a shop's milestones are DiveDay's reading of
+  // its progress rather than anything the shop recorded. None is a shop record.
+  "setup_requests",
+  "demo_entries",
+  "shop_milestones",
 ];
 
 /**
@@ -473,7 +486,7 @@ const EXCLUDED_COLUMNS: Record<string, string[]> = {
     // carrying any size is a stated fit and `src/db/import.ts` stamps it — so
     // exporting it would carry an internal flag out and re-derive it anyway.
     "fit_stated_at",
-    // The one kind `rents_hood` and `rents_gloves` replaced (H-101, issue
+    // The one kind `rents_hood` and `rents_gloves` replaced (H-102, issue
     // #1816). Nothing reads or writes it; it stays in the schema only until
     // the release that still selects it has gone, and is not a fact to carry.
     "rents_hood_gloves",
@@ -550,6 +563,10 @@ function table(
   return found;
 }
 
+// One seeded database for the file and a rolled-back transaction per test
+// (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
+const ctx = fileScopedShopContext();
+
 describe("schema coverage", () => {
   it("forces every schema table to be exported, folded, or deliberately excluded", () => {
     const tableNames = Object.values(schema)
@@ -583,7 +600,7 @@ describe("schema coverage", () => {
     // pushed this test over its 20s budget under full-suite parallelism while
     // passing in isolation. The sibling dataset test below still asks for
     // history, because it genuinely asserts on rows.
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const input = await loadShopExportBundleInput(db, shop.id);
     if (!input) throw new Error("seeded shop failed to load");
 
@@ -622,7 +639,7 @@ describe("schema coverage", () => {
   });
 
   it("keeps every row exactly as wide as its own header", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const input = await loadShopExportBundleInput(db, shop.id);
     if (!input) throw new Error("seeded shop failed to load");
 
@@ -646,7 +663,7 @@ describe("schema coverage", () => {
   });
 
   it("names every column once per file", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const input = await loadShopExportBundleInput(db, shop.id);
     if (!input) throw new Error("seeded shop failed to load");
 
@@ -761,7 +778,7 @@ describe("full-shop export dataset", () => {
   });
 
   it("flattens each person into an import-ready contacts row", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const input = await loadShopExportBundleInput(db, shop.id);
     if (!input) throw new Error("seeded shop failed to load");
 
@@ -799,7 +816,7 @@ describe("full-shop export dataset", () => {
   });
 
   it("never lets a pending card outrank a verified one in contacts.csv", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const now = new Date("2026-07-23T12:00:00.000Z");
 
     const [diver] = await db
@@ -869,7 +886,7 @@ describe("full-shop export dataset", () => {
    * reading it in a spreadsheet reads a gap as an oversight.
    */
   it("tells an uncertified diver from an unasked one in contacts.csv", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const declaredAt = new Date("2026-07-20T09:00:00.000Z");
     const [stated] = await db
       .insert(people)
@@ -979,7 +996,7 @@ describe("full-shop export dataset", () => {
   });
 
   it("exports issued waiver evidence linked to its template version", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const before = await loadShopExportBundleInput(db, shop.id);
     if (!before) throw new Error("shop failed to load");
     const bookingsTable = table(before, "bookings.csv");
@@ -1015,7 +1032,7 @@ describe("full-shop export dataset", () => {
   });
 
   it("round-trips an imported waiver's provenance through waiver_records.csv, contacts.csv, and the photo bundle (ADR 20260724-import-waiver-acceptance)", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [diver] = await db
       .insert(people)
       .values({ shopId: shop.id, fullName: "Imported Ida", email: "ida.import@example.com" })
@@ -1075,7 +1092,7 @@ describe("full-shop export dataset", () => {
   });
 
   it("excludes a live medical_review hold from contacts.csv's waiver_accepted signal", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [diver] = await db
       .insert(people)
       .values({ shopId: shop.id, fullName: "Held Holly", email: "holly.import@example.com" })
@@ -1114,7 +1131,7 @@ describe("full-shop export dataset", () => {
   });
 
   it("keeps soft-archived people in the bundle with their deleted_at", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const diver = await createDiver(db, {
       shopId: shop.id,
       fullName: "Archived Alex",
@@ -1134,7 +1151,7 @@ describe("full-shop export dataset", () => {
   });
 
   it("carries an erased diver out as erased, not as their original details", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [owner] = await db
       .select({ id: people.id })
       .from(people)
@@ -1202,7 +1219,7 @@ describe("full-shop export dataset", () => {
    * free, which is the property the ADR actually claims.
    */
   it("keeps an erased diver out of every file, including the operational records", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [owner] = await db
       .select({ id: people.id })
       .from(people)
@@ -1283,7 +1300,7 @@ describe("full-shop export dataset", () => {
   });
 
   it("never leaks another shop's rows into the bundle", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const [rival] = await db
       .insert(shops)
       .values({ name: "Rival Reef", slug: "rival-reef", timezone: "America/New_York" })
@@ -1322,7 +1339,7 @@ describe("full-shop export dataset", () => {
    * diver, so the old clause answers the exact opposite every time.
    */
   it("orders bookings.csv on the diver's name when seats share an instant, not on a random uuid", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     const [shop] = await db
       .insert(shops)
       .values({ name: "Tie Break Divers", slug: "tie-break", timezone: "America/New_York" })
@@ -1340,7 +1357,7 @@ describe("full-shop export dataset", () => {
       const [person] = await db.insert(people).values({ shopId: shop.id, fullName }).returning();
       const [booking] = await db
         .insert(bookings)
-        .values({ shopId: shop.id, tripId: trip.id, personId: person.id })
+        .values({ bookedAs: "diver", shopId: shop.id, tripId: trip.id, personId: person.id })
         .returning();
       return booking;
     };
@@ -1367,7 +1384,7 @@ describe("full-shop export dataset", () => {
   });
 
   it("returns null for an unknown shop instead of an empty bundle", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     expect(await loadShopExportBundleInput(db, "00000000-0000-0000-0000-000000000000")).toBeNull();
   });
 });
@@ -1387,7 +1404,7 @@ describe("export privilege re-check (database, not JWT)", () => {
   }
 
   it("passes a current owner and refuses roles the token might overstate", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const owner = await personIdForEmail(db, DEV_STAFF_LOGINS.owner.email);
     expect(await canPersonExportShopData(db, shop.id, owner)).toBe(true);
 
@@ -1407,7 +1424,7 @@ describe("export privilege re-check (database, not JWT)", () => {
   });
 
   it("revokes access the moment the accountable roles are removed, before any token expires", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const owner = await personIdForEmail(db, DEV_STAFF_LOGINS.owner.email);
     // The seed gives Dana both accountable roles; a demotion removes both.
     for (const role of ["owner", "manager"] as const) {
@@ -1419,7 +1436,7 @@ describe("export privilege re-check (database, not JWT)", () => {
   });
 
   it("revokes access the moment the login is disabled", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const owner = await personIdForEmail(db, DEV_STAFF_LOGINS.owner.email);
     await db
       .update(userAccounts)
@@ -1444,14 +1461,14 @@ describe("export counts (the settings page's cheap view)", () => {
   });
 
   it("returns null for an unknown shop", async () => {
-    const { db } = await seededShopContext();
+    const { db } = ctx;
     expect(await loadShopExportCounts(db, "00000000-0000-0000-0000-000000000000")).toBeNull();
   });
 });
 
 describe("photoUrls (ADR 20260724-export-bundled-photos)", () => {
   it("collects every image URL referenced anywhere in the bundle, deduped and sorted", async () => {
-    const { db, shop } = await seededShopContext();
+    const { db, shop } = ctx;
     const managedA = "https://diveday-media.s3.us-east-1.amazonaws.com/sites/a.jpg";
     const managedB = "https://diveday-media.s3.us-east-1.amazonaws.com/sites/b.jpg";
     // Dive-site imagery rather than certification cards: a card has carried no

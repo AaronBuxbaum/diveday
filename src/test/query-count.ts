@@ -17,7 +17,7 @@ import { seededShopContext } from "./db";
  * This app has already paid the same class of bill once: `Intl` formatters
  * constructed per render cost ~12x reusing them and surfaced as *e2e flake
  * under load*, which is the most expensive possible way to learn about a
- * per-iteration cost. `pnpm check:intl-cache` now refuses that one statically.
+ * per-iteration cost. Biome's `intlCache` rule (`pnpm lint`) now refuses that one statically.
  * A query in a loop cannot be caught by a grep, so it is caught by counting.
  *
  * ## What to assert, and what not to

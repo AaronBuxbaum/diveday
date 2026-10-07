@@ -37,7 +37,7 @@ import { people } from "./schema";
  *
  * The stored-side strip is an expression, not a column reference, and it is
  * backed by its own GIN trigram index (`people_phone_digits_trgm_idx`,
- * src/db/schema.ts) alongside the plain one on the column
+ * src/db/schema/) alongside the plain one on the column
  * (`people_phone_trgm_idx`). **So the digits comparison costs an index lookup,
  * not a sequential scan** — the earlier note here said the opposite, which was
  * true for the four days between the expression landing and the index that

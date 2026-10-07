@@ -14,7 +14,7 @@ import {
   getShopReviewAggregate,
   listPublishedShopReviewsPage,
 } from "@/db/reviews";
-import { shopBySlugCached } from "@/db/shops";
+import { shopBySlugCached } from "@/db/shops-cached";
 import { requestTranslator } from "@/i18n/request";
 import { cachedFormatter } from "@/lib/intl-cache";
 import { publicReviewsPath, publicSchedulePath } from "@/lib/public-routes";

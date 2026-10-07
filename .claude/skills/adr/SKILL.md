@@ -1,6 +1,6 @@
 ---
 name: adr
-description: Record an architecture decision. Use when making any significant hard-to-reverse choice — new runtime dependency, storage, auth, external service, data-model spine, or when superseding a previous decision.
+description: Record an architecture decision. Use for any hard-to-reverse choice (runtime dependency, storage, auth, external service, data-model spine) or when superseding one.
 ---
 
 # Write an ADR
@@ -16,8 +16,10 @@ file — write it.
 1. Read `docs/architecture/decisions/README.md` for the ID rules. New records use a
    collision-resistant `YYYYMMDD-kebab-slug.md` ID; do not allocate the next integer.
 2. Copy `docs/architecture/decisions/0000-template.md` to that filename, fill every
-   section. Keep it under a page. Alternatives get one honest line each; consequences include
-   the escape hatch (what triggers revisiting, roughly what leaving costs).
+   section. Aim for about 400 words across Context, Decision and Consequences; the incident
+   narrative and measurements go in the PR or `docs/`, linked from Context. Alternatives get one
+   honest line each; consequences include the escape hatch (what triggers revisiting, roughly what
+   leaving costs). Existing ADRs keep their length; the cap applies to new ones.
 3. New collision-resistant records do not need an index row; historical `NNNN` records retain
    their existing index only.
 4. If the stack changed, update the table in `docs/architecture/overview.md`; if this resolves

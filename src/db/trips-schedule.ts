@@ -2,8 +2,9 @@ import { and, asc, count, eq, isNull, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { tripReservationWindow } from "@/lib/gear";
 import { shiftInstantByWallTimeDelta, utcToWallTime, wallTimeDeltaMs } from "@/lib/zoned";
-import { type AppDb, type DbExecutor, queryAll } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { rewindowTripGearReservations } from "./gear";
+import { queryAll } from "./query-helpers";
 import type { Trip } from "./schema";
 import {
   bookings,
@@ -352,6 +353,11 @@ export async function duplicateTrip(
       plannedDives: source.plannedDives,
       priceCents: source.priceCents,
       depositCents: source.depositCents,
+      // A copy carries the same snorkel and ride-along seats; it holds no
+      // bookings yet, so no limit can fall below the divers aboard.
+      snorkelerPriceCents: source.snorkelerPriceCents,
+      riderPriceCents: source.riderPriceCents,
+      diverCapacity: source.diverCapacity,
       cancellationWindowHours: source.cancellationWindowHours,
       isPrivate: source.isPrivate,
       // Copied like every other stated fact about the departure. A shop that

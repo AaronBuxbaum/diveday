@@ -52,6 +52,8 @@ export const metadata: Metadata = {
 const NOTICE_KEYS: Record<string, { tone: "danger" | "neutral"; key: StaffMessageKey }> = {
   "walkin-invalid": { tone: "danger", key: "checkIn.notice.walkinInvalid" },
   "walkin-full": { tone: "danger", key: "checkIn.notice.walkinFull" },
+  "walkin-divers-full": { tone: "danger", key: "participants.notices.diversFull" },
+  "walkin-type-unavailable": { tone: "danger", key: "participants.notices.typeUnavailable" },
   "walkin-already": { tone: "neutral", key: "checkIn.notice.walkinAlready" },
   "walkin-course-unstaffed": { tone: "danger", key: "checkIn.notice.walkinCourseUnstaffed" },
   "walkin-course-prerequisite": { tone: "danger", key: "checkIn.notice.walkinCoursePrerequisite" },

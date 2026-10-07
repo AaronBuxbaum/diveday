@@ -139,7 +139,7 @@ export type CourseDepth = { meters: number; feet: number };
  * `prerequisiteNote` capped at 400 while seven templates shipped longer notes
  * (Wreck Diver's is 510), so opening one of those courses and changing anything
  * at all was refused, with the cursor thrown into an untouched box.
- * `src/db/course-templates.test.ts` asserts every template fits, so the two
+ * `src/content/course-templates.test.ts` asserts every template fits, so the two
  * cannot drift apart again.
  */
 export const COURSE_CONTENT_LIMITS = {

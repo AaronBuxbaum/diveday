@@ -30,13 +30,13 @@
 // count and records the reason and the date in the baseline, so a raise arrives in the diff
 // with its justification attached instead of as a number that drifted.
 
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { RATCHETS_PATH, ratchetFlags, readRatchet, writeRatchet } from "./ratchet.mjs";
 
 const ROOT = process.cwd();
-const BASELINE = "scripts/context-budget-baseline.json";
 
 // Just above the longest line as of the extraction above (226 words, the `pnpm e2e` row).
 // A cell that wants more than this is a document.
@@ -59,18 +59,34 @@ function frontmatterDescription(contents) {
   return line ? line[1] : "";
 }
 
+/** Whether a skill is invocable only by a human typing its name. */
+export function isUserOnly(contents) {
+  const block = contents.match(/^---\n([\s\S]*?)\n---/);
+  return Boolean(block && /^disable-model-invocation:\s*true\s*$/m.test(block[1]));
+}
+
 /** Whether a `.claude/rules/*.md` file carries `paths:` frontmatter, and so loads on demand. */
 export function isPathScoped(contents) {
   const block = contents.match(/^---\n([\s\S]*?)\n---/);
   return Boolean(block && /^paths:/m.test(block[1]));
 }
 
-async function listDirs(root, relative) {
+/**
+ * The directories under `relative`, following symlinks. Many of `.claude/skills/` are links into
+ * `.agents/skills/`, and a `Dirent` reports a link as a link, not a directory — filtering on
+ * `isDirectory()` alone left every imported skill's description out of the count.
+ */
+export async function listDirs(root, relative) {
   const entries = await readdir(path.join(root, relative), { withFileTypes: true });
-  return entries
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort();
+  const dirs = [];
+  for (const entry of entries) {
+    if (entry.isDirectory()) dirs.push(entry.name);
+    else if (entry.isSymbolicLink()) {
+      const target = await stat(path.join(root, relative, entry.name)).catch(() => null);
+      if (target?.isDirectory()) dirs.push(entry.name);
+    }
+  }
+  return dirs.sort();
 }
 
 /**
@@ -123,7 +139,11 @@ export async function measure(root = ROOT) {
   let skillDescriptions = 0;
   for (const dir of await listDirs(root, ".claude/skills")) {
     const file = path.join(root, ".claude/skills", dir, "SKILL.md");
-    skillDescriptions += words(frontmatterDescription(await readFile(file, "utf8")));
+    const contents = await readFile(file, "utf8");
+    // A user-only skill (`disable-model-invocation: true`) is kept out of the model's listing
+    // entirely: only a human typing its name reaches it, so its description costs no session.
+    if (isUserOnly(contents)) continue;
+    skillDescriptions += words(frontmatterDescription(contents));
   }
   measured[".claude/skills/*/SKILL.md (description lines)"] = skillDescriptions;
 
@@ -157,10 +177,10 @@ async function main() {
   const args = process.argv.slice(2);
   const reportPath = args.includes("--report") ? args[args.indexOf("--report") + 1] : null;
   const write = args.includes("--write");
-  const absorb = args.includes("--absorb") ? args[args.indexOf("--absorb") + 1] : null;
+  const { absorb } = ratchetFlags(args);
 
   const measured = await measure();
-  const baseline = JSON.parse(await readFile(path.join(ROOT, BASELINE), "utf8"));
+  const baseline = (await readRatchet(ROOT, "context-budget")) ?? {};
   const budgets = baseline.budgets ?? {};
 
   const total = Object.values(measured).reduce((sum, count) => sum + count, 0);
@@ -181,7 +201,7 @@ async function main() {
   }
 
   if (absorb !== null) {
-    if (!absorb || absorb.startsWith("--")) {
+    if (!absorb) {
       console.error(
         'context-budget: --absorb needs a reason — `--absorb "new switching-guide row"`. The reason is the whole point: it is what a reader sees in the diff when the budget moves.',
       );
@@ -190,26 +210,19 @@ async function main() {
     const raised = Object.entries(measured).filter(
       ([file, count]) => count > (budgets[file] ?? Number.POSITIVE_INFINITY),
     );
-    await writeFile(
-      path.join(ROOT, BASELINE),
-      `${JSON.stringify(
+    await writeRatchet(ROOT, "context-budget", {
+      ...baseline,
+      budgets: { ...budgets, ...Object.fromEntries(raised) },
+      raises: [
+        ...(baseline.raises ?? []),
         {
-          ...baseline,
-          budgets: { ...budgets, ...Object.fromEntries(raised) },
-          raises: [
-            ...(baseline.raises ?? []),
-            {
-              why: absorb,
-              files: Object.fromEntries(
-                raised.map(([file, count]) => [file, `${budgets[file]} -> ${count}`]),
-              ),
-            },
-          ],
+          why: absorb,
+          files: Object.fromEntries(
+            raised.map(([file, count]) => [file, `${budgets[file]} -> ${count}`]),
+          ),
         },
-        null,
-        2,
-      )}\n`,
-    );
+      ],
+    });
     console.log(
       raised.length > 0
         ? `context-budget: raised ${raised.map(([file, count]) => `${file} -> ${count}`).join(", ")} (${absorb})`
@@ -224,10 +237,7 @@ async function main() {
       // A ratchet only ever turns one way: bank the fall, never the growth.
       next[file] = Math.min(count, budgets[file] ?? count);
     }
-    await writeFile(
-      path.join(ROOT, BASELINE),
-      `${JSON.stringify({ ...baseline, budgets: next }, null, 2)}\n`,
-    );
+    await writeRatchet(ROOT, "context-budget", { ...baseline, budgets: next });
     const banked = Object.entries(next).filter(([file, count]) => count < (budgets[file] ?? count));
     console.log(
       banked.length > 0
@@ -243,7 +253,7 @@ async function main() {
     const budget = budgets[file];
     if (budget === undefined) {
       problems.push(
-        `${file}: no entry in ${BASELINE} — every always-loaded surface needs a budget; run \`node scripts/check-context-budget.mjs --write\` once you have decided what it should be`,
+        `${file}: no entry in ${RATCHETS_PATH}'s context-budget section — every always-loaded surface needs a budget; run \`node scripts/check-context-budget.mjs --write\` once you have decided what it should be`,
       );
       continue;
     }
