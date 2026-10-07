@@ -834,7 +834,7 @@ function renderedSectionIds(node: unknown, found: string[] = []): string[] {
  */
 describe("the rail and the pane say the same thing", () => {
   it("renders every section the rail points at, in the rail's order", async () => {
-    // A shop past its demo, so the trial row renders too.
+    // A shop past its demo, so the owner-only Billing door renders too.
     const rendered = renderedSectionIds(
       await renderSettings("owner", async (db, session) => {
         await db.update(shops).set({ isDemo: false }).where(eq(shops.id, session.user.shopId));

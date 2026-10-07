@@ -23,6 +23,7 @@
 
 import activity from "./activity.json";
 import backup from "./backup.json";
+import billing from "./billing.json";
 import blowout from "./blowout.json";
 import boats from "./boats.json";
 import bookings from "./bookings.json";
@@ -89,6 +90,7 @@ const staff = {
   shopHome,
   shared,
   whatsapp,
+  billing,
   activity,
   backup,
   bookings,

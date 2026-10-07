@@ -331,15 +331,6 @@
     "integrations": {
       "heading": "Shop integrations"
     },
-    "trial": {
-      "heading": "Your trial",
-      "activeDescription": "{count, plural, one {# day} other {# days}} left, through {endDate}.",
-      "expiredDescription": "Your trial ended {endDate}. Everything you’ve set up keeps working.",
-      "upgradeBody": "Ready to move to a paid plan?",
-      "emailCta": "Email {email}",
-      "value": "{count, plural, one {# day left} other {# days left}}",
-      "expiredValue": "Ended {endDate}"
-    },
     "support": {
       "description": "A bad morning at the counter, a feature you’re missing, a bug. Write in any time.",
       "emailCta": "Email {email}"

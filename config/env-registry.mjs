@@ -288,6 +288,42 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
+      "DiveDay's own subscription billing: what a shop pays DiveDay, on DiveDay's own",
+      "Stripe account (ADR 20261007-subscription-billing). Deliberately separate from the",
+      "STRIPE_* Connect keys above, which move divers' money to shops: a restricted key",
+      "here (Customers, Checkout Sessions, Customer Portal sessions: write) cannot touch a",
+      "connected account. BILLING_STRIPE_WEBHOOK_SECRET signs /api/webhooks/billing,",
+      "configured on the account itself (not Connected accounts) for",
+      "checkout.session.completed, customer.subscription.created/updated/deleted and",
+      "invoice.paid. BILLING_STRIPE_PRICE_ID is the one recurring monthly price. All three",
+      "or none: until every one is set, Settings > Billing says billing is not turned on",
+      "and the webhook answers 503. The steps are in docs/engineering/manual-actions.md",
+      "(stripe-billing-setup). Keep them in 1Password; they reach Vercel from .env.manual.",
+    ],
+    keys: [
+      {
+        key: "BILLING_STRIPE_SECRET_KEY",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "Settings > Billing says billing is not turned on yet; nothing is charged",
+      },
+      {
+        key: "BILLING_STRIPE_WEBHOOK_SECRET",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent:
+          "billing counts as not turned on; /api/webhooks/billing answers 503 so Stripe keeps retrying",
+      },
+      {
+        key: "BILLING_STRIPE_PRICE_ID",
+        from: "manual",
+        targets: LOCAL_AND_VERCEL,
+        absent: "billing counts as not turned on; there is nothing to subscribe to",
+      },
+    ],
+  },
+  {
+    doc: [
       "Courtesy SMS reminders through AWS SNS (ADR 20260802-sns-sms-adapter). A",
       "distinct IAM user from SES_AWS_* (least privilege: sns:Publish only).",
       "SNS_SENDER_ID is an optional alphanumeric sender label, not supported in every",

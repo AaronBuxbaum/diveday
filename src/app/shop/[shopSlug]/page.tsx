@@ -131,6 +131,7 @@ const AUTH_NOTICES: Record<string, StaffMessageKey> = {
   "whatsapp-not-authorized": "shopHome.notice.whatsappNotAuthorized",
   "promos-not-authorized": "shopHome.notice.promosNotAuthorized",
   "integrations-not-authorized": "shopHome.notice.integrationsNotAuthorized",
+  "billing-not-authorized": "shopHome.notice.billingNotAuthorized",
 };
 
 type EveningNotice = { key: StaffMessageKey; tone: NoticeTone };

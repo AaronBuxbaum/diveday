@@ -69,7 +69,7 @@ describe("each settings group renders as its own component", () => {
       MessagesGroup({ view, canManageMessaging: true }),
       WebsiteGroup({ view }),
       await DataGroup({ view, db, personId, canExport: true, canImport: true }),
-      AccountGroup({ view, canViewTrialStatus: true }),
+      AccountGroup({ view, canViewBilling: true }),
     ].map(shape);
 
     expect(rendered.map((group) => group.id)).toEqual(SETTINGS_GROUPS.map((group) => group.id));
@@ -86,7 +86,10 @@ describe("each settings group renders as its own component", () => {
       "dateRequests",
       "lastMinuteList",
     ]);
-    expect(rendered[9]?.rows).toEqual(["trial"]);
+    expect(rendered[9]?.rows).toEqual([]);
+    expect(hrefsIn(AccountGroup({ view, canViewBilling: true }))).toContain(
+      `/shop/${view.shopSlug}/settings/billing`,
+    );
   });
 
   it("hides what its gates hide", async () => {
@@ -100,6 +103,8 @@ describe("each settings group renders as its own component", () => {
     const messages = MessagesGroup({ view, canManageMessaging: false });
     expect(hrefsIn(messages)).not.toContain(`/shop/${view.shopSlug}/settings/whatsapp`);
 
-    expect(shape(AccountGroup({ view, canViewTrialStatus: false })).rows).toEqual([]);
+    expect(hrefsIn(AccountGroup({ view, canViewBilling: false }))).not.toContain(
+      `/shop/${view.shopSlug}/settings/billing`,
+    );
   });
 });

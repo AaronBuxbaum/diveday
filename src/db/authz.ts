@@ -5,6 +5,7 @@ import {
   canDeleteDiver,
   canErasePersonalData,
   canExportIncidentRecord,
+  canManageBilling,
   canManageMessagingSettings,
   canManageOrders,
   canManagePaymentSettings,
@@ -128,6 +129,10 @@ async function canPerson(
 /** Live DB-checked companions of the H-14 predicates (src/lib/authz.ts). */
 export const canPersonManagePaymentSettings = (db: DbExecutor, shopId: string, personId: string) =>
   canPerson(db, shopId, personId, canManagePaymentSettings);
+
+/** Live DB-checked companion of the owner-only billing gate (src/lib/authz.ts). */
+export const canPersonManageBilling = (db: DbExecutor, shopId: string, personId: string) =>
+  canPerson(db, shopId, personId, canManageBilling);
 
 export const canPersonManageMessagingSettings = (
   db: DbExecutor,

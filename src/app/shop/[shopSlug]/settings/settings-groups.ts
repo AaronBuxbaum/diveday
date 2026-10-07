@@ -77,7 +77,6 @@ export const SECTION_IDS = [
   "dateRequests",
   "lastMinuteList",
   "stripe",
-  "trial",
 ] as const;
 export type SectionId = (typeof SECTION_IDS)[number];
 
@@ -121,7 +120,7 @@ export type SettingsRailGate =
   | "import"
   | "export"
   | "boats"
-  | "trial";
+  | "billing";
 
 /**
  * The one warning a rail row may carry, named as a code rather than a
@@ -407,11 +406,11 @@ export const SETTINGS_RAIL_ROWS: readonly SettingsRailRow[] = [
     target: { kind: "route", path: "/settings/calendar" },
   },
   {
-    id: "trial",
-    labelKey: "settings.main.trial.heading",
+    id: "billing",
+    labelKey: "billing.title",
     group: "account",
-    target: { kind: "section", id: "trial" },
-    gate: "trial",
+    target: { kind: "route", path: "/settings/billing" },
+    gate: "billing",
   },
 ];
 

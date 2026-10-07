@@ -13,10 +13,10 @@ import { isAddressLookupConfigured } from "@/lib/address-lookup";
 import {
   canExportShopData,
   canImportShopData,
+  canManageBilling,
   canManageMessagingSettings,
   canManageStaffAccounts,
   canManageWaiverTemplates,
-  canViewShopReports,
 } from "@/lib/authz";
 import { configuredValue } from "@/lib/configured";
 import { toShopCurrency } from "@/lib/money";
@@ -220,10 +220,10 @@ export default async function SettingsPage({
   // 20260724-role-gated-surfaces-hide-not-explain). Both pages re-check.
   const canManageTeam = canManageStaffAccounts(session.user.roles);
   const canManageWaivers = canManageWaiverTemplates(session.user.roles);
-  // Trial timing is owner-grade information the same way the monthly report
-  // is — the daily crew has no reason to see it, and a demo shop isn't a
-  // trial at all (ADR 20260720-trial-shops-are-not-demo).
-  const canViewTrialStatus = !shop.isDemo && canViewShopReports(session.user.roles);
+  // What the shop pays DiveDay — the trial, a free term, the card — is the
+  // owner's alone, and a demo shop is never billed (ADR
+  // 20261007-subscription-billing). The page re-checks against live roles.
+  const canViewBilling = !shop.isDemo && canManageBilling(session.user.roles);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const banner = noticeFromParam(notice, noticeMessages(t));
@@ -299,7 +299,7 @@ export default async function SettingsPage({
           />
         </Suspense>
 
-        <AccountGroup view={view} canViewTrialStatus={canViewTrialStatus} />
+        <AccountGroup view={view} canViewBilling={canViewBilling} />
 
         {/* The stack's last child, so it sits a section's 40px under the last
             card like every section above it; on its own `mt-12` it sat 48px

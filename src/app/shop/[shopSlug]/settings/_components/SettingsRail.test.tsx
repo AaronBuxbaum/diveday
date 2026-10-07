@@ -576,7 +576,7 @@ describe("what the rail hides", () => {
     boats: "boats",
     stripe: "payments",
     tax: "payments",
-    trial: "trial",
+    billing: "billing",
   };
 
   it("drops every gated destination for a reader who holds nothing", () => {

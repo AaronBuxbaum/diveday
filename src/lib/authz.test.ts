@@ -8,6 +8,7 @@ import {
   canExportIncidentRecord,
   canExportShopData,
   canImportShopData,
+  canManageBilling,
   canManageMessagingSettings,
   canManageOrders,
   canManagePaymentSettings,
@@ -221,4 +222,13 @@ describe("canReadPrivateRecapPulse and the promise on the recap form", () => {
       }
     });
   }
+});
+
+describe("canManageBilling", () => {
+  it("is the owner's alone — not a manager's, not the crew's", () => {
+    expect(canManageBilling(["owner"])).toBe(true);
+    expect(canManageBilling(["manager"])).toBe(false);
+    expect(canManageBilling(["captain", "crew", "divemaster", "instructor"])).toBe(false);
+    expect(canManageBilling(undefined)).toBe(false);
+  });
 });

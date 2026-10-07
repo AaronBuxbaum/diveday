@@ -83,6 +83,7 @@
     "db:merge": "node scripts/merge-migration-heads.mjs",
     "db:migrate": "dotenv -c -- drizzle-kit migrate --config drizzle.config.prod.ts",
     "db:reset": "node scripts/db-reset.mjs",
+    "billing:free-term": "dotenv -c -- tsx scripts/billing-free-term.ts",
     "build:sw": "node scripts/build-service-worker.mjs",
     "brand:icons": "tsx scripts/render-brand-icons.tsx",
     "check:context-budget": "node scripts/check-context-budget.mjs",

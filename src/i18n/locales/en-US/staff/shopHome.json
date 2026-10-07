@@ -29,7 +29,8 @@
     "backupNotAuthorized": "Only an owner or manager can change backup settings.",
     "whatsappNotAuthorized": "Only an owner or manager can change WhatsApp settings.",
     "promosNotAuthorized": "Promo codes are limited to owners and managers.",
-    "integrationsNotAuthorized": "Only an owner or manager can change integrations."
+    "integrationsNotAuthorized": "Only an owner or manager can change integrations.",
+    "billingNotAuthorized": "Billing is limited to the owner."
   },
   "orientation": {
     "heading": "New here? A few pointers for your role.",
