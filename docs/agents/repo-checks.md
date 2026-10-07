@@ -1,6 +1,6 @@
 # What each `pnpm check:repo` guard refuses, and why
 
-`scripts/check-repo.mjs` runs 44 guard scripts concurrently and reports every failure in one
+`scripts/check-repo.mjs` runs 45 guard scripts concurrently and reports every failure in one
 pass. **Nobody needs to read this file to run the check** — a failing guard names itself and prints
 the offending line. Read the matching section below when you want the reasoning behind one: what it
 protects, the incident that produced it, and the escape hatch for a line that genuinely means the
