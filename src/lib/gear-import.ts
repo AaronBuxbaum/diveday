@@ -37,6 +37,16 @@ export type PreparedGearImport = {
   fatal: GearImportFatal | null;
 };
 
+/**
+ * **Rows per gear file, tighter than the shared `MAX_IMPORT_ROWS`** (security
+ * review, #1846). `commitGearImport` writes the whole file in one transaction,
+ * several statements a row, so the shared 20,000 is a transaction holding
+ * locks and a pooled connection for as long as 100,000 writes take. Two
+ * thousand is more units and service records than any one shop's register
+ * carries; a bigger history arrives as more than one file.
+ */
+export const MAX_GEAR_IMPORT_ROWS = Math.min(2_000, MAX_IMPORT_ROWS);
+
 /** Why a whole file was refused; each one has a notice of its own on the Import page. */
 export type GearImportFatal =
   | "file_empty"
@@ -128,7 +138,7 @@ export function prepareGearImport(csv: string): PreparedGearImport {
   if (grid.length === 0) return { rows: [], unmappedColumns: [], fatal: "file_empty" };
   if (grid[0].length > MAX_IMPORT_COLUMNS)
     return { rows: [], unmappedColumns: [], fatal: "too_many_columns" };
-  if (grid.length - 1 > MAX_IMPORT_ROWS)
+  if (grid.length - 1 > MAX_GEAR_IMPORT_ROWS)
     return { rows: [], unmappedColumns: [], fatal: "too_many_rows" };
   if (grid.some((row) => row.some((cell) => cell.length > MAX_IMPORT_CELL_LENGTH)))
     return { rows: [], unmappedColumns: [], fatal: "cell_too_long" };

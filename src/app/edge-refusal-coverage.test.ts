@@ -239,4 +239,11 @@ describe("the proxy matcher skips static files and nothing else", () => {
     expect(reachesProxy("/_next/image?url=%2Fdive-sites%2Fx.jpg&w=640&q=75")).toBe(false);
     expect(reachesProxy("/api/health")).toBe(false);
   });
+
+  it("sends a staff path ending in an image extension through the proxy too", () => {
+    // `/shop/**` is staff without exception; the old matcher let any of it that
+    // ended `.png` past the edge's session check, straight to the page gate.
+    for (const url of ["/shop/blue-mantis/dive-sites/x.png", "/shop/x/foo.jpg"])
+      expect(reachesProxy(url), url).toBe(true);
+  });
 });

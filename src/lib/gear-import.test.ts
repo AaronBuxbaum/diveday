@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { prepareGearImport } from "./gear-import";
-import {
-  MAX_IMPORT_BYTES,
-  MAX_IMPORT_CELL_LENGTH,
-  MAX_IMPORT_COLUMNS,
-  MAX_IMPORT_ROWS,
-} from "./import";
+import { MAX_GEAR_IMPORT_ROWS, prepareGearImport } from "./gear-import";
+import { MAX_IMPORT_BYTES, MAX_IMPORT_CELL_LENGTH, MAX_IMPORT_COLUMNS } from "./import";
 
 /**
  * **The four caps the contacts importer enforces** (issue #1846), from the
@@ -26,18 +21,22 @@ describe("prepareGearImport — explicit bounds (CR-016)", () => {
     expect(prepared.rows).toHaveLength(0);
   });
 
+  it("caps gear rows below the shared limit, because one transaction commits them all", () => {
+    expect(MAX_GEAR_IMPORT_ROWS).toBe(2_000);
+  });
+
   it("rejects a file with more rows than the limit", () => {
-    const rows = Array.from({ length: MAX_IMPORT_ROWS + 1 }, (_, i) => `BCD #${i}`).join("\n");
+    const rows = Array.from({ length: MAX_GEAR_IMPORT_ROWS + 1 }, (_, i) => `BCD #${i}`).join("\n");
     const prepared = prepareGearImport(`gear_label\n${rows}`);
     expect(prepared.fatal).toBe("too_many_rows");
     expect(prepared.rows).toHaveLength(0);
   });
 
   it("accepts a file right at the row limit", () => {
-    const rows = Array.from({ length: MAX_IMPORT_ROWS }, (_, i) => `BCD #${i}`).join("\n");
+    const rows = Array.from({ length: MAX_GEAR_IMPORT_ROWS }, (_, i) => `BCD #${i}`).join("\n");
     const prepared = prepareGearImport(`gear_label\n${rows}`);
     expect(prepared.fatal).toBeNull();
-    expect(prepared.rows).toHaveLength(MAX_IMPORT_ROWS);
+    expect(prepared.rows).toHaveLength(MAX_GEAR_IMPORT_ROWS);
   });
 
   it("rejects a single cell over the length limit instead of reading it", () => {
