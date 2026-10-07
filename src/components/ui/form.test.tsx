@@ -977,6 +977,38 @@ describe("Field around a child that labels itself", () => {
     expect(within(group).getByText("Look").closest("label")).toBeNull();
   });
 
+  it("marks a required group with the asterisk, outside the group's name", () => {
+    render(
+      <Field label="Do you run a boat?" group required>
+        <div>
+          <label>
+            <input type="radio" name="boat" value="yes" required />
+            Yes
+          </label>
+        </div>
+      </Field>,
+    );
+    const group = screen.getByRole("group", { name: "Do you run a boat?" });
+    const marker = within(group).getByText("*", { exact: false });
+    expect(marker).toHaveAttribute("aria-hidden", "true");
+    expect(marker).toHaveClass("text-danger");
+  });
+
+  it("marks no group that is not said to be required, and none when told not to", () => {
+    const { rerender } = render(
+      <Field label="Look" group>
+        <div />
+      </Field>,
+    );
+    expect(screen.getByRole("group", { name: "Look" }).textContent).not.toContain("*");
+    rerender(
+      <Field label="Look" group required markRequired={false}>
+        <div />
+      </Field>,
+    );
+    expect(screen.getByRole("group", { name: "Look" }).textContent).not.toContain("*");
+  });
+
   it("describes a group by its description and its refusal", () => {
     render(
       <Field label="Look" group description="How the embed is colored" error="Pick one">

@@ -101,8 +101,8 @@ export function SetupRequestForm({
             className={controlClass}
           />
         </Field>
-        <Field label={words.runsBoat} group error={errorFor("runsBoat")}>
-          <div className="flex gap-3">
+        <Field label={words.runsBoat} group required error={errorFor("runsBoat")}>
+          <div className="grid grid-cols-2 gap-2">
             {(["yes", "no"] as const).map((answer) => (
               <ChoicePill
                 key={answer}
@@ -112,15 +112,15 @@ export function SetupRequestForm({
                 value={answer}
                 required
                 defaultChecked={values.runsBoat === answer}
-                className="flex-1"
               >
                 {words[answer]}
               </ChoicePill>
             ))}
           </div>
         </Field>
-        <Field label={words.currentSystem} group error={errorFor("currentSystem")}>
-          <div className="grid gap-2 sm:grid-cols-2">
+        <Field label={words.currentSystem} group required error={errorFor("currentSystem")}>
+          {/* One answer per row: two columns of a 334px card wrapped three of the five. */}
+          <div className="grid gap-2">
             {SETUP_CURRENT_SYSTEMS.map((system) => (
               <ChoicePill
                 key={system}

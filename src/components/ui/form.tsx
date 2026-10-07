@@ -456,6 +456,7 @@ export function Field({
   error,
   htmlFor,
   group = false,
+  required = false,
   markRequired = true,
   className = "",
   children,
@@ -513,6 +514,13 @@ export function Field({
    * subgrid the caption row is a track of.
    */
   group?: boolean;
+  /**
+   * **A required `group`**, which gets the same `*` a required control does.
+   * A group has no one control to read `required` off (each radio carries its
+   * own), so the caller says it. Ignored without `group`: a single control's
+   * marker always comes from the control itself.
+   */
+  required?: boolean;
   className?: string;
   children: ReactNode;
 }) {
@@ -550,7 +558,8 @@ export function Field({
   // distinguishes nothing — a one-field "add a member" row, say. Used sparingly:
   // the marker's whole job is telling required apart from optional, so silencing
   // it on a form that has both would be a lie rather than a tidy-up.
-  const isRequired = isControl && children.props.required === true && markRequired;
+  const isRequired =
+    (group ? required : isControl && children.props.required === true) && markRequired;
 
   // The asterisk is aria-hidden and stays *outside* the `<label>` itself
   // (not just inside an aria-hidden span within it): a `<label>`'s own text
@@ -611,7 +620,9 @@ export function Field({
         className={`row-span-2 grid min-w-0 grid-rows-subgrid gap-y-1 text-sm font-medium ${className}`}
       >
         <span className="self-end text-pretty">
+          {/* The marker sits outside the captioned span, so the group's name stays its caption. */}
           <span id={captionId}>{captionContent}</span>
+          {requiredMarker}
           {aside}
         </span>
         <span className="grid content-start gap-1">
