@@ -51,6 +51,9 @@ test.describe("staff-prepared trip", () => {
     await requirements.getByText("Edit requirements").click();
     await requirements.getByLabel("Require payment to board").check();
     await requirements.getByRole("button", { name: "Save requirements" }).click();
+    // Wait for the save's own redirect: signing out while it is in flight
+    // lets that redirect land after the session is gone, on /sign-in.
+    await expect(page.getByRole("status")).toContainText("requirements updated");
     await signOut(page);
 
     await page.goto("/s/blue-mantis", { waitUntil: "domcontentloaded" });
