@@ -246,10 +246,9 @@ for (const entry of plan.file) {
     ),
   ];
   const issue = renderIssue(entry, { runContext, touches });
-  // The self-check that keeps a bad week from reddening every open pull
-  // request: `pnpm check:follow-ups` reads the live tracker, so one malformed
-  // issue here fails `pnpm check` for every other session until a human
-  // notices. Number 0 is a placeholder — the guard only reads it to build its
+  // The self-check that keeps a bad week out of the tracker:
+  // `pnpm check:follow-ups` reads the live tracker, so one malformed issue
+  // here fails the scheduled scan until a human notices. Number 0 is a placeholder — the guard only reads it to build its
   // message.
   const { problems } = findIssueProblems({ number: 0, title: issue.title, body: issue.body });
   if (problems.length > 0) {

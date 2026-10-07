@@ -267,6 +267,22 @@ for (const script of [
 // doesn't spawn is a ratchet nobody turns — it would pass review as "checked"
 // while never executing in `pnpm check`.
 const checkRepoSource = await readFile(path.join(ROOT, "scripts/check-repo.mjs"), "utf8");
+// A guard that reads the network instead of the tree runs on a schedule, never per branch:
+// `check-follow-ups.mjs` reads the live tracker, and inside check:repo one malformed issue
+// turned every open pull request red (#2036). It still has to run somewhere, so its
+// workflow must name it.
+const SCHEDULED_GUARDS = {
+  "check-follow-ups.mjs": [".github/workflows/follow-ups.yml", "pnpm check:follow-ups"],
+};
+for (const [file, [workflow, command]] of Object.entries(SCHEDULED_GUARDS)) {
+  const source = await readFile(path.join(ROOT, workflow), "utf8").catch(() => "");
+  if (!source.includes(command))
+    problems.push(`${workflow}: must run \`${command}\` — ${file} runs nowhere else`);
+  if (checkRepoSource.includes(`"${file}"`))
+    problems.push(
+      `scripts/check-repo.mjs: ${file} reads the network and runs in ${workflow}, not per branch`,
+    );
+}
 const checkScripts = (await readdir(path.join(ROOT, "scripts"))).filter(
   (file) =>
     file.startsWith("check-") &&
@@ -279,7 +295,8 @@ const checkScripts = (await readdir(path.join(ROOT, "scripts"))).filter(
     // which is the orchestrator one level *above* check-repo — it spawns this
     // file, so requiring this file to spawn it would be a cycle.
     file !== "check-e2e-build.mjs" &&
-    file !== "check-all.mjs",
+    file !== "check-all.mjs" &&
+    !(file in SCHEDULED_GUARDS),
 );
 // The count AGENTS.md states for `pnpm check:repo` is the one number in that table a
 // reader has no way to verify and every reason to trust. It is also the number that goes

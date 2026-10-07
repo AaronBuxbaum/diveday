@@ -284,7 +284,7 @@ export function personaById(id, personas = PERSONAS) {
  *
  * `touches` is the `**Touches:**` line the filed issue carries, and every path
  * on it has to exist on `main` (docs/agents/issue-tracker.md): a path only an
- * unmerged branch adds reddens `pnpm check:follow-ups` for every other session.
+ * unmerged branch adds fails `pnpm check:follow-ups` until that branch merges.
  * These are all long-standing files; the *route's* own `page.tsx` is added at
  * shaping time, and only when it is on disk.
  */

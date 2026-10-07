@@ -72,6 +72,14 @@ find out, never to walk away. A pull request left red with nobody working it is 
 rule must not become — see AGENTS.md's rules on visual diffs and review threads, which apply from
 the moment it is open.
 
+## Neither: the tracker scan
+
+`pnpm check:follow-ups` reads the live issue tracker, not your branch, so no pull request runs it:
+`.github/workflows/follow-ups.yml` does, daily and from its Run workflow button. Inside
+`check:repo` one malformed issue (#2036) turned every open pull request red at once. Run it
+yourself before filing an issue by hand (`--body <path>`, no network) and before pushing a change
+that deletes or renames a path an open issue's `Touches:` line names.
+
 ## Reading CI: through the MCP, or not at all
 
 GitHub is reachable from a cloud container **only** through the MCP server tools. `gh` is not

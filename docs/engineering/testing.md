@@ -81,9 +81,8 @@ at those would file opinions into a tracker one person reads.
 *class* however many surfaces it fires on, a comment rather than a second issue when the class is
 already open, never a re-file once a human has closed it, three new issues per run, and nothing at
 all once the `needs-triage` inbox is at forty. Every rendered body is put through
-`findIssueProblems` — the same function `pnpm check:follow-ups` runs over the live tracker inside
-every pull request — before anything is filed, because one malformed issue reddens every open PR in
-the repository. ADR
+`findIssueProblems` — the same function `pnpm check:follow-ups` runs over the live tracker every
+day — before anything is filed, because one malformed issue fails that scan for everyone. ADR
 [20260907-persona-bots-file-under-a-ceiling](../architecture/decisions/20260907-persona-bots-file-under-a-ceiling.md)
 carries the reasoning and the numbers.
 

@@ -65,10 +65,8 @@ jobs:
     timeout-minutes: 15
     permissions:
       contents: read
-      # check-follow-ups.mjs (part of check:repo) reads open needs-triage issues via
-      # `gh issue list`. It fails open when this token can't answer, so this grant is
-      # what turns the check on rather than something it depends on to pass.
-      issues: read
+      # No `issues: read`: nothing in check:repo reads the tracker. The one guard
+      # that does, check-follow-ups.mjs, runs in follow-ups.yml on a schedule.
     steps:
       - uses: actions/checkout@v7
         with:
@@ -82,8 +80,6 @@ jobs:
           fetch-depth: 0
       - uses: ./.github/actions/setup
       - run: pnpm check:repo
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   lint:
     name: Lint
