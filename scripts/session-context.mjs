@@ -12,8 +12,14 @@
 // against the one the repo pins. Each of those is otherwise a tool call a session makes in its
 // first minute — `git status`, `git log -1`, `git branch -vv`, `node --version` — and a tool
 // call costs more context than the answer does. In a cloud container it also installs
-// dependencies when `node_modules/` is missing, so the first `pnpm lint` is not the moment a
-// session discovers there is nothing to run it with.
+// dependencies when `node_modules/` is missing or older than `pnpm-lock.yaml`, so the first
+// `pnpm lint` is not the moment a session discovers there is nothing (or the wrong thing) to run
+// it with.
+//
+// When the Node on PATH is not the major `.nvmrc` pins and that major is installed anyway (nvm,
+// fnm, n, volta, or a `/opt/node<major>` directory), it puts that one first on PATH for the rest
+// of the session through `CLAUDE_ENV_FILE`, and says so. When it is not installed, it says that
+// instead, and what it costs.
 //
 // After a **compaction** the same block carries a second half: the working rules the summary
 // most reliably drops. AGENTS.md is re-read from disk after compaction (Claude Code does that
@@ -29,7 +35,8 @@
 // something wrong: a session that starts without its context line loses a few tokens of
 // convenience; a session that starts with a stale or invented branch name loses more.
 
-import { existsSync, readFileSync } from "node:fs";
+import { appendFileSync, existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
@@ -93,6 +100,98 @@ function pinnedNodeMajor(root) {
   }
 }
 
+/** Compares `v24.15.0` / `24.15.0` style names numerically, highest first. */
+function byVersionDescending(a, b) {
+  const parts = (name) =>
+    name
+      .replace(/^v/, "")
+      .split(".")
+      .map((n) => Number.parseInt(n, 10) || 0);
+  const [x, y] = [parts(a), parts(b)];
+  for (let i = 0; i < Math.max(x.length, y.length); i++) {
+    if ((x[i] ?? 0) !== (y[i] ?? 0)) return (y[i] ?? 0) - (x[i] ?? 0);
+  }
+  return 0;
+}
+
+/**
+ * Where an installed Node `major` lives, if anywhere: the `bin` directory holding its `node`,
+ * and which manager put it there. Every version manager this could meet keeps its versions in a
+ * directory of its own, so this reads those directories rather than sourcing a manager's shell
+ * function — nvm is a function, not a binary, and a hook has no interactive shell to run it in.
+ * `exists` and `list` are injectable so the tests never need any of them installed.
+ */
+export function findInstalledNode(
+  major,
+  { env = process.env, home = os.homedir(), exists = existsSync, list = readdirSync } = {},
+) {
+  const versionsIn = (dir, prefix) => {
+    try {
+      return list(dir)
+        .filter((name) => name.startsWith(prefix))
+        .sort(byVersionDescending);
+    } catch {
+      return [];
+    }
+  };
+  const managers = [
+    {
+      via: "nvm",
+      root: path.join(env.NVM_DIR ?? path.join(home, ".nvm"), "versions/node"),
+      prefix: `v${major}.`,
+      bin: "bin",
+    },
+    {
+      via: "fnm",
+      root: path.join(env.FNM_DIR ?? path.join(home, ".local/share/fnm"), "node-versions"),
+      prefix: `v${major}.`,
+      bin: "installation/bin",
+    },
+    {
+      via: "n",
+      root: path.join(env.N_PREFIX ?? "/usr/local", "n/versions/node"),
+      prefix: `${major}.`,
+      bin: "bin",
+    },
+    {
+      via: "volta",
+      root: path.join(env.VOLTA_HOME ?? path.join(home, ".volta"), "tools/image/node"),
+      prefix: `${major}.`,
+      bin: "bin",
+    },
+  ];
+  for (const { via, root, prefix, bin } of managers) {
+    for (const version of versionsIn(root, prefix)) {
+      const dir = path.join(root, version, bin);
+      if (exists(path.join(dir, "node"))) return { bin: dir, via };
+    }
+  }
+  const opt = path.join("/opt", `node${major}`, "bin");
+  if (exists(path.join(opt, "node"))) return { bin: opt, via: "/opt" };
+  return null;
+}
+
+/**
+ * Puts the pinned Node first on PATH for the session's later shell commands, when the one
+ * running is a different major and the pinned one is installed. `CLAUDE_ENV_FILE` is the
+ * channel Claude Code gives a `SessionStart` hook for exactly this: lines appended to it are
+ * sourced before every later Bash command. Without it nothing here can reach the session's
+ * shell, so it reports the Node it found and leaves PATH alone.
+ */
+export function selectPinnedNode(
+  { nodeMajor, pinnedMajor },
+  { env = process.env, find = findInstalledNode, append = appendFileSync } = {},
+) {
+  if (!nodeMajor || !pinnedMajor || nodeMajor === pinnedMajor) return null;
+  const found = find(pinnedMajor, { env });
+  if (!found) return { status: "unavailable" };
+  if (!env.CLAUDE_ENV_FILE) return { status: "no-env-file", ...found };
+  append(env.CLAUDE_ENV_FILE, `export PATH="${found.bin}:$PATH"\n`);
+  // The install below runs in this process; let it run on the Node the session will use.
+  env.PATH = `${found.bin}${path.delimiter}${env.PATH ?? ""}`;
+  return { status: "selected", ...found };
+}
+
 /** The one-line form for `UserPromptSubmit`. */
 export function promptLine(state) {
   if (!state) return "";
@@ -109,7 +208,7 @@ export function promptLine(state) {
 /** The block for `SessionStart`, given the state and the session's `source`. */
 export function sessionBlock(
   state,
-  { source = "startup", nodeMajor, pinnedMajor, installed } = {},
+  { source = "startup", nodeMajor, pinnedMajor, installed, nodeSelection = null } = {},
 ) {
   const lines = [];
   if (state) {
@@ -131,11 +230,24 @@ export function sessionBlock(
     }
   }
   if (nodeMajor && pinnedMajor && nodeMajor !== pinnedMajor) {
-    lines.push(
-      `Node ${nodeMajor} here, repo pins ${pinnedMajor}: expected in a container, and the reason every pnpm command prints an engine warning first (debug skill).`,
-    );
+    if (nodeSelection?.status === "selected") {
+      lines.push(
+        `Node ${nodeMajor} started this session, repo pins ${pinnedMajor}: Node ${pinnedMajor} from ${nodeSelection.via} (${nodeSelection.bin}) is now first on PATH for every shell command.`,
+      );
+    } else {
+      const found =
+        nodeSelection?.status === "no-env-file"
+          ? `Node ${pinnedMajor} is installed (${nodeSelection.bin}) but this hook had no CLAUDE_ENV_FILE to select it with`
+          : `no Node ${pinnedMajor} is installed (looked in nvm, fnm, n, volta and /opt/node${pinnedMajor})`;
+      lines.push(
+        `Node ${nodeMajor} here, repo pins ${pinnedMajor}, and ${found}. Every pnpm command prints an engine warning first, and node_modules may have been installed under another Node or lag pnpm-lock.yaml — when a test disagrees with CI, run \`pnpm install --frozen-lockfile\` before believing it (debug skill).`,
+      );
+    }
   }
   if (installed === "installed") lines.push("node_modules was missing; `pnpm install` ran.");
+  if (installed === "refreshed") {
+    lines.push("node_modules was older than pnpm-lock.yaml; `pnpm install` ran.");
+  }
   if (installed === "failed") {
     lines.push(
       "node_modules is missing and `pnpm install --frozen-lockfile` failed — run it and read the error.",
@@ -170,16 +282,39 @@ function readPayload() {
   }
 }
 
-function installIfMissing(root) {
+/**
+ * Whether `node_modules` needs an install: missing, or written before the lockfile last
+ * changed. pnpm records each install in `node_modules/.modules.yaml`; a lockfile newer than that
+ * means a pull or a branch switch moved the dependencies underneath it, and the first pnpm
+ * command would otherwise reinstall in the middle of whatever the session asked it to do. A
+ * checkout that only touches the lockfile's mtime costs one no-op frozen install.
+ */
+export function installNeed(
+  root,
+  { exists = existsSync, mtime = (file) => statSync(file).mtimeMs } = {},
+) {
+  if (!exists(path.join(root, "node_modules"))) return "missing";
+  try {
+    const lock = mtime(path.join(root, "pnpm-lock.yaml"));
+    const installed = mtime(path.join(root, "node_modules/.modules.yaml"));
+    return lock > installed ? "stale" : null;
+  } catch {
+    return null;
+  }
+}
+
+function installIfNeeded(root) {
   if (process.env.CLAUDE_CODE_REMOTE !== "true") return null;
-  if (existsSync(path.join(root, "node_modules"))) return null;
+  const need = installNeed(root);
+  if (!need) return null;
   const result = runBounded("pnpm", INSTALL_ARGS, {
     cwd: root,
     encoding: "utf8",
     stdio: "ignore",
     timeoutMs: 240_000,
   });
-  return result.status === 0 ? "installed" : "failed";
+  if (result.status !== 0) return "failed";
+  return need === "missing" ? "installed" : "refreshed";
 }
 
 function main() {
@@ -194,11 +329,16 @@ function main() {
   }
 
   const source = payload.source ?? payload.how_started ?? "startup";
+  const nodeMajor = Number(process.versions.node.split(".")[0]);
+  const pinnedMajor = pinnedNodeMajor(cwd);
+  // Before the install, so the install runs on the Node the session will use.
+  const nodeSelection = selectPinnedNode({ nodeMajor, pinnedMajor });
   const block = sessionBlock(state, {
     source,
-    nodeMajor: Number(process.versions.node.split(".")[0]),
-    pinnedMajor: pinnedNodeMajor(cwd),
-    installed: installIfMissing(cwd),
+    nodeMajor,
+    pinnedMajor,
+    nodeSelection,
+    installed: installIfNeeded(cwd),
   });
   if (block) process.stdout.write(`${block}\n`);
 }

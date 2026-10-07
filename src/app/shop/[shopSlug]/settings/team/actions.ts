@@ -28,6 +28,7 @@ import { toDiverLocale } from "@/i18n/settings";
 import { inviteLinkPath } from "@/lib/account-tokens";
 import { type Role, STAFF_ROLE_LABELS, STAFF_ROLES } from "@/lib/authz";
 import { isValidCalendarDate } from "@/lib/calendar-date";
+import { log } from "@/lib/log";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
 import { requireStaffSession } from "@/lib/session";
@@ -97,7 +98,10 @@ async function sendInviteEmail(input: {
   }).catch((error: unknown) => {
     // Without this line the invite silently never sends and the inviter has
     // no way to know — the page already told them it did.
-    console.error("sendInviteEmail: invite token failed", error);
+    log("staff_invite.token_failed", "error", {
+      userAccountId: input.userAccountId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
     return null;
   });
   if (!issued) return;
