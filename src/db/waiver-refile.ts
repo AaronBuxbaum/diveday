@@ -27,7 +27,7 @@ import { waiverRecords } from "./schema";
  * Called by `mergeDiverRecords` for every release of the record merged away,
  * which is also how a wrong split of a held seat is undone. A version 3
  * release verifies again after a second move, re-sealed over its newest owner.
- * A version 4 release — its guardian's address erased on request (H-101) —
+ * A version 4 release — its guardian's address erased on request (H-102) —
  * moves under version 4 again: that seal covers the move fields too, and a
  * re-seal under version 3 would put the erased address back inside the seal.
  */

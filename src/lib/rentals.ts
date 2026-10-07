@@ -120,7 +120,7 @@ export const RENTABLE_ITEMS: readonly RentableItem[] = [
   // A dive light and an SMB carry none and want none — both are one size off
   // the shelf.
   //
-  // **A hood and gloves are two kinds, each with a size** (H-100, issue
+  // **A hood and gloves are two kinds, each with a size** (H-101, issue
   // #1816; `dive-domain-expert`, issue #1805). Hoods and gloves both rack by
   // size and thickness (S–XL, 3/5/7 mm); a hood two sizes big flushes on every descent, and
   // gloves a size small cannot be pulled onto a wet hand at the dock. A
@@ -424,7 +424,7 @@ export function nitroxCardWanted(
  * field with no companion column or packing piece for what it implies, so the
  * only one whose free text is load-bearing beyond the size itself
  * (`src/lib/dive-prep.ts`; every size reaches the packing list verbatim).
- * The `hood` and `gloves` joined it with a free-text size each (H-100, issue
+ * The `hood` and `gloves` joined it with a free-text size each (H-101, issue
  * #1816): each by size and thickness ("M, 5 mm" for a hood, "L, 3 mm" for gloves).
  *
  * Same union `statedSizeItems` in `dive-prep.ts` already speaks, so a surface
@@ -513,7 +513,7 @@ export const SIZED_RENTAL_FIT_COLUMN = {
  * as loosely as a BCD unit meets `bcd_size`, and an off-grid string the shop
  * really wrote ("ML, rock boot 9") survives both fit forms — the diver's select
  * offers a stored off-grid size back (issue #1728), the staff editor is free
- * text. A **hood** and **gloves** are here since H-100 (issue #1816), on the
+ * text. A **hood** and **gloves** are here since H-101 (issue #1816), on the
  * same free-text terms. `torch` and `smb` stay out: they carry no size column
  * for a return to teach.
  *

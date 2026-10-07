@@ -103,7 +103,7 @@ describe("rented add-ons on the prep list", () => {
   });
 
   /**
-   * **A hood and gloves are two pieces, each with its own size** (H-100,
+   * **A hood and gloves are two pieces, each with its own size** (H-101,
    * issue #1816). A warm-water diver takes gloves and no hood; a quarry
    * diver takes both, the hood in its thickness, and the packer reads the
    * shop's own words for each.
@@ -593,7 +593,7 @@ describe("fins for a diver in a drysuit", () => {
 });
 
 /**
- * **Gloves for a diver in a drysuit** (H-100, dive-domain review). Wet gloves
+ * **Gloves for a diver in a drysuit** (H-101, dive-domain review). Wet gloves
  * or dry gloves on a ring system are two different things off the rack, so
  * the line asks rather than reading like any other pair to pull.
  */

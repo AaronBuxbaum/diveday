@@ -19,7 +19,7 @@ export type GuardianEmailErasure =
 const normalized = (email: string) => email.trim().toLowerCase();
 
 /**
- * **Erase a co-signing guardian's email address, and only that** (H-101,
+ * **Erase a co-signing guardian's email address, and only that** (H-102,
  * issue #1673).
  *
  * A parent who co-signs a minor's release hands the shop an address. They are

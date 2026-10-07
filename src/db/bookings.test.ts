@@ -1290,6 +1290,7 @@ describe("createBooking identity safeguard (H-13)", () => {
         bookingId: shared.bookingId,
         actorPersonId: staffer.id,
         fullName: " Ben Quinn ",
+        adultAttested: true,
       });
       if (!result.ok) throw new Error(`split refused: ${result.reason}`);
       expect(result.personId).not.toBe(nora);
@@ -1342,6 +1343,7 @@ describe("createBooking identity safeguard (H-13)", () => {
           ...input,
           shopId: crypto.randomUUID(),
           fullName: "Ben Quinn",
+          adultAttested: true,
         }),
       ).toEqual({ ok: false, reason: "not_held" });
 
@@ -1366,6 +1368,7 @@ describe("createBooking identity safeguard (H-13)", () => {
         bookingId: shared.bookingId,
         actorPersonId: staffer.id,
         fullName: "Ben Quinn",
+        adultAttested: true,
       });
       expect(result.ok).toBe(true);
       const readiness = await readinessModule.getBookingReadiness(db, shop.id, shared.bookingId);
@@ -1391,6 +1394,7 @@ describe("createBooking identity safeguard (H-13)", () => {
         bookingId: shared.bookingId,
         actorPersonId: staffer.id,
         fullName: "Ben Quinn",
+        adultAttested: true,
       });
       expect(result.ok).toBe(true);
       // The link went to the matched diver's inbox, and the seat is no longer theirs.
@@ -1436,6 +1440,7 @@ describe("createBooking identity safeguard (H-13)", () => {
           bookingId: shared.bookingId,
           actorPersonId: staffer.id,
           fullName: "Ben Quinn",
+          adultAttested: true,
         }),
       ).toEqual({ ok: false, reason: "medical_hold" });
       const [still] = await db
@@ -1468,6 +1473,7 @@ describe("createBooking identity safeguard (H-13)", () => {
           bookingId: shared.bookingId,
           actorPersonId: staffer.id,
           fullName: "Ben Quinn",
+          adultAttested: true,
         }),
       ).toEqual({ ok: false, reason: "medical_hold" });
     });
@@ -1515,6 +1521,7 @@ describe("createBooking identity safeguard (H-13)", () => {
         bookingId: shared.bookingId,
         actorPersonId: staffer.id,
         fullName: "Ben Quinn",
+        adultAttested: true,
       });
       if (!result.ok) throw new Error(`split refused: ${result.reason}`);
 
@@ -1544,6 +1551,7 @@ describe("createBooking identity safeguard (H-13)", () => {
         bookingId: shared.bookingId,
         actorPersonId: staffer.id,
         fullName: "Ben Quinn",
+        adultAttested: true,
       });
       if (!result.ok) throw new Error(`split refused: ${result.reason}`);
 
@@ -1608,6 +1616,91 @@ describe("createBooking identity safeguard (H-13)", () => {
         expect(await db.select({ id: people.id }).from(people)).toHaveLength(before.length);
       });
 
+      /**
+       * **A blank date never reads as an adult on its own** (H-100, issue
+       * #2143). The split is for someone who is not the matched diver, and the
+       * usual one is a minor booked with a parent's email: on a plain charter
+       * the date used to be optional, and a record with none passes the
+       * guardian rule as an adult.
+       */
+      it("refuses a split with neither a date of birth nor an 18-or-older answer, on any departure", async () => {
+        const { db, shop, open } = await seededContext();
+        const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const staffer = await counterStaffer(db, shop.id);
+        const input = {
+          shopId: shop.id,
+          bookingId: shared.bookingId,
+          actorPersonId: staffer.id,
+          fullName: "Ben Quinn",
+        };
+        const before = await db.select({ id: people.id }).from(people);
+
+        expect(await splitBookingIdentity(db, input)).toEqual({
+          ok: false,
+          reason: "age_unstated",
+        });
+        expect(
+          await splitBookingIdentity(db, { ...input, dateOfBirth: " ", adultAttested: false }),
+        ).toEqual({ ok: false, reason: "age_unstated" });
+        expect(await identityFlag(db, shared.bookingId)).not.toBeNull();
+        expect(await db.select({ id: people.id }).from(people)).toHaveLength(before.length);
+      });
+
+      it("files the 18-or-older answer with the staffer who gave it", async () => {
+        const { db, shop, open } = await seededContext();
+        const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const staffer = await counterStaffer(db, shop.id);
+        const result = await splitBookingIdentity(db, {
+          shopId: shop.id,
+          bookingId: shared.bookingId,
+          actorPersonId: staffer.id,
+          fullName: "Ben Quinn",
+          adultAttested: true,
+        });
+        if (!result.ok) throw new Error(`split refused: ${result.reason}`);
+        const [created] = await db.select().from(people).where(eq(people.id, result.personId));
+        expect(created?.dateOfBirth).toBeNull();
+        expect(created?.adultAttestedAt).toBeInstanceOf(Date);
+        expect(created?.adultAttestedByPersonId).toBe(staffer.id);
+      });
+
+      it("keeps the date and no 18-or-older answer when the staffer gave both", async () => {
+        const { db, shop, open } = await seededContext();
+        const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const staffer = await counterStaffer(db, shop.id);
+        const result = await splitBookingIdentity(db, {
+          shopId: shop.id,
+          bookingId: shared.bookingId,
+          actorPersonId: staffer.id,
+          fullName: "Ben Quinn",
+          dateOfBirth: "2012-06-01",
+          adultAttested: true,
+        });
+        if (!result.ok) throw new Error(`split refused: ${result.reason}`);
+        const [created] = await db.select().from(people).where(eq(people.id, result.personId));
+        // The date says minor; an answer saying otherwise is not kept beside it.
+        expect(created?.dateOfBirth).toBe("2012-06-01");
+        expect(created?.adultAttestedAt).toBeNull();
+        expect(created?.adultAttestedByPersonId).toBeNull();
+      });
+
+      it("still asks for the date on a course with a minimum age, 18-or-older or not", async () => {
+        const { db, shop, open } = await seededContext();
+        const { night, shared } = await sharedInboxSeat(db, shop.id, open.id);
+        await ageGate(db, shop.id, night.id, 12);
+        const staffer = await counterStaffer(db, shop.id);
+        expect(
+          await splitBookingIdentity(db, {
+            shopId: shop.id,
+            bookingId: shared.bookingId,
+            actorPersonId: staffer.id,
+            fullName: "Ben Quinn",
+            adultAttested: true,
+          }),
+        ).toEqual({ ok: false, reason: "date_of_birth_required" });
+        expect(await identityFlag(db, shared.bookingId)).not.toBeNull();
+      });
+
       it("files the date on the new record, so the age check reads the person who is here", async () => {
         const { db, shop, open } = await seededContext();
         const { night, shared } = await sharedInboxSeat(db, shop.id, open.id);
@@ -1655,6 +1748,7 @@ describe("createBooking identity safeguard (H-13)", () => {
           bookingId: shared.bookingId,
           actorPersonId: staffer.id,
           fullName: "Ben Quinn",
+          adultAttested: true,
           email: "  Ben.Quinn@Example.com ",
           phone: "+1 305 555 0188",
         });
@@ -1676,6 +1770,7 @@ describe("createBooking identity safeguard (H-13)", () => {
             bookingId: shared.bookingId,
             actorPersonId: staffer.id,
             fullName: "Ben Quinn",
+            adultAttested: true,
             email: "NORA@example.com",
           }),
         ).toEqual({ ok: false, reason: "email_in_use" });
@@ -1738,6 +1833,7 @@ describe("createBooking identity safeguard (H-13)", () => {
           bookingId: shared.bookingId,
           actorPersonId: staffer.id,
           fullName: "Ben Quinn",
+          adultAttested: true,
           sameNameSeatIds: [seat.bookingId],
         });
         if (!result.ok) throw new Error(`split refused: ${result.reason}`);
@@ -1766,6 +1862,7 @@ describe("createBooking identity safeguard (H-13)", () => {
           bookingId: shared.bookingId,
           actorPersonId: staffer.id,
           fullName: "Ben Quinn",
+          adultAttested: true,
         });
         if (!one.ok) throw new Error(`split refused: ${one.reason}`);
         expect(one.seats).toBe(1);
@@ -1794,6 +1891,7 @@ describe("createBooking identity safeguard (H-13)", () => {
             bookingId: shared.bookingId,
             actorPersonId: staffer.id,
             fullName: "Ben Quinn",
+            adultAttested: true,
             sameNameSeatIds: [seat.bookingId],
           }),
         ).toEqual({ ok: false, reason: "medical_hold" });
@@ -1841,6 +1939,7 @@ describe("createBooking identity safeguard (H-13)", () => {
           bookingId: shared.bookingId,
           actorPersonId: staffer.id,
           fullName: "Ben Quinn",
+          adultAttested: true,
           sameNameSeatIds: [twin.bookingId],
         });
         if (!result.ok) throw new Error(`split refused: ${result.reason}`);
@@ -1887,6 +1986,7 @@ describe("createBooking identity safeguard (H-13)", () => {
           bookingId: shared.bookingId,
           actorPersonId: staffer.id,
           fullName: "Ben Quinn",
+          adultAttested: true,
         });
         if (!result.ok) throw new Error(`split refused: ${result.reason}`);
         const [after] = await db.select().from(internalNotes).where(eq(internalNotes.id, note.id));
@@ -1912,6 +2012,7 @@ describe("createBooking identity safeguard (H-13)", () => {
           bookingId: shared.bookingId,
           actorPersonId: staffer.id,
           fullName: "Ben Quinn",
+          adultAttested: true,
         });
         if (!result.ok) throw new Error(`split refused: ${result.reason}`);
         const moved = await db
@@ -1942,6 +2043,7 @@ describe("createBooking identity safeguard (H-13)", () => {
           bookingId: shared.bookingId,
           actorPersonId: staffer.id,
           fullName: "Ben Quinn",
+          adultAttested: true,
         }),
       ).toEqual({ ok: false, reason: "not_held" });
     });

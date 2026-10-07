@@ -119,7 +119,7 @@ export function GearAndSizes({
     },
     // Free text too, and for a narrower reason than the drysuit's: a hood and
     // gloves both rack by size and thickness ("M, 5 mm", "L, 3 mm"), and no
-    // closed grid has an owner yet (H-100, issue #1816).
+    // closed grid has an owner yet (H-101, issue #1816).
     offers.has("hood") && {
       name: "hoodSize",
       label: t("divers.rentalFit.hoodSizeLabel"),

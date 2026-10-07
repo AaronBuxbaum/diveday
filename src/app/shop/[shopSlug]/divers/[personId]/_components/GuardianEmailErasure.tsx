@@ -8,7 +8,7 @@ import { eraseGuardianEmailAction } from "../actions";
 import { DiverFormStatus, type DiverNotice } from "./NoticeBanner";
 
 /**
- * **A co-signing guardian's address, erased on its own** (H-101, issue #1673).
+ * **A co-signing guardian's address, erased on its own** (H-102, issue #1673).
  *
  * A parent who co-signed a minor's release is a third party: they have no
  * record of their own, so the only place their address can be taken back is

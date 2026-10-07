@@ -155,6 +155,8 @@
     "emailLabel": "Email",
     "phoneLabel": "Phone",
     "dateOfBirthLabel": "Date of birth",
+    "adultAttestedHint": "18 or older, per {name}",
+    "adultAttestedHintNoName": "18 or older, per staff",
     "optionalHint": "(optional)",
     "diveInsuranceFieldLabel": "Dive insurance",
     "diveInsurancePlaceholder": "DAN #12345",

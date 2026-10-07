@@ -459,7 +459,7 @@ const NOTICE_KEYS: DiverNoticeMap = {
     field: "erase-confirm-name",
   },
   "erase-refused": { form: "erase", tone: "danger", key: "divers.notices.eraseRefused" },
-  // A guardian's address erased on its own (H-101). On a live record, so the
+  // A guardian's address erased on its own (H-102). On a live record, so the
   // section is still there to answer in — except after a success that took the
   // last address, which is why the success is "page": the section it would
   // have sat in is gone.

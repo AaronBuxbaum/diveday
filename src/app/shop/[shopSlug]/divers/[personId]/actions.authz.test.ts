@@ -244,7 +244,7 @@ describe("erasing a diver's personal and medical data", () => {
 });
 
 /**
- * **A co-signing guardian's address, erased on its own** (H-101, issue #1673).
+ * **A co-signing guardian's address, erased on its own** (H-102, issue #1673).
  * Owner-only like the diver's erasure, typed back to confirm, and on a live
  * record — the child stays a diver.
  */

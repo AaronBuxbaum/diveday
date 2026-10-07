@@ -71,7 +71,7 @@ export type RentalFit = {
   wetsuitSize: string | null;
   /** On the drysuit scale, never the wetsuit's (issue 1414, schema.ts). */
   drysuitSize: string | null;
-  /** Free text, like the drysuit's (H-100): a hood and gloves both by size and thickness. */
+  /** Free text, like the drysuit's (H-101): a hood and gloves both by size and thickness. */
   hoodSize: string | null;
   gloveSize: string | null;
   bootSize: string | null;
@@ -205,7 +205,7 @@ export type PrepPiece = {
    */
   drysuitFinFit: boolean;
   /**
-   * The gloves of a diver in a drysuit (H-100, dive-domain review). A drysuit
+   * The gloves of a diver in a drysuit (H-101, dive-domain review). A drysuit
    * diver may wear wet gloves or dry gloves on a ring system, and those are
    * different things off the rack, so the line asks rather than reading like
    * any other pair to pull.
@@ -420,7 +420,7 @@ const _everyKindHasAPackingPosition: Record<KindWithNoPackingPosition, never> = 
  * recorded" on the packing line, naming a gap that cannot be filled by
  * anybody. The complement of the sized kinds is the answer, and taking it from
  * the same constant is what stops the two lists disagreeing again: when a hood
- * and gloves gained a size each (H-100), they left this list by themselves.
+ * and gloves gained a size each (H-101), they left this list by themselves.
  */
 const SIZED = new Set<string>(SIZED_RENTAL_KINDS);
 export const UNSIZED_ITEM_KINDS: readonly RentalItemKind[] = KIND_ORDER.filter(
@@ -658,7 +658,7 @@ function rentedItems(fit: RentalFit, offered: CatalogScope = null): PrepPiece[] 
   // shoe size either, which is what `maskFins` above marks rather than what
   // this line handles.
   if (fit.rentsDrysuit) items.push(sized("drysuit", fit.drysuitSize));
-  // Two kinds with a free-text size each (H-100, issue #1816).
+  // Two kinds with a free-text size each (H-101, issue #1816).
   if (fit.rentsHood) items.push(sized("hood", fit.hoodSize));
   if (fit.rentsGloves) {
     items.push({ ...sized("gloves", fit.gloveSize), drysuitGloves: inDrysuit && !flagged });

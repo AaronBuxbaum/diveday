@@ -175,7 +175,7 @@ export function PrepBody({
       );
     }
     // A drysuit diver's gloves: wet gloves or dry gloves on rings are two
-    // different things off the rack, so the line asks (H-100).
+    // different things off the rack, so the line asks (H-101).
     if (piece.drysuitGloves) {
       return (
         <span className="font-medium text-warning">

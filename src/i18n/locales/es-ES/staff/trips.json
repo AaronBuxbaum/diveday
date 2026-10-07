@@ -72,6 +72,7 @@
     "identitySplit": "Ya tiene su propia ficha, aún sin exención ni certificaciones registradas. Antes de que embarque, envíale la exención desde su ficha o registra una exención en papel en su fila.",
     "identityMedicalHold": "Esta plaza, o una plaza retenida que se pasa con ella, tiene una retención médica: una derivación sin responder, o una que el médico no autorizó. Para darle a esta persona su propia ficha, cancela esta plaza y dale una plaza nueva.",
     "identitySplitDobRequired": "Una salida que pasa a su ficha es un curso con edad mínima. Añade su fecha de nacimiento para crearle su propia ficha.",
+    "identitySplitAgeUnstated": "Añade su fecha de nacimiento. Marca “Tiene 18 años o más” solo si lo has verificado.",
     "identitySplitDobInvalid": "Esa fecha de nacimiento no puede ser correcta. Revísala e inténtalo de nuevo.",
     "identitySplitEmailInvalid": "Ese correo no parece correcto. Revísalo o déjalo en blanco.",
     "identitySplitEmailInUse": "Otro buceador ya tiene ese correo. Usa el suyo propio o déjalo en blanco.",

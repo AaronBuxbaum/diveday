@@ -541,6 +541,7 @@
     "emailLabel": "Correo electrónico",
     "phoneLabel": "Teléfono",
     "optional": "(opcional)",
+    "adultAttested": "Tiene 18 años o más",
     "sameNameSeats": "{count, plural, one {Pasar también la plaza retenida reservada como {bookedAs} en {departures}} other {Pasar también las plazas retenidas reservadas como {bookedAs} en {departures}}}",
     "sameNameDeparture": "{trip} ({date}, {time})",
     "split": "Crear su propia ficha",

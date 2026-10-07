@@ -512,6 +512,28 @@ export const people = pgTable(
      */
     dateOfBirth: date("date_of_birth", { mode: "string" }),
     /**
+     * **When a staffer said, at the counter, that this person is 18 or older**
+     * without giving a date of birth (H-100, issue #2143). Written only by
+     * `splitBookingIdentity`: a held seat split into a new diver must carry a
+     * date or this answer, because the split exists for a person who is *not*
+     * the matched diver, and the common case is a minor booked with a parent's
+     * email. A blank date there would read as an adult by default; this column
+     * makes it an adult by someone's say-so.
+     *
+     * A date of birth replaces it: the guardian rule and the age gate read the
+     * date and never this, and typing a date (`updateDiver`) or merging onto
+     * one nulls this pair, so clearing that date later cannot bring back an
+     * adult claim the date may have disproved. Null everywhere else, which is
+     * the ordinary H-08 case of a record nobody asked about.
+     */
+    adultAttestedAt: timestamp("adult_attested_at", { withTimezone: true }),
+    /**
+     * Which staffer gave that answer. Not a typed FK, for the self-reference
+     * reason `no_certification_cleared_by_person_id` gives: the row's own
+     * trail, because an age answer outlives the pruned activity log.
+     */
+    adultAttestedByPersonId: uuid("adult_attested_by_person_id"),
+    /**
      * Dive-accident insurance the diver carries — DAN or another provider, as
      * free text ("DAN #12345"). A safety detail the crew wants on hand in an
      * incident, never a gate; null until the diver or staff records it
@@ -6159,7 +6181,7 @@ export const waiverRecords = pgTable(
     guardianSignedAt: timestamp("guardian_signed_at", { withTimezone: true }),
     /**
      * **The guardian's address was erased on their own request**, and by whom
-     * (H-101, issue #1673). The guardian is a third party with no record of
+     * (H-102, issue #1673). The guardian is a third party with no record of
      * their own, so `eraseGuardianEmail` (`src/db/guardian-erasure.ts`) nulls
      * `guardian_email` alone and leaves the diver, the medical answers and
      * the co-signature standing. `guardian_email` is inside the version 1
@@ -6275,7 +6297,7 @@ export const waiverRecords = pgTable(
           or ${table.medicalClearancePhysicianName} is not null))`,
     ),
     // An erased address stays erased: no writer may put one back on a release
-    // the guardian asked to be taken off (H-101, issue #1673).
+    // the guardian asked to be taken off (H-102, issue #1673).
     check(
       "waiver_records_guardian_email_erased_stays_erased",
       sql`${table.guardianEmailErasedAt} is null or ${table.guardianEmail} is null`,
@@ -7124,7 +7146,7 @@ export const tripRequirements = pgTable(
  * `drysuit` was in that excluded company until issue 1414 gave it `drysuit_size`
  * below; it is a sized piece now, on a scale of its own, and belongs here.
  * `hood` and `gloves` joined it when they became two kinds with a size each
- * (H-100, issue #1816).
+ * (H-101, issue #1816).
  */
 export const rentalFitItem = pgEnum("rental_fit_item", [
   "bcd",
@@ -7187,7 +7209,7 @@ export const rentalFitProfiles = pgTable(
     rentsGopro: boolean("rents_gopro").notNull().default(false),
     rentsDrysuit: boolean("rents_drysuit").notNull().default(false),
     /**
-     * Two kinds, not one "hood & gloves" (H-100, issue #1816): a warm-water
+     * Two kinds, not one "hood & gloves" (H-101, issue #1816): a warm-water
      * diver takes gloves and no hood, a quarry diver takes both in different
      * thicknesses, and one checkbox with one size could say neither.
      *
@@ -7226,7 +7248,7 @@ export const rentalFitProfiles = pgTable(
      */
     drysuitSize: text("drysuit_size"),
     /**
-     * **Free text, like the drysuit's, on both fit forms** (H-100, issue
+     * **Free text, like the drysuit's, on both fit forms** (H-101, issue
      * #1816). A rental hood and rental gloves both rack by size *and*
      * thickness ("M, 5 mm", "L, 3 mm"); a closed select would need two axes and somebody
      * to own them, so the shop's own words reach the packing list verbatim.

@@ -229,7 +229,7 @@ export default async function DiverDetailPage({
     diverStatusRows(db, shop.id, diver, now, { collectHasSomewhereToGo }),
     pagedUpcomingTripsWithCounts(db, shop.id, { limit: BOOK_ACTIVITY_TRIP_SCAN_LIMIT }),
     // The co-signing guardians' addresses, for the owner's control that erases
-    // one on the guardian's request (H-101). Nobody else is shown them here.
+    // one on the guardian's request (H-102). Nobody else is shown them here.
     canErase ? listGuardianEmails(db, shop.id, personId) : [],
   ]);
   const upcoming = scannedTrips.filter(

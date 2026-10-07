@@ -499,7 +499,7 @@ new domain concept, define it here in the same PR.
   else: no surface renders it, readiness treats the record as co-signed, and the only readers are
   the integrity seal and the export bundle. The guardian's email is **optional**, and the one thing
   it is for is a copy of what was signed (see **Guardian's copy** below). **It can be erased on
-  its own** (H-101): an owner takes it off from the child's record, and the release is re-sealed as
+  its own** (H-102): an owner takes it off from the child's record, and the release is re-sealed as
   **redacted** (integrity version 4), still verifying, with who erased it and when inside the seal.
   **Two codes, and only two** — `parent` and `legal_guardian`, confirmed by the owner on 2026-09-10
   (issue 1541) rather than widened. Free text was rejected in the ADR because the code renders to
@@ -1847,7 +1847,7 @@ new domain concept, define it here in the same PR.
 - **Rental fit** — a shop-scoped diver's reusable record of *which* pieces they take from the shop
   and in *what size* (BCD, wetsuit, drysuit, hood, gloves, boot, fin, usual weighting, plus the
   dive-computer, GoPro, dive-light and SMB add-ons). A **hood** and **gloves** are two kinds, each
-  with a free-text size (H-100), each racked by size and thickness ("M, 5 mm", "L, 3 mm"). A
+  with a free-text size (H-101), each racked by size and thickness ("M, 5 mm", "L, 3 mm"). A
   drysuit diver's gloves are flagged on the packing line ("wet or dry gloves?").
   The **drysuit** is the one add-on that carries a size, and it is sized on its own scale — the
   manufacturer grid a rental wall is racked from (a girth letter, a trailing `T` for the tall cut),
@@ -2315,9 +2315,11 @@ new domain concept, define it here in the same PR.
   seat read as theirs. It **carries nothing** of the matched diver's:
   no cards, sizes, date of birth, contact or email (the shared address stays with the record that
   owns it, and is refused if typed). What the staffer types about the person in front of them
-  lands on the new record (issue #2081): a **date of birth**, required when a moving seat is on a
-  course with a minimum age, because the age check and the guardian co-signature rule both read it
-  and fail open without one, and an optional **email or phone** for sending their own waiver. When
+  lands on the new record (issue #2081): a **date of birth** or the staffer's **"They're 18 or
+  older"** (H-100), one of the two on every departure and the date itself when a moving seat is on a
+  course with a minimum age, because the age check and the guardian co-signature rule both read the
+  date and fail open without one (the tick is filed with who gave it, `people.adult_attested_at`),
+  and an optional **email or phone** for sending their own waiver. When
   there are **other held seats under the same name** matched to the same diver on *other*
   departures, one box names each of those departures and, when ticked (it starts unticked: two
   strangers can share a name), moves them onto the one new record, so three dives booked with a

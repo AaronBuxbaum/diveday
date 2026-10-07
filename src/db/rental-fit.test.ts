@@ -189,7 +189,7 @@ describe("saveRentalFit / getRentalFit", () => {
     expect((await getRentalFit(db, shopId, personId))?.drysuitSize).toBe("MT");
   });
 
-  it("writes a hood and gloves as two answers with a size each (H-100)", async () => {
+  it("writes a hood and gloves as two answers with a size each (H-101)", async () => {
     const { db, shop, shopId, tripId } = await context();
     await setShopRentalItems(db, shopId, [...shop.rentalItems, "hood", "gloves"]);
     const { personId } = await bookVisitor(db, shopId, tripId, "Nora Quinn");

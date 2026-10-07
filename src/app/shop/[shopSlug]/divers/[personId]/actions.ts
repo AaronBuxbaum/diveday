@@ -1412,7 +1412,7 @@ export async function erasePersonAction(shopSlug: string, personId: string, form
 }
 
 /**
- * **Erase a co-signing guardian's email address, and nothing else** (H-101,
+ * **Erase a co-signing guardian's email address, and nothing else** (H-102,
  * issue #1673).
  *
  * The same owner-only gate as the diver's erasure, re-read here and again
