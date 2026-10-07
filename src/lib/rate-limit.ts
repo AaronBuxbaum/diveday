@@ -223,6 +223,32 @@ const defaultStoreKind: "upstash" | "memory" = upstashConfigSchema.safeParse({
   : "memory";
 
 /**
+ * Whether the module's own default store has already said it is the in-process
+ * one. Per process, so per serverless instance: one line per cold start.
+ */
+let memoryStoreAnnounced = false;
+
+/**
+ * The in-memory fallback is a supported state everywhere except a production
+ * deployment, where it quietly multiplies every limit by the number of warm
+ * instances (ADR 20260801-distributed-rate-limit-store). It stays fail-open --
+ * refusing traffic because a store is unprovisioned would be the outage this
+ * module exists not to cause -- but it is never *silent*: the first check on an
+ * instance logs `rate_limit.memory_store_in_production`, and `pnpm check:env`
+ * fails a production run missing the Upstash pair (config/env-registry.mjs).
+ *
+ * The e2e fleet serves a production build (`NODE_ENV=production`) on purpose
+ * with no Upstash, so `DIVEDAY_E2E=1` is not production for this question --
+ * the same split `src/lib/auth.ts` makes for secure cookies.
+ */
+function announceMemoryStoreInProduction(store: RateLimitStore): void {
+  if (memoryStoreAnnounced || store !== defaultStore || defaultStoreKind !== "memory") return;
+  memoryStoreAnnounced = true;
+  if (process.env.NODE_ENV !== "production" || process.env.DIVEDAY_E2E === "1") return;
+  log("rate_limit.memory_store_in_production", "warn", { store: "memory" });
+}
+
+/**
  * Minimum gap between two store-failure reports from one process.
  *
  * Every public write boundary in the app funnels through `checkRateLimit`, so
@@ -324,6 +350,7 @@ export async function checkRateLimit(
   store: RateLimitStore = defaultStore,
 ): Promise<RateLimitResult> {
   if (rateLimitDisabled()) return { allowed: true, retryAfterMs: 0 };
+  announceMemoryStoreInProduction(store);
   try {
     return await store.take(key, config, now);
   } catch (error) {

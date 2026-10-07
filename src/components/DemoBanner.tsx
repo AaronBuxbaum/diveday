@@ -6,6 +6,7 @@ import { useState, useTransition } from "react";
 import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
+import { log } from "@/lib/log";
 
 /** One role card's full content, resolved server-side (name is data, the rest is translated copy). */
 interface DemoRoleInfo {
@@ -88,7 +89,9 @@ export function DemoBanner({
         // rethrow a switch that worked still painted "didn't go through" under
         // the new role's page.
         unstable_rethrow(err);
-        console.error("Failed to switch demo role:", err);
+        log("demo.role_switch_failed", "warn", {
+          errorCode: err instanceof Error ? err.name : "unknown_error",
+        });
         // The panel has already closed by now — say so in the banner itself,
         // not only in a console nobody on a demo is watching.
         setSwitchFailed(true);

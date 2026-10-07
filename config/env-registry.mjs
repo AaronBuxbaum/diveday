@@ -65,6 +65,15 @@
  * are CI's, not the application's.
  */
 
+/**
+ * Whether being absent is legitimate. Every row says what its absence switches
+ * off (`absent`), and for nearly all of them that is a supported state -- a
+ * local run has no Stripe account and nowhere to ship logs. A row marked
+ * `requiredInProduction: true` is the exception: its absence from a production
+ * deployment is a security gap, not a feature turned off, so
+ * `pnpm check:env` refuses it when run with VERCEL_ENV=production.
+ */
+
 const LOCAL = ["local"];
 const VERCEL = ["vercel"];
 const LOCAL_AND_VERCEL = ["local", "vercel"];
@@ -498,6 +507,36 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
+      "The distributed rate-limit store (ADR 20260801-distributed-rate-limit-store):",
+      "an Upstash Redis database's REST URL and token, read by src/lib/rate-limit.ts.",
+      "Vercel's Upstash integration sets both on the project; otherwise paste them",
+      "from the Upstash console. Vercel only: a local run, the e2e fleet and CI use",
+      "the in-process store on purpose. Absent in production, every limit is per",
+      "serverless instance and so multiplied by however many are warm -- the app",
+      "logs rate_limit.memory_store_in_production once per instance, and",
+      "`pnpm check:env` fails when it runs with VERCEL_ENV=production and either",
+      "is unset.",
+    ],
+    keys: [
+      {
+        key: "UPSTASH_REDIS_REST_URL",
+        from: "manual",
+        targets: VERCEL,
+        requiredInProduction: true,
+        absent:
+          "rate limits fall back to a per-instance in-memory store, so sign-in, password reset and public booking limits are bypassable by fan-out",
+      },
+      {
+        key: "UPSTASH_REDIS_REST_TOKEN",
+        from: "manual",
+        targets: VERCEL,
+        requiredInProduction: true,
+        absent: "as UPSTASH_REDIS_REST_URL",
+      },
+    ],
+  },
+  {
+    doc: [
       "Provider usage guardrails (ADR 20260806-provider-usage-guardrails,",
       "docs/engineering/cost-guardrails-runbook.md). GET /api/cron/usage polls Vercel's",
       "and Neon's own usage APIs daily and emails ALERT_EMAIL when a ceiling in",
@@ -781,6 +820,10 @@ export const isStackProduced = (key) => {
   const from = byKey.get(key)?.from;
   return from === "stack" || from === "derived";
 };
+
+/** Keys a production deployment must carry; see `requiredInProduction` above. */
+export const keysRequiredInProduction = () =>
+  ENV_ENTRIES.filter((entry) => entry.requiredInProduction === true).map((entry) => entry.key);
 
 /** Whether a target file carries this key at all. */
 export const goesTo = (key, target) => Boolean(byKey.get(key)?.targets.includes(target));

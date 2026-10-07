@@ -2,8 +2,9 @@ import { and, asc, count, eq, isNull, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import { tripReservationWindow } from "@/lib/gear";
 import { shiftInstantByWallTimeDelta, utcToWallTime, wallTimeDeltaMs } from "@/lib/zoned";
-import { type AppDb, type DbExecutor, queryAll } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { rewindowTripGearReservations } from "./gear";
+import { queryAll } from "./query-helpers";
 import type { Trip } from "./schema";
 import {
   bookings,

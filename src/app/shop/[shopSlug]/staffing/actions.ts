@@ -14,7 +14,7 @@ import {
 import { getShopById } from "@/db/shops";
 import { setCrewPublicConsent } from "@/db/staff-accounts";
 import { createStaffShift, deleteStaffShift } from "@/db/staffing";
-import { changeTripCrew } from "@/db/trips-crew";
+import { changeTripCrew } from "@/db/trips";
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";

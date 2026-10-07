@@ -15,11 +15,15 @@ import { noticeUrl, shopPath } from "@/lib/staff-notices";
  * call (ADR-0006).
  *
  * **Every call re-reads the account live** (issue #701), not only the H-14
- * role-specific gates. Sessions are stateless 30-day JWTs
- * (`src/lib/auth.config.ts`) with no built-in re-validation, so before this,
+ * role-specific gates. Sessions are better-auth database sessions
+ * (`account_sessions`, configured in `src/lib/auth.ts`) whose
+ * `personId`/`shopId`/`roles` fields are written once at sign-in, and read
+ * back through a JWE cookie cache (five minutes) that the edge proxy decodes
+ * without a database round trip. Nothing re-derives those roles from the
+ * account while the session lives, so before this,
  * `isStaff(session.user.roles)` trusted claims cached at sign-in — a
  * disabled, deleted, or fully-demoted staff member kept every ordinary
- * `/shop/**` surface working for up to 30 days, because only the ~12
+ * `/shop/**` surface working for the rest of the session, because only the ~12
  * `canPerson*`-gated actions ever called `loadActiveStaffRoles` themselves.
  * This reuses `loadActiveStaffRolesByPerson`, the person-scoped sibling of
  * the same query the H-14 gates already run, so "disabled" means the same

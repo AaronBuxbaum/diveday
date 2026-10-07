@@ -21,8 +21,9 @@ import {
   inTrainingBefore,
   listCourseSeatsInTraining,
 } from "./certifications-in-training";
-import { type AppDb, type DbExecutor, isUniqueConstraintViolation, queryAll } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { paymentsByBooking } from "./payments";
+import { isUniqueConstraintViolation, queryAll } from "./query-helpers";
 import type { Certification, CertificationAgency, DiveSpecialty } from "./schema";
 import {
   bookings,

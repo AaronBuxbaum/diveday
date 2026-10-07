@@ -20,7 +20,8 @@ import {
   listTripGearAssignments,
 } from "./gear";
 import { listTripPrepDivers } from "./rental-fit";
-import { getTripCrewIds, getTripWithBooked, listStaff } from "./trips";
+import { getTripCrewIds, listStaff } from "./trips-crew";
+import { getTripWithBooked } from "./trips-record";
 
 export type TripPrepShop = {
   id: string;

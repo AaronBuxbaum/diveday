@@ -853,20 +853,20 @@ export async function drainNotificationRetries(
         // The error's name only, as in `queueRetryOrLog`: these writes bind
         // `delivery.detail`, which can be a provider's raw message quoting the
         // recipient, and a driver error can quote its bound parameters.
-        console.error("Notification retry status could not be recorded", {
+        log("notification.retry_status_record_failed", "error", {
           bookingId: tracked.bookingId,
           kind: tracked.kind,
-          error: error instanceof Error ? error.name : "unknown_error",
+          errorCode: error instanceof Error ? error.name : "unknown_error",
         });
       }
     }
     try {
       await recordIndependentWaiverDelivery(db, notification, delivery);
     } catch (error) {
-      console.error("Independent waiver delivery status could not be recorded", {
+      log("notification.waiver_delivery_record_failed", "error", {
         waiverRecordId:
           notification.kind === "waiver_request" ? notification.waiverRecordId : undefined,
-        error: error instanceof Error ? error.name : "unknown_error",
+        errorCode: error instanceof Error ? error.name : "unknown_error",
       });
     }
 
@@ -1080,10 +1080,11 @@ export async function sendAndRecordNotification(
         delivery,
         isRetry: options.isRetry,
       });
-    } catch {
-      console.error("Notification delivery status could not be recorded", {
+    } catch (error) {
+      log("notification.delivery_status_record_failed", "error", {
         bookingId: input.bookingId,
         kind: input.kind,
+        errorCode: error instanceof Error ? error.name : "unknown_error",
       });
     }
   }

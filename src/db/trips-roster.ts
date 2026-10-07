@@ -79,7 +79,7 @@ export async function listTripDiverContacts(db: AppDb, shopId: string, tripId: s
  * arbitrarily-ordered list they must scan every row for every name, which is
  * how the second check quietly stops happening. It is **not** the order a
  * person would have written the list in themselves: `full_name` is one free
- * text box whose entry convention is not a fact (`src/db/schema.ts` records
+ * text box whose entry convention is not a fact (`src/db/schema/` records
  * that rows arrive as "Tanaka Keiko" and as "Smith, John"), so this sorts on
  * whichever token happens to be first. Never call the manifest alphabetical in
  * staff copy — a crew would search it that way and conclude a diver is

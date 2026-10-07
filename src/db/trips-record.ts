@@ -111,7 +111,7 @@ export async function getTripWithBooked(db: AppDb, shopId: string, tripId: strin
 /**
  * Primary-subtag languages this trip's current bookings actually signalled —
  * `people.locale`, only ever written from a request the diver themselves made
- * (`src/db/schema.ts`), never a default fallback. Feeds the quiet crew-
+ * (`src/db/schema/`), never a default fallback. Feeds the quiet crew-
  * language coverage note (`crewLanguageGap`, issue #708): a diver who never
  * signalled a preference correctly contributes nothing to compare against.
  */

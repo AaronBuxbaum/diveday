@@ -46,6 +46,20 @@ describe("promisesUnfinishedWork", () => {
     expect(promisesUnfinishedWork(text, DIRTY)).toBe(false);
   });
 
+  /**
+   * AGENTS.md: a turn that ends on a question is a fine ending; one that ends on an
+   * intention is not. The question phrases are exemptions (`HANDOFFS`), never part of
+   * what blocks, and each one holds even beside a promise and without a trailing `?`.
+   */
+  it.each([
+    "Next I'll drop the table. Let me know if you would rather keep it",
+    "I'll then run the visual suite. Want me to open the PR first",
+    "Then I'll add the capture. Shall I stack it on the open branch",
+    "Next I'll file the follow-up. Would you like it labelled waiting-on-external",
+  ])("treats a closing question as a handoff: %j", (text) => {
+    expect(promisesUnfinishedWork(text, DIRTY)).toBe(false);
+  });
+
   it("leaves a promise alone when the tree is clean", () => {
     // "Finished and pushed, here is what happens next" is the ordinary way a
     // completed piece of work ends, and it reads identically to the offender.

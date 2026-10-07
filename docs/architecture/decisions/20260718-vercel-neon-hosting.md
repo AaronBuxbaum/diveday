@@ -7,7 +7,7 @@
 
 [20260718-vercel-hosting](20260718-vercel-hosting.md) selected Vercel as the web host but
 deliberately left the managed Postgres provider unchosen, tracked as
-[H-04](../../product/human-decisions.md) in the human decision log ("this ADR deliberately does
+[H-04](../../product/human-decisions/README.md) in the human decision log ("this ADR deliberately does
 not choose a database vendor or store secrets"). [ADR-0005](0005-database.md) separately deferred
 only the production driver, anticipating `drizzle-orm/node-postgres` "when hosting lands."
 

@@ -1,7 +1,7 @@
 # Incident response runbook
 
 What to do when production is broken. DiveDay runs on one Vercel project and one Neon Postgres
-project ([H-04](../product/human-decisions.md)), with error capture in Sentry
+project ([H-04](../product/human-decisions/README.md)), with error capture in Sentry
 ([ADR 20260727-sentry-error-monitoring-q7fk2p](../architecture/decisions/20260727-sentry-error-monitoring-q7fk2p.md)),
 an unauthenticated liveness probe at `src/app/api/health/route.ts`, and a Sentry Cron Monitor
 check-in inside `src/app/api/cron/reminders/route.ts`. H-04 names **Aaron Buxbaum** as the owner of
@@ -220,7 +220,7 @@ until you have actually checked.
 ## After: the write-up
 
 Every Sev-1 and every Sev-2 that reached a shop gets one, same day, in
-[docs/product/human-decisions.md](../product/human-decisions.md)'s decision log if it changed a
+[docs/product/human-decisions/README.md](../product/human-decisions/README.md)'s decision log if it changed a
 decision, or as a dated note in the relevant runbook if it changed a procedure. Five things:
 timeline with timestamps, what broke, how it was found (and how long that took — detection latency
 is usually the real finding), what fixed it, and the one change that would have prevented it. Then
@@ -241,7 +241,7 @@ down once will let you down again.
 - **Security incidents get only partial coverage here.** Capability-token exposure is handled in
   [capability-telemetry-runbook.md](capability-telemetry-runbook.md); a suspected breach of accounts,
   medical data, or Stripe credentials needs a disclosure decision that is a legal question
-  ([H-02](../product/human-decisions.md)), not an engineering one, and that path is not written down
+  ([H-02](../product/human-decisions/README.md)), not an engineering one, and that path is not written down
   yet.
 - **Third-party outages (Vercel, Neon, Stripe, AWS SES, Twilio) have no documented degradation
   playbook.** Check the provider's status page first; the app degrades to `not_configured` for

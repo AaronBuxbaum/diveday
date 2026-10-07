@@ -2,7 +2,8 @@ import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { STAFF_ROLES } from "@/lib/authz";
 import { nowDate } from "@/lib/clock";
 import type { RatingCredential } from "@/lib/crew-roles";
-import { type DbExecutor, isUniqueConstraintViolation } from "./client";
+import type { DbExecutor } from "./client";
+import { isUniqueConstraintViolation } from "./query-helpers";
 import { people, personRoles, staffCredentials } from "./schema";
 
 /**

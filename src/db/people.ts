@@ -1,8 +1,10 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { type DiverLocale, isDiverLocale } from "@/i18n/settings";
+import { log } from "@/lib/log";
 import { personNamesMatch } from "@/lib/person-name";
-import { type DbExecutor, isUniqueConstraintViolation } from "./client";
+import type { DbExecutor } from "./client";
 import { storedPhone } from "./person-phone";
+import { isUniqueConstraintViolation } from "./query-helpers";
 import { bookings, people, personRoles } from "./schema";
 
 export type FindOrCreatePersonInput = {
@@ -152,8 +154,11 @@ export async function recordDiverOwnLocale(
           isNull(people.deletedAt),
         ),
       );
-  } catch {
-    console.error("Diver locale could not be recorded", { personId: input.personId });
+  } catch (error) {
+    log("person.locale_record_failed", "error", {
+      personId: input.personId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
   }
 }
 
@@ -182,10 +187,13 @@ export async function recordDiverOwnLocaleForBooking(
       .from(bookings)
       .where(eq(bookings.id, input.bookingId))
       .limit(1);
-  } catch {
+  } catch (error) {
     // Same contract as `recordDiverOwnLocale`: never the reason a photo upload
     // or a review submission turns into an error page.
-    console.error("Diver locale could not be recorded", { bookingId: input.bookingId });
+    log("person.locale_record_failed", "error", {
+      bookingId: input.bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
     return;
   }
   if (!booking) return;
@@ -229,8 +237,13 @@ export async function getShopPersonName(
   return row?.fullName ?? null;
 }
 
-/** Case-insensitive to mirror the `lower(email)` index this is meant to reflect. */
-async function selectActivePersonByEmail(tx: DbExecutor, shopId: string, email: string) {
+/**
+ * The shop's live person at this address, or null. Case-insensitive on both
+ * sides to mirror the `lower(email)` unique index (`people_shop_email_unique`),
+ * so a caller need not normalise first. The one copy: `inviteStaffMember`
+ * (staff-accounts.ts) reads through it too.
+ */
+export async function selectActivePersonByEmail(tx: DbExecutor, shopId: string, email: string) {
   const [row] = await tx
     .select()
     .from(people)

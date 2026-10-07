@@ -108,8 +108,8 @@ accepted rather than overlooked: on `/s/<slug>` in Spanish the chrome is Spanish
 words are the shop's English, which is the same contract a boat's description, a trip title and a
 site's fit tone already carry. If a pilot shop says the untranslated rail matters, the answer is
 additive and needs no migration — a DiveDay-published starting set the shop copies and then owns,
-the contract [`src/db/dive-site-templates.ts`](../../../src/db/dive-site-templates.ts) and
-[`src/db/course-templates.ts`](../../../src/db/course-templates.ts) already use. Replacing the table
+the contract [`src/content/dive-site-templates.ts`](../../../src/content/dive-site-templates.ts) and
+[`src/content/course-templates.ts`](../../../src/content/course-templates.ts) already use. Replacing the table
 with a code column would be a reversal and would need its own ADR.
 
 ### 3. Every open feature idea gets one verdict

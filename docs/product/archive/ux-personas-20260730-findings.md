@@ -310,7 +310,7 @@ and discover it at the dock.
 
     **Dive-domain-expert review.** This needs reframing before implementation, not just building
     as written — `course_min_age` is deliberately unenforced for public actors today
-    (`docs/product/human-decisions.md` H-08 option B, cross-referenced by H-22
+    (`docs/product/human-decisions/README.md` H-08 option B, cross-referenced by H-22
     `20260725-checklist-age-disclosure`): a hard public-facing age refusal can be used to probe
     whether a specific address/email belongs to a minor, which is exactly what H-22 closed off.
     An **attestation checkbox** ("I confirm every diver on this booking meets the minimum age of
@@ -1004,7 +1004,7 @@ best asset — is sold as a blind button with no preview of what's inside.
     was actually `settings.embed.notConfigured` — fixed both real occurrences.
 100. **[S] State what "trial" means.** Add one honest sentence wherever "trial" appears
     (pricing FAQ, onboard button area): free while in early access, no card, no time limit
-    yet — matching `docs/product/human-decisions.md`'s open pricing decision. Do not invent a
+    yet — matching `docs/product/human-decisions/README.md`'s open pricing decision. Do not invent a
     trial length.
     **Done — PR #274.**
 101. **[M] Answer the migration fears in the guides.** Add a short "Cutover without drama"

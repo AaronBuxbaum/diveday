@@ -25,8 +25,9 @@ import type { ShopYearDay, ShopYearInput } from "@/lib/shop-year";
 import { DEPARTURE_BUFFER_MS } from "@/lib/trips";
 import { wallTimeToUtc } from "@/lib/zoned";
 import { buddyReferredSeatsForWindow } from "./buddy-referrals";
-import { type DbExecutor, queryAll } from "./client";
+import type { DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
+import { queryAll } from "./query-helpers";
 import {
   boats,
   bookingCheckoutBookings,

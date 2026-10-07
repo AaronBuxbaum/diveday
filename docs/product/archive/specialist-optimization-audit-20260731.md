@@ -155,7 +155,7 @@ for the mechanisms and ADRs:
 - Harden the `/api/test/*` seed endpoints with an explicit shared secret.
 
 **"Close the revocation window on base staff surfaces" was not built.** It re-proposed exactly what
-[H-15](../human-decisions.md#decision-register) already decided against on 2026-07-24: accept
+[H-15](../human-decisions/README.md#decision-register) already decided against on 2026-07-24: accept
 Auth.js's 30-day JWT default with no live database recheck, an explicit "acceptable,
 non-aggressive" tolerance. See
 [20260724-staff-session-and-capability-migration-policy](../../architecture/decisions/20260724-staff-session-and-capability-migration-policy.md),

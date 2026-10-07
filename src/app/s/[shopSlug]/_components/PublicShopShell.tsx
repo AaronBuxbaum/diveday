@@ -38,7 +38,7 @@ import { getDb } from "@/db/client";
 import { hasActiveCourses } from "@/db/courses";
 import { DEMO_SHOP_SLUG } from "@/db/dev-credentials";
 import { people, personRoles } from "@/db/schema";
-import { shopBySlugCached } from "@/db/shops";
+import { shopBySlugCached } from "@/db/shops-cached";
 import { listShopSpokenLanguages } from "@/db/staff-accounts";
 import { languageEndonym, localeEndonym } from "@/i18n/language-labels";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";

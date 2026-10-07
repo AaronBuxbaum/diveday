@@ -3,7 +3,7 @@
 > A channel-by-channel assessment of paid advertising for reaching dive shop owners, written
 > 2026-08-12 from a live research sweep (vendor tag containers, Google autocomplete probes, published
 > 2026 rate cards, media kits, DEMA's own rate pages, industry census data) against the commercial
-> terms in [human-decisions.md](../human-decisions.md) H-12/H-26. Companion to
+> terms in [human-decisions/](../human-decisions/README.md) H-12/H-26. Companion to
 > [rollout.md](../rollout.md), which schedules "modest paid search on high-intent queries" in Phase 2
 > — this document is the sizing work behind that line, and it narrows it substantially. An
 > assessment, not a commitment.

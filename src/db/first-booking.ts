@@ -1,7 +1,8 @@
 import { and, asc, desc, eq, isNull } from "drizzle-orm";
 import { hasSailed } from "@/lib/trips";
 import { isCompletedWaiverCurrent } from "@/lib/waivers";
-import { type DbExecutor, queryAll } from "./client";
+import type { DbExecutor } from "./client";
+import { queryAll } from "./query-helpers";
 import type { PaymentStatus, WaiverRecord } from "./schema";
 import {
   bookingPayments,

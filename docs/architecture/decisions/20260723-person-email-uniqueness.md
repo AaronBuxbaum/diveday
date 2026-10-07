@@ -103,7 +103,7 @@ notice short of staff spotting a duplicate on the roster.
   and "Jane Doe") — match and are not flagged; the second could inherit the first's evidence. This
   is intrinsic to name-based matching, and the alternative (firing on every initial) would train
   staff to confirm reflexively and blunt the gate. Security and dive-domain reviews accepted it as a
-  floor, not a regression. See [H-13](../../product/human-decisions.md) and the
+  floor, not a regression. See [H-13](../../product/human-decisions/README.md) and the
   [identity match key glossary entry](../../product/glossary.md#modeling-notes).
 - **Concurrency-closing path is not exercisable in the current test suite:** the catch-and-reread
   branch in `findOrCreatePerson`/`createDiver`/`updateDiver`/`restoreDiver`/`commitContactImport`

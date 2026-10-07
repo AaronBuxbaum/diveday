@@ -63,7 +63,7 @@ export type WaiverDelivery =
  * and so the one rule that prefers a shop's own WhatsApp over platform SMS
  * (`sendCourtesyMessage`) stays in the one place that owns it.
  */
-export async function waiverTextProviders(db: AppDb, shopId: string): Promise<CourtesyProviders> {
+async function waiverTextProviders(db: AppDb, shopId: string): Promise<CourtesyProviders> {
   const senders = await whatsAppProvidersForShops(db, [shopId]);
   return {
     sms: stopListedSmsProvider(db, smsProviderFromEnvironment()),

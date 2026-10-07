@@ -151,6 +151,6 @@ The cost of getting it wrong is asymmetric and mild in the direction that matter
 wrongly marked self-guided loses an advisory row it was never obliged to act on, while every real
 gate that could refuse a diver a seat is untouched.
 
-`docs/product/human-decisions.md` H-51's open question — whether an advisory signal should ever
+`docs/product/human-decisions/README.md` H-51's open question — whether an advisory signal should ever
 become binding — is unaffected. This ADR does not make anything binding; it narrows what an advisory
 signal is advisory *about*.

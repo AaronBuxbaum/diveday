@@ -669,7 +669,7 @@ what stop it rotting.
 
 - [ ] Semantic tokens only (no raw hex / palette-scale classes)
 - [ ] Verified in light (screenshots); dark as well only when the change is colour work — a token,
-      a tint, a hue ([H-90](../product/human-decisions.md#decision-register))
+      a tint, a hue ([H-90](../product/human-decisions/README.md#decision-register))
 - [ ] Pixel pass: the probe ran on every changed capture, every flag has a verdict (confirmed with
       its measurement, or dismissed with its reason and settled), and the 1:1 tiles and the atlas
       entries for the controls touched were read before the source —

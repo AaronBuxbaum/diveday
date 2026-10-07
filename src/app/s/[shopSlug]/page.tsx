@@ -20,7 +20,7 @@ import { type AppDb, getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
 import { tripRequirementSummaries } from "@/db/readiness";
 import { getShopReviewAggregate, listPublishedShopReviews } from "@/db/reviews";
-import { shopBySlugCached } from "@/db/shops";
+import { shopBySlugCached } from "@/db/shops-cached";
 import { listTripLenses } from "@/db/trip-lenses";
 import {
   countShopTrips,

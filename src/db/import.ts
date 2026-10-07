@@ -45,7 +45,8 @@ import { storeImportReceiptDocument, storeImportWaiverDocument } from "@/lib/sto
 import { ingestImageUrl } from "@/lib/storage/ingest-url";
 import { createWaiverToken, hashWaiverToken } from "@/lib/waiver-tokens";
 import { isCompletedWaiverCurrent } from "@/lib/waivers";
-import { type AppDb, isUniqueConstraintViolation } from "./client";
+import type { AppDb } from "./client";
+import { isUniqueConstraintViolation } from "./query-helpers";
 import {
   certifications,
   importedPaymentHistory,

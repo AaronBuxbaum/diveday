@@ -10,7 +10,7 @@ This is a **single-context** repo — one glossary, one ADR log.
 - **`docs/architecture/decisions/`** — this repo's ADR log (not the default `docs/adr/`; see [docs/README.md](../README.md) for the full documentation index and the project's own `adr` skill). Read ADRs that touch the area you're about to work in.
 - **`AGENTS.md`** — the canonical map of routes, modules, and hard rules for this repo. Read it before `CONTEXT.md`; it is kept current and is the first stop, not a fallback.
 
-If `CONTEXT.md` doesn't exist yet, **proceed silently**. Don't flag its absence; don't suggest creating it upfront. The `/domain-modeling` skill (reached via `/grill-with-docs` and `/improve-codebase-architecture`) creates it lazily when terms or decisions actually get resolved.
+If `CONTEXT.md` doesn't exist yet, **proceed silently**. Don't flag its absence; don't suggest creating it upfront. The `/domain-modeling` skill (reached via `/grilling` and `/improve-codebase-architecture`) creates it lazily when terms or decisions actually get resolved.
 
 ## File structure
 

@@ -12,11 +12,16 @@
  * | `./trips-series.ts` | recurring series: create, extend the horizon, apply details across, cancel the run |
  * | `./trips-record.ts` | one departure's own record: read it, edit details/dives/conditions/status |
  * | `./trips-schedule.ts` | the schedule builder's move / copy / remove and their refusals |
+ * | `./trips-live.ts` | `liveTrip()`, the where-clause every read of `trips` carries (`pnpm check:live-trips`) |
  * | `./trips-minimum.ts` | the minimum-head-count sweep: cancel what did not fill by its own deadline |
  * | `./trips-crew.ts` | who is working it, and the guards on changing that |
-| `./trips-clashes.ts` | two departures in each other's way: the overlap rule, and one hull on two at once |
+ * | `./trips-clashes.ts` | two departures in each other's way: the overlap rule, and one hull on two at once |
+ * | `./trips-prep.ts` | the trip-prep page's one read: crew, gear and every diver's rental fit |
  * | `./trips-roster.ts` | who is on it: bookings, wait list, contacts |
  * | `./trips-queries.ts` | reading the board: schedule lists, aggregates, calendar feeds |
+ *
+ * Two siblings are not here yet: `./trips-guests.ts` and `./trips-overview.ts`
+ * are still imported directly by the trip pages that read them.
  *
  * Adding a function to a sibling does not publish it — name it here too. That
  * is deliberate: `trips-create.ts` in particular also exports the
@@ -56,6 +61,7 @@ export {
   type TripCrewOutcome,
   tripCrewByTrip,
 } from "./trips-crew";
+export { liveTrip } from "./trips-live";
 export {
   cancelDeparturesBelowMinimum,
   listDeparturesAwaitingMinimumDecision,
@@ -65,6 +71,7 @@ export {
   reinstateTripClearingMinimum,
   type SweptDeparture,
 } from "./trips-minimum";
+export { getTripPrep, type TripPrep, type TripPrepShop } from "./trips-prep";
 export {
   type CourseSessionScope,
   countShopTrips,

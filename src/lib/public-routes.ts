@@ -4,7 +4,7 @@
  * Everything a diver reads without an account lives under `/s/<shopSlug>`;
  * `/shop/<shopSlug>/**` is staff-only, without exception (ADR
  * 20260803-public-shop-namespace). Keeping the path strings in one framework-
- * free module is what lets the route matchers (src/lib/auth.config.ts, edge),
+ * free module is what lets the route matchers (src/proxy.ts, edge),
  * the redirect table (next.config.ts, build time), the pages, the sitemap, and
  * every notification URL builder agree by construction rather than by grep.
  *

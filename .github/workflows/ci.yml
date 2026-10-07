@@ -14,7 +14,7 @@ on:
   #
   # A workflow-level trigger fires *every* job in the file, so on its own this
   # would silently start running lint, typecheck, four unit shards, the build,
-  # and eight Playwright/visual shards every night. Two reasons that is not
+  # and twelve Playwright/visual shards every night. Two reasons that is not
   # merely wasteful: it roughly doubles this workflow's runner minutes for no
   # signal (the same commit already went green on merge), and `visual-report`
   # would republish main's S3 snapshot on a run that resolved no baseline —
@@ -118,8 +118,12 @@ jobs:
     # is set for this job, so `describePostgres` registers a skipped suite and
     # nothing tries to open a connection. `real-postgres` below is the only job
     # that sets it.
-    # Nightly runs `real-postgres` only.
-    if: github.event_name != 'schedule'
+    # Nightly runs `real-postgres` only. A change that touches no code skips the
+    # four shards exactly as it skips the build (`changes` below); the
+    # `unit-tests-docs` job runs the unit files that read a document instead,
+    # so a docs-only pull request still answers to them.
+    needs: changes
+    if: github.event_name != 'schedule' && needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -149,7 +153,61 @@ jobs:
       # so the underlying CLI sees `vitest run -- --reporter=dot --shard=…`
       # and drops everything after that `--` as unparsed — every shard then
       # silently runs the full suite instead of its 1/4 slice.
-      - run: pnpm exec vitest run --reporter=dot --shard=${{ matrix.shard }}/4
+      #
+      # The second reporter prints nothing: it records each file's wall time
+      # into the artifact below, which is what `scripts/test-durations.json`
+      # (the sequencer's input, src/test/shard-sequencer.ts) is refreshed from —
+      # download every `unit-durations-<n>` of one green run and pass them all
+      # to `node scripts/merge-test-durations.mjs`.
+      - run: pnpm exec vitest run --reporter=dot --reporter=./src/test/duration-reporter.ts --shard=${{ matrix.shard }}/4
+        env:
+          DIVEDAY_TEST_DURATIONS_OUT: test-durations/shard-${{ matrix.shard }}.json
+      - uses: actions/upload-artifact@v7
+        if: ${{ !cancelled() }}
+        with:
+          name: unit-durations-${{ matrix.shard }}
+          path: test-durations/
+          if-no-files-found: ignore
+          retention-days: 30
+
+  unit-tests-docs:
+    name: Unit tests that read docs
+    # The other half of `unit-tests`' gate. A docs-only change cannot move a
+    # module's behaviour, but some unit files hold code to a document or a
+    # document to the code — the glossary, the manual-actions list an infra
+    # test generates, the agent layer under `.claude/` — and a docs-only pull
+    # request must still answer to those. This runs every test file whose
+    # source quotes a path into `docs/` or `.claude/`, `AGENTS.md`, `CLAUDE.md`,
+    # a README or any `.md` file (about 60 files, 8 of them db-backed, on
+    # 2026-10-07): a text match that errs wide on purpose, since a file that
+    # only quotes a doc path in a comment costs a few seconds and a file that
+    # reads one and is missed costs a red main. Pathspecs are `src/*.test.ts`,
+    # not `src/**/…`: without `:(glob)` magic git's `*` already crosses `/`, and
+    # `**/` would demand at least one directory and miss `scripts/x.test.mjs`.
+    # On a code change the four shards run everything and this skips.
+    needs: changes
+    if: github.event_name != 'schedule' && needs.changes.outputs.code != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - uses: actions/cache@v6
+        with:
+          path: node_modules/.cache/diveday
+          key: ${{ runner.os }}-pglite-template-${{ hashFiles('drizzle/**', 'src/db/**', 'src/test/frozen-clock.ts', 'pnpm-lock.yaml') }}
+      - name: Run the unit files that read a document
+        run: |
+          mapfile -t files < <(git grep -lE "[\"'\`](\./)?(docs/|\.claude/|AGENTS\.md|CLAUDE\.md|README)|[\"'\`](docs|\.claude)[\"'\`]|\.md[\"'\`]" -- \
+            'src/*.test.ts' 'src/*.test.tsx' 'scripts/*.test.mjs' 'infra/*.test.ts')
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::No unit file quotes a document path — the match above is broken, not the suite clean."
+            exit 1
+          fi
+          echo "${#files[@]} unit files quote a document path"
+          pnpm exec vitest run --reporter=dot "${files[@]}"
 
   build:
     name: Build
@@ -302,9 +360,28 @@ jobs:
           retention-days: 7
 
   visual:
-    name: Visual capture shard ${{ matrix.shard }}/4
+    name: Visual capture shard ${{ matrix.shard }}/8
     needs: build
     if: github.event_name != 'schedule' # nightly runs `real-postgres` only
+    # Eight shards, one worker each — not four shards at two workers. Four
+    # shards at one worker made this the run's critical path: 554, 619, 913
+    # and 855 seconds on a green run (2026-10), of which an estimated 1.5-2
+    # minutes a shard is fixed cost (checkout, setup, artifact download,
+    # `build:sw`, the browser, one `next start`). Both levers halve the capture time per
+    # shard; only this one does it without putting a second browser and a
+    # second `next start` beside the first on the same runner, which is the
+    # oversubscription the playwright job above accepts knowingly and this
+    # suite — pixels, with a renderer-wedge probe that already earns one
+    # rerun — should not. Expected: the slowest shard ~8-8.5 minutes instead
+    # of ~15, for four more runners' fixed cost (~8 runner minutes) per run.
+    #
+    # Playwright's own `--shard` is fine here, unlike for the spec files
+    # above: there is one spec file, `fullyParallel` makes every test its own
+    # group, and nothing in it is serial, so eight contiguous slices of ~31
+    # tests is a correct split. It is not a weighted one — the back half of
+    # the file ran ~1.5x the front half in the four-way split — so if one
+    # shard drifts back over ten minutes, weight the split rather than adding
+    # shards.
     runs-on: ubuntu-latest
     timeout-minutes: 20
     permissions:
@@ -312,7 +389,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
@@ -354,7 +431,7 @@ jobs:
       - name: Capture visual regression screenshots
         run: |
           set -o pipefail
-          if pnpm exec playwright test e2e/visual.spec.ts --shard=${{ matrix.shard }}/4 2>&1 | tee capture.log; then
+          if pnpm exec playwright test e2e/visual.spec.ts --shard=${{ matrix.shard }}/8 2>&1 | tee capture.log; then
             exit 0
           fi
           if grep -q "wedged, not slow" capture.log; then
@@ -364,10 +441,10 @@ jobs:
             exit 1
           fi
         env:
-          # Same reasoning as the playwright job above: each shard is its own
-          # runner, and pinning to 1 worker keeps that shard's own
-          # browser+server pair from competing with itself for the runner's 4
-          # cores. NOT the fix for the recurring 45s timeout on the
+          # Each shard is its own runner, and pinning to 1 worker keeps that
+          # shard's one browser+server pair from competing with a second for
+          # the runner's cores; the job's own comment above is why the speed
+          # comes from more shards instead. NOT the fix for the recurring 45s timeout on the
           # /recap/[token] capture in visual.spec.ts's long public-surfaces
           # test, though it was tried as one first: that timeout reproduced
           # identically with 2 workers and with 1 (3/3 CI runs, always the
@@ -715,13 +792,18 @@ jobs:
     # `.claude/`, and every one of them ran the build, four Playwright shards,
     # four visual shards and a reg-suit compare — nineteen jobs, seventy-odd
     # runner minutes, ten minutes of wall-clock — to photograph 696 surfaces
-    # that could not have moved. Worse than the waste is the queue: this
-    # workflow's nineteen jobs sit one under the account's twenty-concurrent-job
-    # cap, so a docs-only run starting ahead of a code run held the code run's
-    # jobs back for as long as it took to capture nothing. The safeguards, lint,
-    # typecheck and the unit shards still run on every change: `check:repo`
-    # reads the docs, and twenty unit files read a document they hold the code
-    # to (`docs/engineering/manual-actions.md` is *generated* by an infra test).
+    # that could not have moved. Worse than the waste is the queue: a code run
+    # is twenty-three jobs against the account's twenty-concurrent-job cap (at
+    # most ~17 at once, since the safeguards, lint, typecheck and this job are
+    # done before the build releases the browser shards), so a docs-only run
+    # starting ahead of a code run held the code run's jobs back for as long as
+    # it took to capture nothing. The safeguards, lint
+    # and typecheck still run on every change, because `check:repo` reads the
+    # docs. The four unit shards do not: a docs-only change runs
+    # `unit-tests-docs` in their place — the unit files that read a document
+    # they hold the code to (`docs/engineering/manual-actions.md` is *generated*
+    # by an infra test) — which is what stopped a docs-only run costing the
+    # 13.6 minutes the four shards took.
     #
     # Written as a job rather than a workflow-level `paths:` filter because that
     # filter applies to the *whole workflow* — putting one on the `pull_request`
@@ -830,7 +912,7 @@ jobs:
             echo "code=true" >> "$GITHUB_OUTPUT"
           else
             echo "code=false" >> "$GITHUB_OUTPUT"
-            echo "Only docs, Markdown or \`.claude/\` changed — the build, the Playwright and visual shards and the reg-suit compare are skipped. The safeguards, lint, typecheck and the unit shards still ran. The next code commit's visual baseline resolves past this one (scripts/wait-for-baseline.mjs)." >> "$GITHUB_STEP_SUMMARY"
+            echo "Only docs, Markdown or \`.claude/\` changed — the build, the unit, Playwright and visual shards and the reg-suit compare are skipped. The safeguards, lint, typecheck and the unit files that quote a document path still ran. The next code commit's visual baseline resolves past this one (scripts/wait-for-baseline.mjs)." >> "$GITHUB_STEP_SUMMARY"
           fi
 
   real-postgres:
