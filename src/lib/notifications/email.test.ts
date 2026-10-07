@@ -921,7 +921,7 @@ describe("setupRequestAlertEmail (ADR 20261007-setup-request-form)", () => {
     expect(email.subject).toBe("Set-up request: Reef <Line> Divers (Key Largo)");
     expect(email.text).toContain("Runs a boat: yes");
     expect(email.text).toContain("Uses today: a booking system");
-    expect(email.text).toContain("Email: ana@reefline.example");
+    expect(email.text).toContain("Email (unverified): ana@reefline.example");
     expect(email.text).toContain("From: pricing");
     expect(email.text).not.toContain("Phone:");
     expect(setupRequestAlertEmail({ ...request, contactPhone: "+1 305 555 0100" }).text).toContain(

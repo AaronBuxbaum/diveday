@@ -203,3 +203,29 @@ describe("every handle a notification carries is reachable by the erasure sweep"
     expect(notificationSubjectPhone(phoneOnly as Notification)).toBe("+1 305 555 0134");
   });
 });
+
+describe("setup_request_alert", () => {
+  const alert = {
+    kind: "setup_request_alert",
+    setupRequestId: "00000000-0000-4000-8000-000000000009",
+    to: "onboarding@diveday.invalid",
+    shopName: "Reef Line Divers",
+    region: "Key Largo",
+    runsBoat: true,
+    currentSystem: "paper",
+    contactName: "Ana Ruiz",
+    contactEmail: "ana@shop.invalid",
+    source: "pricing",
+    requestLocale: "en-US",
+  };
+
+  it("takes a request the form accepted", () => {
+    expect(notificationSchema.safeParse(alert).success).toBe(true);
+  });
+
+  it("refuses a line break or a bidi override in an answer, whoever the caller", () => {
+    for (const shopName of ["Reef\r\nBcc: x@example.com", "Reef‮Line", "Reef Line"]) {
+      expect(notificationSchema.safeParse({ ...alert, shopName }).success).toBe(false);
+    }
+  });
+});

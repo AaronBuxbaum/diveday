@@ -1055,7 +1055,8 @@ export function setupRequestAlertEmail(input: SetupRequestAlertEmailInput): Noti
     ["Runs a boat", input.runsBoat ? "yes" : "no"],
     ["Uses today", currentSystemWords[input.currentSystem]],
     ["Name", input.contactName],
-    ["Email", input.contactEmail],
+    // Typed by whoever filled the form; nothing has proved they own it.
+    ["Email (unverified)", input.contactEmail],
     ...(input.contactPhone ? [["Phone", input.contactPhone] as [string, string]] : []),
     ["Language", input.requestLocale],
     ["From", input.source],

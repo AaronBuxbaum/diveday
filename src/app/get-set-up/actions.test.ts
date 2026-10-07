@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppDb } from "@/db/client";
+import { recordSetupRequest } from "@/db/funnel";
 import { setupRequests } from "@/db/schema";
+import { nowDate } from "@/lib/clock";
 import { ONBOARDING_EMAIL } from "@/lib/platform-mail";
+import { SETUP_REQUESTS_PER_HOUR } from "@/lib/setup-requests";
 import { seededTestDb } from "@/test/db";
 import { nextHeadersStub } from "@/test/next-headers";
 
@@ -140,12 +143,18 @@ describe("submitSetupRequestAction", () => {
   });
 
   it("answers a bot exactly like a person and stores, sends and counts nothing", async () => {
+    const lines = vi.spyOn(console, "log").mockImplementation(() => {});
     expect(await submit(setUpForm({ website: "https://cheap-pills.example" }))).toEqual({
       redirect: "/get-set-up/sent",
     });
     expect(await db.select().from(setupRequests)).toEqual([]);
     expect(notify).not.toHaveBeenCalled();
     expect(trackEvent).not.toHaveBeenCalled();
+    // Counted in the drain, and nothing the bot typed rides along.
+    const logged = lines.mock.calls.map((call) => String(call[0]));
+    expect(logged.some((line) => line.includes("setup_request.honeypot_tripped"))).toBe(true);
+    expect(logged.join("\n")).not.toMatch(/cheap-pills|Reef Line|reefline/i);
+    lines.mockRestore();
   });
 
   it("names each refused field and hands back what was typed", async () => {
@@ -172,6 +181,47 @@ describe("submitSetupRequestAction", () => {
     expect(state?.formError).toBe("rate_limited");
     expect(checkRateLimit).toHaveBeenCalledTimes(2);
     expect(await db.select().from(setupRequests)).toEqual([]);
+  });
+
+  it("holds the hourly cap from the table itself, whatever the in-memory bucket says", async () => {
+    const stored = {
+      shopName: "Earlier Shop",
+      region: "Somewhere",
+      runsBoat: false,
+      currentSystem: "paper" as const,
+      contactName: "Someone",
+      email: "someone@example.com",
+      phone: null,
+      source: "pricing" as const,
+      locale: "en-US",
+    };
+    const tenMinutesAgo = new Date(nowDate().getTime() - 10 * 60 * 1000);
+    for (let i = 0; i < SETUP_REQUESTS_PER_HOUR; i += 1) {
+      await recordSetupRequest(db, { ...stored, at: tenMinutesAgo });
+    }
+    const { state } = await submit(setUpForm());
+    expect(state?.formError).toBe("rate_limited");
+    expect(await db.select().from(setupRequests)).toHaveLength(SETUP_REQUESTS_PER_HOUR);
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it("lets a request through once the last hour's requests have aged out", async () => {
+    const twoHoursAgo = new Date(nowDate().getTime() - 2 * 60 * 60 * 1000);
+    for (let i = 0; i < SETUP_REQUESTS_PER_HOUR; i += 1) {
+      await recordSetupRequest(db, {
+        shopName: "Earlier Shop",
+        region: "Somewhere",
+        runsBoat: false,
+        currentSystem: "paper",
+        contactName: "Someone",
+        email: "someone@example.com",
+        phone: null,
+        source: "pricing",
+        locale: "en-US",
+        at: twoHoursAgo,
+      });
+    }
+    expect(await submit(setUpForm())).toEqual({ redirect: "/get-set-up/sent" });
   });
 
   it("does not spend the global bucket on an invalid request", async () => {

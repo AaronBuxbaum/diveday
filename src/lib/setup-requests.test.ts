@@ -96,6 +96,24 @@ describe("parseSetupRequest", () => {
     expect(parsed.fieldErrors).toEqual({ shopName: "invalid", region: "invalid" });
   });
 
+  it("refuses format characters and Unicode line separators that hide or break a line", () => {
+    for (const contactName of [
+      "Ana\u202eziuR",
+      "Ana\u200dRuiz",
+      "Ana\u2028Ruiz",
+      "Ana\u2029Ruiz",
+    ]) {
+      const parsed = parseSetupRequest({ ...complete, contactName });
+      expect(parsed.ok).toBe(false);
+      if (parsed.ok) continue;
+      expect(parsed.fieldErrors).toEqual({ contactName: "invalid" });
+    }
+  });
+
+  it("keeps accented and non-Latin names", () => {
+    expect(parseSetupRequest({ ...complete, contactName: "José Núñez 李" }).ok).toBe(true);
+  });
+
   it("takes a phone written the ways people write one, and refuses anything else", () => {
     expect(parseSetupRequest({ ...complete, phone: "+1 (305) 555-0100" }).ok).toBe(true);
     const parsed = parseSetupRequest({ ...complete, phone: "<b>call me</b>" });

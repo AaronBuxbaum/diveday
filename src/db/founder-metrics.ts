@@ -162,6 +162,17 @@ export async function recordShopMilestone(
   db: DbExecutor,
   input: { shopId: string; milestone: ShopMilestone; at?: Date },
 ): Promise<void> {
+  // Read by primary key first: after its first time a shop has this row for
+  // good, and every later booking would otherwise pay for the real-shop
+  // check's join to reach a no-op insert.
+  const [reached] = await db
+    .select({ shopId: shopMilestones.shopId })
+    .from(shopMilestones)
+    .where(
+      and(eq(shopMilestones.shopId, input.shopId), eq(shopMilestones.milestone, input.milestone)),
+    )
+    .limit(1);
+  if (reached) return;
   const [shop] = await db
     .select({ id: shops.id })
     .from(shops)

@@ -69,26 +69,39 @@ export type SetupField = (typeof SETUP_FIELDS)[number];
 /** Why one field was refused. The page picks the sentence. */
 export type SetupFieldError = "required" | "invalid";
 
+/**
+ * **The real cap on set-up requests**, from everyone together, per rolling
+ * hour. Each one mails the onboarding inbox, so the per-IP limit alone would
+ * let a rotating pool of addresses fill it. Counted from the table before each
+ * insert, so it holds across server instances, which the in-memory rate-limit
+ * bucket does not. Thirty is far above any real week and well below a flood.
+ */
+export const SETUP_REQUESTS_PER_HOUR = 30;
+
 export const SETUP_TEXT_MAX = 120;
 export const SETUP_PHONE_MAX = 30;
 
 /**
- * Line breaks and other control characters are refused in every typed
- * answer: each one lands in a mail (the shop name and region in its subject),
- * and none belongs in a one-line answer.
+ * Line breaks, control and format characters (bidi overrides, zero-width
+ * joiners) and the Unicode line and paragraph separators are refused in every
+ * typed answer: each one lands in a mail (the shop name and region in its
+ * subject), where they can break a header or disguise what the text says, and
+ * none belongs in a one-line answer. Shared with the `setup_request_alert`
+ * notification schema, so the mail refuses them even if a caller skipped this
+ * parser.
  */
-const CONTROL_CHARACTER = /\p{Cc}/u;
+const UNSAFE_CHARACTER = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
+
+/** Whether a one-line answer is free of every character `UNSAFE_CHARACTER` refuses. */
+export function isSingleLineText(value: string): boolean {
+  return !UNSAFE_CHARACTER.test(value);
+}
 
 /** Digits and the punctuation people write phone numbers with, nothing else. */
 const PHONE_SHAPE = /^[+\d\s().-]*$/;
 
 const requiredText = (max: number) =>
-  z
-    .string()
-    .trim()
-    .min(1, "required")
-    .max(max, "invalid")
-    .refine((value) => !CONTROL_CHARACTER.test(value), "invalid");
+  z.string().trim().min(1, "required").max(max, "invalid").refine(isSingleLineText, "invalid");
 
 const setupRequestSchema = z.object({
   shopName: requiredText(SETUP_TEXT_MAX),

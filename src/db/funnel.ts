@@ -1,4 +1,4 @@
-import { and, count, eq, gte, isNull, lt } from "drizzle-orm";
+import { and, count, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import { nowDate } from "@/lib/clock";
 import type { DemoRoleId } from "@/lib/demo-roles";
 import type { SourceCount } from "@/lib/founder-metrics";
@@ -63,6 +63,18 @@ export async function recordSetupRequest(
   return row;
 }
 
+/**
+ * Set-up requests stored at or after `since`. The global cap's count
+ * (`SETUP_REQUESTS_PER_HOUR`), read on `setup_requests_created_idx`.
+ */
+export async function countSetupRequestsSince(db: DbExecutor, since: Date): Promise<number> {
+  const [row] = await db
+    .select({ count: count() })
+    .from(setupRequests)
+    .where(gte(setupRequests.createdAt, since));
+  return row?.count ?? 0;
+}
+
 /** The onboarding mail for this request left. */
 export async function markSetupRequestNotified(
   db: DbExecutor,
@@ -105,4 +117,42 @@ export async function countUnnotifiedSetupRequests(
       ),
     );
   return row?.count ?? 0;
+}
+
+/**
+ * **Erase every set-up request a person sent**, by the address they gave
+ * (ADR 20261007-setup-request-form). The table belongs to no shop, so no
+ * shop's erasure reaches it: this is the one way its rows leave, run when
+ * someone asks DiveDay to forget them. Matched case-insensitively, because the
+ * form stores the address lowered and a request to forget may not be. Returns
+ * how many rows went, so the reply to the person can say so.
+ */
+export async function deleteSetupRequestsByEmail(db: DbExecutor, email: string): Promise<number> {
+  const address = email.trim().toLowerCase();
+  if (!address) return 0;
+  const gone = await db
+    .delete(setupRequests)
+    .where(eq(sql`lower(${setupRequests.email})`, address))
+    .returning({ id: setupRequests.id });
+  return gone.length;
+}
+
+/**
+ * The same erasure by phone number, for a person who gave one and asks by it.
+ * The form stores the number as typed, so both sides are compared with only
+ * their digits (and a leading `+`) kept: "+1 (305) 555-0100" and
+ * "+13055550100" are one number.
+ */
+export async function deleteSetupRequestsByPhone(db: DbExecutor, phone: string): Promise<number> {
+  const digits = normalizePhone(phone);
+  if (digits.replace("+", "").length === 0) return 0;
+  const gone = await db
+    .delete(setupRequests)
+    .where(eq(sql`regexp_replace(${setupRequests.phone}, '[^0-9+]', '', 'g')`, digits))
+    .returning({ id: setupRequests.id });
+  return gone.length;
+}
+
+function normalizePhone(phone: string): string {
+  return phone.replace(/[^0-9+]/g, "");
 }

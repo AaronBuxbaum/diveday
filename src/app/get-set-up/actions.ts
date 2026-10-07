@@ -3,15 +3,18 @@
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { getDb } from "@/db/client";
-import { recordSetupRequest } from "@/db/funnel";
+import { countSetupRequestsSince, recordSetupRequest } from "@/db/funnel";
 import { requestLocale } from "@/i18n/request";
+import { HOUR_MS, nowDate } from "@/lib/clock";
 import { eventSource, SET_UP_SENT_PATH } from "@/lib/funnel";
+import { log } from "@/lib/log";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { clientIp } from "@/lib/request-ip";
 import {
   parseSetupRequest,
   SETUP_FIELDS,
   SETUP_HONEYPOT_FIELD,
+  SETUP_REQUESTS_PER_HOUR,
   type SetupField,
   type SetupRequestFormState,
   trippedHoneypot,
@@ -34,7 +37,9 @@ const ECHO_MAX = 400;
  * 3. **Validation**, answered field by field with what the reader typed handed
  *    back, so a refusal never empties the form.
  * 4. **The global limit**, after the two checks that cost nothing, so junk
- *    cannot drain the bucket an honest request needs.
+ *    cannot drain the bucket an honest request needs: the in-memory bucket as
+ *    a first filter, then the real cap, counted in `setup_requests` over the
+ *    last hour, because the bucket is per server instance.
  *
  * The mail and the event run in `after()`: the row is written before the
  * redirect, and nothing the reader is waiting on queues behind SES.
@@ -57,7 +62,11 @@ export async function submitSetupRequestAction(
   );
   if (!byIp.allowed) return { formError: "rate_limited", values };
 
-  if (trippedHoneypot(formData.get(SETUP_HONEYPOT_FIELD))) redirect(SET_UP_SENT_PATH);
+  if (trippedHoneypot(formData.get(SETUP_HONEYPOT_FIELD))) {
+    // A count, so a bot wave shows in the drain; nothing it typed is logged.
+    log("setup_request.honeypot_tripped", "info");
+    redirect(SET_UP_SENT_PATH);
+  }
 
   const parsed = parseSetupRequest(values);
   if (!parsed.ok) return { fieldErrors: parsed.fieldErrors, values };
@@ -68,7 +77,13 @@ export async function submitSetupRequestAction(
   );
   if (!everyone.allowed) return { formError: "rate_limited", values };
 
-  const row = await recordSetupRequest(await getDb(), {
+  const db = await getDb();
+  const hourAgo = new Date(nowDate().getTime() - HOUR_MS);
+  if ((await countSetupRequestsSince(db, hourAgo)) >= SETUP_REQUESTS_PER_HOUR) {
+    return { formError: "rate_limited", values };
+  }
+
+  const row = await recordSetupRequest(db, {
     ...parsed.data,
     source: eventSource(formData.get("source")),
     locale: await requestLocale(),

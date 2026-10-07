@@ -444,10 +444,12 @@ export const RATE_LIMITS = {
    */
   setupRequestByIp: perHour(5),
   /**
-   * Set-up requests, **across everyone**. Each one mails the onboarding inbox,
-   * so the per-IP bucket alone would let a rotating pool fill it; thirty an
-   * hour is far above any real week and well below a flood. An empty bucket
-   * refuses the request with the rate-limit sentence, never silently.
+   * Set-up requests from every IP together, as a cheap first filter. Like
+   * every bucket here it is per server instance unless the distributed store is
+   * configured (ADR 20260801-distributed-rate-limit-store), so it is not the
+   * cap: the cap is `SETUP_REQUESTS_PER_HOUR`, counted in `setup_requests`
+   * itself before each insert (ADR 20261007-setup-request-form). An empty
+   * bucket refuses the request with the rate-limit sentence, never silently.
    */
   setupRequestGlobal: perHour(30),
   /**

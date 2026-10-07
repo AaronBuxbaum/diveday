@@ -8,7 +8,12 @@ import { SHOP_MILESTONES } from "@/lib/founder-metrics";
 import { REPLY_BODY_MAX_LENGTH } from "@/lib/inbox";
 import { DIVER_EMAIL_MAX } from "@/lib/person-fields";
 import { REMINDER_ACTION_CODES } from "@/lib/readiness-summary";
-import { SETUP_CURRENT_SYSTEMS, SETUP_PHONE_MAX, SETUP_TEXT_MAX } from "@/lib/setup-requests";
+import {
+  isSingleLineText,
+  SETUP_CURRENT_SYSTEMS,
+  SETUP_PHONE_MAX,
+  SETUP_TEXT_MAX,
+} from "@/lib/setup-requests";
 
 /**
  * Every kind of notification DiveDay sends, as a discriminated union of zod
@@ -678,17 +683,25 @@ const usageCeilingAlertSchema = z.object({
  * the row in `setup_requests` is the durable copy, and its `notified_at`
  * stays null when this send fails so the founder digest can say so.
  */
+/**
+ * One answer a stranger typed, bound for the alert's subject or body: the same
+ * single-line rule the form's parser applies, held again here so the mail
+ * refuses a line break or a bidi override even from a caller that skipped it.
+ */
+const setupAnswerSchema = (max: number) =>
+  z.string().trim().min(1).max(max).refine(isSingleLineText, "unsafe character");
+
 const setupRequestAlertSchema = z.object({
   kind: z.literal("setup_request_alert"),
   setupRequestId: z.uuid(),
   to: emailAddressSchema,
-  shopName: z.string().trim().min(1).max(SETUP_TEXT_MAX),
-  region: z.string().trim().min(1).max(SETUP_TEXT_MAX),
+  shopName: setupAnswerSchema(SETUP_TEXT_MAX),
+  region: setupAnswerSchema(SETUP_TEXT_MAX),
   runsBoat: z.boolean(),
   currentSystem: z.enum(SETUP_CURRENT_SYSTEMS),
-  contactName: z.string().trim().min(1).max(SETUP_TEXT_MAX),
+  contactName: setupAnswerSchema(SETUP_TEXT_MAX),
   contactEmail: emailAddressSchema,
-  contactPhone: z.string().trim().min(1).max(SETUP_PHONE_MAX).optional(),
+  contactPhone: setupAnswerSchema(SETUP_PHONE_MAX).optional(),
   /** A `FunnelSource` clamped by `eventSource`, or "unknown". */
   source: z.string().trim().min(1).max(60),
   /** The language the reader filled the form in. */
