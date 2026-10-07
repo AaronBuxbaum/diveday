@@ -298,6 +298,16 @@ export default async function EditDiveSitePage({
       planningNote: planningNoteWords,
       ...siteFields
     } = parsed.fields;
+    // Only a photo no other site still shows may be deleted once this saves: a
+    // copied site, or another shop's row naming the same object, keeps it alive
+    // (issue #2078). Asked before the write, while this site still holds them,
+    // because the reader only answers for photos this shop holds.
+    const released = await diveSitePhotosNoOtherSiteHolds(
+      activeDb,
+      activeSession.user.shopId,
+      id,
+      supersededDiveSitePhotos(stored, photos.photos),
+    );
     const updated = await updateDiveSiteForForm(
       activeDb,
       activeSession.user.shopId,
@@ -350,14 +360,8 @@ export default async function EditDiveSitePage({
     if (!updated) notFound();
     // Only once the row is durably saved: a photo this save replaced or
     // removed is queued for provider deletion, never blocked on storage and
-    // owner-visible if it fails (CR-012).
-    // Only a photo no other site still shows: a copied site, or another
-    // shop's row naming the same object, keeps it alive (issue #2078).
-    const released = await diveSitePhotosNoOtherSiteHolds(
-      activeDb,
-      id,
-      supersededDiveSitePhotos(stored, photos.photos),
-    );
+    // owner-visible if it fails (CR-012). Which ones was decided before the
+    // save, above.
     for (const url of released) {
       await queueAndAttemptMediaDeletion(activeDb, {
         shopId: activeSession.user.shopId,

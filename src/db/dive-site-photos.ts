@@ -55,9 +55,10 @@ export async function diveSitePhotoUrlsHeldByShop(db: AppDb, shopId: string): Pr
 }
 
 /**
- * **The photos among `urls` that no other dive site still holds** — the only
- * ones a save that took them off `siteId` may delete from storage (issue
- * #2078).
+ * **The photos among `urls` that this shop holds and no other dive site
+ * does** — the only ones a save taking them off `siteId` may delete from
+ * storage (issue #2078). Call it *before* that save writes, while `siteId`
+ * still holds them.
  *
  * A stored URL can sit on more than one row: `copyDiveSite` carries the
  * original's photos onto the copy, and before #2078 an import could name any
@@ -66,24 +67,36 @@ export async function diveSitePhotoUrlsHeldByShop(db: AppDb, shopId: string): Pr
  * when that row is another shop's, the failed picture is on their public page
  * while the deletion is filed under this shop, where they never see it.
  *
- * **This reads across shops on purpose, and returns nothing about them.** The
- * answer is a subset of `urls` the caller already holds; no other shop's row,
- * id or field leaves this function. Deleted sites count: a restore brings them
+ * **This reads across shops on purpose, and answers nothing about them.**
+ * `urls` is first cut down to what this shop's own sites hold
+ * (`diveSitePhotoUrlsHeldByShop`), so a caller can only ever ask about photos
+ * it already has, and the answer is a subset of those; no other shop's row, id
+ * or field leaves this function. Deleted sites count: a restore brings them
  * back with their photos.
+ *
+ * The catalog (`global_dive_site_versions`) is not a holder: its briefings name
+ * only bundled root-relative paths under `public/`, which storage never
+ * deletes (`queueMediaDeletion` refuses them), and `dive-site-photos.test.ts`
+ * holds every template to that.
  */
 export async function diveSitePhotosNoOtherSiteHolds(
   db: AppDb,
+  shopId: string,
   siteId: string,
   urls: readonly string[],
 ): Promise<string[]> {
   if (urls.length === 0) return [];
-  const wanted = new Set(urls);
+  const ours = await diveSitePhotoUrlsHeldByShop(db, shopId);
+  const wanted = new Set(urls.filter((url) => ours.has(url)));
+  if (wanted.size === 0) return [];
   const list = sql`array[${sql.join(
-    urls.map((url) => sql`${url}`),
+    [...wanted].map((url) => sql`${url}`),
     sql`, `,
   )}]::text[]`;
   // Narrowed in SQL to the rows naming one of `urls`, so a save reads the
   // handful of sites sharing a photo rather than every site on the platform.
+  // `landmarks` is guarded to an array first: `jsonb_array_elements` raises on
+  // anything else, and one malformed row anywhere must not fail every save.
   const others = await db
     .select(photoColumns)
     .from(diveSites)
@@ -94,10 +107,10 @@ export async function diveSitePhotosNoOtherSiteHolds(
           inArray(diveSites.satelliteImageUrl, [...wanted]),
           inArray(diveSites.routeImageUrl, [...wanted]),
           sql`${diveSites.imageUrls} ?| ${list}`,
-          sql`exists (select 1 from jsonb_array_elements(${diveSites.landmarks}) as landmark where jsonb_typeof(landmark) = 'object' and landmark->>'photoUrl' = any(${list}))`,
+          sql`exists (select 1 from jsonb_array_elements(case when jsonb_typeof(${diveSites.landmarks}) = 'array' then ${diveSites.landmarks} else '[]'::jsonb end) as landmark where jsonb_typeof(landmark) = 'object' and landmark->>'photoUrl' = any(${list}))`,
         ),
       ),
     );
   const held = new Set(others.flatMap(photoUrlsOf).filter((url) => wanted.has(url)));
-  return urls.filter((url) => !held.has(url));
+  return [...wanted].filter((url) => !held.has(url));
 }
