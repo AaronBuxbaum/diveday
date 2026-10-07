@@ -2,19 +2,20 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
-import { LedgerRow } from "@/components/ui/ledger";
 import { FIGURE_HERO_CLASS } from "@/components/ui/typography";
 import { type CheckInQueueRow, listCheckInQueue } from "@/db/check-in";
 import type { AppDb } from "@/db/client";
 import { noShowSalvage } from "@/db/no-show";
+import { welcomeCueInputsByBooking } from "@/db/welcome-cues";
 import type { StaffTranslator } from "@/i18n/staff-messages";
+import { welcomeCueText } from "@/i18n/welcome-cue-labels";
 import { counterIsClear, counterTally, isNoShowAtCounter } from "@/lib/check-in";
 import { formatWeekdayTime } from "@/lib/format";
 import { type NoShowClaim, noShowClaim, noShowGate } from "@/lib/no-show";
 import { arrivalsWindow } from "@/lib/operational-window";
 import { paperPassPath } from "@/lib/print-sheets";
-import { shopPath } from "@/lib/staff-notices";
 import { hasSailed } from "@/lib/trips";
+import { welcomeCueFor } from "@/lib/welcome-cue";
 import type { RosterArrival } from "../_components/RosterSection";
 import { ArrivalTap } from "./ArrivalTap";
 import { checkInAction, markNoShowAction, undoCheckInAction, undoNoShowAction } from "./actions";
@@ -27,8 +28,12 @@ import { noShowSalvageCopy } from "./salvage-copy";
 export type ArrivalDesk = {
   /** The count, the taps and the groups the roster draws (`RosterSection`'s `arrival`). */
   arrival: RosterArrival;
-  /** The walk-in door, while the boat can still seat one. */
-  walkIn: ReactNode;
+  /**
+   * Whether the boat can still seat a walk-in. The door itself is the add-a-
+   * diver search's empty result (UX audit 2026-10-07, item 24), not a row of
+   * its own.
+   */
+  walkInOpen: boolean;
 };
 
 /**
@@ -47,7 +52,7 @@ export function deskIsOpen(trip: { status: string; startsAt: Date }, now: Date):
  * the same blockers and the same fixes; arrival is a state of the roster now,
  * and this is the part of the old counter that the roster does not already
  * have: the count, the check-in tap and its undo, "Not here" and the released
- * seat's next step, the paper pass, and the walk-in door.
+ * seat's next step, the paper pass, and whether a walk-in can still be seated.
  *
  * Every fix for a blocked diver — the waiver, the paper release, the identity
  * confirm, payment — is the roster row's own, so a blocked row gets no
@@ -78,7 +83,10 @@ export async function buildArrivalDesk({
   t: StaffTranslator;
 }): Promise<ArrivalDesk | null> {
   if (!deskIsOpen(trip, now)) return null;
-  const rows = await listCheckInQueue(db, shopId, { now, tripId });
+  const [rows, welcomeInputs] = await Promise.all([
+    listCheckInQueue(db, shopId, { now, tripId }),
+    welcomeCueInputsByBooking(db, shopId, tripId, now),
+  ]);
 
   const checkIn = checkInAction.bind(null, shopSlug, tripId);
   const undo = undoCheckInAction.bind(null, shopSlug, tripId);
@@ -226,6 +234,36 @@ export async function buildArrivalDesk({
     }
   }
 
+  // **The welcome word, at the counter** (UX audit 2026-10-07, item 46): the
+  // same consented cue the manifest wears under a name and Today's "Say hello"
+  // row names, on the row the desk is looking at when the diver walks up.
+  // `welcomeCueFor` answers nothing without the diver's own consent stamp, and
+  // nothing an hour after the boat is home. What a diver said they came for
+  // stays a count (D12): it names nobody, which is what lets it be asked.
+  for (const row of rows) {
+    if (row.bookingStatus === "no_show") continue;
+    const inputs = welcomeInputs.get(row.bookingId);
+    const cue = inputs ? welcomeCueFor({ ...inputs, tripEndsAt: row.endsAt, now }) : null;
+    if (!cue) continue;
+    const line = (
+      <p key="welcome" className="mt-1 text-sm text-muted">
+        {welcomeCueText(t, cue)}
+      </p>
+    );
+    const existing = below.get(row.bookingId);
+    below.set(
+      row.bookingId,
+      existing ? (
+        <>
+          {line}
+          {existing}
+        </>
+      ) : (
+        line
+      ),
+    );
+  }
+
   // **The figure and its remainders** read off one tally
   // (`src/lib/check-in.ts`), so nobody has to subtract to check. "Here" is
   // arrival — checked in and cleared to board. Whether the desk is *finished*
@@ -264,34 +302,8 @@ export async function buildArrivalDesk({
   const boarded = new Set(rows.filter((row) => row.boarded).map((row) => row.bookingId));
 
   // A walk-in can only be seated on a boat that has not left: the seat action
-  // refuses one that is underway, so the door is not drawn there.
-  const walkIn = hasSailed(trip.startsAt, now) ? null : (
-    <div className="mt-4 border-t border-border print:hidden">
-      <LedgerRow
-        as="div"
-        size="lg"
-        href={shopPath(shopSlug, "trips", tripId, "walk-in")}
-        linkLabel={t("checkIn.walkInAction")}
-        closed={false}
-        leading={
-          <svg
-            aria-hidden="true"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={1.8}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="size-[18px] text-primary"
-          >
-            <path d="M12 5v14M5 12h14" />
-          </svg>
-        }
-      >
-        <span className="font-medium text-primary">{t("checkIn.walkInAction")}</span>
-      </LedgerRow>
-    </div>
-  );
+  // refuses one that is underway, so the door is not offered there.
+  const walkInOpen = !hasSailed(trip.startsAt, now);
 
-  return { arrival: { instrument, controls, below, boarded }, walkIn };
+  return { arrival: { instrument, controls, below, boarded }, walkInOpen };
 }

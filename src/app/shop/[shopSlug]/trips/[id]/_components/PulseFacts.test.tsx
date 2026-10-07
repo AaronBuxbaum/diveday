@@ -15,7 +15,12 @@ describe("PulseFacts (UX audit item 23)", () => {
   });
 
   it("keeps a single work fact as its own link", () => {
-    render(<PulseFacts facts={[{ text: "1 order is awaiting payment", href: "/o" }]} foldLabel={label} />);
+    render(
+      <PulseFacts
+        facts={[{ text: "1 order is awaiting payment", href: "/o" }]}
+        foldLabel={label}
+      />,
+    );
     expect(screen.getByRole("link", { name: "1 order is awaiting payment" })).toBeVisible();
     expect(screen.queryByText(/before boarding/)).toBeNull();
   });

@@ -40,10 +40,12 @@ describe("the shop home's pinned sentences", () => {
   it("names the divers blocked today, the same figure the Today badge carries", () => {
     expect(
       daySpineSummaryText(t, { boats: 2, blocked: 4, jobs: 3, nextDepartureTime: "5:30 AM" }),
-    ).toBe("2 boats today, 4 divers blocked. 3 things need you before the 5:30 AM leaves the dock.");
-    expect(
-      daySpineSummaryText(t, { boats: 1, blocked: 1, jobs: 1, nextDepartureTime: null }),
-    ).toBe("1 boat today, 1 diver blocked. 1 thing still needs you.");
+    ).toBe(
+      "2 boats today, 4 divers blocked. 3 things need you before the 5:30 AM leaves the dock.",
+    );
+    expect(daySpineSummaryText(t, { boats: 1, blocked: 1, jobs: 1, nextDepartureTime: null })).toBe(
+      "1 boat today, 1 diver blocked. 1 thing still needs you.",
+    );
   });
 
   it("keeps the deadline half even when nothing is open before that boat", () => {

@@ -324,6 +324,7 @@
     "noMatches": "Ningún buceador habitual coincide con “{query}”.",
     "nameLabel": "Nombre",
     "addToWaitlist": "Añadir a la lista de espera",
+    "addAsWalkIn": "Añadir como walk-in",
     "noMatchesHeading": "Ningún buceador habitual con ese nombre",
     "addDiver": "Añadir buceador",
     "addNewDiverAction": "Añadir buceador"

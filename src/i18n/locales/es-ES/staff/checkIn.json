@@ -43,7 +43,6 @@
   },
   "undoAriaLabel": "Deshacer el check-in de {name}",
   "undoing": "Deshaciendo…",
-  "walkInAction": "Añadir un walk-in",
   "notice": {
     "notReady": "Algo ha cambiado y todavía no puede embarcar. Su fila dice qué lo impide.",
     "notBookable": "Esa reserva ya no está disponible para el check-in.",

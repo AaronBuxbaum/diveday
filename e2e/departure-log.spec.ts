@@ -18,9 +18,7 @@ signedInAsOwner();
  * 20260804-incident-export-owner-gate, amendment 2026-10-07). The live Today
  * card is the day's briefing and no longer carries it.
  */
-test("the Details tab opens the log with the recorded facts", async ({
-  page,
-}) => {
+test("the Details tab opens the log with the recorded facts", async ({ page }) => {
   // Board → trip → manifest, one roll-call write, the home, then the log —
   // several full server round trips over a 9-diver manifest.
   test.setTimeout(45_000);

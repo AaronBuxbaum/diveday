@@ -3930,13 +3930,13 @@ for (const scheme of ["light", "dark"] as const) {
       // diver's own row. Priya Sharma is seeded blocked on a boat inside the
       // arrivals window, so the frame holds the instrument above the roster, a
       // blocked row with its reasons and no tap, cleared rows ending in their
-      // check-in taps, and the walk-in door under "Add a diver".
+      // check-in taps, and "Add a diver" as one search field.
       test(`the desk on a departure's Divers tab renders true to the design (${scheme})`, async ({
         page,
       }) => {
         await openCounterFor(page, "blue-mantis", "Priya Sharma");
         await page.getByText(/^\d+ of \d+ here$/).waitFor();
-        await page.getByRole("link", { name: "Add a walk-in" }).waitFor();
+        await page.getByRole("searchbox", { name: "Find a returning diver" }).waitFor();
         await capture(page, "trip-desk", scheme);
       });
 

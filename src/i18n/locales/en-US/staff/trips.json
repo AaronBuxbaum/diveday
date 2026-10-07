@@ -324,6 +324,7 @@
     "noMatches": "No returning diver matches “{query}”.",
     "nameLabel": "Name",
     "addToWaitlist": "Add to wait list",
+    "addAsWalkIn": "Add as a walk-in",
     "noMatchesHeading": "No returning diver by that name",
     "addDiver": "Add diver",
     "addNewDiverAction": "Add diver"

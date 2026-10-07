@@ -58,9 +58,9 @@ import { DESK_NOTICES } from "./_arrivals/notices";
 import { ConditionsSection } from "./_components/ConditionsSection";
 import { CopyLinkButton } from "./_components/CopyLinkButton";
 import { CrewSection } from "./_components/CrewSection";
+import { DepartureLogLink } from "./_components/DepartureLogLink";
 import { DetailsSection } from "./_components/DetailsSection";
 import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
-import { DepartureLogLink } from "./_components/DepartureLogLink";
 import { PrintTripBundleButton } from "./_components/PrintTripBundleButton";
 import { PulseFacts } from "./_components/PulseFacts";
 import { RequirementsSection } from "./_components/RequirementsSection";
@@ -1166,7 +1166,7 @@ export default async function ManageTripPage({
 
             <TripRosterContent
               arrival={desk?.arrival}
-              walkIn={desk?.walkIn}
+              walkInOpen={desk?.walkInOpen}
               acceptsDivers={acceptsDivers}
               guests={guests}
               shopSlug={shopSlug}

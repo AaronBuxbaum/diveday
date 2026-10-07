@@ -37,6 +37,36 @@ describe("AddDiverSection", () => {
     );
   });
 
+  it("is one search field at the counter, whose empty result offers the walk-in (UX audit item 24)", () => {
+    const props = {
+      shopSlug: "blue-mantis",
+      tripId: "trip-1",
+      full: false,
+      candidates: [],
+      addBookingAction: action,
+      addToWaitlistAction: action,
+      addExistingDiverAction: action,
+      locale: "en-US",
+      timeZone: "America/Cancun",
+      walkInOpen: true,
+    };
+    const { rerender } = render(<AddDiverSection {...props} query="" />);
+    expect(screen.getByRole("searchbox")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Add diver" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Add as a walk-in" })).toBeNull();
+
+    rerender(<AddDiverSection {...props} query="Zed Quill" />);
+    expect(screen.getByRole("link", { name: "Add as a walk-in" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/divers/new?name=Zed+Quill&surface=walk-in&tripId=trip-1",
+    );
+    // A phone booking for tomorrow is not a walk-in: its door stays beside.
+    expect(screen.getByRole("link", { name: "Add diver" })).toHaveAttribute(
+      "href",
+      "/shop/blue-mantis/divers/new?name=Zed+Quill&surface=trip-guests&tripId=trip-1",
+    );
+  });
+
   it("offers waitlist addition directly when trip is full", () => {
     render(
       <AddDiverSection
