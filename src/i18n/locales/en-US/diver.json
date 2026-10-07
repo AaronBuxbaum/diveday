@@ -472,6 +472,14 @@
     "confirmedTitle": "You’re unsubscribed",
     "confirmedText": "You won’t get optional emails from {shopName} anymore. You’ll still get emails about your own bookings, waivers, and trip updates."
   },
+  "weeklyDigestUnsubscribe": {
+    "title": "Stop the Monday email?",
+    "description": "Every Monday you get a summary of the week at {shopName}. You can turn it back on from your email settings.",
+    "submit": "Stop the Monday email",
+    "submitting": "Stopping…",
+    "confirmedTitle": "The Monday email is off",
+    "confirmedText": "You won’t get the weekly summary from {shopName} anymore. Turn it back on from your email settings."
+  },
   "contactConfirm": {
     "title": "Confirm this address for {shopName}?",
     "description": "Divers who reply to {shopName}’s emails will reach {email}.",
@@ -4076,6 +4084,46 @@
       "body": "Once confirmed, a diver who replies to a booking, waiver or reminder email from {shopName} reaches this inbox.",
       "confirm": "Confirm this address",
       "expiry": "This link expires {expiresAt}. If nobody at {shopName} asked for this, you can ignore it."
+    },
+    "weeklyDigest": {
+      "subject": "Your week at {shopName}",
+      "lastWeek": {
+        "heading": "Last week, {range}",
+        "bookings": "{count, plural, =0 {No new bookings.} one {# new booking.} other {# new bookings.}}",
+        "sailed": "{departures, plural, one {# departure} other {# departures}} sailed with {filled} of {seats} seats filled ({percent}%).",
+        "link": "Open Reports"
+      },
+      "thisWeek": {
+        "heading": "This week, {range}",
+        "board": "{departures, plural, one {# departure} other {# departures}} on the board, {filled} of {seats} seats booked ({percent}%).",
+        "link": "Open the schedule"
+      },
+      "waivers": {
+        "heading": "Waivers",
+        "body": "{divers, plural, one {# diver still needs} other {# divers still need}} a signed waiver, across {departures, plural, one {# departure} other {# departures}} this week.",
+        "link": "Open Today"
+      },
+      "reviews": {
+        "heading": "Reviews",
+        "received": "{count, plural, one {# new review} other {# new reviews}} last week.",
+        "waiting": "{count, plural, one {# review is waiting on you.} other {# reviews are waiting on you.}}",
+        "link": "Moderate reviews"
+      },
+      "dateRequests": {
+        "heading": "Date requests",
+        "body": "{count, plural, one {# request for a day that is not on the board.} other {# requests for days that are not on the board.}}",
+        "link": "Open requests"
+      },
+      "overdue": {
+        "heading": "Overdue",
+        "body": "{count, plural, one {# thing on Today is past due.} other {# things on Today are past due.}}",
+        "link": "Open Today"
+      },
+      "zoneNote": "Weeks run Monday to Sunday, {zone}.",
+      "why": "You get this every Monday as staff at {shopName}.",
+      "settings": "Email settings",
+      "turnOff": "Stop these emails",
+      "quietWeek": "Nothing happened last week and nothing is on the board this week, so no email goes out this Monday."
     },
     "staffInvite": {
       "subject": "{inviterName} invited you to {shopName} on DiveDay",

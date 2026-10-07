@@ -472,6 +472,14 @@
     "confirmedTitle": "Te has dado de baja",
     "confirmedText": "Ya no recibirás correos opcionales de {shopName}. Seguirás recibiendo correos sobre tus propias reservas, exenciones y actualizaciones de viaje."
   },
+  "weeklyDigestUnsubscribe": {
+    "title": "¿Dejar de recibir el correo de los lunes?",
+    "description": "Cada lunes recibes un resumen de la semana en {shopName}. Puedes volver a activarlo desde tus ajustes de correo.",
+    "submit": "Dejar de recibir el correo de los lunes",
+    "submitting": "Guardando…",
+    "confirmedTitle": "El correo de los lunes está desactivado",
+    "confirmedText": "Ya no recibirás el resumen semanal de {shopName}. Vuelve a activarlo desde tus ajustes de correo."
+  },
   "contactConfirm": {
     "title": "¿Confirmar esta dirección para {shopName}?",
     "description": "Los buceadores que respondan a los correos de {shopName} llegarán a {email}.",
@@ -4076,6 +4084,46 @@
       "body": "Una vez confirmada, un buceador que responda a un correo de reserva, exención o recordatorio de {shopName} llegará a esta bandeja.",
       "confirm": "Confirmar esta dirección",
       "expiry": "Este enlace caduca el {expiresAt}. Si nadie de {shopName} lo pidió, puedes ignorarlo."
+    },
+    "weeklyDigest": {
+      "subject": "Tu semana en {shopName}",
+      "lastWeek": {
+        "heading": "La semana pasada, {range}",
+        "bookings": "{count, plural, =0 {Ninguna reserva nueva.} one {# reserva nueva.} other {# reservas nuevas.}}",
+        "sailed": "{departures, plural, one {Salió # salida} other {Salieron # salidas}} con {filled} de {seats} plazas ocupadas ({percent} %).",
+        "link": "Abrir Informes"
+      },
+      "thisWeek": {
+        "heading": "Esta semana, {range}",
+        "board": "{departures, plural, one {# salida} other {# salidas}} en la agenda, {filled} de {seats} plazas reservadas ({percent} %).",
+        "link": "Abrir la agenda"
+      },
+      "waivers": {
+        "heading": "Exenciones",
+        "body": "{divers, plural, one {# buceador aún necesita} other {# buceadores aún necesitan}} una exención firmada, en {departures, plural, one {# salida} other {# salidas}} esta semana.",
+        "link": "Abrir Hoy"
+      },
+      "reviews": {
+        "heading": "Reseñas",
+        "received": "{count, plural, one {# reseña nueva} other {# reseñas nuevas}} la semana pasada.",
+        "waiting": "{count, plural, one {# reseña te está esperando.} other {# reseñas te están esperando.}}",
+        "link": "Moderar reseñas"
+      },
+      "dateRequests": {
+        "heading": "Peticiones de fecha",
+        "body": "{count, plural, one {# petición de un día que no está en la agenda.} other {# peticiones de días que no están en la agenda.}}",
+        "link": "Abrir peticiones"
+      },
+      "overdue": {
+        "heading": "Atrasado",
+        "body": "{count, plural, one {# tarea en Hoy está atrasada.} other {# tareas en Hoy están atrasadas.}}",
+        "link": "Abrir Hoy"
+      },
+      "zoneNote": "Las semanas van de lunes a domingo, {zone}.",
+      "why": "Recibes esto cada lunes como parte del equipo de {shopName}.",
+      "settings": "Ajustes de correo",
+      "turnOff": "Dejar de recibir estos correos",
+      "quietWeek": "La semana pasada no hubo actividad y esta semana no hay nada en la agenda, así que este lunes no se envía ningún correo."
     },
     "staffInvite": {
       "subject": "{inviterName} te ha invitado a {shopName} en DiveDay",
