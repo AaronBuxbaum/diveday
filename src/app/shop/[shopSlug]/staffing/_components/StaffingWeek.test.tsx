@@ -286,6 +286,26 @@ describe("StaffingWeek", () => {
    * assignment to make (`gapAct`). A managing viewer gets "Assign ›" and
    * nothing else.
    */
+  /**
+   * Issue #1677. The two ratio chips sit in the same column, often with no
+   * sentence beside them, and the difference between them is who a manager
+   * goes to find: a divemaster raises the student cap, and only an instructor
+   * raises the intro (DSD / Try Scuba) cap. Each chip says which, in both
+   * locales, and neither says it in the needs-instructor chip's words.
+   */
+  it.each([
+    ["en-US", /divemaster/, /instructor/],
+    ["es-ES", /divemaster/, /instructor/],
+  ] as const)("names who closes each ratio chip in %s", (locale, entry, intro) => {
+    const t = staffTranslator(locale);
+    const over = t("trips.pulse.overRatio");
+    const overIntro = t("trips.pulse.overIntroRatio");
+    expect(over).toMatch(entry);
+    expect(overIntro).toMatch(intro);
+    expect(overIntro).not.toMatch(/divemaster/);
+    expect(overIntro).not.toBe(t("trips.pulse.needsInstructor"));
+  });
+
   it("tells a divemaster their ask adds no seats to an intro-ratio gap", () => {
     const dm = renderWeek({
       gaps: [{ ...GAP, gap: "over_intro_ratio" }],

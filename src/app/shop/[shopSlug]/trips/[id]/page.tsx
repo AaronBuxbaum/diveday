@@ -381,7 +381,11 @@ export default async function ManageTripPage({
         ...(crewGap.code === "over_ratio"
           ? [
               {
-                text: t("trips.pulse.overRatio"),
+                // Two caps, two people to find (issue #1677): a divemaster
+                // raises the student cap and adds nothing to an intro one.
+                text: t(
+                  crewGap.ratio === "intro" ? "trips.pulse.overIntroRatio" : "trips.pulse.overRatio",
+                ),
                 href: "?view=details#crew",
                 tone: "danger" as const,
               },

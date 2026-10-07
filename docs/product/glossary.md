@@ -556,8 +556,8 @@ new domain concept, define it here in the same PR.
   as a booking gate (`INTRO_COURSE_RATIO` in `src/lib/course-ratios.ts`, derived from `DSD_RATIO`);
   the confined-water 4:1 number is recorded for reference, unenforced. A certified assistant aboard
   buys an intro session no extra seats; only another instructor does — which is why the staffing
-  week words this gap apart as "Over intro ratio" rather than the entry-level "Over student ratio"
-  (**Crew gap** below).
+  week words this gap apart as "Over intro ratio: add an instructor" rather than the entry-level
+  "Over student ratio: add a divemaster" (**Crew gap** below).
   Applies to **every agency** — unlike the entry-level ratio below, the *reason* this figure is
   tighter (participants with no prior water time) does not depend on whose logo is on the course, so
   an SSI Try Scuba and a NAUI intro session take the same cap. An intro session stays gated **even
@@ -845,9 +845,10 @@ new domain concept, define it here in the same PR.
   it is kept because a row written out of band still has to resolve correctly. Formerly "coverage
   gap", which named a second vocabulary that no longer exists. **The six words a staffer reads** are
   "No divemaster", "Under target", "Course needs instructor", "No instructor or crew",
-  "Over student ratio" and "Over intro ratio" — "student" says the agency cap rather than the
-  target two rows down, "intro" the one cap a divemaster cannot raise, and all six share the same
-  135px column of the staffing week (issues #1125, #1338, #1339).
+  "Over student ratio: add a divemaster" and "Over intro ratio: add an instructor" — "student"
+  says the agency cap rather than the target two rows down, "intro" the one cap a divemaster cannot
+  raise, each names who a manager goes to find, and all six share the same 135px column of the
+  staffing week (issues #1125, #1338, #1339, #1677).
 - **Self-guided departure** — `trips.self_guided`. A departure the shop has said runs without an
   in-water guide: buddy pairs go in on their own. It silences the shop's own **Target
   diver:divemaster ratio** for that one sailing and reaches nothing else — never an agency training
