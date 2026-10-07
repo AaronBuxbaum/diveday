@@ -38,6 +38,7 @@ import { drysuitCardWarningText, rentalFitLineText } from "@/i18n/rental-labels"
 import { type StaffMessageKey, staffTranslator } from "@/i18n/staff-messages";
 import { ageOnDate, birthdayCallout, isMinorOnDate, maxPlausibleBirthDate } from "@/lib/age";
 import type { CalendarDate } from "@/lib/calendar-date";
+import type { CertificationLevel } from "@/lib/certification-levels";
 import { nowDate } from "@/lib/clock";
 import { mailtoHref, telHref } from "@/lib/contact-links";
 import type { DepthUnit } from "@/lib/depth-units";
@@ -240,6 +241,7 @@ export function RosterSection({
   deleteNoteAction,
   saveEmergencyContactAction,
   certifyDiverAction,
+  certifyDefaultLevel = null,
   saveCourseNextStepAction,
   courseNextStepByBooking,
   updatePickupAction,
@@ -344,6 +346,13 @@ export function RosterSection({
    * roster — a fun dive has no completion to certify.
    */
   certifyDiverAction?: (formData: FormData) => void;
+  /**
+   * The rung this course issues (`courses.certifies_level`, issue #2059) —
+   * where the "Certify diver" select opens, so the instructor confirms rather
+   * than hunts. Still a choice per diver: a student who finished a different
+   * rung, or a specialty, is one change of the select away.
+   */
+  certifyDefaultLevel?: CertificationLevel | null;
   /**
    * What this student does next, in the instructor's own words (issues #1196,
    * #1205) — present under exactly the same condition as `certifyDiverAction`,
@@ -1273,7 +1282,19 @@ export function RosterSection({
                 label={t("trips.roster.certifyLevel")}
                 description={t("trips.roster.certifyLevelHint")}
               >
-                <select name="award" className={controlClass}>
+                {/* Opens on the rung the course issues, or on nothing: a
+                    course that issues none (a specialty, a refresher the shop
+                    wrote itself) must never put a level in front of the
+                    instructor to confirm by reflex (dive-domain review). */}
+                <select
+                  name="award"
+                  required
+                  className={controlClass}
+                  defaultValue={certifyDefaultLevel ?? ""}
+                >
+                  <option value="" disabled>
+                    {t("trips.roster.certifyChoose")}
+                  </option>
                   <optgroup label={t("trips.roster.certifyLevelGroup")}>
                     {Object.entries(CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
                       <option key={value} value={value}>

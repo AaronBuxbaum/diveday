@@ -540,10 +540,12 @@ export async function listShopOrders(
         .leftJoin(bookings, eq(bookings.id, orders.bookingId))
         .leftJoin(trips, eq(trips.id, bookings.tripId))
         .where(where)
-        // `orders.id` breaks ties on the non-unique timestamp, so a row can
-        // never land on two pages (or on none) just because it shares a second
-        // with its neighbour.
-        .orderBy(desc(orders.createdAt), desc(orders.id))
+        // The diver's name, then `orders.id`, break ties on the non-unique
+        // timestamp: the id so a row can never land on two pages (or on none)
+        // just because it shares a second with its neighbour, the name first
+        // so a frozen test clock does not hand the order to a random uuid
+        // (issue #1762).
+        .orderBy(desc(orders.createdAt), asc(people.fullName), desc(orders.id))
         .limit(limit)
         .offset(offset),
   });

@@ -1,3 +1,4 @@
+import { isMarineLifeSlug, type MarineLifeSlug } from "@/db/marine-life-catalog";
 import { MAX_ENTERED_DEPTH_METERS } from "./depth-units";
 import { DIVE_SITE_DIFFICULTIES, type DiveSiteDifficulty } from "./dive-site-difficulty";
 import { type DiveSiteLandmark, parseDiveSiteLandmarks } from "./dive-site-landmarks";
@@ -491,6 +492,130 @@ export function prepareDiveSiteImport(
       imageUrls: imageUrls ?? null,
       planningNote: read(cells, "planning_note"),
       deletedAt,
+      issues,
+    };
+  });
+
+  return { rows, unknownColumns, fatal: null };
+}
+
+/**
+ * **Reading `dive_site_creatures.csv` back** — the field guide each restored
+ * site arrives without otherwise (issue #1841).
+ *
+ * The same contract as {@link prepareDiveSiteImport}: DiveDay's own file, so an
+ * unrecognised column refuses the file rather than being guessed at, and the
+ * same four caps bound it. Only three columns are read — `dive_site_id`,
+ * `catalog_slug` and `position` — because a row *is* a slug and a position;
+ * the name, kind, description, tip and image are DiveDay's own words rendered
+ * into the bundle for a person to read (ADR 20260813-marine-life-is-diveday-copy)
+ * and are recognised so the file is accepted whole, never written.
+ *
+ * **A slug DiveDay no longer carries is dropped, and the row says so**
+ * (`unknown_species`). Keeping it is not an option: a species outside
+ * `MARINE_LIFE_CATALOG` has no words in any locale, so nothing could render
+ * it. Refusing the whole site's guide over it would lose every species that
+ * *can* render for the sake of one that cannot. A counted drop keeps the rest
+ * and tells the staffer one went — the silent drop is the version this
+ * replaces.
+ */
+export const DIVE_SITE_CREATURE_IMPORT_COLUMNS = [
+  "id",
+  "dive_site_id",
+  "dive_site_name",
+  "position",
+  "name",
+  "kind",
+  "description",
+  "preparation_tip",
+  "image_url",
+  "catalog_slug",
+] as const;
+
+type CreatureColumn = (typeof DIVE_SITE_CREATURE_IMPORT_COLUMNS)[number];
+
+export type PreparedDiveSiteCreatureRow = {
+  /** 1-based, counting the header. */
+  rowNumber: number;
+  /** The bundle's site id: a key into the sites file, never a value written. */
+  diveSiteId: string | null;
+  catalogSlug: MarineLifeSlug | null;
+  position: number | null;
+  /** Why this row will be skipped, or empty if it will not be. */
+  issues: string[];
+};
+
+export type PreparedDiveSiteCreaturesImport = {
+  rows: PreparedDiveSiteCreatureRow[];
+  unknownColumns: string[];
+  fatal: PreparedDiveSiteImport["fatal"] | "no_slug_column" | null;
+};
+
+/**
+ * Whether a file's header is the field-guide file's rather than the sites
+ * file's. The two arrive in one upload (one bundle, one import — a shop asked
+ * to run two imports in order will run them in the wrong one), so the action
+ * tells them apart by what they carry, not by what the shop named them.
+ */
+export function isDiveSiteCreaturesCsv(csv: string): boolean {
+  const header = parseCsv(csv.slice(0, 4096))[0] ?? [];
+  const names = new Set(header.map(normalizeHeader));
+  return names.has("catalog_slug") && names.has("dive_site_id");
+}
+
+export function prepareDiveSiteCreaturesImport(csv: string): PreparedDiveSiteCreaturesImport {
+  // The caps the sites half and the contacts importer enforce, for the same
+  // reason: a restore is one server action against a shared database, and a
+  // file of bare rows is the whole attack.
+  if (new TextEncoder().encode(csv).length > MAX_IMPORT_BYTES)
+    return { rows: [], unknownColumns: [], fatal: "file_too_large" };
+  const grid = parseCsv(csv).filter((row) => row.some((cell) => cell.trim() !== ""));
+  const header = grid[0];
+  if (!header) return { rows: [], unknownColumns: [], fatal: "file_empty" };
+  if (header.length > MAX_IMPORT_COLUMNS)
+    return { rows: [], unknownColumns: [], fatal: "too_many_columns" };
+  if (grid.length - 1 > MAX_IMPORT_ROWS)
+    return { rows: [], unknownColumns: [], fatal: "too_many_rows" };
+  if (grid.some((row) => row.some((cell) => cell.length > MAX_IMPORT_CELL_LENGTH)))
+    return { rows: [], unknownColumns: [], fatal: "cell_too_long" };
+
+  const known = new Set<string>(DIVE_SITE_CREATURE_IMPORT_COLUMNS);
+  const indexes = new Map<CreatureColumn, number>();
+  const unknownColumns: string[] = [];
+  header.forEach((raw, index) => {
+    const name = normalizeHeader(raw);
+    if (!name) return;
+    if (!known.has(name)) {
+      unknownColumns.push(raw.trim() || name);
+      return;
+    }
+    if (!indexes.has(name as CreatureColumn)) indexes.set(name as CreatureColumn, index);
+  });
+  if (unknownColumns.length > 0) return { rows: [], unknownColumns, fatal: "unknown_columns" };
+  if (!indexes.has("catalog_slug") || !indexes.has("dive_site_id"))
+    return { rows: [], unknownColumns, fatal: "no_slug_column" };
+
+  const read = (cells: string[], column: CreatureColumn): string | null => {
+    const index = indexes.get(column);
+    return index === undefined ? null : text(cells[index]);
+  };
+
+  const rows = grid.slice(1).map((cells, index): PreparedDiveSiteCreatureRow => {
+    const issues: string[] = [];
+    const diveSiteId = read(cells, "dive_site_id");
+    if (!diveSiteId) issues.push("missing_dive_site_id");
+    const slug = read(cells, "catalog_slug");
+    const catalogSlug = slug && isMarineLifeSlug(slug) ? slug : null;
+    if (!catalogSlug) issues.push("unknown_species");
+    const positionRaw = read(cells, "position");
+    const position = finiteNumber(positionRaw);
+    if (positionRaw !== null && (position === null || !Number.isInteger(position) || position < 0))
+      issues.push("invalid_position");
+    return {
+      rowNumber: index + 2,
+      diveSiteId,
+      catalogSlug,
+      position: position !== null && Number.isInteger(position) && position >= 0 ? position : null,
       issues,
     };
   });

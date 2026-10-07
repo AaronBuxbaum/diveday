@@ -103,6 +103,7 @@
         "agency": "Agency",
         "description": "Course description",
         "minimumCertificationLevel": "Certification requirement",
+        "certifiesLevel": "Certification it issues",
         "minimumAge": "Minimum age",
         "isIntroCourse": "Intro-course status",
         "summary": "Subhead",

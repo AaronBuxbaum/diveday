@@ -1,5 +1,6 @@
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
+import { divesOnTrip } from "@/lib/crew-roles";
 import {
   buildDivePrepChecklist,
   buildHotelPickupList,
@@ -20,7 +21,7 @@ import {
   listTripGearAssignments,
 } from "./gear";
 import { listTripPrepDivers } from "./rental-fit";
-import { getTripCrewIds, getTripWithBooked, listStaff } from "./trips";
+import { getTripCrewAssignments, getTripWithBooked, listStaff } from "./trips";
 
 export type TripPrepShop = {
   id: string;
@@ -73,10 +74,10 @@ export async function getTripPrep(
 
   const gearWindow = tripReservationWindow(trip, shop.timezone);
   const todayLocal = calendarDateInTimezone(now, shop.timezone);
-  const [divers, staff, crewIds, fleetByKind, assignmentsByBooking, freeUnits] = await Promise.all([
+  const [divers, staff, crew, fleetByKind, assignmentsByBooking, freeUnits] = await Promise.all([
     listTripPrepDivers(db, shop.id, tripId),
     listStaff(db, shop.id),
-    getTripCrewIds(db, shop.id, tripId),
+    getTripCrewAssignments(db, shop.id, tripId),
     countGearItemsByKind(db, shop.id),
     listTripGearAssignments(db, shop.id, tripId),
     listAvailableGearUnits(db, shop.id, { ...gearWindow, todayLocal }),
@@ -84,15 +85,18 @@ export async function getTripPrep(
 
   // Only the crew who actually dive the trip need their own tank — a captain
   // or deckhand assigned for the boat stays dry and is not part of the plan.
-  // `assistant_instructor` is in the water with students by definition, so it
-  // belongs beside the other two rather than with the dry roles (issue #1680).
+  // The job rostered on *this* trip decides it, so a divemaster driving the
+  // boat today gets no tank (issue #1851); with no job rostered, the standing
+  // roles do (`divesOnTrip`, src/lib/crew-roles.ts).
+  const tripRoleByPerson = new Map(crew.map((entry) => [entry.personId, entry.tripRole]));
   const divingCrew = staff
     .filter(
       (entry) =>
-        crewIds.includes(entry.person.id) &&
-        (entry.roles.includes("instructor") ||
-          entry.roles.includes("assistant_instructor") ||
-          entry.roles.includes("divemaster")),
+        tripRoleByPerson.has(entry.person.id) &&
+        divesOnTrip({
+          tripRole: tripRoleByPerson.get(entry.person.id),
+          shopRoles: entry.roles,
+        }),
     )
     .map((entry) => entry.person.fullName);
 

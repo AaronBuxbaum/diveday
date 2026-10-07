@@ -528,7 +528,8 @@ describe("createBooking stamps its own clock (D15's comparison)", () => {
       rentsDiveComputer: false,
       rentsGopro: false,
       rentsDrysuit: false,
-      rentsHoodGloves: false,
+      rentsHood: false,
+      rentsGloves: false,
       rentsTorch: false,
       rentsSmb: false,
       bcdSize: "M",
@@ -1217,7 +1218,6 @@ describe("createBooking identity safeguard (H-13)", () => {
       shopId: shop.id,
       bookingId: shared.bookingId,
       actorPersonId: staffer.id,
-      door: "roster" as const,
     };
     expect(await confirmBookingIdentity(db, confirm)).toBe(true);
     expect(await identityFlag(db, shared.bookingId)).toBeNull();
@@ -1246,7 +1246,6 @@ describe("createBooking identity safeguard (H-13)", () => {
       shopId: shop.id,
       bookingId: shared.bookingId,
       actorPersonId: staffer.id,
-      door: "roster",
     });
     const [cleared] = await db.select().from(bookings).where(eq(bookings.id, shared.bookingId));
     expect(cleared?.identityBookedAs).toBeNull();
@@ -1289,6 +1288,7 @@ describe("createBooking identity safeguard (H-13)", () => {
         bookingId: shared.bookingId,
         actorPersonId: staffer.id,
         fullName: " Ben Quinn ",
+        adultAttested: true,
       });
       if (!result.ok) throw new Error(`split refused: ${result.reason}`);
       expect(result.personId).not.toBe(nora);
@@ -1341,10 +1341,11 @@ describe("createBooking identity safeguard (H-13)", () => {
           ...input,
           shopId: crypto.randomUUID(),
           fullName: "Ben Quinn",
+          adultAttested: true,
         }),
       ).toEqual({ ok: false, reason: "not_held" });
 
-      await confirmBookingIdentity(db, { ...input, door: "roster" });
+      await confirmBookingIdentity(db, input);
       const before = await db.select({ id: people.id }).from(people);
       expect(await splitBookingIdentity(db, { ...input, fullName: "Ben Quinn" })).toEqual({
         ok: false,
@@ -1365,6 +1366,7 @@ describe("createBooking identity safeguard (H-13)", () => {
         bookingId: shared.bookingId,
         actorPersonId: staffer.id,
         fullName: "Ben Quinn",
+        adultAttested: true,
       });
       expect(result.ok).toBe(true);
       const readiness = await readinessModule.getBookingReadiness(db, shop.id, shared.bookingId);
@@ -1390,6 +1392,7 @@ describe("createBooking identity safeguard (H-13)", () => {
         bookingId: shared.bookingId,
         actorPersonId: staffer.id,
         fullName: "Ben Quinn",
+        adultAttested: true,
       });
       expect(result.ok).toBe(true);
       // The link went to the matched diver's inbox, and the seat is no longer theirs.
@@ -1435,6 +1438,7 @@ describe("createBooking identity safeguard (H-13)", () => {
           bookingId: shared.bookingId,
           actorPersonId: staffer.id,
           fullName: "Ben Quinn",
+          adultAttested: true,
         }),
       ).toEqual({ ok: false, reason: "medical_hold" });
       const [still] = await db
@@ -1467,6 +1471,7 @@ describe("createBooking identity safeguard (H-13)", () => {
           bookingId: shared.bookingId,
           actorPersonId: staffer.id,
           fullName: "Ben Quinn",
+          adultAttested: true,
         }),
       ).toEqual({ ok: false, reason: "medical_hold" });
     });
@@ -1514,6 +1519,7 @@ describe("createBooking identity safeguard (H-13)", () => {
         bookingId: shared.bookingId,
         actorPersonId: staffer.id,
         fullName: "Ben Quinn",
+        adultAttested: true,
       });
       if (!result.ok) throw new Error(`split refused: ${result.reason}`);
 
@@ -1543,6 +1549,7 @@ describe("createBooking identity safeguard (H-13)", () => {
         bookingId: shared.bookingId,
         actorPersonId: staffer.id,
         fullName: "Ben Quinn",
+        adultAttested: true,
       });
       if (!result.ok) throw new Error(`split refused: ${result.reason}`);
 
@@ -1607,6 +1614,91 @@ describe("createBooking identity safeguard (H-13)", () => {
         expect(await db.select({ id: people.id }).from(people)).toHaveLength(before.length);
       });
 
+      /**
+       * **A blank date never reads as an adult on its own** (H-100, issue
+       * #2143). The split is for someone who is not the matched diver, and the
+       * usual one is a minor booked with a parent's email: on a plain charter
+       * the date used to be optional, and a record with none passes the
+       * guardian rule as an adult.
+       */
+      it("refuses a split with neither a date of birth nor an 18-or-older answer, on any departure", async () => {
+        const { db, shop, open } = await seededContext();
+        const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const staffer = await counterStaffer(db, shop.id);
+        const input = {
+          shopId: shop.id,
+          bookingId: shared.bookingId,
+          actorPersonId: staffer.id,
+          fullName: "Ben Quinn",
+        };
+        const before = await db.select({ id: people.id }).from(people);
+
+        expect(await splitBookingIdentity(db, input)).toEqual({
+          ok: false,
+          reason: "age_unstated",
+        });
+        expect(
+          await splitBookingIdentity(db, { ...input, dateOfBirth: " ", adultAttested: false }),
+        ).toEqual({ ok: false, reason: "age_unstated" });
+        expect(await identityFlag(db, shared.bookingId)).not.toBeNull();
+        expect(await db.select({ id: people.id }).from(people)).toHaveLength(before.length);
+      });
+
+      it("files the 18-or-older answer with the staffer who gave it", async () => {
+        const { db, shop, open } = await seededContext();
+        const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const staffer = await counterStaffer(db, shop.id);
+        const result = await splitBookingIdentity(db, {
+          shopId: shop.id,
+          bookingId: shared.bookingId,
+          actorPersonId: staffer.id,
+          fullName: "Ben Quinn",
+          adultAttested: true,
+        });
+        if (!result.ok) throw new Error(`split refused: ${result.reason}`);
+        const [created] = await db.select().from(people).where(eq(people.id, result.personId));
+        expect(created?.dateOfBirth).toBeNull();
+        expect(created?.adultAttestedAt).toBeInstanceOf(Date);
+        expect(created?.adultAttestedByPersonId).toBe(staffer.id);
+      });
+
+      it("keeps the date and no 18-or-older answer when the staffer gave both", async () => {
+        const { db, shop, open } = await seededContext();
+        const { shared } = await sharedInboxSeat(db, shop.id, open.id);
+        const staffer = await counterStaffer(db, shop.id);
+        const result = await splitBookingIdentity(db, {
+          shopId: shop.id,
+          bookingId: shared.bookingId,
+          actorPersonId: staffer.id,
+          fullName: "Ben Quinn",
+          dateOfBirth: "2012-06-01",
+          adultAttested: true,
+        });
+        if (!result.ok) throw new Error(`split refused: ${result.reason}`);
+        const [created] = await db.select().from(people).where(eq(people.id, result.personId));
+        // The date says minor; an answer saying otherwise is not kept beside it.
+        expect(created?.dateOfBirth).toBe("2012-06-01");
+        expect(created?.adultAttestedAt).toBeNull();
+        expect(created?.adultAttestedByPersonId).toBeNull();
+      });
+
+      it("still asks for the date on a course with a minimum age, 18-or-older or not", async () => {
+        const { db, shop, open } = await seededContext();
+        const { night, shared } = await sharedInboxSeat(db, shop.id, open.id);
+        await ageGate(db, shop.id, night.id, 12);
+        const staffer = await counterStaffer(db, shop.id);
+        expect(
+          await splitBookingIdentity(db, {
+            shopId: shop.id,
+            bookingId: shared.bookingId,
+            actorPersonId: staffer.id,
+            fullName: "Ben Quinn",
+            adultAttested: true,
+          }),
+        ).toEqual({ ok: false, reason: "date_of_birth_required" });
+        expect(await identityFlag(db, shared.bookingId)).not.toBeNull();
+      });
+
       it("files the date on the new record, so the age check reads the person who is here", async () => {
         const { db, shop, open } = await seededContext();
         const { night, shared } = await sharedInboxSeat(db, shop.id, open.id);
@@ -1654,6 +1746,7 @@ describe("createBooking identity safeguard (H-13)", () => {
           bookingId: shared.bookingId,
           actorPersonId: staffer.id,
           fullName: "Ben Quinn",
+          adultAttested: true,
           email: "  Ben.Quinn@Example.com ",
           phone: "+1 305 555 0188",
         });
@@ -1675,6 +1768,7 @@ describe("createBooking identity safeguard (H-13)", () => {
             bookingId: shared.bookingId,
             actorPersonId: staffer.id,
             fullName: "Ben Quinn",
+            adultAttested: true,
             email: "NORA@example.com",
           }),
         ).toEqual({ ok: false, reason: "email_in_use" });
@@ -1737,6 +1831,7 @@ describe("createBooking identity safeguard (H-13)", () => {
           bookingId: shared.bookingId,
           actorPersonId: staffer.id,
           fullName: "Ben Quinn",
+          adultAttested: true,
           sameNameSeatIds: [seat.bookingId],
         });
         if (!result.ok) throw new Error(`split refused: ${result.reason}`);
@@ -1765,6 +1860,7 @@ describe("createBooking identity safeguard (H-13)", () => {
           bookingId: shared.bookingId,
           actorPersonId: staffer.id,
           fullName: "Ben Quinn",
+          adultAttested: true,
         });
         if (!one.ok) throw new Error(`split refused: ${one.reason}`);
         expect(one.seats).toBe(1);
@@ -1793,6 +1889,7 @@ describe("createBooking identity safeguard (H-13)", () => {
             bookingId: shared.bookingId,
             actorPersonId: staffer.id,
             fullName: "Ben Quinn",
+            adultAttested: true,
             sameNameSeatIds: [seat.bookingId],
           }),
         ).toEqual({ ok: false, reason: "medical_hold" });
@@ -1840,6 +1937,7 @@ describe("createBooking identity safeguard (H-13)", () => {
           bookingId: shared.bookingId,
           actorPersonId: staffer.id,
           fullName: "Ben Quinn",
+          adultAttested: true,
           sameNameSeatIds: [twin.bookingId],
         });
         if (!result.ok) throw new Error(`split refused: ${result.reason}`);
@@ -1886,6 +1984,7 @@ describe("createBooking identity safeguard (H-13)", () => {
           bookingId: shared.bookingId,
           actorPersonId: staffer.id,
           fullName: "Ben Quinn",
+          adultAttested: true,
         });
         if (!result.ok) throw new Error(`split refused: ${result.reason}`);
         const [after] = await db.select().from(internalNotes).where(eq(internalNotes.id, note.id));
@@ -1911,6 +2010,7 @@ describe("createBooking identity safeguard (H-13)", () => {
           bookingId: shared.bookingId,
           actorPersonId: staffer.id,
           fullName: "Ben Quinn",
+          adultAttested: true,
         });
         if (!result.ok) throw new Error(`split refused: ${result.reason}`);
         const moved = await db
@@ -1941,6 +2041,7 @@ describe("createBooking identity safeguard (H-13)", () => {
           bookingId: shared.bookingId,
           actorPersonId: staffer.id,
           fullName: "Ben Quinn",
+          adultAttested: true,
         }),
       ).toEqual({ ok: false, reason: "not_held" });
     });
@@ -2009,7 +2110,6 @@ describe("createBooking identity safeguard (H-13)", () => {
         shopId: shop.id,
         bookingId: outcome.bookingId,
         actorPersonId: staffer.id,
-        door: "roster",
       }),
     ).toBe(true);
     expect(await identityFlag(db, outcome.bookingId)).toBeNull();
@@ -2092,11 +2192,6 @@ describe("createBooking identity safeguard (H-13)", () => {
    * departure's trail is what the crew reads that day, and the matched person's
    * record is where a shop looks months later — a trip-scoped row carries no
    * booking and no subject, so it never reaches that second surface.
-   *
-   * **And both name the door.** The counter's attestation is made with the
-   * person standing at the desk and the roster's is made by somebody reading a
-   * list, so one sentence for the two would lose the only thing that separates
-   * the evidence behind them (`dive-domain-expert` review of issue #1696).
    */
   it("records who cleared the flag, on the departure and on the matched diver's record", async () => {
     const { db, shop, open } = await seededContext();
@@ -2118,60 +2213,22 @@ describe("createBooking identity safeguard (H-13)", () => {
         shopId: shop.id,
         bookingId: shared.bookingId,
         actorPersonId: staffer.id,
-        door: "counter",
       }),
     ).toBe(true);
 
     // The name on the line is the *matched* record's, which is the whole point:
-    // it says whose evidence this seat was just attached to — and the code says
-    // it was vouched for at the desk rather than off a list.
+    // it says whose evidence this seat was just attached to.
     expect((await listTripActivity(db, shop.id, night.id))[0]).toMatchObject({
-      code: "identity_confirmed_at_counter",
+      code: "identity_confirmed",
       params: { actor: staffer.fullName, diver: visitor.fullName },
     });
 
     const record = await pagedDiverActivity(db, shop.id, shared.personId);
     expect(
       record.rows.some(
-        (row) =>
-          row.code === "identity_confirmed_at_counter" && row.params.actor === staffer.fullName,
+        (row) => row.code === "identity_confirmed" && row.params.actor === staffer.fullName,
       ),
     ).toBe(true);
-  });
-
-  /**
-   * The other door, whose line has to be a different one. Same write, same
-   * clearance, different evidence: a staffer working the roster is reading a
-   * list, and the trail is the only place that difference survives.
-   */
-  it("says the roster when the roster is where it was confirmed", async () => {
-    const { db, shop, open } = await seededContext();
-    const night = await nightTrip(db, shop.id);
-    const first = await bookVisitor(db, shop.id, open.id);
-    if (!first.ok) throw new Error("setup booking failed");
-    const shared = await createBooking(db, {
-      actor: "staff",
-      shopId: shop.id,
-      tripId: night.id,
-      fullName: "Ben Quinn",
-      email: "nora@example.com",
-    });
-    if (!shared.ok) throw new Error("shared-inbox booking failed");
-    const staffer = await counterStaffer(db, shop.id);
-
-    expect(
-      await confirmBookingIdentity(db, {
-        shopId: shop.id,
-        bookingId: shared.bookingId,
-        actorPersonId: staffer.id,
-        door: "roster",
-      }),
-    ).toBe(true);
-
-    expect((await listTripActivity(db, shop.id, night.id))[0]).toMatchObject({
-      code: "identity_confirmed",
-      params: { actor: staffer.fullName, diver: visitor.fullName },
-    });
   });
 
   it("writes no certification claim under a name-match seat", async () => {

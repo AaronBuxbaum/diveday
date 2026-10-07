@@ -9,6 +9,11 @@
  * the bundle is migration-grade history, not a view of the active roster.
  * A schema-coverage test (export.test.ts) forces every schema table to be
  * either exported here or on the deliberate exclusion list.
+ *
+ * Its `orderBy(createdAt, id)` clauses are exempt from the time-id-order
+ * guard (`scripts/check-time-id-order.mjs`, issue #1762): a CSV's row order is
+ * not something a person reads as meaningful, and stability within one
+ * database is all an export needs, which the id gives it.
  */
 
 import { and, asc, count, eq, getTableColumns, inArray, isNull, or } from "drizzle-orm";
@@ -1139,6 +1144,10 @@ export async function loadShopExportBundleInput(
             // rather than dumps, resolves the pair down to one cell.
             "no_certification_cleared_at",
             "no_certification_cleared_by_person_id",
+            // A staffer's "18 or older" at a split, and whose (H-100): the age
+            // answer the guardian rule read when no date was on file.
+            "adult_attested_at",
+            "adult_attested_by_person_id",
             // **Where this record came from.** Set once, when a diver put
             // themselves on file at the shop's counter QR rather than being
             // typed in by staff (issue #1236). It changes how a destination
@@ -1178,6 +1187,8 @@ export async function loadShopExportBundleInput(
             row.noCertificationDeclaredAt,
             row.noCertificationClearedAt,
             row.noCertificationClearedByPersonId,
+            row.adultAttestedAt,
+            row.adultAttestedByPersonId,
             row.selfRegisteredAt,
             row.deletedAt,
             row.anonymizedAt,
@@ -2527,6 +2538,11 @@ export async function loadShopExportBundleInput(
             "moved_from_person_id",
             "moved_at",
             "moved_by_person_id",
+            // Version 4: the guardian asked for their address to be erased and
+            // the shop did (H-102, issue #1673). Inside the seal, so a
+            // destination re-verifying it needs both.
+            "guardian_email_erased_at",
+            "guardian_email_erased_by_person_id",
             "created_at",
           ],
           rows: waiverRows.map((row) => [
@@ -2577,6 +2593,8 @@ export async function loadShopExportBundleInput(
             row.movedFromPersonId,
             row.movedAt,
             row.movedByPersonId,
+            row.guardianEmailErasedAt,
+            row.guardianEmailErasedByPersonId,
             row.createdAt,
           ]),
           note: EXPORT_FILE_NOTES["waiver_records.csv"],
@@ -2594,12 +2612,15 @@ export async function loadShopExportBundleInput(
             "rents_dive_computer",
             "rents_gopro",
             "rents_drysuit",
-            "rents_hood_gloves",
+            "rents_hood",
+            "rents_gloves",
             "rents_torch",
             "rents_smb",
             "bcd_size",
             "wetsuit_size",
             "drysuit_size",
+            "hood_size",
+            "glove_size",
             "boot_size",
             "fin_size",
             "weight_preference",
@@ -2636,12 +2657,15 @@ export async function loadShopExportBundleInput(
             row.rentsDiveComputer,
             row.rentsGopro,
             row.rentsDrysuit,
-            row.rentsHoodGloves,
+            row.rentsHood,
+            row.rentsGloves,
             row.rentsTorch,
             row.rentsSmb,
             row.bcdSize,
             row.wetsuitSize,
             row.drysuitSize,
+            row.hoodSize,
+            row.gloveSize,
             row.bootSize,
             row.finSize,
             row.weightPreference,
@@ -3504,6 +3528,7 @@ export async function loadShopExportBundleInput(
             "e_learning_price_cents",
             "private_price_cents",
             "minimum_certification_level",
+            "certifies_level",
             "minimum_age",
             "duration_text",
             "group_size_text",
@@ -3535,6 +3560,7 @@ export async function loadShopExportBundleInput(
             row.eLearningPriceCents,
             row.privatePriceCents,
             row.minimumCertificationLevel,
+            row.certifiesLevel,
             row.minimumAge,
             row.durationText,
             row.groupSizeText,
@@ -4083,6 +4109,7 @@ export async function loadDiverExportBundleInput(
             "courtesy_email_opt_out_at",
             "no_certification_declared_at",
             "no_certification_cleared_at",
+            "adult_attested_at",
             "deleted_at",
             "created_at",
           ],
@@ -4099,6 +4126,7 @@ export async function loadDiverExportBundleInput(
               person.courtesyEmailOptOutAt,
               person.noCertificationDeclaredAt,
               person.noCertificationClearedAt,
+              person.adultAttestedAt,
               person.deletedAt,
               person.createdAt,
             ],
@@ -4517,12 +4545,15 @@ export async function loadDiverExportBundleInput(
             "rents_dive_computer",
             "rents_gopro",
             "rents_drysuit",
-            "rents_hood_gloves",
+            "rents_hood",
+            "rents_gloves",
             "rents_torch",
             "rents_smb",
             "bcd_size",
             "wetsuit_size",
             "drysuit_size",
+            "hood_size",
+            "glove_size",
             "boot_size",
             "fin_size",
             "weight_preference",
@@ -4538,12 +4569,15 @@ export async function loadDiverExportBundleInput(
             row.rentsDiveComputer,
             row.rentsGopro,
             row.rentsDrysuit,
-            row.rentsHoodGloves,
+            row.rentsHood,
+            row.rentsGloves,
             row.rentsTorch,
             row.rentsSmb,
             row.bcdSize,
             row.wetsuitSize,
             row.drysuitSize,
+            row.hoodSize,
+            row.gloveSize,
             row.bootSize,
             row.finSize,
             row.weightPreference,

@@ -221,7 +221,7 @@ export async function listWaiverIntegrityAudit(
         .leftJoin(bookings, eq(bookings.id, waiverRecords.bookingId))
         .leftJoin(trips, eq(trips.id, bookings.tripId))
         .where(scope)
-        .orderBy(desc(waiverRecords.signedAt), desc(waiverRecords.id))
+        .orderBy(desc(waiverRecords.signedAt), asc(people.fullName), desc(waiverRecords.id))
         .limit(limit)
         .offset(offset),
   });
@@ -354,6 +354,14 @@ export async function getSignedWaiverForDiver(
     templateBody: record.templateBody,
     guardian: identityHeld ? null : guardianSignatureOf(record),
     integrity: verifyWaiverIntegrity(record),
+    /**
+     * When the co-signing guardian's address was erased on request (H-102) —
+     * the note a redacted release carries, so its blank address reads as the
+     * shop's act rather than as a field nobody filled.
+     */
+    guardianEmailErasedAt: record.guardianEmailErasedAt,
+    /** Which seal is on it — the redaction note is only true under version 4. */
+    integrityVersion: record.integrityVersion,
     /** Every answer, for an owner or manager; null for anyone else. */
     medicalAnswers: input.readsMedicalAnswers ? answers : null,
     /** What the roster shows every staff role: the prompts that flagged, on a record held for them. */

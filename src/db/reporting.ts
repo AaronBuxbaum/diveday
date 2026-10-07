@@ -130,6 +130,24 @@ export async function getMonthlyReport(
   endUtc: Date,
   options: { currency?: string; timeZone?: string } = {},
 ): Promise<MonthlyReportInput> {
+  // **The rule for deleted departures, and why the money joins skip it**
+  // (issue #1932). The trip spine, the waiver count and the referral count
+  // carry `liveTrip()`; the seven money queries below (`baseRevenue`,
+  // `recoveredDeposits`, `currentCheckoutTax`, `currentPassThrough`,
+  // `invoiceRevenue`, `invoiceBookingAmounts`, `tipTotals`) join on this alone.
+  // That is not a gap, and adding `liveTrip()` to them would filter against a
+  // state the product cannot produce: every one of them reaches `trips`
+  // *through* `bookings`, and `deleteTrip` (src/db/trips-schedule.ts) refuses
+  // with `has_roster` any departure that has ever held a booking, cancelled
+  // ones included, under a row lock. So a deleted departure has no payment, no
+  // checkout, no invoice and no tip, and the month's revenue and its seats
+  // always read the same boats. `reporting.test.ts` pins the refusal rather
+  // than a zero sum, because the refusal is what keeps this true.
+  //
+  // The one route to a deleted departure with bookings is the e2e-only
+  // `api/test/seed-off-season` route, gated to demo shops behind
+  // `e2eTestRouteAuthorized`; a capture of /reports after it can show revenue
+  // against no seats, and that is the seed, not this report.
   const inWindow = and(
     eq(trips.shopId, shopId),
     ne(trips.status, "cancelled"),
@@ -683,7 +701,7 @@ export async function pagedMonthlyReportTrips(
         )
         .where(and(inWindow, liveTrip()))
         .groupBy(trips.id, trips.title, trips.startsAt, trips.capacity)
-        .orderBy(asc(trips.startsAt), asc(trips.id))
+        .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id))
         .limit(limit)
         .offset(offset),
   });

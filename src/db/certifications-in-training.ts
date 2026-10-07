@@ -1,8 +1,7 @@
 import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import { SEAT_HELD_STATUSES } from "@/lib/no-show";
-import type { CertificationInTraining, CertificationLevel } from "@/lib/readiness";
+import type { CertificationInTraining } from "@/lib/readiness";
 import type { DbExecutor } from "./client";
-import { courseTemplateCertifiedLevel } from "./course-templates";
 import { bookings, courses, trips } from "./schema";
 import { liveTrip } from "./trips-live";
 
@@ -16,8 +15,10 @@ export type CourseSeatInTraining = CertificationInTraining & {
 /**
  * **Which levels each diver is booked to be certified at, and when.**
  *
- * A seat on a scheduled course session, for a course whose template issues a
- * rung of the ladder (`courseTemplateCertifiedLevel`). One row per session, so
+ * A seat on a scheduled course session, for a course that issues a rung of
+ * the ladder (`courses.certifies_level`, issue #2059 — copied from the
+ * course's template and owned by it, so no editor changes it; a course a shop
+ * built without a template issues nothing and never counts). One row per session, so
  * a caller measures each against the trip it is deciding: only a session that
  * ends before that trip starts counts (`inTrainingBefore`).
  *
@@ -36,7 +37,7 @@ export async function listCourseSeatsInTraining(
       personId: bookings.personId,
       tripId: trips.id,
       finishesAt: trips.endsAt,
-      templateSlug: courses.sourceTemplateSlug,
+      level: courses.certifiesLevel,
     })
     .from(bookings)
     .innerJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
@@ -49,16 +50,11 @@ export async function listCourseSeatsInTraining(
         // session runs for nobody.
         inArray(bookings.status, [...SEAT_HELD_STATUSES]),
         eq(trips.status, "scheduled"),
-        isNotNull(courses.sourceTemplateSlug),
+        isNotNull(courses.certifiesLevel),
         liveTrip(),
       ),
     );
-  return rows.flatMap((row) => {
-    const level: CertificationLevel | null = courseTemplateCertifiedLevel(row.templateSlug);
-    return level
-      ? [{ personId: row.personId, tripId: row.tripId, finishesAt: row.finishesAt, level }]
-      : [];
-  });
+  return rows.flatMap(({ level, ...row }) => (level ? [{ ...row, level }] : []));
 }
 
 /**

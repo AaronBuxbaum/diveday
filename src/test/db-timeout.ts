@@ -6,14 +6,19 @@ import { readFileSync } from "node:fs";
  * `testTimeout`/`hookTimeout` in `vitest.config.ts` are one number for the
  * whole suite, and 20s is generous for the pure-logic files that are most of
  * it. A db-backed test is a different animal: `seededShopContext()` hydrates a
- * PGlite template per call at 0.6–1.2s, and a file like `closeout.test.ts`
- * does it eight times because it cannot use `fileScopedShopContext` — it opens
- * its own transactions, it is a money path, and it asserts on the ordering of
- * `defaultNow()`-stamped rows, which one wrapping transaction would freeze
- * (`src/test/db.ts`'s "When NOT to use this"). On a contended CI runner that
- * lands over 20s, and it did on three separate runs across two shards, always
- * inside `seededShopContext()` on a test's first line and never on an
- * assertion (issue #1306).
+ * PGlite template per call at 0.6–1.2s, and a file that genuinely cannot use
+ * `fileScopedShopContext` (one that races, or whose subject is its own
+ * transactions: `src/test/db.ts`'s "When NOT to use this") pays that per
+ * test. On a contended CI runner that lands over 20s, and it did on three
+ * separate runs across two shards, always inside `seededShopContext()` on a
+ * test's first line and never on an assertion (issue #1306).
+ *
+ * **This ceiling is not the remedy for a file that outgrows it.**
+ * `closeout.test.ts` was the file it was sized for, and it grew back into it
+ * at 60s (issue #1820). The reasons it had declined the file-scoped context
+ * had expired, so it moved onto one and now pays a single hydration. A db
+ * file timing out inside `seededShopContext()` asks first whether its tests
+ * each need a fresh database, and only then whether this number is wrong.
  *
  * This is not widening a timeout to paper over a flake — the mechanism is
  * understood and the work is real. It is scoping the ceiling to the thing it

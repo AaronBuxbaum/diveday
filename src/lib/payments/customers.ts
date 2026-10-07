@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ERASURE_FAILURE_DETAIL } from "./erasure-failure";
 
 /**
  * Customer deletion on a shop's connected Stripe account — the processor half
@@ -116,7 +117,7 @@ export function stripeCustomerProvider(
         const body = deletedResponseSchema.safeParse(await response.json());
         return body.success
           ? { status: "deleted" }
-          : { status: "failed", error: "stripe did not report the customer deleted" };
+          : { status: "failed", error: ERASURE_FAILURE_DETAIL.notConfirmed };
       } catch (error) {
         return {
           status: "failed",

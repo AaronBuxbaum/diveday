@@ -256,6 +256,7 @@ export default async function StaffingPage({
     no_instructor: t("trips.pulse.needsInstructor"),
     over_ratio: t("trips.pulse.overRatio"),
     over_intro_ratio: t("trips.pulse.overIntroRatio"),
+    over_ratio_instructor: t("trips.pulse.overRatioInstructor"),
     uncrewed_course: t("today.actionKind.uncrewedCourse"),
     uncrewed_departure: t("today.actionKind.uncrewedDeparture"),
     crew_below_target: t("today.actionKind.crewBelowTarget"),

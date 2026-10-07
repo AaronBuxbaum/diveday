@@ -22,7 +22,8 @@ export type RentableItemKind =
   | "dive_computer"
   | "gopro"
   | "drysuit"
-  | "hood_gloves"
+  | "hood"
+  | "gloves"
   | "torch"
   | "smb";
 
@@ -38,7 +39,8 @@ export type RentalFitField =
   | "rentsDiveComputer"
   | "rentsGopro"
   | "rentsDrysuit"
-  | "rentsHoodGloves"
+  | "rentsHood"
+  | "rentsGloves"
   | "rentsTorch"
   | "rentsSmb";
 
@@ -116,16 +118,18 @@ export const RENTABLE_ITEMS: readonly RentableItem[] = [
   // for the tall cut, which is how a rental wall is stocked.
   //
   // A dive light and an SMB carry none and want none — both are one size off
-  // the shelf. **Hood and gloves are not**, and the sentence that used to say
-  // so here was wrong (`dive-domain-expert`, issue #1805): hoods rack S/M/L/XL
-  // and 3/5/7 mm, gloves S–XL, a hood two sizes big flushes on every descent,
-  // and gloves a size small cannot be pulled onto a wet hand at the dock. What
-  // is true is narrower — DiveDay holds no size for them yet, so there is
-  // nothing to be missing and the packing line must not claim a gap nobody can
-  // close. Whether to give them a column, and whether they are one kind or
-  // two, is issue #1816.
+  // the shelf.
+  //
+  // **A hood and gloves are two kinds, each with a size** (H-101, issue
+  // #1816; `dive-domain-expert`, issue #1805). Hoods and gloves both rack by
+  // size and thickness (S–XL, 3/5/7 mm); a hood two sizes big flushes on every descent, and
+  // gloves a size small cannot be pulled onto a wet hand at the dock. A
+  // warm-water diver takes gloves and no hood, a quarry diver takes both in
+  // different thicknesses, so one checkbox could say neither. Each size is
+  // free text, like the drysuit's, and reaches the packing list verbatim.
   { kind: "drysuit", field: "rentsDrysuit", name: "drysuit", defaultRented: false },
-  { kind: "hood_gloves", field: "rentsHoodGloves", name: "hoodGloves", defaultRented: false },
+  { kind: "hood", field: "rentsHood", name: "hood", defaultRented: false },
+  { kind: "gloves", field: "rentsGloves", name: "gloves", defaultRented: false },
   { kind: "torch", field: "rentsTorch", name: "torch", defaultRented: false },
   { kind: "smb", field: "rentsSmb", name: "smb", defaultRented: false },
 ] as const;
@@ -408,7 +412,7 @@ export function nitroxCardWanted(
 /**
  * The pieces of a fit that have a **size to record**, in canonical order.
  *
- * `regulator`, `dive_computer`, `gopro`, `hood_gloves`, `torch` and `smb` are
+ * `regulator`, `dive_computer`, `gopro`, `torch` and `smb` are
  * deliberately absent: none has a `rental_fit_profiles` size column, so renting
  * one can never leave a fit half-filled. `boots` has no checkbox of its own — it rides
  * along with the wetsuit (`src/lib/dive-prep.ts`), so a suit with no shoe size
@@ -420,6 +424,8 @@ export function nitroxCardWanted(
  * field with no companion column or packing piece for what it implies, so the
  * only one whose free text is load-bearing beyond the size itself
  * (`src/lib/dive-prep.ts`; every size reaches the packing list verbatim).
+ * The `hood` and `gloves` joined it with a free-text size each (H-101, issue
+ * #1816): each by size and thickness ("M, 5 mm" for a hood, "L, 3 mm" for gloves).
  *
  * Same union `statedSizeItems` in `dive-prep.ts` already speaks, so a surface
  * can render both through `src/i18n/rental-labels.ts` without a second map.
@@ -431,6 +437,8 @@ export const SIZED_RENTAL_KINDS = [
   "mask_fins",
   "weights",
   "drysuit",
+  "hood",
+  "gloves",
 ] as const;
 
 export type SizedRentalKind = (typeof SIZED_RENTAL_KINDS)[number];
@@ -482,6 +490,8 @@ export const SIZED_RENTAL_FIT_COLUMN = {
   mask_fins: "finSize",
   weights: "weightPreference",
   drysuit: "drysuitSize",
+  hood: "hoodSize",
+  gloves: "gloveSize",
 } as const satisfies Record<SizedRentalKind, string>;
 
 /**
@@ -503,7 +513,8 @@ export const SIZED_RENTAL_FIT_COLUMN = {
  * as loosely as a BCD unit meets `bcd_size`, and an off-grid string the shop
  * really wrote ("ML, rock boot 9") survives both fit forms — the diver's select
  * offers a stored off-grid size back (issue #1728), the staff editor is free
- * text. `hood`, `gloves`, `torch` and `smb` stay out: they carry no size column
+ * text. A **hood** and **gloves** are here since H-101 (issue #1816), on the
+ * same free-text terms. `torch` and `smb` stay out: they carry no size column
  * for a return to teach.
  *
  * Takes a plain string rather than importing `GearItemKind`, which keeps this
@@ -524,6 +535,10 @@ export function sizedRentalKindOfGearKind(gearKind: string): SizedRentalKind | n
       return "weights";
     case "drysuit":
       return "drysuit";
+    case "hood":
+      return "hood";
+    case "gloves":
+      return "gloves";
     default:
       return null;
   }
@@ -541,9 +556,13 @@ export type RentalFitSizes = {
   rentsMaskFins: boolean;
   rentsWeights: boolean;
   rentsDrysuit: boolean;
+  rentsHood: boolean;
+  rentsGloves: boolean;
   bcdSize: string | null;
   wetsuitSize: string | null;
   drysuitSize: string | null;
+  hoodSize: string | null;
+  gloveSize: string | null;
   bootSize: string | null;
   finSize: string | null;
   weightPreference: string | null;
@@ -622,6 +641,8 @@ export function rentalFitCompleteness(
     // No `boots` row beside it, unlike the wetsuit: a drysuit's boots are part
     // of the suit, so this one size is the whole answer (issue 1414).
     { kind: "drysuit", rented: fit.rentsDrysuit && offers("drysuit"), value: fit.drysuitSize },
+    { kind: "hood", rented: fit.rentsHood && offers("hood"), value: fit.hoodSize },
+    { kind: "gloves", rented: fit.rentsGloves && offers("gloves"), value: fit.gloveSize },
   ];
   const missing = required
     .filter((item) => item.rented && !recorded(item.value))
@@ -657,6 +678,8 @@ export function sizeForRentalItem(
     mask_fins: shoeSize,
     weights: fit.weightPreference,
     drysuit: fit.drysuitSize,
+    hood: fit.hoodSize,
+    gloves: fit.gloveSize,
   }[kind];
   return value?.trim() || null;
 }

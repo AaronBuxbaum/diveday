@@ -12,6 +12,7 @@ import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripGuests } from "@/db/trips-guests";
 import { activityLine } from "@/i18n/activity-labels";
 import { staffTranslator } from "@/i18n/staff-messages";
+import type { CertificationLevel } from "@/lib/certification-levels";
 import { cancellationDeadline } from "@/lib/deposits";
 import { formatShortDate } from "@/lib/format";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
@@ -80,6 +81,7 @@ export function TripRosterContent({
   arrival,
   walkIn = null,
   acceptsDivers,
+  certifyDefaultLevel = null,
   actions,
 }: {
   guests: TripGuests;
@@ -126,6 +128,8 @@ export function TripRosterContent({
    * invite control is drawn at all (owner, 2026-10-06).
    */
   acceptsDivers: boolean;
+  /** The level this course session certifies, if any — see `RosterSection`. */
+  certifyDefaultLevel?: CertificationLevel | null;
   actions: TripRosterActions;
 }) {
   const t = staffTranslator(locale);
@@ -226,6 +230,7 @@ export function TripRosterContent({
         sameNameHeldSeats={guests.sameNameHeldSeats}
         splitAsksDateOfBirth={guests.splitAsksDateOfBirth}
         certifyDiverAction={actions.certifyDiverAction}
+        certifyDefaultLevel={certifyDefaultLevel}
         saveCourseNextStepAction={actions.saveCourseNextStepAction}
         courseNextStepByBooking={courseNextStepByBooking}
         notesByBooking={notesByBooking}

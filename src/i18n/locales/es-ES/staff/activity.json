@@ -12,7 +12,6 @@
     "booking_no_show_boarded": "{actor} embarcó a {diver} en el barco, así que la plaza liberada vuelve a ser suya",
     "booking_no_show_missing_after_dive": "{actor} registró que {diver} no volvió a bordo después de una inmersión, así que la plaza liberada vuelve a ser suya",
     "identity_confirmed": "{actor} confirmó en el listado de la salida que esta reserva es de {diver}",
-    "identity_confirmed_at_counter": "{actor} confirmó en el mostrador que esta reserva es de {diver}",
     "identity_split": "{actor} creó una ficha propia para {diver}: no era la persona a la que se había asociado la reserva",
     "identity_split_off": "{actor} quitó de la ficha de {diver} una reserva hecha con otro nombre",
     "crew_assigned": "{actor} asignó a {crew} a la tripulación",

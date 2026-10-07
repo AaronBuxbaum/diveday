@@ -113,3 +113,31 @@ describe("the two Boat palettes", () => {
     expect(day["primary-foreground"]).toBe(night.primary);
   });
 });
+
+/**
+ * **A token `:root` derives is redeclared on `.boat-mode`** (issue #1988). A
+ * custom property's `var()` is substituted on the element that declares it,
+ * and `.boat-mode` is a descendant wrapper on the manifest, so a ring or a
+ * strong ink derived once on `:root` reached the roll call in the office
+ * palette. Declared again on the boat block, the same expression resolves
+ * against Boat's own colors by day and, because the dark block sits on the
+ * same element, at night too.
+ */
+describe("the tokens :root derives", () => {
+  const derived = Object.entries(tokensIn(blockAfter(":root {\n")))
+    .filter(([, value]) => value.includes("var(--"))
+    .map(([name]) => name);
+
+  it("are found at all", () => {
+    expect(derived).toEqual(
+      expect.arrayContaining(["focus-ring", "primary-sunken", "success-strong", "warning-strong"]),
+    );
+  });
+
+  it.each(derived)("redeclares --%s on Boat mode", (name) => {
+    const value = day[name];
+    expect(value, `--${name} on .boat-mode`).toBeDefined();
+    // Built from Boat's own colors, never a hex frozen from the office palette.
+    expect(value).toMatch(/var\(--/);
+  });
+});

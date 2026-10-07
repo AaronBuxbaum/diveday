@@ -2392,7 +2392,7 @@ describe("the row grammar the live manifest already reads", () => {
                 blockers: [
                   {
                     code: "identity_unconfirmed",
-                    text: "Might be someone else. Confirm who this is before boarding.",
+                    text: "Matched to this record on a guess: confirm who this is on the roster before boarding.",
                   },
                 ],
               },

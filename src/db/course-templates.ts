@@ -55,6 +55,22 @@ export type CourseTemplate = {
   agency: "padi" | "ssi" | "sdi";
   description: string;
   minimumCertificationLevel: CertificationLevel | null;
+  /**
+   * **The rung a course leaves its students on**, or null for one that issues
+   * none — a specialty, a refresher, a taster (issue #2059). Agency fact, not
+   * shop content: it is copied onto `courses.certifies_level` with the rest of
+   * the template and carried by a template update, and no editor offers it.
+   *
+   * Only the courses whose card *is* a rung of DiveDay's ladder. SSI's
+   * Advanced Adventurer and SDI's Advanced Adventure Diver are the Advanced
+   * rung here because they are everywhere else: the importer maps the card to
+   * `advanced_open_water` (`src/lib/import.ts`), the SSI page quotes its 30 m
+   * limit, and the SDI continuing-education templates name it as their
+   * Advanced prerequisite.
+   *
+   * Required rather than optional so a new template has to answer it.
+   */
+  certifiesLevel: CertificationLevel | null;
   content: CourseContent;
 };
 
@@ -102,6 +118,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "padi",
     description: "A supervised first underwater experience with an instructor.",
     minimumCertificationLevel: null,
+    certifiesLevel: null,
     content: {
       ...blank,
       isIntroCourse: true,
@@ -179,6 +196,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "padi",
     description: "The foundational certification course for new divers.",
     minimumCertificationLevel: null,
+    certifiesLevel: "open_water",
     content: {
       ...blank,
       summary: "Become a certified PADI Open Water Diver",
@@ -290,6 +308,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "padi",
     description: "Build confidence and range with five adventure dives.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: "advanced_open_water",
     content: {
       ...blank,
       summary: "Five dives that take you deeper, further, and more confidently",
@@ -369,6 +388,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "padi",
     description: "Problem prevention and rescue skills for experienced divers.",
     minimumCertificationLevel: "advanced_open_water",
+    certifiesLevel: "rescue",
     content: {
       ...blank,
       summary: "Learn to spot trouble early — and to handle it when you cannot",
@@ -456,6 +476,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "padi",
     description: "A half-day tune-up for certified divers who have been away.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Shake the rust off before your first dive back",
@@ -521,6 +542,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "padi",
     description: "Learn to plan and dive with Nitrox up to 40% oxygen.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "More bottom time on repetitive dives, and the planning that makes it safe",
@@ -599,6 +621,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "padi",
     description: "Two dives spent fixing weighting, trim, and control.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Stop fighting the water and start hovering in it",
@@ -671,6 +694,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "padi",
     description: "Three dives after dark, with lights, signals, and navigation.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "The same reef, a completely different animal",
@@ -760,6 +784,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "padi",
     description: "Four dives that extend your limit to {depth40}, done properly.",
     minimumCertificationLevel: "advanced_open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "How to dive between {depth18n} and {depth40} and come back with a plan intact",
@@ -847,6 +872,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "padi",
     description: "Four dives on wrecks, mapping, lines, and limited penetration.",
     minimumCertificationLevel: "advanced_open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Dive wrecks with a survey, a line, and a way out",
@@ -941,6 +967,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "padi",
     description: "Three dives spent learning to find your way back without asking.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Know where the boat is, and get back to it without surfacing",
@@ -1024,6 +1051,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     description:
       "Two dives on getting a photo worth keeping, in the water rather than in software.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Come back with photos you actually want to show people",
@@ -1103,6 +1131,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "padi",
     description: "Two dives learning to let the current do the work.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Stop swimming against the ocean and start riding it",
@@ -1182,6 +1211,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "padi",
     description: "Two dives on being useful, and unbothered, on a dive boat.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Know where your gear goes, where to stand, and when to jump",
@@ -1255,6 +1285,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "padi",
     description: "Four dives on finding what went over the side, and bringing it up safely.",
     minimumCertificationLevel: "advanced_open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Find the thing, then lift it without becoming the emergency",
@@ -1348,6 +1379,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "padi",
     description: "Confined water and three dives moving your tanks off your back onto your hips.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Two tanks, nothing on your back, and a rig you can take off in the water",
@@ -1436,6 +1468,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "padi",
     description: "Two dives learning to name what you have been swimming past.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Learn the families first, and the reef stops being a blur",
@@ -1515,6 +1548,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "padi",
     description: "The first professional rating: supervising, assisting, and leading divers.",
     minimumCertificationLevel: "rescue",
+    certifiesLevel: "divemaster",
     content: {
       ...blank,
       summary: "The first professional rating, and the point where diving becomes work",
@@ -1620,6 +1654,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "padi",
     description: "Stay warm and comfortable diving in colder water with a dry suit.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Dive warm in colder waters and extend your dive season",
@@ -1683,6 +1718,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "padi",
     description: "Learn how to recognize dive emergencies and administer emergency oxygen.",
     minimumCertificationLevel: null,
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Recognize dive illnesses and provide life-saving oxygen support",
@@ -1737,6 +1773,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "padi",
     description: "Understand how your dive gear works and how to maintain and care for it.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Master gear maintenance, field repairs, and equipment principles",
@@ -1787,6 +1824,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "padi",
     description: "Look past the big animals to see the interactions and ecosystems of the reef.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "See aquatic life through an ecological and behavioral lens",
@@ -1839,6 +1877,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     description:
       "Your first taste of breathing underwater under the direct care of an SSI instructor.",
     minimumCertificationLevel: null,
+    certifiesLevel: null,
     content: {
       ...blank,
       isIntroCourse: true,
@@ -1891,6 +1930,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "ssi",
     description: "The globally recognized SSI certification to dive independently with a buddy.",
     minimumCertificationLevel: null,
+    certifiesLevel: "open_water",
     content: {
       ...blank,
       summary: "Earn your worldwide lifetime scuba certification to dive to {depth18}",
@@ -1975,6 +2015,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "ssi",
     description: "Sample five different specialty areas and expand your depth to {depth30}.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: "advanced_open_water",
     content: {
       ...blank,
       summary:
@@ -2035,6 +2076,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "ssi",
     description: "Learn to prevent, recognize, and manage stress and diving emergencies.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: "rescue",
     content: {
       ...blank,
       summary: "Build confidence by learning to prevent problems and manage dive emergencies",
@@ -2104,6 +2146,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "ssi",
     description: "A quick, comprehensive refresher to get your dive skills sharp and comfortable.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Refresh your knowledge, gear handling, and in-water skills before your next dive",
@@ -2154,6 +2197,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "ssi",
     description: "Master trim, reduce air consumption, and hover effortlessly in any position.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Perfect your weighting, trim, and fin kicks to float weightlessly",
@@ -2203,6 +2247,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "ssi",
     description: "Learn the procedures and safety protocols for diving to {depth40}.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Safely explore deeper reefs and wrecks down to {depth40}",
@@ -2262,6 +2307,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     description:
       "Learn to navigate underwater using compass headings, natural references, and patterns.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Never get lost on a dive: master compass work, patterns, and natural navigation",
@@ -2312,6 +2358,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     description:
       "Learn underwater photography and videography techniques to capture stunning imagery.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Capture crisp, colorful underwater photos and video without harming the reef",
@@ -2364,6 +2411,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     description:
       "Explore the complex relationships between marine organisms and their ocean habitats.",
     minimumCertificationLevel: null,
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Understand ocean ecosystems, coral reefs, and marine conservation",
@@ -2413,6 +2461,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     description:
       "Emergency First Response: CPR, First Aid, AED, and Emergency Oxygen administration.",
     minimumCertificationLevel: null,
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Learn essential CPR, first aid, and oxygen administration skills for emergencies",
@@ -2463,6 +2512,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "ssi",
     description: "The first step in SSI professional leadership: learn to guide certified divers.",
     minimumCertificationLevel: "rescue",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Step into professional diving: lead certified divers and conduct dive briefings",
@@ -2543,6 +2593,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "sdi",
     description: "A guided first breath underwater, with an instructor at arm's reach.",
     minimumCertificationLevel: null,
+    certifiesLevel: null,
     content: {
       ...blank,
       isIntroCourse: true,
@@ -2597,6 +2648,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "sdi",
     description: "SDI's entry-level certification — computer-based from the first dive.",
     minimumCertificationLevel: null,
+    certifiesLevel: "open_water",
     content: {
       ...blank,
       summary: "Certify to dive with a buddy, worldwide, to {depth18}",
@@ -2671,6 +2723,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "sdi",
     description: "Five dives that open up depth, navigation, and whatever you pick next.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: "advanced_open_water",
     content: {
       ...blank,
       summary: "Five guided dives — deep and navigation, plus three you choose",
@@ -2732,6 +2785,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "sdi",
     description: "Spot a problem early, and know exactly what to do when you cannot.",
     minimumCertificationLevel: "advanced_open_water",
+    certifiesLevel: "rescue",
     content: {
       ...blank,
       summary: "The course that changes how you watch everyone else on the boat",
@@ -2792,6 +2846,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "sdi",
     description: "The first professional rating — leading divers, not just diving with them.",
     minimumCertificationLevel: "rescue",
+    certifiesLevel: "divemaster",
     content: {
       ...blank,
       summary: "Turn diving into the job: guide, supervise, and run the boat's dive day",
@@ -2856,6 +2911,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "sdi",
     description: "SDI's own course: self-reliance, redundancy, and honest self-assessment.",
     minimumCertificationLevel: "advanced_open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Learn to be your own buddy — properly equipped and properly honest about it",
@@ -2905,6 +2961,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "sdi",
     description: "Longer bottom times on enriched air, planned on your own computer.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "More time on the reef, less time on the surface waiting",
@@ -2954,6 +3011,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "sdi",
     description: "Plan, manage and enjoy the deeper end of recreational diving.",
     minimumCertificationLevel: "advanced_open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "The wrecks and walls that start where the reef stops",
@@ -3011,6 +3069,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "sdi",
     description: "Know where you are, and get back to the boat without surfacing to check.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Natural references, compass work, and finding the mooring line again",
@@ -3056,6 +3115,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "sdi",
     description: "The same reef after dark, and the skills for water that has gone green.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "A different reef entirely, once the sun goes down",
@@ -3104,6 +3164,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "sdi",
     description: "Survey a wreck properly, and understand exactly where the outside ends.",
     minimumCertificationLevel: "advanced_open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "How to dive a wreck as a structure, not just swim past one",
@@ -3160,6 +3221,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "sdi",
     description: "Let the current do the work, and stay findable while it does.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "The easiest diving there is, once you stop fighting the water",
@@ -3208,6 +3270,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "sdi",
     description: "Be the diver a captain is glad to have aboard.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Entries, exits, and knowing where to put your kit",
@@ -3252,6 +3315,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "sdi",
     description: "Find what went over the side, and bring it up without hurting anyone.",
     minimumCertificationLevel: "advanced_open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Search patterns that work, and lifting that does not run away with you",
@@ -3309,6 +3373,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "sdi",
     description: "Bring back images that look like the dive actually looked.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Get close, add light, and hold still — the three things that fix everything",
@@ -3357,6 +3422,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "sdi",
     description: "Dive warm, and control a suit that is now part of your buoyancy.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Stay warm on long dives — and learn the one skill a wetsuit never taught you",
@@ -3405,6 +3471,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "sdi",
     description: "Understand your kit well enough to fix the small things yourself.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Know what everything does, and sort the small failures on the boat",
@@ -3453,6 +3520,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "sdi",
     description: "Cylinders on your hips — easier on your back, and every valve in reach.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "A trim, balanced rig you can carry to the water in two trips",
@@ -3509,6 +3577,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "sdi",
     description: "Understand the reef you are diving, and dive it without damaging it.",
     minimumCertificationLevel: null,
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "Know what you are looking at, and leave it exactly as you found it",
@@ -3554,6 +3623,7 @@ export const COURSE_TEMPLATES: CourseTemplate[] = [
     agency: "sdi",
     description: "Back in the water after a gap, without pretending the gap did not happen.",
     minimumCertificationLevel: "open_water",
+    certifiesLevel: null,
     content: {
       ...blank,
       summary: "A patient tune-up so your first dive back is a good one",
@@ -3604,39 +3674,3 @@ export function getCourseTemplate(slug: string): CourseTemplate | null {
 
 /** The baseline persisted beside a shop copy when it begins following a template. */
 export { courseTemplateSnapshot };
-
-/**
- * **The rung a course leaves its students on**, for the templates that issue
- * one. Agency fact, not shop content, so it is keyed by template and never
- * edited: a shop copy reads it through `courses.source_template_slug`.
- *
- * Only the courses whose card *is* a rung of DiveDay's ladder. Specialties,
- * refreshers and tasters issue no level. SSI's Advanced Adventurer and SDI's
- * Advanced Adventure Diver are the Advanced rung here because they are
- * everywhere else: the importer maps the card to `advanced_open_water`
- * (`src/lib/import.ts`), the SSI page quotes its 30 m limit, and the SDI
- * continuing-education templates name it as their Advanced prerequisite.
- *
- * Read by `src/db/certifications-in-training.ts`, which is what lets a diver
- * booked on the course be booked on the dive after it.
- */
-const CERTIFIED_LEVEL_BY_TEMPLATE: Readonly<Record<string, CertificationLevel>> = {
-  "open-water-diver": "open_water",
-  "advanced-open-water-diver": "advanced_open_water",
-  "rescue-diver": "rescue",
-  divemaster: "divemaster",
-  "ssi-open-water-diver": "open_water",
-  "ssi-advanced-adventurer": "advanced_open_water",
-  "ssi-diver-stress-and-rescue": "rescue",
-  "sdi-open-water-scuba-diver": "open_water",
-  "sdi-advanced-adventure-diver": "advanced_open_water",
-  "sdi-rescue-diver": "rescue",
-  "sdi-divemaster": "divemaster",
-};
-
-/** The level a course built from this template certifies its students at, if any. */
-export function courseTemplateCertifiedLevel(
-  slug: string | null | undefined,
-): CertificationLevel | null {
-  return slug ? (CERTIFIED_LEVEL_BY_TEMPLATE[slug] ?? null) : null;
-}

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { nowMs } from "@/lib/clock";
 import { fileScopedShopContext } from "@/test/db";
 import { createBooking } from "./bookings";
-import { inTrainingBefore } from "./certifications-in-training";
+import { inTrainingBefore, listCourseSeatsInTraining } from "./certifications-in-training";
 import type { AppDb } from "./client";
 import { listTripReadiness, upsertTripRequirements } from "./readiness";
 import { type certificationLevel, certifications, courses, tripAssignments } from "./schema";
@@ -188,6 +188,75 @@ describe("a fun dive after the course that certifies for it", () => {
       ok: false,
       reason: "course_prerequisite",
     });
+  });
+});
+
+describe("listCourseSeatsInTraining reads the course's own level (issue #2059)", () => {
+  async function courseWith(
+    db: AppDb,
+    shopId: string,
+    fields: { title: string; sourceTemplateSlug: string | null; certifiesLevel: Level | null },
+  ) {
+    const [course] = await db
+      .insert(courses)
+      .values({ shopId, slug: fields.title.toLowerCase().replace(/\W+/g, "-"), ...fields })
+      .returning();
+    if (!course) throw new Error("course insert failed");
+    const session = await createTrip(db, {
+      shopId,
+      courseId: course.id,
+      title: `${fields.title} session`,
+      startsAt: new Date(BASE() + 20 * DAY),
+      endsAt: new Date(BASE() + 20 * DAY + 8 * 60 * 60 * 1000),
+      capacity: 6,
+    });
+    if (!session) throw new Error("session not created");
+    const instructor = (await listStaff(db, shopId)).find((entry) =>
+      entry.roles.includes("instructor"),
+    );
+    if (!instructor) throw new Error("seeded instructor missing");
+    await db.insert(tripAssignments).values({ tripId: session.id, personId: instructor.person.id });
+    return session;
+  }
+
+  it("counts a course the shop built itself when it carries a level", async () => {
+    const { db, shop } = ctx;
+    const session = await courseWith(db, shop.id, {
+      title: "House Advanced Programme",
+      sourceTemplateSlug: null,
+      certifiesLevel: "advanced_open_water",
+    });
+    const seat = await book(db, shop.id, session.id, { name: "Ren Okafor" });
+    if (!seat.ok) throw new Error(`booking refused: ${seat.reason}`);
+    expect(await listCourseSeatsInTraining(db, shop.id, [seat.personId])).toEqual([
+      expect.objectContaining({ tripId: session.id, level: "advanced_open_water" }),
+    ]);
+  });
+
+  it("counts nothing for a course with no level, whatever template it started from", async () => {
+    const { db, shop } = ctx;
+    const session = await courseWith(db, shop.id, {
+      title: "Open Water Taster Rewrite",
+      sourceTemplateSlug: "open-water-diver",
+      certifiesLevel: null,
+    });
+    const seat = await book(db, shop.id, session.id, { name: "Saoirse Daly" });
+    if (!seat.ok) throw new Error(`booking refused: ${seat.reason}`);
+    expect(await listCourseSeatsInTraining(db, shop.id, [seat.personId])).toEqual([]);
+  });
+
+  it("never reads another shop's course seats for this shop's divers", async () => {
+    const { db, shop } = ctx;
+    const session = await courseWith(db, shop.id, {
+      title: "Rescue Weekend",
+      sourceTemplateSlug: null,
+      certifiesLevel: "rescue",
+    });
+    const seat = await book(db, shop.id, session.id, { name: "Noor Haddad" });
+    if (!seat.ok) throw new Error(`booking refused: ${seat.reason}`);
+    expect(
+      await listCourseSeatsInTraining(db, "00000000-0000-0000-0000-000000000000", [seat.personId]),
+    ).toEqual([]);
   });
 });
 

@@ -28,6 +28,7 @@ import { staffTideStationText, staffTideWindowText } from "@/i18n/tide-labels";
 import { ratingLapsedDetailText } from "@/i18n/today-labels";
 import { nowDate } from "@/lib/clock";
 import { DSD_RATIO } from "@/lib/course-ratios";
+import { courseCertifiesStudents } from "@/lib/courses";
 import { oneWindowPerSite, tideWindowsForDeparture } from "@/lib/departure-tides";
 import { depthInUnit } from "@/lib/depth-units";
 import { parseDockDayRhythm } from "@/lib/diver-planning";
@@ -293,7 +294,13 @@ export default async function ManageTripPage({
             cap: crewGap.capacity,
             perInstructor: DSD_RATIO.openWaterStudentsPerInstructor,
           })
-        : t("trips.detail.overRatioWarning", { booked: crewGap.booked, cap: crewGap.capacity });
+        : crewGap.remedy === "instructor"
+          ? // Past the 12-per-instructor ceiling an assistant buys no seat.
+            t("trips.detail.overRatioWarningCeiling", {
+              booked: crewGap.booked,
+              cap: crewGap.capacity,
+            })
+          : t("trips.detail.overRatioWarning", { booked: crewGap.booked, cap: crewGap.capacity });
 
   // One resolution, handed to the section it belongs to. Whatever no rendered
   // section claims — a page-level permission refusal, or a section this
@@ -381,7 +388,16 @@ export default async function ManageTripPage({
         ...(crewGap.code === "over_ratio"
           ? [
               {
-                text: t("trips.pulse.overRatio"),
+                // Who to go and find (issue #1677): a divemaster or AI raises
+                // the student cap up to 12 per instructor, and adds nothing
+                // past that or to an intro session.
+                text: t(
+                  crewGap.ratio === "intro"
+                    ? "trips.pulse.overIntroRatio"
+                    : crewGap.remedy === "instructor"
+                      ? "trips.pulse.overRatioInstructor"
+                      : "trips.pulse.overRatio",
+                ),
                 href: "?view=details#crew",
                 tone: "danger" as const,
               },
@@ -640,7 +656,10 @@ export default async function ManageTripPage({
     sendNewWaiverAction: mayRetireRefusal
       ? sendNewWaiverAction.bind(null, shopSlug, tripId)
       : undefined,
-    certifyDiverAction: trip.course
+    // Never on an intro session (a DSD, a Try Scuba, a refresher): it issues
+    // no card, and a tap there would mint a verified one for a diver who has
+    // never been certified. The action refuses it too.
+    certifyDiverAction: courseCertifiesStudents(trip.course ?? null)
       ? certifyDiverFromRosterAction.bind(null, shopSlug, tripId)
       : undefined,
     // The two course acts travel together: a roster that could certify a
@@ -1169,6 +1188,7 @@ export default async function ManageTripPage({
               arrival={desk?.arrival}
               walkIn={desk?.walkIn}
               acceptsDivers={acceptsDivers}
+              certifyDefaultLevel={trip.course?.certifiesLevel ?? null}
               guests={guests}
               shopSlug={shopSlug}
               shopName={shop.name}
