@@ -841,7 +841,7 @@ new domain concept, define it here in the same PR.
   writes the mark onto a course session any more (issue #1342, see **Self-guided departure**) — and
   it is kept because a row written out of band still has to resolve correctly. Formerly "coverage
   gap", which named a second vocabulary that no longer exists. **The six words a staffer reads** are
-  "Nobody in the water", "Under target", "Course needs instructor", "No instructor or crew",
+  "No divemaster", "Under target", "Course needs instructor", "No instructor or crew",
   "Over student ratio" and "Over intro ratio" — "student" says the agency cap rather than the
   target two rows down, "intro" the one cap a divemaster cannot raise, and all six share the same
   135px column of the staffing week (issues #1125, #1338, #1339).

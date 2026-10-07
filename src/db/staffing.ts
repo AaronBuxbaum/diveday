@@ -364,7 +364,7 @@ export async function getStaffingView(
       diversPerDivemaster,
       selfGuided: entry.trip.selfGuided,
     });
-    // **Nobody in the water outranks the instructor gap** (issue #1338). A
+    // **No divemaster outranks the instructor gap** (issue #1338). A
     // course session with no crew at all satisfies both rules, and issue #732
     // settled that a departure carries one row — but #732's rule is about the
     // *count*, not about which code wins, and the course gap winning outright

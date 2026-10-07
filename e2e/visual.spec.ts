@@ -4272,7 +4272,7 @@ for (const scheme of ["light", "dark"] as const) {
         await request.post("/api/test/seed-trouble-states?crewGap=1");
         await page.goto("/shop/blue-mantis/staffing");
         // The destination's own words, not a timing guess.
-        await page.getByText("Nobody in the water").first().waitFor();
+        await page.getByText("No divemaster").first().waitFor();
         await capture(page, "staffing-week-gap", scheme);
       });
 
@@ -7632,8 +7632,8 @@ for (const scheme of ["light", "dark"] as const) {
         });
 
         /**
-         * **The staffing week's gap chips**, three words in English ("Nobody in
-         * the water") and four in Spanish ("Nadie en el agua") inside a day
+         * **The staffing week's gap chips**, two words in English ("No
+         * divemaster") and two in Spanish ("Sin divemaster") inside a day
          * cell whose width is a seventh of the grid.
          *
          * Through the same trouble-states route its English sibling uses: a
@@ -7645,7 +7645,7 @@ for (const scheme of ["light", "dark"] as const) {
         }) => {
           await request.post("/api/test/seed-trouble-states?crewGap=1");
           await page.goto("/shop/blue-mantis/staffing");
-          await page.getByText("Nadie en el agua").first().waitFor();
+          await page.getByText("Sin divemaster").first().waitFor();
           await capture(page, "staffing-week-gap", scheme, { locale: SPANISH });
         });
       });

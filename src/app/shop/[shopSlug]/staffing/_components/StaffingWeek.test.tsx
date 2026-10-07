@@ -64,7 +64,7 @@ const GAP_WORDS: GapWords = {
   over_ratio: "More divers booked than the crew can supervise",
   over_intro_ratio: "Over intro ratio",
   uncrewed_course: "No instructor or crew",
-  uncrewed_departure: "Nobody in the water",
+  uncrewed_departure: "No divemaster",
   crew_below_target: "Under target",
 };
 
@@ -154,7 +154,7 @@ describe("StaffingWeek", () => {
     renderWeek({ gaps: [GAP] });
 
     // The word, not the hue: every colour-carried state also carries one.
-    expect(screen.getAllByText("Nobody in the water").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("No divemaster").length).toBeGreaterThan(0);
     // And the act, named for the departure it belongs to, pointing at that
     // trip's crew section rather than at a nav tab.
     for (const link of screen.getAllByRole("link", { name: "Assign crew to Spiegel Grove" })) {
@@ -620,7 +620,7 @@ describe("StaffingWeek geometry", () => {
         : within(grid).getByText("6:30 AM – 12:00 PM").closest("span.flex-col")?.parentElement,
       crew: grid.querySelector('a[href="/shop/blue-mantis/trips/trip-drift?view=details#crew"]'),
       away: within(grid).getByText("Away").parentElement,
-      gap: within(grid).getByText("Nobody in the water").parentElement,
+      gap: within(grid).getByText("No divemaster").parentElement,
     };
     return { ...rendered, grid, chips };
   }

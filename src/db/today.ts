@@ -1910,7 +1910,7 @@ export async function getTodayWork(
       // this queue and the trip page cannot disagree (issue #973).
       selfGuided: trip.selfGuided,
     });
-    // **Nobody in the water outranks the instructor gap.** A course session
+    // **No divemaster outranks the instructor gap.** A course session
     // with no crew at all satisfies both rules, and issue #732 settled that a
     // departure carries one row for one underlying fact — but that rule is
     // about the count, not about which code wins. The course gap winning
