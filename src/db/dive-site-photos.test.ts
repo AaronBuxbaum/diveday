@@ -1,9 +1,13 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { unseededTestDb } from "@/test/db";
-import { diveSitePhotosNoOtherSiteHolds, diveSitePhotoUrlsHeldByShop } from "./dive-site-photos";
+import {
+  diveSitePhotosNoOtherSiteHolds,
+  diveSitePhotoUrlsHeldByShop,
+  ownedDiveSitePhotos,
+} from "./dive-site-photos";
 import { DIVE_SITE_TEMPLATES } from "./dive-site-templates";
 import { diveSites, shops } from "./schema";
 
@@ -22,7 +26,55 @@ async function twoShops() {
   return { db, mine, theirs };
 }
 
+/** Both steps back to back, for the tests about who counts as a holder. */
+async function release(
+  db: Awaited<ReturnType<typeof unseededTestDb>>,
+  shopId: string,
+  siteId: string,
+  urls: readonly string[],
+) {
+  return diveSitePhotosNoOtherSiteHolds(db, siteId, await ownedDiveSitePhotos(db, shopId, urls));
+}
+
 describe("dive-site photo holders (issue #2078)", () => {
+  /**
+   * **Holders are read after the save, not before** (security review). Step
+   * one runs while the site still holds the photo; a copy of the site made in
+   * the same shop between that read and the save's write must still count, or
+   * the copy's picture is deleted under it.
+   */
+  it("keeps a photo a copy picked up between choosing candidates and the save", async () => {
+    const { db, mine } = await twoShops();
+    const url = `${MEDIA}/copied.jpg`;
+    const [site] = await db
+      .insert(diveSites)
+      .values({ shopId: mine.id, name: "Mine", slug: "mine", imageUrls: [url] })
+      .returning();
+    if (!site) throw new Error("site insert failed");
+
+    const owned = await ownedDiveSitePhotos(db, mine.id, [url]);
+    // A concurrent copy, then the save that takes the photo off the original.
+    await db
+      .insert(diveSites)
+      .values({ shopId: mine.id, name: "Copy", slug: "copy", imageUrls: [url] });
+    await db.update(diveSites).set({ imageUrls: [] }).where(eq(diveSites.id, site.id));
+
+    expect(await diveSitePhotosNoOtherSiteHolds(db, site.id, owned)).toEqual([]);
+  });
+
+  it("frees a photo after the save once nothing else holds it", async () => {
+    const { db, mine } = await twoShops();
+    const url = `${MEDIA}/gone.jpg`;
+    const [site] = await db
+      .insert(diveSites)
+      .values({ shopId: mine.id, name: "Mine", slug: "mine", imageUrls: [url] })
+      .returning();
+    if (!site) throw new Error("site insert failed");
+    const owned = await ownedDiveSitePhotos(db, mine.id, [url]);
+    await db.update(diveSites).set({ imageUrls: [] }).where(eq(diveSites.id, site.id));
+    expect(await diveSitePhotosNoOtherSiteHolds(db, site.id, owned)).toEqual([url]);
+  });
+
   /**
    * **A save that lets go of a photo deletes the object only when no other
    * site still shows it.** Another shop's site naming the same stored URL (an
@@ -59,9 +111,7 @@ describe("dive-site photo holders (issue #2078)", () => {
       },
     ]);
 
-    expect(await diveSitePhotosNoOtherSiteHolds(db, mine.id, site.id, held)).toEqual([
-      `${MEDIA}/only-mine.jpg`,
-    ]);
+    expect(await release(db, mine.id, site.id, held)).toEqual([`${MEDIA}/only-mine.jpg`]);
   });
 
   /**
@@ -81,10 +131,7 @@ describe("dive-site photo holders (issue #2078)", () => {
       .values({ shopId: theirs.id, name: "T", slug: "t", imageUrls: [`${MEDIA}/theirs.jpg`] });
 
     expect(
-      await diveSitePhotosNoOtherSiteHolds(db, mine.id, site.id, [
-        `${MEDIA}/theirs.jpg`,
-        `${MEDIA}/nobodys.jpg`,
-      ]),
+      await release(db, mine.id, site.id, [`${MEDIA}/theirs.jpg`, `${MEDIA}/nobodys.jpg`]),
     ).toEqual([]);
   });
 
@@ -95,10 +142,8 @@ describe("dive-site photo holders (issue #2078)", () => {
       .values({ shopId: mine.id, name: "Mine", slug: "mine", imageUrls: [`${MEDIA}/x.jpg`] })
       .returning();
     if (!site) throw new Error("site insert failed");
-    expect(await diveSitePhotosNoOtherSiteHolds(db, mine.id, site.id, [`${MEDIA}/x.jpg`])).toEqual([
-      `${MEDIA}/x.jpg`,
-    ]);
-    expect(await diveSitePhotosNoOtherSiteHolds(db, mine.id, site.id, [])).toEqual([]);
+    expect(await release(db, mine.id, site.id, [`${MEDIA}/x.jpg`])).toEqual([`${MEDIA}/x.jpg`]);
+    expect(await release(db, mine.id, site.id, [])).toEqual([]);
   });
 
   it("is not failed by a row whose landmarks are not an array", async () => {
@@ -117,9 +162,7 @@ describe("dive-site photo holders (issue #2078)", () => {
       sql`update dive_sites set landmarks = '{"photoUrl": "x"}'::jsonb where id = ${odd.id}`,
     );
 
-    expect(await diveSitePhotosNoOtherSiteHolds(db, mine.id, site.id, [`${MEDIA}/x.jpg`])).toEqual([
-      `${MEDIA}/x.jpg`,
-    ]);
+    expect(await release(db, mine.id, site.id, [`${MEDIA}/x.jpg`])).toEqual([`${MEDIA}/x.jpg`]);
   });
 
   it("reads the photos a shop holds and none another shop holds", async () => {

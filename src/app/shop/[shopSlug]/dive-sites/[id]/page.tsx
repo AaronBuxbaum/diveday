@@ -12,7 +12,7 @@ import { SectionCard, TONE_PANEL_CLASS } from "@/components/ui/card";
 import { DangerDisclosure } from "@/components/ui/disclosure";
 import { FormStatus } from "@/components/ui/form";
 import { getDb } from "@/db/client";
-import { diveSitePhotosNoOtherSiteHolds } from "@/db/dive-site-photos";
+import { diveSitePhotosNoOtherSiteHolds, ownedDiveSitePhotos } from "@/db/dive-site-photos";
 import {
   deleteDiveSite,
   getDiveSite,
@@ -298,14 +298,12 @@ export default async function EditDiveSitePage({
       planningNote: planningNoteWords,
       ...siteFields
     } = parsed.fields;
-    // Only a photo no other site still shows may be deleted once this saves: a
-    // copied site, or another shop's row naming the same object, keeps it alive
-    // (issue #2078). Asked before the write, while this site still holds them,
-    // because the reader only answers for photos this shop holds.
-    const released = await diveSitePhotosNoOtherSiteHolds(
+    // The photos this save lets go of that are this shop's, chosen before the
+    // write while this site still holds them (issue #2078). Whether another
+    // site still shows one is asked after the write, below.
+    const candidates = await ownedDiveSitePhotos(
       activeDb,
       activeSession.user.shopId,
-      id,
       supersededDiveSitePhotos(stored, photos.photos),
     );
     const updated = await updateDiveSiteForForm(
@@ -360,8 +358,10 @@ export default async function EditDiveSitePage({
     if (!updated) notFound();
     // Only once the row is durably saved: a photo this save replaced or
     // removed is queued for provider deletion, never blocked on storage and
-    // owner-visible if it fails (CR-012). Which ones was decided before the
-    // save, above.
+    // owner-visible if it fails (CR-012). Only a candidate no other site shows
+    // now that the save has landed: a copied site, an import, or another
+    // shop's row naming the same object keeps it alive (issue #2078).
+    const released = await diveSitePhotosNoOtherSiteHolds(activeDb, id, candidates);
     for (const url of released) {
       await queueAndAttemptMediaDeletion(activeDb, {
         shopId: activeSession.user.shopId,

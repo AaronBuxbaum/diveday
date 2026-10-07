@@ -54,11 +54,40 @@ export async function diveSitePhotoUrlsHeldByShop(db: AppDb, shopId: string): Pr
   return new Set(rows.flatMap(photoUrlsOf));
 }
 
+declare const ownedPhotos: unique symbol;
+
 /**
- * **The photos among `urls` that this shop holds and no other dive site
- * does** — the only ones a save taking them off `siteId` may delete from
- * storage (issue #2078). Call it *before* that save writes, while `siteId`
- * still holds them.
+ * Photo URLs this shop's own sites held when they were read — the only input
+ * {@link diveSitePhotosNoOtherSiteHolds} takes. Branded so that function cannot
+ * be handed a URL that did not come through {@link ownedDiveSitePhotos}.
+ */
+export type OwnedDiveSitePhotos = readonly string[] & { readonly [ownedPhotos]: true };
+
+/**
+ * **Step one of releasing photos: which of `urls` are this shop's** (issue
+ * #2078). Call it *before* the save that lets go of them, while the site still
+ * holds them; a URL this shop has never held is dropped here, so the
+ * cross-shop question in step two can only ever be asked about photos the
+ * caller already has.
+ */
+export async function ownedDiveSitePhotos(
+  db: AppDb,
+  shopId: string,
+  urls: readonly string[],
+): Promise<OwnedDiveSitePhotos> {
+  if (urls.length === 0) return [] as unknown as OwnedDiveSitePhotos;
+  const ours = await diveSitePhotoUrlsHeldByShop(db, shopId);
+  return [...new Set(urls.filter((url) => ours.has(url)))] as unknown as OwnedDiveSitePhotos;
+}
+
+/**
+ * **Step two: the owned photos no other dive site still holds** — the only
+ * ones a save taking them off `siteId` may delete from storage (issue #2078).
+ * Call it *after* that save has written, so a copy or an import that landed in
+ * between is read as a holder rather than having its photo deleted under it.
+ * (Not inside the save's transaction: `updateDiveSiteForForm` opens its own.
+ * What is left is the gap between this read and the deletion, a concurrent
+ * copy of a site whose photo was removed in the same instant.)
  *
  * A stored URL can sit on more than one row: `copyDiveSite` carries the
  * original's photos onto the copy, and before #2078 an import could name any
@@ -67,12 +96,10 @@ export async function diveSitePhotoUrlsHeldByShop(db: AppDb, shopId: string): Pr
  * when that row is another shop's, the failed picture is on their public page
  * while the deletion is filed under this shop, where they never see it.
  *
- * **This reads across shops on purpose, and answers nothing about them.**
- * `urls` is first cut down to what this shop's own sites hold
- * (`diveSitePhotoUrlsHeldByShop`), so a caller can only ever ask about photos
- * it already has, and the answer is a subset of those; no other shop's row, id
- * or field leaves this function. Deleted sites count: a restore brings them
- * back with their photos.
+ * **This reads across shops on purpose, and answers nothing about them.** Its
+ * input is already cut down to this shop's own photos (step one), and the
+ * answer is a subset of those; no other shop's row, id or field leaves this
+ * function. Deleted sites count: a restore brings them back with their photos.
  *
  * The catalog (`global_dive_site_versions`) is not a holder: its briefings name
  * only bundled root-relative paths under `public/`, which storage never
@@ -81,13 +108,10 @@ export async function diveSitePhotoUrlsHeldByShop(db: AppDb, shopId: string): Pr
  */
 export async function diveSitePhotosNoOtherSiteHolds(
   db: AppDb,
-  shopId: string,
   siteId: string,
-  urls: readonly string[],
+  owned: OwnedDiveSitePhotos,
 ): Promise<string[]> {
-  if (urls.length === 0) return [];
-  const ours = await diveSitePhotoUrlsHeldByShop(db, shopId);
-  const wanted = new Set(urls.filter((url) => ours.has(url)));
+  const wanted = new Set<string>(owned);
   if (wanted.size === 0) return [];
   const list = sql`array[${sql.join(
     [...wanted].map((url) => sql`${url}`),
