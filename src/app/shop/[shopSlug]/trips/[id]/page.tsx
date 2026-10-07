@@ -514,7 +514,7 @@ export default async function ManageTripPage({
         timeZone: shop.timezone,
         t,
       });
-  // The count leads the desk and says "1 diver can't board yet" itself, so the
+  // The count leads the desk and says "1 person can't board yet" itself, so the
   // pulse's door to the same rows stands down while it is on screen.
   const shownPulseFacts = desk?.arrival.instrument
     ? pulseFacts.filter((fact) => !fact.href.endsWith("#roster"))

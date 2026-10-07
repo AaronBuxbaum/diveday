@@ -137,11 +137,11 @@
     "seats": "{booked} de {capacity} reservados · {open, plural, one {# plaza libre} other {# plazas libres}}",
     "seatsFull": "Barco completo — {capacity, plural, one {la # plaza reservada} other {las # plazas reservadas}}",
     "aboard": "{count} a bordo",
-    "blocked": "{count, plural, one {# buceador todavía no puede embarcar} other {# buceadores todavía no pueden embarcar}}",
+    "blocked": "{count, plural, one {# persona todavía no puede embarcar} other {# personas todavía no pueden embarcar}}",
     "needsInstructor": "El curso necesita instructor",
     "overRatio": "Ratio de alumnos excedida",
     "overIntroRatio": "Ratio de bautismo excedida",
-    "prepGaps": "{count, plural, one {A # buceador le faltan tallas de alquiler} other {A # buceadores les faltan tallas de alquiler}}",
+    "prepGaps": "{count, plural, one {A # persona le faltan tallas de alquiler} other {A # personas les faltan tallas de alquiler}}",
     "awaitingPayment": "{count, plural, one {# pedido pendiente de pago} other {# pedidos pendientes de pago}}",
     "noRequirements": "Define los requisitos para que alguien pueda embarcar",
     "boatClash": "{boat} también está asignado a {departure}"

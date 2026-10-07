@@ -41,7 +41,7 @@
   "crewNoneAboard": "Everyone aboard is counted, and every crew member on this trip is marked ashore, so nobody aboard is on the crew list. Add whoever sailed.",
   "crewNotBackAboard": "{count, plural, one {# crew member is not back aboard.} other {# crew members are not back aboard.}} This checkpoint stays open.",
   "crewAwaiting": "{count, plural, one {# crew member still to call.} other {# crew members still to call.}} Every person on the crew list needs a result of their own.",
-  "blockedDeparture": "{count, plural, one {# diver is blocked.} other {# divers are blocked.}}",
+  "blockedDeparture": "{count, plural, one {# person is blocked.} other {# people are blocked.}}",
   "crewHeading": "Crew",
   "crewMarkAboard": "Mark aboard",
   "crewAboardCheck": "Aboard",

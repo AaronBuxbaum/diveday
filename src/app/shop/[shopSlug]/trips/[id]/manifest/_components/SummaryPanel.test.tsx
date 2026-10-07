@@ -497,7 +497,7 @@ describe("uncalled crew while divers are still open", () => {
  * it was `px-4`, and its lines started a pixel left of the card's. And the
  * live status line stays mounted (it must exist before its words arrive), but
  * with divers still to call it has nothing to say, and the lines after it
- * still spaced themselves off it: 4px of margin above "1 diver is blocked."
+ * still spaced themselves off it: 4px of margin above "1 person is blocked."
  * against a 0px line.
  */
 describe("who the people are", () => {
@@ -509,6 +509,23 @@ describe("who the people are", () => {
     });
     expect(screen.getByText("3 divers · 1 snorkeler")).toBeInTheDocument();
     expect(screen.queryByText(/rider/)).toBeNull();
+  });
+
+  it("counts the blocked as people, since a snorkeler or rider can be one", () => {
+    // Regression (visual triage, PR #2224): a mixed boat's Boat tab said
+    // "4 divers are blocked." with a snorkeler and a rider among the four.
+    renderPanel({
+      isDeparture: true,
+      checkpoint: "departure",
+      summary: summary({
+        totalDivers: 7,
+        byType: { diver: 5, snorkeler: 1, rider: 1 },
+        ready: 3,
+        blocked: 4,
+      }),
+    });
+    expect(screen.getByText("4 people are blocked.")).toBeInTheDocument();
+    expect(screen.queryByText(/divers are blocked/)).toBeNull();
   });
 });
 
@@ -542,7 +559,7 @@ describe("the prose under the pinned card", () => {
     const live = document.querySelector('[aria-live="polite"]');
     expect(live?.tagName).toBe("P");
     expect(live).toBeEmptyDOMElement();
-    const blocked = screen.getByText("1 diver is blocked.");
+    const blocked = screen.getByText("1 person is blocked.");
     expect(blocked).toHaveClass("[p:empty+&]:mt-0");
   });
 });

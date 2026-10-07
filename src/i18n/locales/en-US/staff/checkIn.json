@@ -3,8 +3,8 @@
   "instrument": {
     "hereOf": "<figure>{here}</figure> of {expected} here",
     "toCome": "{count} to come",
-    "cantBoard": "{count, plural, one {# diver can’t board yet} other {# divers can’t board yet}}",
-    "notHere": "{count, plural, one {# diver is not here} other {# divers are not here}}"
+    "cantBoard": "{count, plural, one {# person can’t board yet} other {# people can’t board yet}}",
+    "notHere": "{count, plural, one {# person is not here} other {# people are not here}}"
   },
   "row": {
     "arrived": "Checked in"
