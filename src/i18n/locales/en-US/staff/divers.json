@@ -61,6 +61,7 @@
     "declaredNumber": "Diver says {number}",
     "shopIssuedLabel": "issued by your shop",
     "shopIssuedNoNumberLabel": "Certification number not on file yet",
+    "checkWithAgency": "Check with {agency}",
     "sightCard": "Verify certification record",
     "sightCardHint": "The diver told us this level. Enter the agency and number from the certification record you verified.",
     "sightNitroxCardHint": "The diver told us they’re nitrox certified. RAID and GUE cover enriched air in the level credential (RAID Open Water 20 or Advanced 35, GUE Fundamentals or Rec 1), so record that one. Every other agency issues a separate enriched-air credential, and a level credential from them is not nitrox evidence.",

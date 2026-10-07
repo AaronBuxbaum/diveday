@@ -53,3 +53,13 @@ even though it never fired. The cost was real; the benefit was hypothetical.
 - No behavioural change to readiness: the same verified/unexpired evidence clears the same gates.
 - If DiveDay later integrates a real agency API, it returns as a new, deliberately-scoped decision —
   not resurrected speculative plumbing.
+
+## Amendment 2026-10-07: a link to the agency's own lookup
+
+A card waiting for a check (pending, self-declared, or imported and unconfirmed) carries a **Check
+with <agency>** link that opens the agency's own public verification page in a new tab, from one
+registry, `src/lib/agency-verification.ts` (market audit 2026-10-07, item 30). It is a link and
+nothing more: DiveDay never fetches, scrapes or posts to the agency, never prefills a diver's
+details into the URL (no agency documents a parameter for it), and the staffer still marks the card
+certified here. Only agencies with a confirmed public lookup are listed; PADI's diver lookup is
+member-only, so PADI cards carry no link. This stays inside the decision above.

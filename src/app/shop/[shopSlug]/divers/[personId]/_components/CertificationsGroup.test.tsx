@@ -388,3 +388,68 @@ describe("a card gap on the certification records door", () => {
     expect(door()).toHaveTextContent("No certification is on file for this trip.");
   });
 });
+
+/**
+ * **"Check with SSI"** (market audit item 30, inside H-10): beside a card that
+ * is waiting for somebody, a plain link to the agency's own public lookup, in a
+ * new tab. Never on a settled card, and never for an agency that publishes no
+ * public lookup (PADI's is member-only).
+ */
+describe("the agency check link", () => {
+  function card(agency: string, status: string) {
+    return {
+      id: `c-${agency}`,
+      agency,
+      level: "open_water",
+      status,
+      identifier: "AB12345",
+      selfDeclaredAt: null,
+    };
+  }
+
+  it("links a pending SSI card to SSI's own diver check in a new tab", () => {
+    renderGroup(
+      diver({ certifications: [card("ssi", "pending")] } as unknown as Partial<DiverProfile>),
+    );
+    const link = screen.getByRole("link", { name: "Check with SSI" });
+    expect(link).toHaveAttribute("href", "https://my.divessi.com/online_diver_check");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link.getAttribute("rel")).toContain("noopener");
+  });
+
+  it("links a pending specialty card under its own agency", () => {
+    renderGroup(
+      diver({
+        specialtyCertifications: [
+          {
+            id: "s1",
+            agency: "naui",
+            specialty: "deep",
+            status: "pending",
+            identifier: "4321",
+            selfDeclaredAt: null,
+          },
+        ],
+      } as unknown as Partial<DiverProfile>),
+    );
+    expect(screen.getByRole("link", { name: "Check with NAUI" })).toHaveAttribute(
+      "href",
+      "https://www.naui.org/services/verify-diver-certification/",
+    );
+  });
+
+  it("draws nothing for a card already certified", () => {
+    renderGroup(
+      diver({ certifications: [card("ssi", "verified")] } as unknown as Partial<DiverProfile>),
+    );
+    expect(screen.queryByRole("link", { name: /Check with/ })).toBeNull();
+  });
+
+  it("draws nothing for an agency with no public lookup", () => {
+    renderGroup(
+      diver({ certifications: [card("padi", "pending")] } as unknown as Partial<DiverProfile>),
+    );
+    expect(screen.getByText("AB12345")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Check with/ })).toBeNull();
+  });
+});
