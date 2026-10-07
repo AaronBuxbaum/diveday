@@ -1113,6 +1113,20 @@ export const courses = pgTable(
      */
     minimumCertificationLevel: certificationLevel("minimum_certification_level"),
     /**
+     * **The rung this course leaves its students on**, or null for a course
+     * that issues none — a specialty, a refresher, a taster, or a course the
+     * shop built without a template (issue #2059). Agency fact like the gate
+     * above it: copied from the template when the course is made, carried by
+     * a template update (`COURSE_TEMPLATE_SYNC_FIELDS`), and offered to no
+     * editor. It replaced a lookup by `source_template_slug`, which kept
+     * answering for the original template however the shop rewrote its copy.
+     *
+     * Read by `listCourseSeatsInTraining` (a booked student counts as in
+     * training for this level) and by the roster's "Certify diver" select,
+     * which opens on it.
+     */
+    certifiesLevel: certificationLevel("certifies_level"),
+    /**
      * The one visibility switch: hides the course from the session picker and
      * takes its public page down. There is no separate draft/publish state —
      * a course is either offered, or it is hidden.
@@ -2378,6 +2392,7 @@ export const executedDives = pgTable(
 
 export const staffCredentialKind = pgEnum("staff_credential_kind", [
   "instructor_rating",
+  "assistant_instructor_rating",
   "divemaster_rating",
   "liability_insurance",
   "first_aid_cpr",
@@ -6142,6 +6157,21 @@ export const waiverRecords = pgTable(
     guardianConsentedAt: timestamp("guardian_consented_at", { withTimezone: true }),
     guardianSignedAt: timestamp("guardian_signed_at", { withTimezone: true }),
     /**
+     * **The guardian's address was erased on their own request**, and by whom
+     * (H-101, issue #1673). The guardian is a third party with no record of
+     * their own, so `eraseGuardianEmail` (`src/db/guardian-erasure.ts`) nulls
+     * `guardian_email` alone and leaves the diver, the medical answers and
+     * the co-signature standing. `guardian_email` is inside the version 1
+     * seal, so a release whose seal verified is re-sealed as version 4 — every
+     * signed fact but the address, plus these two columns — and reads as
+     * redacted rather than as tampered. Null on every record nobody asked
+     * about.
+     */
+    guardianEmailErasedAt: timestamp("guardian_email_erased_at", { withTimezone: true }),
+    guardianEmailErasedByPersonId: uuid("guardian_email_erased_by_person_id").references(
+      () => people.id,
+    ),
+    /**
      * The guardian section as last saved with "Save and finish later" — the
      * sibling of `draft_signer_name`, so a parent who comes back to the link
      * finds their own fields as they left them. Unsubmitted state, never
@@ -6242,6 +6272,12 @@ export const waiverRecords = pgTable(
         ${table.medicalClearanceEvaluatedOn} is not null
         and (${table.medicalClearanceDocumentUrl} is not null
           or ${table.medicalClearancePhysicianName} is not null))`,
+    ),
+    // An erased address stays erased: no writer may put one back on a release
+    // the guardian asked to be taken off (H-101, issue #1673).
+    check(
+      "waiver_records_guardian_email_erased_stays_erased",
+      sql`${table.guardianEmailErasedAt} is null or ${table.guardianEmail} is null`,
     ),
     // A guardian's signature is one act with four facts: when they signed,
     // when they consented, by which provider, and who they are to the diver.
@@ -7079,13 +7115,15 @@ export const tripRequirements = pgTable(
  * confirmation can only ever name one of them.
  *
  * Deliberately not `gear_item_kind` below: that one is the *register's*
- * alphabet and carries `regulator`, `tank`, `hood` and a split `mask`/`fins`,
+ * alphabet and carries `regulator`, `tank` and a split `mask`/`fins`,
  * none of which has a size column on `rental_fit_profiles`. A confirmation
  * naming one of those could not be printed back to a diver against any size
  * the shop actually holds.
  *
  * `drysuit` was in that excluded company until issue 1414 gave it `drysuit_size`
  * below; it is a sized piece now, on a scale of its own, and belongs here.
+ * `hood` and `gloves` joined it when they became two kinds with a size each
+ * (H-100, issue #1816).
  */
 export const rentalFitItem = pgEnum("rental_fit_item", [
   "bcd",
@@ -7094,6 +7132,8 @@ export const rentalFitItem = pgEnum("rental_fit_item", [
   "mask_fins",
   "weights",
   "drysuit",
+  "hood",
+  "gloves",
 ]);
 
 /**
@@ -7145,7 +7185,20 @@ export const rentalFitProfiles = pgTable(
     rentsDiveComputer: boolean("rents_dive_computer").notNull().default(false),
     rentsGopro: boolean("rents_gopro").notNull().default(false),
     rentsDrysuit: boolean("rents_drysuit").notNull().default(false),
+    /**
+     * Two kinds, not one "hood & gloves" (H-100, issue #1816): a warm-water
+     * diver takes gloves and no hood, a quarry diver takes both in different
+     * thicknesses, and one checkbox with one size could say neither.
+     *
+     * `rents_hood_gloves`, the one kind they replace, has no reader or writer
+     * left and stays only for the deploy: the release still serving while
+     * this migration runs selects it, so it is the contract half of an
+     * expand/contract pair and is dropped by the next migration (H-49 waives
+     * the backfill, not the deploy window).
+     */
     rentsHoodGloves: boolean("rents_hood_gloves").notNull().default(false),
+    rentsHood: boolean("rents_hood").notNull().default(false),
+    rentsGloves: boolean("rents_gloves").notNull().default(false),
     rentsTorch: boolean("rents_torch").notNull().default(false),
     rentsSmb: boolean("rents_smb").notNull().default(false),
     bcdSize: text("bcd_size"),
@@ -7171,6 +7224,14 @@ export const rentalFitProfiles = pgTable(
      * carries a second fact with nothing on the list to notice its loss.
      */
     drysuitSize: text("drysuit_size"),
+    /**
+     * **Free text, like the drysuit's, on both fit forms** (H-100, issue
+     * #1816). A rental hood racks by size *and* thickness ("M, 5 mm") and
+     * gloves by size (S–XL); a closed select would need two axes and somebody
+     * to own them, so the shop's own words reach the packing list verbatim.
+     */
+    hoodSize: text("hood_size"),
+    gloveSize: text("glove_size"),
     bootSize: text("boot_size"),
     finSize: text("fin_size"),
     weightPreference: text("weight_preference"),

@@ -317,8 +317,9 @@ new domain concept, define it here in the same PR.
   already count. The credit assumes a rating **in teaching status** — a lapsed AI is out of teaching
   status and uninsured, and is not a certified assistant. Since H-59's 2026-10-07 amendment (issue
   #1853) the **supervision claim** checks it, so far as the shop has recorded it: an AI whose every
-  recorded `instructor_rating` / `divemaster_rating` renewed before the departure counts for nothing
-  on Today, the staffing week and the trip page (see **Supervision claim**). Booking and rostering
+  recorded `instructor_rating` / `assistant_instructor_rating` / `divemaster_rating` renewed before the departure counts for nothing
+  on Today, the staffing week and the trip page (see **Supervision claim**); the AI's own rating is
+  filed as `assistant_instructor_rating` (issue #1850). Booking and rostering
   still give the credit, because H-59 kept those two gates closed.
   **It carries no permissions of its own** — DiveDay's authorization gates are
   unchanged by it, so a shop that wants their AI to hold a Divemaster's permissions files them as

@@ -199,6 +199,8 @@ export const PERSON_COLUMNS_DELIBERATELY_UNMOVED: Readonly<Record<string, string
   "waiver_materiality_decisions.actor_person_id": "who judged the answer material",
   "waiver_records.anonymized_by_person_id": "provenance for an erasure on a signed release",
   "waiver_records.medical_clearance_declined_by_person_id": "who declined the clearance",
+  "waiver_records.guardian_email_erased_by_person_id":
+    "who erased the guardian's address; inside its seal",
   "waiver_records.medical_cleared_by_person_id": "who cleared the medical answer",
   "waiver_records.moved_by_person_id": "who refiled the release with its split seat",
   "waiver_records.moved_from_person_id": "where a refiled release sat before; inside its seal",

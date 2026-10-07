@@ -99,7 +99,7 @@ export type RatingCredential = { kind: string; renewsAt: string | null };
  */
 const RUNG_EVIDENCE: Record<LapsedRung, readonly string[]> = {
   instructor: ["instructor_rating"],
-  certified_assistant: ["instructor_rating", "divemaster_rating"],
+  certified_assistant: ["instructor_rating", "assistant_instructor_rating", "divemaster_rating"],
 };
 
 /**
