@@ -34,9 +34,10 @@ import {
 import type { DiveMode } from "@/lib/diver-planning";
 import type { CertificationLevel } from "@/lib/readiness";
 import type { TidePreference } from "@/lib/tides";
-import { type AppDb, type DbExecutor, violatesUniqueIndex } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { isMarineLifeSlug, type MarineLifeSlug } from "./marine-life-catalog";
 import { offsetPage, PAGE_SIZE } from "./paging";
+import { violatesUniqueIndex } from "./query-helpers";
 import {
   bookings,
   type DiveSiteFitTone,

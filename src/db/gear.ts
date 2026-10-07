@@ -38,14 +38,10 @@ import {
   type SizedRentalKind,
   sizedRentalKindOfGearKind,
 } from "@/lib/rentals";
-import {
-  type AppDb,
-  type DbExecutor,
-  violatesExclusionConstraint,
-  violatesUniqueIndex,
-} from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { recordDeskEvent } from "./desk-events";
 import { type OffsetPage, offsetPage } from "./paging";
+import { violatesExclusionConstraint, violatesUniqueIndex } from "./query-helpers";
 import {
   bookings,
   type GearItem,

@@ -12,7 +12,7 @@ import { diverTranslator } from "@/i18n/messages";
 
 vi.mock("next/server", () => ({ connection: vi.fn(async () => undefined) }));
 vi.mock("@/db/client", () => ({ getDb: vi.fn(async () => ({})) }));
-vi.mock("@/db/shops", () => ({
+vi.mock("@/db/shops-cached", () => ({
   shopBySlugCached: vi.fn(async () => ({
     id: "shop-1",
     slug: "blue-mantis",
@@ -33,7 +33,7 @@ vi.mock("@/i18n/request", () => ({
 }));
 
 const { listPublishedShopReviewsPage } = await import("@/db/reviews");
-const { shopBySlugCached } = await import("@/db/shops");
+const { shopBySlugCached } = await import("@/db/shops-cached");
 const { default: PublicReviewsPage } = await import("./page");
 
 afterEach(cleanup);

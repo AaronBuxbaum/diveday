@@ -13,10 +13,11 @@ import {
   verifyBookingCapability,
 } from "./booking-capabilities";
 import { tripAdmissionFor } from "./bookings";
-import { type AppDb, type DbExecutor, isUniqueConstraintViolation } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { recordTripActivity } from "./operations";
 import { findOrCreatePerson } from "./people";
 import { storedPhone } from "./person-phone";
+import { isUniqueConstraintViolation } from "./query-helpers";
 import {
   bookings,
   certifications,

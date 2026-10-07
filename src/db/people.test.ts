@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
-import { isUniqueConstraintViolation } from "@/db/client";
+import { isUniqueConstraintViolation } from "@/db/query-helpers";
 import { firstHandLocale } from "@/i18n/negotiate";
 import type { DiverLocale } from "@/i18n/settings";
 import { nowDate } from "@/lib/clock";

@@ -24,8 +24,9 @@ import {
   reviewerDisplayName,
 } from "@/lib/reviews";
 import { isUuid } from "@/lib/uuid";
-import { type AppDb, type DbExecutor, queryAll } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { offsetPage, PAGE_SIZE } from "./paging";
+import { queryAll } from "./query-helpers";
 import {
   bookings,
   people,

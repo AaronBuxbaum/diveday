@@ -10,7 +10,7 @@ import { GroupLabel } from "@/components/ui/ledger";
 import { ITEM_TITLE_CLASS } from "@/components/ui/typography";
 import { getDb } from "@/db/client";
 import { activeCourseAgencies, listActiveCourses } from "@/db/courses";
-import { shopBySlugCached } from "@/db/shops";
+import { shopBySlugCached } from "@/db/shops-cached";
 import { DIVER_CERTIFICATION_LEVEL_KEYS } from "@/i18n/readiness-labels";
 import { requestTranslator } from "@/i18n/request";
 import { courseDepthFormat } from "@/i18n/unit-labels";

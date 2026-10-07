@@ -1,7 +1,8 @@
 import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
-import { getDb, sqlStateOf } from "@/db/client";
+import { getDb } from "@/db/client";
 import { DEMO_SCHEDULE_MIN_RUNWAY_DAYS, refreshCanonicalDemoSchedule } from "@/db/demo-refresh";
+import { sqlStateOf } from "@/db/query-helpers";
 import { log } from "@/lib/log";
 import { flushLogs } from "@/lib/observability";
 

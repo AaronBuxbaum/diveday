@@ -1,8 +1,9 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { type DiverLocale, isDiverLocale } from "@/i18n/settings";
 import { personNamesMatch } from "@/lib/person-name";
-import { type DbExecutor, isUniqueConstraintViolation } from "./client";
+import type { DbExecutor } from "./client";
 import { storedPhone } from "./person-phone";
+import { isUniqueConstraintViolation } from "./query-helpers";
 import { bookings, people, personRoles } from "./schema";
 
 export type FindOrCreatePersonInput = {

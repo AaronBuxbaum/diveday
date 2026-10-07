@@ -1,6 +1,7 @@
 import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { canPersonMergeDiver } from "@/db/authz";
-import { type AppDb, type DbExecutor, isUniqueConstraintViolation } from "@/db/client";
+import type { AppDb, DbExecutor } from "@/db/client";
+import { isUniqueConstraintViolation } from "@/db/query-helpers";
 import { bookings, people, personRoles } from "@/db/schema";
 import { nowDate } from "@/lib/clock";
 import { MIN_PHONE_SEARCH_DIGITS, phoneDigits } from "@/lib/person-fields";

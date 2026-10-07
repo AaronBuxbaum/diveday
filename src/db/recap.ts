@@ -29,7 +29,7 @@ import { maySendNow } from "@/lib/send-window";
 import type { TemperatureUnit } from "@/lib/temperature-units";
 import { loadActiveStaffRoles } from "./authz";
 import { getBoatForHistory } from "./boats";
-import { type AppDb, type DbExecutor, queryAll } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { issuePersonCourtesyEmailUnsubscribeToken } from "./courtesy-email";
 import { listSiteFieldGuides } from "./dive-sites";
 import { listExecutedDives, peopleWhoDivedBefore } from "./executed-dives";
@@ -39,6 +39,7 @@ import {
   recordNotificationDelivery,
   sendNotificationBatch,
 } from "./notifications";
+import { queryAll } from "./query-helpers";
 import {
   bookings,
   certifications,

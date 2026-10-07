@@ -22,7 +22,7 @@ import {
   isUsableInvoiceCustomerAddress,
 } from "@/lib/payments/invoicing";
 import { canPersonManageOrders } from "./authz";
-import { type AppDb, type DbExecutor, queryAll } from "./client";
+import type { AppDb, DbExecutor } from "./client";
 import { grantPackageEntitlementsForPaidOrder } from "./dive-packages";
 import { enqueueOrderIntegrationEvent } from "./integration-events";
 import { type OffsetPage, offsetPage, PAGE_SIZE } from "./paging";
@@ -34,6 +34,7 @@ import {
   startPaymentOperation,
 } from "./payment-operations";
 import { setBookingPayment, setBookingPaymentIfNotFinal } from "./payments";
+import { queryAll } from "./query-helpers";
 import type { Order, OrderLineItemKind, OrderStatus, PaymentOperationIntent } from "./schema";
 import {
   bookings,
