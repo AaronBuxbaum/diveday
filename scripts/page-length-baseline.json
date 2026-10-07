@@ -17,7 +17,7 @@
   "src/app/shop/[shopSlug]/orders/[id]/page.tsx": 558,
   "src/app/shop/[shopSlug]/orders/new/page.tsx": 416,
   "src/app/shop/[shopSlug]/orders/page.tsx": 851,
-  "src/app/shop/[shopSlug]/page.tsx": 1079,
+  "src/app/shop/[shopSlug]/page.tsx": 1056,
   "src/app/shop/[shopSlug]/promos/page.tsx": 610,
   "src/app/shop/[shopSlug]/reports/page.tsx": 720,
   "src/app/shop/[shopSlug]/reviews/page.tsx": 466,
