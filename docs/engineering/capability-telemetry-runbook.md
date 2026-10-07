@@ -148,7 +148,7 @@ the answer stays safe if that changes.
 In order of preference:
 
 1. **Import conversions offline.** `src/lib/analytics.ts` already measures both
-   marketing conversions server-side (`demo_entered`, `trial_started`) with a
+   marketing conversions server-side (`demo_entered`, `setup_requested`) with a
    funnel tag per surface, and `src/lib/funnel.ts` registers the vocabulary. That
    is a better instrument than a browser pixel — it cannot be blocked and cannot
    be double-counted — and every ad platform accepts an offline conversion
@@ -201,7 +201,7 @@ conversions API, offline import, or hashed-email upload:
   platform.
 
 The offline import recommended above is safe **only** because `demo_entered` and
-`trial_started` are shop-owner funnel events with no diver in them. That is the
+`setup_requested` are shop-owner funnel events with no diver in them. That is the
 boundary rather than an accident: the importable set is exactly
 `src/lib/funnel.ts`'s vocabulary, and extending an import to a diver event turns
 the recommended option into the refused one.

@@ -288,7 +288,8 @@ when/why snapshot; the playbooks carry the prep.
 
 North star: **dive days run end-to-end in DiveDay per week** (a day counts when the trip had
 bookings, readiness cleared divers, and a roll-call checkpoint was recorded). Everything else
-serves it.
+serves it. Computed nightly and mailed to the founder each Monday with the activation stalls below
+([ADR 20261007-founder-metrics](../architecture/decisions/20261007-founder-metrics.md)).
 
 - **Activation (per shop):** time from signup → first real trip scheduled → first public booking
   → first pre-arrival signed waiver → first roll call. Concierge target: first real booking

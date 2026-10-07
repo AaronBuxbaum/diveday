@@ -126,9 +126,9 @@ chosen battlegrounds — and re-read it before changing the spine.
 The funnel has two doors — **Try the live demo** and **Get set up** — and the order they are
 offered in is a property of the funnel, not of any one page.
 
-**Since 2026-09-25 the second door is a mail, not a sign-up** ([ADR 20260925-shops-are-set-up-by-hand](../architecture/decisions/20260925-shops-are-set-up-by-hand.md)). Every shop is set up
-by hand, so "Get set up" is a `mailto:` to `onboarding@dive.day` with the subject written, and
-`/onboard` without the owner's setup key is one sentence and that same mail. Where this section
+**Since 2026-09-25 the second door is a request, not a sign-up** ([ADR 20260925-shops-are-set-up-by-hand](../architecture/decisions/20260925-shops-are-set-up-by-hand.md)). Every shop is set up
+by hand, so "Get set up" opens the set-up request form at `/get-set-up?from=<tag>` (since 2026-10-07, [ADR 20261007-setup-request-form](../architecture/decisions/20261007-setup-request-form.md); before that it was a mail), and
+`/onboard` without the owner's setup key is one sentence and a door to that same form. Where this section
 says "trial" below, read it as that door.
 
 - **The demo leads, everywhere, at every depth.** It is the primary; the trial follows as
@@ -674,20 +674,20 @@ sent the visitor:
 | Event | Fired by | Meaning |
 | --- | --- | --- |
 | `demo_entered` | `src/app/actions/demo.ts` | A skeptic chose to look — the low-commitment half |
-| `trial_started` | `src/app/onboard/actions.ts` | A shop of their own now exists — the committed half |
+| `setup_requested` | `src/app/get-set-up/announce.ts` | A shop asked to be set up — the committed half |
 
 Both fire **after the outcome they name**, deferred with `after()` — a rate-limited demo attempt or a
 refused sign-up is not an entry, and counting one would inflate the numerator of every ratio read off
-the pair. Both also email the founder as they fire, so neither half needs a dashboard to be noticed:
-`new_account_alert` for a trial, `demo_started_alert` for a demo try, both to `alertRecipient()`
-(overridable with `OPS_ALERT_EMAIL`). The demo alert is anonymous by construction — the shop slug,
+the pair. Both also email someone as they fire, so neither half needs a dashboard to be noticed:
+`setup_request_alert` to `onboarding@dive.day` for a set-up request, `demo_started_alert` to `alertRecipient()`
+(overridable with `OPS_ALERT_EMAIL`) for a demo try. The Monday founder digest counts both by tag ([ADR 20261007-founder-metrics](../architecture/decisions/20261007-founder-metrics.md)). The demo alert is anonymous by construction — the shop slug,
 the role, and the tag below, and nothing about the visitor, who never identified themselves. See
 [ADR 20260805-demo-try-alerts](../architecture/decisions/20260805-demo-try-alerts.md).
 
 The tag vocabulary is a closed registry in `src/lib/funnel.ts`, because the failure it prevents is
 silent: a misspelled tag doesn't error, it opens a second bucket that reads like a real page with
 suspiciously few visits. So a demo form tags itself with `<FunnelTag source="…">` — type-checked against the registry; the
-"Get set up" mail carries no tag at all, since a mail client drops it — and a tag arriving
+"Get set up" door carries its tag in `?from=` through `setUpHref`, and the form posts it back — and a tag arriving
 off a request goes through `eventSource()`, which returns `unknown` for anything unregistered.
 **Adding a marketing CTA means tagging it**, and a new page means adding its tag to the registry
 first; an untagged link is a conversion we can't attribute. Read the pair per surface: a page with
@@ -901,7 +901,7 @@ take a claim on trust; now each row names a feature page and its one sentence, a
 it shows the screen (H-93, and "The homepage breadth band" near the top of this file). It still
 carries no demo door of its own: the close is one band away, and three banded CTAs in a row read as
 pressure, not confidence (the mid-page door retired in the 2026-08-13 redesign for that reason).
-Revisit the band when the page-level `demo_entered`/`trial_started` pairs (`home-hero` /
+Revisit the band when the page-level `demo_entered`/`setup_requested` pairs (`home-hero` /
 `home-closing`) have numbers.
 
 **`SectionMarker` is deliberately page-local.** The homepage's kicker — a short sentence-case label

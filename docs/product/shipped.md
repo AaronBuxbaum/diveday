@@ -7,6 +7,12 @@ lives in [features/roadmap.md](features/roadmap.md), which this file keeps unclu
 Move an item here when its slice ships (compress it to a line or two and link its ADR); do not leave
 it marked done in the roadmap. If code and this list disagree, one of them is wrong — fix it.
 
+## A set-up request form, and the founder's numbers (delivered 2026-10-07)
+
+Every public "Get set up" door, which used to be a mail to `onboarding@dive.day`, now opens `/get-set-up?from=<tag>`. The form asks for shop name, town or region, whether the shop runs a boat, what it uses today, name, email and an optional phone. It checks a per-IP and a global rate limit and a honeypot, stores a `setup_requests` row with the funnel tag, mails onboarding@ (`setup_request_alert`), fires `setup_requested`, and lands on a thank-you page with the demo door. `trial_started` is deleted ([ADR 20261007-setup-request-form](../architecture/decisions/20261007-setup-request-form.md)).
+
+A nightly cron (`/api/cron/founder-metrics`) records each real shop's activation milestones in `shop_milestones` (first departure, first public booking, first self-signed waiver, first roll call, with a seam for the first paid month) and logs the north star, dive days run end to end per week. On Mondays it mails `FOUNDER_DIGEST_EMAIL` last week's north star, demo entries and set-up requests by source, and each shop stalled 7 or more days, reported once ([ADR 20261007-founder-metrics](../architecture/decisions/20261007-founder-metrics.md)).
+
 ## A page for every feature (delivered 2026-10-05)
 
 H-93. Twelve feature pages under `/product/<feature>` (online booking, the shop's website, waivers

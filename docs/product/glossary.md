@@ -1723,6 +1723,9 @@ new domain concept, define it here in the same PR.
   out. Dormant until Meta approves DiveDay's app — the settings page says so, and courtesy messages
   go out as SMS meanwhile. See
   [20260802-whatsapp-embedded-signup](../architecture/decisions/20260802-whatsapp-embedded-signup.md).
+- **Set-up request** — a shop asking to be set up, sent from the public form at `/get-set-up` (every "Get set up" button opens it). One `setup_requests` row with the shop's answers, the contact's details and the funnel tag of the page that sent them; the founder opens the shop by hand from it ([ADR 20261007-setup-request-form](../architecture/decisions/20261007-setup-request-form.md)). Not a booking inquiry, which is a diver asking a shop.
+- **Dive day (north star)** — one real shop's local calendar day on which at least one diver was boarded at a departure roll call. Counted per week, it is the north star in [rollout.md](rollout.md#metrics--the-scoreboard). Two boats out on one Saturday is one dive day ([ADR 20261007-founder-metrics](../architecture/decisions/20261007-founder-metrics.md)).
+- **Activation milestone** — a first-time step a real shop has taken: created, first departure, first public booking, first diver-signed waiver, first roll call, and (once billing exists) first paid month. Stored once each in `shop_milestones`. A shop is **stalled** when its newest step is 7 or more days old and the next is missing; the founder digest names a stall once.
 - **Demo mode** — a shop flagged `isDemo` gets the Demo Playground banner, its role switcher, and a
   "Reset demo data" affordance scoped to that one tenant. "Try the live demo" **mints a fresh
   `isDemo` shop per visitor** with a generated name/slug, seeded with the full sample schedule; a
