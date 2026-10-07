@@ -3116,7 +3116,7 @@ describe("physician medical clearance", () => {
       expect(row?.overriddenRefusal).not.toBeNull();
     });
 
-    it("leaves paper after a refusal to an owner or manager", async () => {
+    it("lets any staffer record paper after a refusal (H-98)", async () => {
       const { db, shop, booking, owner } = await refusedOverAnOlderCleanRelease();
       await retireMedicalRefusal(db, {
         shopId: shop.id,
@@ -3133,8 +3133,8 @@ describe("physician medical clearance", () => {
           medicalAttested: true,
           now: signedLater,
         }),
-      ).toEqual({ ok: false, reason: "refusal_needs_manager" });
-      expect((await getBookingReadiness(db, shop.id, booking.id))?.blockers).toContainEqual(
+      ).toMatchObject({ ok: true });
+      expect((await getBookingReadiness(db, shop.id, booking.id))?.blockers).not.toContainEqual(
         expect.objectContaining({ code: "medical_not_cleared" }),
       );
     });
