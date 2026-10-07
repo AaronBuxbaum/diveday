@@ -32,7 +32,8 @@ import {
 } from "@/db/schema";
 import { seatDiver } from "@/db/seat-diver";
 import { getShopBySlug } from "@/db/shops";
-import { moveTrip } from "@/db/trips";
+import { moveTrip, setTripParticipantTerms } from "@/db/trips";
+import { heldSeatCounts } from "@/db/trips-queries";
 import { completeWaiver, issueWaiverRequest, recordWaiverDelivery } from "@/db/waivers";
 import { STAFF_ROLES } from "@/lib/authz";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
@@ -410,6 +411,15 @@ export async function POST(request: Request) {
       ? await askForAPieceTheShopNoLongerRents(db, shop.id)
       : null;
 
+  // Opt-in: a departure carrying a snorkeler and a rider (ADR
+  // 20261007-participant-types). Not seeded into blue-mantis yet because the
+  // seed has another owner right now; the captures that want the badge, the
+  // split head count and the public type choice ask for it here.
+  const mixedBoat =
+    new URL(request.url).searchParams.get("mixedBoat") === "1"
+      ? await carrySomebodyWhoIsNotDiving(db, shop.id, actor.id, now)
+      : null;
+
   return NextResponse.json({
     ok: true,
     ...(blockedMinor ? { blockedMinor } : {}),
@@ -419,7 +429,89 @@ export async function POST(request: Request) {
     ...(moveBlocked ? { moveBlocked } : {}),
     ...(farStation ? { farStation } : {}),
     ...(droppedRental ? { droppedRental } : {}),
+    ...(mixedBoat ? { mixedBoat } : {}),
   });
+}
+
+/**
+ * **A snorkeler and a rider on a diver's departure** (ADR
+ * 20261007-participant-types): the roster and roll-call badge, the head
+ * count's split, and the public form's "Joining as" choice with a price per
+ * type.
+ *
+ * Through the real doors: `setTripParticipantTerms` names the two prices, and
+ * `seatDiver` seats each person with their type, so the rows are ones the
+ * product writes. The boat is the soonest upcoming charter (never a course
+ * session, which seats divers only) that has room for two more; the names are
+ * nobody any other seed or spec reads.
+ */
+const NO_PARTICIPANT_TERMS = {
+  snorkelerPriceCents: null,
+  riderPriceCents: null,
+  diverCapacity: null,
+};
+
+async function carrySomebodyWhoIsNotDiving(
+  db: Awaited<ReturnType<typeof getDb>>,
+  shopId: string,
+  actorPersonId: string,
+  now: Date,
+): Promise<{ tripId: string; title: string; snorkeler: string; rider: string } | null> {
+  const departures = await db
+    .select({ id: trips.id, title: trips.title, capacity: trips.capacity })
+    .from(trips)
+    .where(
+      and(
+        eq(trips.shopId, shopId),
+        eq(trips.status, "scheduled"),
+        isNull(trips.deletedAt),
+        isNull(trips.courseId),
+        gte(trips.startsAt, now),
+      ),
+    )
+    .orderBy(trips.startsAt);
+  const snorkeler = "Mara Quint";
+  const rider = "Owen Quint";
+  for (const departure of departures) {
+    // Room for both first, so a departure this skips is left exactly as it
+    // was: no prices named on a boat that ends up carrying nobody new.
+    const held = await heldSeatCounts(db, shopId, departure.id);
+    if (held.aboard + 2 > departure.capacity) continue;
+    const terms = await setTripParticipantTerms(db, shopId, departure.id, {
+      snorkelerPriceCents: 4500,
+      riderPriceCents: 2500,
+      diverCapacity: null,
+    });
+    if (!terms.ok) continue;
+    const seatedSnorkeler = await seatDiver(db, {
+      shopId,
+      tripId: departure.id,
+      actorPersonId,
+      diver: { fullName: snorkeler },
+      entry: "walk_in",
+      refusals: "coarse",
+      participantType: "snorkeler",
+    });
+    if (!seatedSnorkeler.ok) {
+      await setTripParticipantTerms(db, shopId, departure.id, NO_PARTICIPANT_TERMS);
+      continue;
+    }
+    const seatedRider = await seatDiver(db, {
+      shopId,
+      tripId: departure.id,
+      actorPersonId,
+      diver: { fullName: rider },
+      entry: "walk_in",
+      refusals: "coarse",
+      participantType: "rider",
+    });
+    if (!seatedRider.ok) {
+      await setTripParticipantTerms(db, shopId, departure.id, NO_PARTICIPANT_TERMS);
+      continue;
+    }
+    return { tripId: departure.id, title: departure.title, snorkeler, rider };
+  }
+  return null;
 }
 
 /**
