@@ -1,10 +1,12 @@
 import { notFound, redirect } from "next/navigation";
+import { after } from "next/server";
 import { loadActiveStaffRoles, loadActiveStaffRolesByPerson } from "@/db/authz";
 import type { AppDb } from "@/db/client";
 import { getDb } from "@/db/client";
 import { getShopById } from "@/db/shops";
 import { auth, type DiveDaySession } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
+import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { noticeUrl, shopPath } from "@/lib/staff-notices";
 
 /**
@@ -31,6 +33,9 @@ import { noticeUrl, shopPath } from "@/lib/staff-notices";
 export async function requireStaffSession() {
   const session = await auth();
   if (!session?.user || !isStaff(session.user.roles)) redirect("/sign-in");
+  // Every staff render passes through here, so this is where its query count
+  // is armed; a page that knows its own route sharpens the label after.
+  reportRenderQueries("/shop/**", after, { fallback: true });
   const db = await getDb();
   const liveRoles = await loadActiveStaffRolesByPerson(db, session.user.personId);
   // `!isStaff(liveRoles)` catches a demotion off every staff role, the same

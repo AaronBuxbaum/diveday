@@ -62,6 +62,7 @@ import {
 } from "@/lib/format";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl } from "@/lib/notifications";
+import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { FIRST_RUN_STEP_COUNT } from "@/lib/onboarding";
 import { publicSchedulePath } from "@/lib/public-routes";
 import { recapAutoSendAt } from "@/lib/recap-schedule";
@@ -317,6 +318,7 @@ async function TodayBody({
   // is the same answer `requireShopSurface` gives, spelled out here because
   // the helper cannot run inside this boundary.
   if (shop.slug !== shopSlug) notFound();
+  reportRenderQueries("/shop/[shopSlug]", after);
   const t = staffTranslator(locale);
   // `Object.hasOwn`, not `AUTH_NOTICES[notice]`: `notice` is an attacker-supplied
   // query param, and a bare lookup resolves `?notice=constructor` off the

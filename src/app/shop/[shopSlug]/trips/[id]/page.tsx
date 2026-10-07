@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { seatExistingDiverAction, seatNewDiverAction } from "@/app/actions/seat-diver";
 import { ConnectivityStatus } from "@/components/ConnectivityStatus";
 import { FlashParams } from "@/components/FlashParams";
@@ -40,6 +41,7 @@ import {
   shouldShowAutomatedForecast,
 } from "@/lib/marine-forecast";
 import { toShopCurrency } from "@/lib/money";
+import { reportRenderQueries } from "@/lib/observability/query-timing";
 import { publicTripPath } from "@/lib/public-routes";
 import { recurrenceSummary } from "@/lib/recurrence";
 import { requireShopSurface } from "@/lib/session";
@@ -178,6 +180,7 @@ export default async function ManageTripPage({
   // without this the page 500s where its own notFound() belongs.
   if (!uuidParam(tripId)) notFound();
   const { session, db, shop } = await requireShopSurface(shopSlug);
+  reportRenderQueries("/shop/[shopSlug]/trips/[id]", after);
   // Staff read dates in the language their own device asks for, same
   // negotiation as the public pages (docs ADR 20260729-diver-copy-localization).
   // Locale and the trip row both depend on `shop` but not on each other.
