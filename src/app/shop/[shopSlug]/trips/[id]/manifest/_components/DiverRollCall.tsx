@@ -515,25 +515,34 @@ export function DiverRollCall({
           // 20260827-the-departure-is-two-working-surfaces, decision 1). A row
           // at rest is a name and a mark; the expected state is quiet. This is
           // the priority when a diver is several things at once, loudest first
-          // — a split buddy team outranks a desk blocker outranks the crew's
-          // duty of care to a minor outranks an advisory outranks a birthday.
-          // Everything not chosen here still reaches the reader: it is in the
-          // panel one tap away, and unconditionally on paper.
-          // Which of the five the capsule ended up being, so the printed block
-          // below can say the *other* four without repeating this one. Paper
+          // — a split buddy team outranks a desk blocker outranks a physician's
+          // earlier "no" outranks the crew's duty of care to a minor outranks
+          // an advisory outranks a birthday. Everything not chosen here still
+          // reaches the reader: it is in the panel one tap away, and
+          // unconditionally on paper.
+          //
+          // **The earlier refusal** (H-98; dive-domain review of #2096): a
+          // clean new release cleared a diver a physician had refused. It
+          // boards them, so it is never a blocker, but the crew at the rail
+          // decides with it in view, which a sentence one tap away is not.
+          // Which of the six the capsule ended up being, so the printed block
+          // below can say the *other* five without repeating this one. Paper
           // carries every fact the screen tucks away; it does not carry the
           // same fact twice.
+          const earlierRefusal = Boolean(diver.medicalWaiver?.overriddenRefusal);
           const capsuleKind = diver.buddyAlert
             ? "buddy"
             : blockedAtDock
               ? "blocked"
-              : diver.minor && diver.age !== null && diver.age !== undefined
-                ? "minor"
-                : diver.depthAdvisory?.status === "exceeds"
-                  ? "depth"
-                  : diver.birthday
-                    ? "birthday"
-                    : null;
+              : earlierRefusal
+                ? "refusal"
+                : diver.minor && diver.age !== null && diver.age !== undefined
+                  ? "minor"
+                  : diver.depthAdvisory?.status === "exceeds"
+                    ? "depth"
+                    : diver.birthday
+                      ? "birthday"
+                      : null;
           const capsule =
             diver.buddyAlert && diver.buddyTeam ? (
               <Badge tone={diver.buddyAlert === "separated_after_dive" ? "danger" : "warning"}>
@@ -543,6 +552,8 @@ export function DiverRollCall({
               <Badge tone={readinessStatusTone(diverStatus)}>
                 {readinessStatusText(t, diverStatus)}
               </Badge>
+            ) : earlierRefusal ? (
+              <Badge tone="warning">{t("manifest.medicalEarlierRefusalChip")}</Badge>
             ) : diver.minor && diver.age !== null && diver.age !== undefined ? (
               <Badge tone="warning" tabularNums>
                 {t("manifest.minorAge", { age: diver.age })}
@@ -900,6 +911,9 @@ export function DiverRollCall({
                           ? t("manifest.minorAge", { age: diver.age })
                           : t("manifest.age", { age: diver.age })}
                       </Badge>
+                    ) : null}
+                    {earlierRefusal && capsuleKind !== "refusal" ? (
+                      <Badge tone="warning">{t("manifest.medicalEarlierRefusalChip")}</Badge>
                     ) : null}
                     {diver.birthday && capsuleKind !== "birthday" ? (
                       <Badge tone="primary">{birthdayCalloutText(t, diver.birthday)}</Badge>

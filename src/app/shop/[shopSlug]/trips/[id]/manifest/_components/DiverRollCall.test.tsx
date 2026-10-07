@@ -472,6 +472,93 @@ describe("asserting aboard over a missing mark is never the cheap direction", ()
 });
 
 /**
+ * **A diver boarding over a physician's earlier "no" says so on the row**
+ * (H-98; dive-domain review of #2096). A clean new release clears the diver,
+ * and the warning used to live only in the person sheet, one tap away from
+ * the rail where the crew decides. It takes the row's one capsule below a
+ * split buddy team and a desk blocker, and above the minor, depth and
+ * birthday capsules; the minor flag it displaces still reaches the panel and
+ * the paper.
+ */
+describe("the earlier-refusal capsule", () => {
+  const refusedBefore = {
+    at: new Date("2026-09-01T12:00:00.000Z"),
+    source: "digital",
+    overriddenReferralAt: null,
+    overriddenRefusal: { recordId: "w-refused", at: new Date("2026-08-20T12:00:00.000Z") },
+    clearance: null,
+    guardian: null,
+  } as unknown as TripManifest["divers"][number]["medicalWaiver"];
+  const CAPSULE = "Doctor said no before";
+
+  function capsuleOf(container: HTMLElement) {
+    return container.querySelector(".basis-full");
+  }
+
+  it("puts a warning capsule on the row", () => {
+    const { container } = renderList({ divers: [diver({ medicalWaiver: refusedBefore })] });
+    const capsule = capsuleOf(container);
+    expect(capsule).toHaveTextContent(CAPSULE);
+    expect(within(capsule as HTMLElement).getByText(CAPSULE).className).toContain(
+      "text-warning-strong",
+    );
+  });
+
+  it("is short in Spanish too", () => {
+    const { container } = renderList({
+      divers: [diver({ medicalWaiver: refusedBefore })],
+      locale: "es-ES",
+    });
+    const text = capsuleOf(container)?.textContent ?? "";
+    expect(text.length).toBeGreaterThan(0);
+    expect(text.length).toBeLessThanOrEqual(24);
+  });
+
+  it("yields to a split buddy team and to a desk blocker", () => {
+    const split = renderList({
+      divers: [
+        diver({
+          medicalWaiver: refusedBefore,
+          buddyAlert: "separated_after_dive",
+          buddyTeam: { teamId: "t-1", others: [] },
+        }),
+      ],
+    });
+    expect(capsuleOf(split.container)).toHaveTextContent("Someone unaccounted for");
+    expect(capsuleOf(split.container)).not.toHaveTextContent(CAPSULE);
+    split.unmount();
+
+    const blocked = renderList({
+      checkpoint: "departure",
+      divers: [
+        diver({
+          medicalWaiver: refusedBefore,
+          readiness: { status: "blocked", blockers: [{ code: "certification_missing" }] },
+        }),
+      ],
+    });
+    expect(capsuleOf(blocked.container)).not.toHaveTextContent(CAPSULE);
+  });
+
+  it("outranks the minor, depth and birthday capsules, and the minor flag still shows", () => {
+    renderList({
+      divers: [
+        diver({
+          medicalWaiver: refusedBefore,
+          age: 13,
+          minor: true,
+          birthday: { status: "today" },
+        }),
+      ],
+    });
+    const row = screen.getByRole("listitem");
+    expect(row.querySelector(".basis-full")).toHaveTextContent(CAPSULE);
+    expect(row.querySelector(".basis-full")).not.toHaveTextContent("Minor");
+    expect(screen.getAllByText("Minor · age 13").length).toBeGreaterThan(0);
+  });
+});
+
+/**
  * **The capsule has the whole row's width** (issue #2008). A Badge never wraps,
  * and the longest capsule ("Someone unaccounted for", "Alguien sin
  * contabilizar") is wider than the name column at 390px, so beside the name it
