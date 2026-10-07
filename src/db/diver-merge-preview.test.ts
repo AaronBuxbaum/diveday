@@ -222,6 +222,23 @@ describe("the merge preview", () => {
     expect(preview?.releaseNames.sort()).toEqual(["Carmen Diaz", "Maya Rivera"]);
   });
 
+  it("warns when one person's release would land on a record under another name", async () => {
+    const f = await fixtures();
+    await f.db.update(people).set({ fullName: "Carmen Diaz" }).where(eq(people.id, f.survivor.id));
+    // One release, on the record merged away; the kept record has none.
+    await signedRelease(f.db, f.shop.id, f.source.id, "Maya Rivera", true);
+    const preview = await getDiverMergePreview(f.db, f.shop.id, f.source.id, f.survivor.id);
+    expect(preview?.warnings).toEqual(["releases_under_different_names"]);
+    expect(await merge(f)).toEqual({ ok: false, reason: "different_people_unacknowledged" });
+  });
+
+  it("asks nothing when two spellings of a name have no release behind them", async () => {
+    const f = await fixtures();
+    await f.db.update(people).set({ fullName: "Carmen Diaz" }).where(eq(people.id, f.survivor.id));
+    const preview = await getDiverMergePreview(f.db, f.shop.id, f.source.id, f.survivor.id);
+    expect(preview?.warnings).toEqual([]);
+  });
+
   it("answers null for one record twice and for a record in another shop", async () => {
     const f = await fixtures();
     expect(await getDiverMergePreview(f.db, f.shop.id, f.source.id, f.source.id)).toBeNull();

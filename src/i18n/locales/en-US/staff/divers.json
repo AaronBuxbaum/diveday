@@ -245,7 +245,7 @@
     "bookingConflict": "Both records hold a seat on the same departure. Cancel or move one of those seats before merging.",
     "differentPeopleHeading": "These may be two people",
     "differentBirthDates": "The two records have different dates of birth.",
-    "releasesUnderDifferentNames": "Signed releases on these records name {names}. Every release moves to the kept record.",
+    "releasesUnderDifferentNames": "Signed releases are on file, and these names do not all match: {names}. Every release moves to the kept record.",
     "acknowledge": "I checked: these records are the same person",
     "submit": "Merge into {name}",
     "pending": "Merging…",

@@ -245,7 +245,7 @@
     "bookingConflict": "Ambos registros tienen un lugar en la misma salida. Cancela o mueve uno de esos lugares antes de fusionar.",
     "differentPeopleHeading": "Pueden ser dos personas",
     "differentBirthDates": "Los dos registros tienen fechas de nacimiento distintas.",
-    "releasesUnderDifferentNames": "Las exenciones firmadas en estos registros nombran a {names}. Todas pasan al registro que se conserva.",
+    "releasesUnderDifferentNames": "Hay exenciones firmadas y estos nombres no coinciden entre sí: {names}. Todas pasan al registro que se conserva.",
     "acknowledge": "Lo verifiqué: estos registros son de la misma persona",
     "submit": "Fusionar con {name}",
     "pending": "Fusionando…",

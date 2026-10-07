@@ -75,11 +75,13 @@ export type DiverMergeChoices = Partial<Record<DiverMergeField, DiverMergeSideCh
  * preview and again in the transaction (`different_people_unacknowledged`).
  *
  * - `different_birth_dates`: both records hold a date of birth and they differ.
- * - `releases_under_different_names`: the signed releases across both records
- *   were signed under names that do not match each other. A signature is
- *   refused unless the typed name matches the record's diver (issue #2080), so
- *   a release names the person who signed it, and a merge moves it onto the
- *   kept record whatever that record is called.
+ * - `releases_under_different_names`: a signed release is on file, and the
+ *   names it was signed under and the two records' own names do not all match.
+ *   A signature is refused unless the typed name matches the record's diver
+ *   (issue #2080), so a release names the person who signed it, and a merge
+ *   moves it onto the kept record whatever that record is called: one
+ *   "Maya Rivera" release moving onto a "Carmen Diaz" record is exactly the
+ *   case, with no second release anywhere.
  */
 export type DiverMergeWarning = "different_birth_dates" | "releases_under_different_names";
 
@@ -465,7 +467,7 @@ type MergeAssessment =
   | {
       ok: true;
       warnings: DiverMergeWarning[];
-      /** Every distinct name a signed release on either record was signed under. */
+      /** The distinct names in play when a release is on file: signed names and both records' names. */
       releaseNames: string[];
     };
 
@@ -561,12 +563,22 @@ async function assessMerge(
         isNull(waiverRecords.anonymizedAt),
       ),
     );
+  // The names a release can be checked against: each one's signed name, and
+  // both records' own names, since the kept record ends up under one of the
+  // two and every release lands on it. Only when a signed release exists: two
+  // spellings of a name with no legal paper behind either are a field
+  // conflict, not two people's records.
   const releaseNames: string[] = [];
-  for (const { signedName } of signed) {
-    const name = signedName?.trim();
+  const note = (raw: string | null | undefined) => {
+    const name = raw?.trim();
     if (name && !releaseNames.some((known) => personNamesMatch(known, name))) {
       releaseNames.push(name);
     }
+  };
+  if (signed.length > 0) {
+    for (const { signedName } of signed) note(signedName);
+    note(survivor.fullName);
+    note(source.fullName);
   }
   if (releaseNames.length > 1) warnings.push("releases_under_different_names");
   return { ok: true, warnings, releaseNames };
