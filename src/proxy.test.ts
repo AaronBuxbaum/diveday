@@ -66,7 +66,10 @@ vi.mock("@/lib/course-preview-gate", async (importOriginal) => {
 
 vi.mock("@/db/client", () => ({ getDb: async () => ({}) }));
 vi.mock("@/db/public-route-existence", () => ({
-  publicRouteLookup: async (_db: unknown, shape: PublicRouteQuery) => {
+  // The per-instance memory in front of the lookup is pinned in its own test
+  // file; here every ask reaches the stub, so each test sees its own answer.
+  rememberedPublicRouteLookup: async (shape: PublicRouteQuery, open: () => Promise<unknown>) => {
+    await open();
     existence.asked.push(shape);
     if (existence.throws) throw existence.throwsWith ?? new Error("database unavailable");
     const shopExists = existence.liveShops
