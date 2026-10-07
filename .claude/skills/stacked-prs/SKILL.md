@@ -30,7 +30,7 @@ one merges.
 
 **Unrelated work stacks for a different reason: the conflicts.** A second branch cut from `main`
 re-edits the same shared files as the first — `AGENTS.md`'s `check:repo` row, a `docs/design/*.md`
-section, a `scripts/*-baseline.json`, a message bundle — and each one is a merge resolved later, by
+section, a section of `scripts/ratchets.json`, a message bundle — and each one is a merge resolved later, by
 hand, without the context that produced it. Thirteen branches cut from one `main` in a single
 session is the measured case, and every one of them conflicted with every other. On a stack each
 layer already contains the layers below, so those files merge **once, while the change is being

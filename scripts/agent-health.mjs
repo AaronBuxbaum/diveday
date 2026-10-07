@@ -27,6 +27,7 @@ import path from "node:path";
 import process from "node:process";
 
 import { listDirs, measure, rules } from "./check-context-budget.mjs";
+import { readRatchet } from "./ratchet.mjs";
 
 const ROOT = process.cwd();
 const TOKENS_PER_WORD = 1.35;
@@ -43,7 +44,7 @@ console.log("Agent environment\n=================\n");
 
 // ---------------------------------------------------------------- context
 const measured = await measure(ROOT);
-const { budgets } = await readJson("scripts/context-budget-baseline.json");
+const { budgets } = await readRatchet(ROOT, "context-budget");
 const total = Object.values(measured).reduce((sum, count) => sum + count, 0);
 
 console.log("Always-loaded context (every session, main loop and subagents alike)");

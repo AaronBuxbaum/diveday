@@ -104,7 +104,7 @@ Rules 1 and 2 say what they mean when they go red: no compiled-in `"en-US"` unde
 
 Rule 3 is newer (issue #1757) and exists because of a fallback nobody could see: **a key missing from the es-ES bundle falls back to the English string rather than throwing.** So a key somebody pasted into the Spanish bundle untranslated passes rule 2 (same key, same placeholders), passes `src/i18n/icu-messages.test.ts` (it compiles fine), and renders English to a Spanish reader forever. 206 of the roughly 7,900 comparable keys were byte-identical between the two bundles when this landed, and nothing in the repo reported that number or stopped it rising.
 
-**How it counts, because the floor is meaningless without the rule.** Both bundles are flattened to dotted paths; only keys present in *both* with a string on each side are compared; the comparison is byte-for-byte. A key the other bundle is missing is **not** counted as identical — that is rule 2's failure, and conflating the two produces a floor nobody can reproduce. The count is per bundle **file** (`es-ES/diver.json`, `es-ES/staff/gear.json`, …) in `scripts/locale-baseline.json`, not one total: one number over 7,900 keys is a number the next untranslated string can hide inside, and a paste into `staff/gear.json` moves that file off its own line whatever the total does. Both directions fail — a rise is refused, a fall must be banked — so the baseline always describes what is on disk. `--write` banks a fall and refuses a rise, `--absorb` records growth arriving from a merge, `--report [prefix]` lists every key still identical.
+**How it counts, because the floor is meaningless without the rule.** Both bundles are flattened to dotted paths; only keys present in *both* with a string on each side are compared; the comparison is byte-for-byte. A key the other bundle is missing is **not** counted as identical — that is rule 2's failure, and conflating the two produces a floor nobody can reproduce. The count is per bundle **file** (`es-ES/diver.json`, `es-ES/staff/gear.json`, …) in `scripts/ratchets.json`'s `locale` section, not one total: one number over 7,900 keys is a number the next untranslated string can hide inside, and a paste into `staff/gear.json` moves that file off its own line whatever the total does. Both directions fail — a rise is refused, a fall must be banked — so the baseline always describes what is on disk. `--write` banks a fall and refuses a rise, `--absorb` records growth arriving from a merge, `--report [prefix]` lists every key still identical.
 
 **The count is zero, and the thing that would still be the bug is inventing Spanish for Divemaster.** The floor used to be 188 across 23 files, and it was never debt — it meant "unexamined". Issue #1797 examined all 188, and every one turned out to be a brand, an acronym, a place, a unit, a loanword Spanish diving uses, example data in a placeholder attribute, or a template with no word in it. Two were genuinely wrong and are translated: the import wizard's "Waivers" and "Waiver" now read "Exenciones" and "Exención", in a file that already wrote "exención" six keys away. The training-agency acronyms (PADI, SSI, NAUI, SDI, TDI, CMAS, RAID, GUE, BSAC), the course-name ladder a Spanish-speaking shop says in English (Open Water, Advanced Open Water, Divemaster, Instructor — `rescue` is the exception and *is* translated, "Buceador de Rescate"), "Plan", the brands (GoPro, Stripe, Shopify, Xero), the unit abbreviations and five of the eight compass points are declared rather than translated, one line and one reason each.
 
@@ -143,7 +143,7 @@ explicitly calls figures. And a `sm:`/`dark:`/`group-hover:` prefix is *not* a b
 site pairs a ramp constant with its own breakpoint step (`` `${BANNER_TITLE_CLASS} sm:text-4xl` ``),
 which is where that decision belongs.
 
-Ratcheted per file in `scripts/type-ramp-baseline.json` exactly like `check:copy` — `--write` banks
+Ratcheted per file (`scripts/ratchets.json`'s `type-ramp` section) exactly like `check:copy` — `--write` banks
 a fall and refuses a rise, `--absorb` records growth arriving from a merge, `--report` prints the
 per-file table. It lands at zero, so it behaves as a full gate today; the ratchet is there for the
 branch cut before the sweep, whose spellings are pre-existing debt rather than new drift. A heading
@@ -249,14 +249,14 @@ would refuse *advise*, *promise*, *four* and *your*.
 
 A short label separator is deliberately not a hit: "Boarded — tap again to undo" and "Checked in —
 2" are not sentences, and the tell is the dash that replaced a full stop or a comma in running
-prose. Ratcheted per file in `scripts/voice-baseline.json` exactly like `check:copy` (`--write`
+prose. Ratcheted per file (`scripts/ratchets.json`'s `voice` section) exactly like `check:copy` (`--write`
 banks a fall and refuses a rise, `--absorb` records growth arriving from a merge, `--report
 [prefix]` lists every hit with its key and rule). It landed at zero, so it behaves as a full gate
 today; the ratchet is there for the branch cut before the sweep.
 
 ### logical-property
 
-The logical-property one (`scripts/check-logical-properties.mjs`) refuses a new `ml-`/`mr-`/`pl-`/`pr-`/`left-`/`right-`/`text-left`/`text-right`/`border-l`/`border-r`/`rounded-l`/`rounded-r` under `src/app`, `src/components` or `src/features`, ratcheted per file in `scripts/logical-properties-baseline.json` exactly like `check:tokens` — 126 across 62 files are grandfathered, the count may never rise, and a fall is banked with `--write`. `src/components` already carries ~190 *logical* utilities against those few dozen physical ones: somebody has been writing direction-agnostic layout for a long time and nothing protected it (issue #733). The stakes are nil today — both shipped locales read left to right, so `ml-2` and `ms-2` are the same pixels — and that is the point: the cost lands all at once on the day a third locale arrives, which is the shape of debt a ratchet is for. Comments are stripped before counting, because prose is full of "right-hand" and "left-aligned" and neither is a class. It is **not** a claim of RTL support: no RTL locale ships and nobody has looked at the app in one (docs/design/principles.md's "Writing direction").
+The logical-property one (`scripts/check-logical-properties.mjs`) refuses a new `ml-`/`mr-`/`pl-`/`pr-`/`left-`/`right-`/`text-left`/`text-right`/`border-l`/`border-r`/`rounded-l`/`rounded-r` under `src/app`, `src/components` or `src/features`, ratcheted per file (`scripts/ratchets.json`'s `logical-properties` section) exactly like `check:tokens` — 126 across 62 files are grandfathered, the count may never rise, and a fall is banked with `--write`. `src/components` already carries ~190 *logical* utilities against those few dozen physical ones: somebody has been writing direction-agnostic layout for a long time and nothing protected it (issue #733). The stakes are nil today — both shipped locales read left to right, so `ml-2` and `ms-2` are the same pixels — and that is the point: the cost lands all at once on the day a third locale arrives, which is the shape of debt a ratchet is for. Comments are stripped before counting, because prose is full of "right-hand" and "left-aligned" and neither is a class. It is **not** a claim of RTL support: no RTL locale ships and nobody has looked at the app in one (docs/design/principles.md's "Writing direction").
 
 ### image-sizes
 
@@ -1000,7 +1000,10 @@ For `scripts/`, `.claude/` and `.github/`; the rules themselves are in `.claude/
 - **Ratchets turn one way.** `--write` banks a fall and refuses a rise; `--absorb "<why>"` records a
   deliberate rise with its reason in the baseline diff. `copy`, `domain-strings`, `tokens`,
   `architecture`, `type-ramp`, `voice`, `logical-properties`, `bundle-reach`, `route-coverage`,
-  `locale` and `context-budget` all work this way. `locale`'s count is the one that will never
+  `locale` and `context-budget` all work this way. Every count but `route-coverage`'s lives in
+  `scripts/ratchets.json`, one section per guard, read and banked through `scripts/ratchet.mjs`;
+  `route-coverage.json` and `image-sizes.json` stay their own files because they are data a guard
+  checks against, not counters that only fall. `locale`'s count is the one that will never
   reach zero — an acronym and a course name are the same word in Spanish, so read it as
   "unexamined" and name a deliberate one in `DELIBERATELY_IDENTICAL`
   ([docs/agents/repo-checks.md](repo-checks.md)).

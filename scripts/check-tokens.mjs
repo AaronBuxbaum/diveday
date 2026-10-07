@@ -1,7 +1,8 @@
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
 
 /**
  * Semantic design tokens only (docs ADR 0004-design-tokens).
@@ -39,7 +40,7 @@ import { pathToFileURL } from "node:url";
  *     before scanning.
  *
  * The escape hatch is a baseline entry, never an inline-disable comment:
- * `tokens-baseline.json` records how many violations a file still carries
+ * Its section of `scripts/ratchets.json` records how many violations a file still carries
  * (today: the embed-snippet generator, whose hex is copied into *third-party*
  * sites where our tokens do not exist). A file not in the baseline may have
  * none, a count may never rise, and a fall must be banked in the same change
@@ -48,7 +49,6 @@ import { pathToFileURL } from "node:url";
  */
 
 const ROOT = process.cwd();
-export const BASELINE_PATH = "scripts/tokens-baseline.json";
 const guardedRoots = ["src/app", "src/components", "src/features"];
 
 /**
@@ -275,54 +275,22 @@ async function main() {
     process.exit(0);
   }
 
-  let baseline = {};
-  let baselineExists = true;
-  try {
-    baseline = JSON.parse(await readFile(path.join(ROOT, BASELINE_PATH), "utf8"));
-  } catch (error) {
-    if (error?.code !== "ENOENT") throw error;
-    baselineExists = false;
-  }
-  // The file carries a leading note for humans; it is not a path.
-  const baselineCounts = Object.fromEntries(
-    Object.entries(baseline).filter(([key]) => !key.startsWith("//")),
-  );
-
-  const absorbing = process.argv.includes("--absorb");
-  if (process.argv.includes("--write") || absorbing) {
-    const grew = [...details.entries()].filter(
-      ([file, hits]) => baselineExists && hits.length > (baselineCounts[file] ?? 0),
+  const { counts: baselineCounts, exists: baselineExists } = await readCounts(ROOT, "tokens");
+  const { write, absorb } = ratchetFlags();
+  if (write || absorb !== null) {
+    process.exit(
+      await bankCounts({
+        root: ROOT,
+        guard: "tokens",
+        counts: details,
+        allowed: baselineCounts,
+        exists: baselineExists,
+        note: "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist.",
+        refusal: "The ratchet only turns one way — use a semantic token instead",
+        absorb,
+        summary: (files, total) => `${files} files, ${total} values`,
+      }),
     );
-    if (grew.length > 0 && !absorbing) {
-      console.error(
-        "Refusing to write a baseline that grows. The ratchet only turns one way — use a semantic token instead:",
-      );
-      for (const [file, hits] of grew) {
-        console.error(`- ${file}: ${baselineCounts[file] ?? 0} → ${hits.length}`);
-      }
-      console.error(
-        "If this growth arrived in a merge from a branch that predates the check, `--absorb` records it explicitly.",
-      );
-      process.exit(1);
-    }
-    if (grew.length > 0) {
-      console.warn("Absorbing values that grew — this must be merged-in work, not new debt:");
-      for (const [file, hits] of grew) {
-        console.warn(`- ${file}: ${baselineCounts[file] ?? 0} → ${hits.length}`);
-      }
-    }
-    const next = {
-      "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist.",
-      ...Object.fromEntries(
-        [...details.entries()]
-          .map(([file, hits]) => [file, hits.length])
-          .sort(([a], [b]) => a.localeCompare(b)),
-      ),
-    };
-    await writeFile(path.join(ROOT, BASELINE_PATH), `${JSON.stringify(next, null, 2)}\n`);
-    const total = [...details.values()].reduce((sum, hits) => sum + hits.length, 0);
-    console.log(`tokens: baseline written — ${details.size} files, ${total} values`);
-    process.exit(0);
   }
 
   const violations = [];

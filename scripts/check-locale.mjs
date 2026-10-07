@@ -1,7 +1,8 @@
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+import { bankCounts, ratchetFlags, readCounts } from "./ratchet.mjs";
 
 /**
  * Three invariants (docs ADR 20260729-diver-copy-localization):
@@ -123,8 +124,6 @@ const BUNDLES = [
  * `formatToParts` output, which must not vary).
  */
 const guardedRoots = ["src/app", "src/components"];
-
-export const BASELINE_PATH = "scripts/locale-baseline.json";
 
 /**
  * **Keys whose non-default value is the same string on purpose, and why.**
@@ -732,60 +731,23 @@ async function main() {
     process.exit(0);
   }
 
-  let baseline = {};
-  let baselineExists = true;
-  try {
-    baseline = JSON.parse(await readFile(path.join(ROOT, BASELINE_PATH), "utf8"));
-  } catch (error) {
-    if (error?.code !== "ENOENT") throw error;
-    baselineExists = false;
-  }
-  const baselineCounts = Object.fromEntries(
-    Object.entries(baseline).filter(([key]) => !key.startsWith("//")),
-  );
-
-  const absorbing = process.argv.includes("--absorb");
-  if (process.argv.includes("--write") || absorbing) {
-    const grew = [...identicalCounts.entries()].filter(
-      ([file, count]) => baselineExists && count > (baselineCounts[file] ?? 0),
+  const { counts: baselineCounts, exists: baselineExists } = await readCounts(ROOT, "locale");
+  const { write, absorb } = ratchetFlags();
+  if (write || absorb !== null) {
+    process.exit(
+      await bankCounts({
+        root: ROOT,
+        guard: "locale",
+        counts: identicalCounts,
+        allowed: baselineCounts,
+        exists: baselineExists,
+        note: "Undeclared es-ES values still byte-identical to their en-US counterpart, per bundle file. Written by `node scripts/check-locale.mjs --write`. This number may only go down, and it will never reach zero — the acronyms, the course-name ladder and the placeholder-only templates are the same string in Spanish on purpose. See scripts/check-locale.mjs and docs/agents/repo-checks.md.",
+        refusal:
+          "Translate the string, or declare it in DELIBERATELY_IDENTICAL with its reason if it is a brand, an acronym or a course name",
+        absorb,
+        summary: (files, total) => `${files} files, ${total} identical`,
+      }),
     );
-    const added = [...identicalCounts.keys()].filter(
-      (file) => baselineExists && !(file in baselineCounts),
-    );
-    if (grew.length > 0 || added.length > 0) {
-      if (!absorbing) {
-        console.error(
-          "Refusing to write a baseline that grows. Translate the string, or declare it in DELIBERATELY_IDENTICAL with its reason if it is a brand, an acronym or a course name:",
-        );
-        for (const [file, count] of grew) {
-          console.error(`- ${file}: ${baselineCounts[file]} → ${count}`);
-        }
-        for (const file of added) {
-          console.error(`- ${file}: new file with ${identicalCounts.get(file)}`);
-        }
-        console.error(
-          "If this growth arrived in a merge from a branch that predates the ratchet, `--absorb` records it explicitly.",
-        );
-        process.exit(1);
-      }
-      console.warn("Absorbing identical values that grew — this must be merged-in work, not new:");
-      for (const [file, count] of grew) {
-        console.warn(
-          `- ${file}: ${baselineCounts[file]} → ${count} (+${count - baselineCounts[file]})`,
-        );
-      }
-      for (const file of added) {
-        console.warn(`- ${file}: new file with ${identicalCounts.get(file)}`);
-      }
-    }
-    const next = {
-      "//": "Undeclared es-ES values still byte-identical to their en-US counterpart, per bundle file. Written by `node scripts/check-locale.mjs --write`. This number may only go down, and it will never reach zero — the acronyms, the course-name ladder and the placeholder-only templates are the same string in Spanish on purpose. See scripts/check-locale.mjs and docs/agents/repo-checks.md.",
-      ...Object.fromEntries([...identicalCounts.entries()].sort(([a], [b]) => a.localeCompare(b))),
-    };
-    await writeFile(path.join(ROOT, BASELINE_PATH), `${JSON.stringify(next, null, 2)}\n`);
-    const total = [...identicalCounts.values()].reduce((sum, n) => sum + n, 0);
-    console.log(`locale: baseline written — ${identicalCounts.size} files, ${total} identical`);
-    process.exit(0);
   }
 
   violations.push(...auditIdenticalBaseline(identicalCounts, baselineCounts, baselineExists));

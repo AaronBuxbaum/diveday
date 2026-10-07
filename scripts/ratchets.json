@@ -1,0 +1,214 @@
+{
+  "//": "Every ratcheted check:repo guard's counts, keyed by guard. A count may only fall: `node scripts/check-<guard>.mjs --write` banks a fall and refuses a rise; `--absorb \"<why>\"` records a deliberate rise with its reason. Shared code: scripts/ratchet.mjs.",
+  "architecture": {
+    "//": "Pre-existing architecture-boundary violations, per file. Written by `node scripts/check-architecture.mjs --write`. This number may only go down — see scripts/check-architecture.mjs."
+  },
+  "bundle-reach": {
+    "//": "Message-bundle keys no string literal in src/ can reach, per bundle. Written by `node scripts/check-bundle-reach.mjs --write`. This number may only go down — see scripts/check-bundle-reach.mjs. An entry is a list to triage, not a list to delete on sight: some are a hole in the walk.",
+    "src/i18n/locales/en-US/diver.json": 7,
+    "src/i18n/locales/en-US/staff/bookings.json": 1,
+    "src/i18n/locales/en-US/staff/divers.json": 10,
+    "src/i18n/locales/en-US/staff/diveSites.json": 6,
+    "src/i18n/locales/en-US/staff/integrations.json": 4,
+    "src/i18n/locales/en-US/staff/manifest.json": 6,
+    "src/i18n/locales/en-US/staff/orders.json": 1,
+    "src/i18n/locales/en-US/staff/seatDiver.json": 1,
+    "src/i18n/locales/en-US/staff/settings.json": 3,
+    "src/i18n/locales/en-US/staff/shared.json": 1,
+    "src/i18n/locales/en-US/staff/trips.json": 13
+  },
+  "context-budget": {
+    "note": "Words of agent context every session loads before reading any code. A ratchet: a count may never rise, and a fall is banked with `node scripts/check-context-budget.mjs --write`. See the module comment in scripts/check-context-budget.mjs.",
+    "budgets": {
+      "CLAUDE.md": 64,
+      "AGENTS.md": 2498,
+      ".claude/rules/*.md (without paths: frontmatter)": 0,
+      ".claude/skills/*/SKILL.md (description lines)": 783,
+      ".claude/agents/*.md (description lines)": 130
+    },
+    "raises": [
+      {
+        "why": "documents the four new tools this change adds (check:context-budget, agent:health, the concurrent check, and the two hooks); AGENTS.md is still 2,068 words below where this change found it",
+        "files": {
+          "AGENTS.md": "10757 -> 11160"
+        }
+      },
+      {
+        "why": "the dive-site briefing row now names both halves — which form writes each column and which beat reads it — after slice 7c deleted the reader and left eight authored columns reaching no diver",
+        "files": {
+          "AGENTS.md": "11143 -> 11166"
+        }
+      },
+      {
+        "why": "a new check:repo guard needs a row in the command table (check:type-ramp, #1229)",
+        "files": {
+          "AGENTS.md": "11148 -> 11188"
+        }
+      },
+      {
+        "why": "a new hard rule: text a human will copy is written unwrapped, so the copy does not arrive in a mailbox or support form full of hard breaks",
+        "files": {
+          "AGENTS.md": "11188 -> 11296"
+        }
+      },
+      {
+        "why": "a new check:repo guard needs a row in the command table (check:voice), and the brand-voice skill's description now names the voice tells so a session writing copy loads it",
+        "files": {
+          "AGENTS.md": "11296 -> 11358",
+          ".claude/skills/*/SKILL.md (description lines)": "723 -> 740"
+        }
+      },
+      {
+        "why": "The two rows a session reads at the moment local running fails: what 'serving' means against Next's misleading 'Ready' (a 26s gap that reads as a wedge), that an announced memory restart is expected rather than a bug, that the dev lock is per-checkout so --port buys nothing, and that PGlite takes no lock so two openers of one .pglite silently fork it. Each was measured on 2026-09-03 and each previously cost a session an unguided hunt; the reasoning and the numbers are in ADR 20260903-the-dev-server-is-supervised and the debug skill, only the operative facts are here.",
+        "files": {
+          "AGENTS.md": "11358 -> 11502"
+        }
+      },
+      {
+        "why": "The debug skill's trigger now names a dev server that died, refuses to start, or serves stale data. Those are the symptoms this change added rows for, and they were the one class of failure whose sufferer had no reason to open the debug skill at all — an OOM-killed dev server reads as 'my change broke the app', not as 'a bug report or a red check'. Fourteen words to make the playbook load for the failure it now documents.",
+        "files": {
+          ".claude/skills/*/SKILL.md (description lines)": "740 -> 754"
+        }
+      },
+      {
+        "why": "A project 'run' skill, and the one word that indexes it. Until now the generic global run skill was the authority at the exact moment a session launches this app, and it knows nothing about the twenty-six-second gap between Next's 'Ready' and the app answering, the supervisor's restart lines, the per-checkout dev lock, or that pnpm build beside pnpm dev silently forks the database. Every session was re-deriving a launcher and getting the same three things wrong; this is the fix for that being a recurring cost rather than a one-off.",
+        "files": {
+          "AGENTS.md": "11502 -> 11503",
+          ".claude/skills/*/SKILL.md (description lines)": "754 -> 786"
+        }
+      },
+      {
+        "why": "The db:reset row now states the rule is enforced rather than remembered: a second opener of one .pglite is refused naming the process to stop, and a lock left by a killed server is taken over rather than obeyed. Both halves matter at the moment a session hits it — the first so an 'is already open by process N' refusal reads as working-as-intended, the second so nobody deletes the lock file by hand and re-opens the silent fork it exists to stop (ADR 20260903-one-process-per-pglite-directory).",
+        "files": {
+          "AGENTS.md": "11503 -> 11533"
+        }
+      },
+      {
+        "why": "The late-arrival buffer rule now names hasSailed/hasReturned and its guard; the long half (the fifteen spellings and the citation ring) went to docs/agents/repo-checks.md rather than here.",
+        "files": {
+          "AGENTS.md": "11524 -> 11543"
+        }
+      },
+      {
+        "why": "the pre-push coverage-guard rule (#1409): four CI failures in one afternoon came from guards that key off schema.ts from files nobody edits, so a focused run never selects them",
+        "files": {
+          "AGENTS.md": "11543 -> 11589"
+        }
+      },
+      {
+        "why": "the integrations route-map row names Xero, the provider this branch adds",
+        "files": {
+          "AGENTS.md": "4141 -> 4142"
+        }
+      },
+      {
+        "why": "One sentence on the background-job hard rule pointing at docs/agents/verifying.md's new 'Reading CI' section (issue #1521). It has to be in AGENTS.md rather than only in docs/: the session that built four curl CI monitors on 2026-09-07, and got four wrong answers with no error, had AGENTS.md loaded in full and verifying.md not. The reasoning, the measurement and the incident all stay in verifying.md; this is the pointer that makes them reachable.",
+        "files": {
+          "AGENTS.md": "4142 -> 4172"
+        }
+      },
+      {
+        "why": "the route map's infra row names the second stack and the one place regions are written down: a session that reads that row to find where a credential or a manual step lives would otherwise deploy one third of the estate and see the rest silently deleted, and the estate now spans two regions on purpose (ADR 20260910-one-region-in-us-east-2)",
+        "files": {
+          "AGENTS.md": "4172 -> 4188"
+        }
+      },
+      {
+        "why": "the route-map row for the public namespace's edge refusal (ADR 20260912-the-public-namespace-refuses-at-the-edge). It belongs in AGENTS.md rather than only in the ADR because it is a navigation fact a session needs before it reads any code: three issues (#1489, #1510, #1604) were spent looking for this mechanism in a page, and a new route under /s/** that is not taught to publicRouteShape is passed through and silently answers 200 again",
+        "files": {
+          "AGENTS.md": "4188 -> 4254"
+        }
+      },
+      {
+        "why": "48th guard: check:closing-keywords, named in the guards row so a session can run it alone (two words)",
+        "files": {
+          "AGENTS.md": "4254 -> 4256"
+        }
+      },
+      {
+        "why": "issue #1794 adds a 50th repo guard; AGENTS.md gains only its name in the existing per-guard list row, with all of its reasoning in docs/agents/repo-checks.md",
+        "files": {
+          "AGENTS.md": "4252 -> 4254"
+        }
+      },
+      {
+        "why": "the six-layer stack cap is deleted (Aaron's call, 2026-09-16): the Parallel work bullet now says a stack has no maximum depth instead of naming a number the CI change of 2026-08-27 had already made obsolete",
+        "files": {
+          "AGENTS.md": "4254 -> 4264"
+        }
+      },
+      {
+        "why": "papercuts log pointer (docs/agents/papercuts.md)",
+        "files": {
+          "CLAUDE.md": "49 -> 64"
+        }
+      },
+      {
+        "why": "Stacks: a middle layer now runs no CI at all, and opening a layer cancels the superseded run below it. Every session has to know that a Cancelled check on a stacked layer is the machinery working, not a failure to re-run (ADR 20260919-stack-ci-cancels-superseded-layers).",
+        "files": {
+          "AGENTS.md": "4264 -> 4273"
+        }
+      },
+      {
+        "why": "Slice 23e adds the one door in the staff app that is not a place: a diver, laid over the day as a sheet. The route map's job is to answer 'where' for every destination the product has, so a new destination is a new row — the budget exists to keep the rest of the file lean, not to cap how many surfaces DiveDay may have. The how and the why are in .claude/rules/surfaces.md, which is path-scoped and costs a session nothing until it opens a file under src/app or src/components; this row is only the pointer. Paid for in part by deleting 'Guests tab' from the seating row, which slice 23c made untrue.",
+        "files": {
+          "AGENTS.md": "4271 -> 4299"
+        }
+      }
+    ]
+  },
+  "copy": {
+    "//": "Hard-coded user-facing strings still awaiting extraction, per file. Written by `node scripts/check-copy.mjs --write`. This number may only go down — see scripts/check-copy.mjs."
+  },
+  "domain-strings": {
+    "//": "English strings returned from src/lib or src/db, per file. Written by `node scripts/check-domain-strings.mjs --write`. This number may only go down — see scripts/check-domain-strings.mjs."
+  },
+  "locale": {
+    "//": "Undeclared es-ES values still byte-identical to their en-US counterpart, per bundle file. Written by `node scripts/check-locale.mjs --write`. This number may only go down, and it will never reach zero — the acronyms, the course-name ladder and the placeholder-only templates are the same string in Spanish on purpose. See scripts/check-locale.mjs and docs/agents/repo-checks.md."
+  },
+  "logical-properties": {
+    "//": "Physical directional utilities still in components, per file. Written by `node scripts/check-logical-properties.mjs --write`. This number may only go down — see scripts/check-logical-properties.mjs. Use ms-/me-/ps-/pe-/start-/end-/text-start/text-end instead.",
+    "src/app/page.tsx": 6,
+    "src/app/pricing/page.tsx": 3,
+    "src/app/product/page.tsx": 1,
+    "src/app/s/[shopSlug]/courses/[slug]/_components/CourseSections.tsx": 4,
+    "src/app/s/[shopSlug]/trips/[id]/_components/PackingSection.tsx": 6,
+    "src/app/s/[shopSlug]/trips/[id]/_components/RentalFitForm.tsx": 2,
+    "src/app/shop/[shopSlug]/_components/SeatDiverPanel.tsx": 3,
+    "src/app/shop/[shopSlug]/_components/today/PaymentActionControl.tsx": 1,
+    "src/app/shop/[shopSlug]/_components/today/ResendConfirmationControl.tsx": 1,
+    "src/app/shop/[shopSlug]/_components/today/WaiverSendControl.tsx": 1,
+    "src/app/shop/[shopSlug]/dive-sites/_components/RouteEditor.tsx": 1,
+    "src/app/shop/[shopSlug]/divers/new/page.tsx": 3,
+    "src/app/shop/[shopSlug]/settings/AddressSearch.tsx": 1,
+    "src/app/shop/[shopSlug]/settings/export/_components/BackupsSection.tsx": 2,
+    "src/app/shop/[shopSlug]/settings/import/ImportWizard.tsx": 2,
+    "src/app/shop/[shopSlug]/settings/whatsapp/page.tsx": 1,
+    "src/app/shop/[shopSlug]/trips/[id]/_components/AddDiverSection.tsx": 3,
+    "src/app/switching/_components/guide.tsx": 3,
+    "src/app/waivers/[token]/MedicalQuestionnaireFields.tsx": 2,
+    "src/components/JumpNav.tsx": 1,
+    "src/components/LanguagePicker.tsx": 1,
+    "src/components/LegalDocument.tsx": 1,
+    "src/components/MapEmbed.tsx": 1,
+    "src/components/MarketingNavView.tsx": 5,
+    "src/components/MarketingSections.tsx": 1,
+    "src/components/PartyClaimPanel.tsx": 1,
+    "src/components/search/CommandPalette.tsx": 1,
+    "src/components/ShopIdentityMenu.tsx": 1,
+    "src/components/SkipLink.tsx": 1,
+    "src/components/ui/form.tsx": 1,
+    "src/components/ui/InfoHint.tsx": 1,
+    "src/components/ui/table.test.tsx": 3,
+    "src/components/ui/table.tsx": 3
+  },
+  "tokens": {
+    "//": "Non-token color values still in components, per file. Written by `node scripts/check-tokens.mjs --write`. This number may only go down — see scripts/check-tokens.mjs. The embed-snippet generator is here by design: its hex is pasted into third-party sites where our tokens do not exist."
+  },
+  "type-ramp": {
+    "//": "Bare heading spellings still typed at a call site, per file. Written by `node scripts/check-type-ramp.mjs --write`. This number may only go down — see scripts/check-type-ramp.mjs."
+  },
+  "voice": {
+    "//": "Voice tells — a machine-written mannerism, or a straight apostrophe or double quote where the house ’ and “ ” belong — still in a message bundle or a route's metadata block, per file. Written by `node scripts/check-voice.mjs --write`. This number may only go down — see scripts/check-voice.mjs."
+  }
+}

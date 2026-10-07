@@ -34,9 +34,9 @@ import { readdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
+import { RATCHETS_PATH, ratchetFlags, readRatchet, writeRatchet } from "./ratchet.mjs";
 
 const ROOT = process.cwd();
-const BASELINE = "scripts/context-budget-baseline.json";
 
 // Just above the longest line as of the extraction above (226 words, the `pnpm e2e` row).
 // A cell that wants more than this is a document.
@@ -177,10 +177,10 @@ async function main() {
   const args = process.argv.slice(2);
   const reportPath = args.includes("--report") ? args[args.indexOf("--report") + 1] : null;
   const write = args.includes("--write");
-  const absorb = args.includes("--absorb") ? args[args.indexOf("--absorb") + 1] : null;
+  const { absorb } = ratchetFlags(args);
 
   const measured = await measure();
-  const baseline = JSON.parse(await readFile(path.join(ROOT, BASELINE), "utf8"));
+  const baseline = (await readRatchet(ROOT, "context-budget")) ?? {};
   const budgets = baseline.budgets ?? {};
 
   const total = Object.values(measured).reduce((sum, count) => sum + count, 0);
@@ -201,7 +201,7 @@ async function main() {
   }
 
   if (absorb !== null) {
-    if (!absorb || absorb.startsWith("--")) {
+    if (!absorb) {
       console.error(
         'context-budget: --absorb needs a reason — `--absorb "new switching-guide row"`. The reason is the whole point: it is what a reader sees in the diff when the budget moves.',
       );
@@ -210,26 +210,19 @@ async function main() {
     const raised = Object.entries(measured).filter(
       ([file, count]) => count > (budgets[file] ?? Number.POSITIVE_INFINITY),
     );
-    await writeFile(
-      path.join(ROOT, BASELINE),
-      `${JSON.stringify(
+    await writeRatchet(ROOT, "context-budget", {
+      ...baseline,
+      budgets: { ...budgets, ...Object.fromEntries(raised) },
+      raises: [
+        ...(baseline.raises ?? []),
         {
-          ...baseline,
-          budgets: { ...budgets, ...Object.fromEntries(raised) },
-          raises: [
-            ...(baseline.raises ?? []),
-            {
-              why: absorb,
-              files: Object.fromEntries(
-                raised.map(([file, count]) => [file, `${budgets[file]} -> ${count}`]),
-              ),
-            },
-          ],
+          why: absorb,
+          files: Object.fromEntries(
+            raised.map(([file, count]) => [file, `${budgets[file]} -> ${count}`]),
+          ),
         },
-        null,
-        2,
-      )}\n`,
-    );
+      ],
+    });
     console.log(
       raised.length > 0
         ? `context-budget: raised ${raised.map(([file, count]) => `${file} -> ${count}`).join(", ")} (${absorb})`
@@ -244,10 +237,7 @@ async function main() {
       // A ratchet only ever turns one way: bank the fall, never the growth.
       next[file] = Math.min(count, budgets[file] ?? count);
     }
-    await writeFile(
-      path.join(ROOT, BASELINE),
-      `${JSON.stringify({ ...baseline, budgets: next }, null, 2)}\n`,
-    );
+    await writeRatchet(ROOT, "context-budget", { ...baseline, budgets: next });
     const banked = Object.entries(next).filter(([file, count]) => count < (budgets[file] ?? count));
     console.log(
       banked.length > 0
@@ -263,7 +253,7 @@ async function main() {
     const budget = budgets[file];
     if (budget === undefined) {
       problems.push(
-        `${file}: no entry in ${BASELINE} — every always-loaded surface needs a budget; run \`node scripts/check-context-budget.mjs --write\` once you have decided what it should be`,
+        `${file}: no entry in ${RATCHETS_PATH}'s context-budget section — every always-loaded surface needs a budget; run \`node scripts/check-context-budget.mjs --write\` once you have decided what it should be`,
       );
       continue;
     }

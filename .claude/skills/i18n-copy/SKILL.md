@@ -19,7 +19,7 @@ Decisions: [20260729-diver-copy-localization](../../../docs/architecture/decisio
 `pnpm check:copy` enforces this for `src/app`/`src/components` (`.tsx` and colocated `.ts`).
 `pnpm check:domain-strings` enforces the same rule for `src/lib`/`src/db` — see
 [Copy that is not in a component](#copy-that-is-not-in-a-component) below. Both are ratchets over
-`scripts/copy-baseline.json` / `scripts/domain-strings-baseline.json`: each currently sits at zero
+the `copy` and `domain-strings` sections of `scripts/ratchets.json`: each currently sits at zero
 (the full-app and full-domain-layer extractions are both done — ADRs
 [20260730-frontend-strings-i18n-extraction](../../../docs/architecture/decisions/20260730-frontend-strings-i18n-extraction.md)
 and
@@ -161,7 +161,7 @@ no English-first workflow; a key present in one locale and missing in another fa
 ## When `pnpm check:copy` or `pnpm check:domain-strings` fails
 
 Both scripts share the same messages and flags; substitute `check-domain-strings.mjs` and
-`domain-strings-baseline.json` for `src/lib`/`src/db` work.
+`domain-strings` section for `src/lib`/`src/db` work.
 
 | Message | What to do |
 | --- | --- |
