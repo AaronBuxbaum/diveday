@@ -1,5 +1,6 @@
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { type DiverLocale, isDiverLocale } from "@/i18n/settings";
+import { log } from "@/lib/log";
 import { personNamesMatch } from "@/lib/person-name";
 import { type DbExecutor, isUniqueConstraintViolation } from "./client";
 import { storedPhone } from "./person-phone";
@@ -152,8 +153,11 @@ export async function recordDiverOwnLocale(
           isNull(people.deletedAt),
         ),
       );
-  } catch {
-    console.error("Diver locale could not be recorded", { personId: input.personId });
+  } catch (error) {
+    log("person.locale_record_failed", "error", {
+      personId: input.personId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
   }
 }
 
@@ -182,10 +186,13 @@ export async function recordDiverOwnLocaleForBooking(
       .from(bookings)
       .where(eq(bookings.id, input.bookingId))
       .limit(1);
-  } catch {
+  } catch (error) {
     // Same contract as `recordDiverOwnLocale`: never the reason a photo upload
     // or a review submission turns into an error page.
-    console.error("Diver locale could not be recorded", { bookingId: input.bookingId });
+    log("person.locale_record_failed", "error", {
+      bookingId: input.bookingId,
+      errorCode: error instanceof Error ? error.name : "unknown_error",
+    });
     return;
   }
   if (!booking) return;
