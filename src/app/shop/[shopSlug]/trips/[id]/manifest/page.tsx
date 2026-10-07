@@ -676,8 +676,6 @@ export default async function TripManifestPage({
       <TripPageHeader
         boardHref={shopPath(shopSlug, "schedule", "board")}
         backLabel={t(STAFF_DESTINATION_LABEL_KEYS.board)}
-        // Boat mode hides the shell's tab bar, so the day gets a door of its
-        // own beside the schedule's (UX audit 2026-10-07, item 39).
         today={{ href: shopPath(shopSlug), label: t(STAFF_DESTINATION_LABEL_KEYS.today) }}
         trip={manifest.trip}
         locale={locale}
