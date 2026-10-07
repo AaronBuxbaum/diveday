@@ -2,14 +2,19 @@ import type { PGlite } from "@electric-sql/pglite";
 import { and, asc, eq, gt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { describe, expect, it, vi } from "vitest";
-import { countBlockedDiversToday, inHorizonReadiness } from "@/db/blockers";
+import { inHorizonReadiness } from "@/db/blockers";
 import type { AppDb } from "@/db/client";
 import { hasActiveCourses } from "@/db/courses";
 import { countGearItems } from "@/db/gear";
 import { people, personRoles, trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { getShopStripeAccount } from "@/db/stripe-accounts";
-import { getShopDayDepartures, getTodayWork, todayNextDepartureTripId } from "@/db/today";
+import {
+  countBlockedDiversNextBoatDay,
+  getShopDayDepartures,
+  getTodayWork,
+  todayNextDepartureTripId,
+} from "@/db/today";
 import { getTripGuests } from "@/db/trips-guests";
 import { liveTrip } from "@/db/trips-live";
 import { getTripOverview } from "@/db/trips-overview";
@@ -97,7 +102,7 @@ describe("what a staff render sends", () => {
       const row = await getShopBySlug(db, shop.slug);
       if (!row) throw new Error("no shop");
       await Promise.all([
-        countBlockedDiversToday(db, row.id, row.timezone, nowDate()),
+        countBlockedDiversNextBoatDay(db, row.id, row.timezone, nowDate()),
         todayNextDepartureTripId(db, row.id, row.timezone),
         hasActiveCourses(db, row.id),
         countGearItems(db, row.id),

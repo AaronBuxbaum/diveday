@@ -1,7 +1,7 @@
 import { cache } from "react";
-import { MINUTE_MS, nowDate } from "@/lib/clock";
+import { MINUTE_MS } from "@/lib/clock";
 import { OPERATIONAL_MAX_TRIPS, operationalWindow } from "@/lib/operational-window";
-import { toDateInputValue, utcToWallTime } from "@/lib/zoned";
+import { addCalendarDays, toDateInputValue, utcToWallTime } from "@/lib/zoned";
 import type { AppDb } from "./client";
 import { listTripsReadiness } from "./readiness";
 import { pagedUpcomingTripsWithCounts } from "./trips";
@@ -96,7 +96,7 @@ const horizonSlot = cache(
  * {@link inHorizonReadiness}, run once per render for every caller asking about
  * the same shop in the same clock minute (app audit 2026-10-07, item 2).
  *
- * The staff shell's badge (`countBlockedDiversToday`), the shop home and the roster
+ * The staff shell's badge (`countBlockedDiversNextBoatDay` in `./today`), the shop home and the roster
  * each run the pass, about eleven statements a time. The first asker's pass is
  * the one every later asker in the render receives, so the badge and the page
  * it links to now read literally the same evidence - the property this file
@@ -122,44 +122,55 @@ export function sharedInHorizonReadiness(
 }
 
 /**
- * Divers who can't board yet on **today's** departures, in the shop's own
- * zone: the number the Today row's nav badge carries (UX audit 2026-10-07,
- * item 1). It counts exactly what the day's departure cards count — one per
- * blocked booking on each of today's departures, the sum of every card's
- * "N blocked" — and the summary line under the date says the same number in
- * words, so the badge, the cards and the sentence are one figure.
+ * The blocked-diver figure for the **next boat day**: the number the Today
+ * row's nav badge carries, the sum of the departure cards' "N blocked" on
+ * that day, and the blocked clause of the summary under the date (UX audit
+ * 2026-10-07, item 1; glossary "Operational horizon").
+ *
+ * - **The day** is today while any of today's departures is still inside the
+ *   horizon (not yet an hour past sailing); once none is, it is tomorrow, the
+ *   shop-day the spine's Tomorrow cards show. So at 4 PM, with the day's boats
+ *   in, the badge already counts the medical hold on tomorrow's dawn boat
+ *   instead of reading 0.
+ * - **`aboard`** is the caller's count of blocked divers aboard boats that are
+ *   still out but have left the horizon (`blockedAboardOnBoatsOut` in
+ *   `./today`), added whichever day it is: a diver in the water on a hold is
+ *   the case the count matters most for, and the horizon drops their boat an
+ *   hour after it sails.
  *
  * It used to count the whole week's horizon, on a row labelled Today, which is
- * how the badge came to read 21 over a page whose cards said 4.
+ * how the badge came to read 21 over a page whose cards said 4; then only
+ * today, which read 0 every afternoon.
  */
-export async function countBlockedDiversToday(
-  db: AppDb,
-  shopId: string,
-  timeZone: string,
-  now: Date = nowDate(),
-): Promise<number> {
-  const evidence = await sharedInHorizonReadiness(db, shopId, now);
-  return blockedOnShopDay(evidence, timeZone, now);
-}
+export type NextBoatDayBlocked = {
+  /** Which shop-day `onDay` counts. */
+  day: "today" | "tomorrow";
+  /** Blocked bookings on that day's in-horizon departures: the cards' sum. */
+  onDay: number;
+  /** Blocked divers aboard boats still out past the horizon. */
+  aboard: number;
+  /** `onDay + aboard`: the badge. */
+  total: number;
+};
 
-/**
- * The shared derivation behind {@link countBlockedDiversToday}, over evidence a
- * caller already holds: blocked readiness rows on the departures whose start
- * falls on `now`'s shop-day.
- */
-export function blockedOnShopDay(
+export function blockedOnNextBoatDay(
   evidence: Pick<HorizonReadinessEvidence, "trips" | "readinessByTrip">,
   timeZone: string,
   now: Date,
-): number {
+  aboard = 0,
+): NextBoatDayBlocked {
   const day = (date: Date) => toDateInputValue(utcToWallTime(date, timeZone));
   const today = day(now);
-  let blocked = 0;
+  const sailsToday = evidence.trips.some((trip) => day(trip.startsAt) === today);
+  const target = sailsToday
+    ? today
+    : toDateInputValue(addCalendarDays(utcToWallTime(now, timeZone), 1));
+  let onDay = 0;
   for (const trip of evidence.trips) {
-    if (day(trip.startsAt) !== today) continue;
+    if (day(trip.startsAt) !== target) continue;
     for (const row of evidence.readinessByTrip.get(trip.id) ?? []) {
-      if (row.readiness.status === "blocked") blocked += 1;
+      if (row.readiness.status === "blocked") onDay += 1;
     }
   }
-  return blocked;
+  return { day: sailsToday ? "today" : "tomorrow", onDay, aboard, total: onDay + aboard };
 }

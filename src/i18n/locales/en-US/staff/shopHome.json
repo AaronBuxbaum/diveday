@@ -115,6 +115,8 @@
   "spine": {
     "summaryBoats": "{count, plural, one {# boat today.} other {# boats today.}}",
     "summaryBoatsBlocked": "{count, plural, one {# boat today} other {# boats today}}, {blocked, plural, one {# diver blocked.} other {# divers blocked.}}",
+    "summaryBoatsBlockedTomorrow": "{count, plural, one {# boat today} other {# boats today}}, {tomorrow, plural, one {# diver blocked for tomorrow.} other {# divers blocked for tomorrow.}}",
+    "summaryBoatsBlockedAboardAndTomorrow": "{count, plural, one {# boat today} other {# boats today}}, {blocked, plural, one {# diver blocked aboard} other {# divers blocked aboard}} and {tomorrow, plural, one {# for tomorrow.} other {# for tomorrow.}}",
     "summaryNext": "{count, plural, =0 {Nothing needs you before the {time} leaves the dock.} one {# thing needs you before the {time} leaves the dock.} other {# things need you before the {time} leaves the dock.}}",
     "summaryAfter": "{count, plural, =0 {Nothing is waiting on you.} one {# thing still needs you.} other {# things still need you.}}",
     "quietSentence": "No boats today, and nothing is waiting on you.",

@@ -24,7 +24,7 @@ import { ShopNotice } from "@/components/ShopPageHeader";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
 import { canPersonExportIncidentRecord } from "@/db/authz";
-import { sharedInHorizonReadiness } from "@/db/blockers";
+import { blockedOnNextBoatDay, sharedInHorizonReadiness } from "@/db/blockers";
 import { hasArrivals, listCheckInQueue } from "@/db/check-in";
 import { getDb } from "@/db/client";
 import { getDayCloseout, listHeadCountCloses, shopHasSailedBefore } from "@/db/closeout";
@@ -545,6 +545,10 @@ async function TodayBody({
   const nextStation: DayStation | undefined = spine.stations.find(
     (station) => !hasSailed(station.startsAt, now),
   );
+  // The badge's figure, from the same evidence and the same boats-out read
+  // (`blockedOnNextBoatDay`): today's cards while a boat is still to sail,
+  // tomorrow's once they are all away, plus divers blocked aboard a boat out.
+  const nextBoatDay = blockedOnNextBoatDay(evidence, shop.timezone, now, work.blockedAboard);
   // "3 boats today. 2 things need you before the 7:00 AM leaves the dock." The
   // count is what is still open on the boat the sentence names, because that
   // is what "before it leaves" means; once every boat is away it counts what
@@ -556,7 +560,8 @@ async function TodayBody({
         // has three boats on it, and the line under the date says what the day
         // *is* before it says what is left of it.
         boats: dayDepartures.length,
-        blocked: blockedToday,
+        blocked: nextBoatDay.day === "today" ? nextBoatDay.total : nextBoatDay.aboard,
+        blockedTomorrow: nextBoatDay.day === "tomorrow" ? nextBoatDay.onDay : 0,
         jobs: nextStation
           ? pressingRows(nextStation.rows)
           : spine.stations.reduce((total, station) => total + pressingRows(station.rows), 0) +

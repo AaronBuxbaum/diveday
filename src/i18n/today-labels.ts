@@ -941,17 +941,35 @@ export function openStaffingActionText(t: StaffTranslator): string {
  */
 export function daySpineSummaryText(
   t: StaffTranslator,
-  summary: { boats: number; blocked?: number; jobs: number; nextDepartureTime: string | null },
+  summary: {
+    boats: number;
+    blocked?: number;
+    blockedTomorrow?: number;
+    jobs: number;
+    nextDepartureTime: string | null;
+  },
 ): string | null {
   if (summary.boats === 0) return null;
-  // **The blocked figure is the Today row's badge, word for word** (UX audit
-  // 2026-10-07, item 1): the same count the departure cards' "N blocked" sum
-  // to, so the badge, the cards and this sentence are one number.
+  // **The blocked figures add up to the Today row's badge** (UX audit
+  // 2026-10-07, item 1; `blockedOnNextBoatDay`). `blocked` is today's: the
+  // cards' "N blocked" while a boat is still to sail, plus divers blocked
+  // aboard a boat still out. `blockedTomorrow` is set once today's boats are
+  // all away, when the badge has moved on to tomorrow's departures, so the
+  // sentence names that day rather than counting tomorrow's divers as today's.
   const blocked = summary.blocked ?? 0;
+  const tomorrow = summary.blockedTomorrow ?? 0;
   const boats =
-    blocked > 0
-      ? t("shopHome.spine.summaryBoatsBlocked", { count: summary.boats, blocked })
-      : t("shopHome.spine.summaryBoats", { count: summary.boats });
+    blocked > 0 && tomorrow > 0
+      ? t("shopHome.spine.summaryBoatsBlockedAboardAndTomorrow", {
+          count: summary.boats,
+          blocked,
+          tomorrow,
+        })
+      : tomorrow > 0
+        ? t("shopHome.spine.summaryBoatsBlockedTomorrow", { count: summary.boats, tomorrow })
+        : blocked > 0
+          ? t("shopHome.spine.summaryBoatsBlocked", { count: summary.boats, blocked })
+          : t("shopHome.spine.summaryBoats", { count: summary.boats });
   const jobs = summary.nextDepartureTime
     ? t("shopHome.spine.summaryNext", {
         count: summary.jobs,

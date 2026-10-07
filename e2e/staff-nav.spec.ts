@@ -54,7 +54,8 @@ test.describe("owner", () => {
       "Settings",
     ]);
     // **Not `exact`, because Today's badge is part of its name**: the blocked
-    // count rides the row, so the accessible name is "Today 4 divers blocked".
+    // count rides the row, so the accessible name is "Today 4 divers blocked, aboard or on the next
+    // boats".
     await expect(nav.getByRole("link", { name: /^Today/ })).toHaveAttribute("aria-current", "page");
 
     const divers = nav.getByRole("link", { name: "Divers", exact: true });

@@ -39,7 +39,7 @@ import { markShopUnitsConfirmed } from "./shops";
 import { createStaffCredential } from "./staff-credentials";
 import { getStaffingView } from "./staffing";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { getTodayWork } from "./today";
+import { countBlockedDiversNextBoatDay, getTodayWork } from "./today";
 import { sendLastMinuteDealBlast } from "./trip-promos";
 import { recordTripStage } from "./trip-stages";
 import {
@@ -2479,6 +2479,27 @@ describe("unclosed roll call (DOM-H3)", () => {
         expect(work.outTripIds).toContain(trip.id);
         // The departure is not a live station again: the closing state owns it.
         expect(work.departures.some((departure) => departure.tripId === trip.id)).toBe(false);
+      });
+
+      it("counts the diver aboard in the nav badge until the boat is home", async () => {
+        const { db, shop } = ctx;
+        const { trip, staffId } = await sailedNinetyMinutesAgo();
+        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+        const badge = await countBlockedDiversNextBoatDay(db, shop.id, shop.timezone);
+        // The one boarded diver, not the one left ashore on a boat that has gone.
+        expect(work.blockedAboard).toBeGreaterThanOrEqual(1);
+        expect(badge.aboard).toBe(work.blockedAboard);
+        expect(badge.total).toBe(badge.onDay + badge.aboard);
+
+        await recordTripStage(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          stage: "home",
+          recordedByPersonId: staffId,
+          recordedAt: nowDate(),
+        });
+        const home = await countBlockedDiversNextBoatDay(db, shop.id, shop.timezone);
+        expect(home.aboard).toBe(badge.aboard - 1);
       });
 
       it("drops the row once the crew says the boat is home", async () => {

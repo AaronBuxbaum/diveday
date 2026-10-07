@@ -599,8 +599,14 @@ new domain concept, define it here in the same PR.
 
 - **Operational horizon** — the single forward window every readiness surface reads: now through
   seven days out. Today ranks the work inside it in both of its views, and the nav's blocked-diver
-  badge counts the same set — so a diver cleared on one is cleared on all of them. Anything past it
-  is Schedule's job, not a triage list's. Defined once in `src/lib/operational-window.ts`; each
+  badge reads the same readiness — so a diver cleared on one is cleared on all of them. The badge
+  counts the **next boat day** inside it, not the whole week: today's departures while one is still
+  to sail (not yet an hour past leaving the dock), tomorrow's once they are all away, plus every
+  diver blocked aboard a boat still out, whose departure the horizon dropped an hour after it
+  sailed. That is the sum of the day's cards' "N blocked" plus the Aboard rows in Needs you, and the
+  blocked clause of the summary under the date says the same figure in words
+  (`blockedOnNextBoatDay`, `src/db/blockers.ts`). Anything past the horizon is Schedule's job, not
+  a triage list's. Defined once in `src/lib/operational-window.ts`; each
   surface derives its bounds from there rather than declaring its own. Reports is deliberately
   outside this model — a calendar month is genuinely its job.
 - **Needs you** — the one list of jobs on Today (ADR 20261001-logbook, decision 4): every row from

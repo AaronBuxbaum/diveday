@@ -960,6 +960,15 @@ function headlineFor(diver: {
 }
 
 /**
+ * Whether a blocked diver aboard a boat that is out keeps a `blocked_aboard`
+ * row: any open blocker but money alone, which changes nothing in the water.
+ * The nav badge counts exactly these divers (`blockedOnNextBoatDay`).
+ */
+export function isBlockedAboard(blockers: readonly ReadinessBlocker[]): boolean {
+  return headlineFor({ blockers, aboard: true })?.aboard === true;
+}
+
+/**
  * Where a staffer goes to clear a diver's *worst* blocker, and what the link
  * says when they get there.
  *

@@ -48,6 +48,21 @@ describe("the shop home's pinned sentences", () => {
     );
   });
 
+  it("names tomorrow's blocked divers once today's boats are all away, as the badge counts them", () => {
+    expect(
+      daySpineSummaryText(t, { boats: 3, blockedTomorrow: 2, jobs: 0, nextDepartureTime: null }),
+    ).toBe("3 boats today, 2 divers blocked for tomorrow. Nothing is waiting on you.");
+    expect(
+      daySpineSummaryText(t, {
+        boats: 3,
+        blocked: 1,
+        blockedTomorrow: 2,
+        jobs: 1,
+        nextDepartureTime: null,
+      }),
+    ).toBe("3 boats today, 1 diver blocked aboard and 2 for tomorrow. 1 thing still needs you.");
+  });
+
   it("keeps the deadline half even when nothing is open before that boat", () => {
     expect(daySpineSummaryText(t, { boats: 1, jobs: 0, nextDepartureTime: "7:00 AM" })).toBe(
       "1 boat today. Nothing needs you before the 7:00 AM leaves the dock.",
