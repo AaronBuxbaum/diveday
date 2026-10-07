@@ -58,9 +58,11 @@ export async function getTripGuests(
   tripId: string,
   filters: TripGuestsFilters = {},
   /** The reads shared with `getTripOverview` (`./trips-shared-reads`); omitted, this reads its own. */
-  sharedReads?: TripSharedReads | Promise<TripSharedReads>,
+  sharedReads?: TripSharedReads | null | Promise<TripSharedReads | null>,
 ) {
   const shared = await sharedReads;
+  // Handed reads that found no departure: the answer is already in.
+  if (sharedReads !== undefined && shared === null) return null;
   const trip = shared ? shared.trip : await getTripWithBooked(db, shop.id, tripId);
   if (!trip) return null;
 

@@ -79,9 +79,11 @@ export async function getTripOverview(
    * (`./trips-shared-reads`), when the caller has them in hand or in flight.
    * Omitted, this reads its own, as the print packet's call does.
    */
-  sharedReads?: TripSharedReads | Promise<TripSharedReads>,
+  sharedReads?: TripSharedReads | null | Promise<TripSharedReads | null>,
 ) {
   const shared = await sharedReads;
+  // Handed reads that found no departure: the answer is already in.
+  if (sharedReads !== undefined && shared === null) return null;
   const trip = shared ? shared.trip : await getTripWithBooked(db, shop.id, tripId);
   if (!trip) return null;
 

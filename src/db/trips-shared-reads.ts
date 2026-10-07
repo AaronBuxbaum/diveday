@@ -17,11 +17,11 @@ import { getTripWithBooked } from "./trips";
  * pulse on Overview and the roster on Guests can never be drawn from two
  * different readings of one boat.
  *
- * `trip` is `null` when the departure does not exist, exactly as
+ * The whole answer is `null` when the departure does not exist, as
  * `getTripWithBooked` answers; both readers then return `null` as before.
  */
 export type TripSharedReads = {
-  trip: Awaited<ReturnType<typeof getTripWithBooked>>;
+  trip: NonNullable<Awaited<ReturnType<typeof getTripWithBooked>>>;
   requirement: Awaited<ReturnType<typeof getTripRequirements>>;
   siteRequirement: Awaited<ReturnType<typeof getTripSiteRequirement>>;
   readiness: Awaited<ReturnType<typeof listTripReadiness>>;
@@ -33,11 +33,9 @@ export async function loadTripSharedReads(
   db: AppDb,
   shopId: string,
   tripId: string,
-): Promise<TripSharedReads> {
+): Promise<TripSharedReads | null> {
   const trip = await getTripWithBooked(db, shopId, tripId);
-  if (!trip) {
-    return { trip: null, requirement: null, siteRequirement: null, readiness: [], prepDivers: [] };
-  }
+  if (!trip) return null;
   const [requirement, siteRequirement, readiness, prepDivers] = await Promise.all([
     getTripRequirements(db, shopId, tripId),
     getTripSiteRequirement(db, shopId, tripId),
