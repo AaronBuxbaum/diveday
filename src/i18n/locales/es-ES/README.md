@@ -264,7 +264,7 @@ across Latin America and the Caribbean.
 | --- | --- |
 | an intro session / intro course (DSD, Try Scuba) | un bautismo (de buceo) |
 | on this intro session | en este bautismo |
-| Over intro ratio | Ratio de bautismo excedida |
+| Over intro ratio: add an instructor | Ratio de bautismo excedida: añade un instructor |
 | Intro-course status | Estado de bautismo de buceo |
 
 The noun is **masculine**: `el`/`un`/`este`, and anything reaching back to it agrees (`lleno`,

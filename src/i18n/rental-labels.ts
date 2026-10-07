@@ -1,4 +1,4 @@
-import type { RentalFitLine, RentalItemKind } from "@/lib/dive-prep";
+import type { RentalFitLine, RentalItemKind, StatedSizeKind } from "@/lib/dive-prep";
 import type { DrysuitCardCheck } from "@/lib/drysuit-card";
 import { cachedListFormat } from "@/lib/intl-cache";
 import type { RentableItemKind, ShopCatalogKind } from "@/lib/rentals";
@@ -27,7 +27,8 @@ const RENTAL_ITEM_LABEL_KEYS: Record<RentalItemKind, StaffMessageKey> = {
   dive_computer: "shared.rentalFit.itemLabels.diveComputer",
   gopro: "shared.rentalFit.itemLabels.gopro",
   drysuit: "shared.rentalFit.itemLabels.drysuit",
-  hood_gloves: "shared.rentalFit.itemLabels.hoodGloves",
+  hood: "shared.rentalFit.itemLabels.hood",
+  gloves: "shared.rentalFit.itemLabels.gloves",
   torch: "shared.rentalFit.itemLabels.torch",
   smb: "shared.rentalFit.itemLabels.smb",
 };
@@ -107,7 +108,7 @@ function sizedPiece(t: StaffTranslator, item: string, size: string): string {
 export function statedSizesText(
   t: StaffTranslator,
   locale: string,
-  items: { kind: "bcd" | "wetsuit" | "boots" | "mask_fins" | "drysuit"; size: string }[],
+  items: { kind: StatedSizeKind; size: string }[],
 ): string {
   const parts = items.map((item) => sizedPiece(t, rentalItemLabel(t, item.kind), item.size));
   return cachedListFormat(locale, { style: "long", type: "unit" }).format(parts);
@@ -156,9 +157,16 @@ export function rentalFitLineText(t: StaffTranslator, locale: string, line: Rent
                   size: sizeText(item.size),
                 })
               : t("shared.rentalFit.itemOverDrysuitBoot", { item: label })
-            : item.size
-              ? sizedPiece(t, label, item.size)
-              : oneUnit(label);
+            : item.drysuitGloves
+              ? item.size
+                ? t("shared.rentalFit.itemDrysuitGlovesWithSize", {
+                    item: label,
+                    size: sizeText(item.size),
+                  })
+                : t("shared.rentalFit.itemDrysuitGloves", { item: label })
+              : item.size
+                ? sizedPiece(t, label, item.size)
+                : oneUnit(label);
         // Wrapped rather than substituted, so the piece keeps whatever it
         // already said and gains the contradiction. A staffer reading the rail
         // is about to go and fetch this: "Drysuit ML" with nothing on it sends

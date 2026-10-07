@@ -33,7 +33,14 @@ export function OfflineShellVersionBanner({ copy }: { copy: OfflineShellVersionB
       if (!cancelled && version && version !== OFFLINE_MANIFEST_SHELL_VERSION) setStale(true);
     });
     if (!("serviceWorker" in navigator)) return;
-    const onControllerChange = () => setUpdateReady(true);
+    // `controllerchange` also fires when the first worker takes control of a
+    // page that had none, which is an install, not an update (issue #1971).
+    // Only a change from one controller to another means a newer version.
+    let hadController = navigator.serviceWorker.controller !== null;
+    const onControllerChange = () => {
+      if (hadController) setUpdateReady(true);
+      hadController = navigator.serviceWorker.controller !== null;
+    };
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
     return () => {
       cancelled = true;

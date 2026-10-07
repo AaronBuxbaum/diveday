@@ -199,18 +199,9 @@ export function gearAssignmentNeeds(
       { kind: "fins", size: piece.size },
     ];
   }
-  // The same split, one item over: a diver ticks "hood & gloves" once and the
-  // register holds a hood and a pair of gloves as separate tagged units.
-  // Neither carries a size in the fit.
-  if (piece.kind === "hood_gloves") {
-    return [
-      { kind: "hood", size: null },
-      { kind: "gloves", size: null },
-    ];
-  }
-  return [
-    { kind: piece.kind as Exclude<RentalItemKind, "mask_fins" | "hood_gloves">, size: piece.size },
-  ];
+  // A hood and gloves are two kinds in the fit as in the register (H-101), so
+  // each meets its own tagged units with its own size, like every other piece.
+  return [{ kind: piece.kind as Exclude<RentalItemKind, "mask_fins">, size: piece.size }];
 }
 
 /** The service-form suggestion: the conventional next deadline for this clock. */

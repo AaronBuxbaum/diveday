@@ -277,7 +277,7 @@ function hasSpaceHaving(hasSpace: boolean | undefined) {
  * its own question needs (reviewed 2026-09-11, after the public dive-site page
  * was found telling a stranger a released seat's boat was full):
  *
- * - `getStaffingView` (`./staffing.ts`) and `tripOverIntroRatio`
+ * - `getStaffingView` (`./staffing.ts`) and `tripRatioGapNeedsInstructor`
  *   (`./crew-requests.ts`) size crew against the count. A diver the desk wrote
  *   off can still be boarded at the rail (`reclaimReleasedSeat`,
  *   `./manifests.ts`), so the ratio has to already cover them; under-crewing a

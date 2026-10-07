@@ -256,6 +256,7 @@ export async function seedCatalog(db: DbExecutor, shopId: string) {
                 agency: template.agency,
                 description: template.description,
                 minimumCertificationLevel,
+                certifiesLevel: template.certifiesLevel,
                 isIntroCourse,
                 sourceTemplateSlug: template.slug,
                 sourceTemplateVersion: template.version,

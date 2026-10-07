@@ -476,7 +476,8 @@ test("a refusal from the global door stays on the form, boat still chosen", asyn
  * **The other answer to a held seat** (Aaron, 2026-10-05). The seed books
  * Hana Park on the night dive with June Park's email, so the seat hangs on
  * June's record. "Different person" gives the seat a record of its own, named
- * the way it was booked, and the row stops asking.
+ * the way it was booked, and the row stops asking. It asks her age first: a
+ * date of birth, or the staffer's "18 or older" (H-100).
  */
 test("a held seat that is someone else gets its own diver record", async ({ page }) => {
   await page.goto("/shop/blue-mantis/schedule/board");
@@ -487,6 +488,13 @@ test("a held seat that is someone else gets its own diver record", async ({ page
 
   await row.getByText("Different person").click();
   await expect(row.getByLabel("Name for their own record")).toHaveValue("Hana Park");
+  // H-100: with neither a date of birth nor "They're 18 or older", a blank date
+  // would read as an adult, so the split is refused and the seat stays held.
+  await row.getByRole("button", { name: "Give them their own record" }).click();
+  await expect(page.getByRole("status")).toContainText("Add their date of birth.");
+  await expect(row).toContainText("Booked as Hana Park with June Park’s email.");
+  await row.getByText("Different person").click();
+  await expect(row.getByLabel("They’re 18 or older")).not.toBeChecked();
   // Who she is, beyond a name (issue #2081): nothing of June's is offered,
   // and what the staffer types lands on Hana's own record.
   await expect(row.getByLabel(/^Email/)).toHaveValue("");

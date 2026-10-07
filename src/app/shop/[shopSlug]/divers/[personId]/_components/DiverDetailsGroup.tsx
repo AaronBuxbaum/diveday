@@ -146,7 +146,7 @@ export function DiverDetailsGroup({
             copy={forgivingCopy(t)}
           />
         </Field>
-        <Field label={t("divers.header.dateOfBirthLabel")} hint={t("divers.header.optionalHint")}>
+        <Field label={t("divers.header.dateOfBirthLabel")} hint={dateOfBirthHint(t, diver)}>
           <DateField
             name="dateOfBirth"
             // Mirrors the server-side plausibility bound so a mistyped year
@@ -217,4 +217,18 @@ export function DiverDetailsGroup({
       ) : null}
     </DiverFileGroupDisclosure>
   );
+}
+
+/**
+ * The date field's hint: "(optional)", or, on a record split off a held seat
+ * with no date, who said the diver is 18 or older (H-100). That answer is what
+ * the guardian rule reads until a date is typed here, so it says whose it is.
+ */
+function dateOfBirthHint(t: StaffTranslator, diver: DiverProfile): string {
+  if (diver.person.dateOfBirth || !diver.person.adultAttestedAt) {
+    return t("divers.header.optionalHint");
+  }
+  return diver.adultAttestedByName
+    ? t("divers.header.adultAttestedHint", { name: diver.adultAttestedByName })
+    : t("divers.header.adultAttestedHintNoName");
 }

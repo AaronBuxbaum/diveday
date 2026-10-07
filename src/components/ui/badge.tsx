@@ -107,7 +107,10 @@ export function Badge({
     // centres on it. A drawn mark a caller passes in centres itself the same
     // way (badge.test.tsx sweeps for one that does not).
     <span
-      className={`inline-flex items-baseline rounded-full font-medium ${
+      // `whitespace-nowrap`: a pill is one line, or it is a two-line stadium
+      // ("Someone unaccounted for" on the roll call, issue #2008). Where a pill
+      // can be wider than its column, the caller gives it a line of its own.
+      className={`inline-flex items-baseline rounded-full font-medium whitespace-nowrap ${
         mark ? "gap-1" : ""
       } ${sizeClass[size]} ${toneClass[tone]}${tabularNums ? " tabular-nums" : ""}${
         className ? ` ${className}` : ""

@@ -203,6 +203,7 @@ export default async function EditCoursePage({
     agency: t("courses.edit.templateUpdates.fields.agency"),
     description: t("courses.edit.templateUpdates.fields.description"),
     minimumCertificationLevel: t("courses.edit.templateUpdates.fields.minimumCertificationLevel"),
+    certifiesLevel: t("courses.edit.templateUpdates.fields.certifiesLevel"),
     minimumAge: t("courses.edit.templateUpdates.fields.minimumAge"),
     isIntroCourse: t("courses.edit.templateUpdates.fields.isIntroCourse"),
     summary: t("courses.edit.templateUpdates.fields.summary"),

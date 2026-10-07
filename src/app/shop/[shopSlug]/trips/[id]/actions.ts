@@ -26,6 +26,7 @@ import { sendNotification } from "@/db/notifications";
 import { addInternalNote, deleteInternalNote, recordTripActivity } from "@/db/operations";
 import { getBookingPayment, setBookingPayment } from "@/db/payments";
 import {
+  courseCertifiesOnTrip,
   getTripRequirements,
   issueShopCertification,
   issueShopNitroxCertification,
@@ -1226,6 +1227,7 @@ export async function splitDiverIdentityAction(
     actorPersonId: s.user.personId,
     fullName: String(formData.get("fullName") ?? ""),
     dateOfBirth: String(formData.get("dateOfBirth") ?? ""),
+    adultAttested: formData.get("adultAttested") === "yes",
     email: email.data,
     phone: phone.data,
     // The bookings the ticked box named. Only ids; the writer moves only those
@@ -1249,6 +1251,7 @@ const SPLIT_REFUSAL_NOTICE = {
   medical_hold: "identity-medical-hold",
   date_of_birth_required: "identity-split-dob-required",
   date_of_birth_invalid: "identity-split-dob-invalid",
+  age_unstated: "identity-split-age-unstated",
   email_in_use: "identity-split-email-in-use",
 } as const satisfies Record<
   Extract<Awaited<ReturnType<typeof splitBookingIdentity>>, { ok: false }>["reason"],
@@ -1274,6 +1277,14 @@ export async function certifyDiverFromRosterAction(
   const award = String(formData.get("award") ?? "");
   if (!uuidParam(bookingId) || !uuidParam(personId) || !award) redirect(back);
   const db = await getDb();
+  // **An intro session certifies nobody** (dive-domain review). The roster
+  // draws no Certify control on one, but a post reaches this regardless, and
+  // a forged `award=open_water` on a DSD would otherwise land a verified card
+  // the booking gate trusts. Refused before any writer is reached, for all
+  // three kinds of card.
+  if ((await courseCertifiesOnTrip(db, s.user.shopId, tripId)) === "not_a_certifying_course") {
+    revalidateAndRedirect(back, noticeUrl(back, "certify-failed", { bid: bookingId }));
+  }
   const issued = { shopId: s.user.shopId, personId, tripId, issuedByPersonId: s.user.personId };
 
   // **Three destinations, and two different landings.** A level card lands

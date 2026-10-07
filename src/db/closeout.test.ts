@@ -351,9 +351,11 @@ describe("day close-out (in-memory PGlite)", () => {
       // a body on the boat at 06:50.
       //
       // The rail is the statement that *does* outrank it, and it needs no
-      // reader here: boarding a diver marked absent puts the booking back to
-      // `booked` (`reclaimReleasedSeat`, src/db/manifests.ts), so a diver the
-      // crew counted is never sitting at `no_show` when the evening reads it.
+      // reader here: boarding a diver marked absent takes the booking back to
+      // what it was before the release, `checked_in` when the desk had seen
+      // them and `booked` otherwise (`reclaimReleasedSeat`,
+      // src/db/manifests.ts), so a diver the crew counted is never sitting at
+      // `no_show` when the evening reads it.
       const ctx = await boatThatSailedShort();
       const { db, shop, staff, now, trip, divers } = ctx;
       await seat(db, {
