@@ -72,12 +72,53 @@ describe("the shop's divemaster target", () => {
   });
 });
 
+/**
+ * Issue #1853. The supervision count reads each rostered professional's
+ * recorded ratings, so "This course needs an instructor" can fire on a crew
+ * list with an instructor's name on it. The panel says who, beside the gap,
+ * rather than leaving the reader to think the list failed to save.
+ */
+describe("a rating that lapses before the departure", () => {
+  const props = {
+    tripId: "trip-1",
+    staff: [] as StaffList,
+    crewIds: [],
+    crewRoles: {},
+    onShiftIds: null,
+    shopSlug: "blue-mantis",
+    updateCrewAction: async () => ({ ok: true }),
+  };
+
+  it("names who beside the instructor gap it opened", () => {
+    render(
+      <CrewSection
+        {...props}
+        crewGapCode="no_instructor"
+        copy={{
+          ...COPY,
+          ratingLapsedNote: "Keiko Tanaka has a rating that lapses before this departure.",
+        }}
+      />,
+    );
+    expect(screen.getByText("This course needs an instructor.")).toBeTruthy();
+    expect(
+      screen.getByText("Keiko Tanaka has a rating that lapses before this departure.").className,
+    ).toBe(INSET_NOTE_CLASS);
+  });
+
+  it("says nothing when no rating lapses", () => {
+    render(<CrewSection {...props} crewGapCode="none" copy={COPY} />);
+    expect(screen.queryByText(/lapses before this departure/)).toBeNull();
+  });
+});
+
 const COPY: CrewSectionCopy = {
   heading: "Crew",
   courseNeedsInstructor: "This course needs an instructor.",
   overRatioWarning: null,
   underTargetNote: null,
   languageGapNote: null,
+  ratingLapsedNote: null,
   noStaff: "No staff on file yet.",
   notAssignedYet: "Nobody assigned yet.",
   assignLabel: "Assign crew",

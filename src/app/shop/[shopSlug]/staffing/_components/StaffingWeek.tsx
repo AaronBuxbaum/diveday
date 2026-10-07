@@ -51,7 +51,9 @@ import {
  *   one warning channel this surface has on advice (`GAP_TONE`).
  * - **Credentials are not here.** They are the quiet ledger beneath this
  *   (`StaffCredentials`), and nothing in this grid is gated by one — H-59's
- *   clocks inform, never gate.
+ *   clocks inform, never gate. Since issue #1853 a lapsed rating can open a
+ *   gap here (the count reads recorded ratings), and the chip then says so
+ *   (`PlacedGap.ratingLapsed`); it still disables nothing.
  * - **The grid is not the phone.** Below `lg` the same week renders as a day
  *   list, people under each day: seven columns of time ranges have no honest
  *   390px form (the same call H-63 made for the schedule board). Both
@@ -118,6 +120,11 @@ export type StaffingWeekWords = {
    * reader never told.
    */
   requestWontClose: string;
+  /**
+   * Under a gap's code when a lapsed rating is why it is short (issue #1853):
+   * the crew list names somebody, and the chip alone read as nobody.
+   */
+  ratingLapsed: string;
 };
 
 export type StaffingWeekLinks = {
@@ -466,6 +473,10 @@ function GapChip({
         <span className={`font-semibold ${ink}`}>{departure}</span>
       )}
       <span className={ink}>{gapWords[gap.gap]}</span>
+      {/* Why a crew that looks filled is short (issue #1853): a rating on file
+          lapses before the departure. Under the code, in its ink, because it is
+          the rest of the same fact. The trip's crew section names who. */}
+      {gap.ratingLapsed ? <span className={ink}>{words.ratingLapsed}</span> : null}
       {/* **Who has asked to work it** (issue #1235). The owner's own act sits
           on the request rather than in a queue elsewhere: the departure, the
           reason it is short, and the person offering are one thing, and
@@ -835,6 +846,15 @@ export function StaffingWeek({
                     >
                       {gapWords[gap.gap]}
                     </p>
+                    {gap.ratingLapsed ? (
+                      <p
+                        className={`text-sm ${
+                          GAP_TONE[gap.gap] === "warning" ? "text-warning-strong" : "text-muted"
+                        }`}
+                      >
+                        {words.ratingLapsed}
+                      </p>
+                    ) : null}
                     {/* The same acts the grid carries: the phone loses the
                         columns, never the work (`GRID_CLASS`'s note above). */}
                     {gap.requests.map((request) => (

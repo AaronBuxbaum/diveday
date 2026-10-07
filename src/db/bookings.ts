@@ -395,6 +395,17 @@ class PartyBookingError extends Error {
  * counter's other seat-granting undo, `undoBookingNoShow` (src/db/no-show.ts):
  * a second copy of this query is a second chance for the two undos to disagree
  * about who is in the water.
+ *
+ * **The roster's claim, deliberately — not the supervision claim** (issue
+ * #1853). Today, the staffing week and the trip page read each professional's
+ * recorded ratings (`courseCrewCountsByTrip`, src/db/today.ts), so a lapsed
+ * instructor stops counting there. This passes no `lapsedRungs`, so the sale
+ * gate, the seat cap and the no-show hand-back go on counting them: H-59
+ * (docs/product/human-decisions.md) closed new-sale refusal on a locally
+ * recorded renewal date, and the 2026-09-16 ruling reopened only the ratio. A
+ * shop whose instructor renewed last week and has not updated DiveDay does
+ * not lose a sale on Saturday morning; it sees the gap, worded, on the
+ * surfaces where it can fix the record.
  */
 export async function tripCourseCrewCounts(
   tx: DbExecutor,

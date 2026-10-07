@@ -171,6 +171,7 @@
     "crewClashSailed": "{names} {count, plural, one {está} other {están}} a bordo pese a figurar también en la tripulación de {departure} a esas horas.",
     "crewClashSailedConfirm": "Confirma quién va a bordo.",
     "crewBelowTarget": "{divers, plural, one {# buceador} other {# buceadores}}, {divemasterCount, plural, one {# supervisor} other {# supervisores}}. Tu objetivo es {ratio}:1.",
+    "ratingLapsed": "{names} {count, plural, one {tiene una titulación que vence} other {tienen titulaciones que vencen}} antes de esta salida.",
     "missingContact": "{count, plural, one {# buceador no tiene} other {# buceadores no tienen}} contacto de emergencia.",
     "missingContactNamed": "Sin contacto de emergencia.",
     "lastMinuteFill": "{seats, plural, one {# plaza libre} other {# plazas libres}}, sin oferta de última hora enviada.",

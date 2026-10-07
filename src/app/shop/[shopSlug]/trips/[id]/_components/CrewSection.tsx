@@ -34,6 +34,13 @@ export type CrewSectionCopy = {
    * tone and reasoning as `underTargetNote` (issue #708).
    */
   languageGapNote: string | null;
+  /**
+   * Pre-rendered with the names in it, or null when no rostered professional's
+   * recorded rating lapses before this departure (issue #1853). It is why the
+   * gap above can fire on a crew list that names an instructor; said in the
+   * section's ordinary ink because the gap itself already carries the warning.
+   */
+  ratingLapsedNote: string | null;
   /** No staff exist in the shop at all yet, so there's nobody to assign. */
   noStaff: string;
   /** Staff exist, but nobody is on this trip's crew yet. */
@@ -300,6 +307,7 @@ export function CrewSection({
           {copy.overRatioWarning}
         </p>
       ) : null}
+      {copy.ratingLapsedNote ? <p className={INSET_NOTE_CLASS}>{copy.ratingLapsedNote}</p> : null}
       {copy.underTargetNote ? <p className={INSET_NOTE_CLASS}>{copy.underTargetNote}</p> : null}
       {copy.languageGapNote ? <p className={INSET_NOTE_CLASS}>{copy.languageGapNote}</p> : null}
 

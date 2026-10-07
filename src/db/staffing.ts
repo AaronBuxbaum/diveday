@@ -19,7 +19,7 @@ import {
   tripScheduleDays,
   trips,
 } from "./schema";
-import { courseCrewCountsByTrip } from "./today";
+import { courseCrewCountsByTrip, NO_SUPERVISION } from "./today";
 import { listStaff } from "./trips";
 import { liveTrip } from "./trips-live";
 
@@ -116,6 +116,12 @@ export type StaffingGapTrip = {
   gap: StaffGapCode;
   /** Its meeting windows, so the week can place it in a day it actually meets. */
   meetings: TripMeeting[];
+  /**
+   * Whether somebody rostered on it counts for less than their role says
+   * because their recorded rating lapses before it (issue #1853) — the week
+   * says so beside the code rather than showing one more shortfall.
+   */
+  ratingLapsed: boolean;
 };
 
 export type StaffingView = {
@@ -317,7 +323,10 @@ export async function getStaffingView(
   // (src/db/today.ts) is what `instructor_missing` is computed from, and it
   // counts in-water crew by the one definition every ratio gate shares
   // (`countInWaterCrew`, src/lib/crew-roles.ts) — a divemaster rostered as
-  // this trip's captain is not their own assistant here either.
+  // this trip's captain is not their own assistant here either. It is the
+  // supervision claim, so a professional whose every recorded rating lapses
+  // before the departure counts for less here than on the booking gate, which
+  // reads the roster's claim on purpose (issue #1853, H-59).
   const crewCounts = await courseCrewCountsByTrip(db, shopId, [...tripMap.keys()]);
   // A departure already home is nobody's morning. The week deliberately shows
   // up to six days behind the shop's own today, and `trip_status` is only
@@ -335,7 +344,7 @@ export async function getStaffingView(
   const gapTrips: StaffingGapTrip[] = [];
   for (const entry of tripMap.values()) {
     if (entry.trip.endsAt < sailedBefore) continue;
-    const counts = crewCounts.get(entry.trip.id) ?? { instructorCount: 0, assistantCount: 0 };
+    const counts = crewCounts.get(entry.trip.id) ?? NO_SUPERVISION;
     // The agency training ratio first, exactly as Today orders them: a course
     // session missing its instructor is the more precise fact, and firing the
     // shop's own target underneath it would name one gap in two vocabularies.
@@ -352,6 +361,7 @@ export async function getStaffingView(
         startsAt: entry.trip.startsAt,
         gap,
         meetings: meetingsFor(entry.trip),
+        ratingLapsed: counts.lapsed.length > 0,
       });
     // Then the shop's own target, which reaches every departure it runs rather
     // than only the courses — and which owns the two exemptions this walk used

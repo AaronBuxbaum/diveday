@@ -98,6 +98,7 @@
     "next": "Next week",
     "person": "Person",
     "previous": "Previous week",
+    "ratingLapsed": "A crew rating lapses first",
     "request": "Ask for this one",
     "requestApproved": "Approved",
     "requestAria": "Ask to work {trip}",

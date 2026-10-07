@@ -98,6 +98,7 @@
     "next": "Semana siguiente",
     "person": "Persona",
     "previous": "Semana anterior",
+    "ratingLapsed": "Una titulación del equipo vence antes",
     "request": "Pedir esta salida",
     "requestApproved": "Aprobado",
     "requestAria": "Pedir trabajar en {trip}",

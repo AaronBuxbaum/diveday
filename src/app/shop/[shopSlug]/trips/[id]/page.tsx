@@ -25,6 +25,7 @@ import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-label
 import { requestLocale } from "@/i18n/request";
 import { staffTranslator } from "@/i18n/staff-messages";
 import { staffTideStationText, staffTideWindowText } from "@/i18n/tide-labels";
+import { ratingLapsedDetailText } from "@/i18n/today-labels";
 import { nowDate } from "@/lib/clock";
 import { DSD_RATIO } from "@/lib/course-ratios";
 import { oneWindowPerSite, tideWindowsForDeparture } from "@/lib/departure-tides";
@@ -238,7 +239,20 @@ export default async function ManageTripPage({
   const liveBoatClashes = cancelled ? [] : boatClashes;
   const boatClashText = (clash: (typeof boatClashes)[number]) =>
     t("trips.pulse.boatClash", { boat: clash.boatName, departure: clash.otherTitle });
-  const { crewIds, tripRoleByPerson, crewGap, ratioGap, languageGap, onShiftIds, clashes } = crew;
+  const {
+    crewIds,
+    tripRoleByPerson,
+    crewGap,
+    ratioGap,
+    languageGap,
+    lapsedCrew,
+    onShiftIds,
+    clashes,
+  } = crew;
+  // Who a lapsed rating took down a rung (issue #1853), in Today's own
+  // sentence: one fact, one set of words wherever a staffer meets it.
+  const ratingLapsedNote =
+    lapsedCrew.length > 0 ? ratingLapsedDetailText(t, locale, lapsedCrew) : null;
   // Same tone as underTargetNote below: informs, refuses nothing (issue
   // #708). Each missing language is named in the reader's own locale
   // (`languageNameIn`), matching the team settings form's convention —
@@ -606,7 +620,10 @@ export default async function ManageTripPage({
     (shop.crewScheduleEnabled && crewIds.length === 0) ||
     liveClashes.length > 0 ||
     (!cancelled &&
-      (crewGap.code !== "none" || underTargetNote !== null || languageGapNote !== null));
+      (crewGap.code !== "none" ||
+        underTargetNote !== null ||
+        languageGapNote !== null ||
+        ratingLapsedNote !== null));
   const rosterActions = {
     addBookingAction: seatNewDiverAction.bind(null, "trip-guests", shopSlug),
     addExistingDiverAction: seatExistingDiverAction.bind(null, "trip-guests", shopSlug),
@@ -947,6 +964,7 @@ export default async function ManageTripPage({
                         overRatioWarning,
                         underTargetNote: cancelled ? null : underTargetNote,
                         languageGapNote: cancelled ? null : languageGapNote,
+                        ratingLapsedNote: cancelled ? null : ratingLapsedNote,
                         noStaff: t("trips.crew.noCrew"),
                         notAssignedYet: t("trips.crew.notAssignedYet"),
                         assignLabel: t("trips.crew.assignLabel"),

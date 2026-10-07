@@ -4,6 +4,10 @@ import {
   effectiveCrewRoles,
   groupCrewAssignments,
   inWaterCrewRole,
+  type LapsedRung,
+  lapsedRungs,
+  lastDayOfDeparture,
+  narrowedByLapse,
   standingRatingsBesideJob,
   TRIP_CREW_ROLES,
 } from "./crew-roles";
@@ -196,6 +200,216 @@ describe("countInWaterCrew", () => {
 
   it("is empty-safe", () => {
     expect(countInWaterCrew([])).toEqual({ instructorCount: 0, assistantCount: 0 });
+  });
+});
+
+/**
+ * Issue #1853. An expired rating counted toward the supervision ratio, so the
+ * staffing line could say a course was supervised when the only instructor on
+ * it was out of teaching status. The ruling (2026-09-16) reads the credential
+ * where the ratio is computed; H-59 keeps selling and seating on the roster's
+ * claim, which is why the narrowing is something a caller passes rather than
+ * something `inWaterCrewRole` looks up.
+ */
+describe("lapsedRungs", () => {
+  const rating = (kind: string, renewsAt: string | null) => ({ kind, renewsAt });
+  const DIVE_DAY = "2026-10-10";
+
+  it("says nothing about a person with no rating recorded — silence is not a lapse", () => {
+    expect(lapsedRungs([], DIVE_DAY)).toEqual([]);
+    // Credentials that evidence no in-water rung are not ratings either.
+    expect(
+      lapsedRungs(
+        [rating("first_aid_cpr", "2020-01-01"), rating("captains_licence", "2020-01-01")],
+        DIVE_DAY,
+      ),
+    ).toEqual([]);
+  });
+
+  it("counts a rating with no renewal date recorded as current", () => {
+    expect(lapsedRungs([rating("instructor_rating", null)], DIVE_DAY)).toEqual([]);
+  });
+
+  it("counts a rating renewing on the morning of the dive — good through its own day", () => {
+    expect(lapsedRungs([rating("instructor_rating", DIVE_DAY)], DIVE_DAY)).toEqual([]);
+  });
+
+  it("lapses a rating that renewed the day before the dive, off both rungs", () => {
+    // A lapsed professional is out of status at every rung, so the instructor
+    // rating was also the only evidence for the assistant rung.
+    expect(lapsedRungs([rating("instructor_rating", "2026-10-09")], DIVE_DAY)).toEqual([
+      "instructor",
+      "certified_assistant",
+    ]);
+  });
+
+  it("keeps the assistant rung on a current Divemaster rating beside a lapsed instructor one", () => {
+    expect(
+      lapsedRungs(
+        [rating("instructor_rating", "2026-10-09"), rating("divemaster_rating", "2027-01-01")],
+        DIVE_DAY,
+      ),
+    ).toEqual(["instructor"]);
+  });
+
+  it("needs every rating for a rung lapsed — one current card is enough", () => {
+    // Two agencies' instructor ratings, one renewed and one not.
+    expect(
+      lapsedRungs(
+        [rating("instructor_rating", "2025-01-01"), rating("instructor_rating", "2027-01-01")],
+        DIVE_DAY,
+      ),
+    ).toEqual([]);
+    // And an undated one beside a lapsed one: nothing is known to be lapsed.
+    expect(
+      lapsedRungs(
+        [rating("instructor_rating", "2025-01-01"), rating("instructor_rating", null)],
+        DIVE_DAY,
+      ),
+    ).toEqual([]);
+  });
+
+  it("reads a date that is not a real calendar date as no date, never as a lapse", () => {
+    expect(lapsedRungs([rating("instructor_rating", "2026-02-31")], DIVE_DAY)).toEqual([]);
+  });
+
+  it("answers for the dive day, so a rating lapsing between booking and the dive is lapsed", () => {
+    // Current on the day the seat was sold, gone by the day in the water.
+    const renews = "2026-10-05";
+    expect(lapsedRungs([rating("instructor_rating", renews)], "2026-10-01")).toEqual([]);
+    expect(lapsedRungs([rating("instructor_rating", renews)], DIVE_DAY)).toEqual([
+      "instructor",
+      "certified_assistant",
+    ]);
+  });
+});
+
+describe("lastDayOfDeparture", () => {
+  it("is the shop-local day, not the UTC one", () => {
+    // 01:30 UTC on the 11th is still the evening of the 10th in New York.
+    expect(lastDayOfDeparture(new Date("2026-10-11T01:30:00Z"), "America/New_York")).toBe(
+      "2026-10-10",
+    );
+    // And 23:30 UTC on the 10th is already the morning of the 11th in Sydney.
+    expect(lastDayOfDeparture(new Date("2026-10-10T23:30:00Z"), "Australia/Sydney")).toBe(
+      "2026-10-11",
+    );
+  });
+
+  it("keeps a departure ending exactly at local midnight on the day it ran", () => {
+    expect(lastDayOfDeparture(new Date("2026-10-11T04:00:00Z"), "America/New_York")).toBe(
+      "2026-10-10",
+    );
+  });
+});
+
+describe("inWaterCrewRole with recorded lapses", () => {
+  const both: LapsedRung[] = ["instructor", "certified_assistant"];
+
+  it("counts an instructor whose every rating lapsed for nothing", () => {
+    expect(inWaterCrewRole({ tripRole: null, shopRoles: ["instructor"], lapsedRungs: both })).toBe(
+      "none",
+    );
+    expect(
+      inWaterCrewRole({ tripRole: "instructor", shopRoles: ["instructor"], lapsedRungs: both }),
+    ).toBe("none");
+  });
+
+  it("lets a current Divemaster card count when only the instructor rating lapsed", () => {
+    const lapsed: LapsedRung[] = ["instructor"];
+    expect(
+      inWaterCrewRole({ tripRole: null, shopRoles: ["instructor"], lapsedRungs: lapsed }),
+    ).toBe("certified_assistant");
+    expect(
+      inWaterCrewRole({ tripRole: "instructor", shopRoles: ["instructor"], lapsedRungs: lapsed }),
+    ).toBe("certified_assistant");
+  });
+
+  it("takes a lapsed Divemaster or Assistant Instructor out of the assistant count", () => {
+    const lapsed: LapsedRung[] = ["certified_assistant"];
+    expect(inWaterCrewRole({ shopRoles: ["divemaster"], lapsedRungs: lapsed })).toBe("none");
+    expect(inWaterCrewRole({ shopRoles: ["assistant_instructor"], lapsedRungs: lapsed })).toBe(
+      "none",
+    );
+  });
+
+  it("changes nothing when the credentials were not read, or nothing lapsed", () => {
+    // The roster's claim — what the booking gate still reads (H-59).
+    expect(inWaterCrewRole({ shopRoles: ["instructor"] })).toBe("instructor");
+    expect(inWaterCrewRole({ shopRoles: ["instructor"], lapsedRungs: [] })).toBe("instructor");
+  });
+
+  it("is monotone — a recorded lapse never raises what anybody is worth", () => {
+    const weight = { none: 0, certified_assistant: 1, instructor: 2 } as const;
+    const lapseSets: LapsedRung[][] = [[], ["instructor"], ["certified_assistant"], both];
+    const roleSets = [
+      [],
+      ["captain"],
+      ["divemaster"],
+      ["instructor"],
+      ["instructor", "divemaster"],
+      ["assistant_instructor"],
+      ["assistant_instructor", "instructor"],
+    ];
+    for (const shopRoles of roleSets) {
+      for (const tripRole of [null, ...TRIP_CREW_ROLES]) {
+        const baseline = weight[inWaterCrewRole({ tripRole, shopRoles })];
+        for (const lapsed of lapseSets) {
+          expect(
+            weight[inWaterCrewRole({ tripRole, shopRoles, lapsedRungs: lapsed })],
+          ).toBeLessThanOrEqual(baseline);
+        }
+      }
+    }
+  });
+});
+
+describe("countInWaterCrew with recorded lapses", () => {
+  it("counts two instructors with one expired as one", () => {
+    expect(
+      countInWaterCrew([
+        { tripRole: null, shopRoles: ["instructor"], lapsedRungs: [] },
+        {
+          tripRole: null,
+          shopRoles: ["instructor"],
+          lapsedRungs: ["instructor", "certified_assistant"],
+        },
+      ]),
+    ).toEqual({ instructorCount: 1, assistantCount: 0 });
+  });
+
+  it("counts a course whose only instructor lapsed as having none", () => {
+    expect(
+      countInWaterCrew([
+        {
+          tripRole: "instructor",
+          shopRoles: ["instructor"],
+          lapsedRungs: ["instructor", "certified_assistant"],
+        },
+      ]),
+    ).toEqual({ instructorCount: 0, assistantCount: 0 });
+  });
+});
+
+describe("narrowedByLapse", () => {
+  it("names only the people a lapse actually took down a rung", () => {
+    expect(
+      narrowedByLapse({
+        shopRoles: ["instructor"],
+        lapsedRungs: ["instructor", "certified_assistant"],
+      }),
+    ).toBe(true);
+    // Lapsed, but rostered as the captain — worth nothing either way, so the
+    // lapse is not why the session is short.
+    expect(
+      narrowedByLapse({
+        tripRole: "captain",
+        shopRoles: ["instructor"],
+        lapsedRungs: ["instructor", "certified_assistant"],
+      }),
+    ).toBe(false);
+    expect(narrowedByLapse({ shopRoles: ["instructor"] })).toBe(false);
+    expect(narrowedByLapse({ shopRoles: ["instructor"], lapsedRungs: [] })).toBe(false);
   });
 });
 
