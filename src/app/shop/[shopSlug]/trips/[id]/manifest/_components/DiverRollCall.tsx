@@ -620,7 +620,7 @@ export function DiverRollCall({
                     ) : null
                   }
                   closeLabel={t("manifest.closePersonDetails")}
-                  triggerClassName={ROW_DISCLOSURE_SUMMARY_CLASS}
+                  triggerClassName={`${ROW_DISCLOSURE_SUMMARY_CLASS} flex-wrap gap-y-2`}
                   mark={
                     rowState.notBackAboard ? (
                       <RollCallMark state="notBack" />
@@ -645,33 +645,8 @@ export function DiverRollCall({
                         {String(index + 1).padStart(2, "0")}
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="flex flex-wrap items-center gap-2">
-                          <span className={`${ITEM_TITLE_CLASS} group-hover/summary:underline`}>
-                            {diver.fullName}
-                          </span>
-                          {capsule}
-                          {/* **The desk wrote this one off** (#1209). On the
-                            row and not in the sheet, unlike "Checked in":
-                            that one is routine and a tap away is fine, this
-                            is the reason a crew member should stop looking.
-                            A released seat and a diver still walking down
-                            the dock read identically without it, which is
-                            how a head count at the rail chases a name the
-                            counter settled forty minutes ago
-                            (`dive-domain-expert` review 20260911).
-
-                            Neutral, and outside the one-capsule priority
-                            chain — the same licence the welcome word takes
-                            below. It is not an exception the crew must act
-                            on; it is the absence of one, and colouring it
-                            would put a second loud thing on the row that
-                            most wants a quiet one. The row keeps its mark:
-                            nothing here refuses a boarding, and a diver who
-                            turns up after all is tapped aboard exactly as
-                            before. */}
-                          {diver.notHere ? (
-                            <Badge tone="neutral">{t("manifest.notHerePill")}</Badge>
-                          ) : null}
+                        <span className={`block ${ITEM_TITLE_CLASS} group-hover/summary:underline`}>
+                          {diver.fullName}
                         </span>
                         {/* **The welcome word** (issue #1182, delight report
                           D22; ADR 20260904-reef-all-the-way-down slice 16d):
@@ -697,6 +672,44 @@ export function DiverRollCall({
                           </span>
                         ) : null}
                       </span>
+                      {/* **The capsule's own line, the row's full width**
+                        (issue #2008). A Badge never wraps, and the longest
+                        capsule ("Someone unaccounted for", about 210px; es-ES
+                        about 222px) is wider than the name column a 390px
+                        phone leaves (186px), so beside the name it spilled
+                        over the caret toward the mark. Here it runs from the
+                        index's edge to the caret's (about 246px at 390), and
+                        it stays inside the name button: one tap target, the
+                        same reading order, the mark centred on the whole row.
+                        `order-last` puts it under the caret's line, which
+                        `PersonSheet` renders after this fragment. */}
+                      {capsule || diver.notHere ? (
+                        <span className="order-last flex basis-full flex-wrap items-center gap-2">
+                          {capsule}
+                          {/* **The desk wrote this one off** (#1209). On the
+                            row and not in the sheet, unlike "Checked in":
+                            that one is routine and a tap away is fine, this
+                            is the reason a crew member should stop looking.
+                            A released seat and a diver still walking down
+                            the dock read identically without it, which is
+                            how a head count at the rail chases a name the
+                            counter settled forty minutes ago
+                            (`dive-domain-expert` review 20260911).
+
+                            Neutral, and outside the one-capsule priority
+                            chain — the same licence the welcome word takes
+                            below. It is not an exception the crew must act
+                            on; it is the absence of one, and colouring it
+                            would put a second loud thing on the row that
+                            most wants a quiet one. The row keeps its mark:
+                            nothing here refuses a boarding, and a diver who
+                            turns up after all is tapped aboard exactly as
+                            before. */}
+                          {diver.notHere ? (
+                            <Badge tone="neutral">{t("manifest.notHerePill")}</Badge>
+                          ) : null}
+                        </span>
+                      ) : null}
                     </>
                   }
                 >

@@ -472,6 +472,44 @@ describe("asserting aboard over a missing mark is never the cheap direction", ()
 });
 
 /**
+ * **The capsule has the whole row's width** (issue #2008). A Badge never wraps,
+ * and the longest capsule ("Someone unaccounted for", "Alguien sin
+ * contabilizar") is wider than the name column at 390px, so beside the name it
+ * would spill over the caret and the mark. It takes its own line under the
+ * row, from the index's edge to the caret's, still inside the name button:
+ * the tap target and what the button opens are unchanged. jsdom has no
+ * layout, so this pins the structure that gives it the room.
+ */
+describe("the exception capsule's line", () => {
+  function capsuleLine(row: HTMLElement, text: string) {
+    const pill = within(row).getByText(text);
+    const line = pill.parentElement;
+    if (!line) throw new Error("no line around the capsule");
+    return { pill, line };
+  }
+
+  it.each([
+    ["a birthday", diver({ birthday: { status: "today" } }), "Birthday today"],
+    ["a seat the desk wrote off", diver({ notHere: true }), "Not here"],
+  ] as const)("puts %s on a full-width line inside the name button", (_label, row, text) => {
+    const { container } = renderList({ divers: [row] });
+    const { pill, line } = capsuleLine(container, text);
+    const button = line.parentElement;
+    expect(button?.tagName).toBe("BUTTON");
+    expect(button?.className).toContain("flex-wrap");
+    expect(line.className).toContain("basis-full");
+    // Not inside the name's own column, whose width is what ran out.
+    const name = within(container).getByText("Meera Iyer");
+    expect(name.closest(".flex-1")?.contains(pill)).toBe(false);
+  });
+
+  it("renders no empty line for a row with no exception", () => {
+    const { container } = renderList({ divers: [diver()] });
+    expect(container.querySelector(".basis-full")).toBeNull();
+  });
+});
+
+/**
  * The welcome word (issue #1182, delight report D22; ADR
  * 20260904-reef-all-the-way-down slice 16d). D22's boundary is that a cue
  * invites a human welcome and is never a profile badge, so what these assert is
