@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  blockedAtDock,
   buddyAlertFor,
   buildTripManifest,
   carryForwardNotBoarded,
@@ -128,6 +129,47 @@ describe("buildTripManifest", () => {
     // both independently rather than conflating them.
     expect(manifest.divers.find((d) => d.bookingId === "booking-ready")?.checkedIn).toBe(true);
     expect(manifest.divers.find((d) => d.bookingId === "booking-unknown")?.checkedIn).toBe(false);
+  });
+
+  /**
+   * **The blocked figures the head count says, and the ones it leaves out**
+   * (UX audit 2026-10-07, item 16; dive-domain review of it). `blocked` is the
+   * roster's readiness; the count beside "N of M aboard" may only carry the
+   * blocked divers inside that total. A blocked diver the crew left ashore or
+   * the desk released as not here is settled: counting them read "5 of 5
+   * aboard, 3 blocked". One the crew marked aboard anyway is the louder fact.
+   */
+  it("splits blocked divers into still-to-decide and aboard, and leaves out the settled", () => {
+    const blockedDiver = (
+      bookingId: string,
+      extra: Partial<ManifestDiverInput> = {},
+    ): ManifestDiverInput => ({
+      bookingId,
+      fullName: bookingId,
+      email: null,
+      emergencyContactName: null,
+      emergencyContactPhone: null,
+      readiness: { status: "blocked", blockers: [] },
+      rentalFit: { state: "not_recorded" as const },
+      nitroxRequested: false,
+      checkedIn: false,
+      ...extra,
+    });
+    const manifest = buildTripManifest({
+      trip,
+      crew: [],
+      divers: [
+        blockedDiver("undecided"),
+        blockedDiver("aboard", { rollCall: boardedAt() }),
+        blockedDiver("left-ashore", { rollCall: notBoardedAt() }),
+        blockedDiver("released", { notHere: true }),
+        // The desk released the seat, then the crew boarded them anyway: the
+        // crew's result is the row's answer, and it is aboard.
+        blockedDiver("reclaimed", { notHere: true, rollCall: boardedAt() }),
+      ],
+    });
+    expect(manifest.summary.blocked).toBe(5);
+    expect(blockedAtDock(manifest.divers)).toEqual({ undecided: 1, aboard: 2 });
   });
 
   /**

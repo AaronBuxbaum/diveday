@@ -128,7 +128,10 @@ export function PreDepartureCheckList({
   if (items.length === 0) return null;
   // Controlled by the facts, not remembered: React writes `open` only when
   // this value changes, so a crew member who folds an unfinished list keeps
-  // it folded across a tap, and the last check folds it for everyone.
+  // it folded across a tap, and the last check folds it for everyone. A
+  // reload or a switch back to the departure checkpoint opens an unfinished
+  // list again, and that is intended: the fold is not saved anywhere, and an
+  // unfinished boat check before the boat leaves is the state worth reopening.
   const open = atDeparture && items.some((item) => item.checkedByLine === undefined);
   return (
     <section

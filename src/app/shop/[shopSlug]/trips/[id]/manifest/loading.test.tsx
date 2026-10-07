@@ -36,7 +36,7 @@ describe("the manifest's loading skeleton", () => {
     const row = all(container).find(
       (element) =>
         element.children.length === 5 &&
-        [...element.children].every((child) => child.classList.contains("h-11")),
+        [...element.children].every((child) => child.classList.contains("h-14")),
     );
     expect(row).toHaveClass("grid", "grid-cols-3", "sm:grid-cols-5");
     expect(row?.children).toHaveLength(5);

@@ -74,12 +74,23 @@ describe("HeadCount", () => {
 
 /** UX audit 2026-10-07, item 16: the count never reads as all-clear over blocked rows. */
 describe("HeadCount with blocked divers", () => {
-  it("says the blocked count under the count, in words and in the progressbar's text", () => {
-    const { container } = render(<HeadCount aboard={8} out={8} blocked={3} t={t} />);
+  it("says the blocked still to decide about under the count, in words a reader reaches", () => {
+    const { container } = render(<HeadCount aboard={5} out={8} blocked={3} t={t} />);
     expect(screen.getByRole("progressbar").getAttribute("aria-valuetext")).toBe(
-      "8 of 8 divers aboard, 3 blocked",
+      "5 of 8 divers aboard",
     );
-    expect(container.textContent).toBe("8of 8 divers aboard3 blocked");
+    const line = screen.getByText("3 blocked");
+    expect(line).toHaveClass("text-danger");
+    expect(line.closest("[aria-hidden='true']")).toBeNull();
+    expect(container.textContent).toBe("5of 8 divers aboard3 blocked");
+  });
+
+  it("says a blocked diver aboard louder, first, and apart from the undecided", () => {
+    const { container } = render(
+      <HeadCount aboard={8} out={8} blocked={2} blockedAboard={1} t={t} />,
+    );
+    expect(screen.getByText("1 blocked diver aboard")).toHaveClass("text-danger", "font-bold");
+    expect(container.textContent).toBe("8of 8 divers aboard1 blocked diver aboard2 blocked");
   });
 
   it("adds nothing when nobody is blocked", () => {

@@ -46,6 +46,7 @@ export function SummaryPanel({
   separatedTeams,
   notBackAboardDivers,
   notBackAboardCrew,
+  blockedAtDock = { undecided: 0, aboard: 0 },
   t,
 }: {
   /** Scopes this section's element ids to one departure — see `scopedId`. */
@@ -85,6 +86,12 @@ export function SummaryPanel({
    */
   notBackAboardDivers: ReadonlyArray<{ bookingId: string; fullName: string }>;
   notBackAboardCrew: ReadonlyArray<{ id: string; fullName: string }>;
+  /**
+   * The blocked divers the head count speaks of (`blockedAtDock` in
+   * src/lib/manifests.ts): still to decide about, and marked aboard anyway.
+   * Read at the departure checkpoint only.
+   */
+  blockedAtDock?: { undecided: number; aboard: number };
   t: StaffTranslator;
 }) {
   // Who among the named crew is still unaccounted for at this checkpoint. Read
@@ -249,9 +256,11 @@ export function SummaryPanel({
               a glass that filled on results stood at the brim with a diver in
               the water (dive-domain review 20260902). After a dive the glass
               is everyone who left the dock — `totalDivers − ashore` — so a
-              diver who never boarded does not hold the figure short all day;
-              at the dock it is everyone on the manifest. `ashore` is 0 at
-              departure by construction, so one expression serves both.
+              diver who never boarded does not hold the figure short all day.
+              At the dock the same expression leaves out whoever the crew has
+              said is not boarding: `notBackAboard` is 0 there, so `ashore` is
+              every `not_boarded` result, and the glass is everyone still
+              expected aboard. One expression serves both.
 
               **And a seat the desk released is not a body to expect** (#1209,
               dive-domain review 20260911). A diver marked not here has had
@@ -270,7 +279,8 @@ export function SummaryPanel({
             // ashore, and the rows carry it, and a red line here would compete
             // with the one red that means somebody is in the water (ADR
             // 20260827-the-departure-is-two-working-surfaces, decision 4).
-            blocked={isDeparture ? summary.blocked : 0}
+            blocked={isDeparture ? blockedAtDock.undecided : 0}
+            blockedAboard={isDeparture ? blockedAtDock.aboard : 0}
             t={t}
           />
         </div>

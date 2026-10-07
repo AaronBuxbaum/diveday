@@ -84,8 +84,15 @@ export function StageStrip({
               aria-pressed={current === tap.stage}
               className={buttonClass({
                 variant: current === tap.stage ? "primary" : "secondary",
+                // `sm`'s 14px label and 12px padding, at the dock's 56px
+                // height: `boat` is the rail's size, but its 24px padding and
+                // 16px label leave about 64px for a word in a third of a
+                // phone, and "Underway" or "Embarcando" cannot break. The
+                // height is what a wet thumb needs; `min-h-14` stands above the
+                // base's `min-h-11` the way `md`'s `min-h-12` does, and
+                // `touch-manipulation` is `boat`'s own (no double-tap wait).
                 size: "sm",
-                className: "w-full text-balance",
+                className: "min-h-14 w-full touch-manipulation text-balance",
               })}
             >
               {tap.label}

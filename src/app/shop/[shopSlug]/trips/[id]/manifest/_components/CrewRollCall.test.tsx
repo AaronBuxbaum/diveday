@@ -308,8 +308,8 @@ describe("a crew member rostered on another boat", () => {
         "2 of the crew are also rostered on other boats at these hours. Confirm who sails.",
       ),
     ).toHaveLength(1);
-    expect(screen.getByText("Also rostered on Wreck run")).toBeInTheDocument();
-    expect(screen.getByText("Also rostered on Night dive")).toBeInTheDocument();
+    expect(screen.getByText("Also rostered on Wreck run at these hours.")).toBeInTheDocument();
+    expect(screen.getByText("Also rostered on Night dive at these hours.")).toBeInTheDocument();
     expect(screen.queryByText(/Confirm who is aboard/)).toBeNull();
   });
 
@@ -333,7 +333,7 @@ describe("a crew member rostered on another boat", () => {
         "1 of the crew is also rostered on another boat at these hours. Confirm who sails.",
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByText("Also rostered on Night dive")).toBeNull();
+    expect(screen.queryByText("Also rostered on Night dive at these hours.")).toBeNull();
   });
 
   it("says nothing about another boat after a dive, where it would read as an excuse", () => {

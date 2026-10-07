@@ -71,7 +71,11 @@ describe("StageStrip", () => {
     expect(row).toHaveClass("grid", "grid-cols-3", "sm:grid-cols-5");
     expect(row).not.toHaveClass("flex-wrap");
     for (const tap of copy.taps) {
-      expect(screen.getByRole("button", { name: tap.label })).toHaveClass("w-full");
+      expect(screen.getByRole("button", { name: tap.label })).toHaveClass(
+        "w-full",
+        "min-h-14",
+        "touch-manipulation",
+      );
     }
   });
 

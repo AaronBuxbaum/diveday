@@ -40,6 +40,7 @@ import { formatDateTimeTz, formatTime, formatTimeRange } from "@/lib/format";
 import { withholdHeldSeatParticulars } from "@/lib/held-seat";
 import { cachedListFormat } from "@/lib/intl-cache";
 import {
+  blockedAtDock,
   isRollCallCheckpoint,
   type ManifestBuddyTeam,
   type RollCallCheckpoint,
@@ -782,6 +783,7 @@ export default async function TripManifestPage({
           id: member.id,
           fullName: member.fullName,
         }))}
+        blockedAtDock={blockedAtDock(manifest.divers)}
         t={t}
       />
 

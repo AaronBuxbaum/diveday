@@ -532,31 +532,36 @@ describe("the prose under the pinned card", () => {
 /**
  * **The headline never reassures over a blocked row** (UX audit 2026-10-07,
  * item 16). "8 of 8 divers aboard" stood over three rows reading Blocked, and
- * the count of them was a sentence in the half that scrolls away.
+ * the count of them was a sentence in the half that scrolls away. The panel
+ * says the summary's two settled-out figures, never `blocked` itself: a
+ * blocked diver left ashore or released by the desk is outside the total, and
+ * counting them read "5 of 5 aboard, 3 blocked" (dive-domain review).
  */
 describe("blocked divers at the head count", () => {
-  function renderBlocked(isDeparture: boolean) {
+  function renderBlocked(
+    isDeparture: boolean,
+    counts: { blocked: number; undecided: number; aboard: number },
+  ) {
     return renderPanel({
       isDeparture,
       checkpoint: isDeparture ? "departure" : "after_dive_1",
       completeness: completeness({ reason: null, complete: true }),
       summary: summary({
         totalDivers: 8,
-        ready: 5,
-        blocked: 3,
-        boarded: 8,
+        ready: 8 - counts.blocked,
+        blocked: counts.blocked,
+        boarded: 5,
         notBoarded: 0,
         notBackAboard: 0,
-        awaiting: 0,
+        awaiting: 3,
       }),
+      blockedAtDock: { undecided: counts.undecided, aboard: counts.aboard },
       notBackAboardDivers: [],
     });
   }
 
-  it("carries the blocked count in the pinned card, beside the count it qualifies", () => {
-    renderBlocked(true);
-    const figure = screen.getByRole("progressbar", { name: "Roll-call progress" });
-    expect(figure).toHaveAttribute("aria-valuetext", "8 of 8 divers aboard, 3 blocked");
+  it("carries the undecided blocked count in the pinned card, beside the count it qualifies", () => {
+    renderBlocked(true, { blocked: 3, undecided: 3, aboard: 0 });
     const line = screen.getByText("3 blocked");
     expect(line).toHaveClass("text-danger");
     // In the sticky card, not the prose that scrolls away under it.
@@ -564,12 +569,21 @@ describe("blocked divers at the head count", () => {
     expect(screen.queryByText(/divers are blocked/)).toBeNull();
   });
 
-  it("says nothing about blocked after a dive, where it gates nothing", () => {
-    renderBlocked(false);
+  it("never says the roster's blocked figure, only the dock's", () => {
+    // Three blocked on the roster, all left ashore or released as not here:
+    // none undecided, none aboard. Nothing to say over the count.
+    renderBlocked(true, { blocked: 3, undecided: 0, aboard: 0 });
     expect(screen.queryByText(/blocked/)).toBeNull();
-    expect(screen.getByRole("progressbar")).toHaveAttribute(
-      "aria-valuetext",
-      expect.not.stringContaining("blocked"),
-    );
+  });
+
+  it("says a blocked diver the crew marked aboard, apart from the undecided", () => {
+    renderBlocked(true, { blocked: 3, undecided: 1, aboard: 2 });
+    expect(screen.getByText("2 blocked divers aboard")).toHaveClass("text-danger");
+    expect(screen.getByText("1 blocked")).toBeInTheDocument();
+  });
+
+  it("says nothing about blocked after a dive, where it gates nothing", () => {
+    renderBlocked(false, { blocked: 3, undecided: 1, aboard: 2 });
+    expect(screen.queryByText(/blocked/)).toBeNull();
   });
 });

@@ -46,7 +46,7 @@ export default function ManifestLoading() {
         <div className="h-4 w-32 rounded bg-surface-sunken" />
         <div className="mt-2 grid grid-cols-3 gap-2 sm:max-w-2xl sm:grid-cols-5">
           {STAGE_TAPS.map((stage) => (
-            <div key={stage} className="h-11 rounded-lg bg-surface-sunken" />
+            <div key={stage} className="h-14 rounded-lg bg-surface-sunken" />
           ))}
         </div>
       </div>
@@ -57,6 +57,15 @@ export default function ManifestLoading() {
       </div>
       {/* From the boat check down, the page's one stack (K-189). */}
       <div className="mt-5 space-y-10">
+        {/* The boat check as its one line. It stands open at the dock until
+            every item is checked (`PreDepartureCheckList`), about 260px on a
+            phone, which this boundary cannot know before the page arrives:
+            reserving that height would jump the other way on every finished
+            check, so the roll call lands lower than this skeleton draws it
+            until the boat check is done. A thumb aimed at the first row while
+            the page streams in can land on a checklist item instead, which
+            records a check, never a roll-call result, and the same tap undoes
+            it (dive-domain review of UX audit 2026-10-07, item 17). */}
         <div className={sectionCardClass({ padding: "none", className: "h-14" })} />
         <div>
           <div className="h-7 w-40 max-w-full rounded bg-surface-sunken" />

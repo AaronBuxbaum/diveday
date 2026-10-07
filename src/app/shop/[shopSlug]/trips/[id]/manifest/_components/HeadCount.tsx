@@ -42,6 +42,7 @@ export function HeadCount({
   aboard,
   out,
   blocked = 0,
+  blockedAboard = 0,
   t,
   className = "",
 }: {
@@ -50,10 +51,13 @@ export function HeadCount({
   /** The population the count is about: everyone at the dock, or everyone who went out. */
   out: number;
   /**
-   * Divers readiness will not clear, said beside the count — the dock only;
-   * the caller passes 0 after a dive, where blocked gates nothing.
+   * Blocked divers still to decide about (`summary.blockedUndecided`), said
+   * beside the count — the dock only; the caller passes 0 after a dive, where
+   * blocked gates nothing.
    */
   blocked?: number;
+  /** Blocked divers the crew marked aboard anyway (`summary.blockedAboard`); the dock only. */
+  blockedAboard?: number;
   t: StaffTranslator;
   className?: string;
 }) {
@@ -68,11 +72,7 @@ export function HeadCount({
         aria-valuemin={0}
         aria-valuemax={out}
         aria-valuenow={aboard}
-        aria-valuetext={
-          blocked > 0
-            ? t("manifest.aboardOfTotalBlocked", { aboard, total: out, blocked })
-            : t("manifest.aboardOfTotal", { aboard, total: out })
-        }
+        aria-valuetext={t("manifest.aboardOfTotal", { aboard, total: out })}
         className="relative size-20 shrink-0 overflow-hidden rounded-full border border-border bg-surface-sunken"
       >
         <div
@@ -95,10 +95,20 @@ export function HeadCount({
           2026-10-07, item 16). "8 of 8 divers aboard" stood at the top of a
           roster with three rows reading Blocked, and the count of them was a
           sentence in the half of the panel that scrolls away. It is the
-          count's own second line now, in the danger the rows wear, pinned
-          with the figure it qualifies. */}
-      <div aria-hidden="true" className="text-base font-semibold tabular-nums">
-        <p>{t("manifest.ofTotalAboard", { total: out })}</p>
+          count's own next line now, in the danger the rows wear, pinned with
+          the figure it qualifies. Two facts, never one sum: a blocked diver
+          still to decide about, and — louder — one the crew marked aboard
+          anyway. A blocked diver left ashore or released by the desk is
+          settled, and outside the total above, so neither counts them.
+          The words are not `aria-hidden`: the progressbar's text says the
+          count, and these say what the count does not. */}
+      <div className="text-base font-semibold tabular-nums">
+        <p aria-hidden="true">{t("manifest.ofTotalAboard", { total: out })}</p>
+        {blockedAboard > 0 ? (
+          <p className="font-bold text-danger">
+            {t("manifest.headCountBlockedAboard", { count: blockedAboard })}
+          </p>
+        ) : null}
         {blocked > 0 ? (
           <p className="font-bold text-danger">
             {t("manifest.headCountBlocked", { count: blocked })}
