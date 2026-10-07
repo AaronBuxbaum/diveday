@@ -574,7 +574,7 @@ verify a token, read a booking, and render `AfterState`.
 
 **One ask, and the rest are doors.** The review is the page's single primary in every variant — a
 sparse keepsake never promotes a door to fill the space above it — and the carry-it-to-Google
-hand-off keeps its demote-and-offer behaviour, lighting up only after a strong rating has just
+hand-off keeps its demote-and-offer behaviour, lighting up after any rating has just
 landed and stepping the form's own submit back to secondary while it is lit. Photos and the tip sit
 behind hairline `<details>` rows in the same grammar the prep spine uses one screen earlier, each
 opening the form it already had; a door with a notice to deliver opens itself. The footer says one

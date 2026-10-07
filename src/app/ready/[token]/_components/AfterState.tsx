@@ -74,7 +74,7 @@ import { TipAmountPicker } from "./TipAmountPicker";
  * 3. **The crew's word**, when the crew wrote one.
  * 4. **The one ask.** The review is the page's single primary, and the
  *    carry-it-to-Google door is the one thing that may take that weight off
- *    it — after a strong rating has just landed, never beside it.
+ *    it — after a rating has just landed, never beside it.
  * 5. **The other thing worth saying, privately** — the pulse (D40, issue
  *    #1200). Outside the review's `<form>`, because a private field inside a
  *    public one is a trap and a diver who has already left a review must still
@@ -365,15 +365,17 @@ export function AfterState({
 
   /**
    * One review ask, not two: the "share it on Google too" door only lights up
-   * right after a strong (4–5★) on-page submission went through, and while it
-   * is lit the form's own submit steps back to secondary. One spelling of that
-   * state, so the two can never disagree about which is the page's primary.
+   * right after an on-page submission went through, and while it is lit the
+   * form's own submit steps back to secondary. One spelling of that state, so
+   * the two can never disagree about which is the page's primary.
+   *
+   * **Every rating, never only the good ones** (issue #2095). Offering the
+   * public review link only to a diver who rated 4–5★ is review gating, which
+   * Google's review policy forbids; a one-star diver gets the same door.
    */
-  const justSubmittedStrongReview =
-    (params.review === "published" || params.review === "pending") &&
-    ownReview !== null &&
-    ownReview.rating >= 4;
-  const externalReviewUrl = justSubmittedStrongReview ? shop.reviewUrl : null;
+  const justSubmittedReview =
+    (params.review === "published" || params.review === "pending") && ownReview !== null;
+  const externalReviewUrl = justSubmittedReview ? shop.reviewUrl : null;
 
   /**
    * **The last coral this thread spends** (decision 6). The moment is "you're
@@ -708,7 +710,7 @@ export function AfterState({
           </Door>
         ) : null}
 
-        {/* The one review ask left: a strong rating just landed, so offer to
+        {/* The one review ask left: a rating just landed, so offer to
             carry it further instead of stacking a second, separately-worded
             ask underneath. It is a door rather than a disclosure — the
             destination is somebody else's site. */}
@@ -719,8 +721,8 @@ export function AfterState({
                 <p className="text-base font-semibold">{t("recap.externalReviewHeading")}</p>
                 <p className="mt-0.5 text-sm text-muted">
                   {ownReview?.comment
-                    ? t("recap.externalReviewBody", { shop: shop.name })
-                    : t("recap.externalReviewBodyNoComment", { shop: shop.name })}
+                    ? t("recap.externalReviewBody")
+                    : t("recap.externalReviewBodyNoComment")}
                 </p>
               </div>
               <ShareReviewButton
