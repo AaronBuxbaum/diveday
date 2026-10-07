@@ -190,7 +190,7 @@ export async function listShopDayDepartures(
         lt(trips.startsAt, to),
       ),
     )
-    .orderBy(asc(trips.startsAt), asc(trips.id));
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
 }
 
 /**
@@ -369,6 +369,7 @@ export async function pagedUpcomingTripsWithCounts(
     )
     .groupBy(trips.id, courses.id, diveSites.id)
     .having(hasSpaceHaving(options.hasSpace))
+    // diveday:allow-time-id-order: the keyset cursor is the (startsAt, id) pair (`src/db/cursor.ts`), so a title key here would skip or repeat rows across pages until the cursor carries it too.
     .orderBy(asc(trips.startsAt), asc(trips.id))
     .limit(limit + 1);
 
@@ -460,7 +461,7 @@ export async function offsetUpcomingTripsWithCounts(
         .where(and(scope, liveTrip()))
         .groupBy(trips.id, courses.id, diveSites.id)
         .having(having)
-        .orderBy(asc(trips.startsAt), asc(trips.id))
+        .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id))
         .limit(limit)
         .offset(offset),
   });
@@ -974,7 +975,7 @@ export async function weekBoard(
       ),
     )
     .groupBy(trips.id, diveSites.id)
-    .orderBy(asc(trips.startsAt), asc(trips.id));
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id));
 
   if (overlapping.length === 0) return { days, spans: [] };
 

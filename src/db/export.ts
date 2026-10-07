@@ -9,6 +9,11 @@
  * the bundle is migration-grade history, not a view of the active roster.
  * A schema-coverage test (export.test.ts) forces every schema table to be
  * either exported here or on the deliberate exclusion list.
+ *
+ * Its `orderBy(createdAt, id)` clauses are exempt from the time-id-order
+ * guard (`scripts/check-time-id-order.mjs`, issue #1762): a CSV's row order is
+ * not something a person reads as meaningful, and stability within one
+ * database is all an export needs, which the id gives it.
  */
 
 import { and, asc, count, eq, getTableColumns, inArray, isNull, or } from "drizzle-orm";

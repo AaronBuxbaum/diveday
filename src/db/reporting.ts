@@ -683,7 +683,7 @@ export async function pagedMonthlyReportTrips(
         )
         .where(and(inWindow, liveTrip()))
         .groupBy(trips.id, trips.title, trips.startsAt, trips.capacity)
-        .orderBy(asc(trips.startsAt), asc(trips.id))
+        .orderBy(asc(trips.startsAt), asc(trips.title), asc(trips.id))
         .limit(limit)
         .offset(offset),
   });

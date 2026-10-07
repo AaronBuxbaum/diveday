@@ -65,6 +65,40 @@ describe("a shop's trip tags", () => {
   });
 });
 
+describe("two words written in the same instant", () => {
+  /**
+   * The frozen test clock stamps every row a run writes with one instant, and
+   * the order used to fall through to a random uuid, which re-ordered the
+   * storefront rail between seeded databases (issue #1762). The ids are forced
+   * so the old order is the wrong one.
+   */
+  it("are listed by name, never by their random ids", async () => {
+    const { db } = await seededShopContext();
+    const rival = await rivalShop(db);
+    const createdAt = new Date("2026-07-21T13:30:00.000Z");
+    await db.insert(tripLenses).values([
+      {
+        id: "00000000-0000-4000-8000-000000000001",
+        shopId: rival.id,
+        name: "Wrecks",
+        slug: "wrecks",
+        createdAt,
+      },
+      {
+        id: "ffffffff-ffff-4fff-bfff-ffffffffffff",
+        shopId: rival.id,
+        name: "Reefs",
+        slug: "reefs",
+        createdAt,
+      },
+    ]);
+    expect((await listTripLenses(db, rival.id)).map((lens) => lens.name)).toEqual([
+      "Reefs",
+      "Wrecks",
+    ]);
+  });
+});
+
 describe("deleting a word", () => {
   it("stamps it instead of removing it, and takes it off the rail", async () => {
     const { db, shop } = await seededShopContext();

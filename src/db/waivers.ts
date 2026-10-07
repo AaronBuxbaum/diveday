@@ -221,7 +221,7 @@ export async function listWaiverIntegrityAudit(
         .leftJoin(bookings, eq(bookings.id, waiverRecords.bookingId))
         .leftJoin(trips, eq(trips.id, bookings.tripId))
         .where(scope)
-        .orderBy(desc(waiverRecords.signedAt), desc(waiverRecords.id))
+        .orderBy(desc(waiverRecords.signedAt), asc(people.fullName), desc(waiverRecords.id))
         .limit(limit)
         .offset(offset),
   });

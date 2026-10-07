@@ -109,7 +109,11 @@ export async function listBackupDeliveries(
         .select()
         .from(shopBackupDeliveries)
         .where(eq(shopBackupDeliveries.shopId, shopId))
-        .orderBy(desc(shopBackupDeliveries.startedAt), desc(shopBackupDeliveries.id))
+        .orderBy(
+          desc(shopBackupDeliveries.startedAt),
+          desc(shopBackupDeliveries.periodKey),
+          desc(shopBackupDeliveries.id),
+        )
         .offset(offset)
         .limit(limit),
   });

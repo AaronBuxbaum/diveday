@@ -109,6 +109,7 @@ export async function shopFirstBooking(
     // the heap's first two, and `asc(bookings.createdAt)` says which two a
     // reader would expect. If the random-uuid guard the issue proposes ever
     // lands, this is its exempt case and this comment is the reason.
+    // diveday:allow-time-id-order: the output depends on the row set, never its order (above).
     .orderBy(asc(bookings.createdAt), asc(bookings.id))
     .limit(2);
 

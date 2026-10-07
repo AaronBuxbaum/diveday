@@ -2,7 +2,7 @@ import { and, asc, eq, gte, inArray, lt, ne } from "drizzle-orm";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import type { DbExecutor } from "./client";
-import { bookings, shops, tips, tripReviews, trips } from "./schema";
+import { bookings, people, shops, tips, tripReviews, trips } from "./schema";
 
 /**
  * The recaps the month you are *reading about* should carry.
@@ -113,6 +113,7 @@ export async function seedRecentRecaps(
         inArray(bookings.status, [...ACTIVE_BOOKING_STATUSES]),
       ),
     )
+    .innerJoin(people, eq(people.id, bookings.personId))
     .where(
       and(
         eq(trips.shopId, shopId),
@@ -121,9 +122,11 @@ export async function seedRecentRecaps(
         lt(trips.startsAt, now),
       ),
     )
-    // Deterministic: departure order, then booking id, so the index every
-    // decision below keys off is the same on every run.
-    .orderBy(asc(trips.startsAt), asc(bookings.id));
+    // Deterministic: departure order, then the diver's name, so the index
+    // every decision below keys off is the same on every run. The booking id
+    // alone was a random uuid per seeded database, since every seat on one
+    // departure shares its `startsAt` (issue #1762).
+    .orderBy(asc(trips.startsAt), asc(trips.title), asc(people.fullName), asc(bookings.id));
   if (candidates.length === 0) return { tips: 0, reviews: 0 };
 
   const bookingIds = candidates.map((row) => row.bookingId);
