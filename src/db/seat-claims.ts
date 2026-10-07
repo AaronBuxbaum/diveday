@@ -367,6 +367,10 @@ async function claimSeatRecord(tx: DbExecutor, input: ClaimSeatInput): Promise<C
     existing ? { id: existing.id } : undefined,
     identityUnconfirmed,
     Boolean(trip.courseId),
+    undefined,
+    // The seat's own type: a rider or a snorkeler is asked for no card, here
+    // exactly as at booking (ADR 20261007-participant-types).
+    booking.participantType,
   );
   if (!admission.admitted) {
     return { ok: false, reason: "trip_prerequisite", refusal: admission.refusal };
