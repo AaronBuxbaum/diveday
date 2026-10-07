@@ -36,7 +36,6 @@
     "changeAnyway": "Change anyway"
   },
   "headCount": {
-    "split": "{divers, plural, one {# diver} other {# divers}} · {snorkelers, plural, one {# snorkeler} other {# snorkelers}} · {riders, plural, one {# rider} other {# riders}}",
     "aboardOfTotalPeople": "{aboard} of {total, plural, one {# person} other {# people}} aboard",
     "ofTotalAboardPeople": "of {total, plural, one {# person} other {# people}} aboard"
   },

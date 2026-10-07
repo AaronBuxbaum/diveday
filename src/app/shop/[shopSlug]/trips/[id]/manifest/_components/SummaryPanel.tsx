@@ -2,6 +2,7 @@ import { groupLabelClass } from "@/components/ui/ledger";
 import { StatusMark } from "@/components/ui/StatusMark";
 import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { rollCallCheckpointText } from "@/i18n/manifest-labels";
+import { staffPassengerSplit } from "@/i18n/participant-labels";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { crewRowId, diverRowHash, scopedHash, scopedId } from "@/lib/element-id";
 import type { RollCallCheckpoint, TripManifest } from "@/lib/manifests";
@@ -274,13 +275,7 @@ export function SummaryPanel({
             20261007-participant-types): a split of the same rows the head
             count above counts, never a second count of the boat. */}
         {summary.byType && hasNonDivers(summary.byType) ? (
-          <p className="mt-2 text-base tabular-nums">
-            {t("participants.headCount.split", {
-              divers: summary.byType.diver,
-              snorkelers: summary.byType.snorkeler,
-              riders: summary.byType.rider,
-            })}
-          </p>
+          <p className="mt-2 text-base tabular-nums">{staffPassengerSplit(t, summary.byType)}</p>
         ) : null}
         {/* The counts the six tiles used to carry, folded in under the bar they
             explain. A definition list, not a grid of cards: label/number pairs

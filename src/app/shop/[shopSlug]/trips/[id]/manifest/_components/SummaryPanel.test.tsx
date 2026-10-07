@@ -500,6 +500,18 @@ describe("uncalled crew while divers are still open", () => {
  * still spaced themselves off it: 4px of margin above "1 diver is blocked."
  * against a 0px line.
  */
+describe("who the people are", () => {
+  it("leaves out a type nobody is, as the offline copy does", () => {
+    // Regression (dive-domain review, PR #2224): the live panel printed
+    // "0 riders" where the offline copy left the type out.
+    renderPanel({
+      summary: summary({ totalDivers: 4, byType: { diver: 3, snorkeler: 1, rider: 0 } }),
+    });
+    expect(screen.getByText("3 divers · 1 snorkeler")).toBeInTheDocument();
+    expect(screen.queryByText(/rider/)).toBeNull();
+  });
+});
+
 describe("the prose under the pinned card", () => {
   function renderAwaiting() {
     return renderPanel({

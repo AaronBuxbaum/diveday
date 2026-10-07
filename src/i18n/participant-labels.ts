@@ -185,11 +185,7 @@ export function staffBookingsDetail(
   return hasNonDivers(seats)
     ? t("participants.reports.bookingsDetailSplit", {
         detail,
-        split: t("participants.headCount.split", {
-          divers: seats.diver,
-          snorkelers: seats.snorkeler,
-          riders: seats.rider,
-        }),
+        split: staffPassengerSplit(t, seats),
       })
     : detail;
 }

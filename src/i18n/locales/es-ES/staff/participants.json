@@ -36,7 +36,6 @@
     "changeAnyway": "Cambiar de todos modos"
   },
   "headCount": {
-    "split": "{divers, plural, one {# buceador} other {# buceadores}} · {snorkelers, plural, one {# de snorkel} other {# de snorkel}} · {riders, plural, one {# acompañante} other {# acompañantes}}",
     "aboardOfTotalPeople": "{aboard} de {total, plural, one {# persona} other {# personas}} a bordo",
     "ofTotalAboardPeople": "de {total, plural, one {# persona} other {# personas}} a bordo"
   },
