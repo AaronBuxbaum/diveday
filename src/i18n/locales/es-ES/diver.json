@@ -1994,7 +1994,6 @@
       "signingIn": "Iniciando sesión…",
       "submit": "Iniciar sesión",
       "needShop": "¿Necesitas un centro?",
-      "getSetUp": "Escribe a {email}",
       "publicSchedule": "¿Buscas el calendario de buceo?"
     },
     "onboard": {
@@ -2002,8 +2001,7 @@
       "title": "Abre tu centro",
       "closed": {
         "title": "Abrimos cada centro a mano",
-        "body": "Cuéntanos de tu centro y lo abrimos contigo.",
-        "cta": "Escribir a {email}"
+        "body": "Cuéntanos de tu centro y lo abrimos contigo."
       },
       "shopSectionTitle": "Tu centro",
       "shopNameLabel": "Nombre del centro",
@@ -2640,7 +2638,6 @@
       "gettingReady": "Preparando tu centro…",
       "tryDemo": "Probar la demo en vivo",
       "getSetUp": "Pide tu centro",
-      "setUpSubject": "Quiero abrir mi centro en DiveDay",
       "demoNote": "La demo abre un centro de muestra en funcionamiento con un clic. Sin registro y sin tarjeta."
     },
     "price": {
@@ -3887,6 +3884,38 @@
         "faq3A": "Los pedidos pagados y reembolsados se envían a QuickBooks o Xero como recibos, y el informe se descarga como hoja de cálculo.",
         "closeTitle": "Repasa un día de pedidos en la demo.",
         "demoPlace": "los pedidos del día, como propietario"
+      }
+    },
+    "setUp": {
+      "title": "Pide tu centro",
+      "description": "Abrimos cada centro a mano y te escribimos para abrir el tuyo.",
+      "shopName": "Nombre del centro",
+      "region": "Ciudad o región",
+      "runsBoat": "¿Tienes barco?",
+      "yes": "Sí",
+      "no": "No",
+      "currentSystem": "¿Qué usas hoy?",
+      "current": {
+        "paper": "Papel",
+        "spreadsheet": "Hojas de cálculo",
+        "bookingSystem": "Un sistema de reservas",
+        "shopSoftware": "Un programa de gestión de buceo",
+        "other": "Otra cosa"
+      },
+      "contactName": "Tu nombre",
+      "email": "Correo electrónico",
+      "phone": "Teléfono",
+      "website": "Sitio web",
+      "submit": "Enviar",
+      "sending": "Enviando…",
+      "errors": {
+        "required": "Completa este campo.",
+        "invalid": "Revisa este dato.",
+        "email": "Revisa la dirección."
+      },
+      "sent": {
+        "title": "Solicitud enviada",
+        "body": "Te escribiremos para abrir tu centro. Mientras tanto, la demo está abierta."
       }
     }
   },

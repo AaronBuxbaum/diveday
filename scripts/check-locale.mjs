@@ -202,6 +202,7 @@ export const DELIBERATELY_IDENTICAL = new Map([
   ["staff/divers.json shared.agencies.tdi", "agency acronym"],
   ["staff/schedule.json builder.courseAgencies.padi", "agency acronym"],
   ["staff/waiversStaff.json record.answerNo", '"No" is the same word in Spanish'],
+  ["diver.json marketing.setUp.no", '"No" is the same word in Spanish'],
   ["staff/schedule.json builder.courseAgencies.ssi", "agency acronym"],
   ["diver.json marketing.privacy.processors.awsTerm", "brand"],
   ["diver.json marketing.privacy.processors.googleTerm", "brand"],

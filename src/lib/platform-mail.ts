@@ -17,19 +17,11 @@ export const SUPPORT_EMAIL = "support@dive.day";
 /**
  * Where a shop writes in to be set up, and where a trial shop's owner writes in
  * to move to a paid plan. Every shop is opened by hand from this inbox (ADR
- * 20260925-shops-are-set-up-by-hand), so every public "Get set up" door is a
- * mail to it.
+ * 20260925-shops-are-set-up-by-hand); the public "Get set up" door is the form
+ * at `/get-set-up`, and each request it takes is mailed here (ADR
+ * 20261007-setup-request-form).
  */
 export const ONBOARDING_EMAIL = "onboarding@dive.day";
-
-/**
- * The public "Get set up" door: a mail to {@link ONBOARDING_EMAIL} with the
- * subject already written, in the reader's language (the caller passes it from
- * the bundle, because this file is shared with code that has no locale).
- */
-export function setUpMailto(subject: string): string {
-  return `mailto:${ONBOARDING_EMAIL}?subject=${encodeURIComponent(subject)}`;
-}
 
 /** Where operational alerts (new signups, error monitoring) land — not diver- or shop-facing. */
 export const ALERT_EMAIL = "alerts@dive.day";
@@ -52,4 +44,17 @@ export function alertRecipient(
   env: Readonly<Record<string, string | undefined>> = process.env,
 ): string {
   return env.OPS_ALERT_EMAIL?.trim() || ALERT_EMAIL;
+}
+
+/**
+ * Who reads the founder's Monday digest (ADR 20261007-founder-metrics), or
+ * null when nobody has said: the digest is then not sent, because there is no
+ * shared mailbox that is the right home for a person's weekly read of the
+ * business and guessing one would mail it to the wrong inbox. Set in
+ * `FOUNDER_DIGEST_EMAIL` (`config/env-registry.mjs`).
+ */
+export function founderDigestRecipient(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): string | null {
+  return env.FOUNDER_DIGEST_EMAIL?.trim() || null;
 }

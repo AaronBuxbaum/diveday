@@ -300,6 +300,13 @@ const EXCLUDED_TABLES = [
   // What one staffer had typed into a form when the phone rang (same ADR,
   // decision 3): a day-old draft of their own, never a shop record.
   "form_drafts",
+  // DiveDay's own funnel and activation bookkeeping (ADR
+  // 20261007-founder-metrics): a set-up request predates any shop, a demo
+  // entry belongs to no shop, and a shop's milestones are DiveDay's reading of
+  // its progress rather than anything the shop recorded. None is a shop record.
+  "setup_requests",
+  "demo_entries",
+  "shop_milestones",
 ];
 
 /**

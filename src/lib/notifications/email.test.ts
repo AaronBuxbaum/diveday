@@ -3,11 +3,13 @@ import {
   bookingConfirmationEmail,
   courseInquiryEmail,
   demoStartedAlertEmail,
+  founderDigestEmail,
   guardianReleaseCopyEmail,
   lastMinuteDealEmail,
   newAccountAlertEmail,
   passwordChangedEmail,
   passwordResetEmail,
+  setupRequestAlertEmail,
   tripBlowoutEmail,
   tripConditionsHoldEmail,
   tripInvitationEmail,
@@ -899,5 +901,97 @@ describe("the guardian's copy of a signed release", () => {
 
     expect(email.html).toContain("Blue Mantis &amp; Co.");
     expect(email.html).toContain("&lt;Liability &quot;Release&quot;&gt;");
+  });
+});
+
+describe("setupRequestAlertEmail (ADR 20261007-setup-request-form)", () => {
+  const request = {
+    shopName: "Reef <Line> Divers",
+    region: "Key Largo",
+    runsBoat: true,
+    currentSystem: "booking_system" as const,
+    contactName: "Ana Ruiz",
+    contactEmail: "ana@reefline.example",
+    source: "pricing",
+    requestLocale: "es-ES",
+  };
+
+  it("lays out what a first reply needs, and leaves out a phone nobody gave", () => {
+    const email = setupRequestAlertEmail(request);
+    expect(email.subject).toBe("Set-up request: Reef <Line> Divers (Key Largo)");
+    expect(email.text).toContain("Runs a boat: yes");
+    expect(email.text).toContain("Uses today: a booking system");
+    expect(email.text).toContain("Email: ana@reefline.example");
+    expect(email.text).toContain("From: pricing");
+    expect(email.text).not.toContain("Phone:");
+    expect(setupRequestAlertEmail({ ...request, contactPhone: "+1 305 555 0100" }).text).toContain(
+      "Phone: +1 305 555 0100",
+    );
+  });
+
+  it("escapes everything the requester typed", () => {
+    const email = setupRequestAlertEmail(request);
+    expect(email.html).toContain("Reef &lt;Line&gt; Divers");
+    expect(email.html).not.toContain("<Line>");
+  });
+});
+
+describe("founderDigestEmail (ADR 20261007-founder-metrics)", () => {
+  const digest = {
+    weekStart: "2026-10-05",
+    weekEnd: "2026-10-11",
+    diveDays: 3,
+    diveDayShops: 2,
+    demoEntries: [
+      { source: "home-hero", count: 4 },
+      { source: "pricing", count: 1 },
+    ],
+    setupRequests: [{ source: "pricing", count: 2 }],
+    unnotifiedSetupRequests: 0,
+    stalls: [
+      {
+        shopName: "Reef & Wreck",
+        shopSlug: "reef-wreck",
+        lastReached: "first_departure" as const,
+        since: "2026-10-01",
+        waitingFor: "first_public_booking" as const,
+      },
+    ],
+  };
+
+  it("leads with the north star and lists the funnel by source and every stall", () => {
+    const email = founderDigestEmail(digest);
+    expect(email.subject).toBe("DiveDay week of 2026-10-05: 3 dive days");
+    expect(email.text).toContain("North star: 3 dive days run end to end");
+    expect(email.text).toContain("across 2 shops");
+    expect(email.text).toContain("Demo entries: 5");
+    expect(email.text).toContain("home-hero: 4");
+    expect(email.text).toContain("Set-up requests: 2");
+    expect(email.text).toContain(
+      "Reef & Wreck (/shop/reef-wreck): first departure on 2026-10-01, waiting for first public booking",
+    );
+    expect(email.html).toContain("Reef &amp; Wreck");
+    expect(email.text.indexOf("North star")).toBeLessThan(email.text.indexOf("Demo entries"));
+  });
+
+  it("says a quiet week is quiet rather than dropping its sections", () => {
+    const email = founderDigestEmail({
+      ...digest,
+      diveDays: 1,
+      diveDayShops: 1,
+      demoEntries: [],
+      setupRequests: [],
+      stalls: [],
+    });
+    expect(email.subject).toBe("DiveDay week of 2026-10-05: 1 dive day");
+    expect(email.text).toContain("Demo entries: 0");
+    expect(email.text).toContain("Set-up requests: 0");
+    expect(email.text).toContain("Stalled shops: 0");
+  });
+
+  it("names set-up requests whose mail never reached the inbox", () => {
+    expect(founderDigestEmail({ ...digest, unnotifiedSetupRequests: 2 }).text).toContain(
+      "2 never reached the onboarding inbox",
+    );
   });
 });

@@ -2206,13 +2206,30 @@ for (const scheme of ["light", "dark"] as const) {
       });
 
       // What everyone without the key meets at `/onboard`: one sentence on how
-      // a shop is set up and the mail that starts it.
+      // a shop is set up and the door to the set-up form.
       test(`the closed onboarding door renders true to the design (${scheme})`, async ({
         page,
       }) => {
         await page.goto("/onboard");
         await page.locator("h1").first().waitFor();
         await capture(page, "onboard-closed", scheme);
+      });
+
+      // Where every "Get set up" door lands (ADR 20261007-setup-request-form):
+      // seven asks, two of them as pills.
+      test(`the set-up request form renders true to the design (${scheme})`, async ({ page }) => {
+        await page.goto("/get-set-up?from=pricing");
+        await page.locator("h1").first().waitFor();
+        await capture(page, "get-set-up", scheme);
+      });
+
+      // The thank-you page a sent request lands on, with the demo door.
+      test(`the set-up request thank-you page renders true to the design (${scheme})`, async ({
+        page,
+      }) => {
+        await page.goto("/get-set-up/sent");
+        await page.locator("h1").first().waitFor();
+        await capture(page, "get-set-up-sent", scheme);
       });
 
       test(`the sign-in page renders true to the design (${scheme})`, async ({ page }) => {

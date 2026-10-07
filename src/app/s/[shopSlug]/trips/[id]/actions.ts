@@ -11,6 +11,7 @@ import { createBookingParty, getBookingForTrip } from "@/db/bookings";
 import { recordBuddyReferral, resolveBuddyReferral } from "@/db/buddy-referrals";
 import { startBookingCheckout } from "@/db/checkouts";
 import { getDb } from "@/db/client";
+import { recordShopMilestone } from "@/db/founder-metrics";
 import { setBookingNitrox } from "@/db/nitrox";
 import { sendAndRecordNotification } from "@/db/notifications";
 import { recordDiverOwnLocaleForBooking } from "@/db/people";
@@ -398,6 +399,15 @@ export async function bookSpot(
     return { error: message, fieldErrors: memberFieldErrors };
   }
   await trackEvent({ name: "booking_completed", source: "diver", partySize: validParty.length });
+  // The shop's first booking through its own public pages is an activation
+  // step the founder watches (ADR 20261007-founder-metrics); nothing on the
+  // booking row says which door it came through, so it is recorded here, once.
+  // Deferred and swallowed: the diver's confirmation never waits on it.
+  after(() =>
+    recordShopMilestone(dbi, { shopId: shopNow.id, milestone: "first_public_booking" }).catch(
+      (error) => console.error("bookSpot: first_public_booking milestone failed", error),
+    ),
+  );
   // Which diver's link brought this party, if one did. Every seat of it, the
   // organizer's included, for the reason the partner referral above credits
   // every seat: one person booking four through a friend's link is four divers

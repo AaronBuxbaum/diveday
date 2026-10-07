@@ -169,6 +169,25 @@ export const ENV_GROUPS = [
   },
   {
     doc: [
+      "Who reads the founder's Monday digest: last week's north star, demo entries",
+      "and set-up requests by source, and shops stalled between activation steps",
+      "(ADR 20261007-founder-metrics). A person's address, not a shared mailbox,",
+      "which is why it is configuration rather than a constant. Not a secret.",
+    ],
+    keys: [
+      {
+        key: "FOUNDER_DIGEST_EMAIL",
+        from: "manual",
+        // Vercel only: the cron that sends it runs there, and a workstation has
+        // no business mailing the founder a digest of its dev database.
+        targets: VERCEL,
+        absent:
+          "the nightly founder-metrics run still computes and logs the numbers, but no digest is sent",
+      },
+    ],
+  },
+  {
+    doc: [
       "The key that opens /onboard (ADR 20260925-shops-are-set-up-by-hand). Every",
       "shop is set up by hand: /onboard?setup=<this value> shows the sign-up form",
       "and its action accepts a submission only when the posted key matches. Any",

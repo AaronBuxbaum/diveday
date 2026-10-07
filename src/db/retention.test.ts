@@ -302,6 +302,18 @@ describe("pruneExpiredRecords", () => {
     expect(await db.select().from(tripReadMarks)).toHaveLength(0);
   });
 
+  it("prunes demo entries past their window and keeps the recent ones", async () => {
+    const { db } = await retentionContext();
+    await db.insert(schema.demoEntries).values([
+      { source: "home-hero", role: "owner", enteredAt: daysAgo(RETENTION_DAYS.demo_entries + 1) },
+      { source: "pricing", role: "owner", enteredAt: daysAgo(1) },
+    ]);
+    const summary = await pruneExpiredRecords(db, { now: NOW });
+    expect(outcomeFor(summary, "demo_entries").deleted).toBe(1);
+    const left = await db.select({ source: schema.demoEntries.source }).from(schema.demoEntries);
+    expect(left).toEqual([{ source: "pricing" }]);
+  });
+
   it("reports a per-table outcome for every retained table, with the window applied", async () => {
     const { db } = await retentionContext();
     const summary = await pruneExpiredRecords(db, { now: NOW });
@@ -397,6 +409,9 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "imported_payment_history",
   "last_minute_list_entries",
   "course_inquiries",
+  // A shop asking to be set up: a person's contact details, kept until they
+  // ask for them gone like every other lead (ADR 20261007-setup-request-form).
+  "setup_requests",
   "internal_notes",
   "staff_credentials",
   "staff_shifts",
@@ -467,6 +482,7 @@ const OUTSIDE_RETENTION: readonly string[] = [
   // Current state about DiveDay's own machinery: one row per object, replaced
   // in place rather than appended, so there is no history here to age out.
   "notification_rate_limit_state",
+  "shop_milestones",
   "integration_sync_records",
   "shop_integrations",
   "shop_stripe_accounts",

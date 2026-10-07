@@ -24,6 +24,16 @@
     "visual": ["forgot-password"],
     "a11y": ["a11y.spec.ts"]
   },
+  "/get-set-up": {
+    "e2e": ["setup-request.spec.ts"],
+    "visual": ["get-set-up"],
+    "a11y": ["a11y.spec.ts"]
+  },
+  "/get-set-up/sent": {
+    "e2e": ["setup-request.spec.ts"],
+    "visual": ["get-set-up-sent"],
+    "a11y": ["a11y.spec.ts"]
+  },
   "/invite/[token]": {
     "e2e": ["staff-invite.spec.ts"],
     "visual": ["staff-invite"]

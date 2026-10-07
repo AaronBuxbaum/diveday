@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { demoEntries } from "@/db/schema";
 import { ALERT_EMAIL } from "@/lib/platform-mail";
 import { QUIET_DEMO_COOKIE, quietDemoToken } from "@/lib/quiet-demo-device";
 import { seededTestDb } from "@/test/db";
@@ -137,6 +138,17 @@ describe("enterDemoAction instrumentation", () => {
       source: "pricing",
       role: "captain",
     });
+  });
+
+  it("records one demo entry for the founder digest, with nothing but the tag and role", async () => {
+    await useDb();
+    await enterDemo(demoForm({ role: "captain", source: "pricing" }));
+
+    const db = await getDb();
+    const rows = await db.select().from(demoEntries);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ source: "pricing", role: "captain" });
+    expect(Object.keys(rows[0] ?? {}).sort()).toEqual(["enteredAt", "id", "role", "source"]);
   });
 
   it("defaults an untagged CTA to the owner view and an unknown source", async () => {

@@ -113,6 +113,7 @@ export type RetainedTable =
   | "trip_desk_events"
   | "trip_read_marks"
   | "form_drafts"
+  | "demo_entries"
   | "inbound_messages"
   | "staff_replies";
 
@@ -256,6 +257,13 @@ export const RETENTION_DAYS: Readonly<Record<RetainedTable, number>> = {
    * older than this, so the prune only takes out what nobody can see.
    */
   form_drafts: 1,
+  /**
+   * 400 days. A demo entry is a funnel tag, a role and an instant — nothing
+   * about a person — kept so the founder digest can count the demo by source
+   * (ADR 20261007-founder-metrics). A year plus a season is enough to compare a
+   * week with the same week last year; nothing older is read.
+   */
+  demo_entries: 400,
   /**
    * 400 days, the same window as `notification_deliveries` and for the same
    * reason: a diver's reply and the shop's answer are the other half of the

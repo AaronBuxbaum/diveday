@@ -17,14 +17,14 @@ import {
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import type { DiverLocale } from "@/i18n/settings";
-import { switchingHref } from "@/lib/funnel";
+import { setUpHref, switchingHref } from "@/lib/funnel";
 import {
   continuityPromise,
   earlyAccessPrice,
   fullShopExport,
   sharedLinkCard,
 } from "@/lib/marketing";
-import { SUPPORT_EMAIL, setUpMailto } from "@/lib/platform-mail";
+import { SUPPORT_EMAIL } from "@/lib/platform-mail";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
@@ -267,7 +267,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
                   this row stays available and stops shouting
                   (docs/product/marketing-review-20260827.md, `/about`).
 
-                  The first door is the set-up mail, the same one the shared
+                  The first door is the set-up form, the same one the shared
                   pair offers, because this band's first paragraph is the
                   set-up offer ("Write to us, and someone here builds your shop
                   with you"); a support mailto stood here until 2026-10-07 and
@@ -290,12 +290,12 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
                   under the two outline doors onto a line of its own, where the
                   size's `px-4` set its words 16px inside the column (K-397). */}
               <div className="mt-8 flex flex-wrap gap-3">
-                <a
-                  href={setUpMailto(t("marketing.common.setUpSubject"))}
+                <Link
+                  href={setUpHref("about-work")}
                   className={buttonClass({ variant: "outline" })}
                 >
                   {t("marketing.common.getSetUp")}
-                </a>
+                </Link>
                 <Link href="/pricing" className={buttonClass({ variant: "outline" })}>
                   {t("marketing.about.seeCost", {
                     price: earlyAccessPrice.price,

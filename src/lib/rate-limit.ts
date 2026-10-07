@@ -438,6 +438,19 @@ export const RATE_LIMITS = {
   /** Course inquiry submissions from the public course page, per IP. */
   courseInquiry: perHour(10),
   /**
+   * Set-up requests from `/get-set-up` (ADR 20261007-setup-request-form), per
+   * IP. A shop asks once; five an hour covers a typo resubmitted and a second
+   * person at the same desk.
+   */
+  setupRequestByIp: perHour(5),
+  /**
+   * Set-up requests, **across everyone**. Each one mails the onboarding inbox,
+   * so the per-IP bucket alone would let a rotating pool fill it; thirty an
+   * hour is far above any real week and well below a flood. An empty bucket
+   * refuses the request with the rate-limit sentence, never silently.
+   */
+  setupRequestGlobal: perHour(30),
+  /**
    * Self-registration from the shop's own QR, per IP. The public write with
    * the widest blast radius on this surface: it creates a person row.
    */
