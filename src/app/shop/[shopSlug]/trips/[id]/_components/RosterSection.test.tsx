@@ -116,6 +116,7 @@ function renderRoster({
   arrival,
   sameNameHeldSeats,
   splitAsksDateOfBirth,
+  certifyDefaultLevel,
 }: {
   roster: RosterEntry[];
   readiness: ReadinessByBooking;
@@ -129,6 +130,8 @@ function renderRoster({
   arrival?: RosterArrival;
   sameNameHeldSeats?: ReadonlyMap<string, ReadonlyArray<SameNameHeldSeat>>;
   splitAsksDateOfBirth?: boolean;
+  /** Present means this is a course session's roster, with a Certify control. */
+  certifyDefaultLevel?: "open_water" | "advanced_open_water" | null;
 }) {
   return render(
     <RosterSection
@@ -164,6 +167,8 @@ function renderRoster({
       compact={compact}
       addDiverGroup={addDiverGroup}
       arrival={arrival}
+      certifyDiverAction={certifyDefaultLevel === undefined ? undefined : noop}
+      certifyDefaultLevel={certifyDefaultLevel}
     />,
   );
 }
@@ -1362,5 +1367,26 @@ describe("an earlier physician refusal under a cleared release", () => {
       waivers: new Map([["r", signedWaiver]]) as WaiverByBooking,
     });
     expect(screen.queryByText(/A physician did not clear this diver on/)).toBeNull();
+  });
+});
+
+describe("certifying a student from a course session's roster (issue #2059)", () => {
+  /** One per student row; every one of them opens the same way. */
+  function awardSelects() {
+    const selects = screen.getAllByRole("combobox", { name: /^Level/ }) as HTMLSelectElement[];
+    expect(selects).toHaveLength(2);
+    return selects;
+  }
+
+  it("opens on the level the course issues", () => {
+    renderRoster({ ...fixtures, certifyDefaultLevel: "advanced_open_water" });
+    for (const select of awardSelects()) expect(select.value).toBe("advanced_open_water");
+  });
+
+  it("opens on the first rung when the course issues none, and can still be changed", () => {
+    renderRoster({ ...fixtures, certifyDefaultLevel: null });
+    const [select] = awardSelects();
+    expect(select?.value).toBe("open_water");
+    expect([...(select?.options ?? [])].map((option) => option.value)).toContain("advanced_open_water");
   });
 });

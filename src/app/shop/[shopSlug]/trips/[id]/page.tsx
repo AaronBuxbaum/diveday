@@ -1169,6 +1169,7 @@ export default async function ManageTripPage({
               arrival={desk?.arrival}
               walkIn={desk?.walkIn}
               acceptsDivers={acceptsDivers}
+              certifyDefaultLevel={trip.course?.certifiesLevel ?? null}
               guests={guests}
               shopSlug={shopSlug}
               shopName={shop.name}

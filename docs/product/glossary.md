@@ -116,9 +116,12 @@ new domain concept, define it here in the same PR.
   purpose (see their own entries on why even an *imported* row waits for a staff confirm there).
 - **In training** — a diver with no card at a trip's level yet, holding a seat on a course session
   that certifies that level (or higher), ends before the trip starts, and has not ended yet. Which
-  courses certify a rung is agency fact, kept by template in `src/db/course-templates.ts`
-  (`courseTemplateCertifiedLevel`), and matches the importer: SSI Advanced Adventurer and SDI
-  Advanced Adventure Diver are the Advanced rung; specialties, refreshers and tasters certify none.
+  courses certify a rung is agency fact, written on each template in `src/db/course-templates.ts`
+  (`certifiesLevel`) and copied onto the course (`courses.certifies_level`, issue #2059), so a
+  template update carries it and no editor changes it; it matches the importer: SSI Advanced
+  Adventurer and SDI Advanced Adventure Diver are the Advanced rung; specialties, refreshers and
+  tasters certify none, and neither does a course a shop built without a template. The roster's
+  "Certify" select opens on it.
   It is **never evidence**. At a charter's sale it counts toward the trip's level, so a fun dive the
   morning after an Open Water course can be sold. It does **not** satisfy a course's own
   prerequisite: Advanced still asks for a certified Open Water card (H-08's course baseline). At

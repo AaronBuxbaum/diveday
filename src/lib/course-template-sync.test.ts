@@ -3,6 +3,7 @@ import {
   type CourseTemplateSource,
   courseTemplateDiff,
   courseTemplateSnapshot,
+  courseTemplateDatabaseFields,
   mergedCourseTemplateSnapshot,
 } from "./course-template-sync";
 
@@ -12,6 +13,7 @@ function template(overrides: Partial<CourseTemplateSource> = {}): CourseTemplate
     agency: "padi",
     description: "The foundational course.",
     minimumCertificationLevel: null,
+    certifiesLevel: "open_water",
     content: {
       summary: "Learn to dive",
       overview: "The original overview.",
@@ -78,5 +80,20 @@ describe("course template synchronization", () => {
     expect(
       mergedCourseTemplateSnapshot(current, baseline, latest, "replace-template-copy"),
     ).toEqual(latest);
+  });
+
+  it("carries the level a course certifies as a template fact the shop never owns (issue #2059)", () => {
+    const baseline = courseTemplateSnapshot(template({ certifiesLevel: null }));
+    expect(baseline.certifiesLevel).toBeNull();
+    const latest = courseTemplateSnapshot(template());
+    expect(latest.certifiesLevel).toBe("open_water");
+    expect(courseTemplateDiff(baseline, baseline, latest)).toEqual([
+      expect.objectContaining({ field: "certifiesLevel", shopChanged: false }),
+    ]);
+    // Even a course whose prose the shop rewrote takes the template's level.
+    const current = { ...baseline, overview: "The shop’s own explanation." };
+    const merged = mergedCourseTemplateSnapshot(current, baseline, latest, "preserve-shop-edits");
+    expect(merged.certifiesLevel).toBe("open_water");
+    expect(courseTemplateDatabaseFields(merged).certifiesLevel).toBe("open_water");
   });
 });

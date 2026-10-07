@@ -52,6 +52,7 @@ import { cachedListFormat } from "@/lib/intl-cache";
 import { flaggedMedicalPrompts } from "@/lib/medical";
 import type { PaperWaiverAction } from "@/lib/paper-waiver-form";
 import { paymentSourceLine } from "@/lib/payment-source";
+import type { CertificationLevel } from "@/lib/certification-levels";
 import { BLOCKER_CATEGORY } from "@/lib/readiness";
 import { rosterRowIsBlocked } from "@/lib/roster-filters";
 import { shopPath } from "@/lib/staff-notices";
@@ -240,6 +241,7 @@ export function RosterSection({
   deleteNoteAction,
   saveEmergencyContactAction,
   certifyDiverAction,
+  certifyDefaultLevel = null,
   saveCourseNextStepAction,
   courseNextStepByBooking,
   updatePickupAction,
@@ -344,6 +346,13 @@ export function RosterSection({
    * roster — a fun dive has no completion to certify.
    */
   certifyDiverAction?: (formData: FormData) => void;
+  /**
+   * The rung this course issues (`courses.certifies_level`, issue #2059) —
+   * where the "Certify diver" select opens, so the instructor confirms rather
+   * than hunts. Still a choice per diver: a student who finished a different
+   * rung, or a specialty, is one change of the select away.
+   */
+  certifyDefaultLevel?: CertificationLevel | null;
   /**
    * What this student does next, in the instructor's own words (issues #1196,
    * #1205) — present under exactly the same condition as `certifyDiverAction`,
@@ -1273,7 +1282,11 @@ export function RosterSection({
                 label={t("trips.roster.certifyLevel")}
                 description={t("trips.roster.certifyLevelHint")}
               >
-                <select name="award" className={controlClass}>
+                <select
+                  name="award"
+                  className={controlClass}
+                  defaultValue={certifyDefaultLevel ?? undefined}
+                >
                   <optgroup label={t("trips.roster.certifyLevelGroup")}>
                     {Object.entries(CERTIFICATION_LEVEL_KEYS).map(([value, key]) => (
                       <option key={value} value={value}>
