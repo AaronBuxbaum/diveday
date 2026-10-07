@@ -16,9 +16,14 @@ vi.mock("@/db/client", async (importOriginal) => {
   return { ...actual, getDb: vi.fn() };
 });
 vi.mock("@/lib/session", () => ({ requireStaffSession: vi.fn() }));
+vi.mock("@/features/calendar-sync", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/calendar-sync")>();
+  return { ...actual, revokeCalendarFeeds: vi.fn(async () => undefined) };
+});
 
 const { getDb } = await import("@/db/client");
 const { requireStaffSession } = await import("@/lib/session");
+const { revokeCalendarFeeds } = await import("@/features/calendar-sync");
 const { calendarFeedAction } = await import("./actions");
 
 function form(entries: Array<[string, string]>): FormData {
@@ -45,5 +50,32 @@ describe("calendarFeedAction", () => {
 
     expect(await calendarFeedAction({ status: "idle" }, data)).toEqual({ status: "denied" });
     expect(getDb).not.toHaveBeenCalled();
+  });
+
+  it("revokes from the panel's turn-off form, which carries no rotating flag", async () => {
+    // The revoke form posts only intent and scope. Regression: zod refuses a
+    // missing key even for `unknown`, which read every turn-off as denied.
+    vi.mocked(getDb).mockResolvedValue({} as never);
+    vi.mocked(requireStaffSession).mockResolvedValue(
+      staffSession({
+        shopId: "11111111-1111-4111-8111-111111111111",
+        shopSlug: "reef-life",
+        personId: "22222222-2222-4222-8222-222222222222",
+      }),
+    );
+
+    const result = await calendarFeedAction(
+      { status: "idle" },
+      form([
+        ["intent", "revoke"],
+        ["scope", "assignments"],
+      ]),
+    );
+
+    expect(result).toEqual({ status: "revoked", scope: "assignments" });
+    expect(revokeCalendarFeeds).toHaveBeenCalledWith(
+      {},
+      expect.objectContaining({ scope: "assignments" }),
+    );
   });
 });

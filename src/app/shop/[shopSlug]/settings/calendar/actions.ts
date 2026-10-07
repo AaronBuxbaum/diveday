@@ -18,12 +18,14 @@ import type { FeedIssueState } from "./feed-panel-types";
 
 /**
  * The panel's form: the one scope it controls, and two flags read as exactly
- * `"revoke"` and `"true"` — anything else is the ordinary path.
+ * `"revoke"` and `"true"` — anything else, including an absent field, is the
+ * ordinary path. Both are optional because the revoke form sends no
+ * `rotating` at all, and zod refuses a missing key even for `unknown`.
  */
 const feedForm = z.object({
   scope: z.enum(["assignments", "shop_trips"]) satisfies z.ZodType<FeedScope>,
-  intent: z.unknown(),
-  rotating: z.unknown(),
+  intent: z.unknown().optional(),
+  rotating: z.unknown().optional(),
 });
 
 /**
