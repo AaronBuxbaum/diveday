@@ -389,3 +389,670 @@ What that cost, until 2026-08-28: `check-repo.mjs` labelled a check by its exit 
 So a check has three outcomes. Exit 0 is `ok`, exit 1 is `FAILED`, and exit **2** is `SKIPPED` — its own header, the reason printed under it, and a summary line reading `all checks passed (1 skipped: follow-ups)` instead of claiming otherwise. The overall exit stays 0; nothing is blocked. Two things about that code are load-bearing: it is unreachable from any validation path in the script, so a genuine failure can never downgrade itself into a skip, and it is deliberately a **one-off for the network-dependent guard** rather than a mechanism any check may reach for — one that lets a check opt out of running is one a future check will use when it is merely slow.
 
 When you see `SKIPPED`, the inbox was not validated. Run it where `gh` exists, or read the CI log.
+
+## The path-scoped rules, in full
+
+Each `.claude/rules/<area>.md` is a short list of rules, each naming the guard or hook that enforces it and pointing here. What those files used to carry in full (the reasoning, the incidents, and the longer route-map entries) is kept below as it stood on 2026-10-07, one section per area, so a session that needs the *why* finds it without every session paying for it.
+
+### The surfaces rules
+
+For `src/app/` and `src/components/`; the rules themselves are in `.claude/rules/surfaces.md`.
+
+#### Where things are
+
+- **Public pages** (landing, sign-in): `src/app/`. **Diver-facing shop pages**:
+  `src/app/s/[shopSlug]/**` — its own namespace, no auth anywhere in it; path strings come from
+  `src/lib/public-routes.ts`, which also holds the 308s from the old `/shop/**` URLs (ADR
+  20260803-public-shop-namespace). `/shop/**` is staff, without exception.
+- **Where a diver can go**: the header nav in `src/components/PublicShopNav.tsx`, assembled once in
+  `src/app/s/[shopSlug]/layout.tsx` and rendered by `src/components/PublicShopChrome.tsx`. Add a
+  public destination there, never as a per-page cross-link; the whole header is dropped in
+  `?embed=1`.
+- **Where staff can go**: derive from `src/lib/staff-destinations.ts`, a registry of
+  destinations each filed under one **section** — Today, Schedule, Divers, Inbox, Money, Courses,
+  Gear, Settings (ADR 20261001-logbook). It has **two** consumers:
+  `src/components/ShopSectionNav.tsx` (the labelled sidebar from `lg` up, the phone tab bar below
+  it — Today, Schedule, Divers, Inbox and More) and `src/components/search/CommandPalette.tsx`, the
+  shortcut to everything. `staffNavSections` decides which rows a viewer sees (a gated section is
+  absent; Courses and Gear only for a shop that teaches or keeps a fleet) and `currentStaffSection`
+  is the one answer to "which row is lit". Add a destination to the registry with its section,
+  never to a consumer. The sidebar is its own `<Suspense>` boundary in the staff layout, beside the
+  page; the tab bar sets `--tabbar-h`, which anything fixed to the foot (toasts, the sticky Save
+  bar) stands off. A diver the search finds opens their record, `divers/[personId]`.
+  `src/components/ShopIdentityMenu.tsx` holds what is the reader's own: their calendar feed, their
+  language, sign out.
+- **Bearer-token pages** (`src/app/waivers/[token]`, `ready/[token]`, `recap/[token]`,
+  `verify/[token]`, `reset-password/[token]`, `calendar/[token]`): the URL *is* the capability;
+  read [docs/engineering/capability-telemetry-runbook.md](../engineering/capability-telemetry-runbook.md)
+  before touching. Never structured data or telemetry that could carry the token.
+- **The four lines every staff page opens with**: one helper, `requireShopSurface` in
+  `src/lib/session.ts`: `requireStaffSession()` → the shop row read by `session.user.shopId` (never
+  the URL slug) → `notFound()` when it is missing **or** disagrees with the slug → an optional live
+  `src/db/authz.ts` gate → a `?notice=` refusal redirect. Every refusal *throws*; there is no path
+  that returns after deciding against the caller, and `src/lib/session.test.ts` pins that. Never
+  `return null`, `redirect("/")`, or a bounce to the shop home for a cross-tenant miss — all of those
+  are now `notFound()`.
+- **Server actions**: inline `"use server"` closures for single-page mutations; `src/app/actions/`
+  only for actions shared across pages; a large page colocates its actions/zod schemas in a sibling
+  `actions.ts`. **Seating a diver** from any surface goes through `src/app/actions/seat-diver.ts`
+  and the per-surface table in `seat-diver-surfaces.ts`; the global door is
+  `src/app/shop/[shopSlug]/bookings/new` then `bookings/new/[tripId]` — the trip is a path segment,
+  not a `?tripId=`, so a refusal can land back on it.
+- **The schedule builder**: `src/app/shop/[shopSlug]/schedule/board/_components/ScheduleBuilder.tsx`
+  + `schedule/board/actions.ts`; mutations in `src/db/trips-schedule.ts`. The add panel is the
+  **one place a trip is created**; `/shop/[shopSlug]/trips/new` is a 308 to
+  `schedule/board?add=full` (ADR 20260806-one-trip-create-form).
+- **Schedule is one place with two views** (ADR 20261001-logbook): Week (`schedule/board`, the
+  departures and the builder) and Crew (`staffing/`, the same week by who is working it), both
+  titled "Schedule" under `schedule/_components/ScheduleViews.tsx`, which carries `?week=` across.
+  A third reading of the week is a third view there, never a page of its own.
+- **A departure is four tabs under one header** (ADR 20261001-logbook, decision 3):
+  Divers (`trips/[id]/page.tsx`, the roster, which is also the arrival desk inside the arrivals window:
+  `_arrivals/arrival-desk.tsx`, its walk-in form at `walk-in/`), Boat (`manifest/`), Gear (`prep/`, the packing list) and Details (`trips/[id]?view=details`,
+  the About panel). One component draws them, `_components/TripTabs.tsx`; every tab wears `TripPageHeader`, whose
+  stage pill's phase (Prep, Check-in, Aboard, Back) comes from `src/lib/trip-phase.ts`, where the crew's tap
+  on the manifest beats the clock. Add to a tab, never a fifth surface; a second list of the same divers is the duplicate this cut removed. A gear form redirects to
+  `prep#{PREP_SECTION_ID}`; an About form redirects to the departure with its `form`, which opens
+  Details. **A cancelled departure keeps its Boat tab and packs nothing**: the roll call is a
+  record of people, the packing list an instruction about a check-in that is not happening
+  (dive-domain review 20260920). `print/` composes prep as a component for the paper day.
+  Finding which boat an arriving diver is on is Today's arrival lookup (`?q=`), never a search on
+  the tab.
+- **The shop home** is the day's departures, then one "Needs you" list (ADR 20261001-logbook,
+  decision 4): `_components/today/DaySpine.tsx` composes them, `DayStation.tsx` is a departure
+  card (time, stage pill from `tripPhaseOf`, readiness bar), and every job on the day, at a boat
+  or at the desk, ranks in the one list and names its own boat. Its evening state is the settled
+  stations (`ClosingStation.tsx`) and the day's takings; there is no act of closing the day. `?view=` and `/blockers` 308 home (ADR 20260827-clearwater-surface-language). A
+  departure's **log** is generated from there (`trips/[id]/log`, owner-only).
+- **The back-office queues** are **not on Reports** — each sits with the object it is about and
+  renders *nothing* when empty: stuck payment operations on the Orders index behind
+  `canPersonManagePaymentSettings`; stuck media deletions and owed processor erasures lead Settings'
+  "Data" group in `settings/SettingsPage.tsx`. `/shop/[shopSlug]/reports` is the
+  shop's own reading of itself and nothing else: the month by default, the year at `?range=year`,
+  one segmented control between them, and **no money at all on the year** (ADR 20260908-one-hand,
+  decision 6, lever T). The year prints as a 3:2 card at `reports/card`, staff-only.
+- **A diver asking for a day not on the board**: one composer, `src/components/DateRequestForm.tsx`,
+  behind one action `src/app/actions/inquiry.ts`; staff read them at `shop/[shopSlug]/requests`.
+  Never the wait list or the last-minute deal list — those answer "tell me when a seat frees".
+- **A dive site's briefing**: written on `dive-sites/_components/SiteFields.tsx`; read on the
+  departure page as four beats in `_components/TripDayPlan.tsx` — `TripLookFor`, `TripRoutes`,
+  `TripMoments`, `TripSiteNotes`. Every sentence comes off the site row, uncaptioned; the fit tone
+  is one word and there is no canned filler (ADR 20260813-dive-site-briefings-are-the-shops-own-words).
+  The field guide is the one exception — a *selection* of catalog species whose words are DiveDay's
+  (`src/i18n/marine-life-labels.ts`).
+- **Design tokens**: `src/app/globals.css` (semantic only, ADR-0004). **Wrappers**:
+  `src/components/ui/` — `form.tsx` (`Field`, `FieldGrid`, `controlClass`, `FormStatus`,
+  `FieldErrorFocus`, and `StatusInView`, which `FormStatus` carries), `button.ts` (`buttonClass`),
+  `card.tsx` (`SectionCard`, `sectionCardClass`), `tone.ts` (`toneMark`). Readiness words: `src/i18n/readiness-labels.ts` — never spell a status
+  inline. Heading levels come from `src/components/ui/typography.ts` (`pnpm check:type-ramp`).
+- **Paging a staff list**: `src/components/Pager.tsx` + `offsetPage` in `src/db/paging.ts`. Every
+  paged staff list wears it with `words={staffPagerWords(t)}`, and the public reviews archive with
+  the diver bundle's words (ADR 20260803-one-pagination-model); keyset cursors (`src/db/cursor.ts`)
+  are the one earned exception. A list's **count must share the row query's exact scope** (joins,
+  `where`, `having`, `now`), or the pager promises pages that render nothing.
+- **Link previews and icons** (`ImageResponse`): every surface that rasterizes at request time —
+  DiveDay's own card at `link-card/route.tsx`, the three `opengraph-image.tsx` cards under
+  `/recap/` and `/s/`, `pwa-icon-maskable/route.tsx` and `/shop/[shopSlug]/reports/card` — calls `allowSvgRasterization()` (`src/lib/og-rasterizer.ts`)
+  first, and so does any new one: `next/image` disables libvips' SVG loader process-wide on first
+  use and satori's output is SVG, so without it the card severs the socket mid-stream (ADR
+  20260804-og-svg-rasterizer). **A metadata module that imports `next/og` reaches every page entry
+  in its segment's subtree**, so one in the *root* segment reaches the whole app — which is how the
+  favicon and then the root card each put 3.07 MiB of renderer into every closure in it. The
+  favicon and touch icon are committed PNGs now, re-rendered by `pnpm brand:icons` (issue #1361),
+  and DiveDay's card is a route handler named by `sharedLinkCardImage` in `src/lib/site-metadata.ts`
+  (issue #1709); `src/app/_og/card.test.tsx` refuses a new root metadata module and holds every card
+  to the shared chrome. **Every page that exports an `openGraph` block spreads `openGraphSite`**
+  (`src/lib/site-metadata.ts`): Next merges `metadata` shallowly, so a page-level block *replaces*
+  the root layout's. `sharedLinkCard` (`src/lib/marketing.ts`) is this plus the card image — and the
+  card is deliberately *not* inside `openGraphSite`, because a level that names `images` makes Next
+  skip that segment's own `opengraph-image.tsx`. Structured data (`JsonLd`) never renders in
+  `?embed=1` mode or on a bearer-token page.
+- **Design for a surface that does not exist yet**: read
+  [docs/design/design-artifacts.md](../design/design-artifacts.md) first — the canvas
+  argues in pictures, the ADR decides, code obeys the ADR. Reach for a canvas only when a surface is
+  significant enough for an ADR; for a component, a form or a copy change, the screenshot script and
+  the **design-review** skill answer faster against the real app.
+
+#### Semantic tokens only
+
+No raw hex, no palette-scale classes in components (ADR-0004; `pnpm check:tokens`). Next
+metadata-file conventions (OG images, icons, manifest) are exempt by design — tokens cannot reach a
+Satori bitmap.
+
+#### Forms, buttons and panels go through the wrappers
+
+Stacked fields via `<Field>`/`<FieldGrid>`, button-shaped things via `buttonClass()`, controls via
+`controlClass`, the bordered panel a page is made of via `<SectionCard>` (and its `loading.tsx`
+twin via `sectionCardClass()`). Hand-rolled class strings are how fields fall out of alignment,
+button labels drift off-center, and sibling routes one tap apart end up at two different corner
+radii. Never pass a `text-<colour>` through `className` to `buttonClass()` — Tailwind emits colour
+utilities **alphabetically by token name**, so the override silently loses to the variant's own
+colour; that read as an instruction and did nothing at 31 call sites until 2026-08-15, and
+`button.test.ts` now fails on it. If you find yourself cancelling a variant's own styles, the
+variant is wrong. `SectionCard` has **deliberately no `radius` prop** — one that let each call site
+keep its current corner would preserve the drift behind an abstraction. Pages space their sections
+with `space-y-10` rather than per-section `mt-*`. See
+[docs/design/forms-and-controls.md](../design/forms-and-controls.md).
+
+#### Where a form says what happened
+
+**Beside the form, never in a banner at the top of the page.** Field-level refusals go on the field
+(`Field`'s `error` prop, which wires `aria-invalid`/`aria-describedby`); form-level ones go in the
+action row (`FormStatus`), with `FieldErrorFocus` to move the cursor to the offending box. A page's
+`?notice=` is routed to the form that produced it by `noticeForForm` (`src/lib/staff-notices.ts`);
+the page banner is left for what is genuinely about the page.
+
+**And it has to be on screen, or it said nothing.** Putting the outcome in its own section fixed a
+confirmation appearing off-screen *above* a reader who saved halfway down, and left the mirror image
+open: `PreserveFormScroll` puts them back exactly where they submitted from, so an outcome rendered
+below the submit button can land below the fold. `FormStatus` carries `StatusInView`, which brings
+it into view **only when it is off screen** — a status that yanks the viewport when the reader can
+already read it is worse than one that does nothing — and never for `danger`, whose `FieldErrorFocus`
+has the better destination. It waits for three conditions rather than a duration: the status is
+something the renderer is drawing (`checkVisibility()`, not a zero-sized rect inside a `<details>`
+that has just opened), `PreserveFormScroll` has stamped `SCROLL_SETTLED_ATTRIBUTE`, and the page has
+stopped moving. All three were found by measuring: on the diver record's gear group the status read
+viewport 138 mid-flight and 748 once the disclosure, the restore and the browser's smooth animation
+between them had all landed.
+
+#### A new page ships with a `loading.tsx` and `export const instant = true`
+
+That file is the route's `<Suspense>` boundary — what a client navigation into the segment paints,
+and what stands in the static shell while the page's request-scoped reads stream in. Shape it like
+the body it replaces (an `animate-pulse` wrapper, `bg-surface-sunken` bars, `border-border
+bg-surface` cards), never a spinner. **Never put an `await` above `{children}` in a `layout.tsx`**:
+a layout wraps the page, so no boundary can be placed between them, and one request-scoped read
+there costs every route beneath it its static shell — put the read in an async child inside its
+own `<Suspense>`, with a fallback that holds its height. `next build` fails on a route that breaks
+this (`blocking-prerender-dynamic` / `blocking-prerender-client-hook`), naming the component.
+`instant = false` survives on exactly one layout, `src/app/shop/[shopSlug]/trips/[id]/layout.tsx`.
+The staff shell is no longer the second: its six reads — session, shop row, locale, demo roles, nav
+badge, boat link — moved into `_components/ShopChrome.tsx` behind a `<Suspense>` that holds the
+bar's height, and its cross-tenant `notFound()` went with them, which is safe because every staff
+page gates itself as well (ADR 20260804-instant-navigation; the **instant-navigation** skill).
+
+#### Never hard-code a locale, and every rendered date names its zone
+
+Every date, time and money figure formats for the negotiated request locale (`requestLocale`) —
+never a literal `"en-US"` (`pnpm check:locale`). Timestamps are stored as UTC instants and
+displayed in the shop's own zone, so every date/time render passes `shop.timezone` alongside the
+locale. This is not a style preference: `Intl` falls back to the *host* zone when no zone is given,
+and every DiveDay server and CI box is UTC, so an omission renders a 7:30 AM departure as 11:30 AM —
+plausible, green, and four hours wrong on the screen a diver uses to decide when to leave. A value
+with no instant in it says `timeZone: "UTC"` explicitly (`src/lib/calendar-date.ts`).
+`pnpm check:timezone` enforces the rest.
+
+#### Copy comes from a message bundle, never a component
+
+Diver copy in `src/i18n/locales/<locale>/diver.json`, staff copy in
+`locales/<locale>/staff/<namespace>.json` (one file per area). `pnpm check:copy` is a full gate over
+`src/app`, `src/components` and `src/features`: any hard-coded copy fails it. **Never add English
+(or any language) as a string the user will read outside `src/i18n/locales/`** — every new sentence
+lands in *every* locale's bundle in the same change, and a key missing from one locale fails
+`pnpm check:locale`. Waiver/medical wording stays English pending H-01/H-03. **Any diver Client
+Component that reads copy needs `DiverIntlProvider` above it** — without one it throws during the
+server render and the page silently degrades to a blank client-only 200;
+`src/i18n/provider-coverage.test.ts` fails on a consumer with no provider in an ancestor segment.
+Staff Client Components take words as props (`staffTranslator` is server-side only). See the
+**i18n-copy** skill and the i18n rules.
+
+#### Every sentence earns its place, or it is deleted
+
+Before writing a string — and every time you read past an existing one — ask whether the reader
+would get something wrong without it. Only two kinds survive: one carrying a state or consequence
+the surface cannot show on its own, and one that is genuine delight. A caption restating its own
+heading, a clause explaining which rule won, a second manual path to what a nearby button already
+does, and an apology for a refusal all go — deleted, not shortened, along with the element that held
+them. Deleting a key means all three edits in one change: the call site, `en-US`, and `es-ES`. See
+the **copy-restraint** skill. Where restraint and accessibility genuinely conflict, build for the
+standard user and record the trade in
+[docs/design/accessibility-tradeoffs.md](../design/accessibility-tradeoffs.md) — never a
+follow-up, never silence. That licence stops at safety surfaces (manifests, roll call, cert gating,
+medical flags), at keyboard reach, and at anything that costs the sighted user nothing.
+
+#### Delete says Delete
+
+Every delete is soft (`deleted_at`) and the word on screen is still "Delete" — never Archive,
+Deactivate, Retire, Hide or "soft delete", and never a caption explaining which history survived.
+A publish toggle is "Hidden", not deleted. The full rule and its exceptions are in the db rules
+(`.claude/rules/db.md`) and ADR 20260820-every-delete-is-soft.
+
+#### A panel that only renders when something has gone wrong
+
+is photographed through `/api/test/seed-trouble-states`
+(`src/app/api/test/seed-trouble-states/route.ts`), never by seeding the failure into the demo shop:
+add the new state to that route and a capture beside the surface's calm one. A demo permanently
+shouting that four payments are broken is a worse demo. Mutating is safe because each Playwright
+worker owns its own database and resets it before every test (`e2e/servers.ts`).
+
+#### Every surface gets looked at
+
+A user-facing change is verified by looking at it — `node scripts/screenshot.mjs <path…>` against a
+running `pnpm dev`, phone and desktop, light only unless the work is colour (then `--both`) — and by
+the **design-review** skill for a significant surface. Every important flow gets an `e2e/` spec and
+every important surface a capture in `e2e/visual.spec.ts` (the **e2e-and-visual** skill).
+Safety-critical surfaces get a `dive-domain-expert` review.
+
+### The db rules
+
+For `src/db/` and `drizzle/`; the rules themselves are in `.claude/rules/db.md`.
+
+#### Where things are
+
+- **Schema** (source of truth — never read `drizzle/`): `src/db/schema.ts`. Locate a table with
+  Grep and read the range; the file is 8,700 lines and the Read guard refuses it whole.
+- **Client / test db factory**: `src/db/client.ts` (`getDb()`, `createTestDb()`).
+- **Queries and seed data**: `src/db/shops.ts`, plus two barrels over sibling modules —
+  `src/db/trips.ts` re-exports `trips-create/-series/-record/-schedule/-crew/-roster.ts`, and
+  `src/db/seed.ts` orchestrates the `seed-*.ts` scenarios. Import from the barrel; edit the
+  sibling.
+- **Demo/seed data**: a new `src/db/seed-<scenario>.ts` plus one line in `src/db/seed.ts`'s
+  orchestrator — never wedge rows into an existing scenario, which is how that file became the
+  repo's top conflict magnet (ADR 20260803-seed-scenario-modules). Do **not** seed a failure state
+  into blue-mantis (see the e2e rules: trouble states are seeded through
+  `/api/test/seed-trouble-states`); `src/db/seed-front-desk.ts` says so at the row it deliberately
+  seeds `succeeded`.
+- **The booking transaction** (capacity enforcement): `src/db/bookings.ts` — read its tests first.
+- **Staff seating a diver**: one consequence path, `src/db/seat-diver.ts` (booking + waiver-on-join
+  + activity trail + analytics). Never re-implement the post-booking side effects at a call site.
+- **Retention / pruning of append-only tables**: `src/lib/retention.ts` holds `RETENTION_DAYS` (the
+  one table a human edits; the values are HD-11's call), `src/db/retention.ts` runs the bounded
+  prune, `src/app/api/cron/retention/` is the weekly surface. The `stripe_webhook_events` window is
+  asserted against Stripe's retry horizon, not merely commented.
+- **Recurring trips**: materialization in `src/db/trips-series.ts`, cadence math in
+  `src/lib/recurrence.ts`. A run has **no limit** (`trip_series.ends_on` null keeps going into a
+  rolling `SERIES_HORIZON_DAYS` window). Every instance is an ordinary independent `trips` row — a
+  deleted one leaves a `trip_series_skips` row so the roll never puts it back, and a moved one keeps
+  its `series_occurrence_date` so the roll never re-fills the slot it left. **Narrowing a cadence
+  cancels nothing** — orphaned dates are listed back with head counts and taken off only on a
+  second tap (ADR 20260810-open-ended-recurring-trips).
+- **Gear register**: opt-in **by presence** — zero `gear_items` rows means no gear UI anywhere
+  (ADR 20260815-minimal-gear-register). The double-booking guard is the
+  `gear_reservations_no_overlap` **exclusion constraint** (btree_gist, hand-added SQL in the
+  migration, raced for real in `gear-reservations.postgres.test.ts`): catch 23P01 via
+  `violatesExclusionConstraint`, never pre-check availability as truth. Service clocks are the
+  newest `gear_service_events` row per kind and **inform, never gate**. `pnpm task:context gear`.
+- **Buddy teams**: `src/db/buddy-pairs.ts` (named for its table, `buddy_pair_members`; every word a
+  human reads says "team"). A team is two or more, a member is a booking **or** a crew person, and
+  every act appends to `buddy_team_events` — informs, never gates (ADR 20260804-buddy-teams).
+- **Starting content a shop copies and then owns**: `src/db/dive-site-templates.ts` and
+  `src/db/course-templates.ts`, both `i18n-exempt-file` — picking one **copies** its words onto the
+  shop's row, and nothing is read back at render, so a later correction never rewrites what a shop
+  published. The **opposite** contract is `src/db/marine-life-catalog.ts`: 148 species as slug +
+  Latin binomial + category code and no prose; DiveDay writes the words once in every language
+  (`marineLife.*` in `diver.json`), and `MARINE_LIFE_CATALOG` is `as const`, so a species added
+  without its copy is a **compile** error (ADR 20260813-marine-life-is-diveday-copy). A species
+  DiveDay does not carry lands in `marine_life_requests` — a table nothing renders.
+- **Course inquiries** (`course_inquiries`, `src/db/course-inquiries.ts`): `course_id` is nullable
+  and the check constraint refuses a row naming neither a course nor an interest (ADR
+  20260814-a-date-request-is-a-course-inquiry).
+- **Integrations**: rows in `src/db/integrations.ts` (credentials sealed by `src/lib/secret-box.ts`)
+  and `src/db/integration-events.ts` (the at-least-once outbox); OAuth state in
+  `integration_oauth_states`, consumed once and bound to the shop **and** the person who started it.
+
+#### Changing the schema
+
+Follow the **schema-change** skill. The short form: edit `src/db/schema.ts`, `pnpm db:generate`
+with a `--name`, review the generated SQL once, seed if e2e needs rows, and **before you push** run
+the four coverage guards that assert over `schema.ts` from files you will never touch:
+
+```bash
+pnpm test src/db/export.test.ts src/db/diver-merge.test.ts src/db/delete-path-coverage.test.ts src/db/retention.test.ts --reporter=dot
+```
+
+Touching `schema.ts` at all is the trigger, not the shape of the change — `pnpm test:changed`
+selects the whole suite after a schema edit, and that run belongs to CI
+([docs/agents/verifying.md](verifying.md)). Never hand-edit or hand-merge
+anything under `drizzle/`; a migration is generated, and a conflict there is resolved by reverting
+your migration files, rebasing, and regenerating.
+
+#### There is no legacy. Delete it.
+
+DiveDay is pre-pilot: no users, no data anyone would miss (H-49, extending H-47). A table nothing
+writes gets **dropped**, not carried behind a `seq` column so its dead rows sort nicely. A code path
+that exists only to tolerate old rows gets **deleted**, not documented. A lifecycle rule that exists
+only to age out abandoned objects gets **removed**, not waited out. Do not write reconciliation,
+backfill, dual-read, or version-tolerance code for pre-pilot data, and do not read the absence of
+one as an oversight to fix — three follow-ups proposed exactly that in one week, and each was a
+migration spent on rows that have never had a reader. When in doubt the answer is the smaller tree.
+
+**Two things this does not relax**, because they are not about the value of the data: the
+**destructive-migration guard** and the expand/contract rule keep the *previous release* alive
+while a migration runs inside the production build, and having no users does not help a shop
+watching its schedule mid-deploy — a destructive migration still carries its
+`-- diveday:allow-destructive <rule> <table>.<column>: <why>` line, where "pre-pilot, no users,
+H-49" is now a sufficient *why*. And **H-02's retention windows and the erasure path** are promises
+about data we *will* hold; they stand. This rule expires the moment the first pilot shop has real
+divers in the system — Aaron will say so, and it is not an agent's call to make.
+
+#### Every delete is soft, and the word on screen is still "Delete."
+
+A user pointing at a thing and asking for it gone sets `deleted_at`; the row stays and history holds
+(ADR 20260820-every-delete-is-soft, extending 20260719-crud-archive-semantics to every entity). This
+is the default, not a list of blessed tables: a new table holding anything a user can delete gets
+`deleted_at`, a partial index over the live rows only, and `deleted_at is null` in every
+active-workspace read. The column is `deleted_at` — `archived_at` is not a second spelling of it.
+
+**Never say so.** Not Archive, Unarchive, Deactivate, Retire, Hide, or "soft delete" in anything a
+person reads — button, confirm, toast, notice, filter, empty state; a staff list of deleted records
+is "Deleted" and its action is "Restore". No sentence explains which history survived: a caption
+reassuring the reader about an outcome they never doubted earns nothing, and "archive" makes a shop
+stop mid-afternoon to work out whether we mean the thing they asked for. The euphemism does not have
+to be one of those words to be one: "Takes this diver off your active lists", under a heading saying
+**Delete** and above a button saying **Delete Adaeze Nwosu**, was the only one of the three that
+declined to say it (issue #779). `pnpm check:repo` refuses that family over the message bundles.
+
+**A publish state is not a delete, and says so.** Hiding a review and taking a course off the public
+site are both *unpublishing*: `tripReviews.isPublished` is reversible by republishing and a hidden
+review still counts against the shop's suppression share (ADR
+20260813-review-moderation-has-a-floor), and `courses.is_active` is the toggle on the "Live at
+/s/<slug>/courses/<slug>" line — neither table has a delete at all. So "Hidden" is the honest word
+in both, and the test is whether the thing is *gone* or merely *not shown*.
+
+**Two exceptions.** *Legal erasure*, where an obligation requires real destruction — it stays
+one-way, stays a separate column from `deleted_at` (`people.anonymized_at` plus its check
+constraint), never becomes the primary action, and is the one place the distinction *is* expressed,
+because the reader is choosing between two outcomes and one has no undo. And *machinery nobody
+pointed at*: H-02's bounded retention prune, child rows rewritten wholesale when their parent saves
+(`trip_dives`, `trip_schedule_days` — a replace), a single-use token consumed on use, seed and test
+teardown. This does **not** touch the rule above it: "There is no legacy" governs the *tree*; this
+one governs *rows at runtime*.
+
+`deleteTrip` (`src/db/trips-schedule.ts`) stamps `trips.deleted_at` and leaves all five child tables
+attached, and `scripts/check-live-trips.mjs` (in `pnpm check:repo`) fails the build on any read of
+`trips`, or any join from a surviving child table, that neither carries `liveTrip()`
+(`src/db/trips-live.ts`) nor says `diveday:allow-deleted-trips: <why>`. That gate exists because the
+failure is silent and public: an unfiltered read shows an anonymous visitor a departure the shop
+took off the board. `deleted_at` is the only spelling in the tree, internal names included.
+
+A departure that *moves* has a second obligation: `trips.revision` is published as the RFC 5545
+`SEQUENCE` (`src/lib/trip-calendar.ts`), so a write of `trips.starts_at` that leaves the revision
+flat leaves every subscribed calendar on the old `DTSTART` (issue #1165).
+`scripts/check-trip-revision.mjs` (also in `pnpm check:repo`) fails any `.update(trips)` writing
+`startsAt` whose `.set()` neither bumps `revision` nor says `diveday:allow-flat-revision: <why>`
+— the reason being required, and a `.set()` handed anything but an object literal being refused
+rather than guessed at.
+
+#### Tenant isolation
+
+Every domain table carries `shop_id`; every query filters by the session's shop; a lookup by id,
+slug or token cannot return another shop's row. A change to rows holding personal or medical data,
+to export/import, or to a token flow gets a `security-reviewer` review before merge.
+
+### The domain rules
+
+For `src/lib/` and `src/features/`; the rules themselves are in `.claude/rules/domain.md`.
+
+#### Where things are
+
+- **Domain logic**: `src/lib/` — capacity in `trips.ts`, dates in `format.ts`.
+- **Whether a diver may *buy* a seat vs. *board***: two different gates, deliberately. **Trip
+  admission** (`src/lib/trip-admission.ts`, booking-time — "could this diver ever be cleared?") is
+  weaker than **readiness** (`src/lib/readiness.ts`, boarding-time — "are they cleared now?"), and
+  admission may never refuse someone readiness would clear. Both compose the same effective
+  requirement via `getTripSiteRequirement`.
+- **Payments and orders** (Stripe Connect): `src/lib/payments/` (checkout, connect, invoicing,
+  promotions, webhook); order/refund state in `src/db/orders.ts`, `payments.ts`, `checkouts.ts`,
+  `refunds.ts`, `stripe-accounts.ts`. Discount codes: shop-wide in `src/lib/promo-codes.ts` +
+  `src/db/shop-promos.ts`; one-trip last-minute deals in `src/db/trip-promos.ts`. Both resolve in
+  `bookSpot`; Stripe owns the arithmetic.
+- **The Today work queue**: `src/lib/today.ts` / `src/db/today.ts`. `assembleDaySpine` re-files what
+  `getTodayWork` ranked; no second detector. The end-of-day close-out composes from Today's own
+  readers (`src/lib/closeout.ts`, `src/db/closeout.ts`) — never a second detector; closing is a
+  recorded act, never a gate (ADR 20260804-day-closeout).
+- **Notifications**: `src/lib/notifications/` (SES email, SNS SMS, Meta Cloud API WhatsApp);
+  `courtesy.ts` picks WhatsApp-or-SMS; delivery/retry state in `src/db/notifications.ts`. A shop's
+  own WhatsApp sender: `whatsapp-signup.ts`, tokens sealed by `src/lib/secret-box.ts`.
+- **Offline manifests**: `src/lib/offline-manifests.ts` + `offline-manifest-store.ts` (encrypted
+  IndexedDB); worker `src/worker/manifest-sw.ts`. Two API routes, deliberately not one:
+  `api/offline-manifests/upcoming` answers with the whole 48-hour board, `identity` answers
+  `{ shop: { slug } }` and nothing else. Both `no-store`; both read through the response types in
+  `offline-manifests.ts`, never an inline cast (ADR 20260726-shopwide-offline-manifest-priming).
+- **Dive-site difficulty**: `dive_sites.difficulty_level`, one of three codes
+  (`src/lib/dive-site-difficulty.ts`), worded by `src/i18n/dive-site-labels.ts`. Never free text
+  (ADR 20260813-dive-site-difficulty-is-a-code). `siteFit()` believes a chosen level outright and
+  only falls back to its keyword sniff when there is none.
+- **Recurrence**: `src/lib/recurrence.ts` is a pure `seriesOccurrenceDates`; materialization lives in
+  `src/db/trips-series.ts` (see the db rules).
+- **Retention windows**: `src/lib/retention.ts` — `RETENTION_DAYS` is the one table a human edits.
+- **Course content**: shapes and parsers in `src/lib/courses.ts`. A depth in course prose is a
+  **marker**, not words: `{depth18}` reads "18 meters" or "60 feet" by the shop's `depth_unit`,
+  resolved once per page by `resolveCourseContentDepths` as a lookup into the agency pairs. A
+  *broken* marker is refused when the editor saves (`courseDepthPlaceholderIssues`), never rendered
+  — shop prose deliberately never touches ICU (ADR 20260814-course-depth-markers).
+- **Auth**: `src/lib/auth.ts` (better-auth + credentials plugin) / `auth-secret.ts` / `authz.ts` +
+  `session.ts`; edge layer in `src/proxy.ts`. `/shop/**` is staff-only end to end — there is no
+  public-route allowlist any more. The proxy is convenience, not the security boundary.
+- **Staff destinations**: one registry, `src/lib/staff-destinations.ts` — path, permission gate,
+  badge source, and the nav **section** each destination lights (ADR 20261001-logbook). The nav is
+  the sections, by name, always on screen; the search is a shortcut, never the only door.
+- **Staff notices**: `src/lib/staff-notices.ts` — `noticeUrl(path, code, extra?)` writes,
+  `noticeFromParam` reads, `shopPath(slug, ...segments)` builds. `noticeUrl` percent-encodes every
+  value, merges `&bid=`/`&count=`/`&form=`, keeps an existing query and `#fragment`, and normalises
+  the code to kebab; `shopPath` escapes each segment, which is what stops a client-supplied slug
+  traversing out of `/shop/`. Codes are enforced kebab by `pnpm check:repo`; never hand-build the
+  string.
+- **SEO**: `src/lib/structured-data.ts`; `openGraphSite` in `src/lib/site-metadata.ts` (see the
+  surfaces rules for why every page with an `openGraph` block spreads it).
+- **Feature modules**: `src/features/<feature>/` — one `index.ts` is the whole public surface,
+  `README.md` states what it owns; deep imports fail `pnpm check:architecture` (ADR
+  20260730-feature-module-contracts). `calendar-sync`, `backup-export` and `integrations` exist.
+  Integrations: one registry (`registry.ts`) names each provider and its event types,
+  `dispatcher.ts` drains the outbox, one adapter per provider; a Zapier hook URL is pinned to
+  `hooks.zapier.com` over https — never an arbitrary host.
+
+#### Dependency direction
+
+`app → features → lib/db`, one way, enforced by `pnpm check:architecture`: `src/lib`/`src/db` may
+import neither `src/app` nor `src/features`. Routes stay thin; the rules live here.
+
+#### Read time through the clock
+
+`src/lib`, `src/db`, and `src/features` never call `new Date()` / `Date.now()` directly — use
+`nowDate()` / `nowMs()` from `src/lib/clock.ts` (default a `now` parameter to it). This is what lets
+the e2e fleet freeze one instant so the clock-anchored seed and every render stay pixel-stable for
+visual regression; in production the clock is the native call, unchanged. `pnpm check:clock`
+enforces it. Never stabilise a visual test by masking moving text — freeze the clock at the
+Playwright harness boundary.
+
+#### Trips late-arrival and departure buffer
+
+Because trips often run late, every check deciding whether a departure has sailed, ended, or is
+"in the past" allows a **1-hour buffer** on the scheduled time. Ask it through `hasSailed()` /
+`hasReturned()` (`src/lib/trips.ts`), never a second `*_BUFFER_MS` and never the comparison by
+hand: stated in prose alone the hour reached fifteen spellings, and `pnpm check:repo` refuses the
+sixteenth ([docs/agents/repo-checks.md](repo-checks.md)).
+
+#### Codes, not sentences
+
+`src/lib` and `src/db` return **codes, not sentences**; the UI picks the words (ADR
+20260731-domain-layer-copy-leaks, enforced by `pnpm check:domain-strings`). A data module that
+*feeds* the UI (marketing claims, switching guides, demo roles) holds **message-bundle keys, never
+words** — the key-registry pattern of `src/lib/marketing.ts` / `src/lib/demo-roles.ts` — and the
+registries listed in `scripts/check-domain-strings.mjs`'s `proseFreeFiles` hard-fail on any
+unexempted prose literal.
+
+#### Every formatter names its zone
+
+The `src/lib/format.ts` formatters take `timeZone` as a **required** parameter so a missing zone is
+a compile error rather than a wrong time. A value with no instant in it (a date-only calendar date,
+a wall-clock time of day) says `timeZone: "UTC"` explicitly — see `src/lib/calendar-date.ts`.
+Every `Intl` formatter is built through `src/lib/intl-cache.ts`, never a bare `new Intl.*` at the
+call site (constructing one costs ~12x reusing it; `pnpm check:intl-cache`).
+
+A formatted date or time is one unit on the line: every formatter in `format.ts` and
+`calendar-date.ts` that prints one joins its parts through `keepUnitsWhole`
+(`src/lib/date-parts.ts`), so "Jul 21" and "7:05 AM EDT" carry U+00A0 inside them and a line
+breaks only where the pattern has more than a space (a comma, a range dash, Spanish "de"). A new
+one joins the same way. A test matches them with a *string* query, which normalizes whitespace
+(`getByText("Jul 21")`, `toHaveTextContent`), or with a regex that spells `\s` or `\u00A0` \u2014 a
+regex is matched against the raw text, so `/Jul 21/` never matches, in `getByText` and `toHaveText`
+alike; a string that leaves the page plain says so where it leaves (the SMS transport, a field's
+own value in `formatWallTime`).
+
+#### Safety and security
+
+Safety-critical logic (manifests, roll call, cert gating, medical flags) gets boring code,
+failure-path and adversarial tests, and a `dive-domain-expert` review. Auth/authz, token flows and
+anything touching personal or medical data get a `security-reviewer` review before merge.
+
+### The e2e rules
+
+For `e2e/`; the rules themselves are in `.claude/rules/e2e.md`.
+
+- **Focused runs only, locally.** `pnpm e2e <spec> --reporter=line`, or `pnpm e2e:run <spec>` after
+  one `pnpm e2e:build`. The whole suite belongs to CI, and `scripts/guard-bash.mjs` refuses the
+  bare form ([docs/agents/verifying.md](verifying.md)).
+- **Every worker owns a server and a database**, and `/api/test/reset` restores the shared
+  `blue-mantis` fixture's **schedule** before each test — but not the shop's **configuration**
+  (the `RESET_KEEPS` list in `src/db/delete-path-coverage.test.ts`). **A test that writes shop-wide
+  settings takes a shop of its own**: the lazy `privateShop` fixture in `e2e/fixtures.ts` (ADR
+  20260815-per-test-private-shops). Never a `finally` that puts the setting back — nothing enforces
+  it and it does not survive the failure it is there for. Each invocation derives a per-worktree
+  base port; `E2E_BASE_PORT` overrides it.
+- **No timing guesses.** `waitForTimeout`, `networkidle`, spec-level `retries:` and hand-rolled retry
+  loops are refused by `pnpm check:e2e-hygiene` unless the line carries
+  `diveday:allow-e2e-hygiene <rule>: <why>` naming the mechanism that makes it deterministic. The
+  suite runs `retries: 0` so a flake fails loudly and gets root-caused; the fix for a race is always
+  waiting for what the destination page itself renders.
+- **Never navigate straight off a submit.** A `goto`/`reload` as the next statement after a
+  submit-shaped click races the action it just sent, and `check:e2e-hygiene`'s `action-race` rule
+  refuses it: the click resolves when the request leaves, not when the write lands, so the
+  navigation can tear the page down mid-flight and the destination renders the state from before
+  the save. Put the wait between them — `page.waitForURL()` on the action's own `?notice=`
+  redirect, or an `expect(locator)` on what the row shows for a `useActionState` form that
+  re-renders in place. **Reading the field back is not a wait**: an `expect(field).toHaveValue(…)`
+  or `.toBeChecked()` naming what this same test typed passes on its first poll whether or not the
+  write landed, so the rule steps straight over it — assert the round trip after a real wait, never
+  as one. Both instances that reached CI failed dozens of lines away from the cause
+  ([docs/agents/repo-checks.md](repo-checks.md)).
+- **An absence assertion pairs with a positive query.** A locator naming a string nothing renders
+  any more satisfies `.toHaveCount(0)` for the wrong reason, so keep the same string queried
+  positively somewhere in the spec — that pairing is the only thing that proves the name still
+  matches anything. It is a convention, not a guard: the rule was written and swept, and it flags
+  98 lines across 46 of the 112 files here, so it is not live (#1403, counts in
+  [docs/agents/repo-checks.md](repo-checks.md)).
+- **A failing or flaky test is part of the work, even when unrelated to your change.** Never skip
+  it, widen a timeout, or leave it red. Search open PRs first for a fix already in flight on the same
+  spec.
+- **Screenshots are full-size and unfiltered; bound the *page*, not the capture.** A surface that
+  screenshots enormous is telling you the page is unbounded, and the fix is pagination (or a default
+  range) in the product — never a `?filter=` in the spec that shrinks the picture. Narrowing a
+  capture to make it cheap silently narrows what it can catch; the orders index was found this way:
+  323 seeded orders, no pager, no baseline at all.
+- **A panel that only renders when something has gone wrong** is photographed through
+  `/api/test/seed-trouble-states`, never by seeding the failure into the demo shop. Add the state to
+  `src/app/api/test/seed-trouble-states/route.ts` and a capture beside the surface's calm one.
+- **Route coverage**: every `src/app/**/page.tsx` route is listed in `scripts/route-coverage.json`
+  with the specs and `e2e/visual.spec.ts` captures that cover it, or a written `exempt` reason. The
+  lists are hand-maintained (a spec usually *clicks* its way to a route); `--write` rewrites only
+  mechanical facts, `--absorb` records a merge-in loss, `--report` prints the table. The `a11y`
+  column is what `pnpm agent:health` reads for the axe share.
+- **Fixtures**: prefer `staffContext.newPage()` and the exported fixtures; `pnpm check:e2e-fixtures`
+  flags a hand-built context.
+- **The clock is frozen at the harness boundary** (`TEST_FROZEN_CLOCK`); never stabilise a capture
+  by masking moving text.
+- **Visual diffs**: baselines live in S3 keyed by git commit (ADR
+  20260729-reg-suit-visual-regression) — nothing to regenerate locally. "Approving" an intentional
+  change means saying in the PR *why* the pixels moved and merging. Baselines are rendered on CI's
+  Linux runners; on macOS nearly everything reads as changed — triage from the CI report.
+- **Every important flow gets a spec, every important surface a capture** — if unsure whether
+  something qualifies, it does.
+
+### The scripts rules
+
+For `scripts/`, `.claude/` and `.github/`; the rules themselves are in `.claude/rules/scripts.md`.
+
+- **Every subprocess is bounded.** A synchronous `spawnSync`/`execFileSync` in `scripts/` goes
+  through `runBounded`/`readBounded` in `scripts/subprocess.mjs`, with a ceiling from
+  `SUBPROCESS_TIMEOUTS` — an unbounded one is how `pnpm check` hung permanently on a cloud runner
+  (2026-08-14). Argument arrays, never a shell string, when any argument comes from a payload.
+- **A hook fails open.** Every script wired in `.claude/settings.json` exits 0 on an unparseable
+  payload, a missing binary, a timeout, or its own bug: a hook that blocks a session because it
+  broke is worse than the thing it prevents. A `Stop` hook honours `stop_hook_active` so it cannot
+  loop a session against itself. A refusal names the correct form, because a guard that only says
+  no gets routed around. The full roster and each hook's reasoning:
+  [docs/agents/session-hooks.md](session-hooks.md). Hooks load at session start,
+  so a change to one needs a restart to take effect.
+- **A guard gets a test beside it.** `scripts/check-<name>.mjs` ships with
+  `scripts/check-<name>.test.mjs`, and a hook with `scripts/<name>.test.mjs`; `pnpm agent:health`
+  lists the ones without. The "leaves alone" cases carry at least as much weight as the refusals.
+- **A guard is spawned by `scripts/check-repo.mjs`** or it never runs; `pnpm check:agents` fails on
+  one that is not in the table, and on the `check:repo` row in `AGENTS.md` naming the wrong count.
+- **Ratchets turn one way.** `--write` banks a fall and refuses a rise; `--absorb "<why>"` records a
+  deliberate rise with its reason in the baseline diff. `copy`, `domain-strings`, `tokens`,
+  `architecture`, `type-ramp`, `voice`, `logical-properties`, `bundle-reach`, `route-coverage`,
+  `locale` and `context-budget` all work this way. `locale`'s count is the one that will never
+  reach zero — an acronym and a course name are the same word in Spanish, so read it as
+  "unexamined" and name a deliberate one in `DELIBERATELY_IDENTICAL`
+  ([docs/agents/repo-checks.md](repo-checks.md)).
+- **The agent layer is checked** (`scripts/check-agents.mjs`): every skill has frontmatter whose
+  `name` matches its directory and a `description` (the only part every session pays for); every
+  skill is in `.claude/skills/README.md` and mentioned in `AGENTS.md`; every reviewer agent is in
+  the index; every `task:context` path exists; every backticked repo path in `AGENTS.md` and in
+  `.claude/rules/*.md` exists; every allowlist entry and every hook command in
+  `.claude/settings.json` names a real script or package script; nothing in `.mcp.json` launches
+  through a package manager.
+- **Always-loaded context is budgeted** (`scripts/check-context-budget.mjs`): `AGENTS.md`,
+  `CLAUDE.md`, any `.claude/rules/*.md` **without** `paths:` frontmatter, and every skill's and
+  agent's `description:` line. A path-scoped rule is paid for only by the session that reads a
+  matching file, which is why a rule that only matters under one directory goes in `.claude/rules/`
+  with `paths:` and never in `AGENTS.md`. The fix for a red budget is to move the long half into
+  `docs/` or a scoped rule and leave a pointer — never to compress the prose.
+- **CI** (`.github/workflows/ci.yml`) shards the unit suite four ways and runs the whole e2e and
+  visual suites; a local session runs the focused forms only. `scripts/check-ci-change-detection.mjs`
+  pins how CI decides what to run — read
+  [docs/agents/repo-checks.md](repo-checks.md) before touching it. Every layer of
+  a stack runs the whole gate (ADR 20261003-every-stack-layer-runs-ci).
+- **Skills** state *how*, docs state *what and why*; a skill that contradicts an ADR or the code is
+  stale and is fixed in the same change. Keep a `description:` specific about its trigger, then
+  short — the body is where length belongs. A reviewer agent lists only the tools it needs.
+- **Text a human will copy is written unwrapped** — one line per paragraph — in a script's output as
+  in a doc.
+
+### The i18n rules
+
+For `src/i18n/`; the rules themselves are in `.claude/rules/i18n.md`.
+
+- **Bundles**: diver messages in `locales/<locale>/diver.json` (`diverTranslator`,
+  `DiverIntlProvider` + `useTranslations()` for Client Components); staff messages in
+  `locales/<locale>/staff/<namespace>.json` — one file per area, composed by `staff-messages.ts`
+  (ADR 20260807-per-area-staff-bundles). A new area is a new file plus one import there, so parallel
+  branches stop colliding in one 3,500-line bundle. `staffTranslator` is **server-side only** —
+  staff Client Components take words as props.
+- **Every key lands in every locale in the same change.** There is no "translate it later": a key
+  missing from one locale fails `pnpm check:locale`, which also refuses a literal locale in the
+  app. Deleting a key means all three edits at once: the call site, `en-US`, and `es-ES`.
+- **Spanish**: read `src/i18n/locales/es-ES/README.md` first — terminology ("centro" for the shop
+  entity, the retail-vs-entity split) and LatAm register are already decided.
+- **Locale resolution** happens in one order: the reader's own choice (the
+  `diveday_locale` cookie, `src/i18n/locale-cookie.ts`) → `Accept-Language` →
+  `shops.default_locale`. The switcher is three doors onto one Server Action
+  (`src/app/actions/set-locale.ts`), each language named in itself via `localeEndonym`, never from
+  a bundle. Still **no `[locale]` route**: a locale in the path would fork every public URL and every
+  canonical link (ADR 20260812-reader-chosen-language).
+- **Provider coverage**: any diver Client Component that reads copy needs `DiverIntlProvider` above
+  it, with a `namespaces` list that is not short; `src/i18n/provider-coverage.test.ts` fails
+  otherwise, because the failure mode is a blank client-only 200.
+- **Voice**: no message bundle reads as machine-written — a prose em-dash, an intensifier
+  (*actually*, *genuinely*, *simply*), a "Here's how" lead-in, a "not just X" contrast or a "No X.
+  No Y." run fails `pnpm check:voice`, per locale. So does a British spelling in English
+  (*colour*, *centre*, *cancelled*, *grey*): DiveDay spells American (H-95). The reasoning and the before/after table are in
+  [docs/design/brand.md](../design/brand.md)'s "What gives us away".
+- **The apostrophe is `’` (U+2019)**, in every locale and in a route's `metadata` literals. A
+  straight `'` fails `pnpm check:voice` unless it is ICU quoting — `'{depth18}'`, `'{{1}}'` — where
+  the straight character is what makes the span a literal and a curly one would print. Both spellings
+  render identically and no reader notices; Playwright matches them as different strings and every
+  e2e spec hard-codes its English, which is what made this worth a guard (issue #1367).
+- **Vocabulary the guards refuse**: Archive/Unarchive/Deactivate/soft-delete in any key or value
+  (`scripts/check-soft-delete.mjs`, ADR 20260820-every-delete-is-soft; each locale states its own
+  word list); "shop" where the entity word is decided otherwise (`scripts/check-shop-word.mjs`);
+  ICU plurals that do not cover every category (`scripts/check-icu-plurals.mjs`).
+- **Words that are DiveDay's, not a shop's**: the marine-life field guide (`marineLife.*` in
+  `diver.json`, resolved by `marine-life-labels.ts`), readiness words (`readiness-labels.ts`),
+  dive-site difficulty (`dive-site-labels.ts`), buddy-team words (`buddy-labels.ts`), gear words
+  (`gear-labels.ts`). Never spell any of these inline in a surface.
+- **Every sentence earns its place.** A caption restating its heading, an explanation of which rule
+  won, an apology for a refusal — deleted, not shortened (the **copy-restraint** skill).
+- Waiver and medical wording stays English pending H-01/H-03 — its date formatting is still
+  locale-negotiated.
