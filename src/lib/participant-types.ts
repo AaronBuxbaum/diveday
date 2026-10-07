@@ -263,6 +263,33 @@ export function rentsKind(type: ParticipantType | null | undefined, kind: string
   return false;
 }
 
+/**
+ * The shop's rental catalog as one seat's fit form offers it: everything for a
+ * diver, the surface kit for a snorkeler (so no nitrox and no tanks), nothing
+ * for a rider.
+ */
+export function seatRentalItems(
+  type: ParticipantType | null | undefined,
+  rentalItems: readonly string[],
+): string[] {
+  return rentalItems.filter((kind) => rentsKind(type, kind));
+}
+
+/**
+ * A fit form's answer for one piece, read for the seat that posted it: "on" or
+ * not for a piece this seat may rent, and nothing at all for one it may not,
+ * since the form never showed it. Nothing is what `saveRentalFit` reads as
+ * "leave the stored answer alone", so one snorkel trip never rewrites the
+ * person's own dive kit.
+ */
+export function seatRentalAnswer(
+  type: ParticipantType | null | undefined,
+  kind: string,
+  posted: string | undefined,
+): boolean | undefined {
+  return rentsKind(type, kind) ? posted === "on" : undefined;
+}
+
 /** Whether a seat of this type gets a rental step at all: a rider does not. */
 export function rentsGear(type: ParticipantType | null | undefined): boolean {
   return type !== "rider";

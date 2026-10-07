@@ -40,6 +40,7 @@ import { DIVE_RECENCY_BANDS } from "@/lib/dive-recency";
 import { log } from "@/lib/log";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { publicAppUrl, recipientLocale } from "@/lib/notifications";
+import { seatRentalAnswer } from "@/lib/participant-types";
 import { checkRateLimit, RATE_LIMITS, rateLimitKey } from "@/lib/rate-limit";
 import { RE_ENTRY_ASKS, reEntryOffersFor } from "@/lib/re-entry";
 import { nitroxAvailableOn, RENTAL_FIT_TEXT_LIMITS, suitFlagsFromPost } from "@/lib/rentals";
@@ -283,6 +284,9 @@ export async function saveFitFromReady(token: string, formData: FormData) {
   refuseWhileHeld(token, ctx.data);
   const parsed = fitSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) redirect(`${base(token)}?error=fit`);
+  // A snorkeler's form shows surface kit only (ADR 20261007-participant-types).
+  const said = (kind: string, posted: string | undefined) =>
+    seatRentalAnswer(ctx.data.participantType, kind, posted);
   const saved = await saveRentalFit(ctx.db, {
     shopId: ctx.data.shop.id,
     personId: ctx.data.person.id,
@@ -291,18 +295,18 @@ export async function saveFitFromReady(token: string, formData: FormData) {
     // `saveRentalFit` re-derives the offered set and leaves those columns alone
     // rather than reading the silence as "no" (issue #1755) — the same posture
     // the nitrox request takes below, and the mirror of the absent-size rule.
-    rentsBcd: parsed.data.bcd === "on",
-    rentsRegulator: parsed.data.regulator === "on",
+    rentsBcd: said("bcd", parsed.data.bcd),
+    rentsRegulator: said("regulator", parsed.data.regulator),
     // Wetsuit, drysuit and "I dive dry" as one answer, so a diver can say they
     // are in their own drysuit and can never be packed two suits (H-78).
     ...suitFlagsFromPost(parsed.data.suit),
-    rentsMaskFins: parsed.data.maskFins === "on",
-    rentsWeights: parsed.data.weights === "on",
-    rentsDiveComputer: parsed.data.diveComputer === "on",
-    rentsGopro: parsed.data.gopro === "on",
-    rentsHoodGloves: parsed.data.hoodGloves === "on",
-    rentsTorch: parsed.data.torch === "on",
-    rentsSmb: parsed.data.smb === "on",
+    rentsMaskFins: said("mask_fins", parsed.data.maskFins),
+    rentsWeights: said("weights", parsed.data.weights),
+    rentsDiveComputer: said("dive_computer", parsed.data.diveComputer),
+    rentsGopro: said("gopro", parsed.data.gopro),
+    rentsHoodGloves: said("hood_gloves", parsed.data.hoodGloves),
+    rentsTorch: said("torch", parsed.data.torch),
+    rentsSmb: said("smb", parsed.data.smb),
     bcdSize: parsed.data.bcdSize,
     wetsuitSize: parsed.data.wetsuitSize,
     // On the drysuit grid, not the wetsuit's (issue 1414) — one size, and no boot

@@ -19,6 +19,8 @@ import {
   SNORKELER_REGISTER_KINDS,
   SNORKELER_RENTABLE_KINDS,
   seatRefusal,
+  seatRentalAnswer,
+  seatRentalItems,
   typeChangeRefusal,
 } from "./participant-types";
 
@@ -196,5 +198,28 @@ describe("typeChangedDeskEventKind", () => {
     expect(typeChangedDeskEventKind("diver")).toBe("now_diving");
     expect(typeChangedDeskEventKind("snorkeler")).toBe("now_snorkeling");
     expect(typeChangedDeskEventKind("rider")).toBe("now_riding");
+  });
+});
+
+describe("seatRentalAnswer", () => {
+  it("leaves a piece the seat cannot rent unsaid, so a snorkel trip keeps the dive kit", () => {
+    // Regression (dive-domain review, PR #2224): a snorkeler's fit form hides
+    // the BCD, and its silence must not be stored as "does not rent a BCD".
+    expect(seatRentalAnswer("snorkeler", "bcd", undefined)).toBeUndefined();
+    expect(seatRentalAnswer("snorkeler", "mask_fins", undefined)).toBe(false);
+    expect(seatRentalAnswer("snorkeler", "mask_fins", "on")).toBe(true);
+    expect(seatRentalAnswer("diver", "bcd", undefined)).toBe(false);
+    expect(seatRentalAnswer("rider", "mask_fins", "on")).toBeUndefined();
+  });
+});
+
+describe("seatRentalItems", () => {
+  it("offers a snorkeler surface kit only, never nitrox or a BCD, and a rider nothing", () => {
+    // Regression (dive-domain review, PR #2224): trip prep showed a snorkeler
+    // the whole dive catalog, nitrox and tanks included.
+    const catalog = ["bcd", "regulator", "wetsuit", "mask_fins", "nitrox", "gopro"];
+    expect(seatRentalItems("diver", catalog)).toEqual(catalog);
+    expect(seatRentalItems("snorkeler", catalog)).toEqual(["wetsuit", "mask_fins", "gopro"]);
+    expect(seatRentalItems("rider", catalog)).toEqual([]);
   });
 });
