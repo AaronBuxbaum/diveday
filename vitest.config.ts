@@ -86,10 +86,12 @@ export default defineConfig({
     // Do not reach for `isolate: false` to win the time back — module mocks are
     // per-file here, and a shared registry across files is a different bug.
     pool: "forks",
-    // `--shard=i/n` (CI's four unit shards) deals files by estimated cost, not
-    // by count: a db-backed file costs a PGlite hydration per test and a pure
-    // one costs almost nothing, and an equal-count deal left the slowest shard
-    // a minute and a half behind the fastest. See src/test/shard-sequencer.ts.
+    // `--shard=i/n` (CI's four unit shards) deals files by cost, not by count:
+    // a db-backed file costs a PGlite hydration per test and a pure one costs
+    // almost nothing, and an equal-count deal left the slowest shard a minute
+    // and a half behind the fastest. The cost is each file's recorded CI
+    // duration from `scripts/test-durations.json` when it has one, and a
+    // source estimate otherwise. See src/test/shard-sequencer.ts.
     sequence: { sequencer: CostWeightedSequencer },
     // `pnpm test:changed` (and `vitest related`) selects tests by walking the
     // *import* graph, and the Drizzle migrations are never imported — they are
