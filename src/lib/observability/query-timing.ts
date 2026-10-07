@@ -19,11 +19,11 @@ import { log } from "@/lib/log";
  * 1. **An explicit scope**, {@link withQueryStats}: an `AsyncLocalStorage`
  *    store, for a test or a script that wants the cost of one call path.
  * 2. **The render pass**: a React `cache()`d record, one per React request
- *    scope. Not one per HTTP request — under Cache Components the staff shell
- *    and the page beside it render in separate passes (measured on
- *    `inHorizonReadiness`, `src/db/blockers.ts`, issue #1121), so each pass
- *    reports its own line. Two lines for one navigation is the honest shape of
- *    what the server did; summing them is a query, not a code change.
+ *    scope, which is not always one per HTTP request: issue #1121 measured
+ *    the staff shell and the page beside it rendering in separate passes, and
+ *    on 2026-10-07 (Next 16.4) they shared one (`src/db/blockers.ts`). Either
+ *    way each pass reports its own line, so a navigation that logs two lines
+ *    rendered in two passes - which is itself worth knowing.
  *
  * Outside both — a cron, a route handler, a server action, a test that did not
  * ask — React's `cache()` calls straight through, so the count lands on a

@@ -3,7 +3,7 @@ import { after } from "next/server";
 import { loadActiveStaffRoles, loadActiveStaffRolesByPerson } from "@/db/authz";
 import type { AppDb } from "@/db/client";
 import { getDb } from "@/db/client";
-import { getShopById } from "@/db/shops";
+import { type getShopById, shopByIdCached } from "@/db/shops";
 import { auth, type DiveDaySession } from "@/lib/auth";
 import { isStaff } from "@/lib/authz";
 import { reportRenderQueries } from "@/lib/observability/query-timing";
@@ -172,7 +172,8 @@ export async function requireShopSurface(
 ): Promise<ShopSurface> {
   const session = await requireStaffSession();
   const db = await getDb();
-  const shop = await getShopById(db, session.user.shopId);
+  // Once per render: the shop home and the shell ask for the same row.
+  const shop = await shopByIdCached(db, session.user.shopId);
   // Two conditions, one outcome: a session pointing at a shop row that is gone,
   // and a URL naming a shop that is not this session's. Both are "no such page
   // for you", and neither may fall through to the read below.

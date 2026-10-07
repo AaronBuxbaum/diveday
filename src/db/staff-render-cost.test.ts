@@ -9,7 +9,7 @@ import { countGearItems } from "@/db/gear";
 import { people, personRoles, trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { getShopStripeAccount } from "@/db/stripe-accounts";
-import { getTodayWork, todayNextDepartureTripId } from "@/db/today";
+import { getShopDayDepartures, getTodayWork, todayNextDepartureTripId } from "@/db/today";
 import { getTripGuests } from "@/db/trips-guests";
 import { liveTrip } from "@/db/trips-live";
 import { getTripOverview } from "@/db/trips-overview";
@@ -123,18 +123,7 @@ describe("what a staff render sends", () => {
         true,
         evidence,
       );
-      await getTodayWork(
-        db,
-        shop.id,
-        shop.slug,
-        shop.timezone,
-        tomorrow,
-        undefined,
-        undefined,
-        undefined,
-        false,
-        evidence,
-      );
+      await getShopDayDepartures(db, shop.id, shop.timezone, tomorrow, evidence);
       await getShopStripeAccount(db, shop.id);
     });
     expect(report("today (readiness + today + tomorrow)", stats.queries)).toBeLessThanOrEqual(
@@ -161,5 +150,5 @@ describe("what a staff render sends", () => {
 /** What each render sends today: lower one when a change saves a statement, never raise it quietly. */
 const GATE_CEILING = 4;
 const CHROME_CEILING = 17;
-const TODAY_CEILING = 93;
+const TODAY_CEILING = 60;
 const TRIP_CEILING = 69;
