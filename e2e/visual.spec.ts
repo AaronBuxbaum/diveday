@@ -2599,9 +2599,9 @@ for (const scheme of ["light", "dark"] as const) {
       /**
        * **"Joining as", with a price per type** (ADR 20261007-participant-types).
        * A departure that sells snorkeler and rider seats asks each person what
-       * they are doing, and the hero states each type's price. Seeded through
-       * `/api/test/seed-trouble-states?mixedBoat=1`, which names the two prices
-       * on a real departure through `setTripParticipantTerms`.
+       * they are doing, and the hero states each type's price. Today's reef
+       * boat, through `/api/test/seed-trouble-states?mixedBoat=1`, which names
+       * the two prices unless the demo seed already has.
        */
       test(`the public trip page offers a snorkeler and a rider seat (${scheme})`, async ({
         page,
@@ -4753,9 +4753,10 @@ for (const scheme of ["light", "dark"] as const) {
       /**
        * **A snorkeler and a rider aboard** (ADR 20261007-participant-types):
        * the roster's type badge, the Details row that sets their prices, the
-       * manifest head count's split and the roll-call badge. Seeded through
-       * `/api/test/seed-trouble-states?mixedBoat=1` (the demo seed does not
-       * carry one yet), which seats both through `seatDiver`.
+       * manifest head count's split and the roll-call badge, on today's reef
+       * boat. `/api/test/seed-trouble-states?mixedBoat=1` seats Mara and Owen
+       * Quint there through `seatDiver` unless the demo seed already has, so
+       * the capture reads the same on every layer of the stack.
        */
       test(`a departure carrying a snorkeler and a rider (${scheme})`, async ({
         page,
@@ -4774,6 +4775,7 @@ for (const scheme of ["light", "dark"] as const) {
           page
             .locator('#roster li[id^="booking-"]')
             .filter({ hasText: mixedBoat.rider })
+            .first()
             .getByText("Rider", { exact: true }),
         ).toBeVisible();
         await capture(page, "trip-roster-participant-types", scheme);
