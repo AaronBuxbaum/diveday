@@ -84,6 +84,8 @@ describe("the shared readiness pass", () => {
     const own = await inHorizonReadiness(db, shop.id, now);
     expect(shared.trips.map((trip) => trip.id)).toEqual(own.trips.map((trip) => trip.id));
     expect([...shared.readinessByTrip.keys()]).toEqual([...own.readinessByTrip.keys()]);
-    expect((await countBlockedDiversNextBoatDay(db, shop.id, shop.timezone, now)).total).toBeGreaterThanOrEqual(0);
+    expect(
+      (await countBlockedDiversNextBoatDay(db, shop.id, shop.timezone, now)).total,
+    ).toBeGreaterThanOrEqual(0);
   });
 });

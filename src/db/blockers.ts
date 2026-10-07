@@ -174,3 +174,22 @@ export function blockedOnNextBoatDay(
   }
   return { day: sailsToday ? "today" : "tomorrow", onDay, aboard, total: onDay + aboard };
 }
+
+/**
+ * The shop home's summary sentence's two blocked figures, from the badge's own
+ * derivation ({@link blockedOnNextBoatDay}) over the same evidence and the same
+ * boats-out read: `blocked` is today's cards while a boat is still to sail plus
+ * divers blocked aboard a boat out; `blockedTomorrow` is tomorrow's cards once
+ * today's boats are all away.
+ */
+export function daySummaryBlocked(
+  evidence: Pick<HorizonReadinessEvidence, "trips" | "readinessByTrip">,
+  timeZone: string,
+  now: Date,
+  aboard: number,
+): { blocked: number; blockedTomorrow: number } {
+  const next = blockedOnNextBoatDay(evidence, timeZone, now, aboard);
+  return next.day === "today"
+    ? { blocked: next.total, blockedTomorrow: 0 }
+    : { blocked: next.aboard, blockedTomorrow: next.onDay };
+}

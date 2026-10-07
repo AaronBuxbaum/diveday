@@ -159,6 +159,9 @@ describe("what a staff render sends", () => {
 
 /** What each render sends today: lower one when a change saves a statement, never raise it quietly. */
 const GATE_CEILING = 4;
-const CHROME_CEILING = 17;
+// 17 → 19: the Today badge also counts divers blocked aboard a boat still out
+// past the horizon (`countBlockedDiversNextBoatDay` → `blockedAboardOnBoatsOut`,
+// UX audit 2026-10-07 item 1): two statements over the boats still out.
+const CHROME_CEILING = 19;
 const TODAY_CEILING = 60;
 const TRIP_CEILING = 49;

@@ -1650,6 +1650,11 @@ export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpin
   };
 }
 
+/** Rows a staffer could still act on before a boat leaves. */
+export function pressingRows(rows: readonly TodayAction[]): number {
+  return rows.filter((row) => ACTION_KIND_META[row.kind].tone !== "neutral").length;
+}
+
 /** Every row the spine holds, wherever it filed. */
 export function spineJobCount(spine: DaySpine): number {
   return (
