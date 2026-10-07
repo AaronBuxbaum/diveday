@@ -13,6 +13,7 @@ import { getShopDayDepartures, getTodayWork, todayNextDepartureTripId } from "@/
 import { getTripGuests } from "@/db/trips-guests";
 import { liveTrip } from "@/db/trips-live";
 import { getTripOverview } from "@/db/trips-overview";
+import { loadTripSharedReads } from "@/db/trips-shared-reads";
 import { nowDate } from "@/lib/clock";
 import { queryTimingLogger, withQueryStats } from "@/lib/observability/query-timing";
 import { seededShopContext } from "@/test/db";
@@ -140,9 +141,13 @@ describe("what a staff render sends", () => {
       .orderBy(asc(trips.startsAt))
       .limit(1);
     if (!trip) throw new Error("the seeded shop has no upcoming departure");
-    const { stats } = await withQueryStats(() =>
-      Promise.all([getTripOverview(db, shop, trip.id, ownerId), getTripGuests(db, shop, trip.id)]),
-    );
+    const { stats } = await withQueryStats(() => {
+      const shared = loadTripSharedReads(db, shop.id, trip.id);
+      return Promise.all([
+        getTripOverview(db, shop, trip.id, ownerId, undefined, shared),
+        getTripGuests(db, shop, trip.id, {}, shared),
+      ]);
+    });
     expect(report("trip (overview + guests)", stats.queries)).toBeLessThanOrEqual(TRIP_CEILING);
   });
 });
@@ -151,4 +156,4 @@ describe("what a staff render sends", () => {
 const GATE_CEILING = 4;
 const CHROME_CEILING = 17;
 const TODAY_CEILING = 60;
-const TRIP_CEILING = 69;
+const TRIP_CEILING = 49;

@@ -21,6 +21,7 @@ import { listTripLenses } from "@/db/trip-lenses";
 import { latestTripStage } from "@/db/trip-stages";
 import { getTripGuests } from "@/db/trips-guests";
 import { getTripOverview } from "@/db/trips-overview";
+import { loadTripSharedReads } from "@/db/trips-shared-reads";
 import { languageNameIn } from "@/i18n/language-labels";
 import { CERTIFICATION_LEVEL_KEYS, SPECIALTY_KEYS } from "@/i18n/readiness-labels";
 import { requestLocale } from "@/i18n/request";
@@ -186,6 +187,7 @@ export default async function ManageTripPage({
   // Locale and the trip row both depend on `shop` but not on each other.
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
+  const sharedReads = loadTripSharedReads(db, shop.id, tripId);
   const [
     overview,
     guests,
@@ -197,8 +199,10 @@ export default async function ManageTripPage({
     mayRetireRefusal,
     canManageOrders,
   ] = await Promise.all([
-    getTripOverview(db, shop, tripId, session.user.personId),
-    getTripGuests(db, shop, tripId, { diverQuery: diverq, confirmName }),
+    // Both read the trip, its requirements, readiness and prep list; started
+    // once here and handed to each (`src/db/trips-shared-reads.ts`).
+    getTripOverview(db, shop, tripId, session.user.personId, undefined, sharedReads),
+    getTripGuests(db, shop, tripId, { diverQuery: diverq, confirmName }, sharedReads),
     // The fleet, for the Details form's hull select. Live hulls only: this is
     // a picker for what the departure will sail on, not a record of what it
     // did (`listBoatsForHistory` is the other one).
