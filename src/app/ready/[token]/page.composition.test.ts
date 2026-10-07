@@ -187,11 +187,14 @@ describe("the cancel door", () => {
  * from `sm` and under it on a phone.
  */
 describe("day-of details", () => {
+  // Its own component since the route grew past its line budget; the rules
+  // are the same, read where the forms now live.
+  const DAY_OF = readFileSync(join(__dirname, "_components/DayOfDetails.tsx"), "utf8");
   /** The source of the form posting to `action`, from `<form` to `</form>`. */
   const formFor = (action: string) => {
-    const at = positionOf(action);
-    const start = SOURCE.lastIndexOf("<form", at);
-    return SOURCE.slice(start, SOURCE.indexOf("</form>", at));
+    const at = DAY_OF.indexOf(action);
+    const start = DAY_OF.lastIndexOf("<form", at);
+    return DAY_OF.slice(start, DAY_OF.indexOf("</form>", at));
   };
 
   it("keeps who sees the intent answer with the question, above the next rule", () => {
@@ -200,7 +203,8 @@ describe("day-of details", () => {
     // next question (K-469).
     const intent = formFor("saveDiveIntentFromReady.bind(null, token)");
     expect(intent).toContain('t("booking.intent.audience")');
-    expect(countOf('t("booking.intent.audience")')).toBe(1);
+    expect(DAY_OF.split('t("booking.intent.audience")').length - 1).toBe(1);
+    expect(countOf('t("booking.intent.audience")')).toBe(0);
     // …and it describes the select it is about, not only sits near it.
     const id = /<p id="([^"]+)"[^>]*>\s*\{t\("booking\.intent\.audience"\)\}/.exec(intent)?.[1];
     expect(id).toBeTruthy();
