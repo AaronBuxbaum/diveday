@@ -119,7 +119,7 @@ console.log();
 
 // -------------------------------------------------------------- the wiring
 const settings = await readJson(".claude/settings.json");
-// Follows links: most skills are symlinked in from `.agents/skills/`.
+// Follows links: many skills are symlinked in from `.agents/skills/`.
 const skills = await listDirs(ROOT, ".claude/skills");
 const agents = (await readdir(path.join(ROOT, ".claude/agents"))).filter((f) => f.endsWith(".md"));
 

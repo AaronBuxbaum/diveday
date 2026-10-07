@@ -1,6 +1,6 @@
 ---
 name: verify
-description: Verify a change actually works before committing — run checks, exercise the app, look at UI changes. Use before every commit and whenever asked to confirm something works.
+description: Verify a change works before committing — checks, the running app, screenshots of changed UI. Use before every commit and whenever asked to confirm something works.
 ---
 
 # Verify a change

@@ -72,7 +72,7 @@ export function isPathScoped(contents) {
 }
 
 /**
- * The directories under `relative`, following symlinks. Most of `.claude/skills/` is links into
+ * The directories under `relative`, following symlinks. Many of `.claude/skills/` are links into
  * `.agents/skills/`, and a `Dirent` reports a link as a link, not a directory — filtering on
  * `isDirectory()` alone left every imported skill's description out of the count.
  */

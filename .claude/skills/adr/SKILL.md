@@ -1,6 +1,6 @@
 ---
 name: adr
-description: Record an architecture decision. Use when making any significant hard-to-reverse choice — new runtime dependency, storage, auth, external service, data-model spine, or when superseding a previous decision.
+description: Record an architecture decision. Use for any hard-to-reverse choice (runtime dependency, storage, auth, external service, data-model spine) or when superseding one.
 ---
 
 # Write an ADR

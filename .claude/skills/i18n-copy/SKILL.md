@@ -1,6 +1,6 @@
 ---
 name: i18n-copy
-description: Write user-facing copy so it goes through a message bundle, and extract existing hard-coded English. Use whenever adding or editing any string a person reads on screen, when `pnpm check:copy` fails, or when working through the copy baseline.
+description: Route on-screen copy through a message bundle and extract hard-coded English. Use when adding or editing any string a person reads, when `pnpm check:copy` fails, or when working the copy baseline.
 ---
 
 # Copy goes in a bundle, never in a component

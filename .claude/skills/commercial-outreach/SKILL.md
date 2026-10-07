@@ -1,6 +1,6 @@
 ---
 name: commercial-outreach
-description: Draft or update pilot/founding-shop outreach and sales collateral — the design-partner one-pager, case-study interview prep, DEMA/media pitch notes, or other prep material for a stakeholder conversation in the go-to-market plan. Use whenever a task touches docs/product/rollout.md's recruiting/outreach work, docs/product/stakeholders/commercial-and-industry.md, or asks for a pitch, pilot pitch, one-pager, cold-outreach message, or case-study prep.
+description: Draft pilot and founding-shop outreach — the design-partner one-pager, case-study prep, DEMA/media pitch notes, cold messages. Use when a task touches docs/product/rollout.md's recruiting or asks for a pitch.
 ---
 
 # Commercial outreach and sales collateral

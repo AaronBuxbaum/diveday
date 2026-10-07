@@ -1,6 +1,6 @@
 ---
 name: schema-change
-description: How to change the database schema (Drizzle/Postgres/PGlite) safely — new tables, columns, enums, constraints, indexes. Use whenever editing src/db/schema.ts or when a feature needs new persistent state.
+description: Change the database schema safely (Drizzle, PGlite) — tables, columns, enums, constraints, indexes. Use when editing src/db/schema.ts or when a feature needs new persistent state.
 ---
 
 # Change the schema

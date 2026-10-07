@@ -60,7 +60,7 @@ describe("what counts as always-loaded context", () => {
   });
 
   /**
-   * Most of `.claude/skills/` is symlinks into `.agents/skills/`. A `Dirent` reports a link
+   * Many of `.claude/skills/` are symlinks into `.agents/skills/`. A `Dirent` reports a link
    * as a link, so an `isDirectory()` filter skipped every imported skill and the budget read
    * about 500 words light.
    */
