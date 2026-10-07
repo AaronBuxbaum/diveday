@@ -862,7 +862,8 @@ describe("erasure coverage", () => {
         );
         if (!keyed) misdeclared.push(`${name}.${column.name} references no ${target}`);
       }
-      if (getTableName(scope.shopColumn.table) !== name || scope.shopColumn.name !== "shop_id") {
+      const ownColumn = getTableConfig(table).columns.includes(scope.shopColumn as never);
+      if (!ownColumn || scope.shopColumn.name !== "shop_id") {
         misdeclared.push(`${name} is shop-scoped by ${scope.shopColumn.name}`);
       }
     }
