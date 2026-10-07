@@ -194,7 +194,7 @@ test.describe("staffing", () => {
     // The gap is named, worded and actionable in the day it sails — not a
     // count in a sentence at the top of the page with nowhere to go.
     await expect(week.getByText(title).first()).toBeVisible();
-    await expect(week.getByText("Nobody in the water").first()).toBeVisible();
+    await expect(week.getByText("No divemaster").first()).toBeVisible();
     const assign = page.getByRole("link", { name: `Assign crew to ${title}` });
     await expect(assign).toBeVisible();
 
