@@ -235,7 +235,7 @@ export async function ShopChrome({ params }: { params: Promise<{ shopSlug: strin
           ux-personas-20260730-findings.md) — this jumps a keyboard user past it and the
           demo banner straight to the page's own content. Unconditional, like
           the manifest's own skip link. */}
-      <SkipLink href="#shop-main-content" label={staffT("shared.skipToContent")} />
+      <SkipLink href="#shop-main-content" label={staffT("shared.skipToContent")} level="shell" />
       {ownShop && showBanner && demoT ? (
         <DemoBanner
           switchRole={switchDemoRoleAction}

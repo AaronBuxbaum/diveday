@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { OfflineManifestView } from "@/components/OfflineManifestView";
+import OfflineManifestLoading from "./loading";
 
 // `instant = true`: navigating here paints immediately. Every request-scoped
 // read sits behind a `<Suspense>` boundary — this segment's `loading.tsx`, or
@@ -21,11 +22,12 @@ export const metadata: Metadata = {
  * `<Suspense>` boundary now (docs: "blocking-prerender-client-hook"). That
  * boundary is exactly what restores the original static-shell intent: the
  * page prerenders (there is no server data to make it dynamic), and the
- * client component streams/hydrates as before.
+ * client component streams/hydrates as before. The fallback is the segment's
+ * own skeleton rather than nothing, so the shell paints the page's shape.
  */
 export default function OfflineManifestPage() {
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<OfflineManifestLoading />}>
       <OfflineManifestView />
     </Suspense>
   );

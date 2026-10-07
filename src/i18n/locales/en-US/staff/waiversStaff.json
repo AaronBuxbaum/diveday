@@ -36,7 +36,7 @@
     "openRecord": "Open the diver record",
     "openTrip": "Open the departure",
     "integrityInvalid": "Integrity mismatch",
-    "integrityUnsealed": "Not sealed",
+    "integrityUnsealed": "Can’t be checked for changes",
     "medicalFlag": "Medical follow-up flagged",
     "flaggedAnswersHeading": "Flagged answers",
     "pagination": {

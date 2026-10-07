@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { FIGURE_CLASS, LEAD_TITLE_CLASS } from "@/components/ui/typography";
@@ -11,6 +12,7 @@ import {
   type PrepGrouping,
   type RentalFit,
 } from "@/lib/dive-prep";
+import type { GearServiceState } from "@/lib/gear";
 import { rendersFlush } from "@/test/button-flush";
 import { PrepBody } from "./PrepBody";
 
@@ -66,6 +68,7 @@ function prepFor(): TripPrep {
     freeByKind: new Map(),
     loadOut: null,
     assignmentRows: [],
+    proposals: new Map(),
   };
 }
 
@@ -266,12 +269,23 @@ function everyPanelPrep(): TripPrep {
       {
         diver: { bookingId: "b1", fullName: "Carmen Ruiz" } as never,
         assigned: [
-          { reservationId: "r1", kind: "bcd", size: "L", label: "BCD #2", checkedOutAt: null },
+          {
+            reservationId: "r1",
+            kind: "bcd",
+            size: "L",
+            label: "BCD #2",
+            checkedOutAt: null,
+            status: "in_service",
+            serviceNote: null,
+            serviceState: { state: "no_clock" },
+            serviceConcern: false,
+          },
         ] as never,
         wanted: [],
         handedOver: false,
       },
     ],
+    proposals: new Map(),
   };
 }
 
@@ -332,9 +346,219 @@ function spacingPx(element: Element | null | undefined, utility: string): number
  * layout, so each case pins the classes whose arithmetic the pixel probe
  * measured wrong; the probe re-measures the pixels.
  */
+/**
+ * **A proposal for every piece the register can answer** (UX audit
+ * 2026-10-07, item 9): a proposed row says which unit in words and offers
+ * Assign and Change, never a select; a row with no proposal keeps its picker
+ * open; and the section offers every proposal in one tap.
+ */
+describe("proposed units on the Gear tab", () => {
+  function withProposal(
+    options: { proposedState?: GearServiceState; otherConcern?: boolean } = {},
+  ): TripPrep {
+    const base = prepFor();
+    const unit = (id: string, label: string, size: string | null) => ({
+      id,
+      kind: "bcd" as const,
+      label,
+      size,
+      serviceState: { state: "no_clock" } as GearServiceState,
+      serviceConcern: false,
+    });
+    const proposed = {
+      ...unit("u3", "BCD #3", "L"),
+      ...(options.proposedState ? { serviceState: options.proposedState } : {}),
+    };
+    const other = { ...unit("u4", "BCD #4", "S"), serviceConcern: options.otherConcern ?? false };
+    return {
+      ...base,
+      gearFleetTotal: 4,
+      loadOut: { units: 0, divers: 2, stillToPick: 2, serviceFlagged: 0 },
+      freeByKind: new Map([["bcd", [proposed, other]]]),
+      assignmentRows: [
+        {
+          diver: { bookingId: "b1", fullName: "Carmen Ruiz" } as never,
+          assigned: [] as never,
+          wanted: [{ kind: "bcd", size: "L" }],
+          handedOver: false,
+        },
+        {
+          diver: { bookingId: "b2", fullName: "Theo Lindqvist" } as never,
+          assigned: [] as never,
+          wanted: [{ kind: "bcd", size: "XL" }],
+          handedOver: false,
+        },
+      ],
+      proposals: new Map([["b1:bcd", proposed]]),
+    };
+  }
+
+  it("says the proposed unit in words, and keeps the picker open only where there is none", () => {
+    renderPrep(withProposal());
+    expect(screen.getByText("Proposed: BCD #3 · L")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Assign" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Change" })).toBeInTheDocument();
+    // Theo's XL has no exact unit, so his row is the one select on the tab.
+    expect(screen.getAllByRole("combobox")).toHaveLength(1);
+  });
+
+  it("says a proposed unit's service is coming due, in the words the picker uses", () => {
+    renderPrep(
+      withProposal({
+        proposedState: { state: "due_soon", kind: "service", nextDueOn: "2026-10-20", daysLeft: 9 },
+      }),
+    );
+    expect(
+      screen.getByText(`Proposed: BCD #3 · L · ${t("gear.prep.optionServiceDueSoon")}`),
+    ).toBeInTheDocument();
+  });
+
+  it("labels a unit with an unanswered service concern in the picker, as it labels a lapsed clock", () => {
+    renderPrep(withProposal({ otherConcern: true }));
+    expect(
+      screen.getByRole("option", {
+        name: `BCD #4 · S · ${t("gear.prep.optionServiceConcern")}`,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("offers every proposal in one tap", () => {
+    renderPrep(withProposal());
+    expect(screen.getByRole("button", { name: "Assign the proposed unit" })).toBeInTheDocument();
+  });
+
+  it("proposes nothing on a departure that is not going", () => {
+    render(
+      <PrepBody
+        prep={withProposal()}
+        t={t}
+        locale="en-US"
+        shopSlug="blue-mantis"
+        tripId="t1"
+        rentalItems={["bcd"]}
+        notice={undefined}
+        grouping="item"
+        groupPath="/shop/blue-mantis/trips/t1"
+        cancelled
+        className={STACK}
+      />,
+    );
+    expect(screen.queryByText("Proposed: BCD #3 · L")).toBeNull();
+    expect(screen.queryByRole("button", { name: /proposed/ })).toBeNull();
+  });
+});
+
+/**
+ * **An assigned unit keeps its care labels** (second dive-domain review of the
+ * proposals). The picker said "service concern" or "service overdue" in the
+ * option; the assigned line says it too, in the same words, and the cart line
+ * counts it.
+ */
+describe("an assigned unit that needs care", () => {
+  function withAssigned(unit: {
+    serviceState: GearServiceState;
+    serviceConcern: boolean;
+    status?: "in_service" | "needs_service";
+    serviceNote?: string | null;
+  }) {
+    const base = prepFor();
+    return {
+      ...base,
+      gearFleetTotal: 4,
+      loadOut: { units: 1, divers: 1, stillToPick: 0, serviceFlagged: 1 },
+      assignmentRows: [
+        {
+          diver: { bookingId: "b1", fullName: "Carmen Ruiz" } as never,
+          assigned: [
+            {
+              reservationId: "r1",
+              gearItemId: "u2",
+              bookingId: "b1",
+              kind: "regulator",
+              size: null,
+              label: "Reg #2",
+              reservedFrom: "2026-07-21",
+              reservedUntil: "2026-07-21",
+              checkedOutAt: null,
+              status: "in_service",
+              serviceNote: null,
+              ...unit,
+            },
+          ] as never,
+          wanted: [],
+          handedOver: false,
+        },
+      ],
+    } satisfies TripPrep;
+  }
+
+  it("says an open service concern beside the unit", () => {
+    renderPrep(withAssigned({ serviceState: { state: "no_clock" }, serviceConcern: true }));
+    expect(screen.getByText("Reg #2")).toBeInTheDocument();
+    expect(screen.getByText(t("gear.prep.optionServiceConcern"))).toBeInTheDocument();
+  });
+
+  it("says a lapsed clock and a concern together, in the order the picker says them", () => {
+    renderPrep(
+      withAssigned({
+        serviceState: {
+          state: "overdue",
+          kind: "service",
+          nextDueOn: "2026-07-01",
+          daysOverdue: 20,
+        },
+        serviceConcern: true,
+      }),
+    );
+    expect(
+      screen.getByText(
+        `${t("gear.prep.optionServiceOverdue")} · ${t("gear.prep.optionServiceConcern")}`,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("says a unit pulled out of service since it was assigned, with the technician's note", () => {
+    renderPrep(
+      withAssigned({
+        serviceState: { state: "no_clock" },
+        serviceConcern: false,
+        status: "needs_service",
+        serviceNote: "Inflator sticks",
+      }),
+    );
+    expect(
+      screen.getByText(`${t("gear.status.needsService")} · Inflator sticks`),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/1 unit needs service/)).toBeInTheDocument();
+  });
+
+  it("says a pulled unit with no note in the status word alone", () => {
+    renderPrep(
+      withAssigned({
+        serviceState: { state: "no_clock" },
+        serviceConcern: false,
+        status: "needs_service",
+        serviceNote: null,
+      }),
+    );
+    expect(screen.getByText(t("gear.status.needsService"))).toBeInTheDocument();
+  });
+
+  it("says nothing more about a unit that needs nothing", () => {
+    renderPrep(withAssigned({ serviceState: { state: "no_clock" }, serviceConcern: false }));
+    expect(screen.queryByText(t("gear.prep.optionServiceConcern"))).toBeNull();
+    expect(screen.queryByText(t("gear.prep.optionServiceOverdue"))).toBeNull();
+  });
+
+  it("counts it on the cart line in words that fit a concern as well as a clock", () => {
+    renderPrep(withAssigned({ serviceState: { state: "no_clock" }, serviceConcern: true }));
+    expect(screen.getByText(/1 unit needs service/)).toBeInTheDocument();
+  });
+});
+
 describe("the packing list's geometry", () => {
   it("stacks its sections at the gap its page asks for, never a margin each (K-487)", () => {
-    const { container } = renderPrep(everyPanelPrep(), { notice: "gear-assigned" });
+    const { container } = renderPrep(everyPanelPrep(), { notice: "gear-released" });
     const stack = container.firstElementChild;
     expect(stack).toHaveClass(STACK);
     // Tanks, nitrox, sizes, staff fit, pickups, kit, banner, assignments.
@@ -474,7 +698,7 @@ describe("the packing list's geometry", () => {
   });
 
   it("titles every section at the one size a card's own title has (K-151)", () => {
-    const { container } = renderPrep(everyPanelPrep(), { notice: "gear-assigned" });
+    const { container } = renderPrep(everyPanelPrep(), { notice: "gear-released" });
     const headings = container.querySelectorAll("h2");
     // Tanks, nitrox, sizes, staff fit, pickups, kit, assignments.
     expect(headings).toHaveLength(7);

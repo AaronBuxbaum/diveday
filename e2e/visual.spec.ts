@@ -5827,8 +5827,8 @@ for (const scheme of ["light", "dark"] as const) {
        *
        * **Named for the departure, not for `/prep`, because that is where it
        * lands.** It starts on `/prep` like its siblings, but it is the only
-       * one here that *acts* — and slice 23c re-pointed `assignGearUnitAction`
-       * and its three siblings at the departure, since after the fold `/prep`
+       * one here that *acts* — and slice 23c re-pointed the Gear tab's
+       * redirecting forms at the departure, since after the fold `/prep`
        * is a page with no roster and no way back. The capture followed the
        * redirect and its baseline more than doubled (4053 → 8605 at 1280),
        * which is how the drift was found: a name that says `prep-` over a

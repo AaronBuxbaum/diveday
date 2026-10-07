@@ -10,6 +10,7 @@ import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
 import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
 import { formatTime } from "@/lib/format";
 import { type GearRegisterGroupName, gearRegisterGroup, gearServiceIsDue } from "@/lib/gear";
+import { sizedRentalKindOfGearKind } from "@/lib/rentals";
 
 /**
  * **The register as one story** — ADR 20260827-the-shops-shelves, the
@@ -253,11 +254,17 @@ function GearUnitRow({
   // insurer, never to a staffer at the rack.
   // A size on its own names itself: a bare "7" on a row of boots read as a
   // count or a tag, not a size.
+  // A unit with neither says which kind of nothing it is (UX audit
+  // 2026-10-07, item 32): a mask or a torch takes no size, and a blank beside
+  // its tag read as missing data; a BCD or a wetsuit does take one, and its
+  // blank *was* missing data, the one gap that keeps a unit out of a fit.
   const descriptor = item.brandModel
     ? [item.brandModel, item.size].filter(Boolean).join(" · ")
     : item.size
       ? t("gear.fleet.sizeOnly", { size: item.size })
-      : "";
+      : sizedRentalKindOfGearKind(item.kind)
+        ? t("gear.fleet.sizeNotSet")
+        : t("gear.fleet.noSize");
   const where = reservation
     ? whereFact({ reservation, group, t, locale, timeZone, todayLocal })
     : null;

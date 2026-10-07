@@ -25,7 +25,7 @@ import { at } from "./seed-clock";
  *     seal a record the moment they write it (an HMAC over the immutable signed
  *     metadata — src/lib/waiver-integrity.ts), so a live shop's recent evidence
  *     verifies. A seeded record never went through either, so *every* row read
- *     "Not sealed" and the integrity column had exactly one value.
+ *     "Can’t be checked for changes" and the integrity column had exactly one value.
  *
  * This scenario fixes both, and the fix is itself the story a demo should tell:
  * releases signed since the shop's account got the evidence seal carry a

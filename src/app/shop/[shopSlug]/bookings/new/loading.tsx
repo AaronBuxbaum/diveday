@@ -17,7 +17,16 @@ export default function NewBookingLoading() {
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
         <ShopPageHeaderSkeleton titleWidth="w-56" description={false} />
-        <div className="mt-8 h-3 w-36 rounded bg-surface-sunken" />
+        {/* The day control (`DepartureDayNav`): its label over the date box,
+            Show beside it. */}
+        <div className="mt-8 flex items-end gap-2">
+          <div>
+            <div className="h-4 w-10 rounded bg-surface-sunken" />
+            <div className="mt-1.5 h-11 w-44 rounded-lg bg-surface-sunken" />
+          </div>
+          <div className="h-11 w-20 rounded-lg bg-surface-sunken" />
+        </div>
+        <div className="mt-6 h-3 w-36 rounded bg-surface-sunken" />
         <div className="mt-4 space-y-6">
           {[0, 1].map((day) => (
             <div key={day}>

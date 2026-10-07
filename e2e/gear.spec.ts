@@ -14,11 +14,9 @@ import { e2eNow, seededTripId } from "./helpers";
  * Open the "Add a unit" disclosure at the foot of the register, once React
  * owns it.
  *
- * The register has one door onto this form now: the band's own `<summary>`.
- * The page header used to carry a second (`AddUnitLink`, a client handler
- * talking to a client listener) — two doors for one act, which is what the
- * design sweep took out; the empty-register card still uses that link, which
- * is why it is still here.
+ * The band's own `<summary>` is the form's frame; the page header's primary
+ * (`AddUnitLink`, a client handler talking to a client listener) opens the
+ * same band and has a test of its own below.
  *
  * The wait stays. `AddUnitDetails` owns `open` in React state, so a tap that
  * lands before hydration is a tap React has not seen, and the next render can
@@ -51,6 +49,20 @@ test.describe("staff", () => {
 
     await expect(page.getByRole("status").filter({ hasText: "On the register." })).toBeVisible();
     await expect(page.getByRole("link", { name: tag })).toBeVisible();
+  });
+
+  test("the header's Add a unit opens the form at the foot of the register", async ({ page }) => {
+    // The page's primary (UX audit 2026-10-07, item 31): an owner with a
+    // fleet should not have to read past every row to find the add form.
+    await page.goto("/shop/blue-mantis/gear");
+    const door = page.getByRole("button", { name: "Add a unit", exact: true }).first();
+    await expect(door).toHaveAttribute("data-hydrated", "true");
+    await expect(page.locator("details:has(> summary#add-unit)")).toHaveAttribute(
+      "data-hydrated",
+      "true",
+    );
+    await door.click();
+    await expect(page.getByLabel("Tag")).toBeVisible();
   });
 
   test("refuses a duplicate tag beside the field, not in a page banner", async ({ page }) => {
@@ -192,13 +204,19 @@ test.describe("staff", () => {
       page.getByRole("heading", { name: "Rental assignments", exact: true }),
     ).toBeVisible();
 
-    // **The pick is the act.** There is no "Assign" beside the select any more:
-    // one boat was 21 dropdowns and 21 confirming taps, at a counter, on the
+    // **The pick is the act.** There is no "Assign" beside the select: one
+    // boat was 21 dropdowns and 21 confirming taps, at a counter, on the
     // morning of a departure (issue #802). Choosing a unit commits it.
     //
-    // The first open picker on the page, whatever kind it offers, and its
-    // first real unit — a picker with no exact size match opens on a disabled
-    // "Pick a unit…" placeholder, so the choice is explicit.
+    // A proposed row holds its picker behind Change (UX audit 2026-10-07,
+    // item 9), so this opens the first one and picks from it — a staffer who
+    // knows better than the proposal. Its first real unit: the picker opens
+    // on a disabled "Pick a unit…" placeholder, so the choice is explicit.
+    const assignments = page.locator('section[aria-labelledby="assignments-heading"]');
+    const change = assignments.getByRole("button", { name: "Change" }).first();
+    await expect(change).toBeVisible();
+    await expect(change.locator("xpath=../../..")).toHaveAttribute("data-hydrated", "true");
+    await change.click();
     const firstSelect = page.locator("select[id^='assign-']").first();
     await firstSelect.waitFor();
     const firstUnit = firstSelect.locator("option:not([disabled])").first();
@@ -209,7 +227,6 @@ test.describe("staff", () => {
 
     // The settled state is the assignment appearing on the diver's row — no
     // page banner, because nothing navigated.
-    const assignments = page.locator('section[aria-labelledby="assignments-heading"]');
     await expect(assignments.getByText(suggestedTag, { exact: true })).toBeVisible();
     // Named rather than `getByRole("alert")`: Next's route announcer is a
     // permanently-mounted empty alert, as this file's own note at the tag
@@ -246,14 +263,15 @@ test.describe("staff", () => {
     // sentence it replaced never carried.
     await expect(assignments.getByText(/\d+ units? for \d+ divers?/)).toBeVisible();
 
-    // Assign one unit so there is a set to hand across, and remember its tag.
-    const picker = page.locator("select[id^='assign-']").first();
-    await picker.waitFor();
-    const option = picker.locator("option:not([disabled])").first();
-    const label = (await option.textContent()) ?? "";
+    // Assign one proposed unit in its one tap, so there is a set to hand
+    // across, and remember its tag (UX audit 2026-10-07, item 9).
+    const proposed = assignments.getByText(/^Proposed: /).first();
+    await expect(proposed).toBeVisible();
+    const label = ((await proposed.textContent()) ?? "").replace(/^Proposed: /, "");
     const tag = label.split(" · ")[0]?.trim() ?? "";
     expect(tag.length).toBeGreaterThan(0);
-    await picker.selectOption({ label });
+    await expect(proposed.locator("xpath=../..")).toHaveAttribute("data-hydrated", "true");
+    await proposed.locator("xpath=..").getByRole("button", { name: "Assign" }).click();
     await expect(assignments.getByText(tag, { exact: true })).toBeVisible();
 
     // One deliberate act per diver. The row it belongs to is the one holding
@@ -268,6 +286,26 @@ test.describe("staff", () => {
     await page.getByRole("link", { name: tag, exact: true }).first().click();
     await expect(page.getByRole("heading", { level: 1, name: tag })).toBeVisible();
     await expect(page.getByRole("button", { name: "Check out" })).toHaveCount(0);
+  });
+
+  /**
+   * **Every proposal in one tap** (UX audit 2026-10-07, item 9). The Gear tab
+   * was one "Pick a unit…" select per piece; it now proposes a unit for every
+   * piece the register can answer on its own, and the section confirms them
+   * all at once. What is left open afterwards is only what a person must fit.
+   */
+  test("assigns every proposed unit on the departure in one tap", async ({ page }) => {
+    const tripId = await seededTripId(page, "blue-mantis", "Wreck Trip — Spiegel Grove");
+    await page.goto(`/shop/blue-mantis/trips/${tripId}/prep`);
+    const assignments = page.locator('section[aria-labelledby="assignments-heading"]');
+    const assignAll = assignments.getByRole("button", {
+      name: /^Assign (all \d+ proposed units|the proposed unit)$/,
+    });
+    await expect(assignAll).toBeVisible();
+    await expect(assignAll.locator("xpath=..")).toHaveAttribute("data-hydrated", "true");
+    await assignAll.click();
+    await expect(assignments.getByText(/^Proposed: /)).toHaveCount(0);
+    await expect(assignAll).toHaveCount(0);
   });
 
   /**

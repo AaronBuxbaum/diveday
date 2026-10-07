@@ -12,7 +12,7 @@ import {
   returnTripGearSet,
 } from "@/db/gear";
 import { getShopById } from "@/db/shops";
-import { getTripWithBooked } from "@/db/trips";
+import { getTripWithBooked, screenGearPicks } from "@/db/trips";
 import { PREP_SECTION_ID } from "@/lib/element-id";
 import { GEAR_RETURN_OUTCOMES, tripReservationWindow } from "@/lib/gear";
 import { revalidateAndRedirect } from "@/lib/navigation";
@@ -30,8 +30,8 @@ import { type NoticeCodeOf, noticeUrl, shopPath } from "@/lib/staff-notices";
  * looks exactly like a dead link and fails nothing.
  *
  * The value type is a template over `NoticeCodeOf`, so each entry is pinned to
- * exactly one spelling: the domain layer says `unit_out_of_service` and the URL
- * must say `gear-unit-out-of-service`. A typo is a compile error rather than a
+ * exactly one spelling: the domain layer says `already_checked_out` and the URL
+ * must say `gear-already-checked-out`. A typo is a compile error rather than a
  * silent blank, and the literals are now greppable from the page that resolves
  * them.
  */
@@ -40,14 +40,6 @@ type GearRefusalOf<Outcome> =
 
 type GearNoticeTable<Reason extends string> = {
   [R in Reason]: `gear-${NoticeCodeOf<R>}`;
-};
-
-const RESERVE_GEAR_NOTICE: GearNoticeTable<GearRefusalOf<ReserveGearUnitOutcome>> = {
-  not_found: "gear-not-found",
-  booking_not_found: "gear-booking-not-found",
-  invalid_window: "gear-invalid-window",
-  unit_out_of_service: "gear-unit-out-of-service",
-  unit_unavailable: "gear-unit-unavailable",
 };
 
 const RESERVATION_ACTION_NOTICE: GearNoticeTable<GearRefusalOf<GearReservationActionOutcome>> = {
@@ -61,6 +53,7 @@ const assignSchema = z.object({
   tripId: z.uuid(),
   bookingId: z.uuid(),
   gearItemId: z.uuid(),
+  proposed: z.boolean().optional(),
 });
 
 /**
@@ -89,79 +82,54 @@ function packingListOf(shopSlug: string, tripId: string) {
 }
 
 /**
- * Assign one unit to one diver for this departure's whole window. The window
- * is derived from the trip on the server — never posted from the form — so a
- * stale tab cannot reserve last week's dates, and the exclusion constraint
- * stays the only arbiter of availability (ADR 20260815-minimal-gear-register).
- */
-export async function assignGearUnitAction(formData: FormData) {
-  const session = await requireStaffSession();
-  const parsed = assignSchema.safeParse(Object.fromEntries(formData));
-  if (!parsed.success) {
-    const gear = shopPath(session.user.shopSlug, "gear");
-    revalidateAndRedirect(gear, noticeUrl(gear, "invalid"));
-  }
-  const departure = departureOf(session.user.shopSlug, parsed.data.tripId);
-  const landing = packingListOf(session.user.shopSlug, parsed.data.tripId);
-
-  const db = await getDb();
-  const [shop, trip] = await Promise.all([
-    getShopById(db, session.user.shopId),
-    getTripWithBooked(db, session.user.shopId, parsed.data.tripId),
-  ]);
-  if (!shop || !trip) revalidateAndRedirect(departure, noticeUrl(landing, "gear-invalid"));
-
-  const window = tripReservationWindow(trip, shop.timezone);
-  const outcome = await reserveGearUnit(db, {
-    shopId: shop.id,
-    gearItemId: parsed.data.gearItemId,
-    bookingId: parsed.data.bookingId,
-    // Pins the booking to this departure: the window above is this trip's, so
-    // a stale tab pairing it with another trip's booking must be refused.
-    tripId: parsed.data.tripId,
-    reservedFrom: window.from,
-    reservedUntil: window.until,
-  });
-  revalidateAndRedirect(
-    departure,
-    noticeUrl(landing, outcome.ok ? "gear-assigned" : RESERVE_GEAR_NOTICE[outcome.reason]),
-  );
-}
-
-/**
  * What a row learns when it commits its own pick — a **code**, never a
  * sentence; the row picks the words (ADR 20260731-domain-layer-copy-leaks).
  */
 export type AssignGearUnitResult =
   | { ok: true }
-  | { ok: false; reason: GearRefusalOf<ReserveGearUnitOutcome> | "invalid" };
+  | {
+      ok: false;
+      /**
+       * `not_wanted`: the diver already holds one of that kind, or never asked
+       * for it. `needs_care`: a proposed unit gained a lapsed clock or an open
+       * service concern since the page loaded.
+       */
+      reason: GearRefusalOf<ReserveGearUnitOutcome> | "invalid" | "not_wanted" | "needs_care";
+    };
 
 /**
- * **The same assignment, answered rather than redirected.**
+ * **Assign one unit to one diver for this departure's whole window, answered
+ * rather than redirected.**
  *
- * `assignGearUnitAction` above redirects with a `?notice=`, which is right for
- * a form: one act, one page, one banner. This surface is twenty-one acts in a
- * row at a counter on the morning of a departure, and a redirect per row means
- * the page reloads under the staffer twenty-one times and says what happened
- * in a banner at the top, away from the row that did it.
+ * This surface is twenty-one acts in a row at a counter on the morning of a
+ * departure, and a redirect per row would reload the page under the staffer
+ * twenty-one times and say what happened in a banner at the top, away from
+ * the row that did it. So the picker commits on change and this hands the
+ * outcome back, letting the row revert its own select and say why on the spot
+ * (issue #802, docs/design/principles.md §10's "edit in place where safe").
  *
- * So the picker commits on change and this hands the outcome back, letting the
- * row revert its own select and say why on the spot (issue #802,
- * docs/design/principles.md §10's "edit in place where safe").
- *
- * **Every guard the redirecting twin has, in the same order** — the session,
- * the same parse, the shop and trip re-read by `session.user.shopId` rather
- * than by anything the client sent, the window computed here from the trip
- * row, and `tripId` pinned into the reservation so a stale tab cannot pair
- * this trip's window with another trip's booking. Availability is still never
- * pre-checked: the double-booking refusal arrives from the exclusion
+ * The guards, in order: the session, the parse, the shop and trip re-read by
+ * `session.user.shopId` rather than by anything the client sent, the pick held
+ * to what the departure still wants (`screenGearPicks`, the door a stale Gear
+ * tab's picker and proposed rows reach), the window computed here from the
+ * trip row (never posted from the form, so a stale tab cannot reserve last
+ * week's dates), and `tripId` pinned into the reservation so a stale tab
+ * cannot pair this trip's window with another trip's booking. Availability is
+ * never pre-checked: the double-booking refusal arrives from the exclusion
  * constraint inside `reserveGearUnit`, which is the only thing that can be
- * true at write time.
+ * true at write time (ADR 20260815-minimal-gear-register).
+ *
+ * `proposed` says the pick is the row's proposal rather than a unit a person
+ * chose from the picker. A proposed pick is also re-read for care, and one
+ * whose unit has since gained a lapsed clock or an open service concern is
+ * refused (`needs_care`). A hand pick may still knowingly choose a labeled
+ * unit: the dock decides (H-06).
  */
 export async function assignGearUnit(input: {
   tripId: string;
   bookingId: string;
   gearItemId: string;
+  proposed?: boolean;
 }): Promise<AssignGearUnitResult> {
   const session = await requireStaffSession();
   const parsed = assignSchema.safeParse(input);
@@ -172,7 +140,19 @@ export async function assignGearUnit(input: {
     getShopById(db, session.user.shopId),
     getTripWithBooked(db, session.user.shopId, parsed.data.tripId),
   ]);
-  if (!shop || !trip) return { ok: false, reason: "invalid" };
+  if (!shop || !trip || trip.status === "cancelled") return { ok: false, reason: "invalid" };
+  // The same screen "Assign all" uses (`screenGearPicks`): a stale tab cannot
+  // give a diver a second unit of a kind they already hold, nor reserve a
+  // proposed unit whose care changed since the page loaded.
+  const pick = {
+    bookingId: parsed.data.bookingId,
+    gearItemId: parsed.data.gearItemId,
+  };
+  const screened = await screenGearPicks(db, shop, parsed.data.tripId, [pick], {
+    proposed: parsed.data.proposed === true,
+  });
+  if (screened.needsCare > 0) return { ok: false, reason: "needs_care" };
+  if (screened.kept.length === 0) return { ok: false, reason: "not_wanted" };
 
   const window = tripReservationWindow(trip, shop.timezone);
   const outcome = await reserveGearUnit(db, {

@@ -150,7 +150,11 @@ export async function PublicShopChrome({ params }: { params: Promise<{ shopSlug:
     <>
       {/* Diver copy from the diver bundle: this shell never renders staff
           chrome, so the only staff words on it are the "you work here" bar. */}
-      <SkipLink href="#public-shop-main-content" label={t("shopChrome.skipToContent")} />
+      <SkipLink
+        href="#public-shop-main-content"
+        label={t("shopChrome.skipToContent")}
+        level="shell"
+      />
       {showBanner && shop ? (
         <DemoBanner
           switchRole={switchDemoRoleAction}
@@ -282,7 +286,11 @@ export async function PublicShopFooterSection({
 export function PublicShopChromePlaceholder({ label }: { label: DiverTranslator }) {
   return (
     <>
-      <SkipLink href="#public-shop-main-content" label={label("shopChrome.skipToContent")} />
+      <SkipLink
+        href="#public-shop-main-content"
+        label={label("shopChrome.skipToContent")}
+        level="shell"
+      />
       {/* Marked so a visual capture can tell this band from the real chrome.
           `capture()` (e2e/visual.spec.ts) waits for the page's own skeleton to
           leave `<main>`, and this bar is *above* `<main>` — so a shot fired

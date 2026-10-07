@@ -144,7 +144,11 @@ async function snapshotFocus(page: Page): Promise<FocusStop | null> {
       label: `${el.tagName.toLowerCase()}${role ? `[${role}]` : ""} "${name.slice(0, 60)}"${
         target ? ` → ${target}` : ""
       }`,
-      keyboardFocused: el.matches(":focus-visible"),
+      // A date box's calendar button is a Tab stop inside the box's own
+      // shadow tree: the box is :focus-within there, never :focus-visible.
+      // The ring check below still has to find a ring drawn on the box.
+      keyboardFocused:
+        el.matches(":focus-visible") || (el.matches(":focus-within") && !el.matches(":focus")),
       hasFocusRing:
         style.outlineStyle !== "none" && (Number.parseFloat(style.outlineWidth) || 0) > 0,
       perceivable:
@@ -356,8 +360,11 @@ test("a booking can be seated with the keyboard alone, and says so out loud", as
   // the first departure is checked, which is the part of "keyboard accessible"
   // no route-level scan covers.
   await beginWalk(page);
+  // The day control sits above the list (UX audit 2026-10-07, item 19): a
+  // date input is four stops in Chromium (three segments and its calendar
+  // button), then Show and Later days.
   await tabUntil(page, /→ \/shop\/blue-mantis\/bookings\/new\/./, {
-    limit: 40,
+    limit: 48,
     where: "departure picker",
   });
   await page.keyboard.press("Enter");

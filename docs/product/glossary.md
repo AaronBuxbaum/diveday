@@ -1968,6 +1968,28 @@ new domain concept, define it here in the same PR.
   comes home. Assigning informs the prep page; it gates nothing at boarding. The direct-person
   shape is modeled but deliberately has no staff form yet; booking-held rows remain prep-flow
   shape.
+- **Gear proposal** — the unit the Gear tab offers for a piece a diver wants, so staff confirm
+  instead of choose (`proposeRentalUnits`, `src/lib/gear-proposals.ts`). A proposal is never a
+  reservation and never a fit check, and it gates nothing: nothing is held until a staffer taps
+  Assign, and the exclusion constraint still decides availability at write time. A sized kind is
+  proposed only from units *exactly* the size on file; a sizeless kind only from units with no
+  size label, because a mask labelled "Kids" or "RX -4.0" was labelled for somebody. A drysuit
+  diver's fins and gloves, and a diver flagged for a staff fit, are never proposed. A unit whose
+  service clock has lapsed, or whose last return raised a **service concern** nobody has answered
+  since, is never proposed; a unit coming due soon is proposed only after every unit that is not,
+  and its line says so. A concern is answered by the kind's own care, dated after the unit came
+  home (on the same day, written after the return): a `service` for a kind that gets one, a visual
+  inspection, hydro test or O2 clean for a tank, and never a note for either. A soft good (a
+  wetsuit, a mask, fins) has no service and no check to write, so a dated note is its clearing
+  event, because a note is the only record those units ever get. A return with no outcome (the
+  register's quick Return) says nothing, and leaves an earlier concern standing. A regulator is
+  never proposed for a diver who asked for nitrox, because the register cannot yet say which
+  regulators are O2-clean. One unit is never proposed twice. Every pick, one row or "Assign all",
+  goes through `assignGearUnit` or `confirmProposedGearUnits`, and each is re-read against what
+  the departure still wants before it reserves (`screenGearPicks`), so a stale tab cannot give a
+  diver a second unit of a kind they hold. A proposed pick is also re-read for care at that
+  moment: one whose unit has since gained a lapsed clock or an open concern is refused and its row
+  left for a person. A unit picked by hand from the picker can still be a labeled one, knowingly.
 - **Gear register groups** — the three windows the register files every live unit into, and its
   answer to "where is my fleet right now": **Out** (a window that has begun — with a diver, or
   waiting on the desk for someone to collect it), **Overdue** (a window that has closed and nobody

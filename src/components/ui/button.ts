@@ -376,6 +376,18 @@ export const tapTargetLinkClass = "inline-flex min-h-11 items-center";
 export const proseLinkClass = "underline hover:text-primary";
 
 /**
+ * **A link inside a form's note, with a thumb's hit area** (UX audit
+ * 2026-10-07, item 38). The SMS consent note's "Privacy policy" was a 74×15
+ * target under a phone field a diver fills in standing on a dock. Vertical
+ * padding on an inline box grows what a tap can land on without moving a
+ * single line: the line box ignores it, so the note looks exactly as
+ * `proseLinkClass` draws it. 14px a side brings a 15–16px line to about 44.
+ * Only for a note's link, never running prose: in a paragraph the padding
+ * would reach into the lines above and below and take their taps.
+ */
+export const formNoteLinkClass = `${proseLinkClass} py-3.5`;
+
+/**
  * **The 20px line a 44px link stands on**, for a `text-sm` link with a line of
  * its own: the last line of a card, the "All courses" beside a section's
  * heading.

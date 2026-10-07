@@ -421,6 +421,19 @@ html:has([data-chrome-bar]) {
 }
 
 /*
+ * One skip link per page (UX audit 2026-10-07, item 29). The root layout,
+ * a shell with its own header and a page with a better target each render a
+ * `SkipLink`, marked `data-skip-link="root" | "shell" | "page"`; only the
+ * deepest one present stays in the focus trail. `display: none` takes the
+ * others out of the tab order and the accessibility tree alike. A browser
+ * without `:has()` keeps today's duplicates, which is untidy, never broken.
+ */
+body:has([data-skip-link="shell"], [data-skip-link="page"]) [data-skip-link="root"],
+body:has([data-skip-link="page"]) [data-skip-link="shell"] {
+  display: none;
+}
+
+/*
  * The same inset at the bottom edge, for a page with a sticky Save bar
  * (`StickyFormActions`, which marks itself `data-sticky-actions`).
  *
@@ -789,6 +802,17 @@ summary {
  */
 @layer base {
   :where(a, button, input, select, textarea, summary):focus-visible {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* Chromium tabs into a date or time box's own calendar button after the
+     last segment. That button lives in the box's shadow tree, so the box is
+     :focus-within but neither :focus nor :focus-visible, and `DateField`
+     hides the button under the house glyph. Without this the keyboard lands
+     on nothing anyone can see. The ring goes round the whole box, as it does
+     for the segments. */
+  :where(input):focus-within:not(:focus) {
     outline: 3px solid var(--focus-ring);
     outline-offset: 2px;
   }
@@ -1738,6 +1762,18 @@ details[open]::details-content {
       background: var(--rail-label-fill);
     }
   }
+}
+
+/*
+ * **The settings rail says it goes on** (UX audit 2026-10-07, item 12). Its
+ * box is longer than a laptop viewport, and a hard clip at the fold read as
+ * the end of the map. `SettingsRail` marks the box `data-more-below` while
+ * rows sit under its fold; the bottom edge fades out over the last 3rem then,
+ * and is crisp once the reader reaches the foot. Only the mask's alpha
+ * matters, so the colour stops are plain black and transparent.
+ */
+[data-settings-rail-scroller][data-more-below] {
+  mask-image: linear-gradient(to bottom, black calc(100% - 3rem), transparent);
 }
 
 /*

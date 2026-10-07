@@ -17,7 +17,11 @@ import {
   type SQL,
   sql,
 } from "drizzle-orm";
-import { type CalendarDate, isValidCalendarDate } from "@/lib/calendar-date";
+import {
+  type CalendarDate,
+  calendarDateInTimezone,
+  isValidCalendarDate,
+} from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import {
   GEAR_KIND_ORDER,
@@ -32,6 +36,7 @@ import {
   gearServiceState,
   pickDisplayReservation,
   type ReservationWindow,
+  serviceConcernStillOpen,
 } from "@/lib/gear";
 import {
   SIZED_RENTAL_FIT_COLUMN,
@@ -393,6 +398,11 @@ export async function recordGearService(
       nextDueDives: nextDueDives ?? null,
       note: optional(input.note),
       recordedByPersonId: input.recordedByPersonId ?? null,
+      // The app clock, the one `returnedAt` is written from: a same-day
+      // service answers a concern only when it was written after the return
+      // (`serviceConcernStillOpen`), so the two instants must come off the
+      // same clock to be compared.
+      createdAt: nowDate(),
     });
 
     if (input.returnToService && item.status === "needs_service") {
@@ -636,6 +646,9 @@ export async function reserveGearUnit(
       if (item.status !== "in_service")
         return { ok: false, reason: "unit_out_of_service" } as const;
 
+      // A cancelled booking holds nothing: its seat is gone, and a unit
+      // reserved against it hangs on the wall as "spoken for" for a diver who
+      // is not coming (dive-domain review of the Gear tab's proposals).
       const [booking] = await tx
         .select({ id: bookings.id, tripId: bookings.tripId, personId: bookings.personId })
         .from(bookings)
@@ -643,6 +656,7 @@ export async function reserveGearUnit(
           and(
             eq(bookings.id, input.bookingId),
             eq(bookings.shopId, input.shopId),
+            ne(bookings.status, "cancelled"),
             input.tripId ? eq(bookings.tripId, input.tripId) : undefined,
           ),
         )
@@ -1603,7 +1617,96 @@ export type AvailableGearUnit = {
    * hiding the unit — the dock decides (dive-domain review, 2026-08-20).
    */
   serviceState: GearServiceState;
+  /**
+   * It last came home flagged as a service concern, and nobody has written
+   * the care that answers it since (`serviceConcernStillOpen`). Said in the
+   * picker the way a lapsed clock is; never proposed.
+   */
+  serviceConcern: boolean;
 };
+
+/**
+ * The units among these whose last return still stands as a service concern
+ * (`serviceConcernStillOpen`). Two reads, and the second only when the first
+ * finds a concern at all: the newest closed reservation per unit that came
+ * home with an outcome, then the service history of the flagged ones.
+ *
+ * A return with no outcome is skipped, not read as "all good": the register's
+ * quick Return and the unit page's Return close a reservation without anybody
+ * saying how the unit came home, and letting that row stand as the last word
+ * would wipe the concern the return before it raised (dive-domain review).
+ */
+export async function openServiceConcerns(
+  db: AppDb,
+  shopId: string,
+  units: readonly { id: string; kind: GearItemKind }[],
+): Promise<Set<string>> {
+  if (units.length === 0) return new Set();
+  const lastReturns = await db
+    .selectDistinctOn([gearReservations.gearItemId], {
+      gearItemId: gearReservations.gearItemId,
+      outcome: gearReservations.returnOutcome,
+      returnedAt: gearReservations.returnedAt,
+    })
+    .from(gearReservations)
+    .where(
+      and(
+        eq(gearReservations.shopId, shopId),
+        inArray(
+          gearReservations.gearItemId,
+          units.map((unit) => unit.id),
+        ),
+        isNotNull(gearReservations.returnedAt),
+        isNotNull(gearReservations.returnOutcome),
+      ),
+    )
+    .orderBy(gearReservations.gearItemId, desc(gearReservations.returnedAt));
+  const flagged = lastReturns.filter(
+    (row): row is typeof row & { returnedAt: Date } =>
+      row.outcome === "service_concern" && row.returnedAt !== null,
+  );
+  if (flagged.length === 0) return new Set();
+
+  const [shop] = await db
+    .select({ timezone: shops.timezone })
+    .from(shops)
+    .where(eq(shops.id, shopId))
+    .limit(1);
+  const events = await db
+    .select({
+      gearItemId: gearServiceEvents.gearItemId,
+      kind: gearServiceEvents.kind,
+      servicedOn: gearServiceEvents.servicedOn,
+      createdAt: gearServiceEvents.createdAt,
+    })
+    .from(gearServiceEvents)
+    .where(
+      and(
+        eq(gearServiceEvents.shopId, shopId),
+        inArray(
+          gearServiceEvents.gearItemId,
+          flagged.map((row) => row.gearItemId),
+        ),
+      ),
+    );
+  const kindById = new Map(units.map((unit) => [unit.id, unit.kind]));
+  const open = new Set<string>();
+  for (const row of flagged) {
+    const kind = kindById.get(row.gearItemId);
+    if (!kind) continue;
+    const stillOpen = serviceConcernStillOpen(
+      kind,
+      {
+        outcome: row.outcome,
+        returnedOn: calendarDateInTimezone(row.returnedAt, shop?.timezone ?? "UTC"),
+        returnedAt: row.returnedAt,
+      },
+      events.filter((event) => event.gearItemId === row.gearItemId),
+    );
+    if (stillOpen) open.add(row.gearItemId);
+  }
+  return open;
+}
 
 /**
  * Units a staffer could assign for a window: in service, with no open
@@ -1667,15 +1770,33 @@ export async function listAvailableGearUnits(
     )
     .orderBy(asc(gearItems.label));
 
-  const clocksByItem = await latestServiceClocks(
-    db,
-    shopId,
-    units.map((unit) => unit.id),
-  );
+  const [clocksByItem, concerns] = await Promise.all([
+    latestServiceClocks(
+      db,
+      shopId,
+      units.map((unit) => unit.id),
+    ),
+    openServiceConcerns(db, shopId, units),
+  ]);
   return units.map((unit) => ({
     ...unit,
     serviceState: gearServiceState(clocksByItem.get(unit.id) ?? [], options.todayLocal),
+    serviceConcern: concerns.has(unit.id),
   }));
+}
+
+/** The kind of each of these units this shop owns and has not deleted. */
+export async function gearItemKindsById(
+  db: AppDb,
+  shopId: string,
+  ids: readonly string[],
+): Promise<Map<string, GearItemKind>> {
+  if (ids.length === 0) return new Map();
+  const rows = await db
+    .select({ id: gearItems.id, kind: gearItems.kind })
+    .from(gearItems)
+    .where(and(eq(gearItems.shopId, shopId), inArray(gearItems.id, [...ids]), liveGearItem()));
+  return new Map(rows.map((row) => [row.id, row.kind]));
 }
 
 export type TripGearAssignment = {
@@ -1689,6 +1810,14 @@ export type TripGearAssignment = {
   reservedFrom: CalendarDate;
   reservedUntil: CalendarDate;
   checkedOutAt: Date | null;
+  /**
+   * The unit's own status now, not when it was assigned: a technician can
+   * pull an assigned unit off the wall ("Needs service") days before the
+   * departure, and the Gear tab must say so on the row that holds it.
+   */
+  status: GearItemStatus;
+  /** What the technician wrote when they pulled it, if anything. */
+  serviceNote: string | null;
 };
 
 /** Open assignments for one departure's roster, keyed by booking. */
@@ -1709,6 +1838,8 @@ export async function listTripGearAssignments(
       reservedFrom: gearReservations.reservedFrom,
       reservedUntil: gearReservations.reservedUntil,
       checkedOutAt: gearReservations.checkedOutAt,
+      status: gearItems.status,
+      serviceNote: gearItems.serviceNote,
     })
     .from(gearReservations)
     .innerJoin(bookings, eq(bookings.id, gearReservations.bookingId))

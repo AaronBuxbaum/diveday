@@ -1,6 +1,10 @@
 {
   "operationalWindow": {},
   "skipToContent": "Skip to main content",
+  "notFound": {
+    "heading": "We couldn’t find that page",
+    "backToToday": "Back to Today"
+  },
   "publicPreview": {
     "youWorkHere": "You work here. This is the page divers see.",
     "divesSee": "Divers see this page.",

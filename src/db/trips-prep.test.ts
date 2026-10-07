@@ -3,12 +3,19 @@ import { describe, expect, it } from "vitest";
 import { calendarDateInTimezone } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { tripReservationWindow } from "@/lib/gear";
+import { proposalKey } from "@/lib/gear-proposals";
 import { fileScopedShopContext } from "@/test/db";
-import { checkOutTripGearSet, listAvailableGearUnits, reserveGearUnit } from "./gear";
-import { gearItems } from "./schema";
+import {
+  checkOutTripGearSet,
+  listAvailableGearUnits,
+  recordGearService,
+  reserveGearUnit,
+  setGearItemStatus,
+} from "./gear";
+import { gearItems, gearReservations, gearServiceEvents } from "./schema";
 import { upcomingTripsWithCounts } from "./trips";
 import { listStaff, setTripCrew } from "./trips-crew";
-import { getTripPrep } from "./trips-prep";
+import { getTripPrep, screenGearPicks } from "./trips-prep";
 
 async function context() {
   const { db, shop } = fileCtx;
@@ -60,6 +67,70 @@ async function reserveOneUnit(ctx: Awaited<ReturnType<typeof context>>) {
   return row;
 }
 
+/**
+ * The unit came home from an earlier, closed reservation flagged as a service
+ * concern, and nothing has answered it since. Written at the frozen "now", so
+ * it is the newest return the unit has, whatever the seed gave it before.
+ */
+async function flagServiceConcern(
+  ctx: Awaited<ReturnType<typeof context>>,
+  gearItemId: string,
+  bookingId: string,
+) {
+  await ctx.db.insert(gearReservations).values({
+    shopId: ctx.shop.id,
+    gearItemId,
+    bookingId,
+    reservedFrom: "2026-01-10",
+    reservedUntil: "2026-01-10",
+    checkedOutAt: new Date("2026-01-10T12:00:00.000Z"),
+    returnedAt: nowDate(),
+    returnOutcome: "service_concern",
+    returnNote: "Second stage free-flows",
+  });
+}
+
+/**
+ * The unit's service clock ran out long before this departure. Written on a
+ * clock the seed gave this unit no record of, so no newer seeded event of the
+ * same kind can stand in front of it (`latestServiceClocks` keeps the newest
+ * per kind, and the worst kind wins).
+ */
+async function lapseServiceClock(ctx: Awaited<ReturnType<typeof context>>, gearItemId: string) {
+  const recorded = new Set(
+    (
+      await ctx.db
+        .select({ kind: gearServiceEvents.kind })
+        .from(gearServiceEvents)
+        .where(eq(gearServiceEvents.gearItemId, gearItemId))
+    ).map((row) => row.kind),
+  );
+  const kind = (["o2_clean", "hydro_test", "visual_inspection", "service"] as const).find(
+    (candidate) => !recorded.has(candidate),
+  );
+  if (!kind) throw new Error("the unit already has every clock");
+  const outcome = await recordGearService(ctx.db, {
+    shopId: ctx.shop.id,
+    gearItemId,
+    kind,
+    servicedOn: "2025-01-10",
+    nextDueOn: "2025-06-10",
+  });
+  if (!outcome.ok) throw new Error(`service record refused: ${outcome.reason}`);
+}
+
+/** A piece a diver on the reef boat wants, and a free unit that answers it. */
+async function aWantedPick(ctx: Awaited<ReturnType<typeof context>>) {
+  const prep = await prepFor(ctx);
+  for (const row of prep.assignmentRows) {
+    for (const need of row.wanted) {
+      const unit = prep.freeByKind.get(need.kind)?.[0];
+      if (unit) return { bookingId: row.diver.bookingId, gearItemId: unit.id };
+    }
+  }
+  throw new Error("seeded trip has no wanted piece with a free unit");
+}
+
 // One seeded database for the file and a rolled-back transaction per test
 // (src/test/db.ts, `fileScopedShopContext`); nothing here commits or races.
 const fileCtx = fileScopedShopContext();
@@ -68,6 +139,31 @@ describe("getTripPrep", () => {
   it("answers null for a trip that is not this shop's", async () => {
     const { db, shop } = await context();
     expect(await getTripPrep(db, shop, "00000000-0000-4000-8000-000000000000")).toBeNull();
+  });
+
+  /**
+   * The proposals the Gear tab offers (UX audit 2026-10-07, item 9), read off
+   * the real demo shop: each one is a unit free for this window, in this kind,
+   * never the same unit twice, and only ever for a piece somebody wants.
+   */
+  it("proposes free, distinct units, each for a piece a diver on this boat wants", async () => {
+    const ctx = await context();
+    const prep = await prepFor(ctx);
+    expect(prep.proposals.size).toBeGreaterThan(0);
+    const seen = new Set<string>();
+    const wantedKeys = new Set(
+      prep.assignmentRows.flatMap((row) =>
+        row.wanted.map((need) => proposalKey(row.diver.bookingId, need.kind)),
+      ),
+    );
+    for (const [key, unit] of prep.proposals) {
+      expect(wantedKeys.has(key), key).toBe(true);
+      expect(seen.has(unit.id), `${unit.label} proposed twice`).toBe(false);
+      seen.add(unit.id);
+      const free = prep.freeByKind.get(unit.kind) ?? [];
+      expect(free.some((candidate) => candidate.id === unit.id)).toBe(true);
+      expect(unit.serviceState.state).not.toBe("overdue");
+    }
   });
 
   /**
@@ -199,6 +295,97 @@ describe("getTripPrep", () => {
         expect(prep.loadOut.stillToPick).toBeGreaterThanOrEqual(0);
       });
 
+      /**
+       * **An assigned unit keeps its care labels** (second dive-domain review
+       * of the proposals). The picker said "service concern" and "service
+       * overdue" in the option; the assigned line and the cart's count must
+       * not go quiet the moment the pick is made.
+       */
+      it("carries an open service concern onto the assigned unit and counts it", async () => {
+        const ctx = await context();
+        const row = await reserveOneUnit(ctx);
+        const [held] = row.assigned;
+        if (!held) throw new Error("the reserved diver holds nothing");
+        expect(held.serviceConcern).toBe(false);
+        const before = await prepFor(ctx);
+
+        await flagServiceConcern(ctx, held.gearItemId, row.diver.bookingId);
+
+        const after = await prepFor(ctx);
+        const unit = after.assignmentRows
+          .flatMap((entry) => entry.assigned)
+          .find((assignment) => assignment.gearItemId === held.gearItemId);
+        expect(unit?.serviceConcern).toBe(true);
+        expect(after.loadOut?.serviceFlagged).toBe((before.loadOut?.serviceFlagged ?? 0) + 1);
+      });
+
+      it("carries a lapsed service clock onto the assigned unit and counts it", async () => {
+        const ctx = await context();
+        const row = await reserveOneUnit(ctx);
+        const [held] = row.assigned;
+        if (!held) throw new Error("the reserved diver holds nothing");
+        expect(held.serviceState.state).not.toBe("overdue");
+        const before = await prepFor(ctx);
+
+        await lapseServiceClock(ctx, held.gearItemId);
+
+        const after = await prepFor(ctx);
+        const unit = after.assignmentRows
+          .flatMap((entry) => entry.assigned)
+          .find((assignment) => assignment.gearItemId === held.gearItemId);
+        expect(unit?.serviceState.state).toBe("overdue");
+        expect(after.loadOut?.serviceFlagged).toBe((before.loadOut?.serviceFlagged ?? 0) + 1);
+      });
+
+      /**
+       * BCD #7 is assigned for Saturday; on Wednesday a technician pulls it
+       * off the wall. Saturday's Gear tab must say so on the row that holds
+       * it, and count it (second dive-domain re-review).
+       */
+      it("carries a unit pulled out of service after it was assigned, and counts it", async () => {
+        const ctx = await context();
+        const row = await reserveOneUnit(ctx);
+        const [held] = row.assigned;
+        if (!held) throw new Error("the reserved diver holds nothing");
+        expect(held.status).toBe("in_service");
+        const before = await prepFor(ctx);
+
+        const pulled = await setGearItemStatus(ctx.db, {
+          shopId: ctx.shop.id,
+          gearItemId: held.gearItemId,
+          status: "needs_service",
+          serviceNote: "Inflator sticks",
+        });
+        if (!pulled.ok) throw new Error("status change refused");
+
+        const after = await prepFor(ctx);
+        const unit = after.assignmentRows
+          .flatMap((entry) => entry.assigned)
+          .find((assignment) => assignment.gearItemId === held.gearItemId);
+        expect(unit?.status).toBe("needs_service");
+        expect(unit?.serviceNote).toBe("Inflator sticks");
+        expect(after.loadOut?.serviceFlagged).toBe((before.loadOut?.serviceFlagged ?? 0) + 1);
+      });
+
+      it("counts a unit with every label once", async () => {
+        const ctx = await context();
+        const row = await reserveOneUnit(ctx);
+        const [held] = row.assigned;
+        if (!held) throw new Error("the reserved diver holds nothing");
+        const before = await prepFor(ctx);
+
+        await flagServiceConcern(ctx, held.gearItemId, row.diver.bookingId);
+        await lapseServiceClock(ctx, held.gearItemId);
+        await setGearItemStatus(ctx.db, {
+          shopId: ctx.shop.id,
+          gearItemId: held.gearItemId,
+          status: "needs_service",
+        });
+
+        const after = await prepFor(ctx);
+        expect(after.loadOut?.serviceFlagged).toBe((before.loadOut?.serviceFlagged ?? 0) + 1);
+      });
+
       it("calls a set handed over only once every unit on it has left", async () => {
         const ctx = await context();
         const row = await reserveOneUnit(ctx);
@@ -253,5 +440,50 @@ describe("getTripPrep", () => {
       expect(updated?.wanted.map((item) => item.kind)).toContain("fins");
       expect(updated?.wanted.map((item) => item.kind)).not.toContain("mask");
     });
+  });
+});
+
+/**
+ * **A proposal is re-read for care when it is confirmed** (second dive-domain
+ * review of the proposals). A proposal was offered because its unit had no
+ * lapsed clock and no open concern; one that gained either since the tab
+ * loaded is refused rather than reserved unseen. A hand pick saw the label in
+ * the picker and may still choose the unit.
+ */
+describe("screenGearPicks", () => {
+  it("keeps a proposed pick whose unit needs nothing", async () => {
+    const ctx = await context();
+    const pick = await aWantedPick(ctx);
+    expect(await screenGearPicks(ctx.db, ctx.shop, ctx.tripId, [pick], { proposed: true })).toEqual(
+      { kept: [pick], refused: 0, needsCare: 0 },
+    );
+  });
+
+  it("refuses a proposed pick whose unit gained an open service concern", async () => {
+    const ctx = await context();
+    const pick = await aWantedPick(ctx);
+    await flagServiceConcern(ctx, pick.gearItemId, pick.bookingId);
+    expect(await screenGearPicks(ctx.db, ctx.shop, ctx.tripId, [pick], { proposed: true })).toEqual(
+      { kept: [], refused: 1, needsCare: 1 },
+    );
+  });
+
+  it("refuses a proposed pick whose unit's service clock lapsed", async () => {
+    const ctx = await context();
+    const pick = await aWantedPick(ctx);
+    await lapseServiceClock(ctx, pick.gearItemId);
+    expect(await screenGearPicks(ctx.db, ctx.shop, ctx.tripId, [pick], { proposed: true })).toEqual(
+      { kept: [], refused: 1, needsCare: 1 },
+    );
+  });
+
+  it("keeps a hand pick of a labeled unit, which the picker said out loud", async () => {
+    const ctx = await context();
+    const pick = await aWantedPick(ctx);
+    await flagServiceConcern(ctx, pick.gearItemId, pick.bookingId);
+    await lapseServiceClock(ctx, pick.gearItemId);
+    expect(
+      await screenGearPicks(ctx.db, ctx.shop, ctx.tripId, [pick], { proposed: false }),
+    ).toEqual({ kept: [pick], refused: 0, needsCare: 0 });
   });
 });

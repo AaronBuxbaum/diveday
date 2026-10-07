@@ -251,13 +251,13 @@ export default async function GearRegisterPage({
       <FlashParams params={["notice", "undoId"]} />
       <ShopPageHeader
         title={t("gear.title")}
-        // **No header action at all** (principle 8: two doors for one act is
-        // one too many). The register ends in the "Add a unit" band the way the
-        // trip roster ends in "Add a diver" — the ledger's own terminal row,
-        // where a person who has just finished reading the wall is already
-        // standing — and a secondary button in the header was a second door
-        // onto that same disclosure, scrolling the reader back down to it. The
-        // empty register keeps its one door in the empty card below.
+        // The page's primary (UX audit 2026-10-07, item 31) opens the "Add a unit"
+        // band at the foot; the empty register keeps its door in the card below.
+        actions={
+          fleetTotal > 0 ? (
+            <AddUnitLink className={buttonClass()}>{t("gear.addUnit.title")}</AddUnitLink>
+          ) : undefined
+        }
       />
 
       {notice === "deleted" && search.undoId ? (

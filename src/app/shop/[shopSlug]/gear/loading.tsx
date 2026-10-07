@@ -36,7 +36,7 @@ export default function GearLoading() {
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 sm:py-10">
       <div className="animate-pulse">
-        <ShopPageHeaderSkeleton eyebrow={false} description={false} />
+        <ShopPageHeaderSkeleton eyebrow={false} description={false} actions />
         {/* The chip band, laid out as `FilterChips` lays it: one line that
             scrolls on a phone, wrapping only from `sm`, at the chips' 44px.
             No top margin of its own: the header skeleton's `mb-8` is the same
