@@ -19,6 +19,7 @@ export * from "./crew";
 export * from "./dive-day";
 export * from "./dive-sites";
 export * from "./erasure";
+export * from "./funnel";
 export * from "./gear";
 export * from "./integrations";
 export * from "./notifications";
