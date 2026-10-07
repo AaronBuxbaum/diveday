@@ -13,6 +13,15 @@ describe("demoTodayDepartureStart", () => {
     expect(localDay(start)).toBe(localDay(now));
   });
 
+  it("never sails before the dawn boat is back, so one crew is never on two boats", () => {
+    // Seeded at 12:30 AM EDT, now+5h is 5:30 AM: the dawn two-tank's own slot,
+    // crewed by the same captain and divemaster (UX audit 2026-10-07, item 4).
+    const now = new Date("2026-07-20T04:30:00Z"); // 12:30 AM EDT
+    const start = demoTodayDepartureStart(now, TZ);
+    expect(start.toISOString()).toBe("2026-07-20T13:00:00.000Z"); // 9:00 AM EDT
+    expect(localDay(start)).toBe(localDay(now));
+  });
+
   it("still sails today when now+5h would round past local midnight", () => {
     // Regression: seeding at 6:34 PM EDT put the "sails today" trip at
     // midnight — tomorrow in shop time — emptying the departure board that

@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import type { DiveIntent } from "@/lib/dive-intent";
-import { simulatorEmail } from "@/lib/simulator-email";
+import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
 import { bookings, people, trips } from "./schema";
 import { demoTodayDepartureStart } from "./seed-clock";
@@ -34,11 +34,11 @@ import { demoTodayDepartureStart } from "./seed-clock";
 const REEF_TRIP_TITLE = "Two-Tank Reef — Molasses & French";
 
 const ANSWERS: { email: string; intent: DiveIntent }[] = [
-  { email: simulatorEmail("tom.okafor"), intent: "easing_back" },
-  { email: simulatorEmail("diego.alvarez"), intent: "small_life" },
-  { email: simulatorEmail("sam.whitfield"), intent: "small_life" },
-  { email: simulatorEmail("june.park"), intent: "good_day" },
-  { email: simulatorEmail("ines.costa"), intent: "good_day" },
+  { email: demoEmail("tom.okafor"), intent: "easing_back" },
+  { email: demoEmail("diego.alvarez"), intent: "small_life" },
+  { email: demoEmail("sam.whitfield"), intent: "small_life" },
+  { email: demoEmail("june.park"), intent: "good_day" },
+  { email: demoEmail("ines.costa"), intent: "good_day" },
 ];
 
 export async function seedDiveIntents(db: DbExecutor, shopId: string) {

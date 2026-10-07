@@ -162,8 +162,8 @@ test.describe("staff-prepared trip", () => {
     await expect(arrivalCard.getByText("100 Ocean Drive")).toBeVisible();
     await expect(arrivalCard.getByText("Key Largo, FL 33037")).toBeVisible();
     await expect(
-      arrivalCard.getByRole("link", { name: "success+front.desk@simulator.amazonses.com" }),
-    ).toHaveAttribute("href", "mailto:success+front.desk@simulator.amazonses.com");
+      arrivalCard.getByRole("link", { name: "front.desk@mail.example" }),
+    ).toHaveAttribute("href", "mailto:front.desk@mail.example");
     // The map is a plain roadmap embed built from the shop's own address —
     // never a guessed location. The e2e context answers maps.google.com
     // with an empty page (fixtures.ts), so this asserts the frame, not its
@@ -222,7 +222,7 @@ test.describe("staff-prepared trip", () => {
     await expect(page.getByText(/Blue Mantis Divers/)).toBeVisible();
     await expect(page.getByRole("link", { name: "Contact Blue Mantis Divers" })).toHaveAttribute(
       "href",
-      "mailto:success+front.desk@simulator.amazonses.com",
+      "mailto:front.desk@mail.example",
     );
 
     // **And the card can now do something about it** — issue #850's half of the

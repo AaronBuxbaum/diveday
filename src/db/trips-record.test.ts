@@ -209,22 +209,22 @@ describe("trip records (in-memory PGlite)", () => {
   it("refuses to shrink capacity below the trip's active booking count", async () => {
     const { db, shop } = await seededShopContext();
     const upcoming = await upcomingTripsWithCounts(db, shop.id);
-    // 9 of 12 booked in the seed.
+    // 11 of 14 booked in the seed: nine divers, a snorkeler and a rider.
     const reef = upcoming.find((t) => t.title === "Two-Tank Reef — Molasses & French");
     if (!reef) throw new Error("expected seeded reef trip missing");
-    expect(reef.booked).toBe(9);
+    expect(reef.booked).toBe(11);
 
     const refused = await updateTrip(db, shop.id, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,
-      capacity: 8,
+      capacity: 10,
       plannedDives: reef.plannedDives,
     });
     expect(refused).toEqual({
       ok: false,
       reason: "capacity_below_booked",
-      detail: { bookedCount: 9 },
+      detail: { bookedCount: 11 },
     });
     // Untouched — the capacity in the database still reads the original value.
     expect((await getTripWithBooked(db, shop.id, reef.id))?.capacity).toBe(reef.capacity);
@@ -233,11 +233,11 @@ describe("trip records (in-memory PGlite)", () => {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,
-      capacity: 9,
+      capacity: 11,
       plannedDives: reef.plannedDives,
     });
     expect(accepted.ok).toBe(true);
-    expect((await getTripWithBooked(db, shop.id, reef.id))?.capacity).toBe(9);
+    expect((await getTripWithBooked(db, shop.id, reef.id))?.capacity).toBe(11);
   });
 
   /**
@@ -253,33 +253,33 @@ describe("trip records (in-memory PGlite)", () => {
       (trip) => trip.title === "Two-Tank Reef — Molasses & French",
     );
     if (!reef) throw new Error("expected seeded reef trip missing");
-    expect(reef.booked).toBe(9);
+    expect(reef.booked).toBe(11);
 
     const [entry] = await getTripRoster(db, shop.id, reef.id);
     if (!entry) throw new Error("expected a booking to release");
     await db.update(bookings).set({ status: "no_show" }).where(eq(bookings.id, entry.booking.id));
-    expect((await getTripWithBooked(db, shop.id, reef.id))?.booked).toBe(8);
+    expect((await getTripWithBooked(db, shop.id, reef.id))?.booked).toBe(10);
 
     const accepted = await updateTrip(db, shop.id, reef.id, {
       title: reef.title,
       startsAt: reef.startsAt,
       endsAt: reef.endsAt,
-      capacity: 8,
+      capacity: 10,
       plannedDives: reef.plannedDives,
     });
     expect(accepted.ok).toBe(true);
-    expect((await getTripWithBooked(db, shop.id, reef.id))?.capacity).toBe(8);
+    expect((await getTripWithBooked(db, shop.id, reef.id))?.capacity).toBe(10);
 
-    // Still a floor, just the honest one: the eight seats somebody is holding.
+    // Still a floor, just the honest one: the ten seats somebody is holding.
     expect(
       await updateTrip(db, shop.id, reef.id, {
         title: reef.title,
         startsAt: reef.startsAt,
         endsAt: reef.endsAt,
-        capacity: 7,
+        capacity: 9,
         plannedDives: reef.plannedDives,
       }),
-    ).toEqual({ ok: false, reason: "capacity_below_booked", detail: { bookedCount: 8 } });
+    ).toEqual({ ok: false, reason: "capacity_below_booked", detail: { bookedCount: 10 } });
   });
 
   it("refuses to drop planned dives below a checkpoint staff already recorded a roll call against", async () => {

@@ -193,21 +193,14 @@ test("a freshly onboarded shop finds a way forward on its empty Divers and Order
   await expect(page.getByRole("heading", { level: 1, name: "First Empty Diver" })).toBeVisible();
   await expect(page.getByLabel("Date of birth")).toBeVisible();
 
-  // Orders: no orders and no connected account, so the one honest door is the
-  // money settings — the same fork the page header already makes, now inside
-  // the card a shop with nothing actually reads.
+  // Orders: no orders and no connected account. Connecting is a setup step,
+  // so it is a card above the list rather than the page's standing primary
+  // (UX audit item 20), and the empty state says only what is true.
   await page.goto(`/shop/${unique}/orders`);
-  await expect(
-    page.getByText(
-      // One noun for one object: the record the front desk sends is an
-      // "order" wherever it is named — "invoice" is only the Stripe artifact.
-      "No DiveDay orders yet. Connect payments and the front desk can send its first order from here.",
-    ),
-  ).toBeVisible();
-  // One door, once: while the unfiltered list is empty the header stands
-  // down, so the empty state's action is the only Connect payments on screen
-  // (docs/design/principles.md #8 — two identical primaries for one action
-  // is triage work the layout should have done).
+  await expect(page.getByText("No DiveDay orders yet.", { exact: true })).toBeVisible();
+  // One door, once: the header holds no primary without an account to send
+  // an order from, and the empty state does not repeat the card's door
+  // (docs/design/principles.md #8).
   const connect = page.getByRole("link", { name: "Connect payments" });
   await expect(connect).toHaveCount(1);
   await connect.click();

@@ -82,7 +82,7 @@ export function TripRosterContent({
   compact = false,
   afterRoster = null,
   arrival,
-  walkIn = null,
+  walkInOpen = false,
   acceptsDivers,
   actions,
 }: {
@@ -120,12 +120,11 @@ export function TripRosterContent({
   /** The desk's taps and groups, once arrivals open — see `RosterSection`. */
   arrival?: RosterArrival;
   /**
-   * The walk-in door, under the add-diver search while the boat can still take
-   * one: a name-only seat for the person standing at the desk, which the
-   * search's new-diver form (it asks for an address to send the waiver to) is
-   * not.
+   * The counter can still seat a walk-in: the add-diver search's one door for
+   * someone new is then "Add as a walk-in", a name-only seat for the person
+   * standing at the desk (UX audit 2026-10-07, item 24).
    */
-  walkIn?: ReactNode;
+  walkInOpen?: boolean;
   /**
    * `acceptsNewDivers`, read by the page against its clock: false on a
    * departure that has sailed, is held or is cancelled, and then no add or
@@ -286,28 +285,26 @@ export function TripRosterContent({
               />
             ) : null,
           addDiverGroup: !acceptsDivers ? null : (
-            <>
-              <AddDiverSection
-                shopSlug={shopSlug}
-                full={isFull(trip)}
-                query={diverQuery}
-                candidates={diverCandidates}
-                tripId={trip.id}
-                addBookingAction={actions.addBookingAction}
-                addToWaitlistAction={actions.addToWaitlistAction}
-                addExistingDiverAction={actions.addExistingDiverAction}
-                inviteAction={actions.createDirectTripInvitationAction}
-                status={noticeForForm(tripNotice, "add-diver")}
-                locale={locale}
-                timeZone={timezone}
-                confirmName={confirmName}
-                confirmEmail={confirmEmail}
-                confirmPhone={confirmPhone}
-                confirmMatches={confirmMatches}
-                shopRentalItems={shopRentalItems}
-              />
-              {walkIn}
-            </>
+            <AddDiverSection
+              shopSlug={shopSlug}
+              full={isFull(trip)}
+              query={diverQuery}
+              candidates={diverCandidates}
+              tripId={trip.id}
+              addBookingAction={actions.addBookingAction}
+              addToWaitlistAction={actions.addToWaitlistAction}
+              addExistingDiverAction={actions.addExistingDiverAction}
+              inviteAction={actions.createDirectTripInvitationAction}
+              status={noticeForForm(tripNotice, "add-diver")}
+              locale={locale}
+              timeZone={timezone}
+              confirmName={confirmName}
+              confirmEmail={confirmEmail}
+              confirmPhone={confirmPhone}
+              confirmMatches={confirmMatches}
+              shopRentalItems={shopRentalItems}
+              walkInOpen={walkInOpen}
+            />
           ),
         }}
       />

@@ -104,6 +104,7 @@ import {
   collapseOwedRefunds,
   crewClashPhase,
   filterActionsForRoles,
+  isBlockedAboard,
   ROLL_CALL_GAP_KINDS,
   type RollCallGapReason,
   rollCallGapUrgency,
@@ -115,7 +116,13 @@ import { liveStageOf, type TripStageReading } from "@/lib/trip-stages";
 import { DEPARTURE_BUFFER_MS, hasReturned, hasSailed } from "@/lib/trips";
 import { welcomeCueFor } from "@/lib/welcome-cue";
 import { shopDayBounds, toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
-import { type HorizonReadinessEvidence, inHorizonReadiness } from "./blockers";
+import {
+  blockedOnNextBoatDay,
+  type HorizonReadinessEvidence,
+  inHorizonReadiness,
+  type NextBoatDayBlocked,
+  sharedInHorizonReadiness,
+} from "./blockers";
 import type { AppDb } from "./client";
 import { diveIntentTallyForTrips } from "./dive-intent";
 import {
@@ -321,6 +328,12 @@ export type TodayWork = {
    * into the week's count (`assembleDaySpine`).
    */
   outTripIds: string[];
+  /**
+   * Blocked divers aboard boats still out past the horizon (issue #2064), the
+   * divers the `blocked_aboard` rows below name. Added to the nav badge and
+   * the summary's blocked figure (`blockedOnNextBoatDay`).
+   */
+  blockedAboard: number;
   /** How many actions were filtered out for the reader's role lens (issue #715). */
   withheldCount: number;
   /** Shown only when nothing sails today, so the page still orients the crew. */
@@ -1667,6 +1680,30 @@ export async function getShopDayDepartures(
   );
 }
 
+/**
+ * The Today row's nav badge: blocked divers on the next boat day, plus those
+ * aboard a boat still out (`blockedOnNextBoatDay` in `./blockers` says which
+ * day and why). The same derivation the shop home's cards and summary read,
+ * over the same two reads, so the three cannot disagree.
+ */
+export async function countBlockedDiversNextBoatDay(
+  db: AppDb,
+  shopId: string,
+  timeZone: string,
+  now: Date = nowDate(),
+): Promise<NextBoatDayBlocked> {
+  const evidence = await sharedInHorizonReadiness(db, shopId, now);
+  const boatsOut = await blockedAboardOnBoatsOut(
+    db,
+    shopId,
+    timeZone,
+    now,
+    new Set(evidence.trips.map((trip) => trip.id)),
+  );
+  const aboard = boatsOut.blocked.filter((row) => isBlockedAboard(row.readiness.blockers)).length;
+  return blockedOnNextBoatDay(evidence, timeZone, now, aboard);
+}
+
 export async function getTodayWork(
   db: AppDb,
   shopId: string,
@@ -2876,6 +2913,7 @@ export async function getTodayWork(
     actions.push({
       id: `staff-credential:${personId}`,
       kind: "staff_credential_due",
+      staffPersonId: personId,
       urgency: entry.overdue ? "now" : urgencyFor(entry.dueAt, now),
       subject: entry.name,
       context: null,
@@ -2944,6 +2982,7 @@ export async function getTodayWork(
     outTripIds: [
       ...new Set([...crewClashState.outTripIds, ...boatsOut.out.map((trip) => trip.id)]),
     ],
+    blockedAboard: boatsOut.blocked.filter((row) => isBlockedAboard(row.readiness.blockers)).length,
     withheldCount,
     nextDeparture: next
       ? {

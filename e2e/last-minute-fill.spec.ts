@@ -70,12 +70,29 @@ test("diver opts in, Today nudges staff, and the trip page reflects the send att
   // route the visual suite uses to render Stripe-gated surfaces).
   await request.post("/api/test/seed-stripe-account");
   await page.reload();
+  // A tap before React owns the form submits it natively and holds nothing.
+  await expect(sendButton.locator("xpath=ancestor::form")).toHaveAttribute("data-hydrated", "true");
   await sendButton.click();
   // The send holds eight seconds with Undo first (ADR 20260906-before-you-ask,
   // decision 2); the outcome is allowed the hold plus the Stripe attempt.
-  await expect(
-    page.getByText("Stripe couldn’t create the discount code. Try again in a moment."),
-  ).toBeVisible({ timeout: HELD_SEND_TIMEOUT_MS });
+  const stripeFailed = page.getByText(
+    "Stripe couldn’t create the discount code. Try again in a moment.",
+  );
+  try {
+    await expect(stripeFailed).toBeVisible({ timeout: HELD_SEND_TIMEOUT_MS });
+  } catch (error) {
+    // This has failed on CI only, where the screenshot is out of reach. Say
+    // where the page ended up and what it said instead, so the log alone
+    // tells a send that never left from a notice drawn inside a shut panel.
+    const seen = await page.evaluate(() => ({
+      url: location.pathname + location.search + location.hash,
+      notices: [...document.querySelectorAll('[role="status"], [role="alert"]')]
+        .map((node) => node.textContent?.trim())
+        .filter(Boolean),
+      promoteOpen: document.querySelector("#last-minute-deal")?.closest("details")?.open ?? null,
+    }));
+    throw new Error(`${(error as Error).message}\nPage state: ${JSON.stringify(seen)}`);
+  }
 
   // The attempt is durable evidence even though it failed — a staffer sees
   // it, not silence. Not exact: the badge's text is "Failed at Stripe"
@@ -128,7 +145,9 @@ test("a failed send attempt does not silence the Today nudge — nothing actuall
   // Stripe step — durable proof an *attempt* happened, but no code actually
   // went out, so the nudge (which dedupes on a genuinely `sent` row) must
   // keep prompting staff to try again rather than reading the attempt as done.
-  await page.getByRole("button", { name: /Send to \d+ divers?/ }).click();
+  const send = page.getByRole("button", { name: /Send to \d+ divers?/ });
+  await expect(send.locator("xpath=ancestor::form")).toHaveAttribute("data-hydrated", "true");
+  await send.click();
   await expect(page.getByText(/off · /)).toBeVisible({ timeout: HELD_SEND_TIMEOUT_MS });
 
   await page.goto("/shop/blue-mantis");

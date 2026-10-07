@@ -24,6 +24,8 @@ export type ShopSenderSource = {
   addressRegion: string | null;
   addressPostalCode: string | null;
   addressCountry: string | null;
+  /** `shops.is_demo`: its seeded people's mail goes to the SES simulator. */
+  isDemo?: boolean;
 };
 
 const replyToSchema = z.email().max(200);
@@ -101,6 +103,7 @@ export function shopSenderOf(
   const sender: NotificationSender = {
     ...(replyTo && { replyTo }),
     ...(postalAddress.success && postalAddress.data && { postalAddress: postalAddress.data }),
+    ...(shop.isDemo === true && { demoShop: true as const }),
   };
   return Object.keys(sender).length > 0 ? sender : undefined;
 }

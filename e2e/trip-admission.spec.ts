@@ -81,9 +81,7 @@ test.describe("as owner", () => {
     // above it — the shop has adjudicated him, so this is a settled
     // impossibility rather than an absence of evidence.
     await page.getByLabel("Name", { exact: true }).fill("Diego Alvarez");
-    await page
-      .getByLabel("Email", { exact: true })
-      .fill("success+diego.alvarez@simulator.amazonses.com");
+    await page.getByLabel("Email", { exact: true }).fill("diego.alvarez@mail.example");
     await page.getByRole("button", { name: /^Book (these spots|the last spot)$/ }).click();
 
     // What the *trip* requires, never what this person lacks (H-22). The

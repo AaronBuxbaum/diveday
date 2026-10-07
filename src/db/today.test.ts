@@ -39,7 +39,7 @@ import { markShopUnitsConfirmed } from "./shops";
 import { createStaffCredential } from "./staff-credentials";
 import { getStaffingView } from "./staffing";
 import { setShopStripeAccountStatus, upsertShopStripeAccount } from "./stripe-accounts";
-import { getTodayWork } from "./today";
+import { countBlockedDiversNextBoatDay, getTodayWork } from "./today";
 import { sendLastMinuteDealBlast } from "./trip-promos";
 import { recordTripStage } from "./trip-stages";
 import {
@@ -83,11 +83,13 @@ describe("today's work queue (in-memory PGlite)", () => {
     expect(work.departures).toHaveLength(1);
     const [departure] = work.departures;
     expect(departure?.title).toBe("Two-Tank Reef — Molasses & French");
-    expect(departure?.booked).toBe(9);
-    expect(departure?.capacity).toBe(12);
-    // Most divers have already signed their waiver in the fresh seed — only
-    // the first-booked diver (the deliberate straggler) is still blocked.
-    expect(departure?.ready).toBe(8);
+    // Nine divers plus the snorkeler and the rider (`seed-mixed-boat.ts`), on
+    // a boat two places larger for them.
+    expect(departure?.booked).toBe(11);
+    expect(departure?.capacity).toBe(14);
+    // Most people aboard have already signed their waiver in the fresh seed —
+    // only the first-booked diver (the deliberate straggler) is still blocked.
+    expect(departure?.ready).toBe(10);
     expect(departure?.blocked).toBe(1);
     expect(departure?.boarded).toBe(0);
     expect(work.nextDeparture).toBeNull();
@@ -153,7 +155,7 @@ describe("today's work queue (in-memory PGlite)", () => {
     expect(waiverRow(after)).toBeUndefined();
     // She was the boat's one remaining straggler — clearing her leaves the
     // whole roster ready.
-    expect(after.departures[0]?.ready).toBe(9);
+    expect(after.departures[0]?.ready).toBe(11);
     expect(after.departures[0]?.blocked).toBe(0);
   });
 
@@ -516,7 +518,7 @@ describe("today's work queue (in-memory PGlite)", () => {
       status: "boarded",
     });
     const boarded = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    expect(boarded.departures[0]?.booked).toBe(9);
+    expect(boarded.departures[0]?.booked).toBe(11);
     expect(boarded.departures[0]?.boarded).toBe(1);
 
     // A no-show pulled, or a refund, after the diver already boarded — the
@@ -527,7 +529,7 @@ describe("today's work queue (in-memory PGlite)", () => {
     // trip remain genuinely unboarded.
     await cancelBooking(db, shop.id, entry.booking.id);
     const afterCancel = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
-    expect(afterCancel.departures[0]?.booked).toBe(8);
+    expect(afterCancel.departures[0]?.booked).toBe(10);
     expect(afterCancel.departures[0]?.boarded).toBe(0);
   });
 
@@ -983,13 +985,39 @@ describe("uncrewed and below-target departures (issue #732)", () => {
     return reef;
   }
 
+  /**
+   * The reef trip with both of its crew still aboard and neither in the water:
+   * the captain on the lines and the divemaster driving (tripRole "crew" and
+   * "captain", the DOM-M3 shape). Neither counts toward the in-water ratio
+   * (src/lib/crew-roles.ts), so the trip is uncrewed by the rule the ratio
+   * itself uses. The seed used to roster today's reef boat this way; it no
+   * longer does (UX audit 2026-10-07, item 4), so each case says it here.
+   */
+  async function uncrewedReefTrip(
+    db: ReturnType<typeof fileScopedShopContext>["db"],
+    shopId: string,
+  ) {
+    const reef = await reefTrip(db, shopId);
+    const crew = await db
+      .select({ personId: tripAssignments.personId, role: personRolesTable.role })
+      .from(tripAssignments)
+      .innerJoin(personRolesTable, eq(personRolesTable.personId, tripAssignments.personId))
+      .where(eq(tripAssignments.tripId, reef.id));
+    expect(crew.length).toBeGreaterThan(0);
+    for (const member of crew) {
+      await db
+        .update(tripAssignments)
+        .set({ tripRole: member.role === "divemaster" ? "captain" : "crew" })
+        .where(
+          and(eq(tripAssignments.tripId, reef.id), eq(tripAssignments.personId, member.personId)),
+        );
+    }
+    return reef;
+  }
+
   it("raises uncrewed_departure for a fun dive with divers booked and zero in-water crew", async () => {
     const { db, shop } = ctx;
-    // The seed's own first charter (src/db/seed-trips.ts) rosters its captain
-    // and divemaster as tripRole "crew"/"captain" — neither counts toward the
-    // in-water ratio (src/lib/crew-roles.ts) — so this trip is genuinely
-    // uncrewed by the rule the ratio itself uses, not a fixture I'm rigging.
-    const reef = await reefTrip(db, shop.id);
+    const reef = await uncrewedReefTrip(db, shop.id);
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
 
@@ -1278,7 +1306,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
    */
   it("raises neither row for a departure the shop marked self-guided", async () => {
     const { db, shop } = ctx;
-    const reef = await reefTrip(db, shop.id);
+    const reef = await uncrewedReefTrip(db, shop.id);
     // The same trip the first test in this block proves *does* raise the row,
     // so the only thing that changed is the mark.
     const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
@@ -2454,6 +2482,27 @@ describe("unclosed roll call (DOM-H3)", () => {
         expect(work.outTripIds).toContain(trip.id);
         // The departure is not a live station again: the closing state owns it.
         expect(work.departures.some((departure) => departure.tripId === trip.id)).toBe(false);
+      });
+
+      it("counts the diver aboard in the nav badge until the boat is home", async () => {
+        const { db, shop } = ctx;
+        const { trip, staffId } = await sailedNinetyMinutesAgo();
+        const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
+        const badge = await countBlockedDiversNextBoatDay(db, shop.id, shop.timezone);
+        // The one boarded diver, not the one left ashore on a boat that has gone.
+        expect(work.blockedAboard).toBeGreaterThanOrEqual(1);
+        expect(badge.aboard).toBe(work.blockedAboard);
+        expect(badge.total).toBe(badge.onDay + badge.aboard);
+
+        await recordTripStage(db, {
+          shopId: shop.id,
+          tripId: trip.id,
+          stage: "home",
+          recordedByPersonId: staffId,
+          recordedAt: nowDate(),
+        });
+        const home = await countBlockedDiversNextBoatDay(db, shop.id, shop.timezone);
+        expect(home.aboard).toBe(badge.aboard - 1);
       });
 
       it("drops the row once the crew says the boat is home", async () => {

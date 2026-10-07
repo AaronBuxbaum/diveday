@@ -5,6 +5,7 @@ import { createBoat } from "./boats";
 import { recordRollCall } from "./manifests";
 import { DELIVERY_KIND_CLASSIFICATION, getMovePreflight } from "./move-preflight";
 import { countTripOrders } from "./orders";
+import { getBookingReadiness } from "./readiness";
 import {
   bookings,
   gearReservations,
@@ -209,11 +210,22 @@ describe("getMovePreflight", () => {
     // a count while being a shape `recordRollCall` never produces.
     const roster = await getTripRoster(ctx.db, ctx.shop.id, trip.id);
     const [recorder] = await listStaff(ctx.db, ctx.shop.id);
+    // A seat that may board: boarding a blocked one is refused at departure,
+    // which is a different guard from the one this test is about.
+    let boardable: string | undefined;
+    for (const row of roster) {
+      const readiness = await getBookingReadiness(ctx.db, ctx.shop.id, row.booking.id);
+      if (readiness?.status === "ready") {
+        boardable = row.booking.id;
+        break;
+      }
+    }
+    if (!boardable) throw new Error("the busiest departure has nobody ready to board");
     expect(
       await recordRollCall(ctx.db, {
         shopId: ctx.shop.id,
         tripId: trip.id,
-        bookingId: roster[0].booking.id,
+        bookingId: boardable,
         recordedByPersonId: recorder.person.id,
         status: "boarded",
       }),

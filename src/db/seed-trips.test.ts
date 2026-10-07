@@ -120,7 +120,9 @@ describe("seeded charters share their crew", () => {
       new Set(rows.filter((row) => row.title === title).map((row) => row.personId));
     const mover = crewOf(titles[0] as string);
     const host = crewOf(titles[1] as string);
-    expect(mover.size).toBe(2);
+    // The wreck charter also carries the assistant instructor in the water;
+    // the Christ of the Abyss day is the DOM-M3 charter and does not.
+    expect(mover.size).toBe(3);
     expect(host.size).toBe(2);
     // Both, not one: the block draws a line per person, and the capture counts
     // two.

@@ -46,6 +46,14 @@ async function tapSend() {
 }
 
 describe("SendHold", () => {
+  it("publishes data-hydrated once React owns the form", () => {
+    // Before hydration the tap submits natively and holds nothing, so the
+    // e2e suite waits on this flag before it taps.
+    renderHold();
+    const button = screen.getByRole("button", { name: "Send" });
+    expect(button.closest("form")).toHaveAttribute("data-hydrated", "true");
+  });
+
   it("says Sending… with Undo, and no countdown", async () => {
     renderHold();
     await tapSend();

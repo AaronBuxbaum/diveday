@@ -69,6 +69,11 @@ export function SendHold<Outcome>({
   // clock never released there.
   const [elapsedMs, setElapsedMs] = useState(0);
   const busy = useRef(false);
+  // The tap is only a hold once React owns the form: before then it submits
+  // natively, reloads the page and holds nothing. The form publishes the staff
+  // surfaces' `data-hydrated` flag, which the e2e suite waits on.
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
 
   useEffect(() => {
     if (!ticket) return;
@@ -144,7 +149,7 @@ export function SendHold<Outcome>({
   }
 
   return (
-    <form onSubmit={onSubmit} className={className}>
+    <form onSubmit={onSubmit} className={className} data-hydrated={hydrated ? "true" : undefined}>
       {children}
     </form>
   );

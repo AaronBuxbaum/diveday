@@ -3969,13 +3969,13 @@ for (const scheme of ["light", "dark"] as const) {
       // diver's own row. Priya Sharma is seeded blocked on a boat inside the
       // arrivals window, so the frame holds the instrument above the roster, a
       // blocked row with its reasons and no tap, cleared rows ending in their
-      // check-in taps, and the walk-in door under "Add a diver".
+      // check-in taps, and "Add a diver" as one search field.
       test(`the desk on a departure's Divers tab renders true to the design (${scheme})`, async ({
         page,
       }) => {
         await openCounterFor(page, "blue-mantis", "Priya Sharma");
         await page.getByText(/^\d+ of \d+ here$/).waitFor();
-        await page.getByRole("link", { name: "Add a walk-in" }).waitFor();
+        await page.getByRole("searchbox", { name: "Find a returning diver" }).waitFor();
         await capture(page, "trip-desk", scheme);
       });
 
@@ -4283,9 +4283,8 @@ for (const scheme of ["light", "dark"] as const) {
       // Staffing as a week (ADR 20260827-the-shops-shelves, decision 3):
       // people down the side, seven shop-local days across the top, shifts as
       // quiet chips, credentials as a ledger beneath. The demo's own week,
-      // gap row included — the seeded board carries the departure whose
-      // divemaster is driving it (`seed-trips.ts`, the DOM-M3 case), which
-      // Today already reports as uncrewed and this surface now agrees with.
+      // which carries no gap row: the DOM-M3 charter (`seed-trips.ts`) sails
+      // the week after, and the gap is photographed below on purpose.
       // Its 390 image is the day list, which is what the week collapses to
       // below `lg` (the same call H-63 made for the board).
       test(`the staffing week renders true to the design (${scheme})`, async ({ page }) => {

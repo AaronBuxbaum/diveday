@@ -190,7 +190,7 @@ describe("refreshCanonicalDemoSchedule", () => {
       .select({ note: staffShifts.note })
       .from(staffShifts)
       .where(eq(staffShifts.personId, restored[0].id));
-    expect(shifts).toEqual([{ note: "Demo schedule" }]);
+    expect(shifts).toEqual([{ note: null }]);
   });
 
   /**

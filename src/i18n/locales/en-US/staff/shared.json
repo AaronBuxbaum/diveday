@@ -229,7 +229,7 @@
     "signOutPending": "Signing out…"
   },
   "shopNavLinks": {
-    "badgeBlocked": "{count, plural, one {# diver blocked} other {# divers blocked}}",
+    "badgeBlocked": "{count, plural, one {# diver blocked, aboard or on the next boats} other {# divers blocked, aboard or on the next boats}}",
     "today": "Today",
     "divers": "Divers",
     "board": "Schedule",

@@ -66,6 +66,7 @@ describe("the departure's section rhythm", () => {
    */
   const COMPONENTS = join(__dirname, "_components");
   const body = SOURCE.slice(SOURCE.indexOf("export default async function"));
+  const PULSE = readFileSync(join(COMPONENTS, "PulseFacts.tsx"), "utf8");
 
   it("holds the masthead and every block under it in one space-y-10", () => {
     expect(
@@ -81,12 +82,16 @@ describe("the departure's section rhythm", () => {
         body.indexOf("{cancelled && (canConfigure"),
         body.indexOf("<FormStatus", body.indexOf("{cancelled && (canConfigure")),
       ),
-      body.slice(
-        body.indexOf("{shownPulseFacts.length > 0 ? ("),
-        body.indexOf("{shownPulseFacts.map"),
-      ),
+      // The pulse facts are their own component now; the page only places it.
+      body.slice(body.indexOf("<PulseFacts"), body.indexOf("/>", body.indexOf("<PulseFacts"))),
+      // Its outer row; the fold's own inner spacing is inside the block.
+      PULSE.match(/export function PulseFacts[\s\S]*?return \(\s*(<div [^>]*>)/)?.[1] ?? "",
     ];
-    for (const block of blocks) expect(block).not.toMatch(/(^|[\s"`])mt-(4|5|6|8|10)\b/);
+    expect(body.indexOf("<PulseFacts")).toBeGreaterThan(-1);
+    for (const block of blocks) {
+      expect(block.length).toBeGreaterThan(0);
+      expect(block).not.toMatch(/(^|[\s"`])mt-(4|5|6|8|10)\b/);
+    }
 
     expect(body).toMatch(/<TripPageHeader\s+className=""/);
     const seats = readFileSync(join(COMPONENTS, "MinimumSeatsBand.tsx"), "utf8");
@@ -107,17 +112,17 @@ describe("the departure's section rhythm", () => {
     // height; `gap-y-7` keeps a wrapped line's box 4px clear of the one above,
     // as `gap-y-1` did. Not `-my-3` on the row: the stack's end margin is
     // `:where()`, so the row's own would replace it and pull the roster up.
-    const pulse = body.slice(
-      body.indexOf("{shownPulseFacts.length > 0 ? ("),
-      body.indexOf("<TripRosterContent"),
-    );
-    const row = pulse.match(/<div className="([^"]*)">\s*\{shownPulseFacts\.map/)?.[1] ?? "";
+    const pulse = PULSE.slice(PULSE.indexOf("export function PulseFacts"));
+    // The row that holds every fact, open or folded.
+    const row = pulse.match(/return \(\s*<div className="([^"]*)">/)?.[1] ?? "";
     expect(row.split(/\s+/)).toEqual(expect.arrayContaining(["flex", "flex-wrap", "gap-y-7"]));
     expect(row).not.toMatch(/(^|\s)-?m[ty]?-/);
-    const link = pulse.match(/className=\{`([^`]*)`\}/)?.[1] ?? "";
+    const link = PULSE.match(/const FACT_LINK_CLASS =\s*"([^"]*)"/)?.[1] ?? "";
     expect(link.split(/\s+/)).toEqual(
       expect.arrayContaining(["-my-3", "inline-flex", "min-h-11", "items-center", "text-sm"]),
     );
+    // And the page places it straight in the stack, with nothing round it.
+    expect(body).toMatch(/\n\s*<PulseFacts\n/);
   });
 
   it("keeps the skeleton on the same rhythm, so nothing jumps when the page arrives", () => {

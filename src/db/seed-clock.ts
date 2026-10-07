@@ -98,12 +98,27 @@ export function hoursFromNow(hours: number, from = nowDate()): Date {
  * earliest still-future instant) rather than concede to tomorrow: "today
  * always has a board" has no exception.
  */
+/** The earliest local hour today's seeded departure leaves: after the dawn boat docks. */
+export const DEMO_DAY_FIRST_SAILING_HOUR = 9;
+
 export function demoTodayDepartureStart(
   now = nowDate(),
   timeZone: string = DEMO_SHOP_TIMEZONE,
 ): Date {
   const localDay = (date: Date) => toDateInputValue(utcToWallTime(date, timeZone));
-  const candidate = hoursFromNow(5, now);
+  // Never before the dawn boat is back. The same captain and divemaster crew
+  // `DEMO_COMPLETED_TRIP_TITLE` (5:30 to 8:30 AM, `seed-more-trips.ts`), so a
+  // demo seeded in the small hours put them on two boats at once and opened
+  // Today on "Crew on two departures" (UX audit 2026-10-07, item 4).
+  const firstSlotAfterDawnBoat = wallTimeToUtc(
+    { ...utcToWallTime(now, timeZone), hour: DEMO_DAY_FIRST_SAILING_HOUR, minute: 0 },
+    timeZone,
+  );
+  const fiveHoursOut = hoursFromNow(5, now);
+  const candidate =
+    fiveHoursOut.getTime() < firstSlotAfterDawnBoat.getTime()
+      ? firstSlotAfterDawnBoat
+      : fiveHoursOut;
   if (localDay(candidate) === localDay(now)) return candidate;
   const lastSlotToday = wallTimeToUtc(
     { ...utcToWallTime(now, timeZone), hour: 23, minute: 30 },

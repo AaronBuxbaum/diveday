@@ -5,7 +5,7 @@ import { calendarDateInTimezone, shiftCalendarDate } from "@/lib/calendar-date";
 import { nowDate } from "@/lib/clock";
 import { crewPublicNameToStore } from "@/lib/crew-public-name";
 import { generateDemoShopIdentity, pinnedDemoShopIdentity } from "@/lib/demo-identity";
-import { simulatorEmail } from "@/lib/simulator-email";
+import { demoEmail } from "@/lib/simulator-email";
 import { DEFAULT_WAIVER_BODY, DEFAULT_WAIVER_TITLE } from "@/lib/waivers";
 import type { DbExecutor } from "./client";
 import { DEMO_SHOP_SLUG, DEV_STAFF_LOGINS } from "./dev-credentials";
@@ -133,6 +133,7 @@ import { seedLenses } from "./seed-lenses";
 import { seedListedShops } from "./seed-listed-shops";
 import { seedMedicalReview } from "./seed-medical-review";
 import { seedMinimumSeats } from "./seed-minimum-seats";
+import { seedMixedBoat } from "./seed-mixed-boat";
 import { seedMoreTrips } from "./seed-more-trips";
 import { seedNitrox } from "./seed-nitrox";
 import { seedOpenInvoice } from "./seed-open-invoice";
@@ -233,7 +234,9 @@ async function seedStaffShifts(db: DbExecutor, shopId: string, personIds: string
       personId,
       startsAt,
       endsAt,
-      note: "Demo schedule",
+      // No note: a seed label ("Demo schedule") on every chip of the Crew
+      // view read as a test fixture, not a shop (UX audit 2026-10-07, item 34).
+      note: null,
       createdByPersonId: personId,
     })),
   );
@@ -362,7 +365,7 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
       crewScheduleEnabled: true,
       // A front-desk address, not a person's — this is printed on the public
       // course pages, where it backs the "Get in touch" composer.
-      contactEmail: simulatorEmail("front.desk"),
+      contactEmail: demoEmail("front.desk"),
       // The demo shop's front desk is confirmed: it is the state a real shop
       // reaches after opening the link (issue #1288), and the one the settings
       // capture should show.
@@ -447,8 +450,8 @@ export async function seedDemo(db: DbExecutor, opts: { history?: boolean } = {})
     {
       shopId: shop.id,
       name: "Mantis I",
-      capacity: 12,
-      description: "The small boat — twelve divers, a shaded deck, ten minutes to the reef.",
+      capacity: 14,
+      description: "The small boat — fourteen aboard, a shaded deck, ten minutes to the reef.",
     },
     {
       shopId: shop.id,
@@ -709,8 +712,8 @@ export async function createDemoShop(
     {
       shopId: shop.id,
       name: "Mantis I",
-      capacity: 12,
-      description: "The small boat — twelve divers, a shaded deck, ten minutes to the reef.",
+      capacity: 14,
+      description: "The small boat — fourteen aboard, a shaded deck, ten minutes to the reef.",
     },
     {
       shopId: shop.id,
@@ -1071,6 +1074,12 @@ export async function seedDemoSchedule(
   // and the recap's keepsake line, never by readiness, the roll call or a
   // head count — so nothing seeded before it moves.
   await seedSightings(db, shopId);
+  // Adds-only and late: a snorkeler and a rider on today's reef boat, into the
+  // two places `seed-trips.ts` holds for them (src/db/seed-mixed-boat.ts, ADR
+  // 20261007-participant-types).
+  const [reef] = tripRows;
+  if (!reef) throw new Error("seed: reef trip missing before the mixed boat");
+  await seedMixedBoat(db, shopId, { reef, waiverTemplate });
 
   // Adds-only and late, like the four above: the desk's trail **per diver**,
   // so the Activity section on a diver's record opens on a real history rather

@@ -712,7 +712,7 @@ describe("a standing crew clash", () => {
     return day?.crewing.find((trip) => trip.tripId === tripId)?.clashes ?? null;
   }
 
-  it("names the other departure, on both chips", () => {
+  it("names the other departure once, under the earlier chip (UX audit 2026-10-07, item 34)", () => {
     const wreck = {
       tripId: "trip-wreck",
       title: "Spiegel Grove",
@@ -727,9 +727,9 @@ describe("a standing crew clash", () => {
     expect(clashesOn("2026-08-27", [DRIFT, wreck], "trip-drift")).toEqual([
       { tripId: "trip-wreck", title: "Spiegel Grove" },
     ]);
-    expect(clashesOn("2026-08-27", [DRIFT, wreck], "trip-wreck")).toEqual([
-      { tripId: "trip-drift", title: "Reef drift" },
-    ]);
+    // The later boat does not say it back: the same clash, already said in
+    // the same day's column.
+    expect(clashesOn("2026-08-27", [DRIFT, wreck], "trip-wreck")).toEqual([]);
   });
 
   it("leaves the ordinary double shift alone, and a hand-off at the dock too", () => {

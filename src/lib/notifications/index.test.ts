@@ -122,6 +122,39 @@ describe("notify", () => {
     expect(client.send).not.toHaveBeenCalled();
   });
 
+  it("delivers a demo shop's seeded address to the SES mailbox simulator", async () => {
+    // UX audit 2026-10-07, item 4: staff read `priya.sharma@mail.example`;
+    // SES receives the simulator's success box under the same label.
+    const client = { send: vi.fn().mockResolvedValue({ MessageId: "ses-demo-id" }) };
+    const provider = sesNotificationProvider(sesConfig, { client });
+
+    await expect(
+      notify({ ...booking, to: "priya.sharma@mail.example", sender: { demoShop: true } }, provider),
+    ).resolves.toEqual({ status: "sent", providerMessageId: "ses-demo-id" });
+    const command = client.send.mock.calls[0]?.[0] as SendEmailCommand;
+    expect(command.input).toMatchObject({
+      Destination: { ToAddresses: ["success+priya.sharma@simulator.amazonses.com"] },
+    });
+  });
+
+  it("refuses a mail.example address on a real shop instead of simulating it", async () => {
+    // A diver on a real shop who typed `me@mail.example` gave an address nobody
+    // reads; staff must see the send refused, not reported delivered.
+    const client = { send: vi.fn() };
+    const provider = sesNotificationProvider(sesConfig, { client });
+
+    for (const sender of [undefined, { replyTo: "desk@bluemantis.dive" }]) {
+      await expect(
+        notify({ ...booking, to: "me@mail.example", sender }, provider),
+      ).resolves.toMatchObject({
+        status: "failed",
+        retryable: false,
+        errorCode: "invalid_test_recipient",
+      });
+    }
+    expect(client.send).not.toHaveBeenCalled();
+  });
+
   it("never sends seeded demo.com recipients to SES", async () => {
     const client = { send: vi.fn() };
     const provider = sesNotificationProvider(sesConfig, { client });
