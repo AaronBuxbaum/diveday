@@ -336,6 +336,7 @@ export async function seedCertGates(
           .filter((person): person is { id: string } => person !== undefined)
           .map((person) => ({
             shopId,
+            bookedAs: "diver" as const,
             tripId: trip.id,
             personId: person.id,
             status: "booked" as const,
