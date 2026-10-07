@@ -393,6 +393,8 @@ const OUTSIDE_CLOSURE_REASONS: Record<string, string> = {
   notification_rate_limit_state: "provider coordination keyed by ceiling and period",
   stripe_webhook_events:
     "the platform's delivery ledger, pruned by retention; it carries no payload",
+  sms_opt_outs:
+    "a phone number that replied STOP, and nothing else. Keeping it after an erasure is what keeps the promise: removing it would let a later booking with that number text someone who said stop",
   media_deletion_attempts:
     "the blob-deletion ledger the erasure itself *writes to* — a URL, a kind and a retry count. Redacting it would be erasing the record of the erasure",
   integration_events:

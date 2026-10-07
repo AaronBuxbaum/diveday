@@ -51,6 +51,7 @@ import {
   tripRecapPhotos,
   trips,
 } from "./schema";
+import { stopListedSmsProvider } from "./sms-opt-outs";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { getLatestTipForBooking, refreshTipFromStripe } from "./tips";
 import { listTripSightings } from "./trip-sightings";
@@ -1273,7 +1274,10 @@ async function sendRecaps(
 ): Promise<RecapRunSummary> {
   const now = options.now ?? nowDate();
   const emailProvider = notificationProviderForDb(options.emailProvider);
-  const smsProvider = options.smsProvider ?? smsProviderFromEnvironment();
+  const smsProvider = stopListedSmsProvider(
+    db,
+    options.smsProvider ?? smsProviderFromEnvironment(),
+  );
   const origin = options.appOrigin === undefined ? publicAppUrl() : options.appOrigin;
   const since = new Date(now.getTime() - RECAP_LOOKBACK_HOURS * HOUR_MS);
   const eligibleBefore = new Date(now.getTime() - RECAP_AUTOMATIC_DELAY_HOURS * HOUR_MS);
@@ -1408,6 +1412,7 @@ async function sendRecaps(
     shopName: string;
     phone: string | null;
     smsBody: string;
+    smsStopLine: string;
     notification: Notification;
   }> = [];
   const smsWork: Array<{
@@ -1416,6 +1421,7 @@ async function sendRecaps(
     shopName: string;
     phone: string;
     smsBody: string;
+    smsStopLine: string;
   }> = [];
 
   for (const { booking, person, trip, shop } of rows) {
@@ -1459,6 +1465,7 @@ async function sendRecaps(
         shopName: shop.name,
         phone,
         smsBody,
+        smsStopLine: t("notifications.sms.stopLine"),
         notification: {
           kind: "trip_recap",
           bookingId: booking.id,
@@ -1483,6 +1490,7 @@ async function sendRecaps(
         shopName: shop.name,
         phone,
         smsBody,
+        smsStopLine: t("notifications.sms.stopLine"),
       });
     } else if (recapUrl && person.email && person.courtesyEmailOptOutAt) {
       // Opted out of courtesy email and no phone to fall back to — not a
@@ -1512,7 +1520,12 @@ async function sendRecaps(
     // that failed must not overwrite a delivered email.
     if (delivery.status === "sent" && work.phone) {
       await sendCourtesyMessage(
-        { to: work.phone, body: work.smsBody, shopName: work.shopName },
+        {
+          to: work.phone,
+          body: work.smsBody,
+          smsStopLine: work.smsStopLine,
+          shopName: work.shopName,
+        },
         { sms: smsProvider, whatsapp: whatsAppProviders.get(work.shopId) ?? null },
       );
     }
@@ -1530,7 +1543,12 @@ async function sendRecaps(
     // Phone-only diver: the courtesy text is the tracked channel, whichever of
     // WhatsApp or SMS carried it.
     const { delivery } = await sendCourtesyMessage(
-      { to: work.phone, body: work.smsBody, shopName: work.shopName },
+      {
+        to: work.phone,
+        body: work.smsBody,
+        smsStopLine: work.smsStopLine,
+        shopName: work.shopName,
+      },
       { sms: smsProvider, whatsapp: whatsAppProviders.get(work.shopId) ?? null },
     );
     await recordNotificationDelivery(db, {

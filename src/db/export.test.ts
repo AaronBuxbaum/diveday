@@ -225,6 +225,7 @@ const EXCLUDED_TABLES = [
   "shop_stripe_accounts", // provider linkage, useless outside Stripe
   "payment_operation_intents", // internal reconciliation ledger, not a shop record (CR-005)
   "stripe_webhook_events", // provider webhook-delivery ledger, not a shop record — same reasoning as payment_operation_intents
+  "sms_opt_outs", // the platform texting number's STOP list, not one shop's record (ADR 20261007-sms-stop-and-help)
   "media_deletion_attempts", // internal reconciliation ledger, not a shop record (CR-012)
   // The "what erasure still owes at Stripe" ledger. Not a shop record: every row
   // is a pointer into *this* Stripe account (`cus_…`/`in_…`) plus the state of

@@ -8,6 +8,7 @@ import type { AppDb } from "./client";
 import { sendAndRecordNotification, sendNotification } from "./notifications";
 import { getBookingReadiness } from "./readiness";
 import { bookings, people, shops, trips } from "./schema";
+import { stopListedSmsProvider } from "./sms-opt-outs";
 import {
   hasLivePersonWaiverRequest,
   hasLiveWaiverRequest,
@@ -64,7 +65,10 @@ export type WaiverDelivery =
  */
 export async function waiverTextProviders(db: AppDb, shopId: string): Promise<CourtesyProviders> {
   const senders = await whatsAppProvidersForShops(db, [shopId]);
-  return { sms: smsProviderFromEnvironment(), whatsapp: senders.get(shopId) ?? null };
+  return {
+    sms: stopListedSmsProvider(db, smsProviderFromEnvironment()),
+    whatsapp: senders.get(shopId) ?? null,
+  };
 }
 
 /**
@@ -107,15 +111,17 @@ async function textWaiverLink(
   const to = smsRecipient(input.phone);
   if (!to) return { delivery: "no_phone" };
   const providers = input.providers ?? (await waiverTextProviders(db, input.shopId));
+  const t = diverTranslator(input.locale);
   const { delivery } = await sendCourtesyMessage(
     {
       to,
       shopName: input.shopName,
-      body: waiverTextBody(diverTranslator(input.locale), {
+      body: waiverTextBody(t, {
         shopName: input.shopName,
         tripTitle: input.tripTitle,
         completionUrl: input.completionUrl,
       }),
+      smsStopLine: t("notifications.sms.stopLine"),
     },
     providers,
   );

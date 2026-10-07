@@ -9,6 +9,7 @@
     "said": "The crew said so at {time}."
   },
   "common": {
+    "smsConsent": "By giving a mobile number, you agree to texts from DiveDay about your bookings: reminders, waiver links and trip recaps, up to four per booking. Message and data rates may apply. Reply STOP to opt out, HELP for help. <a>Privacy policy</a>",
     "backToSchedule": "Back to the schedule",
     "needHelpContact": "Need help? <link>Contact {shop}</link>.",
     "needHelpPlain": "Need help? Contact {shop} directly.",
@@ -3450,6 +3451,8 @@
         "paymentsBody": "DiveDay never sees a card number. Cards are entered directly with Stripe on the shop’s own connected account. We keep the amount, the state and Stripe’s identifiers, so a shop can reconcile a refund without us holding anything worth stealing.",
         "trailsTerm": "Operational trails",
         "trailsBody": "who moved a booking, who marked a diver aboard, whether a confirmation arrived. Short who-did-what-when rows, in the shop’s own tenant.",
+        "textsTerm": "Text messages",
+        "textsBody": "a mobile number given with a booking is used only to text that diver about their bookings, from DiveDay’s own number. Mobile numbers and the consent to text them are never shared with or sold to anyone for their own marketing. Replying STOP to any text stops them, and the number stays on a stop list so it is not texted again until the diver replies START.",
         "devicesTerm": "The copy on a boat phone",
         "devicesBody": "So that a roll call still works with no signal, a crew phone holds its own copy of the next two days of manifests. For each diver it keeps their name and emergency contact; their rental sizes and whether they asked for nitrox; who is on their buddy team; whether they checked in or the desk marked them as not coming; whether they are cleared to board and, if not, why, which can be a medical hold; and each roll-call mark, with the name of the crew member who made it and any note they wrote. It is stored encrypted on that phone, under a key the browser will not hand back out, so it cannot be read off the device’s storage. Anyone holding the unlocked phone can open it, the same as the paper manifest it replaces. It is removed when a different shop signs in on that phone, and it deletes itself at the earlier of fourteen days after it was saved or seven days after the trip ended."
       },
@@ -4137,7 +4140,8 @@
       "medicalReviewNote": "Check if a medical answer needs a doctor’s sign-off",
       "recap": "{shopName}: thanks for diving {tripTitle}! Your recap: {recapUrl}",
       "waiver": "{shopName}: please sign your dive release before you dive — {url}",
-      "waiverForTrip": "{shopName}: please sign your dive release for {tripTitle} — {url}"
+      "waiverForTrip": "{shopName}: please sign your dive release for {tripTitle} — {url}",
+      "stopLine": "Reply STOP to opt out."
     },
     "whatsappTemplate": {
       "body": "Hi! An update from '{{1}}': '{{2}}'",

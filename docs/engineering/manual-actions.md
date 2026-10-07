@@ -125,14 +125,19 @@ this file is the checklist, not the argument.
     if not   A denial with no reason is the norm, not the end: reply on the same case with the runbook's follow-up answers, and if it is closed, open a new case that names the closed case id. A second region is its own sandbox and its own request.
     note     Everything the reviewer asks for is already in the stack: DKIM and a custom MAIL FROM on the identity, bounce and complaint events to /api/webhooks/ses, account-level suppression on the configuration set, one-click unsubscribe headers, Reply-To and a postal footer from the shop record, and the two reputation alarms in the email stack. The case text lists them; do not paraphrase it shorter.
 
-[12] Leave the SMS sandbox, raise the spend limit, register an origination identity
+[12] Leave the SMS sandbox, raise the spend limit, register a toll-free number and set its HELP/STOP replies
     when     once per region, before sending SMS to a diver -- start it early, the vetting is measured in weeks
-    why      All three are account-and-region SMS state. The sandbox exit and any spend limit above $1 are Support cases; a US origination identity (10DLC or toll-free) is a vetted registration with the carriers that takes weeks, not days. The SetSMSAttributes custom resource (infra-stack.ts S10) deliberately touches none of them -- it sets delivery-status logging and nothing else. Moving the estate to another region means doing all three again there, which is most of the reason a region move is a decision rather than a chore (docs/engineering/region-migration.md).
-    run      SNS console -> Text messaging (SMS) -> Exit SMS sandbox (a Support case).
-             Service Quotas -> Amazon SNS -> Account spend threshold for SMS (default $1/month).
-             SNS console -> Text messaging (SMS) -> Origination identities, for US traffic.
+    why      All of it is account-and-region SMS state. The sandbox exit and any spend limit above $1 are Support cases; a US toll-free number is a vetted registration with the carriers that takes weeks, not days. Toll-free rather than 10DLC because one DiveDay number sends for every shop (ADR 20261007-sms-stop-and-help). The keyword replies and the two-way setting live on the number, which the stack does not own, so they are set here; the stack supplies the topic and the role they name. The SetSMSAttributes custom resource (infra-stack.ts S10) deliberately touches none of it. Moving the estate to another region means doing all of it again there (docs/engineering/region-migration.md).
+    run      AWS End User Messaging SMS console -> Account settings -> Request production access (a Support case); ask for the spend limit in the same case.
+             SNS console -> Text messaging (SMS) -> Edit preferences: set the account spend limit to what the case granted.
+             AWS End User Messaging SMS console -> Phone numbers -> Request originator: United States, Toll-free, SMS, Transactional; then submit its toll-free registration with the answers in docs/engineering/sms-delivery-receipts-runbook.md, 'Registering the number'.
+             aws pinpoint-sms-voice-v2 put-keyword --origination-identity <phone-number-id> --keyword HELP --keyword-action AUTOMATIC_RESPONSE --keyword-message "DiveDay texts about your dive bookings. For help with a booking, contact the dive shop that sent it. Reply STOP to opt out. Msg & data rates may apply."
+             aws pinpoint-sms-voice-v2 put-keyword --origination-identity <phone-number-id> --keyword STOP --keyword-action OPT_OUT --keyword-message "You won't get more texts from DiveDay. Reply START to opt back in."
+             aws pinpoint-sms-voice-v2 update-phone-number --phone-number-id <phone-number-id> --two-way-enabled --two-way-channel-arn <SmsDeliveryReceiptsTopicArn> --two-way-channel-role <SmsTwoWayRoleArn> --no-self-managed-opt-outs-enabled
     verify   aws sns get-sms-attributes --attributes MonthlySpendLimit
-    note     Skipping this does not fail anything visibly: the pipeline reads healthy end to end while sends are capped or dropped.
+             aws pinpoint-sms-voice-v2 describe-keywords --origination-identity <phone-number-id> -- HELP and STOP carry the messages above.
+             Text STOP to the number from your own phone: the STOP reply arrives, and an sms_webhook.reply_applied line is logged.
+    note     Skipping this does not fail anything visibly: the pipeline reads healthy end to end while sends are capped or dropped, and without the two-way setting a STOP is still honored by AWS but the app never hears of it.
 
 [13] Confirm the observability alarm subscription email
     when     three times per alert address -- once per alarm topic -- and again if the address changes

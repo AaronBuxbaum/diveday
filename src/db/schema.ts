@@ -4720,6 +4720,30 @@ export const stripeWebhookEvents = pgTable(
 );
 
 /**
+ * Each phone number's last word to DiveDay's texting number: STOP or START
+ * (ADR 20261007-sms-stop-and-help).
+ *
+ * Platform-wide, not per shop, and that is the carriers' rule rather than a
+ * modeling shortcut: every shop's texts leave from the one DiveDay number, so a
+ * diver who answers STOP to one shop's reminder has asked *that number* to stop,
+ * and another shop's waiver link from the same number would be the violation.
+ * Keyed by the E.164 number the reply came from, which is the same form
+ * `smsRecipient` sends to.
+ *
+ * State rather than presence, with the time the keyword was sent: SNS retries a
+ * failed delivery later and in any order, so a START retried after a newer STOP
+ * must lose. A reply older than `keyword_at` changes nothing.
+ *
+ * Nothing else removes a row: not retention, not a diver's erasure, not a shop
+ * reset. Each of those would resume texting someone who said stop.
+ */
+export const smsOptOuts = pgTable("sms_opt_outs", {
+  phone: text("phone").primaryKey(),
+  optedOut: boolean("opted_out").notNull(),
+  keywordAt: timestamp("keyword_at", { withTimezone: true }).notNull(),
+});
+
+/**
  * A hosted Stripe Checkout attempt for a public booking (or party of
  * bookings), on the shop's connected account. `pending` means the diver was
  * handed a payment link that may still be paid; `completed` is only ever set
