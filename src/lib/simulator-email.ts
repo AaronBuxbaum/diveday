@@ -91,4 +91,3 @@ export function deliveryAddressFor(to: string, from: { demoShop: boolean }): str
   if (domain !== DEMO_MAIL_DOMAIN) return to;
   return simulatorEmail(to.slice(0, at));
 }
-

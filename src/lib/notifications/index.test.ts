@@ -129,10 +129,7 @@ describe("notify", () => {
     const provider = sesNotificationProvider(sesConfig, { client });
 
     await expect(
-      notify(
-        { ...booking, to: "priya.sharma@mail.example", sender: { demoShop: true } },
-        provider,
-      ),
+      notify({ ...booking, to: "priya.sharma@mail.example", sender: { demoShop: true } }, provider),
     ).resolves.toEqual({ status: "sent", providerMessageId: "ses-demo-id" });
     const command = client.send.mock.calls[0]?.[0] as SendEmailCommand;
     expect(command.input).toMatchObject({

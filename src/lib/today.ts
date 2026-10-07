@@ -809,13 +809,13 @@ export type TodayAction = {
    * the detail a staffer reads is already rendered into `detail` above.
    */
   rentalFit?: { reservationId: string };
-  /** The departure this hangs off; drives urgency and ordering. */
-/**
+  /**
    * The staff member a staff row is about (`staff_credential_due`), so the crew
    * lens can keep a reader's own row open rather than fold it with the desk's.
    */
   staffPersonId?: string;
-    dueAt: Date | null;
+  /** The departure this hangs off; drives urgency and ordering. */
+  dueAt: Date | null;
 };
 
 /**

@@ -2982,8 +2982,7 @@ export async function getTodayWork(
     outTripIds: [
       ...new Set([...crewClashState.outTripIds, ...boatsOut.out.map((trip) => trip.id)]),
     ],
-    blockedAboard: boatsOut.blocked.filter((row) => isBlockedAboard(row.readiness.blockers))
-      .length,
+    blockedAboard: boatsOut.blocked.filter((row) => isBlockedAboard(row.readiness.blockers)).length,
     withheldCount,
     nextDeparture: next
       ? {
