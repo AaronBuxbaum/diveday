@@ -357,7 +357,7 @@
       "crewNotBackAboard": "{count, plural, one {# crew member is not back aboard.} other {# crew members are not back aboard.}} This checkpoint stays open.",
       "crewOlderCopy": "{count, plural, one {# crew member on this saved copy can’t be called here} other {# crew members on this saved copy can’t be called here}} because it was saved before crew roll call worked offline. Refresh the copy next time you have signal, or record them on the live manifest.",
       "buddyReadOnlyHere": "Buddy teams are shown as saved. Whether anyone on a team is back aboard lives on the live roll call, and this copy doesn’t track it.",
-      "crewAwaiting": "{count, plural, one {# crew member still to call.} other {# crew members still to call.}} Every person on the crew list needs a result of their own.",
+      "crewAwaiting": "{count, plural, one {# crew member still to call.} other {# crew members still to call.}}",
       "readyBadge": "Ready when saved",
       "blockedBadge": "Blocked when saved",
       "notHereBadge": "Not here when saved",
