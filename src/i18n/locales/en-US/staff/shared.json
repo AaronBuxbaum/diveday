@@ -196,7 +196,7 @@
     },
     "blockers": {
       "requirementsNotConfigured": "Trip requirements have not been configured yet.",
-      "identityUnconfirmed": "Matched to this record on a guess: confirm who this is before boarding.",
+      "identityUnconfirmed": "Matched to this record on a guess: confirm who this is on the roster before boarding.",
       "waiverNotSent": "Waiver not signed. Not sent yet.",
       "waiverPending": "Waiver not signed. Link sent.",
       "waiverExpired": "Waiver link expired; issue a fresh link.",
