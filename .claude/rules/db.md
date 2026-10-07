@@ -12,8 +12,10 @@ never pays for them.
 
 ## Where things are
 
-- **Schema** (source of truth — never read `drizzle/`): `src/db/schema.ts`. Locate a table with
-  Grep and read the range; the file is 8,700 lines and the Read guard refuses it whole.
+- **Schema** (source of truth — never read `drizzle/`): `src/db/schema/`, one module per domain
+  (`core.ts` holds shops, people, user accounts and the shared enums; then `trips.ts`, `bookings.ts`,
+  `payments.ts`, `waivers.ts`, …), re-exported by `index.ts`, which is what `@/db/schema` and both
+  drizzle configs read. A new table goes in its domain's module; Grep for a table to find it.
 - **Client / test db factory**: `src/db/client.ts` (`getDb()`, `createTestDb()`).
 - **Queries and seed data**: `src/db/shops.ts`, plus two barrels over sibling modules —
   `src/db/trips.ts` re-exports `trips-create/-series/-record/-schedule/-crew/-roster.ts`, and
@@ -65,15 +67,15 @@ never pays for them.
 
 ## Changing the schema
 
-Follow the **schema-change** skill. The short form: edit `src/db/schema.ts`, `pnpm db:generate`
+Follow the **schema-change** skill. The short form: edit the module under `src/db/schema/`, `pnpm db:generate`
 with a `--name`, review the generated SQL once, seed if e2e needs rows, and **before you push** run
-the four coverage guards that assert over `schema.ts` from files you will never touch:
+the four coverage guards that assert over the schema from files you will never touch:
 
 ```bash
 pnpm test src/db/export.test.ts src/db/diver-merge.test.ts src/db/delete-path-coverage.test.ts src/db/retention.test.ts --reporter=dot
 ```
 
-Touching `schema.ts` at all is the trigger, not the shape of the change — `pnpm test:changed`
+Touching any file under `src/db/schema/` is the trigger, not the shape of the change — `pnpm test:changed`
 selects the whole suite after a schema edit, and that run belongs to CI
 ([docs/agents/verifying.md](../../docs/agents/verifying.md)). Never hand-edit or hand-merge
 anything under `drizzle/`; a migration is generated, and a conflict there is resolved by reverting

@@ -490,7 +490,7 @@ const OUTSIDE_RETENTION: readonly string[] = [
 
 /** What the guard's failure says, so a session reads the rule and not the list. */
 const UNCLASSIFIED_HELP =
-  "a table in src/db/schema.ts that retention classifies as nothing. Give it a window " +
+  "a table in src/db/schema/ that retention classifies as nothing. Give it a window " +
   "in RETENTION_DAYS if it is a trail that should be pruned; add it to " +
   "UNBOUNDED_BY_DECISION *and write the paragraph in src/lib/retention.ts saying who " +
   "decided it is kept forever and when*, the way gear_service_events and " +

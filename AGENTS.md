@@ -52,11 +52,11 @@ provider-specific folders are adapters and must not introduce unique requirement
 | `pnpm lint` / `pnpm lint:fix` | Biome check / autofix |
 | `pnpm typecheck` | tsc |
 | `pnpm test <file> --reporter=dot` | focused Vitest run with low-noise success output |
-| `pnpm test:changed` | the tests your diff reaches through the import graph — the pre-push net that catches a coverage guard living in a file you never touched. A `src/db/schema.ts` edit widens it to the whole suite; name the three guards by path instead ([docs/agents/verifying.md](docs/agents/verifying.md)) |
+| `pnpm test:changed` | the tests your diff reaches through the import graph — the pre-push net that catches a coverage guard living in a file you never touched. A `src/db/schema/` edit widens it to the whole suite; name the three guards by path instead ([docs/agents/verifying.md](docs/agents/verifying.md)) |
 | `pnpm e2e <spec> --reporter=line` | build, then run one Playwright spec — focused because the **whole** suite belongs to CI. What the per-test reset does and does not restore, and why a test that writes shop settings takes a `privateShop`: `.claude/rules/e2e.md` |
 | `pnpm e2e:run <spec> --reporter=line` | fast-iteration path: build once with `pnpm e2e:build`, then reuse it |
 | `pnpm build` | production build |
-| `pnpm db:generate` | generate a Drizzle migration after editing `src/db/schema.ts` (the **schema-change** skill) |
+| `pnpm db:generate` | generate a Drizzle migration after editing `src/db/schema/` (the **schema-change** skill) |
 | `pnpm db:reset` | clear the dev PGlite database; next `pnpm dev` re-migrates and re-seeds. **Refuses while a dev server is running**, naming the pid (ADR 20260903-one-process-per-pglite-directory) |
 | `node scripts/screenshot.mjs <path…>` | look at a page against a running `pnpm dev` — light-mode phone/desktop PNGs into `screenshots/`, with dev-credential sign-in for `/shop/**`. Review-grade captures come from a filtered visual-spec run (the **verify** skill) |
 | `pnpm visual` | capture the visual surfaces and compare them against the S3 baseline for this branch's parent commit (baselines are rendered on CI's Linux runners; triage from the CI report) |
@@ -94,7 +94,7 @@ when you open the file.
 | The four lines every staff page opens with (session, shop, tenant, permission) | `requireShopSurface` in `src/lib/session.ts`; every refusal *throws* |
 | Telling a staffer what just happened (the `?notice=` redirect) | `src/lib/staff-notices.ts` — `noticeUrl`, `noticeFromParam`, `shopPath`; never hand-build the string |
 | Readiness words and tone ("Blocked" / "Ready", everywhere) | `src/i18n/readiness-labels.ts` |
-| DB schema (source of truth — never read `drizzle/`) | `src/db/schema.ts`, by Grep and range |
+| DB schema (source of truth — never read `drizzle/`) | `src/db/schema/`, by Grep and range |
 | DB client / test db factory | `src/db/client.ts` (`getDb()`, `createTestDb()`) |
 | Queries and seed data | `src/db/shops.ts`; barrels `src/db/trips.ts` and `src/db/seed.ts` — import from the barrel, edit the sibling; demo data is a new `src/db/seed-<scenario>.ts` |
 | Retention / pruning of append-only tables | `src/lib/retention.ts` (`RETENTION_DAYS`), `src/db/retention.ts`, `src/app/api/cron/retention/` |
@@ -164,7 +164,7 @@ for anything touching auth, tokens, personal or medical data, or export/import.
   target branch before calling work complete.
 - **Stack by default: cut every branch from the branch you opened last, not from `main`, whenever
   that one is still open** — related or unrelated, a schema migration or a padding change. A
-  dependent chain (`src/db/schema.ts` + migration → the `src/db` reader → the surface) has no other
+  dependent chain (`src/db/schema/` + migration → the `src/db` reader → the surface) has no other
   honest shape; unrelated work stacks because a second branch cut from `main` re-edits the same
   shared files (a `check:repo` row, a baseline, a message bundle), and on a stack those merge once,
   while the change is being written. Pixels are not an exception. Cut each branch from the one

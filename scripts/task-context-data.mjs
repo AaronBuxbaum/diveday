@@ -21,7 +21,7 @@ export const areas = {
       "docs/architecture/overview.md",
     ],
     code: [
-      "src/db/schema.ts",
+      "src/db/schema/",
       "src/db/client.ts",
       "src/db/bookings.ts",
       "src/lib/authz.ts",
@@ -50,7 +50,7 @@ export const areas = {
       "docs/architecture/overview.md",
     ],
     code: [
-      "src/db/schema.ts",
+      "src/db/schema/",
       "src/db/readiness.ts",
       "src/lib/readiness.ts",
       "src/app/shop/[shopSlug]/divers/[personId]",
@@ -78,7 +78,7 @@ export const areas = {
       "docs/architecture/overview.md",
     ],
     code: [
-      "src/db/schema.ts",
+      "src/db/schema/",
       "src/db/rental-fit.ts",
       "src/db/nitrox.ts",
       "src/lib/dive-prep.ts",
@@ -105,7 +105,7 @@ export const areas = {
       "docs/design/principles.md",
     ],
     code: [
-      "src/db/schema.ts",
+      "src/db/schema/",
       "src/db/gear.ts",
       "src/lib/gear.ts",
       "src/i18n/gear-labels.ts",
@@ -141,7 +141,7 @@ export const areas = {
       "docs/architecture/decisions/20260718-offline-manifest-snapshots.md",
     ],
     code: [
-      "src/db/schema.ts",
+      "src/db/schema/",
       "src/db/readiness.ts",
       "src/db/manifests.ts",
       "src/lib/readiness.ts",
@@ -192,7 +192,7 @@ export const areas = {
       // The gate, the mix validation, and the MOD derivation all live in
       // src/db/nitrox.ts — there is no src/lib/nitrox.ts; the prep list reads
       // the results through src/lib/dive-prep.ts.
-      "src/db/schema.ts",
+      "src/db/schema/",
       "src/db/nitrox.ts",
       "src/lib/dive-prep.ts",
       "src/app/shop/[shopSlug]/trips/[id]/prep",
@@ -220,7 +220,7 @@ export const areas = {
       "docs/architecture/overview.md",
     ],
     code: [
-      "src/db/schema.ts",
+      "src/db/schema/",
       "src/db/courses.ts",
       "src/db/course-templates.ts",
       "src/lib/courses.ts",
@@ -314,7 +314,7 @@ export const areas = {
       "docs/product/glossary.md",
     ],
     code: [
-      "src/db/schema.ts",
+      "src/db/schema/",
       "src/db/client.ts",
       // `trips.ts` and `seed.ts` are barrels; the code lives in the siblings.
       "src/db/trips.ts",
@@ -333,7 +333,7 @@ export const areas = {
     ],
     tests: ["src/db", "src/lib"],
     invariants: [
-      "src/db/schema.ts is the source of truth; never infer schema from generated migrations.",
+      "src/db/schema/ (one module per domain, re-exported by index.ts) is the source of truth; never infer schema from generated migrations.",
       "Every tenant-owned domain row carries shop_id.",
       "Capacity enforcement remains transactional.",
       "Schema changes include focused PGlite tests and generated migrations.",
