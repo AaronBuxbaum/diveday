@@ -29,6 +29,15 @@ vi.mock("@/db/recap-pulses", async (importOriginal) => {
   return { ...actual, submitRecapPulse: vi.fn() };
 });
 vi.mock("@/db/people", () => ({ recordDiverOwnLocaleForBooking: vi.fn() }));
+vi.mock("@/db/tips", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/db/tips")>();
+  return {
+    ...actual,
+    getTipCurrencyForBooking: vi.fn(async () => "usd"),
+    startTipCheckout: vi.fn(async () => ({ ok: true, checkoutUrl: "https://checkout.test/tip" })),
+  };
+});
+vi.mock("@/lib/notifications", () => ({ publicAppUrl: vi.fn(() => "https://diveday.test") }));
 vi.mock("@/i18n/request", () => ({
   requestFirstHandLocale: vi.fn(async () => "en-US"),
   requestLocale: vi.fn(async () => "en-US"),
@@ -48,7 +57,8 @@ vi.mock("@/lib/rate-limit", async (importOriginal) => {
 const { submitRecapPulse } = await import("@/db/recap-pulses");
 const { verifyRecapToken } = await import("@/lib/recap-links");
 const { checkRateLimit } = await import("@/lib/rate-limit");
-const { submitRecapPulseAction } = await import("./actions");
+const { startTipCheckout } = await import("@/db/tips");
+const { startTipAction, submitRecapPulseAction } = await import("./actions");
 
 const TOKEN = "signed-recap-token";
 const BOOKING_ID = "0f2a9c1e-1111-4222-8333-444444444444";
@@ -161,5 +171,40 @@ describe("submitRecapPulseAction", () => {
   it("reports an error rather than throwing when the write itself fails", async () => {
     vi.mocked(submitRecapPulse).mockRejectedValueOnce(new Error("db down"));
     expect(await redirectedTo(form([["category", "gear"]]))).toBe(`/recap/${TOKEN}?pulse=error`);
+  });
+});
+
+describe("startTipAction", () => {
+  async function tipRedirect(data: FormData): Promise<string> {
+    try {
+      await startTipAction(TOKEN, data);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "";
+      if (message.startsWith("REDIRECT:")) return message.slice("REDIRECT:".length);
+      throw error;
+    }
+    throw new Error("action returned without redirecting");
+  }
+
+  it("refuses an amount that is not a number, and charges nothing", async () => {
+    expect(await tipRedirect(form([["customAmount", "lots"]]))).toBe(`/recap/${TOKEN}?tip=invalid`);
+    expect(startTipCheckout).not.toHaveBeenCalled();
+  });
+
+  it("refuses a form with no amount at all", async () => {
+    expect(await tipRedirect(form([]))).toBe(`/recap/${TOKEN}?tip=invalid`);
+    expect(startTipCheckout).not.toHaveBeenCalled();
+  });
+
+  it("lets a typed amount win over the checked preset", async () => {
+    expect(
+      await tipRedirect(
+        form([
+          ["amount", "10"],
+          ["customAmount", " 25 "],
+        ]),
+      ),
+    ).toBe("https://checkout.test/tip");
+    expect(vi.mocked(startTipCheckout).mock.calls[0]?.[1]).toMatchObject({ amountCents: 2500 });
   });
 });

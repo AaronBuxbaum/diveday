@@ -3,6 +3,7 @@
 import { getDb } from "@/db/client";
 import { commitGearImport } from "@/db/gear-import";
 import { canPersonImportShopData } from "@/db/import";
+import { csvUploadForm, parseForm } from "@/lib/form-parse";
 import { prepareGearImport } from "@/lib/gear-import";
 import { revalidateAndRedirect } from "@/lib/navigation";
 import { requireStaffSession } from "@/lib/session";
@@ -29,10 +30,9 @@ export async function importGearServiceHistoryAction(formData: FormData) {
     revalidateAndRedirect(home, noticeUrl(home, "gear-import-not-authorized"));
   }
 
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0)
-    revalidateAndRedirect(page, noticeUrl(tab, "import-empty"));
-  const prepared = prepareGearImport(await file.text());
+  const parsed = parseForm(csvUploadForm, formData);
+  if (!parsed.ok) revalidateAndRedirect(page, noticeUrl(tab, "import-empty"));
+  const prepared = prepareGearImport(await parsed.data.file.text());
   if (prepared.fatal) revalidateAndRedirect(page, noticeUrl(tab, `import-${prepared.fatal}`));
   const summary = await commitGearImport(db, session.user.shopId, prepared, session.user.personId);
   revalidateAndRedirect(

@@ -1,11 +1,16 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { getDb } from "@/db/client";
 import { canPersonImportShopData, commitContactImport, type ImportSummary } from "@/db/import";
+import { parseForm } from "@/lib/form-parse";
 import type { ImportFatalCode, ImportFatalParams } from "@/lib/import";
 import { prepareContactImport } from "@/lib/import";
 import { requireStaffSession } from "@/lib/session";
+
+/** The pasted or uploaded CSV, as text the client read off the file. */
+const contactsForm = z.object({ csv: z.string().default("") });
 
 export type ImportActionErrorCode =
   | ImportFatalCode
@@ -35,7 +40,8 @@ export async function importContactsAction(
     return { status: "error", code: "not_owner_or_manager" };
   }
 
-  const csv = String(formData.get("csv") ?? "");
+  const parsed = parseForm(contactsForm, formData);
+  const csv = parsed.ok ? parsed.data.csv : "";
   if (!csv.trim()) return { status: "error", code: "csv_required" };
 
   const prepared = prepareContactImport(csv);
