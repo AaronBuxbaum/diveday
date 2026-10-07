@@ -1388,7 +1388,9 @@ new domain concept, define it here in the same PR.
   version and new links snapshot the current one. The exact template version is snapshotted into each
   issued record; a signed record is immutable and a replacement link creates a new record. Some
   answers on the medical form require a physician sign-off — that's a blocking state, not a checkbox,
-  and the only thing that ends it is a **physician clearance** recorded against that record.
+  and the only thing that ends it is a **physician clearance** recorded against that record. The
+  hold is a fact about the diver, not the trip: it blocks every departure, including one that does
+  not require the release (H-102).
 
   **Publishing a version invalidates every standing signature at the shop, at once.** A signature is
   held against the version it was signed on, so a new version leaves every booked diver on every

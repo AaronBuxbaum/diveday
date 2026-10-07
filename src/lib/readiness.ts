@@ -767,22 +767,30 @@ export function calculateReadiness(input: ReadinessInput): ReadinessResult {
     return { status: "blocked", blockers };
   }
 
+  const state = waiverState(input.waiver, now);
+
+  // A medical answer is a fact about the diver, not about the departure
+  // (H-102, issue #2096): a referral nobody has cleared, or a physician's "no",
+  // holds the diver on every trip, including one whose requirements leave the
+  // release off. A clean release signed after a refusal is the record handed
+  // in here instead (H-98), so it reads "complete" and raises neither.
+  if (state === "medical_review") {
+    blockers.push({ code: "medical_review" });
+  }
+  // The block is identical — a refused evaluation lifts nothing — and only
+  // the word changes, so the crew reads "the doctor said no" rather than
+  // "still waiting on the doctor" (issue #1283).
+  if (state === "medical_not_cleared") {
+    blockers.push({ code: "medical_not_cleared" });
+  }
+
+  // The release's own blockers follow the departure's setting.
   if (input.requirement.requiresWaiver) {
-    const state = waiverState(input.waiver, now);
     if (state === "not_sent") blockers.push({ code: "waiver_not_sent" });
     if (state === "awaiting_signature") {
       blockers.push({ code: "waiver_pending" });
     }
     if (state === "expired") blockers.push({ code: "waiver_expired" });
-    if (state === "medical_review") {
-      blockers.push({ code: "medical_review" });
-    }
-    // The block is identical — a refused evaluation lifts nothing — and only
-    // the word changes, so the crew reads "the doctor said no" rather than
-    // "still waiting on the doctor" (issue #1283).
-    if (state === "medical_not_cleared") {
-      blockers.push({ code: "medical_not_cleared" });
-    }
     // A signed release a minor gave alone (ADR 20260907-guardian-co-signature).
     // Only ever raised over a record that *is* signed: an unsigned, expired or
     // held release already has its own line above, and a second one here
