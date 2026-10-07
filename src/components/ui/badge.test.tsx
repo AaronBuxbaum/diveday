@@ -56,6 +56,15 @@ describe("Badge geometry", () => {
     },
   );
 
+  it("wraps its words only when the caller asks", () => {
+    render(
+      <Badge tone="danger" size="sm" wraps>
+        Blocked when saved
+      </Badge>,
+    );
+    expect(screen.getByText("Blocked when saved").className).not.toMatch(/\bwhitespace-nowrap\b/);
+  });
+
   it("draws the neutral edge as an inset ring, which takes no room", () => {
     const classes = pill("neutral", "md").className.split(/\s+/);
     expect(classes).toEqual(expect.arrayContaining(["ring-1", "ring-inset", "ring-border"]));

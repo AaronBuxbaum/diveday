@@ -631,7 +631,7 @@ export function DiverRollCall({
                     ) : null
                   }
                   closeLabel={t("manifest.closePersonDetails")}
-                  triggerClassName={`${ROW_DISCLOSURE_SUMMARY_CLASS} flex-wrap gap-y-2`}
+                  triggerClassName={`${ROW_DISCLOSURE_SUMMARY_CLASS} flex-wrap gap-y-2 sm:flex-nowrap print:flex-nowrap`}
                   mark={
                     rowState.notBackAboard ? (
                       <RollCallMark state="notBack" />
@@ -655,7 +655,9 @@ export function DiverRollCall({
                       <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-surface text-sm font-bold tabular-nums">
                         {String(index + 1).padStart(2, "0")}
                       </span>
-                      <span className="min-w-0 flex-1">
+                      <span
+                        className={`min-w-0 flex-1 ${capsule || diver.notHere ? "sm:flex-initial print:flex-initial" : ""}`}
+                      >
                         <span className={`block ${ITEM_TITLE_CLASS} group-hover/summary:underline`}>
                           {diver.fullName}
                         </span>
@@ -693,9 +695,21 @@ export function DiverRollCall({
                         it stays inside the name button: one tap target, the
                         same reading order, the mark centred on the whole row.
                         `order-last` puts it under the caret's line, which
-                        `PersonSheet` renders after this fragment. */}
+                        `PersonSheet` renders after this fragment.
+
+                        From `sm` up, and on paper, the name column is wide
+                        enough, so the capsule goes back beside the name's
+                        first line: a second line there only made every
+                        flagged row taller, and on paper it cost the packet
+                        pages (e2e/paper-day). */}
                       {capsule || diver.notHere ? (
-                        <span className="order-last flex basis-full flex-wrap items-center gap-2">
+                        <span
+                          className={`order-last flex basis-full flex-wrap items-center gap-2 sm:order-none sm:flex-1 sm:basis-auto print:order-none print:flex-1 print:basis-auto ${
+                            // Level with the name's line: the top of a
+                            // two-line column, the middle of a one-line one.
+                            diver.welcomeCue ? "sm:self-start print:self-start" : ""
+                          }`}
+                        >
                           {capsule}
                           {/* **The desk wrote this one off** (#1209). On the
                             row and not in the sheet, unlike "Checked in":
