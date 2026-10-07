@@ -89,6 +89,7 @@ export async function seedMinimumSeats(
       startsAt,
       endsAt,
       capacity: 8,
+      priceCents: 21500,
       plannedDives: 3,
       minimumBookings: 6,
       minimumDecisionHours: 48,

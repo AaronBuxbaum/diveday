@@ -54,6 +54,7 @@ export async function seedMoreTrips(
         | "divemaster"
         | "instructor"
         | null;
+      priceCents?: number | null;
     }>;
     instructorId: string;
     captainId: string | undefined;
@@ -87,6 +88,9 @@ export async function seedMoreTrips(
     }
     return picked;
   };
+
+  /** The demo shop's ordinary boat fare, for a charter its definition does not price. */
+  const DEMO_TWO_TANK_PRICE_CENTS = 9500;
 
   type ExtraTripDef = {
     title: string;
@@ -463,7 +467,14 @@ export async function seedMoreTrips(
         status: def.status ?? "scheduled",
         conditionsHold: def.conditionsHold ?? false,
         conditionsSummary: def.conditionsSummary,
-        priceCents: def.priceCents,
+        // Every departure on the demo board carries a fare (UX audit
+        // 2026-10-07, item 4): a run shop does not sell seats at no price, and
+        // a board of amber "No price set" pills read as a half-built demo. A
+        // course session takes its course's catalog price.
+        priceCents:
+          def.priceCents ??
+          (def.courseTitle ? courseByTitle.get(def.courseTitle)?.priceCents : undefined) ??
+          DEMO_TWO_TANK_PRICE_CENTS,
       })),
     )
     .returning();

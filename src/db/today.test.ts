@@ -983,13 +983,39 @@ describe("uncrewed and below-target departures (issue #732)", () => {
     return reef;
   }
 
+  /**
+   * The reef trip with both of its crew still aboard and neither in the water:
+   * the captain on the lines and the divemaster driving (tripRole "crew" and
+   * "captain", the DOM-M3 shape). Neither counts toward the in-water ratio
+   * (src/lib/crew-roles.ts), so the trip is uncrewed by the rule the ratio
+   * itself uses. The seed used to roster today's reef boat this way; it no
+   * longer does (UX audit 2026-10-07, item 4), so each case says it here.
+   */
+  async function uncrewedReefTrip(
+    db: ReturnType<typeof fileScopedShopContext>["db"],
+    shopId: string,
+  ) {
+    const reef = await reefTrip(db, shopId);
+    const crew = await db
+      .select({ personId: tripAssignments.personId, role: personRolesTable.role })
+      .from(tripAssignments)
+      .innerJoin(personRolesTable, eq(personRolesTable.personId, tripAssignments.personId))
+      .where(eq(tripAssignments.tripId, reef.id));
+    expect(crew.length).toBeGreaterThan(0);
+    for (const member of crew) {
+      await db
+        .update(tripAssignments)
+        .set({ tripRole: member.role === "divemaster" ? "captain" : "crew" })
+        .where(
+          and(eq(tripAssignments.tripId, reef.id), eq(tripAssignments.personId, member.personId)),
+        );
+    }
+    return reef;
+  }
+
   it("raises uncrewed_departure for a fun dive with divers booked and zero in-water crew", async () => {
     const { db, shop } = ctx;
-    // The seed's own first charter (src/db/seed-trips.ts) rosters its captain
-    // and divemaster as tripRole "crew"/"captain" — neither counts toward the
-    // in-water ratio (src/lib/crew-roles.ts) — so this trip is genuinely
-    // uncrewed by the rule the ratio itself uses, not a fixture I'm rigging.
-    const reef = await reefTrip(db, shop.id);
+    const reef = await uncrewedReefTrip(db, shop.id);
 
     const work = await getTodayWork(db, shop.id, shop.slug, shop.timezone);
 
@@ -1278,7 +1304,7 @@ describe("uncrewed and below-target departures (issue #732)", () => {
    */
   it("raises neither row for a departure the shop marked self-guided", async () => {
     const { db, shop } = ctx;
-    const reef = await reefTrip(db, shop.id);
+    const reef = await uncrewedReefTrip(db, shop.id);
     // The same trip the first test in this block proves *does* raise the row,
     // so the only thing that changed is the mark.
     const before = await getTodayWork(db, shop.id, shop.slug, shop.timezone);

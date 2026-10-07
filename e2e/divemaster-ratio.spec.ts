@@ -35,9 +35,8 @@ test("a shop's target ratio reaches the departure, and refuses nothing", async (
 
   // 1:1 — tighter than any crew a seeded departure carries, so "under target"
   // is a fact about the number rather than about how the demo happens to be
-  // staffed. Today's charter is in fact crewed by nobody in the water at all:
-  // `seed-trips.ts` rosters the shop's divemaster as its *captain* on the first
-  // charter, on purpose, and `inWaterCrewRole` counts a captain as nobody.
+  // staffed. Today's charter carries one divemaster in the water
+  // (`seed-trips.ts`), so a 1:1 target is eight short.
   await page.getByLabel("Divers per divemaster").fill("1");
   await page.getByRole("button", { name: "Save crew schedule" }).click();
   // The hub row states what it holds, so the saved target is readable without
@@ -60,14 +59,14 @@ test("a shop's target ratio reaches the departure, and refuses nothing", async (
 
   // The other half of the join: the crew this departure needs is *derived* from
   // the number, not a constant that happens to read 9. Same nine divers, same
-  // empty water, one loose target — one divemaster.
+  // divemaster aboard, a looser target — two divemasters.
   await page.goto(`/shop/${SHOP}/settings`);
   await openSettingsRow(page, "Crew schedule");
-  await page.getByLabel("Divers per divemaster").fill("20");
+  await page.getByLabel("Divers per divemaster").fill("5");
   await page.getByRole("button", { name: "Save crew schedule" }).click();
-  await expect(page.getByText("20:1 divers per divemaster")).toBeVisible();
+  await expect(page.getByText("5:1 divers per divemaster")).toBeVisible();
 
   await page.goto(`/shop/${SHOP}/trips/${tripId}`);
   await openTripAbout(page);
-  await expect(crew).toContainText("Your 20:1 target wants 1 divemaster");
+  await expect(crew).toContainText("Your 5:1 target wants 2 divemasters");
 });
