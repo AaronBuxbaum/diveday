@@ -210,9 +210,11 @@ export function sesNotificationProvider(
     });
   return {
     async send(notification) {
-      // A seeded person's address reads like a person's and is delivered to the
-      // SES mailbox simulator (`deliveryAddressFor`); everything else as written.
-      const to = deliveryAddressFor(notification.to);
+      // On a demo shop, a seeded person's address reads like a person's and is
+      // delivered to the SES mailbox simulator (`deliveryAddressFor`); every
+      // other address, and every address on a real shop, as written.
+      const demoShop = { demoShop: notification.sender?.demoShop === true };
+      const to = deliveryAddressFor(notification.to, demoShop);
       const invalidRecipient = reservedTestRecipientDelivery(to);
       if (invalidRecipient) return invalidRecipient;
       const message = messageFor(notification);
@@ -228,7 +230,7 @@ export function sesNotificationProvider(
             // shop's own front-desk address, when it has one on file (ADR
             // 20260902-sender-standards-for-ses).
             ...(notification.sender?.replyTo && {
-              ReplyToAddresses: [deliveryAddressFor(notification.sender.replyTo)],
+              ReplyToAddresses: [deliveryAddressFor(notification.sender.replyTo, demoShop)],
             }),
             EmailTags: emailTagsOf(notification),
             Content: {

@@ -7,6 +7,7 @@ import { seededShopContext, unseededTestDb } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { issueBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
+import { shopSenderFor } from "./notifications";
 import {
   accountSessions,
   bookingCapabilities,
@@ -625,10 +626,12 @@ describe("seeded addresses", () => {
       // What staff read (UX audit 2026-10-07, item 4)...
       expect(email.endsWith(`@${DEMO_MAIL_DOMAIN}`), email).toBe(true);
       // ...and where SES actually sends it.
-      const delivered = deliveryAddressFor(email);
+      // The demo shop's sends say so (`NotificationSender.demoShop`, asserted below).
+      const delivered = deliveryAddressFor(email, { demoShop: true });
       expect(isSimulatorEmail(delivered), email).toBe(true);
       expect(reservedTestRecipientDelivery(delivered), email).toBeNull();
     }
+    expect((await shopSenderFor(db, shop.id))?.demoShop).toBe(true);
     // Unique per diver, which the simulator's `+label` then carries.
     const addresses = divers.map((person) => person.email);
     expect(new Set(addresses).size).toBe(addresses.length);

@@ -25,8 +25,15 @@
  * ({@link demoEmail}), and the SES provider maps that one domain onto the
  * simulator at the moment of sending ({@link deliveryAddressFor}). `.example`
  * is reserved (RFC 2606) and can never reach a real inbox, so the mapping
- * cannot redirect anybody's real mail, and an address on it that somehow
- * escaped the mapping is refused at the provider boundary as before.
+ * cannot redirect anybody's real mail.
+ *
+ * **Only for a demo shop** (`shops.is_demo`). On a real shop a diver who types
+ * `me@mail.example` has typed an address nobody reads, and staff must see that
+ * send refused (`invalid_test_recipient`), not reported delivered to a
+ * simulator. So the mapping runs only when the send says it comes from a demo
+ * shop — `NotificationSender.demoShop`, resolved from the shop row at send
+ * time in `src/db/notifications.ts` — and every other `mail.example` address
+ * is refused at the provider boundary as before.
  *
  * Staff demo sign-ins are not here. They stay under `demo.invalid`
  * (`src/lib/demo-identity.ts`), because that domain is half of the demo
@@ -68,11 +75,13 @@ export function demoEmail(label: string): string {
 }
 
 /**
- * Where a message to `to` is actually sent. A seeded person's address
- * ({@link DEMO_MAIL_DOMAIN}) goes to the SES mailbox simulator's success
- * address under the same label; every other address is sent as written.
+ * Where a message to `to` is actually sent. On a demo shop, a seeded person's
+ * address ({@link DEMO_MAIL_DOMAIN}) goes to the SES mailbox simulator's
+ * success address under the same label; every other address, and every
+ * address on a shop that is not a demo, is sent as written.
  */
-export function deliveryAddressFor(to: string): string {
+export function deliveryAddressFor(to: string, from: { demoShop: boolean }): string {
+  if (!from.demoShop) return to;
   const at = to.lastIndexOf("@");
   if (at <= 0) return to;
   const domain = to
@@ -82,3 +91,4 @@ export function deliveryAddressFor(to: string): string {
   if (domain !== DEMO_MAIL_DOMAIN) return to;
   return simulatorEmail(to.slice(0, at));
 }
+

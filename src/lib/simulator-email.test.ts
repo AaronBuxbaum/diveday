@@ -49,15 +49,30 @@ describe("demoEmail and deliveryAddressFor (UX audit item 4)", () => {
     expect(() => demoEmail(" -- ")).toThrow();
   });
 
-  it("sends a seeded address to the simulator's success box, under the same label", () => {
-    expect(deliveryAddressFor(demoEmail("Priya Sharma"))).toBe(simulatorEmail("Priya Sharma"));
-    expect(deliveryAddressFor(`Front.Desk@${DEMO_MAIL_DOMAIN.toUpperCase()}`)).toBe(
+  const demo = { demoShop: true };
+  const real = { demoShop: false };
+
+  it("sends a demo shop's seeded address to the simulator's success box, under the same label", () => {
+    expect(deliveryAddressFor(demoEmail("Priya Sharma"), demo)).toBe(
+      simulatorEmail("Priya Sharma"),
+    );
+    expect(deliveryAddressFor(`Front.Desk@${DEMO_MAIL_DOMAIN.toUpperCase()}`, demo)).toBe(
       "success+front.desk@simulator.amazonses.com",
     );
-    expect(reservedTestRecipientDelivery(deliveryAddressFor(demoEmail("Tom Okafor")))).toBeNull();
+    expect(
+      reservedTestRecipientDelivery(deliveryAddressFor(demoEmail("Tom Okafor"), demo)),
+    ).toBeNull();
   });
 
-  it("leaves every other address exactly as written", () => {
+  it("never maps an address on a real shop, so the provider still refuses it", () => {
+    const typed = demoEmail("Priya Sharma");
+    expect(deliveryAddressFor(typed, real)).toBe(typed);
+    expect(reservedTestRecipientDelivery(deliveryAddressFor(typed, real))).toMatchObject({
+      errorCode: "invalid_test_recipient",
+    });
+  });
+
+  it("leaves every other address exactly as written, even on a demo shop", () => {
     for (const to of [
       "diver@gmail.com",
       "priya.sharma@example.com",
@@ -65,7 +80,7 @@ describe("demoEmail and deliveryAddressFor (UX audit item 4)", () => {
       "x@evilmail.example",
       "not-an-address",
     ]) {
-      expect(deliveryAddressFor(to)).toBe(to);
+      expect(deliveryAddressFor(to, demo)).toBe(to);
     }
   });
 
