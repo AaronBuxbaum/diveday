@@ -10,6 +10,7 @@ import {
   medicalWaiverMark,
   needsMedicalReview,
   overriddenReferralAt,
+  overriddenRefusal,
   shopWaiverStatus,
   WAIVER_SIGNATURE_VALIDITY_MS,
   waiverState,
@@ -154,6 +155,7 @@ describe("medical waiver mark", () => {
       at: signedAt,
       source: "digital",
       overriddenReferralAt: null,
+      overriddenRefusal: null,
       clearance: null,
       guardian: null,
     });
@@ -173,6 +175,7 @@ describe("medical waiver mark", () => {
       at: signedAt,
       source: "paper",
       overriddenReferralAt: null,
+      overriddenRefusal: null,
       clearance: null,
       guardian: null,
     });
@@ -188,6 +191,7 @@ describe("medical waiver mark", () => {
       at: signedAt,
       source: "imported",
       overriddenReferralAt: null,
+      overriddenRefusal: null,
       clearance: null,
       guardian: null,
     });
@@ -214,6 +218,7 @@ describe("medical waiver mark", () => {
       at: completedAt,
       source: "digital",
       overriddenReferralAt: null,
+      overriddenRefusal: null,
       clearance: null,
       guardian: null,
     });
@@ -620,6 +625,7 @@ describe("physician clearance", () => {
       at: clearedAt,
       source: "cleared",
       overriddenReferralAt: null,
+      overriddenRefusal: null,
       // The record the clearance hangs on, and whether the physician's
       // evaluation itself is stored against it (issue #1283). The URL is
       // deliberately absent: this mark travels to the boat manifest, and
@@ -646,6 +652,144 @@ describe("physician clearance", () => {
       now: SIGN_NOW,
     });
     expect(effective).toBeNull();
+  });
+});
+
+/**
+ * **A physician's "no" a later clean signature stands over** (Aaron,
+ * 2026-10-07, issue #2158): allowed, and warned about with the refused record.
+ */
+describe("overriddenRefusal", () => {
+  const refusal = (overrides: Partial<WaiverRecord> = {}) =>
+    completedWaiver({
+      id: "refusal",
+      status: "medical_review",
+      signedAt: new Date(SIGN_NOW.getTime() - 600_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 600_000),
+      medicalClearanceDeclinedAt: new Date(SIGN_NOW.getTime() - 500_000),
+      supersededAt: new Date(SIGN_NOW.getTime() - 400_000),
+      ...overrides,
+    });
+  const reSigned = (overrides: Partial<WaiverRecord> = {}) =>
+    completedWaiver({
+      id: "re-signed",
+      medicalAnswers: { questionnaireId: "rstc", questionnaireVersion: 1, responses: {} },
+      signedAt: new Date(SIGN_NOW.getTime() - 60_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 60_000),
+      ...overrides,
+    });
+
+  it("names the refused record a clean new release stands over, retired or not", () => {
+    const expected = { recordId: "refusal", at: refusal().medicalClearanceDeclinedAt };
+    expect(overriddenRefusal(reSigned(), [refusal(), reSigned()])).toEqual(expected);
+    expect(overriddenRefusal(reSigned(), [refusal({ supersededAt: null }), reSigned()])).toEqual(
+      expected,
+    );
+    expect(medicalWaiverMark(reSigned(), [refusal(), reSigned()])?.overriddenRefusal).toEqual(
+      expected,
+    );
+  });
+
+  it("boards the diver on the new release, and warns once rather than twice", () => {
+    const records = [refusal({ supersededAt: null }), reSigned()];
+    const status = shopWaiverStatus({
+      personSignedWaivers: records,
+      currentTemplateVersion: 1,
+      now: SIGN_NOW,
+    });
+    expect(status.state).toBe("current");
+    // The refusal is its own warning, never also an "unanswered referral".
+    expect(status).toMatchObject({
+      medical: { overriddenReferralAt: null, overriddenRefusal: { recordId: "refusal" } },
+    });
+  });
+
+  it("names the newest of several refusals", () => {
+    const older = refusal({
+      id: "older",
+      signedAt: new Date(SIGN_NOW.getTime() - 900_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 900_000),
+      medicalClearanceDeclinedAt: new Date(SIGN_NOW.getTime() - 800_000),
+    });
+    expect(overriddenRefusal(reSigned(), [older, refusal(), reSigned()])?.recordId).toBe("refusal");
+  });
+
+  it("says nothing once a physician cleared a release signed after the refusal", () => {
+    const cleared = completedWaiver({
+      id: "cleared",
+      status: "medical_review",
+      signedAt: new Date(SIGN_NOW.getTime() - 300_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 300_000),
+      medicalClearedAt: new Date(SIGN_NOW.getTime() - 200_000),
+    });
+    expect(overriddenRefusal(cleared, [refusal(), cleared])).toBeNull();
+    expect(overriddenRefusal(reSigned(), [refusal(), cleared, reSigned()])).toBeNull();
+  });
+
+  it("says nothing about a refusal signed after the standing release", () => {
+    const later = refusal({
+      signedAt: new Date(SIGN_NOW.getTime() - 10_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 10_000),
+    });
+    expect(overriddenRefusal(reSigned(), [reSigned(), later])).toBeNull();
+  });
+
+  const [cardiacId, earsId] = RSTC_QUESTIONNAIRE.questions
+    .filter((question) => question.referral)
+    .map((question) => question.id);
+  const flagging = (...ids: string[]) => ({
+    ...clear,
+    responses: { ...clear.responses, ...Object.fromEntries(ids.map((id) => [id, true])) },
+  });
+
+  it("keeps warning when a later clearance was about a different question", () => {
+    // A cardiologist's "no", then an ENT clearing ears: not an answer to it.
+    const cardiacNo = refusal({ medicalAnswers: flagging(cardiacId) });
+    const earsYes = completedWaiver({
+      id: "ears-yes",
+      status: "medical_review",
+      medicalAnswers: flagging(earsId),
+      signedAt: new Date(SIGN_NOW.getTime() - 300_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 300_000),
+      medicalClearedAt: new Date(SIGN_NOW.getTime() - 200_000),
+    });
+    expect(overriddenRefusal(earsYes, [cardiacNo, earsYes])?.recordId).toBe("refusal");
+    expect(overriddenRefusal(reSigned(), [cardiacNo, earsYes, reSigned()])?.recordId).toBe(
+      "refusal",
+    );
+    // A clearance that covered the refused question too does answer it.
+    const bothYes = completedWaiver({
+      ...earsYes,
+      id: "both-yes",
+      medicalAnswers: flagging(cardiacId, earsId),
+    });
+    expect(overriddenRefusal(bothYes, [cardiacNo, bothYes])).toBeNull();
+  });
+
+  it("orders a yes against a no by when the physician answered, not when it was signed", () => {
+    // The older referral was refused after the newer one was cleared.
+    const lateNo = refusal({
+      medicalClearanceEvaluatedOn: "2026-07-10",
+      medicalClearanceDeclinedAt: new Date(SIGN_NOW.getTime() - 100_000),
+    });
+    const earlyYes = completedWaiver({
+      id: "early-yes",
+      status: "medical_review",
+      signedAt: new Date(SIGN_NOW.getTime() - 300_000),
+      completedAt: new Date(SIGN_NOW.getTime() - 300_000),
+      medicalClearedAt: new Date(SIGN_NOW.getTime() - 200_000),
+      medicalClearanceEvaluatedOn: "2026-07-01",
+    });
+    expect(overriddenRefusal(earlyYes, [lateNo, earlyYes])).toEqual({
+      recordId: "refusal",
+      at: lateNo.medicalClearanceDeclinedAt,
+    });
+  });
+
+  it("says nothing for a diver no physician refused, or with no clean release", () => {
+    expect(overriddenRefusal(reSigned(), [reSigned()])).toBeNull();
+    expect(overriddenRefusal(null, [refusal()])).toBeNull();
+    expect(overriddenRefusal(refusal(), [refusal()])).toBeNull();
   });
 });
 
