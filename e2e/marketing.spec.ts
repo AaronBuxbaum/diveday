@@ -1511,9 +1511,18 @@ test.describe("with Accept-Language: es", () => {
       english: "Bring the spreadsheet with you.",
       spanish: "Trae la hoja de cálculo contigo.",
     },
+    // `/about`'s `h1` is its eyebrow, and the same words are the page's
+    // `<title>`. Next streams metadata through the body and React hoists the
+    // `<title>` into `<head>` a beat later, so for one frame the English title
+    // is body text for every reader, whatever their language, and the eyebrow
+    // would be "seen" on every run (PR #2165, Playwright shard 4/4). The
+    // marker is the hero's tie sentence instead, which is body copy and
+    // nothing else; `heading` is the Spanish `h1` that says the page has
+    // finished rendering.
     "/about": {
-      english: "Why DiveDay exists",
-      spanish: "Por qué existe DiveDay",
+      english: "That story is why we built DiveDay.",
+      spanish: "Por esa historia construimos DiveDay.",
+      heading: "Por qué existe DiveDay",
     },
   } as const;
 
@@ -1549,7 +1558,8 @@ test.describe("with Accept-Language: es", () => {
       // The page is finished rendering in the reader's language — so anything
       // the recorder caught was on screen at some point before this, which is
       // exactly the window the old fallback lived in.
-      await expect(page.getByRole("heading", { level: 1, name: copy.spanish })).toBeVisible();
+      const heading = "heading" in copy ? copy.heading : copy.spanish;
+      await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
       const seen = await page.evaluate(
         () =>
           (window as unknown as { __englishBodyEverSeen?: string[] }).__englishBodyEverSeen ?? [],
