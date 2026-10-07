@@ -1789,9 +1789,9 @@ new domain concept, define it here in the same PR.
 - **Rental set** — typically: **BCD** (jacket, sized), **regulator** ("reg", with octopus and
   SPG), **wetsuit** (sized, thickness in mm) with **boots**, mask/fins, **weights**, a **dive
   computer**, and a **tank/cylinder** (e.g. AL80 aluminum 80 cu ft). The dive computer is default-on
-  for every diver **and** part of the priced core set (H-06, reconfirmed 2026-08-02 — HD-9). Four
-  add-ons are off by default and priced separately: the **GoPro**, the **drysuit**, **hood &
-  gloves**, a **dive light** and an **SMB** (`RENTABLE_ITEMS`, `src/lib/rentals.ts`). A diver who skips a core
+  for every diver **and** part of the priced core set (H-06, reconfirmed 2026-08-02 — HD-9). Six
+  add-ons are off by default and priced separately: the **GoPro**, the **drysuit**, a **hood**,
+  **gloves**, a **dive light** and an **SMB** (`RENTABLE_ITEMS`, `src/lib/rentals.ts`). A diver who skips a core
   piece (brings their own dive computer, say) is quoted whichever is cheaper — the set price or the
   sum of the pieces they actually take — so skipping one never costs more than the full set would
   have (`quoteRentalFit`, `src/lib/rentals.ts`).
@@ -1842,8 +1842,9 @@ new domain concept, define it here in the same PR.
   the shop rather than quoted at zero. A shop that prices nothing keeps the "ask the shop what's
   included" behaviour.
 - **Rental fit** — a shop-scoped diver's reusable record of *which* pieces they take from the shop
-  and in *what size* (BCD, wetsuit, drysuit, boot, fin, usual weighting, plus the dive-computer,
-  GoPro, hood-and-gloves, dive-light and SMB add-ons).
+  and in *what size* (BCD, wetsuit, drysuit, hood, glove, boot, fin, usual weighting, plus the
+  dive-computer, GoPro, dive-light and SMB add-ons). A **hood** and **gloves** are two kinds, each
+  with a free-text size (H-100): a hood racks by size and thickness ("M, 5 mm"), gloves by size.
   The **drysuit** is the one add-on that carries a size, and it is sized on its own scale — the
   manufacturer grid a rental wall is racked from (a girth letter, a trailing `T` for the tall cut),
   which shares the wetsuit's girth letters but carries a second axis the wetsuit scale has no room

@@ -26,12 +26,15 @@ function makeRentalFit(overrides: Partial<RentalFit> = {}): RentalFit {
     rentsDiveComputer: false,
     rentsGopro: false,
     rentsDrysuit: false,
-    rentsHoodGloves: false,
+    rentsHood: false,
+    rentsGloves: false,
     rentsTorch: false,
     rentsSmb: false,
     bcdSize: null,
     wetsuitSize: null,
     drysuitSize: null,
+    hoodSize: null,
+    gloveSize: null,
     bootSize: null,
     finSize: null,
     weightPreference: null,
@@ -103,6 +106,21 @@ describe("GearAndSizes", () => {
   it("never asks a shop that does not rent drysuits", () => {
     renderGear(makeRentalFit({ rentsBcd: true, bcdSize: "M" }), ["bcd"]);
     expect(screen.queryByLabelText("Drysuit size")).not.toBeInTheDocument();
+  });
+
+  it("asks a hood and glove size each, in free text, only for what the shop rents (H-100)", () => {
+    renderGear(
+      makeRentalFit({ rentsHood: true, hoodSize: "M, 5 mm", rentsGloves: true, gloveSize: "L" }),
+      ["hood", "gloves"],
+    );
+    expect(screen.getByLabelText("Hood size")).toHaveValue("M, 5 mm");
+    expect(screen.getByLabelText("Glove size")).toHaveValue("L");
+    expect(screen.getByLabelText("Hood")).toBeChecked();
+    expect(screen.getByLabelText("Gloves")).toBeChecked();
+    cleanup();
+    renderGear(makeRentalFit({ rentsGloves: true, gloveSize: "L" }), ["gloves"]);
+    expect(screen.queryByLabelText("Hood size")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Glove size")).toHaveValue("L");
   });
 
   /**

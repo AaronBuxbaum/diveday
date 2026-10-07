@@ -31,12 +31,15 @@ export type RentalFitInput = {
   rentsDiveComputer?: boolean;
   rentsGopro?: boolean;
   rentsDrysuit?: boolean;
-  rentsHoodGloves?: boolean;
+  rentsHood?: boolean;
+  rentsGloves?: boolean;
   rentsTorch?: boolean;
   rentsSmb?: boolean;
   bcdSize?: string;
   wetsuitSize?: string;
   drysuitSize?: string;
+  hoodSize?: string;
+  gloveSize?: string;
   bootSize?: string;
   finSize?: string;
   weightPreference?: string;
@@ -165,6 +168,8 @@ function sizeUpdates(input: RentalFitInput) {
     bcdSize: input.bcdSize,
     wetsuitSize: input.wetsuitSize,
     drysuitSize: input.drysuitSize,
+    hoodSize: input.hoodSize,
+    gloveSize: input.gloveSize,
     bootSize: input.bootSize,
     finSize: input.finSize,
     weightPreference: input.weightPreference,
@@ -470,7 +475,8 @@ export type DiverRentalFit = {
   rentsDiveComputer: boolean;
   rentsGopro: boolean;
   rentsDrysuit: boolean;
-  rentsHoodGloves: boolean;
+  rentsHood: boolean;
+  rentsGloves: boolean;
   rentsTorch: boolean;
   rentsSmb: boolean;
   bcdSize: string | null;
@@ -482,6 +488,9 @@ export type DiverRentalFit = {
    * about them, which is what this projection exists to hold back.
    */
   drysuitSize: string | null;
+  /** The diver's own answers on their own form, like the drysuit size (H-100). */
+  hoodSize: string | null;
+  gloveSize: string | null;
   bootSize: string | null;
   finSize: string | null;
   weightPreference: string | null;
@@ -510,12 +519,15 @@ export function toDiverRentalFit(
     rentsDiveComputer: profile.rentsDiveComputer,
     rentsGopro: profile.rentsGopro,
     rentsDrysuit: profile.rentsDrysuit,
-    rentsHoodGloves: profile.rentsHoodGloves,
+    rentsHood: profile.rentsHood,
+    rentsGloves: profile.rentsGloves,
     rentsTorch: profile.rentsTorch,
     rentsSmb: profile.rentsSmb,
     bcdSize: profile.bcdSize,
     wetsuitSize: profile.wetsuitSize,
     drysuitSize: profile.drysuitSize,
+    hoodSize: profile.hoodSize,
+    gloveSize: profile.gloveSize,
     bootSize: profile.bootSize,
     finSize: profile.finSize,
     weightPreference: profile.weightPreference,

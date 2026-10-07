@@ -117,6 +117,23 @@ export function GearAndSizes({
         detail: t("divers.rentalFit.drysuitSizeHint"),
       },
     },
+    // Free text too, and for a narrower reason than the drysuit's: a hood racks
+    // by size and thickness ("M, 5 mm"), gloves by size, and no closed grid has
+    // an owner yet (H-100, issue #1816).
+    offers.has("hood") && {
+      name: "hoodSize",
+      label: t("divers.rentalFit.hoodSizeLabel"),
+      placeholder: t("divers.rentalFit.hoodSizePlaceholder"),
+      defaultValue: profile?.hoodSize ?? "",
+      requires: ["hood"],
+    },
+    offers.has("gloves") && {
+      name: "gloveSize",
+      label: t("divers.rentalFit.gloveSizeLabel"),
+      placeholder: t("divers.rentalFit.gloveSizePlaceholder"),
+      defaultValue: profile?.gloveSize ?? "",
+      requires: ["gloves"],
+    },
     // One shoe-size answer covers fins and boots — the two fields asked the
     // same question, and the save writes it to both columns.
     (offers.has("mask_fins") || offers.has("wetsuit")) && {

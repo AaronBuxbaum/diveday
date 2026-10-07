@@ -114,7 +114,8 @@ export const RENTABLE_ITEM_LABEL_KEYS: Record<RentableItemKind, DiverMessageKey>
   dive_computer: "rental.itemLabels.diveComputer",
   gopro: "rental.itemLabels.gopro",
   drysuit: "rental.itemLabels.drysuit",
-  hood_gloves: "rental.itemLabels.hoodGloves",
+  hood: "rental.itemLabels.hood",
+  gloves: "rental.itemLabels.gloves",
   torch: "rental.itemLabels.torch",
   smb: "rental.itemLabels.smb",
 };
@@ -581,6 +582,8 @@ export function RentalFitForm({
         {offers.has("bcd") ||
         offers.has("wetsuit") ||
         offers.has("drysuit") ||
+        offers.has("hood") ||
+        offers.has("gloves") ||
         offers.has("mask_fins") ||
         offers.has("weights") ? (
           <FieldGrid columns={2}>
@@ -635,6 +638,31 @@ export function RentalFitForm({
                     </option>
                   ))}
                 </select>
+              </Field>
+            ) : null}
+            {/* Free text, like the staff side's drysuit box (H-100): a hood racks
+                by size and thickness, gloves by size, and the diver's own words
+                reach the packing list verbatim. */}
+            {offers.has("hood") ? (
+              <Field label={t("rental.hoodSize")} hint={t("common.optional")}>
+                <input
+                  name="hoodSize"
+                  maxLength={RENTAL_FIT_TEXT_LIMITS.size}
+                  defaultValue={rentalFit?.hoodSize ?? ""}
+                  placeholder={t("rental.hoodSizePlaceholder")}
+                  className={controlClass}
+                />
+              </Field>
+            ) : null}
+            {offers.has("gloves") ? (
+              <Field label={t("rental.gloveSize")} hint={t("common.optional")}>
+                <input
+                  name="gloveSize"
+                  maxLength={RENTAL_FIT_TEXT_LIMITS.size}
+                  defaultValue={rentalFit?.gloveSize ?? ""}
+                  placeholder={t("rental.gloveSizePlaceholder")}
+                  className={controlClass}
+                />
               </Field>
             ) : null}
             {offers.has("mask_fins") || offers.has("wetsuit") ? (

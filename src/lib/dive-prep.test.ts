@@ -17,12 +17,15 @@ const fullFit: RentalFit = {
   rentsDiveComputer: false,
   rentsGopro: false,
   rentsDrysuit: false,
-  rentsHoodGloves: false,
+  rentsHood: false,
+  rentsGloves: false,
   rentsTorch: false,
   rentsSmb: false,
   bcdSize: "M",
   wetsuitSize: "5mm M",
   drysuitSize: null,
+  hoodSize: null,
+  gloveSize: null,
   bootSize: "9",
   finSize: "M",
   weightPreference: "6 kg",
@@ -97,6 +100,42 @@ describe("rented add-ons on the prep list", () => {
     const kinds = line.state === "rents" ? line.items.map((item) => item.kind) : [];
     expect(kinds).toContain("dive_computer");
     expect(kinds).toContain("gopro");
+  });
+
+  /**
+   * **A hood and gloves are two pieces, each with its own size** (H-100,
+   * issue #1816). A warm-water diver takes gloves and no hood; a quarry
+   * diver takes both, the hood in its thickness, and the packer reads the
+   * shop's own words for each.
+   */
+  it("packs a hood and gloves as separate sized pieces, and only what was asked for", () => {
+    const checklist = buildDivePrepChecklist({
+      divers: [
+        diver({
+          bookingId: "b1",
+          fullName: "Priya Sharma",
+          fit: { ...fullFit, rentsGloves: true, gloveSize: " L " },
+        }),
+        diver({
+          bookingId: "b2",
+          fullName: "Ana Ruiz",
+          fit: { ...fullFit, rentsHood: true, hoodSize: "M, 7 mm", rentsGloves: true },
+        }),
+      ],
+      plannedDives: 1,
+    });
+    expect(lineFor(checklist, "gloves", "L")).toMatchObject({
+      count: 1,
+      divers: ["Priya Sharma"],
+    });
+    expect(lineFor(checklist, "hood", "M, 7 mm")).toMatchObject({
+      count: 1,
+      divers: ["Ana Ruiz"],
+    });
+    // Gloves asked for with no size are a real gap now, and the line says so
+    // by carrying no size rather than dropping the pair.
+    expect(lineFor(checklist, "gloves", null)).toMatchObject({ count: 1, divers: ["Ana Ruiz"] });
+    expect(checklist.lines.filter((line) => line.kind === "hood")).toHaveLength(1);
   });
 });
 
@@ -347,6 +386,8 @@ describe("a diver in their own drysuit", () => {
     wetsuitSize: null,
     rentsDrysuit: false,
     drysuitSize: null,
+    hoodSize: null,
+    gloveSize: null,
     divesDry: true,
     rentsWeights: true,
     weightPreference: "12 lb with 3 mm suit",
@@ -461,6 +502,8 @@ describe("fins for a diver in a drysuit", () => {
             rentsDrysuit: false,
             divesDry: false,
             drysuitSize: null,
+            hoodSize: null,
+            gloveSize: null,
             rentsWetsuit: true,
           },
         }),
@@ -485,6 +528,8 @@ describe("fins for a diver in a drysuit", () => {
             rentsDrysuit: false,
             divesDry: false,
             drysuitSize: null,
+            hoodSize: null,
+            gloveSize: null,
             rentsWetsuit: true,
           },
         }),
@@ -1022,7 +1067,8 @@ describe("divers with an incomplete fit", () => {
             rentsDiveComputer: true,
             rentsGopro: true,
             rentsDrysuit: false,
-            rentsHoodGloves: false,
+            rentsHood: false,
+            rentsGloves: false,
             rentsTorch: false,
             rentsSmb: false,
             bcdSize: null,
@@ -1376,7 +1422,8 @@ describe("the same packing list grouped by diver", () => {
             drysuitSize: "ML",
             rentsDiveComputer: true,
             rentsGopro: true,
-            rentsHoodGloves: true,
+            rentsHood: true,
+            rentsGloves: true,
             rentsTorch: true,
             rentsSmb: true,
           },
@@ -1393,7 +1440,8 @@ describe("the same packing list grouped by diver", () => {
       "mask_fins",
       "weights",
       "dive_computer",
-      "hood_gloves",
+      "hood",
+      "gloves",
       "torch",
       "smb",
       // Last on purpose: the only piece here whose absence changes nothing in

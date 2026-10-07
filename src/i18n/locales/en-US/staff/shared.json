@@ -428,7 +428,8 @@
       "diveComputer": "Dive computer",
       "gopro": "GoPro",
       "drysuit": "Drysuit",
-      "hoodGloves": "Hood & gloves",
+      "hood": "Hood",
+      "gloves": "Gloves",
       "torch": "Dive light",
       "smb": "Surface marker buoy"
     },

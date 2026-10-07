@@ -428,7 +428,8 @@
       "diveComputer": "Ordenador de buceo",
       "gopro": "GoPro",
       "drysuit": "Traje seco",
-      "hoodGloves": "Capucha y guantes",
+      "hood": "Capucha",
+      "gloves": "Guantes",
       "torch": "Linterna",
       "smb": "Boya de superficie"
     },

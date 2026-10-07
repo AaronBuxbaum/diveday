@@ -253,7 +253,8 @@ const fitSchema = z.object({
   weights: z.string().optional(),
   diveComputer: z.string().optional(),
   gopro: z.string().optional(),
-  hoodGloves: z.string().optional(),
+  hood: z.string().optional(),
+  gloves: z.string().optional(),
   torch: z.string().optional(),
   smb: z.string().optional(),
   nitrox: z.string().optional(),
@@ -271,6 +272,8 @@ const fitSchema = z.object({
   bcdSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
   wetsuitSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
   drysuitSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  hoodSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
+  gloveSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
   finSize: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.size).optional(),
   weightPreference: z.string().trim().max(RENTAL_FIT_TEXT_LIMITS.weightPreference).optional(),
 });
@@ -298,7 +301,8 @@ export async function saveFitFromReady(token: string, formData: FormData) {
     rentsWeights: parsed.data.weights === "on",
     rentsDiveComputer: parsed.data.diveComputer === "on",
     rentsGopro: parsed.data.gopro === "on",
-    rentsHoodGloves: parsed.data.hoodGloves === "on",
+    rentsHood: parsed.data.hood === "on",
+    rentsGloves: parsed.data.gloves === "on",
     rentsTorch: parsed.data.torch === "on",
     rentsSmb: parsed.data.smb === "on",
     bcdSize: parsed.data.bcdSize,
@@ -308,6 +312,8 @@ export async function saveFitFromReady(token: string, formData: FormData) {
     // A fleet whose suits take separate rock boots says so in the size itself,
     // which is why the staff-side box is free text (`src/lib/dive-prep.ts`).
     drysuitSize: parsed.data.drysuitSize,
+    hoodSize: parsed.data.hoodSize,
+    gloveSize: parsed.data.gloveSize,
     // Fins and boots are one shoe-size answer on the diver's form now, written
     // to both columns so the packing list, the manifest and the CSV export all
     // keep reading the field they already read.

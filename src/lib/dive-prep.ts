@@ -39,9 +39,20 @@ export type RentalItemKind =
   | "dive_computer"
   | "gopro"
   | "drysuit"
-  | "hood_gloves"
+  | "hood"
+  | "gloves"
   | "torch"
   | "smb";
+
+/** The kinds a flagged diver's stated sizes are listed under (`statedSizeItems`). */
+export type StatedSizeKind =
+  | "bcd"
+  | "wetsuit"
+  | "boots"
+  | "mask_fins"
+  | "drysuit"
+  | "hood"
+  | "gloves";
 
 export type RentalFit = {
   rentsBcd: boolean;
@@ -52,13 +63,17 @@ export type RentalFit = {
   rentsDiveComputer: boolean;
   rentsGopro: boolean;
   rentsDrysuit: boolean;
-  rentsHoodGloves: boolean;
+  rentsHood: boolean;
+  rentsGloves: boolean;
   rentsTorch: boolean;
   rentsSmb: boolean;
   bcdSize: string | null;
   wetsuitSize: string | null;
   /** On the drysuit scale, never the wetsuit's (issue 1414, schema.ts). */
   drysuitSize: string | null;
+  /** Free text, like the drysuit's (H-100): a hood by size and thickness. */
+  hoodSize: string | null;
+  gloveSize: string | null;
   bootSize: string | null;
   finSize: string | null;
   weightPreference: string | null;
@@ -337,7 +352,7 @@ export type DivePrepChecklist = {
      * "bring a range in their band" means starting from scratch on a moving
      * dock. It is a starting point, not an allocation.
      */
-    statedSizes: { kind: "bcd" | "wetsuit" | "boots" | "mask_fins" | "drysuit"; size: string }[];
+    statedSizes: { kind: StatedSizeKind; size: string }[];
     /**
      * Whole days since the flag was raised. A shortage is a fact about one
      * day, so an old flag is a prompt to re-ask the diver rather than a
@@ -368,7 +383,8 @@ const KIND_ORDER = [
   "mask_fins",
   "weights",
   "dive_computer",
-  "hood_gloves",
+  "hood",
+  "gloves",
   "torch",
   "smb",
   // **Last, below the dive-specific add-ons** (`dive-domain-expert`). The
@@ -389,13 +405,13 @@ const _everyKindHasAPackingPosition: Record<KindWithNoPackingPosition, never> = 
  * Kit that has no size to record, so a blank is expected rather than a gap.
  *
  * **Derived, not listed** (issue #1805). This was a hand-kept list of three,
- * and it had drifted: a hood, a torch and an SMB have no
- * `rental_fit_profiles` size column either — `src/lib/rentals.ts` says so at
- * `RENTABLE_ITEMS` and enforces it in `SIZED_RENTAL_KINDS` — so a diver
- * renting one read "Not recorded" on the packing line, naming a gap that
- * cannot be filled by anybody. The complement of the sized kinds is the
- * answer, and taking it from the same constant is what stops the two lists
- * disagreeing again.
+ * and it had drifted: a torch and an SMB have no `rental_fit_profiles` size
+ * column either — `src/lib/rentals.ts` says so at `RENTABLE_ITEMS` and
+ * enforces it in `SIZED_RENTAL_KINDS` — so a diver renting one read "Not
+ * recorded" on the packing line, naming a gap that cannot be filled by
+ * anybody. The complement of the sized kinds is the answer, and taking it from
+ * the same constant is what stops the two lists disagreeing again: when a hood
+ * and gloves gained a size each (H-100), they left this list by themselves.
  */
 const SIZED = new Set<string>(SIZED_RENTAL_KINDS);
 export const UNSIZED_ITEM_KINDS: readonly RentalItemKind[] = KIND_ORDER.filter(
@@ -625,8 +641,10 @@ function rentedItems(fit: RentalFit, offered: CatalogScope = null): PrepPiece[] 
   // shoe size either, which is what `maskFins` above marks rather than what
   // this line handles.
   if (fit.rentsDrysuit) items.push(sized("drysuit", fit.drysuitSize));
-  // The three add-ons that carry no size (see `RENTABLE_ITEMS`).
-  if (fit.rentsHoodGloves) items.push(unsized("hood_gloves"));
+  // Two kinds with a free-text size each (H-100, issue #1816).
+  if (fit.rentsHood) items.push(sized("hood", fit.hoodSize));
+  if (fit.rentsGloves) items.push(sized("gloves", fit.gloveSize));
+  // The two add-ons that carry no size (see `RENTABLE_ITEMS`).
   if (fit.rentsTorch) items.push(unsized("torch"));
   if (fit.rentsSmb) items.push(unsized("smb"));
   // **Sorted, not pushed in order** (issue #1805, `dive-domain-expert`). The
@@ -649,10 +667,8 @@ function rentedItems(fit: RentalFit, offered: CatalogScope = null): PrepPiece[] 
  * sees everything else there. Empty when nothing sized was recorded, which is
  * its own useful signal: there is no starting point to work from.
  */
-function statedSizeItems(
-  fit: RentalFit,
-): { kind: "bcd" | "wetsuit" | "boots" | "mask_fins" | "drysuit"; size: string }[] {
-  const items: { kind: "bcd" | "wetsuit" | "boots" | "mask_fins" | "drysuit"; size: string }[] = [];
+function statedSizeItems(fit: RentalFit): { kind: StatedSizeKind; size: string }[] {
+  const items: { kind: StatedSizeKind; size: string }[] = [];
   const bcdSize = size(fit.bcdSize);
   if (fit.rentsBcd && bcdSize) items.push({ kind: "bcd", size: bcdSize });
   if (fit.rentsWetsuit) {
@@ -665,6 +681,10 @@ function statedSizeItems(
   // piece, so the fitter needs the size the diver actually asked for (issue 1414).
   const drysuitSize = size(fit.drysuitSize);
   if (fit.rentsDrysuit && drysuitSize) items.push({ kind: "drysuit", size: drysuitSize });
+  const hoodSize = size(fit.hoodSize);
+  if (fit.rentsHood && hoodSize) items.push({ kind: "hood", size: hoodSize });
+  const gloveSize = size(fit.gloveSize);
+  if (fit.rentsGloves && gloveSize) items.push({ kind: "gloves", size: gloveSize });
   const finSize = size(fit.finSize);
   if (fit.rentsMaskFins && finSize) items.push({ kind: "mask_fins", size: finSize });
   return items;
