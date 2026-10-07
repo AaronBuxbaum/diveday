@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useActionState } from "react";
+import { SmsConsentNote } from "@/components/SmsConsentNote";
 
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
@@ -107,7 +108,11 @@ export function RegisterForm({
             className={controlClass}
           />
         </Field>
-        <Field label={t("register.phoneLabel")} htmlFor="phone">
+        <Field
+          label={t("register.phoneLabel")}
+          htmlFor="phone"
+          description={<SmsConsentNote t={t} />}
+        >
           <input
             id="phone"
             name="phone"

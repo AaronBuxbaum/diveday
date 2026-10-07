@@ -171,6 +171,7 @@
     "crewClashSailed": "{names} {count, plural, one {is} other {are}} out aboard while also rostered on {departure} at these hours.",
     "crewClashSailedConfirm": "Confirm who is aboard.",
     "crewBelowTarget": "{divers, plural, one {# diver} other {# divers}}, {divemasterCount, plural, one {# supervisor} other {# supervisors}}. Your target is {ratio}:1.",
+    "ratingLapsed": "{names} {count, plural, one {has a rating that isn’t current} other {have ratings that aren’t current}} for this departure.",
     "missingContact": "{count, plural, one {# diver has} other {# divers have}} no emergency contact.",
     "missingContactNamed": "No emergency contact.",
     "lastMinuteFill": "{seats, plural, one {# seat} other {# seats}} open, no last-minute deal sent.",

@@ -24,8 +24,8 @@ const COPY: PaymentStatusControlCopy = {
  * type.** The select was the stacked field's 44px at an appended 14px beside
  * an `sm` Update (44/14); once the appended size went (a control's type is
  * 16px at every size, K-45) it stood a 16px box beside a 14px label, which is
- * the mismatch `controlSizes` names: `sm` never matches a control. A row with
- * a text control in it is an `md` row — 48px, 16px, both of them.
+ * the mismatch `controlClass` names: `sm` never matches a control. Every text
+ * control is 48px with 16px type, so the button beside it is `md`.
  */
 describe("PaymentStatusControl control row", () => {
   it("draws the status select and its Update button at md", () => {

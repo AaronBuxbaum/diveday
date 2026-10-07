@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { SmsConsentNote } from "@/components/SmsConsentNote";
 import { ChoiceRow, controlClass, Field, FieldGrid } from "@/components/ui/form";
 import { segmentClass, segmentedTrackClass } from "@/components/ui/segmented";
 import { mailtoHref, telHref } from "@/lib/contact-links";
@@ -400,6 +401,7 @@ export function BookingPartyFields({
                     <Field
                       label={t("party.phoneLabel")}
                       hint={t("party.phoneHint")}
+                      description={<SmsConsentNote t={t} />}
                       className="text-base"
                       error={fieldErrors?.phone}
                     >

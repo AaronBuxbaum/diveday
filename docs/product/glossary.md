@@ -315,8 +315,11 @@ new domain concept, define it here in the same PR.
   while `instructor` was the only rung available to file them under (issue #1680, ruled 2026-09-16).
   Adding the rung changed no ratio arithmetic: `inWaterCrewRole` maps it to the thing those rules
   already count. The credit assumes a rating **in teaching status** — a lapsed AI is out of teaching
-  status and uninsured, and is not a certified assistant — and DiveDay does not check that, because
-  H-59 made credential status inform-only, permanently.
+  status and uninsured, and is not a certified assistant. Since H-59's 2026-10-07 amendment (issue
+  #1853) the **supervision claim** checks it, so far as the shop has recorded it: an AI whose every
+  recorded `instructor_rating` / `divemaster_rating` renewed before the departure counts for nothing
+  on Today, the staffing week and the trip page (see **Supervision claim**). Booking and rostering
+  still give the credit, because H-59 kept those two gates closed.
   **It carries no permissions of its own** — DiveDay's authorization gates are
   unchanged by it, so a shop that wants their AI to hold a Divemaster's permissions files them as
   both, which the roles list has always allowed. The one that bites is
@@ -1448,8 +1451,8 @@ new domain concept, define it here in the same PR.
   the diver without a second physician, and says so** (H-98, Aaron 2026-10-07): it boards them,
   and the roster, the manifest and the diver record warn that a physician did not clear this
   diver, with a link to the refused record on the roster and the diver record
-  (`overriddenRefusal`). Paper is recorded only by an owner or manager while the refusal stands
-  (`refusal_needs_manager`). The warning ends only when a physician has since cleared a release
+  (`overriddenRefusal`). Any staffer may record a paper waiver after a refusal (Aaron, 2026-10-07).
+  The warning ends only when a physician has since cleared a release
   that flagged every question the refused one did, ordered by when each physician answered.
 - **Paper / in-person signature** — a non-diver (staff) recording that a diver signed the release on
   paper — a copy on the boat or on shore — that the app never saw signed. It creates the same
@@ -1680,6 +1683,12 @@ new domain concept, define it here in the same PR.
   and the **SMS channel** otherwise. Any WhatsApp failure — most often a diver who simply isn't on
   WhatsApp — falls back to SMS immediately rather than being retried, because a reminder that lands
   after the boat leaves is worth nothing.
+- **STOP list** — the phone numbers that replied STOP to DiveDay's texting number (`sms_opt_outs`,
+  ADR [20261007-sms-stop-and-help](../architecture/decisions/20261007-sms-stop-and-help.md)). One
+  list for the platform, because every shop texts from the one number. A listed number gets no SMS
+  from any shop until it replies START; WhatsApp and email are unaffected. Every SMS ends with the
+  STOP line, and every phone field a diver fills in for themselves carries the **SMS consent** line
+  saying which texts follow.
 - **SMS channel** — an optional text channel for notifications, delivered through an AWS SNS seam
   (`SmsProvider.send()`, resolved by `smsProviderFromEnvironment()`). A number is texted only if it is already E.164, and the channel degrades to
   `not_configured` with no SNS credentials configured, exactly like the email seam. The platform-wide
@@ -2128,6 +2137,16 @@ new domain concept, define it here in the same PR.
   first-aid, boat licence), with an optional renewal date that raises a Today row as it approaches
   (`staff_credentials`). Distinct from a **certification**, which is always a diver's. Renewal is
   a calendar date, so it is good through the end of its own shop-local day.
+- **Supervision claim** — what Today, the staffing week and the trip page tell a staffer about who
+  is supervising a departure in the water: the in-water crew count with each rostered
+  professional's recorded ratings read (`courseCrewCountsByTrip`, `getTripOverview`). A rung is
+  **lapsed** when at least one `instructor_rating` (for the instructor rung) or dive-professional
+  rating (for the certified-assistant rung) is on file and every one of them renewed before the
+  departure's last shop-local day (`lapsedRungs`, `src/lib/crew-roles.ts`); nothing on file, or no
+  date on file, is not a lapse. Distinct from the **roster's claim** — the same count with no
+  credential read — which the booking gate, the seat cap and the crew editor's refusals use, because
+  H-59 keeps a locally recorded renewal date from ever refusing a sale or an assignment (issue
+  #1853). A surface showing a gap the two claims disagree about names who lapsed.
 
 ## Security
 

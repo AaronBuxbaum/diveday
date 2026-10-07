@@ -38,6 +38,7 @@ import {
   openUnitsActionText,
   overRatioDetailText,
   overRatioIntroDetailText,
+  ratingLapsedDetailText,
   rentalFitConfirmDetailText,
   reviewsPendingSubjectText,
   rollCallGapDetailText,
@@ -64,7 +65,16 @@ import {
 } from "@/lib/calendar-date";
 import { HOUR_MS, nowDate } from "@/lib/clock";
 import { courseCrewGap } from "@/lib/course-ratios";
-import { countInWaterCrew, effectiveCrewRoles, groupCrewAssignments } from "@/lib/crew-roles";
+import {
+  countBothClaims,
+  effectiveCrewRoles,
+  groupCrewAssignments,
+  type InWaterCrewCount,
+  type LapsedRung,
+  lapsedRungs,
+  lastDayOfDeparture,
+  rungLostToLapse,
+} from "@/lib/crew-roles";
 import type { DiveIntentCount } from "@/lib/dive-intent";
 import {
   DEFAULT_DIVERS_PER_DIVEMASTER,
@@ -140,7 +150,7 @@ import {
   trips,
   tripWaitlistEntries,
 } from "./schema";
-import { listStaffCredentials } from "./staff-credentials";
+import { listStaffCredentials, ratingCredentialsByPerson } from "./staff-credentials";
 import { canAcceptPayments, getShopStripeAccount } from "./stripe-accounts";
 import { tripIdsNeverSentLastMinuteDeal } from "./trip-promos";
 import { latestTripStagesByTrip } from "./trip-stages";
@@ -1130,20 +1140,32 @@ async function waitlistFrontByTrip(db: AppDb, shopId: string, tripIds: string[])
  * Exported because the shift roster's crew-gap summary composes *this* reader
  * — the one Today's own `instructor_missing` detection runs on — rather than
  * re-deriving crew counts of its own (ADR 20260806-staffing-is-the-shift-roster).
+ *
+ * **This is the supervision claim, so it reads the credentials** (issue
+ * #1853). A rostered professional whose every recorded rating has lapsed by
+ * the departure's last shop-local day counts for the rung they are still
+ * current on, or for nothing (`lapsedRungs`, src/lib/crew-roles.ts). `lapsed`
+ * names who a lapse took down a rung, so every surface that shows a gap this
+ * count opened can say why rather than showing one more shortfall. The money
+ * and roster paths do not come through here: `tripCourseCrewCounts`
+ * (src/db/bookings.ts) is the roster's claim, on purpose (H-59).
  */
 export async function courseCrewCountsByTrip(
   db: AppDb,
   shopId: string,
   tripIds: string[],
-): Promise<Map<string, { instructorCount: number; assistantCount: number }>> {
-  const counts = new Map<string, { instructorCount: number; assistantCount: number }>();
+): Promise<Map<string, SupervisionCrewCount>> {
+  const counts = new Map<string, SupervisionCrewCount>();
   if (tripIds.length === 0) return counts;
   const rows = await db
     .select({
       tripId: tripAssignments.tripId,
       personId: tripAssignments.personId,
+      fullName: people.fullName,
       tripRole: tripAssignments.tripRole,
       role: personRoles.role,
+      endsAt: trips.endsAt,
+      timeZone: shops.timezone,
     })
     .from(tripAssignments)
     // `trip_assignments` carries no shop_id of its own; proving the trip
@@ -1153,6 +1175,8 @@ export async function courseCrewCountsByTrip(
     // Every current caller already pre-filters tripIds to this shop, but the
     // helper itself shouldn't depend on that discipline.
     .innerJoin(trips, eq(trips.id, tripAssignments.tripId))
+    // The zone the departure's day is read in (issue #1853).
+    .innerJoin(shops, eq(shops.id, trips.shopId))
     .innerJoin(people, eq(people.id, tripAssignments.personId))
     // A `left join`, and no role filter: the per-trip role lives on the
     // assignment row, so a rostered captain has to reach the rule that decides
@@ -1167,16 +1191,71 @@ export async function courseCrewCountsByTrip(
       ),
     );
   const rowsByTrip = new Map<string, typeof rows>();
+  const nameByPerson = new Map<string, string>();
   for (const row of rows) {
     const list = rowsByTrip.get(row.tripId) ?? [];
     list.push(row);
     rowsByTrip.set(row.tripId, list);
+    nameByPerson.set(row.personId, row.fullName);
   }
+  const credentials = await ratingCredentialsByPerson(db, shopId, [...nameByPerson.keys()]);
   for (const tripId of tripIds) {
-    counts.set(tripId, countInWaterCrew(groupCrewAssignments(rowsByTrip.get(tripId) ?? [])));
+    const tripRows = rowsByTrip.get(tripId) ?? [];
+    const [first] = tripRows;
+    // Asked of the departure's own last day in the shop's zone, so a rating
+    // that lapses between the booking and the dive is lapsed for the dive.
+    const divesOn = first ? lastDayOfDeparture(first.endsAt, first.timeZone) : null;
+    const members = groupCrewAssignments(tripRows).map((member) => ({
+      ...member,
+      lapsedRungs:
+        divesOn === null ? [] : lapsedRungs(credentials.get(member.personId) ?? [], divesOn),
+    }));
+    const { supervision, roster } = countBothClaims(members);
+    const lapsed: SupervisionCrewCount["lapsed"] = [];
+    for (const member of members) {
+      const lost = rungLostToLapse(member);
+      if (lost === null) continue;
+      lapsed.push({
+        personId: member.personId,
+        fullName: nameByPerson.get(member.personId) ?? "",
+        lost,
+      });
+    }
+    // Names in a stable order, so the sentence that lists them does not
+    // reshuffle between loads.
+    lapsed.sort(byNameThenId);
+    counts.set(tripId, { ...supervision, roster, lapsed });
   }
   return counts;
 }
+
+function byNameThenId(
+  a: { fullName: string; personId: string },
+  b: { fullName: string; personId: string },
+): number {
+  if (a.fullName !== b.fullName) return a.fullName < b.fullName ? -1 : 1;
+  return a.personId < b.personId ? -1 : a.personId > b.personId ? 1 : 0;
+}
+
+/**
+ * The supervision claim for one departure: the in-water counts with every
+ * rostered professional's recorded ratings read, the roster's claim beside it
+ * (the same count with none read), and who a lapse took down a rung and which
+ * rung (issue #1853). A surface says a gap is a lapse's only when the two
+ * claims disagree about that gap.
+ */
+export type SupervisionCrewCount = InWaterCrewCount & {
+  roster: InWaterCrewCount;
+  lapsed: { personId: string; fullName: string; lost: LapsedRung }[];
+};
+
+/** A departure nobody is rostered on: nobody in the water, nobody lapsed. */
+export const NO_SUPERVISION: SupervisionCrewCount = {
+  instructorCount: 0,
+  assistantCount: 0,
+  roster: { instructorCount: 0, assistantCount: 0 },
+  lapsed: [],
+};
 
 /**
  * Everything the Today queue needs, in one pass. Every signal is derived from a
@@ -1890,7 +1969,7 @@ export async function getTodayWork(
     // report its two codes separately, so a session Today flags as over its
     // ratio can neither read as "Covered" on staffing nor be filed there under
     // "needs an instructor" when it already has one.
-    const counts = courseCrewCounts.get(trip.id) ?? { instructorCount: 0, assistantCount: 0 };
+    const counts = courseCrewCounts.get(trip.id) ?? NO_SUPERVISION;
     const crewGap = courseCrewGap({
       course: trip.course,
       instructorCount: counts.instructorCount,
@@ -1937,7 +2016,37 @@ export async function getTodayWork(
     // shop-set preference deciding whether a supervision signal appears would
     // be alarming; it cannot.
     const uncrewed = ratioGap.code === "under_target" && ratioGap.divemasterCount === 0;
+    // **A gap a lapse opened says so, and only that gap** (issue #1853).
+    // `counts` reads each rostered professional's recorded ratings, so a crew
+    // list with an instructor's name on it can still raise these rows. The
+    // same three answers are taken again on the roster's claim, and a row
+    // carries the lapse only when the roster would not have raised it: a
+    // divemaster's lapsed card beside a session nobody rostered an instructor
+    // on is not why it has no instructor (dive-domain review). Never a refusal
+    // — the booking gate still reads the roster's claim (H-59).
+    const rosterCrewGap = courseCrewGap({
+      course: trip.course,
+      instructorCount: counts.roster.instructorCount,
+      assistantCount: counts.roster.assistantCount,
+      booked: trip.booked,
+    });
+    const rosterRatioGap = divemasterRatioGap({
+      divers: trip.booked,
+      divemasterCount: inWaterDivemasterCount(counts.roster),
+      diversPerDivemaster,
+      selfGuided: trip.selfGuided,
+    });
+    const rosterUncrewed =
+      rosterRatioGap.code === "under_target" && rosterRatioGap.divemasterCount === 0;
+    const lapseNote =
+      counts.lapsed.length > 0 ? ratingLapsedDetailText(t, locale, counts.lapsed) : null;
+    const explainedIf = (opened: boolean, detail: string) =>
+      opened && lapseNote ? `${detail} ${lapseNote}` : detail;
+    // Who lost the instructor rung — the only people who can be why a session
+    // reads as having no instructor.
+    const lostInstructor = counts.lapsed.filter((member) => member.lost === "instructor");
     if (crewGap.code !== "none" && !uncrewed) {
+      const opened = rosterCrewGap.code !== crewGap.code || rosterUncrewed;
       actions.push({
         id: `instructor:${trip.id}`,
         kind: "instructor_missing",
@@ -1954,10 +2063,19 @@ export async function getTodayWork(
               // 8-plus-2 and tells staff to add an assistant — would both
               // misquote a standard and prescribe a fix that changes nothing.
               // Each rule gets its own sentence.
-              crewGap.ratio === "intro"
-              ? overRatioIntroDetailText(t, crewGap.booked, crewGap.capacity)
-              : overRatioDetailText(t, crewGap.booked, crewGap.capacity)
-            : instructorMissingDetailText(t),
+              explainedIf(
+                opened,
+                crewGap.ratio === "intro"
+                  ? overRatioIntroDetailText(t, crewGap.booked, crewGap.capacity)
+                  : overRatioDetailText(t, crewGap.booked, crewGap.capacity),
+              )
+            : // "No instructor assigned" is false beside a lapsed instructor's
+              // name, so when one lost the rung the lapse is the whole
+              // sentence. When nobody did, the session has no instructor
+              // rostered at all, and that is what it says.
+              opened && lostInstructor.length > 0
+              ? ratingLapsedDetailText(t, locale, lostInstructor)
+              : instructorMissingDetailText(t),
         actionLabel: openCrewActionText(t),
         // The trip's crew editor, not the bare Overview it used to land on
         // (Lens 17 task 139) — the fix for either gap lives right there.
@@ -2005,9 +2123,12 @@ export async function getTodayWork(
           context: when,
           departure,
           aboutDeparture: true,
-          detail: course
-            ? uncrewedCourseDetailText(t, ratioGap.divers)
-            : uncrewedDepartureDetailText(t, ratioGap.divers),
+          detail: explainedIf(
+            !rosterUncrewed,
+            course
+              ? uncrewedCourseDetailText(t, ratioGap.divers)
+              : uncrewedDepartureDetailText(t, ratioGap.divers),
+          ),
           actionLabel: openCrewActionText(t),
           href: `${tripHref}?view=details#crew`,
           dueAt: trip.startsAt,
@@ -2021,12 +2142,15 @@ export async function getTodayWork(
           context: when,
           departure,
           aboutDeparture: true,
-          detail: crewBelowTargetDetailText(
-            t,
-            ratioGap.divers,
-            ratioGap.divemasterCount,
-            // Never null here: a null target reports no gap at all.
-            diversPerDivemaster ?? DEFAULT_DIVERS_PER_DIVEMASTER,
+          detail: explainedIf(
+            rosterRatioGap.code === "none",
+            crewBelowTargetDetailText(
+              t,
+              ratioGap.divers,
+              ratioGap.divemasterCount,
+              // Never null here: a null target reports no gap at all.
+              diversPerDivemaster ?? DEFAULT_DIVERS_PER_DIVEMASTER,
+            ),
           ),
           actionLabel: openCrewActionText(t),
           href: `${tripHref}?view=details#crew`,

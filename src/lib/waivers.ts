@@ -545,12 +545,11 @@ export function overriddenRefusal(
 /**
  * The physician's "no" on file that no later clearance has answered
  * ({@link overriddenRefusal}'s rule), among refusals signed before
- * `signedBefore` — every one of them when omitted. The paper path asks this
- * with no standing release, to decide who may record one (H-98).
+ * `signedBefore`.
  */
-export function unansweredRefusal(
+function unansweredRefusal(
   records: readonly WaiverRecord[],
-  signedBefore = Number.POSITIVE_INFINITY,
+  signedBefore: number,
 ): { recordId: string; at: Date } | null {
   const refusals = records
     .filter((record) => isStandingRefusal(record) && signatureTime(record) < signedBefore)

@@ -11,7 +11,6 @@ import {
   ChoiceRow,
   choiceClass,
   controlClass,
-  controlClassFor,
   DateField,
   Field,
   FieldActions,
@@ -19,6 +18,8 @@ import {
   FormStatus,
   legendClass,
   PriceField,
+  radioClass,
+  radioRingClass,
   SearchField,
   StickyFormActions,
   textareaClassFor,
@@ -64,18 +65,11 @@ describe("SearchField", () => {
     expect(box).toHaveAttribute("name", "q");
   });
 
-  it("stands at md's 48px beside an md button, and at the 44px floor anywhere else", () => {
-    render(
-      <>
-        <SearchField id="orders-search" label="Search orders" />
-        <SearchField id="diverq-search" label="Find a diver" size="md" />
-      </>,
-    );
-    const alone = screen.getByRole("searchbox", { name: "Search orders" });
-    const beside = screen.getByRole("searchbox", { name: "Find a diver" });
-    expect(alone).toHaveClass("min-h-11");
-    expect(beside).toHaveClass("min-h-12", "ps-9");
-    expect(beside).not.toHaveClass("min-h-11");
+  it("stands at the one 48px control height, level with an md button", () => {
+    render(<SearchField id="orders-search" label="Search orders" />);
+    const box = screen.getByRole("searchbox", { name: "Search orders" });
+    expect(box).toHaveClass("min-h-12", "ps-9");
+    expect(box).not.toHaveClass("min-h-11");
   });
 });
 
@@ -87,17 +81,17 @@ function stepPx(tokens: string[], prefix: string): number {
 }
 
 /**
- * **A text control on a line with buttons stands at their size** — the pixel
- * probe's `mismatched-controls` cluster on 2026-09-25: a 44px search box beside
- * a 48px "Add diver" on seventeen trip captures and the roster, and a 16px box
- * beside a 14px "Go" or "Save" wherever a row paired one with `sm`. A control's
- * type is 16px and stays there, so `md`, the one button rung with a 16px label,
- * is what it can stand level with, and `controlClassFor("md")` is how it
- * reaches that rung's height.
+ * **Every text control is 48px**, level with an `md` button wherever it
+ * stands (issue #1987). The pixel probe's `mismatched-controls` cluster on
+ * 2026-09-25 found a 44px search box beside a 48px "Add diver" on seventeen
+ * trip captures and the roster, and a 16px box beside a 14px "Go" or "Save"
+ * wherever a row paired one with `sm`. A control's type is 16px and stays
+ * there, so `md`, the one button rung with a 16px label, is what it can stand
+ * level with; one control height makes that hold on every row by construction.
  */
-describe("controlClassFor", () => {
-  it("stands an md control level with an md button, in height and in type", () => {
-    const control = controlClassFor("md").split(/\s+/);
+describe("controlClass", () => {
+  it("stands a control level with an md button, in height and in type", () => {
+    const control = controlClass.split(/\s+/);
     const button = buttonClass().split(/\s+/);
     expect(control).toContain("min-h-12");
     expect(button).toContain("min-h-12");
@@ -106,22 +100,12 @@ describe("controlClassFor", () => {
     expect(button).toContain("text-base");
   });
 
-  it("keeps the stacked field's control at the 44px floor, as `controlClass`", () => {
-    expect(controlClassFor("field")).toBe(controlClass);
-    expect(controlClass.split(/\s+/)).toContain("min-h-11");
-    expect(controlClass.split(/\s+/)).not.toContain("min-h-12");
-  });
-
-  it("grows the padding with the height, so a control that does not center itself still sits centered", () => {
+  it("pads a 26px content box, so a control that does not center itself still sits centered", () => {
     // A text box centres its line at any height; a native file picker lays its
-    // button at the top of the content box. The same content box at every size
-    // puts the extra height equally above and below either one.
-    const contentBox = (classes: string) => {
-      const tokens = classes.split(/\s+/);
-      const border = tokens.includes("border") ? 2 : 0;
-      return stepPx(tokens, "min-h-") - 2 * stepPx(tokens, "py-") - border;
-    };
-    expect(contentBox(controlClassFor("md"))).toBe(contentBox(controlClassFor("field")));
+    // button at the top of the content box, so the padding is what centres it.
+    const tokens = controlClass.split(/\s+/);
+    const border = tokens.includes("border") ? 2 : 0;
+    expect(stepPx(tokens, "min-h-") - 2 * stepPx(tokens, "py-") - border).toBe(26);
   });
 
   /**
@@ -129,24 +113,14 @@ describe("controlClassFor", () => {
    * "…along the c" at 390 on the dive-site editor (K-129). The ellipsis says
    * there is more; a cut says the box is broken.
    */
-  it("ends an overlong placeholder in an ellipsis at every size", () => {
-    for (const size of ["field", "md"] as const) {
-      expect(controlClassFor(size).split(/\s+/), size).toContain("placeholder-shown:text-ellipsis");
-    }
+  it("ends an overlong placeholder in an ellipsis", () => {
+    expect(controlClass.split(/\s+/)).toContain("placeholder-shown:text-ellipsis");
   });
 
-  it("spells each size's height and padding once, so nothing is left to stylesheet order", () => {
-    for (const size of ["field", "md"] as const) {
-      const tokens = controlClassFor(size).split(/\s+/);
-      expect(
-        tokens.filter((one) => one.startsWith("min-h-")),
-        size,
-      ).toHaveLength(1);
-      expect(
-        tokens.filter((one) => one.startsWith("py-")),
-        size,
-      ).toHaveLength(1);
-    }
+  it("spells its height and padding once, so nothing is left to stylesheet order", () => {
+    const tokens = controlClass.split(/\s+/);
+    expect(tokens.filter((one) => one.startsWith("min-h-"))).toHaveLength(1);
+    expect(tokens.filter((one) => one.startsWith("py-"))).toHaveLength(1);
   });
 });
 
@@ -187,8 +161,13 @@ describe("textareaClassFor", () => {
 
   it("is the control's body, and spells one minimum height and one padding", () => {
     const tokens = textareaClassFor(4).split(/\s+/);
-    for (const shared of controlClass.split(/\s+/).filter((token) => !token.startsWith("min-h-")))
-      expect(tokens).toContain(shared);
+    // Everything but the box's height and its padding: a textarea's height is
+    // its rows, and its `py-2` is what `textareaMinHeight` counts.
+    const body = controlClass
+      .split(/\s+/)
+      .filter((token) => !token.startsWith("min-h-") && !token.startsWith("py-"));
+    for (const shared of body) expect(tokens).toContain(shared);
+    expect(tokens).toContain("py-2");
     expect(tokens.filter((token) => token.startsWith("min-h-"))).toHaveLength(1);
     expect(tokens.filter((token) => token.startsWith("py-"))).toHaveLength(1);
   });
@@ -320,17 +299,17 @@ describe("DateField", () => {
     expect(screen.getByLabelText("A month box that exists")).not.toHaveAttribute("data-fallback");
   });
 
-  it("stands at md's 48px beside an md button, and at the field's 44px anywhere else", () => {
+  it("stands at the one 48px control height, whatever its type", () => {
     const { container } = render(
       <>
-        <DateField type="month" name="month" size="md" />
+        <DateField type="month" name="month" />
         <DateField name="on" />
       </>,
     );
-    const [beside, stacked] = container.querySelectorAll("input");
-    expect(beside).toHaveClass("min-h-12", "pe-9");
-    expect(beside).not.toHaveClass("min-h-11");
-    expect(stacked).toHaveClass("min-h-11");
+    for (const box of container.querySelectorAll("input")) {
+      expect(box).toHaveClass("min-h-12", "pe-9");
+      expect(box).not.toHaveClass("min-h-11");
+    }
   });
 
   /**
@@ -530,6 +509,65 @@ describe("ChoicePill and ChoiceRow", () => {
       "text-sm",
       "hover:bg-surface-sunken",
     );
+  });
+
+  /**
+   * **A radio's ring is on its pill or row, a checkbox's on itself.** A
+   * native radio's border-radius computes 0 however it is asked, so the global
+   * ring drew a square round a round dot (#2007). The radio switches its own
+   * outline off and the rounded box round it draws the ring. The rendered
+   * shape is asked of a real browser in e2e/waivers.spec.ts; this pins which
+   * element carries which class.
+   */
+  it("rings a radio's pill, a radio row, and a radio pill with an aside, and leaves checkboxes alone", () => {
+    render(
+      <>
+        <ChoicePill type="radio" name="q" value="yes">
+          Yes
+        </ChoicePill>
+        <ChoiceRow type="radio" name="help" value="none">
+          Nothing
+        </ChoiceRow>
+        <ChoicePill type="radio" name="suit" value="dry" aside={<button type="button">?</button>}>
+          Drysuit
+        </ChoicePill>
+        <ChoicePill type="checkbox" name="roles" value="captain">
+          Captain
+        </ChoicePill>
+        <ChoiceRow type="checkbox" name="agree" value="on">
+          I agree
+        </ChoiceRow>
+      </>,
+    );
+    expect(radioClass.split(/\s+/)).toEqual([
+      ...choiceClass.split(/\s+/),
+      "focus-visible:outline-none",
+    ]);
+    for (const name of ["Yes", "Nothing", "Drysuit"]) {
+      const radio = screen.getByRole("radio", { name });
+      expect(radio).toHaveClass("focus-visible:outline-none");
+    }
+    expect(screen.getByRole("radio", { name: "Yes" }).closest("label")).toHaveClass(
+      radioRingClass,
+      "rounded-lg",
+    );
+    // A row has no corner of its own: it takes one, and room either side for
+    // the ring, handed back so its box stays on the column.
+    expect(screen.getByRole("radio", { name: "Nothing" }).closest("label")).toHaveClass(
+      radioRingClass,
+      "rounded-lg",
+      "-mx-2",
+      "px-2",
+    );
+    // The aside's pill is the bordered div; its label sits inside the borders.
+    const drysuit = screen.getByRole("radio", { name: "Drysuit" });
+    expect(drysuit.closest("label")).not.toHaveClass(radioRingClass);
+    expect(drysuit.closest("label")?.parentElement).toHaveClass(radioRingClass, "rounded-lg");
+    for (const name of ["Captain", "I agree"]) {
+      const box = screen.getByRole("checkbox", { name });
+      expect(box).not.toHaveClass("focus-visible:outline-none");
+      expect(box.closest("label")).not.toHaveClass(radioRingClass);
+    }
   });
 
   it("sets a diver-facing pill's words at 16px when asked", () => {
@@ -1554,8 +1592,8 @@ describe("source sweeps", () => {
    * over `controlClass`'s `text-base` by stylesheet order, so one field drew
    * at three sizes on one page — "Assign crew…" at a 10px cap beside "Every
    * week" at 12px (trip-repeating-cadence, trip-crew-clash; K-45) — and iOS
-   * Safari zooms the page when a box under 16px takes focus. A denser control
-   * is a `controlClassFor` size that keeps 16px, never an appended size. The
+   * Safari zooms the page when a box under 16px takes focus. There is no denser
+   * control: every text control is `controlClass`, at 16px. The
    * one exception is the embed page's read-only code snippet, which is a
    * block of code to copy, not a box anyone types in.
    */
@@ -1564,8 +1602,7 @@ describe("source sweeps", () => {
     const offenders: string[] = [];
     for (const { file, source } of sourceFiles()) {
       if (allowed.has(file)) continue;
-      const templates =
-        /`[^`]*\$\{(?:controlClass(?:For\([^)]*\))?|textareaClassFor\([^)]*\))\}[^`]*`/g;
+      const templates = /`[^`]*\$\{(?:controlClass|textareaClassFor\([^)]*\))\}[^`]*`/g;
       for (const match of source.matchAll(templates)) {
         if (/\btext-(xs|sm)\b/.test(match[0]))
           offenders.push(`${file}:${lineOf(source, match.index)} ${match[0]}`);
@@ -1604,12 +1641,18 @@ describe("source sweeps", () => {
    * spelled `size-4` by hand, most without `shrink-0` (K-13 review). A box
    * that is `sr-only` or `opacity-0` is a stand-in's business, not this rule's.
    *
+   * A visible radio wears `radioClass` instead — `choiceClass` with its own
+   * outline off — and the box round it wears `radioRingClass`: a native
+   * radio's ring is a square round a round dot, so it is drawn on the label
+   * (#2007). This reads the input's tag and its file, not which element the
+   * ring lands on; the rendered test above pins that for the two components.
+   *
    * Two boxes are 20px on purpose and named here by path: the conditions
    * hold, a warning-tinted card whose box stands beside its 16px semibold
    * heading, and the buddy builder's drag rows, a manifest surface whose own
    * note asks for a box big enough to hit without aiming.
    */
-  it("draws every visible choice box with choiceClass", () => {
+  it("draws every visible choice box with choiceClass, and every radio with radioClass", () => {
     const deliberate20px = new Set([
       "src/app/shop/[shopSlug]/trips/[id]/_components/ConditionsSection.tsx",
       "src/app/shop/[shopSlug]/trips/[id]/manifest/_components/BuddyDragGroups.tsx",
@@ -1620,7 +1663,11 @@ describe("source sweeps", () => {
         if (!/type=(?:"|\{")(checkbox|radio)"/.test(text)) continue;
         if (/\b(sr-only|opacity-0)\b/.test(text)) continue;
         const where = `${file}:${lineOf(source, index)}`;
-        if (!/\bchoiceClass\b/.test(text) && !deliberate20px.has(file))
+        if (/type=(?:"|\{")radio"/.test(text)) {
+          if (!/\bradioClass\b/.test(text)) offenders.push(`${where} lacks radioClass`);
+          else if (!/\bradioRingClass\b/.test(source))
+            offenders.push(`${where} wears radioClass with no radioRingClass on its box`);
+        } else if (!/\bchoiceClass\b/.test(text) && !deliberate20px.has(file))
           offenders.push(`${where} lacks choiceClass`);
         if (/\b(rounded|border-[a-z-]+|text-primary|focus:ring-[a-z-]+)\b/.test(text))
           offenders.push(`${where} wears forms-plugin classes`);

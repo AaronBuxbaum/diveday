@@ -12,8 +12,8 @@ import { tapTargetLinkClass } from "@/components/ui/button";
 import { groupLabelClass } from "@/components/ui/ledger";
 import {
   BANNER_TITLE_CLASS,
+  ITEM_TITLE_CLASS,
   MARKETING_EYEBROW_CLASS,
-  SECTION_TITLE_CLASS,
 } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
@@ -224,7 +224,7 @@ async function GuideBody({
             <p className="mt-8 max-w-2xl leading-7 text-muted">{t(guide.coexist.bridgeNote)}</p>
 
             <div className="mt-8 rounded-panel border border-primary/30 bg-primary/5 p-6">
-              <h3 className={`${SECTION_TITLE_CLASS} tracking-tight`}>
+              <h3 className={`${ITEM_TITLE_CLASS} tracking-tight`}>
                 {t(guide.coexist.replace.heading)}
               </h3>
               <p className="mt-2 leading-7 text-muted">{t(guide.coexist.replace.body)}</p>
@@ -293,7 +293,7 @@ async function GuideBody({
             </p>
 
             <div className="mt-8 rounded-panel border border-primary/30 bg-primary/5 p-6">
-              <h3 className={`${SECTION_TITLE_CLASS} tracking-tight`}>
+              <h3 className={`${ITEM_TITLE_CLASS} tracking-tight`}>
                 {t(guide.website.offer.heading)}
               </h3>
               <p className="mt-2 leading-7 text-muted">{t(guide.website.offer.body)}</p>

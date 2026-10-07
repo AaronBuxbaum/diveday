@@ -8,7 +8,7 @@ import { RollCallMark } from "@/components/RollCallMark";
 import { Badge } from "@/components/ui/badge";
 import { sectionCardClass } from "@/components/ui/card";
 import { StatusMark } from "@/components/ui/StatusMark";
-import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { ITEM_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { birthdayCalloutText } from "@/i18n/birthday-labels";
 import { buddyAlertText } from "@/i18n/buddy-labels";
 import { depthWarningText } from "@/i18n/depth-labels";
@@ -646,7 +646,7 @@ export function DiverRollCall({
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-2">
-                          <span className={`${SECTION_TITLE_CLASS} group-hover/summary:underline`}>
+                          <span className={`${ITEM_TITLE_CLASS} group-hover/summary:underline`}>
                             {diver.fullName}
                           </span>
                           {capsule}

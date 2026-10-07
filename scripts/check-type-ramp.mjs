@@ -86,6 +86,52 @@ export function findRampSpellings(source) {
   return found;
 }
 
+/**
+ * **One section rung (#1966).** A page's sections once came in two sizes: a
+ * `SectionCard` drew its own `h2` at 24px (`LEAD_TITLE_CLASS`) while most
+ * hand-spelled section headings wore `SECTION_TITLE_CLASS` at 18px, and the
+ * ratchet above could not see it, because both were named constants. Now both
+ * read `SECTION_TITLE_CLASS`, and two spellings would reopen the split:
+ *
+ * - `LEAD_TITLE_CLASS` anywhere under `src/app/shop` — it is the reading
+ *   ramp's lead, the same size today but a different rung, and a staff section
+ *   that takes it drifts the moment either moves;
+ * - an `<h2>` wearing `ITEM_TITLE_CLASS` anywhere — that rung names a thing
+ *   inside a section, and a section heading at it is the 18px heading again.
+ *
+ * A flat gate rather than a ratchet: it lands at zero.
+ */
+const ITEM_ON_H2 = /<h2\b[^>]*\bITEM_TITLE_CLASS\b/g;
+const LEAD_USE = /\bLEAD_TITLE_CLASS\b/g;
+
+export function findSectionRungDrift(file, source) {
+  const found = [];
+  const lineOf = (offset) => source.slice(0, offset).split("\n").length;
+  ITEM_ON_H2.lastIndex = 0;
+  for (const match of source.matchAll(ITEM_ON_H2)) {
+    found.push({
+      line: lineOf(match.index),
+      text: "an <h2> at ITEM_TITLE_CLASS — a section heading takes SECTION_TITLE_CLASS",
+    });
+  }
+  const staff = file.split(path.sep).join("/").startsWith("src/app/shop/");
+  if (staff) {
+    const lines = source.split("\n");
+    for (const [index, line] of lines.entries()) {
+      if (/^\s*(import\b|[A-Z_]+,\s*$|\}\s*from\b)/.test(line)) continue;
+      if (/^\s*(\*|\/\/|\{\/\*)/.test(line)) continue;
+      LEAD_USE.lastIndex = 0;
+      if (LEAD_USE.test(line)) {
+        found.push({
+          line: index + 1,
+          text: "LEAD_TITLE_CLASS on a staff page — a section heading takes SECTION_TITLE_CLASS",
+        });
+      }
+    }
+  }
+  return found;
+}
+
 async function walk(relativeDirectory) {
   let entries;
   try {
@@ -113,10 +159,15 @@ async function walk(relativeDirectory) {
 async function main() {
   const counts = new Map();
   const details = new Map();
+  const rungDrift = [];
   for (const root of guardedRoots) {
     for (const file of await walk(root)) {
       if (file === RAMP_MODULE) continue;
-      const found = findRampSpellings(await readFile(path.join(ROOT, file), "utf8"));
+      const source = await readFile(path.join(ROOT, file), "utf8");
+      for (const hit of findSectionRungDrift(file, source)) {
+        rungDrift.push(`${file}:${hit.line}  ${hit.text}`);
+      }
+      const found = findRampSpellings(source);
       if (found.length > 0) {
         counts.set(file, found.length);
         details.set(file, found);
@@ -188,7 +239,7 @@ async function main() {
     process.exit(0);
   }
 
-  const violations = [];
+  const violations = [...rungDrift];
   for (const [file, count] of counts) {
     const allowed = baselineCounts[file];
     if (allowed === undefined) {
@@ -224,7 +275,7 @@ async function main() {
   if (violations.length > 0) {
     console.error(`Type-ramp violations:\n${violations.map((v) => `- ${v}`).join("\n")}`);
     console.error(
-      "Headings take a named level from src/components/ui/typography.ts — PAGE_TITLE_CLASS, SHELL_TITLE_CLASS, DISPLAY_TITLE_CLASS, BANNER_TITLE_CLASS, LEAD_TITLE_CLASS, SUB_TITLE_CLASS, SECTION_TITLE_CLASS, or one of the four FIGURE_* levels. A genuinely off-ramp heading says `diveday:allow-type-ramp: <why>` on the line or the line above.",
+      "Headings take a named level from src/components/ui/typography.ts — PAGE_TITLE_CLASS, SHELL_TITLE_CLASS, DISPLAY_TITLE_CLASS, BANNER_TITLE_CLASS, LEAD_TITLE_CLASS, SUB_TITLE_CLASS, SECTION_TITLE_CLASS, ITEM_TITLE_CLASS, or one of the four FIGURE_* levels. A genuinely off-ramp heading says `diveday:allow-type-ramp: <why>` on the line or the line above.",
     );
     process.exit(1);
   }

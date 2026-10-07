@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { LedgerRow } from "@/components/ui/ledger";
-import { LEAD_TITLE_CLASS } from "@/components/ui/typography";
+import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
 
 /**
  * **A staff credential is a fact, never a badge and never a gate** — ADR
@@ -79,7 +79,7 @@ export function StaffCredentials({
   // renewal row links to. With nothing on file the door is the whole list.
   return (
     <section id="credentials" className="scroll-mt-24" aria-labelledby="credentials-heading">
-      <h2 id="credentials-heading" className={LEAD_TITLE_CLASS}>
+      <h2 id="credentials-heading" className={SECTION_TITLE_CLASS}>
         {label}
       </h2>
       <ul className="mt-4">

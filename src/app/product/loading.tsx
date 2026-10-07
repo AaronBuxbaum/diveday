@@ -4,8 +4,8 @@ import { SkeletonLineBars } from "@/components/ShopPageHeader";
 import { groupLabelClass } from "@/components/ui/ledger";
 import {
   DISPLAY_TITLE_CLASS,
+  ITEM_TITLE_CLASS,
   MARKETING_EYEBROW_CLASS,
-  SECTION_TITLE_CLASS,
 } from "@/components/ui/typography";
 import { FEATURE_PHASES, featurePagesIn } from "@/lib/feature-pages";
 import { hubOnlyCapabilityGroups } from "@/lib/marketing";
@@ -104,7 +104,7 @@ export default function ProductLoading() {
                     <li key={page.slug} className="border-b border-border pt-4">
                       <SkeletonLineBars
                         lines={1}
-                        height={`h-lh ${SECTION_TITLE_CLASS}`}
+                        height={`h-lh ${ITEM_TITLE_CLASS}`}
                         width="w-48 max-w-full"
                       />
                       <div className="mt-1">
@@ -132,9 +132,7 @@ export default function ProductLoading() {
                 {hubOnlyCapabilityGroups.map((id) => (
                   <li key={id} className="border-b border-border lg:border-t">
                     <div className="flex min-h-14 items-center justify-between gap-4 py-4">
-                      <div
-                        className={`h-lh w-40 rounded bg-surface-sunken ${SECTION_TITLE_CLASS}`}
-                      />
+                      <div className={`h-lh w-40 rounded bg-surface-sunken ${ITEM_TITLE_CLASS}`} />
                       <div className="h-5 w-20 shrink-0 rounded bg-surface-sunken" />
                     </div>
                   </li>

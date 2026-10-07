@@ -2,11 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import type { CourtesyDelivery } from "./courtesy";
 import { sendCourtesyMessage } from "./courtesy";
 
-const message = {
+const courtesy = {
   to: "+13055551234",
   body: "Reef Runner departs Sat at 8:00 AM.",
   shopName: "Blue Horizon Divers",
 };
+const message = { ...courtesy, smsStopLine: "Reply STOP to opt out." };
 
 function provider(...results: CourtesyDelivery[]) {
   const send = vi.fn();
@@ -23,7 +24,10 @@ describe("sendCourtesyMessage", () => {
     const result = await sendCourtesyMessage(message, { sms });
 
     expect(result).toEqual({ channel: "sms", delivery: sent("SM_1") });
-    expect(sms.send).toHaveBeenCalledWith({ to: message.to, body: message.body });
+    expect(sms.send).toHaveBeenCalledWith({
+      to: message.to,
+      body: "Reef Runner departs Sat at 8:00 AM. Reply STOP to opt out.",
+    });
   });
 
   it("prefers the shop's WhatsApp when connected", async () => {
@@ -46,7 +50,32 @@ describe("sendCourtesyMessage", () => {
     const whatsapp = provider(sent("wamid.1"));
     await sendCourtesyMessage(message, { sms: provider(), whatsapp });
 
-    expect(whatsapp.send).toHaveBeenCalledWith(message);
+    expect(whatsapp.send).toHaveBeenCalledWith(courtesy);
+  });
+
+  it("never tells a WhatsApp reader to reply STOP", async () => {
+    const whatsapp = provider(sent("wamid.1"));
+    await sendCourtesyMessage(
+      { ...message, whatsAppBody: "Reef Runner departs Sat. Reply C to confirm." },
+      { sms: provider(), whatsapp },
+    );
+
+    expect(whatsapp.send).toHaveBeenCalledWith({
+      ...courtesy,
+      body: "Reef Runner departs Sat. Reply C to confirm.",
+      whatsAppBody: "Reef Runner departs Sat. Reply C to confirm.",
+    });
+  });
+
+  it("puts the STOP line on the SMS a failed WhatsApp send falls back to", async () => {
+    const sms = provider(sent("SM_1"));
+    const whatsapp = provider({ status: "failed", retryable: false, errorCode: "131026" });
+    await sendCourtesyMessage(message, { sms, whatsapp });
+
+    expect(sms.send).toHaveBeenCalledWith({
+      to: message.to,
+      body: "Reef Runner departs Sat at 8:00 AM. Reply STOP to opt out.",
+    });
   });
 
   it("falls back to SMS when the diver is not on WhatsApp", async () => {

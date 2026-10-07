@@ -19,13 +19,13 @@ const FORM = readFileSync(join(__dirname, "RegisterForm.tsx"), "utf8");
  * jump on every visit.
  */
 describe("the register page's loading skeleton", () => {
-  it("draws one box per control the form renders, each at the control's 44px", () => {
+  it("draws one box per control the form renders, each at the control's 48px", () => {
     const controls = [...FORM.matchAll(/className=\{controlClass\}/g)].length;
     expect(controls).toBe(9);
     const { container } = render(<RegisterLoading />);
     const boxes = container.querySelectorAll("[data-control-bar]");
     expect(boxes).toHaveLength(controls);
-    for (const box of boxes) expect(box).toHaveClass("h-11", "rounded-lg");
+    for (const box of boxes) expect(box).toHaveClass("h-12", "rounded-lg");
   });
 
   it("stands a bar for each of the form's legends, at the legend's 32px line", () => {

@@ -9,7 +9,7 @@ import { buttonClass } from "@/components/ui/button";
 import {
   BANNER_TITLE_CLASS,
   DISPLAY_TITLE_CLASS,
-  SECTION_TITLE_CLASS,
+  ITEM_TITLE_CLASS,
   SUB_TITLE_CLASS,
 } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
@@ -206,7 +206,7 @@ export async function FeaturePageBody({
                     {index + 1}
                   </span>
                   <div>
-                    <h3 className={`${SECTION_TITLE_CLASS} text-balance`}>{step.title}</h3>
+                    <h3 className={`${ITEM_TITLE_CLASS} text-balance`}>{step.title}</h3>
                     <p className="mt-2 leading-7 text-muted">{step.body}</p>
                   </div>
                 </li>
@@ -323,7 +323,7 @@ export async function FeaturePageBody({
                     className="group flex h-full flex-col rounded-panel border border-border bg-background p-5 transition-colors hover:border-primary"
                   >
                     <span className="flex items-center justify-between gap-3">
-                      <span className={SECTION_TITLE_CLASS}>
+                      <span className={ITEM_TITLE_CLASS}>
                         {t(`marketing.featurePages.${other.key}.name`)}
                       </span>
                       <DiveDayIcon

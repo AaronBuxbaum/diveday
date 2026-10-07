@@ -273,6 +273,7 @@ describe("issueAndDeliverWaiver", () => {
     });
     expect(texted).toMatchObject({ ok: true, delivery: "sent" });
     expect(sms.send).toHaveBeenCalledOnce();
+    expect(sms.send.mock.calls[0]?.[0]?.body).toMatch(/ Reply STOP to opt out\.$/);
 
     // A local number has no unambiguous country code, so nothing is attempted
     // rather than texting whoever holds it in the wrong country.

@@ -9,7 +9,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Badge } from "@/components/ui/badge";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClassFor, FormStatus } from "@/components/ui/form";
+import { controlClass, FormStatus } from "@/components/ui/form";
 import { FIGURE_INLINE_CLASS } from "@/components/ui/typography";
 import { canPersonRefund } from "@/db/authz";
 import { getDb } from "@/db/client";
@@ -498,10 +498,10 @@ export default async function OrderDetailPage({
                  never the gate: `refundOrder` re-reads the row under its own
                  lock and Stripe refuses an over-refund behind that.
 
-                 The box is `md`, the danger button's 48px: a row with a text
-                 control in it is an `md` row, and at the field's 44px it stood
-                 4px below the button's top in this `items-end` row (K-10). Its
-                 width is the wrapper's, since `controlClassFor` already carries
+                 The box is 48px, like every text control, level with the `md`
+                 danger button; at 44px it stood 4px below the button's top in
+                 this `items-end` row (K-10). Its
+                 width is the wrapper's, since `controlClass` already carries
                  `w-full` and two widths resolve by stylesheet order. */
               <form action={refundAction} className="flex flex-wrap items-end gap-2">
                 <input type="hidden" name="orderId" value={order.order.id} />
@@ -520,7 +520,7 @@ export default async function OrderDetailPage({
                       max={refundableMajor}
                       step={minorToMajor(1, order.order.currency)}
                       defaultValue={refundableMajor}
-                      className={`${controlClassFor("md")} tabular-nums`}
+                      className={`${controlClass} tabular-nums`}
                     />
                   </span>
                 </label>

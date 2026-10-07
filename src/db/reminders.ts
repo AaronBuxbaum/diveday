@@ -42,6 +42,7 @@ import {
 } from "./notifications";
 import { listTripsReadiness } from "./readiness";
 import { bookings, notificationDeliveries, people, shops, trips } from "./schema";
+import { stopListedSmsProvider } from "./sms-opt-outs";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
 const REMINDER_KINDS: ReminderKind[] = TRIP_REMINDER_CADENCES.map((c) => c.kind);
@@ -209,7 +210,10 @@ export async function sendDueReminders(
 ): Promise<ReminderRunSummary> {
   const now = options.now ?? nowDate();
   const emailProvider = notificationProviderForDb(options.emailProvider);
-  const smsProvider = options.smsProvider ?? smsProviderFromEnvironment();
+  const smsProvider = stopListedSmsProvider(
+    db,
+    options.smsProvider ?? smsProviderFromEnvironment(),
+  );
   const origin = options.appOrigin === undefined ? publicAppUrl() : options.appOrigin;
   // Whether a diver replying to this mail reaches DiveDay at all. The
   // `Reply-To` is a routable per-shop address only when a receiving domain is
@@ -285,6 +289,7 @@ export async function sendDueReminders(
     kind: ReminderKind;
     phone: string | null;
     smsBody: string;
+    smsStopLine: string;
     whatsAppBody: string;
     notification: Notification;
   }> = [];
@@ -295,6 +300,7 @@ export async function sendDueReminders(
     kind: ReminderKind;
     phone: string;
     smsBody: string;
+    smsStopLine: string;
     whatsAppBody: string;
   }> = [];
 
@@ -474,6 +480,7 @@ export async function sendDueReminders(
         kind: cadence.kind,
         phone,
         smsBody,
+        smsStopLine: t("notifications.sms.stopLine"),
         whatsAppBody,
         notification: {
           kind: cadence.kind,
@@ -505,6 +512,7 @@ export async function sendDueReminders(
         kind: cadence.kind,
         phone,
         smsBody,
+        smsStopLine: t("notifications.sms.stopLine"),
         whatsAppBody,
       });
     } else {
@@ -536,6 +544,7 @@ export async function sendDueReminders(
         {
           to: work.phone,
           body: work.smsBody,
+          smsStopLine: work.smsStopLine,
           whatsAppBody: work.whatsAppBody,
           shopName: work.shopName,
         },
@@ -560,6 +569,7 @@ export async function sendDueReminders(
       {
         to: work.phone,
         body: work.smsBody,
+        smsStopLine: work.smsStopLine,
         whatsAppBody: work.whatsAppBody,
         shopName: work.shopName,
       },

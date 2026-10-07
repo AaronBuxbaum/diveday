@@ -4,6 +4,7 @@ import { EntryDone } from "@/components/account/EntryShell";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { FlashParams } from "@/components/FlashParams";
 import { ShopNotice } from "@/components/ShopPageHeader";
+import { SmsConsentNote } from "@/components/SmsConsentNote";
 import { SubmitButton } from "@/components/SubmitButton";
 import { ThreadShell } from "@/components/thread/ThreadShell";
 import { buttonClass } from "@/components/ui/button";
@@ -244,7 +245,10 @@ export default async function SeatClaimPage({
               className={controlClass}
             />
           </Field>
-          <Field label={`${t("seatClaim.phoneLabel")} ${t("common.optional")}`}>
+          <Field
+            label={`${t("seatClaim.phoneLabel")} ${t("common.optional")}`}
+            description={<SmsConsentNote t={t} />}
+          >
             <input
               name="phone"
               type="tel"

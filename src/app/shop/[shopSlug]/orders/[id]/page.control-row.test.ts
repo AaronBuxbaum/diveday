@@ -14,19 +14,15 @@ const REFUND_FORM = SOURCE.slice(
 );
 
 /**
- * **The refund amount stands level with "Refund payment".** The box was the
- * stacked field's 44px beside the `md` danger button's 48px, in a row aligned
- * `items-end`, so the button stood 4px above the box's top edge — the K-10
- * mismatch this branch fixed at three other rows, on a line it had already
- * edited for K-45. A row with a text control in it is an `md` row. Its width
- * is a wrapper's, not a `w-32` beside the control's own `w-full`, because two
- * width utilities resolve by stylesheet order rather than class order.
+ * **The refund amount stands level with "Refund payment"**, the one 48px
+ * control beside an `md` danger button (K-10). Its width is a wrapper's, not a
+ * `w-32` beside the control's own `w-full`, because two width utilities
+ * resolve by stylesheet order rather than class order.
  */
 describe("the order's refund row", () => {
-  it("draws the amount box at md, the size of the Refund button beside it", () => {
+  it("sizes the amount box on a wrapper, beside an md Refund button", () => {
     expect(REFUND_FORM).toMatch(/name="amountMajor"/);
-    expect(REFUND_FORM).toMatch(/\$\{controlClassFor\("md"\)\} tabular-nums/);
-    expect(REFUND_FORM).not.toMatch(/\$\{controlClass\}/);
+    expect(REFUND_FORM).toMatch(/\$\{controlClass\} tabular-nums/);
     expect(REFUND_FORM).not.toMatch(/controlClass[^`]*\bw-32\b/);
     expect(REFUND_FORM).toMatch(/buttonClass\(\{ variant: "danger" \}\)/);
   });

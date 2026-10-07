@@ -107,6 +107,7 @@ describe("staffing view", () => {
       startsAt: bare.startsAt,
       gap: "uncrewed_departure",
       meetings: [{ startsAt: bare.startsAt, endsAt: bare.endsAt }],
+      ratingLapsed: false,
     });
   });
 

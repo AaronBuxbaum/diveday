@@ -14,7 +14,7 @@ import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureRowList } from "@/components/ui/disclosure";
 import { FilterChips } from "@/components/ui/FilterChips";
-import { SECTION_TITLE_CLASS } from "@/components/ui/typography";
+import { ITEM_TITLE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import { listBoats } from "@/db/boats";
 import { type AppDb, getDb } from "@/db/client";
 import { listActiveCourses } from "@/db/courses";
@@ -1104,7 +1104,7 @@ export default async function SchedulePage({
                 })}
               >
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className={`font-brand-display ${SECTION_TITLE_CLASS} tracking-tight`}>
+                  <span className={`font-brand-display ${ITEM_TITLE_CLASS} tracking-tight`}>
                     {boat.name}
                   </span>
                   <span className="shrink-0 text-sm text-muted tabular-nums">

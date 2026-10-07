@@ -14,6 +14,7 @@ import {
 import { sendDueReminders } from "./reminders";
 import { bookings, notificationDeliveries, people, shops, waiverRecords } from "./schema";
 import { setShopDockDayRhythm } from "./shops";
+import { recordSmsKeyword } from "./sms-opt-outs";
 import { upcomingTripsWithCounts, updateTripConditions } from "./trips";
 import { completeWaiver, issueWaiverRequest } from "./waivers";
 
@@ -198,6 +199,37 @@ describe("sendDueReminders", () => {
       .where(eq(notificationDeliveries.bookingId, bookingId));
     expect(row.status).toBe("sent");
     expect(row.providerMessageId).toBe("wamid.only");
+  });
+
+  it("ends every text with how to stop them, in the diver's language", async () => {
+    const { db, personId, inWeekBucket } = await reminderContext();
+    await db.update(people).set({ phone: PHONE, locale: "es-ES" }).where(eq(people.id, personId));
+    const sms = fakeSms();
+    await sendDueReminders(db, {
+      now: inWeekBucket,
+      emailProvider: fakeEmail().provider,
+      smsProvider: sms.provider,
+      appOrigin: null,
+    });
+    const mine = sms.sent.filter((m) => m.to === PHONE);
+    expect(mine[0].body).toMatch(/ Responde STOP para darte de baja\.$/);
+  });
+
+  it("never texts a phone-only diver who replied STOP, and records why", async () => {
+    const { db, bookingId, personId, inWeekBucket } = await reminderContext();
+    await db.update(people).set({ email: null, phone: PHONE }).where(eq(people.id, personId));
+    await recordSmsKeyword(db, { phone: PHONE, optedOut: true, keywordAt: inWeekBucket });
+    const sms = fakeSms();
+
+    await sendDueReminders(db, {
+      now: inWeekBucket,
+      emailProvider: fakeEmail().provider,
+      smsProvider: sms.provider,
+      appOrigin: null,
+    });
+    expect(sms.sent.filter((m) => m.to === PHONE)).toHaveLength(0);
+    const rows = await rowsFor(db, bookingId);
+    expect(rows[0]).toMatchObject({ status: "failed", sendErrorCode: "opted_out" });
   });
 
   it("tracks a phone-only diver from the SMS result, not email", async () => {

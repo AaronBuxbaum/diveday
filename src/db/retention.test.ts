@@ -374,6 +374,10 @@ const OUTSIDE_RETENTION: readonly string[] = [
   "global_dive_sites",
   "global_dive_site_versions",
   "marine_life_requests",
+  // The texting number's STOP list. A START lifts a STOP; nothing ages one out
+  // on a clock, because that would resume texting someone who said
+  // stop (ADR 20261007-sms-stop-and-help).
+  "sms_opt_outs",
   // People, and what a shop knows about one. The standing decision at the top
   // of src/lib/retention.ts is that this data is kept until somebody asks for
   // it gone: the erasure path is the requested one (`src/db/anonymize.ts`),

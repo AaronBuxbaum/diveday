@@ -814,7 +814,9 @@ summary {
  * `focus-ring` is for a stand-in the eye reads as the control while focus
  * lands somewhere invisible: the label wrapping an `sr-only` input
  * (`has-[:focus-visible]:focus-ring`), a switch's track beside its hidden
- * checkbox (`peer-focus-visible:focus-ring`).
+ * checkbox (`peer-focus-visible:focus-ring`). And the pill or row round a
+ * visible radio (`radioRingClass` in form.tsx): a native radio's radius
+ * computes 0 whatever asks, so its own ring is a square round a dot (#2007).
  *
  * `focus-ring-inset` is for a row flush inside an `overflow-hidden` container
  * — a list card's rows, a scroll box's options — where the outset ring has no

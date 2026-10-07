@@ -60,6 +60,20 @@ export type CourtesyMessage = {
   shopName: string;
 };
 
+/**
+ * What `sendCourtesyMessage` takes: the message, plus the line only SMS
+ * carries.
+ */
+export type CourtesySend = CourtesyMessage & {
+  /**
+   * "Reply STOP to opt out." in the diver's language, appended to the SMS and
+   * never to WhatsApp (ADR 20261007-sms-stop-and-help). Required so no caller
+   * can send a text without it: carriers filter a sender whose texts never say
+   * how to stop them, and STOP on WhatsApp means nothing.
+   */
+  smsStopLine: string;
+};
+
 export interface CourtesyProvider {
   send(message: CourtesyMessage): Promise<CourtesyDelivery>;
 }
@@ -104,12 +118,13 @@ export type CourtesyProviders = {
  * channel the shop *did* set up, so the WhatsApp failure is returned instead.
  */
 export async function sendCourtesyMessage(
-  message: CourtesyMessage,
+  message: CourtesySend,
   providers: CourtesyProviders,
 ): Promise<CourtesyResult> {
+  const { smsStopLine, ...courtesy } = message;
   const whatsAppDelivery = providers.whatsapp
     ? await providers.whatsapp.send(
-        message.whatsAppBody ? { ...message, body: message.whatsAppBody } : message,
+        courtesy.whatsAppBody ? { ...courtesy, body: courtesy.whatsAppBody } : courtesy,
       )
     : { status: "not_configured" as const };
   if (whatsAppDelivery.status === "sent") {
@@ -123,7 +138,10 @@ export async function sendCourtesyMessage(
     });
   }
 
-  const smsDelivery = await providers.sms.send({ to: message.to, body: message.body });
+  const smsDelivery = await providers.sms.send({
+    to: message.to,
+    body: `${message.body} ${smsStopLine}`,
+  });
   if (smsDelivery.status === "not_configured" && whatsAppDelivery.status === "failed") {
     return { channel: "whatsapp", delivery: whatsAppDelivery };
   }

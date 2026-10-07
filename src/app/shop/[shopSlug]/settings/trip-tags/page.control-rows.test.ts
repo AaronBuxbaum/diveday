@@ -14,17 +14,10 @@ const SOURCE = readFileSync(join(import.meta.dirname, "page.tsx"), "utf8");
  * rename box stood beside `sm` Save and Delete buttons: one height, and a 16px
  * box beside 14px words, on all six rows of `settings-trip-tags` (the pixel
  * probe's `mismatched-controls` cluster, 2026-09-25), and the "Add" row below
- * them had the same pair. A box's type is 16px and stays there, so the buttons
- * take `md` and the boxes stand at md's 48px.
+ * them had the same pair. A box's type is 16px and its height 48px, so the
+ * buttons take `md`.
  */
 describe("the trip-tags rows", () => {
-  it("puts every text box at md", () => {
-    const boxes = SOURCE.split('type="text"').length - 1;
-    expect(boxes, "the rename box and the add box").toBe(2);
-    expect(SOURCE.split('controlClassFor("md")').length - 1).toBe(boxes);
-    expect(SOURCE).not.toContain("className={controlClass}");
-  });
-
   it("draws no button at sm, and sizes the armed delete's Cancel md through InlineConfirm", () => {
     expect(SOURCE).not.toContain('size: "sm"');
     // The trigger is `flush` on the row's edge and the armed block's confirm is

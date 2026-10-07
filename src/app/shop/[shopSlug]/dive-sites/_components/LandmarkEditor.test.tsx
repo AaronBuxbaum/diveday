@@ -62,7 +62,7 @@ function renderOne() {
  * Remove standing in the row of fields, where the course editor's days and
  * questions and the field guide beside it drew their Remove three other ways.
  * Remove now sits at the head of the card, so the name box and the kind select
- * are a row of controls only, which stands at the field size.
+ * are a row of controls only, at the one 48px control size.
  *
  * jsdom lays nothing out, so these pin which element carries which size and
  * where each caption lives, not the pixels.
@@ -79,11 +79,11 @@ describe("LandmarkEditor", () => {
     );
   });
 
-  it("stands the name box and the kind select, a row of controls only, at the field size", () => {
+  it("stands the name box and the kind select at the one 48px control size", () => {
     const { name, kind } = renderOne();
     for (const control of [name, kind]) {
-      expect(control).toHaveClass("min-h-11", "text-base");
-      expect(control).not.toHaveClass("min-h-12");
+      expect(control).toHaveClass("min-h-12", "text-base");
+      expect(control).not.toHaveClass("min-h-11");
     }
   });
 

@@ -5,7 +5,7 @@ import { StaffNoticeBanner } from "@/components/StaffNoticeBanner";
 import { SubmitButton } from "@/components/SubmitButton";
 import { buttonClass } from "@/components/ui/button";
 import { SectionCard } from "@/components/ui/card";
-import { controlClassFor } from "@/components/ui/form";
+import { controlClass } from "@/components/ui/form";
 import { InlineConfirm } from "@/components/ui/InlineConfirm";
 import { canPersonManageShopSettings } from "@/db/authz";
 import { countTripLensDepartures, listTripLenses } from "@/db/trip-lenses";
@@ -104,7 +104,7 @@ export default async function TripTagsSettingsPage({
                         defaultValue={lens.name}
                         aria-label={t("lenses.nameLabel")}
                         placeholder={t("lenses.nameLabel")}
-                        className={controlClassFor("md")}
+                        className={controlClass}
                       />
                     </div>
                     {/* **Save and Delete on one line**, in the rename form's
@@ -187,7 +187,7 @@ export default async function TripTagsSettingsPage({
                   maxLength={LENS_NAME_MAX}
                   aria-label={t("lenses.nameLabel")}
                   placeholder={t("lenses.nameLabel")}
-                  className={controlClassFor("md")}
+                  className={controlClass}
                 />
                 {/* The one line that earns its place here: it names the
                     consequence a shop cannot see from this form, which is that
