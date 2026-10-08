@@ -1,9 +1,9 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "76c4c834-73d7-493f-a8ec-4f3450d9972f",
+  "id": "f26c35ab-7fbc-431c-b389-bf57eb5b5abd",
   "prevIds": [
-    "acbbbe68-799d-44f4-a1a2-d2f6a477af5c"
+    "ba1f9bcf-674a-4895-841e-475878bb68cc"
   ],
   "ddl": [
     {
@@ -4688,6 +4688,19 @@
       "generated": null,
       "identity": null,
       "name": "reviewed_by_person_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "certifications"
+    },
+    {
+      "type": "timestamp with time zone",
+      "typeSchema": null,
+      "notNull": false,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "agency_checked_at",
       "entityType": "columns",
       "schema": "public",
       "table": "certifications"
