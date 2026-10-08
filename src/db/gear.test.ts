@@ -37,7 +37,7 @@ import {
   updateGearItem,
 } from "./gear";
 import { saveRentalFit } from "./rental-fit";
-import { bookings, gearReservations, shops, trips } from "./schema";
+import { bookings, gearReservations, gearServiceEvents, shops, trips } from "./schema";
 import { moveTrip, setTripStatus } from "./trips";
 import { createTrip } from "./trips-create";
 
@@ -2049,5 +2049,187 @@ describe("returning a whole rental set", () => {
     const [row] = await outcomesOf(db, [first]);
     expect(row?.returnedAt).toBeInstanceOf(Date);
     expect(row?.outcome).toBeNull();
+  });
+});
+
+/**
+ * **A service concern stands until somebody services the unit** (dive-domain
+ * review of the Gear tab's proposals). The return is a flag, not a service
+ * record, so the picker reads it off the last return and the history after it.
+ */
+describe("a unit that came home with a service concern", () => {
+  const window = { from: "2026-09-10", until: "2026-09-10", todayLocal: TODAY };
+
+  async function returnedWith(
+    outcome: "service_concern" | "all_good",
+    kind: "regulator" | "wetsuit" | "tank" = "regulator",
+  ) {
+    const { db, shop } = await gearShopContext();
+    const unit = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind, label: `${kind} #70` }),
+    );
+    const maya = await shopBooking(db, shop.id, "Maya Reyes");
+    const reserved = await reserveGearUnit(db, {
+      shopId: shop.id,
+      gearItemId: unit.id,
+      bookingId: maya.bookingId,
+      reservedFrom: "2026-09-01",
+      reservedUntil: "2026-09-02",
+    });
+    if (!reserved.ok) throw new Error("reserve failed");
+    await checkOutGearReservation(db, { shopId: shop.id, reservationId: reserved.reservation.id });
+    const back = await returnGearReservation(db, {
+      shopId: shop.id,
+      reservationId: reserved.reservation.id,
+      outcome,
+      note: outcome === "service_concern" ? "Second stage free-flows" : undefined,
+    });
+    if (!back.ok) throw new Error("return failed");
+    const flagged = async () =>
+      (await listAvailableGearUnits(db, shop.id, window)).find((row) => row.id === unit.id)
+        ?.serviceConcern;
+    return { db, shop, unit, maya, flagged };
+  }
+
+  it("is flagged in the picker, and still offered there", async () => {
+    const { flagged } = await returnedWith("service_concern");
+    expect(await flagged()).toBe(true);
+  });
+
+  it("is not flagged after an ordinary return", async () => {
+    const { flagged } = await returnedWith("all_good");
+    expect(await flagged()).toBe(false);
+  });
+
+  it("stays flagged through a service dated before it came home, and clears on one after", async () => {
+    const { db, shop, unit, flagged } = await returnedWith("service_concern");
+    await recordGearService(db, {
+      shopId: shop.id,
+      gearItemId: unit.id,
+      kind: "service",
+      servicedOn: "2026-07-01",
+    });
+    expect(await flagged()).toBe(true);
+    // A note is not a service for a regulator, whose form offers one.
+    await recordGearService(db, {
+      shopId: shop.id,
+      gearItemId: unit.id,
+      kind: "note",
+      servicedOn: "2026-07-22",
+      note: "Looked at it",
+    });
+    expect(await flagged()).toBe(true);
+    await recordGearService(db, {
+      shopId: shop.id,
+      gearItemId: unit.id,
+      kind: "service",
+      servicedOn: "2026-07-22",
+    });
+    expect(await flagged()).toBe(false);
+  });
+
+  it("clears on a dated note for a kind that never gets a service", async () => {
+    const { db, shop, unit, flagged } = await returnedWith("service_concern", "wetsuit");
+    expect(await flagged()).toBe(true);
+    await recordGearService(db, {
+      shopId: shop.id,
+      gearItemId: unit.id,
+      kind: "note",
+      servicedOn: "2026-07-22",
+      note: "Zip replaced",
+    });
+    expect(await flagged()).toBe(false);
+  });
+  it("stays flagged through a later return that nobody said anything about", async () => {
+    // The register's quick Return and the unit page's Return close a
+    // reservation with no outcome. That says nothing about the unit, so it
+    // must not stand in for the flagged return before it.
+    const { db, shop, unit, maya, flagged } = await returnedWith("service_concern");
+    const again = await reserveGearUnit(db, {
+      shopId: shop.id,
+      gearItemId: unit.id,
+      bookingId: maya.bookingId,
+      reservedFrom: "2026-09-05",
+      reservedUntil: "2026-09-06",
+    });
+    if (!again.ok) throw new Error("reserve failed");
+    await checkOutGearReservation(db, { shopId: shop.id, reservationId: again.reservation.id });
+    expect(
+      await returnGearReservation(db, { shopId: shop.id, reservationId: again.reservation.id }),
+    ).toEqual({ ok: true });
+    // The frozen clock writes both returns at one instant; this one came later.
+    await db
+      .update(gearReservations)
+      .set({ returnedAt: new Date(nowMs() + 60 * 60 * 1000) })
+      .where(eq(gearReservations.id, again.reservation.id));
+    expect(await flagged()).toBe(true);
+  });
+
+  it("stays flagged through a same-day service written before it came home", async () => {
+    const { db, shop, unit, flagged } = await returnedWith("service_concern");
+    const returnedOn = calendarDateInTimezone(nowDate(), shop.timezone);
+    await recordGearService(db, {
+      shopId: shop.id,
+      gearItemId: unit.id,
+      kind: "service",
+      servicedOn: returnedOn,
+    });
+    // The morning's service, written two hours before the evening's return.
+    await db
+      .update(gearServiceEvents)
+      .set({ createdAt: new Date(nowMs() - 2 * 60 * 60 * 1000) })
+      .where(eq(gearServiceEvents.gearItemId, unit.id));
+    expect(await flagged()).toBe(true);
+    // The same day, written after it came home.
+    await recordGearService(db, {
+      shopId: shop.id,
+      gearItemId: unit.id,
+      kind: "service",
+      servicedOn: returnedOn,
+    });
+    expect(await flagged()).toBe(false);
+  });
+
+  it("never clears a tank on a note, and clears it on one of its own checks", async () => {
+    const { db, shop, unit, flagged } = await returnedWith("service_concern", "tank");
+    await recordGearService(db, {
+      shopId: shop.id,
+      gearItemId: unit.id,
+      kind: "note",
+      servicedOn: "2026-07-22",
+      note: "Looks fine",
+    });
+    expect(await flagged()).toBe(true);
+    await recordGearService(db, {
+      shopId: shop.id,
+      gearItemId: unit.id,
+      kind: "visual_inspection",
+      servicedOn: "2026-07-22",
+    });
+    expect(await flagged()).toBe(false);
+  });
+});
+
+describe("reserving against a cancelled booking", () => {
+  it("is refused inside the write, as if there were no booking", async () => {
+    const { db, shop } = await gearShopContext();
+    const bcd = mustCreate(
+      await createGearItem(db, { shopId: shop.id, kind: "bcd", label: "BCD #71", size: "M" }),
+    );
+    const maya = await shopBooking(db, shop.id, "Maya Reyes");
+    await cancelBooking(db, shop.id, maya.bookingId);
+    expect(
+      await reserveGearUnit(db, {
+        shopId: shop.id,
+        gearItemId: bcd.id,
+        bookingId: maya.bookingId,
+        tripId: maya.trip.id,
+        reservedFrom: "2026-09-01",
+        reservedUntil: "2026-09-02",
+      }),
+    ).toEqual({ ok: false, reason: "booking_not_found" });
+    expect(
+      await db.select().from(gearReservations).where(eq(gearReservations.gearItemId, bcd.id)),
+    ).toEqual([]);
   });
 });

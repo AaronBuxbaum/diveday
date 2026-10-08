@@ -14,8 +14,11 @@ import { SHELL_TITLE_CLASS } from "@/components/ui/typography";
 import { diverTranslator } from "@/i18n/messages";
 import { requestLocale } from "@/i18n/request";
 import { DEFAULT_DIVER_LOCALE } from "@/i18n/settings";
-import { REFUSED_SHOP_SLUG_HEADER } from "@/lib/embed-routes";
+import { staffTranslator } from "@/i18n/staff-messages";
+import { REFUSED_SHOP_SLUG_HEADER, REQUEST_PATH_HEADER } from "@/lib/embed-routes";
 import { publicSchedulePath, shopSlugFromPublicPath } from "@/lib/public-routes";
+import { staffHomeSlug } from "@/lib/staff-home";
+import { shopPath } from "@/lib/staff-notices";
 
 /**
  * The app-wide backstop for `notFound()` — a stale email link, a typo'd URL,
@@ -78,10 +81,13 @@ export default function NotFound() {
  * rather than for whatever slug the dead URL happened to carry.
  */
 async function RequestScopedNotFound() {
-  const shopSlug = refusedShopSlug((await headers()).get(REFUSED_SHOP_SLUG_HEADER));
+  const requestHeaders = await headers();
+  const shopSlug = refusedShopSlug(requestHeaders.get(REFUSED_SHOP_SLUG_HEADER));
   const locale = await requestLocale();
-  if (!shopSlug) return <DiveDayNotFound locale={locale} />;
-  return <ShopFramedNotFound shopSlug={shopSlug} locale={locale} />;
+  if (shopSlug) return <ShopFramedNotFound shopSlug={shopSlug} locale={locale} />;
+  const ownShopSlug = await staffHomeSlug(requestHeaders.get(REQUEST_PATH_HEADER));
+  if (ownShopSlug) return <StaffNotFound shopSlug={ownShopSlug} locale={locale} />;
+  return <DiveDayNotFound locale={locale} />;
 }
 
 /**
@@ -132,6 +138,23 @@ function DiveDayNotFound({ locale, isShell }: { locale: Locale; isShell?: boolea
       <p className="mt-3 text-muted">{t("notFound.body")}</p>
       <Link href="/" className={buttonClass({ className: "mt-6" })}>
         {t("notFound.backHome")}
+      </Link>
+    </main>
+  );
+}
+
+/**
+ * The staff refusal: the same heading as DiveDay's, in the staff bundle, and
+ * one door to Today. No sentence under the heading: "check the address" is
+ * advice for someone who typed a URL, and a staffer arrives here by a link.
+ */
+function StaffNotFound({ shopSlug, locale }: { shopSlug: string; locale: Locale }) {
+  const t = staffTranslator(locale);
+  return (
+    <main className="mx-auto flex w-full max-w-xl flex-1 flex-col items-center justify-center px-6 py-16 text-center">
+      <h1 className={`${SHELL_TITLE_CLASS} text-balance`}>{t("shared.notFound.heading")}</h1>
+      <Link href={shopPath(shopSlug)} className={buttonClass({ className: "mt-6" })}>
+        {t("shared.notFound.backToToday")}
       </Link>
     </main>
   );

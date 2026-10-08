@@ -22,7 +22,8 @@ import { telHref } from "@/lib/contact-links";
  * **`shop` stays optional, and that is the security-relevant half.** A token
  * that resolves *no* record has no shop to attribute it to without weakening
  * the guarantee the model rests on — a bearer token reveals only its own
- * record. Every caller keeps its bare notice for that case. What a resolvable
+ * record. Every caller keeps its bare notice for that case, which wears
+ * DiveDay's own wordmark in the shop's place. What a resolvable
  * token reveals is the shop's own published name and contact details, which is
  * what the diver came for and nothing the shop hides.
  *
@@ -80,6 +81,10 @@ export function ExpiredLinkCard({
     ) : null;
   return (
     <EntryDone
+      // No shop to name: DiveDay's mark says whose page this is, so a diver on
+      // a dead link is not left on a blank screen (UX audit #28). The body's
+      // "ask your dive shop for a fresh link" is the door.
+      wordmark={!shop}
       glyph={glyph}
       title={title}
       text={text}

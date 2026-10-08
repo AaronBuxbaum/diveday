@@ -50,7 +50,8 @@ describe("demo seed + schedule queries (in-memory PGlite)", () => {
     expect(starts).toEqual([...starts].sort((a, b) => a - b));
 
     const bySlugishTitle = Object.fromEntries(upcoming.map((t) => [t.title, t.booked]));
-    expect(bySlugishTitle["Two-Tank Reef — Molasses & French"]).toBe(9);
+    // Nine divers, plus the snorkeler and the rider `seed-mixed-boat.ts` adds.
+    expect(bySlugishTitle["Two-Tank Reef — Molasses & French"]).toBe(11);
     expect(bySlugishTitle["Wreck Trip — Spiegel Grove"]).toBe(10);
     expect(bySlugishTitle["Two-Tank Reef — Christ of the Abyss"]).toBe(0);
     expect(

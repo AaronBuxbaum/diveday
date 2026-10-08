@@ -93,7 +93,9 @@ export async function seedTrips(
         description: "Double dip on the outer reef.",
         startsAt: todaySailStart, // sails today, so Today always has a board
         endsAt: new Date(todaySailStart.getTime() + 3.5 * 60 * 60 * 1000),
-        capacity: 12,
+        // Nine divers, a snorkeler and a rider (`seed-mixed-boat.ts`), and the
+        // three spots left that e2e reads to pick this trip off the schedule.
+        capacity: 14,
         priceCents: 9500,
       },
       {
@@ -130,6 +132,7 @@ export async function seedTrips(
         startsAt: at(7, 11, 30),
         endsAt: at(7, 15, 0),
         capacity: 12,
+        priceCents: 9500,
       },
       {
         shopId,
@@ -184,6 +187,7 @@ export async function seedTrips(
         startsAt: at(6, 13, 0),
         endsAt: at(6, 17, 0),
         capacity: 10,
+        priceCents: 9500,
       },
       ...courseSession("Nitrox Diver", {
         title: "Nitrox Diver — classroom & two dives",
@@ -438,6 +442,11 @@ export async function seedTrips(
   );
   const captainId = crewByRole.get("captain");
   const divemasterId = crewByRole.get("divemaster");
+  // The second pair of eyes in the water. Six divers per supervisor is the
+  // shop's default target, and the demo boats carry eight or nine, so with the
+  // divemaster alone every charter opened Today and the Crew view on "Under
+  // target" (UX audit 2026-10-07, item 4).
+  const assistantId = crewByRole.get("assistant_instructor");
   /**
    * The job each person is doing on this sailing, not just who is aboard
    * (DOM-M3, ADR 20260803-per-trip-crew-role). Deliberately *varied*: a seed
@@ -483,6 +492,7 @@ export async function seedTrips(
   // visitor is most likely to open — showing exactly what they showed before.
   const reliefAssistedCourseId = courseIdByTitle.get("Nitrox Diver");
   let charterIndex = 0;
+  const DOM_M3_CHARTER = 3;
   await db.insert(tripAssignments).values(
     tripRows.flatMap((trip): CrewRow[] => {
       if (trip.courseId) {
@@ -516,12 +526,16 @@ export async function seedTrips(
         ];
       }
       const nth = charterIndex++;
-      // nth 0: the divemaster is driving. nth 1: nobody has said. Everyone
-      // else: the ordinary roster, each doing the job they hold.
+      // nth 3 (the Christ of the Abyss reef day, a week out): the divemaster is
+      // driving. nth 1: nobody has said. Everyone else, today's reef boat
+      // first: the ordinary roster, each doing the job they hold. The DOM-M3
+      // case used to be today's reef boat itself, so the demo day opened on
+      // "No divemaster" for the shop's headline departure (UX audit
+      // 2026-10-07, item 4).
       const captainRole: TripAssignmentRole | null =
-        nth === 0 ? "crew" : nth === 1 ? null : "captain";
+        nth === DOM_M3_CHARTER ? "crew" : nth === 1 ? null : "captain";
       const divemasterRole: TripAssignmentRole | null =
-        nth === 0 ? "captain" : nth === 1 ? null : "divemaster";
+        nth === DOM_M3_CHARTER ? "captain" : nth === 1 ? null : "divemaster";
       return [
         ...(captainId
           ? [{ tripId: trip.id, personId: captainId, tripRole: captainRole } satisfies CrewRow]
@@ -532,6 +546,17 @@ export async function seedTrips(
                 tripId: trip.id,
                 personId: divemasterId,
                 tripRole: divemasterRole,
+              } satisfies CrewRow,
+            ]
+          : []),
+        // Not on the DOM-M3 charter, whose point is that nobody aboard is
+        // supervising in the water.
+        ...(assistantId && nth !== DOM_M3_CHARTER
+          ? [
+              {
+                tripId: trip.id,
+                personId: assistantId,
+                tripRole: nth === 1 ? null : ("divemaster" as TripAssignmentRole),
               } satisfies CrewRow,
             ]
           : []),

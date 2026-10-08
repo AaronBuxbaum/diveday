@@ -1,7 +1,9 @@
 # 20260804-incident-export-owner-gate — The incident-ready export is the owner's to produce
 
 - **Status:** Accepted, **amended 2026-08-12** (renamed to the departure log, and its door moved from
-  the manifest to close-out — see [Amendment](#amendment-2026-08-12--it-is-the-departure-log-and-it-is-generated-from-close-out))
+  the manifest to close-out — see [Amendment](#amendment-2026-08-12--it-is-the-departure-log-and-it-is-generated-from-close-out)),
+  **amended 2026-10-07** (the live door moved to the Details tab and the link says "Departure log" — see
+  [Amendment](#amendment-2026-10-07--the-live-door-is-details))
 - **Date:** 2026-08-04
 
 ## Context
@@ -112,3 +114,20 @@ Internal module names (`src/lib/incident-export.ts`, `src/db/incident-export.ts`
 deliberately. They name *why the document exists* — evidence, if a departure is ever asked about —
 which is exactly the fact this ADR turns on and the fact the softer product word is chosen to avoid
 putting in front of a crew at 07:00.
+
+## Amendment 2026-10-07 — the live door is Details
+
+The UX audit of 2026-10-07 (item 11) found the link on every live Today card all day: a verb from the
+back office on a card that otherwise reads as the morning's briefing, and a standing reminder of an
+event that has not happened. The 2026-08-12 reason for a live door still holds (an owner whose boat is
+overdue needs the record now), so the door is not removed from live departures; it moves.
+
+- **Live departures**: the door is on the departure's **Details** tab, beside the print packet,
+  owner-only and absent for everyone else (`trips/[id]/_components/DepartureLogLink.tsx`).
+- **Back**: the settled station on the shop home keeps its door, as before.
+- **The word**: the link names the document, **Departure log**, rather than the verb "Generate log".
+  The audit proposed "Incident log"; that is the word this ADR deliberately keeps off the crew's
+  screens, so it is not used.
+
+The gate and the route are unchanged.
+

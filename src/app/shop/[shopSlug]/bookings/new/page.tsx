@@ -1,12 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { connection } from "next/server";
 import { discardFormDraftAction, saveFormDraftAction } from "@/app/actions/form-drafts";
 import { AutoOpenDetails } from "@/components/AutoOpenDetails";
-import { EmptyState } from "@/components/EmptyState";
 import { FormDraft } from "@/components/FormDraft";
 import { formDraftCopy } from "@/components/form-draft-copy";
-import { Pager, staffPagerWords } from "@/components/Pager";
 import { ShopPageHeader } from "@/components/ShopPageHeader";
 import { SubmitButton } from "@/components/SubmitButton";
 import {
@@ -36,7 +33,9 @@ import {
   groupByLocalDay,
   shiftCalendarDate,
 } from "@/lib/calendar-date";
+import { nowDate } from "@/lib/clock";
 import { dateRequestMatchFor, FLEXIBLE_WINDOW_DAYS } from "@/lib/date-requests";
+import { departurePickerWindow } from "@/lib/departure-picker-window";
 import { formatShortDate, formatTime, formatTimeRange } from "@/lib/format";
 import { requireShopSurface } from "@/lib/session";
 import { STAFF_DESTINATION_LABEL_KEYS } from "@/lib/staff-destinations";
@@ -44,7 +43,8 @@ import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices"
 import { isCallOutcome } from "@/lib/took-a-call";
 import { spotsRemaining } from "@/lib/trips";
 import { uuidParam } from "@/lib/uuid";
-import { DeparturePicker, type DeparturePickerDay } from "./_components/DeparturePicker";
+import type { DeparturePickerDay } from "./_components/DeparturePicker";
+import { DepartureWindowSection } from "./_components/DepartureWindowSection";
 import { type CallDeparture, TookACallFields } from "./_components/TookACallFields";
 import { tookACallAction } from "./call-actions";
 
@@ -69,11 +69,10 @@ export const metadata: Metadata = {
  * rendered all of them would be a screen nobody can scan (AGENTS.md — bound
  * the page, not the capture).
  *
- * Anything past this used to be reachable only by leaving for the schedule
- * board — the one place staff still met "go look somewhere else" where every
- * other list says "page 2 of 4" (ADR 20260803-one-pagination-model). It pages
- * in place now; the board link above stays, because the board is still where
- * you go to *change* the schedule rather than book against it.
+ * The picker shows two days at a time now (`departurePickerWindow`), with a
+ * date control and Earlier / Later days beside it, so the pager only appears
+ * for a window that holds more than a page (ADR 20260803-one-pagination-model
+ * still governs it when it does).
  */
 const TRIP_PAGE_SIZE = PAGE_SIZE.list;
 
@@ -120,15 +119,25 @@ export default async function NewBookingPage({
   searchParams,
 }: {
   params: Promise<{ shopSlug: string }>;
-  searchParams: Promise<{ page?: string; request?: string; notice?: string; outcome?: string }>;
+  searchParams: Promise<{
+    page?: string;
+    request?: string;
+    notice?: string;
+    outcome?: string;
+    from?: string;
+  }>;
 }) {
   await connection(); // live seat counts — render per request, never a build-time shell
   const { shopSlug } = await params;
-  const { page, request, notice, outcome } = await searchParams;
+  const { page, request, notice, outcome, from } = await searchParams;
   const { db, shop, session } = await requireShopSurface(shopSlug);
   const locale = await requestLocale(shop.defaultLocale);
   const t = staffTranslator(locale);
   const requestId = request ? uuidParam(request) : null;
+  // Today and tomorrow unless the staffer asked for another day (UX audit
+  // 2026-10-07, item 19): the departures in that window, paged only if a
+  // window ever holds more than a page.
+  const pickerWindow = departurePickerWindow({ now: nowDate(), timeZone: shop.timezone, from });
 
   // A non-numeric or missing `?page=` reads as page 1; the query clamps it into
   // range so a bookmarked page past the end lands on the last real one.
@@ -137,6 +146,8 @@ export default async function NewBookingPage({
       hasSpace: true,
       limit: TRIP_PAGE_SIZE,
       page: Number.parseInt(page ?? "", 10),
+      now: pickerWindow.start,
+      monthEnd: pickerWindow.end,
     }),
     readFormDraft(db, shop.id, session.user.personId, "took_a_call"),
     offsetUpcomingTripsWithCounts(db, shop.id, { limit: CALL_DEPARTURE_LOOKAHEAD }),
@@ -154,6 +165,19 @@ export default async function NewBookingPage({
     }));
   const callNotice = noticeFromParam(notice, CALL_NOTICES);
   const trips = tripPage.trips;
+  // An empty window says where the next open seat is, rather than leaving the
+  // staffer to step through empty days to find it; nothing open anywhere
+  // ahead is the board's empty state below.
+  const nextOpen =
+    trips.length === 0
+      ? ((
+          await offsetUpcomingTripsWithCounts(db, shop.id, {
+            hasSpace: true,
+            limit: 1,
+            now: pickerWindow.end,
+          })
+        ).trips[0] ?? null)
+      : null;
   const tripDates = [
     ...new Set(trips.map((trip) => calendarDateInTimezone(trip.startsAt, shop.timezone))),
   ];
@@ -255,8 +279,6 @@ export default async function NewBookingPage({
       };
     }),
   }));
-  const self = `/shop/${shopSlug}/bookings/new`;
-  const pageHref = (target: number) => (target > 1 ? `${self}?page=${target}` : self);
 
   return (
     <main className="mx-auto w-full max-w-2xl px-4 py-8 sm:px-6 sm:py-10">
@@ -294,42 +316,17 @@ export default async function NewBookingPage({
         items={relevantRequestItems}
       />
 
-      {/* The list is filtered to departures with a seat left, and a filter
-          nobody announced reads as a missing departure: a sold-out Saturday
-          simply wasn't here, with nothing on screen to say why or what to do
-          about it. The picker says both, and names the board as the place to
-          do something about it. */}
-      {trips.length === 0 ? (
-        // "Put a departure on the board first" now goes to the board.
-        <EmptyState
-          title={t("bookings.new.tripEmpty")}
-          action={
-            <Link href={`/shop/${shopSlug}/schedule/board`} className={buttonClass()}>
-              {t("bookings.new.tripEmptyAction")}
-            </Link>
-          }
-          className="mt-8"
-        />
-      ) : (
-        <>
-          <DeparturePicker
-            className="mt-8"
-            heading={t("bookings.new.tripHeading")}
-            headingId="which-departure"
-            days={pickerDays}
-          />
-          <Pager
-            page={tripPage.page}
-            pageCount={tripPage.pageCount}
-            href={pageHref}
-            total={t("bookings.new.pagination.total", { count: tripPage.total })}
-            words={staffPagerWords(t)}
-          />
-          {/* Under the list rather than over it: it explains an absence, and
-              an absence is only noticed once the reader has looked for it. */}
-          <p className="mt-4 text-sm text-muted">{t("bookings.new.fullExcluded")}</p>
-        </>
-      )}
+      <DepartureWindowSection
+        self={`/shop/${shopSlug}/bookings/new`}
+        pickerWindow={pickerWindow}
+        requestId={selectedRequest?.id ?? null}
+        days={pickerDays}
+        tripPage={tripPage}
+        nextOpenDay={nextOpen ? calendarDateInTimezone(nextOpen.startsAt, shop.timezone) : null}
+        boardHref={shopPath(shopSlug, "schedule", "board")}
+        locale={locale}
+        t={t}
+      />
 
       {/* `padding="none"`: the summary and the open body pad themselves. Opens
           on its own refusal, or on a kept draft — a shut disclosure would hide

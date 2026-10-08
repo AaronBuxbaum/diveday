@@ -306,7 +306,7 @@ describe("callTripBlowout — what the message says", () => {
         shopId: shop.id,
         tripId: trip.id,
         fullName: "Diego Alvarez",
-        email: "success+diego.alvarez@simulator.amazonses.com",
+        email: "diego.alvarez@mail.example",
       },
     ]);
     if (!party.ok) throw new Error(`Diego could not be booked: ${party.reason}`);
@@ -331,7 +331,7 @@ describe("callTripBlowout — what the message says", () => {
     });
     expect(outcome).toMatchObject({ ok: true, sent: 1 });
     const [send] = blowoutSends(email.sent);
-    expect(send.to).toBe("success+diego.alvarez@simulator.amazonses.com");
+    expect(send.to).toBe("diego.alvarez@mail.example");
     expect(send.alternatives.length).toBeGreaterThan(0);
     for (const alternative of send.alternatives) {
       expect(alternative.title).not.toBe(gated[0].title);

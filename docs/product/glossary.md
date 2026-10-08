@@ -615,8 +615,14 @@ new domain concept, define it here in the same PR.
 
 - **Operational horizon** — the single forward window every readiness surface reads: now through
   seven days out. Today ranks the work inside it in both of its views, and the nav's blocked-diver
-  badge counts the same set — so a diver cleared on one is cleared on all of them. Anything past it
-  is Schedule's job, not a triage list's. Defined once in `src/lib/operational-window.ts`; each
+  badge reads the same readiness — so a diver cleared on one is cleared on all of them. The badge
+  counts the **next boat day** inside it, not the whole week: today's departures while one is still
+  to sail (not yet an hour past leaving the dock), tomorrow's once they are all away, plus every
+  diver blocked aboard a boat still out, whose departure the horizon dropped an hour after it
+  sailed. That is the sum of the day's cards' "N blocked" plus the Aboard rows in Needs you, and the
+  blocked clause of the summary under the date says the same figure in words
+  (`blockedOnNextBoatDay`, `src/db/blockers.ts`). Anything past the horizon is Schedule's job, not
+  a triage list's. Defined once in `src/lib/operational-window.ts`; each
   surface derives its bounds from there rather than declaring its own. Reports is deliberately
   outside this model — a calendar month is genuinely its job.
 - **Needs you** — the one list of jobs on Today (ADR 20261001-logbook, decision 4): every row from
@@ -627,7 +633,11 @@ new domain concept, define it here in the same PR.
   row for several says it as one sentence ("9 divers not certified for this trip.") and names
   nobody. Neither carries the levels or the other blockers — the roster and the diver record carry
   the full sentence. Failed emails of one kind and one cause are one row with one resend, however
-  many people they missed.
+  many people they missed. **A crew reader's lens** (UX audit 2026-10-07, item 7): for a captain or
+  divemaster who crews one of today's boats, the list leads with that boat's rows, every
+  danger-tone row about any boat (a diver unaccounted for is everyone's to see), and any row about
+  the reader themself, such as their own credential coming due; the rest — other boats' work and
+  the desk's — folds into one closed line, "N more for other boats and the desk", never gone.
 - **Not ready** — the **by-departure view** of Today's work queue (`?view=departures`), not a page
   of its own: the same blocked divers the urgency view ranks chronologically, grouped instead under
   the boat each one holds up, with a per-departure batch waiver send. It had its own route until
@@ -808,7 +818,9 @@ new domain concept, define it here in the same PR.
   the only reader** (issue #1695): the panel that warned about a move closes with the move, so the
   clash a departure is *standing* in is read back on its own Crew panel, on its About summary row,
   and in the staffing week on the day the overlap falls (`crewClashes`, the same overlap query the
-  preview asks with a shifted window). Still information on every surface — nothing gates on it.
+  preview asks with a shifted window). The staffing week (the Crew schedule) names the pair
+  **once, under the earlier departure**: the later one's chip does not say it back (UX audit
+  2026-10-07, item 34). Still information on every surface — nothing gates on it.
   **Three writes manufacture one, not just `moveTrip`** (dive-domain-expert review 2026-09-12): the
   move, `updateTripRecord` — the About → Details form, which writes `starts_at`/`ends_at` straight
   through and replaces `trip_schedule_days` wholesale with no crew read at all — and
@@ -1973,6 +1985,28 @@ new domain concept, define it here in the same PR.
   comes home. Assigning informs the prep page; it gates nothing at boarding. The direct-person
   shape is modeled but deliberately has no staff form yet; booking-held rows remain prep-flow
   shape.
+- **Gear proposal** — the unit the Gear tab offers for a piece a diver wants, so staff confirm
+  instead of choose (`proposeRentalUnits`, `src/lib/gear-proposals.ts`). A proposal is never a
+  reservation and never a fit check, and it gates nothing: nothing is held until a staffer taps
+  Assign, and the exclusion constraint still decides availability at write time. A sized kind is
+  proposed only from units *exactly* the size on file; a sizeless kind only from units with no
+  size label, because a mask labelled "Kids" or "RX -4.0" was labelled for somebody. A drysuit
+  diver's fins and gloves, and a diver flagged for a staff fit, are never proposed. A unit whose
+  service clock has lapsed, or whose last return raised a **service concern** nobody has answered
+  since, is never proposed; a unit coming due soon is proposed only after every unit that is not,
+  and its line says so. A concern is answered by the kind's own care, dated after the unit came
+  home (on the same day, written after the return): a `service` for a kind that gets one, a visual
+  inspection, hydro test or O2 clean for a tank, and never a note for either. A soft good (a
+  wetsuit, a mask, fins) has no service and no check to write, so a dated note is its clearing
+  event, because a note is the only record those units ever get. A return with no outcome (the
+  register's quick Return) says nothing, and leaves an earlier concern standing. A regulator is
+  never proposed for a diver who asked for nitrox, because the register cannot yet say which
+  regulators are O2-clean. One unit is never proposed twice. Every pick, one row or "Assign all",
+  goes through `assignGearUnit` or `confirmProposedGearUnits`, and each is re-read against what
+  the departure still wants before it reserves (`screenGearPicks`), so a stale tab cannot give a
+  diver a second unit of a kind they hold. A proposed pick is also re-read for care at that
+  moment: one whose unit has since gained a lapsed clock or an open concern is refused and its row
+  left for a person. A unit picked by hand from the picker can still be a labeled one, knowingly.
 - **Gear register groups** — the three windows the register files every live unit into, and its
   answer to "where is my fleet right now": **Out** (a window that has begun — with a diver, or
   waiting on the desk for someone to collect it), **Overdue** (a window that has closed and nobody

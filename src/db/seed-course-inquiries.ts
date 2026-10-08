@@ -1,5 +1,5 @@
 import { and, eq, isNull } from "drizzle-orm";
-import { simulatorEmail } from "@/lib/simulator-email";
+import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
 import { courseInquiries, people } from "./schema";
 import { at, dateAt } from "./seed-clock";
@@ -87,7 +87,7 @@ export async function seedCourseInquiries(
             name: "Marisol Vega",
             // Nobody at this shop holds this address, so the lead stays
             // unlinked — the ordinary case, and not a bug.
-            email: simulatorEmail("marisol.vega"),
+            email: demoEmail("marisol.vega"),
             phone: "+1-305-555-0410",
             experienceLevel: "never" as const,
             timing: "Some weekend in the next couple of months",

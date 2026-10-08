@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { proseLinkClass } from "@/components/ui/button";
+import { formNoteLinkClass } from "@/components/ui/button";
 import type { DiverTranslator } from "@/i18n/messages";
 
 /**
@@ -12,7 +12,7 @@ import type { DiverTranslator } from "@/i18n/messages";
 export function SmsConsentNote({ t }: { t: Pick<DiverTranslator, "rich"> }) {
   return t.rich("common.smsConsent", {
     a: (chunks) => (
-      <Link href="/privacy" className={proseLinkClass}>
+      <Link href="/privacy" className={formNoteLinkClass}>
         {chunks}
       </Link>
     ),

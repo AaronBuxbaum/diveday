@@ -58,11 +58,13 @@ import { DESK_NOTICES } from "./_arrivals/notices";
 import { ConditionsSection } from "./_components/ConditionsSection";
 import { CopyLinkButton } from "./_components/CopyLinkButton";
 import { CrewSection } from "./_components/CrewSection";
+import { DepartureLogLink } from "./_components/DepartureLogLink";
 import { DeskRefresh } from "./_components/DeskRefresh";
 import { DetailsSection } from "./_components/DetailsSection";
 import { MinimumSeatsBand } from "./_components/MinimumSeatsBand";
 import { participantTermsRows } from "./_components/ParticipantTermsSection";
 import { PrintTripBundleButton } from "./_components/PrintTripBundleButton";
+import { PulseFacts } from "./_components/PulseFacts";
 import { RequirementsSection } from "./_components/RequirementsSection";
 import {
   recurrenceSummaryText,
@@ -1050,6 +1052,14 @@ export default async function ManageTripPage({
                     recordAction={recordTripPrintPdfAction.bind(null, shopSlug, tripId)}
                     flush
                   />
+                  <DepartureLogLink
+                    db={db}
+                    shopId={shop.id}
+                    personId={session.user.personId}
+                    shopSlug={shopSlug}
+                    tripId={tripId}
+                    label={t("incidentExport.openLink")}
+                  />
                 </>
               }
             />
@@ -1130,32 +1140,14 @@ export default async function ManageTripPage({
               />
             ) : null}
 
-            {/* **The stack's gap is measured to the words** (K-262). Each fact is
-            a 44px link round a 20px line, and its words sat 12px inside each
-            40px gap. Each link gives that unseen 12px back as `-my-3`, so the
-            row is its words' height and the targets overhang the gaps;
-            `gap-y-7` keeps a wrapped line's box 4px clear of the one above.
-            Not on the row: the stack's end margin is `:where()`, and the
-            row's own `-my-3` would replace it and pull the roster up. */}
-            {shownPulseFacts.length > 0 ? (
-              <div className="flex flex-wrap gap-x-4 gap-y-7">
-                {shownPulseFacts.map((fact) => (
-                  <Link
-                    key={fact.href}
-                    href={fact.href}
-                    className={`-my-3 inline-flex min-h-11 items-center text-sm font-medium hover:underline ${
-                      fact.tone === "danger" ? "text-danger" : "text-primary"
-                    }`}
-                  >
-                    {fact.text}
-                  </Link>
-                ))}
-              </div>
-            ) : null}
+            <PulseFacts
+              facts={shownPulseFacts}
+              foldLabel={(count) => t("trips.pulse.toSort", { count })}
+            />
 
             <TripRosterContent
               arrival={desk?.arrival}
-              walkIn={desk?.walkIn}
+              walkInOpen={desk?.walkInOpen}
               acceptsDivers={acceptsDivers}
               guests={guests}
               shopSlug={shopSlug}

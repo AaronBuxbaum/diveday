@@ -382,6 +382,8 @@ describe("seat state and price", () => {
     );
 
     expect(screen.getByText("Only 2 spots left").className).toContain("bg-warning-tint");
+    // A sales nudge never wears the safety triangle: the words carry it.
+    expect(screen.getByText("Only 2 spots left").querySelector("svg")).toBeNull();
     // Routine availability is not an alert, so it is not dimmed.
     expect(screen.getByRole("listitem").querySelector(".opacity-60")).toBeNull();
   });

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { AfterState } from "@/app/ready/[token]/_components/AfterState";
-import { EntryDone } from "@/components/account/EntryShell";
 import { ExpiredLinkCard } from "@/components/ExpiredLinkCard";
 import { buttonClass } from "@/components/ui/button";
 import { getDb } from "@/db/client";
@@ -118,13 +117,12 @@ export default async function DiveRecapPage({
   const anonT = diverTranslator(await requestLocale());
   const bookingId = verifyRecapToken(token);
   if (!bookingId) {
-    // `EntryDone` is the app's one warm terminal pattern
-    // (docs/design/principles.md #4); the `expired` mark — a drawn clock
-    // (ADR 20260827-first-light, decision 2) — is the app-wide "this link has
-    // run out" mark, decorative.
+    // `ExpiredLinkCard` with no shop: `EntryDone`'s warm terminal pattern
+    // (docs/design/principles.md #4) under DiveDay's wordmark, the `expired`
+    // mark — a drawn clock (ADR 20260827-first-light, decision 2) — the
+    // app-wide "this link has run out" mark, decorative.
     return (
-      <EntryDone
-        glyph="expired"
+      <ExpiredLinkCard
         title={anonT("recap.unavailableHeading")}
         text={anonT("recap.unavailableBody")}
       />
@@ -140,8 +138,7 @@ export default async function DiveRecapPage({
     // own record, so this is the account-tier door: warm, terminal, naming
     // nobody.
     return (
-      <EntryDone
-        glyph="expired"
+      <ExpiredLinkCard
         title={anonT("recap.unavailableHeading")}
         text={anonT("recap.unavailableBody")}
       />

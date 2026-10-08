@@ -7,10 +7,10 @@ import { useEffect, useRef, useState } from "react";
 const OPEN_EVENT = "gear:open-add-unit";
 
 /**
- * The "Add a unit" disclosure and the register's one door onto the add form,
- * open state owned by React rather than by a DOM mutation a later render could
- * silently undo. `AddUnitLink` (the empty register's own door) can only ever
- * *ask* this to open, via a `window` event — it has no reference to this
+ * The "Add a unit" disclosure that frames the add form, open state owned by
+ * React rather than by a DOM mutation a later render could silently undo.
+ * `AddUnitLink` (the header's primary, or the empty register's door) can only
+ * ever *ask* this to open, via a `window` event — it has no reference to this
  * component and doesn't need one.
  *
  * **`data-hydrated` once React owns it.** The summary is a native control, so

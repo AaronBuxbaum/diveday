@@ -5,6 +5,14 @@
     "fullExcluded": "Full departures aren’t listed. Add seats, or another departure that day, from the board.",
     "tripEmpty": "Nothing upcoming has a seat left.",
     "tripEmptyAction": "Open the schedule",
+    "day": {
+      "label": "Day",
+      "show": "Show",
+      "earlier": "Earlier days",
+      "later": "Later days",
+      "empty": "No departure on these two days has a seat left.",
+      "nextOpen": "Next open seat: {date}"
+    },
     "seatsLeft": "{count, plural, one {# seat left} other {# seats left}}",
     "changeTrip": "Not this one? Pick a different departure.",
     "addToTrip": "Add to trip",

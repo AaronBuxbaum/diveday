@@ -1,4 +1,4 @@
-import { simulatorEmail } from "@/lib/simulator-email";
+import { demoEmail } from "@/lib/simulator-email";
 import type { DbExecutor } from "./client";
 import {
   bookings,
@@ -109,7 +109,7 @@ export async function seedCertGates(
     .values({
       shopId,
       fullName: "Odile Marchand",
-      email: simulatorEmail("odile.marchand"),
+      email: demoEmail("odile.marchand"),
       phone: "+33155550313",
       emergencyContactName: "Luc Marchand (husband)",
       emergencyContactPhone: "+33-1-555-0314",
@@ -255,6 +255,12 @@ export async function seedCertGates(
         endsAt: def.endsAt,
         capacity: def.capacity,
         plannedDives: def.plannedDives,
+        // Priced like the rest of the demo board (UX audit 2026-10-07, item 4):
+        // the course session at its catalog price, a charter at a gated boat's.
+        priceCents:
+          (def.courseId && advancedCourse?.id === def.courseId
+            ? advancedCourse.priceCents
+            : undefined) ?? 12500,
       })),
     )
     .returning();

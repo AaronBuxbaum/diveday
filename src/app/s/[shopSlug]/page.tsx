@@ -9,7 +9,6 @@ import { EmbedCredit } from "@/components/EmbedCredit";
 import { EmptyState } from "@/components/EmptyState";
 import { JsonLd } from "@/components/JsonLd";
 import { ShopReviews, ShopReviewsSkeleton } from "@/components/ShopReviews";
-import { DiveDayIcon } from "@/components/StaffDestinationIcon";
 import { buttonClass } from "@/components/ui/button";
 import { sectionCardClass } from "@/components/ui/card";
 import { DisclosureRowList } from "@/components/ui/disclosure";
@@ -74,8 +73,10 @@ import { resolveLens } from "@/lib/trip-lenses";
 import { capacityLabel, nextBookableDeparture } from "@/lib/trips";
 import { toDateInputValue, utcToWallTime, wallTimeToUtc } from "@/lib/zoned";
 import { CoursesShelf } from "./_components/CoursesShelf";
+import { DayJumpStrip } from "./_components/DayJumpStrip";
 import { FindMyBookingForm } from "./_components/FindMyBookingForm";
 import { LastMinuteListForm } from "./_components/LastMinuteListForm";
+import { MonthRail } from "./_components/MonthRail";
 import { NextBoatCard } from "./_components/NextBoatCard";
 import { OffSeasonPanel } from "./_components/OffSeasonPanel";
 import { ScheduleFilters } from "./_components/ScheduleFilters";
@@ -825,40 +826,33 @@ export default async function SchedulePage({
           )}
 
           {hasUpcoming && !isEmbed && (prevMonthKey || nextMonthKey || explicitMonth) ? (
-            // A labeled region rather than a `<nav>` landmark, matching the month
-            // grid it replaced: the embed widget promises "no page chrome" as
-            // literally zero navigation landmarks inside the iframe
-            // (e2e/schedule-embed.spec.ts), and two month arrows don't merit one.
-            <section
+            <MonthRail
               aria-label={t("schedule.monthNav")}
-              className="mb-4 flex flex-wrap items-center gap-2"
-            >
-              {/* The arrows sit beside the label they page, not floated to the
-                  far edge of the viewport — a control detached from its object is
-                  a control the reader has to go looking for (principle 10; the
-                  lone `›` at the right margin read as a stray glyph on a phone). */}
-              <p className="text-base font-semibold">{monthLabel(currentMonth, locale)}</p>
-              {prevMonthKey ? (
-                <Link
-                  href={`${publicSchedulePath(shopSlug)}?month=${prevMonthKey}${isEmbed ? "&embed=1" : ""}${filterSuffix}`}
-                  aria-label={t("schedule.previousMonth")}
-                  scroll={false}
-                  className={buttonClass({ variant: "ghost", size: "icon-sm" })}
-                >
-                  <DiveDayIcon name="chevron-left" className="size-4" />
-                </Link>
-              ) : null}
-              {nextMonthKey ? (
-                <Link
-                  href={`${publicSchedulePath(shopSlug)}?month=${nextMonthKey}${isEmbed ? "&embed=1" : ""}${filterSuffix}`}
-                  aria-label={t("schedule.nextMonth")}
-                  scroll={false}
-                  className={buttonClass({ variant: "ghost", size: "icon-sm" })}
-                >
-                  <DiveDayIcon name="chevron-right" className="size-4" />
-                </Link>
-              ) : null}
-            </section>
+              month={monthLabel(currentMonth, locale)}
+              previous={
+                prevMonthKey
+                  ? {
+                      href: `${publicSchedulePath(shopSlug)}?month=${prevMonthKey}${isEmbed ? "&embed=1" : ""}${filterSuffix}`,
+                      label: t("schedule.previousMonth"),
+                    }
+                  : null
+              }
+              next={
+                nextMonthKey
+                  ? {
+                      href: `${publicSchedulePath(shopSlug)}?month=${nextMonthKey}${isEmbed ? "&embed=1" : ""}${filterSuffix}`,
+                      label: t("schedule.nextMonth"),
+                    }
+                  : null
+              }
+            />
+          ) : null}
+
+          {/* The week's days, one tap from each (UX audit #18): under the
+              month rail, the other date control, and above the lens rail and
+              the filter form, which must stay directly before the list. */}
+          {showsWeekLedger && !isEmbed ? (
+            <DayJumpStrip rows={weekRows} label={t("schedule.jumpToDay")} />
           ) : null}
 
           {/* **The lens rail** — ADR 20260904-reef-all-the-way-down, decision 2

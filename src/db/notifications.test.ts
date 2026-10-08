@@ -97,6 +97,8 @@ describe("the shop's sender profile", () => {
     expect(seen[0]?.sender).toEqual({
       replyTo: `reply+${shop.inboundEmailToken}@inbound.ses.dive.day`,
       postalAddress: "1 Harbor Rd, Key Largo, FL 33037, US",
+      // The seeded shop is the demo shop, so its sends may reach the simulator.
+      demoShop: true,
     });
 
     // Inbound switched off: the confirmed front desk, resolved from the same
@@ -123,6 +125,7 @@ describe("the shop's sender profile", () => {
     expect(seen[0]?.sender).toEqual({
       replyTo: "desk@bluemantis.dive",
       postalAddress: "1 Harbor Rd, Key Largo, FL 33037, US",
+      demoShop: true,
     });
   });
 
@@ -179,7 +182,7 @@ describe("the shop's sender profile", () => {
 
     // The queued payload carried no sender, so the drain resolved one fresh.
     expect(seen).toHaveLength(1);
-    expect(seen[0]?.sender).toEqual({ replyTo: "desk@bluemantis.dive" });
+    expect(seen[0]?.sender).toEqual({ replyTo: "desk@bluemantis.dive", demoShop: true });
   });
 });
 

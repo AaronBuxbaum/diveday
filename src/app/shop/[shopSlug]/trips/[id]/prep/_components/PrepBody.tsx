@@ -11,7 +11,7 @@ import { StatusMark } from "@/components/ui/StatusMark";
 import { RowLink, Table, TBody, Td, THead, Th, Tr } from "@/components/ui/table";
 import { FIGURE_CLASS, SECTION_TITLE_CLASS } from "@/components/ui/typography";
 import type { TripPrep } from "@/db/trips";
-import { gearItemKindLabel } from "@/i18n/gear-labels";
+import { gearItemKindLabel, gearStatusLabel } from "@/i18n/gear-labels";
 import { diveRecencyText } from "@/i18n/readiness-labels";
 import { rentalItemLabel, statedSizesText } from "@/i18n/rental-labels";
 import type { StaffMessageKey, StaffTranslator } from "@/i18n/staff-messages";
@@ -23,7 +23,8 @@ import {
 } from "@/lib/dive-prep";
 import { diveRecencyIsNotable } from "@/lib/dive-recency";
 import { scopedId } from "@/lib/element-id";
-import { groupUnitsForSize } from "@/lib/gear";
+import { type GearItemStatus, groupUnitsForSize } from "@/lib/gear";
+import { proposalKey } from "@/lib/gear-proposals";
 import { cachedListFormat } from "@/lib/intl-cache";
 import { shopOffersNitrox } from "@/lib/rentals";
 import { type NoticeTone, noticeFromParam, shopPath } from "@/lib/staff-notices";
@@ -33,21 +34,17 @@ import {
   releaseGearUnitAction,
   returnTripGearSetAction,
 } from "../actions";
+import { confirmProposedGearUnits } from "../proposal-actions";
 import { GearReturnPane } from "./GearReturnPane";
+import { ConfirmProposals, ProposedUnit } from "./ProposedUnit";
 import { RentalUnitPicker } from "./RentalUnitPicker";
 
-/** `?notice=` codes the gear-assignment forms redirect back with. Read through
+/** `?notice=` codes the Gear tab's forms redirect back with. Read through
  * `noticeFromParam`, never a bare index — the param is attacker-supplied. */
 const GEAR_NOTICES: Record<string, { tone: NoticeTone; key: StaffMessageKey }> = {
-  "gear-assigned": { tone: "success", key: "gear.prep.notice.assigned" },
   "gear-released": { tone: "success", key: "gear.prep.notice.released" },
-  "gear-unit-unavailable": { tone: "warning", key: "gear.prep.notice.unitUnavailable" },
-  "gear-unit-out-of-service": { tone: "warning", key: "gear.prep.notice.unitOutOfService" },
   "gear-already-checked-out": { tone: "warning", key: "gear.prep.notice.alreadyCheckedOut" },
   "gear-not-found": { tone: "danger", key: "gear.notice.notFound" },
-  "gear-booking-not-found": { tone: "danger", key: "gear.notice.notFound" },
-  "gear-invalid-window": { tone: "danger", key: "gear.notice.invalid" },
-  "gear-invalid": { tone: "danger", key: "gear.notice.invalid" },
   "gear-already-returned": { tone: "warning", key: "gear.notice.alreadyReturned" },
   "gear-returned-set": { tone: "success", key: "gear.notice.returnedSet" },
   "gear-handed-over": { tone: "success", key: "gear.prep.notice.handedOver" },
@@ -143,7 +140,71 @@ export function PrepBody({
    */
   className: string;
 }) {
-  const { checklist, hotelPickups, gearFleetTotal, freeByKind, loadOut, assignmentRows } = prep;
+  const {
+    checklist,
+    hotelPickups,
+    gearFleetTotal,
+    freeByKind,
+    loadOut,
+    assignmentRows,
+    proposals,
+  } = prep;
+  /**
+   * The unit proposed for each piece still to pick, in roster order (UX audit
+   * 2026-10-07, item 9): what the one-tap "Assign all" sends, and what each
+   * proposed row offers on its own. None on a cancelled departure.
+   */
+  const proposalPicks = cancelled
+    ? []
+    : assignmentRows.flatMap(({ diver, wanted }) =>
+        wanted.flatMap((item) => {
+          const unit = proposals.get(proposalKey(diver.bookingId, item.kind));
+          return unit ? [{ bookingId: diver.bookingId, gearItemId: unit.id }] : [];
+        }),
+      );
+
+  /**
+   * A unit in words, the way the picker's option and a proposed row both say
+   * it: label, size, and whatever about its care is worth saying at the
+   * moment of the pick. A lapsed clock, an unanswered service concern and a
+   * clock coming due are each said, never hidden: the dock decides (H-06).
+   * A proposal is never overdue or flagged, so on a proposed row this says
+   * at most "service due soon".
+   */
+  const careNotes = (unit: { serviceState: { state: string }; serviceConcern?: boolean }) => [
+    unit.serviceState.state === "overdue" ? t("gear.prep.optionServiceOverdue") : null,
+    unit.serviceConcern ? t("gear.prep.optionServiceConcern") : null,
+    unit.serviceState.state === "due_soon" ? t("gear.prep.optionServiceDueSoon") : null,
+  ];
+  const unitLine = (unit: {
+    label: string;
+    size: string | null;
+    serviceState: { state: string };
+    serviceConcern?: boolean;
+  }) =>
+    [unit.size ? `${unit.label} · ${unit.size}` : unit.label, ...careNotes(unit)]
+      .filter(Boolean)
+      .join(" · ");
+  /**
+   * What an assigned unit's line says about its care: the same notes the
+   * picker said when it was chosen, so a lapsed clock or an open concern does
+   * not go quiet the moment the unit is assigned (second dive-domain review).
+   * A unit a technician pulled off the wall after it was assigned says so
+   * first, in the register's own status word, with the technician's note.
+   */
+  const careLine = (unit: {
+    status: GearItemStatus;
+    serviceNote: string | null;
+    serviceState: { state: string };
+    serviceConcern?: boolean;
+  }) =>
+    [
+      unit.status === "needs_service" ? gearStatusLabel(t, unit.status) : null,
+      unit.status === "needs_service" ? unit.serviceNote?.trim() || null : null,
+      ...careNotes(unit),
+    ]
+      .filter(Boolean)
+      .join(" · ");
 
   /**
    * The size a staffer pulls, or the honest reason there isn't one — null when
@@ -925,6 +986,19 @@ export function PrepBody({
                     .join(" · ")}
                 </p>
               ) : null}
+              {proposalPicks.length > 0 ? (
+                <ConfirmProposals
+                  tripId={tripId}
+                  picks={proposalPicks}
+                  confirm={confirmProposedGearUnits}
+                  copy={{
+                    action: t("gear.prep.proposal.assignAll", { count: proposalPicks.length }),
+                    pending: t("gear.prep.assigning"),
+                    refused: t("gear.prep.proposal.someRefused"),
+                    failed: t("gear.prep.notice.assignFailed"),
+                  }}
+                />
+              ) : null}
               {/* **One grammar per diver, not two stacked lists.** A row used
                   to be a list of assigned units in one shape (a mono tag, a
                   kind, a release control) followed by a list of labelled
@@ -992,6 +1066,11 @@ export function PrepBody({
                           </dt>
                           <dd className="flex flex-wrap items-center gap-x-3 gap-y-1">
                             <span className="font-mono font-medium">{assignment.label}</span>
+                            {careLine(assignment) ? (
+                              <span className="font-medium text-warning-strong">
+                                {careLine(assignment)}
+                              </span>
+                            ) : null}
                             {assignment.checkedOutAt ? (
                               <span className="text-muted">{t("gear.prep.outLabel")}</span>
                             ) : (
@@ -1080,24 +1159,16 @@ export function PrepBody({
                             // of a kind invited the somebody-got-it-first refusal.
                             // Anything else opens on a placeholder the form refuses
                             // to submit.
-                            const preselect = exact[0]?.id ?? "";
+                            //
+                            // A row with a proposal says so in words and holds
+                            // its picker behind Change (`ProposedUnit`); one
+                            // without opens on the placeholder, because the
+                            // exact units it could have preselected are the
+                            // ones proposed to the divers above it.
+                            const proposal = proposals.get(proposalKey(diver.bookingId, item.kind));
+                            const preselect = "";
                             const optionsFor = (units: typeof exact) =>
-                              units.map((option) => ({
-                                id: option.id,
-                                label: [
-                                  option.size ? `${option.label} · ${option.size}` : option.label,
-                                  // A lapsed or looming bench clock is said at the
-                                  // moment of the pick — still selectable, never
-                                  // hidden: the dock decides (H-06).
-                                  option.serviceState.state === "overdue"
-                                    ? t("gear.prep.optionServiceOverdue")
-                                    : option.serviceState.state === "due_soon"
-                                      ? t("gear.prep.optionServiceDueSoon")
-                                      : null,
-                                ]
-                                  .filter(Boolean)
-                                  .join(" · "),
-                              }));
+                              units.map((option) => ({ id: option.id, label: unitLine(option) }));
                             // **Nothing falls between the bands.** The first band
                             // is headed by the size it matches, so it can only
                             // exist where there is a size to name — and a unit
@@ -1128,6 +1199,26 @@ export function PrepBody({
                                   }
                                 : null,
                             ].filter((group) => group !== null);
+                            const picker = (
+                              <RentalUnitPicker
+                                id={selectId}
+                                tripId={tripId}
+                                bookingId={diver.bookingId}
+                                defaultValue={preselect}
+                                assign={assignGearUnit}
+                                groups={groups}
+                                copy={{
+                                  pickUnit: t("gear.prep.pickUnit"),
+                                  assigning: t("gear.prep.assigning"),
+                                  refusals: {
+                                    unit_unavailable: t("gear.prep.notice.unitUnavailable"),
+                                    unit_out_of_service: t("gear.prep.notice.unitOutOfService"),
+                                    not_wanted: t("gear.prep.notice.notWanted"),
+                                  },
+                                  refusalFallback: t("gear.prep.notice.assignFailed"),
+                                }}
+                              />
+                            );
                             return (
                               <div key={item.kind} className={`${kitLineClass} print:hidden`}>
                                 <dt className="text-muted sm:pt-2">
@@ -1154,25 +1245,37 @@ export function PrepBody({
                                       The refusal the exclusion constraint can
                                       still answer with lands on this row, and
                                       reverts it. */}
-                                      <RentalUnitPicker
-                                        id={selectId}
-                                        tripId={tripId}
-                                        bookingId={diver.bookingId}
-                                        defaultValue={preselect}
-                                        assign={assignGearUnit}
-                                        groups={groups}
-                                        copy={{
-                                          pickUnit: t("gear.prep.pickUnit"),
-                                          assigning: t("gear.prep.assigning"),
-                                          refusals: {
-                                            unit_unavailable: t("gear.prep.notice.unitUnavailable"),
-                                            unit_out_of_service: t(
-                                              "gear.prep.notice.unitOutOfService",
-                                            ),
-                                          },
-                                          refusalFallback: t("gear.prep.notice.assignFailed"),
-                                        }}
-                                      />
+                                      {proposal ? (
+                                        <ProposedUnit
+                                          tripId={tripId}
+                                          bookingId={diver.bookingId}
+                                          gearItemId={proposal.id}
+                                          assign={assignGearUnit}
+                                          copy={{
+                                            proposed: t("gear.prep.proposal.unit", {
+                                              unit: unitLine(proposal),
+                                            }),
+                                            assign: t("gear.prep.proposal.assign"),
+                                            assigning: t("gear.prep.assigning"),
+                                            change: t("gear.prep.proposal.change"),
+                                            refusals: {
+                                              unit_unavailable: t(
+                                                "gear.prep.notice.unitUnavailable",
+                                              ),
+                                              unit_out_of_service: t(
+                                                "gear.prep.notice.unitOutOfService",
+                                              ),
+                                              not_wanted: t("gear.prep.notice.notWanted"),
+                                              needs_care: t("gear.prep.notice.unitNeedsCare"),
+                                            },
+                                            refusalFallback: t("gear.prep.notice.assignFailed"),
+                                          }}
+                                        >
+                                          {picker}
+                                        </ProposedUnit>
+                                      ) : (
+                                        picker
+                                      )}
                                     </div>
                                   )}
                                 </dd>

@@ -1114,3 +1114,35 @@ export function rollCallLabel(
   if (isNotBackAboard(checkpoint, rollCall)) return "not_back_aboard";
   return rollCall.implied ? "not_boarded_carried" : "not_boarded";
 }
+
+/**
+ * **The blocked divers the dock's head count may speak of** (UX audit
+ * 2026-10-07, item 16), split in two and never summed.
+ *
+ * - `undecided`: readiness blocked, no roll-call result at this checkpoint, and
+ *   not released by the desk as not here.
+ * - `aboard`: readiness blocked and marked aboard anyway. Nothing on the
+ *   boarding path refuses that tap, so it is the louder fact.
+ *
+ * Not `summary.blocked`, which is the roster's readiness: a blocked diver the
+ * crew left ashore, or whose seat the desk released, is settled and is outside
+ * the count's own total, so counting them read "5 of 5 aboard, 3 blocked" over
+ * a boat with nobody blocked aboard (dive-domain review of that change). The
+ * caller asks this at the departure checkpoint only; after a dive, blocked
+ * gates nothing.
+ */
+export function blockedAtDock(
+  divers: ReadonlyArray<Pick<TripManifest["divers"][number], "readiness" | "rollCall" | "notHere">>,
+): { undecided: number; aboard: number } {
+  let undecided = 0;
+  let aboard = 0;
+  for (const diver of divers) {
+    if (diver.readiness.status !== "blocked") continue;
+    if (!diver.rollCall) {
+      if (!diver.notHere) undecided += 1;
+    } else if (diver.rollCall.state === "boarded") {
+      aboard += 1;
+    }
+  }
+  return { undecided, aboard };
+}

@@ -177,8 +177,8 @@ test.describe("schedule builder", () => {
     await expect(row).toHaveCount(1);
     await expect(row.getByText("0 of 8")).toBeVisible();
     // No price was typed, so the board still says so, as the row's own amber
-    // pill: the seeded board is a mixed one — seven of its fourteen departures
-    // carry a price — so `allUnpriced` is false and the flag stays per-row
+    // pill: every seeded departure carries a price (UX audit 2026-10-07, item
+    // 4), so `allUnpriced` is false and the flag stays per-row
     // rather than collapsing into the group-level notice (design/principles.md
     // #9). Adding the price box did not quietly retire the flag.
     await expect(row.getByText("No price set")).toBeVisible();

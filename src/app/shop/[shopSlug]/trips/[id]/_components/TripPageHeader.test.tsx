@@ -47,6 +47,41 @@ describe("TripPageHeader", () => {
     expect(title).toHaveClass("min-w-0", "flex-1");
   });
 
+  /**
+   * UX audit 2026-10-07, item 39: the Boat tab hides the shell, so "‹ Schedule"
+   * was its only door and the day was two hops away.
+   */
+  it("offers the day beside the schedule when a tab asks for it, and only then", () => {
+    const trip = {
+      title: "Two-Tank Reef",
+      startsAt: new Date("2026-07-21T18:30:00Z"),
+      endsAt: new Date("2026-07-21T22:00:00Z"),
+    };
+    const view = render(
+      <TripPageHeader
+        trip={trip}
+        boardHref="/shop/blue-mantis/schedule/board"
+        backLabel="Schedule"
+        today={{ href: "/shop/blue-mantis", label: "Today" }}
+        locale="en-US"
+        timeZone="America/New_York"
+      />,
+    );
+    const schedule = screen.getByRole("link", { name: "Schedule" });
+    const today = screen.getByRole("link", { name: "Today" });
+    expect(today).toHaveAttribute("href", "/shop/blue-mantis");
+    // One row of doors, off paper together.
+    const row = schedule.parentElement?.parentElement;
+    expect(row).toContainElement(today);
+    expect(row).toHaveClass("print:hidden");
+    // Only where boat mode hides the shell: from `lg` the sidebar has Today.
+    expect(today.parentElement).toHaveClass("lg:hidden");
+    view.unmount();
+
+    renderHeader();
+    expect(screen.queryByRole("link", { name: "Today" })).toBeNull();
+  });
+
   it("gives the title its row alone when the surface has no actions", () => {
     renderHeader();
 

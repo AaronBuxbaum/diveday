@@ -206,7 +206,7 @@ when the post-mutation status is empty; visual re-captures (the record has 6).
   the material path only). With zero standing signatures the choice collapses away and Publish is
   alone. The recorded decision keeps writing `waiver_materiality_decisions` exactly as today.
 - Signatures: day-grouped ledger rows (name · trip · time), integrity as a `Badge` **only when not
-  valid** ("Not sealed", "Integrity failed"), the flagged-medical badge + its existing disclosure.
+  valid** ("Can’t be checked for changes", "Integrity failed"), the flagged-medical badge + its existing disclosure.
   A signature row's door discloses its full evidence block in place (today's anchored content); it
   does not navigate. `?record=` keeps today's resolve-to-page behavior — "pinned to the top" means
   the row renders first within its day group with a hairline left rule, never lifted out of the

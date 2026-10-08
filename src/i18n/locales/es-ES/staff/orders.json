@@ -118,9 +118,12 @@
     "filteredByDiver": "Mostrando los pedidos de {name}.",
     "filteredByTrip": "Mostrando los pedidos de {title}.",
     "openFilteredTrip": "Abrir la salida",
+    "setupCard": {
+      "title": "Cobra con DiveDay",
+      "body": "Conecta Stripe y la recepción podrá enviar pedidos desde aquí."
+    },
     "emptyAll": "Todavía no hay pedidos de DiveDay.",
     "emptyFiltered": "Ningún pedido de DiveDay coincide con estos filtros.",
-    "emptyNoPayments": "Todavía no hay pedidos de DiveDay. Conecta los pagos y recepción podrá enviar su primer pedido desde aquí.",
     "ledger": {
       "today": "Hoy · {date}",
       "continued": "{day}, continuación",

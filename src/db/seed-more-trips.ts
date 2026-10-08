@@ -1,3 +1,4 @@
+import { and, eq } from "drizzle-orm";
 import { rollCallCheckpoints } from "@/lib/roll-call";
 import type { DbExecutor } from "./client";
 import {
@@ -6,6 +7,8 @@ import {
   type DiveSpecialty,
   notificationDeliveries,
   notificationDeliveryAttempts,
+  people,
+  personRoles,
   rollCallEvents,
   type TripAssignmentRole,
   tripAssignments,
@@ -54,6 +57,7 @@ export async function seedMoreTrips(
         | "divemaster"
         | "instructor"
         | null;
+      priceCents?: number | null;
     }>;
     instructorId: string;
     captainId: string | undefined;
@@ -87,6 +91,9 @@ export async function seedMoreTrips(
     }
     return picked;
   };
+
+  /** The demo shop's ordinary boat fare, for a charter its definition does not price. */
+  const DEMO_TWO_TANK_PRICE_CENTS = 9500;
 
   type ExtraTripDef = {
     title: string;
@@ -463,7 +470,14 @@ export async function seedMoreTrips(
         status: def.status ?? "scheduled",
         conditionsHold: def.conditionsHold ?? false,
         conditionsSummary: def.conditionsSummary,
-        priceCents: def.priceCents,
+        // Every departure on the demo board carries a fare (UX audit
+        // 2026-10-07, item 4): a run shop does not sell seats at no price, and
+        // a board of amber "No price set" pills read as a half-built demo. A
+        // course session takes its course's catalog price.
+        priceCents:
+          def.priceCents ??
+          (def.courseTitle ? courseByTitle.get(def.courseTitle)?.priceCents : undefined) ??
+          DEMO_TWO_TANK_PRICE_CENTS,
       })),
     )
     .returning();
@@ -550,6 +564,15 @@ export async function seedMoreTrips(
   // every row written before the column existed is in, and the one no seeded
   // row exercised at all.
   type ScenarioCrewRow = { tripId: string; personId: string; tripRole: TripAssignmentRole | null };
+  // The second supervisor in the water, as on the charters in `seed-trips.ts`:
+  // eight divers to one divemaster is under the shop's default 6:1 target, and
+  // every boat read "Under target" (UX audit 2026-10-07, item 4).
+  const [assistant] = await db
+    .select({ id: people.id })
+    .from(people)
+    .innerJoin(personRoles, eq(personRoles.personId, people.id))
+    .where(and(eq(people.shopId, shopId), eq(personRoles.role, "assistant_instructor")))
+    .limit(1);
   let scenarioCharterIndex = 0;
   await db.insert(tripAssignments).values(
     insertedTrips.flatMap((trip, i): ScenarioCrewRow[] => {
@@ -578,6 +601,15 @@ export async function seedMoreTrips(
               {
                 tripId: trip.id,
                 personId: divemasterId,
+                tripRole: unspecified ? null : ("divemaster" as TripAssignmentRole),
+              },
+            ]
+          : []),
+        ...(assistant
+          ? [
+              {
+                tripId: trip.id,
+                personId: assistant.id,
                 tripRole: unspecified ? null : ("divemaster" as TripAssignmentRole),
               },
             ]

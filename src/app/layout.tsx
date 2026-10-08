@@ -132,7 +132,7 @@ export const viewport: Viewport = {
 async function LocalizedSkipLink() {
   const locale = await requestLocale();
   const t = diverTranslator(locale);
-  return <SkipLink href="#main-content" label={t("nav.skipToContent")} />;
+  return <SkipLink href="#main-content" label={t("nav.skipToContent")} level="root" />;
 }
 
 const defaultSkipLinkLabel = diverTranslator(DEFAULT_DIVER_LOCALE)("nav.skipToContent");
@@ -166,7 +166,9 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col">
-        <Suspense fallback={<SkipLink href="#main-content" label={defaultSkipLinkLabel} />}>
+        <Suspense
+          fallback={<SkipLink href="#main-content" label={defaultSkipLinkLabel} level="root" />}
+        >
           <LocalizedSkipLink />
         </Suspense>
         {/*

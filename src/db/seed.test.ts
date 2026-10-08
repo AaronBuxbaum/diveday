@@ -2,11 +2,12 @@ import { and, eq, inArray } from "drizzle-orm";
 import { describe, expect, it } from "vitest";
 import { STAFF_ROLES } from "@/lib/authz";
 import { reservedTestRecipientDelivery } from "@/lib/notifications/provider";
-import { isSimulatorEmail } from "@/lib/simulator-email";
+import { DEMO_MAIL_DOMAIN, deliveryAddressFor, isSimulatorEmail } from "@/lib/simulator-email";
 import { seededShopContext, unseededTestDb } from "@/test/db";
 import { fakePromotions } from "@/test/fakes";
 import { issueBookingCapability } from "./booking-capabilities";
 import { createBooking } from "./bookings";
+import { shopSenderFor } from "./notifications";
 import {
   accountSessions,
   bookingCapabilities,
@@ -599,7 +600,7 @@ describe("seedIfEmpty (CR-010)", () => {
 });
 
 describe("seeded addresses", () => {
-  it("send every seeded diver and shop desk to the SES mailbox simulator, never to a domain the provider refuses", async () => {
+  it("read like a person's to staff, and deliver to the SES mailbox simulator, never to a domain the provider refuses", async () => {
     const { db, shop } = await seededShopContext();
     await resetDemoSchedule(db, shop.id, { history: true });
 
@@ -622,10 +623,16 @@ describe("seeded addresses", () => {
       .filter((email): email is string => Boolean(email));
 
     for (const email of [...divers.map((person) => person.email as string), ...shopDesks]) {
-      expect(isSimulatorEmail(email), email).toBe(true);
-      expect(reservedTestRecipientDelivery(email), email).toBeNull();
+      // What staff read (UX audit 2026-10-07, item 4)...
+      expect(email.endsWith(`@${DEMO_MAIL_DOMAIN}`), email).toBe(true);
+      // ...and where SES actually sends it.
+      // The demo shop's sends say so (`NotificationSender.demoShop`, asserted below).
+      const delivered = deliveryAddressFor(email, { demoShop: true });
+      expect(isSimulatorEmail(delivered), email).toBe(true);
+      expect(reservedTestRecipientDelivery(delivered), email).toBeNull();
     }
-    // Unique per diver, which is what the `+label` is for.
+    expect((await shopSenderFor(db, shop.id))?.demoShop).toBe(true);
+    // Unique per diver, which the simulator's `+label` then carries.
     const addresses = divers.map((person) => person.email);
     expect(new Set(addresses).size).toBe(addresses.length);
   });

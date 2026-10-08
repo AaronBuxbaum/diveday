@@ -64,8 +64,6 @@ export const SKELETON_EXEMPT = {
   switching: "Static competitor index, prerendered; no ancestor boundary above it.",
   "switching/[competitor]":
     "Static per-competitor guide, prerendered; no ancestor boundary above it.",
-  "offline-manifest":
-    "Reads encrypted IndexedDB in the browser, not the server; there is no server wait to stand in for.",
 };
 
 /**

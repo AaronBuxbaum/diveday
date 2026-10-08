@@ -133,7 +133,7 @@ test("a ready diver checks in with one tap, sinks into the checked-in group, and
  * not this spec.
  *
  * What it pins is the instrument itself: the count leading the roster, taps at
- * the dock test's 44px floor, the walk-in door under "Add a diver", and — on a
+ * the dock test's 44px floor, "Add a diver" as one search field, and — on a
  * boat that has already sailed — the receipts and the divers who still cannot
  * board, apart.
  */
@@ -156,15 +156,17 @@ test("the counter reads as an instrument at the tablet on the desk", async ({ pa
   await expect(firstTap).toBeVisible();
   expect((await firstTap.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
 
-  // The walk-in door stands under "Add a diver".
-  await expect(page.getByRole("link", { name: "Add a walk-in" })).toBeVisible();
+  // "Add a diver" is one search field at the counter; someone new is offered by
+  // its empty result (UX audit item 24), so no door stands beside it.
+  await expect(page.getByRole("searchbox", { name: "Find a returning diver" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Add diver", exact: true })).toHaveCount(0);
 
   // A boat that has already sailed is read rather than worked: its receipts
   // stand in their own group.
   await page.goto(counterPath("blue-mantis", sailedId));
   await expect(page.getByRole("heading", { name: CHECKED_IN_BAND })).toBeVisible();
   // Nobody can be seated on a boat that has left, so its door is not drawn.
-  await expect(page.getByRole("link", { name: "Add a walk-in" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Add as a walk-in" })).toHaveCount(0);
 
   // **And it is not all-clear, because some of the divers aboard are blocked.**
   // Every diver on this boat is `checked_in`, which used to be the whole
@@ -190,23 +192,15 @@ test("a counter walk-in books straight onto a boat with no email required", asyn
   const tripId = await seededTripId(page, "blue-mantis", OPEN_BOAT);
   const counter = counterPath("blue-mantis", tripId);
   await page.goto(counter);
-  await page.getByRole("link", { name: "Add a walk-in" }).click();
-  await expect(page.getByRole("heading", { name: "Walk-in", level: 1 })).toBeVisible();
-  // The boat is the departure's own, in the path — which is what lets a
-  // refusal land back on this same form with the boat still chosen and name
-  // the gate it hit.
-  await expect(page).toHaveURL(`${counter}/walk-in`);
-  // The chosen boat is echoed back so the crew can confirm before adding anyone.
-  await expect(page.getByText(OPEN_BOAT, { exact: false }).first()).toBeVisible();
+  // A search for someone who isn't on file falls through to the walk-in, in
+  // the Divers tab's own search (UX audit item 24).
+  const find = page.getByRole("searchbox", { name: "Find a returning diver" });
+  await find.fill("Zzyzx No Such Diver");
+  await find.press("Enter");
+  await expect(page.getByText(/No returning diver matches/)).toBeVisible();
 
-  // A search for someone who isn't on file falls through to adding a diver.
-  const walkInSearch = page.getByRole("searchbox", { name: "Search by name, email, or phone" });
-  await walkInSearch.fill("Zzyzx No Such Diver");
-  await walkInSearch.press("Enter");
-  await expect(page.getByText(/No matches for/)).toBeVisible();
-
-  await page.getByRole("link", { name: "Add diver" }).click();
-  await page.waitForURL(/\/divers\/new\?/);
+  await page.getByRole("link", { name: "Add as a walk-in" }).click();
+  await page.waitForURL(/\/divers\/new\?.*surface=walk-in/);
   await page.getByLabel("Full name").fill("Walk-in Test Diver");
   // Email and phone are left blank on purpose — the whole point of this flow.
   await page.getByRole("button", { name: "Add to boat" }).click();
@@ -320,7 +314,12 @@ test("a full boat refuses a counter walk-in with the wait-list nudge", async ({ 
   const tripId = page.url().match(/\/trips\/([^/?#]+)/)?.[1];
   if (!tripId) throw new Error("could not read the trip id from the URL");
 
-  await page.getByRole("link", { name: "Add diver" }).click();
+  // Inside the arrivals window "Add a diver" is one search field, and a booked
+  // seat is its empty result's "Add diver" (UX audit item 24).
+  const find = page.getByRole("searchbox", { name: "Find a returning diver" });
+  await find.fill("Fills The Boat");
+  await find.press("Enter");
+  await page.getByRole("link", { name: "Add diver", exact: true }).first().click();
   await page.waitForURL(/\/divers\/new/);
   await page.getByLabel("Full name").fill("Fills The Boat");
   await page.getByLabel("Email").fill(`fills-${e2eNow().getTime()}@example.com`);
@@ -417,9 +416,7 @@ test("the desk shows no diver's email on the roster's face", async ({ page }) =>
   // Looking up by email still finds the diver's boat — that path is a staffer
   // typing on Today, never a display, and it must not have been narrowed with
   // the display.
-  await page.goto(
-    `/shop/blue-mantis?q=${encodeURIComponent("success+priya.sharma@simulator.amazonses.com")}`,
-  );
+  await page.goto(`/shop/blue-mantis?q=${encodeURIComponent("priya.sharma@mail.example")}`);
   await expect(page.getByRole("link", { name: /check-in for Priya Sharma$/ })).toHaveCount(1);
 });
 

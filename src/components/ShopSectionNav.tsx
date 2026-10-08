@@ -81,7 +81,10 @@ function BlockedBadge({ count, label }: { count: number; label: string }) {
   );
 }
 
-const sidebarRowClass = `flex min-h-10 items-center gap-3 ${SEGMENT_CORNER} px-3 text-sm transition-colors`;
+// 44px, the floor every other row a hand can reach stands at (principles.md
+// §2): the sidebar shows from `lg` up, and 1024px is a tablet held in the
+// hand as often as a desk (UX audit 2026-10-07, item 37).
+const sidebarRowClass = `flex min-h-11 items-center gap-3 ${SEGMENT_CORNER} px-3 text-sm transition-colors`;
 
 /**
  * The sidebar, from `lg` up: every section as a row with its icon and its

@@ -2,14 +2,19 @@ import type { PGlite } from "@electric-sql/pglite";
 import { and, asc, eq, gt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pglite";
 import { describe, expect, it, vi } from "vitest";
-import { countBlockedDivers, inHorizonReadiness } from "@/db/blockers";
+import { inHorizonReadiness } from "@/db/blockers";
 import type { AppDb } from "@/db/client";
 import { hasActiveCourses } from "@/db/courses";
 import { countGearItems } from "@/db/gear";
 import { people, personRoles, trips } from "@/db/schema";
 import { getShopBySlug } from "@/db/shops";
 import { getShopStripeAccount } from "@/db/stripe-accounts";
-import { getShopDayDepartures, getTodayWork, todayNextDepartureTripId } from "@/db/today";
+import {
+  countBlockedDiversNextBoatDay,
+  getShopDayDepartures,
+  getTodayWork,
+  todayNextDepartureTripId,
+} from "@/db/today";
 import { getTripGuests } from "@/db/trips-guests";
 import { liveTrip } from "@/db/trips-live";
 import { getTripOverview } from "@/db/trips-overview";
@@ -97,7 +102,7 @@ describe("what a staff render sends", () => {
       const row = await getShopBySlug(db, shop.slug);
       if (!row) throw new Error("no shop");
       await Promise.all([
-        countBlockedDivers(db, row.id, nowDate()),
+        countBlockedDiversNextBoatDay(db, row.id, row.timezone, nowDate()),
         todayNextDepartureTripId(db, row.id, row.timezone),
         hasActiveCourses(db, row.id),
         countGearItems(db, row.id),
@@ -154,6 +159,9 @@ describe("what a staff render sends", () => {
 
 /** What each render sends today: lower one when a change saves a statement, never raise it quietly. */
 const GATE_CEILING = 4;
-const CHROME_CEILING = 17;
+// 17 → 19: the Today badge also counts divers blocked aboard a boat still out
+// past the horizon (`countBlockedDiversNextBoatDay` → `blockedAboardOnBoatsOut`,
+// UX audit 2026-10-07 item 1): two statements over the boats still out.
+const CHROME_CEILING = 19;
 const TODAY_CEILING = 60;
 const TRIP_CEILING = 49;

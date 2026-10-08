@@ -64,7 +64,7 @@ describe("integrity", () => {
   it("says nothing at all when the seal verifies", () => {
     renderLog([entry({ id: "a" })]);
     expect(screen.queryByText("Integrity mismatch")).toBeNull();
-    expect(screen.queryByText("Not sealed")).toBeNull();
+    expect(screen.queryByText("Can’t be checked for changes")).toBeNull();
     // …and the row is still there to say nothing about.
     expect(screen.getByText("Grace Mensah")).toBeInTheDocument();
   });
@@ -75,7 +75,7 @@ describe("integrity", () => {
       entry({ id: "b", integrity: "unsealed", personName: "Priya Sharma" }),
     ]);
     expect(screen.getByText("Integrity mismatch")).toBeInTheDocument();
-    expect(screen.getByText("Not sealed")).toBeInTheDocument();
+    expect(screen.getByText("Can’t be checked for changes")).toBeInTheDocument();
   });
 });
 
@@ -282,7 +282,7 @@ describe("a row's height", () => {
  * **On a phone the departure is read whole, on a line of its own** (class 8).
  * The pixel probe (staff-waivers@390): the departure shared the first line
  * with the name, the time and the caret, and truncated to 38–182px of its
- * 276–351px on every row — the date never showed, and a "Not sealed" row kept
+ * 276–351px on every row — the date never showed, and a "Can’t be checked for changes" row kept
  * only "Two-…". The column is 358px, wider than the longest seeded value, so
  * below `sm` the row takes `LedgerRow`'s `stacked` grammar: the name, time
  * and caret on the first line, the departure under them at full width.
@@ -315,7 +315,7 @@ describe("a row on a phone", () => {
     ]);
     const summary = summaryOf(container, "a");
     const badges = within(summary).getByText("Medical follow-up flagged").parentElement;
-    expect(within(summary).getByText("Not sealed").parentElement).toBe(badges);
+    expect(within(summary).getByText("Can’t be checked for changes").parentElement).toBe(badges);
     expect(badges?.parentElement).toBe(summary);
     // Below `sm` a full-width line after the departure's; from `sm` up the
     // badges are the row's own items again, where they always stood.

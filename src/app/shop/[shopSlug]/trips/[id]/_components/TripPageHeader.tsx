@@ -69,6 +69,7 @@ export function TripPageHeader({
   trip,
   boardHref,
   backLabel,
+  today,
   locale,
   timeZone,
   badge,
@@ -84,6 +85,13 @@ export function TripPageHeader({
   boardHref: string;
   /** The nav's own word for it, so the two cannot drift (issue #824). */
   backLabel: string;
+  /**
+   * A second way up, to the day, for the one tab that hides the shell: the
+   * Boat tab is boat mode, with no tab bar, so "‹ Schedule" was its only door
+   * and Today was two hops away (UX audit 2026-10-07, item 39). The other tabs
+   * keep the shell's own Today and leave this out.
+   */
+  today?: { href: string; label: string };
   locale: string;
   /** The shop's own zone — never the host's. See `src/lib/format.ts`. */
   timeZone: string;
@@ -122,9 +130,22 @@ export function TripPageHeader({
           are readings of rather than the board two levels above it.
           `print:hidden` because `print/page.tsx` wears this header too and a
           paper sheet has no navigation. */}
-      <EyebrowBackLink href={boardHref} className="print:hidden">
-        {backLabel}
-      </EyebrowBackLink>
+      {today ? (
+        <div className="flex flex-wrap gap-x-6 print:hidden">
+          <EyebrowBackLink href={boardHref}>{backLabel}</EyebrowBackLink>
+          {/* Below `lg` only, which is exactly where boat mode hides the
+              shell (`globals.css`); from `lg` the sidebar's own Today stands
+              beside the page and a second one here would be the same door
+              twice. */}
+          <EyebrowBackLink href={today.href} className="lg:hidden">
+            {today.label}
+          </EyebrowBackLink>
+        </div>
+      ) : (
+        <EyebrowBackLink href={boardHref} className="print:hidden">
+          {backLabel}
+        </EyebrowBackLink>
+      )}
       {/* **The title and its actions are one row, centred on each other.**
           The 48px ••• used to sit in a grid cell beside the 16px eyebrow on a
           phone — 16px under the eyebrow's centre, and holding the title 49px

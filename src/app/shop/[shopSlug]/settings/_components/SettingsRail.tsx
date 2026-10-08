@@ -134,6 +134,7 @@ export function SettingsRail({
     if (currentId && scrollerRef.current) revealCurrentRow(scrollerRef.current);
     setSettledFor(currentId);
   }, [currentId]);
+  const moreBelow = useMoreBelow(scrollerRef);
 
   return (
     <nav aria-label={ariaLabel} className={SETTINGS_RAIL_COLUMN_CLASS}>
@@ -150,6 +151,11 @@ export function SettingsRail({
         ref={scrollerRef}
         data-settings-rail-scroller
         data-rail-settled={settledFor === currentId ? "" : undefined}
+        // The box is longer than a laptop viewport and its clipped foot read
+        // as the end of the map: the last thing on screen was a group label
+        // with no rows under it (UX audit 2026-10-07, item 12). While there
+        // is more below, globals.css fades the box's bottom edge.
+        data-more-below={moreBelow ? "" : undefined}
         className={`${SETTINGS_RAIL_FRAME_CLASS} overflow-y-auto`}
       >
         {/* The inset is on what the box scrolls, never on the box: a sticky
@@ -233,6 +239,32 @@ export function SettingsRail({
 }
 
 /**
+ * Whether the rail's box has rows below its fold: true until the reader
+ * scrolls to its foot, and false for a box short enough to show them all.
+ * Measured on scroll and on resize; a rail that is not drawn (`hidden` below
+ * `lg`) measures zero and has nothing below.
+ */
+function useMoreBelow(scrollerRef: React.RefObject<HTMLDivElement | null>): boolean {
+  const [moreBelow, setMoreBelow] = useState(false);
+  useEffect(() => {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    const measure = () =>
+      setMoreBelow(scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight > 1);
+    measure();
+    scroller.addEventListener("scroll", measure, { passive: true });
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    observer?.observe(scroller);
+    if (scroller.firstElementChild) observer?.observe(scroller.firstElementChild);
+    return () => {
+      scroller.removeEventListener("scroll", measure);
+      observer?.disconnect();
+    };
+  }, [scrollerRef]);
+  return moreBelow;
+}
+
+/**
  * Scroll the rail's own box so its current row is in sight, centred, when it
  * is not: below the box's fold, or under its group's label stuck at the top.
  * A row already in sight is left where it is, so a click inside the rail keeps
@@ -251,7 +283,14 @@ function revealCurrentRow(scroller: HTMLElement) {
   const rect = row.getBoundingClientRect();
   const label = row.closest("ul")?.previousElementSibling;
   const cover = label instanceof HTMLElement ? label.getBoundingClientRect().height : 0;
-  if (rect.top >= box.top + cover && rect.bottom <= box.bottom) return;
+  // While rows sit below the fold the box's foot fades out (`data-more-below`
+  // in globals.css), so a current row in that last 3rem is washed out, not in
+  // sight: "Calendar subscriptions" at the rail's foot read as nearly blank.
+  const fade =
+    scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight > 1
+      ? 3 * (Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16)
+      : 0;
+  if (rect.top >= box.top + cover && rect.bottom <= box.bottom - fade) return;
   scroller.scrollTop += rect.top + rect.height / 2 - (box.top + box.height / 2);
   settleOnRowEdge(scroller, box);
 }

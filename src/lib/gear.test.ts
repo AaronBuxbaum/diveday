@@ -8,6 +8,7 @@ import {
   GEAR_SERVICE_DUE_SOON_DIVES,
   GEAR_SERVICE_KINDS_FOR,
   type GearRegisterGroupName,
+  type GearServiceKind,
   gearAssignmentNeeds,
   gearKindRank,
   gearRegisterGroup,
@@ -17,6 +18,8 @@ import {
   pickDisplayReservation,
   rankUnitsForSize,
   reservationPhase,
+  serviceConcernClearingKinds,
+  serviceConcernStillOpen,
   suggestNextDueOn,
   tripReservationWindow,
 } from "./gear";
@@ -600,5 +603,100 @@ describe("gearKindRank", () => {
     expect(gearKindRank("bcd")).toBeLessThan(gearKindRank("regulator"));
     expect(gearKindRank("gopro")).toBeLessThan(gearKindRank("tank"));
     expect(gearKindRank("tank")).toBeLessThan(gearKindRank("other"));
+  });
+});
+
+/**
+ * **What answers a service concern** (second dive-domain review of the Gear
+ * tab's proposals): the kind's own care, written after the unit came home.
+ */
+describe("serviceConcernStillOpen", () => {
+  const returnedAt = new Date("2026-07-21T22:00:00.000Z");
+  const flaggedReturn = { outcome: "service_concern", returnedOn: "2026-07-21", returnedAt };
+  const event = (kind: GearServiceKind, servicedOn: string, createdAt = returnedAt) => ({
+    kind,
+    servicedOn,
+    createdAt,
+  });
+
+  it("is closed when the last return said nothing was wrong", () => {
+    expect(
+      serviceConcernStillOpen("regulator", { ...flaggedReturn, outcome: "all_good" }, []),
+    ).toBe(false);
+    expect(serviceConcernStillOpen("regulator", null, [])).toBe(false);
+  });
+
+  it("clears on a service dated a later day, whenever it was written", () => {
+    const early = new Date("2026-07-20T09:00:00.000Z");
+    expect(
+      serviceConcernStillOpen("regulator", flaggedReturn, [event("service", "2026-07-22", early)]),
+    ).toBe(false);
+  });
+
+  it("stays open on a same-day service written before the return", () => {
+    const morning = new Date("2026-07-21T14:00:00.000Z");
+    expect(
+      serviceConcernStillOpen("regulator", flaggedReturn, [
+        event("service", "2026-07-21", morning),
+      ]),
+    ).toBe(true);
+  });
+
+  it("clears on a same-day service written at or after the return", () => {
+    expect(
+      serviceConcernStillOpen("regulator", flaggedReturn, [event("service", "2026-07-21")]),
+    ).toBe(false);
+    const later = new Date("2026-07-21T23:30:00.000Z");
+    expect(
+      serviceConcernStillOpen("regulator", flaggedReturn, [event("service", "2026-07-21", later)]),
+    ).toBe(false);
+  });
+
+  it("stays open on a service dated before the return", () => {
+    expect(
+      serviceConcernStillOpen("regulator", flaggedReturn, [event("service", "2026-07-20")]),
+    ).toBe(true);
+  });
+
+  it("never clears a kind that gets a service on a note", () => {
+    expect(serviceConcernStillOpen("bcd", flaggedReturn, [event("note", "2026-07-22")])).toBe(true);
+  });
+
+  it("never clears a tank on a note, only on one of its own checks", () => {
+    expect(serviceConcernStillOpen("tank", flaggedReturn, [event("note", "2026-07-22")])).toBe(
+      true,
+    );
+    for (const check of ["visual_inspection", "hydro_test", "o2_clean"] as const) {
+      expect(serviceConcernStillOpen("tank", flaggedReturn, [event(check, "2026-07-22")])).toBe(
+        false,
+      );
+    }
+  });
+
+  it("clears a soft good on a dated note, the only record it ever gets", () => {
+    expect(serviceConcernStillOpen("wetsuit", flaggedReturn, [event("note", "2026-07-22")])).toBe(
+      false,
+    );
+  });
+});
+
+describe("serviceConcernClearingKinds", () => {
+  it("names the service, the tank checks, or the note, never a note beside real care", () => {
+    expect(serviceConcernClearingKinds("regulator")).toEqual(["service"]);
+    expect(serviceConcernClearingKinds("tank")).toEqual([
+      "visual_inspection",
+      "hydro_test",
+      "o2_clean",
+    ]);
+    expect(serviceConcernClearingKinds("wetsuit")).toEqual(["note"]);
+  });
+
+  it("lets a note clear only a kind whose form offers nothing else", () => {
+    for (const [kind, offered] of Object.entries(GEAR_SERVICE_KINDS_FOR)) {
+      const clearing = serviceConcernClearingKinds(kind as keyof typeof GEAR_SERVICE_KINDS_FOR);
+      expect(clearing.includes("note")).toBe(
+        offered.every((offeredKind) => offeredKind === "note"),
+      );
+    }
   });
 });

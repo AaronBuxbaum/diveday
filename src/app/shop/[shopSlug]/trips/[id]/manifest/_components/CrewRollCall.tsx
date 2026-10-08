@@ -127,6 +127,14 @@ export function CrewRollCall({
   t: StaffTranslator;
 }) {
   const crewAssigned = crew.length;
+  // How many named crew another departure still claims (issue #1779), on the
+  // same terms as each row's own line below: at the departure checkpoint and
+  // only for somebody nobody has tapped yet. The instruction is said once,
+  // here; the rows say only which other boat (UX audit 2026-10-07, item 3 —
+  // two crew members carried the same three-line paragraph each).
+  const crewToConfirm = isDeparture
+    ? crew.filter((member) => !member.rollCall && (member.clashes ?? []).length > 0).length
+    : 0;
   return (
     <section>
       <h2 className={SECTION_TITLE_CLASS}>{t("manifest.crewHeading")}</h2>
@@ -175,6 +183,11 @@ export function CrewRollCall({
               boarded or missing one — where the diver list's reads `border`.
               Each row draws its own rule inside, off the diver list's helper
               (`rollCallRuleClass`). */}
+          {crewToConfirm > 0 ? (
+            <p className="mt-2 max-w-prose text-base font-semibold text-warning-strong print:hidden">
+              {t("manifest.crewClashConfirm", { count: crewToConfirm })}
+            </p>
+          ) : null}
           <ul
             className={sectionCardClass({
               padding: "none",

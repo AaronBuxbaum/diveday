@@ -1,6 +1,10 @@
 {
   "operationalWindow": {},
   "skipToContent": "Skip to main content",
+  "notFound": {
+    "heading": "We couldn’t find that page",
+    "backToToday": "Back to Today"
+  },
   "publicPreview": {
     "youWorkHere": "You work here. This is the page divers see.",
     "divesSee": "Divers see this page.",
@@ -229,7 +233,7 @@
     "signOutPending": "Signing out…"
   },
   "shopNavLinks": {
-    "badgeBlocked": "{count, plural, one {# diver blocked} other {# divers blocked}}",
+    "badgeBlocked": "{count, plural, one {# diver blocked, aboard or on the next boats} other {# divers blocked, aboard or on the next boats}}",
     "today": "Today",
     "divers": "Divers",
     "board": "Schedule",

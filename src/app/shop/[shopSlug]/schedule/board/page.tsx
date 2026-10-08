@@ -913,29 +913,28 @@ export default async function ScheduleBoardPage({
               >
                 {st("schedule.viewPublicPage")}
               </Link>
-              {/* A link to `?add=1`, not a button: the open-the-panel state
-                lives in ScheduleBuilder, and this is the server-rendered side
-                of that boundary. It joins the header's action cluster instead
-                of holding a whole band of its own between header and board —
-                the same control the former /trips/new doors 308 into.
-                `data-board-add` is how the panel's Cancel hands focus back
-                here. Secondary weight: the page's one primary stays "Add a
-                booking". */}
+              {/* **One primary, the board's own act** (UX audit 2026-10-07,
+                item 30): "Add a departure" leads for a role that can make one,
+                and "Add a booking" sits beside it at secondary weight. A role
+                that cannot configure trips (issue #1831's gate) sees no
+                departure door, so its booking door keeps the primary.
+                A link to `?add=1`, not a button: the open-the-panel state
+                lives in ScheduleBuilder. `data-board-add` is how the panel's
+                Cancel hands focus back here. */}
               {canConfigure ? (
                 <Link
                   href={`/shop/${shopSlug}/schedule/board?add=1`}
                   data-board-add
                   scroll={false}
-                  className={buttonClass({ variant: "secondary" })}
+                  className={buttonClass()}
                 >
                   {st("schedule.builder.addDeparture")}
                 </Link>
               ) : null}
-              {/* The board's primary action. Scheduling a departure is the rarer
-                job — a shop puts a boat on the board once and then seats
-                divers on it all week — and until now "someone just called,
-                put them on Saturday" had no door of its own at all. */}
-              <Link href={`/shop/${shopSlug}/bookings/new`} className={buttonClass()}>
+              <Link
+                href={`/shop/${shopSlug}/bookings/new`}
+                className={buttonClass({ variant: canConfigure ? "secondary" : "primary" })}
+              >
                 {st("schedule.addBooking")}
               </Link>
             </>

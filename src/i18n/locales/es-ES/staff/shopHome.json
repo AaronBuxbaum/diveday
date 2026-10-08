@@ -115,6 +115,9 @@
   },
   "spine": {
     "summaryBoats": "{count, plural, one {# salida hoy.} other {# salidas hoy.}}",
+    "summaryBoatsBlocked": "{count, plural, one {# salida hoy} other {# salidas hoy}}, {blocked, plural, one {# buceador bloqueado.} other {# buceadores bloqueados.}}",
+    "summaryBoatsBlockedTomorrow": "{count, plural, one {# salida hoy} other {# salidas hoy}}, {tomorrow, plural, one {# buceador bloqueado para mañana.} other {# buceadores bloqueados para mañana.}}",
+    "summaryBoatsBlockedAboardAndTomorrow": "{count, plural, one {# salida hoy} other {# salidas hoy}}, {blocked, plural, one {# buceador bloqueado a bordo} other {# buceadores bloqueados a bordo}} y {tomorrow, plural, one {# para mañana.} other {# para mañana.}}",
     "summaryNext": "{count, plural, =0 {Nada te espera antes de que la de las {time} zarpe.} one {# cosa te espera antes de que la de las {time} zarpe.} other {# cosas te esperan antes de que la de las {time} zarpe.}}",
     "summaryAfter": "{count, plural, =0 {No hay nada pendiente para ti.} one {Todavía te espera # cosa.} other {Todavía te esperan # cosas.}}",
     "quietSentence": "Hoy no sale ninguna salida y no hay nada pendiente para ti.",
@@ -141,7 +144,7 @@
       "surface": "En superficie",
       "headingIn": "De regreso",
       "home": "En puerto",
-      "chip": "{stage} · {time}"
+      "chip": "{stage} desde las {time}"
     },
     "factOfScale": {
       "divers": "{name} embarca en la salida de las {time} como tu buceador número {count} de la temporada.",
@@ -177,6 +180,8 @@
     "readyCount": "Listos: {ready} de {booked}",
     "blockedCount": "{count, plural, one {# bloqueado} other {# bloqueados}}",
     "departuresLabel": "Salidas",
+    "needsYouCount": "{count, plural, one {# cosa} other {# cosas}}",
+    "deskFoldLabel": "{count, plural, one {# más para otras salidas y el mostrador} other {# más para otras salidas y el mostrador}}",
     "needsYouLabel": "Pendiente"
   },
   "quietAddDeparture": "Añadir una salida",

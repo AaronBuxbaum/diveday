@@ -152,7 +152,7 @@ async function AboutBody({ locale }: { locale: DiverLocale }) {
           holds the sourcing and the limits: no operator or skipper named, no
           adjective on the account, no sentence saying DiveDay would have
           prevented it). The right column is the thing that story built, a
-          captain's roll call by name, running from the phone's saved copy.
+          captain's roll call by name, one tap on each circle.
 
           The eyebrow is the page's `h1`. The display heading over the story
           ("Why did you build this") left on 2026-10-07 at the owner's call, so

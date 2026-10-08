@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RAIL_ROW_CLASS } from "@/components/ui/rail";
 import {
@@ -461,6 +461,23 @@ describe("the rail keeps the current row in view", () => {
     expect(railScroller().scrollTop).toBe(0);
   });
 
+  it("treats a current row in the faded foot as out of sight", () => {
+    // "Calendar subscriptions" sat in the last 3rem of the box while rows
+    // went on below, and the fade washed it out to nearly nothing.
+    pathname = `${BASE}/settings/team`;
+    vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockReturnValue(2000);
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockReturnValue(744);
+    stubBoxes({
+      scroller: { top: 56, height: 744 },
+      row: { top: 740, height: 44 },
+      label: { top: 80, height: 24 },
+    });
+    renderRail();
+
+    // Centred: 762 − (56 + 372).
+    expect(railScroller().scrollTop).toBe(334);
+  });
+
   it("brings the row a reader went to out from under its group's stuck label", () => {
     pathname = `${BASE}/settings/team`;
     const boxes: Boxes = {
@@ -562,6 +579,50 @@ describe("the rail keeps the current row in view", () => {
     renderRail();
 
     expect(railScroller().scrollTop).toBe(0);
+  });
+});
+
+describe("the rail says there is more below", () => {
+  /** The box's measures, read at call time so a test can scroll it. */
+  function stubScroll(box: { scrollHeight: number; clientHeight: number }) {
+    vi.spyOn(HTMLElement.prototype, "scrollHeight", "get").mockImplementation(
+      () => box.scrollHeight,
+    );
+    vi.spyOn(HTMLElement.prototype, "clientHeight", "get").mockImplementation(
+      () => box.clientHeight,
+    );
+  }
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function scroller(container: HTMLElement) {
+    const box = container.querySelector<HTMLElement>("[data-settings-rail-scroller]");
+    if (!box) throw new Error("the rail has no scroll box");
+    return box;
+  }
+
+  it("fades its foot while rows run past the bottom, and clears it at the end", () => {
+    stubScroll({ scrollHeight: 2220, clientHeight: 744 });
+    const { container } = renderRail();
+    const box = scroller(container);
+    expect(box.hasAttribute("data-more-below")).toBe(true);
+
+    box.scrollTop = 2220 - 744;
+    fireEvent.scroll(box);
+    expect(box.hasAttribute("data-more-below")).toBe(false);
+  });
+
+  it("draws no fade when every row already fits", () => {
+    stubScroll({ scrollHeight: 600, clientHeight: 744 });
+    const { container } = renderRail();
+    expect(scroller(container).hasAttribute("data-more-below")).toBe(false);
+  });
+
+  it("is a mask the stylesheet keys to the mark, so the fade is never drawn by default", () => {
+    expect(GLOBALS_CSS).toMatch(
+      /\[data-settings-rail-scroller\]\[data-more-below\]\s*\{[^}]*mask-image/,
+    );
   });
 });
 

@@ -139,6 +139,20 @@ describe("the three groups", () => {
     expect(screen.getByText("Cressi Start · XS")).toBeInTheDocument();
   });
 
+  it("says No size on a sizeless unit and Size not set on a sized one missing its size", () => {
+    const base = unit("Mask #1").item;
+    renderLedger({
+      onWall: wall([
+        unit("Mask #1", { item: { ...base, kind: "mask", size: null, brandModel: null } }),
+        unit("BCD #9", {
+          item: { ...base, id: "unit-BCD9", kind: "bcd", size: null, brandModel: null },
+        }),
+      ]),
+    });
+    expect(screen.getByText("No size")).toBeInTheDocument();
+    expect(screen.getByText("Size not set")).toBeInTheDocument();
+  });
+
   it("never restates the group's own word on its rows", () => {
     renderLedger({
       out: [unit("BCD-02", { reservation: reservation() })],

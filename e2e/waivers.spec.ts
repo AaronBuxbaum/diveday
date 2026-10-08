@@ -150,7 +150,7 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   // DiveDay's marketing homepage (a regression this page used to have).
   await expect(page.getByRole("link", { name: "Contact Blue Mantis Divers" })).toHaveAttribute(
     "href",
-    "mailto:success+front.desk@simulator.amazonses.com",
+    "mailto:front.desk@mail.example",
   );
   await page.getByLabel("Type your full name").fill("Priya Sharma");
   await page.getByLabel("I have read this waiver, understand it, and agree to it.").check();
@@ -234,9 +234,10 @@ test("one waiver button sends a resumable link and a medical yes surfaces follow
   ).toBeVisible();
   await expect(page.getByText("The shop will be in touch.")).toBeVisible();
   await expect(page.getByText("usually before your trip day")).not.toBeVisible();
-  await expect(
-    page.getByRole("link", { name: "success+front.desk@simulator.amazonses.com" }),
-  ).toHaveAttribute("href", "mailto:success+front.desk@simulator.amazonses.com");
+  await expect(page.getByRole("link", { name: "front.desk@mail.example" })).toHaveAttribute(
+    "href",
+    "mailto:front.desk@mail.example",
+  );
   await expect(page.getByRole("link", { name: /left before you sail/ })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Your scheduled dive sites" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Molasses Reef" })).toBeVisible();

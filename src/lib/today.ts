@@ -809,6 +809,11 @@ export type TodayAction = {
    * the detail a staffer reads is already rendered into `detail` above.
    */
   rentalFit?: { reservationId: string };
+  /**
+   * The staff member a staff row is about (`staff_credential_due`), so the crew
+   * lens can keep a reader's own row open rather than fold it with the desk's.
+   */
+  staffPersonId?: string;
   /** The departure this hangs off; drives urgency and ordering. */
   dueAt: Date | null;
 };
@@ -957,6 +962,15 @@ function headlineFor(diver: {
     blocker,
     aboard: Boolean(diver.aboard) && BLOCKER_ACTIONS[blocker.code].kind !== "payment",
   };
+}
+
+/**
+ * Whether a blocked diver aboard a boat that is out keeps a `blocked_aboard`
+ * row: any open blocker but money alone, which changes nothing in the water.
+ * The nav badge counts exactly these divers (`blockedOnNextBoatDay`).
+ */
+export function isBlockedAboard(blockers: readonly ReadinessBlocker[]): boolean {
+  return headlineFor({ blockers, aboard: true })?.aboard === true;
 }
 
 /**
@@ -1634,6 +1648,11 @@ export function assembleDaySpine(today: SpineWork, tomorrow: SpineWork): DaySpin
     },
     week: { jobs: weekJobs },
   };
+}
+
+/** Rows a staffer could still act on before a boat leaves. */
+export function pressingRows(rows: readonly TodayAction[]): number {
+  return rows.filter((row) => ACTION_KIND_META[row.kind].tone !== "neutral").length;
 }
 
 /** Every row the spine holds, wherever it filed. */

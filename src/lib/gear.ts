@@ -182,6 +182,12 @@ export const GEAR_SERVICE_KINDS_FOR: Record<GearItemKind, readonly GearServiceKi
 export type GearAssignmentNeed = {
   kind: GearItemKind;
   size: string | null;
+  /**
+   * The stated size is where a packer starts, not what they pull: a drysuit
+   * diver's fins and gloves (`rentalFitLine`). Nothing proposes a unit on it
+   * (`proposeRentalUnits`). Absent rather than `false`.
+   */
+  sizeIsAStart?: true;
 };
 
 /**
@@ -566,4 +572,54 @@ export type GearReturnOutcome = (typeof GEAR_RETURN_OUTCOMES)[number];
 /** The one outcome that asks for words before it will be written. */
 export function gearReturnOutcomeNeedsNote(outcome: string): boolean {
   return outcome === "service_concern";
+}
+
+/**
+ * **The care that answers a service concern on a unit of this kind.**
+ *
+ * A kind that runs a manufacturer service is cleared by a `service`, never by
+ * a note. A tank never gets one: it is cleared by one of its own checks (a
+ * visual inspection, a hydro test or an O2 clean), and still never by a note.
+ * A kind whose form offers nothing but a note (a wetsuit, a mask, fins) is
+ * cleared by a dated note, because that is the only record those units ever
+ * get (dive-domain review of the Gear tab's proposals).
+ */
+export function serviceConcernClearingKinds(kind: GearItemKind): readonly GearServiceKind[] {
+  const offered = GEAR_SERVICE_KINDS_FOR[kind] ?? [];
+  if (offered.includes("service")) return ["service"];
+  const checks = offered.filter((offeredKind) => offeredKind !== "note");
+  if (checks.length > 0) return checks;
+  return ["note"];
+}
+
+/**
+ * **Whether a unit's last return still stands as a service concern.**
+ *
+ * A `service_concern` return is a flag, not a service record (see
+ * `gearReturnOutcome` in the schema): it stands until somebody writes the care
+ * `serviceConcernClearingKinds` names against the unit after it came home.
+ * "After" is the technician's own date in the shop's zone: a later day always
+ * counts, and on the day it came home the record must also have been written
+ * at or after the return, so a morning service cannot answer a concern raised
+ * that evening.
+ *
+ * Only the **most recent** return that said something counts: a unit that
+ * went out again and came home "all good" has been seen since. A return with
+ * no outcome (the register's quick Return) said nothing, so the caller skips
+ * it rather than let it stand in for the flagged one before it.
+ */
+export function serviceConcernStillOpen(
+  kind: GearItemKind,
+  lastReturn: { outcome: string | null; returnedOn: CalendarDate; returnedAt: Date } | null,
+  events: readonly { kind: GearServiceKind; servicedOn: CalendarDate; createdAt: Date }[],
+): boolean {
+  if (lastReturn?.outcome !== "service_concern") return false;
+  const clearing = serviceConcernClearingKinds(kind);
+  return !events.some(
+    (event) =>
+      clearing.includes(event.kind) &&
+      (event.servicedOn > lastReturn.returnedOn ||
+        (event.servicedOn === lastReturn.returnedOn &&
+          event.createdAt.getTime() >= lastReturn.returnedAt.getTime())),
+  );
 }
