@@ -164,8 +164,17 @@ export const TRIP_REMINDER_RHYTHM: Record<ReminderKind, ReminderRhythmRule> = {
 export function reminderEarnsItsSend(
   kind: ReminderKind,
   checklist: readonly { state: ChecklistState }[] | null,
+  options: {
+    /**
+     * A course student whose learning materials nobody has marked done (ADR
+     * 20261008-course-learning-materials). That is a to-do of its own, so the
+     * week-out nudge still has something to say; ticked, it stops counting.
+     */
+    courseMaterialsDue?: boolean;
+  } = {},
 ): boolean {
   if (TRIP_REMINDER_RHYTHM[kind].unconditional) return true;
+  if (options.courseMaterialsDue) return true;
   if (!checklist || checklist.length === 0) return true;
   return !checklist.every((item) => item.state === "done");
 }

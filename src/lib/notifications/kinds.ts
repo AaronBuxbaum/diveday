@@ -3,6 +3,12 @@ import { DIVER_LOCALES, type DiverLocale, isDiverLocale, toDiverLocale } from "@
 import { isValidCalendarDate } from "@/lib/calendar-date";
 import { ALERTING_LEVELS, CEILING_UNITS, COST_PROVIDERS } from "@/lib/cost-guardrails";
 import { COURSE_INQUIRY_EXPERIENCE } from "@/lib/course-inquiry";
+import {
+  isLearningMaterialLink,
+  LEARNING_MATERIAL_LIMITS,
+  MAX_LEARNING_MATERIALS,
+  MAX_SCHEDULE_DAYS,
+} from "@/lib/courses";
 import { DEMO_ROLE_IDS } from "@/lib/demo-roles";
 import { SHOP_MILESTONES } from "@/lib/founder-metrics";
 import { REPLY_BODY_MAX_LENGTH } from "@/lib/inbox";
@@ -77,6 +83,22 @@ export function recipientLocale(
 
 const reminderActionCodeSchema = z.enum(REMINDER_ACTION_CODES);
 
+/**
+ * A course's learning materials as a message carries them (ADR
+ * 20261008-course-learning-materials). The link is re-checked at the boundary
+ * — `https:` only — because the renderer turns it into an `href`.
+ */
+const learningMaterialsSchema = z
+  .array(
+    z.object({
+      name: z.string().trim().min(1).max(LEARNING_MATERIAL_LIMITS.name),
+      url: z.string().max(LEARNING_MATERIAL_LIMITS.url).refine(isLearningMaterialLink).optional(),
+      note: z.string().trim().min(1).max(LEARNING_MATERIAL_LIMITS.note).optional(),
+    }),
+  )
+  .max(MAX_LEARNING_MATERIALS)
+  .optional();
+
 const bookingConfirmationSchema = z.object({
   kind: z.literal("booking_confirmation"),
   bookingId: z.uuid(),
@@ -92,6 +114,7 @@ const bookingConfirmationSchema = z.object({
   dockCallMinutes: z.number().int().min(5).max(180).optional(),
   readinessUrl: z.url().max(2_000).optional(),
   packingList: z.array(z.string().trim().min(1).max(100)).max(12).optional(),
+  learningMaterials: learningMaterialsSchema,
   /**
    * Set only by a caller sending a *second* confirmation for the same
    * `bookingId` — a reschedule reactivating a previously-cancelled row, or a
@@ -358,6 +381,13 @@ const tripReminderFields = {
    * only obeys.
    */
   replyKeywords: z.boolean().optional(),
+  /** Carried only while nobody has marked this student's materials done. */
+  learningMaterials: learningMaterialsSchema,
+  /** Every meeting of a multi-day course session, so the email can list each day. */
+  scheduleDays: z
+    .array(z.object({ startsAt: z.date(), endsAt: z.date() }))
+    .max(MAX_SCHEDULE_DAYS)
+    .optional(),
 };
 
 // The night-before brief's extra sections, carried only on the 24h cadence

@@ -67,6 +67,90 @@ describe("bookingConfirmationEmail", () => {
   });
 });
 
+describe("course learning materials (ADR 20261008-course-learning-materials)", () => {
+  const materials = [
+    {
+      name: "PADI Open Water eLearning",
+      url: "https://www.padi.com/",
+      note: "Finish before day 1",
+    },
+    { name: "Logbook <yours>" },
+  ];
+
+  it("lists the materials on the booking confirmation, linked", () => {
+    const email = bookingConfirmationEmail({ ...base, learningMaterials: materials });
+    expect(email.text).toContain("Before your first day");
+    expect(email.text).toContain("- PADI Open Water eLearning (Finish before day 1)");
+    expect(email.text).toContain("https://www.padi.com/");
+    expect(email.html).toContain('<a href="https://www.padi.com/"');
+    // The shop's words are escaped, never markup.
+    expect(email.html).toContain("Logbook &lt;yours&gt;");
+    expect(email.html).not.toContain("<yours>");
+  });
+
+  it("never links a stored link that is not https", () => {
+    const email = bookingConfirmationEmail({
+      ...base,
+      learningMaterials: [{ name: "Manual", url: "javascript:alert(1)" }],
+    });
+    expect(email.html).toContain("Manual");
+    expect(email.html).not.toContain("javascript:");
+    expect(email.text).not.toContain("javascript:");
+  });
+
+  it("says nothing about materials on a booking that has none", () => {
+    for (const learningMaterials of [undefined, []]) {
+      const email = bookingConfirmationEmail({ ...base, learningMaterials });
+      expect(email.text).not.toContain("Before your first day");
+      expect(email.html).not.toContain("Before your first day");
+    }
+  });
+
+  it("repeats them on the week-out reminder", () => {
+    const email = tripReminderEmail({ ...base, lead: "week", learningMaterials: materials });
+    expect(email.text).toContain("Before your first day");
+    expect(email.html).toContain('<a href="https://www.padi.com/"');
+  });
+
+  it("lists every day of a multi-day course in the shop's zone", () => {
+    const email = tripReminderEmail({
+      ...base,
+      lead: "week",
+      scheduleDays: [
+        // Out of order on purpose: the email sorts them.
+        {
+          startsAt: new Date("2026-08-02T12:00:00.000Z"),
+          endsAt: new Date("2026-08-02T20:00:00.000Z"),
+        },
+        {
+          startsAt: new Date("2026-08-01T13:00:00.000Z"),
+          endsAt: new Date("2026-08-01T17:00:00.000Z"),
+        },
+      ],
+    });
+    expect(email.text).toContain("Your course days");
+    const day1 = email.text.indexOf("Day 1:");
+    const day2 = email.text.indexOf("Day 2:");
+    expect(day1).toBeGreaterThan(-1);
+    expect(day2).toBeGreaterThan(day1);
+    // 13:00Z is 9 AM in New York; 12:00Z the next day is 8 AM.
+    expect(email.text.slice(day1, day2)).toMatch(/Aug\s1/);
+    expect(email.text.slice(day1, day2)).toMatch(/9/);
+    expect(email.text.slice(day2)).toMatch(/Aug\s2/);
+    expect(email.text.slice(day2)).toMatch(/8/);
+    expect(email.html).toContain("Your course days");
+  });
+
+  it("keeps the one-line date for a single meeting", () => {
+    const email = tripReminderEmail({
+      ...base,
+      lead: "day",
+      scheduleDays: [{ startsAt: base.startsAt, endsAt: base.endsAt }],
+    });
+    expect(email.text).not.toContain("Your course days");
+  });
+});
+
 describe("tripConditionsHoldEmail", () => {
   it("reassures the diver that their seat remains held and includes the crew note", () => {
     const email = tripConditionsHoldEmail({

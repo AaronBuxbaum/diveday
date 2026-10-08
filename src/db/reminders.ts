@@ -1,9 +1,10 @@
-import { and, eq, gt, inArray, lt, lte, ne } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, lt, lte, ne } from "drizzle-orm";
 import { type DiverTranslator, diverTranslator } from "@/i18n/messages";
 import { reminderActionText } from "@/i18n/reminder-labels";
 import type { DiverLocale } from "@/i18n/settings";
 import { readinessLinkPath } from "@/lib/booking-capabilities";
 import { HOUR_MS, nowDate } from "@/lib/clock";
+import { readLearningMaterials } from "@/lib/courses";
 import { formatShortDate, formatTimeRangeTz } from "@/lib/format";
 import { firstTimerReassuranceText, forecastText } from "@/lib/night-before-brief";
 import {
@@ -41,7 +42,15 @@ import {
   sendNotificationBatch,
 } from "./notifications";
 import { listTripsReadiness } from "./readiness";
-import { bookings, notificationDeliveries, people, shops, trips } from "./schema";
+import {
+  bookings,
+  courses,
+  notificationDeliveries,
+  people,
+  shops,
+  tripScheduleDays,
+  trips,
+} from "./schema";
 import { stopListedSmsProvider } from "./sms-opt-outs";
 import { whatsAppProvidersForShops } from "./whatsapp-accounts";
 
@@ -146,6 +155,8 @@ function reminderSmsBody(
     whoToText?: string | null;
     /** Whether this body may end with the reply line (ADR 20260909-reply-keywords). */
     replyKeywords?: boolean;
+    /** Unfinished course materials, by name — on the to-do list like a waiver. */
+    materialNames?: string[];
   },
 ): string {
   const when =
@@ -159,6 +170,7 @@ function reminderSmsBody(
   // Name the diver's own outstanding items rather than a generic nudge.
   const todo = input.outstanding.map((code) => reminderActionText(t, code));
   if (input.medicalReview) todo.push(t("notifications.sms.medicalReviewNote"));
+  todo.push(...(input.materialNames ?? []));
   const todoText = todo.length
     ? ` ${t("notifications.common.outstandingHeading")} ${todo.join("; ")}.`
     : "";
@@ -224,11 +236,22 @@ export async function sendDueReminders(
   const horizon = new Date(now.getTime() + MAX_REMINDER_LEAD_HOURS * HOUR_MS);
 
   const rows = await db
-    .select({ booking: bookings, person: people, trip: trips, shop: shops })
+    .select({
+      booking: bookings,
+      person: people,
+      trip: trips,
+      shop: shops,
+      // A course session's learning materials (ADR
+      // 20261008-course-learning-materials); null on a fun dive. Joined on the
+      // shop as well as the id, so a course row can only ever be this trip's
+      // own shop's.
+      courseMaterials: courses.learningMaterials,
+    })
     .from(bookings)
     .innerJoin(people, eq(people.id, bookings.personId))
     .innerJoin(trips, eq(trips.id, bookings.tripId))
     .innerJoin(shops, eq(shops.id, bookings.shopId))
+    .leftJoin(courses, and(eq(courses.id, trips.courseId), eq(courses.shopId, trips.shopId)))
     .where(
       and(
         ne(bookings.status, "cancelled"),
@@ -364,8 +387,30 @@ export async function sendDueReminders(
     }),
   );
 
+  // Every meeting of each due trip, in day order — one read for the whole
+  // pass. A multi-day course's reminder lists each day; one meeting (or none
+  // on file) keeps the single date and time it always had.
+  const dueTripIds = [...new Set(dueRows.map(({ row }) => row.trip.id))];
+  const meetingsByTrip = new Map<string, { startsAt: Date; endsAt: Date }[]>();
+  if (dueTripIds.length > 0) {
+    const meetings = await db
+      .select({
+        tripId: tripScheduleDays.tripId,
+        startsAt: tripScheduleDays.startsAt,
+        endsAt: tripScheduleDays.endsAt,
+      })
+      .from(tripScheduleDays)
+      .where(inArray(tripScheduleDays.tripId, dueTripIds))
+      .orderBy(asc(tripScheduleDays.tripId), asc(tripScheduleDays.dayNumber));
+    for (const meeting of meetings) {
+      const list = meetingsByTrip.get(meeting.tripId) ?? [];
+      list.push({ startsAt: meeting.startsAt, endsAt: meeting.endsAt });
+      meetingsByTrip.set(meeting.tripId, list);
+    }
+  }
+
   for (const {
-    row: { booking, person, trip, shop },
+    row: { booking, person, trip, shop, courseMaterials },
     cadence,
   } of dueRows) {
     // The diver's own checklist, from the same engine their readiness page
@@ -375,6 +420,15 @@ export async function sendDueReminders(
     const checklist = evidence
       ? buildDiverChecklist(evidence.requirement, evidence.readiness)
       : null;
+    // A course student's learning materials ride the week-out nudge until a
+    // staffer marks them done (ADR 20261008-course-learning-materials). They
+    // are a to-do of their own, so they also keep that nudge from being
+    // suppressed as settled; the night-before brief never repeats them.
+    const materialsDue =
+      cadence.kind === "trip_reminder_7d" && !booking.courseMaterialsDoneAt
+        ? readLearningMaterials(courseMaterials)
+        : [];
+    const meetings = meetingsByTrip.get(trip.id) ?? [];
 
     // **Due, sendable, and still not worth sending.** The 7-day nudge carries
     // the diver's to-do list and nothing else, so with nothing on it there is
@@ -384,7 +438,11 @@ export async function sendDueReminders(
     // and no phone is counted settled rather than failed. Nothing is written:
     // the un-sent cadence is what re-arms the nudge if a card lapses later in
     // the same week-wide bucket.
-    if (!reminderEarnsItsSend(cadence.kind, checklist)) {
+    if (
+      !reminderEarnsItsSend(cadence.kind, checklist, {
+        courseMaterialsDue: materialsDue.length > 0,
+      })
+    ) {
       summary.settled += 1;
       continue;
     }
@@ -463,6 +521,7 @@ export async function sendDueReminders(
         forecast,
         whoToText,
         replyKeywords,
+        materialNames: materialsDue.map((material) => material.name),
       });
     const smsBody = reminderText(false);
     // The same reminder, plus the reply line, for the one text channel that
@@ -502,6 +561,8 @@ export async function sendDueReminders(
           readinessUrl,
           ...(inboundEmailOn ? { replyKeywords: true } : {}),
           ...(brief ? { brief } : {}),
+          ...(materialsDue.length > 0 ? { learningMaterials: materialsDue } : {}),
+          ...(meetings.length > 1 ? { scheduleDays: meetings } : {}),
         },
       });
     } else if (phone) {

@@ -545,6 +545,8 @@
     "jumpDates": "Dates",
     "jumpQuestions": "Questions",
     "jumpContact": "Get in touch",
+    "privateAvailable": "Private course available",
+    "privateAsk": "Ask the shop",
     "nextDate": "Next date",
     "nextOpenDate": "Next open date",
     "moreDates": "More dates",
@@ -734,6 +736,7 @@
     "metaTitle": "Your trip readiness — DiveDay",
     "namelessFallback": "there",
     "allSetHeading": "You’re all set",
+    "materialsDone": "The shop has these marked done",
     "openingPayment": "Opening payment…",
     "cancelledHeading": "This booking was canceled",
     "unavailableHeading": "This readiness link isn’t available",
@@ -4063,6 +4066,13 @@
       "arrival": "Aim to be at the dock by {time}, {dock} before we sail.",
       "hotelPickupArrival": "Your morning pickup is scheduled for {time} at {location}.",
       "hotelNotSet": "your hotel"
+    },
+    "courseMaterials": {
+      "heading": "Before your first day"
+    },
+    "courseDays": {
+      "heading": "Your course days",
+      "day": "Day {number}: {date}, {time}"
     },
     "tripRecap": {
       "subject": "Your dive with {shopName} — {tripTitle}",

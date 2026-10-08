@@ -4,6 +4,7 @@ import { reminderActionText } from "@/i18n/reminder-labels";
 import type { DiverLocale } from "@/i18n/settings";
 import { type CalendarDate, formatCalendarDate } from "@/lib/calendar-date";
 import { COURSE_INQUIRY_EXPERIENCE_KEYS, type CourseInquiryExperience } from "@/lib/course-inquiry";
+import { type CourseLearningMaterial, isLearningMaterialLink } from "@/lib/courses";
 import type { DemoRoleId } from "@/lib/demo-roles";
 import { type FlySafeResult, flySafeMessageKey } from "@/lib/fly-safe";
 import {
@@ -41,6 +42,8 @@ type BookingConfirmationEmailInput = {
   readinessUrl?: string;
   /** The shop's configured packing suggestions (`shops.packingList`). */
   packingList?: string[];
+  /** A course session's learning materials, already read through `readLearningMaterials`. */
+  learningMaterials?: CourseLearningMaterial[];
 };
 
 type WaiverRequestEmailInput = {
@@ -187,6 +190,18 @@ type TripReminderEmailInput = {
   readinessUrl?: string;
   /** Present on the night-before (day) lead only; enriches it into a full brief. */
   brief?: NightBeforeBriefInput;
+  /**
+   * A course session's learning materials, carried by the week-out reminder
+   * only while nobody has marked this student's done (ADR
+   * 20261008-course-learning-materials).
+   */
+  learningMaterials?: CourseLearningMaterial[];
+  /**
+   * Every meeting of a multi-day course session, in day order. Drawn in place
+   * of the single date and time once there is more than one, so a student
+   * knows when day 2 is without opening anything.
+   */
+  scheduleDays?: { startsAt: Date; endsAt: Date }[];
   /**
    * Whether this message can be replied to with a keyword (ADR
    * 20260909-reply-keywords). Decided by the sender, because it is a fact
@@ -487,6 +502,83 @@ function outstandingLines(
 }
 
 /**
+ * A course's learning materials under one heading (ADR
+ * 20261008-course-learning-materials): each name, its link when there is one,
+ * and its note. The link is checked again here rather than trusted from the
+ * caller, because this is the line that turns it into an `href` in somebody's
+ * inbox — anything not `https:` is printed as its name alone. Empty strings
+ * when there is nothing to list.
+ */
+function materialsSection(t: DiverTranslator, materials: CourseLearningMaterial[] | undefined) {
+  const items = (materials ?? []).filter((material) => material.name.trim());
+  if (items.length === 0) return { text: "", html: "" };
+  const heading = t("notifications.courseMaterials.heading");
+  const textLines = items.map((material) => {
+    const link = material.url && isLearningMaterialLink(material.url) ? material.url : null;
+    return [
+      `- ${material.name}`,
+      material.note ? ` (${material.note})` : "",
+      link ? `\n  ${link}` : "",
+    ].join("");
+  });
+  const htmlItems = items.map((material) => {
+    const link = material.url && isLearningMaterialLink(material.url) ? material.url : null;
+    const name = link
+      ? `<a href="${escapeHtml(link)}" target="_blank">${escapeHtml(material.name)}</a>`
+      : escapeHtml(material.name);
+    const note = material.note
+      ? `<br><span style="font-size: 13px;">${escapeHtml(material.note)}</span>`
+      : "";
+    return `<li style="margin-bottom: 6px;">${name}${note}</li>`;
+  });
+  return {
+    text: `\n\n${heading}\n${textLines.join("\n")}\n`,
+    html: `<div class="dd-panel" style="margin-top: 20px; padding: 15px; border-left: 4px solid ${BRAND_PRIMARY_COLOR}; background-color: #f3f4f6; border-radius: 8px;"><strong>${escapeHtml(heading)}</strong><ul style="margin-top: 8px; padding-left: 20px; margin-bottom: 0;">${htmlItems.join("")}</ul></div>`,
+  };
+}
+
+/**
+ * When a session meets: one date and time, or — for a multi-day course — every
+ * day it meets, each with its own date and hours in the shop's zone. A single
+ * meeting (or none on file) is the ordinary line, so a one-day course and a
+ * fun dive read exactly as they always have.
+ */
+function whenLines(
+  t: DiverTranslator,
+  input: {
+    locale: DiverLocale;
+    timezone: string;
+    startsAt: Date;
+    endsAt: Date;
+    scheduleDays?: { startsAt: Date; endsAt: Date }[];
+  },
+) {
+  const days = [...(input.scheduleDays ?? [])].sort(
+    (a, b) => a.startsAt.getTime() - b.startsAt.getTime(),
+  );
+  if (days.length < 2) {
+    const date = formatShortDate(input.startsAt, input.locale, input.timezone);
+    const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
+    return {
+      text: `${date}\n${time}`,
+      html: `<p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>`,
+    };
+  }
+  const heading = t("notifications.courseDays.heading");
+  const lines = days.map((day, index) =>
+    t("notifications.courseDays.day", {
+      number: index + 1,
+      date: formatShortDate(day.startsAt, input.locale, input.timezone),
+      time: formatTimeRangeTz(day.startsAt, day.endsAt, input.locale, input.timezone),
+    }),
+  );
+  return {
+    text: `${heading}\n${lines.map((line) => `- ${line}`).join("\n")}`,
+    html: `<p><strong>${escapeHtml(heading)}</strong></p><ul>${lines.map((line) => `<li>${escapeHtml(line)}</li>`).join("")}</ul>`,
+  };
+}
+
+/**
  * The night-before brief's body — conditions, what to bring, and who to text —
  * rendered as text + html fragments slotted between the dock-time line and the
  * outstanding-items list. Empty strings when the brief carries nothing, so the
@@ -573,11 +665,14 @@ export function bookingConfirmationEmail(input: BookingConfirmationEmailInput): 
     shopName: input.shopName,
   });
   const dockNoteHtml = t("notifications.bookingConfirmation.dockNote", { dock, shopName: shop });
+  // A course's learning materials, above the packing list: the eLearning is
+  // the one thing on this page with a deadline weeks before the boat.
+  const materials = materialsSection(t, input.learningMaterials);
 
   return {
     subject: t("notifications.bookingConfirmation.subject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${confirmed}\n\n${date}\n${time}\n\n${dockNote}${readyText}${reminderText}`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${confirmedHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>${dockNoteHtml}</p>${readyHtml}${reminderHtml}`,
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${confirmed}\n\n${date}\n${time}\n\n${dockNote}${readyText}${materials.text}${reminderText}`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${confirmedHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>${dockNoteHtml}</p>${readyHtml}${materials.html}${reminderHtml}`,
   };
 }
 
@@ -729,8 +824,8 @@ export function checkoutRecoveryEmail(input: CheckoutRecoveryEmailInput): Notifi
 export function tripReminderEmail(input: TripReminderEmailInput): NotificationEmail {
   const t = diverTranslator(input.locale);
   const firstName = firstNameOf(input.diverName, t("notifications.common.genericName"));
-  const date = formatShortDate(input.startsAt, input.locale, input.timezone);
-  const time = formatTimeRangeTz(input.startsAt, input.endsAt, input.locale, input.timezone);
+  // One date and time, or every day a multi-day course meets.
+  const when = whenLines(t, input);
   const title = escapeHtml(input.tripTitle);
   const shop = escapeHtml(input.shopName);
   const seeWhatsLeft = t("notifications.common.seeWhatsLeft");
@@ -777,8 +872,8 @@ export function tripReminderEmail(input: TripReminderEmailInput): NotificationEm
         });
     return {
       subject: t("notifications.tripReminder.daySubject", { tripTitle: input.tripTitle }),
-      text: `${t("notifications.common.greeting", { firstName })}\n\n${opener}\n\n${date}\n${time}${brief.text}${todo.text}${readyText}${keywordText}`,
-      html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${openerHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p>${brief.html}${todo.html}${readyHtml}${keywordHtml}`,
+      text: `${t("notifications.common.greeting", { firstName })}\n\n${opener}\n\n${when.text}${brief.text}${todo.text}${readyText}${keywordText}`,
+      html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${openerHtml}</p>${when.html}${brief.html}${todo.html}${readyHtml}${keywordHtml}`,
     };
   }
 
@@ -791,11 +886,14 @@ export function tripReminderEmail(input: TripReminderEmailInput): NotificationEm
     shopName: shop,
   });
   const dockNote = t("notifications.tripReminder.dockNote", { dock });
+  // The week-out nudge is the to-do list, and unfinished course materials are
+  // on it. The sender stops passing them once a staffer marks them done.
+  const materials = materialsSection(t, input.learningMaterials);
 
   return {
     subject: t("notifications.tripReminder.weekSubject", { tripTitle: input.tripTitle }),
-    text: `${t("notifications.common.greeting", { firstName })}\n\n${weekBody}\n\n${date}\n${time}\n\n${dockNote}${todo.text}${readyText}${keywordText}`,
-    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${weekBodyHtml}</p><p><strong>${escapeHtml(date)}</strong><br>${escapeHtml(time)}</p><p>${dockNote}</p>${todo.html}${readyHtml}${keywordHtml}`,
+    text: `${t("notifications.common.greeting", { firstName })}\n\n${weekBody}\n\n${when.text}\n\n${dockNote}${todo.text}${materials.text}${readyText}${keywordText}`,
+    html: `<p>${t("notifications.common.greeting", { firstName: escapeHtml(firstName) })}</p><p>${weekBodyHtml}</p>${when.html}<p>${dockNote}</p>${todo.html}${materials.html}${readyHtml}${keywordHtml}`,
   };
 }
 

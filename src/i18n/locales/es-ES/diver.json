@@ -545,6 +545,8 @@
     "jumpDates": "Fechas",
     "jumpQuestions": "Preguntas",
     "jumpContact": "Contacto",
+    "privateAvailable": "Curso privado disponible",
+    "privateAsk": "Pregunta al centro",
     "nextDate": "Próxima fecha",
     "nextOpenDate": "Próxima fecha disponible",
     "moreDates": "Más fechas",
@@ -734,6 +736,7 @@
     "metaTitle": "Tu preparación para la salida — DiveDay",
     "namelessFallback": "buceador",
     "allSetHeading": "Lo tienes todo listo",
+    "materialsDone": "El centro ya los tiene como hechos",
     "openingPayment": "Abriendo el pago…",
     "cancelledHeading": "Esta reserva se canceló",
     "unavailableHeading": "Este enlace de preparación no está disponible",
@@ -4063,6 +4066,13 @@
       "arrival": "Procura estar en el muelle a las {time}, {dock} antes de zarpar.",
       "hotelPickupArrival": "Tu recogida de la mañana está programada a las {time} en {location}.",
       "hotelNotSet": "tu hotel"
+    },
+    "courseMaterials": {
+      "heading": "Antes de tu primer día"
+    },
+    "courseDays": {
+      "heading": "Los días de tu curso",
+      "day": "Día {number}: {date}, {time}"
     },
     "tripRecap": {
       "subject": "Tu inmersión con {shopName} — {tripTitle}",
