@@ -190,8 +190,8 @@ describe("checkRateLimit — fail-open is observable", () => {
   });
 
   it("tags which store failed, so an Upstash incident is not confused with a bug in this file", async () => {
-    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://example.upstash.io");
-    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "test-token");
+    vi.stubEnv("KV_REST_API_URL", "https://example.upstash.io");
+    vi.stubEnv("KV_REST_API_TOKEN", "test-token");
     // Stubbed *before* the re-import, because the module picks its default
     // store — and that store captures its `fetch` — at load. A unit test must
     // not depend on a real DNS failure to produce the outage it is asserting
@@ -236,8 +236,8 @@ describe("checkRateLimit — the in-memory store announces itself in production"
 
   beforeEach(() => {
     warned = vi.spyOn(console, "warn").mockImplementation(() => {});
-    vi.stubEnv("UPSTASH_REDIS_REST_URL", "");
-    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "");
+    vi.stubEnv("KV_REST_API_URL", "");
+    vi.stubEnv("KV_REST_API_TOKEN", "");
     vi.stubEnv("DIVEDAY_RATE_LIMIT_DISABLED", "");
     vi.stubEnv("DIVEDAY_E2E", "");
   });
@@ -294,8 +294,8 @@ describe("checkRateLimit — the in-memory store announces itself in production"
 
   it("stays quiet in production when the distributed store is configured", async () => {
     vi.stubEnv("NODE_ENV", "production");
-    vi.stubEnv("UPSTASH_REDIS_REST_URL", "https://example.upstash.io");
-    vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "test-token");
+    vi.stubEnv("KV_REST_API_URL", "https://example.upstash.io");
+    vi.stubEnv("KV_REST_API_TOKEN", "test-token");
     vi.stubGlobal("fetch", async () => new Response(JSON.stringify({ result: [1, "2"] })));
     const check = await freshLimiter();
 
@@ -532,8 +532,8 @@ describe("rateLimitStoreFromEnvironment", () => {
     const { fetchImpl, requests } = fakeUpstash();
     const store = rateLimitStoreFromEnvironment(
       {
-        UPSTASH_REDIS_REST_URL: "https://example.upstash.io",
-        UPSTASH_REDIS_REST_TOKEN: "test-token",
+        KV_REST_API_URL: "https://example.upstash.io",
+        KV_REST_API_TOKEN: "test-token",
       },
       fetchImpl,
     );
@@ -544,7 +544,7 @@ describe("rateLimitStoreFromEnvironment", () => {
   it("falls back to in-memory when only one of the two Upstash env vars is set", async () => {
     const { fetchImpl, requests } = fakeUpstash();
     const store = rateLimitStoreFromEnvironment(
-      { UPSTASH_REDIS_REST_URL: "https://example.upstash.io" },
+      { KV_REST_API_URL: "https://example.upstash.io" },
       fetchImpl,
     );
     await store.take("k", config, 0);

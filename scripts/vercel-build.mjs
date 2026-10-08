@@ -12,6 +12,13 @@ function run(command, args, timeoutMs) {
 // VERCEL_ENV is available only when Vercel's System Environment Variables are enabled.
 // Keep previews read-only: schema changes apply only to the production deployment of main.
 if (process.env.VERCEL_ENV === "production") {
+  // First, because it is the cheapest refusal and the one a human has to act
+  // on: every registry row marked `requiredInProduction` (the Upstash pair
+  // today, without which every rate limit is per serverless instance) must be
+  // set on the Vercel project, or the deploy fails here naming the keys. A
+  // deploy that fails loudly beats a feature that fails quietly; decided
+  // 2026-10-07 (issue #2244). Previews and local builds are not asked.
+  run("node", ["scripts/check-env.mjs"], SUBPROCESS_TIMEOUTS.nodeScript);
   // The last thing standing between a contracting migration and the database.
   // This build applies DDL while the *previous* release is still serving
   // traffic, and there are no down migrations — so the guard refuses a `DROP`,

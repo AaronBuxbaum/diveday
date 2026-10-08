@@ -189,7 +189,7 @@ export function upstashRateLimitStore(
 }
 
 /**
- * `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` absent (the default —
+ * `KV_REST_API_URL` + `KV_REST_API_TOKEN` absent (the default —
  * every deployment until one is provisioned) falls back to the in-memory
  * store, so dev/e2e/an unconfigured deployment stay zero-setup (ADR
  * 20260801-distributed-rate-limit-store).
@@ -199,8 +199,8 @@ export function rateLimitStoreFromEnvironment(
   fetchImpl: Fetch = fetch,
 ): RateLimitStore {
   const config = upstashConfigSchema.safeParse({
-    url: env.UPSTASH_REDIS_REST_URL,
-    token: env.UPSTASH_REDIS_REST_TOKEN,
+    url: env.KV_REST_API_URL,
+    token: env.KV_REST_API_TOKEN,
   });
   return config.success ? upstashRateLimitStore(config.data, fetchImpl) : inMemoryRateLimitStore();
 }
@@ -216,8 +216,8 @@ const defaultStore = rateLimitStoreFromEnvironment();
  * error reads the same either way.
  */
 const defaultStoreKind: "upstash" | "memory" = upstashConfigSchema.safeParse({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN,
+  url: process.env.KV_REST_API_URL,
+  token: process.env.KV_REST_API_TOKEN,
 }).success
   ? "upstash"
   : "memory";

@@ -161,7 +161,7 @@ budget back, rather than waiting for a hard window edge. `checkRateLimit` is
 `async` and every call site awaits it.
 
 **Distributed when configured, per-instance otherwise.** Set both
-`UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` (Vercel's own Upstash
+`KV_REST_API_URL` and `KV_REST_API_TOKEN` (Vercel's own Upstash
 integration provisions both together) and `rateLimitStoreFromEnvironment()`
 switches to `upstashRateLimitStore` — a real global ceiling across every
 serverless instance/region, enforced atomically via one Redis `EVAL`'d Lua
@@ -228,14 +228,14 @@ designed, and it is not up for renegotiation in an incident.
 **What to do.**
 
 1. Check `store`. `upstash` → check the Upstash console/status and the
-   `UPSTASH_REDIS_REST_*` values on the deployment (a rotated token reads as a
+   `KV_REST_API_*` values on the deployment (a rotated token reads as a
    401 from the REST API, which the store turns into a throw). `memory` → this
    is a code bug, not an outage; open it as one.
 2. Treat "unprotected" as the live risk, not the log volume. If the incident is
    long, put a platform-level (Vercel Firewall/WAF) rule in front of the
    affected paths — the in-app limiter cannot be the answer while its store is
    down.
-3. Removing both `UPSTASH_REDIS_REST_*` env vars is a valid last resort: the
+3. Removing both `KV_REST_API_*` env vars is a valid last resort: the
    next cold start falls back to the in-memory store, which is per-instance but
    working. Re-add them once the incident is over.
 
@@ -276,7 +276,7 @@ locally, start the server with `DIVEDAY_RATE_LIMIT_DISABLED=0 pnpm dev`.
 
 Create an Upstash Redis database (directly, or through Vercel's Upstash
 integration, which sets both env vars on the project automatically) and set
-`UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` on the deployment. No
+`KV_REST_API_URL` + `KV_REST_API_TOKEN` on the deployment. No
 code change or redeploy-time flag needed — `rateLimitStoreFromEnvironment()`
 picks it up from the environment on the next cold start. No SDK package is
 involved; `upstashRateLimitStore` calls Upstash's REST API directly with
