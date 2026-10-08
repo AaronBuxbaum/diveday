@@ -64,7 +64,7 @@ export function GearRentalsList({
             label={
               <Link
                 href={shopPath(shopSlug, "divers", holder.personId)}
-                className="normal-case tracking-normal text-foreground hover:underline"
+                className="text-sm normal-case tracking-normal text-foreground hover:underline"
               >
                 {holder.name}
               </Link>

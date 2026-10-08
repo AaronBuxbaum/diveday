@@ -8,18 +8,19 @@ import { openTripFromBoard, openTripTab } from "./helpers";
  * the seal, and the text the diver signed — with no door on the paper.
  *
  * The page's permission walls are the reader's (`getSignedWaiverForDiver`):
- * every answer for an owner or manager, only the flagged prompts for anyone
- * else. Paper may not widen that, so both readers print here.
+ * the physician's name and every answer for an owner or manager, and for
+ * anyone else only what the trip roster already shows them. Paper may not
+ * widen that, so both readers print here.
  */
 
-/** Morgan Vale's release: the demo's medical-review training hold. */
-async function openMorgansWaiver(page: Page) {
+/** Rowan Pike's release: a physician's dated, named refusal above the text. */
+async function openRowansWaiver(page: Page) {
   await page.goto("/shop/blue-mantis/schedule/board");
   await openTripFromBoard(page, "Afternoon Two-Tank — French Reef");
   await openTripTab(page, "Trip");
   const diver = page
     .locator("li")
-    .filter({ has: page.getByText("Morgan Vale", { exact: true }) })
+    .filter({ has: page.getByText("Rowan Pike", { exact: true }) })
     .filter({ visible: true });
   await diver.getByRole("link", { name: "View signed record" }).click();
   await page.waitForURL(/\/divers\/[^/]+\/waivers\/[^/]+$/);
@@ -30,7 +31,8 @@ test.describe("as the owner", () => {
   signedInAsOwner();
 
   test("prints the signed waiver as a clean document", async ({ page }) => {
-    await openMorgansWaiver(page);
+    await openRowansWaiver(page);
+    const main = page.locator("main");
     // The Print button opens the browser's own dialog; a stub stands in for
     // it, so the test proves the tap reaches `window.print` and nothing else.
     await page.evaluate(() => {
@@ -45,24 +47,30 @@ test.describe("as the owner", () => {
       .toBe(1);
 
     // On screen the diver's name is the way back to their record, and the
-    // shop's name is the chrome's; neither line of paper exists yet.
-    await expect(page.getByRole("link", { name: "Morgan Vale" })).toBeVisible();
-    await expect(page.getByText("Blue Mantis Divers", { exact: true })).toBeHidden();
+    // page carries no line of its own naming the shop.
+    await expect(main.getByRole("link", { name: "Rowan Pike" })).toBeVisible();
+    await expect(
+      main.getByText("Blue Mantis Divers", { exact: true }).filter({ visible: true }),
+    ).toHaveCount(0);
 
     await page.emulateMedia({ media: "print" });
-    await expect(page.getByText("Blue Mantis Divers", { exact: true })).toBeVisible();
-    await expect(page.getByText("Diver", { exact: true })).toBeVisible();
-    await expect(page.getByText("Morgan Vale", { exact: true })).toBeVisible();
-    await expect(page.getByText("Seal", { exact: true })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "What they signed" })).toBeVisible();
+    await expect(main.getByText("Blue Mantis Divers", { exact: true })).toBeVisible();
+    await expect(main.getByText("Diver", { exact: true })).toBeVisible();
+    await expect(main.getByText("Seal", { exact: true })).toBeVisible();
+    await expect(main.getByText("Sealed and unchanged")).toBeVisible();
+    await expect(main.getByRole("heading", { name: "What they signed" })).toBeVisible();
     // The signed time names its zone: a printed release outlives the screen
     // that knew which shop it came from.
-    await expect(page.getByText(/\b(EDT|EST|GMT[+-]\d+)\b/).first()).toBeVisible();
+    await expect(main.getByText(/\b(EDT|EST)\b/).first()).toBeVisible();
+    // An owner reads the physician's name, on paper as on screen.
+    await expect(main.getByText("Physician: Dr. Imani Reyes")).toBeVisible();
     // No door reaches paper: not Print, not the way back up.
-    await expect(page.getByRole("button", { name: "Print / save PDF" })).toBeHidden();
-    await expect(page.getByRole("link", { name: "Morgan Vale" })).toBeHidden();
-    // An owner reads every answer, so the paper carries the noes too.
-    await expect(page.getByText("No", { exact: true }).first()).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Print / save PDF" }).filter({ visible: true }),
+    ).toHaveCount(0);
+    await expect(
+      main.getByRole("link", { name: "Rowan Pike" }).filter({ visible: true }),
+    ).toHaveCount(0);
     await page.emulateMedia({ media: "screen" });
   });
 });
@@ -70,16 +78,20 @@ test.describe("as the owner", () => {
 test.describe("as a divemaster", () => {
   signedInAs("divemaster");
 
-  test("prints only what the screen shows them: the flagged prompts, never every answer", async ({
-    page,
-  }) => {
-    await openMorgansWaiver(page);
+  test("prints only what the screen shows them, never the owner's half", async ({ page }) => {
+    await openRowansWaiver(page);
+    const main = page.locator("main");
     await page.emulateMedia({ media: "print" });
-    await expect(page.getByRole("heading", { name: "What they signed" })).toBeVisible();
-    // The flagged prompt is what whoever records a clearance needs to read…
-    await expect(page.getByText("Yes", { exact: true }).first()).toBeVisible();
-    // …and the answers an owner reads above stay off this reader's paper.
-    await expect(page.getByText("No", { exact: true })).toHaveCount(0);
+    await expect(main.getByRole("heading", { name: "What they signed" })).toBeVisible();
+    await expect(
+      main.getByText("A physician did not clear this diver.", { exact: false }),
+    ).toBeVisible();
+    await expect(
+      main.getByText("Only an owner or manager can read the full questionnaire."),
+    ).toBeVisible();
+    // The physician's name is the owner's and manager's to read; the owner's
+    // test above finds it on the same paper.
+    await expect(main.getByText(/^Physician:/).filter({ visible: true })).toHaveCount(0);
     await page.emulateMedia({ media: "screen" });
   });
 });
