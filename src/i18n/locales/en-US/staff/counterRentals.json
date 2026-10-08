@@ -36,7 +36,32 @@
       "notAuthorized": "Only an owner or manager can send an invoice.",
       "paymentNotConnected": "Payments aren’t connected, so no invoice can go.",
       "needsEmail": "An invoice needs an email on file.",
-      "duplicate": "A person with that email is already on file. Find them above."
+      "duplicate": "A person with that email is already on file. Find them above.",
+      "unitNeedsService": "{label} needs service before it can go out for these days.",
+      "unitNeedsServiceUnnamed": "One of those units needs service before it can go out for these days.",
+      "unitNeedsConfirm": "{label} has a service flag. Tick the box under it to lend it anyway.",
+      "unitNeedsConfirmUnnamed": "One of those units has a service flag. Tick the box under it to lend it anyway.",
+      "notCertified": "Life support needs a verified card. Record the card you’ve seen, or rent soft goods only.",
+      "noDrysuitCard": "A drysuit needs a verified drysuit card.",
+      "cardRecorded": "Card recorded as seen by you.",
+      "cardDuplicate": "That card is already on file. Confirm it on the diver’s record.",
+      "cardNotRecorded": "That card didn’t save. Try again from the diver’s record.",
+      "cardInvalid": "Check the card number and try again."
+    },
+    "unitNeedsCard": "Needs a verified card",
+    "unitNeedsDrysuitCard": "Needs a drysuit card",
+    "unitNeedsService": "Needs service first",
+    "lendAnyway": "Lend {label} anyway",
+    "setPrice": "Set price, {count, plural, one {# day} other {# days}}",
+    "cards": {
+      "verified": "Verified card: {level}",
+      "none": "No verified card, so no life support: regulators, BCDs, tanks, computers and drysuits stay on the wall.",
+      "drysuit": "Drysuit card verified",
+      "unverified": "{count, plural, one {# card} other {# cards}} on file, not yet verified",
+      "minor": "Minor",
+      "seen": "Card seen",
+      "record": "Record card",
+      "recording": "Recording…"
     }
   },
   "invoiceLine": "{label} rental, {days, plural, one {# day} other {# days}}",
@@ -50,12 +75,19 @@
       "returned": "Back on the wall.",
       "released": "Released.",
       "notFound": "Nothing on this rental is left to do that to.",
-      "concernNeedsWords": "A service concern needs a line saying what happened, so a technician can act on it."
-    }
+      "concernNeedsWords": "A service concern needs a line saying what happened, so a technician can act on it.",
+      "returnedFlagged": "Back, and flagged for the bench.",
+      "invoiced": "This rental is on an invoice. Void the invoice first, then release it."
+    },
+    "divesLabel": "Dives on this rental"
   },
   "diver": {
     "rented": "Rented",
     "rentGear": "Rent gear",
     "rentalLine": "{units} · back by {date}"
+  },
+  "setLine": "Rental set, {days, plural, one {# day} other {# days}}",
+  "trip": {
+    "held": "Has {units} on a counter rental until {date}"
   }
 }

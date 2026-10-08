@@ -543,6 +543,14 @@ export const gearReservations = pgTable(
      * nothing at all until #1186 — the detail was there and invisible.
      */
     returnNote: text("return_note"),
+    /**
+     * Dives the person did on a **counter rental**, told at the return; null
+     * when nobody said. A booking-held reservation leaves it null, because its
+     * dives are the departure's planned dives. Summed into a unit's dive clock
+     * (`completedDivesByUnit`), so gear lent across the counter wears its
+     * clock like gear that rode a boat.
+     */
+    divesLogged: integer("dives_logged"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
@@ -552,6 +560,10 @@ export const gearReservations = pgTable(
     index("gear_reservations_order_idx").on(table.orderId),
     index("gear_reservations_shop_until_idx").on(table.shopId, table.reservedUntil),
     check("gear_reservations_window", sql`${table.reservedUntil} >= ${table.reservedFrom}`),
+    check(
+      "gear_reservations_dives_logged",
+      sql`${table.divesLogged} is null or (${table.divesLogged} >= 0 and ${table.divesLogged} <= 200)`,
+    ),
     check(
       "gear_reservations_one_holder",
       sql`(${table.bookingId} is not null and ${table.personId} is null) or (${table.bookingId} is null and ${table.personId} is not null)`,

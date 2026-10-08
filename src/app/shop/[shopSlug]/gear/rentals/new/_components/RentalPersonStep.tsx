@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { SubmitButton } from "@/components/SubmitButton";
 import { PersonFieldTrio } from "@/components/seat-diver/PersonFieldTrio";
 import { buttonClass } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { FieldActions, FormStatus, SearchField } from "@/components/ui/form";
 import type { listDiverSummaries } from "@/db/divers";
 import type { StaffTranslator } from "@/i18n/staff-messages";
 import { diverSearchPrefill } from "@/lib/person-fields";
+import type { NoticeTone } from "@/lib/staff-notices";
 import { addCounterRentalPersonAction } from "../../actions";
 import { counterRentalFormPath } from "../../rental-form";
 
@@ -14,7 +16,8 @@ import { counterRentalFormPath } from "../../rental-form";
  * **Who the gear goes to** — the rent-out form's first step. The person chosen,
  * with a way to change them; or a search over the shop's people (asked first,
  * so one person is not split in two), then, once something was searched for,
- * the roster's own add-a-person fields prefilled from the search.
+ * the roster's own add-a-person fields prefilled from the search. Once chosen,
+ * `cards` is what the counter knows about their cards (`RentalCardSeen`).
  */
 export function RentalPersonStep({
   t,
@@ -25,6 +28,8 @@ export function RentalPersonStep({
   from,
   until,
   whoNotice,
+  whoTone = "danger",
+  cards,
 }: {
   t: StaffTranslator;
   shopSlug: string;
@@ -34,22 +39,30 @@ export function RentalPersonStep({
   from: string;
   until: string;
   whoNotice?: string;
+  whoTone?: NoticeTone;
+  cards?: ReactNode;
 }) {
   const prefill = diverSearchPrefill(query);
   return (
     <SectionCard title={t("counterRentals.new.whoHeading")}>
       {person ? (
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <p>
-            <span className="font-medium">{person.fullName}</span>
-            {person.email ? <span className="text-muted"> · {person.email}</span> : null}
-          </p>
-          <Link
-            href={counterRentalFormPath(shopSlug, { from, until })}
-            className={buttonClass({ variant: "link", size: "sm", flush: true })}
-          >
-            {t("counterRentals.new.change")}
-          </Link>
+        <div>
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <p>
+              <span className="font-medium">{person.fullName}</span>
+              {person.email ? <span className="text-muted"> · {person.email}</span> : null}
+            </p>
+            <Link
+              href={counterRentalFormPath(shopSlug, { from, until })}
+              className={buttonClass({ variant: "link", size: "sm", flush: true })}
+            >
+              {t("counterRentals.new.change")}
+            </Link>
+          </div>
+          {cards}
+          <FormStatus tone={whoTone} className="mt-3">
+            {whoNotice}
+          </FormStatus>
         </div>
       ) : (
         <div className="flex flex-col gap-6">

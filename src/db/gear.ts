@@ -508,6 +508,11 @@ export async function latestServiceClocks(
  * The trip's date is compared against `serviced_on` as a shop-local calendar
  * date on both sides, so a departure and a service on the same day both count —
  * a boundary a floor can afford.
+ *
+ * **A counter rental counts the dives the person said they did** when it came
+ * back (`dives_logged`, asked at the return and optional), dated by the first
+ * day of its window. One with no number counts nothing — a floor again: a
+ * guess at "probably two a day" would run the clock fast.
  */
 async function completedDivesByUnit(
   db: AppDb,
@@ -534,9 +539,25 @@ async function completedDivesByUnit(
         liveTrip(),
       ),
     );
+  const counterRows = await db
+    .select({
+      gearItemId: gearReservations.gearItemId,
+      tripDate: gearReservations.reservedFrom,
+      plannedDives: sql<number>`${gearReservations.divesLogged}`,
+    })
+    .from(gearReservations)
+    .where(
+      and(
+        eq(gearReservations.shopId, shopId),
+        inArray(gearReservations.gearItemId, [...gearItemIds]),
+        isNull(gearReservations.bookingId),
+        isNotNull(gearReservations.returnedAt),
+        isNotNull(gearReservations.divesLogged),
+      ),
+    );
 
   const byUnit = new Map<string, { tripDate: CalendarDate; plannedDives: number }[]>();
-  for (const row of rows) {
+  for (const row of [...rows, ...counterRows]) {
     const bucket = byUnit.get(row.gearItemId) ?? [];
     bucket.push({ tripDate: row.tripDate, plannedDives: row.plannedDives });
     byUnit.set(row.gearItemId, bucket);
@@ -1739,6 +1760,11 @@ export async function listAvailableGearUnits(
     until: CalendarDate;
     todayLocal: CalendarDate;
     kind?: GearItemKind;
+    /**
+     * The day the service clocks are read on; today unless said. The counter
+     * reads them on the window's last day (`counterRentalServiceVerdicts`).
+     */
+    serviceAsOf?: CalendarDate;
   },
 ): Promise<AvailableGearUnit[]> {
   const units = await db
@@ -1795,7 +1821,10 @@ export async function listAvailableGearUnits(
   ]);
   return units.map((unit) => ({
     ...unit,
-    serviceState: gearServiceState(clocksByItem.get(unit.id) ?? [], options.todayLocal),
+    serviceState: gearServiceState(
+      clocksByItem.get(unit.id) ?? [],
+      options.serviceAsOf ?? options.todayLocal,
+    ),
     serviceConcern: concerns.has(unit.id),
   }));
 }
@@ -2092,15 +2121,21 @@ async function listReturnRows(
         tripTitle: trips.title,
       })
       .from(gearReservations)
-      .innerJoin(gearItems, eq(gearItems.id, gearReservations.gearItemId))
+      // Every join carries the shop as well, as defense-in-depth: today the
+      // reservation writer proves the rows share a shop, and this keeps a
+      // future mismatched row from ever rendering another tenant's words here.
+      .innerJoin(
+        gearItems,
+        and(eq(gearItems.id, gearReservations.gearItemId), eq(gearItems.shopId, shopId)),
+      )
       // Counter rentals too: a unit lent across the counter is due back and
       // goes overdue exactly like one that rode a boat.
-      .leftJoin(bookings, eq(bookings.id, gearReservations.bookingId))
-      // The shop condition on the joined person is defense-in-depth: today the
-      // reservation writer proves all three rows share a shop, and this keeps a
-      // future mismatched row from ever rendering another tenant's name here.
+      .leftJoin(
+        bookings,
+        and(eq(bookings.id, gearReservations.bookingId), eq(bookings.shopId, shopId)),
+      )
       .innerJoin(people, and(eq(people.id, reservationHolder()), eq(people.shopId, shopId)))
-      .leftJoin(trips, eq(trips.id, bookings.tripId))
+      .leftJoin(trips, and(eq(trips.id, bookings.tripId), eq(trips.shopId, shopId)))
       .where(
         and(
           eq(gearReservations.shopId, shopId),

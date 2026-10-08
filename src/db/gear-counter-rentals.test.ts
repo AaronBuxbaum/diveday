@@ -10,10 +10,12 @@ import {
   deleteGearItem,
   gearRegisterGroups,
   getGearItemDetail,
+  latestServiceClocks,
   listAvailableGearUnits,
   listGearDueBack,
   listOverdueGearReservations,
   openServiceConcerns,
+  recordGearService,
   releaseGearReservation,
   reserveGearUnit,
   returnGearReservation,
@@ -22,15 +24,27 @@ import {
 import {
   COUNTER_RENTAL_MAX_UNITS,
   checkOutCounterRental,
+  counterRentalsHeldDuring,
   counterRentalTicketIdForOrder,
   createCounterRental,
   getCounterRentalTicket,
   linkCounterRentalOrder,
   listOpenCounterRentalsForPerson,
+  recordCounterRentalCardSighting,
   releaseCounterRental,
   returnCounterRental,
 } from "./gear-counter-rentals";
-import { gearReservations, orders, people, personRoles, shops } from "./schema";
+import {
+  certifications,
+  type GearItemKindValue,
+  gearReservations,
+  orders,
+  people,
+  personRoles,
+  shops,
+  specialtyCertifications,
+  userAccounts,
+} from "./schema";
 import { createTrip } from "./trips-create";
 
 const TODAY = "2026-10-08";
@@ -56,22 +70,38 @@ async function insertShop(db: AppDb, slug: string) {
   return shop;
 }
 
-async function person(db: AppDb, shopId: string, fullName: string, email?: string) {
+/**
+ * A person on file. Each carries a verified Open Water card unless told
+ * otherwise, because most of these tests lend life support and are about
+ * something other than the card rule (that has its own block below).
+ */
+async function person(
+  db: AppDb,
+  shopId: string,
+  fullName: string,
+  email?: string,
+  options: { card?: boolean } = {},
+) {
   const [row] = await db
     .insert(people)
     .values({ shopId, fullName, email: email ?? null })
     .returning();
   if (!row) throw new Error("person insert failed");
   await db.insert(personRoles).values({ personId: row.id, role: "diver" });
+  if (options.card ?? true) {
+    await db.insert(certifications).values({
+      shopId,
+      personId: row.id,
+      agency: "padi",
+      level: "open_water",
+      identifier: `OW-${row.id.slice(0, 8)}`,
+      status: "verified",
+    });
+  }
   return row;
 }
 
-async function unit(
-  db: AppDb,
-  shopId: string,
-  label: string,
-  kind: "bcd" | "regulator" | "fins" = "bcd",
-) {
+async function unit(db: AppDb, shopId: string, label: string, kind: GearItemKindValue = "bcd") {
   const created = await createGearItem(db, { shopId, kind, label, size: "M" });
   if (!created.ok) throw new Error(`unit refused: ${created.reason}`);
   return created.item;
@@ -143,7 +173,7 @@ describe("createCounterRental", () => {
         reservedUntil: "2026-10-09",
         todayLocal: TODAY,
       }),
-    ).toEqual({ ok: false, reason: "unit_unavailable", unitLabel: "Reg #1" });
+    ).toEqual({ ok: false, reason: "unit_unavailable", unitId: reg.id });
 
     // All or nothing: the free BCD was not lent either.
     const bens = await db
@@ -195,7 +225,7 @@ describe("createCounterRental", () => {
         reservedUntil: "2026-10-12",
         todayLocal: TODAY,
       }),
-    ).toEqual({ ok: false, reason: "unit_unavailable", unitLabel: "BCD #1" });
+    ).toEqual({ ok: false, reason: "unit_unavailable", unitId: bcd.id });
 
     // And the other way round: the trip writer is refused by a counter rental.
     const reg = await unit(db, shop.id, "Reg #1", "regulator");
@@ -685,5 +715,402 @@ describe("the whole rental in one act", () => {
     });
     const after = await getCounterRentalTicket(db, shop.id, first);
     expect(after?.units.map((row) => row.reservationId)).toEqual([first]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The counter's safety rules (dive-domain review of PR #2256)
+// ---------------------------------------------------------------------------
+
+/** Lend these units to this person for today alone. */
+function lend(
+  db: AppDb,
+  shopId: string,
+  personId: string,
+  gearItemIds: string[],
+  extra: { reservedUntil?: string; confirmedFlaggedIds?: string[] } = {},
+) {
+  return createCounterRental(db, {
+    shopId,
+    personId,
+    gearItemIds,
+    reservedFrom: TODAY,
+    reservedUntil: extra.reservedUntil ?? TODAY,
+    todayLocal: TODAY,
+    confirmedFlaggedIds: extra.confirmedFlaggedIds,
+  });
+}
+
+async function heldBy(db: AppDb, personId: string) {
+  return db.select().from(gearReservations).where(eq(gearReservations.personId, personId));
+}
+
+async function staffer(db: AppDb, shopId: string) {
+  const [row] = await db.insert(people).values({ shopId, fullName: "Dana Desk" }).returning();
+  if (!row) throw new Error("staff insert failed");
+  await db.insert(personRoles).values({ personId: row.id, role: "owner" });
+  await db.insert(userAccounts).values({
+    personId: row.id,
+    email: `dana.${row.id.slice(0, 8)}@example.com`,
+    hashedPassword: "x",
+    status: "active",
+  });
+  return row;
+}
+
+describe("the card rule: life support needs a verified card", () => {
+  it("refuses a regulator to somebody with no card at all, and writes nothing", async () => {
+    const { db, shop } = await rentalShop();
+    const walkIn = await person(db, shop.id, "No Card", undefined, { card: false });
+    const reg = await unit(db, shop.id, "Reg #1", "regulator");
+    const fins = await unit(db, shop.id, "Fins #1", "fins");
+    expect(await lend(db, shop.id, walkIn.id, [fins.id, reg.id])).toEqual({
+      ok: false,
+      reason: "not_certified",
+    });
+    expect(await heldBy(db, walkIn.id)).toEqual([]);
+  });
+
+  it("refuses a regulator to somebody who declared they hold no certification", async () => {
+    const { db, shop } = await rentalShop();
+    const declared = await person(db, shop.id, "Declared None", undefined, { card: false });
+    await db
+      .update(people)
+      .set({ noCertificationDeclaredAt: new Date("2026-10-01T12:00:00Z") })
+      .where(eq(people.id, declared.id));
+    const reg = await unit(db, shop.id, "Reg #1", "regulator");
+    expect(await lend(db, shop.id, declared.id, [reg.id])).toEqual({
+      ok: false,
+      reason: "not_certified",
+    });
+  });
+
+  it("refuses a regulator on a self-declared card, or one still waiting for review", async () => {
+    const { db, shop } = await rentalShop();
+    const claimed = await person(db, shop.id, "Says Advanced", undefined, { card: false });
+    await db.insert(certifications).values({
+      shopId: shop.id,
+      personId: claimed.id,
+      agency: "padi",
+      level: "advanced_open_water",
+      selfDeclaredAt: new Date("2026-10-01T12:00:00Z"),
+      status: "pending",
+    });
+    const captured = await person(db, shop.id, "Card Pending", undefined, { card: false });
+    await db.insert(certifications).values({
+      shopId: shop.id,
+      personId: captured.id,
+      agency: "ssi",
+      level: "open_water",
+      identifier: "SSI-PENDING-1",
+      status: "pending",
+    });
+    const reg = await unit(db, shop.id, "Reg #1", "regulator");
+    const bcd = await unit(db, shop.id, "BCD #1");
+    expect(await lend(db, shop.id, claimed.id, [reg.id])).toEqual({
+      ok: false,
+      reason: "not_certified",
+    });
+    expect(await lend(db, shop.id, captured.id, [bcd.id])).toEqual({
+      ok: false,
+      reason: "not_certified",
+    });
+  });
+
+  it("refuses every life-support kind and lends soft goods to anybody", async () => {
+    const { db, shop } = await rentalShop();
+    const walkIn = await person(db, shop.id, "Snorkeler", undefined, { card: false });
+    const lifeSupport: GearItemKindValue[] = [
+      "regulator",
+      "bcd",
+      "tank",
+      "dive_computer",
+      "drysuit",
+      "dpv",
+      "o2_kit",
+      "nitrox_analyzer",
+    ];
+    for (const kind of lifeSupport) {
+      const item = await unit(db, shop.id, `LS ${kind}`, kind);
+      expect(await lend(db, shop.id, walkIn.id, [item.id])).toEqual({
+        ok: false,
+        reason: "not_certified",
+      });
+    }
+    const soft = await Promise.all(
+      (["mask", "fins", "wetsuit", "torch", "weights"] as const).map((kind) =>
+        unit(db, shop.id, `Soft ${kind}`, kind),
+      ),
+    );
+    rented(
+      await lend(
+        db,
+        shop.id,
+        walkIn.id,
+        soft.map((item) => item.id),
+      ),
+    );
+    expect(await heldBy(db, walkIn.id)).toHaveLength(soft.length);
+  });
+
+  it("wants the drysuit card for a drysuit, on top of a verified level", async () => {
+    const { db, shop } = await rentalShop();
+    const diver = await person(db, shop.id, "Open Water Only");
+    const suit = await unit(db, shop.id, "Drysuit #1", "drysuit");
+    expect(await lend(db, shop.id, diver.id, [suit.id])).toEqual({
+      ok: false,
+      reason: "no_drysuit_card",
+    });
+    // A self-declared drysuit card is somebody's word, and clears nothing.
+    await db.insert(specialtyCertifications).values({
+      shopId: shop.id,
+      personId: diver.id,
+      agency: "padi",
+      specialty: "drysuit",
+      selfDeclaredAt: new Date("2026-10-01T12:00:00Z"),
+      status: "pending",
+    });
+    expect(await lend(db, shop.id, diver.id, [suit.id])).toEqual({
+      ok: false,
+      reason: "no_drysuit_card",
+    });
+    const dana = await staffer(db, shop.id);
+    expect(
+      await recordCounterRentalCardSighting(db, {
+        shopId: shop.id,
+        personId: diver.id,
+        seenByPersonId: dana.id,
+        agency: "padi",
+        identifier: "DRY-12345",
+        sighting: { card: "drysuit" },
+      }),
+    ).toEqual({ ok: true });
+    rented(await lend(db, shop.id, diver.id, [suit.id]));
+  });
+
+  it("lends once a staffer records the card they saw, and the card says who saw it", async () => {
+    const { db, shop } = await rentalShop();
+    const walkIn = await person(db, shop.id, "Card In Hand", undefined, { card: false });
+    const reg = await unit(db, shop.id, "Reg #1", "regulator");
+    const dana = await staffer(db, shop.id);
+    expect(await lend(db, shop.id, walkIn.id, [reg.id])).toMatchObject({ ok: false });
+
+    expect(
+      await recordCounterRentalCardSighting(db, {
+        shopId: shop.id,
+        personId: walkIn.id,
+        seenByPersonId: dana.id,
+        agency: "padi",
+        identifier: "PADI-998877",
+        sighting: { card: "level", level: "open_water" },
+      }),
+    ).toEqual({ ok: true });
+    const [card] = await db
+      .select()
+      .from(certifications)
+      .where(eq(certifications.personId, walkIn.id));
+    expect(card).toMatchObject({ status: "verified", reviewedByPersonId: dana.id });
+    expect(card?.reviewedAt).toBeInstanceOf(Date);
+
+    rented(await lend(db, shop.id, walkIn.id, [reg.id]));
+  });
+
+  it("records no sighting for somebody who is not live staff, or for a card already on file", async () => {
+    const { db, shop } = await rentalShop();
+    const walkIn = await person(db, shop.id, "Card In Hand", undefined, { card: false });
+    const notStaff = await person(db, shop.id, "Another Diver");
+    const dana = await staffer(db, shop.id);
+    const sighting = {
+      shopId: shop.id,
+      personId: walkIn.id,
+      agency: "padi" as const,
+      identifier: "PADI-555",
+      sighting: { card: "level" as const, level: "open_water" as const },
+    };
+    expect(
+      await recordCounterRentalCardSighting(db, { ...sighting, seenByPersonId: notStaff.id }),
+    ).toEqual({ ok: false, reason: "staff_not_found" });
+    const reg = await unit(db, shop.id, "Reg #1", "regulator");
+    expect(await lend(db, shop.id, walkIn.id, [reg.id])).toMatchObject({
+      reason: "not_certified",
+    });
+    // The pending row that refusal left is the same card: a second try is a
+    // duplicate, confirmed on the diver record rather than split in two.
+    expect(
+      await recordCounterRentalCardSighting(db, { ...sighting, seenByPersonId: dana.id }),
+    ).toEqual({ ok: false, reason: "duplicate_card" });
+  });
+});
+
+describe("the service screen: the one place a clock gates", () => {
+  it("refuses life support whose clock runs out by the window's last day", async () => {
+    const { db, shop } = await rentalShop();
+    const diver = await person(db, shop.id, "Ana Walk-In");
+    const reg = await unit(db, shop.id, "Reg #1", "regulator");
+    expect(
+      (
+        await recordGearService(db, {
+          shopId: shop.id,
+          gearItemId: reg.id,
+          kind: "service",
+          servicedOn: "2025-10-09",
+          nextDueOn: "2026-10-09",
+        })
+      ).ok,
+    ).toBe(true);
+    // Overdue on the 10th, the last day of this window.
+    expect(await lend(db, shop.id, diver.id, [reg.id], { reservedUntil: "2026-10-10" })).toEqual({
+      ok: false,
+      reason: "unit_needs_service",
+      unitId: reg.id,
+    });
+    // Confirming does nothing for life support.
+    expect(
+      await lend(db, shop.id, diver.id, [reg.id], {
+        reservedUntil: "2026-10-10",
+        confirmedFlaggedIds: [reg.id],
+      }),
+    ).toMatchObject({ reason: "unit_needs_service" });
+    // Back before the clock runs out: lent.
+    rented(await lend(db, shop.id, diver.id, [reg.id]));
+  });
+
+  it("refuses life support with an open concern, and lends flagged soft goods only when confirmed", async () => {
+    const { db, shop } = await rentalShop();
+    const first = await person(db, shop.id, "First Renter");
+    const next = await person(db, shop.id, "Next Renter");
+    const reg = await unit(db, shop.id, "Reg #1", "regulator");
+    const fins = await unit(db, shop.id, "Fins #1", "fins");
+    const out = rented(await lend(db, shop.id, first.id, [reg.id, fins.id]));
+    const ticket = { shopId: shop.id, ticketId: out.ticketId };
+    await checkOutCounterRental(db, ticket);
+    expect(
+      await returnCounterRental(db, {
+        ...ticket,
+        outcome: "service_concern",
+        note: "Free-flowed on the surface",
+      }),
+    ).toEqual({ ok: true });
+
+    expect(await lend(db, shop.id, next.id, [reg.id])).toEqual({
+      ok: false,
+      reason: "unit_needs_service",
+      unitId: reg.id,
+    });
+    expect(await lend(db, shop.id, next.id, [fins.id])).toEqual({
+      ok: false,
+      reason: "unit_needs_confirm",
+      unitId: fins.id,
+    });
+    expect(await heldBy(db, next.id)).toEqual([]);
+    rented(await lend(db, shop.id, next.id, [fins.id], { confirmedFlaggedIds: [fins.id] }));
+  });
+});
+
+describe("dives on a counter rental", () => {
+  it("counts the dives said at the return on the unit's dive clock, and nothing when unsaid", async () => {
+    const { db, shop } = await rentalShop();
+    const diver = await person(db, shop.id, "Ana Walk-In");
+    const reg = await unit(db, shop.id, "Reg #1", "regulator");
+    const other = await unit(db, shop.id, "Reg #2", "regulator");
+    for (const item of [reg, other]) {
+      await recordGearService(db, {
+        shopId: shop.id,
+        gearItemId: item.id,
+        kind: "service",
+        servicedOn: "2026-10-01",
+        nextDueOn: "2027-10-01",
+        nextDueDives: 100,
+      });
+    }
+    const counted = rented(await lend(db, shop.id, diver.id, [reg.id]));
+    await checkOutCounterRental(db, { shopId: shop.id, ticketId: counted.ticketId });
+    await returnCounterRental(db, {
+      shopId: shop.id,
+      ticketId: counted.ticketId,
+      outcome: "all_good",
+      dives: 4,
+    });
+    const unsaid = rented(await lend(db, shop.id, diver.id, [other.id]));
+    await checkOutCounterRental(db, { shopId: shop.id, ticketId: unsaid.ticketId });
+    await returnCounterRental(db, {
+      shopId: shop.id,
+      ticketId: unsaid.ticketId,
+      outcome: "all_good",
+    });
+
+    const clocks = await latestServiceClocks(db, shop.id, [reg.id, other.id]);
+    expect(clocks.get(reg.id)?.[0]?.divesSince).toBe(4);
+    expect(clocks.get(other.id)?.[0]?.divesSince).toBe(0);
+  });
+});
+
+describe("releasing an invoiced rental", () => {
+  it("is refused while an invoice points at it, and the rows stay", async () => {
+    const { db, shop } = await rentalShop();
+    const diver = await person(db, shop.id, "Ana Walk-In", "ana@example.com");
+    const bcd = await unit(db, shop.id, "BCD #1");
+    const rental = rented(await lend(db, shop.id, diver.id, [bcd.id]));
+    const [order] = await db
+      .insert(orders)
+      .values({
+        shopId: shop.id,
+        personId: diver.id,
+        createdByPersonId: diver.id,
+        currency: "usd",
+        totalCents: 1500,
+        stripeAccountId: "acct_test",
+        stripeCustomerId: "cus_release",
+        stripeInvoiceId: "in_release",
+      })
+      .returning();
+    if (!order) throw new Error("order insert failed");
+    await linkCounterRentalOrder(db, {
+      shopId: shop.id,
+      reservationIds: rental.reservationIds,
+      orderId: order.id,
+    });
+    expect(await releaseCounterRental(db, { shopId: shop.id, ticketId: rental.ticketId })).toEqual({
+      ok: false,
+      reason: "invoiced",
+    });
+    expect(await heldBy(db, diver.id)).toHaveLength(1);
+  });
+});
+
+describe("counter rentals over a departure's window", () => {
+  it("names what a diver still holds across the window, and nothing returned or outside it", async () => {
+    const { db, shop } = await rentalShop();
+    const diver = await person(db, shop.id, "Ana Walk-In");
+    const reg = await unit(db, shop.id, "Reg #1", "regulator");
+    const fins = await unit(db, shop.id, "Fins #1", "fins");
+    rented(await lend(db, shop.id, diver.id, [reg.id], { reservedUntil: "2026-10-10" }));
+    const back = rented(await lend(db, shop.id, diver.id, [fins.id]));
+    await checkOutCounterRental(db, { shopId: shop.id, ticketId: back.ticketId });
+    await returnCounterRental(db, {
+      shopId: shop.id,
+      ticketId: back.ticketId,
+      outcome: "all_good",
+    });
+
+    const during = await counterRentalsHeldDuring(db, shop.id, [diver.id], {
+      from: "2026-10-10",
+      until: "2026-10-10",
+    });
+    expect(during.get(diver.id)).toEqual([{ label: "Reg #1", until: "2026-10-10" }]);
+    const after = await counterRentalsHeldDuring(db, shop.id, [diver.id], {
+      from: "2026-10-11",
+      until: "2026-10-11",
+    });
+    expect(after.size).toBe(0);
+    const rival = await insertShop(db, "rival-held");
+    expect(
+      (
+        await counterRentalsHeldDuring(db, rival.id, [diver.id], {
+          from: TODAY,
+          until: "2026-10-10",
+        })
+      ).size,
+    ).toBe(0);
   });
 });

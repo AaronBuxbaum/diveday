@@ -6,8 +6,11 @@ import { bookings, gearItems, gearReservations, type people } from "./schema";
 
 /**
  * **One counter rental on the books** (ADR 20260815-minimal-gear-register,
- * amended 2026-10-08): the camera and a dive computer, put by over the phone
- * for a diver who is shore diving this weekend and has no boat booked. Picked
+ * amended 2026-10-08): the camera and a pair of boots, put by over the phone
+ * for a diver who is snorkeling from the shore this weekend and has no boat
+ * booked. Both are soft goods, so the counter's card rule has nothing to ask
+ * of them (`counterRentalCardRefusal`); a seeded regulator would show a rental
+ * the counter could not have written for somebody with no card on file. Picked
  * up tomorrow, back two days later — reserved, not yet out, so the register's
  * wall shows the hold, the diver's record shows "Rented", and nothing on
  * Today or in the Out group moves (a unit out or overdue is a trouble state,
@@ -41,7 +44,7 @@ export async function seedCounterRental(
     .where(
       and(
         eq(gearItems.shopId, shopId),
-        inArray(gearItems.label, ["GoPro A", "Computer #2"]),
+        inArray(gearItems.label, ["GoPro A", "Boots #2"]),
         isNull(gearItems.deletedAt),
       ),
     );

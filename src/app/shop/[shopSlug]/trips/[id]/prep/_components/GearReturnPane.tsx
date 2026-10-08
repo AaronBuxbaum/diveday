@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { controlClass, Field } from "@/components/ui/form";
 
@@ -34,14 +34,18 @@ import { controlClass, Field } from "@/components/ui/form";
  *
  * **The set is whatever the action's hidden fields name** — a booking on a
  * departure here, a counter rental's ticket on `/gear/rentals` — so one pane
- * asks the one question wherever a set comes home.
+ * asks the one question wherever a set comes home. `children` is anything else
+ * that set's return asks beside the outcome (a counter rental's dive count),
+ * posted with whichever answer is tapped.
  */
 export function GearReturnPane({
   fields,
   action,
   labels,
+  children,
 }: {
   fields: Record<string, string>;
+  children?: ReactNode;
   action: (formData: FormData) => Promise<void>;
   labels: {
     allGood: string;
@@ -58,6 +62,7 @@ export function GearReturnPane({
       {Object.entries(fields).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}
+      {children}
       <div className="flex flex-wrap items-center gap-2">
         {/* `formNoValidate` on both fast answers, and it is load-bearing:
             arming the concern puts a `required` note in the same form, and

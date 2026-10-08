@@ -13,6 +13,15 @@ export const UNIT_FIELD = "unit";
 export const PRICE_FIELD_PREFIX = "price-";
 
 /**
+ * The one price box for the shop's core set, shown when the picks are exactly
+ * one set (`isOneCoreSet`). Not a uuid, so it never collides with a unit's box.
+ */
+export const SET_PRICE_FIELD = "price-set";
+
+/** A flagged soft-goods unit the staffer chose to lend anyway posts `confirm-<unit id>`. */
+export const CONFIRM_FIELD_PREFIX = "confirm-";
+
+/**
  * The rent-out form for a person and a window — the URL every step of the form
  * lands back on, so a refusal keeps who and when the staffer already chose.
  */

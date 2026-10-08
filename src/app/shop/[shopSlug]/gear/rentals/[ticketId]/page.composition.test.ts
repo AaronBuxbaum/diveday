@@ -35,4 +35,22 @@ describe("the counter-rental ticket", () => {
     expect(list).toContain("grid grid-cols-[max-content_minmax(0,1fr)] gap-x-3");
     expect(list).toContain("grid-cols-subgrid");
   });
+
+  it("prints the shop's phone in the footer, the number the person calls", () => {
+    const footer = SOURCE.slice(SOURCE.lastIndexOf("border-t border-border pt-4"));
+    expect(footer).toContain("shop.contactPhone");
+  });
+
+  it("asks the dives on the return, optional, inside the return's own form", () => {
+    const pane = SOURCE.slice(
+      SOURCE.indexOf("<GearReturnPane"),
+      SOURCE.indexOf("</GearReturnPane>"),
+    );
+    expect(pane).toContain('name="dives"');
+    expect(pane).not.toMatch(/name="dives"[^>]*required/);
+  });
+
+  it("does not call a flagged return back on the wall", () => {
+    expect(SOURCE).toContain('"returned-flagged"');
+  });
 });
