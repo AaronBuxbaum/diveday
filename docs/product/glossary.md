@@ -2148,6 +2148,16 @@ new domain concept, define it here in the same PR.
   has worked it or is about to (`customer_gear_items`): kind, make and model, serial number, and its
   own next-service date. Not the shop's fleet (`gear_items`) and never rentable — the register, the
   prep list and every manifest read ignore it.
+- **Ready message** — what a customer is told when their ticket moves to ready for pickup: the shop,
+  the pieces and the work performed, by email or the courtesy text. It is sent once per ready
+  transition and can be resent from the ticket. It never goes for a ticket on one of the shop's own
+  units ([20261008-work-order-follow-up](../architecture/decisions/20261008-work-order-follow-up.md)).
+- **Bench bill** — the order a ticket's parts and labor raise through `createOrder`, linked in
+  `work_order_bills`. It is an ordinary order, so only one can be open per ticket. With no Stripe
+  account, the ticket shows the total and says it is collected at the counter.
+- **Service reminder** — the message a customer gets about a month before a piece's service date,
+  once per piece, clock and date. It is on by default and switched off per piece on the diver
+  record.
 
 ## Records and evidence
 

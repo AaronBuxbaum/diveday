@@ -2771,7 +2771,9 @@
         "item9": "Una lista de preparación hecha con las tallas que te dieron, con tanques de aire y nitrox separados",
         "item10": "Una lista de empaque del centro reutilizada en cada salida",
         "item11": "Una lista de precios de alquiler: el equipo completo, cada pieza y el nitrox por inmersión",
-        "item12": "Unidades, historial de mantenimiento y alquileres anteriores importados desde una hoja de cálculo"
+        "item12": "Unidades, historial de mantenimiento y alquileres anteriores importados desde una hoja de cálculo",
+        "item13": "Órdenes de trabajo para el equipo de tus clientes: qué entró, repuestos y mano de obra, y una etiqueta de entrega",
+        "item14": "Un aviso de listo para recoger, la cuenta enviada por Stripe y un recordatorio de mantenimiento un mes antes de cada vencimiento"
       },
       "schedule": {
         "item1": "El horario como constructor: añade, mueve, copia y quita en el sitio",
@@ -3001,7 +3003,7 @@
         "exportNotes": {
           "note1": "Hazlo mientras tu instalación de EVE todavía abra y tu licencia esté activa; la exportación que puedes hacer hoy es la que hay que guardar.",
           "note2": "Los encabezados de tus columnas no tienen que coincidir con nada. DiveDay reconoce los nombres habituales que usan EVE y todos los demás sistemas, y te muestra cómo se mapeó cada columna antes de confirmar.",
-          "note3": "Si EVE te da también un informe de ventas o de reservas, llévatelo. Un archivo con una fila por reserva traslada el historial de visitas de tus habituales, para que un cliente de quince años no llegue pareciendo nuevo. Los recibos de caja y los partes de taller se quedan en EVE; mira la tabla de alcance abajo."
+          "note3": "Si EVE te da también un informe de ventas o de reservas, llévatelo. Un archivo con una fila por reserva traslada el historial de visitas de tus habituales, para que un cliente de quince años no llegue pareciendo nuevo. Los recibos de caja se quedan en EVE. Los partes de taller no se importan, así que pasa a DiveDay como órdenes de trabajo los que siguen en el taller y guarda los cerrados en tu exportación de EVE; mira la tabla de alcance abajo."
         }
       },
       "diveshop360": {
@@ -3047,7 +3049,7 @@
         "exportNotes": {
           "note1": "CSV manual, un conjunto a la vez, es el límite de DiveShop360 (sin API, sin exportación masiva, sin webhooks). Hacerlo tú mismo desde la administración es el único camino, y alcanza.",
           "note2": "Los encabezados de tus columnas no tienen que coincidir con nada. DiveDay reconoce los nombres habituales que usan DiveShop360 y todos los demás sistemas, y te muestra cómo se mapeó cada columna antes de confirmar.",
-          "note3": "Si puedes exportar también un informe de reservas o ventas, tráelo. Una fila por reserva se convierte aquí en el historial de visitas de tus buceadores. Los recibos de venta minorista, los partes de taller y tu web de comercio electrónico se quedan en DiveShop360; mira la tabla de alcance abajo."
+          "note3": "Si puedes exportar también un informe de reservas o ventas, tráelo. Una fila por reserva se convierte aquí en el historial de visitas de tus buceadores. Los recibos de venta minorista y tu web de comercio electrónico se quedan en DiveShop360. Los partes de taller no se importan, así que pasa a DiveDay como órdenes de trabajo los que siguen en el taller; mira la tabla de alcance abajo."
         },
         "importerNote": "DiveShop360 exporta los clientes y los datos de certificación como dos archivos separados. Importa primero el archivo de clientes. DiveDay empareja a las personas por correo, así que el de certificaciones suma a los mismos buceadores en vez de duplicarlos. Ese archivo suele traer una fila por certificación: un buceador con tres certificaciones aparece en tres filas, cada una aterriza en ese único buceador, y una fila que dice “PADI Deep Diver” se convierte en una certificación de especialidad de profundidad."
       },
@@ -3799,11 +3801,11 @@
       },
       "rentalGear": {
         "name": "Equipo de alquiler",
-        "summary": "Cada unidad de tu pared con su talla y su próximo mantenimiento, reservada para un buceador a la vez.",
+        "summary": "Cada unidad de tu pared con su talla y su próximo mantenimiento, reservada para un buceador a la vez, y el equipo de tus clientes en el taller.",
         "metaTitle": "Alquiler de equipo de buceo y control de mantenimiento",
         "metaDescription": "Lleva cada chaleco, regulador, neopreno y tanque por etiqueta, talla y fecha de mantenimiento. El personal aparta una unidad para una reserva, y el registro no se la da a un segundo buceador en las mismas fechas.",
         "title": "Sabe qué neopreno lleva cada buceador y qué regulador toca revisar.",
-        "lede": "Registra tus propias unidades por etiqueta, talla y número de serie, aparta una para una reserva desde la pestaña Equipo de la salida y mira la próxima fecha de mantenimiento de cada regulador, tanque y chaleco.",
+        "lede": "Registra tus propias unidades por etiqueta, talla y número de serie, aparta una para una reserva desde la pestaña Equipo de la salida y mira la próxima fecha de mantenimiento de cada regulador, tanque y chaleco. Cuando un cliente trae su propio regulador, entra al taller como orden de trabajo y se le avisa cuando está listo.",
         "screenLabel": "El registro de equipo: unidades por tipo con sus cantidades, y la etiqueta, el modelo, la talla y el estado de cada unidad.",
         "note1": "Los contadores muestran las unidades de cada tipo, así que un estante corto se nota antes de la mañana.",
         "note2": "Una unidad apartada nombra a su buceador, y el registro no se la da a nadie más.",
@@ -3813,7 +3815,7 @@
         "step2Title": "Los buceadores dan sus tallas después de reservar",
         "step2Body": "La pestaña Equipo convierte esas tallas en una lista para sacar y muestra las unidades libres, la talla exacta primero.",
         "step3Title": "Sale, vuelve y se revisa",
-        "step3Body": "Marca la salida y la vuelta de una unidad, imprime el comprobante de alquiler del buceador, y mira en la lista de tareas del día las devoluciones atrasadas y el mantenimiento que vence.",
+        "step3Body": "Marca la salida y la vuelta de una unidad, imprime el comprobante de alquiler del buceador, y mira en la lista de tareas del día las devoluciones atrasadas y el mantenimiento que vence. Las reparaciones van en órdenes de trabajo: el cliente se entera cuando la suya está lista y recibe la cuenta por correo.",
         "faq1Q": "¿Qué revisiones de mantenimiento controla?",
         "faq1A": "Servicio anual, prueba hidrostática, inspección visual y limpieza para oxígeno, cada una con su fecha de vencimiento, más un conteo de inmersiones donde el fabricante lo fija.",
         "faq2Q": "¿Y si dos buceadores quieren la misma unidad?",

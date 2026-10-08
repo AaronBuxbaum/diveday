@@ -2771,7 +2771,9 @@
         "item9": "A rental prep list built from the sizes divers gave you, tanks split air and nitrox",
         "item10": "A shop packing checklist reused on every trip",
         "item11": "A rental price list: the full set, each piece, and nitrox by the dive",
-        "item12": "Units, service history and past rentals imported from a spreadsheet"
+        "item12": "Units, service history and past rentals imported from a spreadsheet",
+        "item13": "Work orders for customers’ own gear: what came in, parts and labor, and a claim tag",
+        "item14": "A ready-for-pickup message, the bill sent through Stripe, and a service reminder a month before each due date"
       },
       "schedule": {
         "item1": "The schedule as a builder: add, move, copy, remove in place",
@@ -3001,7 +3003,7 @@
         "exportNotes": {
           "note1": "Do this while your EVE install still opens and your license is active; an export you can run today is the one to keep.",
           "note2": "Your column headings do not have to match anything. DiveDay recognizes the common names EVE and every other system use, and shows you how each column mapped before you commit.",
-          "note3": "If EVE will give you a sales or booking report as well, take it. A file with one row per booking brings your regulars’ visit history across, so a fifteen-year customer does not arrive looking brand new. Register receipts and repair tickets stay in EVE; see the scope table below."
+          "note3": "If EVE will give you a sales or booking report as well, take it. A file with one row per booking brings your regulars’ visit history across, so a fifteen-year customer does not arrive looking brand new. Register receipts stay in EVE. Repair tickets do not import, so put any still on the bench into DiveDay as work orders and keep the closed ones in your EVE export; see the scope table below."
         }
       },
       "diveshop360": {
@@ -3047,7 +3049,7 @@
         "exportNotes": {
           "note1": "Manual CSV, one dataset at a time, is DiveShop360’s limit (no API, no bulk export, no webhooks). Doing it yourself from the admin is the only path, and it is enough.",
           "note2": "Your column headings do not have to match anything. DiveDay recognizes the common names DiveShop360 and every other system use, and shows you how each column mapped before you commit.",
-          "note3": "If you can also export a booking or sales report, bring it. One row per booking becomes your divers’ visit history here. Retail receipts, repair tickets, and your e-commerce site stay in DiveShop360; see the scope table below."
+          "note3": "If you can also export a booking or sales report, bring it. One row per booking becomes your divers’ visit history here. Retail receipts and your e-commerce site stay in DiveShop360. Repair tickets do not import, so put any still on the bench into DiveDay as work orders; see the scope table below."
         },
         "importerNote": "DiveShop360 exports customers and certification data as two separate files. Import the customer file first. DiveDay matches people by email, so the certification file adds to the same divers instead of duplicating them. That file usually holds one row per certification: a diver with three certifications appears on three rows, each landing on that one diver, and a row reading “PADI Deep Diver” becomes a deep specialty certification."
       },
@@ -3799,11 +3801,11 @@
       },
       "rentalGear": {
         "name": "Rental gear",
-        "summary": "Every unit on your wall with its size and service due, reserved for one diver at a time.",
+        "summary": "Every unit on your wall with its size and service due, reserved for one diver at a time, and your customers’ own gear on the bench.",
         "metaTitle": "Dive gear rental and service tracking",
         "metaDescription": "Track every BCD, regulator, wetsuit and cylinder by tag, size and service date. Staff reserve a unit to one booking, and the register won’t give it to a second diver on the same dates.",
         "title": "Know which wetsuit is on which diver, and which regulator is due for service.",
-        "lede": "List your own units by tag, size and serial, reserve one to a booking from the departure’s Gear tab, and see each regulator, cylinder and BCD’s next service date.",
+        "lede": "List your own units by tag, size and serial, reserve one to a booking from the departure’s Gear tab, and see each regulator, cylinder and BCD’s next service date. When a customer brings their own regulator in, it goes on the bench as a work order, and they hear when it’s ready.",
         "screenLabel": "The gear register: units by kind with their counts, then each unit’s tag, model, size and status.",
         "note1": "The chips count units of each kind, so a short shelf shows before the morning.",
         "note2": "A reserved unit names its diver, and the register won’t give it to anyone else.",
@@ -3813,7 +3815,7 @@
         "step2Title": "Divers give their sizes after booking",
         "step2Body": "The Gear tab turns those sizes into a list to pull and lists free units, exact size first.",
         "step3Title": "Out, back and serviced",
-        "step3Body": "Stamp a unit out and back, print the diver’s rental slip, and see overdue returns and service coming due on the day’s to-do list.",
+        "step3Body": "Stamp a unit out and back, print the diver’s rental slip, and see overdue returns and service coming due on the day’s to-do list. Repairs run on work orders: the customer is told when theirs is ready, and gets the bill by email.",
         "faq1Q": "Which service checks can it track?",
         "faq1A": "Annual service, hydrostatic test, visual inspection and oxygen cleaning, each with its due date, plus a dive count where the manufacturer sets one.",
         "faq2Q": "What if two divers want the same unit?",
